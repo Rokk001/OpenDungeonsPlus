@@ -40,6 +40,11 @@ You will find us on the following channels:
 
 ### Build instructions
 
+For the Windows x64 build with MSVC 2022 and OGRE 13.6.5, see
+[Windows prerequisites, build and direct startup](docs/WINDOWS.md).
+The [UI and settings guide](docs/UI-AND-SETTINGS.md) describes live settings,
+interface scaling and the required renderer patches.
+
 If you retrieve the source code of OpenDungeonsPlus and want to have a go at
 building it yourself, have a look at platform-specific build instructions
 on our wiki: https://github.com/OpenDungeons/OpenDungeons/wiki/Compile
