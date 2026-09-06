@@ -8,18 +8,18 @@
         <Window type="OD/IconButton" name="ObjectivesButton" >
             <Property name="Area" value="{{0,24},{0,36},{1,-24},{0,74}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/ObjectivesIcon" />
-            <Property name="Text" value="Objectives (F3)" />
+            <Property name="Text" value="Objectives" />
             <Property name="TooltipText" value="View the current game objectives." />
         </Window>
         <Window type="OD/IconButton" name="SkillButton" >
             <Property name="Area" value="{{0,24},{0,82},{1,-24},{0,120}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/SkillIcon" />
-            <Property name="Text" value="Skill (F4)" />
+            <Property name="Text" value="Skill" />
         </Window>
         <Window type="OD/IconButton" name="SaveGameButton" >
             <Property name="Area" value="{{0,24},{0,128},{1,-24},{0,166}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/SaveIcon" />
-            <Property name="Text" value="Save Game (F5)" />
+            <Property name="Text" value="Save Game" />
         </Window>
         <Window type="OD/IconButton" name="LoadGameButton" >
             <Property name="Area" value="{{0,24},{0,174},{1,-24},{0,212}}" />
@@ -51,12 +51,16 @@
             <Window type="OD/IconButton" name="HelpButton" >
             <Property name="Area" value="{{0,24},{0,358},{1,-24},{0,396}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/HelpIcon" />
-            <Property name="Text" value="Help (F1)" />
+            <Property name="Text" value="Help" />
         </Window>
             <Window type="OD/IconButton" name="PlayerSettingsButton" >
             <Property name="Area" value="{{0,24},{0,404},{1,-24},{0,442}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/SeatIcon" />
-            <Property name="Text" value="Player information (F2)" />
+            <Property name="Text" value="Player information" />
+        </Window>
+        <Window type="OD/Button" name="UserCamerasButton">
+            <Property name="Area" value="{{0,24},{0,450},{1,-24},{0,488}}" />
+            <Property name="Text" value="Define user cameras" />
         </Window>
     </Window>
 </GUILayout>
