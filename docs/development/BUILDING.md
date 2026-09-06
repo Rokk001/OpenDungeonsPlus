@@ -1,5 +1,21 @@
 # Configuring and compiling on Windows
 
+The completed September 6 cursor-light correction on `fix/shadow-coverage` preserves
+ambient illumination inside shadows and applies the existing light falloff to
+custom materials. The user's 16:36 captures rejected the earlier solid-black
+furniture shadows. All 60 new lighting checks, 73 receiver cases, 146 shadow
+toggles and the 33-creature portrait regression pass. Release compilation and
+runtime preparation pass at 16:51 in `build/windows/cursor-light-build.log` and
+`cursor-light-runtime.log`. The shader/material-only correction loads directly
+through the prepared runtime's resource junctions; the executable is still the
+16:39:18 build with SHA-256
+`141f56e38665bfab44df3741f82cbc46213637978990a4d256f7316129759024`.
+The user's 18:18-18:19 screenshots confirm that the solid-black room shadows
+are gone; additional instanced-fog and vertical-wall checks also pass.
+The user requested local branch closure and a separate room-lighting follow-up;
+the exact named-map and Linux verification limits remain recorded in
+[shadow coverage](SHADOW-COVERAGE.md), together with the PR update status.
+
 The latest hand-feedback follow-up corrects creature highlighting after camera
 movement with a stationary pointer. Release compilation and runtime preparation
 pass in `build/windows/dk2-highlight-build.log` and `dk2-highlight-runtime.log`;

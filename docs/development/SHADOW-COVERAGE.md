@@ -1,5 +1,67 @@
 # Shadow coverage correction
 
+## Local branch closure on September 6, 2026
+
+The user requested closing the shadow work after the final review and handling
+room lighting separately. The review found no new blocking defects in the
+shadow correction; no further production changes were necessary.
+Functional commits are `99e80b2d` and `fe86bf03`. Verification comprises 60
+lighting checks, 73 receiver cases, 146 settings checks, 33 portraits, the
+additional instanced-fog/wall renders, the Release build and the user's
+18:18-18:19 screenshots. The named-map and Linux verification limits below
+remain accurately recorded; they are not reported as tested.
+
+The functional work is closed locally on `fix/shadow-coverage`; room lighting
+is a separate follow-up. PR #48 is already open and ready for review, with
+published head `dbae8421`; the two local correction commits have not been
+pushed. Publishing or replying still requires the user's authorization.
+The final checkpoint changes only this task's development note, build-history
+entry and documentation-index link. The game version and root README need no
+additional change for this bug fix; no release or new player-facing feature
+was introduced and this repository has no changelog file.
+
+## User screenshot review at 18:18-18:19
+
+The user supplied `ODscreenshot_2026-09-06_181846_0.png`,
+`ODscreenshot_2026-09-06_181848_1.png` and
+`ODscreenshot_2026-09-06_181905_2.png` and requested their comparison with the
+reference. All three were inspected. The earlier solid-black floor wedges are
+absent, surface detail remains visible and the hand illuminates a local area;
+the library and dormitory furniture still cast visible shadows. This supports
+the reported shadow correction in an actual user game. The remaining visual
+difference is the dark, uniform illumination outside that local area.
+
+The current game log identifies the loaded save as
+`saves/2026-09-06_134654-SK-DuelToDeath.level`. Its `[Lights]` section contains
+no entries, and the run logs no added map lights. The room implementations do
+not create map lights; the renderer creates the hand point light and renders
+map lights supplied by the level. Thus changing how additional existing lights
+are accumulated would not brighten this particular save. The configured ambient
+slider value is 100, and constructing the settings window applies that value
+through the existing ambient-light setter; this is not evidence of an ignored
+brightness setting.
+
+Reference-like room-local lighting would require an additional lighting feature
+or level light placement, beyond repairing shadow reception and preserving
+ambient light. No such source, placement or intensity has been invented or
+added to the shadow contribution. The screenshot comparison does not establish
+complete lighting parity; the user subsequently deferred room lighting to a
+separate task and requested closure of the shadow branch.
+
+The live PR #48 comment was rechecked after this review: the maintainer's
+request remains missing creature shadows and missing receiving surfaces, with
+Forgotten Treasures as the suggested reproduction. The local rendering checks
+cover those receiver paths, but the user's latest captures are from the save
+identified above, not that named map. Do not describe them as confirmation of
+the maintainer's exact full-map reproduction. No reply or push was made.
+
+### Prepared maintainer reply, not posted
+
+I've prepared a local fix for the shadow projection and material receivers;
+isolated rendering checks now show creature shadows on floors and walls.
+The latest in-game screenshots also show the excessive black shadows resolved,
+but the original Forgotten Treasures reproduction still needs a manual retest.
+
 ## User rejection: cursor-light shadows on September 6
 
 The user's 16:36:21, 16:36:27, 16:36:32 and 16:36:35 captures in the
@@ -55,13 +117,25 @@ Verification on September 6 at 16:51:
 Evidence is retained under `build/windows/cursor-light-*`; regenerate/rebuild
 the probe with `make-cursor-light-probe.py` and `build-cursor-light-probe.ps1`.
 The shadow coverage and portrait probe sources remain as described below.
-The existing instanced fog material receives the same lighting calculation;
-its full in-game appearance remains in user QA. No version bump or new README
-feature entry is required for this shader bug fix; no changelog exists here.
+The additional surface probe now renders 49 actual hardware-instanced
+`FogOfWarDirt.mesh` instances with the game's material and custom-colour path.
+It passes the nonempty-image, ambient-preservation and attenuation checks:
+330,969 evaluated channels, zero falloff mismatches and zero pixels below
+ambient. A row of actual `Claimed_fl_0000.mesh` walls using `DCW0000` passes
+the same checks and receives 2,809 shadow pixels outside the projected
+bookshelf bounds; the measurement excludes the caster itself. This closes
+the earlier planar-wall and unrendered-instancing verification gaps.
+Sources, logs and images: `build/windows/make-cursor-surface-probe.py`,
+`cursor-surface-probe.cpp`, `cursor-surface-instanced.log`,
+`cursor-surface-wall.log` and `cursor-surface-*.png`.
+These checks required no further production changes.
 
-The user should restart the prepared game and repeat the furnished-room cursor
-movement. No game was launched by the assistant, and reference parity and
-full-map visual acceptance are not claimed from isolated renders.
+No version bump or new README feature entry is required for this shader bug
+fix; no changelog exists here.
+
+The subsequent user captures and their scoped review are recorded above.
+No game was launched by the assistant, and reference parity or the original
+full-map reproduction are not claimed from isolated renders.
 
 ## Report, baseline and existing path
 
