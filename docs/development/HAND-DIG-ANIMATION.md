@@ -1,5 +1,23 @@
 # Downward hand strike on wall marking
 
+## Follow-up: removing a digging mark
+
+The user confirmed the marking animation works, but reported no animation when
+removing a mark. The confirmed wall-selection path queues both operations, then
+guards animation playback with the marking flag. That guard is the cause.
+Only that animation guard is removed so both eligible, validated operations
+reuse the same accepted strike; the preview/cancellation/input guards remain.
+The 781-case release/selection check reproduces two unmarking failures before
+the correction and passes afterward. Release compilation, runtime preparation
+and the headless resource check pass. The renderer is unchanged from the 876-case
+verified animation implementation. The executable is dated September 6 at
+22:31:33, size 4,197,376 bytes, SHA-256
+`c41af657e9a8891fdaac306cff05e379a306977123a9d1c476718a43dc7a021d`.
+Logs use `hand-unmark-` in `build/windows/`. The user's retest of unmarking remains
+pending; the marking animation was explicitly accepted. This correction stays
+on the same functional hand-animation branch. README wording is updated;
+version remains 0.7.1 and no changelog is present.
+
 ## Existing implementation and requested change
 
 The user requested a downward tool swing when clicking a wall, preserving the
@@ -10,8 +28,8 @@ return before that request. Previously, no hand animation was triggered there.
 The existing renderer plays non-looping hand animations and restores the current
 hover pose afterward. The change extends that lifecycle with a short closed-grip downward
 strike for a confirmed marking request. The attached tool remains visible with
-the existing grip material throughout the strike. Unmarking, sounds, gameplay
-rules and authored animation clips retain their existing behavior.
+the existing grip material throughout the strike. The follow-up above also
+animates removing marks; sounds, gameplay rules and authored clips are unchanged.
 
 ## Implementation
 
@@ -24,8 +42,8 @@ The tool and grip material remain active for the strike and are immediately
 updated when another animation starts or the strike finishes.
 
 `GameMode.cpp` invokes the strike only after queuing an eligible, confirmed
-marking request. It does not run on preview, empty/invalid selection, cancellation,
-release over an interface surface, repeated release events or unmarking.
+marking or unmarking request. It does not run on preview, empty/invalid selection,
+cancellation, release over an interface surface or repeated release events.
 The short animation does not delay the existing network request and does not
 claim server acceptance of a request that may subsequently become invalid.
 

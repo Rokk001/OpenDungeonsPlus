@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The hand-animation correction also plays the accepted downward strike when
+removing digging marks. All 781 release/selection checks pass, with two reproduced
+failures before the correction, as do Release/runtime/resource checks. The
+executable is dated September 6 at 22:31:33, 4,197,376 bytes, SHA-256
+`c41af657e9a8891fdaac306cff05e379a306977123a9d1c476718a43dc7a021d`.
+Logs use `hand-unmark-`; see [hand animation](HAND-DIG-ANIMATION.md).
+The user accepted marking; the unmarking retest remains pending. No game was launched.
+
 The minimap stacking correction passes all 680 installed-CEGUI click checks
 (640 failures before), Release build and runtime preparation. The changed layout
 is available through the existing runtime GUI junction; this fix changes no C++

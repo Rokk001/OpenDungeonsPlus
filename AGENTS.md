@@ -1,5 +1,12 @@
 # Project context for future sessions
 
+The hand-animation follow-up now also animates removing digging marks; the user
+accepted the marking strike and reported its absence on unmarking. Removing the
+single playback guard passes all 781 release/selection checks (two failures
+before), Release compilation, runtime preparation and headless resource checks.
+The executable is dated September 6 at 22:31:33 in BUILDING.md. Preserve current
+parallel minimap stacking work; the unmarking retest remains with the user.
+
 The latest hand follow-up is `feature/hand-dig-animation`, based on complete map
 checkpoint `a4d1b0f5`, retaining held display `6b248742` and all newer local work.
 It adds a downward closed-grip strike only after confirmed wall marking; 876
