@@ -1,5 +1,15 @@
 # Project context for future sessions
 
+The latest hand follow-up is `feature/hand-dig-animation`, based on complete map
+checkpoint `a4d1b0f5`, retaining held display `6b248742` and all newer local work.
+It adds a downward closed-grip strike only after confirmed wall marking; 876
+renderer and 781 release/selection checks pass, as do Release/runtime/resource
+checks. The executable is dated September 6 at 22:21:21 in BUILDING.md.
+See [the hand strike note](docs/development/HAND-DIG-ANIMATION.md). The user
+accepted the static grip; the new animation's game acceptance remains pending.
+Preserve the shared shadow checkout and its normal index; use an isolated index
+for this branch. No push or game launch was made. The broader roadmap remains open.
+
 ## Current Windows crash correction
 
 The latest combined work is `fix/windows-incremental-build`, merge `e1276f81`,
