@@ -66,6 +66,7 @@
 #include <OgreShadowCameraSetupLiSPSM.h>
 #include <OgreSkeleton.h>
 #include <OgreSkeletonInstance.h>
+#include <OgreTagPoint.h>
 #include <OgreSubEntity.h>
 #include <OgreSubMesh.h>
 #include <OgreRoot.h>
@@ -126,6 +127,13 @@ void createKeeperHandPoses(Ogre::Entity* hand)
                 frame->setRotation(sampled.getRotation());
                 frame->setTranslate(sampled.getTranslate());
                 frame->setScale(sampled.getScale());
+            }
+            if(pose == "Dig")
+            {
+                // Turn the gripping wrist so the tool emerges above the thumb.
+                Ogre::TransformKeyFrame* wrist = animation->createNodeTrack(
+                    skeleton->getBone("Hand1")->getHandle())->createNodeKeyFrame(0);
+                wrist->setRotation(Ogre::Quaternion(Ogre::Degree(120.0f), Ogre::Vector3::UNIT_Y));
             }
         }
         if(!hand->hasAnimationState(pose))
@@ -684,7 +692,10 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     addPickaxePrism(mHandPickaxe, {{0.042f,0.057f}, {0.085f,0.043f}, {0.05f,0.073f}},
         0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     mHandPickaxe->end();
-    keeperHandEnt->attachObjectToBone("Hand2", mHandPickaxe, Ogre::Quaternion::IDENTITY, Ogre::Vector3(0,0.03f,0.01f));
+    // The closed fingers wrap around the shaft across the palm, below its back.
+    Ogre::TagPoint* toolGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandPickaxe,
+        Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
+    toolGrip->setScale(0.6f, 0.6f, 0.6f);
     mHandPickaxe->setVisible(false);
     mHandKeeperNode->setScale(Ogre::Vector3::UNIT_SCALE * KEEPER_HAND_POS_Z);
     mHandKeeperNode->setPosition(0.0f, 0.0f, -KEEPER_HAND_POS_Z);
@@ -2828,6 +2839,9 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
         }
         as->setEnabled(false);
     }
+
+    if(animState != nullptr && ent->getName() == "keeperHandEnt")
+        ent->setMaterialName(animation == "Dig" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
 
     return animState;
 }
