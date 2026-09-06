@@ -12,6 +12,10 @@ of development.
 
 ### How to play
 
+The control panel groups Creatures, Rooms, Spells and Workshop beside the
+circular map at the bottom left. Press G to hide or reveal the panel content.
+Options provides help, research and player information as well as game settings.
+
 The panel above the action bar names the current action and its mouse controls;
 target feedback explains where the action is available and why an invalid attempt
 cannot proceed, while the selected action button stays highlighted.

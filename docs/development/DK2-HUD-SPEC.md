@@ -79,6 +79,33 @@ headless bounds tests support the user comparison; they do not replace it.
 
 No new game build or user acceptance has been performed for 1b at this stage.
 
+## Implementation checkpoint, September 6, 2026
+
+The initial HUD implementation is on `feature/dk2-hud`, based on `8141b5f1`.
+The bottom-left circular map, category order, measured panel geometry, Options
+access for additional functions and actual pickup counts are implemented.
+The existing renderer choices remain selectable; editor map presentation stays
+rectangular. A circular map rejects corner clicks before camera navigation.
+Tab text padding now follows the same scale as tab height and icon sizes.
+
+The regenerated headless CEGUI probe passes at 800x600, 1280x720, 1920x1080,
+3440x1440 and 3840x2160 with 80%, 100%, 120%, 100% scale transitions. It loads
+the actual layouts and checks action/category/utility hit targets, bounds,
+collapsed-panel input and access to all Options commands. Evidence is in
+`build/windows/dk2-hud-probe-results.log`; the initial Release compilation passes
+in `build/windows/dk2-hud-build.log`. The subsequent clean Release build also
+passes in `build/windows/dk2-hud-clean-build.log`; runtime preparation succeeded.
+No game was launched and no new user acceptance is claimed.
+
+This checkpoint does not certify all HUD-01..17 fidelity scenarios: detailed
+creature portrait/job/mood controls, final reference artwork, minimap corner
+actions and complete popup visual comparison still need their own evidence and
+implementation checks. The hand branch replaces the old action panel; it remains
+in this intermediate checkpoint so the preserved prototype can still execute.
+Version remains 0.7.1 because this is development work, not a release; README and
+these development notes describe the implemented controls. No changelog exists
+in the current checkout, and no upstream issue is claimed closed by this work.
+
 ## Concrete implementation contract
 
 The decision record in 0b supersedes the earlier pending-user gates above.
