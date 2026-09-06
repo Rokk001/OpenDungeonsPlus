@@ -82,13 +82,50 @@ The clean Windows Release build, final incremental build and runtime preparation
 September 6, 2026 at 15:16:16; SHA-256:
 `667e5f70ebe7d9822a67f53b526e8ee02adcf5065c394f2c86cf50be30be806f`.
 
+### Portrait rendering prerequisite
+
+The existing atlas has aggregate worker/fighter images. At this feature's
+baseline, creature models and materials exist, but no per-type portrait asset
+or thumbnail renderer was found. The new `source/render/CreaturePortrait.cpp`
+reuses those models and the minimap's existing Ogre-to-CEGUI image bridge.
+
+The portrait path renders each existing mesh in its Idle pose to a cached
+texture in a separate scene. Portrait material copies disable world shadows
+without modifying shared gameplay materials. Short, wide creatures need framing
+around their head rather than the standing-creature upper-body crop. Images are
+owned by the current CEGUI system; shutdown releases the associated Ogre textures.
+
+The isolated offscreen asset preview links the production renderer and image
+cache with the installed Ogre and CEGUI libraries. All 33 distinct configured
+meshes render nonempty images, repeat requests reuse the same image, temporary
+scenes and material copies are released, and world shadow parameters remain
+unchanged. CEGUI shutdown removes every cached portrait texture. Generated
+previews are under `build/reference-audit/portrait-*.mesh.png`; scripts and logs
+are `build/windows/creature-portrait-preview.cpp`,
+`build-creature-portrait-preview.ps1`, `creature-portrait-preview-build.log`,
+`creature-portrait-preview-results.log` and `creature-portrait-preview-stderr.log`.
+
+The helper initially omitted the metal material's shader include paths and the
+application's shader-system setup. Matching the existing application setup fixed
+those helper failures; no game shader or dependency was changed. Compiler/shader
+warnings are retained in the logs. Selected humanoid and non-humanoid previews
+were inspected. Separate CEGUI geometry renders of Kobold and Orc show the correct
+image and orientation (`portrait-gui-*.mesh.png` in the same preview directory).
+This does not establish every model's final framing or panel appearance. No game
+was launched.
+
+The Windows Release build and runtime preparation pass in
+`build/windows/creature-portrait-build.log` and `creature-portrait-runtime.log`.
+The prepared executable timestamp is September 6, 2026 at 15:43:01; SHA-256:
+`cb9421b005d5ca84cc463b73ea8702b33207ce53a71e48278dc641591bc25e40`.
+The version remains 0.7.1. No new panel controls are connected yet, so no visible
+feature or completed panel is claimed in the public README.
+
 ### Remaining panel integration
 
-Per-type portraits, views, count controls and pickup/focus bindings remain
-unimplemented. The existing atlas has aggregate worker/fighter images; creature
-models and their materials exist, but no per-type portrait asset or thumbnail
-renderer was found. Reuse those models when preparing portrait rendering rather
-than substituting one generic icon for every type.
+Per-type views, count controls and pickup/focus bindings remain unimplemented.
+Connect the cached portraits to those views; do not substitute a generic icon for
+every type. Final model framing and the rendered panel still require comparison.
 
 The existing UI refresh runs when player-seat data arrives, before the turn's
 entity refresh notifications. New activity counts must also refresh after entity
@@ -96,6 +133,11 @@ data is applied. Local pickup retains the creature in the map's creature list
 while removing its tile membership, so adding the local hand list again would
 double-count it. Other clients receive entity-removal notifications for pickups;
 population coverage must be checked before claiming complete per-type totals.
+In particular, `Creature::computeVisibleTiles` suppresses vision for knocked-out
+or imprisoned creatures, and `GameEntity::notifySeatsWithVision` removes entities
+from clients that lose tile vision. The client list alone therefore cannot prove
+complete owned-population counts. The next integration must resolve that data
+gap without revealing unseen world entities or mislabeling visible counts as totals.
 
 ### Mood checkpoint
 
