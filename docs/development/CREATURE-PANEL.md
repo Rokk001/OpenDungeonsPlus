@@ -8,7 +8,7 @@ The existing panel offers worker/fighter pickup buttons and eligible counts.
 The approved local HUD specification requires per-type views and accurate
 activity and mood data; the current controls alone do not cover those views.
 
-The server computes five mood levels, but creature snapshots and updates carry
+At the original panel baseline, the server computes five mood levels, but creature snapshots and updates carry
 only the overlay flags. Happy, Neutral and Upset therefore cannot be distinguished
 by the client. Changes between them also need to schedule a refresh even when
 the displayed overlay flags stay the same.
@@ -34,6 +34,70 @@ classification, per-type controls, portrait assets and user-visible acceptance
 remain open. No mood mechanics or AI decisions are changed by transmission.
 
 ## Verification
+
+### Activity data prerequisite
+
+The server executes the last action in each creature's stack. Movement may be
+stacked over a room job, digging, carrying or combat; a room-use action can also
+remain queued under food, payday or combat. The existing pickup priority lists
+therefore cannot provide truthful per-category UI state.
+
+Extend the same negotiated snapshot/update path with a separate activity
+capability. Transfer the executing action, the nearest non-movement action,
+the assigned room type and whether the creature is currently in that room.
+These are facts from the existing action stack, not new AI jobs. Room assignment
+alone does not establish active work. Unknown data, off-map/dead creatures and
+non-allied recipients must not be reported as idle. Sample state at the existing
+end-of-turn refresh, so room/task changes trigger updates without altering AI.
+
+Per-client confirmation at game/editor start preserves recordings from older
+clients, including the preceding mood-only version. UI category mapping and
+portrait controls remain separate remaining work within this feature branch.
+
+The implementation now samples these facts in `Creature::getActivity` and
+refreshes them through the existing entity notification. The room getter is
+read-only; pushing/popping actions, room use and AI scheduling are unchanged.
+The receiver clears unavailable, invalid or truncated activity to Unknown.
+Pickup also clears the cached state immediately, and the getter suppresses
+off-map/dead client state; dropping cannot restore the previous job before a
+fresh server update arrives.
+
+The extended C++ probe passes 1,049 checks: the preceding 713 mood checks and
+336 activity checks. It uses the production activity sampler, pickup and full refresh
+method in addition to the serializers/negotiation blocks. Coverage includes
+wandering, movement over digging/parking, room arrival, payday interrupting a
+queued room job, arena fighting with room context, removed room references,
+held/dead creatures, immediate pickup/drop cache invalidation, refresh suppression
+for unchanged state, ally visibility,
+all optional-feature combinations, truncated/invalid payloads and exact
+compatibility with both `2d3e79dc` and mood checkpoint `b25ac98c`.
+
+The same local probe scripts/logs listed below are reused. Action stacks,
+room/tile storage and queued network endpoints are test doubles; this does not
+claim a live simulation, multiplayer or visual acceptance run.
+
+The clean Windows Release build, final incremental build and runtime preparation succeeded in
+`build/windows/creature-activity-clean-build.log`, `creature-activity-final-build.log` and
+`creature-activity-runtime.log`. The prepared executable timestamp is
+September 6, 2026 at 15:16:16; SHA-256:
+`667e5f70ebe7d9822a67f53b526e8ee02adcf5065c394f2c86cf50be30be806f`.
+
+### Remaining panel integration
+
+Per-type portraits, views, count controls and pickup/focus bindings remain
+unimplemented. The existing atlas has aggregate worker/fighter images; creature
+models and their materials exist, but no per-type portrait asset or thumbnail
+renderer was found. Reuse those models when preparing portrait rendering rather
+than substituting one generic icon for every type.
+
+The existing UI refresh runs when player-seat data arrives, before the turn's
+entity refresh notifications. New activity counts must also refresh after entity
+data is applied. Local pickup retains the creature in the map's creature list
+while removing its tile membership, so adding the local hand list again would
+double-count it. Other clients receive entity-removal notifications for pickups;
+population coverage must be checked before claiming complete per-type totals.
+
+### Mood checkpoint
 
 The isolated Windows C++ probe passes 713 checks using the production creature
 snapshot/update serializers, mood transition method and optional negotiation
