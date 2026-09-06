@@ -1,5 +1,11 @@
 # Configuring and compiling on Windows
 
+The latest hand-feedback follow-up corrects creature highlighting after camera
+movement with a stationary pointer. Release compilation and runtime preparation
+pass in `build/windows/dk2-highlight-build.log` and `dk2-highlight-runtime.log`;
+the affected input probe passes all 34 assertions. See the correction record in
+[the hand-feedback note](DK2-HAND-FEEDBACK-SPEC.md).
+
 For the current `feature/dk2-hand-feedback` fork, the September 6 clean Release
 build, final incremental compilation and runtime preparation succeeded. It
 includes the reference baseline, HUD, minimap resize correction and hand feedback.

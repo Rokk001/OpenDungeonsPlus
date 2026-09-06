@@ -212,3 +212,30 @@ pickup/drop/slap and release over an open interface. Repeat after a live resolut
 change and 80/100/120 percent UI scaling; check the hand attachment, outlined walls,
 minimap center click and all Options commands. This is pending acceptance, not
 a request to choose a different reference or redesign the interface.
+
+## Follow-up: stationary-pointer creature highlighting
+
+The completion audit found an incomplete part of HAND-01: during a selected
+action or while holding an object, creature highlighting was still updated only
+by mouse-movement events. Camera movement refreshed the target tile and action
+icon, but left the old creature highlighted. Moving to empty terrain without
+moving the pointer could leave that highlight behind as well.
+
+The existing highlight update now runs after the per-frame world-position query
+for selected-action, held-object and paused states. Empty-hand hover continues to
+use the actual eligible pickup target. Interface entry clears highlighting;
+target selection and command confirmation rules are unchanged.
+
+The extended input probe reproduces three failures against `f2bdfd56` and passes
+all 34 assertions after the correction. Evidence:
+`build/windows/dk2-highlight-before-results.log` and
+`build/windows/dk2-highlight-after-results.log`. Release compilation and runtime
+preparation pass in `dk2-highlight-build.log` and `dk2-highlight-runtime.log`.
+This build supersedes the executable fingerprint recorded above; its SHA-256 is
+`a3abc957d16efcd256889b9273ed01b14a7086eb4481bd312ed8c580bcd38345`.
+
+Version remains 0.7.1; the README already describes the intended hover behavior,
+so this corrective follow-up needs no additional user-facing feature entry.
+Screenshot comparison and gameplay acceptance remain outstanding; the screenshot
+folder currently contains its README only. The proposed screenshot hotkey is a
+separate feature and has not been implemented by this correction.
