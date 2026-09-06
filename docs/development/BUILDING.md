@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The save-request correction adds the two existing optional string fields to
+three default-save callers. All 58 focused packet checks pass (six failures
+before), as do Release compilation, runtime preparation on retry and the
+headless OGRE resource check. The executable is dated September 6 at 23:33:45,
+is 4,202,496 bytes and has SHA-256
+`a0a0adee1a8dbcb33723839900c3d40316d0e0c6097f89c0a4d89c418e2078a5`.
+It retains the complete navigation checkpoint `11949bc2` and earlier fork work.
+Logs use `save-request-`; see [save request payload](SAVE-REQUEST-PAYLOAD.md).
+The game was not launched; actual saving and loading remain user QA.
+
 The navigation appearance update adds a four-layer circular minimap frame,
 reuses the removal symbol for Sell and replaces the text zoom label with a
 generated magnifier while preserving all existing controls. The map, overlay,
