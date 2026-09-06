@@ -9,7 +9,8 @@ scale. Release compilation and runtime preparation pass. The executable is dated
 September 6 at 23:05:49, is 4,201,984 bytes and has SHA-256
 `a72e1ef155a17c76e0bf517947980480ee1b00aa890e72844cb4b6bca864071e`.
 Logs use `navigation-appearance-`; see [navigation appearance](NAVIGATION-APPEARANCE.md).
-No game was launched; user gameplay and visual acceptance remain pending.
+No game was launched by the assistant. The user already accepted the underlying
+map controls; the new frame and symbols still require visual acceptance.
 
 The main-menu camera now preserves its authored horizontal framing across 4:3,
 widescreen and ultrawide viewports, and restores the prior gameplay field of view

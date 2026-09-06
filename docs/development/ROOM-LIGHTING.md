@@ -68,9 +68,9 @@ Windows Release compilation and runtime preparation pass in
 `room-lighting-build.log` and `room-lighting-runtime.log`. The prepared executable
 is dated September 6, 2026 at 19:38:14, SHA-256
 `26b63a78da44873fe3eb27c9dd843bb2305db2084bee434052a7da143ec0b187`.
-No game was launched; Linux runtime and manual gameplay/visual acceptance remain
-unverified. The user should compare rooms with the cursor moved away, then
-build/sell tiles, toggle shadows and check hidden terrain.
+No game was launched by the assistant. On September 6, the user confirmed that
+the lighting appearance is good. Linux runtime and the individual build/sell,
+shadow-toggle and hidden-terrain lifecycle scenarios remain unreported.
 
 Version remains 0.7.1: this development work does not define a release.
 The README and development index describe the new room illumination; there is

@@ -96,7 +96,8 @@ Release compilation and runtime preparation pass for the September 6, 20:39:04
 executable. Evidence: `camera-wheel-{native,sfml}-{before,results}.log`,
 `camera-wheel-game-build.log` and `camera-wheel-runtime.log` in `build/windows`.
 The original menu before/after evidence is `camera-menu-reset-before.log`
-and `camera-probe-results.log`. User confirmation in the game is still required.
+and `camera-probe-results.log`. On September 6, the user confirmed in-game that
+the intermediate zoom levels and camera controls behave correctly.
 
 This is a correction to the existing controls, without a release or new public
 binding: version 0.7.1 and README controls stay unchanged; no changelog exists.
