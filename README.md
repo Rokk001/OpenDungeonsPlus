@@ -26,6 +26,8 @@ The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature
 types, left-click a count to pick up a matching available creature, or right-click
 a portrait to move the camera to one of that type.
+Hold Ctrl and period while clicking a portrait or count to pick the highest
+available level, or Ctrl and comma to pick the lowest; counts retain their filter.
 
 The hand points at pickup targets and holds a pickaxe over diggable walls,
 which are outlined on hover.
