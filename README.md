@@ -15,6 +15,10 @@ of development.
 The control panel groups Creatures, Rooms, Spells and Workshop beside the
 circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
+With edge scrolling enabled, the camera also scrolls at screen edges covered by
+the fixed HUD. New messages flash the Messages button; left-click it to read
+them and right-click to dismiss read messages. Save opens the message surface
+for the server's confirmation or error.
 
 The hand points at pickup targets and holds a pickaxe over diggable walls.
 It shows the selected action icon or a prohibition sign for an invalid
