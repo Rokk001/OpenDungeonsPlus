@@ -7,6 +7,15 @@ Write and maintain all project documentation in English.
 Use English for Git-related text, including commit messages, pull request titles,
 descriptions and review comments.
 
+## Product reference
+
+Dungeon Keeper 2 is the binding reference for all roadmap-driven gameplay,
+controls, interface, feedback, visual and audio changes. Read the
+[improvement roadmap](docs/development/IMPROVEMENT-ROADMAP.md) before planning or
+implementing them. Reproduce evidenced reference behavior; do not invent a modern
+alternative or fill missing evidence with assumptions. Preserve completed points
+0, 1 and 2; their corrective extensions are 0b, 1b and 2b.
+
 ## Project setup
 
 Always implement new requirements on the user's latest complete fork state,
@@ -23,11 +32,17 @@ Before working on this project, read:
 3. [Development documentation index](docs/development/README.md); follow the
    workflow and task notes when relevant to the request.
 
-The current branch is `feature/action-state-feedback`, continuing from the
-accepted GUI-scaling fork state. The user stopped this goal to redesign the plan
-and requested a commit preserving the current prototype; do not resume its
-implementation without new instructions. Read [action feedback](docs/development/ACTION-STATE-FEEDBACK.md)
-for the preserved implementation, build evidence and rejected permanent panel.
+The user has now authorized roadmap items 0b, 1b and 2b as the new work scope,
+with a separate branch per item. Current work is `docs/dk2-reference-baseline`,
+created from the complete `feature/action-state-feedback` checkpoint `11c4209e`
+and retaining the subsequent roadmap and agent-rule changes. Read the
+[reference baseline](docs/development/DK2-REFERENCE-BASELINE.md),
+[HUD specification](docs/development/DK2-HUD-SPEC.md) and
+[hand-feedback specification](docs/development/DK2-HAND-FEEDBACK-SPEC.md).
+Reference evidence and compatibility decisions must be resolved before dependent
+implementation; do not invent the missing details. The earlier prototype stays
+preserved in [action feedback](docs/development/ACTION-STATE-FEEDBACK.md); its
+permanent-label design is not the target for the new work.
 
 Windows development is organized on `feature/windows-support` in this fork.
 The related work is split into a local branch stack: `feature/windows-support`,
