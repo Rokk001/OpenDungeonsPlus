@@ -2477,6 +2477,8 @@ void GameMode::handlePlayerActionSelectTile()
     clientNotification->mPacket << inputManager.mLStartDragX << inputManager.mLStartDragY;
     clientNotification->mPacket << mDigSetBool;
     ODClient::getSingleton().queueClientNotification(clientNotification);
+    if(mDigSetBool)
+        RenderManager::getSingleton().rrPlayDigAnimation();
     mPlayerSelection.setCurrentAction(SelectedAction::none);
 }
 

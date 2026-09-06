@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+The downward hand-strike follow-up passes Release compilation, runtime
+preparation, 876 renderer checks, 781 release/selection checks and the headless
+resource check. The executable is dated September 6 at 22:21:21, 4,197,376 bytes,
+SHA-256 `60a29defc506b4940cb9699d407715c705b7c84596c2af36800a4ca1aab54f17`.
+It retains the full map/held-creature fork at `a4d1b0f5` and current local work.
+Logs use `hand-dig-` under `build/windows/`; see
+[the implementation note](HAND-DIG-ANIMATION.md). No game was launched;
+the new strike's gameplay/visual acceptance remains with the user.
+
 The map viewport follow-up draws a thin white camera outline on the minimap
 and full map without overwriting terrain colours. All 1,028 viewport checks,
 667 direction regressions and 11 composed map/detail checks pass. Release build

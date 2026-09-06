@@ -69,6 +69,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Held-creature display](HELD-CREATURE-DISPLAY.md): one gripped creature and
   ordered square portraits, with transform, lifecycle and input verification.
 
+- [Downward hand strike](HAND-DIG-ANIMATION.md): closed-grip motion on confirmed
+  wall marking, input guards, existing animation reuse and verification limits.
+
 ## Adding further notes
 
 Add new files here as needed and link them above, for example:

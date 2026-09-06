@@ -69,3 +69,8 @@ Windows build correction must restore consistent objects before another test.
 
 Version remains 0.7.1 because no release was requested. README controls are
 unchanged, and no changelog exists; this note records the correction.
+
+The user subsequently confirmed that the hand with the digging tool looks good.
+This accepts the static tool grip. A suggested swing on a wall click is a
+separate follow-up; it is not evidence for animation timing or acceptance of
+other hand states.
