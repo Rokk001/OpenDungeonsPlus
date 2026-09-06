@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+The held-creature presentation and separate portrait-clipping correction pass
+the Windows Release build and runtime preparation. The executable at
+`build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 21:30:54,
+size 4,193,280 bytes, SHA-256
+`26919b405f7cd92a5861d17e28a84f516cddfe5ba35e44d80c36553ecdaabb87`.
+It retains the complete camera/hand fork and newer parallel map-navigation work.
+All 77 renderer, 3,535 interface and 227 rotation/protocol checks pass, as do
+33 portrait renders, twelve grip-layer comparisons and the headless resource
+check. Logs use `held-display-` and `held-icon-` under `build/windows/`.
+No game was launched; user gameplay acceptance remains open. See
+[held-creature display](HELD-CREATURE-DISPLAY.md) and
+[portrait clipping](CREATURE-PORTRAIT-CLIPPING.md).
+
 The separate portrait-clipping correction passes the interleaved Ogre/CEGUI
 render check for all 33 configured meshes, Windows Release compilation and
 runtime preparation. The shared executable is dated September 6 at 21:30:54,

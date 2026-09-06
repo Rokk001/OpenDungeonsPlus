@@ -24,6 +24,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntity.h"
+#include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
 #include "entities/MovableGameEntity.h"
 #include "entities/RenderedMovableEntity.h"
@@ -108,7 +109,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
     Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
     const Ogre::Animation* pickup = skeleton->getAnimation("Pickup");
     // Reuse the existing rig's closed fingers; the index stays extended when pointing.
-    for(const std::string pose : {"Point", "Dig"})
+    for(const std::string pose : {"Point", "Dig", "Hold"})
     {
         if(!skeleton->hasAnimation(pose))
         {
@@ -116,9 +117,9 @@ void createKeeperHandPoses(Ogre::Entity* hand)
             for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
             {
                 const std::string& name = skeleton->getBone(b)->getName();
-                const bool finger = name.find("Middle") == 0 || name.find("Midlle") == 0 ||
-                    name.find("Ring") == 0 || name.find("Little") == 0 || name.find("Thumb") == 0 ||
-                    (pose == "Dig" && name.find("Index") == 0);
+                const bool finger = (pose != "Hold" && (name.find("Middle") == 0 || name.find("Midlle") == 0 ||
+                    name.find("Ring") == 0 || name.find("Little") == 0)) || name.find("Thumb") == 0 ||
+                    ((pose == "Dig" || pose == "Hold") && name.find("Index") == 0);
                 if(!finger || !pickup->hasNodeTrack(b))
                     continue;
                 Ogre::TransformKeyFrame sampled(nullptr, 0);
@@ -601,8 +602,9 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 }
 
 
-void RenderManager::stopGameRenderer(GameMap*)
+void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    rrEnableHeldCreatureDisplay(false, gameMap->getLocalPlayer());
     rrDrawTilePreview({}, Ogre::ColourValue::White);
     rrSetHandPose(false, false);
     // We do not remove the entities from mDummyEntities as it is a workaround avoiding a crash and removing
@@ -669,6 +671,10 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     handModelNode->setOrientation(Ogre::Quaternion(Ogre::Degree(65.0f), Ogre::Vector3::UNIT_Z) *
         Ogre::Quaternion(Ogre::Degree(35.0f), Ogre::Vector3::UNIT_Y));
     handModelNode->attachObject(keeperHandEnt);
+    mHeldCreatureGrip = mSceneManager->createSceneNode("KeeperHeldCreatureGrip");
+    mHeldCreatureStorage = mSceneManager->createSceneNode("KeeperHeldCreatureStorage");
+    if(mHandKeeperHandVisibility == 0)
+        mHandKeeperNode->addChild(mHeldCreatureGrip);
     mHandPickaxe = mSceneManager->createManualObject("KeeperHandPickaxe");
     mHandPickaxe->setCastShadows(false);
     mHandPickaxe->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
@@ -917,6 +923,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             mHandAnimationState = setEntityAnimation(ent, mHandPose, true);
         }
     }
+    rrUpdateHeldCreature();
 }
 
 Ogre::TexturePtr RenderManager::createPerlinTexture()
@@ -1715,7 +1722,8 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
         Ogre::SceneNode* creatureNode = curCreature->getEntityNode();
         Ogre::Entity* ent = mSceneManager->getEntity(creatureName);
         creatureNode->detachObject(ent);
-        mCreatureSceneNode->removeChild(creatureNode);
+        if(creatureNode->getParentSceneNode() != nullptr)
+            creatureNode->getParentSceneNode()->removeChild(creatureNode);
         curCreature->setParentSceneNode(nullptr);
         curCreature->setEntityNode(nullptr);
         mSceneManager->destroyEntity(ent);
@@ -1895,7 +1903,7 @@ void RenderManager::rrDropHand(GameEntity* curEntity, Player* localPlayer)
 
     // Detach the entity from the "hand" scene node
     Ogre::SceneNode* curEntityNode = curEntity->getEntityNode();
-    mHandKeeperNode->removeChild(curEntityNode);
+    curEntityNode->getParentSceneNode()->removeChild(curEntityNode);
 
     // We put the creature back to the default render queue
     changeRenderQueueRecursive(curEntityNode, Ogre::RenderQueueGroupID::RENDER_QUEUE_MAIN);
@@ -1918,13 +1926,74 @@ void RenderManager::rrOrderHand(Player* localPlayer)
     const std::vector<GameEntity*>& objectsInHand = localPlayer->getObjectsInHand();
     for (GameEntity* tmpEntity : objectsInHand)
     {
+        Ogre::SceneNode* node = tmpEntity->getEntityNode();
+        const bool creature = mHeldCreatureDisplayEnabled &&
+            tmpEntity->getObjectType() == GameEntityType::creature;
+        Ogre::SceneNode* parent = creature ? (i == 0 ? mHeldCreatureGrip : mHeldCreatureStorage) : mHandKeeperNode;
+        if(node->getParentSceneNode() != parent)
+        {
+            node->getParentSceneNode()->removeChild(node);
+            parent->addChild(node);
+        }
         Ogre::Vector3 pos;
         pos.x = static_cast<Ogre::Real>(i % 6 + 1) * KEEPER_HAND_CREATURE_PICKED_OFFSET;
         pos.y = static_cast<Ogre::Real>(i / 6) * KEEPER_HAND_CREATURE_PICKED_OFFSET;
         pos.z = 0;
-        tmpEntity->getEntityNode()->setPosition(pos);
+        node->setPosition(creature ? Ogre::Vector3::ZERO : pos);
         ++i;
     }
+    rrSetHandPose(mHandPose == "Point", mHandPose == "Dig");
+    rrUpdateHeldCreature();
+}
+
+void RenderManager::rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer)
+{
+    mHeldCreatureDisplayEnabled = enabled;
+    if(localPlayer != nullptr)
+        rrOrderHand(localPlayer);
+}
+
+void RenderManager::rrUpdateHeldCreature()
+{
+    if(!mHeldCreatureDisplayEnabled || mHeldCreatureGrip->numChildren() == 0)
+        return;
+
+    Ogre::SceneNode* node = static_cast<Ogre::SceneNode*>(mHeldCreatureGrip->getChild(0));
+    Ogre::Entity* creature = static_cast<Ogre::Entity*>(node->getAttachedObject(0));
+    Ogre::Entity* hand = mSceneManager->getEntity("keeperHandEnt");
+    hand->_updateAnimation();
+    creature->_updateAnimation();
+
+    Ogre::SkeletonInstance* skeleton = hand->getSkeleton();
+    Ogre::Vector3 grip = (skeleton->getBone("Index3")->_getDerivedPosition() +
+        skeleton->getBone("Thumb3")->_getDerivedPosition()) * 0.5f;
+    Ogre::SceneNode* model = hand->getParentSceneNode();
+    grip = model->getPosition() + model->getOrientation() * (model->getScale() * grip);
+
+    const Ogre::AxisAlignedBox& bounds = creature->getMesh()->getBounds();
+    Ogre::Vector3 attachment = bounds.getCenter();
+    attachment.z = bounds.getMaximum().z;
+    if(creature->hasSkeleton())
+    {
+        Ogre::SkeletonInstance* rig = creature->getSkeleton();
+        for(unsigned short b = 0; b < rig->getNumBones(); ++b)
+        {
+            Ogre::Bone* bone = rig->getBone(b);
+            std::string name = bone->getName();
+            Ogre::StringUtil::toLowerCase(name);
+            if(name == "head" || Ogre::StringUtil::endsWith(name, "_head"))
+            {
+                attachment = bone->_getDerivedPosition();
+                attachment.z = (attachment.z + bounds.getMaximum().z) * 0.5f;
+                break;
+            }
+        }
+    }
+
+    // The wrapper changes only the held view; the entity keeps its world orientation.
+    const Ogre::Quaternion orientation(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X);
+    mHeldCreatureGrip->setOrientation(orientation * node->getOrientation().Inverse());
+    mHeldCreatureGrip->setPosition(grip - orientation * (node->getScale() * attachment));
 }
 
 void RenderManager::rrRotateHand(Player* localPlayer)
@@ -2543,12 +2612,17 @@ void RenderManager::rrTemporaryDisplayCreaturesTextOverlay(Creature* creature, O
 
 void RenderManager::rrToggleHandSelectorVisibility()
 {
+    // Keep the held creature's own visibility flags intact while hiding the hand.
+    if(mHeldCreatureGrip->getParentSceneNode() != nullptr)
+        mHandKeeperNode->removeChild(mHeldCreatureGrip);
     if((mHandKeeperHandVisibility & 0x01) == 0)
         mHandKeeperHandVisibility |= 0x01;
     else
         mHandKeeperHandVisibility &= ~0x01;
 
     mHandKeeperNode->setVisible(mHandKeeperHandVisibility == 0);
+    if(mHandKeeperHandVisibility == 0)
+        mHandKeeperNode->addChild(mHeldCreatureGrip);
 }
 
 void RenderManager::setEntityOpacity(Ogre::Entity* ent, float opacity)
@@ -2669,7 +2743,8 @@ void RenderManager::moveWorldCoords(Ogre::Real x, Ogre::Real y)
 
 void RenderManager::rrSetHandPose(bool pointing, bool digging)
 {
-    mHandPose = digging ? "Dig" : (pointing ? "Point" : "Idle");
+    const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
+    mHandPose = digging ? "Dig" : (pointing ? "Point" : (holding ? "Hold" : "Idle"));
     if(mHandAnimationState != nullptr && mHandAnimationState->getLoop() &&
        mHandAnimationState->getAnimationName() != mHandPose)
         mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), mHandPose, true);
@@ -2841,7 +2916,7 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
     }
 
     if(animState != nullptr && ent->getName() == "keeperHandEnt")
-        ent->setMaterialName(animation == "Dig" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
+        ent->setMaterialName(animation == "Dig" || animation == "Hold" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
 
     return animState;
 }

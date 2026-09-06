@@ -21,4 +21,7 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
 //! Return the cached portrait image, owned by the current CEGUI system.
 const CEGUI::Image& getCreaturePortraitImage(const std::string& meshName);
 
+//! Return a square crop sharing the cached portrait texture.
+const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName);
+
 #endif

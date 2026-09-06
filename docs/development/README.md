@@ -66,6 +66,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
   interface clipping before generating a cached portrait.
 
+- [Held-creature display](HELD-CREATURE-DISPLAY.md): one gripped creature and
+  ordered square portraits, with transform, lifecycle and input verification.
+
 ## Adding further notes
 
 Add new files here as needed and link them above, for example:
