@@ -49,6 +49,17 @@ It retains the complete held-creature and portrait-clipping work at `6b248742`.
 No game was launched. User gameplay/visual acceptance and measured reference
 transitions remain open; see [map navigation](MAP-NAVIGATION.md).
 
+The map-navigation checkpoint adds a full map, pointer detail, immediate map
+relocation, minimap zoom and owned-room/fight focus. Release build and runtime
+preparation pass in `map-navigation-build.log` and `map-navigation-runtime.log`.
+The executable is dated September 6 at 21:33:40, size 4,193,280 bytes,
+SHA-256 `3c939f6cc5eb005ee376be4828dc0a5ef149b20b5209330f3790ce9bb5a3fec1`. The installed GUI, map-renderer, camera, culling,
+palette and detail-lighting checks pass; see [map navigation](MAP-NAVIGATION.md)
+for exact counts and verification boundaries. The shared executable includes
+parallel held-creature work, which is excluded from the map contribution.
+Direction markers and further navigation acceptance remain open; no game was
+launched and user startup/visual acceptance is still required.
+
 The held-creature presentation and separate portrait-clipping correction pass
 the Windows Release build and runtime preparation. The executable at
 `build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 21:30:54,
@@ -61,27 +72,6 @@ check. Logs use `held-display-` and `held-icon-` under `build/windows/`.
 No game was launched; user gameplay acceptance remains open. See
 [held-creature display](HELD-CREATURE-DISPLAY.md) and
 [portrait clipping](CREATURE-PORTRAIT-CLIPPING.md).
-
-The separate portrait-clipping correction passes the interleaved Ogre/CEGUI
-render check for all 33 configured meshes, Windows Release compilation and
-runtime preparation. The shared executable is dated September 6 at 21:30:54,
-size 4,193,280 bytes, SHA-256
-`26919b405f7cd92a5861d17e28a84f516cddfe5ba35e44d80c36553ecdaabb87`.
-It also contains newer local held-display and parallel map work. Logs are
-`held-icon-preview-results.log`, `held-display-release-build.log` and
-`held-display-runtime.log` in `build/windows/`. No game was launched. See
-[portrait clipping](CREATURE-PORTRAIT-CLIPPING.md) for the diagnosis and scope.
-
-The map-navigation checkpoint adds a full map, pointer detail, immediate map
-relocation, minimap zoom and owned-room/fight focus. Release build and runtime
-preparation pass in `map-navigation-build.log` and `map-navigation-runtime.log`.
-The executable is dated September 6 at 21:33:40, size 4,193,280 bytes,
-SHA-256 `3c939f6cc5eb005ee376be4828dc0a5ef149b20b5209330f3790ce9bb5a3fec1`. The installed GUI, map-renderer, camera, culling,
-palette and detail-lighting checks pass; see [map navigation](MAP-NAVIGATION.md)
-for exact counts and verification boundaries. The shared executable includes
-parallel held-creature work, which is excluded from the map contribution.
-Direction markers and further navigation acceptance remain open; no game was
-launched and user startup/visual acceptance is still required.
 
 The camera follow-up fixes native wheel units so each notch retains intermediate
 zoom levels, and stops inherited gameplay movement before scripted menu shots.

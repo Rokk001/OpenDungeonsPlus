@@ -1,5 +1,34 @@
 # Contributing to the original project
 
+## Local workspace checkpoint, September 6
+
+The user's priority commit request found 173 entries against the old shared
+shadow checkout; 157 already matched the complete functional branch stack.
+The latest functional commits are minimap stacking `232ac515` and the hand
+unmarking correction `711c694e`, on their respective work branches. Remaining
+local development notes and the requested move of private planning documents
+are preserved on `chore/fork-checkpoint`, which has no upstream PR.
+
+The normal checkout/index are aligned to that complete checkpoint without
+rewriting branch history or replacing working files. The user's `.gitignore`
+is excluded from the commits; the private files remain in `docs/internal/`.
+Subsequent tasks must start from this latest complete state plus newer edits.
+Older instructions to leave the shared checkout on the shadow branch describe
+the earlier parallel-work phase, not the current baseline.
+
+## Inspect existing behavior before implementation
+
+For every request, first search the current complete fork for an existing
+implementation, inspect its actual code path and read the relevant documentation.
+Identify how it is invoked, where it stores its data and what it already covers.
+Record the existing solution and any concrete gap in the task note before coding.
+
+If the request is already covered, use and document the existing functionality.
+If something is missing, extend that implementation wherever it can satisfy the
+request. Do not create a parallel feature, storage location or workflow without
+first establishing why the existing solution cannot be reused or extended.
+Preserve unrelated work while removing any explicitly rejected duplicate.
+
 ## Mandatory pull request rule
 
 Create pull requests only for functional implementations: features and bug fixes.

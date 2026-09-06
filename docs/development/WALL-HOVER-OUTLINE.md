@@ -42,10 +42,14 @@ Local evidence:
 - Release compilation: `build/windows/wall-outline-build.log`.
 - Runtime preparation: `build/windows/wall-outline-runtime.log`.
 
-Open `build/windows/opendungeons-plus.exe` directly. The user must still verify
-the visible outline while hovering, dragging over walls, cancelling and changing
-display scale/resolution; no game was launched by the assistant. The earlier
-HUD fixes remain part of this executable and retain the user's acceptance.
+Open `build/windows/opendungeons-plus.exe` directly. September 6 user captures
+show visible hover and area-selection outlines followed by marked walls; the
+user then confirmed completed unmarking, working right-click cancellation and
+markings behaving as desired. This accepts the reported marking workflow.
+Release over the GUI and display scale/resolution changes were not individually
+confirmed; no game was launched by the assistant. The earlier HUD fixes remain
+part of this executable and retain the user's acceptance; consult BUILDING.md
+for the latest executable checkpoint.
 
 Version stays 0.7.1 because this is a development correction, not a release.
 README and the build/development notes describe the affected behavior; no

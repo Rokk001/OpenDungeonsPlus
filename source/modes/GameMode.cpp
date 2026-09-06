@@ -2124,7 +2124,8 @@ void GameMode::refreshActionFeedback(float elapsed)
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
          (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat())));
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging);
-    refreshHeldCreatureIcons();}
+    refreshHeldCreatureIcons();
+}
 
 void GameMode::refreshHeldCreatureIcons()
 {
