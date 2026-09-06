@@ -124,6 +124,8 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
         viewport->setOverlaysEnabled(false);
         viewport->setShadowsEnabled(false);
         viewport->setBackgroundColour(Ogre::ColourValue(0.025f, 0.018f, 0.015f));
+        // A preceding GUI draw can leave its scissor rectangle active on this target.
+        Ogre::Root::getSingleton().getRenderSystem()->setScissorTest(false);
         target->update();
         target->removeAllViewports();
     }
