@@ -1,6 +1,14 @@
 # Windows development environment
 
-For the current `feature/gui-scaling` work, the September 5 clean Release build
+Current work is `feature/action-state-feedback`, continuing from the user's
+accepted GUI-scaling baseline. On September 6, 2026 the Release build and runtime
+preparation succeeded, including the final input corrections (executable timestamp
+01:27:58 local time). Headless checks pass; a responsive game process and active
+simulation were observed at 09:44. The user rejected the permanent feedback
+panel, stopped the goal to redesign the plan and requested a checkpoint commit.
+See [action feedback and verification status](ACTION-STATE-FEEDBACK.md).
+
+For the preceding `feature/gui-scaling` work, the September 5 clean Release build
 succeeded, but CMake regeneration restored invalid runtime resource paths.
 The existing runtime preparation script corrected them at 23:23:55; the isolated
 OGRE resource probe passes, and the user confirmed startup in the 23:27 run.

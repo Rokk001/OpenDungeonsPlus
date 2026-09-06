@@ -31,6 +31,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   with open upstream issues and pull requests.
 - [GUI scaling](GUI-SCALING.md): scale policy, implementation details,
   automated checks and the required manual verification matrix.
+- [Action state and target feedback](ACTION-STATE-FEEDBACK.md): current action,
+  selected buttons, valid targets, failure reasons, build/probe evidence and the
+  prototype checkpoint stopped by the user pending a redesigned plan.
 - [Restoring prerequisites](WINDOWS-PREREQUISITES.md): sources,
   checksums, installation scripts, order and resolved installation problems.
 
@@ -45,5 +48,6 @@ Add new files here as needed and link them above, for example:
 For technical findings, record the affected code, verification steps and
 open questions; label statements that have not yet been verified accordingly.
 
-The collection is initially intended for our own fork; we decide which documentation
-to include in the original project for each pull request.
+This collection is internal documentation for our own fork and is not an upstream
+contribution. Pull requests are reserved for functional implementations; never
+create a documentation-only PR for these notes or the roadmap.

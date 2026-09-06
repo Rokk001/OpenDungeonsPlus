@@ -1,11 +1,73 @@
 # Contributing to the original project
 
+## Mandatory pull request rule
+
+Create pull requests only for functional implementations: features and bug fixes.
+Never submit documentation-only PRs. Internal development notes, agent rules and
+the product improvement roadmap stay in the fork and outside upstream contributions.
+
+Create one pull request per completed implementation branch/task; never combine multiple
+work branches into a collection or umbrella PR. Each PR must describe its own
+task, dependencies, issue coverage and verification limits.
+
+For an existing branch stack, link the predecessors and provide a direct
+comparison against the preceding work branch. When the user requests finalization,
+mark completed functional contributions ready for review; dependencies alone do
+not require leaving completed work as drafts.
+GitHub compares fork PRs against a branch in the target repository: until the
+predecessors merge, its default comparison can also contain those prerequisite
+commits. State that explicitly; do not present the cumulative diff as one task.
+After the predecessor merges, recheck the base and remaining diff before merging
+the dependent PR: it must contain only its own contribution, without internal
+documentation. Never merge the cumulative stack as an umbrella contribution.
+
+Preserve the latest complete fork, accepted implementation and any uncommitted
+work throughout PR preparation.
+
+Backup/recovery branches are not submitted as separate contributions, and work
+still in progress is not included in the PRs for completed tasks.
+Use issue-closing keywords only when a PR resolves the entire reported issue.
+
+On September 6, 2026, the user required the combined upstream PR #46 to be
+withdrawn and replaced with separate PRs for completed implementation branches.
+The mistakenly submitted roadmap PR #52 was closed because it is internal
+documentation. The user subsequently requested that all six functional PRs be
+marked ready for review.
+This rule supersedes any earlier guidance suggesting a combined contribution.
+
+## Current upstream submissions
+
+As verified on September 6, 2026, [PR #46](https://github.com/tomluchowski/OpenDungeonsPlus/pull/46)
+is closed and the following separate PRs replace it:
+
+| Work branch | Pull request | Submission state |
+| --- | --- | --- |
+| `feature/windows-support` | [#47](https://github.com/tomluchowski/OpenDungeonsPlus/pull/47) | Open for review |
+| `fix/dynamic-shadows` | [#48](https://github.com/tomluchowski/OpenDungeonsPlus/pull/48) | Open for review; predecessor #47 |
+| `fix/settings-option-duplicates` | [#49](https://github.com/tomluchowski/OpenDungeonsPlus/pull/49) | Open for review; predecessor #48 |
+| `feature/live-settings` | [#50](https://github.com/tomluchowski/OpenDungeonsPlus/pull/50) | Open for review; predecessor #49 |
+| `feature/progressive-edge-scrolling` | [#51](https://github.com/tomluchowski/OpenDungeonsPlus/pull/51) | Open for review; predecessor #50 |
+| `docs/improvement-roadmap` | [#52](https://github.com/tomluchowski/OpenDungeonsPlus/pull/52) | Closed; internal documentation |
+| `feature/gui-scaling` | [#53](https://github.com/tomluchowski/OpenDungeonsPlus/pull/53) | Open for review; predecessor #51 |
+
+Each PR uses the already published work-branch head. Its description states its
+own issue coverage, verification limits and, where applicable, a direct comparison
+against its predecessor. The dependency sequence preserves the existing Git
+history; it does not claim that every topic technically requires every earlier
+topic. The default comparisons still include prerequisite commits and fork notes;
+those must be excluded from each final merge. PR #52 is not a merge prerequisite.
+No source changes, rebase, force-push or new game build were introduced
+to replace the combined PR. The unfinished action-feedback work stays local.
+
+These submission states supersede older "not yet published" statements in the
+historical Windows setup notes below; recheck GitHub before further PR actions.
+
 ## Working independently in the fork
 
 The project can be developed independently in your own fork; joining
 the original project's team or having write permissions there is not necessary.
-The actual personal write permissions to the original repository have not
-been checked.
+On September 6, 2026, GitHub reported read access without push or administrative
+permissions to the original repository for this account.
 
 The original project is needed as upstream when you want to incorporate its new
 changes or contribute your own changes back through a pull request;
@@ -198,7 +260,8 @@ pull request.
 
 ## Documentation in the fork and in the pull request
 
-Personal development notes are stored under `docs/development/`. For a contribution to
-the original project, explicitly include only the relevant documentation on the
-work branch; the directory name alone does not exclude files from a
-pull request.
+Personal development notes are stored under `docs/development/` and remain in
+the fork. Do not create documentation-only PRs or submit the internal roadmap,
+agent rules or local installation notes upstream. Review the actual PR diff:
+neither a directory name nor a separate documentation commit excludes those
+files automatically.
