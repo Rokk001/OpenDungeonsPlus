@@ -17,6 +17,8 @@ circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
 Select the question-mark button beside the minimap, then click a creature to
 open its information. Click the button again or right-click the world to cancel.
+Select the currency button beside the minimap, then click an owned room tile,
+trap or door to sell it. The button or a world right-click cancels sale mode.
 Press F10 to toggle Options. Escape closes the frontmost open dialog or list,
 or returns from a main-menu submenu to the preceding screen.
 With edge scrolling enabled, the camera also scrolls at screen edges covered by
