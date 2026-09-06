@@ -128,8 +128,7 @@ void ODFrameListener::windowResized(Ogre::RenderWindow* rw)
     if(width == 0 || height == 0)
         return;
 
-    Ogre::Camera* camera = mCameraManager.getActiveCamera();
-    camera->setAspectRatio(static_cast<Ogre::Real>(width) / static_cast<Ogre::Real>(height));
+    mCameraManager.setViewportSize(width, height);
 
     mModeManager->getInputManager().setWidthAndHeight(width, height);
     //Notify CEGUI that the display size has changed.
@@ -585,6 +584,7 @@ void ODFrameListener::createMainMenuScene()
         return;
 
     mIsMainMenuCreated = true;
+    mCameraManager.setMainMenuProjection(true);
     mMainScene->resetMenu(mCameraManager, *mRenderManager);
 }
 
@@ -595,6 +595,7 @@ void ODFrameListener::freeMainMenuScene()
 
     mIsMainMenuCreated = false;
     mMainScene->freeMenu(mCameraManager, *mRenderManager);
+    mCameraManager.setMainMenuProjection(false);
 }
 
 void ODFrameListener::updateMenuScene(Ogre::Real timeSinceLastFrame)
