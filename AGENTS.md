@@ -1,5 +1,23 @@
 # Project context for future sessions
 
+## Mandatory contribution scope
+
+Each pull request must deliver one coherent, independently reviewable product
+outcome. Include the implementation, its required enabling work, tests and any
+corrections needed to make that outcome meet its acceptance criteria. Do not
+open separate pull requests for internal implementation steps, individual
+commits or prerequisites that have no useful standalone result.
+
+Keep unrelated features and unrelated bug fixes in separate branches and pull
+requests. Do not mix an independent bug fix into a feature contribution. A fix
+that only completes an unmerged feature belongs to that feature's pull request;
+a pre-existing or separately releasable bug requires its own pull request.
+Preserve the complete local fork while preparing focused contribution branches.
+
+Before publishing, verify that the outcome is complete, review its dependency
+and issue overlap, exclude private fork material and describe validation limits.
+Internal documentation and agent rules must not receive upstream pull requests.
+
 ## Current workspace checkpoint
 
 The user requested priority commits for all pending project changes. The complete

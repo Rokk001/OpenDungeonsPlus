@@ -31,13 +31,32 @@ Preserve unrelated work while removing any explicitly rejected duplicate.
 
 ## Mandatory pull request rule
 
+Create one pull request for one coherent, independently reviewable product
+outcome. Include the implementation, required enabling work, tests and any
+corrections needed for that outcome to meet its acceptance criteria. Do not
+create a pull request for every commit, helper, protocol field, rendering layer
+or other internal implementation step when those parts have no useful standalone
+result. This avoids both aggregate pull requests and a flood of fragmentary ones.
+
+Keep unrelated features and unrelated bug fixes in separate branches and pull
+requests. Never place an independent bug fix in a feature contribution merely
+because both were developed in the same local stack. A correction that only
+completes an unmerged feature remains part of that feature's pull request; a
+pre-existing or separately releasable defect gets its own bug-fix pull request.
+Preserve the complete local fork while assembling these focused contributions.
+
+Before publishing, confirm that the user-facing outcome is complete, review its
+dependency and issue overlap, exclude private fork material, and state the real
+validation and acceptance limits. Dependencies require explicit links and a
+focused comparison; they do not justify bundling unrelated outcomes.
+
 Create pull requests only for functional implementations: features and bug fixes.
 Never submit documentation-only PRs. Internal development notes, agent rules and
 the product improvement roadmap stay in the fork and outside upstream contributions.
 
-Create one pull request per completed implementation branch/task; never combine multiple
+Create one pull request per completed coherent outcome; never combine unrelated
 work branches into a collection or umbrella PR. Each PR must describe its own
-task, dependencies, issue coverage and verification limits.
+scope, dependencies, issue coverage and verification limits.
 
 For an existing branch stack, link the predecessors and provide a direct
 comparison against the preceding work branch. When the user requests finalization,
@@ -78,6 +97,31 @@ is closed and the following separate PRs replace it:
 | `feature/progressive-edge-scrolling` | [#51](https://github.com/tomluchowski/OpenDungeonsPlus/pull/51) | Open for review; predecessor #50 |
 | `docs/improvement-roadmap` | [#52](https://github.com/tomluchowski/OpenDungeonsPlus/pull/52) | Closed; internal documentation |
 | `feature/gui-scaling` | [#53](https://github.com/tomluchowski/OpenDungeonsPlus/pull/53) | Open for review; predecessor #51 |
+
+On September 7, 2026, contribution preparation was corrected after an automated
+publication split implementation commits and unfinished feature components into
+too many pull requests. The publication process was stopped. Pull requests #55
+and #72 were replaced by the single coherent Escape-navigation bug fix [#80](https://github.com/tomluchowski/OpenDungeonsPlus/pull/80).
+The component or incomplete submissions #58 and #63 through #79 were withdrawn
+with an explanation; their code remains preserved in the fork and may return only
+as part of a complete, coherent and accepted product outcome.
+
+The additional independent contributions retained after that review are:
+
+| Outcome | Pull request | Reason retained |
+| --- | --- | --- |
+| Default save-request packet correction | [#54](https://github.com/tomluchowski/OpenDungeonsPlus/pull/54) | One independently verified protocol defect |
+| Exit-confirmation layout correction | [#56](https://github.com/tomluchowski/OpenDungeonsPlus/pull/56) | One independently reviewable layout defect |
+| Literal event-message path correction | [#57](https://github.com/tomluchowski/OpenDungeonsPlus/pull/57) | One independently verified parser/display defect |
+| Windows incremental-build correction | [#59](https://github.com/tomluchowski/OpenDungeonsPlus/pull/59) | One independently verified build-consistency defect |
+| Material light accumulation correction | [#62](https://github.com/tomluchowski/OpenDungeonsPlus/pull/62) | One coherent rendering defect; depends on #48 |
+| Escape/back navigation correction | [#80](https://github.com/tomluchowski/OpenDungeonsPlus/pull/80) | One accepted interaction defect replacing #55 and #72 |
+
+Remote preparation branches for withdrawn submissions are retained as recovery
+references because their deletion was not requested. A pushed branch alone is
+not a proposed upstream contribution. Do not reopen those pull requests or create
+replacement submissions until the containing product outcome is complete and
+passes its remaining acceptance gates.
 
 Each PR uses the already published work-branch head. Its description states its
 own issue coverage, verification limits and, where applicable, a direct comparison
