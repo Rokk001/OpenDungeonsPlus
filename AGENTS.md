@@ -1,5 +1,20 @@
 # Project context for future sessions
 
+## Current workspace checkpoint
+
+The user requested priority commits for all pending project changes. The complete
+functional stack now includes minimap stacking `232ac515` and the accepted-marking/
+unmarking-animation correction `711c694e`. Pending fork-only development notes,
+the already requested private planning relocation and an existing line break are
+preserved on `chore/fork-checkpoint`. The normal checkout/index are aligned to
+that complete checkpoint without replacing working files; earlier instructions
+to keep the checkout on the old shadow branch describe the preceding shared
+work phase and are superseded by this checkpoint. Continue from this current
+complete state plus every newer edit, preserving each separate functional branch.
+The user's `.gitignore` is deliberately left outside these commits and unchanged.
+Private planning files remain under ignored `docs/internal/`; do not delete them
+or recreate the old public copies. No push or upstream PR was requested.
+
 The hand-animation follow-up now also animates removing digging marks; the user
 accepted the marking strike and reported its absence on unmarking. Removing the
 single playback guard passes all 781 release/selection checks (two failures
@@ -17,21 +32,47 @@ accepted the static grip; the new animation's game acceptance remains pending.
 Preserve the shared shadow checkout and its normal index; use an isolated index
 for this branch. No push or game launch was made. The broader roadmap remains open.
 
-## Current Windows crash correction
+## Language
 
-The latest combined work is `fix/windows-incremental-build`, merge `e1276f81`,
-retaining hand-grip checkpoint `9beb2ba8` and camera checkpoint `8c1410c3`.
-The user's subsequent 20:06 crash revealed mismatched virtual-call layouts in
-the incrementally built executable: an event notice was dispatched to chat.
-The obsolete MSVC minimal-rebuild option is now disabled, all 248 translation
-units rebuilt, and both linked-binary dispatch checks and runtime resource checks
-pass; see [the diagnosis](docs/development/WINDOWS-INCREMENTAL-BUILD.md).
-Keep shared game builds sequential across sessions; preserve the current local
-camera-reset correction and every other newer edit. The normal shared checkout
-and index remain unchanged. The prepared executable is dated September 6 at
-20:30:04 in BUILDING.md; user startup and game acceptance remain pending.
+Communicate with the user in German.
+Write and maintain all project documentation in English.
+Use English for Git-related text, including commit messages, pull request titles,
+descriptions and review comments.
 
-## Current held-creature presentation
+## Product specifications and documentation boundaries
+
+Use the approved specifications in the [local planning index](docs/internal/README.md)
+for roadmap-driven work and preserve completed items. Keep detailed reference
+comparisons, private product direction and associated evidence under `docs/internal/`.
+Use neutral functional descriptions in public documentation, new branch names,
+commit messages and pull requests; do not publish named reference comparisons
+or clone positioning. The user maintains the ignore rules for the internal area.
+Do not rewrite existing Git history without an explicit request.
+
+## Project setup
+
+Before implementing any request, inspect the current repository for an existing
+solution and trace how it works, including its entry points, storage paths and
+related documentation. Do not infer that a feature is missing from the request.
+Reuse the existing implementation when it already satisfies the requirement;
+otherwise identify the exact gap and extend it with the smallest necessary
+change. Introduce a separate implementation only after establishing why reuse
+or extension cannot meet the request. Document the finding and the chosen path
+in the relevant development note before making dependent changes.
+
+Always implement new requirements on the user's latest complete fork state,
+including all newer fork commits, local work and project documentation. Never
+start implementation work directly from `upstream` unless the user explicitly
+overrides this rule. Use `upstream` only to compare changes and to assemble a
+separate contribution branch after the fork implementation has been completed
+and reviewed.
+
+Before working on this project, read:
+
+1. [Windows environment and current status](docs/development/WINDOWS-DEV-SETUP.md).
+2. [Configure and build commands](docs/development/BUILDING.md).
+3. [Development documentation index](docs/development/README.md); follow the
+   workflow and task notes when relevant to the request.
 
 The latest hand-display work is `feature/held-creature-display`, based on complete
 map checkpoint `6310df83` (retaining camera `abc19866`) and `fix/creature-portrait-clipping`
@@ -48,60 +89,131 @@ all apparently modified/untracked cumulative feature files and newer map edits.
 The suggested wall-click swing is a separate follow-up; inspect the authored
 animations and current wall-selection path before any implementation.
 
-## Language
+The preceding combined work is `fix/windows-incremental-build`, checkpoint `c1937944`
+after merge `e1276f81`,
+retaining hand-grip checkpoint `9beb2ba8` and camera checkpoint `8c1410c3`.
+The user's subsequent 20:06 crash revealed mismatched virtual-call layouts in
+the incrementally built executable: an event notice was dispatched to chat.
+The obsolete MSVC minimal-rebuild option is now disabled, all 248 translation
+units rebuilt, and both linked-binary dispatch checks and runtime resource checks
+pass; see [the diagnosis](docs/development/WINDOWS-INCREMENTAL-BUILD.md).
+Keep shared game builds sequential across sessions; preserve the current local
+camera-reset correction and every other newer edit. The normal shared checkout
+and index remain unchanged. The prepared executable is dated September 6 at
+20:30:04 in BUILDING.md; user startup and game acceptance remain pending.
 
-Communicate with the user in German.
-Write and maintain all project documentation in English.
-Use English for Git-related text, including commit messages, pull request titles,
-descriptions and review comments.
+The preceding hand work is on `fix/hand-tool-grip`, based on merge `7d534b4e`,
+which preserves picker-count correction `505cbf97`, separate hand-orientation
+checkpoint `efa8fa5d` and parallel room lighting `0c7d6234`. The isolated grip
+commit changes the digging wrist, tool attachment and grip-only material,
+with 94 focused checks passing with and without shadows and six render-layer
+occlusion comparisons passing. Eleven other-pose images remain identical.
+The Release executable is dated September 6 at 20:04:49 in BUILDING.md and also
+contains current parallel camera work. Preserve that newer local work; it is
+owned by `fix/camera-controls`, not the hand task. The shared checkout remains
+on `fix/shadow-coverage`, and the normal index is untouched. Apparently modified
+or untracked files on that checkout may already be committed on the feature
+stack and must not be discarded. No push or game launch was made; user visual
+acceptance and the remaining roadmap evidence are still open. See
+[the grip correction](docs/development/HAND-TOOL-GRIP.md) and continue from this
+complete combined state plus every newer local or committed change.
 
-## Product reference
-
-Dungeon Keeper 2 is the binding reference for all roadmap-driven gameplay,
-controls, interface, feedback, visual and audio changes. Read the
-[improvement roadmap](docs/development/IMPROVEMENT-ROADMAP.md) before planning or
-implementing them. Reproduce evidenced reference behavior; do not invent a modern
-alternative or fill missing evidence with assumptions. Preserve completed points
-0, 1 and 2; their corrective extensions are 0b, 1b and 2b.
-
-The user explicitly delegated reference interpretation on September 6, 2026:
-derive edition-independent behavior and the treatment of additional windows from
-the original game, its manual and publisher evidence. Do not ask the user to
-choose a reference version or design the treatment of extra windows again.
-Research actual differences; preserve fork commands through the corresponding
-reference interface flow without claiming that fork-only mechanics are identical.
-
-## Project setup
-
-Always implement new requirements on the user's latest complete fork state,
-including all newer fork commits, local work and project documentation. Never
-start implementation work directly from `upstream` unless the user explicitly
-overrides this rule. Use `upstream` only to compare changes and to assemble a
-separate contribution branch after the fork implementation has been completed
-and reviewed.
-
-Before working on this project, read:
-
-1. [Windows environment and current status](docs/development/WINDOWS-DEV-SETUP.md).
-2. [Configure and build commands](docs/development/BUILDING.md).
-3. [Development documentation index](docs/development/README.md); follow the
-   workflow and task notes when relevant to the request.
-
-The user has now authorized roadmap items 0b, 1b and 2b as the new work scope,
-with a separate branch per item. The active complete fork is now
-`feature/dk2-hand-feedback`, following `docs/dk2-reference-baseline` and
-`feature/dk2-hud` from the preserved `feature/action-state-feedback` checkpoint
-`11c4209e`. The hand branch includes both predecessors and subsequent work; do
-not switch back to a predecessor to begin a new task. Build and technical checks
-are recorded in the linked feature notes; visual/gameplay acceptance is pending. Read the
-[reference baseline](docs/development/DK2-REFERENCE-BASELINE.md),
-[HUD specification](docs/development/DK2-HUD-SPEC.md) and
-[hand-feedback specification](docs/development/DK2-HAND-FEEDBACK-SPEC.md).
-Reference evidence and compatibility decisions must be resolved before dependent
-implementation; do not invent the missing details. The earlier prototype stays
-preserved in [action feedback](docs/development/ACTION-STATE-FEEDBACK.md); its
-permanent-label design is not the target for the new work.
-
+The creature-panel work branch is `feature/creature-panel`, checkpoint `d892374c`,
+retaining accepted Escape checkpoint `2d3e79dc`, all earlier fork work and local
+documentation, and the parallel shadow checkpoint `99e80b2d` via merge `29e4b4b1`.
+The panel's full mood and activity transmission prerequisites are implemented with optional
+connection negotiation. Per-type portraits, four views, worker counts and pickup/focus
+controls are now connected, using an owner-only population snapshot. The focused
+packet/activity probe passes 1,117 checks, aggregate data 77, and real Ogre/CEGUI
+UI/scaling 830; gameplay/network acceptance remains scoped in
+[the creature panel note](docs/development/CREATURE-PANEL.md). Release compilation
+and runtime preparation pass; the latest executable is the September 6, 16:39:18
+build recorded in BUILDING.md, including the separate shadow checkpoint `99e80b2d`.
+Portrait checkpoint `3de2e020` was committed with an isolated index after another
+session switched the shared checkout to `fix/shadow-coverage` on September 6 at
+15:45. The normal checkout and index were not switched or reset. Its working files
+still contain the portrait changes, including two files shown as untracked relative
+to the shadow branch. They are committed on `feature/creature-panel`; do not discard
+them or mix them into the shadow task. Verify both current branches before further
+Git operations and preserve the parallel task's work. The panel integration was
+also committed using an isolated index; the normal index and shared checkout
+remain on `fix/shadow-coverage`. Its apparently untracked panel/portrait source
+files are committed on `feature/creature-panel` and must not be discarded.
+The subsequent `fix/quit-dialog-layout` checkpoint `6eeb4885` retains that complete
+panel/shadow baseline. It changes only two horizontal layout areas; 260 CEGUI
+checks and an isolated rendered preview pass. Its XML and technical note also
+remain as local changes relative to the shared shadow checkout. Do not discard
+them or return to an older branch to begin the next task. Additional material/
+lighting edits currently belong to the parallel session and must be preserved.
+The subsequent `feature/creature-level-selection` checkpoint `ed56e5d2` preserves
+both the dialog/panel work and parallel lighting checkpoint `fe86bf03` via merge
+`85674960`. Portrait/count shortcuts select the highest/lowest eligible level;
+847 panel checks, 21 OIS and 324 SFML keyboard checks, the Release build and
+runtime preparation pass. Its executable is the September 6, 17:02:57 build in
+BUILDING.md. This commit also used an isolated index and did not switch the
+shared checkout. Continue from this combined checkpoint for subsequent work.
+The preceding combined checkpoint is `fix/event-message-paths` at `8fcfde02`,
+which adds only literal event-text escaping and its technical note on top of
+`ed56e5d2`. All 504 installed-parser checks and the Windows Release build pass;
+the prepared executable is the September 6, 17:18:02 build in BUILDING.md.
+This commit also preserves the shared checkout/index. Manual confirmation and
+the broader roadmap gates remain open; do not discard apparently untracked
+files that are already committed on the feature stack.
+The preceding combined checkpoint is `fix/hand-rotation` at `c245acfa`, directly
+after `8fcfde02`. Rotation reuses the existing hand layout, and drop request/reply
+identities keep selection consistent despite intervening input. All 227 focused
+checks and the Release build pass; the prepared executable is the September 6,
+17:34:49 build in BUILDING.md. The isolated commit preserves the shared shadow
+checkout/index. The local RenderManager, Player, game/editor and network changes
+belong to this hand correction; preserve them alongside the parallel task.
+Manual game/multiplayer acceptance and the remaining roadmap evidence are open.
+The preceding combined checkpoint is `feature/entity-query` at `a0d0335a`, directly
+after `c245acfa`. A minimap Query button enters selectable creature inspection,
+reusing the middle-click statistics target and window paths. All 56 controller
+checks, 3,563 installed HUD/layout checks, Release compilation and runtime
+preparation pass; the prepared executable is dated September 6, 17:57:58 in
+BUILDING.md. This is the creature portion of the information tool; trap range
+and user game acceptance remain open. See
+[entity information selection](docs/development/ENTITY-QUERY.md). The isolated
+commit preserved the shared shadow checkout/index. Query changes in GameMode,
+PlayerSelection, SkillManager and ModeGame.layout belong to this task; retain
+them along with the earlier feature stack and parallel work. No push was made.
+The preceding combined checkpoint is `feature/contextual-selling` at `0f4d2404`,
+directly after `a0d0335a`. A common minimap Sell control uses the existing room/
+trap validators with exactly the pointed tile; separate area-sale commands and
+server rules remain unchanged. All 70 sale/packet checks, 3,643 installed HUD
+checks and 56 query regression checks pass, with Release/runtime preparation.
+The executable is dated September 6, 18:16:46 in BUILDING.md. See
+[selling from the minimap](docs/development/CONTEXTUAL-SELLING.md). Manual
+sale/refund acceptance, trap-query range, minimap zoom and broader roadmap
+evidence remain open. The isolated commit preserved the shared shadow checkout
+and normal index. Preserve its GameMode, selection, skill mapping, room/trap
+validator and layout edits alongside all preceding and parallel work. No push
+was made; this checkpoint is retained by the subsequent work below.
+The preceding combined checkpoint is `fix/navigation-hand-feedback` at `84f9eae3`,
+preserving `0f4d2404` and parallel shadow documentation closure `09d7e5e1`
+through merge `5e4da30e`. Its single pose-condition correction reuses the existing
+pointing hand over GUI surfaces. All 178 controller checks pass (24 failed before),
+as do Release compilation and runtime preparation; the executable is dated
+September 6, 18:39:33 in BUILDING.md. See
+[navigation hand feedback](docs/development/NAVIGATION-HAND-FEEDBACK.md).
+The isolated commit changes only GameMode, its README description and its task
+note; it preserves the shared shadow checkout and normal index. The working
+files still look modified/untracked relative to that checkout and must not be
+discarded. Manual navigation/pose acceptance and the remaining roadmap gaps
+remain open. No push was made; this checkpoint is retained below.
+The preceding combined checkpoint is `fix/hand-tool-material` at `65506edf`,
+preserving `84f9eae3` and parallel shadow contribution documentation `ba245257`
+through merge `199e20ab`. Its isolated commit changes only the procedural tool's
+texture coordinates, a separate material script and the task note. All 521
+geometry/material checks and six isolated GL3Plus views pass; Release compilation
+and runtime preparation pass. The ready executable is dated September 6,
+18:58:11 in BUILDING.md, replacing the staged build after the user closed the
+game. See [textured hand tool](docs/development/HAND-TOOL-MATERIAL.md).
+The shared checkout remains on `fix/shadow-coverage`, and its normal index is
+untouched. Preserve the apparently untracked material/note and all earlier
+feature files. No push or game launch was made. Manual appearance and the full
+remaining roadmap scope remain open; continue from this latest combined state.
 The subsequent camera branch is `fix/camera-controls`, based on the complete
 room-lighting checkpoint `0c7d6234`. It adds continuous camera input, default
 view shortcuts and three persistent user orientations. All 278 camera, 84 GUI,
@@ -119,6 +231,16 @@ is dated September 6 at 19:38:14 in BUILDING.md. Manual visual acceptance remain
 with the user. Preserve its shader/material and renderer changes while the
 authorized camera-control and map-navigation tasks proceed on separate branches.
 The shared checkout/index remain on the shadow branch; no new push is authorized.
+
+The user confirmed the three reported HUD regressions are fixed; subsequent
+screenshots show visible wall outlines during hover and dragging. The reported
+F10/Escape issue and the broader Escape navigation correction are confirmed fixed
+by the user. The latter also passes 63 headless checks and the Release build.
+Pickup-label verification and the broader gameplay/visual matrix
+remain pending. Read the current build notes before using an older executable hash.
+Read the [local planning index](docs/internal/README.md) for the detailed task
+specifications, evidence, branch history and remaining acceptance requirements.
+Never return to an older checkpoint to begin a new task.
 
 Windows development is organized on `feature/windows-support` in this fork.
 The related work is split into a local branch stack: `feature/windows-support`,

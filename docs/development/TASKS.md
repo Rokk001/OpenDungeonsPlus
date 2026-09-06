@@ -10,7 +10,7 @@ to focus mainly on testing and visual assessment.
 The following assessments reflect the conversation so far, not a
 guarantee of fully autonomous implementation. The detailed technical findings,
 priorities, branch boundaries and upstream overlap are recorded in the
-[product improvement audit and roadmap](IMPROVEMENT-ROADMAP.md).
+[product improvement audit and roadmap](../internal/README.md).
 
 ## Tasks discussed
 

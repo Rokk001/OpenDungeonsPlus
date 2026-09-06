@@ -33,17 +33,48 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   choices, their cause and verification status.
 - [Live settings](LIVE-SETTINGS.md): applying settings without restarting,
   the fullscreen navigation report and completed Windows verification.
-- [Product improvement roadmap](IMPROVEMENT-ROADMAP.md): binding Dungeon Keeper 2
-  reference, preserved points 0–2, corrective extensions 0b/1b/2b, evidence and
-  acceptance requirements, and coordination with upstream issues and pull requests.
-- [Reference baseline (0b)](DK2-REFERENCE-BASELINE.md): current authorization,
-  separate branch sequence, inspected sources, code findings and unresolved evidence.
-- [HUD specification (1b)](DK2-HUD-SPEC.md): existing-function inventory,
-  measured composition, minimap resize correction, interface boundaries and
-  outstanding reference acceptance scenarios.
-- [Hand-feedback specification (2b)](DK2-HAND-FEEDBACK-SPEC.md): input-state
-  scenarios, hand/icon/outline implementation, regenerated checks and mechanics
-  differences; the latest complete fork is on this feature branch.
+- [Local planning documentation](../internal/README.md): private roadmap,
+  specifications and comparison evidence; available only in the local checkout.
+- [Wall hover outline](WALL-HOVER-OUTLINE.md): model-derived preview height,
+  cause, focused geometry checks and Windows build evidence.
+- [Pickup target descriptions](PICKUP-TARGET-DESCRIPTION.md): readable chicken
+  and gold labels instead of internal identifiers, with build evidence.
+- [Hand rotation and selected-object drops](HAND-ROTATION.md): consistent held
+  spacing and matching drop identities across client/server requests and replies.
+- [Hand feedback over navigation](NAVIGATION-HAND-FEEDBACK.md): pointing over
+  interface controls and restoring the current world pose on exit.
+- [Textured hand tool](HAND-TOOL-MATERIAL.md): reusing existing wood/metal
+  textures with preserved geometry and isolated render verification.
+- [Hand orientation](HAND-ORIENTATION.md): rightward spatial inclination with
+  preserved cursor coordinates and held-object placement.
+- [Hand tool grip](HAND-TOOL-GRIP.md): a shaft enclosed by the fingers, an upright
+  tool head and pose-specific depth occlusion, with render regression evidence.
+- [Downward hand strike](HAND-DIG-ANIMATION.md): closed-grip motion on confirmed
+  wall marking, input guards, existing animation reuse and verification limits.
+- [Held-creature display](HELD-CREATURE-DISPLAY.md): one gripped creature and
+  ordered square portraits, with transform, lifecycle and input verification.
+- [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
+  interface clipping before generating a cached portrait.
+- [Closing Options with Escape](OPTIONS-ESCAPE.md): keyboard priority,
+  retained confirmation cancellation and focused verification.
+- [Escape navigation](ESCAPE-NAVIGATION.md): closing one dialog or returning
+  from front-end screens through the existing cancel/back handlers.
+- [Exit confirmation layout](QUIT-DIALOG-LAYOUT.md): complete title/replay text,
+  scaled bounds and control-hit verification.
+- [Literal paths in event messages](EVENT-MESSAGE-PATHS.md): preserving path
+  separators and bracketed names alongside the existing notice icon and colour.
+- [Creature panel](CREATURE-PANEL.md): per-type portraits, activity/mood views,
+  population transmission, pickup/focus controls and verification limits.
+- [Creature selection by level](CREATURE-LEVEL-SELECTION.md): highest/lowest
+  eligible selection through the existing keyboard and pickup paths.
+- [Creature picker counts](CREATURE-PICKER-COUNTS.md): reducing counts after
+  pickup, retaining empty type entries and restoring counts after drops.
+- [Entity information selection](ENTITY-QUERY.md): selectable creature inspection,
+  existing statistics-window reuse and the outstanding trap-range prerequisite.
+- [Selling from the minimap](CONTEXTUAL-SELLING.md): one entry point for room,
+  trap and door sales, reusing existing prices, permissions and requests.
+- [Missile wall crash investigation](MISSILE-WALL-CRASH.md): existing null-tile
+  correction, before/after regression evidence and limits of the Linux traces.
 - [Shadow coverage](SHADOW-COVERAGE.md): PR #48's missing creature shadows,
   ground projection, receiver and cursor-light corrections, isolated rendering
   evidence, user screenshot review and local branch closure.
@@ -58,21 +89,6 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   prototype checkpoint stopped by the user pending a redesigned plan.
 - [Restoring prerequisites](WINDOWS-PREREQUISITES.md): sources,
   checksums, installation scripts, order and resolved installation problems.
-
-- [Hand orientation](HAND-ORIENTATION.md): rightward spatial inclination with preserved cursor placement.
-
-- [Hand tool grip](HAND-TOOL-GRIP.md): finger enclosure and pose-specific depth occlusion.
-
-- [Creature picker counts](CREATURE-PICKER-COUNTS.md): counts follow pickup and drop acknowledgements.
-
-- [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
-  interface clipping before generating a cached portrait.
-
-- [Held-creature display](HELD-CREATURE-DISPLAY.md): one gripped creature and
-  ordered square portraits, with transform, lifecycle and input verification.
-
-- [Downward hand strike](HAND-DIG-ANIMATION.md): closed-grip motion on confirmed
-  wall marking, input guards, existing animation reuse and verification limits.
 
 ## Adding further notes
 
