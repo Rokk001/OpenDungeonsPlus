@@ -66,3 +66,38 @@ Evidence: `build/windows/camera-probe-results.log`,
 `camera-gui-probe-results.log`, `escape-navigation-probe-results.log`,
 `camera-controls-build.log` and `camera-controls-runtime.log`.
 Manual gameplay/reference comparison and Linux remain unverified.
+
+## Reported wheel zoom and menu reset regressions
+
+The September 6 user report of only minimum/maximum zoom exposes a missing
+input-unit conversion in GameMode::handleMouseWheel: the native OIS backends
+deliver 120 units per notch, while SFML delivers notch counts. InputBridge
+currently preserves those units. Multiplying a native event by 0.2 moves the
+camera by 24 tiles, exceeding the entire 3-to-16 height interval. The previous
+camera probe called zoomBy directly and therefore missed the input boundary.
+Normalize only the camera wheel distance for the selected input backend,
+preserving GUI scrolling and Ctrl-wheel hand rotation; extend the regression
+probe through the actual wheel handler before claiming the report is fixed.
+
+Resetting a scripted menu shot also retained gameplay movement, zoom, flight
+and preset animation. Calling the existing full-stop action before the reset
+removes that inherited motion: five checks fail before, all 286 camera checks
+pass after. This correction was included in the complete September 6, 20:30:04
+Release rebuild; it does not prove the user's first-start menu framing report.
+
+After the wheel correction, all 540 native and 539 SFML checks pass through
+the production wheel handler and real Ogre camera methods (118 native failures
+before). The checks include twelve consecutive intermediate zoom steps,
+opposite/multiple/partial notches, three camera angles and frame rates, GUI
+and focus blocking, and unchanged Ctrl-wheel hand rotation; the 286 existing
+camera checks are included in each run. Native GUI scrolling is unchanged.
+Release compilation and runtime preparation pass for the September 6, 20:39:04
+executable. Evidence: `camera-wheel-{native,sfml}-{before,results}.log`,
+`camera-wheel-game-build.log` and `camera-wheel-runtime.log` in `build/windows`.
+The original menu before/after evidence is `camera-menu-reset-before.log`
+and `camera-probe-results.log`. User confirmation in the game is still required.
+
+This is a correction to the existing controls, without a release or new public
+binding: version 0.7.1 and README controls stay unchanged; no changelog exists.
+The follow-up commit retains the complete Windows build-consistency checkpoint
+`c1937944` and all earlier fork work.
