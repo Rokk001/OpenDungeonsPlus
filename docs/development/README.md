@@ -26,9 +26,15 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   choices, their cause and verification status.
 - [Live settings](LIVE-SETTINGS.md): applying settings without restarting,
   the fullscreen navigation report and completed Windows verification.
-- [Product improvement audit and roadmap](IMPROVEMENT-ROADMAP.md): confirmed
-  visual and usability gaps, ordered implementation branches and coordination
-  with open upstream issues and pull requests.
+- [Product improvement roadmap](IMPROVEMENT-ROADMAP.md): binding Dungeon Keeper 2
+  reference, preserved points 0–2, corrective extensions 0b/1b/2b, evidence and
+  acceptance requirements, and coordination with upstream issues and pull requests.
+- [Reference baseline (0b)](DK2-REFERENCE-BASELINE.md): current authorization,
+  separate branch sequence, inspected sources, code findings and unresolved evidence.
+- [HUD specification (1b)](DK2-HUD-SPEC.md): existing-function inventory,
+  geometry requirements, interface boundaries and reference acceptance scenarios.
+- [Hand-feedback specification (2b)](DK2-HAND-FEEDBACK-SPEC.md): input-state
+  scenarios, current code paths, presentation requirements and mechanics dependencies.
 - [GUI scaling](GUI-SCALING.md): scale policy, implementation details,
   automated checks and the required manual verification matrix.
 - [Action state and target feedback](ACTION-STATE-FEEDBACK.md): current action,
