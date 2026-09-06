@@ -12,6 +12,10 @@ of development.
 
 ### How to play
 
+The panel above the action bar names the current action and its mouse controls;
+target feedback explains where the action is available and why an invalid attempt
+cannot proceed, while the selected action button stays highlighted.
+
 Future versions will have an in-game tutorial, but for now, you can use the
 following resources to learn the basic gameplay concepts:
 

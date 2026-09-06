@@ -23,6 +23,12 @@ Before working on this project, read:
 3. [Development documentation index](docs/development/README.md); follow the
    workflow and task notes when relevant to the request.
 
+The current branch is `feature/action-state-feedback`, continuing from the
+accepted GUI-scaling fork state. The user stopped this goal to redesign the plan
+and requested a commit preserving the current prototype; do not resume its
+implementation without new instructions. Read [action feedback](docs/development/ACTION-STATE-FEEDBACK.md)
+for the preserved implementation, build evidence and rejected permanent panel.
+
 Windows development is organized on `feature/windows-support` in this fork.
 The related work is split into a local branch stack: `feature/windows-support`,
 `fix/dynamic-shadows`, `fix/settings-option-duplicates`, `feature/live-settings`,
@@ -36,6 +42,29 @@ The work branch includes local notes and is not the final upstream PR branch;
 assemble that separate contribution branch later using only the reviewed,
 reusable changes.
 Do not push without explicit user authorization.
+
+## Pull requests: one work branch per contribution
+
+Never combine multiple work branches or unrelated tasks into one pull request.
+Create pull requests only for functional implementations: features and bug fixes.
+Never submit a documentation-only PR. Internal development notes, agent rules and
+the product improvement roadmap remain in the fork, outside upstream contributions.
+Create a separate pull request for each completed implementation branch and explicitly
+link prerequisite PRs. Never present multiple tasks as one combined contribution.
+Completed contributions should be ready for review when the user requests
+finalization; dependency alone is not a reason to leave them as drafts.
+For branches that build on earlier work, disclose the cumulative comparison and
+link the individual changes against the preceding work branch. Before merging,
+verify that the remaining diff contains only the PR's own functional contribution
+and excludes internal documentation; merge prerequisites separately first.
+Do not silently rewrite accepted implementation work merely to rearrange PRs;
+preserve the user's complete working branch and all local changes.
+Recovery/backup branches are not additional contributions, and unfinished work
+must not be included in a PR for a completed task.
+Record relevant issue coverage separately in each PR and only use automatic
+issue-closing keywords when the entire issue is demonstrably resolved.
+
+## Installed development environment
 
 The Windows prerequisites are already installed in `C:\Users\mario\od-deps`;
 their sources, binaries and logs deliberately live outside the repository.

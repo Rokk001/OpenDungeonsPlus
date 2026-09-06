@@ -1,5 +1,10 @@
 # Configuring and compiling on Windows
 
+For the current `feature/action-state-feedback` work, the September 6 Release
+build and runtime preparation succeeded; see [action feedback](ACTION-STATE-FEEDBACK.md)
+for the executable location, headless evidence and the prototype stopped by the
+user pending a redesigned plan.
+
 For the completed `feature/live-settings` work, see [LIVE-SETTINGS.md](LIVE-SETTINGS.md)
 for its build and runtime evidence. The baseline startup verification below
 predates those settings changes.

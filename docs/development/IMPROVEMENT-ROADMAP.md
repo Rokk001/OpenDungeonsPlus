@@ -176,6 +176,16 @@ location and text size.
 room building, trap placement, summoning and a targeted spell without consulting
 the help page, and an invalid click must explain why it failed.
 
+**Status (September 6, 2026):** prototype checkpoint from the
+accepted GUI-scaling fork baseline; Release compilation, 508 decision/input
+checks and the headless CEGUI geometry checks pass. The user confirmed that the
+label appears but rejected the permanent panel. The replacement presentation
+has not yet been agreed; contextual pointer hints and brief failure messages
+are a proposal, not an approved requirement. The user stopped the goal to redesign
+the plan and requested a commit preserving this branch. This step is not complete;
+do not resume the old plan without new instructions. See
+[implementation and verification](ACTION-STATE-FEEDBACK.md).
+
 ### 3. Camera follow-up branches
 
 The verified progressive edge-scrolling branch covers only edge speed and GUI
