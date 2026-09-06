@@ -9,8 +9,15 @@ stopped permanent-label task as the current work scope.
 | Item | Branch | Current state |
 | --- | --- | --- |
 | 0b | `docs/dk2-reference-baseline` | Created from `11c4209e`, retaining the uncommitted roadmap and agent-rule changes; reference collection and source comparison in progress. |
-| 1b | `feature/dk2-hud` | Planned successor of the completed 0b branch; detailed contract in [HUD specification](DK2-HUD-SPEC.md). |
-| 2b | `feature/dk2-hand-feedback` | Planned successor of the completed 1b state; detailed contract in [hand-feedback specification](DK2-HAND-FEEDBACK-SPEC.md). |
+| 1b | `feature/dk2-hud` | Created at reference checkpoint `f390b1de`; implementation pending the 0b gate; detailed contract in [HUD specification](DK2-HUD-SPEC.md). |
+| 2b | `feature/dk2-hand-feedback` | Created at reference checkpoint `f390b1de`; implementation pending the relevant 0b/1b work; detailed contract in [hand-feedback specification](DK2-HAND-FEEDBACK-SPEC.md). |
+
+The two implementation branch names are reserved now as requested; they contain
+no new game changes yet. Before starting 1b, advance its branch to the completed
+0b/latest complete fork state; before starting 2b, advance it to the completed
+1b/latest complete fork state. Use a checked fast-forward where possible and
+preserve any intervening user work; never reset or force-update these branches
+to discard newer work.
 
 Do not create successors from upstream or from an older fork snapshot. Preserve
 the original action-feedback checkpoint and all previous Windows/display fixes.
@@ -129,3 +136,7 @@ unchanged historical sections in the roadmap.
 For this documentation stage, the game remains version 0.7.1: there is no runtime
 change or release. The development index and agent entry point are updated;
 the root README and a game changelog need no new behavior entry yet.
+
+The reference checkpoint passed local-link validation and `git diff --check`;
+SHA-256 comparisons confirm the original roadmap sections 0, 1 and 2 remain
+byte-for-byte unchanged. The current game executable was not rebuilt or launched.
