@@ -40,6 +40,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Shadow coverage](SHADOW-COVERAGE.md): PR #48's missing creature shadows,
   ground projection, receiver and cursor-light corrections, isolated rendering
   evidence, user screenshot review and local branch closure.
+- [Room lighting](ROOM-LIGHTING.md): local visible-room illumination, overlapping
+  light contributions, colour readability and rendering/lifecycle verification.
 - [GUI scaling](GUI-SCALING.md): scale policy, implementation details,
   automated checks and the required manual verification matrix.
 - [Action state and target feedback](ACTION-STATE-FEEDBACK.md): current action,

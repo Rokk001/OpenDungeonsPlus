@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+The latest Release build adds local lighting to visible rooms and restores
+overlapping light contributions and ambient colour on custom world materials.
+All 18 focused room-lighting checks, 60 ambient/falloff checks, 73 shadow-receiver
+cases, 146 settings checks and the instanced-fog/wall renders pass. Release
+compilation and runtime preparation pass in `build/windows/room-lighting-build.log`
+and `room-lighting-runtime.log`. The prepared executable is dated September 6,
+2026 at 19:38:14, SHA-256
+`26b63a78da44873fe3eb27c9dd843bb2305db2084bee434052a7da143ec0b187`.
+It retains the complete hand-tool/navigation and shadow baseline. No game was
+launched; manual appearance and Linux runtime remain unverified. See
+[room lighting](ROOM-LIGHTING.md) for evidence and test boundaries.
+
 The completed September 6 cursor-light correction on `fix/shadow-coverage` preserves
 ambient illumination inside shadows and applies the existing light falloff to
 custom materials. The user's 16:36 captures rejected the earlier solid-black
