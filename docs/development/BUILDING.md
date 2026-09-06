@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The camera follow-up fixes native wheel units so each notch retains intermediate
+zoom levels, and stops inherited gameplay movement before scripted menu shots.
+All 540 native and 539 SFML camera/input checks pass, including the 286 camera
+regression checks; 118 native checks fail before the wheel fix. Release build
+and runtime preparation pass in `camera-wheel-game-build.log` and
+`camera-wheel-runtime.log`. The executable is dated September 6 at 20:39:04,
+size 4,171,264 bytes, SHA-256 `a7610e0c328461afe32f7584883ce227d781b84cd1fa4ae240cc58435139b1db`.
+User gameplay and visual acceptance remain pending; see
+[camera controls](CAMERA-CONTROLS.md).
+
 The latest Release build corrects the incompatible virtual-call layouts found
 after the user's 20:06 crash: event notices now reach the correct handler in
 both game and editor modes. MSVC minimal rebuild is disabled, all 248 translation
