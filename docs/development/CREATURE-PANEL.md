@@ -20,9 +20,12 @@ or count uses the existing camera navigation to an on-map creature of that type.
 
 `CreaturePanelData` provides one shared category mapping for aggregate counts and
 local pickup selection. The server sends an owner-only class/count snapshot after
-entity refresh, with a separately negotiated capability. This includes living
-owned creatures that are held or outside client vision without sending hidden
-entity names, positions or vision. The local hand list is not added again.
+entity refresh, with a separately negotiated capability. This counts living
+owned creatures on the map, including those outside client vision, without
+sending hidden entity names, positions or vision. Held and carried off-map
+creatures are excluded; their class remains visible with zero when none remain
+on the map. The local hand list is not added again. See the
+[picker-count correction](CREATURE-PICKER-COUNTS.md) for the diagnosed pickup bug.
 Old peers and recordings retain their existing packet layouts and quick controls.
 Unknown activity is not idle; unknown mood is not happy. Active workshop/library
 use counts as manufacturing; queued or interrupted room work does not. Friendly
