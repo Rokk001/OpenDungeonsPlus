@@ -35,6 +35,7 @@ a right-click; clicking the minimap moves the camera immediately.
 H focuses the dungeon heart, P cycles owned portals and F focuses the next fight.
 The default minimap uses terrain and owner colours, with darker fortified walls
 and a dotted heart direction when zoomed out; saved renderer preferences remain available.
+The minimap and full map show the current camera view as a thin white outline.
 
 The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature

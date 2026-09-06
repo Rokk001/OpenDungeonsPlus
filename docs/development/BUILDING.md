@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The map viewport follow-up draws a thin white camera outline on the minimap
+and full map without overwriting terrain colours. All 1,028 viewport checks,
+667 direction regressions and 11 composed map/detail checks pass. Release build
+and runtime preparation pass in `map-viewport-build.log` and
+`map-viewport-runtime.log`. The executable is dated September 6 at 22:12:09,
+size 4,195,840 bytes, SHA-256 `8ca8dca9d95822a214036a2dd6825446742e384a912864a671f39624e6c49e61`.
+It retains the complete map/held-creature fork at `32c6d4d3`; the shared checkout
+and normal Git index are preserved. No game was launched. User gameplay/visual
+acceptance and measured reference transitions remain open; see
+[map navigation](MAP-NAVIGATION.md).
+
 The map follow-up adds the clipped dotted heart direction at overview zoom and
 uses the existing drawn minimap by default, retaining saved renderer preferences.
 All 667 image/renderer direction checks and 11 composed map/detail checks pass;
