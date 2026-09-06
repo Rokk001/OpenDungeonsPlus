@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The navigation appearance update adds a four-layer circular minimap frame,
+reuses the removal symbol for Sell and replaces the text zoom label with a
+generated magnifier while preserving all existing controls. The map, overlay,
+click-target and camera-dialog probes pass 3,986 checks, and the full interface
+matrix passes at five representative resolutions and 80%, 100% and 120% user
+scale. Release compilation and runtime preparation pass. The executable is dated
+September 6 at 23:05:49, is 4,201,984 bytes and has SHA-256
+`a72e1ef155a17c76e0bf517947980480ee1b00aa890e72844cb4b6bca864071e`.
+Logs use `navigation-appearance-`; see [navigation appearance](NAVIGATION-APPEARANCE.md).
+No game was launched; user gameplay and visual acceptance remain pending.
+
 The main-menu camera now preserves its authored horizontal framing across 4:3,
 widescreen and ultrawide viewports, and restores the prior gameplay field of view
 on exit. All 339 real Ogre camera checks pass, as do the Release build and runtime
