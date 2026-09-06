@@ -183,5 +183,7 @@ because this is an unreleased functional follow-up; no changelog exists.
 Release build and runtime preparation pass for the September 6, 22:12:09
 executable recorded in BUILDING.md. The follow-up retains the complete fork at
 `32c6d4d3` and changes only the map implementation and its documentation.
-User gameplay, appearance acceptance and measured reference transitions remain
-open; no game was launched and nothing was pushed.
+On September 6, the user confirmed that the map controls behave correctly.
+Appearance acceptance for the later navigation treatment and measured reference
+transitions remain open; no game was launched by the assistant and nothing was
+pushed.

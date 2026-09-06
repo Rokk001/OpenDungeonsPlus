@@ -34,5 +34,6 @@ The Windows Release build and runtime preparation pass. The executable is dated
 September 6 at 23:05:49, is 4,201,984 bytes and has SHA-256
 `a72e1ef155a17c76e0bf517947980480ee1b00aa890e72844cb4b6bca864071e`.
 The generated circular-map preview was inspected and retains the existing map,
-direction and viewport layers inside the new four-layer frame. No game was
-launched; user gameplay and visual acceptance remain pending.
+direction and viewport layers inside the new four-layer frame. The user already
+accepted the underlying map controls; the new frame and symbols still require
+visual acceptance. No game was launched by the assistant.
