@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+The latest Release build adds the camera controls in
+[the camera note](CAMERA-CONTROLS.md), retaining the complete room-lighting fork.
+Built on September 6 at 20:08:51, its SHA-256 is
+`06a56d3703419cfd5a83e5a52be110f6d14ebb093ea715746f175b2f476383ee`.
+The Release build, runtime preparation, 278 camera checks, 84 GUI checks,
+63 Escape checks and 227 hand-rotation checks pass. Manual gameplay and Linux
+remain unverified. Logs use the `camera-controls`, `camera-probe` and
+`camera-gui-probe` prefixes in `build/windows/`.
+
 The latest Release build adds local lighting to visible rooms and restores
 overlapping light contributions and ambient colour on custom world materials.
 All 18 focused room-lighting checks, 60 ambient/falloff checks, 73 shadow-receiver
