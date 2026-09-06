@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The map-navigation checkpoint adds a full map, pointer detail, immediate map
+relocation, minimap zoom and owned-room/fight focus. Release build and runtime
+preparation pass in `map-navigation-build.log` and `map-navigation-runtime.log`.
+The executable is dated September 6 at 21:33:40, size 4,193,280 bytes,
+SHA-256 `3c939f6cc5eb005ee376be4828dc0a5ef149b20b5209330f3790ce9bb5a3fec1`. The installed GUI, map-renderer, camera, culling,
+palette and detail-lighting checks pass; see [map navigation](MAP-NAVIGATION.md)
+for exact counts and verification boundaries. The shared executable includes
+parallel held-creature work, which is excluded from the map contribution.
+Direction markers and further navigation acceptance remain open; no game was
+launched and user startup/visual acceptance is still required.
+
 The camera follow-up fixes native wheel units so each notch retains intermediate
 zoom levels, and stops inherited gameplay movement before scripted menu shots.
 All 540 native and 539 SFML camera/input checks pass, including the 286 camera

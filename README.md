@@ -26,6 +26,14 @@ the fixed HUD. New messages flash the Messages button; left-click it to read
 them and right-click to dismiss read messages. Save opens the message surface
 for the server's confirmation or error.
 
+Use the mouse wheel or Home/End for camera zoom; F1/F2/F3 select isometric,
+top-down and oblique views, and F4-F6 recall views stored through Options.
+Press M to open the map: left-click to move there, or right-click, M or Escape
+to close it without moving. The detail window follows the pointer.
+The +/- button beside the minimap zooms it in with a left-click and out with
+a right-click; clicking the minimap moves the camera immediately.
+H focuses the dungeon heart, P cycles owned portals and F focuses the next fight.
+
 The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature
 types, left-click a count to pick up a matching available creature, or right-click

@@ -9,6 +9,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Map navigation](MAP-NAVIGATION.md): full-map controls, pointer detail, minimap zoom,
+  tile colours, focus shortcuts and verification limits.
 - [Contributing to the original project](CONTRIBUTING-WORKFLOW.md): fork, synchronization,
   the configured Windows work branch, separate commits and the path to a later
   pull request to the original project.
