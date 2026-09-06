@@ -657,7 +657,10 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     Ogre::OverlayManager& overlayManager = Ogre::OverlayManager::getSingleton();
     Ogre::Overlay* handKeeperOverlay = overlayManager.create(keeperHandEnt->getName() + "_Ov");
     mHandKeeperNode = mSceneManager->createSceneNode(keeperHandEnt->getName() + "_node");
-    mHandKeeperNode->attachObject(keeperHandEnt);
+    Ogre::SceneNode* handModelNode = mHandKeeperNode->createChildSceneNode();
+    handModelNode->setOrientation(Ogre::Quaternion(Ogre::Degree(65.0f), Ogre::Vector3::UNIT_Z) *
+        Ogre::Quaternion(Ogre::Degree(35.0f), Ogre::Vector3::UNIT_Y));
+    handModelNode->attachObject(keeperHandEnt);
     mHandPickaxe = mSceneManager->createManualObject("KeeperHandPickaxe");
     mHandPickaxe->setCastShadows(false);
     mHandPickaxe->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
