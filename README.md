@@ -34,6 +34,8 @@ which are outlined on hover.
 It shows the selected action icon or a prohibition sign for an invalid
 target; the top strip describes the current target. Right-click cancels an active
 action, drops a held object or slaps an eligible creature with an empty hand.
+Hold Ctrl and turn the mouse wheel to change the order of held objects.
+The first displayed object is the next one to drop.
 
 Future versions will have an in-game tutorial, but for now, you can use the
 following resources to learn the basic gameplay concepts:
