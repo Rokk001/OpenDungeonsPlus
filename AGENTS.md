@@ -40,9 +40,12 @@ Before working on this project, read:
    workflow and task notes when relevant to the request.
 
 The user has now authorized roadmap items 0b, 1b and 2b as the new work scope,
-with a separate branch per item. Current work is `docs/dk2-reference-baseline`,
-created from the complete `feature/action-state-feedback` checkpoint `11c4209e`
-and retaining the subsequent roadmap and agent-rule changes. Read the
+with a separate branch per item. The active complete fork is now
+`feature/dk2-hand-feedback`, following `docs/dk2-reference-baseline` and
+`feature/dk2-hud` from the preserved `feature/action-state-feedback` checkpoint
+`11c4209e`. The hand branch includes both predecessors and subsequent work; do
+not switch back to a predecessor to begin a new task. Build and technical checks
+are recorded in the linked feature notes; visual/gameplay acceptance is pending. Read the
 [reference baseline](docs/development/DK2-REFERENCE-BASELINE.md),
 [HUD specification](docs/development/DK2-HUD-SPEC.md) and
 [hand-feedback specification](docs/development/DK2-HAND-FEEDBACK-SPEC.md).

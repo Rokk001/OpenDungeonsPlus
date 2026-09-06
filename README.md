@@ -16,9 +16,10 @@ The control panel groups Creatures, Rooms, Spells and Workshop beside the
 circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
 
-The panel above the action bar names the current action and its mouse controls;
-target feedback explains where the action is available and why an invalid attempt
-cannot proceed, while the selected action button stays highlighted.
+The hand points at pickup targets and holds a pickaxe over diggable walls.
+It shows the selected action icon or a prohibition sign for an invalid
+target; the top strip describes the current target. Right-click cancels an active
+action, drops a held object or slaps an eligible creature with an empty hand.
 
 Future versions will have an in-game tutorial, but for now, you can use the
 following resources to learn the basic gameplay concepts:

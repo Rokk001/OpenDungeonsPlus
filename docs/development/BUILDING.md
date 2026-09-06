@@ -1,10 +1,14 @@
 # Configuring and compiling on Windows
 
-For `feature/dk2-hud`, the September 6 clean Release build and runtime preparation
-succeeded; see [HUD implementation evidence](DK2-HUD-SPEC.md). This build has not
-received gameplay or visual acceptance from the user.
+For the current `feature/dk2-hand-feedback` fork, the September 6 clean Release
+build, final incremental compilation and runtime preparation succeeded. It
+includes the reference baseline, HUD, minimap resize correction and hand feedback.
+See [HUD evidence](DK2-HUD-SPEC.md) and [hand evidence](DK2-HAND-FEEDBACK-SPEC.md).
+Logs are `build/windows/dk2-final-clean-build.log`, `dk2-final-build.log` and
+`dk2-final-runtime.log`. Open `build/windows/opendungeons-plus.exe` directly.
+No gameplay or visual acceptance is claimed for this build.
 
-For the current `feature/action-state-feedback` work, the September 6 Release
+For the preserved `feature/action-state-feedback` prototype, the September 6 Release
 build and runtime preparation succeeded; see [action feedback](ACTION-STATE-FEEDBACK.md)
 for the executable location, headless evidence and the prototype stopped by the
 user pending a redesigned plan.

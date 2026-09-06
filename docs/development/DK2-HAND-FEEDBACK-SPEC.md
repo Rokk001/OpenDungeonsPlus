@@ -2,8 +2,8 @@
 
 ## Status and scope
 
-Specification in progress under [0b](DK2-REFERENCE-BASELINE.md), for a separate
-`feature/dk2-hand-feedback` branch based on the complete 1b fork state.
+Implementation on `feature/dk2-hand-feedback`, based on the complete 1b fork
+state and the original evidence in [0b](DK2-REFERENCE-BASELINE.md).
 The user authorized this correction; it must not resume the rejected permanent
 label plan. Reference interpretation is delegated to the original-game evidence; exceptional-state evidence must be distinguished from implementation checks.
 
@@ -18,7 +18,7 @@ rendered state, sound, next state and matching fork observation before changing
 that behavior. The starting conditions below define what to investigate; they
 are not newly invented game rules.
 
-| Scenario | Starting state and input sequence | Current fork evidence | Required reference comparison |
+| Scenario | Starting state and input sequence | Preserved prototype evidence (before 2b) | Reference comparison inventory |
 | --- | --- | --- | --- |
 | HAND-01 idle | Empty hand, no selected action; move over open ground, a creature, an object, a diggable wall and undiggable terrain. | `handlePlayerActionNone` clears pointer text when the hand is empty; renderer creates the idle hand mesh. | R1 hover forms, exact targeting/highlight, hotspot and all transitions. |
 | HAND-02 select | No active action; choose each supported room, trap or spell, then enter the world. | Skill buttons set the selected action; frame refresh adds a button colour and permanent description. | R1 selected-state rendering and R3/R4 target preview for that specific action. |
@@ -58,7 +58,9 @@ The relevant existing rendering paths are:
 
 ## Unresolved measurements and decisions
 
-The following must be evidenced, not assigned convenient defaults:
+The following fidelity measurements are distinguished from technical asset
+construction values. Publisher stills and the manual support the implemented
+forms and gestures; they do not prove original frame timing or exact asset parity:
 
 - Hand asset forms, pose transitions, animation durations and cursor hotspot.
 - Selected-action/prohibition icon artwork, dimensions, attachment point and
@@ -91,8 +93,8 @@ scale changes across the affected presentation states.
 
 Regenerate affected decision/input/layout probes from the modified source before
 using their results. Old prototype checks do not certify the new rendering.
-The user supplies gameplay and visual/listening acceptance; no such acceptance
-or new build exists for 2b at this specification stage.
+The user supplies gameplay and visual/listening acceptance. The implementation
+and headless evidence below do not certify that acceptance.
 
 ## Concrete interaction contract
 
@@ -133,3 +135,80 @@ random-vs-FIFO difference is a mechanics prerequisite under point 10, not a
 cursor rendering fix. These contracts enable implementation; acceptance still
 requires the user's matching gameplay/visual sequences, with remaining asset,
 mechanics or source limitations stated explicitly.
+
+## Implementation and evidence, September 6, 2026
+
+The permanent panel, gold selection overlay updates and timed failure retention
+are removed. The top context strip describes the actual current target; a selected
+action icon or prohibition sign follows the hand. Returning to a valid target
+restores its icon immediately. Interface hover hides world indicators, clears a
+stale creature highlight and lets the open event surface consume its own input.
+
+The existing hand asset has Idle, Pickup, Drop and Slap animations. Two additional
+static poses reuse its own rig: pointing curls the other fingers while leaving
+the index extended; digging also curls the index and shows an original procedural
+pickaxe. The sampled finger rotations come from the existing Pickup midpoint,
+0.825 seconds. The one-second pose clips are constant technical containers, not
+a claimed reference animation duration. Existing one-shot animations finish
+before returning to the current hover pose. No new confirmation sound is added.
+
+The prohibition sign is generated from geometric primitives. Current action
+artwork and the existing licensed hand are reused; no publisher screenshot or
+proprietary game asset is shipped. The 50-design-pixel symbol follows the measured
+reference size. Its current attachment is 90 design pixels right and 8 below the
+existing pointer hotspot; that adaptation to the fork hand still needs visual
+comparison, especially at screen edges and after scale changes.
+
+World previews use outlines instead of the previous water-material selector.
+Walls receive top, bottom and vertical edges, as visible in publisher capture 9;
+ground receives a tile outline. Unaffordable room/trap areas remain visible in
+red. The existing eligibility, mixed-area selection and server request paths
+remain authoritative. Preview geometry is cleared when leaving the game and
+excluded from minimap rendering. No workshop scheduling or spell-rule rewrite
+is included in this branch.
+
+| Scenarios | Implemented / retained behavior | Reference evidence | Verification / remaining comparison |
+| --- | --- | --- | --- |
+| HAND-01 | Idle, pickup-pointing and dig hover; target recomputed under a stationary pointer. | Manual R1; gallery 5/6/9. | Actual hand mesh and skeleton load headlessly; new states resolve on existing and subsequent entities. Visual pose/grip comparison remains open. |
+| HAND-02/03 | Current selected icon; immediate replacement on switching or validity change. | R1; gallery 2/3/8. | Generated input checks and actual CEGUI image/layout checks pass. |
+| HAND-04/12 | Existing cancel and release guards retained; GUI hides previews and owns event-window input. | R1 plus preserved input protections. | Frame previews cannot resend a confirmed action; interrupted release sends no command. Full gameplay sequences remain for the user. |
+| HAND-05 | First-tile mark/unmark and eligible region retained; outlined wall preview. | R1; gallery 5/9. | Source-derived validation and geometry checks pass. Actual dig gesture acceptance remains open. |
+| HAND-06 | Buildable area outlined; unaffordable area red; existing repeatable selection retained. | R3. | Source-derived room/resource checks pass. Original blueprint asset parity is not claimed. |
+| HAND-07 | Existing ten spell rules and cooldowns retained; current icon and prohibition feedback. | R4; gallery 3/8. | Source-derived spell validation checks pass. Fork-only spells have no invented equivalence. |
+| HAND-08 | Existing order, manufacture and delivery retained; outlined placement feedback. | R4. | Placement checks pass. Random-versus-FIFO scheduling remains a separate mechanics difference. |
+| HAND-09/10 | Existing LIFO order, explicit rotation, cancel/drop/slap precedence and one-shot clips retained. | R1. | Original clip durations preserved by the asset probe. Gameplay, held-object appearance and listening acceptance remain open. |
+| HAND-11 | Hover validity controls the sign; no three-second stale failure. | R1; gallery 3. | Invalid-to-valid, switching and cancellation checks pass. No unsupported sound/timing claim. |
+
+Regenerated evidence from the modified production source:
+
+- `build/windows/dk2-validation-probe-results.log`: 481 decision assertions pass
+  for current room, trap and spell validation using world/network doubles.
+- `build/windows/dk2-input-probe-results.log`: 30 assertions pass for frame/input
+  transitions, symbol switching, immediate failure recovery and release guards.
+- `build/windows/dk2-hand-asset-probe-results.log`: 100 assertions pass using the
+  real OGRE hand mesh/skeleton and CPU geometry buffers, including pose creation,
+  unchanged existing durations, outward tool faces, outlined tiles and cleanup.
+- `build/windows/dk2-hud-probe-results.log`: actual CEGUI layouts/images pass at
+  five resolutions and successive 80/100/120/100 percent scales; the permanent
+  panel is absent and the hand image cannot intercept input.
+
+These checks do not exercise GPU appearance, live gameplay, server responses or
+audio. The user's manual comparison is still required. Remaining reference-only
+mechanics and artwork are explicit differences, not certified matches.
+
+The final clean Windows Release build and subsequent compilation of the last
+context-text correction pass. Runtime preparation also succeeds. Evidence:
+`build/windows/dk2-final-clean-build.log`, `dk2-final-build.log` and
+`dk2-final-runtime.log`. The executable is
+`C:\Users\mario\GitHub\OpenDungeonsPlus\build\windows\opendungeons-plus.exe`.
+This build's SHA-256 is
+`d0ec5998e4c4819bc18ad94fe8e036d64722b0bda033a8402b4e082983e25573`.
+No game was launched by the assistant. Version remains 0.7.1; README and the
+development index describe the new controls. No upstream issue is claimed closed.
+
+For user acceptance, compare idle/creature/wall hover, room and spell selection,
+an unaffordable build followed by a valid target, cancellation during dragging,
+pickup/drop/slap and release over an open interface. Repeat after a live resolution
+change and 80/100/120 percent UI scaling; check the hand attachment, outlined walls,
+minimap center click and all Options commands. This is pending acceptance, not
+a request to choose a different reference or redesign the interface.
