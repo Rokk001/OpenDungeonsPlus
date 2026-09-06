@@ -482,8 +482,10 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
             for(Creature* creature : gameMap->getCreaturesBySeat(player->getSeat()))
             {
                 const CreatureDefinition* definition = creature->getDefinition();
-                addCreaturePanelCounts(data[definition->getClassName()], creature->getActivity(),
-                    creature->getMoodValue(), definition->isWorker());
+                CreaturePanelCounts& counts = data[definition->getClassName()];
+                if(creature->getIsOnMap())
+                    addCreaturePanelCounts(counts, creature->getActivity(),
+                        creature->getMoodValue(), definition->isWorker());
             }
             ServerNotification* panel = new ServerNotification(ServerNotificationType::creaturePanel, player);
             exportCreaturePanelData(panel->mPacket, data);
