@@ -149,3 +149,39 @@ parallel held-creature checkpoint `6b248742` and its portrait-clipping parent
 `d018f545`, both based on map checkpoint `6310df83`. No shared checkout or
 index switch and no push are required. Version remains 0.7.1, with no release
 requested; README and the camera shortcut note now describe the final controls.
+
+## Viewport outline follow-up
+
+The newly available recorded map view shows a thin white ground-view outline.
+The rotating drawn renderer currently ignores its corner coordinates, while
+the full-map renderer paints entire tile patches black around them. Extend the
+existing shared image overlay to draw the supplied camera polygon in white,
+using the same projection as the direction line. Use this image for full maps
+as well as circular minimaps; the pointer detail stays a plain scene image.
+Remove the superseded tile-patch outline path so static overview textures remain
+event-driven and display scaling preserves a thin outline.
+
+The installed CEGUI geometry probe found eight cases where independently rounded
+floating-point rectangle edges produced a two-pixel segment. Align each overlay
+sample once and derive its opposite edge from the intended pixel width, retaining
+the existing one-pixel viewport and two-pixel direction samples.
+
+All 1,028 viewport geometry/texture checks pass with the installed Ogre/CEGUI
+renderers, including three map styles, three display sizes, five zoom levels,
+four rotations, distant/clipped corners, stationary terrain, changed tiles and
+overlay cleanup. The eight width failures pass after pixel alignment. All 667
+heart-direction regressions and 11 composed map/detail checks also pass; the
+rendered circular minimap and full-map image were inspected. The supplied corner
+fixtures isolate projection and rendering; they do not establish reference camera
+angles or user gameplay acceptance. Logs use `map-viewport`, `map-direction` and
+`map-composed` under `build/windows`; the old composed image is retained as
+`map-viewport-before-50.png`.
+
+README now describes the white camera outline. Version 0.7.1 remains unchanged
+because this is an unreleased functional follow-up; no changelog exists.
+
+Release build and runtime preparation pass for the September 6, 22:12:09
+executable recorded in BUILDING.md. The follow-up retains the complete fork at
+`32c6d4d3` and changes only the map implementation and its documentation.
+User gameplay, appearance acceptance and measured reference transitions remain
+open; no game was launched and nothing was pushed.
