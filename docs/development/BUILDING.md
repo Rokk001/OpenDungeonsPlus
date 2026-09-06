@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+The main-menu camera now preserves its authored horizontal framing across 4:3,
+widescreen and ultrawide viewports, and restores the prior gameplay field of view
+on exit. All 339 real Ogre camera checks pass, as do the Release build and runtime
+preparation. The executable is dated September 6 at 22:50:03, is 4,197,888 bytes
+and has SHA-256
+`f9ef830a6eeb858db7e4abc667488f27f437a0b1504b60b8db84f3aca10f2350`.
+Logs use `main-menu-framing-`; see [main-menu scene framing](MAIN-MENU-FRAMING.md).
+No game was launched; user visual acceptance remains pending.
+
 The hand-animation correction also plays the accepted downward strike when
 removing digging marks. All 781 release/selection checks pass, with two reproduced
 failures before the correction, as do Release/runtime/resource checks. The
