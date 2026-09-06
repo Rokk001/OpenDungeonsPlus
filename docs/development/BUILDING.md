@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The small-creature shadow correction increases depth precision without changing
+the accepted lighting or creature scale. Rat coverage passes on all eight
+receiver materials over five camera and light placements, including 80 repeated
+toggle checks; 64 existing creature receiver cases also pass. Release compilation
+and runtime preparation pass. The executable is dated September 6 at 23:46:31,
+is 4,206,080 bytes and has SHA-256
+`964df352e4e30a568641769eed90ab22a404ce4b15db9fa7dba15420a7c625de`.
+See [small-creature shadow depth](RAT-SHADOW.md); visual confirmation remains
+with the user.
+
 The navigation appearance update adds a four-layer circular minimap frame,
 reuses the removal symbol for Sell and replaces the text zoom label with a
 generated magnifier while preserving all existing controls. The map, overlay,
