@@ -142,6 +142,40 @@ void createKeeperHandPoses(Ogre::Entity* hand)
     }
 }
 
+void createKeeperHandDigAnimation(Ogre::Entity* hand)
+{
+    Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
+    const Ogre::Real duration = 4.0f / 30.0f;
+    if(!skeleton->hasAnimation("DigSwing"))
+    {
+        const Ogre::Animation* grip = skeleton->getAnimation("Dig");
+        Ogre::Animation* swing = skeleton->createAnimation("DigSwing", duration);
+        Ogre::Bone* wrist = skeleton->getBone("Hand1");
+        const Ogre::Quaternion basis = hand->getParentSceneNode()->getOrientation() * wrist->_getDerivedOrientation();
+        for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
+        {
+            if(!grip->hasNodeTrack(b))
+                continue;
+            Ogre::TransformKeyFrame rest(nullptr, 0);
+            grip->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &rest);
+            Ogre::NodeAnimationTrack* track = swing->createNodeTrack(b);
+            for(int i = 0; i < 3; ++i)
+            {
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(duration * i / 2.0f);
+                frame->setRotation(rest.getRotation());
+                frame->setTranslate(rest.getTranslate());
+                frame->setScale(rest.getScale());
+                // Strike downward around the wrist without opening the gripping fingers.
+                if(b == wrist->getHandle() && i == 1)
+                    frame->setRotation(basis.Inverse() * Ogre::Quaternion(Ogre::Degree(50.0f),
+                        Ogre::Vector3::UNIT_Z) * basis * rest.getRotation());
+            }
+        }
+    }
+    if(!hand->hasAnimationState("DigSwing"))
+        hand->getAllAnimationStates()->createAnimationState("DigSwing", 0, duration);
+}
+
 void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>& points,
     float depth, const Ogre::ColourValue& colour, const Ogre::FloatRect& surface,
     const Ogre::FloatRect& textureArea)
@@ -671,6 +705,7 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     handModelNode->setOrientation(Ogre::Quaternion(Ogre::Degree(65.0f), Ogre::Vector3::UNIT_Z) *
         Ogre::Quaternion(Ogre::Degree(35.0f), Ogre::Vector3::UNIT_Y));
     handModelNode->attachObject(keeperHandEnt);
+    createKeeperHandDigAnimation(keeperHandEnt);
     mHeldCreatureGrip = mSceneManager->createSceneNode("KeeperHeldCreatureGrip");
     mHeldCreatureStorage = mSceneManager->createSceneNode("KeeperHeldCreatureStorage");
     if(mHandKeeperHandVisibility == 0)
@@ -2749,8 +2784,13 @@ void RenderManager::rrSetHandPose(bool pointing, bool digging)
        mHandAnimationState->getAnimationName() != mHandPose)
         mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), mHandPose, true);
     if(mHandPickaxe != nullptr)
-        mHandPickaxe->setVisible(digging && mHandKeeperHandVisibility == 0 &&
-            mHandAnimationState != nullptr && mHandAnimationState->getLoop());
+        mHandPickaxe->setVisible(mHandKeeperHandVisibility == 0 && mHandAnimationState != nullptr &&
+            ((digging && mHandAnimationState->getLoop()) || mHandAnimationState->getAnimationName() == "DigSwing"));
+}
+
+void RenderManager::rrPlayDigAnimation()
+{
+    mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "DigSwing", false);
 }
 
 void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour)
@@ -2916,7 +2956,12 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
     }
 
     if(animState != nullptr && ent->getName() == "keeperHandEnt")
-        ent->setMaterialName(animation == "Dig" || animation == "Hold" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
+    {
+        const bool tool = animation == "Dig" || animation == "DigSwing";
+        ent->setMaterialName(tool || animation == "Hold" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
+        if(mHandPickaxe != nullptr)
+            mHandPickaxe->setVisible(tool && mHandKeeperHandVisibility == 0);
+    }
 
     return animState;
 }

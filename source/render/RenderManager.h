@@ -172,6 +172,7 @@ public:
     void rrEntityRemoveParticleEffect(GameEntity* entity, Ogre::ParticleSystem* particleSystem);
     void rrToggleHandSelectorVisibility();
     void rrSetHandPose(bool pointing, bool digging);
+    void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
 
     //! \brief Toggles the creatures text overlay
