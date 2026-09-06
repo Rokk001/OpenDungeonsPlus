@@ -34,8 +34,8 @@ expected shadow texture in each run.
 Windows Release compilation and runtime preparation pass. The executable is
 dated September 6, 2026 at 23:46:31, is 4,206,080 bytes and has SHA-256
 `964df352e4e30a568641769eed90ab22a404ce4b15db9fa7dba15420a7c625de`.
-The game was not launched by the assistant; visual confirmation in the reported
-map remains with the user.
+The game was not launched by the assistant. On September 6, 2026, the user ran
+the corrected build and confirmed that the Rat shadow is fixed.
 
 Version remains 0.7.1 because this is a rendering bug fix rather than a release.
 The root README needs no change and the repository has no changelog file.
