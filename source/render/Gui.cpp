@@ -80,6 +80,46 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
+void createNavigationImages()
+{
+    const int size = 64;
+    std::vector<unsigned char> pixels(size * size * 4, 0);
+    const float handleStart = 36.0f;
+    const float handleEnd = 53.0f;
+    const float handleLengthSquared = 2.0f * (handleEnd - handleStart) * (handleEnd - handleStart);
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            const float dx = x + 0.5f - 25.0f;
+            const float dy = y + 0.5f - 25.0f;
+            const float ringDistance = std::abs(std::sqrt(dx * dx + dy * dy) - 15.0f);
+            const float handleX = x + 0.5f - handleStart;
+            const float handleY = y + 0.5f - handleStart;
+            const float handleT = std::max(0.0f, std::min(1.0f,
+                ((handleX + handleY) * (handleEnd - handleStart)) / handleLengthSquared));
+            const float nearestX = handleStart + handleT * (handleEnd - handleStart);
+            const float nearestY = handleStart + handleT * (handleEnd - handleStart);
+            const float segmentX = x + 0.5f - nearestX;
+            const float segmentY = y + 0.5f - nearestY;
+            const float handleDistance = std::sqrt(segmentX * segmentX + segmentY * segmentY);
+            const float coverage = std::max(0.0f, std::min(1.0f,
+                std::max(3.0f - ringDistance, 3.0f - handleDistance)));
+            const int i = (y * size + x) * 4;
+            pixels[i] = 232;
+            pixels[i + 1] = 226;
+            pixels[i + 2] = 202;
+            pixels[i + 3] = static_cast<unsigned char>(coverage * 255.0f);
+        }
+    }
+    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("MapZoom");
+    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", "OpenDungeonsIcons/MapZoom"));
+    image.setTexture(&texture);
+    image.setArea(CEGUI::Rectf(0, 0, size, size));
+}
+
 void scaleDimension(CEGUI::UDim& dimension, float scale)
 {
     dimension.d_offset *= scale;
@@ -169,6 +209,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
     OD_LOG_INF("CEGUI::SchemeManager created");
     createHandFeedbackImage();
+    createNavigationImages();
 
     float configuredScalePercent = 100.0f;
     std::istringstream scaleParser(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false));
