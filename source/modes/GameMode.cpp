@@ -481,6 +481,12 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
     if(cameraInputBlocked())
         return;
 
+    // Native OIS reports 120 units per wheel notch; the SFML bridge reports notches.
+    float wheelNotches = static_cast<float>(arg.delta);
+#ifndef OD_USE_SFML_WINDOW
+    wheelNotches /= 120.0f;
+#endif
+
     if (arg.delta > 0)
     {
         if (getKeyboard()->isModifierDown(OIS::Keyboard::Ctrl))
@@ -489,7 +495,7 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
         }
         else
         {
-            frameListener.getCameraManager()->zoomBy(-0.2f * arg.delta);
+            frameListener.getCameraManager()->zoomBy(-0.2f * wheelNotches);
         }
     }
     else if (arg.delta < 0)
@@ -500,7 +506,7 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
         }
         else
         {
-            frameListener.getCameraManager()->zoomBy(-0.2f * arg.delta);
+            frameListener.getCameraManager()->zoomBy(-0.2f * wheelNotches);
         }
     }
 }
