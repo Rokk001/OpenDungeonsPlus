@@ -134,9 +134,15 @@ void createKeeperHandPoses(Ogre::Entity* hand)
 }
 
 void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>& points,
-    float depth, const Ogre::ColourValue& colour)
+    float depth, const Ogre::ColourValue& colour, const Ogre::FloatRect& surface,
+    const Ogre::FloatRect& textureArea)
 {
     // A small extruded polygon, in the hand rig's local units.
+    const auto textureCoordinate = [&](float u, float v)
+    {
+        mesh->textureCoord(textureArea.left + u * textureArea.width(),
+            textureArea.top + v * textureArea.height());
+    };
     const unsigned int count = static_cast<unsigned int>(points.size());
     for(unsigned int i = 1; i + 1 < count; ++i)
     {
@@ -146,6 +152,8 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
             {
                 mesh->position(points[corner].x, points[corner].y, z);
                 mesh->colour(colour);
+                textureCoordinate((points[corner].x - surface.left) / surface.width(),
+                    (points[corner].y - surface.top) / surface.height());
             }
         }
     }
@@ -159,6 +167,12 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
         {
             mesh->position(vertex);
             mesh->colour(Ogre::ColourValue(colour.r * 0.75f, colour.g * 0.75f, colour.b * 0.75f, colour.a));
+            // Map depth across the side rather than collapsing its UVs onto an edge.
+            const float across = (vertex.z + depth) / (2.0f * depth);
+            if(std::abs(b.y - a.y) > std::abs(b.x - a.x))
+                textureCoordinate(across, (vertex.y - surface.top) / surface.height());
+            else
+                textureCoordinate((vertex.x - surface.left) / surface.width(), across);
         }
     }
 }
@@ -647,18 +661,25 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     mHandPickaxe = mSceneManager->createManualObject("KeeperHandPickaxe");
     mHandPickaxe->setCastShadows(false);
     mHandPickaxe->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
-    mHandPickaxe->begin("debug_draw", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+    // Use interior atlas regions from the existing wood and metal textures.
+    const Ogre::FloatRect woodArea(5.0f/128, 2.0f/128, 39.0f/128, 124.0f/128);
+    const Ogre::FloatRect metalArea(58.0f/128, 42.0f/128, 118.0f/128, 118.0f/128);
+    const Ogre::FloatRect shaftSurface(-0.006f, -0.065f, 0.006f, 0.075f);
+    const Ogre::FloatRect headSurface(-0.085f, 0.043f, 0.085f, 0.085f);
+    mHandPickaxe->begin("HandTool/Wood", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
     addPickaxePrism(mHandPickaxe, {{-0.006f,-0.065f}, {0.006f,-0.065f}, {0.006f,0.075f}, {-0.006f,0.075f}},
-        0.005f, Ogre::ColourValue(0.42f,0.28f,0.12f));
+        0.005f, Ogre::ColourValue::White, shaftSurface, woodArea);
+    mHandPickaxe->end();
+    mHandPickaxe->begin("HandTool/Metal", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
     // Convex sections retain the curved head's hollow underside when triangulated.
     addPickaxePrism(mHandPickaxe, {{-0.085f,0.043f}, {-0.042f,0.057f}, {-0.05f,0.073f}},
-        0.008f, Ogre::ColourValue(0.55f,0.57f,0.59f));
+        0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     addPickaxePrism(mHandPickaxe, {{-0.042f,0.057f}, {0,0.065f}, {0,0.085f}, {-0.05f,0.073f}},
-        0.008f, Ogre::ColourValue(0.55f,0.57f,0.59f));
+        0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     addPickaxePrism(mHandPickaxe, {{0,0.065f}, {0.042f,0.057f}, {0.05f,0.073f}, {0,0.085f}},
-        0.008f, Ogre::ColourValue(0.55f,0.57f,0.59f));
+        0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     addPickaxePrism(mHandPickaxe, {{0.042f,0.057f}, {0.085f,0.043f}, {0.05f,0.073f}},
-        0.008f, Ogre::ColourValue(0.55f,0.57f,0.59f));
+        0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     mHandPickaxe->end();
     keeperHandEnt->attachObjectToBone("Hand2", mHandPickaxe, Ogre::Quaternion::IDENTITY, Ogre::Vector3(0,0.03f,0.01f));
     mHandPickaxe->setVisible(false);
