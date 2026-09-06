@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The map follow-up adds the clipped dotted heart direction at overview zoom and
+uses the existing drawn minimap by default, retaining saved renderer preferences.
+All 667 image/renderer direction checks and 11 composed map/detail checks pass;
+Release build and runtime preparation pass in `map-direction-build.log` and
+`map-direction-runtime.log`. The executable is dated September 6 at 21:49:44,
+size 4,197,888 bytes, SHA-256 `5c122c3e3adcfa9ceff877a48a96eef2b867173b1355cf8d229b83f6a6ca1649`.
+It retains the complete held-creature and portrait-clipping work at `6b248742`.
+No game was launched. User gameplay/visual acceptance and measured reference
+transitions remain open; see [map navigation](MAP-NAVIGATION.md).
+
 The held-creature presentation and separate portrait-clipping correction pass
 the Windows Release build and runtime preparation. The executable at
 `build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 21:30:54,

@@ -109,9 +109,43 @@ manual game run. The Release rebuild and runtime preparation after these changes
 September 6, 21:33:40 executable is recorded in BUILDING.md.
 
 This is a functional checkpoint on the dedicated map branch, not completion
-of the full navigation acceptance matrix. Direction markers, final minimap
-presentation and recorded interaction/framing comparisons remain in progress;
-composed game appearance and startup acceptance remain with the user.
+of the full navigation acceptance matrix. Direction markers and the default
+presentation are addressed by the follow-up below; recorded interaction/framing
+comparisons, game appearance and startup acceptance remain with the user.
 README documents the new controls. Version 0.7.1 remains unchanged because no
 release was requested; the project has no changelog. Internal comparison details
 remain under `docs/internal/`, outside the contribution.
+
+## Direction and default presentation follow-up
+
+The drawn renderers already distinguish fortified wall tiles with the owner's
+darkened colour, forming strips around claimed ground. The remaining direction
+indicator belongs to the circular minimap image, shared by all three renderers;
+extend that image with a clipped dotted line from the viewed location to the
+first owned heart tile. Each renderer supplies its displayed centre, span and
+rotation, so live resizing and camera rotation preserve the matching coordinates.
+Show the direction in overview zoom levels and hide it in the closer view and
+full-map detail window. Keep resource ownership with the image.
+
+Use the existing rotating drawn map as the default colour-coded presentation;
+retain explicitly saved renderer preferences and all three selectable renderers.
+The pointer detail remains a scene-camera view. No separate map implementation
+or new rendering dependency is needed.
+
+The direction follow-up passes 667 checks with real image geometry and all three
+map renderers: 132/176/352-pixel display sizes, five zoom levels, four rotations,
+circle clipping, removed/enemy/unseen hearts, texture cleanup and retained saved
+renderer selection. The composed Ogre/CEGUI check uses the actual map layout,
+pointer controller and both map/detail renderers; its 11 assertions cover lit
+scene detail, placement at the centre and opposite corners, and restored light
+visibility. The rendered centre/corner images were inspected. Fixtures establish
+rendering and ownership behavior, not original gameplay fidelity.
+
+Evidence: `map-direction-probe-results.log`, `map-direction-preview.png`,
+`map-composed-probe-results.log` and `map-composed-{1,50,99}.png` under
+`build/windows`. The new Release build and runtime preparation pass for the September 6,
+21:49:44 executable recorded in BUILDING.md. The follow-up retains
+parallel held-creature checkpoint `6b248742` and its portrait-clipping parent
+`d018f545`, both based on map checkpoint `6310df83`. No shared checkout or
+index switch and no push are required. Version remains 0.7.1, with no release
+requested; README and the camera shortcut note now describe the final controls.
