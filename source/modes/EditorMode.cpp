@@ -1964,6 +1964,7 @@ bool EditorMode::onSaveButtonClickFromOptions(const CEGUI::EventArgs& /*arg*/)
         // Send a message to the server telling it we want to drop the creature
         ClientNotification *clientNotification = new ClientNotification(
             ClientNotificationType::askSaveMap);
+        clientNotification->mPacket << std::string() << std::string();
         ODClient::getSingleton().queueClientNotification(clientNotification);
     }
     mModifiedMapBit = false;
@@ -2070,7 +2071,8 @@ bool EditorMode::quickSavePopUpMenu(const CEGUI::EventArgs& /*arg*/)
     if(ODClient::getSingleton().isConnected())
     {
         // Send a message to the server telling it we want to drop the creature
-        ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSaveMap);
+        ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSaveMap,
+            std::string(), std::string());
     }
     mModifiedMapBit = false;
     return true;

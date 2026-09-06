@@ -63,6 +63,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   scaled bounds and control-hit verification.
 - [Literal paths in event messages](EVENT-MESSAGE-PATHS.md): preserving path
   separators and bracketed names alongside the existing notice icon and colour.
+- [Save request payload](SAVE-REQUEST-PAYLOAD.md): matching three default-save
+  callers to the existing server packet format, with before/after evidence.
 - [Creature panel](CREATURE-PANEL.md): per-type portraits, activity/mood views,
   population transmission, pickup/focus controls and verification limits.
 - [Creature selection by level](CREATURE-LEVEL-SELECTION.md): highest/lowest
