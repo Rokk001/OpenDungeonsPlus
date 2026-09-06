@@ -26,3 +26,19 @@ material Keeperhand
         }
     }
 }
+
+// Opaque fingers must hide the enclosed shaft while gripping the tool.
+material Keeperhand/ToolGrip : Keeperhand
+{
+    technique
+    {
+        pass
+        {
+            ambient 0.0 0.0 0.0 1.0
+            diffuse 0.0 0.0 0.0 1.0
+            scene_blend one zero
+            depth_check on
+            depth_write on
+        }
+    }
+}

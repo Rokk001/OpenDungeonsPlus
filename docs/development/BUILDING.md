@@ -1,6 +1,20 @@
 # Configuring and compiling on Windows
 
-The latest Release build adds local lighting to visible rooms and restores
+The latest Release executable includes the corrected hand orientation and tool
+grip, picker counts and current parallel room/camera work. All 94 focused grip
+checks pass with shadows off and on; six rendered layer comparisons verify
+finger/shaft occlusion, and 11 other-pose images remain unchanged. The separate
+orientation probe passes 39 checks; the earlier picker probe passes 911 checks.
+After the parallel task corrected its camera compilation error, Release build
+and runtime preparation pass in `build/windows/hand-grip-release-rebuild.log`
+and `hand-grip-runtime.log`. The executable at `build/windows/opendungeons-plus.exe`
+is dated September 6, 2026 at 20:04:49, size 4,170,752 bytes, SHA-256
+`5c0a25e0fdff21d906bcb5e60a6e6c83b5d21513bbb6e74c39b02d2b3218a2ed`.
+No game was launched; manual visual acceptance remains with the user. See
+[hand orientation](HAND-ORIENTATION.md), [tool grip](HAND-TOOL-GRIP.md) and
+[picker counts](CREATURE-PICKER-COUNTS.md) for scope and verification limits.
+
+The preceding Release build adds local lighting to visible rooms and restores
 overlapping light contributions and ambient colour on custom world materials.
 All 18 focused room-lighting checks, 60 ambient/falloff checks, 73 shadow-receiver
 cases, 146 settings checks and the instanced-fog/wall renders pass. Release

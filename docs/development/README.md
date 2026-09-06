@@ -50,6 +50,12 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Restoring prerequisites](WINDOWS-PREREQUISITES.md): sources,
   checksums, installation scripts, order and resolved installation problems.
 
+- [Hand orientation](HAND-ORIENTATION.md): rightward spatial inclination with preserved cursor placement.
+
+- [Hand tool grip](HAND-TOOL-GRIP.md): finger enclosure and pose-specific depth occlusion.
+
+- [Creature picker counts](CREATURE-PICKER-COUNTS.md): counts follow pickup and drop acknowledgements.
+
 ## Adding further notes
 
 Add new files here as needed and link them above, for example:
