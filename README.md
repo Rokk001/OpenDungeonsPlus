@@ -12,8 +12,6 @@ of development.
 
 ### How to play
 
-Visible rooms have local lighting independent of the cursor.
-
 Future versions will have an in-game tutorial, but for now, you can use the
 following resources to learn the basic gameplay concepts:
 
