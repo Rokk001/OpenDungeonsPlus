@@ -56,6 +56,9 @@ const Ogre::Real DEFAULT_X_AXIS_VIEW = 25.0;
 
 const Ogre::String BACKGROUND_RECT_NAME = "BackgroundRect";
 
+//! The scripted main-menu scene and its GUI were authored on an 800x600 plane.
+const Ogre::Real MAIN_MENU_REFERENCE_ASPECT_RATIO = 4.0f / 3.0f;
+
 CameraManager::CameraManager(Ogre::SceneManager* sceneManager, GameMap* gm, Ogre::RenderWindow* renderWindow) :
     mCircleMode(false),
     mCatmullSplineMode(false),
@@ -66,6 +69,8 @@ CameraManager::CameraManager(Ogre::SceneManager* sceneManager, GameMap* gm, Ogre
     mAlpha(0.0),
     mActiveCamera(nullptr),
     mActiveCameraNode(nullptr),
+    mMainMenuProjection(false),
+    mMainMenuBaseFovY(Ogre::Degree(45.0f)),
     mGameMap(gm),
     mCameraIsFlying(false),
     mCameraFlightDestination(Ogre::Vector3(0.0, 0.0, 0.0)),
@@ -264,11 +269,7 @@ void CameraManager::setRenderWindow(Ogre::RenderWindow* renderWindow)
 
     mViewport = viewport;
     previousTarget->removeViewport(previousViewport->getZOrder());
-    if(viewport->getActualHeight() > 0)
-    {
-        mActiveCamera->setAspectRatio(static_cast<Ogre::Real>(viewport->getActualWidth())
-            / static_cast<Ogre::Real>(viewport->getActualHeight()));
-    }
+    setViewportSize(viewport->getActualWidth(), viewport->getActualHeight());
 }
 
 const Ogre::Vector3& CameraManager::getActiveCameraPosition() const
@@ -297,9 +298,42 @@ void CameraManager::setActiveCamera(const Ogre::String& ss)
 {
     mActiveCamera = mSceneManager->getCamera(ss);
     mViewport->setCamera(mActiveCamera);
-    mActiveCamera->setAspectRatio(Ogre::Real(mViewport->getActualWidth()) / Ogre::Real(mViewport->getActualHeight()));
+    setViewportSize(mViewport->getActualWidth(), mViewport->getActualHeight());
 
     OD_LOG_INF("Setting Active Camera to " + ss + " ...");
+}
+
+void CameraManager::setViewportSize(unsigned int width, unsigned int height)
+{
+    if(mActiveCamera == nullptr || height == 0)
+        return;
+
+    const Ogre::Real aspectRatio = static_cast<Ogre::Real>(width) / static_cast<Ogre::Real>(height);
+    mActiveCamera->setAspectRatio(aspectRatio);
+    if(!mMainMenuProjection)
+        return;
+
+    const Ogre::Real halfFovY = mMainMenuBaseFovY.valueRadians() * 0.5f;
+    const Ogre::Real menuFovY = 2.0f * std::atan(std::tan(halfFovY)
+        * MAIN_MENU_REFERENCE_ASPECT_RATIO / aspectRatio);
+    mActiveCamera->setFOVy(Ogre::Radian(menuFovY));
+}
+
+void CameraManager::setMainMenuProjection(bool enabled)
+{
+    if(enabled && !mMainMenuProjection)
+    {
+        mMainMenuBaseFovY = mActiveCamera->getFOVy();
+        mMainMenuProjection = true;
+    }
+    else if(!enabled && mMainMenuProjection)
+    {
+        mMainMenuProjection = false;
+        mActiveCamera->setFOVy(mMainMenuBaseFovY);
+    }
+
+    if(mViewport != nullptr)
+        setViewportSize(mViewport->getActualWidth(), mViewport->getActualHeight());
 }
 
 void CameraManager::updateCameraFrameTime(const Ogre::Real frameTime)
