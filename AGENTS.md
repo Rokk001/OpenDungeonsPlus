@@ -54,6 +54,16 @@ implementation; do not invent the missing details. The earlier prototype stays
 preserved in [action feedback](docs/development/ACTION-STATE-FEEDBACK.md); its
 permanent-label design is not the target for the new work.
 
+The separate lighting branch is `fix/room-lighting`, based on complete hand-tool
+checkpoint `65506edf`, which already retains shadow closure `ba245257`.
+It adds local visible-room illumination and corrects custom material light
+accumulation and ambient colour. All 18 focused room checks, the existing
+shadow/falloff regressions and the Release build pass; the prepared executable
+is dated September 6 at 19:38:14 in BUILDING.md. Manual visual acceptance remains
+with the user. Preserve its shader/material and renderer changes while the
+authorized camera-control and map-navigation tasks proceed on separate branches.
+The shared checkout/index remain on the shadow branch; no new push is authorized.
+
 Windows development is organized on `feature/windows-support` in this fork.
 The related work is split into a local branch stack: `feature/windows-support`,
 `fix/dynamic-shadows`, `fix/settings-option-duplicates`, `feature/live-settings`,
