@@ -37,6 +37,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Hand-feedback specification (2b)](DK2-HAND-FEEDBACK-SPEC.md): input-state
   scenarios, hand/icon/outline implementation, regenerated checks and mechanics
   differences; the latest complete fork is on this feature branch.
+- [Shadow coverage](SHADOW-COVERAGE.md): PR #48's missing creature shadows,
+  ground projection, receiver and cursor-light corrections, isolated rendering
+  evidence, user screenshot review and local branch closure.
 - [GUI scaling](GUI-SCALING.md): scale policy, implementation details,
   automated checks and the required manual verification matrix.
 - [Action state and target feedback](ACTION-STATE-FEEDBACK.md): current action,
