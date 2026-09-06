@@ -46,7 +46,8 @@ adjust roll, yaw and pitch. Normal play supports arrow panning, Shift accelerati
 Home/End and Ctrl+Up/Down zoom, Delete/Page Down and Ctrl+Left/Right rotation,
 X+horizontal pointer rotation, and Z+vertical pointer zoom. Existing WASD/Q/E,
 middle-button orbit, V view cycling and numbered bookmarks remain available.
-H shares the existing dungeon-heart focus action with T.
+The subsequent map-navigation change focuses the actual owned heart with H;
+T retains the original starting-position shortcut, P cycles portals and F focuses fights.
 
 On September 6, 2026, the Windows Release build and runtime preparation pass.
 The executable was built at 20:08:51. No manual game test was run.
