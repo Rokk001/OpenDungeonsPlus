@@ -63,6 +63,7 @@
 
         <Window type="OD/StaticImage" name="MiniMap" >
             <UserString name="AllowEdgeScrolling" value="true" />
+            <Property name="RiseOnClickEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="FrameEnabled" value="False" />
             <Property name="Area" value="{{0,8},{1,-184},{0,184},{1,-8}}" />
