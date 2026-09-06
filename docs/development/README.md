@@ -9,6 +9,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Minimap navigation stacking](MINIMAP-NAVIGATION-LAYER.md): preserving access
+  to the corner controls after clicking the minimap.
 - [Map navigation](MAP-NAVIGATION.md): full-map controls, pointer detail, minimap zoom,
   tile colours, focus shortcuts and verification limits.
 - [Contributing to the original project](CONTRIBUTING-WORKFLOW.md): fork, synchronization,

@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The minimap stacking correction passes all 680 installed-CEGUI click checks
+(640 failures before), Release build and runtime preparation. The changed layout
+is available through the existing runtime GUI junction; this fix changes no C++
+source. The prepared executable is dated September 6 at 22:31:33,
+SHA-256 `c41af657e9a8891fdaac306cff05e379a306977123a9d1c476718a43dc7a021d`. Runtime layout
+SHA-256: `1080be29fea54a34a428dc9cc9fcc646130a32f9c8931b5955d2427b0c65cd5b`.
+Logs: `minimap-layer-build.log` and `minimap-layer-runtime.log`; see
+[minimap navigation stacking](MINIMAP-NAVIGATION-LAYER.md).
+The complete hand/map fork at `468cb98e` is retained. No game was launched;
+the user's click retest and broader navigation appearance work remain open.
+
 The downward hand-strike follow-up passes Release compilation, runtime
 preparation, 876 renderer checks, 781 release/selection checks and the headless
 resource check. The executable is dated September 6 at 22:21:21, 4,197,376 bytes,
