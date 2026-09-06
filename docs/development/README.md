@@ -20,6 +20,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   build Release/Debug and find logs.
 - [Windows build errors and fixes](WINDOWS-BUILD-FIXES.md): confirmed
   compiler errors, their causes, targeted fixes and build evidence.
+- [Windows incremental build consistency](WINDOWS-INCREMENTAL-BUILD.md): a
+  startup crash caused by incompatible virtual-call layouts and the verified
+  complete rebuild with obsolete minimal rebuild disabled.
 - [Windows startup errors and fixes](WINDOWS-STARTUP-FIXES.md): actual startup
   failures, runtime preparation, resource-path correction and outstanding verification.
 - [Windows settings fixes](WINDOWS-SETTINGS-FIXES.md): duplicate colour-depth

@@ -1,5 +1,19 @@
 # Project context for future sessions
 
+## Current Windows crash correction
+
+The latest combined work is `fix/windows-incremental-build`, merge `e1276f81`,
+retaining hand-grip checkpoint `9beb2ba8` and camera checkpoint `8c1410c3`.
+The user's subsequent 20:06 crash revealed mismatched virtual-call layouts in
+the incrementally built executable: an event notice was dispatched to chat.
+The obsolete MSVC minimal-rebuild option is now disabled, all 248 translation
+units rebuilt, and both linked-binary dispatch checks and runtime resource checks
+pass; see [the diagnosis](docs/development/WINDOWS-INCREMENTAL-BUILD.md).
+Keep shared game builds sequential across sessions; preserve the current local
+camera-reset correction and every other newer edit. The normal shared checkout
+and index remain unchanged. The prepared executable is dated September 6 at
+20:30:04 in BUILDING.md; user startup and game acceptance remain pending.
+
 ## Language
 
 Communicate with the user in German.
