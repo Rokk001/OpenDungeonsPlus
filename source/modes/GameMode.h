@@ -228,6 +228,8 @@ protected:
 
 private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
+    std::vector<CEGUI::Window*> mHeldCreatureIcons;
+    void refreshHeldCreatureIcons();
     bool shouldExpireEventMessages() const override { return false; }
     void showEventMessages();
     bool onEventMessagesClicked(const CEGUI::EventArgs& arg);

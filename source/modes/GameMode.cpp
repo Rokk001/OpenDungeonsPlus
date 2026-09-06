@@ -39,6 +39,7 @@
 #include "network/ODServer.h"
 #include "render/Gui.h"
 #include "render/CreaturePanel.h"
+#include "render/CreaturePortrait.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "render/TextRenderer.h"
@@ -349,6 +350,9 @@ GameMode::GameMode(ModeManager *modeManager):
 
 GameMode::~GameMode()
 {
+    RenderManager::getSingleton().rrEnableHeldCreatureDisplay(false, mGameMap->getLocalPlayer());
+    for(CEGUI::Window* icon : mHeldCreatureIcons)
+        CEGUI::WindowManager::getSingleton().destroyWindow(icon);
     // Remove tile listeners before the base destructor clears the game map.
     mFullMap.reset();
     CEGUI::ToggleButton* checkBox =
@@ -386,6 +390,7 @@ void GameMode::activate()
     // Loads the corresponding Gui sheet.
     Gui& gui = getModeManager().getGui();
     gui.loadGuiSheet(Gui::inGameMenu);
+    RenderManager::getSingleton().rrEnableHeldCreatureDisplay(true, mGameMap->getLocalPlayer());
 
     // We free the menu scene as it is not required anymore
     ODFrameListener::getSingleton().freeMainMenuScene();
@@ -2119,7 +2124,47 @@ void GameMode::refreshActionFeedback(float elapsed)
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
          (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat())));
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging);
+    refreshHeldCreatureIcons();}
 
+void GameMode::refreshHeldCreatureIcons()
+{
+    size_t count = 0;
+    for(GameEntity* entity : mGameMap->getLocalPlayer()->getObjectsInHand())
+    {
+        if(entity->getObjectType() != GameEntityType::creature)
+            continue;
+        if(count == mHeldCreatureIcons.size())
+        {
+            CEGUI::Window* icon = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage",
+                "HeldCreatureIcon" + std::to_string(count));
+            icon->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
+                CEGUI::UDim(0, 32), CEGUI::UDim(0, 32)));
+            icon->setAlwaysOnTop(true);
+            icon->setMousePassThroughEnabled(true);
+            icon->setProperty("ClippedByParent", "False");
+            icon->setProperty("FrameEnabled", "True");
+            icon->setProperty("BackgroundEnabled", "True");
+            mRootWindow->addChild(icon);
+            mHeldCreatureIcons.push_back(icon);
+        }
+        Creature* creature = static_cast<Creature*>(entity);
+        mHeldCreatureIcons[count]->setProperty("Image", getCreatureHandIconImage(
+            creature->getDefinition()->getMeshName()).getName());
+        ++count;
+    }
+
+    const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+    const float scale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
+    const float side = 32.0f * scale;
+    for(size_t i = 0; i < mHeldCreatureIcons.size(); ++i)
+    {
+        CEGUI::Window* icon = mHeldCreatureIcons[i];
+        icon->setVisible(i < count && RenderManager::getSingleton().isKeeperHandVisible());
+        icon->setSize(CEGUI::USize(CEGUI::UDim(0, side), CEGUI::UDim(0, side)));
+        // Keep the existing action/prohibition area clear even when it is hidden.
+        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale + (i % 4) * side),
+            CEGUI::UDim(0, pointer.d_y + 58.0f * scale + (i / 4) * side)));
+    }
 }
 
 
