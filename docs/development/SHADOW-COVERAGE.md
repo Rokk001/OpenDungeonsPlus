@@ -1,5 +1,38 @@
 # Shadow coverage correction
 
+## PR #48 update delivered on September 6, 2026
+
+The user explicitly authorized pushing this correction to their fork and updating
+the existing PR #48. The contribution is assembled in the isolated worktree
+`build/pr48-shadow-update`, branch `pr/shadow-coverage-update`, based on the
+published PR head `dbae842197c299cdf18c8d5d86d9c15ec2cfa54f`. It contains 90
+functional files only: the 88 reviewed shader/material/camera files match
+`fe86bf03`, and the existing shadow-settings helper is reused in the older PR's
+RenderManager initialization. The initialization occurs after resource groups
+are initialized, as in the full fork. No later fork features or internal notes
+are added to this contribution.
+
+The probes rebuilt against the actual contribution resources and helper pass
+all 73 receiver cases, 146 repeated settings checks, 60 lighting checks and the
+instanced-fog/vertical-wall renders. Logs are `build/windows/pr48-coverage-*.log`,
+`pr48-light-results.log` and `pr48-surface-*.log`. The full isolated Windows
+Release build passes in `pr48-shadow-build.log`, with successful configuration
+in `pr48-shadow-configure.log`. Its executable is dated September 6 at 18:46:34,
+SHA-256 `fd7c41efff5359da76e17c9079945a11e77b61c71b933ee2b6f27d5acdb6be35`.
+The current full-fork runtime and unrelated shared working changes are preserved.
+This remains a bug fix without a version bump or a new README feature; there is
+no changelog file.
+
+Commit `6862d3b63c507c4ad94d2580632d7b0a3149ee2b` was pushed normally to the
+user's `origin` branch `fix/dynamic-shadows`, advancing it from `dbae8421`.
+GitHub confirms that [PR #48](https://github.com/tomluchowski/OpenDungeonsPlus/pull/48)
+now points to that exact commit and remains open and ready for review.
+The isolated contribution worktree is clean; the shared checkout remains on
+`fix/shadow-coverage`. No other branch was pushed, and no PR comment was posted.
+A separate maintainer reply must still be shown to the user and approved before
+it is posted. Linux runtime and the original full-map reproduction remain
+unverified; the local shadow work is closed and room lighting is a separate task.
+
 ## Local branch closure on September 6, 2026
 
 The user requested closing the shadow work after the final review and handling
@@ -14,7 +47,8 @@ remain accurately recorded; they are not reported as tested.
 The functional work is closed locally on `fix/shadow-coverage`; room lighting
 is a separate follow-up. PR #48 is already open and ready for review, with
 published head `dbae8421`; the two local correction commits have not been
-pushed. Publishing or replying still requires the user's authorization.
+pushed at that checkpoint. The subsequent push authorization and contribution
+preparation are recorded above; reply approval is still separate.
 The final checkpoint changes only this task's development note, build-history
 entry and documentation-index link. The game version and root README need no
 additional change for this bug fix; no release or new player-facing feature
@@ -53,14 +87,14 @@ request remains missing creature shadows and missing receiving surfaces, with
 Forgotten Treasures as the suggested reproduction. The local rendering checks
 cover those receiver paths, but the user's latest captures are from the save
 identified above, not that named map. Do not describe them as confirmation of
-the maintainer's exact full-map reproduction. No reply or push was made.
+the maintainer's exact full-map reproduction. No reply or push had been made at
+that review; subsequent delivery is recorded above.
 
 ### Prepared maintainer reply, not posted
 
-I've prepared a local fix for the shadow projection and material receivers;
-isolated rendering checks now show creature shadows on floors and walls.
-The latest in-game screenshots also show the excessive black shadows resolved,
-but the original Forgotten Treasures reproduction still needs a manual retest.
+I've pushed the shadow projection and receiver fix and corrected the solid-black
+shadows. The Windows build and isolated rendering checks pass; the original
+Forgotten Treasures reproduction still needs a manual retest.
 
 ## User rejection: cursor-light shadows on September 6
 
@@ -202,10 +236,12 @@ state is added/removed on settings changes without duplicating it.
 
 ## Automated evidence on September 6, 2026
 
-- The PR #48 settings path fails all eight floor cases with zero shadow pixels:
+- The disabled-receiver control fails all eight floor cases with zero shadow pixels:
   `build/windows/shadow-coverage-pr48-final-results.log`. This control uses the
-  current resource files with their default shadow uniforms disabled, matching
-  the submitted PR's initialization; it is not a rebuilt Linux PR binary.
+  current resource files with their default shadow uniforms disabled; it is not
+  the submitted PR's full initialization or a rebuilt Linux PR binary. The
+  submitted constructor does attempt to enable receivers on its selected pass;
+  this control alone does not establish how every original PR receiver behaves.
 - The corrected path passes 73 receiver cases: eight materials over five
   camera/light placements, a second-light case, and Wizard/Dragon/Slime at
   Forgotten Treasures' first starting position (85,60), plus the DCW wall shader.
@@ -244,4 +280,5 @@ Release executable, enable shadows, load Forgotten Treasures, excavate a large
 room and check moving creatures across dirt/claimed/room floors while moving the
 hand light, zooming and rotating the camera; also toggle shadows off and back on.
 Linux runtime and the maintainer's original full-map reproduction remain
-unverified. No push or GitHub reply has been made for this correction.
+unverified. The authorized PR update is recorded above; no GitHub reply has
+been posted.
