@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The separate portrait-clipping correction passes the interleaved Ogre/CEGUI
+render check for all 33 configured meshes, Windows Release compilation and
+runtime preparation. The shared executable is dated September 6 at 21:30:54,
+size 4,193,280 bytes, SHA-256
+`26919b405f7cd92a5861d17e28a84f516cddfe5ba35e44d80c36553ecdaabb87`.
+It also contains newer local held-display and parallel map work. Logs are
+`held-icon-preview-results.log`, `held-display-release-build.log` and
+`held-display-runtime.log` in `build/windows/`. No game was launched. See
+[portrait clipping](CREATURE-PORTRAIT-CLIPPING.md) for the diagnosis and scope.
+
 The map-navigation checkpoint adds a full map, pointer detail, immediate map
 relocation, minimap zoom and owned-room/fight focus. Release build and runtime
 preparation pass in `map-navigation-build.log` and `map-navigation-runtime.log`.

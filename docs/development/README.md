@@ -63,6 +63,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 - [Creature picker counts](CREATURE-PICKER-COUNTS.md): counts follow pickup and drop acknowledgements.
 
+- [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
+  interface clipping before generating a cached portrait.
+
 ## Adding further notes
 
 Add new files here as needed and link them above, for example:
