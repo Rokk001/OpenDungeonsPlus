@@ -32,9 +32,11 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Reference baseline (0b)](DK2-REFERENCE-BASELINE.md): current authorization,
   separate branch sequence, inspected sources, code findings and unresolved evidence.
 - [HUD specification (1b)](DK2-HUD-SPEC.md): existing-function inventory,
-  geometry requirements, interface boundaries and reference acceptance scenarios.
+  measured composition, minimap resize correction, interface boundaries and
+  outstanding reference acceptance scenarios.
 - [Hand-feedback specification (2b)](DK2-HAND-FEEDBACK-SPEC.md): input-state
-  scenarios, current code paths, presentation requirements and mechanics dependencies.
+  scenarios, hand/icon/outline implementation, regenerated checks and mechanics
+  differences; the latest complete fork is on this feature branch.
 - [GUI scaling](GUI-SCALING.md): scale policy, implementation details,
   automated checks and the required manual verification matrix.
 - [Action state and target feedback](ACTION-STATE-FEEDBACK.md): current action,

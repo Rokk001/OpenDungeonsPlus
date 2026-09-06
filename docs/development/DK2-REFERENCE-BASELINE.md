@@ -8,16 +8,14 @@ stopped permanent-label task as the current work scope.
 
 | Item | Branch | Current state |
 | --- | --- | --- |
-| 0b | `docs/dk2-reference-baseline` | Created from `11c4209e`, retaining the uncommitted roadmap and agent-rule changes; reference collection and source comparison in progress. |
-| 1b | `feature/dk2-hud` | Created at reference checkpoint `f390b1de`; implementation pending the 0b gate; detailed contract in [HUD specification](DK2-HUD-SPEC.md). |
-| 2b | `feature/dk2-hand-feedback` | Created at reference checkpoint `f390b1de`; implementation pending the relevant 0b/1b work; detailed contract in [hand-feedback specification](DK2-HAND-FEEDBACK-SPEC.md). |
+| 0b | `docs/dk2-reference-baseline` | Reference register committed through `8141b5f1`, preserving the complete `11c4209e` fork and subsequent documentation. Original manual and publisher evidence define the implemented contract; unmeasured details remain explicit. |
+| 1b | `feature/dk2-hud` | Advanced to the complete reference checkpoint, then implemented in `0f72cf3f`, followed by the minimap resize correction `c8f70486`; see [HUD specification](DK2-HUD-SPEC.md). |
+| 2b | `feature/dk2-hand-feedback` | Active complete fork, advanced from the HUD implementation before adding hand feedback; see [implementation and checks](DK2-HAND-FEEDBACK-SPEC.md). |
 
-The two implementation branch names are reserved now as requested; they contain
-no new game changes yet. Before starting 1b, advance its branch to the completed
-0b/latest complete fork state; before starting 2b, advance it to the completed
-1b/latest complete fork state. Use a checked fast-forward where possible and
-preserve any intervening user work; never reset or force-update these branches
-to discard newer work.
+The three branches form a dependency stack. The active hand branch contains
+the complete HUD and reference work; each feature has its own commits. Checked
+fast-forwards preserved the fork baseline. For future changes, preserve any
+intervening user work; never reset or force-update a branch to discard it.
 
 Do not create successors from upstream or from an older fork snapshot. Preserve
 the original action-feedback checkpoint and all previous Windows/display fixes.
@@ -100,9 +98,9 @@ comparison. Use the scenario identifiers in the two linked specifications.
 | Package | Required coverage | Current status |
 | --- | --- | --- |
 | Reference identity | Original game, excluding mods; distinguish source dimensions from game resolution. | Original manual and EA publisher gallery selected under the user's explicit delegation; no patch-specific claim. |
-| HUD composition | Whole viewport with each category and every affected window open; enabled/disabled, selected and tooltip states. | Manual figures inspected; runtime captures and measurements missing. |
+| HUD composition | Whole viewport, categories and affected windows. | Original manual plus six publisher gameplay captures inspected; main-panel measurements below. Full popup comparison remains unverified. |
 | Hand transitions | Empty/occupied hand, hover types, selection, switching, cancellation, completion and invalid attempts. | Manual rules plus current code mapped; complete runtime sequence missing. |
-| Geometry | Interface/world boundary, reference proportions, cursor hotspot and icon offsets. | Not measured from runtime evidence. |
+| Geometry | Interface/world boundary, reference proportions, cursor hotspot and icon offsets. | Main-panel and symbol dimensions measured from publisher captures below. Existing hand hotspot preserved; exact original attachment and animation measurements remain unverified. |
 | Timing and sound | Animation start/end, tooltip delay, failed-action response and recovery. | Not established. |
 | Compatibility decisions | Treatment of existing fork functions with no verified reference counterpart. | Derive the primary presentation from the reference; preserve additional commands through Options and their existing shortcuts. No further user selection is required. |
 
@@ -137,13 +135,14 @@ remain missing; a filled template or a source link does not prove the gate passe
 acceptance on the designated branch. The original points 0, 1 and 2 remain
 unchanged historical sections in the roadmap.
 
-For this documentation stage, the game remains version 0.7.1: there is no runtime
-change or release. The development index and agent entry point are updated;
-the root README and a game changelog need no new behavior entry yet.
+The game remains version 0.7.1 because no release was requested. Runtime changes
+are now described in the root README and the two feature notes. No changelog file
+exists in this checkout; internal notes remain outside upstream contributions.
 
 The reference checkpoint passed local-link validation and `git diff --check`;
-SHA-256 comparisons confirm the original roadmap sections 0, 1 and 2 remain
-byte-for-byte unchanged. The current game executable was not rebuilt or launched.
+SHA-256 comparisons confirmed that the original roadmap sections 0, 1 and 2 were
+unchanged. Later build evidence belongs to the implementation notes. No game was
+launched by the assistant.
 
 ## Implementation decision record after the user's clarification
 

@@ -44,9 +44,9 @@ acceptance questions.
 | 0 | Completed upstream preparation; retain the original record and repeat upstream checks when starting later contributions. |
 | 1 | Implemented GUI scaling; retain it as the technical foundation. |
 | 2 | Implemented action-feedback prototype; preserve the checkpoint and its verification evidence. The permanent panel was rejected by the user. |
-| 0b | New extension: establish the reference evidence and comparison contract. |
-| 1b | New extension: align the existing interface with the reference while retaining scaling. |
-| 2b | New extension: correct action-feedback presentation and interaction against the reference. |
+| 0b | Reference manual/gallery register and concrete contracts recorded; unresolved fidelity measurements remain explicit. |
+| 1b | HUD composition implemented and technically checked; visual acceptance and listed fidelity differences remain open. |
+| 2b | Hand feedback implemented and technically checked; gameplay/visual acceptance remains open. |
 | 3 onward | Rewritten future work; implementation and reference acceptance remain outstanding. |
 
 The previous permanent-label plan remains stopped; current authorized work is
@@ -78,11 +78,13 @@ sequences and level win/loss actions in sections 8.2–8.3. The host labels this
 copy as fan-modified; verify relevant details against the original editor data
 or the chosen game version before treating them as exact implementation values.
 
-The exact reference edition, patch level and settings have **not yet been
-established**. No new reference gameplay recording or visual measurement was
-completed for this rewrite. Manual descriptions establish the anchors above,
-but do not establish exact geometry, animation timing, sound selection, repeat
-intervals or every exceptional input state.
+The user subsequently delegated reference interpretation to the original game.
+The manual and EA publisher gallery now supply the behavior and main-HUD
+measurements recorded in [0b](DK2-REFERENCE-BASELINE.md). Their metadata does not
+establish an executable patch number; no patch-specific claim is made. Static
+images do not establish exact animation timing, sound selection, repeat intervals
+or every exceptional input state. Do not reopen the resolved version/window
+questions; research a real conflict if one affects implementation.
 
 Use original documentation and directly observed reference behavior together.
 Record edition, settings and the source or capture for each comparison. If sources
@@ -103,8 +105,9 @@ and verification records remain authoritative for what was actually tested:
 - [GUI scaling](GUI-SCALING.md).
 - [Preserved action-feedback prototype](ACTION-STATE-FEEDBACK.md).
 
-The current `gui/ModeGame.layout` contains the `ActionFeedback` panel and
-`MainTabControl`; their existence does not demonstrate reference fidelity.
+The preserved point-2 `gui/ModeGame.layout` contained `ActionFeedback` and
+`MainTabControl`. Extension 2b removes the permanent panel; technical checks alone
+do not demonstrate reference fidelity.
 Likewise, room and spell enums in `source/rooms/RoomType.h` and
 `source/spells/SpellType.h` are a starting inventory, not proof of matching
 mechanics. Inspect the actual handlers and data before declaring a feature
