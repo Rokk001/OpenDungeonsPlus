@@ -32,10 +32,14 @@ complete. The user's newer scope is 0b, 1b and 2b.
 
 ## Reference identity and evidence status
 
-The binding game edition, patch level and settings are awaiting the user's
-answer. No reference installation or gameplay recording has been supplied in
-this task. Do not silently select a patch, mod, widescreen treatment or control
-configuration.
+The user has explicitly delegated interpretation to the original game and
+rejected further questions about a reference version or additional windows.
+Use the unmodified game's original manual and publisher-supplied gameplay
+images below; no mod defines the target. Neither the manual metadata nor the
+publisher images establish a specific executable patch number. This uncertainty
+does not block the common interface and interaction behavior they demonstrate.
+Preserve existing fork commands within the reference's options/category flow;
+do not invent new mechanics to give unmatched commands an apparent counterpart.
 
 The [original player manual](https://retrogamer.biz/wp-content/uploads/2016/06/Dungeon-Keeper-2-Manual.pdf)
 was downloaded and visually inspected for the relevant hand and interface pages.
@@ -95,12 +99,12 @@ comparison. Use the scenario identifiers in the two linked specifications.
 
 | Package | Required coverage | Current status |
 | --- | --- | --- |
-| Reference identity | Edition, patch, mods, language, resolution, camera and input settings. | User answer pending. |
+| Reference identity | Original game, excluding mods; distinguish source dimensions from game resolution. | Original manual and EA publisher gallery selected under the user's explicit delegation; no patch-specific claim. |
 | HUD composition | Whole viewport with each category and every affected window open; enabled/disabled, selected and tooltip states. | Manual figures inspected; runtime captures and measurements missing. |
 | Hand transitions | Empty/occupied hand, hover types, selection, switching, cancellation, completion and invalid attempts. | Manual rules plus current code mapped; complete runtime sequence missing. |
 | Geometry | Interface/world boundary, reference proportions, cursor hotspot and icon offsets. | Not measured from runtime evidence. |
 | Timing and sound | Animation start/end, tooltip delay, failed-action response and recovery. | Not established. |
-| Compatibility decisions | Treatment of existing fork functions with no verified reference counterpart. | User answer pending for keeping existing additional windows. |
+| Compatibility decisions | Treatment of existing fork functions with no verified reference counterpart. | Derive the primary presentation from the reference; preserve additional commands through Options and their existing shortcuts. No further user selection is required. |
 
 The user performs manual gameplay and visual/listening acceptance; the assistant
 does not start either game for QA. Reference recordings, once available, can be
@@ -140,3 +144,54 @@ the root README and a game changelog need no new behavior entry yet.
 The reference checkpoint passed local-link validation and `git diff --check`;
 SHA-256 comparisons confirm the original roadmap sections 0, 1 and 2 remain
 byte-for-byte unchanged. The current game executable was not rebuilt or launched.
+
+## Implementation decision record after the user's clarification
+
+The September 6 clarification delegates the remaining reference interpretation;
+the former version/window questions are withdrawn. Evidence collection continues
+where a real unknown affects implementation, without asking the user to design it.
+
+EA's [publisher gallery](https://store.steampowered.com/app/2616460/Dungeon_Keeper_2/)
+provides whole-viewport evidence. The downloadable image list is recorded in
+`build/reference-audit/publisher-screenshots.json`; `publisher-N.jpg` uses the
+gallery's numeric ID. Images 2, 3, 5, 6, 8 and 9 were inspected as gameplay;
+0, 1, 4, 7 and 10 show other states and are not the normal keeper HUD baseline.
+Do not redistribute these images as game assets.
+
+| Capture | Verified visual evidence |
+| --- | --- |
+| 2 | Rooms category, selected room, upper context strip and outlined wall. |
+| 3 | Spell category and prohibition symbol immediately beside the hand. |
+| 5 / 9 | Workshop category, door/trap icons, pickaxe hand and wall outline. |
+| 6 | Creature portraits/counts, job/mood filter controls, pickaxe and local tooltip. |
+| 8 | Spell grid, creature hover and top context description. |
+
+All supplied files are 1920x1080. They show non-uniformly stretched UI artwork;
+the circular map is approximately 328x246 image pixels. Thus those dimensions
+are not a reason to stretch the fork's map. Convert screenshot coordinates to
+the existing 1024x768 design plane (x*1024/1920, y*768/1080), then apply the
+existing uniform scale. This yields a square map and preserves the user's scale.
+Bounds measured from the visible edges have approximately two design-pixel
+uncertainty; they are not original engine constants.
+
+| Surface | Screenshot bounds / measurement | Design contract |
+| --- | --- | --- |
+| Map including frame | x16..346, y822..1068 | x8..184, bottom184..8; 176 square. |
+| Category row | x354..754, y822..896 | x188, bottom184; four 52-square controls. |
+| Content | x354..1918, y900..1078 | x188..right, bottom128..0. |
+| Top mana and gold | x0..754, y0..94 | first 400 design pixels, mana before gold. |
+| Context strip | x756..1862, y8..64 | after resources, one top line. |
+| Invalid symbol (3) | approximately 92x72 next to hand | 50-square, attached beside hand; no permanent panel. |
+
+Existing additional commands remain functional through Options and their existing
+shortcuts. This is the user's preservation rule applied to the reference's menu
+flow, not a claim that the original has a fork research tree, portal construction,
+network chat or the same spell set. Category membership follows actual function;
+do not rename a different mechanic to pretend equivalence. The reference remains
+the target for primary layout and feedback. Full asset/audio and mechanics parity
+remain the separate roadmap tasks, with required dependencies stated explicitly.
+
+Static publisher images establish appearance, not animation duration or every
+input edge. Use the original manual's documented gestures and retain the fork's
+already verified input protections where no conflicting reference evidence exists.
+Never mark visual/audio acceptance passed from this document or a build.

@@ -16,6 +16,13 @@ implementing them. Reproduce evidenced reference behavior; do not invent a moder
 alternative or fill missing evidence with assumptions. Preserve completed points
 0, 1 and 2; their corrective extensions are 0b, 1b and 2b.
 
+The user explicitly delegated reference interpretation on September 6, 2026:
+derive edition-independent behavior and the treatment of additional windows from
+the original game, its manual and publisher evidence. Do not ask the user to
+choose a reference version or design the treatment of extra windows again.
+Research actual differences; preserve fork commands through the corresponding
+reference interface flow without claiming that fork-only mechanics are identical.
+
 ## Project setup
 
 Always implement new requirements on the user's latest complete fork state,

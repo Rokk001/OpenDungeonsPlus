@@ -78,3 +78,43 @@ Preserve the live resize/fullscreen and clipping corrections. Build checks and
 headless bounds tests support the user comparison; they do not replace it.
 
 No new game build or user acceptance has been performed for 1b at this stage.
+
+## Concrete implementation contract
+
+The decision record in 0b supersedes the earlier pending-user gates above.
+Use gallery captures 2/3/5/6/8/9 and the measured design coordinates in 0b.
+
+- HUD-01: mana, then gold at the upper left; context information occupies the
+  remaining top strip. Preserve territory and creature-pool values in the player
+  information surface instead of competing with the primary reference counters.
+- HUD-02: Creatures, Rooms, Spells, Workshop; square icon categories at the top
+  of the bottom panel; content immediately below. Add the reference's panel
+  hide/reveal control without hiding the minimap or interrupting a selected action.
+- HUD-03/04/05: retain all existing actions and availability/cooldown handlers;
+  use framed icon cells in the bottom content region. Workshop contains both
+  doors and traps. Preserve currently distinct room/trap sell commands.
+- HUD-06: retain worker/fighter pickup access; show their actual available counts.
+  Do not substitute pool capacity for the number of available creatures.
+  Portrait/job/mood parity requires actual matching creature data and commands;
+  report any remaining gap, never fabricate counters or claim equivalence.
+- HUD-07: square 176-design-pixel map at bottom left with a circular aperture;
+  input outside the aperture must not navigate the camera. Retain the existing
+  renderer choices and live-size notification. Map movement itself belongs to 3.
+- HUD-08/09: objective and event access beside the category row. Event text opens
+  in its existing scrollable surface; no new event timing or mentor policy here.
+- HUD-10/11/12: Help, research and player information move into Options, retaining
+  F1/F4/F2 respectively. Their existing contents, apply/cancel and close actions
+  stay functional; no invented replacement game rules.
+- HUD-13/14/15: keep Options and its subordinate settings/confirmation flow;
+  center the dialogs, preserve title/content/footer hierarchy and working scaling.
+  Keep disabled Load disabled; this task does not implement saved-game loading.
+- HUD-16: preserve chat and entity statistics access and close behavior.
+- HUD-17: use the existing medieval font and framed dark panels for the measured
+  hierarchy; contextual descriptions use the top strip, tooltips remain local.
+  Publisher screenshots contain both; do not remove all text in the name of fidelity.
+
+The bottom strip consumes input only where its displayed controls/content exist;
+the hand indicator is always mouse-pass-through. Collapsing content must free
+its former world area. Popup input and drag-release guards retain priority.
+Scope is the existing fork's interface; missing creature filters, reference-only
+actions and final artwork must be recorded as differences, not silently invented.

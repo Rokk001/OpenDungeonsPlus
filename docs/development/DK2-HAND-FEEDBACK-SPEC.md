@@ -5,7 +5,7 @@
 Specification in progress under [0b](DK2-REFERENCE-BASELINE.md), for a separate
 `feature/dk2-hand-feedback` branch based on the complete 1b fork state.
 The user authorized this correction; it must not resume the rejected permanent
-label plan. Reference-version and exceptional-state evidence remain outstanding.
+label plan. Reference interpretation is delegated to the original-game evidence; exceptional-state evidence must be distinguished from implementation checks.
 
 Use R1, R3 and R4 from the [roadmap](IMPROVEMENT-ROADMAP.md), the visually inspected
 manual pages recorded in 0b, and identified runtime recordings. The manual's
@@ -93,3 +93,43 @@ Regenerate affected decision/input/layout probes from the modified source before
 using their results. Old prototype checks do not certify the new rendering.
 The user supplies gameplay and visual/listening acceptance; no such acceptance
 or new build exists for 2b at this specification stage.
+
+## Concrete interaction contract
+
+The 0b clarification supersedes pending version/window decisions. Manual hand,
+room and spell sections plus publisher captures 2/3/5/6/8/9 define these changes:
+
+1. Remove the permanent panel, Ready/Unavailable prefixes and three-second failure
+   retention. Context descriptions belong to the top strip; the active icon and
+   prohibition sign belong beside the hand. No replacement toast is introduced.
+2. With no selection/held object, show the idle hand over open ground, pointing
+   over pickup targets and pickaxe over a diggable wall. Re-evaluate on camera
+   movement as well as pointer movement; clear stale highlights on GUI entry.
+3. Selecting a room/spell/workshop item shows its own existing icon beside the
+   hand. Switching replaces it; right-click cancellation removes it and clears
+   the drag before any drop/slap can execute. Successful repeatable actions stay
+   selected as in the manual's repeated building/casting flow.
+4. Invalid action targets show the prohibition sign in the same attachment area;
+   returning to a valid target restores the selected icon immediately. Existing
+   resource/ownership/cooldown validation remains authoritative. Keep the actual
+   reason in the context strip without a fabricated timer.
+5. Digging previews eligible walls; first-tile state determines mark/unmark on
+   release. Cancelling and release over UI send no command. A frame preview must
+   never repeat a confirmed command.
+6. Room/trap previews use world outlines, including red unaffordable placement;
+   the server still validates actual placement and costs. Retain mixed-area
+   eligibility behavior unless direct reference evidence requires a separate fix.
+7. Held objects retain existing LIFO pickup/drop order and explicit rotation;
+   right-click drops before attempting an empty-hand slap. Selection cancellation
+   precedes both. Preserve existing pickup/drop/slap animations and timing until
+   a measured replacement exists; do not invent extra confirmation audio.
+8. Over interface controls, world previews/indicators are hidden and UI owns input;
+   return to the world restores the current selection. Display changes use the
+   same scaled coordinates for the hand attachment and GUI hit tests.
+
+The ten spells keep their real current rules; none is relabelled as an unrelated
+reference spell. Workshop manufacturing and delivery already exist; the known
+random-vs-FIFO difference is a mechanics prerequisite under point 10, not a
+cursor rendering fix. These contracts enable implementation; acceptance still
+requires the user's matching gameplay/visual sequences, with remaining asset,
+mechanics or source limitations stated explicitly.
