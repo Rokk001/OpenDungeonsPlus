@@ -78,6 +78,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Shadow coverage](SHADOW-COVERAGE.md): PR #48's missing creature shadows,
   ground projection, receiver and cursor-light corrections, isolated rendering
   evidence, user screenshot review and local branch closure.
+- [Small-creature shadow depth](RAT-SHADOW.md): depth precision for visible
+  shadows from low creature geometry.
 - [Camera controls](CAMERA-CONTROLS.md): continuous input, centred view changes,
   three persistent user orientations and keyboard/pointer/GUI verification.
 - [Main-menu scene framing](MAIN-MENU-FRAMING.md): preserving the authored scene
