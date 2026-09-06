@@ -119,14 +119,14 @@
         <Window type="OD/GameTabButton" name="SellButton" >
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-184},{0,184},{1,-140}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/GoldCoin" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/DestroyRoomButton" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Sell: select, then click a room tile, trap or door" />
         </Window>
-        <Window type="OD/Button" name="MiniMapZoomButton">
+        <Window type="OD/GameTabButton" name="MiniMapZoomButton">
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-52},{0,184},{1,-8}}" />
-            <Property name="Text" value="+/-" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/MapZoom" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Minimap: left-click to zoom in, right-click to zoom out; M opens the map" />
         </Window>
