@@ -15,6 +15,7 @@ of development.
 The control panel groups Creatures, Rooms, Spells and Workshop beside the
 circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
+Press F10 to toggle Options, or Escape to close the open Options window.
 With edge scrolling enabled, the camera also scrolls at screen edges covered by
 the fixed HUD. New messages flash the Messages button; left-click it to read
 them and right-click to dismiss read messages. Save opens the message surface
