@@ -128,6 +128,12 @@ guidelines: https://github.com/OpenDungeons/OpenDungeons/wiki/Code-Guidelines
 It contains a rather deep introduction on how we name, indent, structure and
 extend our code. It also has some performance optimisation tips.
 
+Keep each pull request focused on one coherent, independently reviewable
+product change. Include documentation only when it is required to use, build or
+review that change. Do not include internal planning notes, agent instructions,
+local environment records or unrelated documentation commits in an upstream
+pull request.
+
 #### Repository organisation
 
 **Data files**
