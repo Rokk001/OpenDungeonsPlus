@@ -4,9 +4,103 @@
 
 Work branch: `feature/creature-panel`, from the complete current fork at
 `2d3e79dc`, including the accepted Escape correction and all local documentation.
-The existing panel offers worker/fighter pickup buttons and eligible counts.
+At the baseline, the panel offered worker/fighter pickup buttons and eligible counts.
 The approved local HUD specification requires per-type views and accurate
-activity and mood data; the current controls alone do not cover those views.
+activity and mood data; those original controls alone did not cover those views.
+
+## Current integration
+
+The panel now displays cached per-type portraits with Total, Jobs, Fighting and
+Moods views, horizontal type scrolling, and persistent worker Total/Idle/Working/
+Fighting counts. Type order follows the map's creature definitions, including
+custom types. The existing worker/fighter quick selectors remain at the right.
+Left-clicking a count requests an eligible creature of that type and category
+through the existing server-validated pickup command. Right-clicking a portrait
+or count uses the existing camera navigation to an on-map creature of that type.
+
+`CreaturePanelData` provides one shared category mapping for aggregate counts and
+local pickup selection. The server sends an owner-only class/count snapshot after
+entity refresh, with a separately negotiated capability. This includes living
+owned creatures that are held or outside client vision without sending hidden
+entity names, positions or vision. The local hand list is not added again.
+Old peers and recordings retain their existing packet layouts and quick controls.
+Unknown activity is not idle; unknown mood is not happy. Active workshop/library
+use counts as manufacturing; queued or interrupted room work does not. Friendly
+arena combat appears in both training and fighting. Guarding remains zero because
+the fork has no corresponding action; no AI jobs or mood thresholds were changed.
+
+`CreaturePanel` owns its dynamic windows and event connections, reuses the current
+GUI scaling registry, and renders only when the creature tab is visible. Portrait
+textures now use 192x384 pixels for the 54x108 design columns. Pending pickup
+requests are suppressed until the next aggregate snapshot; that guard does not
+constitute a live network-latency test.
+
+The integration review found two implementation defects and corrected them:
+
+- Storing CEGUI scoped connections by value in a growing vector disconnected
+  earlier controls when the vector relocated them. The panel now uses the
+  project's existing connection-handle pattern with explicit teardown.
+- Creature upkeep stops during knockout, but its retained action stack could
+  still appear as work, fighting or idle. The existing knockout predicate now
+  suppresses activity on both server and client while retaining living totals,
+  the action stack and recovery behavior.
+
+### Integration verification
+
+- The production classification/aggregate packet probe passes 77 checks,
+  including active versus queued work, arena membership, semantic mood groups,
+  unknown state, held totals, packet boundaries and atomic malformed-input rejection.
+- The production mood/activity/negotiation probe passes 1,117 checks. The expanded
+  optional negotiation matrix covers the panel capability. Three knockout checks
+  failed before the one-line activity correction and pass afterward; recovery is
+  also covered. Before evidence is `build/windows/creature-panel-knockout-before.log`.
+- The real Ogre/CEGUI panel probe passes 830 checks. It links the production panel,
+  portrait renderer and category mapping and extracts current scaling methods.
+  It injects mouse input for views, type/category pickup, camera focus and paging,
+  and checks all visible type-count hit areas and column bounds at 800x600,
+  1280x720, 1920x1080, 3440x1440 and 3840x2160 through 80/100/120/100% changes.
+  Column aspect allows one pixel of the existing pixel-alignment rounding.
+  Game entities, map storage and command endpoints are test doubles; this does
+  not replace gameplay, multiplayer, replay or live display-switch acceptance.
+
+The UI probe initially expected paging despite all fixture types fitting on screen;
+additional custom fixture classes now establish real overflow. Its original ratio
+tolerance also rejected 41x81 pixels from ordinary pixel alignment, so it now checks
+the expected 2:1 column dimensions within one pixel. Neither harness correction
+changed the game's layout or paging behavior.
+
+Local commands and logs are `build/windows/build-creature-panel-data-probe.ps1`,
+`build-creature-mood-probe.ps1`, `build-creature-panel-ui-probe.ps1` and their
+corresponding `*-results.log` files. Generated panel images are under
+`build/reference-audit/creature-panel-*.png`. No game was launched by the assistant.
+
+The user reported that the new in-game screenshots look good. The inspected
+16:22:11 and 16:22:15 captures show portraits, counts and hover descriptions at
+3440x1440; this records visual acceptance of those views, not all filter behavior.
+Original PNGs remain in `C:\Users\mario\AppData\Roaming\opendungeons`; local JPEG
+inspection copies are in `build/reference-audit/user-captures`. That comparison
+cache is not the game's screenshot destination and does not update automatically.
+
+The first final-link attempt encountered LNK1104 because the user was running the
+executable. After the user closed it, the incremental Release build and runtime
+preparation succeeded in `build/windows/creature-panel-verified-build.log` and
+`creature-panel-verified-runtime.log`. The prepared executable timestamp is
+September 6, 2026 at 16:39:18, SHA-256
+`141f56e38665bfab44df3741f82cbc46213637978990a4d256f7316129759024`.
+It includes the final connection and knockout corrections and the parallel shadow
+checkpoint `99e80b2d`; the shadow change remains a separate contribution.
+
+### Remaining acceptance
+
+The exact repeated-right-click target sequence is not established by the current
+reference evidence; the implementation currently selects the first available
+on-map creature of the requested type. Final portrait framing, category artwork,
+the retained quick controls, and held/contained population comparison still need
+their detailed comparison. Actual multiplayer/replay compatibility, rapid pickup
+under latency and gameplay category transitions remain unverified. This feature
+does not complete every HUD or hand-feedback scenario in the broader specification.
+Version remains 0.7.1 because no release was requested; README now describes the
+connected controls, and there is no changelog in the checkout.
 
 At the original panel baseline, the server computes five mood levels, but creature snapshots and updates carry
 only the overlay flags. Happy, Neutral and Upset therefore cannot be distinguished
@@ -29,7 +123,7 @@ sending entity data. Replays contain incoming packets only: an older client's
 recording can contain a server offer it never accepted. The reader must use the
 recorded agreement rather than enabling extended entity payloads from that offer.
 
-This is a prerequisite for the panel, not a completed UI feature. Activity
+At that checkpoint this was a prerequisite, not a completed UI feature. Activity
 classification, per-type controls, portrait assets and user-visible acceptance
 remain open. No mood mechanics or AI decisions are changed by transmission.
 
@@ -52,7 +146,7 @@ end-of-turn refresh, so room/task changes trigger updates without altering AI.
 
 Per-client confirmation at game/editor start preserves recordings from older
 clients, including the preceding mood-only version. UI category mapping and
-portrait controls remain separate remaining work within this feature branch.
+portrait controls were separate remaining work at that prerequisite checkpoint.
 
 The implementation now samples these facts in `Creature::getActivity` and
 refreshes them through the existing entity notification. The room getter is
@@ -118,12 +212,12 @@ The Windows Release build and runtime preparation pass in
 `build/windows/creature-portrait-build.log` and `creature-portrait-runtime.log`.
 The prepared executable timestamp is September 6, 2026 at 15:43:01; SHA-256:
 `cb9421b005d5ca84cc463b73ea8702b33207ce53a71e48278dc641591bc25e40`.
-The version remains 0.7.1. No new panel controls are connected yet, so no visible
+The version remained 0.7.1. No new panel controls were connected then, so no visible
 feature or completed panel is claimed in the public README.
 
-### Remaining panel integration
+### Population-gap investigation before integration
 
-Per-type views, count controls and pickup/focus bindings remain unimplemented.
+At that checkpoint, per-type views, count controls and pickup/focus bindings were unimplemented.
 Connect the cached portraits to those views; do not substitute a generic icon for
 every type. Final model framing and the rendered panel still require comparison.
 
@@ -138,6 +232,15 @@ or imprisoned creatures, and `GameEntity::notifySeatsWithVision` removes entitie
 from clients that lose tile vision. The client list alone therefore cannot prove
 complete owned-population counts. The next integration must resolve that data
 gap without revealing unseen world entities or mislabeling visible counts as totals.
+
+The integration will send an owner-only aggregate snapshot after entity refresh,
+using a separately negotiated capability. It contains class names and category
+counts, not hidden entity names, positions or vision. Old peers keep their packet
+layouts. The same activity/mood classification will drive counts and eligible
+local pickup targets. Unknown activity does not become idle; queued room use is
+not manufacturing/training until the creature is actually using that room.
+Friendly arena combat belongs to both training and fighting views. Guarding stays
+zero because the fork has no guard action; no AI behavior is added for the display.
 
 ### Mood checkpoint
 
