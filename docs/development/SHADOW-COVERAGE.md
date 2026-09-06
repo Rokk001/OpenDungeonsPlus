@@ -1,5 +1,68 @@
 # Shadow coverage correction
 
+## User rejection: cursor-light shadows on September 6
+
+The user's 16:36:21, 16:36:27, 16:36:32 and 16:36:35 captures in the
+Windows user-data directory show long, fully black shadows from room furniture
+as the cursor moves. The earlier isolated coverage checks did not exercise
+crowded rooms or assert that ambient illumination survives occlusion; their
+passing results do not establish visual acceptance.
+
+The existing hand light is a point light at height 2 with attenuation
+`(500, 1, 0.09, 0.032)`. Custom floor, wall and creature shaders ignore that
+attenuation and multiply ambient illumination by the shadow comparison.
+Consequently a distant occluder can erase all floor detail even where little
+cursor illumination should reach. Generated Ogre materials already separate
+ambient illumination and apply distance attenuation.
+
+Extend the existing custom lighting path: leave ambient illumination outside
+the shadow multiplier and consume the existing light's attenuation parameters,
+preserving its position, colour and configured falloff. Verify a furnished room,
+ambient-only controls and near/far cursor positions in addition to coverage and
+settings restoration. Reference appearance evidence is kept in the internal
+reference baseline; it does not establish original engine constants.
+
+The correction now separates ambient light in all seven affected custom
+fragment shaders and adds one attenuation binding to each of their 73 material
+program definitions. The shared calculation uses Ogre's existing range,
+constant, linear and quadratic parameters; directional lights bypass it.
+No light position, light colour, ambient setting or shadow projection changed.
+
+Verification on September 6 at 16:51:
+
+- The furnished-room control with nine actual Bookshelf meshes and a Wizard
+  failed all 48 initial checks before the correction. Depending on cursor
+  position, roughly 31,000-60,000 floor pixels lost their ambient illumination.
+- All 60 final checks pass: six surface materials at four near/far cursor
+  positions retain ambient illumination while receiving shadows and obeying
+  the configured falloff. Additional range and directional-light checks pass.
+  The falloff test independently doubles all attenuation coefficients and
+  compares the rendered direct-light contribution; low-light pixels are
+  included with two-channel-value quantization tolerance.
+- 73 existing receiver cases and 146 settings-toggle checks pass, as does the
+  real 33-creature portrait/cache/material-isolation/cleanup probe.
+- Before/after images confirm visible floor detail instead of solid black
+  wedges. Physically projected shadows remain; distant hand-light influence
+  now fades with the already configured distance attenuation.
+- Release compilation and runtime preparation pass in `cursor-light-build.log`
+  and `cursor-light-runtime.log`. The executable remains the 16:39:18 build,
+  SHA-256 `141f56e38665bfab44df3741f82cbc46213637978990a4d256f7316129759024`;
+  this correction changes shader/material resources, which the prepared
+  runtime loads directly from the repository through existing junctions.
+  Initial runtime staging collided with this task's still-running Ogre probe;
+  it completed successfully after that probe exited normally.
+
+Evidence is retained under `build/windows/cursor-light-*`; regenerate/rebuild
+the probe with `make-cursor-light-probe.py` and `build-cursor-light-probe.ps1`.
+The shadow coverage and portrait probe sources remain as described below.
+The existing instanced fog material receives the same lighting calculation;
+its full in-game appearance remains in user QA. No version bump or new README
+feature entry is required for this shader bug fix; no changelog exists here.
+
+The user should restart the prepared game and repeat the furnished-room cursor
+movement. No game was launched by the assistant, and reference parity and
+full-map visual acceptance are not claimed from isolated renders.
+
 ## Report, baseline and existing path
 
 PR #48's maintainer reports missing creature shadows and shadow reception on
