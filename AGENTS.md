@@ -54,6 +54,14 @@ implementation; do not invent the missing details. The earlier prototype stays
 preserved in [action feedback](docs/development/ACTION-STATE-FEEDBACK.md); its
 permanent-label design is not the target for the new work.
 
+The subsequent camera branch is `fix/camera-controls`, based on the complete
+room-lighting checkpoint `0c7d6234`. It adds continuous camera input, default
+view shortcuts and three persistent user orientations. All 278 camera, 84 GUI,
+63 Escape and 227 hand-rotation checks pass, together with the Release build
+and runtime preparation. The prepared executable is the September 6, 20:08:51
+build in BUILDING.md. Manual acceptance remains pending; the shared checkout
+and index are preserved. Full-map navigation follows on its own branch.
+
 The separate lighting branch is `fix/room-lighting`, based on complete hand-tool
 checkpoint `65506edf`, which already retains shadow closure `ba245257`.
 It adds local visible-room illumination and corrects custom material light

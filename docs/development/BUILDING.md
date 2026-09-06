@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+The latest Release build adds the camera controls in
+[the camera note](CAMERA-CONTROLS.md), retaining the complete room-lighting fork.
+Built on September 6 at 20:08:51, its SHA-256 is
+`06a56d3703419cfd5a83e5a52be110f6d14ebb093ea715746f175b2f476383ee`.
+The Release build, runtime preparation, 278 camera checks, 84 GUI checks,
+63 Escape checks and 227 hand-rotation checks pass. Manual gameplay and Linux
+remain unverified. Logs use the `camera-controls`, `camera-probe` and
+`camera-gui-probe` prefixes in `build/windows/`.
+
 The latest Release executable includes the corrected hand orientation and tool
 grip, picker counts and current parallel room/camera work. All 94 focused grip
 checks pass with shadows off and on; six rendered layer comparisons verify
@@ -26,6 +35,93 @@ It retains the complete hand-tool/navigation and shadow baseline. No game was
 launched; manual appearance and Linux runtime remain unverified. See
 [room lighting](ROOM-LIGHTING.md) for evidence and test boundaries.
 
+The latest Release build adds texture mapping and separate wood/metal materials
+to the existing hand tool. All 521 geometry/material checks and six isolated
+GL3Plus render views pass; corresponding shadow-on/off images are identical.
+Release compilation first used `build/windows/hand-tool-stage` while the user
+was playing, then rebuilt the normal executable after the game closed.
+Logs: `build/windows/hand-tool-build.log`, `hand-tool-runtime-build.log` and
+`hand-tool-runtime.log`. The prepared executable at
+`build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 18:58:11;
+SHA-256 `66d0f7d258b88525f892faa59c39fb43cb82314ee96fad54c6c244c72ee5e302`.
+It preserves the full navigation/selling/query/hand and parallel shadow baseline.
+No game was launched; manual visual acceptance remains open. See
+[textured hand tool](HAND-TOOL-MATERIAL.md) for exact verification boundaries.
+
+The preceding Release build requests the existing pointing hand over interface
+controls and restores the world pose on exit. All 178 focused controller checks
+pass, including 24 previously failing navigation scenarios; Release compilation
+and runtime preparation pass in `build/windows/navigation-hand-build.log` and
+`navigation-hand-runtime.log`. The executable at
+`build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 18:39:33;
+SHA-256 `2590b059ff405e0eba52b6b1d455112933f7481142605824876ac69bd1176226`.
+It preserves the complete selling/query/hand and parallel shadow baseline. No
+game was launched; visual acceptance remains with the user. See
+[navigation hand feedback](NAVIGATION-HAND-FEEDBACK.md) for test boundaries.
+
+The preceding Release build adds a common minimap Sell toggle for the pointed room
+tile, trap or door. All 70 focused sale/packet checks, 3,643 installed CEGUI/Ogre
+layout checks and 56 creature-query regression checks pass. Release compilation
+and runtime preparation pass in `build/windows/contextual-selling-build.log`
+and `contextual-selling-runtime.log`. The executable at
+`build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 18:16:46;
+SHA-256 `f09479c82a868637aa55a7978fdfdf66fd263036ce3a41d4e7c79090b192ead3`.
+It preserves the full creature-query, hand and parallel lighting baseline.
+No game was launched. See [selling from the minimap](CONTEXTUAL-SELLING.md) for
+the manual check and verification limits; live sale/refund acceptance is open.
+
+The preceding Release build adds selectable creature inspection beside the minimap,
+reusing the existing statistics windows. All 56 behavior checks and 3,563 installed
+CEGUI/Ogre layout checks pass, as do Release compilation and runtime preparation.
+Logs: `build/windows/entity-query-build.log` and `entity-query-runtime.log`.
+The executable at `build/windows/opendungeons-plus.exe` is dated September 6, 2026
+at 17:57:58; SHA-256
+`c28f1b651dad76f4b848440d1b49964350bac75c108b996f8fbf7aa149ac6fb9`.
+It preserves the complete hand-rotation and parallel lighting baseline. No game
+was launched. See [entity information selection](ENTITY-QUERY.md) for the manual
+check, test boundaries and the outstanding trap-range part of this tool.
+
+The preceding Release build fixes held-object spacing after rotation and ensures
+that drop requests/replies identify the selected object. All 227 focused checks
+pass (164 failures before the correction), as do Release compilation and runtime
+preparation. Logs: `build/windows/hand-rotation-build.log` and
+`build/windows/hand-rotation-runtime.log`. The executable at
+`build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 17:34:49;
+SHA-256 `e5db5cf2eb7d38b077f219c6d20aa3b51e4b79d26a1b1b3e2d345673315462c9`.
+It preserves the full event-message, creature-selection and lighting work. No
+game was launched. See [the hand-rotation note](HAND-ROTATION.md) for the manual
+check and older-endpoint limitation; live gameplay/multiplayer acceptance remains
+with the user.
+
+The preceding Release build corrects lost path separators/bracketed names in event
+messages, retaining the full creature-selection and lighting baseline. All 504
+focused CEGUI rendering checks pass (156 failures before the correction), along
+with Release compilation and runtime preparation. Logs:
+`build/windows/event-message-paths-build.log` and
+`build/windows/event-message-paths-runtime.log`. The prepared executable is
+`build/windows/opendungeons-plus.exe`, September 6, 2026 at 17:18:02; SHA-256:
+`71000f94b27c1406e4be50193c6b4924be748d5e331c38969ceb83ef6b1363d0`.
+No game was launched. See [the display correction](EVENT-MESSAGE-PATHS.md) for
+the exact evidence and manual check; this does not certify save/load behavior.
+
+The preceding Release build adds highest/lowest eligible creature selection through
+the documented portrait/count shortcuts, preserving the complete dialog/panel
+and lighting work. Compilation and runtime preparation pass in
+`build/windows/creature-level-selection-build.log` and
+`creature-level-selection-runtime.log`. The prepared executable timestamp is
+September 6, 2026 at 17:02:57; SHA-256:
+`4f3a6b35d625897dcb66662bad4bc9a2aa15636869ab1b64237447e2bdf026dc`.
+The real panel probe passes 847 checks, keyboard OIS 21 and SFML 324, and the
+production SFML wrapper compiles with the installed SDK. User gameplay acceptance
+of these gestures is still pending; no game was launched. See
+[the selection note](CREATURE-LEVEL-SELECTION.md).
+
+The subsequent `fix/quit-dialog-layout` correction widens only the exit dialog
+and replay checkbox to prevent clipped text. All 260 focused CEGUI checks and
+the isolated rendered preview pass. The prepared executable below loads this
+XML directly through the verified `build/windows/gui` junction on its next start;
+no additional compile is needed. See [the correction note](QUIT-DIALOG-LAYOUT.md).
+
 The completed September 6 cursor-light correction on `fix/shadow-coverage` preserves
 ambient illumination inside shadows and applies the existing light falloff to
 custom materials. The user's 16:36 captures rejected the earlier solid-black
@@ -42,19 +138,103 @@ The user requested local branch closure and a separate room-lighting follow-up;
 the exact named-map and Linux verification limits remain recorded in
 [shadow coverage](SHADOW-COVERAGE.md), together with the PR update status.
 
-The latest hand-feedback follow-up corrects creature highlighting after camera
-movement with a stationary pointer. Release compilation and runtime preparation
-pass in `build/windows/dk2-highlight-build.log` and `dk2-highlight-runtime.log`;
-the affected input probe passes all 34 assertions. See the correction record in
-[the hand-feedback note](DK2-HAND-FEEDBACK-SPEC.md).
+The creature-panel integration now passes the Release build and runtime preparation
+in `build/windows/creature-panel-verified-build.log` and
+`creature-panel-verified-runtime.log`. The executable at
+`build/windows/opendungeons-plus.exe` has timestamp September 6, 2026 at 16:39:18
+and SHA-256 `141f56e38665bfab44df3741f82cbc46213637978990a4d256f7316129759024`.
+It includes portraits, four population views, worker counts, pickup/focus controls,
+and the final connection/knockout corrections, alongside the separate shadow
+checkpoint `99e80b2d`. The data probe passes 77 checks, state/negotiation 1,117,
+and actual Ogre/CEGUI controls/scaling 830. The user accepted the appearance in
+earlier 16:22 captures; detailed gameplay/network and remaining visual comparison
+are still open. No game was launched by the assistant. See
+[the creature panel note](CREATURE-PANEL.md) and AGENTS.md for branch ownership.
 
-For the current `feature/dk2-hand-feedback` fork, the September 6 clean Release
-build, final incremental compilation and runtime preparation succeeded. It
-includes the reference baseline, HUD, minimap resize correction and hand feedback.
-See [HUD evidence](DK2-HUD-SPEC.md) and [hand evidence](DK2-HAND-FEEDBACK-SPEC.md).
-Logs are `build/windows/dk2-final-clean-build.log`, `dk2-final-build.log` and
-`dk2-final-runtime.log`. Open `build/windows/opendungeons-plus.exe` directly.
-No gameplay or visual acceptance is claimed for this build.
+The preceding tested creature-panel checkpoint was `3de2e020` on
+`feature/creature-panel`, retaining accepted Escape
+checkpoint `2d3e79dc` and the subsequent mood/activity prerequisites. Cached
+portraits now reuse all 33 existing creature meshes; the isolated Ogre/CEGUI
+preview verifies rendering, caching, material isolation and cleanup. Panel
+controls are not connected yet. Release compilation and runtime preparation pass
+in `build/windows/creature-portrait-build.log` and `creature-portrait-runtime.log`.
+The prepared `build/windows/opendungeons-plus.exe` has timestamp September 6,
+2026 at 15:43:01 and SHA-256
+`cb9421b005d5ca84cc463b73ea8702b33207ce53a71e48278dc641591bc25e40`.
+No game was launched. See [the creature panel note](CREATURE-PANEL.md).
+During this build checkpoint another session changed the shared checkout to
+`fix/shadow-coverage`. The portrait commit was created separately without
+switching that checkout; see AGENTS.md before further Git operations.
+
+At the preceding activity checkpoint, full mood and activity transmission were implemented
+as prerequisites for the creature-panel views; the views remain incomplete.
+The focused packet/negotiation/state probe passes 1,049 checks. The clean Release
+build, final incremental build and runtime preparation succeeded in
+`build/windows/creature-activity-clean-build.log`, `creature-activity-final-build.log`
+and `creature-activity-runtime.log`.
+The prepared executable is `build/windows/opendungeons-plus.exe`, timestamp
+September 6, 2026 at 15:16:16,
+SHA-256 `667e5f70ebe7d9822a67f53b526e8ee02adcf5065c394f2c86cf50be30be806f`.
+It retains all accepted Escape and marking corrections. No game was launched;
+network/replay runtime acceptance and the broader panel work remain open. See
+[the creature panel note](CREATURE-PANEL.md).
+
+The preceding complete fork was `fix/escape-navigation`, continuing directly from
+the user-confirmed Options checkpoint `32550ad8`. All 63 focused headless
+navigation checks pass (49 failures against the preceding checkpoint).
+Windows Release compilation and runtime preparation succeeded in
+`build/windows/escape-navigation-build.log` and `escape-navigation-runtime.log`.
+The prepared executable SHA-256 is
+`53e580c640ffa264e6a4756322cd0bb8dc0d542f3e730d78c5780ee39dc42156`.
+Open `build/windows/opendungeons-plus.exe` directly to test Escape in settings,
+front-end submenus and game dialogs; see [Escape navigation](ESCAPE-NAVIGATION.md).
+On September 6, the user confirmed Escape is fixed and works everywhere;
+the separate hand-feedback and visual/display-change checks remain open.
+
+The preceding `fix/options-escape` build continued from pickup-label
+checkpoint `9ae03c54`. The focused keyboard/window probe passes all 32 checks;
+Release compilation and runtime preparation pass in
+`build/windows/options-escape-build.log` and `options-escape-runtime.log`.
+The executable SHA-256 is
+`991829f9116aff7b7a5bb325ee49b1d193e6a174c46b0cf589ed8ecb7e2b3292`.
+Open `build/windows/opendungeons-plus.exe` directly and test F10 followed by
+Escape; see [the Options correction](OPTIONS-ESCAPE.md).
+
+The preceding `fix/pickup-target-description` build continued from
+wall-outline checkpoint `fcb9714c`. Release compilation and runtime preparation
+succeeded in `build/windows/pickup-description-build.log` and
+`pickup-description-runtime.log`. The executable SHA-256 is
+`3c4989a48148e88f23b4ba2c3a6d1453c5fe3f139d36388c118ef6774ce6e4e8`.
+Open `build/windows/opendungeons-plus.exe` directly. The user test of object
+descriptions is pending; the user's 13:07 captures show visible wall-hover/drag
+outlines, without establishing mark completion or cancellation; see
+[pickup target descriptions](PICKUP-TARGET-DESCRIPTION.md).
+
+The preceding `fix/wall-hover-outline` build started from the accepted
+HUD checkpoint `c450a6cc`. Release compilation and runtime preparation succeeded
+in `build/windows/wall-outline-build.log` and `wall-outline-runtime.log`.
+The wall geometry probe passes all 187 checks. Open
+`build/windows/opendungeons-plus.exe` directly. The later 13:07 user captures
+show visible outlines during hover and dragging; complete gesture and display
+change checks remain pending. See [wall hover outline](WALL-HOVER-OUTLINE.md).
+That build's executable SHA-256 was
+`53dda20bd04dc7548ccb4b8d79237359536dd321801e03bdfcc4d3d41a7e7f5a`.
+
+The preceding `fix/hud-interaction-regressions` build started from
+the full hand-feedback checkpoint `c6cbb259`. The September 6 clean Release
+build, final incremental build and runtime preparation succeeded. This build
+corrects HUD edge scrolling, save/message visibility and square buttons while
+retaining all preceding fork features. Logs: `build/windows/hud-regressions-clean-build.log`,
+`hud-regressions-final-build.log` and `hud-regressions-runtime.log`.
+The CEGUI interaction probe passes 357 checks; the layout/scaling probe reports
+zero failures. See [the HUD correction record](../internal/README.md).
+Open `build/windows/opendungeons-plus.exe` directly. On September 6, the user
+confirmed the reported HUD issues are fixed; see the scoped acceptance record
+in the HUD note. No game was launched by the assistant.
+The executable SHA-256 is
+`09b145a07c1a7eb648e8294b58c6b1cc12ed0ce6f789c43efe5725cff1712462`.
+
+Earlier interface build checkpoints are retained in the [local planning index](../internal/README.md).
 
 For the preserved `feature/action-state-feedback` prototype, the September 6 Release
 build and runtime preparation succeeded; see [action feedback](ACTION-STATE-FEEDBACK.md)
