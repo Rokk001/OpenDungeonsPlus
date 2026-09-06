@@ -1,6 +1,22 @@
 # Configuring and compiling on Windows
 
-The latest Release build adds the camera controls in
+The latest Release build corrects the incompatible virtual-call layouts found
+after the user's 20:06 crash: event notices now reach the correct handler in
+both game and editor modes. MSVC minimal rebuild is disabled, all 248 translation
+units were rebuilt, and both linked-binary dispatch checks pass (the preceding
+game-mode check fails). Runtime preparation and the headless shader-resource
+checks pass. Logs: `build/windows/windows-incremental-full-build.log`,
+`windows-incremental-runtime.log`, `windows-incremental-resources.log` and
+`windows-dispatch-{before,after}.log`. The executable at
+`build/windows/opendungeons-plus.exe` is dated September 6, 2026 at 20:30:04,
+size 4,170,752 bytes, SHA-256
+`1a19b114ccf0967f42508ce25d6717a4eb49c8e3041baee18246a110dfbd68cc`.
+It retains the full hand/camera work and the newer local camera-reset correction.
+No game was launched; user startup and gameplay acceptance remain pending. See
+[Windows build consistency](WINDOWS-INCREMENTAL-BUILD.md) for the traced cause
+and exact verification boundaries.
+
+The preceding Release build adds the camera controls in
 [the camera note](CAMERA-CONTROLS.md), retaining the complete room-lighting fork.
 Built on September 6 at 20:08:51, its SHA-256 is
 `06a56d3703419cfd5a83e5a52be110f6d14ebb093ea715746f175b2f476383ee`.
