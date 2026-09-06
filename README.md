@@ -20,7 +20,8 @@ the fixed HUD. New messages flash the Messages button; left-click it to read
 them and right-click to dismiss read messages. Save opens the message surface
 for the server's confirmation or error.
 
-The hand points at pickup targets and holds a pickaxe over diggable walls.
+The hand points at pickup targets and holds a pickaxe over diggable walls,
+which are outlined on hover.
 It shows the selected action icon or a prohibition sign for an invalid
 target; the top strip describes the current target. Right-click cancels an active
 action, drops a held object or slaps an eligible creature with an empty hand.
