@@ -17,7 +17,7 @@ circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
 Select the question-mark button beside the minimap, then click a creature to
 open its information. Click the button again or right-click the world to cancel.
-Select the currency button beside the minimap, then click an owned room tile,
+Select the removal button beside the minimap, then click an owned room tile,
 trap or door to sell it. The button or a world right-click cancels sale mode.
 Press F10 to toggle Options. Escape closes the frontmost open dialog or list,
 or returns from a main-menu submenu to the preceding screen.
@@ -30,7 +30,7 @@ Use the mouse wheel or Home/End for camera zoom; F1/F2/F3 select isometric,
 top-down and oblique views, and F4-F6 recall views stored through Options.
 Press M to open the map: left-click to move there, or right-click, M or Escape
 to close it without moving. The detail window follows the pointer.
-The +/- button beside the minimap zooms it in with a left-click and out with
+The magnifier button beside the minimap zooms it in with a left-click and out with
 a right-click; clicking the minimap moves the camera immediately.
 H focuses the dungeon heart, P cycles owned portals and F focuses the next fight.
 The default minimap uses terrain and owner colours, with darker fortified walls

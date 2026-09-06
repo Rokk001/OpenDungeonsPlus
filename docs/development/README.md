@@ -82,6 +82,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   three persistent user orientations and keyboard/pointer/GUI verification.
 - [Main-menu scene framing](MAIN-MENU-FRAMING.md): preserving the authored scene
   composition across standard, widescreen and ultrawide viewports.
+- [Navigation appearance](NAVIGATION-APPEARANCE.md): a framed circular minimap
+  and action-specific corner symbols with unchanged navigation behavior.
 - [Room lighting](ROOM-LIGHTING.md): local visible-room illumination, overlapping
   light contributions, colour readability and rendering/lifecycle verification.
 - [GUI scaling](GUI-SCALING.md): scale policy, implementation details,
