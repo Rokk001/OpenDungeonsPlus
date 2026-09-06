@@ -2,14 +2,15 @@
 
 ## Status and dependency
 
-Specification in progress under [0b](DK2-REFERENCE-BASELINE.md); this is not an
-approved set of invented coordinates. The user has authorized implementation,
-but the required reference version, runtime captures and compatibility decisions
-remain open. Implementation belongs on `feature/dk2-hud` after the relevant gate.
+Implemented composition on `feature/dk2-hud`, following the original manual and
+publisher captures recorded in [0b](DK2-REFERENCE-BASELINE.md). The user delegated
+reference interpretation; no edition or additional-window question is pending.
+Build and headless results are recorded below. Visual/gameplay acceptance and
+the explicitly listed fidelity differences remain open.
 
 ## Existing functions that must remain reachable
 
-| Scenario | Current UI / implementation | Comparison required before changing it |
+| Scenario | Preserved baseline UI / implementation | Reference comparison inventory |
 | --- | --- | --- |
 | HUD-01 resources | Gold, mana, territory and creature-pool displays in `ModeGame.layout`. | Reference placement, appearance, units, update behavior and counterpart for each value. |
 | HUD-02 categories | `MainTabControl` and the four imported tab layouts. | R2 category structure and runtime order, selection, visibility, scrolling and resizing. |
@@ -32,14 +33,15 @@ remain open. Implementation belongs on `feature/dk2-hud` after the relevant gate
 This mapping is a work inventory: a same-looking name does not certify equivalent
 gameplay. Inspect each action's handler before changing what its button does.
 
-## Geometry contract to measure
+## Geometry evidence and scaling
 
 Use one identified whole-viewport reference capture per scenario; record its
 resolution and UI state. For each affected element, record the visible bounds,
 interactive bounds, anchor, ordering and relation to the map. Store the reference
 coordinates and the derivation of the fork's design coordinates together.
 
-The following values are deliberately not assigned without reference evidence:
+The following inventory was used to collect evidence; the measured values and
+implemented decisions are now in 0b and the concrete contract below:
 
 - Complete control-panel height and the area reserved for the world.
 - Minimap dimensions, clipping shape and adjacent control offsets.
@@ -77,7 +79,8 @@ changes, and verify actual supported settings windows against their own matrix.
 Preserve the live resize/fullscreen and clipping corrections. Build checks and
 headless bounds tests support the user comparison; they do not replace it.
 
-No new game build or user acceptance has been performed for 1b at this stage.
+The build and geometry results below establish technical checks, not a passed
+visual comparison of all seventeen scenarios.
 
 ## Implementation checkpoint, September 6, 2026
 
@@ -97,7 +100,7 @@ in `build/windows/dk2-hud-build.log`. The subsequent clean Release build also
 passes in `build/windows/dk2-hud-clean-build.log`; runtime preparation succeeded.
 No game was launched and no new user acceptance is claimed.
 
-This checkpoint does not certify all HUD-01..17 fidelity scenarios: detailed
+Remaining differences and acceptance work for HUD-01..17: detailed
 creature portrait/job/mood controls, final reference artwork, minimap corner
 actions and complete popup visual comparison still need their own evidence and
 implementation checks. The hand branch replaces the old action panel; it remains
@@ -108,7 +111,8 @@ in the current checkout, and no upstream issue is claimed closed by this work.
 
 ## Concrete implementation contract
 
-The decision record in 0b supersedes the earlier pending-user gates above.
+The decision record in 0b resolves reference interpretation and extra-window
+placement under the user's explicit delegation.
 Use gallery captures 2/3/5/6/8/9 and the measured design coordinates in 0b.
 
 - HUD-01: mana, then gold at the upper left; context information occupies the
@@ -145,3 +149,16 @@ the hand indicator is always mouse-pass-through. Collapsing content must free
 its former world area. Popup input and drag-release guards retain priority.
 Scope is the existing fork's interface; missing creature filters, reference-only
 actions and final artwork must be recorded as differences, not silently invented.
+
+## Minimap resize correction
+
+Review of the changed HUD found that all three minimap click handlers divided
+by texture dimensions captured at construction. The displayed map can resize
+without recreating that texture, so its center no longer selected the camera
+center. The handlers now normalize against the current displayed size while
+retaining the texture's world span and orientation. No camera controls changed.
+
+A generated C++ probe exercises the actual three conversion methods at six map
+sizes. Against `0f72cf3f`, 30 of 36 assertions fail; against the correction all
+36 pass. Logs: `build/windows/dk2-minimap-before-results.log` and
+`dk2-minimap-after-results.log`. This correction belongs to the HUD branch.
