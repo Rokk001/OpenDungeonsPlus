@@ -14,6 +14,23 @@ camera-reset correction and every other newer edit. The normal shared checkout
 and index remain unchanged. The prepared executable is dated September 6 at
 20:30:04 in BUILDING.md; user startup and game acceptance remain pending.
 
+## Current held-creature presentation
+
+The latest hand-display work is `feature/held-creature-display`, based on complete
+map checkpoint `6310df83` (retaining camera `abc19866`) and `fix/creature-portrait-clipping`
+prerequisite. It preserves newer parallel map-navigation edits in the shared
+checkout. The renderer and interface changes pass 77 and 3,535 focused checks,
+227 rotation/drop regression checks, 33 portrait renders and twelve grip-layer
+comparisons. Release compilation, runtime preparation and resource checks pass;
+the prepared executable is dated September 6 at 21:30:54 in BUILDING.md. User
+gameplay acceptance remains pending; the static tool grip was separately
+accepted. See [held-creature display](docs/development/HELD-CREATURE-DISPLAY.md).
+Use isolated indexes to commit these separate functional branches without
+switching the shared shadow checkout or changing its normal index. Preserve
+all apparently modified/untracked cumulative feature files and newer map edits.
+The suggested wall-click swing is a separate follow-up; inspect the authored
+animations and current wall-selection path before any implementation.
+
 ## Language
 
 Communicate with the user in German.

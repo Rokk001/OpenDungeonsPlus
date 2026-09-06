@@ -167,3 +167,18 @@ const CEGUI::Image& getCreaturePortraitImage(const std::string& meshName)
         throw;
     }
 }
+
+const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName)
+{
+    const std::string name = "CreatureHandIcon/" + meshName;
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    if(images.isDefined(name))
+        return images.get(name);
+
+    getCreaturePortraitImage(meshName);
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
+    image.setTexture(&CEGUI::System::getSingleton().getRenderer()->getTexture("CreaturePortrait/" + meshName));
+    image.setArea(CEGUI::Rectf(0.0f, 96.0f, 192.0f, 288.0f));
+    image.setAutoScaled(CEGUI::ASM_Disabled);
+    return image;
+}

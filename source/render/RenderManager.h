@@ -152,6 +152,8 @@ public:
     void rrPickUpEntity(GameEntity* curEntity, Player* localPlayer);
     void rrDropHand(GameEntity* curEntity, Player* localPlayer);
     void rrRotateHand(Player* localPlayer);
+    void rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer);
+    bool isKeeperHandVisible() const { return mHandKeeperHandVisibility == 0; }
     void rrAddOutliner(Creature* creature);
     void rrRemoveOutliner(Creature* creature);
     void rrIncreaseAmbient(Creature* creature);
@@ -235,6 +237,7 @@ private:
     template<typename Manager> bool removeIfExists(std::string, std::string);
     //! \brief Correctly places entities in hand next to the keeper hand
     void rrOrderHand(Player* localPlayer);
+    void rrUpdateHeldCreature();
 
     //! \brief Colorize the material with the corresponding team id color.
     //! \note If the material (wall tiles only) is marked for digging, a yellow color is added
@@ -281,6 +284,9 @@ private:
 
     //! For the keeper hand
     Ogre::SceneNode* mHandKeeperNode;
+    Ogre::SceneNode* mHeldCreatureGrip = nullptr;
+    Ogre::SceneNode* mHeldCreatureStorage = nullptr;
+    bool mHeldCreatureDisplayEnabled = false;
     Ogre::SceneNode* mDummyNode;
     Ogre::SceneNode* mHandLightNode;
     Ogre::SceneNode* mHandLightNode2;
