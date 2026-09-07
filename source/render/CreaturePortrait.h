@@ -24,7 +24,7 @@ const CEGUI::Image& getCreaturePortraitImage(const std::string& meshName);
 //! Prefer the authored population-panel illustration, falling back for custom meshes.
 const CEGUI::Image& getCreaturePanelPortraitImage(const std::string& meshName);
 
-//! Return a square crop sharing the cached portrait texture.
+//! Return a square crop sharing the cached population-panel portrait texture.
 const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName);
 
 #endif

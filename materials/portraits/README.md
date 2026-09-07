@@ -3,7 +3,9 @@
 The population panel uses original illustrated portraits stored as
 `materials/textures/portrait-<MeshName>.png`. The creature mesh filename is the
 identity key; custom creatures without an illustration retain the model preview.
-The accepted square portraits next to the hand retain their existing rendering.
+The small portraits next to the hand reuse a centered square crop of the same
+illustration, one per held creature; their ordering and pickup/drop behavior
+are unchanged. Meshes without artwork keep the existing model-based square crop.
 
 Artwork is generated with the built-in image generation tool, using this
 project's model exports as identity references. Recreate those references with
