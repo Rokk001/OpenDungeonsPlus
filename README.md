@@ -73,6 +73,7 @@ Hold Ctrl and turn the mouse wheel to change the order of held objects.
 The first displayed object is the next one to drop.
 The selected held creature is gripped between finger and thumb; square portraits
 beside the hand show held creatures in order, with four portraits per row.
+Each miniature uses a square crop of the creature's population-panel portrait.
 
 Visible rooms have local lighting independent of the cursor, while overlapping
 lights and the ambient-light setting preserve the colours of terrain and creatures.
