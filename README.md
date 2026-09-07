@@ -55,6 +55,8 @@ The minimap and full map show the current camera view as a thin white outline.
 
 The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.
+The category symbols are a person, house, wand and pickaxe for Creatures, Rooms,
+Spells and Workshop respectively.
 The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature
 types, left-click a count to pick up a matching available creature, or right-click
