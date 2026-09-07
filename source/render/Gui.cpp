@@ -338,54 +338,74 @@ void createNavigationImages()
         }
     }
 
+    const int badgeSize = 128;
+    pixels.resize(badgeSize * badgeSize * 4);
     for(int badge = 0; badge < 2; ++badge)
     {
-        for(int y = 0; y < size; ++y)
+        auto inSymbol = [badge](float dx, float dy)
         {
-            for(int x = 0; x < size; ++x)
+            if(badge == 0)
             {
-                const float dx = x + 0.5f - 32;
-                const float dy = y + 0.5f - 32;
+                const float hx = dx / 13;
+                const float hy = -dy / 13;
+                const float heart = hx * hx + hy * hy - 1;
+                return heart * heart * heart - hx * hx * hy * hy * hy <= 0;
+            }
+            const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
+            const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
+            return (std::abs(dx) < 1.5f && std::abs(dy) < 20)
+                || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
+                || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
+        };
+        for(int y = 0; y < badgeSize; ++y)
+        {
+            for(int x = 0; x < badgeSize; ++x)
+            {
+                const float dx = (x + 0.5f) * 64 / badgeSize - 32;
+                const float dy = (y + 0.5f) * 64 / badgeSize - 32;
                 const float radius = std::sqrt(dx * dx + dy * dy);
-                const int i = (y * size + x) * 4;
-                unsigned char shade = static_cast<unsigned char>(std::max(0.0f, 36 - radius * 0.6f));
+                const float light = -(dx + dy) / std::max(1.0f, radius * 1.414214f);
+                const int i = (y * badgeSize + x) * 4;
+                unsigned char shade = static_cast<unsigned char>(std::max(0.0f, 28 - radius * 0.6f));
                 pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
-                if(radius > 26)
+                if(radius > 25)
                 {
-                    const float bevel = std::max(0.0f, 1 - std::abs(radius - 28) / 3);
-                    shade = static_cast<unsigned char>((90 - (dx + dy) * 0.8f) * bevel);
+                    const float slope = std::max(-1.0f, std::min(1.0f, (radius - 28) / 3));
+                    const float face = std::sqrt(std::max(0.0f, 1 - slope * slope));
+                    shade = static_cast<unsigned char>(std::max(12.0f,
+                        74 + 92 * light * slope + 65 * face));
                     pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
                 }
                 else if(radius > 22 && radius < 24)
                 {
-                    pixels[i] = badge == 0 ? 24 : 210;
-                    pixels[i + 1] = badge == 0 ? 178 : 171;
-                    pixels[i + 2] = badge == 0 ? 114 : 35;
+                    const float relief = 0.65f + 0.35f * light * (radius - 23);
+                    pixels[i] = static_cast<unsigned char>((badge == 0 ? 24 : 210) * relief);
+                    pixels[i + 1] = static_cast<unsigned char>((badge == 0 ? 178 : 171) * relief);
+                    pixels[i + 2] = static_cast<unsigned char>((badge == 0 ? 114 : 35) * relief);
                 }
-                const float hx = dx / 13;
-                const float hy = -dy / 13;
-                const float heart = hx * hx + hy * hy - 1;
-                bool symbol = badge == 0 && heart * heart * heart - hx * hx * hy * hy * hy <= 0;
-                if(badge == 1)
+                if(inSymbol(dx, dy))
                 {
-                    const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
-                    const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
-                    symbol = (std::abs(dx) < 1.5f && std::abs(dy) < 20)
-                        || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
-                        || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
+                    const float highlight = std::exp(-((dx + 5) * (dx + 5) + (dy + 6) * (dy + 6)) / 35);
+                    float relief = 174 - dx * 1.4f - dy * 2.4f + 48 * highlight;
+                    if(!inSymbol(dx - 1, dy - 1))
+                        relief = 244;
+                    else if(!inSymbol(dx + 1, dy + 1))
+                        relief = 72;
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] =
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f, relief)));
                 }
-                if(symbol)
-                    pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(238 - (dy + 20) * 1.2f);
+                else if(inSymbol(dx - 1.5f, dy - 1.5f))
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = 4;
                 pixels[i + 3] = static_cast<unsigned char>(std::max(0.0f, std::min(1.0f, 31 - radius)) * 255);
             }
         }
         const std::string name = badge == 0 ? "ManaBadge" : "GoldBadge";
         CEGUI::Texture& badgeTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
-        badgeTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+        badgeTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(badgeSize, badgeSize), CEGUI::Texture::PF_RGBA);
         CEGUI::BasicImage& badgeImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
             "BasicImage", "OpenDungeonsIcons/" + name));
         badgeImage.setTexture(&badgeTexture);
-        badgeImage.setArea(CEGUI::Rectf(0, 0, size, size));
+        badgeImage.setArea(CEGUI::Rectf(0, 0, badgeSize, badgeSize));
     }
 }
 
