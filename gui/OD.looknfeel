@@ -5076,4 +5076,18 @@
         </StateImagery>
     </WidgetLook>
 
+    <WidgetLook name="OD/MenuPageWindow" inherits="OD/FrameWindow">
+        <Property name="FrameEnabled" value="False" />
+        <Property name="TitlebarEnabled" value="False" />
+        <Property name="CloseButtonEnabled" value="False" />
+        <StateImagery name="ActiveNoTitleNoFrame" />
+        <StateImagery name="InactiveNoTitleNoFrame" />
+        <StateImagery name="DisabledNoTitleNoFrame" />
+    </WidgetLook>
+
+    <WidgetLook name="OD/MenuPageContent" inherits="OD/TabContentPane">
+        <StateImagery name="Enabled" />
+        <StateImagery name="Disabled" />
+    </WidgetLook>
+
 </Falagard>

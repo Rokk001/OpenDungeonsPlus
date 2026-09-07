@@ -68,7 +68,22 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     rootWindow->addChild(mSettingsWindow);
     mSettingsWindow->hide();
     if(menuPages)
-        static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"))->setTabHeight(CEGUI::UDim(0, 0));
+    {
+        mSettingsWindow->setLookNFeel("OD/MenuPageWindow");
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -272.5f), CEGUI::UDim(0.5f, -60),
+            CEGUI::UDim(0.5f, 272.5f), CEGUI::UDim(1, -16)));
+        CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
+        tabs->setTabHeight(CEGUI::UDim(0, 0));
+        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 10), CEGUI::UDim(0, 72),
+            CEGUI::UDim(1, -10), CEGUI::UDim(1, -70)));
+        tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
+        CEGUI::Window* title = wmgr->createWindow("OD/MenuTitle", "PageTitle");
+        title->setFont("MedievalSharp-20");
+        title->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
+            CEGUI::UDim(1, 0), CEGUI::UDim(0, 60)));
+        title->setMousePassThroughEnabled(true);
+        mSettingsWindow->addChild(title);
+    }
 
     mApplyWindow = wmgr->loadLayoutFromFile("WindowApplyChanges.layout");
     if (mApplyWindow == nullptr)
@@ -655,6 +670,7 @@ void SettingsWindow::showPage(const std::string& name)
     static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"))->setSelectedTab(name);
     mSettingsWindow->setText(name == "Video" ? "Graphics Options" :
         name == "Audio" ? "Sound Options" : name == "Input" ? "Control Options" : "Game Options");
+    mSettingsWindow->getChild("PageTitle")->setText(mSettingsWindow->getText());
 }
 
 void SettingsWindow::hide()
