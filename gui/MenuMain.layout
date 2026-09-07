@@ -5,6 +5,7 @@
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Window type="OD/StaticImage" name="WelcomeBanner" >
+            <Property name="Visible" value="False" />
             <Property name="Area" value="{{0.5,-166.5},{0,32},{0.5,166.5},{0,143}}" />
             <Property name="Image" value="ODMainMenuLogo/Logo" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -21,40 +22,40 @@
         </Window>
 
         <Window type="OD/InvisibleButton" name="StartCampaignButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-184},{0.5,160},{0.5,-120}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,-40},{0.5,160},{0.5,-4}}" />
             <Property name="Text" value="Campaign" />
             <Property name="Disabled" value="True" />
         </Window>
         <Window type="OD/InvisibleButton" name="StartSkirmishButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-120},{0.5,160},{0.5,-56}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,-4},{0.5,160},{0.5,32}}" />
             <Property name="Text" value="Skirmish" />
         </Window>
         <Window type="OD/InvisibleButton" name="MultiplayerModeButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-56},{0.5,160},{0.5,8}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,32},{0.5,160},{0.5,68}}" />
             <Property name="Text" value="Multiplayer" />
         </Window>
         <Window type="OD/InvisibleButton" name="StartReplayButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,8},{0.5,160},{0.5,72}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
             <Property name="Text" value="Replay" />
         </Window>
 
         <Window type="OD/InvisibleButton" name="MapEditorButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,72},{0.5,160},{0.5,136}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,104},{0.5,160},{0.5,140}}" />
             <Property name="Text" value="Map Editor" />
         </Window>
         <Window type="OD/InvisibleButton" name="SettingsButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,136},{0.5,160},{0.5,200}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,140},{0.5,160},{0.5,176}}" />
             <Property name="Text" value="Settings" />
         </Window>
         <Window type="OD/InvisibleButton" name="QuitButton" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,248},{0.5,160},{0.5,312}}" />
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,196},{0.5,160},{0.5,232}}" />
             <Property name="Text" value="Quit" />
         </Window>
         <LayoutImport type="DefaultWindow" filename="WindowSkirmishSubMenu.layout" name="SkirmishSubMenuMenuImport" />
