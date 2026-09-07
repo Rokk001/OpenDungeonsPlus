@@ -222,6 +222,7 @@ protected:
     bool saveGame(const CEGUI::EventArgs& e = {});
     bool loadGame(const CEGUI::EventArgs& e = {});
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
+    void initializeSettingsNavigation();
 
     //! \brief Handle the keyboard input in normal mode
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
@@ -263,6 +264,7 @@ private:
 
     //! \brief The settings window.
     SettingsWindow mSettings;
+    bool mReturningToSettingsNavigation = false;
 
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window

@@ -4881,6 +4881,33 @@
         </StateImagery>
     </WidgetLook>
 
+    <WidgetLook name="OD/GameNavigationButton" inherits="OD/InvisibleButton">
+        <Property name="NormalTextColour" value="FFFFFFFF" />
+        <Property name="HoverTextColour" value="FFFFAC00" />
+        <Property name="PushedTextColour" value="FFFFAC00" />
+        <Property name="HorzLabelFormatting" value="LeftAligned" />
+    </WidgetLook>
+
+    <WidgetLook name="OD/GameNavigationFooter" inherits="OD/GameNavigationButton">
+        <ImagerySection name="label">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="1.4" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Normal"><Layer><Section section="label"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section section="label"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section section="label"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section section="label"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="label"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+    </WidgetLook>
+
     <WidgetLook name="OD/MenuTextButton" inherits="OD/InvisibleButton">
         <Property name="NormalTextColour" value="FFBFBFBF" />
         <ImagerySection name="glow">

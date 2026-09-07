@@ -15,6 +15,9 @@ of development.
 The control panel groups Creatures, Rooms, Spells and Workshop beside the
 circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
+In-game Settings opens a category menu for graphics, sound, controls, user cameras
+and additional game settings; closing a category returns to that menu, Back
+returns to Options, and Continue Game returns to the current session.
 Open End Game for the existing main-menu and desktop exit actions; Back returns
 to Options, and Continue Game closes the menu without leaving the session.
 Select the question-mark button beside the minimap, then click a creature to
