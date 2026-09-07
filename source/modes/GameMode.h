@@ -240,9 +240,19 @@ private:
     void refreshHeldCreatureIcons();
     bool shouldExpireEventMessages() const override { return false; }
     void showEventMessages();
+    void showEventMessage(EventMessage* message, bool raiseWindow);
+    void dismissEventMessage(EventMessage* message);
     bool onEventMessagesClicked(const CEGUI::EventArgs& arg);
     void updateEventMessageIndicator(float elapsed);
-    bool mUnreadEventMessages = false;
+    struct MessageTab
+    {
+        EventMessage* message;
+        CEGUI::Window* window;
+        bool read;
+        float position;
+    };
+    std::vector<MessageTab> mMessageTabs;
+    EventMessage* mSelectedEventMessage = nullptr;
     float mEventMessageFlashTime = 0.0f;
 
     //! \brief Whether the pending exit confirmation should leave to the desktop
