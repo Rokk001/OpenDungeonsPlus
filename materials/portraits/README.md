@@ -3,9 +3,13 @@
 The population panel uses original illustrated portraits stored as
 `materials/textures/portrait-<MeshName>.png`. The creature mesh filename is the
 identity key; custom creatures without an illustration retain the model preview.
-The small portraits next to the hand reuse a centered square crop of the same
+The small portraits next to the hand reuse an upper-centered square crop of the same
 illustration, one per held creature; their ordering and pickup/drop behavior
 are unchanged. Meshes without artwork keep the existing model-based square crop.
+
+All 33 mesh identities in the bundled creature configuration have illustrations.
+The square crop starts one quarter of the unused image height from the top,
+keeping faces visible; model previews retain their original centered crop.
 
 Artwork is generated with the built-in image generation tool, using this
 project's model exports as identity references. Recreate those references with
@@ -15,8 +19,8 @@ tracked game assets and distributed under the project's GPL-3.0-or-later terms.
 No original reference-game artwork is included.
 
 Additional per-creature prompts are in the adjacent Markdown files. The Goblin
-image is the consistency exemplar for this artwork set; artistic acceptance by
-the user remains pending. Keep the mesh identity, original model colors and
+image is the consistency exemplar for this artwork set. Keep the mesh identity,
+original model colors and
 equipment when revising an illustration. Do not put count labels into the art:
 the population panel supplies the live count overlay.
 

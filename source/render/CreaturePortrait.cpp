@@ -211,13 +211,14 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName)
 
     getCreaturePanelPortraitImage(meshName);
     CEGUI::Renderer& renderer = *CEGUI::System::getSingleton().getRenderer();
-    const std::string portraitName = renderer.isTextureDefined("IllustratedCreaturePortrait/" + meshName) ?
+    const bool illustrated = renderer.isTextureDefined("IllustratedCreaturePortrait/" + meshName);
+    const std::string portraitName = illustrated ?
         "IllustratedCreaturePortrait/" + meshName : "CreaturePortrait/" + meshName;
     CEGUI::Texture& texture = renderer.getTexture(portraitName);
     const CEGUI::Sizef size = texture.getOriginalDataSize();
     const float side = std::min(size.d_width, size.d_height);
     const float left = (size.d_width - side) * 0.5f;
-    const float top = (size.d_height - side) * 0.5f;
+    const float top = (size.d_height - side) * (illustrated ? 0.25f : 0.5f);
     CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(left, top, left + side, top + side));
