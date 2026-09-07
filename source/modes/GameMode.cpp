@@ -444,9 +444,6 @@ void GameMode::activate()
     // Play the game music.
     MusicPlayer::getSingleton().play(mGameMap->getLevelMusicFile()); // in game music
 
-    std::string colorStr = Helper::getImageColoursStringFromColourValue(mGameMap->getLocalPlayer()->getSeat()->getColorValue());
-    guiSheet->getChild("HorizontalPipe")->setProperty("ImageColours", colorStr);
-
     if(mGameMap->getTurnNumber() != -1)
     {
         /* The game has been resumed from another mode (like console).
@@ -1140,14 +1137,20 @@ void GameMode::refreshMainUI()
 
     widget = guiSheet->getChild(Gui::DISPLAY_GOLD);
     tempSS.str("");
-    tempSS << mySeat->getGold() << "/" << mySeat->getGoldMax();
+    tempSS << mySeat->getGold();
     widget->setText(tempSS.str());
+    tempSS << "/" << mySeat->getGoldMax();
+    widget->setTooltipText("Your Gold: " + tempSS.str());
+    widget->getChild("Icon")->setTooltipText(widget->getTooltipText());
 
     widget = guiSheet->getChild(Gui::DISPLAY_MANA);
     tempSS.str("");
-    tempSS << mySeat->getMana() << " " << (mySeat->getManaDelta() >= 0 ? "+" : "-")
-            << mySeat->getManaDelta();
+    tempSS << mySeat->getMana();
     widget->setText(tempSS.str());
+    tempSS.str("");
+    tempSS << (mySeat->getManaDelta() >= 0 ? "+" : "") << mySeat->getManaDelta();
+    widget->getChild("Change")->setText(tempSS.str());
+    widget->getChild("Change")->setProperty("TextColours", mySeat->getManaDelta() >= 0 ? "FF00C880" : "FFFF4848");
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
