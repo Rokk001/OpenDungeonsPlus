@@ -1510,7 +1510,9 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
-    mRootWindow->getChild("ObjectivesWindow")->show();
+    CEGUI::Window* objectives = mRootWindow->getChild("ObjectivesWindow");
+    objectives->show();
+    objectives->moveToFront();
     return true;
 }
 
@@ -1672,11 +1674,10 @@ bool GameMode::showExitApplicationFromOptions(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
-bool GameMode::showObjectivesFromOptions(const CEGUI::EventArgs& /*e*/)
+bool GameMode::showObjectivesFromOptions(const CEGUI::EventArgs& e)
 {
     mRootWindow->getChild("GameOptionsWindow")->hide();
-    mRootWindow->getChild("ObjectivesWindow")->show();
-    return true;
+    return showObjectivesWindow(e);
 }
 
 bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& /*e*/)
