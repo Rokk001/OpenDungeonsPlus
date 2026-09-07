@@ -24,15 +24,15 @@
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
                 <Window type="OD/StaticImage" name="Icon" >
-                    <Property name="Area" value="{{0,0},{0,0},{0,30},{0,30}}" />
-                    <Property name="Image" value="OpenDungeonsIcons/GoldCoin" />
+                    <Property name="Area" value="{{0,-4},{0,-2},{0,60},{0,62}}" />
+                    <Property name="Image" value="OpenDungeonsIcons/GoldBadge" />
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
                     <Property name="TooltipText" value="Your Gold" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                    <Property name="VerticalAlignment" value="Top" />
                 </Window>
             </Window>
             <Window type="OD/ResourceDisplay" name="ManaDisplay" >
@@ -42,18 +42,30 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="Your Mana" />
                 <Property name="HorzFormatting" value="RightAligned" />
+                <Property name="VertFormatting" value="TopAligned" />
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
+                <Window type="OD/StaticText" name="Change">
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="Area" value="{{0,64},{0,22},{1,-4},{0,42}}" />
+                    <Property name="Text" value="+0" />
+                    <Property name="TextColours" value="FF00C880" />
+                    <Property name="HorzFormatting" value="LeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="Icon" >
-                    <Property name="Area" value="{{0,0},{0,0},{0,30},{0,30}}" />
-                    <Property name="Image" value="OpenDungeonsIcons/ManaIcon" />
+                    <Property name="Area" value="{{0,-4},{0,-2},{0,60},{0,62}}" />
+                    <Property name="Image" value="OpenDungeonsIcons/ManaBadge" />
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
                     <Property name="TooltipText" value="Your Mana" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                    <Property name="VerticalAlignment" value="Top" />
                 </Window>
             </Window>
 

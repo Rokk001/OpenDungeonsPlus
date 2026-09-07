@@ -53,6 +53,10 @@ The default minimap uses terrain and owner colours, with darker fortified walls
 and a dotted heart direction when zoomed out; saved renderer preferences remain available.
 The minimap and full map show the current camera view as a thin white outline.
 
+The upper resource strip shows current mana and gold beside round badges;
+mana change appears on a smaller line below, and the gold tooltip includes
+storage capacity.
+
 The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.
 The category symbols are a person, house, wand and pickaxe for Creatures, Rooms,

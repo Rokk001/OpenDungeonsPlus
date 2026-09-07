@@ -212,6 +212,56 @@ void createNavigationImages()
         categoryImage.setTexture(&categoryTexture);
         categoryImage.setArea(CEGUI::Rectf(0, 0, size, size));
     }
+
+    for(int badge = 0; badge < 2; ++badge)
+    {
+        for(int y = 0; y < size; ++y)
+        {
+            for(int x = 0; x < size; ++x)
+            {
+                const float dx = x + 0.5f - 32;
+                const float dy = y + 0.5f - 32;
+                const float radius = std::sqrt(dx * dx + dy * dy);
+                const int i = (y * size + x) * 4;
+                unsigned char shade = static_cast<unsigned char>(std::max(0.0f, 36 - radius * 0.6f));
+                pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
+                if(radius > 26)
+                {
+                    const float bevel = std::max(0.0f, 1 - std::abs(radius - 28) / 3);
+                    shade = static_cast<unsigned char>((90 - (dx + dy) * 0.8f) * bevel);
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
+                }
+                else if(radius > 22 && radius < 24)
+                {
+                    pixels[i] = badge == 0 ? 24 : 210;
+                    pixels[i + 1] = badge == 0 ? 178 : 171;
+                    pixels[i + 2] = badge == 0 ? 114 : 35;
+                }
+                const float hx = dx / 13;
+                const float hy = -dy / 13;
+                const float heart = hx * hx + hy * hy - 1;
+                bool symbol = badge == 0 && heart * heart * heart - hx * hx * hy * hy * hy <= 0;
+                if(badge == 1)
+                {
+                    const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
+                    const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
+                    symbol = (std::abs(dx) < 1.5f && std::abs(dy) < 20)
+                        || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
+                        || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
+                }
+                if(symbol)
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(238 - (dy + 20) * 1.2f);
+                pixels[i + 3] = static_cast<unsigned char>(std::max(0.0f, std::min(1.0f, 31 - radius)) * 255);
+            }
+        }
+        const std::string name = badge == 0 ? "ManaBadge" : "GoldBadge";
+        CEGUI::Texture& badgeTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
+        badgeTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+        CEGUI::BasicImage& badgeImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+            "BasicImage", "OpenDungeonsIcons/" + name));
+        badgeImage.setTexture(&badgeTexture);
+        badgeImage.setArea(CEGUI::Rectf(0, 0, size, size));
+    }
 }
 
 void scaleDimension(CEGUI::UDim& dimension, float scale)
