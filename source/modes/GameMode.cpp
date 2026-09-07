@@ -462,8 +462,10 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     // If we have a room/trap/spell selected, show it
     // TODO: This should be changed, or combined with an icon or something later.
     TextRenderer& textRenderer = TextRenderer::getSingleton();
+    const float pointerScale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
     textRenderer.moveText(ODApplication::POINTER_INFO_STRING,
-                          static_cast<Ogre::Real>(mouseEvent.x + 30), static_cast<Ogre::Real>(mouseEvent.y));
+        static_cast<Ogre::Real>(mouseEvent.x + 145.0f * pointerScale),
+        static_cast<Ogre::Real>(mouseEvent.y + 24.0f * pointerScale));
 
     handleMouseWheel(toSFMLMouseWheel(arg));
 
@@ -2111,15 +2113,18 @@ void GameMode::refreshActionFeedback(float elapsed)
     const std::string button = SkillManager::getSelectedButton(mPlayerSelection);
     const bool prohibited = !mActionTargetValid && (active || holding);
     icon->setVisible(!overGui && (prohibited || !button.empty()));
+    const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
     if(icon->isVisible())
     {
         icon->setProperty("Image", prohibited ? "OpenDungeonsIcons/Prohibition" :
             mRootWindow->getChild(button)->getProperty("NormalImage"));
-        const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
         const float scale = icon->getPixelSize().d_width / 50.0f;
         icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale),
             CEGUI::UDim(0, pointer.d_y + 8.0f * scale)));
     }
+    const float pointerScale = icon->getPixelSize().d_width / 50.0f;
+    TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
+        pointer.d_x + 145.0f * pointerScale, pointer.d_y + 24.0f * pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
@@ -2221,6 +2226,13 @@ void GameMode::displayText(const Ogre::ColourValue& txtColour, const std::string
     mActionTargetText = txt;
     mRootWindow->getChild("ContextInfo")->setText(txt);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+}
+
+void GameMode::displayPointerText(const Ogre::ColourValue& txtColour, const std::string& txt)
+{
+    TextRenderer& textRenderer = TextRenderer::getSingleton();
+    textRenderer.setColor(ODApplication::POINTER_INFO_STRING, txtColour);
+    textRenderer.setText(ODApplication::POINTER_INFO_STRING, txt);
 }
 
 void GameMode::checkInputCommand()
