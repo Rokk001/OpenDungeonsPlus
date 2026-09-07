@@ -132,6 +132,14 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
                            AbstractModeManager::ModeType::MENU_EDITOR_NEW);
     connectModeChangeEvent(editorWin->getChild(BUTTON_EDITOR_LOAD),
                            AbstractModeManager::ModeType::MENU_EDITOR_LOAD);
+
+    for(const std::string& name : {WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR})
+        addEventConnection(
+            rootWin->getChild(name + "/BackButton")->subscribeEvent(
+                CEGUI::PushButton::EventClicked,
+                CEGUI::Event::Subscriber(&MenuModeMain::goBack, this)
+            )
+        );
 }
 
 void MenuModeMain::activate()
@@ -144,6 +152,7 @@ void MenuModeMain::activate()
     window->getChild(WINDOW_SKIRMISH)->hide();
     window->getChild(WINDOW_MULTIPLAYER)->hide();
     window->getChild(WINDOW_EDITOR)->hide();
+    showMainMenuButtons(true);
 
     giveFocus();
 
@@ -201,44 +210,43 @@ bool MenuModeMain::goBack(const CEGUI::EventArgs&)
         if(window->isVisible())
         {
             window->hide();
+            showMainMenuButtons(true);
             break;
         }
     }
     return true;
 }
 
-bool MenuModeMain::toggleSkirmishSubMenu(const CEGUI::EventArgs&)
+void MenuModeMain::showMainMenuButtons(bool visible)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
-    OD_ASSERT_TRUE(mainWin);
-    CEGUI::Window* window = mainWin->getChild(WINDOW_SKIRMISH);
-    OD_ASSERT_TRUE(window);
-    window->setVisible(!window->isVisible());
-    mainWin->getChild(WINDOW_MULTIPLAYER)->hide();
-    mainWin->getChild(WINDOW_EDITOR)->hide();
-    return true;
+    for(const std::string& name : {std::string("StartCampaignButton"), BUTTON_SKIRMISH,
+        BUTTON_MULTIPLAYER, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+        mainWin->getChild(name)->setVisible(visible);
+}
+
+bool MenuModeMain::toggleSkirmishSubMenu(const CEGUI::EventArgs&)
+{
+    return toggleSubMenu(WINDOW_SKIRMISH);
 }
 
 bool MenuModeMain::toggleMultiplayerSubMenu(const CEGUI::EventArgs&)
 {
-    CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
-    OD_ASSERT_TRUE(mainWin);
-    CEGUI::Window* window = mainWin->getChild(WINDOW_MULTIPLAYER);
-    OD_ASSERT_TRUE(window);
-    window->setVisible(!window->isVisible());
-    mainWin->getChild(WINDOW_SKIRMISH)->hide();
-    mainWin->getChild(WINDOW_EDITOR)->hide();
-    return true;
+    return toggleSubMenu(WINDOW_MULTIPLAYER);
 }
 
 bool MenuModeMain::toggleEditorSubMenu(const CEGUI::EventArgs&)
 {
+    return toggleSubMenu(WINDOW_EDITOR);
+}
+
+bool MenuModeMain::toggleSubMenu(const std::string& name)
+{
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
     OD_ASSERT_TRUE(mainWin);
-    CEGUI::Window* window = mainWin->getChild(WINDOW_EDITOR);
-    OD_ASSERT_TRUE(window);
-    window->setVisible(!window->isVisible());
-    mainWin->getChild(WINDOW_MULTIPLAYER)->hide();
-    mainWin->getChild(WINDOW_SKIRMISH)->hide();
+    const bool visible = !mainWin->getChild(name)->isVisible();
+    for(const std::string& other : {WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR})
+        mainWin->getChild(other)->setVisible(visible && other == name);
+    showMainMenuButtons(!visible);
     return true;
 }

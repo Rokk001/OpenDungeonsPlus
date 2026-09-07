@@ -21,6 +21,8 @@ Select the removal button beside the minimap, then click an owned room tile,
 trap or door to sell it. The button or a world right-click cancels sale mode.
 Press F10 to toggle Options. Escape closes the frontmost open dialog or list,
 or returns from a main-menu submenu to the preceding screen.
+Skirmish, Multiplayer and Map Editor open separate menu pages; click the cross
+at the bottom right or press Escape to return to the main menu.
 Press Print Screen to save a PNG screenshot from menus, dialogs, gameplay or
 the editor; images use the existing timestamped filenames in the configured
 user-data directory.

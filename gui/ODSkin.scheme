@@ -59,4 +59,6 @@
     <FalagardMapping lookNFeel="OD/Tooltip" renderer="Core/Tooltip" targetType="CEGUI/Tooltip" windowType="OD/Tooltip" />
     <FalagardMapping lookNFeel="OD/StaticImage" renderer="Core/StaticImage" targetType="DefaultWindow" windowType="OD/StaticImage" />
     <FalagardMapping lookNFeel="OD/StaticText" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/StaticText" />
+    <FalagardMapping lookNFeel="OD/MenuTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuTextButton" />
+    <FalagardMapping lookNFeel="OD/MenuTitle" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/MenuTitle" />
 </GUIScheme>
