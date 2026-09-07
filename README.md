@@ -15,6 +15,8 @@ of development.
 The control panel groups Creatures, Rooms, Spells and Workshop beside the
 circular map at the bottom left. Press G to hide or reveal the panel content.
 Options provides help, research and player information as well as game settings.
+Open End Game for the existing main-menu and desktop exit actions; Back returns
+to Options, and Continue Game closes the menu without leaving the session.
 Select the question-mark button beside the minimap, then click a creature to
 open its information. Click the button again or right-click the world to cancel.
 Select the removal button beside the minimap, then click an owned room tile,
