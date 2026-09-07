@@ -1681,6 +1681,9 @@ bool GameMode::hideOptionsWindow(const CEGUI::EventArgs& /*e*/)
 
 bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
 {
+    if(CEGUI::System::getSingleton().getDefaultGUIContext().getModalWindow() != nullptr)
+        return true;
+
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
 
     if (options->isVisible())
