@@ -1633,7 +1633,9 @@ bool GameMode::toggleSkillWindow(const CEGUI::EventArgs& e)
 
 bool GameMode::showOptionsWindow(const CEGUI::EventArgs&)
 {
-    mRootWindow->getChild("GameOptionsWindow")->show();
+    CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
+    options->show();
+    options->moveToFront();
     return true;
 }
 
@@ -1712,9 +1714,7 @@ bool GameMode::saveGame(const CEGUI::EventArgs& /*e*/)
 void GameMode::receiveEventShortNotice(EventMessage* event)
 {
     GameEditorModeBase::receiveEventShortNotice(event);
-    if(mRootWindow->getChild("GameEventText")->isVisible())
-        showEventMessages();
-    else
+    if(!mRootWindow->getChild("GameEventText")->isVisible())
     {
         mUnreadEventMessages = true;
         mEventMessageFlashTime = 0.0f;
