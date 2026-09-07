@@ -46,6 +46,8 @@
                 <Property name="Sort" value="True" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
+                <Property name="LookNFeel" value="OD/MenuDescription" />
+                <Property name="VertScrollbar" value="True" />
                 <Property name="Area" value="{{0.73,0},{0.5,28},{0.92,0},{1,-132}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />

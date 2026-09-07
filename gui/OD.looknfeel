@@ -5211,6 +5211,18 @@
         </Child>
     </WidgetLook>
 
+    <WidgetLook name="OD/MenuDescription" inherits="OD/StaticText">
+        <Child nameSuffix="__auto_vscrollbar__" type="OD/MenuScrollbar">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="Width"><OperatorDim op="Multiply"><ImageDim name="OpenDungeonsSkin/MiniVertScrollThumbNormal" dimension="Width" /><AbsoluteDim value="1.5" /></OperatorDim></Dim>
+                <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+            </Area>
+            <HorzAlignment type="RightAligned" />
+        </Child>
+    </WidgetLook>
+
     <WidgetLook name="OD/MenuListbox" inherits="OD/Listbox">
         <Child nameSuffix="__auto_vscrollbar__" type="OD/MenuScrollbar">
             <Area>
