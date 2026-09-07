@@ -77,6 +77,8 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
         tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 10), CEGUI::UDim(0, 72),
             CEGUI::UDim(1, -10), CEGUI::UDim(1, -108)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
+        for(const char* page : {"Video", "Audio", "Input", "Game"})
+            tabs->getChild(std::string(page) + "/" + page + "SP")->setUserString("TrimLeadingSpace", "true");
         CEGUI::Window* title = wmgr->createWindow("OD/MenuTitle", "PageTitle");
         title->setFont("MedievalSharp-20");
         title->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
