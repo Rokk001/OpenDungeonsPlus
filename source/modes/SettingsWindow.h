@@ -37,7 +37,7 @@ public:
     //! \brief Settings window constructor
     //! \param rootWindow The main CEGUI window used as background to the current mode.
     //! Used to load and later show the settings window.
-    SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages = false);
+    SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages = false, bool gamePage = false);
 
     ~SettingsWindow();
 
