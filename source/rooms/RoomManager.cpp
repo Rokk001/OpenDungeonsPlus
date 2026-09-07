@@ -75,11 +75,13 @@ void RoomFactory::checkBuildRoomDefault(GameMap* gameMap, RoomType type, const I
     {
         std::string txt = formatBuildRoom(type, priceTotal);
         inputCommand.displayText(Ogre::ColourValue::Red, "Not enough gold. " + txt);
+        inputCommand.displayPointerText(Ogre::ColourValue::Red, "$" + Helper::toString(priceTotal));
         return;
     }
 
     std::string txt = formatBuildRoom(type, priceTotal);
     inputCommand.displayText(Ogre::ColourValue::White, txt);
+    inputCommand.displayPointerText(Ogre::ColourValue::Red, "$" + Helper::toString(priceTotal));
 
     if(inputManager.mCommandState != InputCommandState::validated)
         return;

@@ -40,6 +40,7 @@ public:
     virtual void unselectAllTiles() = 0;
     //! \brief Notify the InputCommand that we want to display the given text to the local player
     virtual void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) = 0;
+    virtual void displayPointerText(const Ogre::ColourValue&, const std::string&) {}
 
     //! Explain why an empty room/trap selection cannot be built on the hovered tile.
     void displayTileBuildFailure(const Tile* tile, Seat* seat);
