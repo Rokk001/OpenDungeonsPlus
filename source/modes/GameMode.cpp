@@ -875,6 +875,9 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 
 bool GameMode::keyPressed(const OIS::KeyEvent& arg)
 {
+    if(handleScreenshotKey(arg))
+        return true;
+
     if(mLoadMenu && mLoadMenu->isOpenInGame())
         return mLoadMenu->keyPressed(arg);
     // Inject key to Gui
@@ -1020,11 +1023,6 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
         }
         mExitToDesktop = false;
         popupExit(!mGameMap->getGamePaused());
-        break;
-
-    // Print a screenshot
-    case OIS::KC_SYSRQ:
-        ResourceManager::getSingleton().takeScreenshot(frameListener.getRenderWindow());
         break;
 
     case OIS::KC_RETURN:
