@@ -1493,6 +1493,9 @@ bool EditorMode::hidePortalWaveWindow(const CEGUI::EventArgs& /*arg*/)
 
 bool EditorMode::keyPressed(const OIS::KeyEvent &arg)
 {
+    if(handleScreenshotKey(arg))
+        return true;
+
     // Inject key to the gui currently displayed
     const bool guiHandledKey = CEGUI::System::getSingleton().getDefaultGUIContext().injectKeyDown(
         static_cast<CEGUI::Key::Scan>(arg.key));
@@ -1663,11 +1666,6 @@ bool EditorMode::keyPressed(const OIS::KeyEvent &arg)
     // Quit the Editor Mode
     case OIS::KC_ESCAPE:
         showQuitMenu();
-        break;
-
-    // Print a screenshot
-    case OIS::KC_SYSRQ:
-        ResourceManager::getSingleton().takeScreenshot(frameListener.getRenderWindow());
         break;
 
     case OIS::KC_1:
