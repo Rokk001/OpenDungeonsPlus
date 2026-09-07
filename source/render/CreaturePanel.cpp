@@ -260,7 +260,7 @@ void CreaturePanel::update()
             continue;
         slot.type = types[mFirstType + i];
         const CreatureDefinition* definition = mGameMap.getClassDescription(slot.type);
-        slot.portrait->setProperty("Image", getCreaturePortraitImage(definition->getMeshName()).getName());
+        slot.portrait->setProperty("Image", getCreaturePanelPortraitImage(definition->getMeshName()).getName());
         slot.portrait->setTooltipText(slot.type + ": right-click to locate");
         const auto& criteria = VIEW_CRITERIA[mView];
         for(size_t row = 0; row < slot.counts.size(); ++row)
