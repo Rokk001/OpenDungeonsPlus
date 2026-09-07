@@ -30,7 +30,7 @@
             <Property name="Area" value="{{0.5,-160},{0.5,140},{0.5,160},{0.5,176}}" />
             <Property name="Text" value="Game Options" />
         </Window>
-        <Window type="OD/InvisibleButton" name="BackButton" >
+        <Window type="OD/MenuSymbolButton" name="BackButton" >
             <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
             <Property name="NormalImage" value="OpenDungeonsSkin/CloseButtonNormal" />
             <Property name="HoverImage" value="OpenDungeonsSkin/CloseButtonHover" />

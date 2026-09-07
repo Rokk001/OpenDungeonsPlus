@@ -70,12 +70,12 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     if(menuPages)
     {
         mSettingsWindow->setLookNFeel("OD/MenuPageWindow");
-        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -272.5f), CEGUI::UDim(0.5f, -60),
-            CEGUI::UDim(0.5f, 272.5f), CEGUI::UDim(1, -16)));
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -400), CEGUI::UDim(0.5f, -60),
+            CEGUI::UDim(0.5f, 400), CEGUI::UDim(1, -16)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
         tabs->setTabHeight(CEGUI::UDim(0, 0));
         tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 10), CEGUI::UDim(0, 72),
-            CEGUI::UDim(1, -10), CEGUI::UDim(1, -70)));
+            CEGUI::UDim(1, -10), CEGUI::UDim(1, -108)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
         CEGUI::Window* title = wmgr->createWindow("OD/MenuTitle", "PageTitle");
         title->setFont("MedievalSharp-20");
@@ -430,7 +430,7 @@ void SettingsWindow::initConfig()
         videoCbText->setProperty("BackgroundEnabled", "False");
 
         CEGUI::Combobox* videoCb = static_cast<CEGUI::Combobox*>(videoTab->createChild("OD/Combobox", optionName));
-        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.5, -20),
+        videoCb->setArea(CEGUI::UDim(0.45, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.55, -48),
                          CEGUI::UDim(0, config.possibleValues.size() * 17 + 30));
         videoCb->setReadOnly(true);
         videoCb->setSortingEnabled(true);

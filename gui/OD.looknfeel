@@ -5221,4 +5221,45 @@
         <StateImagery name="Pushed"><Layer><Section section="outline" /><Section section="pushed" /></Layer></StateImagery>
     </WidgetLook>
 
+    <WidgetLook name="OD/SettingsSliderThumb" inherits="OD/HorizontalSliderThumb">
+        <ImagerySection name="grip"><ImageryComponent>
+            <Image name="OpenDungeonsSkin/SelectionBrush" />
+            <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+        </ImageryComponent></ImagerySection>
+        <StateImagery name="Normal"><Layer><Section section="grip"><Colours topLeft="FFBBBBBB" topRight="FFBBBBBB" bottomLeft="FFBBBBBB" bottomRight="FFBBBBBB" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section section="grip" /></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section section="grip" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="grip"><Colours topLeft="FF777777" topRight="FF777777" bottomLeft="FF777777" bottomRight="FF777777" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <WidgetLook name="OD/SettingsSlider" inherits="OD/HorizontalSlider">
+        <Property name="VerticalSlider" value="False" />
+        <Child nameSuffix="__auto_thumb__" type="OD/SettingsSliderThumb">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="Width"><ImageDim dimension="Width" name="OpenDungeonsSkin/MiniVertScrollThumbNormal" /></Dim>
+                <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+            </Area>
+        </Child>
+        <ImagerySection name="track"><FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/HorizontalSliderTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/HorizontalSliderTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/HorizontalSliderBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/HorizontalSliderBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/HorizontalSliderLeft" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/HorizontalSliderRight" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/HorizontalSliderBottom" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/HorizontalSliderTop" />
+                </FrameComponent>
+            </ImagerySection>
+        <StateImagery name="Enabled"><Layer><Section section="track" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="track" /></Layer></StateImagery>
+    </WidgetLook>
+
 </Falagard>
