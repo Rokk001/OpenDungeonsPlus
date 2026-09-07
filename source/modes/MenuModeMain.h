@@ -47,6 +47,8 @@ private:
     //! \brief Function triggered when pushing a button
     bool quitButtonPressed(const CEGUI::EventArgs&);
     bool toggleSettings(const CEGUI::EventArgs&);
+    void showMainMenuButtons(bool visible);
+    bool toggleSubMenu(const std::string& name);
 
     //! \brief Sub menu button triggers
     bool toggleSkirmishSubMenu(const CEGUI::EventArgs&);

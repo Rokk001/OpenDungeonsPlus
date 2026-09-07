@@ -21,39 +21,39 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
 
-        <Window type="OD/InvisibleButton" name="StartCampaignButton" >
+        <Window type="OD/MenuTextButton" name="StartCampaignButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,-40},{0.5,160},{0.5,-4}}" />
             <Property name="Text" value="Campaign" />
             <Property name="Disabled" value="True" />
         </Window>
-        <Window type="OD/InvisibleButton" name="StartSkirmishButton" >
+        <Window type="OD/MenuTextButton" name="StartSkirmishButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,-4},{0.5,160},{0.5,32}}" />
             <Property name="Text" value="Skirmish" />
         </Window>
-        <Window type="OD/InvisibleButton" name="MultiplayerModeButton" >
+        <Window type="OD/MenuTextButton" name="MultiplayerModeButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,32},{0.5,160},{0.5,68}}" />
             <Property name="Text" value="Multiplayer" />
         </Window>
-        <Window type="OD/InvisibleButton" name="StartReplayButton" >
+        <Window type="OD/MenuTextButton" name="StartReplayButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
             <Property name="Text" value="Replay" />
         </Window>
 
-        <Window type="OD/InvisibleButton" name="MapEditorButton" >
+        <Window type="OD/MenuTextButton" name="MapEditorButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,104},{0.5,160},{0.5,140}}" />
             <Property name="Text" value="Map Editor" />
         </Window>
-        <Window type="OD/InvisibleButton" name="SettingsButton" >
+        <Window type="OD/MenuTextButton" name="SettingsButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,140},{0.5,160},{0.5,176}}" />
             <Property name="Text" value="Settings" />
         </Window>
-        <Window type="OD/InvisibleButton" name="QuitButton" >
+        <Window type="OD/MenuTextButton" name="QuitButton" >
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="Area" value="{{0.5,-160},{0.5,196},{0.5,160},{0.5,232}}" />
             <Property name="Text" value="Quit" />
