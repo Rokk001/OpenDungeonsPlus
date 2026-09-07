@@ -15,6 +15,7 @@ of development.
 The control panel groups Creatures, Rooms, Spells and Workshop beside the
 circular map at the bottom left. Press G to hide or reveal the panel content.
 With Windows OIS input, the pointer starts at navigation when the application or a game opens.
+The gameplay panel uses a scaled stone surface with a dark inset for worker statistics.
 Rooms, Spells and Workshop use large icons for small groups and compact columns
 when more actions are available or the interface scale leaves insufficient space.
 Options provides help, research and player information as well as game settings.
