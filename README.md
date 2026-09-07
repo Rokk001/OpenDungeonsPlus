@@ -54,6 +54,7 @@ H focuses the dungeon heart, P cycles owned portals and F focuses the next fight
 The default minimap uses terrain and owner colours, with darker fortified walls
 and a dotted heart direction when zoomed out; saved renderer preferences remain available.
 The minimap and full map show the current camera view as a thin white outline.
+An upright N inside the minimap rim tracks world north as the map rotates.
 
 The upper resource strip shows current mana and gold beside round badges;
 mana change appears on a smaller line below, and the gold tooltip includes
