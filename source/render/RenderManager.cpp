@@ -134,7 +134,8 @@ void createKeeperHandPoses(Ogre::Entity* hand)
             {
                 Ogre::TransformKeyFrame* wrist = animation->createNodeTrack(
                     skeleton->getBone("Hand1")->getHandle())->createNodeKeyFrame(0);
-                wrist->setRotation(Ogre::Quaternion(Ogre::Degree(-15.0f), Ogre::Vector3::UNIT_Z));
+                wrist->setRotation(Ogre::Quaternion(Ogre::Degree(-15.0f), Ogre::Vector3::UNIT_Z) *
+                    Ogre::Quaternion(Ogre::Degree(30.0f), Ogre::Vector3::UNIT_Y));
             }
             if(pose == "Dig")
             {
