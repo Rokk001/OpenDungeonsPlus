@@ -159,6 +159,7 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::storeUserCamera, this)));
 
     // Set per default the input on the map
+    initializeSettingsNavigation();
     mModeManager->getInputManager().mMouseDownOnCEGUIWindow = false;
 
     ODFrameListener::getSingleton().getCameraManager()->setDefaultView();
@@ -376,6 +377,7 @@ GameMode::GameMode(ModeManager *modeManager):
 
 GameMode::~GameMode()
 {
+    mReturningToSettingsNavigation = false;
     RenderManager::getSingleton().rrEnableHeldCreatureDisplay(false, mGameMap->getLocalPlayer());
     for(CEGUI::Window* icon : mHeldCreatureIcons)
         CEGUI::WindowManager::getSingleton().destroyWindow(icon);
@@ -429,7 +431,10 @@ void GameMode::activate()
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
+    mReturningToSettingsNavigation = false;
     guiSheet->getChild("SettingsWindow")->hide();
+    guiSheet->getChild("SettingsNavigationWindow")->setModalState(false);
+    guiSheet->getChild("SettingsNavigationWindow")->hide();
     guiSheet->getChild("GameOptionsWindow")->hide();
     guiSheet->getChild("GameChatWindow/GameChatEditBox")->hide();
     guiSheet->getChild("GameHelpWindow")->hide();
@@ -1834,8 +1839,68 @@ void GameMode::updateEventMessageIndicator(float elapsed)
 bool GameMode::showSettingsFromOptions(const CEGUI::EventArgs& /*e*/)
 {
     mRootWindow->getChild("GameOptionsWindow")->hide();
-    mSettings.show();
+    CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
+    navigation->setModalState(true);
+    navigation->show();
+    navigation->moveToFront();
     return true;
+}
+
+void GameMode::initializeSettingsNavigation()
+{
+    CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
+    navigation->hide();
+    auto closeNavigation = [navigation]()
+    {
+        navigation->setModalState(false);
+        navigation->hide();
+    };
+    for(const std::string& page : {"Video", "Audio", "Input", "Game"})
+    {
+        addEventConnection(navigation->getChild(page)->subscribeEvent(CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber([this, closeNavigation, page](const CEGUI::EventArgs&)
+            {
+                closeNavigation();
+                mReturningToSettingsNavigation = true;
+                mSettings.showPage(page);
+                return true;
+            })));
+    }
+    addEventConnection(navigation->getChild("Cameras")->subscribeEvent(CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber([this, closeNavigation](const CEGUI::EventArgs& e)
+        {
+            closeNavigation();
+            mReturningToSettingsNavigation = true;
+            return showUserCameras(e);
+        })));
+    addEventConnection(navigation->getChild("Continue")->subscribeEvent(CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber([closeNavigation](const CEGUI::EventArgs&)
+        {
+            closeNavigation();
+            return true;
+        })));
+    auto back = [this, closeNavigation](const CEGUI::EventArgs& e)
+    {
+        closeNavigation();
+        return showOptionsWindow(e);
+    };
+    addEventConnection(navigation->getChild("Back")->subscribeEvent(CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(back)));
+    addEventConnection(navigation->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
+        CEGUI::Event::Subscriber(back)));
+    for(const char* name : {"SettingsWindow", "UserCamerasWindow"})
+    {
+        addEventConnection(mRootWindow->getChild(name)->subscribeEvent(CEGUI::Window::EventHidden,
+            CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
+            {
+                if(mReturningToSettingsNavigation)
+                {
+                    mReturningToSettingsNavigation = false;
+                    showSettingsFromOptions();
+                }
+                return true;
+            })));
+    }
 }
 
 bool GameMode::showHelpWindow(const CEGUI::EventArgs&)

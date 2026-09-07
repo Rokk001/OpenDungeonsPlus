@@ -122,6 +122,25 @@ void createNavigationImages()
         "BasicImage", "OpenDungeonsIcons/MapZoom"));
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(0, 0, size, size));
+
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            const bool arrowHead = y >= 10 && y <= 28 && std::abs(x - 36) <= y - 10;
+            const bool arrowStem = x >= 29 && x <= 43 && y >= 25 && y <= 49;
+            const bool returnArm = x >= 11 && x <= 43 && y >= 37 && y <= 49;
+            const int i = (y * size + x) * 4;
+            pixels[i] = pixels[i + 1] = pixels[i + 2] = 232;
+            pixels[i + 3] = arrowHead || arrowStem || returnArm ? 255 : 0;
+        }
+    }
+    CEGUI::Texture& returnTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("MenuReturn");
+    returnTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& returnImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", "OpenDungeonsIcons/MenuReturn"));
+    returnImage.setTexture(&returnTexture);
+    returnImage.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
 void scaleDimension(CEGUI::UDim& dimension, float scale)
