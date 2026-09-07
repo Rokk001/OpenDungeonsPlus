@@ -31,6 +31,12 @@
 #include <OgreTextureManager.h>
 #include <OgreViewport.h>
 
+#include <CEGUI/System.h>
+#include <CEGUI/GUIContext.h>
+#include <CEGUI/MouseCursor.h>
+#include <CEGUI/widgets/ButtonBase.h>
+#include <CEGUI/widgets/FrameWindow.h>
+
 #include <algorithm>
 
 RenderSceneMenu::RenderSceneMenu()
@@ -62,6 +68,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
 
 void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
+    renderManager.rrSetHandPose(false, false);
     Ogre::Rectangle2D* background = static_cast<Ogre::Rectangle2D*>(
         renderManager.getSceneManager()->getSceneNode("Background")->getAttachedObject(0));
     background->setMaterial(Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics"));
@@ -71,6 +78,25 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
 void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame)
 {
+    bool pointing = false;
+    for(CEGUI::Window* window = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
+        window != nullptr; window = window->getParent())
+    {
+        if(window->isDisabled())
+            break;
+        if(CEGUI::ButtonBase* button = dynamic_cast<CEGUI::ButtonBase*>(window))
+        {
+            pointing = button->isHovering();
+            break;
+        }
+        if(dynamic_cast<CEGUI::FrameWindow*>(window) != nullptr)
+        {
+            pointing = window->isHit(window->getGUIContext().getMouseCursor().getPosition());
+            break;
+        }
+    }
+    renderManager.rrSetHandPose(pointing, false);
+
     Ogre::Viewport* viewport = cameraManager.getViewport();
     if(viewport->getActualWidth() == 0 || viewport->getActualHeight() == 0)
         return;
