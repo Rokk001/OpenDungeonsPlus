@@ -111,7 +111,7 @@ GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
     mDigSetBool(false),
     mIndexEvent(0),
-    mSettings(mRootWindow, modeManager->getGui()),
+    mSettings(mRootWindow, modeManager->getGui(), false, true),
     mIsSkillWindowOpen(false),
     mCurrentSkillType(SkillType::nullSkillType),
     mCurrentSkillProgress(0.0),
