@@ -5117,6 +5117,25 @@
         <StateImagery name="DisabledNoTitleNoFrame" />
     </WidgetLook>
 
+    <WidgetLook name="OD/GameSettingsWindow" inherits="OD/MenuPageWindow">
+        <ImagerySection name="backdrop">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsSkin/SelectionBrush" />
+                <Colours topLeft="E6080C10" topRight="E6080C10" bottomLeft="E6080C10" bottomRight="E6080C10" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="ActiveNoTitleNoFrame"><Layer><Section section="backdrop" /></Layer></StateImagery>
+        <StateImagery name="InactiveNoTitleNoFrame"><Layer><Section section="backdrop" /></Layer></StateImagery>
+        <StateImagery name="DisabledNoTitleNoFrame"><Layer><Section section="backdrop" /></Layer></StateImagery>
+    </WidgetLook>
+
     <WidgetLook name="OD/MenuPageContent" inherits="OD/TabContentPane">
         <StateImagery name="Enabled" />
         <StateImagery name="Disabled" />
