@@ -11,7 +11,7 @@
         </Window>
         <Window type="OD/Button" name="Camera2">
             <Property name="Area" value="{{0,168},{0,36},{0,310},{0,72}}" />
-            <Property name="Text" value="Camera 2 (F5)" />
+            <Property name="Text" value="Camera 2" />
         </Window>
         <Window type="OD/Button" name="Camera3">
             <Property name="Area" value="{{0,320},{0,36},{1,-16},{0,72}}" />

@@ -965,10 +965,13 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
             frameListener.getCameraManager()->setDefaultView();
         break;
     case OIS::KC_F4:
-    case OIS::KC_F5:
     case OIS::KC_F6:
         if(!cameraInputBlocked())
             frameListener.getCameraManager()->loadUserView(arg.key - OIS::KC_F4);
+        break;
+
+    case OIS::KC_F5:
+        saveGame();
         break;
 
     case OIS::KC_F8:
@@ -2014,7 +2017,8 @@ void GameMode::setHelpWindowText()
         << "  - Pan: Arrow keys or WASD; hold Shift to scroll faster." << std::endl
         << "  - Rotate: Delete / Page Down, Ctrl+Left / Right, or hold X and move the mouse." << std::endl
         << "  - Zoom: Home / End, Ctrl+Up / Down, wheel, or hold Z and move the mouse vertically." << std::endl
-        << "  - Views: F1 isometric, F2 top down, F3 oblique; F4-F6 user cameras." << std::endl
+        << "  - Views: F1 isometric, F2 top down, F3 oblique; F4/F6 user cameras 1/3." << std::endl
+        << "  - F5 saves the game; all three user cameras remain available in Options." << std::endl
         << "  - Define user cameras in Options; H focuses the dungeon heart; P cycles portals; F focuses fights." << std::endl
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;
