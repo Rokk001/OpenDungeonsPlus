@@ -147,6 +147,30 @@ void createKeeperHandPoses(Ogre::Entity* hand)
         if(!hand->hasAnimationState(pose))
             hand->getAllAnimationStates()->createAnimationState(pose, 0, 1.0f);
     }
+    const Ogre::Real duration = 4.0f / 30.0f;
+    if(!skeleton->hasAnimation("PointTransition"))
+    {
+        Ogre::Animation* transition = skeleton->createAnimation("PointTransition", duration);
+        for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
+        {
+            Ogre::NodeAnimationTrack* track = transition->createNodeTrack(b);
+            for(int i = 0; i < 2; ++i)
+            {
+                const Ogre::Animation* pose = skeleton->getAnimation(i == 0 ? "Idle" : "Point");
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(duration * i);
+                if(pose->hasNodeTrack(b))
+                {
+                    Ogre::TransformKeyFrame sampled(nullptr, 0);
+                    pose->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &sampled);
+                    frame->setRotation(sampled.getRotation());
+                    frame->setTranslate(sampled.getTranslate());
+                    frame->setScale(sampled.getScale());
+                }
+            }
+        }
+    }
+    if(!hand->hasAnimationState("PointTransition"))
+        hand->getAllAnimationStates()->createAnimationState("PointTransition", 0, duration);
 }
 
 void createKeeperHandDigAnimation(Ogre::Entity* hand)
@@ -980,8 +1004,10 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 {
     if(mHandAnimationState != nullptr)
     {
-        mHandAnimationState->addTime(timeSinceLastFrame);
-        if(mHandAnimationState->hasEnded())
+        const bool transition = mHandAnimationState->getAnimationName() == "PointTransition";
+        mHandAnimationState->addTime(transition && mHandPose == "Idle" ? -timeSinceLastFrame : timeSinceLastFrame);
+        if(mHandAnimationState->hasEnded() ||
+           (transition && mHandPose == "Idle" && mHandAnimationState->getTimePosition() == 0))
         {
             Ogre::Entity* ent = mSceneManager->getEntity("keeperHandEnt");
             mHandAnimationState = setEntityAnimation(ent, mHandPose, true);
@@ -2809,9 +2835,21 @@ void RenderManager::rrSetHandPose(bool pointing, bool digging)
 {
     const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
     mHandPose = digging ? "Dig" : (pointing ? "Point" : (holding ? "Hold" : "Idle"));
-    if(mHandAnimationState != nullptr && mHandAnimationState->getLoop() &&
-       mHandAnimationState->getAnimationName() != mHandPose)
-        mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), mHandPose, true);
+    if(mHandAnimationState != nullptr)
+    {
+        const std::string current = mHandAnimationState->getAnimationName();
+        const bool transition = current == "PointTransition";
+        const bool openOrPoint = mHandPose == "Idle" || mHandPose == "Point";
+        if(mHandAnimationState->getLoop() && current != mHandPose &&
+           (current == "Idle" || current == "Point") && openOrPoint)
+        {
+            mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "PointTransition", false);
+            if(current == "Point")
+                mHandAnimationState->setTimePosition(mHandAnimationState->getLength());
+        }
+        else if((mHandAnimationState->getLoop() || (transition && !openOrPoint)) && current != mHandPose)
+            mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), mHandPose, true);
+    }
     if(mHandPickaxe != nullptr)
         mHandPickaxe->setVisible(mHandKeeperHandVisibility == 0 && mHandAnimationState != nullptr &&
             ((digging && mHandAnimationState->getLoop()) || mHandAnimationState->getAnimationName() == "DigSwing"));
