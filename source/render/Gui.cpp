@@ -399,21 +399,39 @@ void Gui::setUserScalePercent(float scalePercent)
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 {
     rooms->getChild("DestroyRoomButton")->hide();
+    arrangeActionButtons(rooms, {"DormitoryButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
+        "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
+        "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton"});
+}
+
+void Gui::arrangeTrapButtons(CEGUI::Window* traps)
+{
+    traps->getChild("DestroyTrapButton")->hide();
+    arrangeActionButtons(traps, {"CannonButton", "SpikeTrapButton", "BoulderTrapButton", "WoodenDoorTrapButton"});
+}
+
+void Gui::arrangeSpellButtons(CEGUI::Window* spells)
+{
+    arrangeActionButtons(spells, {"SummonWorkerButton", "CallToWarButton", "CreatureHealButton",
+        "CreatureExplosionButton", "CreatureHasteButton", "CreatureDefenseButton", "CreatureSlowButton",
+        "CreatureStrengthButton", "CreatureWeakButton", "SpellEyeEvilButton"});
+}
+
+void Gui::arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names)
+{
     const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
     const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
         displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
     std::vector<CEGUI::Window*> buttons;
-    for(const char* name : {"DormitoryButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
-        "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
-        "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton"})
+    for(const char* name : names)
     {
-        CEGUI::Window* button = rooms->getChild(name);
+        CEGUI::Window* button = panel->getChild(name);
         if(button->isVisible())
             buttons.push_back(button);
     }
 
     const bool large = buttons.size() <= 6 &&
-        (20.0f + 106.0f * buttons.size() - 4.0f) * scale <= rooms->getPixelSize().d_width;
+        (20.0f + 106.0f * buttons.size() - 4.0f) * scale <= panel->getPixelSize().d_width;
     const float side = large ? 102.0f : 52.0f;
     for(size_t index = 0; index < buttons.size(); ++index)
     {
@@ -423,26 +441,6 @@ void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
         WindowScaleData& data = mScaledWindows.at(button);
         data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
             CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side));
-        applyScale(button, data, scale);
-    }
-}
-
-void Gui::arrangeTrapButtons(CEGUI::Window* traps)
-{
-    traps->getChild("DestroyTrapButton")->hide();
-    const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
-    const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
-        displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
-    size_t index = 0;
-    for(const char* name : {"CannonButton", "SpikeTrapButton", "BoulderTrapButton", "WoodenDoorTrapButton"})
-    {
-        CEGUI::Window* button = traps->getChild(name);
-        if(!button->isVisible())
-            continue;
-        const float x = 20.0f + 56.0f * static_cast<float>(index++);
-        WindowScaleData& data = mScaledWindows.at(button);
-        data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, 6),
-            CEGUI::UDim(0, x + 52.0f), CEGUI::UDim(0, 58));
         applyScale(button, data, scale);
     }
 }
@@ -477,6 +475,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     {
         arrangeRoomButtons(gameSheet->second->getChild(TAB_ROOMS));
         arrangeTrapButtons(gameSheet->second->getChild(TAB_TRAPS));
+        arrangeSpellButtons(gameSheet->second->getChild(TAB_SPELLS));
     }
 
     for(const auto& scaledWindow : mScaledWindows)
