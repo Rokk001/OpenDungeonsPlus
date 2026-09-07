@@ -3485,6 +3485,7 @@
 
     <WidgetLook name="OD/TabButton">
         <PropertyDefinition name="NavigationFrame" type="bool" initialValue="False" redrawOnWrite="true" />
+        <PropertyDefinition name="NavigationColour" initialValue="FF718C28" redrawOnWrite="true" />
         <PropertyDefinition name="VertImageFormatting" initialValue="Stretched" redrawOnWrite="true" />
         <PropertyDefinition name="HorzImageFormatting" initialValue="Stretched" redrawOnWrite="true" />
         <PropertyDefinition initialValue="FFC0C0C0" name="NormalTextColour" redrawOnWrite="true" />
@@ -3656,12 +3657,27 @@
                 </Section>
             </Layer>
         </StateImagery>
+        <ImagerySection name="navigation_selected">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="3" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="3" /></Dim>
+                    <Dim type="RightEdge"><UnifiedDim scale="1" offset="-3" type="Width" /></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="1" offset="-3" type="Height" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsSkin/SelectionBrush" />
+                <Colours topLeft="FFFFFFFF" topRight="FFFFFFFF" bottomLeft="FF606060" bottomRight="FF606060" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
         <StateImagery name="TopSelected">
             <Layer>
-                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
-                    <ColourProperty name="SelectedTextColour" />
+                <Section section="navigation_selected" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="NavigationColour" />
                 </Section>
-                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true">
+                    <Colours topLeft="FFFFDF85" topRight="FFFFDF85" bottomLeft="FFC29A44" bottomRight="FFC29A44" />
+                </Section>
                 <Section section="top_selected" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="SelectedTextColour" />
@@ -3670,10 +3686,12 @@
         </StateImagery>
         <StateImagery name="BottomSelected">
             <Layer>
-                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
-                    <ColourProperty name="SelectedTextColour" />
+                <Section section="navigation_selected" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="NavigationColour" />
                 </Section>
-                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true">
+                    <Colours topLeft="FFFFDF85" topRight="FFFFDF85" bottomLeft="FFC29A44" bottomRight="FFC29A44" />
+                </Section>
                 <Section section="bot_selected" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="SelectedTextColour" />
