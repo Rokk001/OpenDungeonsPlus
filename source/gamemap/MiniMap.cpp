@@ -31,6 +31,9 @@
 #include "utils/LogManager.h"
 
 #include <CEGUI/BasicImage.h>
+#include <CEGUI/Font.h>
+#include <CEGUI/FontGlyph.h>
+#include <CEGUI/FontManager.h>
 #include <CEGUI/ImageManager.h>
 #include <CEGUI/Renderer.h>
 #include <CEGUI/System.h>
@@ -55,6 +58,7 @@ public:
     std::vector<Ogre::Vector2> mViewport;
     Ogre::Vector2 mDirectionStart;
     Ogre::Vector2 mDirectionEnd;
+    Ogre::Vector2 mNorthDirection = Ogre::Vector2(0.0f, -1.0f);
 
     void render(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
         const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const override
@@ -83,10 +87,29 @@ public:
         for(size_t i = 0; i < mViewport.size(); ++i)
             drawLine(buffer, area, clip, colours, mViewport[i], mViewport[(i + 1) % mViewport.size()], false);
         if(mCircular)
+        {
             drawFrame(buffer, area, clip);
+            drawNorth(buffer, area, clip, colours);
+        }
     }
 
 private:
+    void drawNorth(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
+            const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const
+    {
+        const CEGUI::Font& font = CEGUI::FontManager::getSingleton().get("LiberationSans-10");
+        const CEGUI::Image& glyph = *font.getGlyphData('N')->getImage();
+        const float scale = std::min(area.getWidth(), area.getHeight()) / 176.0f;
+        const float x = area.left() + area.getWidth() * (0.5f + 0.41f * mNorthDirection.x);
+        const float y = area.top() + area.getHeight() * (0.5f + 0.41f * mNorthDirection.y);
+        CEGUI::Rectf letter(x - 6.0f * scale, y - 5.0f * scale,
+            x + 6.0f * scale, y + 5.0f * scale);
+        // Font images carry a baseline offset; place the visible glyph itself.
+        const CEGUI::Vector2f& offset = glyph.getRenderedOffset();
+        letter.offset(CEGUI::Vector2f(-offset.d_x, -offset.d_y));
+        glyph.render(buffer, letter, clip, colours);
+    }
+
     void drawCircleBand(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
             const CEGUI::Rectf* clip, float outerInset, float innerInset,
             const CEGUI::Colour& colour) const
@@ -241,6 +264,10 @@ void MiniMap::updateMapOverlay(CEGUI::Window* window, GameMap& map,
         return Ogre::Vector2(0.5f + x / span.x, 0.5f - y / span.y);
     };
     image->mViewport.clear();
+    // Positive world Y is north in the initial, unrotated map orientation.
+    image->mNorthDirection = Ogre::Vector2(std::sin(rotation) / span.x,
+        -std::cos(rotation) / span.y);
+    image->mNorthDirection.normalise();
     for(const Ogre::Vector3& corner : cornerTiles)
         image->mViewport.push_back(project(Ogre::Vector2(corner.x, corner.y)));
     image->mShowDirection = false;
