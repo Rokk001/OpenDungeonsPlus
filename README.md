@@ -47,7 +47,8 @@ that message. Notices beyond the visible rail remain queued until space opens.
 Save opens the message surface for the server's confirmation or error.
 
 Use the mouse wheel or Home/End for camera zoom; F1/F2/F3 select isometric,
-top-down and oblique views, and F4-F6 recall views stored through Options.
+top-down and oblique views, and F4/F6 recall stored views 1/3; all three stored
+views remain available through Options. Press F5 to save the game directly.
 Press M to open the map: left-click to move there, or right-click, M or Escape
 to close it without moving. The detail window follows the pointer.
 The magnifier button beside the minimap zooms it in with a left-click and out with
