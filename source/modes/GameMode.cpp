@@ -119,6 +119,21 @@ GameMode::GameMode(ModeManager *modeManager):
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
+    // Raise newly opened game dialogs above the HUD and older dialogs.
+    for(size_t index = 0; index < mRootWindow->getChildCount(); ++index)
+    {
+        CEGUI::Window* window = mRootWindow->getChildAtIdx(index);
+        if(dynamic_cast<CEGUI::FrameWindow*>(window) == nullptr)
+            continue;
+        addEventConnection(window->subscribeEvent(CEGUI::Window::EventShown,
+            CEGUI::Event::Subscriber([window](const CEGUI::EventArgs&)
+            {
+                window->setAlwaysOnTop(true);
+                window->moveToFront();
+                return true;
+            })));
+    }
+
     addEventConnection(mRootWindow->getChild("MiniMapZoomButton")->subscribeEvent(
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::zoomMiniMap, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
