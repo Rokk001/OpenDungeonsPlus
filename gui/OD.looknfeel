@@ -3735,6 +3735,7 @@
     </WidgetLook>
 
     <WidgetLook name="OD/TabContentPane">
+        <PropertyDefinition name="NavigationFrame" type="bool" initialValue="False" redrawOnWrite="true" />
         <PropertyDefinition initialValue="0" layoutOnWrite="true" name="EnableTop" redrawOnWrite="true" />
         <PropertyDefinition initialValue="0" layoutOnWrite="true" name="EnableBottom" redrawOnWrite="true" />
         <ImagerySection name="normal">
@@ -3762,16 +3763,27 @@
                 <Image component="Background" name="OpenDungeonsSkin/TabContentPaneMiddle" />
             </FrameComponent>
         </ImagerySection>
+        <ImagerySection name="navigation_background">
+            <ImageryComponent>
+                <Image name="OpenDungeonsSkin/SelectionBrush" />
+                <Colours topLeft="FF242424" topRight="FF242424" bottomLeft="FF101010" bottomRight="FF101010" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
         <StateImagery name="Enabled">
             <Layer>
-                <Section section="normal" />
+                <Section section="normal" controlProperty="NavigationFrame" controlValue="false" />
+                <Section section="navigation_background" controlProperty="NavigationFrame" controlValue="true" />
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-                <Section section="normal">
+                <Section section="normal" controlProperty="NavigationFrame" controlValue="false">
                     <Colours bottomLeft="507F7F7F" bottomRight="507F7F7F" topLeft="507F7F7F" topRight="507F7F7F" />
                 </Section>
+                <Section section="navigation_background" controlProperty="NavigationFrame" controlValue="true" />
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
         </StateImagery>
     </WidgetLook>
