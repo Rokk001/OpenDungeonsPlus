@@ -26,6 +26,8 @@ Select the question-mark button beside the minimap, then click a creature to
 open its information. Click the button again or right-click the world to cancel.
 Select the removal button beside the minimap, then click an owned room tile,
 trap or door to sell it. The button or a world right-click cancels sale mode.
+This is the single gameplay sale control; separate removal buttons remain in
+the editor only.
 Press F10 to toggle Options. Escape closes the frontmost open dialog or list,
 or returns from a main-menu submenu to the preceding screen.
 Skirmish, Multiplayer and Map Editor open separate menu pages; click the cross

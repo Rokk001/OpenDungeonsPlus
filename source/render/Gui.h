@@ -104,6 +104,7 @@ public:
 
     //! \brief Packs visible game room actions into two rows and retains their scaled layout.
     void arrangeRoomButtons(CEGUI::Window* rooms);
+    void arrangeTrapButtons(CEGUI::Window* traps);
 
     // Access names of the GUI elements
     static const std::string ROOT;

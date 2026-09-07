@@ -2142,6 +2142,7 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
         refreshSkillButtonState(skillButtonName, castButtonName, skillProgressBarName, resType);
     });
     getModeManager().getGui().arrangeRoomButtons(mRootWindow->getChild(Gui::TAB_ROOMS));
+    getModeManager().getGui().arrangeTrapButtons(mRootWindow->getChild(Gui::TAB_TRAPS));
 }
 
 void GameMode::refreshSpellButtonCoolDowns()

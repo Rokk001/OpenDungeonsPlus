@@ -1,5 +1,20 @@
 # Selling from the minimap
 
+## Current gameplay entry point
+
+Gameplay now exposes only the shared minimap Sell control. The legacy room and
+trap removal buttons are hidden in the game sheet, and construction actions
+start in the freed column. The editor retains its separate area-removal tools.
+Single-tile sale rules, refunds, ownership checks and cancellation are unchanged.
+This supersedes the earlier requirement below to retain both panel commands in
+gameplay; those paragraphs describe the original integration checkpoint.
+
+The focused UI probe passes 13,217 checks, including scale changes, research
+visibility, construction hit targets, one visible sale entry point and preserved
+editor removal controls; the existing behavior/packet probe passes 70 checks.
+Map entities and transport are controlled fixtures, so in-game visual acceptance
+and actual sale/refund confirmation remain user testing.
+
 ## Existing implementation and integration
 
 Before this task, room and trap panels already exposed separate sell commands.

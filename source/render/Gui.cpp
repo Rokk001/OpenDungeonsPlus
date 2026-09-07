@@ -398,6 +398,7 @@ void Gui::setUserScalePercent(float scalePercent)
 
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 {
+    rooms->getChild("DestroyRoomButton")->hide();
     const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
     const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
         displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
@@ -412,16 +413,36 @@ void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
     }
 
     const bool large = buttons.size() <= 6 &&
-        (76.0f + 106.0f * buttons.size() - 4.0f) * scale <= rooms->getPixelSize().d_width;
+        (20.0f + 106.0f * buttons.size() - 4.0f) * scale <= rooms->getPixelSize().d_width;
     const float side = large ? 102.0f : 52.0f;
     for(size_t index = 0; index < buttons.size(); ++index)
     {
         CEGUI::Window* button = buttons[index];
-        const float x = 76.0f + (side + 4.0f) * static_cast<float>(large ? index : index / 2);
+        const float x = 20.0f + (side + 4.0f) * static_cast<float>(large ? index : index / 2);
         const float y = 6.0f + (large ? 0.0f : 56.0f * static_cast<float>(index % 2));
         WindowScaleData& data = mScaledWindows.at(button);
         data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
             CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side));
+        applyScale(button, data, scale);
+    }
+}
+
+void Gui::arrangeTrapButtons(CEGUI::Window* traps)
+{
+    traps->getChild("DestroyTrapButton")->hide();
+    const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
+        displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
+    size_t index = 0;
+    for(const char* name : {"CannonButton", "SpikeTrapButton", "BoulderTrapButton", "WoodenDoorTrapButton"})
+    {
+        CEGUI::Window* button = traps->getChild(name);
+        if(!button->isVisible())
+            continue;
+        const float x = 20.0f + 56.0f * static_cast<float>(index++);
+        WindowScaleData& data = mScaledWindows.at(button);
+        data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, 6),
+            CEGUI::UDim(0, x + 52.0f), CEGUI::UDim(0, 58));
         applyScale(button, data, scale);
     }
 }
@@ -453,7 +474,10 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
 
     const auto gameSheet = mSheets.find(inGameMenu);
     if(gameSheet != mSheets.end())
+    {
         arrangeRoomButtons(gameSheet->second->getChild(TAB_ROOMS));
+        arrangeTrapButtons(gameSheet->second->getChild(TAB_TRAPS));
+    }
 
     for(const auto& scaledWindow : mScaledWindows)
     {
