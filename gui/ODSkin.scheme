@@ -61,6 +61,7 @@
     <FalagardMapping lookNFeel="OD/StaticText" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/StaticText" />
     <FalagardMapping lookNFeel="OD/MenuTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuTextButton" />
     <FalagardMapping lookNFeel="OD/MenuTitle" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/MenuTitle" />
+    <FalagardMapping lookNFeel="OD/ResourceDisplay" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/ResourceDisplay" />
     <FalagardMapping lookNFeel="OD/MenuScrollbarThumb" renderer="Core/Button" targetType="CEGUI/Thumb" windowType="OD/MenuScrollbarThumb" />
     <FalagardMapping lookNFeel="OD/MenuScrollbar" renderer="Core/Scrollbar" targetType="CEGUI/Scrollbar" windowType="OD/MenuScrollbar" />
     <FalagardMapping lookNFeel="OD/MenuScrollablePane" renderer="Core/ScrollablePane" targetType="CEGUI/ScrollablePane" windowType="OD/MenuScrollablePane" />
