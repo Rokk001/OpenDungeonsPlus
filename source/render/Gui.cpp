@@ -434,6 +434,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
         const CEGUI::ScrolledContainer* content = pane->getContentPane();
         const CEGUI::Vector2f origin = content->getUnclippedOuterRect().get().getPosition();
         CEGUI::Rectf extent(0, 0, 0, 0);
+        bool firstVisibleControl = true;
         for(size_t i = 0; i < content->getChildCount(); ++i)
         {
             CEGUI::Window* child = content->getChildAtIdx(i);
@@ -442,6 +443,10 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
             CEGUI::Rectf area = child->getUnclippedOuterRect().get();
             if(dynamic_cast<CEGUI::Combobox*>(child) != nullptr)
                 area.d_max.d_y = child->getChild("__auto_editbox__")->getUnclippedOuterRect().get().bottom();
+            if(pane->isUserStringDefined("TrimLeadingSpace"))
+                extent.d_min.d_y = firstVisibleControl ? area.top() - origin.d_y :
+                    std::min(extent.top(), area.top() - origin.d_y);
+            firstVisibleControl = false;
             extent.d_max.d_x = std::max(extent.right(), area.right() - origin.d_x);
             extent.d_max.d_y = std::max(extent.bottom(), area.bottom() - origin.d_y);
         }
