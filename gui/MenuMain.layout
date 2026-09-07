@@ -61,5 +61,6 @@
         <LayoutImport type="DefaultWindow" filename="WindowSkirmishSubMenu.layout" name="SkirmishSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMultiplayerSubMenu.layout" name="MultiplayerSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowEditorSubMenu.layout" name="EditorSubMenuMenuImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowSettingsSubMenu.layout" name="SettingsSubMenuMenuImport" />
     </Window>
 </GUILayout>

@@ -23,6 +23,8 @@ Press F10 to toggle Options. Escape closes the frontmost open dialog or list,
 or returns from a main-menu submenu to the preceding screen.
 Skirmish, Multiplayer and Map Editor open separate menu pages; click the cross
 at the bottom right or press Escape to return to the main menu.
+Settings opens a category page for graphics, sound, controls and game options;
+closing or applying a settings page returns to these categories.
 Press Print Screen to save a PNG screenshot from menus, dialogs, gameplay or
 the editor; images use the existing timestamped filenames in the configured
 user-data directory.

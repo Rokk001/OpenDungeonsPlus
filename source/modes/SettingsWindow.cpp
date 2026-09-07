@@ -46,7 +46,7 @@
 #include <map>
 #include <sstream>
 
-SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui):
+SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages):
     mSettingsWindow(nullptr),
     mApplyWindow(nullptr),
     mRootWindow(rootWindow),
@@ -67,6 +67,8 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui):
     }
     rootWindow->addChild(mSettingsWindow);
     mSettingsWindow->hide();
+    if(menuPages)
+        static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"))->setTabHeight(CEGUI::UDim(0, 0));
 
     mApplyWindow = wmgr->loadLayoutFromFile("WindowApplyChanges.layout");
     if (mApplyWindow == nullptr)
@@ -645,6 +647,14 @@ void SettingsWindow::show()
         mSettingsWindow->setModalState(true);
         mSettingsWindow->show();
     }
+}
+
+void SettingsWindow::showPage(const std::string& name)
+{
+    show();
+    static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"))->setSelectedTab(name);
+    mSettingsWindow->setText(name == "Video" ? "Graphics Options" :
+        name == "Audio" ? "Sound Options" : name == "Input" ? "Control Options" : "Game Options");
 }
 
 void SettingsWindow::hide()
