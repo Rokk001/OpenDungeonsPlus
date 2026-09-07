@@ -164,7 +164,7 @@
                 <Window type="OD/MenuScrollablePane" name="GameSP" >
                     <UserString name="VisibleControlExtent" value="true" />
                     <Property name="ContentPaneAutoSized" value="False" />
-                    <Property name="Area" value="{{0,0},{0,15},{1,0},{1,-5}}" />
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Window type="OD/StaticText" name="NicknameText" >
                         <Property name="Area" value="{{0,32},{0,46},{0.42,0},{0,72}}" />
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
