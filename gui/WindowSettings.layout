@@ -25,7 +25,7 @@
                 <Property name="Text" value="Video" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/ScrollablePane" name="VideoSP" >
+                <Window type="OD/MenuScrollablePane" name="VideoSP" >
                     <UserString name="VisibleControlExtent" value="true" />
                     <Property name="ContentPaneAutoSized" value="False" />
                     <Property name="Area" value="{{0,0},{0,15},{1,0},{1,-5}}" />
@@ -85,7 +85,7 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/ScrollablePane" name="AudioSP" >
+                <Window type="OD/MenuScrollablePane" name="AudioSP" >
                     <UserString name="VisibleControlExtent" value="true" />
                     <Property name="ContentPaneAutoSized" value="False" />
                     <Property name="Area" value="{{0,0},{0,15},{1,0},{1,-5}}" />
@@ -112,7 +112,7 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/ScrollablePane" name="InputSP" >
+                <Window type="OD/MenuScrollablePane" name="InputSP" >
                     <UserString name="VisibleControlExtent" value="true" />
                     <Property name="ContentPaneAutoSized" value="False" />
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
@@ -155,7 +155,7 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/ScrollablePane" name="GameSP" >
+                <Window type="OD/MenuScrollablePane" name="GameSP" >
                     <UserString name="VisibleControlExtent" value="true" />
                     <Property name="ContentPaneAutoSized" value="False" />
                     <Property name="Area" value="{{0,0},{0,15},{1,0},{1,-5}}" />
