@@ -261,9 +261,15 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(
         guiSheet->getChild("GameOptionsWindow")->subscribeEvent(
             CEGUI::FrameWindow::EventCloseClicked,
-            CEGUI::Event::Subscriber(&GameMode::hideOptionsWindow, this)
+            CEGUI::Event::Subscriber(&GameMode::closeOptionsWindow, this)
         )
     );
+    addEventConnection(guiSheet->getChild("GameOptionsWindow/EndGameButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showEndGameFromOptions, this)));
+    addEventConnection(guiSheet->getChild("GameOptionsWindow/BackButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showOptionsWindow, this)));
+    addEventConnection(guiSheet->getChild("GameOptionsWindow/ContinueButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::hideOptionsWindow, this)));
     addEventConnection(
         guiSheet->getChild("GameOptionsWindow/ObjectivesButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -1471,6 +1477,7 @@ void GameMode::popupExit(bool pause)
     if(pause)
     {
         mRootWindow->getChild(Gui::EXIT_CONFIRMATION_POPUP)->show();
+        mRootWindow->getChild(Gui::EXIT_CONFIRMATION_POPUP)->moveToFront();
     }
     else
     {
@@ -1644,6 +1651,7 @@ bool GameMode::toggleSkillWindow(const CEGUI::EventArgs& e)
 
 bool GameMode::showOptionsWindow(const CEGUI::EventArgs&)
 {
+    setOptionsPage(false);
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
     options->show();
     options->moveToFront();
@@ -1667,10 +1675,34 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+void GameMode::setOptionsPage(bool endGame)
+{
+    CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
+    for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
+        "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton"})
+        options->getChild(name)->setVisible(!endGame);
+    for(const char* name : {"QuitGameButton", "ExitGameButton", "BackButton"})
+        options->getChild(name)->setVisible(endGame);
+    options->setText(endGame ? "End Game" : "Options");
+}
+
+bool GameMode::showEndGameFromOptions(const CEGUI::EventArgs&)
+{
+    setOptionsPage(true);
+    mRootWindow->getChild("GameOptionsWindow")->moveToFront();
+    return true;
+}
+
+bool GameMode::closeOptionsWindow(const CEGUI::EventArgs& e)
+{
+    if(mRootWindow->getChild("GameOptionsWindow/BackButton")->isVisible())
+        return showOptionsWindow(e);
+    return hideOptionsWindow(e);
+}
+
 bool GameMode::showQuitMenuFromOptions(const CEGUI::EventArgs& /*e*/)
 {
     mExitToDesktop = false;
-    mRootWindow->getChild("GameOptionsWindow")->hide();
     popupExit(!mGameMap->getGamePaused());
     return true;
 }
@@ -1678,7 +1710,6 @@ bool GameMode::showQuitMenuFromOptions(const CEGUI::EventArgs& /*e*/)
 bool GameMode::showExitApplicationFromOptions(const CEGUI::EventArgs& /*e*/)
 {
     mExitToDesktop = true;
-    mRootWindow->getChild("GameOptionsWindow")->hide();
     popupExit(!mGameMap->getGamePaused());
     return true;
 }

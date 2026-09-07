@@ -166,6 +166,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
     bool hideOptionsWindow(const CEGUI::EventArgs& = {});
     bool toggleOptionsWindow(const CEGUI::EventArgs& = {});
+    bool closeOptionsWindow(const CEGUI::EventArgs& = {});
+    bool showEndGameFromOptions(const CEGUI::EventArgs& = {});
+    void setOptionsPage(bool endGame);
     bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
     void toggleAllowTileDebugWindow(){ showTileDebugWindow = !showTileDebugWindow ;};
