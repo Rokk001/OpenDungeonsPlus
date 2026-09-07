@@ -72,6 +72,7 @@
         <UserString name="Circular" value="true" />
         </Window>
         <Window type="OD/TabControl" name="MainTabControl" >
+            <UserString name="NavigationFrame" value="true" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="TabTextPadding" value="{0,6}" />
             <Property name="Area" value="{{0,188},{1,-184},{1,0},{1,0}}" />
@@ -117,6 +118,7 @@
             <Property name="TooltipText" value="Query: select, then click a creature to view its information" />
         </Window>
         <Window type="OD/GameTabButton" name="SellButton" >
+            <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-184},{0,184},{1,-140}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/DestroyRoomButton" />
@@ -124,6 +126,7 @@
             <Property name="TooltipText" value="Sell: select, then click a room tile, trap or door" />
         </Window>
         <Window type="OD/GameTabButton" name="MiniMapZoomButton">
+            <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-52},{0,184},{1,-8}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/MapZoom" />

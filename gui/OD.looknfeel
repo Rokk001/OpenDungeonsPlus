@@ -3484,6 +3484,9 @@
     </WidgetLook>
 
     <WidgetLook name="OD/TabButton">
+        <PropertyDefinition name="NavigationFrame" type="bool" initialValue="False" redrawOnWrite="true" />
+        <PropertyDefinition name="VertImageFormatting" initialValue="Stretched" redrawOnWrite="true" />
+        <PropertyDefinition name="HorzImageFormatting" initialValue="Stretched" redrawOnWrite="true" />
         <PropertyDefinition initialValue="FFC0C0C0" name="NormalTextColour" redrawOnWrite="true" />
         <PropertyDefinition initialValue="FFE0E0E0" name="HoverTextColour" redrawOnWrite="true" />
         <PropertyDefinition initialValue="FFFFFFFF" name="PushedTextColour" redrawOnWrite="true" />
@@ -3607,7 +3610,11 @@
         </ImagerySection>
         <StateImagery name="TopNormal">
             <Layer>
-                <Section section="top_normal" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="NormalTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="top_normal" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="NormalTextColour" />
                 </Section>
@@ -3615,7 +3622,11 @@
         </StateImagery>
         <StateImagery name="BottomNormal">
             <Layer>
-                <Section section="bot_normal" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="NormalTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="bot_normal" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="NormalTextColour" />
                 </Section>
@@ -3623,7 +3634,11 @@
         </StateImagery>
         <StateImagery name="TopHover">
             <Layer>
-                <Section section="top_hover" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="HoverTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="top_hover" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -3631,7 +3646,11 @@
         </StateImagery>
         <StateImagery name="BottomHover">
             <Layer>
-                <Section section="bot_hover" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="HoverTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="bot_hover" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -3639,7 +3658,11 @@
         </StateImagery>
         <StateImagery name="TopSelected">
             <Layer>
-                <Section section="top_selected" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="SelectedTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="top_selected" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="SelectedTextColour" />
                 </Section>
@@ -3647,7 +3670,11 @@
         </StateImagery>
         <StateImagery name="BottomSelected">
             <Layer>
-                <Section section="bot_selected" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="SelectedTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="bot_selected" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="SelectedTextColour" />
                 </Section>
@@ -3655,7 +3682,11 @@
         </StateImagery>
         <StateImagery name="TopPushed">
             <Layer>
-                <Section section="top_normal" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="PushedTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="top_normal" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="PushedTextColour" />
                 </Section>
@@ -3663,7 +3694,11 @@
         </StateImagery>
         <StateImagery name="BottomPushed">
             <Layer>
-                <Section section="bot_normal" />
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="PushedTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="bot_normal" controlProperty="NavigationFrame" controlValue="false" />
                 <Section section="label">
                     <ColourProperty name="PushedTextColour" />
                 </Section>
@@ -3671,7 +3706,11 @@
         </StateImagery>
         <StateImagery name="TopDisabled">
             <Layer>
-                <Section section="top_normal">
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="DisabledTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="top_normal" controlProperty="NavigationFrame" controlValue="false">
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
                 <Section section="label">
@@ -3681,7 +3720,11 @@
         </StateImagery>
         <StateImagery name="BottomDisabled">
             <Layer>
-                <Section section="bot_normal">
+                <Section look="OD/GameTabButton" section="background" controlProperty="NavigationFrame" controlValue="true">
+                    <ColourProperty name="DisabledTextColour" />
+                </Section>
+                <Section look="OD/GameTabButton" section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
+                <Section section="bot_normal" controlProperty="NavigationFrame" controlValue="false">
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
                 <Section section="label">
@@ -4618,6 +4661,7 @@
     </WidgetLook>
 
     <WidgetLook name="OD/GameTabButton">
+        <PropertyDefinition name="NavigationFrame" type="bool" initialValue="False" redrawOnWrite="true" />
         <Property name="WantsMultiClickEvents" value="False" />
         <PropertyDefinition initialValue="" name="NormalImage" redrawOnWrite="true" />
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonHoverEffect" name="HoverImage" redrawOnWrite="true" />
@@ -4651,6 +4695,24 @@
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="navigation_frame">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/ButtonTopLeftNormal" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightNormal" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftNormal" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightNormal" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/ButtonLeftNormal" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/ButtonRightNormal" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/ButtonTopNormal" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/ButtonBottomNormal" />
+            </FrameComponent>
         </ImagerySection>
         <ImagerySection name="frame">
             <ImageryComponent>
@@ -4726,7 +4788,8 @@
                 <Section section="normal" />
             </Layer>
             <Layer priority="2">
-                <Section section="frame" />
+                <Section section="frame" controlProperty="NavigationFrame" controlValue="false" />
+                <Section section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
             <Layer priority="4">
                 <Section section="selected" />
@@ -4740,7 +4803,8 @@
                 <Section section="normal" />
             </Layer>
             <Layer priority="2">
-                <Section section="frame" />
+                <Section section="frame" controlProperty="NavigationFrame" controlValue="false" />
+                <Section section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
             <Layer priority="3">
                 <Section section="hover" />
@@ -4757,7 +4821,8 @@
                 <Section section="normal" />
             </Layer>
             <Layer priority="2">
-                <Section section="frame" />
+                <Section section="frame" controlProperty="NavigationFrame" controlValue="false" />
+                <Section section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
             <Layer priority="3">
                 <Section section="pushed" />
@@ -4774,7 +4839,8 @@
                 <Section section="normal" />
             </Layer>
             <Layer priority="2">
-                <Section section="frame" />
+                <Section section="frame" controlProperty="NavigationFrame" controlValue="false" />
+                <Section section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
             <Layer priority="3">
                 <Section section="hover" />
@@ -4791,7 +4857,8 @@
                 <Section section="normal" />
             </Layer>
             <Layer priority="2">
-                <Section section="frame" />
+                <Section section="frame" controlProperty="NavigationFrame" controlValue="false" />
+                <Section section="navigation_frame" controlProperty="NavigationFrame" controlValue="true" />
             </Layer>
             <Layer priority="3">
                 <Section section="disabled" />

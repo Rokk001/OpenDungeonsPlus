@@ -314,6 +314,17 @@ void Gui::registerWindowHierarchy(CEGUI::Window* window)
 
 void Gui::registerWindow(CEGUI::Window* window)
 {
+    if(window->isPropertyPresent("NavigationFrame"))
+    {
+        for(CEGUI::Window* parent = window->getParent(); parent != nullptr; parent = parent->getParent())
+        {
+            if(parent->isUserStringDefined("NavigationFrame") && parent->getUserString("NavigationFrame") == "true")
+            {
+                window->setProperty("NavigationFrame", "True");
+                break;
+            }
+        }
+    }
     if(!window->isAutoWindow() && mScaledWindows.find(window) == mScaledWindows.end())
     {
         WindowScaleData data;
