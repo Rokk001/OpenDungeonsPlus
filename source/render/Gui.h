@@ -102,6 +102,9 @@ public:
     //! \brief Sets the user-selected UI scale and applies it immediately.
     void setUserScalePercent(float scalePercent);
 
+    //! \brief Packs visible game room actions into two rows and retains their scaled layout.
+    void arrangeRoomButtons(CEGUI::Window* rooms);
+
     // Access names of the GUI elements
     static const std::string ROOT;
     static const std::string DISPLAY_GOLD;
