@@ -5063,6 +5063,26 @@
         </StateImagery>
     </WidgetLook>
 
+    <WidgetLook name="OD/ResourceDisplay" inherits="OD/StaticText">
+        <ImagerySection name="inset">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="OpenDungeonsSkin/ButtonLeftNormal" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><ImageDim name="OpenDungeonsSkin/ButtonTopNormal" dimension="Height" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImageDim name="OpenDungeonsSkin/ButtonRightNormal" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim name="OpenDungeonsSkin/ButtonBottomNormal" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="OpenDungeonsSkin/SelectionBrush" />
+                <Colours topLeft="FF1A2228" topRight="FF1A2228" bottomLeft="FF080C10" bottomRight="FF080C10" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="EnabledFrame"><Layer><Section look="OD/GameTabButton" section="navigation_frame" /></Layer></StateImagery>
+        <StateImagery name="DisabledFrame"><Layer><Section look="OD/GameTabButton" section="navigation_frame" /></Layer></StateImagery>
+        <StateImagery name="WithFrameEnabledBackground"><Layer><Section section="inset" /></Layer></StateImagery>
+        <StateImagery name="WithFrameDisabledBackground"><Layer><Section section="inset" /></Layer></StateImagery>
+    </WidgetLook>
+
     <WidgetLook name="OD/MenuTitle" inherits="OD/StaticText">
         <Property name="FrameEnabled" value="False" />
         <Property name="BackgroundEnabled" value="False" />

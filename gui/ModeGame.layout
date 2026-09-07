@@ -9,11 +9,13 @@
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,0},{0,0},{1,0},{0,48}}" />
             <Property name="Image" value="OpenDungeonsSkin/HorizontalPipe" />
+            <Property name="ImageColours" value="FFB98B56" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="HorzFormatting" value="Tiled" />
-            <Window type="OD/StaticText" name="GoldDisplay" >
+            <Window type="OD/ResourceDisplay" name="GoldDisplay" >
+                <Property name="TextColours" value="FFFFCE00" />
                 <Property name="Area" value="{{0,204},{0,2},{0,400},{0,44}}" />
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -33,7 +35,8 @@
                     <Property name="VerticalAlignment" value="Centre" />
                 </Window>
             </Window>
-            <Window type="OD/StaticText" name="ManaDisplay" >
+            <Window type="OD/ResourceDisplay" name="ManaDisplay" >
+                <Property name="TextColours" value="FF00C880" />
                 <Property name="Area" value="{{0,4},{0,2},{0,200},{0,44}}" />
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -96,6 +99,8 @@
 
 
         <Window type="OD/StaticText" name="ContextInfo" >
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
             <Property name="Area" value="{{0,404},{0,2},{1,-4},{0,44}}" />
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="TextParsingEnabled" value="False" />
