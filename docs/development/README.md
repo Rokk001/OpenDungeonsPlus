@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Creature portrait export](../../tools/portraits/README.md): tracked tooling to
+  export and verify current creature portraits for asset work.
+
 - [Minimap navigation stacking](MINIMAP-NAVIGATION-LAYER.md): preserving access
   to the corner controls after clicking the minimap.
 - [Map navigation](MAP-NAVIGATION.md): full-map controls, pointer detail, minimap zoom,

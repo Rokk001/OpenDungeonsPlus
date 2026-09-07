@@ -138,6 +138,10 @@ And run the *opendungeons* output binary.
 
 ### Contributing code
 
+For creature asset work, the [portrait export tool](tools/portraits/README.md)
+builds a standalone preview from the game's renderer and exports the configured
+creatures to PNG files.
+
 If you want to contribute code, you should take a look at our coding
 guidelines: https://github.com/OpenDungeons/OpenDungeons/wiki/Code-Guidelines
 
