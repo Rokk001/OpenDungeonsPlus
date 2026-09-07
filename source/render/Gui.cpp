@@ -37,6 +37,7 @@
 #include <CEGUI/WindowManager.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/TabControl.h>
+#include <CEGUI/widgets/TabButton.h>
 #include <CEGUI/widgets/Combobox.h>
 #include <CEGUI/widgets/ScrollablePane.h>
 #include <CEGUI/widgets/ScrolledContainer.h>
@@ -359,6 +360,13 @@ void Gui::registerWindow(CEGUI::Window* window)
                 break;
             }
         }
+    }
+    CEGUI::TabButton* tabButton = dynamic_cast<CEGUI::TabButton*>(window);
+    if(tabButton != nullptr && window->isPropertyPresent("NavigationColour"))
+    {
+        CEGUI::Window* page = tabButton->getTargetWindow();
+        if(page != nullptr && page->isUserStringDefined("NavigationColour"))
+            window->setProperty("NavigationColour", page->getUserString("NavigationColour"));
     }
     if(!window->isAutoWindow() && mScaledWindows.find(window) == mScaledWindows.end())
     {
