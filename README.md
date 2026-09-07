@@ -38,9 +38,11 @@ Press Print Screen to save a PNG screenshot from menus, dialogs, gameplay or
 the editor; images use the existing timestamped filenames in the configured
 user-data directory.
 With edge scrolling enabled, the camera also scrolls at screen edges covered by
-the fixed HUD. New messages flash the Messages button; left-click it to read
-them and right-click to dismiss read messages. Save opens the message surface
-for the server's confirmation or error.
+the fixed HUD. New messages arrive from the right as individual flashing
+information tabs; left-click a tab to read it and right-click to dismiss it
+after reading. The tick closes the message window, while the cross removes
+that message. Notices beyond the visible rail remain queued until space opens.
+Save opens the message surface for the server's confirmation or error.
 
 Use the mouse wheel or Home/End for camera zoom; F1/F2/F3 select isometric,
 top-down and oblique views, and F4-F6 recall views stored through Options.
@@ -61,8 +63,8 @@ The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.
 The category symbols are a person, house, wand and pickaxe for Creatures, Rooms,
 Spells and Workshop respectively.
-The narrow controls to their right use paired arrows to hide/show the panel,
-an eye for objectives, and a blue information symbol for messages.
+The narrow controls to their right use paired arrows to hide/show the panel
+and an eye for objectives, followed by the message queue.
 The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature
 types, left-click a count to pick up a matching available creature, or right-click
