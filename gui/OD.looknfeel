@@ -3826,9 +3826,8 @@
         </ImagerySection>
         <ImagerySection name="navigation_background">
             <ImageryComponent>
-                <Image name="OpenDungeonsSkin/SelectionBrush" />
-                <Colours topLeft="FF242424" topRight="FF242424" bottomLeft="FF101010" bottomRight="FF101010" />
-                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+                <Image name="ODHudSurface/Stone" />
+                <VertFormat type="Tiled" /><HorzFormat type="Tiled" />
             </ImageryComponent>
         </ImagerySection>
         <StateImagery name="Enabled">
