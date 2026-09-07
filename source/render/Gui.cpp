@@ -213,6 +213,65 @@ void createNavigationImages()
         categoryImage.setArea(CEGUI::Rectf(0, 0, size, size));
     }
 
+    const char* utilities[] = {"NavigationPanel", "NavigationObjectives", "NavigationMessages"};
+    for(int utility = 0; utility < 3; ++utility)
+    {
+        for(int y = 0; y < size; ++y)
+        {
+            for(int x = 0; x < size; ++x)
+            {
+                int coverage = 0;
+                for(int sy = 0; sy < 4; ++sy)
+                {
+                    for(int sx = 0; sx < 4; ++sx)
+                    {
+                        // Utility cells are narrower than the square category cells.
+                        const float px = (x + (sx + 0.5f) * 0.25f) * 32.0f / size;
+                        const float py = (y + (sy + 0.5f) * 0.25f) * 52.0f / size;
+                        auto line = [&](float ax, float ay, float bx, float by, float radius)
+                        {
+                            const float dx = bx - ax;
+                            const float dy = by - ay;
+                            const float t = std::max(0.0f, std::min(1.0f,
+                                ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+                            const float ex = px - ax - t * dx;
+                            const float ey = py - ay - t * dy;
+                            return ex * ex + ey * ey <= radius * radius;
+                        };
+                        bool inside;
+                        if(utility == 0)
+                            inside = line(7, 14, 16, 6, 1.5f) || line(16, 6, 25, 14, 1.5f)
+                                || line(7, 38, 16, 46, 1.5f) || line(16, 46, 25, 38, 1.5f);
+                        else if(utility == 1)
+                        {
+                            const float dx = (px - 16) / 10;
+                            const float dy = std::abs(py - 26);
+                            const float lid = 5 * (1 - dx * dx);
+                            inside = (std::abs(dx) <= 1 && std::abs(dy - lid) <= 1.1f)
+                                || (px - 16) * (px - 16) + dy * dy <= 9;
+                        }
+                        else
+                            inside = (px - 18) * (px - 18) + (py - 14) * (py - 14) <= 4
+                                || line(16, 23, 13, 38, 1.5f)
+                                || line(12, 23, 17, 23, 1) || line(12, 38, 18, 38, 1);
+                        coverage += inside ? 1 : 0;
+                    }
+                }
+                const int i = (y * size + x) * 4;
+                pixels[i] = utility == 2 ? 140 : 224;
+                pixels[i + 1] = utility == 2 ? 235 : 226;
+                pixels[i + 2] = utility == 2 ? 255 : 218;
+                pixels[i + 3] = static_cast<unsigned char>(coverage * 255 / 16);
+            }
+        }
+        CEGUI::Texture& utilityTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(utilities[utility]);
+        utilityTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+        CEGUI::BasicImage& utilityImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+            "BasicImage", std::string("OpenDungeonsIcons/") + utilities[utility]));
+        utilityImage.setTexture(&utilityTexture);
+        utilityImage.setArea(CEGUI::Rectf(0, 0, size, size));
+    }
+
     for(int badge = 0; badge < 2; ++badge)
     {
         for(int y = 0; y < size; ++y)
