@@ -130,10 +130,10 @@ private:
             const CEGUI::Rectf* clip) const
     {
         const float scale = std::min(area.getWidth(), area.getHeight()) / 176.0f;
-        drawCircleBand(buffer, area, clip, 0.0f, 7.0f * scale, CEGUI::Colour(0.10f, 0.08f, 0.06f));
-        drawCircleBand(buffer, area, clip, 2.0f * scale, 5.0f * scale, CEGUI::Colour(0.56f, 0.52f, 0.43f));
-        drawCircleBand(buffer, area, clip, 2.0f * scale, 3.0f * scale, CEGUI::Colour(0.82f, 0.78f, 0.65f));
-        drawCircleBand(buffer, area, clip, 5.0f * scale, 7.0f * scale, CEGUI::Colour(0.20f, 0.15f, 0.10f));
+        drawCircleBand(buffer, area, clip, 0.0f, 7.0f * scale, CEGUI::Colour(9.5f / 255.0f, 11.0f / 255.0f, 8.5f / 255.0f));
+        drawCircleBand(buffer, area, clip, 2.0f * scale, 5.0f * scale, CEGUI::Colour(78.0f / 255.0f, 79.5f / 255.0f, 77.0f / 255.0f));
+        drawCircleBand(buffer, area, clip, 2.0f * scale, 3.0f * scale, CEGUI::Colour(126.5f / 255.0f, 132.0f / 255.0f, 130.5f / 255.0f));
+        drawCircleBand(buffer, area, clip, 5.0f * scale, 7.0f * scale, CEGUI::Colour(35.0f / 255.0f, 36.0f / 255.0f, 36.0f / 255.0f));
     }
 
     void drawLine(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
