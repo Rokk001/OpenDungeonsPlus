@@ -361,6 +361,30 @@ void Gui::setUserScalePercent(float scalePercent)
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
+void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
+{
+    const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
+        displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
+    size_t index = 0;
+    for(const char* name : {"TreasuryButton", "DormitoryButton", "HatcheryButton", "LibraryButton",
+        "TrainingHallButton", "WorkshopButton", "CryptButton", "PrisonButton", "WoodenBridgeButton",
+        "StoneBridgeButton", "ArenaButton", "CasinoButton", "TortureButton"})
+    {
+        CEGUI::Window* button = rooms->getChild(name);
+        if(!button->isVisible())
+            continue;
+
+        const float x = 76.0f + 56.0f * static_cast<float>(index / 2);
+        const float y = 6.0f + 56.0f * static_cast<float>(index % 2);
+        WindowScaleData& data = mScaledWindows.at(button);
+        data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
+            CEGUI::UDim(0, x + 52.0f), CEGUI::UDim(0, y + 52.0f));
+        applyScale(button, data, scale);
+        ++index;
+    }
+}
+
 bool Gui::onDisplaySizeChanged(const CEGUI::EventArgs& e)
 {
     const CEGUI::DisplayEventArgs& displayEvent = static_cast<const CEGUI::DisplayEventArgs&>(e);
