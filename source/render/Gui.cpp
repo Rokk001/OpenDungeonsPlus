@@ -85,8 +85,63 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
+class MiniMapCornerButton : public CEGUI::PushButton
+{
+public:
+    static const CEGUI::String WidgetTypeName;
+    MiniMapCornerButton(const CEGUI::String& type, const CEGUI::String& name) : CEGUI::PushButton(type, name) {}
+
+    bool isHit(const CEGUI::Vector2f& position, bool allowDisabled = false) const override
+    {
+        if(!CEGUI::PushButton::isHit(position, allowDisabled))
+            return false;
+        // Use the actual map bounds: pixel rounding can differ from this button.
+        const CEGUI::Rectf& map = getParent()->getChild("MiniMap")->getUnclippedOuterRect().get();
+        const float x = (position.d_x - map.left() - map.getWidth() * 0.5f) / (map.getWidth() * 0.5f);
+        const float y = (position.d_y - map.top() - map.getHeight() * 0.5f) / (map.getHeight() * 0.5f);
+        return x * x + y * y >= 1.0f;
+    }
+};
+const CEGUI::String MiniMapCornerButton::WidgetTypeName("OD/MiniMapCornerBase");
+
+void createMiniMapCornerImages()
+{
+    CEGUI::WindowFactoryManager::addFactory<CEGUI::TplWindowFactory<MiniMapCornerButton>>();
+    const int size = 128;
+    for(int corner = 0; corner < 4; ++corner)
+    {
+        std::vector<unsigned char> pixels(size * size * 4, 0);
+        for(int y = 0; y < size; ++y)
+        {
+            for(int x = 0; x < size; ++x)
+            {
+                const float u = ((corner & 1) ? size - x - 0.5f : x + 0.5f) * 44.0f / size;
+                const float v = ((corner & 2) ? size - y - 0.5f : y + 0.5f) * 44.0f / size;
+                const float curve = std::sqrt((88.0f - u) * (88.0f - u) + (88.0f - v) * (88.0f - v)) - 88.0f;
+                const float edge = std::min(curve, std::min(std::min(u, v), std::min(44.0f - u, 44.0f - v)));
+                if(edge <= 0.0f)
+                    continue;
+                const float shade = edge < 1.0f ? 12.0f : edge < 2.0f ? 116.0f : edge < 3.0f ? 62.0f : 24.0f - 10.0f * y / size;
+                const int i = (y * size + x) * 4;
+                pixels[i] = static_cast<unsigned char>(shade);
+                pixels[i + 1] = static_cast<unsigned char>(shade + 3.0f);
+                pixels[i + 2] = static_cast<unsigned char>(shade + 5.0f);
+                pixels[i + 3] = static_cast<unsigned char>(255.0f * std::min(1.0f, edge * size / 44.0f));
+            }
+        }
+        const std::string name = "MiniMapCorner" + std::to_string(corner);
+        CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
+        texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+        auto& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+            "BasicImage", "OpenDungeonsIcons/" + name));
+        image.setTexture(&texture);
+        image.setArea(CEGUI::Rectf(0, 0, size, size));
+    }
+}
+
 void createNavigationImages()
 {
+    createMiniMapCornerImages();
     const int size = 64;
     std::vector<unsigned char> pixels(size * size * 4, 0);
     const float handleStart = 36.0f;

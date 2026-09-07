@@ -119,16 +119,20 @@
             <Property name="TextParsingEnabled" value="False" />
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
-<Window type="OD/ImageButton" name="OptionsButton" >
+<Window type="OD/MiniMapCornerButton" name="OptionsButton" >
+            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner2" />
+            <Property name="CornerIconArea" value="{{0.09,0},{0.48,0},{0.52,0},{0.91,0}}" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,8},{1,-52},{0,52},{1,-8}}" />
-            <Property name="ButtonImage" value="OpenDungeonsIcons/OptionsIcon" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/OptionsIcon" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Options (F10)" />
             <Property name="ClippedByParent" value="False" />
             <Property name="Visible" value="True" />
         </Window>
-        <Window type="OD/GameTabButton" name="QueryButton" >
+        <Window type="OD/MiniMapCornerButton" name="QueryButton" >
+            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner0" />
+            <Property name="CornerIconArea" value="{{0.09,0},{0.09,0},{0.52,0},{0.52,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,8},{1,-184},{0,52},{1,-140}}" />
@@ -136,7 +140,9 @@
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Query: select, then click a creature to view its information" />
         </Window>
-        <Window type="OD/GameTabButton" name="SellButton" >
+        <Window type="OD/MiniMapCornerButton" name="SellButton" >
+            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner1" />
+            <Property name="CornerIconArea" value="{{0.48,0},{0.09,0},{0.91,0},{0.52,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-184},{0,184},{1,-140}}" />
@@ -144,7 +150,9 @@
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Sell: select, then click a room tile, trap or door" />
         </Window>
-        <Window type="OD/GameTabButton" name="MiniMapZoomButton">
+        <Window type="OD/MiniMapCornerButton" name="MiniMapZoomButton">
+            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner3" />
+            <Property name="CornerIconArea" value="{{0.48,0},{0.48,0},{0.91,0},{0.91,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-52},{0,184},{1,-8}}" />
