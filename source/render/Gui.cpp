@@ -402,9 +402,9 @@ void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
     const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
         displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
     size_t index = 0;
-    for(const char* name : {"TreasuryButton", "DormitoryButton", "HatcheryButton", "LibraryButton",
-        "TrainingHallButton", "WorkshopButton", "CryptButton", "PrisonButton", "WoodenBridgeButton",
-        "StoneBridgeButton", "ArenaButton", "CasinoButton", "TortureButton"})
+    for(const char* name : {"DormitoryButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
+        "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
+        "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton"})
     {
         CEGUI::Window* button = rooms->getChild(name);
         if(!button->isVisible())
