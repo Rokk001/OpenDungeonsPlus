@@ -5,50 +5,57 @@
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Window type="OD/StaticImage" name="WelcomeBanner" >
-            <Property name="Area" value="{{0.5,-320},{0,52},{0.5,320},{0,191}}" />
+            <Property name="Area" value="{{0.5,-256},{0,32},{0.5,256},{0,143}}" />
             <Property name="Image" value="ODLogo/Logo" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Property name="MinSize" value="{{0,640},{0,139}}" />
+            <Property name="MinSize" value="{{0,512},{0,111}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0.5,200},{0,171},{0.5,300},{0,191}}" />
+            <Property name="Area" value="{{0,0},{1,-24},{0,100},{1,0}}" />
             <Property name="Text" value="Undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
 
-        <Window type="OD/MainMenuButton" name="StartCampaignButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,-240},{0.0,200},{0.5,-160}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/LibraryButton'][vert-alignment='centre']Campaign" />
+        <Window type="OD/InvisibleButton" name="StartCampaignButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,-184},{0.5,160},{0.5,-120}}" />
+            <Property name="Text" value="Campaign" />
             <Property name="Disabled" value="True" />
         </Window>
-        <Window type="OD/MainMenuButton" name="StartSkirmishButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,-160},{0.0,200},{0.5,-80}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/FighterButton'][vert-alignment='centre']Skirmish" />
+        <Window type="OD/InvisibleButton" name="StartSkirmishButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,-120},{0.5,160},{0.5,-56}}" />
+            <Property name="Text" value="Skirmish" />
         </Window>
-        <Window type="OD/MainMenuButton" name="MultiplayerModeButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,-80},{0.0,200},{0.5,0}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/CasinoButton'][vert-alignment='centre']Multiplayer" />
+        <Window type="OD/InvisibleButton" name="MultiplayerModeButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,-56},{0.5,160},{0.5,8}}" />
+            <Property name="Text" value="Multiplayer" />
         </Window>
-        <Window type="OD/MainMenuButton" name="StartReplayButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,0},{0.0,200},{0.5,80}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/PortalButton'][vert-alignment='centre']Replay" />
+        <Window type="OD/InvisibleButton" name="StartReplayButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,8},{0.5,160},{0.5,72}}" />
+            <Property name="Text" value="Replay" />
         </Window>
 
-        <Window type="OD/MainMenuButton" name="MapEditorButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,80},{0.0,200},{0.5,160}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/SpellsButton'][vert-alignment='centre']Map Editor" />
+        <Window type="OD/InvisibleButton" name="MapEditorButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,72},{0.5,160},{0.5,136}}" />
+            <Property name="Text" value="Map Editor" />
         </Window>
-        <Window type="OD/MainMenuButton" name="SettingsButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,160},{0.0,200},{0.5,240}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/OptionsIcon'][vert-alignment='centre']Settings" />
+        <Window type="OD/InvisibleButton" name="SettingsButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,136},{0.5,160},{0.5,200}}" />
+            <Property name="Text" value="Settings" />
         </Window>
-        <Window type="OD/MainMenuButton" name="QuitButton" >
-            <Property name="Area" value="{{0.0,20},{0.5,240},{0.0,200},{0.5,320}}" />
-            <Property name="Text" value="[image='OpenDungeonsIcons/CryptButton'][vert-alignment='centre']Quit" />
+        <Window type="OD/InvisibleButton" name="QuitButton" >
+            <Property name="Font" value="MedievalSharp-20" />
+            <Property name="Area" value="{{0.5,-160},{0.5,248},{0.5,160},{0.5,312}}" />
+            <Property name="Text" value="Quit" />
         </Window>
         <LayoutImport type="DefaultWindow" filename="WindowSkirmishSubMenu.layout" name="SkirmishSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMultiplayerSubMenu.layout" name="MultiplayerSubMenuMenuImport" />
