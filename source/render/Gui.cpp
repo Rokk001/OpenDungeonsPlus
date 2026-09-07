@@ -401,22 +401,28 @@ void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
     const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
     const float scale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
         displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
-    size_t index = 0;
+    std::vector<CEGUI::Window*> buttons;
     for(const char* name : {"DormitoryButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
         "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
         "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton"})
     {
         CEGUI::Window* button = rooms->getChild(name);
-        if(!button->isVisible())
-            continue;
+        if(button->isVisible())
+            buttons.push_back(button);
+    }
 
-        const float x = 76.0f + 56.0f * static_cast<float>(index / 2);
-        const float y = 6.0f + 56.0f * static_cast<float>(index % 2);
+    const bool large = buttons.size() <= 6 &&
+        (76.0f + 106.0f * buttons.size() - 4.0f) * scale <= rooms->getPixelSize().d_width;
+    const float side = large ? 102.0f : 52.0f;
+    for(size_t index = 0; index < buttons.size(); ++index)
+    {
+        CEGUI::Window* button = buttons[index];
+        const float x = 76.0f + (side + 4.0f) * static_cast<float>(large ? index : index / 2);
+        const float y = 6.0f + (large ? 0.0f : 56.0f * static_cast<float>(index % 2));
         WindowScaleData& data = mScaledWindows.at(button);
         data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
-            CEGUI::UDim(0, x + 52.0f), CEGUI::UDim(0, y + 52.0f));
+            CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side));
         applyScale(button, data, scale);
-        ++index;
     }
 }
 
@@ -444,6 +450,10 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
 
     for(const auto& scaledWindow : mScaledWindows)
         applyScale(scaledWindow.first, scaledWindow.second, scale);
+
+    const auto gameSheet = mSheets.find(inGameMenu);
+    if(gameSheet != mSheets.end())
+        arrangeRoomButtons(gameSheet->second->getChild(TAB_ROOMS));
 
     for(const auto& scaledWindow : mScaledWindows)
     {
