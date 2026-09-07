@@ -14,6 +14,7 @@
 #include <CEGUI/ImageManager.h>
 #include <CEGUI/RendererModules/Ogre/Renderer.h>
 #include <CEGUI/System.h>
+#include <CEGUI/Texture.h>
 
 namespace
 {
@@ -164,6 +165,39 @@ const CEGUI::Image& getCreaturePortraitImage(const std::string& meshName)
             renderer.destroyTexture(name);
         else
             Ogre::TextureManager::getSingleton().remove(texture->getHandle());
+        throw;
+    }
+}
+
+const CEGUI::Image& getCreaturePanelPortraitImage(const std::string& meshName)
+{
+    const std::string name = "IllustratedCreaturePortrait/" + meshName;
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    if(images.isDefined(name))
+        return images.get(name);
+
+    const std::string filename = "portrait-" + meshName + ".png";
+    if(!Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", filename))
+        return getCreaturePortraitImage(meshName);
+
+    CEGUI::OgreRenderer& renderer = static_cast<CEGUI::OgreRenderer&>(
+        *CEGUI::System::getSingleton().getRenderer());
+    try
+    {
+        CEGUI::Texture& texture = renderer.createTexture(name, filename, "Graphics");
+        const CEGUI::Sizef size = texture.getOriginalDataSize();
+        CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
+        image.setTexture(&texture);
+        image.setArea(CEGUI::Rectf(0.0f, 0.0f, size.d_width, size.d_height));
+        image.setAutoScaled(CEGUI::ASM_Disabled);
+        return image;
+    }
+    catch(...)
+    {
+        if(images.isDefined(name))
+            images.destroy(name);
+        if(renderer.isTextureDefined(name))
+            renderer.destroyTexture(name);
         throw;
     }
 }
