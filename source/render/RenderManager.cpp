@@ -130,6 +130,12 @@ void createKeeperHandPoses(Ogre::Entity* hand)
                 frame->setTranslate(sampled.getTranslate());
                 frame->setScale(sampled.getScale());
             }
+            if(pose == "Point")
+            {
+                Ogre::TransformKeyFrame* wrist = animation->createNodeTrack(
+                    skeleton->getBone("Hand1")->getHandle())->createNodeKeyFrame(0);
+                wrist->setRotation(Ogre::Quaternion(Ogre::Degree(-15.0f), Ogre::Vector3::UNIT_Z));
+            }
             if(pose == "Dig")
             {
                 // Turn the gripping wrist so the tool emerges above the thumb.
