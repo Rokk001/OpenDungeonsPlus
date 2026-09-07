@@ -500,7 +500,11 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 
     // Since this is a tile selection query we loop over the result set
     // and look for the first object which is actually a tile.
-    ODFrameListener::getSingleton().findWorldPositionFromMouse(arg, inputManager.mKeeperHandPos,RenderManager::KEEPER_HAND_WORLD_Z);
+    if(!ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    {
+        inputManager.mXPos = inputManager.mYPos = -1;
+        return true;
+    }
     RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
 
     int tileX = Helper::round(inputManager.mKeeperHandPos.x);
@@ -651,7 +655,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(ODFrameListener::getSingleton().findWorldPositionFromMouse(arg, inputManager.mKeeperHandPos,RenderManager::KEEPER_HAND_WORLD_Z))
+    if(ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
     {
         inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
         inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -875,8 +879,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(ODFrameListener::getSingleton().findWorldPositionFromMouse(arg,
-        inputManager.mKeeperHandPos, RenderManager::KEEPER_HAND_WORLD_Z))
+    if(ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
     {
         inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
         inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -2276,8 +2279,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         mouseState.width = static_cast<int>(size.d_width);
         mouseState.height = static_cast<int>(size.d_height);
         const OIS::MouseEvent mouseEvent(nullptr, mouseState);
-        if(ODFrameListener::getSingleton().findWorldPositionFromMouse(mouseEvent,
-            inputManager.mKeeperHandPos, RenderManager::KEEPER_HAND_WORLD_Z))
+        if(ODFrameListener::getSingleton().findTilePositionFromMouse(mouseEvent, inputManager.mKeeperHandPos))
         {
             inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
             inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
