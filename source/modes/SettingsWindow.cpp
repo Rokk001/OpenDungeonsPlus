@@ -86,7 +86,7 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     }
     else if(gamePage)
     {
-        mSettingsWindow->setLookNFeel("OD/MenuPageWindow");
+        mSettingsWindow->setLookNFeel("OD/GameSettingsWindow");
         mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 64),
             CEGUI::UDim(1, 0), CEGUI::UDim(1, -192)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
