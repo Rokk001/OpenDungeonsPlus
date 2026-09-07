@@ -5213,6 +5213,14 @@
     </WidgetLook>
 
     <WidgetLook name="OD/ResourceDisplay" inherits="OD/StaticText">
+        <NamedArea name="WithFrameTextRenderArea">
+            <Area>
+                <Dim type="LeftEdge"><UnifiedDim scale="0.33" type="LeftEdge" /></Dim>
+                <Dim type="TopEdge"><ImageDim dimension="Height" name="OpenDungeonsSkin/StaticTop" /></Dim>
+                <Dim type="RightEdge"><UnifiedDim scale="0.92" type="RightEdge" /></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim dimension="Height" name="OpenDungeonsSkin/StaticBottom" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
         <ImagerySection name="inset">
             <ImageryComponent>
                 <Area>
