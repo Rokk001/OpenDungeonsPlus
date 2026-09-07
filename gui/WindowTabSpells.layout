@@ -3,6 +3,7 @@
 <GUILayout version="4" >
     <Window type="DefaultWindow" name="Spells" >
         <UserString name="NavigationColour" value="FF398B60" />
+        <UserString name="NavigationImage" value="OpenDungeonsIcons/NavigationSpells" />
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="Text" value="[image-size='w:40 h:40'][image='OpenDungeonsIcons/SpellsButton']" />
         <Property name="TooltipText" value="Spells" />

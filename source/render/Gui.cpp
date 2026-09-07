@@ -142,6 +142,76 @@ void createNavigationImages()
         "BasicImage", "OpenDungeonsIcons/MenuReturn"));
     returnImage.setTexture(&returnTexture);
     returnImage.setArea(CEGUI::Rectf(0, 0, size, size));
+
+    const char* categories[] = {"NavigationCreatures", "NavigationRooms", "NavigationSpells", "NavigationWorkshop"};
+    for(int category = 0; category < 4; ++category)
+    {
+        for(int y = 0; y < size; ++y)
+        {
+            for(int x = 0; x < size; ++x)
+            {
+                int coverage = 0;
+                for(int sy = 0; sy < 4; ++sy)
+                {
+                    for(int sx = 0; sx < 4; ++sx)
+                    {
+                        const float px = x + (sx + 0.5f) * 0.25f;
+                        const float py = y + (sy + 0.5f) * 0.25f;
+                        auto line = [&](float ax, float ay, float bx, float by, float radius)
+                        {
+                            const float dx = bx - ax;
+                            const float dy = by - ay;
+                            const float t = std::max(0.0f, std::min(1.0f,
+                                ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+                            const float ex = px - ax - t * dx;
+                            const float ey = py - ay - t * dy;
+                            return ex * ex + ey * ey <= radius * radius;
+                        };
+                        bool inside = false;
+                        if(category == 0)
+                        {
+                            const float dx = px - 32.0f;
+                            const float dy = py - 13.0f;
+                            inside = dx * dx + dy * dy <= 25.0f
+                                || (py >= 21 && py <= 40 && std::abs(dx) <= 9 - (py - 21) * 0.2f)
+                                || line(24, 24, 16, 40, 2.5f) || line(40, 24, 48, 40, 2.5f)
+                                || line(29, 38, 24, 55, 3) || line(35, 38, 40, 55, 3);
+                        }
+                        else if(category == 1)
+                        {
+                            inside = (py >= 9 && py <= 30 && std::abs(px - 32) <= (py - 9) * 1.2f)
+                                || (px >= 13 && px <= 51 && py >= 27 && py <= 55);
+                            if(px >= 27 && px <= 37 && py >= 39)
+                                inside = false;
+                        }
+                        else if(category == 2)
+                        {
+                            inside = line(12, 54, 43, 23, 2.5f)
+                                || line(44, 9, 44, 16, 1.5f) || line(51, 22, 58, 22, 1.5f)
+                                || line(31, 11, 35, 15, 1.5f) || line(51, 14, 55, 10, 1.5f)
+                                || line(51, 29, 55, 33, 1.5f) || line(31, 27, 35, 23, 1.5f);
+                        }
+                        else
+                        {
+                            inside = line(23, 20, 52, 51, 3)
+                                || line(8, 27, 17, 14, 2.5f) || line(17, 14, 30, 9, 2.5f)
+                                || line(30, 9, 43, 11, 2.5f) || line(17, 14, 26, 22, 3);
+                        }
+                        coverage += inside ? 1 : 0;
+                    }
+                }
+                const int i = (y * size + x) * 4;
+                pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(244 - y);
+                pixels[i + 3] = static_cast<unsigned char>(coverage * 255 / 16);
+            }
+        }
+        CEGUI::Texture& categoryTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(categories[category]);
+        categoryTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+        CEGUI::BasicImage& categoryImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+            "BasicImage", std::string("OpenDungeonsIcons/") + categories[category]));
+        categoryImage.setTexture(&categoryTexture);
+        categoryImage.setArea(CEGUI::Rectf(0, 0, size, size));
+    }
 }
 
 void scaleDimension(CEGUI::UDim& dimension, float scale)
@@ -367,6 +437,8 @@ void Gui::registerWindow(CEGUI::Window* window)
         CEGUI::Window* page = tabButton->getTargetWindow();
         if(page != nullptr && page->isUserStringDefined("NavigationColour"))
             window->setProperty("NavigationColour", page->getUserString("NavigationColour"));
+        if(page != nullptr && page->isUserStringDefined("NavigationImage") && window->isPropertyPresent("NavigationImage"))
+            window->setProperty("NavigationImage", page->getUserString("NavigationImage"));
     }
     if(!window->isAutoWindow() && mScaledWindows.find(window) == mScaledWindows.end())
     {
