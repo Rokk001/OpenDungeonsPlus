@@ -33,6 +33,7 @@
 #include "utils/ResourceManager.h"
 
 #include <CEGUI/CEGUI.h>
+#include <CEGUI/widgets/Scrollbar.h>
 #include "boost/filesystem.hpp"
 
 const std::string SAVEGAME_EXTENSION = ".level";
@@ -274,6 +275,7 @@ bool MenuModeLoad::updateDescription(const CEGUI::EventArgs&)
         mapDescription = "invalid map";
 
     descTxt->setText(mapDescription);
+    static_cast<CEGUI::Scrollbar*>(descTxt->getChild("__auto_vscrollbar__"))->setScrollPosition(0);
 
     return true;
 }
