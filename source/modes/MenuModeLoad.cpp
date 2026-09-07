@@ -134,6 +134,7 @@ void MenuModeLoad::activate()
     tmpWin->hide();
     mFilesList.clear();
     levelSelectList->resetList();
+    sheet->getChild("LevelWindowFrame/MapDescriptionText")->setText("");
 
     std::string levelPath = ResourceManager::getSingleton().getSaveGamePath();
     if(Helper::fillFilesList(levelPath, mFilesList, SAVEGAME_EXTENSION))
