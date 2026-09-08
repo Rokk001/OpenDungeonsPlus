@@ -1,5 +1,24 @@
 # Configuring and compiling on Windows
 
+The September 8 context-help correction on `fix/context-help-duplication`
+retains the complete fork and separates concise pointer labels from detailed
+upper-strip descriptions. Release compilation and runtime preparation succeeded.
+The normal executable is dated 2026-09-08 12:20:14, is 4,478,976 bytes and has
+SHA-256 `8D9BF5846AF6DA15AB1ECE96EB1928314B0B03C680A19822EEC4DCE500834336`.
+Logs: `build/windows/context-help-build.log` and
+`build/windows/context-help-runtime.log`.
+
+The installed Ogre/CEGUI probe passes 20,921 checks, including all 27 action
+labels, preserved descriptions/prices, dynamic worker prices, nonduplicated
+dialog help, multiline context normalization and existing scaling/click checks.
+Reproduce with `build/windows/build-context-help-preview.ps1`; production cost,
+title and context-routing methods are extracted while game services are
+simulated. Three rendered `build/reference-audit/context-help-*.png` category
+previews were inspected. This does not replace user gameplay acceptance of
+dynamic help surfaces. No game was launched; the normal executable is ready.
+README usage is updated; no release/version change is required for this fix.
+Private reference and acceptance notes remain outside the contribution.
+
 The September 8 action-cost tooltip build on `feature/action-cost-tooltips`
 retains the complete fork and adds hover prices to all 27 building, workshop
 and spell actions. Release compilation and runtime preparation succeeded.
