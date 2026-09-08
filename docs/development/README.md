@@ -67,6 +67,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   from front-end screens through the existing cancel/back handlers.
 - [Exit confirmation layout](QUIT-DIALOG-LAYOUT.md): complete title/replay text,
   scaled bounds and control-hit verification.
+- [Community exit page](COMMUNITY-EXIT-PAGE.md): explicit Discord and close
+  actions on the final community screen.
 - [Literal paths in event messages](EVENT-MESSAGE-PATHS.md): preserving path
   separators and bracketed names alongside the existing notice icon and colour.
 - [Save request payload](SAVE-REQUEST-PAYLOAD.md): matching three default-save

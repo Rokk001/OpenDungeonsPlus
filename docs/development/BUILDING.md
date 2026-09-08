@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The September 8 community exit-page update replaces the loose recruitment text
+with a centred, skinned panel and explicit Discord and Close actions. The real
+Ogre/CEGUI render probe passes 150 layout, text-fit and hit-target checks across
+five resolutions and three UI scales. Release compilation and runtime
+preparation pass. The normal executable is dated 2026-09-08 22:54:32, is
+4,490,752 bytes, SHA-256
+`8F84BD5703D825E8F9D1327EFFE3768E5EBE3DC228E2E35DB4B411A080913773`.
+The user confirmed the completed page and both actions in game on September 8,
+2026; see [the community exit-page note](COMMUNITY-EXIT-PAGE.md).
+
 The September 8 worker-creation effect adds a short turquoise-green spark burst
 to workers created by the summon-worker spell without changing ordinary creature
 spawning or worker behaviour. The production particle and material scripts pass
