@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The September 8 workshop-order build on `feature/workshop-order-scheduling`
+passes 13 focused scheduling/save-block checks, Release compilation and runtime
+preparation. The executable is dated 2026-09-08 10:24:53, is 4,469,248 bytes,
+and has SHA-256
+`96D274A9C8A3ABBC73625440E1067F706423E10FE4ED3AC9E40923370C128219`.
+It includes the complete `8f5a80d4` fork and the pending order/save correction;
+mixed-type production and save/load gameplay acceptance remain with the user.
+See [workshop scheduling](WORKSHOP-ORDER-SCHEDULING.md) for reproduction and
+verification limits; the earlier build records below are historical.
+
 The save-request correction adds the two existing optional string fields to
 three default-save callers. All 58 focused packet checks pass (six failures
 before), as do Release compilation, runtime preparation on retry and the
