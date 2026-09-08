@@ -187,3 +187,20 @@ On September 6, the user confirmed that the map controls behave correctly.
 Appearance acceptance for the later navigation treatment and measured reference
 transitions remain open; no game was launched by the assistant and nothing was
 pushed.
+
+## Room button navigation follow-up
+
+The room action buttons currently select construction through SkillManager's
+existing room-type mapping, but they have no right-click navigation handler.
+GameMode already locates owned hearts and portals from client-visible tile data;
+the client receives the same distinct tile visual for every non-bridge room and
+the bridge mesh name for each bridge type. Extend that path instead of adding a
+second room model or network message: right-clicking a room button will locate
+the owned connected components of that type in stable map order, fly the camera
+to the component centre and advance the per-type index for the next click.
+
+The focused component probe passes 17 checks for missing, owned, captured,
+removed, newly added and irregular rooms, independent per-type cycling and both
+bridge mesh types. Clean Release compilation and runtime preparation pass; see
+BUILDING.md for the executable. The user accepted the gameplay result on
+September 8, 2026.
