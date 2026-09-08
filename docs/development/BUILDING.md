@@ -1,5 +1,24 @@
 # Configuring and compiling on Windows
 
+The September 8 hand-price scaling correction on `feature/hand-price-scaling`
+passes 30 focused checks using the installed Ogre text overlay (four failures
+before), including scale increases/decreases, unchanged other text, long price
+captions and clearing. Before/after renders were inspected. The game retains
+the existing 16-pixel design height and applies the action icon's effective
+scale; leaving game mode restores the shared text's original height.
+
+The normal Release link could not replace the executable because user game
+process 3100 was running, started at 11:15:58. The same generated project was
+successfully linked with an alternate target name, without stopping that process:
+`build/windows/opendungeons-plus-hand-price-scale.exe`, dated 2026-09-08 11:18:12,
+4,470,784 bytes, SHA-256
+`293E5DAFAA1DC28269BFB5C157F0440E21AC43071AE6C9DC8DBD10115CBD321A`.
+The normal executable still has the 10:58:41 workshop-build hash below and
+does not yet include this correction. Replace it only after the game exits;
+no DLL/configuration changes are required. Logs use `build/windows/hand-price-scale-`.
+The isolated probe does not establish readability against the game world or
+complete feedback acceptance; the user's visual retest remains open.
+
 The September 8 workshop action-order build on `feature/workshop-action-order`
 retains complete fork `902f240d` and moves the existing wooden-door button before
 the traps. The existing installed Ogre/CEGUI action-panel probe passes 20,737
