@@ -33,11 +33,11 @@ Windows Release compilation and runtime preparation pass. Logs are
 `build/windows/workshop-order-before.log`, `workshop-order-after.log`,
 `workshop-order-build.log` and `workshop-order-runtime.log`.
 
-The user still needs to confirm mixed trap production in the game and across a
-save/load cycle. Start with one idle workshop, queue different trap types, and
-check that the earlier unfulfilled order is manufactured first. Production
-already in progress is retained; parallel workshops and delivery timing are
-outside this focused scheduling check.
+On September 8, the user confirmed mixed trap manufacturing order, including
+preservation across a save/load cycle, and explicitly accepted this task as
+complete. This closes the pending gameplay check alongside the automated and
+build evidence above. Production already in progress is retained; parallel
+workshops and delivery timing are outside this focused scheduling check.
 
 Before commit, the version and README were reviewed: this is not a release and
 does not change setup, controls or documented README behavior, so neither needs
