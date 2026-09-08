@@ -73,6 +73,7 @@ and message help also appears above, with concise local labels. Menus and dialog
 retain their local help without duplicating it in the upper strip.
 Local help appears to the right of the visible hand, using another side when
 needed to keep it inside the screen.
+The four main HUD category labels use larger hover text for easier recognition.
 
 The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.
