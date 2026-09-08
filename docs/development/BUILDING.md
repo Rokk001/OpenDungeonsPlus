@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+The September 8 workshop action-order build on `feature/workshop-action-order`
+retains complete fork `902f240d` and moves the existing wooden-door button before
+the traps. The existing installed Ogre/CEGUI action-panel probe passes 20,737
+checks at five resolutions and 80/100/120 percent scale; its updated order
+expectation failed against the preceding source at check 2,262. The rendered
+workshop preview was inspected. These isolated checks use simulated game entities
+and command endpoints; final game acceptance remains with the user.
+Release compilation and runtime preparation pass. The executable is dated
+2026-09-08 10:58:41, is 4,470,272 bytes and has SHA-256
+`AF0CF24E2091087703711594E887A80D1A3E14F799894865D0C71B45582AFD6A`.
+Logs use `build/windows/workshop-action-order-`; reproduce the interface check
+with `build/windows/build-action-panel-preview.ps1`. No game launch or push.
+
 The September 8 idle-terrain context build on `feature/idle-terrain-context`
 passes 12 focused context checks (nine failures before), Release compilation and
 runtime preparation. It retains complete fork `0eb801e3`, including trap costs
