@@ -126,7 +126,8 @@
             <Property name="Area" value="{{0,8},{1,-52},{0,52},{1,-8}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/OptionsIcon" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Options (F10)" />
+            <Property name="TooltipText" value="Options" />
+            <UserString name="ContextHelp" value="Options (F10)" />
             <Property name="ClippedByParent" value="False" />
             <Property name="Visible" value="True" />
         </Window>
@@ -138,7 +139,8 @@
             <Property name="Area" value="{{0,8},{1,-184},{0,52},{1,-140}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/HelpIcon" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Query: select, then click a creature to view its information" />
+            <Property name="TooltipText" value="Query" />
+            <UserString name="ContextHelp" value="Query: select, then click a creature to view its information" />
         </Window>
         <Window type="OD/MiniMapCornerButton" name="SellButton" >
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner1" />
@@ -148,7 +150,8 @@
             <Property name="Area" value="{{0,140},{1,-184},{0,184},{1,-140}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/DestroyRoomButton" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Sell: select, then click a room tile, trap or door" />
+            <Property name="TooltipText" value="Sell" />
+            <UserString name="ContextHelp" value="Sell: select, then click a room tile, trap or door" />
         </Window>
         <Window type="OD/MiniMapCornerButton" name="MiniMapZoomButton">
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner3" />
@@ -158,7 +161,8 @@
             <Property name="Area" value="{{0,140},{1,-52},{0,184},{1,-8}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/MapZoom" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Minimap: left-click to zoom in, right-click to zoom out; M opens the map" />
+            <Property name="TooltipText" value="Minimap" />
+            <UserString name="ContextHelp" value="Minimap: left-click to zoom in, right-click to zoom out; M opens the map" />
         </Window>
     <Window type="OD/GameTabButton" name="ObjectivesButton" >
             <Property name="NavigationFrame" value="True" />
@@ -174,7 +178,8 @@
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,400},{1,-184},{0,432},{1,-132}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/NavigationPanel" />
-            <Property name="TooltipText" value="Hide / show control panel (G)" />
+            <Property name="TooltipText" value="Control panel" />
+            <UserString name="ContextHelp" value="Hide / show control panel (G)" />
         </Window>
     <Window type="DefaultWindow" name="MessageQueue" >
             <UserString name="AllowEdgeScrolling" value="true" />

@@ -62,12 +62,15 @@ The four corner controls attach outside the circular map; their curved cutouts
 leave the map visible and clickable.
 
 The upper resource strip shows current mana and gold beside round badges;
-mana change appears on a smaller line below, and the gold tooltip includes
-storage capacity.
+mana change appears on a smaller line below, and hovering gold shows storage
+capacity in the upper context strip.
 
-Hover building, workshop or spell icons to see their current cost in the tooltip
-and upper context strip. Buildings and traps show gold per tile; spells show
-mana per cast or creature, including the current price of the next summoned worker.
+Hover building, workshop or spell icons to see a short name beside the pointer
+and their description and current cost in the upper context strip. Buildings and
+traps show gold per tile; spells show mana per cast or creature, including the
+current price of the next summoned worker. Detailed creature, resource, minimap
+and message help also appears above, with concise local labels. Menus and dialogs
+retain their local help without duplicating it in the upper strip.
 
 The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.
