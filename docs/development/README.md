@@ -76,6 +76,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Creature health and needs](CREATURE-HEALTH-AND-NEEDS.md): persistent
   owner-coloured health rings with centred need and mood states over the
   existing autonomous behaviour paths.
+- [Worker creation effect](WORKER-CREATION-EFFECT.md): a short networked magical
+  spark burst for workers created by the summon-worker spell.
 - [Creature selection by level](CREATURE-LEVEL-SELECTION.md): highest/lowest
   eligible selection through the existing keyboard and pickup paths.
 - [Creature picker counts](CREATURE-PICKER-COUNTS.md): reducing counts after
