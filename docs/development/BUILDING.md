@@ -1,5 +1,27 @@
 # Configuring and compiling on Windows
 
+The September 8 pointing-contour follow-up on `fix/tooltip-hand-occlusion`
+removes empty mesh-box padding from the tooltip exclusion area while preserving
+other hand poses and the existing pointer alignment. It requests software-skinned
+positions only while measuring the pointing pose and releases the request before
+returning. Release compilation and runtime preparation pass. The normal executable
+is dated 2026-09-08 13:44:25, is 4,484,608 bytes, SHA-256
+`7163BE0D32D0CDAF8A27BBA000E1ED6A9BC545526C336DE5D80863F50A0892A2`.
+Logs: `build/windows/tooltip-contour-build.log` and
+`build/windows/tooltip-contour-runtime.log`.
+The extracted production contour and installed CEGUI render pass 1,368 checks,
+including independent world-view projection under three camera transforms,
+five resolutions and three fields of view, temporary-request release and the
+previous tip/row/transition checks. The combined rendered preview was inspected.
+Generate with `generate-tooltip-hand-combined.py` followed by
+`generate-tooltip-contour-verification.py`, then run
+`build/windows/build-tooltip-contour-verification.ps1` (generators also live in
+`build/windows`). This supersedes the older box-equality oracle for the pointing
+pose; the unchanged UI placement retains its previously recorded edge tests.
+User comparison of the closer tooltip placement remains open. No game was launched.
+README still accurately describes side placement and fallback; this unreleased
+correction needs neither a version change nor a new control description.
+
 The September 8 camera-relative tooltip correction on `fix/tooltip-hand-occlusion`
 supersedes the initial clearance verification below: actual game captures still
 showed overlap because the hand envelope included the overlay's world-camera
