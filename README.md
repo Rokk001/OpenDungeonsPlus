@@ -87,6 +87,10 @@ The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature
 types, left-click a count to pick up a matching available creature, or right-click
 a portrait to move the camera to one of that type.
+Visible creatures continuously show a segmented, owner-coloured health ring
+above their heads. Its centre alternates their level with allied hunger,
+tiredness and urgent mood or activity states, which drive the creatures'
+existing autonomous responses.
 The population panel uses illustrated portraits where artwork is supplied;
 creatures without artwork retain their model preview. Artwork and its generation
 records are described in the [portrait asset guide](materials/portraits/README.md).
