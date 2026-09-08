@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+The September 8 trap-cost feedback build on `feature/trap-placement-cost-feedback`
+passes 141 focused trap/door checks (81 failures before), 496 existing action
+checks, Release compilation and runtime preparation. It retains complete fork
+`08610de8`, including workshop scheduling, and adds numeric placement costs beside
+the hand for traps and doors. The executable is dated 2026-09-08 10:35:28,
+is 4,469,760 bytes and has SHA-256
+`B7A8170DA48C63779B4CC490642F1C80C9A88B732408D705391BDE974AC73114`.
+Logs use `build/windows/trap-cost-`; the focused generator is
+`build/windows/generate-trap-cost-probe.py`, reusing the existing action fixture.
+These tests simulate world/network inputs and do not establish visual or gameplay
+acceptance; the user still needs to check price placement/readability, invalid
+targets, GUI entry and cancellation. No game was launched or branch pushed.
+
 The September 8 workshop-order build on `feature/workshop-order-scheduling`
 passes 13 focused scheduling/save-block checks, Release compilation and runtime
 preparation. The executable is dated 2026-09-08 10:24:53, is 4,469,248 bytes,
