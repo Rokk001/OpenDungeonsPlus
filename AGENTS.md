@@ -57,7 +57,37 @@ Write and maintain all project documentation in English.
 Use English for Git-related text, including commit messages, pull request titles,
 descriptions and review comments.
 
+## User status-reporting and rule-persistence preferences
+
+Maintain `docs/internal/OPEN-TASKS-OVERVIEW.md` as the concise, current task
+overview throughout implementation. The user explicitly approved this workflow.
+Use only the two-column task/status table, with short status labels.
+Mark the currently worked task with `RUNNING` in its existing status cell.
+Do not add a heading, introductory text, extra marker column, long explanations,
+commit IDs or verification details to this overview. Keep the task order stable.
+Update the marker when work changes or pauses; do not leave a stale active marker.
+Reflect accepted completion and canceled work promptly instead of reopening
+them or inventing additional verification tasks. Keep detailed evidence in the
+linked internal task notes and this overview outside functional Git contributions.
+
+The user explicitly requires progress reports as a table with one task and its
+status per row, without replacing the table with prose. When asked for the status
+of open tasks, include only open tasks; omit completed or accepted tasks.
+
+Whenever the user provides a new working rule, save it during that same turn in
+the relevant project instructions and the permitted cross-session memory notes;
+do not merely acknowledge it in chat. Verify the write before claiming it was
+saved. Keep these user preferences subject to higher-priority runtime instructions.
+
 ## Product specifications and documentation boundaries
+
+For roadmap behavior and presentation questions, follow the sole original
+reference specified in `docs/internal/README.md`; the user has delegated these
+decisions to that reference. Research missing details independently instead of
+asking the user to choose an alternative or whether to retain a competing fork
+interaction. Missing evidence is a research gap, not a pending user preference.
+Apply reference-required changes within the requested scope while preserving
+unrelated completed work; record named comparisons only in the internal area.
 
 Use the approved specifications in the [local planning index](docs/internal/README.md)
 for roadmap-driven work and preserve completed items. Keep detailed reference
@@ -68,6 +98,12 @@ or clone positioning. The user maintains the ignore rules for the internal area.
 Do not rewrite existing Git history without an explicit request.
 
 ## Project setup
+
+When the user defines a new goal, identify its functional features and create one
+separate work branch per feature before implementation begins. Perform the
+implementation inside its assigned branch from the latest complete fork state.
+Do not implement new goal work in a shared checkout and split it into branches
+afterward.
 
 Before implementing any request, inspect the current repository for an existing
 solution and trace how it works, including its entry points, storage paths and

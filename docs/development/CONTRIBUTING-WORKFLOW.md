@@ -146,9 +146,12 @@ The original project is needed as upstream when you want to incorporate its new
 changes or contribute your own changes back through a pull request;
 both are optional if you only want to continue development in your own fork.
 
-Use a separate work branch for each task even in the fork. For work solely
-in the fork, create it from your own current development state so that
-existing changes of your own are preserved. The following steps,
+When a new goal is defined, identify its functional features and create one
+separate work branch per feature before implementation starts. Perform each
+implementation inside its assigned branch; do not develop the goal in a shared
+checkout and split it afterward. For work solely in the fork, create each branch
+from your own current complete development state so that existing changes of
+your own are preserved. The following steps,
 in contrast, describe a contribution to the original project and start its
 work branch directly from the upstream state.
 
