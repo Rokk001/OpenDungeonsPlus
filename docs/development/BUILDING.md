@@ -1,5 +1,22 @@
 # Configuring and compiling on Windows
 
+The September 8 navigation-tooltip follow-up on `fix/tooltip-hand-occlusion`
+uses the existing larger font for the four main HUD category buttons. Tooltip
+frames resize with the font, and ordinary targets restore default inheritance.
+Release compilation and runtime preparation pass. The normal executable is
+dated 2026-09-08 13:52:54, is 4,485,120 bytes, SHA-256
+`B7505C8F0652A348AB5399A42F0CA158CB56F33408C90F21ABD4FBAE60432AAD`.
+Build/runtime logs: `build/windows/navigation-tooltip-build.log` and
+`build/windows/navigation-tooltip-runtime.log`.
+The installed UI probe passes 42,521 checks, including all four category fonts,
+frame fit, hand exclusion, screen edges and restoring ordinary tooltip fonts
+across the existing resolution/scale matrix. The combined real-hand/font render
+passes 1,370 checks and was visually inspected. Reproduce with the generators
+and matching build scripts named `navigation-tooltip-preview` and
+`navigation-tooltip-hand-preview` in `build/windows`.
+User visual acceptance remains open; no game was launched. README reflects the
+larger category labels; this unreleased correction needs no version bump.
+
 The September 8 pointing-contour follow-up on `fix/tooltip-hand-occlusion`
 removes empty mesh-box padding from the tooltip exclusion area while preserving
 other hand poses and the existing pointer alignment. It requests software-skinned
