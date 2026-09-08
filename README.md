@@ -71,7 +71,8 @@ traps show gold per tile; spells show mana per cast or creature, including the
 current price of the next summoned worker. Detailed creature, resource, minimap
 and message help also appears above, with concise local labels. Menus and dialogs
 retain their local help without duplicating it in the upper strip.
-Local help is placed outside the visible hand and kept inside the screen.
+Local help appears to the right of the visible hand, using another side when
+needed to keep it inside the screen.
 
 The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.

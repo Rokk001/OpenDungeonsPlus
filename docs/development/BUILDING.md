@@ -1,5 +1,25 @@
 # Configuring and compiling on Windows
 
+The September 8 camera-relative tooltip correction on `fix/tooltip-hand-occlusion`
+supersedes the initial clearance verification below: actual game captures still
+showed overlap because the hand envelope included the overlay's world-camera
+transform. Camera-local composition now keeps help to the right of the visible
+hand, with screen-edge fallback. The movement handler also uses the correct
+CEGUI element-event payload. The accepted list-pointer correction is preserved.
+Release compilation and runtime preparation pass. The normal executable is
+dated 2026-09-08 13:05:28, is 4,482,048 bytes, SHA-256
+`B5D46298A04B7ED72F96B88A484943812F83AF137924E2F10C20838891103040`.
+Build/runtime logs use `build/windows/tooltip-camera-`.
+The installed UI probe passes 23,621 checks. The real-mesh camera regression
+passes 917 checks (150 failed before), comparing all envelope edges against an
+independent world-view projection under three camera transforms. The combined
+real-hand/CEGUI render passes 918 checks and was visually inspected.
+Reproduce with `build/windows/build-tooltip-clearance-preview.ps1`,
+`build/windows/build-tooltip-camera-alignment.ps1` and
+`build/windows/build-tooltip-hand-combined.ps1`. These are isolated probes;
+user gameplay acceptance remains open. No game was launched or stopped.
+README describes the placement; no version bump is needed for this unreleased fix.
+
 The September 8 pointing-tip alignment on `fix/pointing-hand-list-alignment`
 retains the tooltip-clearance correction below and passes Release compilation
 and runtime preparation. The normal executable is dated 2026-09-08 12:47:27,
