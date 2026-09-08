@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+The September 8 room-navigation follow-up makes a room-button right-click fly
+the camera to the corresponding owned room and cycle multiple rooms of the same
+type in stable map order. The focused room-component probe passes 17 checks,
+including ownership, removal, irregular rooms and wooden/stone bridges. Clean
+Release compilation and runtime preparation pass. The normal executable is dated
+2026-09-08 19:03:04, is 4,490,240 bytes, SHA-256
+`C0D0C7FC4D7DEB7AEB3E5EE7FB3DD5C447592A28DBD5CACBA9406E49F83806B0`.
+Logs use `build/windows/room-navigation-` and `map-focus-probe-results.log`.
+README documents the control; version 0.7.1 remains unchanged because no release
+was requested and the project has no changelog. The user accepted the gameplay
+result on September 8, 2026.
+
 The final September 8 navigation-label adjustment increases only the category
 font from 12 to 13 points using the existing bundled typeface. Release/runtime
 preparation, 42,521 installed UI checks and 1,370 combined hand/render checks
