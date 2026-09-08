@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+The final September 8 navigation-label adjustment increases only the category
+font from 12 to 13 points using the existing bundled typeface. Release/runtime
+preparation, 42,521 installed UI checks and 1,370 combined hand/render checks
+pass; the rendered result was inspected. The normal executable is dated
+2026-09-08 14:17:17, is 4,485,120 bytes, SHA-256
+`7C1371C296F7DD14D329507996E997DFAAF10477FEE36D9163FA309D8F032BB7`.
+Build/runtime logs use `build/windows/navigation-tooltip-final-`; the same
+navigation-tooltip probes below now verify the 13-point font and its frame.
+README remains accurate and no release/version change is needed. The scoped
+tooltip task is closed under the user's final small-increase instruction;
+no manual game was launched and this does not close the broader roadmap.
+
 The September 8 navigation-tooltip follow-up on `fix/tooltip-hand-occlusion`
 uses the existing larger font for the four main HUD category buttons. Tooltip
 frames resize with the font, and ordinary targets restore default inheritance.
