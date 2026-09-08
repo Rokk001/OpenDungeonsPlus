@@ -9,6 +9,8 @@ plugins.cfg
 plugins_d.cfg
 resources.cfg
 
+docs/internal
+
 *.bin
 *.dll
 *.exe
