@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The September 8 worker-creation effect adds a short turquoise-green spark burst
+to workers created by the summon-worker spell without changing ordinary creature
+spawning or worker behaviour. The production particle and material scripts pass
+the 10-check headless OGRE probe. Release compilation and runtime preparation
+pass, and the user accepted the visual result in game. The normal executable is
+dated 2026-09-08 20:58:21, is 4,491,264 bytes, SHA-256
+`CEA36C7510853B7129E3703F811F0DF5662367FFAB0797B2D3209DBA934D5C53`.
+
 The final September 8 navigation-label adjustment increases only the category
 font from 12 to 13 points using the existing bundled typeface. Release/runtime
 preparation, 42,521 installed UI checks and 1,370 combined hand/render checks

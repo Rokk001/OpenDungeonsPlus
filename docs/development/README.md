@@ -73,6 +73,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   callers to the existing server packet format, with before/after evidence.
 - [Creature panel](CREATURE-PANEL.md): per-type portraits, activity/mood views,
   population transmission, pickup/focus controls and verification limits.
+- [Worker creation effect](WORKER-CREATION-EFFECT.md): a short networked magical
+  spark burst for workers created by the summon-worker spell.
 - [Creature selection by level](CREATURE-LEVEL-SELECTION.md): highest/lowest
   eligible selection through the existing keyboard and pickup paths.
 - [Creature picker counts](CREATURE-PICKER-COUNTS.md): reducing counts after
