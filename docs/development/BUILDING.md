@@ -1,5 +1,28 @@
 # Configuring and compiling on Windows
 
+The September 8 action-cost tooltip build on `feature/action-cost-tooltips`
+retains the complete fork and adds hover prices to all 27 building, workshop
+and spell actions. Release compilation and runtime preparation succeeded.
+The normal executable is dated 2026-09-08 11:42:42, is 4,475,392 bytes and has
+SHA-256 `B7BB407ADBF91B072BB3A91BEE00D3531DC2111A543B86684DD7E2A956A10B56`.
+Logs: `build/windows/action-cost-tooltips-build.log` and
+`build/windows/action-cost-tooltips-runtime.log`. Runtime staging was repeated
+successfully after the isolated UI probe released its DLLs.
+
+The installed Ogre/CEGUI action-panel probe passes 20,856 checks, including
+119 added tooltip checks and the existing scaling/click regressions.
+Reproduce with `build/windows/build-action-cost-preview.ps1`; the generator
+extracts the production cost formatting and hover-update methods. Price-service
+responses and game entities are simulated; spell expectations come from the
+existing handlers and configuration. Worker price refresh is checked against
+changing helper responses, not a live population simulation.
+Three rendered category previews were inspected under
+`build/reference-audit/action-cost-*.png`. Parentheses preserve the price in
+CEGUI's parsed tooltip text; square brackets were observed to hide it as markup.
+The normal executable is ready for user hover testing; no game was launched.
+README usage was updated; the version remains unchanged because this is not a
+release operation. Private acceptance notes remain outside the contribution.
+
 The hand-price scaling correction is now in the normal executable. After the
 previously observed user game exited, the normal Release link and runtime
 preparation succeeded at 2026-09-08 11:20:07. The executable
