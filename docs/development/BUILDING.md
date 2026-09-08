@@ -1,5 +1,24 @@
 # Configuring and compiling on Windows
 
+The September 8 pointing-tip alignment on `fix/pointing-hand-list-alignment`
+retains the tooltip-clearance correction below and passes Release compilation
+and runtime preparation. The normal executable is dated 2026-09-08 12:47:27,
+is 4,482,048 bytes, SHA-256
+`06C7BB3807C4E77DA0AAD389D3F571FD29898BF18FE9AD75DFEDA8E3BB165871`.
+Build/runtime logs use `build/windows/pointing-tip-`.
+The real Ogre mesh/projection audit passes 242 checks across five resolutions,
+three vertical fields of view and centre/corner positions: measured distal
+fingertip error stays below 0.02 pixel, the same 20-pixel row is identified,
+tooltip exclusion still contains the translated tip, six other poses retain
+their original origin and the existing transition reaches both correct endpoints.
+Run `build/windows/build-pointing-tip-alignment.ps1`; the tip measurement is
+derived independently from mesh vertices, not the calibration constant.
+The rendered fingertip/cursor-cross preview was inspected after increasing the
+fixture camera's far clip to include its cursor plane. These are isolated tests,
+not live list interaction or user acceptance. No game was launched or stopped.
+README and version remain accurate: this restores existing pointing behavior,
+adds no control and is not a release. Only build evidence needs updating.
+
 The September 8 tooltip-clearance correction on `fix/tooltip-hand-occlusion`
 passes Release compilation and runtime preparation. The normal executable is
 dated 2026-09-08 12:40:26, is 4,481,024 bytes, SHA-256
