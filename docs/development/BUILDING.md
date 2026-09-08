@@ -1,5 +1,21 @@
 # Configuring and compiling on Windows
 
+The September 8 tooltip-clearance correction on `fix/tooltip-hand-occlusion`
+passes Release compilation and runtime preparation. The normal executable is
+dated 2026-09-08 12:40:26, is 4,481,024 bytes, SHA-256
+`5C1A27FEED9A596B7EADA21370886950787B2CFA084E0EA6B90BB4C1E1C99421`.
+Logs use `build/windows/tooltip-clearance-`.
+The installed Ogre/CEGUI probe passes 23,621 checks, including 2,700 added
+screen-bound, hand-envelope clearance and text-preservation assertions across
+five resolutions and repeated scale changes. The UI fixture supplies a hand
+envelope; a separate real-asset projection check confirms the visible fingertip
+lies inside the production projected bounds. The room-label preview was inspected.
+The old settings probe required adapting to current action-layout bindings;
+its failures were fixture drift, not gameplay failures. No manual game was run.
+Reproduction: `build/windows/build-tooltip-clearance-preview.ps1` and
+`build/windows/build-hand-tip-audit.ps1`. User appearance acceptance remains open.
+README is updated; no version bump is required for this unreleased correction.
+
 The September 8 context-help correction on `fix/context-help-duplication`
 retains the complete fork and separates concise pointer labels from detailed
 upper-strip descriptions. Release compilation and runtime preparation succeeded.
