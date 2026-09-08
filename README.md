@@ -54,6 +54,8 @@ to close it without moving. The detail window follows the pointer.
 The magnifier button beside the minimap zooms it in with a left-click and out with
 a right-click; clicking the minimap moves the camera immediately.
 H focuses the dungeon heart, P cycles owned portals and F focuses the next fight.
+Right-click a room type in the Rooms panel to fly to an owned room of that type;
+repeated right-clicks cycle through multiple rooms in map order.
 The default minimap uses terrain and owner colours, with darker fortified walls
 and a dotted heart direction when zoomed out; saved renderer preferences remain available.
 The minimap and full map show the current camera view as a thin white outline.

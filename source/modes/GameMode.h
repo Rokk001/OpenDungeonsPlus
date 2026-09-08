@@ -27,6 +27,7 @@
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
+#include <map>
 #include <memory>
 
 namespace CEGUI
@@ -324,7 +325,7 @@ private:
     void focusRoom(RoomType type);
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
     int mSavedMiniMapZoom = 0;
-    size_t mIndexPortal = 0;
+    std::map<RoomType, size_t> mRoomFocusIndices;
     bool mMapKeyDown = false;
 
 
