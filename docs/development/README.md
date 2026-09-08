@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Workshop order scheduling](WORKSHOP-ORDER-SCHEDULING.md): production order,
+  save-order preservation and focused regression checks.
+
 - [Creature portrait export](../../tools/portraits/README.md): tracked tooling to
   export and verify current creature portraits for asset work.
 
