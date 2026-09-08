@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The September 8 idle-terrain context build on `feature/idle-terrain-context`
+passes 12 focused context checks (nine failures before), Release compilation and
+runtime preparation. It retains complete fork `0eb801e3`, including trap costs
+and workshop scheduling, and adds existing terrain names and ownership guidance
+to the top context strip without making terrain an actionable hand target.
+The executable is dated 2026-09-08 10:42:36, is 4,470,272 bytes and has SHA-256
+`77E63E48A4B147512CBDBF9F17511E2D28E6B286C451FA9D9DDAF9F228AD8F25`.
+Logs use `build/windows/idle-terrain-`; the generator is
+`build/windows/generate-idle-terrain-probe.py`. Tile predicates are simulated in
+this focused check; the user still needs to inspect in-game text and hand pose.
+
 The September 8 trap-cost feedback build on `feature/trap-placement-cost-feedback`
 passes 141 focused trap/door checks (81 failures before), 496 existing action
 checks, Release compilation and runtime preparation. It retains complete fork
