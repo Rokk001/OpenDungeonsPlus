@@ -1,5 +1,26 @@
 # Configuring and compiling on Windows
 
+The final September 8 creature-readability follow-up continuously shows a
+softened, segmented owner-coloured health ring above every visible creature. Its centre
+alternates the level with the established hunger, tiredness, mood and activity
+symbols, including the previously omitted unhappy state, while preserving the
+existing autonomous food, sleep, work-refusal, conflict and departure paths.
+The ordinary level caption is enlarged and optically centred inside the ring.
+The unhappy display is derived from the negotiated allied mood value and does
+not extend the legacy overlay packet. The source-path probe passes 25 checks,
+the deterministic asset probe 26, the real OGRE overlay render 234, and the
+serializer/mood/activity probe 1,117. Release compilation and runtime preparation
+pass. A separate 27-check probe executes the production overlay cycle across
+health states, needs, the level interval and visibility rules. The OGRE matrix
+covers all eight health states in all eight configured player colours. The normal
+executable is dated 2026-09-08 20:34:19, is 4,490,752 bytes,
+SHA-256
+`9221DF8E21452ED11010E228404492926872F458E9346F505C6F84678FEA7905`.
+The initial build attempts were invalid before compilation because the calling
+environment contained both `Path` and `PATH`; removing only the duplicate from
+the temporary build process allowed the documented environment helper to run.
+The user accepted the gameplay appearance on September 8, 2026.
+
 The final September 8 navigation-label adjustment increases only the category
 font from 12 to 13 points using the existing bundled typeface. Release/runtime
 preparation, 42,521 installed UI checks and 1,370 combined hand/render checks

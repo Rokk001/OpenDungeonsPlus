@@ -73,6 +73,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   callers to the existing server packet format, with before/after evidence.
 - [Creature panel](CREATURE-PANEL.md): per-type portraits, activity/mood views,
   population transmission, pickup/focus controls and verification limits.
+- [Creature health and needs](CREATURE-HEALTH-AND-NEEDS.md): persistent
+  owner-coloured health rings with centred need and mood states over the
+  existing autonomous behaviour paths.
 - [Creature selection by level](CREATURE-LEVEL-SELECTION.md): highest/lowest
   eligible selection through the existing keyboard and pickup paths.
 - [Creature picker counts](CREATURE-PICKER-COUNTS.md): reducing counts after
