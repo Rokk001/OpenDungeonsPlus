@@ -65,6 +65,10 @@ The upper resource strip shows current mana and gold beside round badges;
 mana change appears on a smaller line below, and the gold tooltip includes
 storage capacity.
 
+Hover building, workshop or spell icons to see their current cost in the tooltip
+and upper context strip. Buildings and traps show gold per tile; spells show
+mana per cast or creature, including the current price of the next summoned worker.
+
 The active HUD category has a colored inset and a gold frame that remain visible
 when the pointer moves away or hovers over another category.
 The category symbols are a person, house, wand and pickaxe for Creatures, Rooms,
