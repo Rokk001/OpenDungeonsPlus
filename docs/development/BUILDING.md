@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The hand-price scaling correction is now in the normal executable. After the
+previously observed user game exited, the normal Release link and runtime
+preparation succeeded at 2026-09-08 11:20:07. The executable
+`build/windows/opendungeons-plus.exe` is 4,470,784 bytes, SHA-256
+`D73C84E18D066AD281A883B0A2FB7F159F1F4BB45EB974486431E28D65FC25BD`.
+Logs: `build/windows/hand-price-scale-final-build.log` and
+`build/windows/hand-price-scale-runtime.log`. This supersedes the pending
+replacement statement in the historical candidate record below. The assistant
+did not launch or terminate the game; final price readability remains user QA.
+
 The September 8 hand-price scaling correction on `feature/hand-price-scaling`
 passes 30 focused checks using the installed Ogre text overlay (four failures
 before), including scale increases/decreases, unchanged other text, long price
