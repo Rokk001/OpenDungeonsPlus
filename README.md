@@ -73,6 +73,9 @@ The production button above the minimap (also in F10 Options) shows current
 workshop work and pending trap priorities. Select an order and use Move up/down
 to change its priority; started items are retained, and workshops continue to
 skip orders already covered by stock or unreachable from their location.
+The adjacent Skill button opens the existing research tree; both research and
+production are also available through F10. The four original corner controls
+are retained, making six minimap navigation buttons in total.
 
 The upper resource strip shows current mana and gold beside round badges;
 mana change appears on a smaller line below, and hovering gold shows storage

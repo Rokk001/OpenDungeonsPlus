@@ -69,6 +69,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   entries or smooth skeletal settling, sustained rest and lifecycle cleanup.
 - [Trap production queue](TRAP-PRODUCTION-QUEUE.md): owner-only priority and
   workshop progress, server-validated reordering, minimap and F10 access.
+- [Research progression](RESEARCH-PROGRESSION.md): existing research path,
+  minimap navigation checkpoint and the remaining upgrade specification.
 - [Main-menu atmosphere](MAIN-MENU-ATMOSPHERE.md): artwork-aligned fog, fire,
   acid and lightning layers with multi-resolution render verification.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked

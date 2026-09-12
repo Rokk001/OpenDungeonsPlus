@@ -1,5 +1,12 @@
 # Configuring and compiling on Windows
 
+The September 12 research-navigation checkpoint retains all four minimap corner
+controls and adds the research button next to production. All 348 installed-CEGUI
+checks pass, including the actual tree-toggle subscription; real 800x600 and
+1280x720 views were inspected. Release compilation and runtime preparation pass.
+This is not completion of the requested upgrade levels; see
+[the remaining research scope](RESEARCH-PROGRESSION.md).
+
 The September 12 production-queue update passes 35 actual reorder/packet checks,
 13 existing workshop/save regressions and 288 installed-CEGUI layout/controller
 checks. Real 800x600 and 1280x720 views were inspected. Release compilation and
