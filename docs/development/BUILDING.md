@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The September 13 combat-animation follow-up passes 5,062 isolated real-Ogre
+checks across all 33 models and ten GPU blood-transparency checks. Release
+compilation and runtime preparation pass; see [combat feedback](CREATURE-COMBAT-FEEDBACK.md).
+The combined executable contains the six queued research, production, cursor,
+feeding, sleep and combat outcomes. It is dated 2026-09-13 01:06:16, is 4,699,648
+bytes, SHA-256 `643304ABBBFDB3EBF6B9829C7DBD53DF55AEC0640137B7E492A4C5B17B5B5334`.
+No game was launched; gameplay and visual acceptance remain with the user.
+
 The September 13 sleep/bed-alignment correction passes 3,049 isolated Ogre
 checks across all 33 creature models, both bed rotations and endpoint level
 scales, plus Release compilation and runtime preparation; see

@@ -26,6 +26,7 @@
 #include <map>
 #include <OgreSingleton.h>
 #include <OgreMath.h>
+#include <OgreSkeleton.h>
 #include <OgreDefaultDebugDrawer.h>
 #include <cstdint>
 #include "entities/GameEntity.h"
@@ -305,9 +306,9 @@ private:
     struct CreatureCombatReaction
     {
         Creature* mCreature;
-        Ogre::SceneNode* mNode;
-        Ogre::Vector3 mBaseScale;
-        Ogre::Real mElapsed;
+        Ogre::Entity* mEntity;
+        Ogre::AnimationState* mAnimation;
+        Ogre::SkeletonAnimationBlendMode mPreviousBlendMode;
     };
     std::vector<CreatureCombatReaction> mCreatureCombatReactions;
     uint64_t mCreatureCombatEffectNumber = 0;
