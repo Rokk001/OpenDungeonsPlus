@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+The September 12 room-construction effect adds a short violet-blue spark burst
+to each newly built gameplay room tile after the normal tile refresh. The
+production particle and material scripts pass the 10-check headless OGRE probe,
+and the notification/render-lifecycle source probe passes 12 checks. The real
+OGRE render preview shows nine simultaneous tile effects with 324 live particles;
+its output was visually inspected. Release compilation and runtime preparation
+pass; CTest has no registered tests. The normal executable is dated
+2026-09-12 15:45:25, is 4,496,896 bytes, SHA-256
+`21A15287F86C5FFA8787B326D777B9E169C40E5966C943A8C62A005F9A5525E1`.
+The user accepted the in-game result on September 12, 2026; no game was launched
+by the implementation agent. See [the room-construction effect note](ROOM-CONSTRUCTION-EFFECT.md).
+
 The September 8 community exit-page update replaces the loose recruitment text
 with a centred, skinned panel and explicit Discord and Close actions. The real
 Ogre/CEGUI render probe passes 150 layout, text-fit and hit-target checks across
