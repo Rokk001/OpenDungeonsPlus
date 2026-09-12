@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The September 12 main-menu atmosphere update keeps the supplied static artwork
+and adds ten aligned screen-space layers for slow fog, flickering firelight,
+pulsing green acid and intermittent lightning. The production Ogre material
+parser and render fixture pass 280 checks across five resolutions and three UI
+scales, and the 1920x1080 output was visually inspected. Release compilation
+and runtime preparation pass; CTest has no registered tests. The executable is
+dated 2026-09-12 18:44:37, is 4,598,272 bytes, SHA-256
+`9DAC0D7F6EA72FABC2177C05B80FF6AC2054F826A6923F14D91F3D2A2B0C7D9D`.
+No game was launched by the implementation agent; the in-game motion and timing
+check remains pending. See [the main-menu atmosphere note](MAIN-MENU-ATMOSPHERE.md).
+
 The September 12 creature-combat update varies and accelerates authored attack
 clips, adds a short target reaction, displays sparks for armed clashes and subtle
 blood for applied body damage, and adds a Game setting that disables blood.
