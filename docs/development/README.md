@@ -80,6 +80,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   existing autonomous behaviour paths.
 - [Worker creation effect](WORKER-CREATION-EFFECT.md): a short networked magical
   spark burst for workers created by the summon-worker spell.
+- [Room construction effect](ROOM-CONSTRUCTION-EFFECT.md): a short networked
+  magical spark burst for successfully built gameplay room tiles.
 - [Creature selection by level](CREATURE-LEVEL-SELECTION.md): highest/lowest
   eligible selection through the existing keyboard and pickup paths.
 - [Creature picker counts](CREATURE-PICKER-COUNTS.md): reducing counts after
