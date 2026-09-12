@@ -1,5 +1,18 @@
 # Creature feeding animations
 
+## Reported black rectangles
+
+The feather material alpha-blends a flare image whose black background has
+fully opaque alpha (including pixel 0,0). The narrow particle quads therefore
+render black rectangles, not cut-out feathers. Replace that flare sampling
+with a small unlit feather-shaped shader using particle UV and vertex colour;
+retain the existing timing, movement, colour/fade and feeding mechanics.
+The old material fails the real framebuffer corner-transparency check and
+visibly renders a black quad; the replacement passes all 2,455 renderer checks.
+The permanent `source/tests/check_feather_material.py` additionally passes ten
+GPU checks for all four transparent corners, a visible vane and complete fade.
+Release build and runtime preparation pass; the actual in-game meal needs retest.
+
 ## Existing path and scoped change
 
 Eating already uses an authoritative chicken lock, removes the consumed chicken
