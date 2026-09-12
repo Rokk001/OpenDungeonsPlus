@@ -126,18 +126,9 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
         {
             case AtmosphereEffectType::fog:
             {
-                alpha = 0.075f + 0.02f * Ogre::Math::Sin(time * 0.7f);
-                scaleX = 1.0f + 0.08f * Ogre::Math::Sin(time * 0.45f);
-                scaleY = 1.0f + 0.05f * Ogre::Math::Sin(time * 0.6f);
-                driftX = 0.025f * Ogre::Math::Sin(time * 0.18f);
-                driftY = 0.012f * Ogre::Math::Sin(time * 0.13f);
-                const unsigned int frame = static_cast<unsigned int>(time * 3.0f) % 15;
-                const Ogre::Real left = static_cast<Ogre::Real>(frame % 5) / 5.0f;
-                const Ogre::Real top = static_cast<Ogre::Real>(frame / 5) / 3.0f;
-                effect.mRectangle->setUVs(Ogre::Vector2(left, top),
-                    Ogre::Vector2(left, top + 1.0f / 3.0f),
-                    Ogre::Vector2(left + 1.0f / 5.0f, top),
-                    Ogre::Vector2(left + 1.0f / 5.0f, top + 1.0f / 3.0f));
+                alpha = 0.19f + 0.035f * Ogre::Math::Sin(time * 0.24f);
+                driftX = 0.009f * Ogre::Math::Sin(time * 0.11f);
+                driftY = 0.003f * Ogre::Math::Sin(time * 0.16f);
                 break;
             }
             case AtmosphereEffectType::fire:
@@ -145,7 +136,7 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
                 const Ogre::Real flicker = 0.78f +
                     0.15f * Ogre::Math::Sin(time * 8.0f) +
                     0.07f * Ogre::Math::Sin(time * 13.0f);
-                alpha = 0.22f * flicker;
+                alpha = 0.48f * flicker;
                 scaleX = 0.94f + 0.06f * flicker;
                 scaleY = 0.90f + 0.14f * flicker;
                 driftY = 0.003f * Ogre::Math::Sin(time * 11.0f);
@@ -164,9 +155,21 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
                     flash = 1.0f - cycle / 0.12f;
                 else if(cycle >= 0.22f && cycle < 0.30f)
                     flash = 0.7f * (1.0f - (cycle - 0.22f) / 0.08f);
-                alpha = 0.10f + 0.52f * flash;
+                alpha = 0.025f + 0.70f * flash;
                 scaleX = 0.9f + 0.15f * flash;
                 scaleY = 1.0f + 0.08f * flash;
+                break;
+            }
+            case AtmosphereEffectType::ember:
+            {
+                const Ogre::Real lifetime = 2.4f + 0.35f * effect.mPhase;
+                const Ogre::Real progress = std::fmod(time, lifetime) / lifetime;
+                alpha = 0.85f * Ogre::Math::Sin(Ogre::Math::PI * progress);
+                driftX = 0.011f * Ogre::Math::Sin(time * 1.4f + effect.mPhase)
+                    * progress;
+                driftY = -0.09f * progress;
+                scaleX = 1.0f - 0.5f * progress;
+                scaleY = scaleX;
                 break;
             }
         }
@@ -185,7 +188,10 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
             effect.mMaterialName, "Graphics");
         Ogre::ColourValue colour = effect.mColour;
         colour.a = alpha;
-        material->getTechnique(0)->getPass(0)->setDiffuse(colour);
+        Ogre::GpuProgramParametersSharedPtr parameters =
+            material->getTechnique(0)->getPass(0)->getFragmentProgramParameters();
+        parameters->setNamedConstant("tint", colour);
+        parameters->setNamedConstant("time", time);
     }
 }
 
@@ -240,14 +246,27 @@ void RenderSceneMenu::createAtmosphere(RenderManager& renderManager)
         Ogre::Vector2(0.879f, 0.105f), Ogre::Vector2(0.075f, 0.19f),
         Ogre::ColourValue(0.16f, 1.0f, 0.32f), 0.0f);
     addEffect(AtmosphereEffectType::fog, "MainMenuAtmosphereFog",
-        Ogre::Vector2(0.17f, 0.66f), Ogre::Vector2(0.26f, 0.27f),
-        Ogre::ColourValue(0.48f, 0.52f, 0.55f), 0.4f);
+        Ogre::Vector2(0.21f, 0.73f), Ogre::Vector2(0.39f, 0.23f),
+        Ogre::ColourValue(0.38f, 0.40f, 0.42f), 0.4f);
     addEffect(AtmosphereEffectType::fog, "MainMenuAtmosphereFog",
-        Ogre::Vector2(0.83f, 0.66f), Ogre::Vector2(0.26f, 0.27f),
-        Ogre::ColourValue(0.48f, 0.52f, 0.55f), 2.6f);
+        Ogre::Vector2(0.79f, 0.73f), Ogre::Vector2(0.39f, 0.23f),
+        Ogre::ColourValue(0.32f, 0.40f, 0.37f), 12.6f);
     addEffect(AtmosphereEffectType::fog, "MainMenuAtmosphereFog",
-        Ogre::Vector2(0.50f, 0.58f), Ogre::Vector2(0.28f, 0.20f),
-        Ogre::ColourValue(0.33f, 0.38f, 0.39f), 4.8f);
+        Ogre::Vector2(0.50f, 0.91f), Ogre::Vector2(0.82f, 0.14f),
+        Ogre::ColourValue(0.31f, 0.35f, 0.36f), 24.8f);
+
+    for(const Ogre::Vector2& fire : {Ogre::Vector2(0.082f, 0.485f),
+        Ogre::Vector2(0.918f, 0.485f), Ogre::Vector2(0.302f, 0.145f),
+        Ogre::Vector2(0.698f, 0.145f)})
+    {
+        for(unsigned int ember = 0; ember < 6; ++ember)
+        {
+            addEffect(AtmosphereEffectType::ember, "MainMenuAtmosphereGlow",
+                fire, Ogre::Vector2(0.0025f, 0.006f),
+                Ogre::ColourValue(1.0f, 0.38f, 0.055f),
+                ember * 0.67f + fire.x * 3.0f);
+        }
+    }
 }
 
 void RenderSceneMenu::clearAtmosphere()

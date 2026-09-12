@@ -54,7 +54,8 @@ private:
         fog,
         fire,
         acid,
-        lightning
+        lightning,
+        ember
     };
 
     struct AtmosphereEffect
