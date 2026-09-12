@@ -1,5 +1,9 @@
 # Configuring and compiling on Windows
 
+The September 13 menu-hand correction passes 60 repeated-entry checks and
+2,453 isolated Ogre hand/creature checks, plus Release compilation and runtime
+preparation; see [menu hand cursor](MENU-HAND-CURSOR.md) for the reproduced case.
+
 The September 13 production-priority correction passes 372 installed-CEGUI
 checks (48 delayed-reply failures reproduced before the fix) and 41 actual
 controller/reorder/packet checks, plus Release compilation and runtime staging.
