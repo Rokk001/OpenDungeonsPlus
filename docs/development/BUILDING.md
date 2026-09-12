@@ -1,5 +1,9 @@
 # Configuring and compiling on Windows
 
+The September 13 feeding-material correction passes 2,455 isolated renderer
+checks and ten real GPU transparency/fade checks, plus Release/runtime checks;
+see [feeding animations](CREATURE-FEEDING-ANIMATIONS.md) for the reproduced black-quad defect.
+
 The September 13 menu-hand correction passes 60 repeated-entry checks and
 2,453 isolated Ogre hand/creature checks, plus Release compilation and runtime
 preparation; see [menu hand cursor](MENU-HAND-CURSOR.md) for the reproduced case.
