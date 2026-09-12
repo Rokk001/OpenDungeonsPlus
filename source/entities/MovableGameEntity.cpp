@@ -236,7 +236,8 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
         addedTime *= 1.15;
     mAnimationTime += addedTime;
     if (!getIsOnServerMap() && getAnimationState() != nullptr &&
-        mPrevAnimationState != EntityAnimation::getup_anim)
+        mPrevAnimationState != EntityAnimation::getup_anim &&
+        mPrevAnimationState != EntityAnimation::eat_chicken_anim)
     {
         // If the animation has stopped we set it to idle if we have to
         if(mDestinationPlayIdleWhenAnimationEnds && getAnimationState()->hasEnded())

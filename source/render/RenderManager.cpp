@@ -440,6 +440,8 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
 
 RenderManager::~RenderManager()
 {
+    cancelCreatureFeedingAnimation();
+    clearChickenFeatherEffects();
     clearCreatureCombatEffects();
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
@@ -722,6 +724,8 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    cancelCreatureFeedingAnimation();
+    clearChickenFeatherEffects();
     clearCreatureCombatEffects();
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
@@ -1078,6 +1082,86 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             mSceneManager->destroySceneNode(it->mNodeName);
         it = mRoomConstructionEffects.erase(it);
     }
+
+    for(auto it = mChickenFeatherEffects.begin(); it != mChickenFeatherEffects.end();)
+    {
+        it->mRemainingTime -= timeSinceLastFrame;
+        if(it->mRemainingTime > 0.0f)
+        {
+            ++it;
+            continue;
+        }
+        it->mNode->detachObject(it->mParticleSystem);
+        mSceneManager->destroyParticleSystem(it->mParticleSystem);
+        mSceneManager->destroySceneNode(it->mNode);
+        it = mChickenFeatherEffects.erase(it);
+    }
+
+    std::vector<Creature*> finishedFeeding;
+    for(CreatureFeedingAnimation& feeding : mCreatureFeedingAnimations)
+    {
+        feeding.mElapsed += timeSinceLastFrame;
+        const Ogre::Real progress = std::min(feeding.mElapsed / 2.2f, 1.0f);
+        const Ogre::Real envelope = Ogre::Math::Sin(Ogre::Math::PI * progress);
+        const Ogre::Real frequency = feeding.mStyle == CreatureFeedingStyle::peck ? 7.0f :
+            (feeding.mStyle == CreatureFeedingStyle::heavy ? 2.0f : 4.0f);
+        const Ogre::Real chew = 0.5f - 0.5f * Ogre::Math::Cos(
+            Ogre::Math::TWO_PI * frequency * progress);
+        feeding.mAnimation->setTimePosition(progress * feeding.mAnimation->getLength());
+        Ogre::Vector3 offset = Ogre::Vector3::ZERO;
+        Ogre::Vector3 scale = Ogre::Vector3::UNIT_SCALE;
+        if(feeding.mStyle == CreatureFeedingStyle::peck)
+            offset.y = -0.045f * chew * envelope;
+        else if(feeding.mStyle == CreatureFeedingStyle::lunge)
+            offset.y = -0.12f * chew * envelope;
+        else if(feeding.mStyle == CreatureFeedingStyle::heavy)
+            scale = Ogre::Vector3(1.0f + 0.025f * chew * envelope, 1.0f,
+                1.0f - 0.035f * chew * envelope);
+        else if(feeding.mStyle == CreatureFeedingStyle::coil)
+        {
+            offset.x = 0.06f * Ogre::Math::Sin(progress * Ogre::Math::TWO_PI) * envelope;
+            offset.y = -0.08f * envelope;
+        }
+        feeding.mNode->setPosition(feeding.mBasePosition + feeding.mBaseOrientation * offset);
+        feeding.mNode->setScale(feeding.mBaseScale * scale);
+        feeding.mEntity->_updateAnimation();
+        const Ogre::Vector3 mouth = feeding.mHead != nullptr ?
+            feeding.mHead->_getDerivedPosition() + Ogre::Vector3(0, -0.10f,
+                -feeding.mEntity->getBoundingBox().getSize().z * 0.06f) :
+            Ogre::Vector3(0, -0.25f, feeding.mEntity->getBoundingBox().getSize().z * 0.7f);
+
+        if(feeding.mChickenNode != nullptr)
+        {
+            const Ogre::Real lift = std::min(progress / 0.32f, 1.0f);
+            const Ogre::Real smoothLift = lift * lift * (3.0f - 2.0f * lift);
+            Ogre::Vector3 position = feeding.mChickenStart +
+                (mouth - feeding.mChickenStart) * smoothLift;
+            if(feeding.mStyle == CreatureFeedingStyle::magical)
+                position += Ogre::Vector3(0.09f * Ogre::Math::Sin(lift * Ogre::Math::TWO_PI),
+                    0, 0.18f * Ogre::Math::Sin(lift * Ogre::Math::PI));
+            const Ogre::Real remaining = 1.0f - std::min(std::max((progress - 0.48f) / 0.22f, 0.0f), 1.0f);
+            feeding.mChickenNode->setVisible(remaining > 0.0f);
+            feeding.mChickenNode->setScale(feeding.mChickenScale * std::max(remaining, 0.001f));
+            feeding.mChickenNode->setOrientation(Ogre::Quaternion(
+                Ogre::Degree(80.0f * smoothLift), Ogre::Vector3::UNIT_X) * Ogre::Quaternion(
+                Ogre::Degree(16.0f * Ogre::Math::Sin(feeding.mElapsed * 22.0f)),
+                Ogre::Vector3::UNIT_Y));
+            position -= feeding.mChickenNode->getOrientation() *
+                (feeding.mChickenNode->getScale() * feeding.mChickenEntity->getBoundingBox().getCenter()) * smoothLift;
+            feeding.mChickenNode->setPosition(position);
+            if(feeding.mChickenEntity->hasAnimationState(EntityAnimation::idle_anim))
+                feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * 3.0f);
+        }
+        if(feeding.mFeatherBursts < 2 && progress >= 0.38f + feeding.mFeatherBursts * 0.24f)
+        {
+            createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth));
+            ++feeding.mFeatherBursts;
+        }
+        if(progress >= 1.0f)
+            finishedFeeding.push_back(feeding.mCreature);
+    }
+    for(Creature* creature : finishedFeeding)
+        creature->setAnimationState(EntityAnimation::idle_anim, true);
 
     for(auto it = mCreatureCombatImpactEffects.begin();
         it != mCreatureCombatImpactEffects.end();)
@@ -2011,6 +2095,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
 
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    cancelCreatureFeedingAnimation(curCreature);
     clearCreatureCombatEffects(curCreature);
     mCreatureAttackVariants.erase(curCreature);
     cancelCreatureDropAnimation(curCreature);
@@ -2037,6 +2122,8 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
 
 void RenderManager::rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction)
 {
+    if(gameEntity->getObjectType() == GameEntityType::creature)
+        cancelCreatureFeedingAnimation(static_cast<Creature*>(gameEntity));
     Ogre::SceneNode* node = mSceneManager->getSceneNode(gameEntity->getOgreNamePrefix() + gameEntity->getName() + "_node");
     Ogre::Vector3 tempVector = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
 
@@ -2178,7 +2265,10 @@ void RenderManager::rrDestroyMapLightVisualIndicator(MapLight* curMapLight)
 void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
 {
     if(curEntity->getObjectType() == GameEntityType::creature)
+    {
+        cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureDropAnimation(static_cast<Creature*>(curEntity));
+    }
 
     Ogre::Entity* ent = mSceneManager->getEntity("keeperHandEnt");
     if(ent->hasAnimationState("Pickup"))
@@ -2428,6 +2518,14 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     Creature* dropCreature = nullptr;
     if(curAnimatedObject->getObjectType() == GameEntityType::creature)
         dropCreature = static_cast<Creature*>(curAnimatedObject);
+
+    if(dropCreature != nullptr)
+        cancelCreatureFeedingAnimation(dropCreature);
+    if(anim == EntityAnimation::eat_chicken_anim && dropCreature != nullptr)
+    {
+        startCreatureFeedingAnimation(dropCreature, objectEntity);
+        return;
+    }
 
     if(anim == EntityAnimation::getup_anim && dropCreature != nullptr)
     {
@@ -2779,6 +2877,167 @@ void RenderManager::rrCreateCreatureCombatImpact(Creature* creature,
     }
 }
 
+void RenderManager::startCreatureFeedingAnimation(Creature* creature, Ogre::Entity* entity)
+{
+    cancelCreatureDropAnimation(creature);
+    clearCreatureCombatEffects(creature);
+    const std::string& mesh = entity->getMesh()->getName();
+    CreatureFeedingStyle style = CreatureFeedingStyle::humanoid;
+    if(mesh == "Rat.mesh" || mesh == "Spider.mesh" || mesh == "Roach.mesh" ||
+       mesh == "Scarab.mesh" || mesh == "CaveHornet.mesh")
+        style = CreatureFeedingStyle::peck;
+    else if(mesh == "Dragon.mesh" || mesh == "Troll.mesh" ||
+            mesh == "PitDemon.mesh" || mesh == "NatureMonster.mesh")
+        style = CreatureFeedingStyle::heavy;
+    else if(mesh == "Lizardman.mesh" || mesh == "Wyvern.mesh" || mesh == "Kreatur.mesh")
+        style = CreatureFeedingStyle::lunge;
+    else if(mesh == "Slime.mesh" || mesh == "LavaSpawn.mesh" ||
+            mesh == "lich.mesh" || mesh == "Wizard.mesh" || mesh == "Cultist.mesh")
+        style = CreatureFeedingStyle::magical;
+    else if(mesh == "TentacleAlbine.mesh" || mesh == "TentacleGreen.mesh")
+        style = CreatureFeedingStyle::coil;
+
+    Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
+    const Ogre::Real duration = 2.2f;
+    const Ogre::Real bites = style == CreatureFeedingStyle::peck ? 7.0f :
+        (style == CreatureFeedingStyle::heavy ? 2.0f : 4.0f);
+    if(!skeleton->hasAnimation(EntityAnimation::eat_chicken_anim))
+    {
+        const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
+        Ogre::Animation* feeding = skeleton->createAnimation(EntityAnimation::eat_chicken_anim, duration);
+        for(unsigned short boneIndex = 0; boneIndex < skeleton->getNumBones(); ++boneIndex)
+        {
+            Ogre::Bone* bone = skeleton->getBone(boneIndex);
+            const std::string& name = bone->getName();
+            const bool head = name == "Head" || name == "head" || name == "crown" ||
+                name == "slime_head" || (mesh == "Spider.mesh" && name == "Body2") ||
+                (mesh == "Scarab.mesh" && name == "Bone.001");
+            const bool jaw = name == "Jaw" || name == "jaws" || name == "Mouth" ||
+                name == "JawL" || name == "JawR" || name == "Zahn_L" || name == "Zahn_R";
+            const bool arm = style == CreatureFeedingStyle::humanoid &&
+                (name == "forearm_l" || name == "forearm_r" || name == "LeftForeArm" ||
+                 name == "RightForeArm" || name == "Forearm_L" || name == "Forearm_R" ||
+                 name == "ForeArm_L" || name == "ForeArm_R" || name == "ArmLower.L" ||
+                 name == "ArmLower.R" || name == "forearm.L" || name == "forearm.R");
+            Ogre::NodeAnimationTrack* track = feeding->createNodeTrack(boneIndex);
+            for(unsigned int key = 0; key <= 66; ++key)
+            {
+                const Ogre::Real progress = key / 66.0f;
+                const Ogre::Real envelope = Ogre::Math::Sin(Ogre::Math::PI * progress);
+                const Ogre::Real chew = 0.5f - 0.5f * Ogre::Math::Cos(
+                    Ogre::Math::TWO_PI * bites * progress);
+                Ogre::TransformKeyFrame rest(nullptr, 0);
+                if(idle->hasNodeTrack(boneIndex))
+                    idle->getNodeTrack(boneIndex)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &rest);
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(progress * duration);
+                frame->setTranslate(rest.getTranslate());
+                frame->setScale(rest.getScale());
+                Ogre::Real angle = head ? (8.0f + 12.0f * chew) * envelope : 0.0f;
+                if(jaw)
+                    angle = -24.0f * chew * envelope;
+                if(arm)
+                    angle = -65.0f * envelope;
+                const Ogre::Quaternion basis = bone->_getDerivedOrientation();
+                frame->setRotation(basis.Inverse() *
+                    Ogre::Quaternion(Ogre::Degree(angle), Ogre::Vector3::UNIT_X) *
+                    basis * rest.getRotation());
+                if(name == "slime_mid" || name == "slime_head")
+                    frame->setScale(rest.getScale() * Ogre::Vector3(
+                        1.0f + 0.13f * chew * envelope, 1.0f + 0.13f * chew * envelope,
+                        1.0f - 0.10f * chew * envelope));
+            }
+        }
+    }
+    if(!entity->hasAnimationState(EntityAnimation::eat_chicken_anim))
+        entity->getAllAnimationStates()->createAnimationState(EntityAnimation::eat_chicken_anim, 0, duration);
+    Ogre::AnimationState* animation = setEntityAnimation(entity, EntityAnimation::eat_chicken_anim, false);
+    creature->setAnimationState(animation);
+    Ogre::Bone* head = nullptr;
+    for(const char* name : {"Head", "head", "crown", "slime_head", "Body2", "Bone.001"})
+    {
+        if(entity->getSkeleton()->hasBone(name))
+        {
+            head = entity->getSkeleton()->getBone(name);
+            break;
+        }
+    }
+    Ogre::SceneNode* node = creature->getEntityNode();
+    mCreatureFeedingAnimations.push_back({creature, node, entity, node->getPosition(),
+        node->getOrientation(), node->getScale(), 0.0f, style, animation,
+        nullptr, nullptr, Ogre::Vector3::ZERO, Ogre::Vector3::UNIT_SCALE, head, 0});
+}
+
+void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,
+    const Ogre::Vector3& position)
+{
+    for(CreatureFeedingAnimation& feeding : mCreatureFeedingAnimations)
+    {
+        if(feeding.mCreature != creature || feeding.mChickenEntity != nullptr)
+            continue;
+
+        const std::string name = "FeedingChicken_" + Helper::toString(++mChickenFeatherEffectNumber);
+        feeding.mChickenEntity = mSceneManager->createEntity(name, "Chicken.mesh");
+        feeding.mChickenNode = feeding.mNode->createChildSceneNode(name + "_node");
+        feeding.mChickenNode->attachObject(feeding.mChickenEntity);
+        feeding.mChickenEntity->setQueryFlags(0);
+        feeding.mChickenEntity->setCastShadows(false);
+        feeding.mChickenStart = feeding.mNode->convertWorldToLocalPosition(position);
+        feeding.mChickenScale = Ogre::Vector3::UNIT_SCALE / feeding.mBaseScale;
+        if(chicken != nullptr && chicken->getEntityNode() != nullptr)
+        {
+            feeding.mChickenScale = chicken->getEntityNode()->_getDerivedScale() / feeding.mBaseScale;
+            chicken->getEntityNode()->setVisible(false);
+        }
+        feeding.mChickenNode->setPosition(feeding.mChickenStart);
+        feeding.mChickenNode->setScale(feeding.mChickenScale);
+        setEntityAnimation(feeding.mChickenEntity, EntityAnimation::idle_anim, true);
+        return;
+    }
+}
+
+void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
+{
+    for(auto it = mCreatureFeedingAnimations.begin(); it != mCreatureFeedingAnimations.end();)
+    {
+        if(creature != nullptr && it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+        it->mNode->setPosition(it->mBasePosition);
+        it->mNode->setOrientation(it->mBaseOrientation);
+        it->mNode->setScale(it->mBaseScale);
+        if(it->mChickenEntity != nullptr)
+        {
+            it->mChickenNode->detachObject(it->mChickenEntity);
+            mSceneManager->destroyEntity(it->mChickenEntity);
+            mSceneManager->destroySceneNode(it->mChickenNode);
+        }
+        it = mCreatureFeedingAnimations.erase(it);
+    }
+}
+
+void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position)
+{
+    const std::string name = "ChickenFeathers_" + Helper::toString(++mChickenFeatherEffectNumber);
+    Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(name + "_node", position);
+    Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, "ChickenFeathers");
+    node->attachObject(particles);
+    particles->setQueryFlags(0);
+    mChickenFeatherEffects.push_back({node, particles, 1.5f});
+}
+
+void RenderManager::clearChickenFeatherEffects()
+{
+    for(const ChickenFeatherEffect& effect : mChickenFeatherEffects)
+    {
+        effect.mNode->detachObject(effect.mParticleSystem);
+        mSceneManager->destroyParticleSystem(effect.mParticleSystem);
+        mSceneManager->destroySceneNode(effect.mNode);
+    }
+    mChickenFeatherEffects.clear();
+}
+
 void RenderManager::clearCreatureCombatEffects(Creature* creature)
 {
     for(auto it = mCreatureCombatImpactEffects.begin();
@@ -2814,6 +3073,8 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
 }
 void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position)
 {
+    if(entity->getObjectType() == GameEntityType::creature)
+        cancelCreatureFeedingAnimation(static_cast<Creature*>(entity));
     if(entity->getEntityNode() == nullptr)
     {
         OD_LOG_ERR("Entity do not have node=" + entity->getName());

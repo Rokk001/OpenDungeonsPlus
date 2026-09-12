@@ -179,6 +179,8 @@ public:
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
     void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
         bool bodyDamage, const Ogre::Vector3& attackerPosition);
+    void rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,
+        const Ogre::Vector3& position);
 
     //! \brief Toggles the creatures text overlay
     void rrSetCreaturesTextOverlay(GameMap& gameMap, bool value);
@@ -311,6 +313,45 @@ private:
     uint64_t mCreatureCombatEffectNumber = 0;
     std::map<Creature*, uint32_t> mCreatureAttackVariants;
 
+    enum class CreatureFeedingStyle
+    {
+        peck,
+        lunge,
+        heavy,
+        humanoid,
+        magical,
+        coil
+    };
+
+    struct CreatureFeedingAnimation
+    {
+        Creature* mCreature;
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::Vector3 mBasePosition;
+        Ogre::Quaternion mBaseOrientation;
+        Ogre::Vector3 mBaseScale;
+        Ogre::Real mElapsed;
+        CreatureFeedingStyle mStyle;
+        Ogre::AnimationState* mAnimation;
+        Ogre::SceneNode* mChickenNode;
+        Ogre::Entity* mChickenEntity;
+        Ogre::Vector3 mChickenStart;
+        Ogre::Vector3 mChickenScale;
+        Ogre::Bone* mHead;
+        unsigned int mFeatherBursts;
+    };
+    std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
+
+    struct ChickenFeatherEffect
+    {
+        Ogre::SceneNode* mNode;
+        Ogre::ParticleSystem* mParticleSystem;
+        Ogre::Real mRemainingTime;
+    };
+    std::vector<ChickenFeatherEffect> mChickenFeatherEffects;
+    uint64_t mChickenFeatherEffectNumber = 0;
+
     struct CreatureDropAnimation
     {
         Creature* mCreature;
@@ -355,6 +396,10 @@ private:
     void restoreCreatureGroundPose(Creature* creature);
     void setCreatureDropGroundAnimation(Creature* creature);
     void clearCreatureCombatEffects(Creature* creature = nullptr);
+    void startCreatureFeedingAnimation(Creature* creature, Ogre::Entity* entity);
+    void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
+    void createChickenFeatherEffect(const Ogre::Vector3& position);
+    void clearChickenFeatherEffects();
     void clearRoomConstructionEffects();
 
 
