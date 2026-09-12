@@ -67,6 +67,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   feeding rhythms, head and jaw motion, consumed-chicken presentation and feathers.
 - [Creature sleep transitions](CREATURE-SLEEP-ANIMATIONS.md): authored sleep
   entries or smooth skeletal settling, sustained rest and lifecycle cleanup.
+- [Trap production queue](TRAP-PRODUCTION-QUEUE.md): owner-only priority and
+  workshop progress, server-validated reordering, minimap and F10 access.
 - [Main-menu atmosphere](MAIN-MENU-ATMOSPHERE.md): artwork-aligned fog, fire,
   acid and lightning layers with multi-resolution render verification.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked

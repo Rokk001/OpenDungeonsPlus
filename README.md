@@ -69,6 +69,10 @@ The minimap and full map show the current camera view as a thin white outline.
 An upright N inside the minimap rim tracks world north as the map rotates.
 The four corner controls attach outside the circular map; their curved cutouts
 leave the map visible and clickable.
+The production button above the minimap (also in F10 Options) shows current
+workshop work and pending trap priorities. Select an order and use Move up/down
+to change its priority; started items are retained, and workshops continue to
+skip orders already covered by stock or unreachable from their location.
 
 The upper resource strip shows current mana and gold beside round badges;
 mana change appears on a smaller line below, and hovering gold shows storage
