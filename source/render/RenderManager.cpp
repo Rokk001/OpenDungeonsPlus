@@ -3165,7 +3165,8 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
 {
     if(entity->getObjectType() == GameEntityType::creature)
     {
-        cancelCreatureSleepAnimation(static_cast<Creature*>(entity));
+        if(static_cast<Creature*>(entity)->isMoving())
+            cancelCreatureSleepAnimation(static_cast<Creature*>(entity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(entity));
     }
     if(entity->getEntityNode() == nullptr)
