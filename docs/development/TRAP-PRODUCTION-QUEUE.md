@@ -1,5 +1,17 @@
 # Trap production queue
 
+## Reported priority-button regression
+
+The once-per-second read refresh sets the same pending flag used to disable
+both priority buttons and reject move commands. With a delayed reply, a valid
+selection is therefore unusable even though reordering uses a stable trap name
+and the server already validates ownership, pending state and boundaries.
+Keep the flag solely for throttling refreshes; allow selected-order commands
+while snapshots are in flight, preserving authoritative server ordering.
+The delayed-reply case reproduced 48 failures in the installed-CEGUI fixture;
+all 372 checks pass after removing the two blocking guards. This supersedes
+the earlier expectation below that pending replies disable both buttons.
+
 ## Existing path and scoped extension
 
 The accepted workshop scheduler uses GameMap's trap insertion order, filters

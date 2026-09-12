@@ -1822,7 +1822,7 @@ bool GameMode::updateTrapProductionButtons(const CEGUI::EventArgs&)
 {
     CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Orders"));
     CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
-    const bool valid = !mProductionRequestPending && selected != nullptr &&
+    const bool valid = selected != nullptr &&
         selected->getID() < mTrapProductionData.orders.size();
     mRootWindow->getChild("ProductionWindow/MoveUp")->setEnabled(valid && selected->getID() > 0);
     mRootWindow->getChild("ProductionWindow/MoveDown")->setEnabled(valid && selected->getID() + 1 < mTrapProductionData.orders.size());
@@ -1831,7 +1831,7 @@ bool GameMode::updateTrapProductionButtons(const CEGUI::EventArgs&)
 
 bool GameMode::moveTrapProductionOrder(bool earlier)
 {
-    if(mProductionRequestPending || !isConnected())
+    if(!isConnected())
         return true;
     CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Orders"));
     CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
