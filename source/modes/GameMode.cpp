@@ -80,6 +80,7 @@ const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
 const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
@@ -663,6 +664,62 @@ bool GameMode::isMouseWheelOnCEGUIWindow()
     return true;
 }
 
+void GameMode::sendPendingHandDropRequest(bool dropAllCreatures)
+{
+    Player* player = mGameMap->getLocalPlayer();
+    Tile* tile = mGameMap->getTile(mPendingHandDropX, mPendingHandDropY);
+    if(player == nullptr || tile == nullptr || !ODClient::getSingleton().isConnected())
+        return;
+
+    if(!dropAllCreatures)
+    {
+        const GameEntityType entityType = static_cast<GameEntityType>(mPendingHandDropEntityType);
+        const unsigned int index = player->getHandIndex(entityType, mPendingHandDropEntityName);
+        if(index < player->numObjectsInHand() && player->isDropHandPossible(tile, index))
+        {
+            ClientNotification* clientNotification = new ClientNotification(
+                ClientNotificationType::askHandDrop);
+            mGameMap->tileToPacket(clientNotification->mPacket, tile);
+            clientNotification->mPacket << entityType << mPendingHandDropEntityName;
+            ODClient::getSingleton().queueClientNotification(clientNotification);
+            return;
+        }
+    }
+    else
+    {
+        std::vector<GameEntity*> creatures;
+        for(GameEntity* entity : player->getObjectsInHand())
+        {
+            if(entity->getObjectType() != GameEntityType::creature)
+                continue;
+            if(!player->isDropHandPossible(tile, player->getHandIndex(
+                    entity->getObjectType(), entity->getName())))
+            {
+                creatures.clear();
+                break;
+            }
+            creatures.push_back(entity);
+        }
+
+        if(creatures.size() > 1)
+        {
+            ClientNotification* clientNotification = new ClientNotification(
+                ClientNotificationType::askHandDropAll);
+            mGameMap->tileToPacket(clientNotification->mPacket, tile);
+            clientNotification->mPacket << static_cast<uint32_t>(creatures.size());
+            for(GameEntity* entity : creatures)
+                clientNotification->mPacket << entity->getObjectType() << entity->getName();
+            ODClient::getSingleton().queueClientNotification(clientNotification);
+            return;
+        }
+    }
+
+    const InputCommandState previousState = mModeManager->getInputManager().mCommandState;
+    mModeManager->getInputManager().mCommandState = InputCommandState::validated;
+    handlePlayerActionNone();
+    mModeManager->getInputManager().mCommandState = previousState;
+}
+
 bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
     InputManager& inputManager = mModeManager->getInputManager();
@@ -776,7 +833,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
         if(mGameMap->getLocalPlayer()->numObjectsInHand() > 0)
         {
-            // If we right clicked with the mouse over a valid map tile, try to drop what we have in hand on the map.
+            // Wait for the release so a held right click can drop every held creature together.
             Tile *curTile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
 
             if (curTile == nullptr)
@@ -787,17 +844,13 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 
             if (mGameMap->getLocalPlayer()->isDropHandPossible(curTile))
             {
-                if(ODClient::getSingleton().isConnected())
-                {
-                    // Send a message to the server telling it we want to drop the creature
-                    ClientNotification *clientNotification = new ClientNotification(
-                        ClientNotificationType::askHandDrop);
-                    mGameMap->tileToPacket(clientNotification->mPacket, curTile);
-                    GameEntity* entity = mGameMap->getLocalPlayer()->getObjectsInHand().front();
-                    clientNotification->mPacket << entity->getObjectType() << entity->getName();
-                    ODClient::getSingleton().queueClientNotification(clientNotification);
-                }
-
+                GameEntity* entity = mGameMap->getLocalPlayer()->getObjectsInHand().front();
+                mPendingHandDrop = true;
+                mPendingHandDropTime = 0.0f;
+                mPendingHandDropX = inputManager.mXPos;
+                mPendingHandDropY = inputManager.mYPos;
+                mPendingHandDropEntityType = static_cast<int32_t>(entity->getObjectType());
+                mPendingHandDropEntityName = entity->getName();
                 return true;
             }
             const InputCommandState previousState = inputManager.mCommandState;
@@ -924,6 +977,11 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     if (id == OIS::MB_Right)
     {
         inputManager.mRMouseDown = false;
+        if(mPendingHandDrop)
+        {
+            mPendingHandDrop = false;
+            sendPendingHandDropRequest(false);
+        }
         return true;
     }
 
@@ -1510,6 +1568,26 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(mFullMap)
         updateMapDetail();
     GameEditorModeBase::onFrameStarted(evt);
+
+    InputManager& inputManager = mModeManager->getInputManager();
+    if(mPendingHandDrop)
+    {
+        if(!inputManager.mRMouseDown || !isConnected() || mGameMap->getGamePaused())
+        {
+            mPendingHandDrop = false;
+        }
+        else
+        {
+            mPendingHandDropTime += evt.timeSinceLastFrame;
+            Player* player = mGameMap->getLocalPlayer();
+            if(mPendingHandDropTime >= HAND_DROP_ALL_HOLD_DURATION &&
+               player != nullptr && player->numCreaturesInHand() > 1)
+            {
+                mPendingHandDrop = false;
+                sendPendingHandDropRequest(true);
+            }
+        }
+    }
     if(mFullMap)
         mFullMap->update(evt.timeSinceLastFrame, mCameraTilesIntersections);
     updateEventMessageIndicator(evt.timeSinceLastFrame);

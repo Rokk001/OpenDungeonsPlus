@@ -59,6 +59,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   wall marking, input guards, existing animation reuse and verification limits.
 - [Held-creature display](HELD-CREATURE-DISPLAY.md): one gripped creature and
   ordered square portraits, with transform, lifecycle and input verification.
+- [Creature hand drop](CREATURE-HAND-DROP.md): short-click front-entry drops,
+  held-button batch drops and the falling, grounded and get-up presentation.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
   interface clipping before generating a cached portrait.
 - [Closing Options with Escape](OPTIONS-ESCAPE.md): keyboard priority,
