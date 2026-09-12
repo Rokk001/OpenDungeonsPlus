@@ -2,9 +2,11 @@
 
 Run in the Windows developer environment; uses a hidden isolated Ogre window,
 not the game or a manual QA session.
+Pass --combat-blood to run the same cutout/fade checks on the blood material.
 """
 from pathlib import Path
 import os
+import sys
 import subprocess
 import tempfile
 
@@ -51,6 +53,9 @@ int main(int argc,char** argv){try{
  std::cout<<"CHECKS="<<checks<<" FAILURES=0\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<"\n";return 1;}}
 '''
+if "--combat-blood" in sys.argv:
+    probe = probe.replace("ChickenFeathers.material", "CombatImpact.material").replace('"ChickenFeathers"', '"CombatBlood"')
+
 with tempfile.TemporaryDirectory(prefix="feather-material-") as directory:
     work = Path(directory)
     cpp = work / "check.cpp"
