@@ -352,6 +352,18 @@ private:
     std::vector<ChickenFeatherEffect> mChickenFeatherEffects;
     uint64_t mChickenFeatherEffectNumber = 0;
 
+    struct CreatureSleepAnimation
+    {
+        Creature* mCreature;
+        Ogre::Entity* mEntity;
+        Ogre::SceneNode* mNode;
+        Ogre::Vector3 mBaseScale;
+        Ogre::AnimationState* mAnimation;
+        Ogre::Real mElapsed;
+        bool mNativeEntry;
+    };
+    std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
+
     struct CreatureDropAnimation
     {
         Creature* mCreature;
@@ -400,6 +412,8 @@ private:
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position);
     void clearChickenFeatherEffects();
+    void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
+    void cancelCreatureSleepAnimation(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
 
 
