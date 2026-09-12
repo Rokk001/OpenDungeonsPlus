@@ -1,5 +1,10 @@
 # Configuring and compiling on Windows
 
+The September 13 production-priority correction passes 372 installed-CEGUI
+checks (48 delayed-reply failures reproduced before the fix) and 41 actual
+controller/reorder/packet checks, plus Release compilation and runtime staging.
+The server still validates every requested move; see [production priority](TRAP-PRODUCTION-QUEUE.md).
+
 The September 13 research-progression update implements all 27 three-level
 entries, saved progress and versioned network selection. Release compilation,
 runtime preparation, 411 research checks, 364 CEGUI checks, 35 production checks

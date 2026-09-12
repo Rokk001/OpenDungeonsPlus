@@ -14,6 +14,9 @@ source = (root / "source/gamemap/GameMap.cpp").read_text(encoding="utf-8")
 start = source.index("bool GameMap::moveTrapProductionOrder(")
 end = source.index("\nvoid GameMap::removeTrap(", start)
 reorder = source[start:end]
+ui = (root / "source/modes/GameMode.cpp").read_text(encoding="utf-8")
+start = ui.index("void GameMode::requestTrapProductionQueue()")
+ui = ui[start:ui.index("void GameMode::refreshTrapProductionQueue(", start)]
 probe = r'''
 #include "game/TrapProductionData.h"
 #include "network/ODPacket.h"
@@ -35,6 +38,22 @@ struct GameMap {
     bool moveTrapProductionOrder(Seat*,const std::string&,bool);
 };
 REORDER
+namespace CEGUI {
+struct EventArgs {};
+struct ListboxItem {uint32_t id=0;uint32_t getID()const{return id;}};
+struct Window {bool enabled=false;virtual ~Window(){};void setEnabled(bool v){enabled=v;}};
+struct Listbox:Window {ListboxItem item;bool selected=true;ListboxItem* getFirstSelectedItem(){return selected?&item:nullptr;}};
+}
+struct Root {CEGUI::Listbox orders;CEGUI::Window up,down;CEGUI::Window* getChild(const std::string& path){return path=="ProductionWindow/Orders"?&orders:(path=="ProductionWindow/MoveUp"?&up:&down);}};
+enum class ClientNotificationType {askTrapProductionQueue,askMoveTrapProductionOrder};
+struct ClientNotification {ClientNotificationType type;ODPacket mPacket;ClientNotification(ClientNotificationType t):type(t){}};
+struct ODClient {int queries=0,moves=0;std::string name;bool earlier=false;static ODClient& getSingleton(){static ODClient c;return c;}void queueClientNotification(ClientNotification* n){if(n->type==ClientNotificationType::askTrapProductionQueue)++queries;else{++moves;n->mPacket>>name>>earlier;}delete n;}};
+struct GameMode {
+ Root root;Root* mRootWindow=&root;TrapProductionData mTrapProductionData;bool mProductionRequestPending=false,connected=true;float mProductionRefreshElapsed=0;
+ bool isConnected(){return connected;}
+ void requestTrapProductionQueue();bool updateTrapProductionButtons(const CEGUI::EventArgs& = {});bool moveTrapProductionOrder(bool);
+};
+UI
 int checks=0;
 void check(bool ok,const char* name) {++checks;if(!ok)throw std::runtime_error(name);}
 int main() {
@@ -53,6 +72,18 @@ int main() {
         map.server=false;check(!map.moveTrapProductionOrder(&own,"last",true),"client cannot mutate order");
         map.server=true;map.editor=true;check(!map.moveTrapProductionOrder(&own,"last",true),"editor cannot mutate gameplay order");
         map.editor=false;map.mTraps.clear();check(!map.moveTrapProductionOrder(&own,"last",true),"empty queue safe");
+
+        GameMode view;view.mTrapProductionData.orders={{"first",TrapType::cannon,1},{"last",TrapType::cannon,1}};
+        view.root.orders.item.id=1;view.requestTrapProductionQueue();
+        check(view.root.up.enabled && !view.root.down.enabled,"read query preserves valid priority button");
+        view.requestTrapProductionQueue();check(ODClient::getSingleton().queries==1,"in-flight read queries stay throttled");
+        view.moveTrapProductionOrder(true);
+        check(ODClient::getSingleton().moves==1 && ODClient::getSingleton().name=="last" && ODClient::getSingleton().earlier,"move transmits stable identity while read is pending");
+        view.moveTrapProductionOrder(true);check(ODClient::getSingleton().moves==2,"successive commands remain responsive");
+        view.root.orders.selected=false;view.updateTrapProductionButtons();view.moveTrapProductionOrder(true);
+        check(!view.root.up.enabled && !view.root.down.enabled && ODClient::getSingleton().moves==2,"no selection cannot move");
+        view.root.orders.selected=true;view.connected=false;view.moveTrapProductionOrder(true);
+        check(ODClient::getSingleton().moves==2,"disconnected move is not sent");
 
         using T=TrapType;
         TrapProductionData original;
@@ -84,7 +115,7 @@ int main() {
         std::cout<<"CHECKS="<<checks<<" FAILURES=0\n";
     }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}
 }
-'''.replace("REORDER", reorder)
+'''.replace("REORDER", reorder).replace("\nUI\n", "\n" + ui + "\n")
 
 with tempfile.TemporaryDirectory(prefix="trap-production-") as directory:
     work = Path(directory)
