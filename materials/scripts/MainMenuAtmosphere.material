@@ -1,0 +1,45 @@
+material MainMenuAtmosphereGlow
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            depth_check off
+            depth_write off
+            scene_blend src_alpha one
+            diffuse 1 1 1 1
+
+            texture_unit
+            {
+                texture Flare.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material MainMenuAtmosphereFog
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            depth_check off
+            depth_write off
+            scene_blend alpha_blend
+            diffuse 1 1 1 0.1
+
+            texture_unit
+            {
+                texture Smoke15Frames.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op modulate
+            }
+        }
+    }
+}
