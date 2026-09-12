@@ -73,6 +73,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   minimap navigation checkpoint and the remaining upgrade specification.
 - [Main-menu atmosphere](MAIN-MENU-ATMOSPHERE.md): artwork-aligned fog, fire,
   acid and lightning layers with multi-resolution render verification.
+- [Menu hand cursor](MENU-HAND-CURSOR.md): restore hidden gameplay pointer on
+  menu entry without changing the gameplay visibility toggle.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
   interface clipping before generating a cached portrait.
 - [Closing Options with Escape](OPTIONS-ESCAPE.md): keyboard priority,
