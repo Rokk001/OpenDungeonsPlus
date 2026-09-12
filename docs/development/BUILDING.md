@@ -1,5 +1,12 @@
 # Configuring and compiling on Windows
 
+The September 12 production-queue update passes 35 actual reorder/packet checks,
+13 existing workshop/save regressions and 288 installed-CEGUI layout/controller
+checks. Real 800x600 and 1280x720 views were inspected. Release compilation and
+runtime preparation pass using the maintained environment helper; reconfiguration
+requires that helper's dependency paths. Manual production/network acceptance
+remains with the user. See [production queue evidence](TRAP-PRODUCTION-QUEUE.md).
+
 The September 12 sleep update adds authored sleep-entry playback or smooth
 skeletal settling, followed by sustained rest and subtle breathing. All 2,385
 isolated renderer checks pass across 33 meshes, including earlier animation
