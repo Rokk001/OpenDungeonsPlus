@@ -27,6 +27,8 @@ Creatures eat chickens with species-group head, jaw and body movements and
 brief feather bursts; the existing hunger, healing and meal cooldown are unchanged.
 At their beds, creatures ease into their resting pose and breathe gently while
 sleeping; models with authored sleep-entry clips use those movements.
+Resting bodies align with their bed's mattress and orientation without changing
+creature size; interruption restores normal ground placement.
 Open End Game for the existing main-menu and desktop exit actions; Back returns
 to Options, and Continue Game closes the menu without leaving the session.
 Select the question-mark button beside the minimap, then click a creature to
