@@ -181,6 +181,8 @@ GameMode::GameMode(ModeManager *modeManager):
 
     addEventConnection(mRootWindow->getChild("MiniMapZoomButton")->subscribeEvent(
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::zoomMiniMap, this)));
+    addEventConnection(mRootWindow->getChild("ResearchButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSkillWindow, this)));
     for(const char* name : {"ProductionButton", "GameOptionsWindow/ProductionButton"})
         addEventConnection(mRootWindow->getChild(name)->subscribeEvent(
             CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showTrapProductionQueue, this)));
