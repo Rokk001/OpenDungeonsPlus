@@ -411,6 +411,8 @@ public:
     void fireCreatureSound(CreatureSound sound);
     void fireCombatImpact(bool weaponClash, bool bodyDamage,
         const Ogre::Vector3& attackerPosition);
+    void fireChickenFeeding(const std::string& chickenName,
+        const Ogre::Vector3& chickenPosition);
 
     void itsPayDay();
 

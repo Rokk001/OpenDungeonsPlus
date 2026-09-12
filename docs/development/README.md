@@ -63,6 +63,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   held-button batch drops and the falling, grounded and get-up presentation.
 - [Creature combat feedback](CREATURE-COMBAT-FEEDBACK.md): varied faster attacks,
   weapon sparks, optional subtle blood, hit reactions and grounded deaths.
+- [Creature feeding animations](CREATURE-FEEDING-ANIMATIONS.md): species-group
+  feeding rhythms, head and jaw motion, consumed-chicken presentation and feathers.
 - [Main-menu atmosphere](MAIN-MENU-ATMOSPHERE.md): artwork-aligned fog, fire,
   acid and lightning layers with multi-resolution render verification.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked

@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The September 12 feeding update adds dedicated skeletal feeding clips for all
+33 creature meshes, a consumed-chicken presentation and brief feather bursts.
+The isolated real Ogre lifecycle probe passes 815 checks, including retained
+hand/drop/get-up/combat regressions. Close-up renders were inspected and the
+chicken pivot corrected. Release compilation and runtime preparation pass;
+manual gameplay/network acceptance remains with the user. See
+[feeding implementation and evidence](CREATURE-FEEDING-ANIMATIONS.md).
+
 The September 12 atmosphere correction replaces stepped smoke-atlas playback
 with continuous procedural mist and explicit shader tint/opacity, and adds 24
 small rising embers at the four painted fire sources. The real Ogre/CEGUI probe
