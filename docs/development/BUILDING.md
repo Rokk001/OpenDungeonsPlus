@@ -1,5 +1,20 @@
 # Configuring and compiling on Windows
 
+The September 12 creature hand-drop update preserves short right-click front-entry
+drops and adds a 350-millisecond right-button hold for dropping every held
+creature through one validated batch request. Confirmed creatures fall from hand
+height and remain in a grounded lying pose until the server starts a smooth
+350-millisecond get-up transition. The input and protocol regressions pass 10
+and 233 checks respectively; the real Ogre
+lifecycle probe passes 378 checks across all 34 configured creature definitions
+(33 distinct meshes), including five concurrent falls. Its three-frame fall/ground
+sequence and the get-up midpoint/final atlases were visually inspected. Release
+compilation and runtime preparation pass; CTest has no registered tests. The
+executable is dated 2026-09-12 17:57:10, is 4,552,192 bytes, SHA-256
+`CBB2329AD8C348022927DEE68A51E6E73E926A211BAA3B4CD3D09F1C1A4127D4`.
+No game was launched by the implementation agent; the combined in-game behavior
+check remains pending. See [the creature hand-drop note](CREATURE-HAND-DROP.md).
+
 The September 12 room-construction effect adds a short violet-blue spark burst
 to each newly built gameplay room tile after the normal tile refresh. The
 production particle and material scripts pass the 10-check headless OGRE probe,
