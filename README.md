@@ -76,6 +76,9 @@ skip orders already covered by stock or unreachable from their location.
 The adjacent Skill button opens the existing research tree; both research and
 production are also available through F10. The four original corner controls
 are retained, making six minimap navigation buttons in total.
+All 27 research entries have three levels; the tree shows the current level,
+next benefit, point cost and queue position before selection. Upgrades retain
+map restrictions and are saved with research progress and the selected order.
 
 The upper resource strip shows current mana and gold beside round badges;
 mana change appears on a smaller line below, and hovering gold shows storage

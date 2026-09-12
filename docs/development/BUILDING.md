@@ -1,5 +1,11 @@
 # Configuring and compiling on Windows
 
+The September 13 research-progression update implements all 27 three-level
+entries, saved progress and versioned network selection. Release compilation,
+runtime preparation, 411 research checks, 364 CEGUI checks, 35 production checks
+and 13 workshop/save regressions pass; see [research progression](RESEARCH-PROGRESSION.md).
+Gameplay and multiplayer acceptance remain with the user.
+
 The sleep-arrival follow-up preserves the newly started sleep transition during
 final bed positioning. All 2,451 isolated renderer checks pass, after reproducing
 33 arrival failures before the correction. Release compilation (zero errors)
