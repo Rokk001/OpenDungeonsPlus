@@ -1,5 +1,20 @@
 # Creature sleep transitions
 
+## Arrival follow-up
+
+The client completes its walk queue by starting the queued sleep state before
+applying the final interpolated position. The unconditional sleep cancellation
+in `rrMoveEntity` therefore canceled a newly started sleep sequence on arrival.
+The expanded real renderer probe reproduces this for all 33 meshes. Cancel there
+only while the creature still has an active walk queue; ordinary walk-animation
+changes also retain their existing cancellation. Final arrival positioning must
+not cancel sleeping. Before the correction, all 33 arrival checks failed; after
+the correction, all 2,451 renderer checks pass, including active-walk cancellation
+and the retained animation regressions. Release compilation and runtime
+preparation pass. Logs: `build/windows/held-display-probe-sleep-arrival-before.log`,
+`build/windows/held-display-probe-sleep-arrival-after.log` and
+`build/windows/sleep-arrival-build.log`. User game acceptance remains pending.
+
 ## Existing path and scoped change
 
 The sleep action already walks to the assigned dormitory bed, orients the

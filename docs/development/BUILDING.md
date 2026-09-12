@@ -1,5 +1,10 @@
 # Configuring and compiling on Windows
 
+The sleep-arrival follow-up preserves the newly started sleep transition during
+final bed positioning. All 2,451 isolated renderer checks pass, after reproducing
+33 arrival failures before the correction. Release compilation (zero errors)
+and runtime preparation pass; see [sleep transitions](CREATURE-SLEEP-ANIMATIONS.md).
+
 The September 12 research-navigation checkpoint retains all four minimap corner
 controls and adds the research button next to production. All 348 installed-CEGUI
 checks pass, including the actual tree-toggle subscription; real 800x600 and
