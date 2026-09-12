@@ -440,6 +440,7 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
 
 RenderManager::~RenderManager()
 {
+    cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
     clearChickenFeatherEffects();
     clearCreatureCombatEffects();
@@ -724,6 +725,7 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
     clearChickenFeatherEffects();
     clearCreatureCombatEffects();
@@ -1098,6 +1100,23 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     }
 
     std::vector<Creature*> finishedFeeding;
+    for(CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
+    {
+        sleeping.mElapsed += timeSinceLastFrame;
+        sleeping.mAnimation->addTime(timeSinceLastFrame);
+        if(sleeping.mNativeEntry && sleeping.mAnimation->hasEnded())
+        {
+            sleeping.mAnimation = setEntityAnimation(sleeping.mEntity,
+                EntityAnimation::sleep_anim, true);
+            sleeping.mCreature->setAnimationState(sleeping.mAnimation);
+            sleeping.mNativeEntry = false;
+        }
+        const Ogre::Real settled = std::min(sleeping.mElapsed / 1.2f, 1.0f);
+        const Ogre::Real breath = 0.008f * Ogre::Math::Sin(
+            sleeping.mElapsed * Ogre::Math::TWO_PI / 4.0f) * settled;
+        sleeping.mNode->setScale(sleeping.mBaseScale * Ogre::Vector3(
+            1.0f + breath * 0.4f, 1.0f + breath * 0.4f, 1.0f + breath));
+    }
     for(CreatureFeedingAnimation& feeding : mCreatureFeedingAnimations)
     {
         feeding.mElapsed += timeSinceLastFrame;
@@ -2095,6 +2114,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
 
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    cancelCreatureSleepAnimation(curCreature);
     cancelCreatureFeedingAnimation(curCreature);
     clearCreatureCombatEffects(curCreature);
     mCreatureAttackVariants.erase(curCreature);
@@ -2267,6 +2287,7 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
     if(curEntity->getObjectType() == GameEntityType::creature)
     {
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
+        cancelCreatureSleepAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureDropAnimation(static_cast<Creature*>(curEntity));
     }
 
@@ -2520,7 +2541,15 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         dropCreature = static_cast<Creature*>(curAnimatedObject);
 
     if(dropCreature != nullptr)
+    {
+        cancelCreatureSleepAnimation(dropCreature);
         cancelCreatureFeedingAnimation(dropCreature);
+    }
+    if(anim == EntityAnimation::sleep_anim && dropCreature != nullptr)
+    {
+        startCreatureSleepAnimation(dropCreature, objectEntity);
+        return;
+    }
     if(anim == EntityAnimation::eat_chicken_anim && dropCreature != nullptr)
     {
         startCreatureFeedingAnimation(dropCreature, objectEntity);
@@ -2995,6 +3024,67 @@ void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* c
     }
 }
 
+void RenderManager::startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity)
+{
+    cancelCreatureDropAnimation(creature);
+    clearCreatureCombatEffects(creature);
+    const bool nativeEntry = entity->hasAnimationState("Sleep_Start") &&
+        entity->hasAnimationState(EntityAnimation::sleep_anim);
+    const std::string entry = nativeEntry ? "Sleep_Start" : "SettleToSleep";
+    const Ogre::Real duration = 1.2f;
+    Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
+    if(!nativeEntry && !skeleton->hasAnimation(entry))
+    {
+        const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
+        const std::string restName = skeleton->hasAnimation(EntityAnimation::sleep_anim) ?
+            EntityAnimation::sleep_anim : EntityAnimation::die_anim;
+        const Ogre::Animation* rest = skeleton->getAnimation(restName);
+        Ogre::Animation* settling = skeleton->createAnimation(entry, duration);
+        for(unsigned short bone = 0; bone < skeleton->getNumBones(); ++bone)
+        {
+            Ogre::TransformKeyFrame standing(nullptr, 0), lying(nullptr, 0);
+            if(idle->hasNodeTrack(bone))
+                idle->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &standing);
+            if(rest->hasNodeTrack(bone))
+                rest->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(rest->getLength()), &lying);
+            Ogre::NodeAnimationTrack* track = settling->createNodeTrack(bone);
+            for(unsigned int key = 0; key <= 36; ++key)
+            {
+                const Ogre::Real progress = key / 36.0f;
+                const Ogre::Real blend = progress * progress * (3.0f - 2.0f * progress);
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(progress * duration);
+                frame->setTranslate(standing.getTranslate() +
+                    (lying.getTranslate() - standing.getTranslate()) * blend);
+                frame->setScale(standing.getScale() +
+                    (lying.getScale() - standing.getScale()) * blend);
+                frame->setRotation(Ogre::Quaternion::Slerp(blend,
+                    standing.getRotation(), lying.getRotation(), true));
+            }
+        }
+    }
+    if(!entity->hasAnimationState(entry))
+        entity->getAllAnimationStates()->createAnimationState(entry, 0, duration);
+    Ogre::AnimationState* animation = setEntityAnimation(entity, entry, false);
+    creature->setAnimationState(animation);
+    Ogre::SceneNode* node = creature->getEntityNode();
+    mCreatureSleepAnimations.push_back({creature, entity, node, node->getScale(),
+        animation, 0.0f, nativeEntry});
+}
+
+void RenderManager::cancelCreatureSleepAnimation(Creature* creature)
+{
+    for(auto it = mCreatureSleepAnimations.begin(); it != mCreatureSleepAnimations.end();)
+    {
+        if(creature != nullptr && it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+        it->mNode->setScale(it->mBaseScale);
+        it = mCreatureSleepAnimations.erase(it);
+    }
+}
+
 void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
 {
     for(auto it = mCreatureFeedingAnimations.begin(); it != mCreatureFeedingAnimations.end();)
@@ -3074,7 +3164,10 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
 void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position)
 {
     if(entity->getObjectType() == GameEntityType::creature)
+    {
+        cancelCreatureSleepAnimation(static_cast<Creature*>(entity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(entity));
+    }
     if(entity->getEntityNode() == nullptr)
     {
         OD_LOG_ERR("Entity do not have node=" + entity->getName());

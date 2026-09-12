@@ -1,5 +1,11 @@
 # Configuring and compiling on Windows
 
+The September 12 sleep update adds authored sleep-entry playback or smooth
+skeletal settling, followed by sustained rest and subtle breathing. All 2,385
+isolated renderer checks pass across 33 meshes, including earlier animation
+regressions. Release compilation and runtime preparation pass. User game and
+bed-alignment acceptance remain pending; see [sleep transitions](CREATURE-SLEEP-ANIMATIONS.md).
+
 The September 12 feeding update adds dedicated skeletal feeding clips for all
 33 creature meshes, a consumed-chicken presentation and brief feather bursts.
 The isolated real Ogre lifecycle probe passes 815 checks, including retained

@@ -65,6 +65,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   weapon sparks, optional subtle blood, hit reactions and grounded deaths.
 - [Creature feeding animations](CREATURE-FEEDING-ANIMATIONS.md): species-group
   feeding rhythms, head and jaw motion, consumed-chicken presentation and feathers.
+- [Creature sleep transitions](CREATURE-SLEEP-ANIMATIONS.md): authored sleep
+  entries or smooth skeletal settling, sustained rest and lifecycle cleanup.
 - [Main-menu atmosphere](MAIN-MENU-ATMOSPHERE.md): artwork-aligned fog, fire,
   acid and lightning layers with multi-resolution render verification.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
