@@ -1,5 +1,25 @@
 # Creature sleep transitions
 
+## Bed alignment correction
+
+Combined model measurements show that resting poses reach or cross floor level
+while mattresses are elevated; several clips also translate their root far from
+the assigned bed centre (the skeleton reaches y=2.21). The previous fixture had
+no beds and therefore missed this. Align the final posed geometry with the
+actual rendered bed's central support surface and orientation, blending the
+placement during entry and restoring the normal transform on interruption.
+Keep creature size, bed allocation, recovery and accepted drop/get-up unchanged.
+The renderer now samples the actual deformed rest pose, ray-tests the bed centre
+for its mattress height (excluding taller posts), and blends both alignment and
+orientation. Missing upright death fallbacks lie down instead of standing in
+the bed. Placement is resolved after final walk positioning; waking preserves
+the newly requested facing and restores original ground position and scale.
+All 3,049 real-Ogre checks pass, covering all 33 models, both bed rotations,
+level-1/30 scales and hand/drop/feed regressions. Combined bed renders were
+inspected, and Release compilation/runtime preparation pass. Natural tails or
+wings may extend past the mattress; creatures are not shrunk to conceal that.
+User visual acceptance remains pending.
+
 ## Arrival follow-up
 
 The client completes its walk queue by starting the queued sleep state before

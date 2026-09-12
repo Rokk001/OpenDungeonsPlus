@@ -361,6 +361,8 @@ private:
         Ogre::AnimationState* mAnimation;
         Ogre::Real mElapsed;
         bool mNativeEntry;
+        Ogre::Vector3 mBasePosition, mRestPosition;
+        Ogre::Quaternion mBaseOrientation, mRestOrientation;
     };
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
 
@@ -413,6 +415,7 @@ private:
     void createChickenFeatherEffect(const Ogre::Vector3& position);
     void clearChickenFeatherEffects();
     void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
+    void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
 

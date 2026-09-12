@@ -1,5 +1,10 @@
 # Configuring and compiling on Windows
 
+The September 13 sleep/bed-alignment correction passes 3,049 isolated Ogre
+checks across all 33 creature models, both bed rotations and endpoint level
+scales, plus Release compilation and runtime preparation; see
+[sleep placement](CREATURE-SLEEP-ANIMATIONS.md) for the combined-bed evidence.
+
 The September 13 feeding-material correction passes 2,455 isolated renderer
 checks and ten real GPU transparency/fade checks, plus Release/runtime checks;
 see [feeding animations](CREATURE-FEEDING-ANIMATIONS.md) for the reproduced black-quad defect.
