@@ -1,5 +1,20 @@
 # Configuring and compiling on Windows
 
+The September 12 creature-combat update varies and accelerates authored attack
+clips, adds a short target reaction, displays sparks for armed clashes and subtle
+blood for applied body damage, and adds a Game setting that disables blood.
+Death playback is quicker, with model-based grounded fallbacks for Cultist and
+Lich. The source-path probe passes 19 checks, the production particle scripts
+pass 22 real Ogre checks, and the creature lifecycle probe passes 386 checks
+across all 33 distinct creature meshes. The settings layout passes the existing
+headless multi-resolution and UI-scale probe. The isolated impact render and both
+fallback death renders were visually inspected. Release compilation and runtime
+preparation pass; CTest has no registered tests. The executable is dated
+2026-09-12 18:26:50, is 4,588,032 bytes, SHA-256
+`C59E72017AAF1A428C1F1157ECABE0E8EADE5CB54A335F5A3F35555DA640DF7D`.
+No game was launched by the implementation agent; the combined in-game check
+remains pending. See [the creature combat note](CREATURE-COMBAT-FEEDBACK.md).
+
 The September 12 creature hand-drop update preserves short right-click front-entry
 drops and adds a 350-millisecond right-button hold for dropping every held
 creature through one validated batch request. Confirmed creatures fall from hand

@@ -39,6 +39,7 @@ namespace EntityAnimation
     static const std::string sleep_anim = "Sleep";
     static const std::string drop_anim = "Drop";
     static const std::string getup_anim = "GetUp";
+    static const std::string combat_attack_anim = "CombatAttack";
 };
 
 class MovableGameEntity : public GameEntity

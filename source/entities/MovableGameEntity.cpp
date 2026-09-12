@@ -230,6 +230,10 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     double addedTime = static_cast<Ogre::Real>(ODApplication::turnsPerSecond
          * static_cast<double>(timeSinceLastFrame)
          * getAnimationSpeedFactor());
+    if(mPrevAnimationState == EntityAnimation::combat_attack_anim)
+        addedTime *= 1.35;
+    else if(mPrevAnimationState == EntityAnimation::die_anim)
+        addedTime *= 1.15;
     mAnimationTime += addedTime;
     if (!getIsOnServerMap() && getAnimationState() != nullptr &&
         mPrevAnimationState != EntityAnimation::getup_anim)
