@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The September 12 atmosphere correction replaces stepped smoke-atlas playback
+with continuous procedural mist and explicit shader tint/opacity, and adds 24
+small rising embers at the four painted fire sources. The real Ogre/CEGUI probe
+passes 640 checks and renders 180 consecutive frames; pixel comparisons verify
+mist changes between consecutive frames, with much larger change over one second.
+The headless desktop clamps larger requested windows (motion captures are
+1284x781), so these renders do not prove native 4K coverage. Release compilation
+and runtime preparation pass. Manual game acceptance remains with the user;
+see [the correction and evidence](MAIN-MENU-ATMOSPHERE.md).
+
 The September 12 main-menu atmosphere update keeps the supplied static artwork
 and adds ten aligned screen-space layers for slow fog, flickering firelight,
 pulsing green acid and intermittent lightning. The production Ogre material

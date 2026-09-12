@@ -1,3 +1,19 @@
+vertex_program MenuAtmosphereVertex glsl
+{
+    source MenuAtmosphere.vert
+}
+
+fragment_program MenuAtmosphereFragment glsl
+{
+    source MenuAtmosphere.frag
+    default_params
+    {
+        param_named tint float4 1 1 1 0
+        param_named time float 0
+        param_named mist float 0
+    }
+}
+
 material MainMenuAtmosphereGlow
 {
     technique
@@ -8,14 +24,12 @@ material MainMenuAtmosphereGlow
             depth_check off
             depth_write off
             scene_blend src_alpha one
-            diffuse 1 1 1 1
-
-            texture_unit
+            vertex_program_ref MenuAtmosphereVertex
             {
-                texture Flare.png
-                tex_address_mode clamp
-                filtering trilinear
-                colour_op modulate
+            }
+            fragment_program_ref MenuAtmosphereFragment
+            {
+                param_named mist float 0
             }
         }
     }
@@ -31,14 +45,12 @@ material MainMenuAtmosphereFog
             depth_check off
             depth_write off
             scene_blend alpha_blend
-            diffuse 1 1 1 0.1
-
-            texture_unit
+            vertex_program_ref MenuAtmosphereVertex
             {
-                texture Smoke15Frames.png
-                tex_address_mode clamp
-                filtering trilinear
-                colour_op modulate
+            }
+            fragment_program_ref MenuAtmosphereFragment
+            {
+                param_named mist float 1
             }
         }
     }
