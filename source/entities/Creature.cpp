@@ -2291,7 +2291,7 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     const Ogre::Vector3& pos = getPosition();
     Ogre::Vector3 walkDirection(tileAttack.getX() - pos.x, tileAttack.getY() - pos.y, 0);
     walkDirection.normalise();
-    setAnimationState(EntityAnimation::attack_anim, false, walkDirection, true);
+    setAnimationState(EntityAnimation::combat_attack_anim, false, walkDirection, true);
     fireCreatureSound(CreatureSound::Attack);
     setNbTurnsWithoutBattle(0);
 
@@ -3122,6 +3122,22 @@ void Creature::fireCreatureSound(CreatureSound sound)
     }
 }
 
+void Creature::fireCombatImpact(bool weaponClash, bool bodyDamage,
+    const Ogre::Vector3& attackerPosition)
+{
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureCombatImpact, seat->getPlayer());
+        notification->mPacket << getName() << weaponClash << bodyDamage
+            << attackerPosition;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
@@ -3605,7 +3621,6 @@ void Creature::normalizeAmbient()
     RenderManager::getSingleton().rrNormalizeAmbient(this);
 
 }
-
 
 
 

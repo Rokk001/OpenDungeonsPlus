@@ -22,6 +22,7 @@ Options provides help, research and player information as well as game settings.
 In-game Settings opens a category menu for graphics, sound, controls, user cameras
 and additional game settings; closing a category returns to that menu, Back
 returns to Options, and Continue Game returns to the current session.
+The Game settings page can disable the subtle blood effect shown on creature hits.
 Open End Game for the existing main-menu and desktop exit actions; Back returns
 to Options, and Continue Game closes the menu without leaving the session.
 Select the question-mark button beside the minimap, then click a creature to

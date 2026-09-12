@@ -99,6 +99,8 @@ const Ogre::Real KEEPER_HAND_CREATURE_PICKED_SCALE = 0.05f;
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
 const Ogre::Real CREATURE_DROP_ANIMATION_DURATION = 0.35f;
 const Ogre::Real CREATURE_GET_UP_ANIMATION_DURATION = 0.35f;
+const Ogre::Real CREATURE_COMBAT_IMPACT_DURATION = 0.55f;
+const Ogre::Real CREATURE_COMBAT_REACTION_DURATION = 0.22f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
@@ -277,7 +279,8 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
 bool needsCreatureDropFallback(Ogre::Entity* entity)
 {
     return !entity->getSkeleton()->hasAnimation("Die") ||
-        entity->getMesh()->getName() == "lich.mesh";
+        entity->getMesh()->getName() == "lich.mesh" ||
+        entity->getMesh()->getName() == "Cultist.mesh";
 }
 }
 
@@ -437,6 +440,7 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
 
 RenderManager::~RenderManager()
 {
+    clearCreatureCombatEffects();
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
     mCreatureGetUpAnimations.clear();
@@ -718,6 +722,7 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    clearCreatureCombatEffects();
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
     mCreatureGetUpAnimations.clear();
@@ -1072,6 +1077,45 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         if(mSceneManager->hasSceneNode(it->mNodeName))
             mSceneManager->destroySceneNode(it->mNodeName);
         it = mRoomConstructionEffects.erase(it);
+    }
+
+    for(auto it = mCreatureCombatImpactEffects.begin();
+        it != mCreatureCombatImpactEffects.end();)
+    {
+        it->mRemainingTime -= timeSinceLastFrame;
+        if(it->mRemainingTime > 0.0f)
+        {
+            ++it;
+            continue;
+        }
+
+        if(it->mNode != nullptr && it->mParticleSystem != nullptr)
+            it->mNode->detachObject(it->mParticleSystem);
+        if(it->mParticleSystem != nullptr)
+            mSceneManager->destroyParticleSystem(it->mParticleSystem);
+        if(it->mNode != nullptr)
+            mSceneManager->destroySceneNode(it->mNode);
+        it = mCreatureCombatImpactEffects.erase(it);
+    }
+
+    for(auto it = mCreatureCombatReactions.begin();
+        it != mCreatureCombatReactions.end();)
+    {
+        it->mElapsed += timeSinceLastFrame;
+        const Ogre::Real progress = std::min(
+            it->mElapsed / CREATURE_COMBAT_REACTION_DURATION, 1.0f);
+        const Ogre::Real pulse = Ogre::Math::Sin(Ogre::Math::PI * progress);
+        it->mNode->setScale(it->mBaseScale *
+            Ogre::Vector3(1.0f + 0.055f * pulse,
+                1.0f - 0.035f * pulse, 1.0f - 0.07f * pulse));
+        if(progress < 1.0f)
+        {
+            ++it;
+            continue;
+        }
+
+        it->mNode->setScale(it->mBaseScale);
+        it = mCreatureCombatReactions.erase(it);
     }
 
     for(auto it = mCreatureDropAnimations.begin(); it != mCreatureDropAnimations.end();)
@@ -1967,6 +2011,8 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
 
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    clearCreatureCombatEffects(curCreature);
+    mCreatureAttackVariants.erase(curCreature);
     cancelCreatureDropAnimation(curCreature);
     if(curCreature->getOverlayStatus() != nullptr)
     {
@@ -2389,6 +2435,53 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
     }
 
+    if(anim == EntityAnimation::combat_attack_anim && dropCreature != nullptr)
+    {
+        std::vector<std::string> attackVariants;
+        for(const char* variant : {"Attack1", "Attack2", "Attack3",
+            "AttackOneHand", "AttackTwoHands"})
+        {
+            if(objectEntity->getSkeleton()->hasAnimation(variant))
+                attackVariants.push_back(variant);
+        }
+        if(attackVariants.empty())
+            anim = EntityAnimation::attack_anim;
+        else
+        {
+            uint32_t& nextVariant = mCreatureAttackVariants[dropCreature];
+            anim = attackVariants[nextVariant % attackVariants.size()];
+            ++nextVariant;
+        }
+    }
+
+    if(anim == EntityAnimation::die_anim && dropCreature != nullptr &&
+       needsCreatureDropFallback(objectEntity))
+    {
+        cancelCreatureDropAnimation(dropCreature);
+        Ogre::SceneNode* node = dropCreature->getEntityNode();
+        const Ogre::Vector3 position = node->getPosition();
+        const Ogre::Quaternion standingOrientation = node->getOrientation();
+        const Ogre::Quaternion lieOrientation = standingOrientation *
+            Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X);
+        const Ogre::Vector3 scale = node->getScale();
+        const auto corners = objectEntity->getBoundingBox().getAllCorners();
+        Ogre::Real minZ = (lieOrientation * (scale * corners[0])).z;
+        for(unsigned int corner = 1; corner < 8; ++corner)
+        {
+            const Ogre::Real z = (lieOrientation * (scale * corners[corner])).z;
+            minZ = std::min(minZ, z);
+        }
+        Ogre::Vector3 liePosition = position;
+        liePosition.z -= minZ;
+        mCreatureDropAnimations.push_back({dropCreature, node, position,
+            position, standingOrientation, lieOrientation, liePosition,
+            0.0f, true, true});
+        Ogre::AnimationState* animState = setEntityAnimation(objectEntity,
+            EntityAnimation::idle_anim, true);
+        curAnimatedObject->setAnimationState(animState);
+        return;
+    }
+
     if(anim == EntityAnimation::drop_anim && dropCreature != nullptr)
     {
         cancelCreatureGetUpAnimation(dropCreature);
@@ -2628,6 +2721,96 @@ void RenderManager::setCreatureDropGroundAnimation(Creature* creature)
     Ogre::AnimationState* animationState = setEntityAnimation(objectEntity,
         animation, animation == EntityAnimation::idle_anim);
     creature->setAnimationState(animationState);
+}
+
+void RenderManager::rrCreateCreatureCombatImpact(Creature* creature,
+    bool weaponClash, bool bodyDamage, const Ogre::Vector3& attackerPosition)
+{
+    if(creature == nullptr || creature->getEntityNode() == nullptr)
+        return;
+
+    for(auto it = mCreatureCombatReactions.begin();
+        it != mCreatureCombatReactions.end();)
+    {
+        if(it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+        it->mNode->setScale(it->mBaseScale);
+        it = mCreatureCombatReactions.erase(it);
+    }
+    Ogre::SceneNode* creatureNode = creature->getEntityNode();
+    mCreatureCombatReactions.push_back(
+        {creature, creatureNode, creatureNode->getScale(), 0.0f});
+
+    Ogre::Vector3 effectPosition = creature->getPosition();
+    effectPosition.z += 0.65f;
+    Ogre::Vector3 impactDirection = effectPosition - attackerPosition;
+    impactDirection.z = 0.2f;
+    if(!impactDirection.isZeroLength())
+        impactDirection.normalise();
+
+    const bool bloodEnabled = bodyDamage &&
+        ConfigManager::getSingleton().getGameValue(
+            Config::BLOOD_EFFECTS, "Yes", false) == "Yes";
+    for(const std::string& particleScript : std::vector<std::string>{
+        weaponClash ? "CombatSparks" : "",
+        bloodEnabled ? "CombatBlood" : ""})
+    {
+        if(particleScript.empty())
+            continue;
+
+        const std::string effectName = "CreatureCombatImpact_" +
+            Helper::toString(++mCreatureCombatEffectNumber);
+        Ogre::SceneNode* effectNode = mCreatureSceneNode->createChildSceneNode(
+            effectName + "_node", effectPosition);
+        if(!impactDirection.isZeroLength())
+        {
+            effectNode->setOrientation(
+                Ogre::Vector3::UNIT_Y.getRotationTo(impactDirection));
+        }
+        Ogre::ParticleSystem* particleSystem = mSceneManager->createParticleSystem(
+            effectName + "_particle", particleScript);
+        particleSystem->setVisibilityFlags(CullingType::SHOW_ALL);
+        effectNode->attachObject(particleSystem);
+        mCreatureCombatImpactEffects.push_back({creature, effectNode,
+            particleSystem, CREATURE_COMBAT_IMPACT_DURATION});
+    }
+}
+
+void RenderManager::clearCreatureCombatEffects(Creature* creature)
+{
+    for(auto it = mCreatureCombatImpactEffects.begin();
+        it != mCreatureCombatImpactEffects.end();)
+    {
+        if(creature != nullptr && it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+        if(it->mNode != nullptr && it->mParticleSystem != nullptr)
+            it->mNode->detachObject(it->mParticleSystem);
+        if(it->mParticleSystem != nullptr)
+            mSceneManager->destroyParticleSystem(it->mParticleSystem);
+        if(it->mNode != nullptr)
+            mSceneManager->destroySceneNode(it->mNode);
+        it = mCreatureCombatImpactEffects.erase(it);
+    }
+
+    for(auto it = mCreatureCombatReactions.begin();
+        it != mCreatureCombatReactions.end();)
+    {
+        if(creature != nullptr && it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+        it->mNode->setScale(it->mBaseScale);
+        it = mCreatureCombatReactions.erase(it);
+    }
+    if(creature == nullptr)
+        mCreatureAttackVariants.clear();
 }
 void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position)
 {

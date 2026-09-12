@@ -61,6 +61,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   ordered square portraits, with transform, lifecycle and input verification.
 - [Creature hand drop](CREATURE-HAND-DROP.md): short-click front-entry drops,
   held-button batch drops and the falling, grounded and get-up presentation.
+- [Creature combat feedback](CREATURE-COMBAT-FEEDBACK.md): varied faster attacks,
+  weapon sparks, optional subtle blood, hit reactions and grounded deaths.
 - [Creature portrait clipping](CREATURE-PORTRAIT-CLIPPING.md): resetting leaked
   interface clipping before generating a cached portrait.
 - [Closing Options with Escape](OPTIONS-ESCAPE.md): keyboard priority,

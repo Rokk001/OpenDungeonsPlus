@@ -23,6 +23,7 @@
 #define RENDERMANAGER_H
 
 #include <string>
+#include <map>
 #include <OgreSingleton.h>
 #include <OgreMath.h>
 #include <OgreDefaultDebugDrawer.h>
@@ -176,6 +177,8 @@ public:
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
+    void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
+        bool bodyDamage, const Ogre::Vector3& attackerPosition);
 
     //! \brief Toggles the creatures text overlay
     void rrSetCreaturesTextOverlay(GameMap& gameMap, bool value);
@@ -288,6 +291,26 @@ private:
     std::vector<RoomConstructionEffect> mRoomConstructionEffects;
     uint64_t mRoomConstructionEffectNumber = 0;
 
+    struct CreatureCombatImpactEffect
+    {
+        Creature* mCreature;
+        Ogre::SceneNode* mNode;
+        Ogre::ParticleSystem* mParticleSystem;
+        Ogre::Real mRemainingTime;
+    };
+    std::vector<CreatureCombatImpactEffect> mCreatureCombatImpactEffects;
+
+    struct CreatureCombatReaction
+    {
+        Creature* mCreature;
+        Ogre::SceneNode* mNode;
+        Ogre::Vector3 mBaseScale;
+        Ogre::Real mElapsed;
+    };
+    std::vector<CreatureCombatReaction> mCreatureCombatReactions;
+    uint64_t mCreatureCombatEffectNumber = 0;
+    std::map<Creature*, uint32_t> mCreatureAttackVariants;
+
     struct CreatureDropAnimation
     {
         Creature* mCreature;
@@ -331,6 +354,7 @@ private:
     void startCreatureGetUpAnimation(Creature* creature);
     void restoreCreatureGroundPose(Creature* creature);
     void setCreatureDropGroundAnimation(Creature* creature);
+    void clearCreatureCombatEffects(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
 
 

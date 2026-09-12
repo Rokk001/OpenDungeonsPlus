@@ -1,0 +1,37 @@
+material CombatSparks
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            diffuse vertexcolour
+
+            texture_unit
+            {
+                texture Flare.png
+            }
+        }
+    }
+}
+
+material CombatBlood
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend alpha_blend
+            depth_write off
+            diffuse vertexcolour
+
+            texture_unit
+            {
+                texture Flare.png
+            }
+        }
+    }
+}
