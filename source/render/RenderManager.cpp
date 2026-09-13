@@ -2825,7 +2825,20 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
     }
 
-    if(anim == EntityAnimation::combat_attack_anim && dropCreature != nullptr)
+    if(anim == EntityAnimation::ranged_attack_anim && dropCreature != nullptr)
+    {
+        // Authored ranged poses must not receive the melee strike deformation.
+        anim = EntityAnimation::attack_anim;
+        for(const char* cast : {"Cast", "CastSpell", "castMagicWeak"})
+        {
+            if(objectEntity->getSkeleton()->hasAnimation(cast))
+            {
+                anim = cast;
+                break;
+            }
+        }
+    }
+    else if(anim == EntityAnimation::combat_attack_anim && dropCreature != nullptr)
     {
         std::vector<std::string> attackVariants;
         for(const char* variant : {"Attack1", "Attack2", "Attack3",

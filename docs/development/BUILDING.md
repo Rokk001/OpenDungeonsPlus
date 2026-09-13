@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The September 13 ranged-combat presentation follow-up passes Release compilation
+and runtime preparation; the normal executable is dated 2026-09-13 13:50:39,
+4,737,536 bytes, and includes the preceding projectile collision correction.
+Dispatch 15, moving-projectile GPU 120 and real-model renderer 10,136 isolated
+checks pass; see [combat feedback](CREATURE-COMBAT-FEEDBACK.md) for limits.
+The user's game was not launched or stopped. Solid room-object navigation is
+the remaining implementation task; research and feeding were accepted by the user.
+
 The September 13 projectile collision correction passes 75 isolated production-
 code checks (28 failures on the preceding implementation) and Release linking.
 The normal executable was locked by the user's running game, so the verified

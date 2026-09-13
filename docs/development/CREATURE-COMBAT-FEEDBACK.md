@@ -1,5 +1,31 @@
 # Creature combat feedback
 
+## Ranged-attack readability follow-up
+
+The preceding attack dispatch always sent the melee combat animation, including
+all six missile-using creature models. Classification now uses the selected skill's allowed
+range, not the current target distance, so a point-blank shot remains ranged.
+Use the model's authored casting clip where present, otherwise its authored
+attack clip (including bow shooting), without the generated melee twist/lunge.
+Preserve melee variants, recoil and impact effects. The existing meshless magic
+missile uses intermittent, broad, pure-blue spray; replace that spray with a
+continuous compact blue-white bolt and short trail in the same particle system.
+Keep ranges, speeds, damage and save/packet layouts unchanged.
+
+The dispatch probe passes 15 checks, including point-blank ranged attacks and
+unchanged melee dispatch, costs and cooldowns. The hidden GPU projectile probe
+passes 120 checks over 60 moving frames, with continuous emission and a visible
+bright core at the current projectile position. Both committed probes require
+the Windows development environment from the environment helper.
+The real-model renderer passes 10,136 checks across all 33 models, including
+native ranged clip selection for the six missile models and restoration of the
+generated melee clips, plus the retained hand, feeding and sleep regressions.
+Representative rendered poses were inspected. These checks do not establish
+live-game readability or synchronize server damage with client interpolation;
+the latter timing remains unchanged. Gameplay acceptance remains with the user.
+No release version increment is needed: this completes the existing unmerged
+combat feature without changing saved data or the packet layout.
+
 ## Approved animation follow-up
 
 Inspection found that the preceding renderer only cycled faster authored attacks
