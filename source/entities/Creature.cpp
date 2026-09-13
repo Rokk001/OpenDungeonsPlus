@@ -1386,7 +1386,8 @@ bool Creature::handleIdleAction()
     if(setDestination(tileDest))
         return false;
 
-    return true;
+    // Retry failed wandering next turn, not repeatedly in this upkeep.
+    return false;
 }
 
 bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
