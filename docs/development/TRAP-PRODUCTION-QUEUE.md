@@ -1,5 +1,23 @@
 # Trap production queue
 
+## Repeated navigation clicks and exclusive windows
+
+The production minimap and F10 bindings both call an unconditional show handler.
+Repeated clicks therefore cannot close the panel, and research remains visible
+behind it. Capture the panel's visibility before closing existing dialogs through
+the established Escape close handlers, then open it only if it was previously
+closed. This preserves each dialog's cancellation behavior instead of hiding
+its window without completing its controller lifecycle. No save format or
+network version change is required for this client-only navigation correction.
+
+The expanded installed-CEGUI fixture sends real mouse down/up events through
+the minimap and F10 controls and exercises the actual Escape close dispatcher.
+All 420 checks pass, including second-click closure and closing research and
+objectives before production opens; the previous handler produces 58 failures
+(including follow-on state failures). The 41 reorder/packet checks also pass.
+Research-to-production closure is covered here; the opposite direction is
+completed on the research branch. Manual gameplay acceptance remains pending.
+
 ## Reported priority-button regression
 
 The once-per-second read refresh sets the same pending flag used to disable
