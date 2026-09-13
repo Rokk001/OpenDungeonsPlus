@@ -49,6 +49,30 @@ No version, save/packet layout or additional README change is required.
 
 ## Current corner-bed and walkable-landmark checkpoint
 
+Before enabling the authorized low-bed crossing, distinguish the support surface
+from tall posts: the renderer already finds mattress support by ray casting, while
+navigation only knows each asset's full XY rectangle. Extend the existing native
+asset probe to measure the support and configured bed heights, including the
+Grindstone bed, and report the existing walk rig's knee/foot ranges. These are
+diagnostics for reusing the renderer's geometry and leg solver, not permission to
+ignore tall furniture or to replace visible stepping with collision removal.
+
+The actual ImpBed support is Z=0.211979 but its posts reach 0.893739; the normal
+bed support is 0.339320 versus a 0.686023 maximum. GoblinBed is only 0.073801
+high, whereas RangerBed's central support is itself 0.805917. A single central
+ray therefore cannot define a safe whole-bed crossing surface. Kobold's existing
+Walk foot joints span approximately Z=0.0399..0.1052, with hips at 0.1543..0.1678;
+ordinary Walk playback alone does not establish clearance over the ImpBed surface.
+The existing feeding leg lookup/solver can be reused for articulated creatures,
+but the lookup has no leg match for the spider, slime or flying creatures, so it
+is not a complete traversal implementation for all 33 models. Retain those cases
+explicitly instead of treating an absent leg mapping as a successful step.
+This diagnostic changes no runtime behavior, executable, version or README entry.
+The extended native probe passes 4,006 checks: 121 Walk poses for each of the
+33 shipped creatures and valid support heights for all 13 configured/catalogued
+bed assets, including legacy coffins. Bone-range output is measured diagnostic
+data, not a passing stepping-animation test.
+
 The September 13 23:05 screenshot shows the small centered beds from the older
 normal executable. The existing corner placement is reused for new and restored
 beds. The requested 70% now applies to the final rotated footprint in both map
