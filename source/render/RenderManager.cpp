@@ -23,6 +23,7 @@
 #include "gamemap/RoomObjectBounds.h"
 
 #include "camera/CullingManager.h"
+#include "entities/BuildingObject.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntity.h"
@@ -2224,7 +2225,9 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         for(const auto& bounds : RoomObjectPath::meshBounds)
             if(meshName == bounds.name)
             {
-                const auto scale = RoomObjectPath::furnitureScale(bounds);
+                const auto placedScale = static_cast<BuildingObject*>(renderedMovableEntity)->getFurnitureScale();
+                const auto scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
+                    RoomObjectPath::FurnitureScale{placedScale.x, placedScale.y};
                 node->setScale(scale.x, scale.y, 1.0f);
                 break;
             }

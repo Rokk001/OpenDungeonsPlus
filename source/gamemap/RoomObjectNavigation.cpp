@@ -76,14 +76,18 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
     std::vector<RoomObjectPath::Obstacle> result;
     const auto append = [&](const BuildingObject* object)
     {
-        if(object == interaction)
+        // These walkable landmarks are not solid room furniture.
+        if(object == interaction || object->getMeshName() == "PortalObject" ||
+            object->getMeshName() == "DungeonTempleObject")
             return;
         for(const auto& bounds : RoomObjectPath::meshBounds)
         {
             if(object->getMeshName() != bounds.name)
                 continue;
             const float angle = float(object->getRotationAngle()) * 0.01745329252f;
-            const auto scale = RoomObjectPath::furnitureScale(bounds);
+            const auto placedScale = object->getFurnitureScale();
+            const auto scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
+                RoomObjectPath::FurnitureScale{placedScale.x, placedScale.y};
             result.push_back({{bounds.minX * scale.x - clearance, bounds.minY * scale.y - clearance},
                 {bounds.maxX * scale.x + clearance, bounds.maxY * scale.y + clearance},
                 {object->getPosition().x, object->getPosition().y}, std::cos(angle), std::sin(angle)});

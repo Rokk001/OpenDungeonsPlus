@@ -63,8 +63,15 @@ struct BuildingObject {
  std::string mesh="ChickenCoop";Ogre::Vector3 pos{5,5,0};float angle=0;
  const std::string& getMeshName()const{return mesh;}const Ogre::Vector3& getPosition()const{return pos;}
  float getRotationAngle()const{return angle;}
+ Ogre::Vector2 furnitureScale=Ogre::Vector2::ZERO;const Ogre::Vector2& getFurnitureScale()const{return furnitureScale;}
 };
 struct Creature;
+void placeBed(BuildingObject& bed,int x,int y,int width,int height,float rotation,const std::string& owner){
+ for(const auto& bounds:RoomObjectPath::meshBounds)if(bed.mesh==bounds.name){
+  const auto placed=RoomObjectPath::bedPlacement(bounds,x,y,width,height,rotation,owner);
+  bed.pos={placed.x,placed.y,0};bed.angle=placed.angle;bed.furnitureScale={placed.scale.x,placed.scale.y};return;
+ }
+}
 struct Room {
  RoomType type=RoomType::hatchery;std::map<Tile*,BuildingObject*> objects;std::vector<Creature*> users;
  RoomType getType()const{return type;}const auto& getBuildingObjects()const{return objects;}
@@ -150,6 +157,18 @@ int main(){
   object.mesh=row.name;object.angle=rotation;object.pos={5,5,0};
   const float angle=rotation*.01745329252f;
   const auto placed=RoomObjectNavigation::collect(map,0);
+  if(object.mesh=="PortalObject"||object.mesh=="DungeonTempleObject"){
+   check(placed.empty(),"portal and dungeon heart do not create furniture blockers");
+   for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30}){
+    creature.mesh=model.name;creature.level=level;creature.pos={1,5,0};
+    std::vector<Ogre::Vector2> transit{{5,5},{10,5}};
+    check(!RoomObjectNavigation::blocked(creature,transit),"every creature can traverse portal and heart");
+    RoomObjectNavigation::refine(creature,transit);
+    check(transit.size()==2&&transit.back()==Ogre::Vector2(10,5),"landmark transit retains its destination");
+   }
+   creature.mesh="Kobold.mesh";creature.level=1;
+   continue;
+  }
   const auto furnitureScale=RoomObjectPath::furnitureScale(row);
   check(placed.size()==1&&placed.front().minimum==Ogre::Vector2(row.minX*furnitureScale.x,row.minY*furnitureScale.y)&&
    placed.front().maximum==Ogre::Vector2(row.maxX*furnitureScale.x,row.maxY*furnitureScale.y),
@@ -316,6 +335,7 @@ probe = probe.replace('PACKED_BEDS', r'''
   for(int y=4;y<=6;++y)for(int x=4;x<=6;++x){
    auto* tile=packed.getTile(x,y);tile->walkable=true;tile->room=&dormitory;
    auto& bed=beds[(y-4)*3+x-4];bed.mesh="ImpBed";bed.pos={float(x),float(y),0};
+   placeBed(bed,x,y,1,1,0,"Creature"+std::to_string((y-4)*3+x-4));
    dormitory.objects[tile]=&bed;
   }
   for(int x:{2,3,7,8})packed.getTile(x,5)->walkable=true;
@@ -361,6 +381,7 @@ probe = probe.replace('PACKED_BEDS', r'''
    for(int y=0;y<3;++y)for(int x=0;x<3;++x){
     auto& bed=beds[y*3+x];bed.mesh=layout.name;bed.angle=rotated?90.f:0.f;
     bed.pos={4+x*w+w*.5f-.5f,4+y*h+h*.5f-.5f,0};
+    placeBed(bed,4+x*w,4+y*h,w,h,bed.angle,"Creature"+std::to_string(y*3+x));
     dormitory.objects[packed.getTile(4+x*w,4+y*h)]=&bed;
    }
    const int centerX=4+w,centerY=4+h;
@@ -470,6 +491,7 @@ if args.saved_terrain:
     angles = {'ChickenCoop': 0, 'Bookcase': 45, 'Podium': 45, 'DungeonTempleObject': 0, 'PortalObject': 0,
               'WorkshopMachine1': 30, 'WorkshopMachine2': 30}
     objects = {}
+    saved_bed_info = {}
     for x, y, mesh in re.findall(r'SERVER - Adding rendered object [^\n]*?\[([0-9]+),([0-9]+)\][^\n]*?,MeshName=(\w+)', args.furniture_log.read_text()):
         if mesh in angles:
             offset = .3 if mesh in ('Bookcase', 'Podium') else .2 if mesh.startswith('WorkshopMachine') else 0
@@ -494,6 +516,7 @@ if args.saved_terrain:
                 width, height = height, width
             px, py = int(x) + width * .5 - .5, int(y) + height * .5 - .5
             objects[(int(x), int(y))] = (mesh, int(rotation), px, py)
+            saved_bed_info[(int(x), int(y))] = (name, width, height)
             bed_count += 1
         assert bed_count > 0, 'Saved-bed fixture found no bedroom records'
         print(f'SAVED_BEDS={bed_count}', flush=True)
@@ -506,6 +529,9 @@ if args.saved_terrain:
     saved_probe += f'std::vector<BuildingObject> savedObjects({len(objects)});\n'
     for i, ((x, y), (mesh, angle, px, py)) in enumerate(objects.items()):
         saved_probe += f'savedObjects[{i}].mesh="{mesh}";savedObjects[{i}].pos={{float({px}),float({py}),0}};savedObjects[{i}].angle={angle};savedRoom.objects[savedMap.getTile({x},{y})]=&savedObjects[{i}];\n'
+        if (x, y) in saved_bed_info:
+            owner, width, height = saved_bed_info[(x, y)]
+            saved_probe += f'placeBed(savedObjects[{i}],{x},{y},{width},{height},{angle},"{owner}");\n'
     saved_probe += f'Creature savedWorker{{&savedMap}};savedWorker.pos={{{worker[1]}f,{worker[2]}f,0}};savedWorker.level={worker[3]};\n'.replace(f'{worker[1]}f', f'float({worker[1]})').replace(f'{worker[2]}f', f'float({worker[2]})')
     saved_probe += r'''
     long long totalMicros=0,maxMicros=0;int searches=0;

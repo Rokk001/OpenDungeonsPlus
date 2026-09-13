@@ -155,6 +155,30 @@ navigation task is not ready for acceptance.
 
 ### Follow-up: visible furniture footprint correction (initial inspection)
 
+The September 13 screenshot at 18:53:47 shows the portal and dungeon-heart
+landmarks occupying their connecting rooms. The shared obstacle collector
+incorrectly treated their complete meshes as solid furniture. At the user's
+explicit request, both mesh types are now excluded from furniture collision;
+terrain/door rules and their rendered geometry remain unchanged. The focused
+navigation probe reproduces 1,596 failed assertions before this correction
+across all 33 creature models, levels 1/30 and six landmark rotations.
+
+The user subsequently rejected the 0.4-tile one-cell bed footprint and requested
+75% allocated width/depth, corner placement and a small creature-specific angle.
+The current creation path centers bed roots and only uses allocation rotations
+0/90; both loaded and new beds pass through `RoomDormitory::createBed`.
+Implement the visual placement there with shared mesh bounds, preserving the
+saved allocation rotation and deriving the slight visual angle from the stable
+creature name. Rendered and navigation objects then share the same actual root
+position/angle. This does not authorize traversal through or over beds; dense
+room passability remains unresolved under the existing full-animation envelope.
+The shared `Bed` mesh is configured as 1x1 for the dwarf worker and 1x2 for other
+creatures, so bed scale must be instance-specific. Creation transmits the two
+scale components with the building object; rendering and navigation use those
+same components. Network version 0.7.3 is required on both peers; the unchanged
+map-data layout still accepts 0.7.1 and 0.7.2 saves and reconstructs bed scale
+from the creature definition. Allocation and saved base rotation are retained.
+
 The subsequent September 13 load-hang investigation extends the saved-terrain
 fixture to include exact saved bed centers/rotations and the source-defined
 library/workshop placement offsets. The worker destination retry probe also
