@@ -1,5 +1,36 @@
 # Configuring and compiling on Windows
 
+## Release optimization correction ready for load retest
+
+The fully rebuilt and prepared normal `build/windows/opendungeons-plus.exe` is
+dated 2026-09-13 18:41:04, 4,834,304 bytes, SHA-256
+`97DD5D76CD37E3F19197FBF01CC0BE1D601071B659B85658DBE6A89D60C7A8A8`.
+Release compilation, runtime preparation and eight effective-project-flag
+checks pass; the flag probe fails against the preceding generated project.
+With the corrected `/O2 /fp:fast /Zi` settings, 3,283 geometry checks, 20 action
+retry checks and 8,052 navigation/layout/saved-food checks pass. The 362 food
+searches reach the same 263 destinations in 1,571.44 ms total, 27.058 ms worst.
+All 411 research/save/packet checks also pass with the existing approved values.
+No game was launched or stopped. The reported load hang needs a user retest;
+the requested 75%-sized corner beds with small angular variation are not in
+this build and remain on the separate navigation task pending passage policy.
+This normal executable supersedes the older build metadata below.
+
+The generated MSVC Release project used `/Od` and Edit-and-Continue debugging:
+the common platform flags overwrote CMake's optimized Release defaults. With
+the September 6 save terrain, 27 saved beds and 50 source-oriented room objects,
+362 isolated food searches reached the same 263 destinations with both flag
+sets, but took 17,161.9 ms with `/Od /fp:fast` versus 1,676.67 ms with `/O2`.
+The unoptimized run failed the existing 100-ms per-search regression ceiling;
+the optimized run passed. These are isolated measurements, not a game-load test.
+
+The separate `fix/windows-release-optimization` branch moves optimization and
+debug-information choices out of the common flags: Release uses `/O2 /Zi`,
+while Debug keeps `/Od /ZI`. This retains symbols without disabling Release
+optimization. No save, protocol or gameplay values change, so no version bump
+or README feature change is needed. The reported hang and larger-bed passage
+decision remain open pending user retest and clarification respectively.
+
 The September 13 visible furniture-footprint correction is built and prepared
 for the normal `build/windows/opendungeons-plus.exe`, dated 2026-09-13 18:08:45,
 4,795,904 bytes, SHA-256
