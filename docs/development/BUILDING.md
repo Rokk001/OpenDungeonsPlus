@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+After the user closed the old run, the same server shutdown fix was rebuilt to
+the normal `build/windows/opendungeons-plus.exe` and runtime preparation passed.
+The normal executable is dated 2026-09-13 15:49:08, 4,785,152 bytes, SHA-256
+`2A7E3CA18B6114B714F62F882B81DB816A8B1FFB77EC6515DD25CD237A48F30C`.
+The 15:41 Windows hang report and log ending at the exit notification came from
+the preceding 15:26 executable, without this fix; no new native crash dump exists.
+Navigation clearance/performance remains open and is not covered by this fix.
+
 The September 13 server self-wait fix passes 31 isolated real-SFML lifecycle
 checks, two source guards, the existing 60 menu-cursor checks and Release linking.
 The user's game is running, so the new output is
