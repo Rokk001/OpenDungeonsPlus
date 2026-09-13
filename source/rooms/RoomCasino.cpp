@@ -21,6 +21,9 @@
 
 #include "creatureaction/CreatureActionFightFriendly.h"
 #include "entities/BuildingObject.h"
+#include "gamemap/RoomObjectNavigation.h"
+#include "creatureaction/CreatureActionWalkToTile.h"
+#include "utils/MakeUnique.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -519,17 +522,18 @@ bool RoomCasino::useRoom(Creature& creature, bool forced)
     Ogre::Real wantedY = static_cast<Ogre::Real>(tileSpot->getY());
     wantedY += creaturePositionOffset;
 
-    // We consider that the creature is in the good place if it near from where we want it to go
-    if(Pathfinding::squaredDistance(creature.getPosition().x, wantedX, creature.getPosition().y, wantedY) > 0.4)
+    BuildingObject* object = getBuildingObjectFromTile(tileSpot);
+    std::vector<Ogre::Vector2> approach;
+    if(object == nullptr || !RoomObjectNavigation::workApproach(creature, *object,
+        {wantedX, wantedY}, {0, 0}, approach))
     {
-        // We go there
-        std::list<Tile*> pathToSpot = getGameMap()->path(&creature, tileSpot);
-        std::vector<Ogre::Vector2> path;
-        Creature::tileToVector2(pathToSpot, path, true, 0.0);
-        // We add the last step to take account of the offset
-        Ogre::Vector2 dest(wantedX, wantedY);
-        path.push_back(dest);
-        creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path,true);
+        creature.popAction();
+        return true;
+    }
+    if(!approach.empty())
+    {
+        creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false);
+        creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
         return false;
     }
 

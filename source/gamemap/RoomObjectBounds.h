@@ -1,0 +1,104 @@
+#ifndef ROOMOBJECTBOUNDS_H
+#define ROOMOBJECTBOUNDS_H
+
+namespace RoomObjectPath
+{
+struct MeshBounds
+{
+    const char* name;
+    float minX, minY, maxX, maxY;
+};
+
+// Mesh-local XY bounds measured from the shipped room furniture, not tile
+// centers. Keep these synchronized with assets using check_room_object_bounds.py.
+static const MeshBounds meshBounds[] = {
+    {"Anvil", -.335981f, -.280187f, .341827f, .231204f},
+    {"Bed", -.337495f, -.681989f, .344794f, .702338f},
+    {"Bookcase", -.1694f, -.1694f, .1694f, .1694f},
+    {"Bookshelf", -.52309f, -.0069419f, .530155f, .428917f},
+    {"CasinoPokerTable", -.287885f, -.249315f, .287885f, .249315f},
+    {"CasinoWallBeer", -.502785f, .325887f, .502785f, .493482f},
+    {"CelticCross", -.391612f, -.28f, .391607f, .28f},
+    {"ChickenCoop", -.203275f, -.4f, .796725f, .4f},
+    {"Chimney", -.63f, .0721364f, .63f, .583136f},
+    {"DragonBed", -.941213f, -.96306f, .886655f, .969738f},
+    {"DungeonTempleObject", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
+    {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
+    {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
+    {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f},
+    {"GoldstackLv1", -.197478f, -.175391f, .186379f, .185685f},
+    {"GoldstackLv2", -.185184f, -.182552f, .185553f, .182552f},
+    {"GoldstackLv3", -.331379f, -.301391f, .290679f, .182552f},
+    {"GoldstackLv4", -.331379f, -.301391f, .290679f, .282221f},
+    {"Grindstone", -.329974f, -.215496f, .329974f, .371096f},
+    {"ImpBed", -.42f, -.42f, .42f, .42f},
+    {"KnightCoffin", -.254848f, -.627449f, .517051f, .632155f},
+    {"KnightStatue", -.293943f, -.32853f, .295722f, .325329f},
+    {"KnightStatue2", -.323145f, -.358743f, .332038f, .367767f},
+    {"LizardmanBed", -.32835f, -.77042f, .328337f, .769587f},
+    {"OrcBed", -.533745f, -.997136f, .529433f, .987434f},
+    {"Podium", -.193612f, -.148315f, .193891f, .148315f},
+    {"PortalObject", -1.66302f, -1.66302f, 1.66302f, 1.66302f},
+    {"RangerBed", -.53459f, -.777014f, .534418f, .775852f},
+    {"Roulette", -.292486f, -.296162f, .292326f, .296652f},
+    {"Skull", -.205408f, -.216924f, .205408f, .460773f},
+    {"SpiderBed", -.342277f, -.52519f, .458527f, .328312f},
+    {"StoneCoffin", -.425477f, -.693722f, .425477f, .693722f},
+    {"TentacleBed", -.448981f, -.476366f, .461978f, .436628f},
+    {"TortureObject", -.7007f, -.606824f, .7007f, .606824f},
+    {"TrainingDummy1", -.248242f, -.128432f, .248296f, .330221f},
+    {"TrainingDummy2", -.455f, -.170625f, .455f, .4095f},
+    {"TrainingDummy3", -.263341f, -.228943f, .30858f, .121115f},
+    {"TrainingDummy4", -.462458f, -.248657f, .462458f, .248657f},
+    {"TrollBed", -.787227f, -.794584f, .954702f, .813162f},
+    {"WorkshopMachine1", -.5376f, -.506479f, .761215f, .337512f},
+    {"WorkshopMachine2", -.730786f, -.336f, .5376f, .338177f}
+};
+
+struct WalkingRadius
+{
+    const char* name;
+    float radius;
+    float minX, minY, maxX, maxY;
+};
+
+// Maximum XY distance of skinned vertices over the authored Walk cycle,
+// rounded upward with a small interpolation margin; never use bind-pose arms.
+static const WalkingRadius walkingRadii[] = {
+    {"Adventurer.mesh", .32f, -.223013f, -.303778f, .219754f, .241574f},
+    {"CaveHornet.mesh", .34f, -.336557f, -.204048f, .336531f, .223639f},
+    {"Cultist.mesh", .36f, -.290157f, -.345677f, .290157f, .285324f},
+    {"DarkElf.mesh", .30f, -.193203f, -.17552f, .139327f, .305f},
+    {"Defender.mesh", 1.08f, -.257927f, -1.0724f, .213f, .375236f},
+    {"Dragon.mesh", .94f, -.742643f, -.907037f, .757226f, .858256f},
+    {"Dwarf1.mesh", .27f, -.258449f, -.249296f, .25823f, .198673f},
+    {"Dwarf2.mesh", .27f, -.253703f, -.248959f, .253375f, .198673f},
+    {"Elf.mesh", .30f, -.193203f, -.17552f, .139327f, .305f},
+    {"Gnome.mesh", .30f, -.257412f, -.196075f, .257413f, .202186f},
+    {"Goblin.mesh", .39f, -.143098f, -.359099f, .26421f, .255691f},
+    {"Knight.mesh", .42f, -.271715f, -.368724f, .276299f, .395971f},
+    {"Kobold.mesh", .30f, -.215426f, -.202178f, .146432f, .277816f},
+    {"Kreatur.mesh", .95f, -.72982f, -.685657f, .73037f, .600837f},
+    {"LavaSpawn.mesh", 1.13f, -.803072f, -.770489f, .801402f, 1.12894f},
+    {"Lizardman.mesh", .72f, -.327972f, -.372646f, .319483f, .717053f},
+    {"Monk.mesh", .29f, -.195454f, -.275317f, .193061f, .190716f},
+    {"NatureMonster.mesh", .59f, -.48582f, -.437184f, .48582f, .446317f},
+    {"Orc.mesh", .37f, -.301586f, -.279845f, .300999f, .289291f},
+    {"PitDemon.mesh", 1.33f, -1.32384f, -.477834f, 1.32384f, .627703f},
+    {"Rat.mesh", .59f, -.137487f, -.47173f, .130219f, .580713f},
+    {"Roach.mesh", .53f, -.289007f, -.445967f, .29347f, .453444f},
+    {"RunelordDwarf.mesh", .42f, -.2958f, -.403943f, .304318f, .219047f},
+    {"Scarab.mesh", .63f, -.580074f, -.289168f, .583679f, .382623f},
+    {"Slime.mesh", .57f, -.139284f, -.564724f, .139272f, .205f},
+    {"Spider.mesh", .46f, -.395196f, -.425697f, .395635f, .395744f},
+    {"TentacleAlbine.mesh", .32f, -.240472f, -.304768f, .239782f, .294454f},
+    {"TentacleGreen.mesh", .32f, -.240472f, -.304768f, .239782f, .294454f},
+    {"Troll.mesh", .64f, -.626231f, -.488335f, .635458f, .318153f},
+    {"Wizard.mesh", .41f, -.238856f, -.314751f, .242062f, .378029f},
+    {"Wyvern.mesh", .62f, -.56663f, -.318587f, .566629f, .619002f},
+    {"lich.mesh", .65f, -.515405f, -.621f, .42628f, .647588f},
+    {"skeleton.mesh", .44f, -.248051f, -.429675f, .279937f, .306748f}
+};
+}
+
+#endif

@@ -65,6 +65,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "giftboxes/GiftBoxSkill.h"
 
 #include "modes/GameEditorModeConsole.h"
@@ -2645,6 +2646,8 @@ bool Creature::setDestination(Tile* tile)
     std::vector<Ogre::Vector2> path;
     tileToVector2(result, path, true, 0.0);
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path,true);
+    if(!isMoving() && posTile != tile)
+        return false;
     pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
     return true;
 }
@@ -3379,7 +3382,7 @@ void Creature::correctEntityMovePosition(Ogre::Vector2& position)
     //     position.z += Random::Double(-offset, offset);
 }
 
-void Creature::checkWalkPathValid()
+void Creature::checkWalkPathValid(bool includeWalkDistortion)
 {
     bool stop = false;
     for(const Ogre::Vector2& dest : mWalkQueue)
@@ -3397,6 +3400,10 @@ void Creature::checkWalkPathValid()
             break;
         }
     }
+
+    if(!stop && getIsOnServerMap())
+        stop = RoomObjectNavigation::blocked(*this,
+            std::vector<Ogre::Vector2>(mWalkQueue.begin(), mWalkQueue.end()), includeWalkDistortion);
 
     if(!stop)
         return;

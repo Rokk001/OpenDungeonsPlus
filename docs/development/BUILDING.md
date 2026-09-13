@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+The September 13 room-object navigation checkpoint passes Release compilation
+and runtime preparation; the normal executable is dated 2026-09-13 15:26:05,
+4,785,152 bytes, SHA-256
+`4A508911681160E626E1050C4C67E44F1CFC565461EAF8BF1941BC6ECEFBD9A2`.
+It includes the slow failed-search correction, body-sized food/work approaches,
+rotated furniture and prison-fence clearance, and preserves the accepted feature
+stack; see [room-object navigation](ROOM-OBJECT-NAVIGATION.md) for tests and limits.
+Geometry 3,199, asset bounds 166, walking poses 3,993 and navigation integration
+2,950 checks pass; dense-room and saved-terrain probes also pass. This does not
+claim a complete live-game performance measurement or a resolved native crash.
+The user's requested next step is diagnosis of the reported crash after this
+checkpoint; no game was launched/stopped and no push was made.
+
 The September 13 ranged-combat presentation follow-up passes Release compilation
 and runtime preparation; the normal executable is dated 2026-09-13 13:50:39,
 4,737,536 bytes, and includes the preceding projectile collision correction.
