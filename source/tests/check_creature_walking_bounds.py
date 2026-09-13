@@ -15,10 +15,24 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 models = set(re.findall(r'^\s*MeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
 catalog = set(re.findall(r'\{"([^"\n]+\.mesh)"', (repo / 'source/gamemap/RoomObjectBounds.h').read_text()))
 assert models == catalog, f'Walking bounds catalog mismatch: {models ^ catalog}'
+renderer = (repo / 'source/render/RenderManager.cpp').read_text()
+bed_support = renderer.split('Ogre::Vector3 getBedSupportPoint(', 1)[1].split('\nbool needsCreatureDropFallback(', 1)[0]
+bed_names = sorted(set(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M)))
+bed_names = sorted(set(bed_names) | {name for name in re.findall(r'\{"([^"\n]+)"',
+    (repo / 'source/gamemap/RoomObjectBounds.h').read_text()) if name.endswith(('Bed', 'Coffin'))})
+leg_names = {}
+for side in ('left', 'right'):
+    for joint in ('Upper', 'Lower', 'Tip'):
+        leg_names[(side, joint)] = re.search(side + r'Leg\.m' + joint + r' = findFeedingBone\(skeleton, (\{[^\n]+\})\);', renderer)[1]
 probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
 #include <iostream>
+Ogre::Vector3 getBedSupportPoint(BED_SUPPORT
+Ogre::Bone* findBone(Ogre::Skeleton* skeleton,std::initializer_list<const char*> names){
+ for(const auto* name:names)if(skeleton->hasBone(name))return skeleton->getBone(name);
+ return nullptr;
+}
 Ogre::AxisAlignedBox poseBounds;
 const float heights[]={.05f,.1f,.15f,.2f,.3f};
 Ogre::AxisAlignedBox heightBounds[5];
@@ -67,30 +81,43 @@ int main(int argc,char** argv){try{
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
  auto* scene=root.createSceneManager();int checks=0,failures=0;
  profile=argc>2;
- if(profile)for(const auto& furniture:RoomObjectPath::meshBounds){
-  const std::string name=furniture.name;
-  if(name.find("Bed")==std::string::npos&&name.find("Coffin")==std::string::npos)continue;
+ if(profile)for(const std::string name:{BED_NAMES}){
   const auto mesh=Ogre::MeshManager::getSingleton().load(name+".mesh","Graphics");
-  std::cout<<"FURNITURE_HEIGHT "<<name<<" min="<<mesh->getBounds().getMinimum().z<<" max="<<mesh->getBounds().getMaximum().z<<'\n';
+  const auto support=getBedSupportPoint(mesh);
+  ++checks;if(!std::isfinite(support.z)||support.z<mesh->getBounds().getMinimum().z-.00001f||support.z>mesh->getBounds().getMaximum().z+.00001f){++failures;std::cout<<"FAIL invalid bed support "<<name<<'\n';}
+  std::cout<<"FURNITURE_HEIGHT "<<name<<" min="<<mesh->getBounds().getMinimum().z<<" max="<<mesh->getBounds().getMaximum().z<<" support="<<support.z<<'\n';
  }
  for(const auto& model:RoomObjectPath::walkingRadii){
   for(auto& bounds:heightBounds)bounds.setNull();
   auto* entity=scene->createEntity(model.name,model.name,"Graphics");
   auto* node=scene->getRootSceneNode()->createChildSceneNode();node->attachObject(entity);
   auto* walk=entity->getAnimationState("Walk");walk->setEnabled(true);
+  auto* skeleton=entity->getSkeleton();
+  Ogre::Bone* joints[]={LEFT_UPPER,LEFT_LOWER,LEFT_TIP,RIGHT_UPPER,RIGHT_LOWER,RIGHT_TIP};
+  Ogre::AxisAlignedBox jointBounds[6];
   for(int frame=0;frame<=120;++frame){
    walk->setTimePosition(walk->getLength()*frame/120);root._fireFrameStarted();root._fireFrameRenderingQueued();
    float actual=radius(entity);++checks;
+   if(profile)for(int joint=0;joint<6;++joint)if(joints[joint])jointBounds[joint].merge(joints[joint]->_getDerivedPosition());
    if(actual>model.radius||poseBounds.getMinimum().x<model.minX||poseBounds.getMinimum().y<model.minY||poseBounds.getMaximum().x>model.maxX||poseBounds.getMaximum().y>model.maxY){++failures;std::cout<<"FAIL "<<model.name<<" pose "<<frame<<" exceeds walking bounds "<<poseBounds<<'\n';}
    root._fireFrameEnded();
   }
   if(profile)for(int band=0;band<5;++band)
    std::cout<<"HEIGHT_PROFILE "<<model.name<<" z="<<heights[band]<<" bounds="<<heightBounds[band]<<'\n';
+  if(profile)for(int joint=0;joint<6;++joint){
+   std::cout<<"LEG_PROFILE "<<model.name<<" joint="<<joint;
+   if(joints[joint])std::cout<<" bone="<<joints[joint]->getName()<<" bounds="<<jointBounds[joint];else std::cout<<" missing";
+   std::cout<<'\n';
+  }
   node->detachAllObjects();scene->destroyEntity(entity);scene->destroySceneNode(node);
  }
  root.destroySceneManager(scene);std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''
+probe = probe.replace('BED_SUPPORT', bed_support).replace('BED_NAMES', ','.join('"' + name + '"' for name in bed_names))
+for side in ('left', 'right'):
+    for joint in ('Upper', 'Lower', 'Tip'):
+        probe = probe.replace(side.upper() + '_' + joint.upper(), 'findBone(skeleton,' + leg_names[(side, joint)] + ')')
 with tempfile.TemporaryDirectory(prefix='odp-walking-bounds-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
@@ -98,7 +125,7 @@ with tempfile.TemporaryDirectory(prefix='odp-walking-bounds-') as directory:
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     result = subprocess.run([str(work / 'check.exe'), str(repo)] + (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
-    print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'HEIGHT_PROFILE ', 'FURNITURE_HEIGHT '))))
+    print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'HEIGHT_PROFILE ', 'FURNITURE_HEIGHT ', 'LEG_PROFILE '))))
     if result.returncode:
         if 'FAIL ' not in result.stdout:
             print(result.stderr)
