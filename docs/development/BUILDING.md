@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The September 13 general window-navigation correction passes 624 isolated CEGUI
+checks, Release compilation and runtime preparation. Opening options, objectives,
+help, player information, cameras or settings now closes preceding dialogs through
+their existing callbacks; see [exclusive windows](GAME-WINDOW-NAVIGATION.md).
+The executable is dated 2026-09-13 12:31:56, is 4,718,592 bytes, SHA-256
+`0E1D6B7EE3F64C77896DEE6CD66D3D4FF33914961AAFD23DAA7B98296173EA24`.
+No game was launched; feeding and combat screenshot follow-ups remain open.
+
 The September 13 follow-up fixes repeated-click closure and exclusive research/
 production navigation, the culled sleeping-creature crash, and grounded chicken
 pickup by all hand-equipped bipeds. Release compilation passes, along with
