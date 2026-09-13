@@ -413,19 +413,19 @@ probe = probe.replace('PACKED_BEDS', r'''
  }
 ''' if args.packed_beds else '')
 probe = probe.replace('ROOM_LAYOUTS', r'''
- {
-  // Rat's measured transverse body fits the 30% lane, but the root-aligned
-  // quarter-tile grid misses it and must not force an outside detour.
+ for(bool lowNest:{false,true}){
+  // Actual Rat bodies and Kobold lower-body triangles fit their respective
+  // lanes; neither a root-aligned grid nor upper-body overhang may hide them.
   GameMap packed(12,12);Room dormitory;dormitory.type=RoomType::dormitory;
   packed.rooms={&dormitory};for(auto& tile:packed.tiles)tile.room=&dormitory;
   std::vector<BuildingObject> beds(9);
   for(int y=0;y<3;++y)for(int x=0;x<3;++x){
-   auto& bed=beds[y*3+x];bed.mesh="ImpBed";
+   auto& bed=beds[y*3+x];bed.mesh=lowNest?"GoblinBed":"ImpBed";
    placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));
    dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
   }
   for(bool vertical:{false,true})for(bool reverse:{false,true})for(bool coarseDetour:{false,true}){
-   Creature walker{&packed};walker.mesh="Rat.mesh";
+   Creature walker{&packed};walker.mesh=lowNest?"Kobold.mesh":"Rat.mesh";
    walker.pos={vertical?5.f:reverse?8.f:2.f,vertical?(reverse?8.f:2.f):5.f,0};
    const Ogre::Vector2 goal(vertical?5.f:reverse?2.f:8.f,vertical?(reverse?2.f:8.f):5.f);
    std::vector<Ogre::Vector2> path;
@@ -443,6 +443,23 @@ probe = probe.replace('ROOM_LAYOUTS', r'''
    std::cout<<"GAP_ROUTE reverse="<<reverse<<" length="<<length<<'\n';
    check(!path.empty()&&path.back()==goal&&length<7.f&&crossedGap,"usable bed strips are preferred to an outside detour");
   }
+ }
+ {
+  GameMap map(12,12);Room room;map.rooms={&room};BuildingObject nest;nest.mesh="GoblinBed";
+  room.objects[map.getTile(5,5)]=&nest;Creature walker{&map};
+  const auto low=RoomObjectNavigation::bodyObstacles(walker);
+  check(low.size()==1&&!RoomObjectPath::clearPoint(low,{5,5}),"low bed still blocks the worker's feet");
+  nest.pos.z=.1f;const auto raised=RoomObjectNavigation::bodyObstacles(walker);
+  check(raised.size()==1&&low.front().bodyMaximum.x-low.front().bodyMinimum.x<
+   raised.front().bodyMaximum.x-raised.front().bodyMinimum.x,"only furniture entirely below the measured body band uses lower-body clearance");
+  nest.pos.z=0;walker.mesh="CaveHornet.mesh";
+  check(RoomObjectNavigation::bodyObstacles(walker).empty(),"flying body above the low nest is not projected into it");
+  nest.pos.z=.1f;
+  check(!RoomObjectNavigation::bodyObstacles(walker).empty(),"higher obstacles still block the same flyer");
+  nest.pos.z=0;walker.mesh="Unknown.mesh";
+  check(!RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(walker),{5,5}),"unknown bodies retain conservative collision");
+  walker.mesh="Spider.mesh";const auto spider=RoomObjectNavigation::bodyObstacles(walker);
+  check(spider.size()==1&&spider.front().bodyMaximum.x-spider.front().bodyMinimum.x>.7f,"wide ground legs are not narrowed to manufacture a route");
  }
  {
   struct Layout{const char* mesh;float angle,yOffset;int spacing;};

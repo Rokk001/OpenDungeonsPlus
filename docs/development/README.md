@@ -70,7 +70,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Creature feeding animations](CREATURE-FEEDING-ANIMATIONS.md): species-group
   feeding rhythms, grounded hand pickup, cuff-clear finger grip, tool stowing and feathers.
 - [Navigation around room objects](ROOM-OBJECT-NAVIGATION.md): rotated furniture
-  footprints, body-sized food/work approaches and efficient failed-route searches.
+  footprints, height-aware low-nest clearance, body-sized food/work approaches
+  and efficient failed-route searches.
 - [Creature sleep transitions](CREATURE-SLEEP-ANIMATIONS.md): authored sleep
   entries or smooth skeletal settling, sustained rest and lifecycle cleanup.
 - [Trap production queue](TRAP-PRODUCTION-QUEUE.md): owner-only priority and

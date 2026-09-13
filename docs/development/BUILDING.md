@@ -1,5 +1,21 @@
 # Configuring and compiling on Windows
 
+## Height-aware clearance beside low nests
+
+The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:
+2026-09-14 00:17:30, 4,841,472 bytes, SHA-256
+`86EA5A1D2F91D6B7CC5ABC3275AA06118ADB7B76DEE01DCE58429EB7501A9B98`.
+Low-nest collision uses measured body triangles below the entire object instead
+of projecting upper-body overhang into the walkway. Raised/taller objects retain
+full-body collision; bed size and accepted combat presentation are unchanged.
+Actual-mesh animation checks pass 39,699, furniture geometry 1,636, path geometry
+7,270, room routing/benchmark 6,727 and saved-map fixtures 5,145. Eight previously
+blocked packed-room cases now pass; 148 of 5,293 remain failing. Visible stepping
+over higher bed parts and live navigation acceptance remain open.
+Release compilation/runtime preparation, resource generation and Release flags
+pass; no game was launched/stopped and no version or save/network format changed.
+See [navigation evidence](ROOM-OBJECT-NAVIGATION.md).
+
 ## Usable strips between corner beds
 
 The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:

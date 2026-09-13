@@ -91,6 +91,7 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
             result.push_back({{bounds.minX * scale.x - clearance, bounds.minY * scale.y - clearance},
                 {bounds.maxX * scale.x + clearance, bounds.maxY * scale.y + clearance},
                 {object->getPosition().x, object->getPosition().y}, std::cos(angle), std::sin(angle)});
+            result.back().maximumHeight = object->getPosition().z + bounds.maxZ;
             break;
         }
     };
@@ -121,11 +122,32 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
     Ogre::Vector2 heading(creature.getWalkDirection().x, creature.getWalkDirection().y);
     if(heading.squaredLength() < 0.000001f)
         heading = Ogre::Vector2(0, -1);
-    for(auto& obstacle : result)
+    const RoomObjectPath::LowWalkingBounds* low = nullptr;
+    for(const auto& model : RoomObjectPath::lowWalkingBounds)
+        if(creature.getMeshName() == model.name)
+        {
+            low = &model;
+            break;
+        }
+    for(auto it = result.begin(); it != result.end();)
     {
+        auto& obstacle = *it;
         obstacle.bodyMinimum = minimum * scale;
         obstacle.bodyMaximum = maximum * scale;
+        if(low != nullptr && obstacle.maximumHeight <= creature.getPosition().z + RoomObjectPath::lowWalkingHeight * scale)
+        {
+            // Body parts above the complete object cannot collide with it.
+            if(low->empty)
+            {
+                it = result.erase(it);
+                continue;
+            }
+            const float margin = RoomObjectPath::lowWalkingMargin;
+            obstacle.bodyMinimum = Ogre::Vector2(low->minX - margin, low->minY - margin) * scale;
+            obstacle.bodyMaximum = Ogre::Vector2(low->maxX + margin, low->maxY + margin) * scale;
+        }
         obstacle.initialHeading = heading;
+        ++it;
     }
     return result;
 }
@@ -164,7 +186,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     auto obstacles = collect(map, radius + 0.425f, interaction);
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     auto previous = start;
-    bool nearby = false;
+    bool nearby = !RoomObjectPath::clearSegment(obstacles, start, path.back());
     for(const auto& point : path)
     {
         if(!RoomObjectPath::clearSegment(obstacles, previous, point))
