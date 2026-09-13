@@ -1,5 +1,25 @@
 # Creature combat feedback
 
+## Immediate projectile launch visibility
+
+The user accepts the improved fireball appearance but reports it first appearing
+mid-flight. Server turn ordering updates animations and visibility before creature
+upkeep; missiles created during upkeep are therefore first announced next turn,
+after their initial flight has advanced. Reuse the launch tile's existing vision
+list to announce a newly positioned missile immediately, before its first flight
+path notification, without revealing it to seats outside that tile's visibility.
+Use the caster's actual XY position instead of the tile center so the announced
+origin matches the caster. Retain particle appearance, flight speed, damage,
+collision and existing turn ordering; do not move the global visibility pass.
+
+The extracted production launch/vision regression reproduces four failures and
+passes all 17 checks after the correction, including launch-position packets,
+creation-before-flight ordering, no duplicate creation in the next vision pass,
+and no notifications to unseen/nonhuman seats. Existing projectile collision 75,
+fireball rendering 180 and attack dispatch 19 checks also pass. The accepted
+fireball appearance is unchanged. This is a same-protocol launch-order fix, not
+a new effect, damage rule or version; no additional README feature is required.
+
 ## September 13 projectile and facing correction
 
 The user rejects the current combat presentation: white-looking caster shots,
