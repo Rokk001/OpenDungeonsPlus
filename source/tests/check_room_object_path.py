@@ -34,6 +34,57 @@ int main(){
  check(!clearSegment(thin,{5,5},{6,5}),"ordinary movement cannot start in furniture");
  check(clearSegment(thin,{5,5},{6,5},true),"legacy overlap can exit");
  check(!clearSegment(thin,{4,5},{5,5},true),"exit permission never admits a blocked destination");
+ // Logical circular footprints must not inherit the blocked corners of their
+ // bounding squares, while long segments still cannot tunnel through them.
+ std::vector<Obstacle> circular{Obstacle::circle({5,5},.5f)};
+ check(circular.front().contains({5,5}),"circle center is occupied");
+ check(!circular.front().contains({5.5f,5}),"circle boundary permits tangency");
+ check(!circular.front().contains({5.4f,5.4f}),"circle does not occupy its bounding-square corner");
+ check(!clearSegment(circular,{2,5},{8,5}),"long segment cannot tunnel through a circle");
+ check(!clearSegment(circular,{8,5},{2,5}),"circle crossing is direction independent");
+ check(clearSegment(circular,{2,5.5f},{8,5.5f}),"tangent segment remains open");
+ check(!clearSegment(circular,{5,5},{5,5}),"stationary point inside circle is blocked");
+ check(clearSegment(circular,{6,5},{6,5}),"stationary point outside circle remains open");
+ check(clearSegment(circular,{5,5},{6,5},true),"legacy overlap can leave a circular footprint");
+ check(!clearSegment(circular,{6,5},{5,5},true),"escape permission cannot enter a circle");
+ check(!clearSegment(circular,{5,5},{5.1f,5},true),"escape must actually leave the circle");
+ check(clearSegment(circular,{5.6f,5},{6,5}),"circle behind segment does not block its infinite line");
+ check(clearSegment(circular,{4,5},{4.4f,5}),"circle beyond segment does not block its infinite line");
+ check(clearSegment({Obstacle::circle({5,5},0)},{4,5},{6,5}),"zero-radius footprint has no interior");
+ for(int y=-2;y<=2;++y)for(int x=-2;x<=2;++x){
+  const Ogre::Vector2 heading{float(x),float(y)};
+  const auto rotated=circular.front().forHeading(heading);
+  check(rotated.radius==.5f&&rotated.contains({5.3f,5.3f})&&!rotated.contains({5.4f,5.4f}),"circular clearance is independent of movement heading");
+ }
+ // This geometry fixture deliberately uses logical radii, not the production
+ // furniture catalog. The separate packed-beds integration gate must also pass.
+ const TerrainSegment furnishedRoom=[](const Ogre::Vector2& a,const Ogre::Vector2& b){
+  const auto passable=[](int x,int y){return (x>=4&&x<=6&&y>=4&&y<=6)||(y==5&&((x>=2&&x<=3)||(x>=7&&x<=8)));};
+  const int steps=std::max(1,int(std::ceil(a.distance(b)*16)));
+  int previousX=int(std::round(a.x)),previousY=int(std::round(a.y));
+  for(int i=0;i<=steps;++i){
+   const auto p=a+(b-a)*(float(i)/steps);const int x=int(std::round(p.x)),y=int(std::round(p.y));
+   if(!passable(x,y)||(x!=previousX&&y!=previousY&&(!passable(x,previousY)||!passable(previousX,y))))return false;
+   previousX=x;previousY=y;
+  }return true;
+ };
+ for(float movingRadius:{.07f,.16f,.225f})for(bool reverse:{false,true}){
+  std::vector<Obstacle> beds;
+  for(int y=4;y<=6;++y)for(int x=4;x<=6;++x)beds.push_back(Obstacle::circle({float(x),float(y)},.25f+movingRadius));
+  const Ogre::Vector2 start(reverse?8.f:2.f,5),goal(reverse?2.f:8.f,5);
+  std::vector<Ogre::Vector2> transit;
+  check(route(start,goal,beds,0,0,10,10,furnishedRoom,transit),"logical footprints preserve transit across a fully furnished room");
+  check(!transit.empty()&&transit.back()==goal,"logical transit reaches the opposite doorway");
+  auto previous=start;
+  for(const auto& point:transit){
+   check(clearSegment(beds,previous,point)&&furnishedRoom(previous,point),"logical transit crosses neither obstacle circles nor surrounding walls");
+   previous=point;
+  }
+  // Extend the barrier into the surrounding walls: stopping exactly at the
+  // floor boundary would deliberately leave a legal tangent around its end.
+  beds.push_back({{-.01f,-2.f},{.01f,2.f},{5,5},1,0});
+  check(!route(start,goal,beds,0,0,10,10,furnishedRoom,transit)&&transit.empty(),"circular footprints do not bypass a rectangular barrier in the same room");
+ }
  std::vector<Obstacle> furniture{box(5,5),box(7,5),box(5,8),box(7,8)};
  std::vector<Ogre::Vector2> path;
  check(route({2,5},{10,5},furniture,0,0,12,12,floor,path),"multiple furniture objects can be bypassed");

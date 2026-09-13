@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The September 13 circular route-geometry extension passes Release compilation
+to `build/windows/opendungeons-plus-pending.exe`, dated 2026-09-13 16:54:27,
+4,791,296 bytes, SHA-256
+`51B69E5A35A5FD055BB087E58087215BAD5B1F8592982786802058619E305223`.
+Geometry 3,280 and navigation/benchmark 2,975 checks pass. The packed-dormitory
+integration gate still reports four failures: the circular geometry is not yet
+assigned to game furniture, and the navigation task is not ready for acceptance.
+The normal 16:22:15 executable and its prepared runtime remain unchanged;
+no game was launched or stopped. See [navigation](ROOM-OBJECT-NAVIGATION.md).
+
 The September 13 combat-test stall follow-up is built to the normal executable
 on `fix/solid-room-object-navigation`, dated 2026-09-13 16:22:15, 4,790,784 bytes,
 SHA-256 `D5AF01DABB91D77158C65942FA1DC5FDBDFFC6ECC7F0E7FFB3B596B4AACFFBC0`.

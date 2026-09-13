@@ -21,11 +21,21 @@ struct Obstacle
     Ogre::Vector2 bodyMinimum = Ogre::Vector2::ZERO;
     Ogre::Vector2 bodyMaximum = Ogre::Vector2::ZERO;
     Ogre::Vector2 initialHeading = Ogre::Vector2(0, -1);
+    // A nonnegative radius is a logical circular footprint with moving-body
+    // clearance already included; negative retains the oriented-box geometry.
+    float radius = -1.0f;
+
+    static Obstacle circle(const Ogre::Vector2& center, float clearanceRadius)
+    {
+        Obstacle result{Ogre::Vector2(-clearanceRadius), Ogre::Vector2(clearanceRadius), center, 1, 0};
+        result.radius = clearanceRadius;
+        return result;
+    }
 
     Obstacle forHeading(Ogre::Vector2 direction) const
     {
         Obstacle result = *this;
-        if(bodyMinimum == Ogre::Vector2::ZERO && bodyMaximum == Ogre::Vector2::ZERO)
+        if(radius >= 0.0f || (bodyMinimum == Ogre::Vector2::ZERO && bodyMaximum == Ogre::Vector2::ZERO))
             return result;
         if(direction.squaredLength() < 0.000001f)
             direction = initialHeading;
@@ -57,6 +67,8 @@ struct Obstacle
 
     bool contains(const Ogre::Vector2& point, const Ogre::Vector2& heading = Ogre::Vector2::ZERO) const
     {
+        if(radius >= 0.0f)
+            return point.squaredDistance(position) < radius * radius;
         const auto bounds = forHeading(heading);
         const auto p = local(point);
         return p.x > bounds.minimum.x && p.x < bounds.maximum.x &&
@@ -65,6 +77,14 @@ struct Obstacle
 
     bool intersects(const Ogre::Vector2& from, const Ogre::Vector2& to) const
     {
+        if(radius >= 0.0f)
+        {
+            const auto delta = to - from;
+            const float lengthSquared = delta.squaredLength();
+            const float along = lengthSquared > 0.0f ?
+                std::max(0.0f, std::min(1.0f, (position - from).dotProduct(delta) / lengthSquared)) : 0.0f;
+            return contains(from + delta * along);
+        }
         const auto bounds = forHeading(to - from);
         const auto a = local(from);
         const auto delta = local(to) - a;
