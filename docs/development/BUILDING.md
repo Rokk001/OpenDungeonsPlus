@@ -1,5 +1,19 @@
 # Configuring and compiling on Windows
 
+The September 13 follow-up fixes repeated-click closure and exclusive research/
+production navigation, the culled sleeping-creature crash, and grounded chicken
+pickup by all hand-equipped bipeds. Release compilation passes, along with
+10,114 isolated renderer checks, 504 real-mouse CEGUI navigation checks and
+64 committed limb-solver checks. The executable is dated 2026-09-13 09:04:25,
+is 4,718,592 bytes, SHA-256
+`0B193A99E5F113358294A8DA125F469B6A44BC14F0E680702C54EA630921DBE8`.
+The complete feature stack is retained; the live game was not launched and user
+gameplay acceptance remains pending. See the linked feeding, sleep, research
+and production notes for the reproduced failures and verification scope.
+Runtime preparation and the final 411 research, 41 production, 13 workshop,
+60 menu-cursor, ten feather-GPU and 26 map-header checks also pass; the latter
+include both supplied older saves, not a complete live-game deserialization.
+
 The September 13 research save-compatibility correction passes 26 map-header
 checks, including both reported 0.7.1 saves, plus 411 research/save/packet checks.
 Release compilation and runtime preparation pass; see

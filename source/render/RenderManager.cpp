@@ -434,6 +434,49 @@ Ogre::AxisAlignedBox getSleepingPoseBounds(Ogre::Entity* entity,
     return bounds;
 }
 
+Ogre::Bone* findFeedingBone(Ogre::Skeleton* skeleton, std::initializer_list<const char*> names)
+{
+    for(const char* name : names)
+        if(skeleton->hasBone(name))
+            return skeleton->getBone(name);
+    return nullptr;
+}
+
+void turnFeedingBone(Ogre::Bone* bone, const Ogre::Vector3& from, const Ogre::Vector3& to)
+{
+    if(from.squaredLength() < 0.0000001f || to.squaredLength() < 0.0000001f)
+        return;
+    const Ogre::Quaternion parent = bone->getParent() != nullptr ?
+        bone->getParent()->_getDerivedOrientation() : Ogre::Quaternion::IDENTITY;
+    bone->setOrientation(parent.Inverse() * from.getRotationTo(to) * bone->_getDerivedOrientation());
+    bone->_update(true, false);
+}
+
+void solveFeedingLimb(Ogre::Bone* upper, Ogre::Bone* lower,
+    const Ogre::Vector3& tipOffset, const Ogre::Vector3& target)
+{
+    const Ogre::Vector3 start = upper->_getDerivedPosition();
+    const Ogre::Vector3 hinge = lower->_getDerivedPosition();
+    const Ogre::Vector3 end = hinge + lower->_getDerivedOrientation() *
+        (lower->_getDerivedScale() * tipOffset);
+    const Ogre::Real first = start.distance(hinge), second = hinge.distance(end);
+    Ogre::Vector3 direction = target - start;
+    const Ogre::Real distance = direction.normalise();
+    if(first < 0.0001f || second < 0.0001f || distance < 0.0001f)
+        return;
+    const Ogre::Real reach = std::max(std::abs(first - second) + 0.00001f,
+        std::min(distance, first + second - 0.00001f));
+    Ogre::Vector3 bend = hinge - start - direction * direction.dotProduct(hinge - start);
+    if(bend.squaredLength() < 0.000001f)
+        bend = direction.perpendicular();
+    bend.normalise();
+    const Ogre::Real along = (first * first - second * second + reach * reach) / (2.0f * reach);
+    const Ogre::Real across = std::sqrt(std::max(0.0f, first * first - along * along));
+    turnFeedingBone(upper, hinge - start, direction * along + bend * across);
+    turnFeedingBone(lower, lower->_getDerivedOrientation() * (lower->_getDerivedScale() * tipOffset),
+        target - lower->_getDerivedPosition());
+}
+
 Ogre::Vector3 getBedSupportPoint(const Ogre::MeshPtr& mesh)
 {
     // A ray through the centre finds the mattress, not the tops of bed posts.
@@ -1355,14 +1398,19 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 
         if(feeding.mChickenNode != nullptr)
         {
+            const bool usesHands = !feeding.mReachBones.empty();
+            Ogre::Vector3 handPosition = Ogre::Vector3::ZERO;
+            if(usesHands)
+                handPosition = updateCreatureFeedingReach(feeding, progress);
             const Ogre::Real lift = std::min(progress / 0.32f, 1.0f);
             const Ogre::Real smoothLift = lift * lift * (3.0f - 2.0f * lift);
             Ogre::Vector3 position = feeding.mChickenStart +
                 (mouth - feeding.mChickenStart) * smoothLift;
-            if(feeding.mStyle == CreatureFeedingStyle::magical)
+            if(!usesHands && feeding.mStyle == CreatureFeedingStyle::magical)
                 position += Ogre::Vector3(0.09f * Ogre::Math::Sin(lift * Ogre::Math::TWO_PI),
                     0, 0.18f * Ogre::Math::Sin(lift * Ogre::Math::PI));
-            const Ogre::Real remaining = 1.0f - std::min(std::max((progress - 0.48f) / 0.22f, 0.0f), 1.0f);
+            const Ogre::Real remaining = 1.0f - std::min(std::max((progress - (usesHands ? 0.64f : 0.48f)) /
+                (usesHands ? 0.18f : 0.22f), 0.0f), 1.0f);
             feeding.mChickenNode->setVisible(remaining > 0.0f);
             feeding.mChickenNode->setScale(feeding.mChickenScale * std::max(remaining, 0.001f));
             feeding.mChickenNode->setOrientation(Ogre::Quaternion(
@@ -1371,11 +1419,21 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
                 Ogre::Vector3::UNIT_Y));
             position -= feeding.mChickenNode->getOrientation() *
                 (feeding.mChickenNode->getScale() * feeding.mChickenEntity->getBoundingBox().getCenter()) * smoothLift;
+            if(usesHands)
+            {
+                const Ogre::Real carried = std::max(0.0f, std::min((progress - 0.28f) / 0.26f, 1.0f));
+                feeding.mChickenNode->setOrientation(Ogre::Quaternion(
+                    Ogre::Degree(80.0f * carried), Ogre::Vector3::UNIT_X));
+                position = progress < 0.28f ? feeding.mChickenStart : handPosition -
+                    feeding.mChickenNode->getOrientation() * (feeding.mChickenNode->getScale() *
+                        feeding.mChickenEntity->getBoundingBox().getCenter());
+            }
             feeding.mChickenNode->setPosition(position);
             if(feeding.mChickenEntity->hasAnimationState(EntityAnimation::idle_anim))
                 feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * 3.0f);
         }
-        if(feeding.mFeatherBursts < 2 && progress >= 0.38f + feeding.mFeatherBursts * 0.24f)
+        if(feeding.mFeatherBursts < 2 && progress >= (feeding.mReachBones.empty() ?
+            0.38f + feeding.mFeatherBursts * 0.24f : 0.58f + feeding.mFeatherBursts * 0.14f))
         {
             createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth));
             ++feeding.mFeatherBursts;
@@ -3211,6 +3269,181 @@ void RenderManager::startCreatureFeedingAnimation(Creature* creature, Ogre::Enti
         nullptr, nullptr, Ogre::Vector3::ZERO, Ogre::Vector3::UNIT_SCALE, head, 0});
 }
 
+void RenderManager::prepareCreatureFeedingReach(CreatureFeedingAnimation& feeding)
+{
+    Ogre::Skeleton* skeleton = feeding.mEntity->getSkeleton();
+    auto& left = feeding.mArms[0];
+    auto& right = feeding.mArms[1];
+    left.mUpper = findFeedingBone(skeleton, {"ArmUpper.L", "arm_l", "LeftArm", "Arm_L", "upper_arm.L", "upperhand.L", "shoulderJointLeft", "shoulderLeft", "Upperarm_L"});
+    right.mUpper = findFeedingBone(skeleton, {"ArmUpper.R", "arm_r", "RightArm", "Arm_R", "upper_arm.R", "upperhand.R", "shoulderJointRight", "shoulderRight", "Upperarm_R"});
+    left.mLower = findFeedingBone(skeleton, {"ArmLower.L", "forearm_l", "LeftForeArm", "Forearm_L", "ForeArm_L", "forearm.L", "arm.L", "ellbowLeft"});
+    right.mLower = findFeedingBone(skeleton, {"ArmLower.R", "forearm_r", "RightForeArm", "Forearm_R", "ForeArm_R", "forearm.R", "arm.R", "ellbowRight"});
+    left.mTip = findFeedingBone(skeleton, {"Hand.L", "hand_l", "LeftHand", "Hand_L", "hand.L", "indexf1.L", "wristLeft"});
+    right.mTip = findFeedingBone(skeleton, {"Hand.R", "hand_r", "RightHand", "Hand_R", "hand.R", "indexf1.R", "handJointRight", "wristRight"});
+    auto& leftLeg = feeding.mLegs[0];
+    auto& rightLeg = feeding.mLegs[1];
+    leftLeg.mUpper = findFeedingBone(skeleton, {"LegUpper.L", "leg_l", "LeftUpLeg", "thigh.L", "leg1.L", "hipLeft", "UpLeg_L", "Thigh_L", "Leg_1_L", "Leg_L", "Upperleg_L"});
+    rightLeg.mUpper = findFeedingBone(skeleton, {"LegUpper.R", "leg_r", "RightUpLeg", "thigh.R", "leg1.R", "hipRight", "UpLeg_R", "Thigh_R", "Leg_1_R", "Leg_R", "Upperleg_R"});
+    leftLeg.mLower = findFeedingBone(skeleton, {"LegLower.L", "lowleg_l", "LeftLeg", "Shin_L", "shin.L", "leg2.L", "kneeLeft", "Leg_L", "Lowerleg_L"});
+    rightLeg.mLower = findFeedingBone(skeleton, {"LegLower.R", "lowleg_r", "RightLeg", "Shin_R", "shin.R", "leg2.R", "kneeRight", "Leg_R", "Lowerleg_R"});
+    leftLeg.mTip = findFeedingBone(skeleton, {"Foot.L", "foot_l", "LeftFoot", "Foot_L", "foot.L", "ankleLeft", "tarsal.L", "Feet_L"});
+    rightLeg.mTip = findFeedingBone(skeleton, {"Foot.R", "foot_r", "RightFoot", "Foot_R", "foot.R", "ankleRight", "tarsal.R", "Feet_R"});
+    for(const auto* limb : {&left, &right, &leftLeg, &rightLeg})
+        if(limb->mUpper == nullptr || limb->mLower == nullptr || limb->mTip == nullptr)
+            return;
+    feeding.mSpine = findFeedingBone(skeleton, {"TorsoUpper", "spine", "Spine", "Spine_1", "spine1", "belly", "Spine1", "spine.01", "C3"});
+    if(feeding.mSpine == nullptr || feeding.mHead == nullptr)
+        return;
+    skeleton->setAnimationState(*feeding.mEntity->getAllAnimationStates());
+    skeleton->_updateTransforms();
+    auto retain = [&feeding](Ogre::Bone* bone)
+    {
+        for(const auto& pose : feeding.mReachBones)
+            if(pose.mBone == bone)
+                return;
+        feeding.mReachBones.push_back({bone, bone->getPosition(), bone->getOrientation(), bone->isManuallyControlled()});
+        bone->setManuallyControlled(true);
+    };
+    for(unsigned short index = 0; index < skeleton->getNumBones(); ++index)
+    {
+        Ogre::Bone* bone = skeleton->getBone(index);
+        if(bone->getParent() == nullptr)
+        {
+            feeding.mRoots.push_back(bone);
+            retain(bone);
+        }
+    }
+    retain(feeding.mSpine);
+    for(auto* limb : {&left, &right, &leftLeg, &rightLeg})
+    {
+        limb->mRestTip = limb->mTip->_getDerivedPosition();
+        limb->mTipOffset = (limb->mLower->_getDerivedOrientation().Inverse() *
+            (limb->mRestTip - limb->mLower->_getDerivedPosition())) / limb->mLower->_getDerivedScale();
+        retain(limb->mUpper);
+        retain(limb->mLower);
+        retain(limb->mTip);
+    }
+    // This mesh skins its body to a second rig while armour uses the first one.
+    if(feeding.mEntity->getMesh()->getName() == "RunelordDwarf.mesh")
+    {
+        const size_t drivers = feeding.mReachBones.size();
+        for(size_t index = 0; index < drivers; ++index)
+        {
+            Ogre::Bone* driver = feeding.mReachBones[index].mBone;
+            std::string name = driver->getName();
+            const size_t suffix = name.find('.');
+            name.insert(suffix == std::string::npos ? name.size() : suffix, ".cr");
+            if(skeleton->hasBone(name))
+            {
+                retain(skeleton->getBone(name));
+                feeding.mReachBones.back().mDriver = driver;
+            }
+        }
+    }
+}
+
+Ogre::Vector3 RenderManager::updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress)
+{
+    auto smooth = [](Ogre::Real value)
+    {
+        value = std::max(0.0f, std::min(value, 1.0f));
+        return value * value * (3.0f - 2.0f * value);
+    };
+    for(const auto& pose : feeding.mReachBones)
+    {
+        pose.mBone->setPosition(pose.mPosition);
+        pose.mBone->setOrientation(pose.mOrientation);
+    }
+    feeding.mEntity->getSkeleton()->_updateTransforms();
+    const Ogre::Real reach = smooth(progress / 0.28f);
+    const Ogre::Real lift = smooth((progress - 0.28f) / 0.26f);
+    const Ogre::Real release = smooth((progress - 0.82f) / 0.18f);
+    const Ogre::Real crouch = reach * (1.0f - lift);
+    const Ogre::Real height = feeding.mEntity->getBoundingBox().getSize().z;
+    for(Ogre::Bone* root : feeding.mRoots)
+    {
+        root->translate(Ogre::Vector3(0, -height * 0.10f, -height * 0.28f) * crouch, Ogre::Node::TS_WORLD);
+        root->_update(true, false);
+    }
+    const Ogre::Quaternion bend(Ogre::Degree(35.0f * crouch), Ogre::Vector3::UNIT_X);
+    const Ogre::Quaternion parent = feeding.mSpine->getParent() != nullptr ?
+        feeding.mSpine->getParent()->_getDerivedOrientation() : Ogre::Quaternion::IDENTITY;
+    feeding.mSpine->setOrientation(parent.Inverse() * bend * feeding.mSpine->_getDerivedOrientation());
+    feeding.mSpine->_update(true, false);
+    const Ogre::Vector3 ground = feeding.mChickenStart + feeding.mChickenScale *
+        feeding.mChickenEntity->getBoundingBox().getCenter();
+    const Ogre::Vector3 mouth = feeding.mHead->_getDerivedPosition() + Ogre::Vector3(0, -0.10f, -height * 0.06f);
+    const Ogre::Vector3 held = ground + (mouth - ground) * lift;
+    const Ogre::Real spread = feeding.mChickenScale.x * feeding.mChickenEntity->getBoundingBox().getSize().x * 0.38f;
+    Ogre::Vector3 targets[2];
+    for(unsigned int side = 0; side < 2; ++side)
+    {
+        const auto& arm = feeding.mArms[side];
+        const Ogre::Vector3 grip = held + Ogre::Vector3(side == 0 ? spread : -spread, 0, 0);
+        targets[side] = arm.mRestTip + (grip - arm.mRestTip) * reach * (1.0f - release);
+    }
+    // Move the crouched torso only as far as required by the actual arm lengths.
+    for(unsigned int pass = 0; pass < 8; ++pass)
+    {
+        Ogre::Vector3 adjustment = Ogre::Vector3::ZERO;
+        for(unsigned int side = 0; side < 2; ++side)
+        {
+            const auto& arm = feeding.mArms[side];
+            Ogre::Vector3 direction = targets[side] - arm.mUpper->_getDerivedPosition();
+            const Ogre::Real distance = direction.normalise();
+            const Ogre::Real length = arm.mUpper->_getDerivedPosition().distance(arm.mLower->_getDerivedPosition()) +
+                (arm.mLower->_getDerivedScale() * arm.mTipOffset).length();
+            adjustment += direction * std::max(0.0f, distance - length * 0.98f) * 0.5f;
+        }
+        if(adjustment.squaredLength() < 0.00000001f)
+            break;
+        for(Ogre::Bone* root : feeding.mRoots)
+        {
+            root->translate(adjustment * crouch, Ogre::Node::TS_WORLD);
+            root->_update(true, false);
+        }
+    }
+    for(unsigned int side = 0; side < 2; ++side)
+    {
+        auto& leg = feeding.mLegs[side];
+        Ogre::Vector3 foot = leg.mRestTip;
+        const Ogre::Vector3 hip = leg.mUpper->_getDerivedPosition();
+        const Ogre::Real legLength = hip.distance(leg.mLower->_getDerivedPosition()) +
+            (leg.mLower->_getDerivedScale() * leg.mTipOffset).length();
+        const Ogre::Real vertical = foot.z - hip.z;
+        const Ogre::Real horizontalReach = std::sqrt(std::max(0.0f,
+            legLength * legLength * 0.999f - vertical * vertical));
+        Ogre::Vector3 step(hip.x - foot.x, hip.y - foot.y, 0);
+        const Ogre::Real horizontalDistance = step.normalise();
+        // Short-legged creatures shuffle toward a distant chicken instead of stretching.
+        foot += step * std::max(0.0f, horizontalDistance - horizontalReach);
+        solveFeedingLimb(leg.mUpper, leg.mLower, leg.mTipOffset, foot);
+        const Ogre::Node* footParent = leg.mTip->getParent();
+        leg.mTip->setPosition(footParent != nullptr ? (footParent->_getDerivedOrientation().Inverse() *
+            (foot - footParent->_getDerivedPosition())) / footParent->_getDerivedScale() : foot);
+        auto& arm = feeding.mArms[side];
+        solveFeedingLimb(arm.mUpper, arm.mLower, arm.mTipOffset, targets[side]);
+    }
+    for(const auto& pose : feeding.mReachBones)
+    {
+        if(pose.mDriver == nullptr)
+            continue;
+        for(const auto& driver : feeding.mReachBones)
+        {
+            if(driver.mBone != pose.mDriver)
+                continue;
+            pose.mBone->setPosition(pose.mPosition + driver.mBone->getPosition() - driver.mPosition);
+            pose.mBone->setOrientation(driver.mBone->getOrientation() *
+                driver.mOrientation.Inverse() * pose.mOrientation);
+            break;
+        }
+    }
+    for(Ogre::Bone* root : feeding.mRoots)
+        root->_update(true, false);
+    // Retain the manual-bone dirty flag so skinning refreshes its cached matrices.
+    return (feeding.mArms[0].mTip->_getDerivedPosition() + feeding.mArms[1].mTip->_getDerivedPosition()) * 0.5f;
+}
+
 void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,
     const Ogre::Vector3& position)
 {
@@ -3235,6 +3468,7 @@ void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* c
         feeding.mChickenNode->setPosition(feeding.mChickenStart);
         feeding.mChickenNode->setScale(feeding.mChickenScale);
         setEntityAnimation(feeding.mChickenEntity, EntityAnimation::idle_anim, true);
+        prepareCreatureFeedingReach(feeding);
         return;
     }
 }
@@ -3361,6 +3595,12 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
         it->mNode->setPosition(it->mBasePosition);
         it->mNode->setOrientation(it->mBaseOrientation);
         it->mNode->setScale(it->mBaseScale);
+        for(const auto& pose : it->mReachBones)
+        {
+            pose.mBone->setPosition(pose.mPosition);
+            pose.mBone->setOrientation(pose.mOrientation);
+            pose.mBone->setManuallyControlled(pose.mWasManual);
+        }
         if(it->mChickenEntity != nullptr)
         {
             it->mChickenNode->detachObject(it->mChickenEntity);
