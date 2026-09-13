@@ -17,18 +17,25 @@ parser.add_argument('--trace-work', action='store_true')
 parser.add_argument('--benchmark', action='store_true')
 parser.add_argument('--saved-terrain', type=Path)
 parser.add_argument('--furniture-log', type=Path)
+parser.add_argument('--saved-food-cases', action='store_true')
+parser.add_argument('--source-ref')
 args = parser.parse_args()
+def read_source(relative):
+    return (subprocess.check_output(['git', 'show', args.source_ref + ':' + relative], cwd=repo, text=True)
+            if args.source_ref else (repo / relative).read_text())
+if args.source_ref:
+    source = re.sub(r'^#include[^\n]*\n', '', read_source('source/gamemap/RoomObjectNavigation.cpp'), flags=re.M)
 if args.trace_food:
     source = source.replace('std::stable_sort(candidates.begin()', 'std::cout << "CANDIDATES " << creature.getMeshName() << " level=" << creature.getLevel() << " count=" << candidates.size() << "\\n"; std::stable_sort(candidates.begin()')
 if args.trace_work:
     source = source.replace('const auto tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const auto tiles = map.path(&creature, stagingTile);')
     source = source.replace('path.clear();\n            return true;', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"BAD_LEG "<<previous<<" -> "<<target<<"\\n"; path.clear();\n            return true;')
 food_source = (subprocess.check_output(['git', 'show', args.food_source_ref + ':source/creatureaction/CreatureActionEatChicken.cpp'], cwd=repo, text=True)
-               if args.food_source_ref else (repo / 'source/creatureaction/CreatureActionEatChicken.cpp').read_text())
+               if args.food_source_ref else read_source('source/creatureaction/CreatureActionEatChicken.cpp'))
 food_handler = food_source[food_source.index('bool CreatureActionEatChicken::handleEatChicken('):food_source.index('\nstd::string CreatureActionEatChicken::getListenerName()')]
 work_gates = []
 for room_class, kind in [('RoomWorkshop', 'workshop'), ('RoomLibrary', 'library'), ('RoomTrainingHall', 'trainingHall'), ('RoomCasino', 'casino')]:
-    room_source = (repo / f'source/rooms/{room_class}.cpp').read_text()
+    room_source = read_source(f'source/rooms/{room_class}.cpp')
     gate_start = room_source.index('    std::vector<Ogre::Vector2> approach;', room_source.index(f'bool {room_class}::useRoom('))
     gate_end = room_source.index('    // This creature is ready.' if kind == 'casino' else '    Ogre::Vector3 walkDirection', gate_start)
     work_gates.append(f'case RoomType::{kind}: {{\n' + room_source[gate_start:gate_end] + '\n break; }')
@@ -221,7 +228,10 @@ int main(){
  creature=Creature{&map};
  for(auto& tile:map.tiles)tile.walkable=false;
  map.getTile(1,5)->walkable=true;object.mesh="Bookcase";object.pos={5,5.3f,0};object.angle=45;room.type=RoomType::library;
- roomWorkGate(RoomType::library,creature,&object,{5,4.7f});
+ for(auto type:{RoomType::library,RoomType::workshop,RoomType::trainingHall,RoomType::casino}){
+  creature.popped=0;
+  check(!roomWorkGate(type,creature,&object,{5,4.7f}),"failed room approach ends this action tick instead of immediate reselection");
+ }
  check(creature.popped==1&&creature.workReady==0&&creature.walk.empty(),"inaccessible workstation releases its job instead of looping or awarding work");
  for(auto& tile:map.tiles)tile.walkable=true;
  creature=Creature{&map};
@@ -270,7 +280,7 @@ int main(){
   check(creature.cooldown==1&&creature.animation=="EatChicken","accepted feeding animation and cooldown are preserved");
  }
  creature=Creature{&map};creature.pos={6,5,0};ChickenEntity trapped{&map,{5.2f,5,0}};
- CreatureActionEatChicken::handleEatChicken(creature,&trapped);
+ check(!CreatureActionEatChicken::handleEatChicken(creature,&trapped),"failed food approach ends this action tick instead of immediate reselection");
  check(trapped.consumed==0&&creature.popped==1&&creature.walk.empty(),"unreachable chicken releases the action rather than consuming through furniture");
  room.objects.clear();creature=Creature{&map};creature.pos={4,5,0};ChickenEntity adjacent{&map,{5,5,0}};
  CreatureActionEatChicken::handleEatChicken(creature,&adjacent);
@@ -332,11 +342,41 @@ if args.saved_terrain:
     check(searches>0,"saved terrain exercises real worker approach destinations");
     std::cout<<"SAVED_TERRAIN_OBJECTS="<<savedObjects.size()<<" SEARCHES="<<searches<<" TOTAL_MS="<<totalMicros/1000.0<<" MAX_MS="<<maxMicros/1000.0<<'\n';
     '''
+    if args.saved_food_cases:
+        creatures = re.findall(r'^\d+\t(\w+)\t(\w+\.mesh)\t([^\t]+)\t([^\t]+)\t[^\t]+\t\w+\t(\d+)\t', saved, re.M)
+        chickens = [line.split() for line in saved.split('[Chickens]')[1].split('[/Chickens]')[0].splitlines() if line.startswith('-1')]
+        cases = []
+        for name, mesh, x, y, level in creatures:
+            for chicken in chickens:
+                cx, cy = chicken[3:5]
+                if (float(x) - float(cx)) ** 2 + (float(y) - float(cy)) ** 2 <= 400:
+                    cases.append(f'{{"{name}","{mesh}",{level},{{float({x}),float({y})}},{{float({cx}),float({cy})}}}}')
+        assert cases
+        saved_probe += 'struct FoodCase{const char* name;const char* mesh;int level;Ogre::Vector2 start,food;};\n'
+        saved_probe += 'const FoodCase cases[]={' + ',\n'.join(cases) + '};\n'
+        saved_probe += r'''
+        long long foodTotal=0,foodMax=0;int foodCalls=0,foodReached=0;
+        for(const auto& item:cases){
+          savedWorker.mesh=item.mesh;savedWorker.pos={item.start.x,item.start.y,0};savedWorker.level=item.level;
+          std::vector<Ogre::Vector2> result;
+          const auto began=std::chrono::steady_clock::now();
+          const bool found=RoomObjectNavigation::foodApproach(savedWorker,item.food,result);
+          const auto us=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-began).count();
+          foodTotal+=us;foodMax=std::max(foodMax,us);++foodCalls;foodReached+=found;
+          check(!found||(!result.empty()&&!RoomObjectNavigation::blocked(savedWorker,result)),"saved food approach never crosses furniture");
+          if(us>10000)std::cout<<"SLOW "<<item.name<<" food="<<item.food<<" found="<<found<<" ms="<<us/1000.0<<std::endl;
+        }
+        std::cout<<"FOOD_CALLS="<<foodCalls<<" REACHED="<<foodReached<<" TOTAL_MS="<<foodTotal/1000.0<<" MAX_MS="<<foodMax/1000.0<<std::endl;
+        check(foodMax<100000,"saved food search stays below 100 ms in the local performance fixture");
+        '''
 probe = probe.replace('SAVED_TERRAIN', saved_probe)
 with tempfile.TemporaryDirectory(prefix='odp-room-navigation-') as directory:
     work = Path(directory)
+    if args.source_ref:
+        (work / 'gamemap').mkdir()
+        (work / 'gamemap/RoomObjectPath.h').write_text(read_source('source/gamemap/RoomObjectPath.h'))
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++14', f'/I{repo / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++14', f'/I{work}', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

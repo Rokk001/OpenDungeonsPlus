@@ -247,6 +247,7 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         const float da = a.squaredDistance(food), db = b.squaredDistance(food);
         return da == db ? a.squaredDistance(start) < b.squaredDistance(start) : da < db;
     });
+    std::vector<Ogre::Vector2> stagingPoints, standingPoints;
     for(const auto& point : candidates)
     {
         Ogre::Vector2 direction = food - point;
@@ -260,21 +261,19 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         if(!creature.canGoThroughTile(tile) || !terrainClear(creature, staging, point) ||
             !RoomObjectPath::clearSegment(body, staging, point))
             continue;
-        const auto tiles = map.path(&creature, tile);
-        if(tiles.empty())
-            continue;
-        std::vector<Ogre::Vector2> approach;
-        Creature::tileToVector2(tiles, approach, true, 0.0f);
-        // Keep this final step even when both actors share a logical tile.
-        approach.push_back(staging);
-        approach.push_back(point);
-        refine(creature, approach);
-        if(approach.empty())
-            continue;
-        path.swap(approach);
-        return true;
+        stagingPoints.push_back(staging);
+        standingPoints.push_back(point);
     }
-    return false;
+    // These are alternatives for one food target, not independent jobs. Search
+    // their shared movement graph once instead of retrying it for every offset.
+    size_t chosen = 0;
+    const auto terrain = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
+    { return terrainClear(creature, from, to); };
+    if(!RoomObjectPath::routeToAny(start, stagingPoints, body, 0, 0,
+        map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, path, chosen))
+        return false;
+    path.push_back(standingPoints[chosen]);
+    return true;
 }
 
 bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject& object,

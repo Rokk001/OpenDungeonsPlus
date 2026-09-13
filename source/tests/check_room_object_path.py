@@ -85,6 +85,21 @@ int main(){
  check(!route({10,10},{100,100},enclosed,0,0,127,127,openFloor,path)&&path.empty(),"furniture-enclosed destination fails without an unsafe route");
  check(terrainChecks<1000,"enclosed destination rejection does not explore the entire map");
  std::cout<<"ENCLOSED_GOAL_MS="<<std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-began).count()<<'\n';
+ terrainChecks=0;
+ check(!route({100,100},{10,10},enclosed,0,0,127,127,openFloor,path)&&path.empty(),"furniture-enclosed start fails without searching the remote open component");
+ check(terrainChecks<1000,"enclosed start rejection does not explore the entire map");
+ // Reverse expansion must query forward terrain edges, not assume symmetry.
+ const TerrainSegment oneWay=[](const Ogre::Vector2& a,const Ogre::Vector2& b){return b.x>=a.x;};
+ check(route({2,5},{10,5},furniture,0,0,12,12,oneWay,path),"bidirectional search preserves a forward-only detour");
+ previous={2,5};for(const auto& p:path){check(oneWay(previous,p)&&clearSegment(furniture,previous,p),"each reconstructed edge keeps its forward terrain and obstacle direction");previous=p;}
+ check(!route({10,5},{2,5},furniture,0,0,12,12,oneWay,path),"reverse search cannot reverse one-way terrain permissions");
+ size_t chosen=0;
+ const std::vector<Ogre::Vector2> foodGoals{{100,100},{11,12}};
+ check(routeToAny({10,10},foodGoals,enclosed,0,0,127,127,openFloor,path,chosen)&&chosen==1&&path.back()==foodGoals[chosen],"an enclosed food candidate does not hide another reachable approach");
+ const std::vector<Ogre::Vector2> detourGoals{{5,5},{10,5},{9,5}};
+ check(routeToAny({2,5},detourGoals,furniture,0,0,12,12,floor,path,chosen)&&chosen>0&&path.back()==detourGoals[chosen],"shared search reconstructs the selected food approach after a detour");
+ previous={2,5};for(const auto& p:path){check(clearSegment(furniture,previous,p)&&floor(previous,p),"shared-search route does not cut through furniture or terrain");previous=p;}
+ check(!routeToAny({10,10},{{100,100},{100.1f,100.1f}},enclosed,0,0,127,127,openFloor,path,chosen)&&path.empty(),"all enclosed food candidates fail in one shared search");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''

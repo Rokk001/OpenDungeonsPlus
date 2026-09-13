@@ -528,7 +528,7 @@ bool RoomCasino::useRoom(Creature& creature, bool forced)
         {wantedX, wantedY}, {0, 0}, approach))
     {
         creature.popAction();
-        return true;
+        return false;
     }
     if(!approach.empty())
     {
