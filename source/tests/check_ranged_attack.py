@@ -16,7 +16,12 @@ probe = r'''
 #include <string>
 struct GameMap {};
 struct Tile {int x,y;int getX()const{return x;}int getY()const{return y;}};
-struct GameEntity {};
+enum class GameEntityType {creature,building};
+struct GameEntity {
+ GameEntityType type=GameEntityType::building;Ogre::Vector3 position;
+ GameEntityType getObjectType()const{return type;}
+ const Ogre::Vector3& getPosition()const{return position;}
+};
 struct Creature;
 namespace EntityAnimation {const std::string combat_attack_anim="CombatAttack",ranged_attack_anim="RangedAttack";}
 namespace CreatureSound {enum {Attack};}
@@ -49,6 +54,13 @@ int main(){int checks=0,failures=0;auto check=[&](bool v){++checks;if(!v)++failu
     check(skill.calls==1 && skill.distance==distance && skill.ko && !skill.notify);
     check(data.mWarmup==2 && data.mCooldown==3);
     check(c.sounds==1 && c.turns==0 && c.tired==.5 && c.xp==1.5);
+ }
+ for(double maximum:{1.,7.})for(const Ogre::Vector3 offset:{Ogre::Vector3(.3f,.2f,0),Ogre::Vector3(-.3f,-.2f,0)}){
+    Creature c;c.position={.1f,-.1f,0};Skill skill{maximum};CreatureSkillData data{&skill};
+    GameEntity target;target.type=GameEntityType::creature;target.position=offset;Tile tile{0,0};
+    c.useAttack(data,target,tile,true,false);
+    auto expected=target.position-c.position;expected.normalise();
+    check(c.direction==expected);
  }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
