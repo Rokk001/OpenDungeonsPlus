@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The September 13 projectile collision correction passes 75 isolated production-
+code checks (28 failures on the preceding implementation) and Release linking.
+The normal executable was locked by the user's running game, so the verified
+output is `build/windows/opendungeons-plus-pending.exe`, dated 2026-09-13 13:34:05,
+4,720,128 bytes, SHA-256
+`375A4912AD3CF1ECCB93AD00D2B8FBB1A5D793AFF9366C167CD6F65E349FF539`.
+It uses the previously prepared runtime in that directory; no runtime DLLs were
+replaced while the game was running. The normal executable remains the 12:47:51
+build below. No game was launched/stopped or pushed; ranged presentation and
+the newly requested solid room-object navigation are still in progress.
+
 The September 13 cuff/grip and worker-tool feeding correction passes a clean
 Release rebuild and runtime preparation after the animation-state layout change.
 The executable is dated 2026-09-13 12:47:51, is 4,720,640 bytes, SHA-256

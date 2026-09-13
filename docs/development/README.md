@@ -110,6 +110,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   trap and door sales, reusing existing prices, permissions and requests.
 - [Missile wall crash investigation](MISSILE-WALL-CRASH.md): existing null-tile
   correction, before/after regression evidence and limits of the Linux traces.
+- [Projectile collision and flight](PROJECTILE-COLLISION-PATH.md): single-hit
+  dispatch, initialized traversal distances and exact collision endpoints.
 - [Shadow coverage](SHADOW-COVERAGE.md): PR #48's missing creature shadows,
   ground projection, receiver and cursor-light corrections, isolated rendering
   evidence, user screenshot review and local branch closure.
