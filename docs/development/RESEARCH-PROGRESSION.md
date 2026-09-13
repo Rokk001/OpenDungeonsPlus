@@ -1,5 +1,20 @@
 # Research progression
 
+## Exclusive research navigation
+
+The minimap research handler already toggles visibility, but opening the tree
+does not close production or other dialogs, and the F10 entry always opens it.
+Reuse the existing Escape close dispatcher before opening the tree and route
+F10 through the same toggle as the minimap. Closing research continues to cancel
+unapplied changes through its existing controller. This client-only correction
+does not change save data, packets or the application version.
+
+The installed-CEGUI navigation probe passes 504 checks using real mouse events
+at four resolutions and three UI scales: repeated minimap clicks, F10 toggles,
+and repeated alternating research/production selection leave only the selected
+dialog visible. The 411 research/save/packet regressions also pass, as does
+Release compilation. User gameplay acceptance remains pending.
+
 ## Existing implementation and remaining scope
 
 The current skill tree already covers 13 buildable rooms, four traps and ten
