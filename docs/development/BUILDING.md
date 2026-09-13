@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+The September 13 visible furniture-footprint correction is built and prepared
+for the normal `build/windows/opendungeons-plus.exe`, dated 2026-09-13 18:08:45,
+4,795,904 bytes, SHA-256
+`AA60D4F611BE659A27DA741E5B391A6734F040A1D87AE24B655C4D1AECF2DA1E`.
+Release compilation and runtime preparation pass; no game was running when the
+normal executable was replaced, and none was launched or stopped. Geometry
+3,283, real furniture bounds 459, room navigation/layouts 7,630, walking poses
+3,993, saved-terrain/food 3,617, renderer/animation 10,136, feeding limb 109 and
+action retry 12 checks pass. See [navigation](ROOM-OBJECT-NAVIGATION.md) for scope
+and measurement limits; user gameplay/visual acceptance remains pending.
+The earlier pending executable and diagnostics below are superseded by this
+normal build for testing the furniture changes.
+
 The September 13 circular route-geometry extension passes Release compilation
 to `build/windows/opendungeons-plus-pending.exe`, dated 2026-09-13 16:54:27,
 4,791,296 bytes, SHA-256

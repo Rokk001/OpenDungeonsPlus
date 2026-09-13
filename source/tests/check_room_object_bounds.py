@@ -8,6 +8,8 @@ import tempfile
 repo = Path(__file__).resolve().parents[2]
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 catalog = (repo / 'source/gamemap/RoomObjectBounds.h').read_text()
+renderer = (repo / 'source/render/RenderManager.cpp').read_text()
+scale_block = renderer.split('    if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)', 1)[1].split('    Ogre::Entity* ent = nullptr;', 1)[0]
 names = set(re.findall(r'\{"([^"]+)"', catalog))
 required = set()
 for path in (repo / 'source/rooms').glob('*.cpp'):
@@ -26,13 +28,46 @@ int main(int argc,char** argv){try{
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
  int checks=0,failures=0;
+ auto* scene=root.createSceneManager();
+ auto* node=scene->getRootSceneNode()->createChildSceneNode();
  for(const auto& row:RoomObjectPath::meshBounds){
   const auto mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
   const auto& b=mesh->getBounds();
   for(float delta:{row.minX-b.getMinimum().x,row.minY-b.getMinimum().y,row.maxX-b.getMaximum().x,row.maxY-b.getMaximum().y}){
    ++checks;if(std::abs(delta)>.00002f){++failures;std::cout<<"FAIL "<<row.name<<" stale asset bounds\n";}
   }
+  const std::string meshName(row.name);
+  node->setScale(Ogre::Vector3::UNIT_SCALE);
+  RENDER_SCALE
+  const auto scale=RoomObjectPath::furnitureScale(row);
+  ++checks;
+  if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)||scale.x<=0||scale.x>1||scale.y<=0||scale.y>1){
+   ++failures;std::cout<<"FAIL "<<row.name<<" renderer footprint scale\n";
+  }
+  for(float angle:{0.f,30.f,45.f,90.f,180.f,270.f}){
+   const Ogre::Quaternion rotation(Ogre::Degree(angle),Ogre::Vector3::UNIT_Z);
+   node->setOrientation(rotation);node->setPosition(5,7,.15f);node->_update(true,false);
+   Ogre::AxisAlignedBox rendered;
+   for(int i=0;i<8;++i)rendered.merge(node->convertLocalToWorldPosition(b.getAllCorners()[i]));
+   Ogre::AxisAlignedBox navigation;
+   for(float x:{row.minX,row.maxX})for(float y:{row.minY,row.maxY})
+    navigation.merge(Ogre::Vector3(5,7,0)+rotation*Ogre::Vector3(x*scale.x,y*scale.y,0));
+   ++checks;
+   if(std::abs(rendered.getMinimum().x-navigation.getMinimum().x)>.00003f||
+      std::abs(rendered.getMinimum().y-navigation.getMinimum().y)>.00003f||
+      std::abs(rendered.getMaximum().x-navigation.getMaximum().x)>.00003f||
+      std::abs(rendered.getMaximum().y-navigation.getMaximum().y)>.00003f||
+      std::abs(rendered.getMinimum().z-b.getMinimum().z-.15f)>.00003f||
+      std::abs(rendered.getMaximum().z-b.getMaximum().z-.15f)>.00003f){
+    ++failures;std::cout<<"FAIL "<<row.name<<" transformed visual/navigation bounds or height\n";
+   }
+  }
  }
+ for(const char* name:{"FenceCorner","FenceStraight","PortalObject","DungeonTempleObject","Bookcase","Podium"})
+  for(const auto& row:RoomObjectPath::meshBounds)if(std::string(row.name)==name){
+   const auto scale=RoomObjectPath::furnitureScale(row);
+   ++checks;if(scale.x!=1||scale.y!=1){++failures;std::cout<<"FAIL unchanged object "<<name<<'\n';}
+  }
  // These decorations are attached high on a wall, not standing on the floor.
  for(const char* name:{"WeaponShield1.mesh","WeaponShield2.mesh"}){
   const auto mesh=Ogre::MeshManager::getSingleton().load(name,"Graphics");++checks;
@@ -40,7 +75,7 @@ int main(int argc,char** argv){try{
  }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
-'''
+'''.replace('RENDER_SCALE', scale_block)
 with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)

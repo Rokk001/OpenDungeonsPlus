@@ -1,6 +1,10 @@
 #ifndef ROOMOBJECTBOUNDS_H
 #define ROOMOBJECTBOUNDS_H
 
+#include <algorithm>
+#include <cmath>
+#include <string>
+
 namespace RoomObjectPath
 {
 struct MeshBounds
@@ -54,6 +58,50 @@ static const MeshBounds meshBounds[] = {
     {"WorkshopMachine1", -.5376f, -.506479f, .761215f, .337512f},
     {"WorkshopMachine2", -.730786f, -.336f, .5376f, .338177f}
 };
+
+// Narrow the visible furniture and its navigation bounds together. Leave Z
+// unchanged so authored working heights and bed support surfaces stay valid.
+// Large beds keep their existing multi-tile allocation; this is not a capacity
+// or placement rule. Already compact meshes are never enlarged.
+struct FurnitureScale
+{
+    float x, y;
+};
+
+inline FurnitureScale furnitureScale(const MeshBounds& bounds)
+{
+    const std::string name(bounds.name);
+    if(name == "FenceCorner" || name == "FenceStraight" ||
+       name == "PortalObject" || name == "DungeonTempleObject")
+        return {1.0f, 1.0f};
+    // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
+    // diagonal, not just their unrotated width, so rotation retains the margin.
+    if(name.compare(0, 9, "Goldstack") == 0)
+    {
+        const float scale = std::min(1.0f, 0.4f / std::hypot(
+            bounds.maxX - bounds.minX, bounds.maxY - bounds.minY));
+        return {scale, scale};
+    }
+    float width = 0.6f, depth = 0.6f;
+    const bool bed = name == "Bed" || name == "KnightCoffin" || name == "StoneCoffin" ||
+        (name.size() >= 3 && name.compare(name.size() - 3, 3, "Bed") == 0);
+    // Beds may occupy every allocated tile. A one-tile bed therefore needs a
+    // wider walking margin than sparsely placed workstations, including the
+    // largest worker level; retain the length of multi-tile sleeping surfaces.
+    if(bed)
+        width = depth = 0.4f;
+    if(name == "DragonBed" || name == "TrollBed")
+        width = depth = 1.2f;
+    else if(name == "Bed" || name == "KnightCoffin" || name == "LizardmanBed" ||
+            name == "OrcBed" || name == "RangerBed" || name == "StoneCoffin")
+        depth = 1.2f;
+    const float x = std::min(1.0f, width / (bounds.maxX - bounds.minX));
+    const float y = std::min(1.0f, depth / (bounds.maxY - bounds.minY));
+    if(bed)
+        return {x, y};
+    const float scale = std::min(x, y);
+    return {scale, scale};
+}
 
 struct WalkingRadius
 {

@@ -115,15 +115,28 @@ int main(){
     const auto world=orientation*Ogre::Vector3(x,y,0);
     const auto local=obstacle.local(point+Ogre::Vector2(world.x,world.y));low.makeFloor(local);high.makeCeil(local);
    }
-   return high.x>obstacle.minimum.x&&low.x<obstacle.maximum.x&&high.y>obstacle.minimum.y&&low.y<obstacle.maximum.y;
+   if(high.x<=obstacle.minimum.x||low.x>=obstacle.maximum.x||high.y<=obstacle.minimum.y||low.y>=obstacle.maximum.y)return false;
+   low=Ogre::Vector2(std::numeric_limits<float>::infinity());high=-low;
+   const Ogre::Quaternion furnitureRotation(Ogre::Radian(rotation),Ogre::Vector3::UNIT_Z);
+   for(float x:{obstacle.minimum.x,obstacle.maximum.x})for(float y:{obstacle.minimum.y,obstacle.maximum.y}){
+    const auto relative=furnitureRotation*Ogre::Vector3(x,y,0)+Ogre::Vector3(obstacle.position.x-point.x,obstacle.position.y-point.y,0);
+    const auto local=orientation.Inverse()*relative;
+    low.makeFloor({local.x,local.y});high.makeCeil({local.x,local.y});
+   }
+   return high.x>-.2f&&low.x<.3f&&high.y>-.9f&&low.y<.4f;
   };
   for(int y=0;y<11;++y)for(int x=0;x<11;++x){
    const Ogre::Vector2 point(2.13f+x*.57f,2.27f+y*.51f);
-   check(obstacle.contains(point,heading)==overlaps(point),"directional body clearance matches Ogre-rotated envelope");
+   check(obstacle.contains(point,heading)==overlaps(point),"directional body clearance matches both Ogre-rotated rectangles");
   }
   const auto from=Ogre::Vector2(5,5)-heading*3, to=Ogre::Vector2(5,5)+heading*3;
   check(obstacle.intersects(from,to),"directional full segment cannot tunnel through furniture");
  }
+ Obstacle rotatedSquare{{-.2f,-.2f},{.2f,.2f},{5,5},std::sqrt(.5f),std::sqrt(.5f)};
+ rotatedSquare.bodyMinimum={-.3f,-.3f};rotatedSquare.bodyMaximum={.3f,.3f};
+ check(!rotatedSquare.contains({5.65f,5},{1,0}),"rotated expanded-box corner is not solid furniture");
+ check(!rotatedSquare.intersects({5.65f,4.95f},{5.65f,5.05f}),"body passes the free corner without touching the rotated object");
+ check(rotatedSquare.intersects({4,5},{6,5}),"exact rectangle sweep still blocks a crossing");
  // A valid terrain tile can be enclosed by furniture: the original tile
  // pathfinder still reaches it, but the body-aware path must reject it cheaply.
  std::vector<Obstacle> enclosed{

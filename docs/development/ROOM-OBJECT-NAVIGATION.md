@@ -1,5 +1,52 @@
 # Navigation around room objects
 
+## Current furniture-footprint checkpoint
+
+Visible room furniture and navigation now share the same mesh-local XY scale.
+Workstations and decorations are capped at 0.6 tiles per axis without enlarging
+already compact meshes. Full-capacity one-tile beds are narrower (0.4 tiles),
+leaving a 0.6-tile gap for the existing level-scaled worker body; long and large
+beds retain up to 1.2 tiles along their allocated long axes. Treasury piles use
+a 0.4-tile diagonal cap so arbitrary rotation does not consume that margin.
+Object height, anchors, rotation, bed reservations, room capacity and rewards
+are unchanged. Prison fencing, portals and the dungeon heart are not resized.
+
+Directional collision checks now use both furniture and body separating axes;
+the previous furniture-axis-only expansion filled empty corners around rotated
+objects. If root-aligned quarter-tile routing misses a narrow lane, bounded
+alternative grid alignments account for the asymmetric furniture/body centers,
+retaining the exact same segment and terrain checks. Work approaches refine
+the staging route and then append the already checked, precisely facing final
+leg; generic endpoint selection no longer displaces a valid work position.
+
+Verification of this checkpoint:
+
+- 3,283 geometry checks, including independent Ogre rotation of both rectangles
+  and explicit free-corner/crossing regressions.
+- 459 real-mesh/render-scale checks over all 41 furniture assets and six angles,
+  including unchanged heights and shared visual/navigation bounds.
+- 7,630 navigation/room-layout/benchmark checks: twelve bed models, both bed
+  orientations, both corridor axes, both travel directions and worker levels
+  1/30; nineteen further furniture layouts, including offset/rotated treasury
+  piles. Every returned segment retains terrain and full walking-body clearance.
+- The unchanged 33 walking-model envelopes pass 3,993 skinned-pose checks.
+- The existing real-Ogre renderer fixture, with the new actual bed scales,
+  passes 10,136 animation, bed-support, culling and cleanup checks; representative
+  resulting sleep renders were inspected. Feeding limb checks pass 109 and
+  failed-action retry checks pass 12.
+- Preserved feature regressions pass: research 411, production 41, workshop
+  scheduling 13, projectile collision 75, ranged dispatch 15 and shutdown 31.
+- The saved-terrain fixture passes 3,617 checks: 39 routes total 4.367 ms,
+  maximum 0.252 ms; 375 food searches total 853.726 ms, maximum 6.738 ms,
+  with 258 reachable cases under the new footprints and exact geometry.
+  These are isolated measurements, not a live-game performance claim.
+
+Release compilation and prepared runtime are recorded in BUILDING.md; no game
+was launched or stopped. Manual game appearance and navigation acceptance stay
+with the user. No save/network/version change is required: transforms are
+derived from existing mesh identities and movement uses existing packet fields.
+The historical diagnostics below describe their respective earlier checkpoints.
+
 ## Observed path and gap
 
 Creature tile pathfinding checks terrain and building movement permissions, but
@@ -105,6 +152,23 @@ the room and does not cover this acceptance requirement. The normal regression
 suite remains separate; passing it does not establish packed-room passability.
 No production behavior has been changed by this diagnostic checkpoint, and the
 navigation task is not ready for acceptance.
+
+### Follow-up: visible furniture footprint correction (initial inspection)
+
+The user has authorized narrower visible furniture together with matching
+collision bounds, retaining room capacity, tile reservations, placement and
+interaction behavior. The renderer currently creates these objects at unit
+scale while navigation uses their raw mesh bounds; reducing collision alone
+would therefore allow creatures through visible furniture. A shared mesh-local
+XY scale was selected for both paths, without changing object height, saved
+positions or packet formats. Existing compact furniture will not be enlarged;
+fences, portals and the dungeon heart are excluded. Bed support positioning
+already uses the actual scene-node scale and must retain that behavior.
+
+The reference screenshots establish free floor beside objects, not an exact
+measured percentage. Packed-room traversal, transformed bounds, work/food
+approaches and sleeping support were the required verification gates; current
+results are recorded above.
 
 ### Follow-up: stalls during combat testing
 
