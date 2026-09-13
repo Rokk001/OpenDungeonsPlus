@@ -1,5 +1,22 @@
 # Configuring and compiling on Windows
 
+## Visible traversal over low nests
+
+The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:
+2026-09-14 00:40:50, 4,849,152 bytes, SHA-256
+`A451A4C3E843A8995D01887BEBE41048C9E44518CB1E1C0ECEBEFE68C7ADCE70`.
+Creatures with feet too wide for the low nest's lane can visibly rise over it,
+using their native Walk pose; ground routes remain preferred when less costly.
+Server route validation and client elevation share the measured footprint and
+minimum body height. Higher bed parts remain solid, and the accepted 70% sizing
+and combat appearance/launch correction are preserved.
+Release/runtime preparation and the new step geometry/lifecycle probe pass,
+along with 39,699 native-pose, 10,136 existing renderer, 6,727 room-routing and
+7,270 path checks. Eight more packed passages pass; 140 of 5,301 remain failing.
+The native preview was inspected; full-game stepping and responsiveness still
+require the user's retest. No game was launched/stopped or save/network version
+changed. See [navigation scope and timing evidence](ROOM-OBJECT-NAVIGATION.md).
+
 ## Height-aware clearance beside low nests
 
 The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:

@@ -1,5 +1,49 @@
 # Navigation around room objects
 
+## Visible low-nest traversal
+
+The remaining level-30 worker cannot fit its measured feet in a 30% lane even
+beside the lowest nest. Implement the authorized crossing using the existing XY
+route and native Walk animation, with a smooth visual rise before the feet reach
+the nest and descent after leaving it. Only the completely measured low nest is
+eligible; taller/unknown furniture stays solid. Compare a crossing route with the
+ordinary route using horizontal distance plus ascent/descent, so a usable gap
+is preferred to stepping when its travel cost is lower. Keep interaction endpoints
+outside other creatures' beds. Server validation and client presentation must use
+the same footprint/height; client objects are available through the existing
+rendered-object list, not server-only room ownership. No new packet is needed.
+
+This is implemented for the fully measured low nest. The native walking pose
+is retained while the visual root rises smoothly before the lower-body envelope
+enters and settles after it leaves; no upper-body shrink or invisible passage is
+used. Raised support remains when a creature stops on the nest and is cleared
+on pickup, entity/map destruction, sleep/get-up transitions or nest removal.
+Ground paths remain the first candidate; crossings pay an ascent/descent cost
+per nest, and clear straight paths or distant, non-improving nests do not trigger
+unnecessary alternative searches. This does not authorize crossing tall posts.
+
+The production geometry/renderer probe passes 1,533,852 sampled assertions across
+33 models, levels 1/30, three bed angles and eight headings, plus pickup/stop/
+removal/reset checks; it renders 121 frames of the native worker Walk crossing.
+The reviewed frames are `build/windows/low-step-preview-{30,60,90}.png`, with
+diagnostic lighting and shipped meshes/textures, not full-game visual acceptance.
+The 39,699 dense native-pose checks also verify minimum Z bounds. All 10,136
+existing real-model hand/drop/get-up, feeding, sleep and combat preview checks
+pass; their pre-existing missing panel-texture warnings remain unrelated.
+Room routing/benchmark passes 6,727 checks and path geometry 7,270. Eight further
+packed low-nest crossings now pass; 140 of 5,301 packed-room checks still fail
+for other bed/body combinations. Do not hide those failures or call the full
+navigation task complete.
+
+The saved fixture retains 295/322 food approaches and passes 5,145 checks;
+84 routes take 417.864 ms and food calls 1,120.14 ms. Bounding the new step search
+reduces its initial 554.522 ms route result, but remains slower than the earlier
+300.55 ms non-stepping checkpoint; this is not a live responsiveness claim.
+Combat arrival 82, missile launch 17, idle retries 24, resource generation 14 and
+Release flags eight pass. Release/runtime preparation succeeds; current binary
+identity is in [BUILDING.md](BUILDING.md). No game was launched/stopped, version
+or packet/save format changed, or push made. Live stepping acceptance is open.
+
 ## Free-strip routing follow-up
 
 The low-nest collision correction retains body/furniture separation in three

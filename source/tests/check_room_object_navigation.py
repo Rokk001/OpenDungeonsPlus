@@ -46,6 +46,7 @@ for room_class, kind in [('RoomWorkshop', 'workshop'), ('RoomLibrary', 'library'
 probe = r'''
 #include "gamemap/RoomObjectNavigation.h"
 #include "gamemap/RoomObjectBounds.h"
+#include "gamemap/RoomObjectStep.h"
 #include "rooms/RoomType.h"
 #include "gamemap/Pathfinding.h"
 #include <OgreVector3.h>
@@ -177,7 +178,7 @@ int main(){
   const float crossingY=5+std::sin(angle)*(row.minX+row.maxX)*.5f+std::cos(angle)*(row.minY+row.maxY)*.5f;
   creature.pos={1,crossingY,0};
   std::vector<Ogre::Vector2> path;for(int x=2;x<=10;++x)path.push_back({float(x),crossingY});
-  check(RoomObjectNavigation::blocked(creature,path),"legacy straight route reproduces furniture crossing");
+  check(RoomObjectNavigation::blocked(creature,path)!=(std::string(row.name)=="GoblinBed"),"straight crossing is permitted only over the measured low nest");
   check(RoomObjectNavigation::refine(creature,path),"furniture routes suppress independent client jitter");
   if(path.empty())std::cout<<"NO_ROUTE "<<row.name<<" rotation="<<rotation<<'\n';
   check(!path.empty()&&path.back()==Ogre::Vector2(10,crossingY),"route keeps accessible destination");
@@ -403,8 +404,17 @@ probe = probe.replace('PACKED_BEDS', r'''
     const auto obstacles=RoomObjectNavigation::bodyObstacles(walker);
     auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
     for(const auto& point:path){
-     check(terrainClear(walker,previous,point)&&RoomObjectPath::clearSegment(obstacles,previous,point),
-      "bed-layout transit preserves terrain and complete visible-body clearance");
+     bool clear=true;
+     for(auto obstacle:obstacles)if(obstacle.intersects(previous,point)){
+      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,1+.02f*walker.level,walker.pos.z);
+      if(rise<=0){clear=false;break;}
+      for(int sample=0;sample<=64;++sample){
+       const auto at=previous+(point-previous)*(sample/64.f);
+       if(obstacle.contains(at,point-previous)&&RoomObjectPath::lowStepElevation(obstacle,at,point-previous,rise)<rise-.00001f)clear=false;
+      }
+     }
+     check(terrainClear(walker,previous,point)&&clear,
+      "bed-layout transit stays clear on the ground or visibly above an eligible low nest");
      previous=point;
     }
     check(dormitory.objects.size()==9,"bed layouts retain all placed objects");

@@ -110,7 +110,8 @@ int main(int argc,char** argv){try{
   for(const auto& low:RoomObjectPath::lowWalkingBounds)if(std::string(low.name)==model.name){
    foundLow=true;const auto& actual=heightBounds[5];const float margin=RoomObjectPath::lowWalkingMargin;
    ++checks;if(low.empty?!actual.isNull():(actual.isNull()||actual.getMinimum().x<low.minX-margin||
-    actual.getMinimum().y<low.minY-margin||actual.getMaximum().x>low.maxX+margin||actual.getMaximum().y>low.maxY+margin)){
+    actual.getMinimum().y<low.minY-margin||actual.getMaximum().x>low.maxX+margin||actual.getMaximum().y>low.maxY+margin||
+    actual.getMinimum().z<low.minZ-margin)){
     ++failures;std::cout<<"FAIL low walking envelope "<<model.name<<" "<<actual<<'\n';
    }
   }
