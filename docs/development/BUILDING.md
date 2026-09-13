@@ -1,5 +1,30 @@
 # Configuring and compiling on Windows
 
+## Seventy-percent corner-bed correction awaiting normal executable update
+
+The September 13 23:05 screenshot still shows small centered beds. The running
+normal executable is the 18:41:04 build below and does not include the later
+corner placement, walkable landmarks or failed-idle-retry correction. Its
+22:56-23:00 log has repeated twenty-action-loop exits and 2-4-second upkeep;
+the latest idle handler passes 24 checks while the older source fails two.
+
+Beds now fit 70% of their allocation width and depth after rotation, anchored
+at the top-left, with 30% clear strips at the right and bottom. This preserves
+the existing small stable angle variation and applies to restored beds too.
+The real-mesh regression fails 576 checks before and passes all 1,635 after;
+default navigation passes 4,737, geometry 3,283 and Release flags eight checks.
+Packed-room passage still fails 156 of 5,343 checks; this is not a claim that
+all creatures can use a 30% lane or that the reported live stalls are resolved.
+
+Release compilation succeeds to `build/windows/opendungeons-plus-pending.exe`,
+dated 2026-09-13 23:11:59, 4,837,376 bytes, SHA-256
+`9B709C4D1E5FEEA09149F1BD603C1738F52ABBEA469890D90ED5CC4E135D5AB0`.
+The normal executable remains unchanged because the game is running; no game
+was launched or stopped. The user has been asked to close it before the normal
+build/runtime update. Visible low-bed stepping and live movement acceptance
+remain open. No additional version bump or README entry is needed for the
+sizing adjustment; save and network formats remain unchanged.
+
 ## Startup resource regeneration correction
 
 The September 13 21:23 startup failure came from CMake overwriting the shared

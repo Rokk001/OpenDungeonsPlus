@@ -82,20 +82,22 @@ int main(int argc,char** argv){try{
   const std::string meshName=row.name;object.scale={scale.x,scale.y};
   RENDER_SCALE
   ++checks;if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)){++failures;std::cout<<"FAIL per-bed renderer scale\n";}
-  ++checks;
-  if(std::abs((bounds.getMaximum().x-bounds.getMinimum().x)*scale.x-size.width*.75f)>.00003f||
-     std::abs((bounds.getMaximum().y-bounds.getMinimum().y)*scale.y-size.height*.75f)>.00003f){
-   ++failures;std::cout<<"FAIL "<<row.name<<" bed must occupy 75 percent of allocated dimensions\n";
-  }
   for(float base:{0.f,90.f})for(int creature=0;creature<24;++creature){
    const int width=base==0?size.width:size.height,height=base==0?size.height:size.width;
    const std::string owner="Creature"+std::to_string(creature);
    const auto placed=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
    const auto restored=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
-   node->setScale(scale.x,scale.y,1);node->setPosition(placed.x,placed.y,0);
+   node->setScale(placed.scale.x,placed.scale.y,1);node->setPosition(placed.x,placed.y,0);
    node->setOrientation(Ogre::Quaternion(Ogre::Degree(placed.angle),Ogre::Vector3::UNIT_Z));
    node->_update(true,false);Ogre::AxisAlignedBox actual;
    for(int i=0;i<8;++i)actual.merge(node->convertLocalToWorldPosition(bounds.getAllCorners()[i]));
+   ++checks;
+   if(std::abs(actual.getSize().x-width*.70f)>.00003f||
+      std::abs(actual.getSize().y-height*.70f)>.00003f||
+      std::abs((4.5f+width-actual.getMaximum().x)-width*.30f)>.00003f||
+      std::abs((actual.getMinimum().y-6.5f)-height*.30f)>.00003f){
+    ++failures;std::cout<<"FAIL "<<row.name<<" rotated bed must leave 30 percent right and bottom lanes\n";
+   }
    ++checks;
    if(std::abs(actual.getMinimum().x-4.5f)>.00003f||
       std::abs(actual.getMaximum().y-(6.5f+height))>.00003f||

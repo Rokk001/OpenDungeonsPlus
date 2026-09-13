@@ -2,12 +2,31 @@
 
 ## Current corner-bed and walkable-landmark checkpoint
 
-The latest actual beds use 75% of their allocated native dimensions, a corner
-anchor and stable small angular variation; portals and dungeon hearts are
+The September 13 23:05 screenshot shows the small centered beds from the older
+normal executable. The existing corner placement is reused for new and restored
+beds. The requested 70% now applies to the final rotated footprint in both map
+axes, leaving full 30% lanes on the right and bottom of each allocation (including
+1x1, 2x1 and 1x2 beds). Scaling native dimensions alone lets the existing small
+angular variation encroach on those lanes; adjust that scale, not the allocation,
+corner anchor, saved orientation or creature-specific variation.
+
+The latest actual beds use a corner anchor and stable small angular variation;
+portals and dungeon hearts are
 excluded from furniture obstacles. This supersedes the earlier centered-bed
-sizes below. The packed-bed test still has 176 failed passage assertions and
+sizes below. The packed-bed test still has 156 failed passage assertions and
 the full navigation task is not ready for acceptance. Current executable and
 protocol compatibility details are in [BUILDING.md](BUILDING.md).
+
+The rotated-lane regression reproduces 576 failures before the scale correction
+and passes all 1,635 actual-mesh checks after it, covering all configured bed
+dimensions, both allocation orientations and 24 stable creature angles. Default
+navigation passes 4,737 checks and geometry passes 3,283; packed bedrooms still
+fail 156 of 5,343 checks because a 30% free lane cannot accommodate every full
+walking-body envelope. The authorized visible low-bed stepping remains open;
+no collision exemption was introduced to hide these failures. Action retries
+pass 24 checks in current source and fail two against the older normal executable's
+source checkpoint. Version, README and save/network layouts are unchanged by
+this sizing correction; the existing navigation entry remains applicable.
 
 The September 13 follow-up fixes failed idle wandering repeating within one
 tick (24 retry checks pass; two failed before). With the actual last-loaded
