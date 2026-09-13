@@ -83,8 +83,9 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
             if(object->getMeshName() != bounds.name)
                 continue;
             const float angle = float(object->getRotationAngle()) * 0.01745329252f;
-            result.push_back({{bounds.minX - clearance, bounds.minY - clearance},
-                {bounds.maxX + clearance, bounds.maxY + clearance},
+            const auto scale = RoomObjectPath::furnitureScale(bounds);
+            result.push_back({{bounds.minX * scale.x - clearance, bounds.minY * scale.y - clearance},
+                {bounds.maxX * scale.x + clearance, bounds.maxY * scale.y + clearance},
                 {object->getPosition().x, object->getPosition().y}, std::cos(angle), std::sin(angle)});
             break;
         }
@@ -318,10 +319,16 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
                 continue;
             Creature::tileToVector2(tiles, path, true, 0.0f);
             path.push_back(staging);
-            path.push_back(point);
             refine(creature, path);
-            if(!path.empty())
+            // The final leg was checked with the actual working direction.
+            // Generic endpoint refinement tests eight walking headings and
+            // must not displace this precise, already valid interaction point.
+            if(!path.empty() && path.back() == staging)
+            {
+                path.push_back(point);
                 return true;
+            }
+            path.clear();
         }
     }
     return false;

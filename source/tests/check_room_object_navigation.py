@@ -16,6 +16,7 @@ parser.add_argument('--trace-food', action='store_true')
 parser.add_argument('--trace-work', action='store_true')
 parser.add_argument('--benchmark', action='store_true')
 parser.add_argument('--packed-beds', action='store_true', help='Check the reported full-capacity dormitory transit regression')
+parser.add_argument('--room-layouts', action='store_true', help='Check furnished room transit with production placement offsets')
 parser.add_argument('--saved-terrain', type=Path)
 parser.add_argument('--furniture-log', type=Path)
 parser.add_argument('--saved-food-cases', action='store_true')
@@ -147,6 +148,11 @@ int main(){
  for(const auto& row:RoomObjectPath::meshBounds)for(float rotation:{0.f,30.f,45.f,90.f,180.f,270.f}){
   object.mesh=row.name;object.angle=rotation;object.pos={5,5,0};
   const float angle=rotation*.01745329252f;
+  const auto placed=RoomObjectNavigation::collect(map,0);
+  const auto furnitureScale=RoomObjectPath::furnitureScale(row);
+  check(placed.size()==1&&placed.front().minimum==Ogre::Vector2(row.minX*furnitureScale.x,row.minY*furnitureScale.y)&&
+   placed.front().maximum==Ogre::Vector2(row.maxX*furnitureScale.x,row.maxY*furnitureScale.y),
+   "placed navigation bounds match the shared visible furniture scale");
   const float crossingY=5+std::sin(angle)*(row.minX+row.maxX)*.5f+std::cos(angle)*(row.minY+row.maxY)*.5f;
   creature.pos={1,crossingY,0};
   std::vector<Ogre::Vector2> path;for(int x=2;x<=10;++x)path.push_back({float(x),crossingY});
@@ -218,7 +224,9 @@ int main(){
   if(!path.empty()){
    creature.pos={path.back().x,path.back().y,0};
    check(RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(creature),path.back(),Ogre::Vector2(object.pos.x,object.pos.y)+offset-path.back()),"work facing does not rotate the creature back into furniture");
-   check(RoomObjectNavigation::workApproach(creature,object,target,offset,path)&&path.empty(),"arrival becomes work-ready instead of repeatedly returning to obstructed tile center");
+   const bool arrived=RoomObjectNavigation::workApproach(creature,object,target,offset,path)&&path.empty();
+   if(!arrived)std::cout<<"WORK_RESELECT "<<model.name<<" level="<<level<<" object="<<object.mesh<<" position="<<creature.pos<<" wanted="<<target<<" facing="<<Ogre::Vector2(object.pos.x,object.pos.y)+offset<<'\n';
+   check(arrived,"arrival becomes work-ready instead of repeatedly returning to obstructed tile center");
    roomWorkGate(type,creature,&object,target);
    check(creature.workReady==1&&creature.walkActions==0,"actual room arrival gate permits work at clearance-adjusted position");
    creature.pos={1,5,0};creature.workReady=0;
@@ -290,6 +298,7 @@ int main(){
  CreatureActionEatChicken::handleEatChicken(creature,&distant);
  check(distant.consumed==0&&creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains original tile path and 80 percent truncation");
  PACKED_BEDS
+ ROOM_LAYOUTS
  BENCHMARK
  SAVED_TERRAIN
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
@@ -318,18 +327,125 @@ probe = probe.replace('PACKED_BEDS', r'''
    Creature::tileToVector2(coarse,transit,true,0);
    RoomObjectNavigation::refine(walker,transit);
    check(!transit.empty(),"packed worker beds must not make the dormitory impassable");
+   if(transit.empty())std::cout<<"PACKED_BLOCKED level="<<level<<" reverse="<<reverse<<'\n';
    if(!transit.empty()){
     check(transit.back()==Ogre::Vector2(float(destination->x),float(destination->y)),"packed-bed transit reaches the opposite doorway");
     auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
     for(const auto& point:transit){
      check(terrainClear(walker,previous,point),"packed-bed transit cannot escape through the surrounding walls");
+     check(RoomObjectPath::clearSegment(RoomObjectNavigation::bodyObstacles(walker),previous,point),
+      "packed-bed transit keeps the full walking body outside visible furniture");
      previous=point;
     }
    }
    check(dormitory.objects.size()==9,"packed-bed transit preserves all nine placed beds");
   }
  }
+ {
+  struct BedLayout{const char* name;int width,height;};
+  const BedLayout layouts[]={
+   {"Bed",1,2},{"ImpBed",1,1},{"GoblinBed",1,1},{"SpiderBed",1,1},
+   {"TentacleBed",1,1},{"KnightCoffin",1,2},{"StoneCoffin",1,2},
+   {"LizardmanBed",1,2},{"OrcBed",1,2},{"RangerBed",1,2},
+   {"DragonBed",2,2},{"TrollBed",2,2}
+  };
+  for(const auto& layout:layouts)for(bool rotated:{false,true})for(bool vertical:{false,true}){
+   const int w=rotated?layout.height:layout.width,h=rotated?layout.width:layout.height;
+   GameMap packed(3*w+8,3*h+8);Room dormitory;dormitory.type=RoomType::dormitory;
+   packed.rooms={&dormitory};for(auto& tile:packed.tiles)tile.walkable=false;
+   for(int y=4;y<4+3*h;++y)for(int x=4;x<4+3*w;++x){
+    auto* tile=packed.getTile(x,y);tile->walkable=true;tile->room=&dormitory;
+   }
+   std::vector<BuildingObject> beds(9);
+   for(int y=0;y<3;++y)for(int x=0;x<3;++x){
+    auto& bed=beds[y*3+x];bed.mesh=layout.name;bed.angle=rotated?90.f:0.f;
+    bed.pos={4+x*w+w*.5f-.5f,4+y*h+h*.5f-.5f,0};
+    dormitory.objects[packed.getTile(4+x*w,4+y*h)]=&bed;
+   }
+   const int centerX=4+w,centerY=4+h;
+   for(int i:{2,3}){
+    packed.getTile(vertical?centerX:i,vertical?i:centerY)->walkable=true;
+    packed.getTile(vertical?centerX:3*w+i+2,vertical?3*h+i+2:centerY)->walkable=true;
+   }
+   for(int level:{1,30})for(bool reverse:{false,true}){
+    const Ogre::Vector3 first(vertical?float(centerX):2.f,vertical?2.f:float(centerY),0);
+    const Ogre::Vector3 last(vertical?float(centerX):float(3*w+5),vertical?float(3*h+5):float(centerY),0);
+    Creature walker{&packed};walker.level=level;walker.pos=reverse?last:first;
+    const auto target=reverse?first:last;
+    auto coarse=packed.path(&walker,packed.getTile(int(target.x),int(target.y)));
+    std::vector<Ogre::Vector2> path;Creature::tileToVector2(coarse,path,true,0);
+    RoomObjectNavigation::refine(walker,path);
+    if(path.empty())std::cout<<"BED_LAYOUT_BLOCKED "<<layout.name<<" rotated="<<rotated<<" vertical="<<vertical<<" level="<<level<<" reverse="<<reverse<<'\n';
+    check(!path.empty()&&path.back()==Ogre::Vector2(target.x,target.y),"every full-capacity bed layout retains worker transit");
+    const auto obstacles=RoomObjectNavigation::bodyObstacles(walker);
+    auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
+    for(const auto& point:path){
+     check(terrainClear(walker,previous,point)&&RoomObjectPath::clearSegment(obstacles,previous,point),
+      "bed-layout transit preserves terrain and complete visible-body clearance");
+     previous=point;
+    }
+    check(dormitory.objects.size()==9,"bed layouts retain all placed objects");
+   }
+  }
+ }
 ''' if args.packed_beds else '')
+probe = probe.replace('ROOM_LAYOUTS', r'''
+ {
+  struct Layout{const char* mesh;float angle,yOffset;int spacing;};
+  const Layout layouts[]={
+   {"ChickenCoop",0,0,2},{"Bookcase",45,.3f,2},{"Podium",45,.3f,2},
+   {"TrainingDummy1",0,.3f,2},{"TrainingDummy2",0,.3f,2},
+   {"TrainingDummy3",0,.3f,2},{"TrainingDummy4",0,.3f,2},
+   {"WorkshopMachine1",30,.2f,2},{"WorkshopMachine2",30,.2f,2},
+   {"GoldstackLv1",0,0,1},{"GoldstackLv2",45,0,1},
+   {"GoldstackLv3",90,0,1},{"GoldstackLv4",135,0,1},
+   {"CasinoPokerTable",0,0,2},{"Roulette",0,0,2},{"TortureObject",0,0,2},
+   {"CelticCross",0,0,2},{"KnightStatue",0,0,2},{"KnightStatue2",0,0,2}
+  };
+  for(const auto& layout:layouts)for(bool vertical:{false,true})for(int placement:{0,1,2}){
+   if(placement!=0&&layout.spacing!=1)continue;
+   GameMap packed(13,13);Room room;packed.rooms={&room};
+   for(auto& tile:packed.tiles)tile.walkable=false;
+   for(int y=3;y<=9;++y)for(int x=3;x<=9;++x){
+    auto* tile=packed.getTile(x,y);tile->walkable=true;tile->room=&room;
+   }
+   std::vector<BuildingObject> furniture;
+   furniture.reserve(49);
+   const int edge=layout.spacing==1?3:4;
+   for(int y=edge;y<=12-edge;y+=layout.spacing)for(int x=edge;x<=12-edge;x+=layout.spacing){
+    furniture.emplace_back();auto& item=furniture.back();item.mesh=layout.mesh;
+    item.angle=layout.angle;item.pos={float(x),float(y)+layout.yOffset,0};
+    if(placement!=0){
+     // Treasury placement permits +/-0.2 on each axis and arbitrary angles.
+     // Exercise opposite extreme offsets, not only centered demonstration piles.
+     const float sign=placement==1?1.f:-1.f;
+     item.pos.x+=sign*(x%2?.2f:-.2f);item.pos.y+=sign*(y%2?.2f:-.2f);
+     item.angle+=float((x*17+y*31)%90);
+    }
+    room.objects[packed.getTile(x,y)]=&item;
+   }
+   for(int i:{1,2,10,11})packed.getTile(vertical?6:i,vertical?i:6)->walkable=true;
+   for(int level:{1,30})for(bool reverse:{false,true}){
+    Creature walker{&packed};walker.level=level;
+    walker.pos={vertical?6.f:reverse?11.f:1.f,vertical?(reverse?11.f:1.f):6.f,0};
+    const Ogre::Vector2 target(vertical?6.f:reverse?1.f:11.f,vertical?(reverse?1.f:11.f):6.f);
+    auto coarse=packed.path(&walker,packed.getTile(int(target.x),int(target.y)));
+    std::vector<Ogre::Vector2> path;Creature::tileToVector2(coarse,path,true,0);
+    RoomObjectNavigation::refine(walker,path);
+    if(path.empty())std::cout<<"ROOM_LAYOUT_BLOCKED "<<layout.mesh<<" placement="<<placement<<" vertical="<<vertical<<" level="<<level<<" reverse="<<reverse<<'\n';
+    check(!path.empty()&&path.back()==target,"furnished room retains worker transit");
+    const auto obstacles=RoomObjectNavigation::bodyObstacles(walker);
+    auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
+    for(const auto& point:path){
+     check(terrainClear(walker,previous,point)&&RoomObjectPath::clearSegment(obstacles,previous,point),
+      "room-layout route clears visible furniture without crossing walls");
+     previous=point;
+    }
+    check(room.objects.size()==furniture.size(),"room transit retains every object");
+   }
+  }
+ }
+''' if args.room_layouts else '')
 probe = probe.replace('BENCHMARK', r'''
  std::vector<BuildingObject> crowd(100);room.type=RoomType::library;
  for(int i=0;i<100;++i){crowd[i].mesh="Bookcase";crowd[i].pos={float(2+i%10),float(2+i/10),0};crowd[i].angle=45;room.objects[map.getTile(2+i%10,2+i/10)]=&crowd[i];}

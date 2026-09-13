@@ -24,6 +24,10 @@ struct Obstacle
     // A nonnegative radius is a logical circular footprint with moving-body
     // clearance already included; negative retains the oriented-box geometry.
     float radius = -1.0f;
+    Ogre::Vector2 bodyAxisMinimum = Ogre::Vector2::ZERO;
+    Ogre::Vector2 bodyAxisMaximum = Ogre::Vector2::ZERO;
+    float bodyCosine = 1.0f, bodySine = 0.0f;
+    bool hasBodyAxes = false;
 
     static Obstacle circle(const Ogre::Vector2& center, float clearanceRadius)
     {
@@ -54,6 +58,25 @@ struct Obstacle
             }
         result.minimum -= high;
         result.maximum -= low;
+        // Both rectangles contribute separating axes. Expanding only in the
+        // furniture axes fills empty corners when furniture and body differ
+        // in orientation, incorrectly sealing real gaps between rotated props.
+        result.bodyCosine = -direction.y;
+        result.bodySine = direction.x;
+        low = Ogre::Vector2(std::numeric_limits<float>::infinity());
+        high = -low;
+        for(float x : {minimum.x, maximum.x})
+            for(float y : {minimum.y, maximum.y})
+            {
+                const Ogre::Vector2 world(cosine * x - sine * y, sine * x + cosine * y);
+                const Ogre::Vector2 point(result.bodyCosine * world.x + result.bodySine * world.y,
+                    -result.bodySine * world.x + result.bodyCosine * world.y);
+                low.makeFloor(point);
+                high.makeCeil(point);
+            }
+        result.bodyAxisMinimum = low - bodyMaximum;
+        result.bodyAxisMaximum = high - bodyMinimum;
+        result.hasBodyAxes = true;
         result.bodyMinimum = result.bodyMaximum = Ogre::Vector2::ZERO;
         return result;
     }
@@ -65,14 +88,26 @@ struct Obstacle
             -sine * relative.x + cosine * relative.y);
     }
 
+    Ogre::Vector2 bodyLocal(const Ogre::Vector2& point) const
+    {
+        const auto relative = point - position;
+        return Ogre::Vector2(bodyCosine * relative.x + bodySine * relative.y,
+            -bodySine * relative.x + bodyCosine * relative.y);
+    }
+
     bool contains(const Ogre::Vector2& point, const Ogre::Vector2& heading = Ogre::Vector2::ZERO) const
     {
         if(radius >= 0.0f)
             return point.squaredDistance(position) < radius * radius;
         const auto bounds = forHeading(heading);
         const auto p = local(point);
-        return p.x > bounds.minimum.x && p.x < bounds.maximum.x &&
-            p.y > bounds.minimum.y && p.y < bounds.maximum.y;
+        if(p.x <= bounds.minimum.x || p.x >= bounds.maximum.x ||
+           p.y <= bounds.minimum.y || p.y >= bounds.maximum.y)
+            return false;
+        const auto bodyPoint = bounds.bodyLocal(point);
+        return !bounds.hasBodyAxes || (bodyPoint.x > bounds.bodyAxisMinimum.x &&
+            bodyPoint.x < bounds.bodyAxisMaximum.x && bodyPoint.y > bounds.bodyAxisMinimum.y &&
+            bodyPoint.y < bounds.bodyAxisMaximum.y);
     }
 
     bool intersects(const Ogre::Vector2& from, const Ogre::Vector2& to) const
@@ -86,19 +121,25 @@ struct Obstacle
             return contains(from + delta * along);
         }
         const auto bounds = forHeading(to - from);
-        const auto a = local(from);
-        const auto delta = local(to) - a;
+        const auto localFrom = local(from), localDelta = local(to) - localFrom;
+        const auto bodyFrom = bounds.bodyLocal(from), bodyDelta = bounds.bodyLocal(to) - bodyFrom;
+        const std::array<float, 4> a{{localFrom.x, localFrom.y, bodyFrom.x, bodyFrom.y}};
+        const std::array<float, 4> delta{{localDelta.x, localDelta.y, bodyDelta.x, bodyDelta.y}};
+        const std::array<float, 4> minimum{{bounds.minimum.x, bounds.minimum.y,
+            bounds.bodyAxisMinimum.x, bounds.bodyAxisMinimum.y}};
+        const std::array<float, 4> maximum{{bounds.maximum.x, bounds.maximum.y,
+            bounds.bodyAxisMaximum.x, bounds.bodyAxisMaximum.y}};
         float enter = 0.0f, leave = 1.0f;
-        for(int axis = 0; axis < 2; ++axis)
+        for(int axis = 0; axis < (bounds.hasBodyAxes ? 4 : 2); ++axis)
         {
             if(std::abs(delta[axis]) < 0.00001f)
             {
-                if(a[axis] <= bounds.minimum[axis] || a[axis] >= bounds.maximum[axis])
+                if(a[axis] <= minimum[axis] || a[axis] >= maximum[axis])
                     return false;
                 continue;
             }
-            float low = (bounds.minimum[axis] - a[axis]) / delta[axis];
-            float high = (bounds.maximum[axis] - a[axis]) / delta[axis];
+            float low = (minimum[axis] - a[axis]) / delta[axis];
+            float high = (maximum[axis] - a[axis]) / delta[axis];
             if(low > high)
                 std::swap(low, high);
             enter = std::max(enter, low);
@@ -148,7 +189,8 @@ using TerrainSegment = std::function<bool(const Ogre::Vector2&, const Ogre::Vect
 
 inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vector2>& goals,
     const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
-    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true)
+    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true,
+    const Ogre::Vector2& gridOffset = Ogre::Vector2::ZERO)
 {
     result.clear();
     if(goals.empty())
@@ -182,7 +224,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     const auto position = [&](int index)
     {
         return Ogre::Vector2(minX + (index % width) * 0.25f,
-            minY + (index / width) * 0.25f);
+            minY + (index / width) * 0.25f) + gridOffset;
     };
     // Opposite consistent potentials keep the two A* frontiers comparable;
     // their sum is a lower bound on the remaining complete route cost.
@@ -201,10 +243,10 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     // newly placed furniture overlaps the start, connect an outward exit first.
     const auto initialHeading = obstacles.empty() ? Ogre::Vector2(0, -1) : obstacles.front().initialHeading;
     const float reach = !allowStartExit || clearPoint(obstacles, start, initialHeading) ? 0.4f : 3.0f;
-    const int firstX = std::max(0, int(std::floor((start.x - reach - minX) * 4)));
-    const int lastX = std::min(width - 1, int(std::ceil((start.x + reach - minX) * 4)));
-    const int firstY = std::max(0, int(std::floor((start.y - reach - minY) * 4)));
-    const int lastY = std::min(height - 1, int(std::ceil((start.y + reach - minY) * 4)));
+    const int firstX = std::max(0, int(std::floor((start.x - reach - minX - gridOffset.x) * 4)));
+    const int lastX = std::min(width - 1, int(std::ceil((start.x + reach - minX - gridOffset.x) * 4)));
+    const int firstY = std::max(0, int(std::floor((start.y - reach - minY - gridOffset.y) * 4)));
+    const int lastY = std::min(height - 1, int(std::ceil((start.y + reach - minY - gridOffset.y) * 4)));
     for(int y = firstY; y <= lastY; ++y)
         for(int x = firstX; x <= lastX; ++x)
         {
@@ -225,10 +267,10 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
         const auto& goal = goals[i];
         if(!clearPoint(obstacles, goal) || !terrain(goal, goal))
             continue;
-        const int goalFirstX = std::max(0, int(std::floor((goal.x - 0.5f - minX) * 4)));
-        const int goalLastX = std::min(width - 1, int(std::ceil((goal.x + 0.5f - minX) * 4)));
-        const int goalFirstY = std::max(0, int(std::floor((goal.y - 0.5f - minY) * 4)));
-        const int goalLastY = std::min(height - 1, int(std::ceil((goal.y + 0.5f - minY) * 4)));
+        const int goalFirstX = std::max(0, int(std::floor((goal.x - 0.5f - minX - gridOffset.x) * 4)));
+        const int goalLastX = std::min(width - 1, int(std::ceil((goal.x + 0.5f - minX - gridOffset.x) * 4)));
+        const int goalFirstY = std::max(0, int(std::floor((goal.y - 0.5f - minY - gridOffset.y) * 4)));
+        const int goalLastY = std::min(height - 1, int(std::ceil((goal.y + 0.5f - minY - gridOffset.y) * 4)));
         for(int y = goalFirstY; y <= goalLastY; ++y)
             for(int x = goalFirstX; x <= goalLastX; ++x)
             {
@@ -340,7 +382,43 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
     const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, bool allowStartExit = true)
 {
     size_t chosenGoal = 0;
-    return routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY, terrain, result, chosenGoal, allowStartExit);
+    if(routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY, terrain, result, chosenGoal, allowStartExit))
+        return true;
+    // Mesh roots are not necessarily centered on the body or furniture. A valid
+    // narrow lane can fall between every root-aligned quarter-tile node even
+    // though a body-centered lane fits. Keep the same exact edge/terrain checks.
+    if(obstacles.empty())
+        return false;
+    const auto center = (obstacles.front().bodyMinimum + obstacles.front().bodyMaximum) * 0.5f;
+    Ogre::Vector2 furnitureCenter = Ogre::Vector2::ZERO;
+    float nearest = std::numeric_limits<float>::infinity();
+    for(const auto& obstacle : obstacles)
+    {
+        if(!obstacle.intersects(start, goal) || obstacle.position.squaredDistance(start) >= nearest)
+            continue;
+        nearest = obstacle.position.squaredDistance(start);
+        const auto localCenter = (obstacle.minimum + obstacle.maximum) * 0.5f;
+        furnitureCenter = obstacle.position + Ogre::Vector2(
+            localCenter.x * obstacle.cosine - localCenter.y * obstacle.sine,
+            localCenter.x * obstacle.sine + localCenter.y * obstacle.cosine);
+    }
+    furnitureCenter.x -= std::round(furnitureCenter.x * 4.0f) * 0.25f;
+    furnitureCenter.y -= std::round(furnitureCenter.y * 4.0f) * 0.25f;
+    if(center.squaredLength() < 0.000001f && furnitureCenter.squaredLength() < 0.000001f)
+        return false;
+    for(int y = -1; y <= 1; ++y)
+        for(int x = -1; x <= 1; ++x)
+        {
+            if(x == 0 && y == 0)
+                continue;
+            const auto heading = Ogre::Vector2(float(x), float(y)).normalisedCopy();
+            const auto offset = furnitureCenter + Ogre::Vector2(center.x * heading.y + center.y * heading.x,
+                -center.x * heading.x + center.y * heading.y);
+            if(routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY,
+                terrain, result, chosenGoal, allowStartExit, offset))
+                return true;
+        }
+    return false;
 }
 }
 

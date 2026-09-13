@@ -20,6 +20,7 @@
  */
 
 #include "render/RenderManager.h"
+#include "gamemap/RoomObjectBounds.h"
 
 #include "camera/CullingManager.h"
 #include "entities/Creature.h"
@@ -2218,6 +2219,15 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         node = mDraggableSceneNode->createChildSceneNode(tempString + "_node");
     node->setPosition(renderedMovableEntity->getPosition());
     node->roll(Ogre::Degree(renderedMovableEntity->getRotationAngle()));
+
+    if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
+        for(const auto& bounds : RoomObjectPath::meshBounds)
+            if(meshName == bounds.name)
+            {
+                const auto scale = RoomObjectPath::furnitureScale(bounds);
+                node->setScale(scale.x, scale.y, 1.0f);
+                break;
+            }
 
 
     Ogre::Entity* ent = nullptr;
