@@ -1,5 +1,13 @@
 # Configuring and compiling on Windows
 
+The September 13 research save-compatibility correction passes 26 map-header
+checks, including both reported 0.7.1 saves, plus 411 research/save/packet checks.
+Release compilation and runtime preparation pass; see
+[legacy save compatibility](LEGACY-SAVE-VERSION.md) for the verification boundary.
+The executable is dated 2026-09-13 07:49:48, is 4,700,160 bytes, SHA-256
+`A24CE41088F43DF999F825153012D06B43119C4B9451E2F1DDA30D766AE907DC`.
+It retains the complete six-task feature stack; no game was launched.
+
 The September 13 combat-animation follow-up passes 5,062 isolated real-Ogre
 checks across all 33 models and ten GPU blood-transparency checks. Release
 compilation and runtime preparation pass; see [combat feedback](CREATURE-COMBAT-FEEDBACK.md).

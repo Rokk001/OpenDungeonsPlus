@@ -41,7 +41,10 @@ Treasury capacity changes do not discard existing gold or allow negative deposit
 Research levels, points and pending order survive save/load; legacy completed
 skills load as level I. Target levels on requests prevent stale edits from
 silently ordering a later upgrade. Network version 0.7.2 is required on both
-ends; 0.7.1 maps remain selectable, but old network replays are incompatible.
+ends; the map loader accepts 0.7.1 files, but old network replays are incompatible.
+The initial update changed only map listing's version check and accidentally
+left actual loading blocked; the [compatibility correction](LEGACY-SAVE-VERSION.md)
+aligns both gates and tests the two reported saved-game headers.
 
 Verification: 411 extracted production research, save and real-codec checks
 pass, covering every item and all approved effect values; 364 installed-CEGUI

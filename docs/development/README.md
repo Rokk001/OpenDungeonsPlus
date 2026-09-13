@@ -69,8 +69,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   entries or smooth skeletal settling, sustained rest and lifecycle cleanup.
 - [Trap production queue](TRAP-PRODUCTION-QUEUE.md): owner-only priority and
   workshop progress, server-validated reordering, minimap and F10 access.
-- [Research progression](RESEARCH-PROGRESSION.md): existing research path,
-  minimap navigation checkpoint and the remaining upgrade specification.
+- [Research progression](RESEARCH-PROGRESSION.md): three-level room, trap and
+  spell research, minimap navigation and [legacy save compatibility](LEGACY-SAVE-VERSION.md).
 - [Main-menu atmosphere](MAIN-MENU-ATMOSPHERE.md): artwork-aligned fog, fire,
   acid and lightning layers with multi-resolution render verification.
 - [Menu hand cursor](MENU-HAND-CURSOR.md): restore hidden gameplay pointer on
