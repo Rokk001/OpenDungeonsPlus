@@ -3,14 +3,20 @@
 ## Corner-bed and walkable-landmark checkpoint (partial)
 
 The separate `build/windows/opendungeons-plus-pending.exe` is dated
-2026-09-13 19:02:46, 4,837,376 bytes, SHA-256
-`597F794363AD9DA3B211D1BF5024A0B4C7764CCD46013DB0F9C0CABE2893C77A`.
+2026-09-13 19:12:45, 4,837,376 bytes, SHA-256
+`AE593D7E913A9C97315F1444A7A71AFE3E4854DD02DE38FF8AE54AF11A789F7A`.
 Release compilation passes with optimized flags. This checkpoint makes portals
 and dungeon hearts walkable and gives real beds 75% of their allocated native
 dimensions, corner placement and stable creature-specific angles within four
 degrees. Per-instance bed scale requires network version 0.7.3; unchanged map
 records still load from 0.7.1 and 0.7.2. The normal 18:41 executable remains
 unchanged, with the hash below; no game was launched or stopped.
+
+The updated checkpoint also ends failed idle-wandering attempts for the current
+tick instead of repeating them up to twenty times. The extracted production
+retry probe reproduces two failures before and passes all 24 checks after this
+correction; default navigation still passes all 4,737 checks. Actual in-game
+turn duration remains unverified, and gameplay cooldowns are unchanged.
 
 Verification passes 4,737 default navigation checks (including all creature
 models/levels through both landmarks), 1,071 real-mesh/bed-placement checks,

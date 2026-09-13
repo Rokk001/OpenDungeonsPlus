@@ -211,6 +211,16 @@ results are recorded above.
 
 ### Follow-up: stalls during combat testing
 
+The later idle-wandering regression reproduces two failures in 24 destination-
+retry checks: a failed destination returns to the same upkeep loop without
+adding an action, repeating wandering selection/pathfinding up to twenty times.
+The failed attempt now ends that tick; later-tick selection and successful
+walking remain unchanged. All 24 retry checks and 4,737 default navigation
+checks pass. This completes the unmerged furniture-navigation failure handling
+without changing hunger cooldowns or collision policy. It does not establish
+that all observed multi-second turns have the same cause. No save/protocol
+version, README or changelog change is required for this correction.
+
 The subsequent 15:56 user run still takes 4.1-4.4 seconds in upkeep and repeatedly
 exhausts the 20-action loop guard. The new furniture approach retries up to 320
 standing offsets independently. A start-connectivity precheck alone did not fix

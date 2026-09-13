@@ -17,6 +17,14 @@ for name in ('UseRoom', 'CarryEntity', 'ClaimWallTile', 'ClaimGroundTile', 'DigT
     end = source.index('return true;', start) + len('return true;')
     handlers.append(f'bool attempt{name}(Creature& creature){{Tile* dest=nullptr;Tile* tileDest=nullptr;Tile tileClaim,tilePos;\n' + source[start:end] + '\n}')
 
+path = 'source/entities/Creature.cpp'
+source = (subprocess.check_output(['git', 'show', args.source_ref + ':' + path], cwd=repo, text=True)
+          if args.source_ref else (repo / path).read_text())
+start = source.index('    if(setDestination(tileDest))', source.index('bool Creature::handleIdleAction()'))
+end = source.index('\nbool Creature::searchBestTargetInList', start)
+idle = source[start:end].rsplit('}', 1)[0].replace('setDestination(', 'creature.setDestination(')
+handlers.append('bool attemptIdle(Creature& creature){Tile* tileDest=nullptr;\n' + idle + '\n}')
+
 probe = r'''
 #include <iostream>
 #define OD_LOG_ERR(...) ((void)0)
@@ -40,6 +48,13 @@ int main(){
   creature=Creature{};creature.reachable=true;
   check(handler(creature)&&creature.requests==1&&creature.popped==0,"successful destination retains immediate walk-action processing");
  }
+ Creature idle;
+ for(int iteration=0;iteration<20;++iteration)if(!attemptIdle(idle))break;
+ check(idle.requests==1,"failed idle wandering does not repeat pathfinding twenty times");
+ check(idle.popped==0,"idle failure does not remove an unrelated action");
+ attemptIdle(idle);check(idle.requests==2,"idle wandering can retry next tick");
+ idle=Creature{};idle.reachable=true;
+ check(!attemptIdle(idle)&&idle.requests==1,"successful idle walking still ends the tick");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''.replace('HANDLERS', '\n'.join(handlers))
