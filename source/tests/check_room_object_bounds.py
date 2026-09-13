@@ -15,6 +15,14 @@ required = set()
 for path in (repo / 'source/rooms').glob('*.cpp'):
     required.update(re.findall(r'new (?:BuildingObject|PersistentObject)\(getGameMap\(\), \*this, "([^"]+)"', path.read_text()))
 required.update(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
+bed_dimensions = set()
+for creature in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[1:]:
+    creature = creature.split('[/Creature]', 1)[0]
+    bed = re.search(r'^\s*BedMeshName\s+(\S+)', creature, re.M)
+    dimensions = re.search(r'^\s*BedDim\s+(\d+)\s+(\d+)', creature, re.M)
+    if bed and dimensions:
+        size = (int(dimensions[1]), int(dimensions[2]))
+        bed_dimensions.add((bed[1], *size))
 required.update(re.findall(r'return "(Goldstack[^"]+)"', (repo / 'source/entities/TreasuryObject.cpp').read_text()))
 assert required <= names, f'Missing room furniture: {sorted(required - names)}'
 probe = r'''
@@ -30,6 +38,10 @@ int main(int argc,char** argv){try{
  int checks=0,failures=0;
  auto* scene=root.createSceneManager();
  auto* node=scene->getRootSceneNode()->createChildSceneNode();
+ struct BedSize{const char* name;int width,height;};
+ const BedSize beds[]={BED_SIZES};
+ struct BuildingObject {Ogre::Vector2 scale=Ogre::Vector2::ZERO;Ogre::Vector2 getFurnitureScale()const{return scale;}} object;
+ auto* renderedMovableEntity=&object;
  for(const auto& row:RoomObjectPath::meshBounds){
   const auto mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
   const auto& b=mesh->getBounds();
@@ -41,7 +53,8 @@ int main(int argc,char** argv){try{
   RENDER_SCALE
   const auto scale=RoomObjectPath::furnitureScale(row);
   ++checks;
-  if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)||scale.x<=0||scale.x>1||scale.y<=0||scale.y>1){
+  const bool bed=std::any_of(std::begin(beds),std::end(beds),[&](const BedSize& size){return meshName==size.name;});
+  if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)||scale.x<=0||scale.y<=0||(!bed&&(scale.x>1||scale.y>1))){
    ++failures;std::cout<<"FAIL "<<row.name<<" renderer footprint scale\n";
   }
   for(float angle:{0.f,30.f,45.f,90.f,180.f,270.f}){
@@ -63,6 +76,40 @@ int main(int argc,char** argv){try{
    }
   }
  }
+ for(const auto& size:beds)for(const auto& row:RoomObjectPath::meshBounds)if(std::string(row.name)==size.name){
+  const auto mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
+  const auto& bounds=mesh->getBounds();const auto scale=RoomObjectPath::bedPlacement(row,5,7,size.width,size.height,0,"Creature1").scale;
+  const std::string meshName=row.name;object.scale={scale.x,scale.y};
+  RENDER_SCALE
+  ++checks;if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)){++failures;std::cout<<"FAIL per-bed renderer scale\n";}
+  ++checks;
+  if(std::abs((bounds.getMaximum().x-bounds.getMinimum().x)*scale.x-size.width*.75f)>.00003f||
+     std::abs((bounds.getMaximum().y-bounds.getMinimum().y)*scale.y-size.height*.75f)>.00003f){
+   ++failures;std::cout<<"FAIL "<<row.name<<" bed must occupy 75 percent of allocated dimensions\n";
+  }
+  for(float base:{0.f,90.f})for(int creature=0;creature<24;++creature){
+   const int width=base==0?size.width:size.height,height=base==0?size.height:size.width;
+   const std::string owner="Creature"+std::to_string(creature);
+   const auto placed=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
+   const auto restored=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
+   node->setScale(scale.x,scale.y,1);node->setPosition(placed.x,placed.y,0);
+   node->setOrientation(Ogre::Quaternion(Ogre::Degree(placed.angle),Ogre::Vector3::UNIT_Z));
+   node->_update(true,false);Ogre::AxisAlignedBox actual;
+   for(int i=0;i<8;++i)actual.merge(node->convertLocalToWorldPosition(bounds.getAllCorners()[i]));
+   ++checks;
+   if(std::abs(actual.getMinimum().x-4.5f)>.00003f||
+      std::abs(actual.getMaximum().y-(6.5f+height))>.00003f||
+      actual.getMaximum().x>=4.5f+width||actual.getMinimum().y<=6.5f||
+      std::abs(placed.angle-base)>4.001f||placed.x!=restored.x||placed.y!=restored.y||placed.angle!=restored.angle){
+    ++failures;std::cout<<"FAIL "<<row.name<<" stable rotated corner placement\n";
+   }
+  }
+  ++checks;
+  if(RoomObjectPath::bedPlacement(row,5,7,size.width,size.height,0,"Creature1").angle==
+     RoomObjectPath::bedPlacement(row,5,7,size.width,size.height,0,"Creature2").angle){
+   ++failures;std::cout<<"FAIL creature-specific bed angle\n";
+  }
+ }
  for(const char* name:{"FenceCorner","FenceStraight","PortalObject","DungeonTempleObject","Bookcase","Podium"})
   for(const auto& row:RoomObjectPath::meshBounds)if(std::string(row.name)==name){
    const auto scale=RoomObjectPath::furnitureScale(row);
@@ -76,6 +123,7 @@ int main(int argc,char** argv){try{
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''.replace('RENDER_SCALE', scale_block)
+probe = probe.replace('BED_SIZES', ','.join(f'{{"{name}",{width},{height}}}' for name, width, height in sorted(bed_dimensions)))
 with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)

@@ -1,5 +1,30 @@
 # Configuring and compiling on Windows
 
+## Corner-bed and walkable-landmark checkpoint (partial)
+
+The separate `build/windows/opendungeons-plus-pending.exe` is dated
+2026-09-13 19:02:46, 4,837,376 bytes, SHA-256
+`597F794363AD9DA3B211D1BF5024A0B4C7764CCD46013DB0F9C0CABE2893C77A`.
+Release compilation passes with optimized flags. This checkpoint makes portals
+and dungeon hearts walkable and gives real beds 75% of their allocated native
+dimensions, corner placement and stable creature-specific angles within four
+degrees. Per-instance bed scale requires network version 0.7.3; unchanged map
+records still load from 0.7.1 and 0.7.2. The normal 18:41 executable remains
+unchanged, with the hash below; no game was launched or stopped.
+
+Verification passes 4,737 default navigation checks (including all creature
+models/levels through both landmarks), 1,071 real-mesh/bed-placement checks,
+seven real scale-packet checks, 27 save-header checks and 10,136 existing
+renderer/animation checks with actual corner-bed placement. The new packed-bed
+fixture still fails 176 of 5,243 checks: the existing full-body envelope cannot
+pass every 75%-sized bed layout. These failures are not suppressed; the whole
+room-navigation task is not ready for acceptance. The separate executable can
+exercise the landmark/visual changes only, not certify bedroom passability.
+Multi-second turns reported after the optimized 18:41 build also remain open.
+See [the navigation note](ROOM-OBJECT-NAVIGATION.md) for implementation scope;
+there is no additional README feature change beyond the existing navigation
+entry, and the necessary protocol version bump is included in this checkpoint.
+
 ## Release optimization correction ready for load retest
 
 The fully rebuilt and prepared normal `build/windows/opendungeons-plus.exe` is

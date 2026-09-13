@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <string>
 
 namespace RoomObjectPath
@@ -85,9 +86,8 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
     float width = 0.6f, depth = 0.6f;
     const bool bed = name == "Bed" || name == "KnightCoffin" || name == "StoneCoffin" ||
         (name.size() >= 3 && name.compare(name.size() - 3, 3, "Bed") == 0);
-    // Beds may occupy every allocated tile. A one-tile bed therefore needs a
-    // wider walking margin than sparsely placed workstations, including the
-    // largest worker level; retain the length of multi-tile sleeping surfaces.
+    // This fallback also covers unassigned decorative instances. Actual beds
+    // override it with the owning creature's allocated dimensions below.
     if(bed)
         width = depth = 0.4f;
     if(name == "DragonBed" || name == "TrollBed")
@@ -101,6 +101,35 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
         return {x, y};
     const float scale = std::min(x, y);
     return {scale, scale};
+}
+
+struct BedPlacement
+{
+    float x, y, angle;
+    FurnitureScale scale;
+};
+
+inline BedPlacement bedPlacement(const MeshBounds& bounds, int x, int y,
+    int width, int height, float allocationAngle, const std::string& creatureName)
+{
+    // Stable across save/load and platforms, without consuming gameplay RNG.
+    std::uint32_t hash = 2166136261u;
+    for(unsigned char character : creatureName)
+        hash = (hash ^ character) * 16777619u;
+    const float angle = allocationAngle + float(hash % 8001u) * 0.001f - 4.0f;
+    const float radians = angle * 0.01745329252f;
+    const float cosine = std::cos(radians), sine = std::sin(radians);
+    const bool rotated = allocationAngle == 90.0f;
+    const FurnitureScale scale{0.75f * (rotated ? height : width) / (bounds.maxX - bounds.minX),
+        0.75f * (rotated ? width : height) / (bounds.maxY - bounds.minY)};
+    float left = 1.0e10f, top = -1.0e10f;
+    for(float px : {bounds.minX * scale.x, bounds.maxX * scale.x})
+        for(float py : {bounds.minY * scale.y, bounds.maxY * scale.y})
+        {
+            left = std::min(left, cosine * px - sine * py);
+            top = std::max(top, sine * px + cosine * py);
+        }
+    return {float(x) - 0.5f - left, float(y + height) - 0.5f - top, angle, scale};
 }
 
 struct WalkingRadius
