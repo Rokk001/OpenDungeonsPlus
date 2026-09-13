@@ -413,6 +413,28 @@ probe = probe.replace('PACKED_BEDS', r'''
 ''' if args.packed_beds else '')
 probe = probe.replace('ROOM_LAYOUTS', r'''
  {
+  // Rat's measured transverse body fits the 30% lane, but the root-aligned
+  // quarter-tile grid misses it and must not force an outside detour.
+  GameMap packed(12,12);Room dormitory;dormitory.type=RoomType::dormitory;
+  packed.rooms={&dormitory};for(auto& tile:packed.tiles)tile.room=&dormitory;
+  std::vector<BuildingObject> beds(9);
+  for(int y=0;y<3;++y)for(int x=0;x<3;++x){
+   auto& bed=beds[y*3+x];bed.mesh="ImpBed";
+   placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));
+   dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
+  }
+  for(bool reverse:{false,true}){
+   Creature walker{&packed};walker.mesh="Rat.mesh";walker.pos={reverse?8.f:2.f,5,0};
+   const Ogre::Vector2 goal(reverse?2.f:8.f,5);
+   std::vector<Ogre::Vector2> path{goal};RoomObjectNavigation::refine(walker,path);
+   float length=0;auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
+   for(const auto& point:path){length+=previous.distance(point);
+    check(terrainClear(walker,previous,point)&&RoomObjectPath::clearSegment(RoomObjectNavigation::bodyObstacles(walker),previous,point),"free-strip route retains full body clearance");previous=point;}
+   std::cout<<"GAP_ROUTE reverse="<<reverse<<" length="<<length<<'\n';
+   check(!path.empty()&&path.back()==goal&&length<7.f,"usable bed strips are preferred to an outside detour");
+  }
+ }
+ {
   struct Layout{const char* mesh;float angle,yOffset;int spacing;};
   const Layout layouts[]={
    {"ChickenCoop",0,0,2},{"Bookcase",45,.3f,2},{"Podium",45,.3f,2},

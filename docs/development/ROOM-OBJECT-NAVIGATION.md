@@ -1,5 +1,26 @@
 # Navigation around room objects
 
+## Free-strip routing follow-up
+
+The user accepts the 70% bed size and reports that creatures detour around the
+furnished area instead of using the free strips. Subtile routing already exists;
+the gap is not a blanket prohibition on occupied tiles. Inspection finds that
+the quarter-tile search returns immediately when an outside route exists, so
+the existing body/furniture-aligned narrow-lane grids are only tried if there
+is no route at all. Compare those routes as alternatives, with the current best
+length as the search bound, retaining exact terrain and full-body segment checks.
+Reproduce the usable-gap detour with the actual small-creature body and corner
+beds before changing the route selection; preserve the accepted bed dimensions.
+Larger bodies that physically cannot fit still need the separate authorized
+stepping work, not an untested collision exemption.
+
+The real Rat/ImpBed reproduction fails two of 7,560 room-layout checks: both
+directions take outside routes of 7.24/7.20 tiles instead of using the available
+strip for the six-tile crossing. This checkpoint adds only that reproduction
+and its diagnosis, not a runtime fix; no build, version or README change is
+required. The reported late-fireball appearance takes priority before the
+bounded alternative-route selection is implemented.
+
 ## Current corner-bed and walkable-landmark checkpoint
 
 The September 13 23:05 screenshot shows the small centered beds from the older
