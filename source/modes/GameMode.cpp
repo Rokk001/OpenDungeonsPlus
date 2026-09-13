@@ -1788,8 +1788,12 @@ void GameMode::syncPlayerSettings()
 
 bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
 {
+    while(closeTopWindow())
+    {
+    }
     resetSkillTree();
     mRootWindow->getChild("SkillTreeWindow")->show();
+    mRootWindow->getChild("SkillTreeWindow")->moveToFront();
     return true;
 }
 
@@ -2015,11 +2019,10 @@ bool GameMode::showObjectivesFromOptions(const CEGUI::EventArgs& e)
     return showObjectivesWindow(e);
 }
 
-bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& /*e*/)
+bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& e)
 {
     mRootWindow->getChild("GameOptionsWindow")->hide();
-    showSkillWindow();
-    return true;
+    return toggleSkillWindow(e);
 }
 
 bool GameMode::loadGame(const CEGUI::EventArgs& /*e*/)
