@@ -1,0 +1,342 @@
+"""Exercise the actual room-navigation integration with lightweight map fixtures."""
+from pathlib import Path
+import argparse
+import os
+import re
+import subprocess
+import tempfile
+
+repo = Path(__file__).resolve().parents[2]
+prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
+source = (repo / 'source/gamemap/RoomObjectNavigation.cpp').read_text()
+source = re.sub(r'^#include[^\n]*\n', '', source, flags=re.M)
+parser = argparse.ArgumentParser()
+parser.add_argument('--food-source-ref')
+parser.add_argument('--trace-food', action='store_true')
+parser.add_argument('--trace-work', action='store_true')
+parser.add_argument('--benchmark', action='store_true')
+parser.add_argument('--saved-terrain', type=Path)
+parser.add_argument('--furniture-log', type=Path)
+args = parser.parse_args()
+if args.trace_food:
+    source = source.replace('std::stable_sort(candidates.begin()', 'std::cout << "CANDIDATES " << creature.getMeshName() << " level=" << creature.getLevel() << " count=" << candidates.size() << "\\n"; std::stable_sort(candidates.begin()')
+if args.trace_work:
+    source = source.replace('const auto tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const auto tiles = map.path(&creature, stagingTile);')
+    source = source.replace('path.clear();\n            return true;', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"BAD_LEG "<<previous<<" -> "<<target<<"\\n"; path.clear();\n            return true;')
+food_source = (subprocess.check_output(['git', 'show', args.food_source_ref + ':source/creatureaction/CreatureActionEatChicken.cpp'], cwd=repo, text=True)
+               if args.food_source_ref else (repo / 'source/creatureaction/CreatureActionEatChicken.cpp').read_text())
+food_handler = food_source[food_source.index('bool CreatureActionEatChicken::handleEatChicken('):food_source.index('\nstd::string CreatureActionEatChicken::getListenerName()')]
+work_gates = []
+for room_class, kind in [('RoomWorkshop', 'workshop'), ('RoomLibrary', 'library'), ('RoomTrainingHall', 'trainingHall'), ('RoomCasino', 'casino')]:
+    room_source = (repo / f'source/rooms/{room_class}.cpp').read_text()
+    gate_start = room_source.index('    std::vector<Ogre::Vector2> approach;', room_source.index(f'bool {room_class}::useRoom('))
+    gate_end = room_source.index('    // This creature is ready.' if kind == 'casino' else '    Ogre::Vector3 walkDirection', gate_start)
+    work_gates.append(f'case RoomType::{kind}: {{\n' + room_source[gate_start:gate_end] + '\n break; }')
+probe = r'''
+#include "gamemap/RoomObjectNavigation.h"
+#include "gamemap/RoomObjectBounds.h"
+#include "rooms/RoomType.h"
+#include "gamemap/Pathfinding.h"
+#include <OgreVector3.h>
+#include <map>
+#include <list>
+#include <memory>
+#include <set>
+#include <string>
+#include <iostream>
+#include <chrono>
+enum class CreatureActionType {sleep,leaveDungeon,useRoom};
+namespace Helper {int round(float v){return int(std::round(v));}}
+struct Room;
+struct Tile {int x,y;bool walkable=true;Room* room=nullptr;Room* getCoveringRoom(){return room;}int getX()const{return x;}int getY()const{return y;}};
+struct BuildingObject {
+ std::string mesh="ChickenCoop";Ogre::Vector3 pos{5,5,0};float angle=0;
+ const std::string& getMeshName()const{return mesh;}const Ogre::Vector3& getPosition()const{return pos;}
+ float getRotationAngle()const{return angle;}
+};
+struct Creature;
+struct Room {
+ RoomType type=RoomType::hatchery;std::map<Tile*,BuildingObject*> objects;std::vector<Creature*> users;
+ RoomType getType()const{return type;}const auto& getBuildingObjects()const{return objects;}
+ Creature* getCreatureUsingRoom(unsigned i){return i<users.size()?users[i]:nullptr;}
+};
+struct RoomPrison : Room {
+ std::map<Tile*,BuildingObject*> fences;const auto& getFencingObjects()const{return fences;}
+};
+struct GameMap {
+ int sizeX,sizeY;
+ std::vector<Tile> tiles;std::vector<Room*> rooms;
+ GameMap(int xCount=16,int yCount=16):sizeX(xCount),sizeY(yCount){for(int y=0;y<sizeY;++y)for(int x=0;x<sizeX;++x)tiles.push_back({x,y});}
+ Tile* getTile(int x,int y){return x>=0&&x<sizeX&&y>=0&&y<sizeY?&tiles[y*sizeX+x]:nullptr;}
+ const auto& getRooms()const{return rooms;}int getMapSizeX()const{return sizeX;}int getMapSizeY()const{return sizeY;}
+ std::list<Tile*> path(Creature*,Tile*);
+};
+struct Creature {
+ GameMap* map;Ogre::Vector3 pos{1,5,0};Tile* home=nullptr;std::set<CreatureActionType> actions;int level=1;
+ std::string mesh="Kobold.mesh";const std::string& getMeshName()const{return mesh;}
+ Ogre::Vector3 direction{0,-1,0};const Ogre::Vector3& getWalkDirection()const{return direction;}
+ int cooldown=0,popped=0,walkActions=0,feeding=0,workReady=0;double food=0,hp=10;
+ std::vector<Ogre::Vector2> walk;bool distortion=true;std::string animation;
+ GameMap* getGameMap(){return map;}const Ogre::Vector3& getPosition()const{return pos;}
+ Tile* getHomeTile()const{return home;}bool isActionInList(CreatureActionType a)const{return actions.count(a)>0;}
+ int getLevel()const{return level;}bool canGoThroughTile(Tile* t)const{return t&&t->walkable;}
+ Tile* getPositionTile(){return map->getTile(Helper::round(pos.x),Helper::round(pos.y));}
+ static void tileToVector2(const std::list<Tile*>& tiles,std::vector<Ogre::Vector2>& path,bool skip,float){
+  for(auto* tile:tiles){if(skip){skip=false;continue;}path.push_back({float(tile->x),float(tile->y)});}
+ }
+ bool decreaseJobCooldown(){if(cooldown>0){--cooldown;return false;}return true;}
+ void popAction(){++popped;}void foodEaten(double value){food+=value;}
+ void setJobCooldown(int value){cooldown=value;}double getHP()const{return hp;}void setHP(double value){hp=value;}
+ void computeCreatureOverlayHealthValue(){}void fireChickenFeeding(const std::string&,const Ogre::Vector3&){++feeding;}
+ void clearDestinations(const std::string& state,bool,bool){walk.clear();animation=state;}
+ void setAnimationState(const std::string& state,bool,const Ogre::Vector3&,bool){animation=state;}
+ void setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>&,bool);
+ template<typename T>void pushAction(std::unique_ptr<T>){++walkActions;}
+};
+std::list<Tile*> GameMap::path(Creature* creature,Tile* target){
+ auto* start=creature->getPositionTile();if(!start||!target)return {};
+ std::vector<int> parents(sizeX*sizeY,-2);std::queue<int> open;int first=start->y*sizeX+start->x;
+ parents[first]=-1;open.push(first);
+ while(!open.empty()){
+  int i=open.front();open.pop();if(&tiles[i]==target){std::list<Tile*> result;for(int p=i;p>=0;p=parents[p])result.push_front(&tiles[p]);return result;}
+  for(auto direction:{Ogre::Vector2(-1,0),Ogre::Vector2(1,0),Ogre::Vector2(0,-1),Ogre::Vector2(0,1)}){
+   auto* next=getTile(tiles[i].x+int(direction.x),tiles[i].y+int(direction.y));if(!next||!next->walkable)continue;
+   int n=next->y*sizeX+next->x;if(parents[n]!=-2)continue;parents[n]=i;open.push(n);
+  }
+ }return {};
+}
+SOURCE
+void Creature::setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& path,bool jitter){
+ walk=path;distortion=jitter;if(RoomObjectNavigation::refine(*this,walk))distortion=false;
+}
+struct ChickenEntity {
+ GameMap* map;Ogre::Vector3 pos;int consumed=0;
+ Tile* getPositionTile(){return map->getTile(Helper::round(pos.x),Helper::round(pos.y));}
+ const Ogre::Vector3& getPosition()const{return pos;}std::string getName()const{return "Chicken";}
+ bool eatChicken(Creature*){if(consumed)return false;++consumed;return true;}
+};
+struct CreatureActionWalkToTile {CreatureActionWalkToTile(Creature&){}};
+struct CreatureActionEatChicken {static bool handleEatChicken(Creature&,ChickenEntity*);};
+struct ConfigManager {
+ static ConfigManager& getSingleton(){static ConfigManager config;return config;}
+ double getRoomConfigDouble(const char*){return 10;}unsigned getRoomConfigUInt32(const char*){return 1;}
+};
+namespace Random {int Int(int first,int){return first;}}
+namespace Utils {using std::make_unique;}
+namespace EntityAnimation {const std::string walk_anim="Walk",idle_anim="Idle",eat_chicken_anim="EatChicken";}
+#define OD_LOG_ERR(...) ((void)0)
+FOOD_HANDLER
+bool roomWorkGate(RoomType type,Creature& creature,BuildingObject* ro,const Ogre::Vector2& wanted){
+ auto* object=ro;float wantedX=wanted.x,wantedY=wanted.y;
+ switch(type){WORK_GATES default:return false;}
+ ++creature.workReady;return false;
+}
+int checks=0,failures=0;
+void check(bool ok,const char* reason){++checks;if(!ok){++failures;std::cout<<"FAIL "<<reason<<'\n';}}
+int main(){
+ GameMap map;Room room;map.rooms.push_back(&room);for(auto& tile:map.tiles)tile.room=&room;
+ BuildingObject object;room.objects[map.getTile(5,5)]=&object;Creature creature{&map};
+ for(const auto& row:RoomObjectPath::meshBounds)for(float rotation:{0.f,30.f,45.f,90.f,180.f,270.f}){
+  object.mesh=row.name;object.angle=rotation;object.pos={5,5,0};
+  const float angle=rotation*.01745329252f;
+  const float crossingY=5+std::sin(angle)*(row.minX+row.maxX)*.5f+std::cos(angle)*(row.minY+row.maxY)*.5f;
+  creature.pos={1,crossingY,0};
+  std::vector<Ogre::Vector2> path;for(int x=2;x<=10;++x)path.push_back({float(x),crossingY});
+  check(RoomObjectNavigation::blocked(creature,path),"legacy straight route reproduces furniture crossing");
+  check(RoomObjectNavigation::refine(creature,path),"furniture routes suppress independent client jitter");
+  if(path.empty())std::cout<<"NO_ROUTE "<<row.name<<" rotation="<<rotation<<'\n';
+  check(!path.empty()&&path.back()==Ogre::Vector2(10,crossingY),"route keeps accessible destination");
+  check(!RoomObjectNavigation::blocked(creature,path),"all routed segments clear placed furniture");
+ }
+ object.mesh="ChickenCoop";object.angle=0;
+ auto obstacles=RoomObjectNavigation::collect(map,.1f);Ogre::Vector2 spawn;
+ check(RoomObjectNavigation::standingPosition(obstacles,{5,5},spawn),"chicken can spawn beside its coop");
+ check(RoomObjectPath::clearPoint(obstacles,spawn)&&Helper::round(spawn.x)==5&&Helper::round(spawn.y)==5,"spawn clears real off-center coop and remains in hatchery tile");
+ for(auto start:{Ogre::Vector3(6,5,0),Ogre::Vector3(5.4f,5,0),Ogre::Vector3(4,5,0)}){
+  creature.pos=start;std::vector<Ogre::Vector2> approach;
+  check(RoomObjectNavigation::foodApproach(creature,spawn,approach),"free food approach exists from either side and the same logical tile");
+  check(!approach.empty()&&!RoomObjectNavigation::blocked(creature,approach),"food approach clears furniture throughout");
+  if(!approach.empty())check(RoomObjectPath::clearSegment(RoomObjectNavigation::collect(map,0),approach.back(),spawn),"eater ends on chicken side of coop");
+ }
+ std::vector<Ogre::Vector2> inaccessible;
+ check(!RoomObjectNavigation::foodApproach(creature,{5.2f,5},inaccessible)&&inaccessible.empty(),"food still inside solid coop is not reachable through its wall");
+ for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30}){
+  creature=Creature{&map};creature.mesh=model.name;creature.level=level;creature.pos={8,5,0};
+  std::vector<Ogre::Vector2> approach;
+  bool found=RoomObjectNavigation::foodApproach(creature,spawn,approach);
+  // At maximum size these forward walking envelopes cannot fit anywhere in
+  // the existing five-tile eating reach while facing food against the coop.
+  // Extending eating range or shrinking their measured bodies is not this fix.
+  const bool tooClose=level==30&&(creature.mesh=="Defender.mesh"||creature.mesh=="Dragon.mesh");
+  check(found!=tooClose,"food against coop is reached only when the body fits within existing eating reach");
+  check(!RoomObjectNavigation::blocked(creature,approach),"body-sized food approach has no furniture crossing");
+  if(tooClose){
+   ChickenEntity tight{&map,{spawn.x,spawn.y,0}};
+   CreatureActionEatChicken::handleEatChicken(creature,&tight);
+   check(tight.consumed==0&&creature.popped==1&&creature.food==0&&creature.feeding==0,"oversized eater releases inaccessible wall-side chicken without reward or animation");
+  }
+  approach.clear();
+  check(RoomObjectNavigation::foodApproach(creature,{4,5},approach),"all models and endpoint levels reach food once it wanders clear of the coop");
+  check(!approach.empty()&&!RoomObjectNavigation::blocked(creature,approach),"free-food approach preserves full measured body clearance");
+  if(!approach.empty()){
+   creature.pos={approach.back().x,approach.back().y,0};ChickenEntity clearFood{&map,{4,5,0}};
+   CreatureActionEatChicken::handleEatChicken(creature,&clearFood);
+   check(clearFood.consumed==1&&creature.feeding==1&&creature.food==10,"each body-sized arrival can consume once through the actual food action");
+  }
+ }
+ creature=Creature{&map};
+ std::vector<Ogre::Vector2> far{{2,0},{3,0},{4,0}};creature.pos={1,0,0};const auto unchanged=far;
+ check(!RoomObjectNavigation::refine(creature,far)&&far==unchanged,"distant paths retain prior jitter behavior");
+ creature.pos={1,5,0};
+ for(RoomType type:{RoomType::workshop,RoomType::library,RoomType::trainingHall}){
+  room.type=type;object.pos={5,type==RoomType::library?5.3f:5.2f,0};object.angle=type==RoomType::library?45.f:30.f;
+  object.mesh=type==RoomType::workshop?"WorkshopMachine1":type==RoomType::library?"Bookcase":"TrainingDummy1";
+  const Ogre::Vector2 target=type==RoomType::workshop?Ogre::Vector2(5.7f,5):Ogre::Vector2(5,4.7f);
+  std::vector<Ogre::Vector2> path{{2,5},{3,5},{4,5},{5,5},target};RoomObjectNavigation::refine(creature,path);
+  check(!path.empty(),"existing workstation remains accessible");
+  if(!path.empty())check(Helper::round(path.back().x)==Helper::round(target.x)&&Helper::round(path.back().y)==Helper::round(target.y),"working destination stays on its existing logical tile");
+  check(!RoomObjectNavigation::blocked(creature,path),"working approach does not pass through its machine");
+ }
+ for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30})for(RoomType type:{RoomType::workshop,RoomType::library,RoomType::trainingHall,RoomType::casino}){
+  creature=Creature{&map};creature.mesh=model.name;creature.level=level;
+  room.type=type;object.pos={5,type==RoomType::library?5.3f:5.2f,0};object.angle=type==RoomType::library?45.f:30.f;
+  object.mesh=type==RoomType::workshop?"WorkshopMachine1":type==RoomType::library?"Bookcase":type==RoomType::casino?"CasinoPokerTable":"TrainingDummy1";
+  const Ogre::Vector2 target=type==RoomType::workshop?Ogre::Vector2(5.7f,5):Ogre::Vector2(5,4.7f);
+  const Ogre::Vector2 offset=type==RoomType::workshop?Ogre::Vector2(-1,1):Ogre::Vector2::ZERO;
+  std::vector<Ogre::Vector2> path;bool found=RoomObjectNavigation::workApproach(creature,object,target,offset,path);
+  if(path.empty())std::cout<<"NO_WORK_ACCESS "<<model.name<<" level="<<level<<" object="<<object.mesh<<'\n';
+  check(found&&!path.empty(),"body-sized workstation remains accessible");
+  check(!RoomObjectNavigation::blocked(creature,path),"every work-approach segment clears full walking body");
+  if(!path.empty()){
+   creature.pos={path.back().x,path.back().y,0};
+   check(RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(creature),path.back(),Ogre::Vector2(object.pos.x,object.pos.y)+offset-path.back()),"work facing does not rotate the creature back into furniture");
+   check(RoomObjectNavigation::workApproach(creature,object,target,offset,path)&&path.empty(),"arrival becomes work-ready instead of repeatedly returning to obstructed tile center");
+   roomWorkGate(type,creature,&object,target);
+   check(creature.workReady==1&&creature.walkActions==0,"actual room arrival gate permits work at clearance-adjusted position");
+   creature.pos={1,5,0};creature.workReady=0;
+   roomWorkGate(type,creature,&object,target);
+   check(creature.workReady==0&&creature.walkActions==1&&!creature.walk.empty()&&!creature.distortion,"actual room gate walks before work and suppresses client offsets");
+  }
+ }
+ creature=Creature{&map};
+ for(auto& tile:map.tiles)tile.walkable=false;
+ map.getTile(1,5)->walkable=true;object.mesh="Bookcase";object.pos={5,5.3f,0};object.angle=45;room.type=RoomType::library;
+ roomWorkGate(RoomType::library,creature,&object,{5,4.7f});
+ check(creature.popped==1&&creature.workReady==0&&creature.walk.empty(),"inaccessible workstation releases its job instead of looping or awarding work");
+ for(auto& tile:map.tiles)tile.walkable=true;
+ creature=Creature{&map};
+ object.pos={5,5,0};object.angle=0;object.mesh="Bed";room.type=RoomType::dormitory;
+ creature.home=map.getTile(5,5);creature.actions.insert(CreatureActionType::sleep);
+ std::vector<Ogre::Vector2> sleep{{2,5},{3,5},{4,5},{5,5}};
+ RoomObjectNavigation::refine(creature,sleep);
+ check(!sleep.empty()&&sleep.back()==Ogre::Vector2(5,5),"intentional own-bed entry retains accepted sleep endpoint");
+ creature.actions.clear();sleep={{2,5},{3,5},{4,5},{5,5},{6,5},{7,5}};
+ RoomObjectNavigation::refine(creature,sleep);
+ check(!sleep.empty()&&!RoomObjectNavigation::blocked(creature,sleep),"same bed is solid during ordinary traversal");
+ room.objects.clear();std::vector<Ogre::Vector2> restored{{2,5},{3,5},{4,5},{5,5}};
+ check(!RoomObjectNavigation::refine(creature,restored),"removing furniture immediately reopens original route");
+ room.objects[map.getTile(5,5)]=&object;
+ check(RoomObjectNavigation::blocked(creature,restored),"placing furniture invalidates existing crossing route");
+ // A previously jittered path can overlap a newly placed object even when the
+ // server's centerline is clear. Placement must invalidate that larger envelope.
+ creature.pos={1,6.4f,0};restored={{9,6.4f}};object.angle=45;
+ check(!RoomObjectNavigation::blocked(creature,restored)&&RoomObjectNavigation::blocked(creature,restored,true),"placement accounts for client offsets around rotated furniture");
+ creature.pos={5,5,0};restored={{9,5}};
+ check(RoomObjectNavigation::blocked(creature,restored,true),"new furniture overlapping a path start invalidates it before an explicit escape is planned");
+ creature.pos={1,5,0};object.angle=0;
+ RoomPrison prison;prison.type=RoomType::prison;BuildingObject fence;fence.mesh="FenceStraight";fence.pos={5,5,0};fence.angle=90;
+ prison.fences[map.getTile(5,5)]=&fence;map.rooms={&prison};restored={{9,5}};
+ check(RoomObjectNavigation::blocked(creature,restored),"separately stored prison fences are solid navigation obstacles");
+ RoomObjectNavigation::refine(creature,restored);
+ check(!restored.empty()&&!RoomObjectNavigation::blocked(creature,restored),"prison-fence route goes around its physical footprint");
+ map.rooms={&room};
+ for(int y=0;y<16;++y)map.getTile(6,y)->walkable=false;
+ restored={{2,5},{3,5},{4,5},{5,5},{6,5},{7,5}};
+ RoomObjectNavigation::refine(creature,restored);
+ check(restored.empty(),"failed refinement never sends a route through blocked terrain");
+ for(auto& tile:map.tiles)tile.walkable=true;
+ object.mesh="ChickenCoop";object.pos={5,5,0};object.angle=0;room.type=RoomType::hatchery;
+ for(auto start:{Ogre::Vector3(6,5,0),Ogre::Vector3(5.4f,5.2f,0),Ogre::Vector3(4.7f,5,0)}){
+  creature=Creature{&map};creature.pos=start;ChickenEntity chicken{&map,{4.6875f,4.9375f,0}};
+  CreatureActionEatChicken::handleEatChicken(creature,&chicken);
+  check(chicken.consumed==0&&creature.feeding==0&&creature.food==0&&creature.hp==10,"blocked or overlapping eater receives no food or animation before walking");
+  check(creature.walkActions==1&&!creature.walk.empty()&&!creature.distortion,"food action requests the checked route without client jitter");
+  for(int turn=0;turn<20&&!creature.walk.empty()&&chicken.consumed==0;++turn){
+   check(!RoomObjectNavigation::blocked(creature,creature.walk),"every approach step is collision-free");
+   creature.pos={creature.walk.back().x,creature.walk.back().y,0};creature.walk.clear();
+   CreatureActionEatChicken::handleEatChicken(creature,&chicken);
+  }
+  check(chicken.consumed==1&&creature.feeding==1&&creature.food==10&&creature.hp==20,"eater eventually reaches free side and eats exactly once");
+  check(creature.cooldown==1&&creature.animation=="EatChicken","accepted feeding animation and cooldown are preserved");
+ }
+ creature=Creature{&map};creature.pos={6,5,0};ChickenEntity trapped{&map,{5.2f,5,0}};
+ CreatureActionEatChicken::handleEatChicken(creature,&trapped);
+ check(trapped.consumed==0&&creature.popped==1&&creature.walk.empty(),"unreachable chicken releases the action rather than consuming through furniture");
+ room.objects.clear();creature=Creature{&map};creature.pos={4,5,0};ChickenEntity adjacent{&map,{5,5,0}};
+ CreatureActionEatChicken::handleEatChicken(creature,&adjacent);
+ check(adjacent.consumed==1&&creature.walkActions==0&&creature.food==10,"unobstructed adjacent feeding remains immediate");
+ creature=Creature{&map};ChickenEntity distant{&map,{8,5,0}};
+ CreatureActionEatChicken::handleEatChicken(creature,&distant);
+ check(distant.consumed==0&&creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains original tile path and 80 percent truncation");
+ BENCHMARK
+ SAVED_TERRAIN
+ std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
+}
+'''.replace('SOURCE', source).replace('FOOD_HANDLER', food_handler).replace('WORK_GATES', '\n'.join(work_gates))
+probe = probe.replace('BENCHMARK', r'''
+ std::vector<BuildingObject> crowd(100);room.type=RoomType::library;
+ for(int i=0;i<100;++i){crowd[i].mesh="Bookcase";crowd[i].pos={float(2+i%10),float(2+i/10),0};crowd[i].angle=45;room.objects[map.getTile(2+i%10,2+i/10)]=&crowd[i];}
+ creature=Creature{&map};creature.pos={1,1,0};
+ const auto began=std::chrono::steady_clock::now();
+ for(int i=0;i<20;++i){std::vector<Ogre::Vector2> route{{14,14}};RoomObjectNavigation::refine(creature,route);check(!route.empty()&&!RoomObjectNavigation::blocked(creature,route),"dense-room route remains traversable and collision-free");}
+ const auto elapsed=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-began).count();
+ std::cout<<"DENSE_ROOM_20_ROUTES_MS="<<elapsed<<'\n';
+''' if args.benchmark else '')
+saved_probe = ''
+if args.saved_terrain:
+    assert args.furniture_log, '--saved-terrain requires --furniture-log'
+    saved = args.saved_terrain.read_text()
+    section = saved.split('[Tiles]', 1)[1].split('[/Tiles]', 1)[0]
+    rows = [line.split('#', 1)[0].split() for line in section.splitlines()]
+    rows = [row for row in rows if row]
+    sx, sy = int(rows[0][0]), int(rows[1][0])
+    floor = [(int(row[0]), int(row[1])) for row in rows[2:] if int(row[2]) in (1, 2, 3, 6) and float(row[3]) == 0]
+    # Only use objects whose placed orientation is fixed by their room source;
+    # randomized treasury angles and saved bed rotations are not guessed.
+    angles = {'ChickenCoop': 0, 'Bookcase': 45, 'Podium': 45, 'DungeonTempleObject': 0, 'PortalObject': 0}
+    objects = {}
+    for x, y, mesh in re.findall(r'SERVER - Adding rendered object [^\n]*?\[([0-9]+),([0-9]+)\][^\n]*?,MeshName=(\w+)', args.furniture_log.read_text()):
+        if mesh in angles:
+            objects[(int(x), int(y))] = (mesh, angles[mesh])
+    assert objects and floor
+    worker = re.search(r'^1\tKobold8\tKobold.mesh\t([^\t]+)\t([^\t]+)\t[^\t]+\tKobold\t(\d+)\t', saved, re.M)
+    assert worker, 'Save fixture requires the logged worker Kobold8'
+    saved_probe = f'GameMap savedMap({sx},{sy});Room savedRoom;savedMap.rooms={{&savedRoom}};\n'
+    saved_probe += 'for(auto& tile:savedMap.tiles){tile.walkable=false;tile.room=&savedRoom;}\n'
+    saved_probe += ''.join(f'savedMap.getTile({x},{y})->walkable=true;\n' for x, y in floor)
+    saved_probe += f'std::vector<BuildingObject> savedObjects({len(objects)});\n'
+    for i, ((x, y), (mesh, angle)) in enumerate(objects.items()):
+        saved_probe += f'savedObjects[{i}].mesh="{mesh}";savedObjects[{i}].pos={{{x},{y},0}};savedObjects[{i}].angle={angle};savedRoom.objects[savedMap.getTile({x},{y})]=&savedObjects[{i}];\n'
+    saved_probe += f'Creature savedWorker{{&savedMap}};savedWorker.pos={{{worker[1]}f,{worker[2]}f,0}};savedWorker.level={worker[3]};\n'.replace(f'{worker[1]}f', f'float({worker[1]})').replace(f'{worker[2]}f', f'float({worker[2]})')
+    saved_probe += r'''
+    long long totalMicros=0,maxMicros=0;int searches=0;
+    for(auto& object:savedObjects)for(int repeat=0;repeat<3;++repeat){
+      auto* tile=savedMap.getTile(Helper::round(object.pos.x),Helper::round(object.pos.y));
+      auto coarse=savedMap.path(&savedWorker,tile);if(coarse.empty())continue;
+      std::vector<Ogre::Vector2> path;Creature::tileToVector2(coarse,path,true,0);
+      const auto began=std::chrono::steady_clock::now();RoomObjectNavigation::refine(savedWorker,path);
+      const auto micros=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-began).count();
+      totalMicros+=micros;maxMicros=std::max(maxMicros,micros);++searches;
+      check(!RoomObjectNavigation::blocked(savedWorker,path),"saved-terrain routes never cross recorded furniture");
+    }
+    check(searches>0,"saved terrain exercises real worker approach destinations");
+    std::cout<<"SAVED_TERRAIN_OBJECTS="<<savedObjects.size()<<" SEARCHES="<<searches<<" TOTAL_MS="<<totalMicros/1000.0<<" MAX_MS="<<maxMicros/1000.0<<'\n';
+    '''
+probe = probe.replace('SAVED_TERRAIN', saved_probe)
+with tempfile.TemporaryDirectory(prefix='odp-room-navigation-') as directory:
+    work = Path(directory)
+    (work / 'check.cpp').write_text(probe)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++14', f'/I{repo / "source"}',
+                    f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
+                    f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
+    subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

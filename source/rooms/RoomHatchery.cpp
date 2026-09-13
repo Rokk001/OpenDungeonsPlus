@@ -28,6 +28,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -172,13 +173,17 @@ void RoomHatchery::doUpkeep()
         return;
 
     // We spawn 1 chicken per chicken coop (until chickens are maxed)
+    const auto obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
     for(Tile* chickenCoopTile : mCentralActiveSpotTiles)
     {
+        Ogre::Vector2 freePosition;
+        if(!RoomObjectNavigation::standingPosition(obstacles,
+            Ogre::Vector2(chickenCoopTile->getX(), chickenCoopTile->getY()), freePosition))
+            continue;
         ChickenEntity* chicken = new ChickenEntity(getGameMap(), getName());
         chicken->addToGameMap();
         chicken->createMesh();
-        Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(chickenCoopTile->getX()),
-                                    static_cast<Ogre::Real>(chickenCoopTile->getY()), 0.0f);
+        Ogre::Vector3 spawnPosition(freePosition.x, freePosition.y, 0.0f);
         chicken->setPosition(spawnPosition);
         ++nbChickens;
         if(nbChickens >= mNumActiveSpots)
