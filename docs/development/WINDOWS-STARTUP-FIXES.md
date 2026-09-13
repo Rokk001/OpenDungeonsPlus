@@ -1,5 +1,31 @@
 # Windows startup failures and verification
 
+## Resource regeneration follow-up, September 13
+
+The 21:23 startup fails because the shared build resource configuration again
+points to nonexistent `build/windows/install/share/OGRE/Media` directories.
+The pending build's CMake regeneration overwrote the prepared configuration,
+affecting both executables. The existing isolated resource probe also fails:
+the shader header cannot be opened, while the game reports a missing internal
+shadow program. The installed media remains intact.
+
+Fix generation itself on `fix/windows-resource-regeneration`: on Windows use
+the already discovered OGRE package media directory and include only installed
+shader subdirectories; retain the existing non-Windows installation layout.
+This removes the dependency on a manual path rewrite after each regeneration.
+The existing runtime preparation remains necessary for DLL/Python staging.
+No gameplay, dependency version, save or protocol changes are required, so no
+application version bump, README feature entry or changelog update is needed.
+
+Verification: the isolated generator passes 14 checks, including repeated
+generation, optional installed shader languages, paths containing spaces,
+missing required media and the unchanged non-Windows prefix layout; validating
+the regenerated real build configuration passes 32 checks in total. Release
+regeneration/build succeeds without running the runtime path-rewrite script.
+The same native resource probe that failed before now opens the game shader
+header and resolves/loads all four internal shadow programs (exit 0).
+No game was launched; full startup confirmation remains with the user.
+
 As of September 5, 2026, the user confirmed that the Release executable starts
 directly without errors. This result is supported by the runtime evidence below,
 in addition to successful builds and static DLL checks.

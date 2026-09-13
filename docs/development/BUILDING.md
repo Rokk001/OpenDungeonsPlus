@@ -1,5 +1,23 @@
 # Configuring and compiling on Windows
 
+## Startup resource regeneration correction
+
+The September 13 21:23 startup failure came from CMake overwriting the shared
+resource configuration with nonexistent installation-prefix media paths.
+Windows generation now uses the already discovered OGRE media and includes
+only installed shader directories. The regenerated configuration is shared by
+both the normal and pending executables; neither binary needed to change.
+The pending executable retains its 19:12:45 timestamp and SHA-256 below.
+
+Release regeneration/build passes, as do 32 generation/configuration checks;
+the native shader-resource probe fails before and passes after, resolving all
+four internal shadow programs without a renderer or game window. DLL/Python
+runtime preparation remains required for a fresh build directory, but another
+CMake regeneration no longer undoes the media paths. User startup retest is
+pending; bed stepping is authorized but not implemented in this executable.
+See [startup verification](WINDOWS-STARTUP-FIXES.md); no gameplay, version or
+README feature change is part of this configuration-only fix.
+
 ## Corner-bed and walkable-landmark checkpoint (partial)
 
 The separate `build/windows/opendungeons-plus-pending.exe` is dated
