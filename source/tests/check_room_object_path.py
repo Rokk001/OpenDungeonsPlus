@@ -29,6 +29,14 @@ int main(){
   }
  }
  std::vector<Obstacle> thin{{{-.01f,-1.f},{.01f,1.f},{5,5},1,0}};
+ for(float angle:{0.f,.5235988f,1.5707963f})for(const Ogre::Vector2 heading:{Ogre::Vector2(1,0),Ogre::Vector2(1,1),Ogre::Vector2(0,-1)}){
+  auto obstacle=box(5,5,angle);obstacle.bodyMinimum={-.2f,-.3f};obstacle.bodyMaximum={.15f,.25f};
+  const auto cached=obstacle.forHeading(heading);auto exact=cached;exact.hasWorldBounds=false;
+  for(int y=0;y<=20;++y)for(int x=0;x<=20;++x){
+   const Ogre::Vector2 from(x*.5f,y*.5f),to=from+heading*.5f;
+   check(cached.intersects(from,to)==exact.intersects(from,to),"cached distant-object rejection preserves exact oriented collision");
+  }
+ }
  check(!clearSegment(thin,{4,5},{6,5}),"thin object blocks crossing with both endpoints outside");
  check(clearSegment(thin,{4,6},{6,6}),"tangency outside interior stays open");
  check(!clearSegment(thin,{5,5},{6,5}),"ordinary movement cannot start in furniture");
@@ -158,6 +166,8 @@ int main(){
  previous={2,5};for(const auto& p:path){check(oneWay(previous,p)&&clearSegment(furniture,previous,p),"each reconstructed edge keeps its forward terrain and obstacle direction");previous=p;}
  check(!route({10,5},{2,5},furniture,0,0,12,12,oneWay,path),"reverse search cannot reverse one-way terrain permissions");
  size_t chosen=0;
+ check(!routeToAny({1,1},{{3,1}},{},0,0,12,12,floor,path,chosen,true,Ogre::Vector2::ZERO,2.f)&&path.empty(),"bounded search rejects routes that cannot improve the incumbent");
+ check(routeToAny({1,1},{{3,1}},{},0,0,12,12,floor,path,chosen,true,Ogre::Vector2::ZERO,3.f)&&path.back()==Ogre::Vector2(3,1),"bounded search retains shorter direct routes");
  const std::vector<Ogre::Vector2> foodGoals{{100,100},{11,12}};
  check(routeToAny({10,10},foodGoals,enclosed,0,0,127,127,openFloor,path,chosen)&&chosen==1&&path.back()==foodGoals[chosen],"an enclosed food candidate does not hide another reachable approach");
  const std::vector<Ogre::Vector2> detourGoals{{5,5},{10,5},{9,5}};

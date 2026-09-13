@@ -18,6 +18,7 @@ parser.add_argument('--benchmark', action='store_true')
 parser.add_argument('--packed-beds', action='store_true', help='Check the reported full-capacity dormitory transit regression')
 parser.add_argument('--room-layouts', action='store_true', help='Check furnished room transit with production placement offsets')
 parser.add_argument('--saved-terrain', type=Path)
+parser.add_argument('--saved-worker', default='Kobold8', help='Exact saved worker name used for approach benchmarks')
 parser.add_argument('--furniture-log', type=Path)
 parser.add_argument('--saved-food-cases', action='store_true')
 parser.add_argument('--saved-beds', action='store_true', help='Include exact saved bed positions, rotations and configured dimensions')
@@ -423,15 +424,24 @@ probe = probe.replace('ROOM_LAYOUTS', r'''
    placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));
    dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
   }
-  for(bool reverse:{false,true}){
-   Creature walker{&packed};walker.mesh="Rat.mesh";walker.pos={reverse?8.f:2.f,5,0};
-   const Ogre::Vector2 goal(reverse?2.f:8.f,5);
-   std::vector<Ogre::Vector2> path{goal};RoomObjectNavigation::refine(walker,path);
+  for(bool vertical:{false,true})for(bool reverse:{false,true})for(bool coarseDetour:{false,true}){
+   Creature walker{&packed};walker.mesh="Rat.mesh";
+   walker.pos={vertical?5.f:reverse?8.f:2.f,vertical?(reverse?8.f:2.f):5.f,0};
+   const Ogre::Vector2 goal(vertical?5.f:reverse?2.f:8.f,vertical?(reverse?2.f:8.f):5.f);
+   std::vector<Ogre::Vector2> path;
+   if(coarseDetour){path.push_back({2,3});path.push_back({8,3});}
+   path.push_back(goal);RoomObjectNavigation::refine(walker,path);
+   bool crossedGap=false;
    float length=0;auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
    for(const auto& point:path){length+=previous.distance(point);
+    const int along=vertical?1:0,across=1-along;
+    if(std::min(previous[along],point[along])<=5&&std::max(previous[along],point[along])>=5&&std::abs(point[along]-previous[along])>.00001f){
+     const float crossing=previous[across]+(point[across]-previous[across])*(5-previous[along])/(point[along]-previous[along]);
+     crossedGap|=crossing>3.5f&&crossing<6.5f;
+    }
     check(terrainClear(walker,previous,point)&&RoomObjectPath::clearSegment(RoomObjectNavigation::bodyObstacles(walker),previous,point),"free-strip route retains full body clearance");previous=point;}
    std::cout<<"GAP_ROUTE reverse="<<reverse<<" length="<<length<<'\n';
-   check(!path.empty()&&path.back()==goal&&length<7.f,"usable bed strips are preferred to an outside detour");
+   check(!path.empty()&&path.back()==goal&&length<7.f&&crossedGap,"usable bed strips are preferred to an outside detour");
   }
  }
  {
@@ -561,8 +571,8 @@ if args.saved_terrain:
         assert bed_count > 0, 'Saved-bed fixture found no bedroom records'
         print(f'SAVED_BEDS={bed_count}', flush=True)
     assert objects and floor
-    worker = re.search(r'^1\tKobold8\tKobold.mesh\t([^\t]+)\t([^\t]+)\t[^\t]+\tKobold\t(\d+)\t', saved, re.M)
-    assert worker, 'Save fixture requires the logged worker Kobold8'
+    worker = re.search(r'^1\t' + re.escape(args.saved_worker) + r'\tKobold.mesh\t([^\t]+)\t([^\t]+)\t[^\t]+\tKobold\t(\d+)\t', saved, re.M)
+    assert worker, f'Save fixture requires the selected worker {args.saved_worker}'
     saved_probe = f'GameMap savedMap({sx},{sy});Room savedRoom;savedMap.rooms={{&savedRoom}};\n'
     saved_probe += 'for(auto& tile:savedMap.tiles){tile.walkable=false;tile.room=&savedRoom;}\n'
     saved_probe += ''.join(f'savedMap.getTile({x},{y})->walkable=true;\n' for x, y in floor)

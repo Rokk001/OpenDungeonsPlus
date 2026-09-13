@@ -28,6 +28,8 @@ struct Obstacle
     Ogre::Vector2 bodyAxisMaximum = Ogre::Vector2::ZERO;
     float bodyCosine = 1.0f, bodySine = 0.0f;
     bool hasBodyAxes = false;
+    Ogre::Vector2 worldMinimum, worldMaximum;
+    bool hasWorldBounds = false;
 
     static Obstacle circle(const Ogre::Vector2& center, float clearanceRadius)
     {
@@ -78,6 +80,15 @@ struct Obstacle
         result.bodyAxisMaximum = high - bodyMinimum;
         result.hasBodyAxes = true;
         result.bodyMinimum = result.bodyMaximum = Ogre::Vector2::ZERO;
+        const auto center = (result.minimum + result.maximum) * 0.5f;
+        const auto half = (result.maximum - result.minimum) * 0.5f;
+        const auto worldCenter = position + Ogre::Vector2(cosine * center.x - sine * center.y,
+            sine * center.x + cosine * center.y);
+        const Ogre::Vector2 extent(std::abs(cosine) * half.x + std::abs(sine) * half.y + 0.00001f,
+            std::abs(sine) * half.x + std::abs(cosine) * half.y + 0.00001f);
+        result.worldMinimum = worldCenter - extent;
+        result.worldMaximum = worldCenter + extent;
+        result.hasWorldBounds = true;
         return result;
     }
 
@@ -112,6 +123,13 @@ struct Obstacle
 
     bool intersects(const Ogre::Vector2& from, const Ogre::Vector2& to) const
     {
+        // Cached for each grid heading: distant furniture cannot intersect the
+        // segment, so reserve the exact oriented-body test for nearby objects.
+        if(hasWorldBounds && ((from.x < worldMinimum.x && to.x < worldMinimum.x) ||
+            (from.x > worldMaximum.x && to.x > worldMaximum.x) ||
+            (from.y < worldMinimum.y && to.y < worldMinimum.y) ||
+            (from.y > worldMaximum.y && to.y > worldMaximum.y)))
+            return false;
         if(radius >= 0.0f)
         {
             const auto delta = to - from;
@@ -190,10 +208,13 @@ using TerrainSegment = std::function<bool(const Ogre::Vector2&, const Ogre::Vect
 inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vector2>& goals,
     const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
     const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true,
-    const Ogre::Vector2& gridOffset = Ogre::Vector2::ZERO)
+    const Ogre::Vector2& gridOffset = Ogre::Vector2::ZERO,
+    float maximumCost = std::numeric_limits<float>::infinity())
 {
     result.clear();
     if(goals.empty())
+        return false;
+    if(goals.size() == 1 && start.distance(goals.front()) >= maximumCost)
         return false;
     for(size_t i = 0; i < goals.size(); ++i)
     {
@@ -300,7 +321,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
                 edge.push_back(obstacle.forHeading(Ogre::Vector2(float(-dx), float(-dy))));
         }
     int destination = -1;
-    float best = std::numeric_limits<float>::infinity();
+    float best = maximumCost;
     bool forward = false;
     while(!open.empty() && !forwardOpen.empty())
     {
@@ -309,7 +330,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
         while(!forwardOpen.empty() && forwardOpen.top().first > forwardCosts[forwardOpen.top().second] + potential(forwardOpen.top().second) + 0.0001f)
             forwardOpen.pop();
         if(open.empty() || forwardOpen.empty() ||
-            (destination >= 0 && open.top().first + forwardOpen.top().first >= best))
+            open.top().first + forwardOpen.top().first >= best)
             break;
         forward = !forward;
         auto& frontier = forward ? forwardOpen : open;
@@ -382,13 +403,27 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
     const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, bool allowStartExit = true)
 {
     size_t chosenGoal = 0;
-    if(routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY, terrain, result, chosenGoal, allowStartExit))
+    bool found = routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY,
+        terrain, result, chosenGoal, allowStartExit);
+    if(found && result.size() == 1)
         return true;
     // Mesh roots are not necessarily centered on the body or furniture. A valid
     // narrow lane can fall between every root-aligned quarter-tile node even
     // though a body-centered lane fits. Keep the same exact edge/terrain checks.
     if(obstacles.empty())
-        return false;
+        return found;
+    const auto length = [&](const std::vector<Ogre::Vector2>& path)
+    {
+        float cost = 0;
+        auto previous = start;
+        for(const auto& point : path)
+        {
+            cost += previous.distance(point);
+            previous = point;
+        }
+        return cost;
+    };
+    float bestCost = found ? length(result) : std::numeric_limits<float>::infinity();
     const auto center = (obstacles.front().bodyMinimum + obstacles.front().bodyMaximum) * 0.5f;
     Ogre::Vector2 furnitureCenter = Ogre::Vector2::ZERO;
     float nearest = std::numeric_limits<float>::infinity();
@@ -405,7 +440,7 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
     furnitureCenter.x -= std::round(furnitureCenter.x * 4.0f) * 0.25f;
     furnitureCenter.y -= std::round(furnitureCenter.y * 4.0f) * 0.25f;
     if(center.squaredLength() < 0.000001f && furnitureCenter.squaredLength() < 0.000001f)
-        return false;
+        return found;
     for(int y = -1; y <= 1; ++y)
         for(int x = -1; x <= 1; ++x)
         {
@@ -414,11 +449,18 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
             const auto heading = Ogre::Vector2(float(x), float(y)).normalisedCopy();
             const auto offset = furnitureCenter + Ogre::Vector2(center.x * heading.y + center.y * heading.x,
                 -center.x * heading.x + center.y * heading.y);
+            std::vector<Ogre::Vector2> candidate;
+            // A valid outside route must not suppress a shorter usable lane.
+            // Bound each alternative by the best complete route already found.
             if(routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY,
-                terrain, result, chosenGoal, allowStartExit, offset))
-                return true;
+                terrain, candidate, chosenGoal, allowStartExit, offset, bestCost))
+            {
+                bestCost = length(candidate);
+                result.swap(candidate);
+                found = true;
+            }
         }
-    return false;
+    return found;
 }
 }
 
