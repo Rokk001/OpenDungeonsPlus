@@ -1,9 +1,9 @@
 # Configuring and compiling on Windows
 
-## Seventy-percent corner-bed correction awaiting normal executable update
+## Seventy-percent corner-bed correction in the normal executable
 
-The September 13 23:05 screenshot still shows small centered beds. The running
-normal executable is the 18:41:04 build below and does not include the later
+The September 13 23:05 screenshot shows small centered beds. The then-running
+normal executable was the 18:41:04 build below and did not include the later
 corner placement, walkable landmarks or failed-idle-retry correction. Its
 22:56-23:00 log has repeated twenty-action-loop exits and 2-4-second upkeep;
 the latest idle handler passes 24 checks while the older source fails two.
@@ -19,11 +19,16 @@ all creatures can use a 30% lane or that the reported live stalls are resolved.
 Release compilation succeeds to `build/windows/opendungeons-plus-pending.exe`,
 dated 2026-09-13 23:11:59, 4,837,376 bytes, SHA-256
 `9B709C4D1E5FEEA09149F1BD603C1738F52ABBEA469890D90ED5CC4E135D5AB0`.
-The normal executable remains unchanged because the game is running; no game
-was launched or stopped. The user has been asked to close it before the normal
-build/runtime update. Visible low-bed stepping and live movement acceptance
-remain open. No additional version bump or README entry is needed for the
-sizing adjustment; save and network formats remain unchanged.
+After the user closed the game, Release linking and runtime preparation also
+succeeded for the normal `build/windows/opendungeons-plus.exe`, dated
+2026-09-13 23:14:48, 4,837,376 bytes, SHA-256
+`5BE751264D758875751CDE775E4BAD379A7DF6F74A1508DAB085BA5DE6A5539F`.
+All 32 generated-resource checks and eight effective Release-flag checks pass
+after preparation. This is now the normal executable for user retesting and
+supersedes the older normal/pending checkpoints below. No game was launched or
+stopped by the agent. Visible low-bed stepping and live movement acceptance
+remain open. No additional version bump or README entry is needed for this
+build update; save and network formats remain unchanged.
 
 ## Startup resource regeneration correction
 
