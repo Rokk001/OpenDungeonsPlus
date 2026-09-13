@@ -21,6 +21,32 @@ and its diagnosis, not a runtime fix; no build, version or README change is
 required. The reported late-fireball appearance takes priority before the
 bounded alternative-route selection is implemented.
 
+Comparing all aligned grids fixes the reproduction (6.22/6.21 tiles) but adds
+search work. Cached conservative world bounds reject distant obstacles before
+the unchanged exact collision test. The current integration additionally reruns
+the search for optional coarse tile centers; those centers are not user-selected
+waypoints (`Creature::setDestination` derives them from the terrain path). Use
+that path to bound one refinement to the actual destination instead, preserving
+terrain/door checks and the precise work/parking endpoint, so free-strip routing
+does not retain tile-center detours or repeat complete searches per coarse leg.
+
+The implemented selection passes 6,673 room-layout checks, including eight
+horizontal/vertical crossings in both directions with and without coarse outside
+detours; paths are 6.21-6.22 tiles and cross the furnished interior with unchanged
+full-body clearance. Geometry passes 7,270 checks, including 3,969 comparisons of
+cached and exact collision results. Packed large-body passages remain explicitly
+failing (156 of 5,253 checks); visible low-bed stepping is not implemented yet.
+
+The saved September 13 23:05:23 map fixture, using Kobold9 and 30 reconstructed
+beds/53 known objects, passes 5,145 checks. Its 84 searches take 394.654 ms and
+322 food approaches take 1,115.37 ms (295 reached), versus 358.142/1,192.4 ms at
+f7bbbd5b. This is mixed timing evidence, not a general speedup: the dense synthetic
+20-route case rises from 75 ms to 285 ms because it now compares usable gaps.
+Unknown randomized furnishings and original room identity are not reconstructed;
+live simulation responsiveness remains unverified. Release compilation and runtime
+preparation pass; the current executable is recorded in [BUILDING.md](BUILDING.md).
+No version, save/packet layout or additional README change is required.
+
 ## Current corner-bed and walkable-landmark checkpoint
 
 The September 13 23:05 screenshot shows the small centered beds from the older

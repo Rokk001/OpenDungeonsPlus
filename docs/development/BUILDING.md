@@ -1,5 +1,19 @@
 # Configuring and compiling on Windows
 
+## Usable strips between corner beds
+
+The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:
+2026-09-13 23:59:51, 4,838,912 bytes, SHA-256
+`45C078B5AED387496426A09F97A758DFBFE30546832D1CB1B6D91457AC776090`.
+Navigation compares existing aligned routes instead of accepting an outside
+detour immediately and refines once to the real endpoint. The accepted 70% beds
+and immediate projectile visibility are preserved. Geometry passes 7,270 checks
+and room-layout routing 6,673; packed large-body passage still fails 156 of 5,253
+checks and requires the authorized visible low-bed stepping follow-up.
+Release compilation/runtime preparation pass; no game was launched or stopped.
+Live movement acceptance remains open. No version or save/network format change.
+See [navigation evidence and timing limits](ROOM-OBJECT-NAVIGATION.md).
+
 ## Immediate missile visibility at the caster
 
 The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:

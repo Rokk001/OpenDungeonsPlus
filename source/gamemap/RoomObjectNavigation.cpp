@@ -175,7 +175,6 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         return false;
 
     obstacles = bodyObstacles(creature, interaction);
-    const auto transitObstacles = collect(map, radius, interaction);
     auto goal = path.back();
     if(!standingPosition(obstacles, goal, goal))
     {
@@ -185,33 +184,26 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     const auto terrain = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
     { return terrainClear(creature, from, to); };
     std::vector<Ogre::Vector2> result;
-    previous = start;
-    for(size_t i = 0; i < path.size(); ++i)
+    // Coarse tile centers bound the search; they are not mandatory stops inside
+    // a furnished room. Refine once to the actual destination through its gaps.
+    Ogre::Vector2 minimum = start, maximum = start;
+    for(const auto& point : path)
     {
-        const auto target = i + 1 == path.size() ? goal : path[i];
-        // Room work paths contain the furniture's center before their precise
-        // working offset; do not make a creature visit that obstructed center.
-        if(i + 1 != path.size() && !RoomObjectPath::clearPoint(transitObstacles, target))
-            continue;
-        std::vector<Ogre::Vector2> leg;
-        int minX = std::max(0, int(std::floor(std::min(previous.x, target.x))) - 2);
-        int minY = std::max(0, int(std::floor(std::min(previous.y, target.y))) - 2);
-        int maxX = std::min(map.getMapSizeX() - 1, int(std::ceil(std::max(previous.x, target.x))) + 2);
-        int maxY = std::min(map.getMapSizeY() - 1, int(std::ceil(std::max(previous.y, target.y))) + 2);
-        const bool localRoute = RoomObjectPath::route(previous, target, obstacles,
-            minX, minY, maxX, maxY, terrain, leg, previous == start);
-        // A failed optional center must not trigger a whole-map search; the
-        // following mandatory destination still receives the full fallback.
-        if(!localRoute && i + 1 != path.size())
-            continue;
-        if(!localRoute && !RoomObjectPath::route(previous, target, obstacles, 0, 0,
-            map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, leg, previous == start))
-        {
-            path.clear();
-            return true;
-        }
-        result.insert(result.end(), leg.begin(), leg.end());
-        previous = target;
+        minimum.makeFloor(point);
+        maximum.makeCeil(point);
+    }
+    minimum.makeFloor(goal);
+    maximum.makeCeil(goal);
+    const int minX = std::max(0, int(std::floor(minimum.x)) - 2);
+    const int minY = std::max(0, int(std::floor(minimum.y)) - 2);
+    const int maxX = std::min(map.getMapSizeX() - 1, int(std::ceil(maximum.x)) + 2);
+    const int maxY = std::min(map.getMapSizeY() - 1, int(std::ceil(maximum.y)) + 2);
+    if(!RoomObjectPath::route(start, goal, obstacles, minX, minY, maxX, maxY, terrain, result) &&
+        !RoomObjectPath::route(start, goal, obstacles, 0, 0,
+            map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, result))
+    {
+        path.clear();
+        return true;
     }
     path.swap(result);
     return true;
