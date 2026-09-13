@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Server shutdown ownership](SERVER-SHUTDOWN.md): reproduced self-wait on exit,
+  owner-thread cleanup and isolated SFML lifecycle regression.
+
 - [Workshop order scheduling](WORKSHOP-ORDER-SCHEDULING.md): production order,
   save-order preservation and focused regression checks.
 

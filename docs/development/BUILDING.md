@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+The September 13 server self-wait fix passes 31 isolated real-SFML lifecycle
+checks, two source guards, the existing 60 menu-cursor checks and Release linking.
+The user's game is running, so the new output is
+`build/windows/opendungeons-plus-pending.exe`, dated 2026-09-13 15:42:10,
+4,785,152 bytes, SHA-256
+`64F970762E0076AC2B17D78B9A45D1F5BD4EEB8A54BCAFF9F7041128E01118ED`.
+It reuses the already prepared runtime; no running executable or DLL was replaced.
+See [server shutdown](SERVER-SHUTDOWN.md). The normal 15:26 executable remains
+unchanged; its latest user run still shows slow upkeep, under continued diagnosis.
+
 The September 13 room-object navigation checkpoint passes Release compilation
 and runtime preparation; the normal executable is dated 2026-09-13 15:26:05,
 4,785,152 bytes, SHA-256
