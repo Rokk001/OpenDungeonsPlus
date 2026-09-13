@@ -1,5 +1,6 @@
 #include "gamemap/RoomObjectNavigation.h"
 #include "gamemap/RoomObjectBounds.h"
+#include "gamemap/RoomObjectStep.h"
 #include "creatureaction/CreatureAction.h"
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
@@ -220,9 +221,86 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     const int minY = std::max(0, int(std::floor(minimum.y)) - 2);
     const int maxX = std::min(map.getMapSizeX() - 1, int(std::ceil(maximum.x)) + 2);
     const int maxY = std::min(map.getMapSizeY() - 1, int(std::ceil(maximum.y)) + 2);
-    if(!RoomObjectPath::route(start, goal, obstacles, minX, minY, maxX, maxY, terrain, result) &&
-        !RoomObjectPath::route(start, goal, obstacles, 0, 0,
-            map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, result))
+    const auto findRoute = [&](const std::vector<RoomObjectPath::Obstacle>& solid, std::vector<Ogre::Vector2>& route)
+    {
+        return RoomObjectPath::route(start, goal, solid, minX, minY, maxX, maxY, terrain, route) ||
+            RoomObjectPath::route(start, goal, solid, 0, 0,
+                map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, route);
+    };
+    const auto length = [&](const std::vector<Ogre::Vector2>& route)
+    {
+        float distance = 0.0f;
+        auto previous = start;
+        for(const auto& point : route)
+        {
+            distance += previous.distance(point);
+            previous = point;
+        }
+        return distance;
+    };
+    bool found = findRoute(obstacles, result);
+    if(found && result.size() == 1)
+    {
+        // A clear straight route cannot be improved by adding a step.
+        path.swap(result);
+        return true;
+    }
+    std::vector<RoomObjectPath::Obstacle> solid, steps;
+    std::vector<float> rises;
+    const float bestCost = found ? length(result) : std::numeric_limits<float>::infinity();
+    for(auto obstacle : obstacles)
+    {
+        const float rise = RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
+            1.0f + 0.02f * creature.getLevel(), creature.getPosition().z);
+        if(rise <= 0.0f)
+        {
+            solid.push_back(obstacle);
+            continue;
+        }
+        // Every crossing must reach the expanded nest and pay its rise/fall.
+        // Distant nests whose lower bound cannot beat the existing route stay
+        // solid instead of causing another whole-map alternative search.
+        const auto radius = [](const Ogre::Vector2& low, const Ogre::Vector2& high)
+        {
+            return std::hypot(std::max(std::abs(low.x), std::abs(high.x)),
+                std::max(std::abs(low.y), std::abs(high.y)));
+        };
+        const float reach = radius(obstacle.minimum, obstacle.maximum) +
+            radius(obstacle.bodyMinimum, obstacle.bodyMaximum);
+        const float lowerBound = std::max(start.distance(goal),
+            start.distance(obstacle.position) + goal.distance(obstacle.position) - 2.0f * reach) + 2.0f * rise;
+        if(lowerBound >= bestCost)
+            solid.push_back(obstacle);
+        else
+        {
+            steps.push_back(obstacle);
+            rises.push_back(rise);
+        }
+    }
+    std::vector<Ogre::Vector2> crossing;
+    if(!steps.empty() && findRoute(solid, crossing))
+    {
+        float cost = length(crossing);
+        for(size_t i = 0; i < steps.size(); ++i)
+        {
+            auto previous = start;
+            for(const auto& point : crossing)
+            {
+                if(steps[i].intersects(previous, point))
+                {
+                    cost += 2.0f * rises[i];
+                    break;
+                }
+                previous = point;
+            }
+        }
+        if(!found || cost < length(result))
+        {
+            result.swap(crossing);
+            found = true;
+        }
+    }
+    if(!found)
     {
         path.clear();
         return true;
@@ -358,8 +436,14 @@ bool RoomObjectNavigation::blocked(Creature& creature, const std::vector<Ogre::V
     if(path.empty())
         return false;
     const auto* interaction = interactionObject(creature, path.back());
-    const auto obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + 0.425f, interaction) :
+    auto obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + 0.425f, interaction) :
         bodyObstacles(creature, interaction);
+    if(!includeWalkDistortion)
+        obstacles.erase(std::remove_if(obstacles.begin(), obstacles.end(), [&](RoomObjectPath::Obstacle obstacle)
+        {
+            return RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
+                1.0f + 0.02f * creature.getLevel(), creature.getPosition().z) > 0.0f;
+        }), obstacles.end());
     Ogre::Vector2 previous(creature.getPosition().x, creature.getPosition().y);
     bool first = true;
     for(const auto& point : path)

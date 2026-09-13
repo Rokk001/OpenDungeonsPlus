@@ -22,6 +22,8 @@
 #ifndef RENDERMANAGER_H
 #define RENDERMANAGER_H
 
+#include <set>
+
 #include <string>
 #include <map>
 #include <OgreSingleton.h>
@@ -389,6 +391,7 @@ private:
         Ogre::Quaternion mBaseOrientation, mRestOrientation;
     };
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
+    std::set<Creature*> mSteppingCreatures;
 
     struct CreatureDropAnimation
     {
@@ -443,6 +446,8 @@ private:
     void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
+    void updateCreatureStep(Creature* creature);
+    void cancelCreatureStep(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
 
 
