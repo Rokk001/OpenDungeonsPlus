@@ -99,7 +99,7 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
             if(!RoomObjectNavigation::foodApproach(creature, foodPosition, path))
             {
                 creature.popAction();
-                return true;
+                return false;
             }
         }
         else

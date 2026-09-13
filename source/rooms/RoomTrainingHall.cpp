@@ -387,7 +387,7 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
     if(!RoomObjectNavigation::workApproach(creature, *ro, {wantedX, wantedY}, {0, 0}, approach))
     {
         creature.popAction();
-        return true;
+        return false;
     }
     if(!approach.empty())
     {

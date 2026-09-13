@@ -462,7 +462,7 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
     if(!RoomObjectNavigation::workApproach(creature, *ro, {wantedX, wantedY}, {-1, 1}, approach))
     {
         creature.popAction();
-        return true;
+        return false;
     }
     if(!approach.empty())
     {

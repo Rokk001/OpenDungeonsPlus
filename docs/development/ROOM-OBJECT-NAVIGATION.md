@@ -76,6 +76,41 @@ crash diagnosis is tracked separately after this task's requested checkpoint.
 
 ## Verification
 
+### Follow-up: stalls during combat testing
+
+The subsequent 15:56 user run still takes 4.1-4.4 seconds in upkeep and repeatedly
+exhausts the 20-action loop guard. The new furniture approach retries up to 320
+standing offsets independently. A start-connectivity precheck alone did not fix
+the slow saved-food cases; searching from both ends alone was also insufficient.
+Food offsets now share one search, with their checked, facing-aligned final leg
+retained. Single-destination searches use balanced bidirectional A*; alternative
+food destinations use bidirectional Dijkstra, without a search-budget cutoff.
+Either enclosed endpoint component can terminate failure without flooding the
+other component. Terrain, measured body clearance and legacy-overlap exit rules
+remain unchanged, and no persistent cache can retain stale furniture pointers.
+
+The same log shows carrying/claiming destinations and library use repeatedly
+failing and immediately returning to selection. The failed approach branches
+now release their assignments and finish the current action tick; successful
+walk dispatch, later retries, food/work rewards and combat rules are unchanged.
+
+With the same save and 15:57 log fixture, the committed old navigation reached
+277 of 375 food cases, total 1,482.060 ms, worst 642.864 ms. The corrected code
+reaches the same 277 cases, total 823.591 ms, worst 5.853 ms; every returned path
+is checked for body/furniture overlap. The retry probe reproduces nine failures
+before and passes all 12 checks after; four room gates and the food gate also
+reproduce immediate-retry failures before and pass after. This is an isolated
+production-code/terrain fixture, not a whole-game responsiveness measurement.
+Packed-bed passability and visual combat acceptance remain unresolved and are
+not claimed fixed by these performance corrections.
+
+Final follow-up verification passes 3,187 geometry/shared-search checks, 3,385
+navigation/benchmark/saved-food checks and 12 failed-destination checks, with
+feeding 109, projectile 75, ranged dispatch 15, workshop 13 and shutdown 31.
+The optional saved-food fixture enforces a 100-ms per-call local regression
+ceiling; its final observed maximum is 5.684 ms and total is 820.368 ms.
+The older counts and measurements below document the preceding checkpoint.
+
 - `check_room_object_path.py`: 3,199 geometry, Ogre-orientation, terrain/door,
   legacy-overlap exit and enclosed-destination checks.
 - `check_room_object_bounds.py`: 166 checks against 41 real furniture meshes

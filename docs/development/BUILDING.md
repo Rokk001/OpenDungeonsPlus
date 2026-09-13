@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The September 13 combat-test stall follow-up is built to the normal executable
+on `fix/solid-room-object-navigation`, dated 2026-09-13 16:22:15, 4,790,784 bytes,
+SHA-256 `D5AF01DABB91D77158C65942FA1DC5FDBDFFC6ECC7F0E7FFB3B596B4AACFFBC0`.
+Release linking and runtime preparation pass; no game was launched or stopped.
+Geometry/shared-search 3,187, navigation/saved-food/benchmark 3,385, action retry
+12, feeding 109, projectile 75, ranged dispatch 15, workshop 13 and shutdown 31
+checks pass. The same 375 food cases retain 277 reachable targets; the final
+isolated run takes 820.368 ms total, worst 5.684 ms, versus 1,482.060/642.864 ms
+before. See [navigation](ROOM-OBJECT-NAVIGATION.md); live-game responsiveness,
+combat acceptance and packed-bed collision policy remain unverified/open.
+
 After the user closed the old run, the same server shutdown fix was rebuilt to
 the normal `build/windows/opendungeons-plus.exe` and runtime preparation passed.
 The normal executable is dated 2026-09-13 15:49:08, 4,785,152 bytes, SHA-256
