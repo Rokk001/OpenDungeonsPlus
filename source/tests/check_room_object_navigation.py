@@ -476,6 +476,24 @@ probe = probe.replace('BENCHMARK', r'''
  for(int i=0;i<20;++i){std::vector<Ogre::Vector2> route{{14,14}};RoomObjectNavigation::refine(creature,route);check(!route.empty()&&!RoomObjectNavigation::blocked(creature,route),"dense-room route remains traversable and collision-free");}
  const auto elapsed=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-began).count();
  std::cout<<"DENSE_ROOM_20_ROUTES_MS="<<elapsed<<'\n';
+ // Use the actual library placement offset for the work-approach measurements.
+ for(auto& station:crowd)station.pos.y+=.3f;
+ long long workTotal=0,workMax=0;int workCalls=0,workReached=0;
+ for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30})for(int index:{0,55}){
+  creature=Creature{&map};creature.mesh=model.name;creature.level=level;creature.pos={1,1,0};
+  auto& station=crowd[index];
+  // Library furniture is 0.3 above the tile center; the working target is 0.3 below it.
+  const Ogre::Vector2 wanted(station.pos.x,station.pos.y-.6f);
+  std::vector<Ogre::Vector2> route;
+  const auto started=std::chrono::steady_clock::now();
+  const bool found=RoomObjectNavigation::workApproach(creature,station,wanted,{0,0},route);
+  const auto us=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-started).count();
+  workTotal+=us;workMax=std::max(workMax,us);++workCalls;workReached+=found;
+  check(!found||!RoomObjectNavigation::blocked(creature,route),"dense work approach does not cross furniture");
+  check(found||route.empty(),"failed dense work approach leaves no route");
+  if(us>10000)std::cout<<"SLOW_WORK "<<model.name<<" level="<<level<<" station="<<index<<" found="<<found<<" ms="<<us/1000.0<<'\n';
+ }
+ std::cout<<"DENSE_WORK_CALLS="<<workCalls<<" REACHED="<<workReached<<" TOTAL_MS="<<workTotal/1000.0<<" MAX_MS="<<workMax/1000.0<<'\n';
 ''' if args.benchmark else '')
 saved_probe = ''
 if args.saved_terrain:

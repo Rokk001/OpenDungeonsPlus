@@ -1,6 +1,43 @@
 # Navigation around room objects
 
-## Current furniture-footprint checkpoint
+## Current corner-bed and walkable-landmark checkpoint
+
+The latest actual beds use 75% of their allocated native dimensions, a corner
+anchor and stable small angular variation; portals and dungeon hearts are
+excluded from furniture obstacles. This supersedes the earlier centered-bed
+sizes below. The packed-bed test still has 176 failed passage assertions and
+the full navigation task is not ready for acceptance. Current executable and
+protocol compatibility details are in [BUILDING.md](BUILDING.md).
+
+The September 13 follow-up fixes failed idle wandering repeating within one
+tick (24 retry checks pass; two failed before). With the actual last-loaded
+September 7 22:12 save and the 18:52 log, the saved fixture reconstructs 30 beds
+and 53 known objects: 84 routes take 296.092 ms total, 28.394 ms worst, and 213
+food searches reach 131 targets in 890.903 ms total, 37.045 ms worst; all 5,036
+checks pass. Unknown randomized furniture and original room identity are not
+reconstructed by this fixture, so this is not full-game or full-map validation.
+
+The extended dense-library benchmark samples all 33 creature models at levels
+1 and 30 against an edge and central workstation among 100 objects, with the
+source-defined 0.3-tile library placement offset. Its 132 work calls reach 66
+targets, take 6.052 ms total and 0.254 ms worst; all 5,021 checks pass. This
+measurement does not reproduce a slow work search and does not justify changing
+work selection or cooldowns. Live turn timing after the idle fix is unverified.
+
+An optional `check_creature_walking_bounds.py --height-profile` diagnostic clips
+animated mesh triangles at five local Z heights for all 121 sampled Walk poses.
+It reports unscaled envelopes, not new collision rules. For example, Kobold
+width below Z=0.05 is 0.222524, but below Z=0.10 it is already 0.311854; Spider
+width is 0.771187 even below Z=0.05. The GoblinBed asset ends at Z=0.073801,
+whereas Bed and ImpBed reach Z=0.686023 and 0.893739. Height-only clearance
+therefore cannot be assumed to make every 0.25-tile lane passable. These are
+sampled envelope measurements, not proof of exact per-pose mesh intersections;
+no body bounds, bed heights or traversal permissions were changed.
+
+These diagnostic extensions do not change runtime code or data; no additional
+version bump, README feature entry or executable rebuild is needed.
+
+## Earlier centered furniture-footprint checkpoint
 
 Visible room furniture and navigation now share the same mesh-local XY scale.
 Workstations and decorations are capped at 0.6 tiles per axis without enlarging
