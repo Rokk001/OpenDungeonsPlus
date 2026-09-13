@@ -78,6 +78,20 @@ crash diagnosis is tracked separately after this task's requested checkpoint.
 
 ### Open regression: fully furnished dormitory transit
 
+The route geometry now also supports circular logical footprints in the same
+search, with exact finite-segment intersection and the existing terrain/escape
+rules retained. Tangency, zero-length segments, legacy-overlap exits, direction
+independence and mixed circle/rectangle barriers pass the geometry regression.
+Six enclosed-room routes using circular clearance radii pass without changing
+the room layout. These are geometry fixtures, not assigned game profiles.
+The 3,280 geometry and 2,975 existing navigation/benchmark checks pass; 20 dense
+room routes take 63 ms in the local isolated probe. Release compilation passes
+to the separate pending executable; the normal executable is unchanged.
+Profile integration and the packed-room acceptance test remain required before
+the gameplay regression can be called fixed. Animation, interaction clearances
+and current furniture assignments are unchanged; no save/network version change
+is needed for this internal geometry extension.
+
 `check_room_object_navigation.py --packed-beds` now exercises a 3x3 dormitory
 with all nine worker beds present, surrounding walls and opposing doorways.
 It checks both travel directions at levels 1 and 30, confirms the underlying
