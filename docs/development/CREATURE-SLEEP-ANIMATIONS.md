@@ -1,5 +1,23 @@
 # Creature sleep transitions
 
+## Culled-creature crash correction
+
+The September 13 dumps at 07:53 and 08:24 both read address 0x58 in Ogre's
+world-to-local conversion, with a null scene parent and the same game caller.
+The bed-fitting code dereferences the creature node's current scene parent;
+visibility culling detaches that node while retaining its logical game parent.
+Use the retained parent for conversion and reconstruct the bed support through
+its retained parent as well, so either object can be culled without a crash or
+an incorrect bed offset. Rendering setup guarantees these retained parents for
+both created entity types. Save data, networking and the version are unchanged.
+
+The expanded real-Ogre fixture passes 5,458 checks, including all four
+creature/bed culling combinations for each of the 33 models, unchanged resting
+position/orientation and normal reattachment, plus existing animation
+regressions. Release compilation passes. This reproduces the detached-node
+condition from the dumps without launching a live game; user gameplay retest
+remains pending.
+
 ## Bed alignment correction
 
 Combined model measurements show that resting poses reach or cross floor level

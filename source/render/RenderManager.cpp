@@ -3293,7 +3293,6 @@ void RenderManager::fitCreatureToBed(CreatureSleepAnimation& sleeping)
     // Resolve after final walk positioning, which follows the sleep-entry event.
     Creature* creature = sleeping.mCreature;
     Ogre::Entity* entity = sleeping.mEntity;
-    Ogre::SceneNode* node = sleeping.mNode;
     Ogre::AnimationState* animation = sleeping.mAnimation;
     const bool nativeEntry = sleeping.mNativeEntry;
     const std::string entry = animation->getAnimationName();
@@ -3323,8 +3322,10 @@ void RenderManager::fitCreatureToBed(CreatureSleepAnimation& sleeping)
             setEntityAnimation(entity, EntityAnimation::sleep_anim, false) : animation;
         rest->setTimePosition(nativeEntry ? 0.0f : rest->getLength());
         const Ogre::AxisAlignedBox bounds = getSleepingPoseBounds(entity, sleeping.mRestOrientation, sleeping.mBaseScale);
-        const Ogre::Vector3 support = node->getParentSceneNode()->convertWorldToLocalPosition(
-            bedNode->convertLocalToWorldPosition(getBedSupportPoint(bedMesh)));
+        const Ogre::Vector3 bedSupport = bedNode->getPosition() + bedNode->getOrientation() *
+            (bedNode->getScale() * getBedSupportPoint(bedMesh));
+        const Ogre::Vector3 support = creature->getParentSceneNode()->convertWorldToLocalPosition(
+            bed->getParentSceneNode()->convertLocalToWorldPosition(bedSupport));
         sleeping.mRestPosition = support - Ogre::Vector3(bounds.getCenter().x, bounds.getCenter().y,
             bounds.getMinimum().z) + Ogre::Vector3(0, 0, 0.01f);
         sleeping.mAnimation = setEntityAnimation(entity, entry, false);
