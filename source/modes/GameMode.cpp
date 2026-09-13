@@ -1552,6 +1552,9 @@ void GameMode::focusRoom(RoomType type)
 
 bool GameMode::showUserCameras(const CEGUI::EventArgs&)
 {
+    while(closeTopWindow())
+    {
+    }
     mRootWindow->getChild("GameOptionsWindow")->hide();
     CEGUI::Window* window = mRootWindow->getChild("UserCamerasWindow");
     window->show();
@@ -1711,6 +1714,9 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
+    while(closeTopWindow())
+    {
+    }
     CEGUI::Window* objectives = mRootWindow->getChild("ObjectivesWindow");
     objectives->show();
     objectives->moveToFront();
@@ -1736,6 +1742,9 @@ bool GameMode::toggleObjectivesWindow(const CEGUI::EventArgs& e)
 
 bool GameMode::showPlayerSettingsWindow(const CEGUI::EventArgs&)
 {
+    while(closeTopWindow())
+    {
+    }
     mRootWindow->getChild("GameOptionsWindow")->hide();
     // Before showing the player settings, we reset to the values in the seat. That's
     // because only the server can change them and the values in the Seat are the
@@ -1948,6 +1957,9 @@ bool GameMode::toggleSkillWindow(const CEGUI::EventArgs& e)
 bool GameMode::showOptionsWindow(const CEGUI::EventArgs&)
 {
     setOptionsPage(false);
+    while(closeTopWindow())
+    {
+    }
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
     options->show();
     options->moveToFront();
@@ -2185,6 +2197,9 @@ void GameMode::updateEventMessageIndicator(float elapsed)
 
 bool GameMode::showSettingsFromOptions(const CEGUI::EventArgs& /*e*/)
 {
+    while(closeTopWindow())
+    {
+    }
     mRootWindow->getChild("GameOptionsWindow")->hide();
     CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
     navigation->setModalState(true);
@@ -2252,6 +2267,9 @@ void GameMode::initializeSettingsNavigation()
 
 bool GameMode::showHelpWindow(const CEGUI::EventArgs&)
 {
+    while(closeTopWindow())
+    {
+    }
     mRootWindow->getChild("GameOptionsWindow")->hide();
     mRootWindow->getChild("GameHelpWindow")->show();
     return true;
