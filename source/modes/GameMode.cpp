@@ -1795,8 +1795,15 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
 
 bool GameMode::showTrapProductionQueue(const CEGUI::EventArgs&)
 {
-    hideOptionsWindow();
-    mRootWindow->getChild("ProductionWindow")->show();
+    CEGUI::Window* production = mRootWindow->getChild("ProductionWindow");
+    const bool wasVisible = production->isVisible();
+    while(closeTopWindow())
+    {
+    }
+    if(wasVisible)
+        return true;
+    production->show();
+    production->moveToFront();
     requestTrapProductionQueue();
     return true;
 }
