@@ -38,3 +38,9 @@ remaining slowdown requires continued navigation diagnosis separately.
 
 No version bump is required: this changes only shutdown ownership and does not
 change save files, packet layouts, settings or gameplay rules.
+
+After the user's old run ended, the normal executable was rebuilt at 15:49:08
+and runtime preparation passed; the fix is no longer confined to the pending
+file. The 15:41 report repeats the exit self-wait in the old 15:26 executable.
+Its log ends at the same exit handler and there is no new native dump. User
+shutdown acceptance remains pending; see BUILDING.md for the normal binary hash.
