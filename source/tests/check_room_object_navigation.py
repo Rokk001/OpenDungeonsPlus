@@ -20,6 +20,7 @@ parser.add_argument('--room-layouts', action='store_true', help='Check furnished
 parser.add_argument('--saved-terrain', type=Path)
 parser.add_argument('--furniture-log', type=Path)
 parser.add_argument('--saved-food-cases', action='store_true')
+parser.add_argument('--saved-beds', action='store_true', help='Include exact saved bed positions, rotations and configured dimensions')
 parser.add_argument('--source-ref')
 args = parser.parse_args()
 def read_source(relative):
@@ -466,11 +467,36 @@ if args.saved_terrain:
     floor = [(int(row[0]), int(row[1])) for row in rows[2:] if int(row[2]) in (1, 2, 3, 6) and float(row[3]) == 0]
     # Only use objects whose placed orientation is fixed by their room source;
     # randomized treasury angles and saved bed rotations are not guessed.
-    angles = {'ChickenCoop': 0, 'Bookcase': 45, 'Podium': 45, 'DungeonTempleObject': 0, 'PortalObject': 0}
+    angles = {'ChickenCoop': 0, 'Bookcase': 45, 'Podium': 45, 'DungeonTempleObject': 0, 'PortalObject': 0,
+              'WorkshopMachine1': 30, 'WorkshopMachine2': 30}
     objects = {}
     for x, y, mesh in re.findall(r'SERVER - Adding rendered object [^\n]*?\[([0-9]+),([0-9]+)\][^\n]*?,MeshName=(\w+)', args.furniture_log.read_text()):
         if mesh in angles:
-            objects[(int(x), int(y))] = (mesh, angles[mesh])
+            offset = .3 if mesh in ('Bookcase', 'Podium') else .2 if mesh.startswith('WorkshopMachine') else 0
+            objects[(int(x), int(y))] = (mesh, angles[mesh], float(x), float(y) + offset)
+    if args.saved_beds:
+        bed_definitions = {}
+        for section in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[1:]:
+            section = section.split('[/Creature]', 1)[0]
+            mesh = re.search(r'^\s*MeshName\s+(\S+)', section, re.M)
+            bed = re.search(r'^\s*BedMeshName\s+(\S+)', section, re.M)
+            dimensions = re.search(r'^\s*BedDim\s+(\d+)\s+(\d+)', section, re.M)
+            if mesh and bed and dimensions:
+                bed_definitions[mesh[1]] = (bed[1], int(dimensions[1]), int(dimensions[2]))
+        saved_creatures = dict(re.findall(r'^\d+\t(\w+)\t(\w+\.mesh)\t', saved, re.M))
+        rooms = saved.split('[Rooms]', 1)[1].split('[/Rooms]', 1)[0]
+        bed_count = 0
+        for name, x, y, rotation in re.findall(r'^(\w+)\t(\d+)\t(\d+)\t(0|90)\s*$', rooms, re.M):
+            if name not in saved_creatures:
+                continue
+            mesh, width, height = bed_definitions[saved_creatures[name]]
+            if rotation != '0':
+                width, height = height, width
+            px, py = int(x) + width * .5 - .5, int(y) + height * .5 - .5
+            objects[(int(x), int(y))] = (mesh, int(rotation), px, py)
+            bed_count += 1
+        assert bed_count > 0, 'Saved-bed fixture found no bedroom records'
+        print(f'SAVED_BEDS={bed_count}', flush=True)
     assert objects and floor
     worker = re.search(r'^1\tKobold8\tKobold.mesh\t([^\t]+)\t([^\t]+)\t[^\t]+\tKobold\t(\d+)\t', saved, re.M)
     assert worker, 'Save fixture requires the logged worker Kobold8'
@@ -478,8 +504,8 @@ if args.saved_terrain:
     saved_probe += 'for(auto& tile:savedMap.tiles){tile.walkable=false;tile.room=&savedRoom;}\n'
     saved_probe += ''.join(f'savedMap.getTile({x},{y})->walkable=true;\n' for x, y in floor)
     saved_probe += f'std::vector<BuildingObject> savedObjects({len(objects)});\n'
-    for i, ((x, y), (mesh, angle)) in enumerate(objects.items()):
-        saved_probe += f'savedObjects[{i}].mesh="{mesh}";savedObjects[{i}].pos={{{x},{y},0}};savedObjects[{i}].angle={angle};savedRoom.objects[savedMap.getTile({x},{y})]=&savedObjects[{i}];\n'
+    for i, ((x, y), (mesh, angle, px, py)) in enumerate(objects.items()):
+        saved_probe += f'savedObjects[{i}].mesh="{mesh}";savedObjects[{i}].pos={{float({px}),float({py}),0}};savedObjects[{i}].angle={angle};savedRoom.objects[savedMap.getTile({x},{y})]=&savedObjects[{i}];\n'
     saved_probe += f'Creature savedWorker{{&savedMap}};savedWorker.pos={{{worker[1]}f,{worker[2]}f,0}};savedWorker.level={worker[3]};\n'.replace(f'{worker[1]}f', f'float({worker[1]})').replace(f'{worker[2]}f', f'float({worker[2]})')
     saved_probe += r'''
     long long totalMicros=0,maxMicros=0;int searches=0;

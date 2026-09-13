@@ -155,6 +155,21 @@ navigation task is not ready for acceptance.
 
 ### Follow-up: visible furniture footprint correction (initial inspection)
 
+The subsequent September 13 load-hang investigation extends the saved-terrain
+fixture to include exact saved bed centers/rotations and the source-defined
+library/workshop placement offsets. The worker destination retry probe also
+exposes the same immediate retry defect in ground claiming and digging (six
+failed assertions). Those failed assignments now end the tick, like the already
+corrected carrying, wall claiming and room-entry branches. Successful dispatch
+and later retry remain unchanged. No save/network version or README behavior
+change is needed for this completion of the navigation feature.
+
+The generated Windows Release project separately disables optimization despite
+the isolated navigation fixture using `/O2`; this pre-existing build defect is
+being investigated on its own branch. The load-hang report remains unresolved
+until that correction is built and retested; isolated tests are not gameplay
+acceptance.
+
 The user has authorized narrower visible furniture together with matching
 collision bounds, retaining room capacity, tile reservations, placement and
 interaction behavior. The renderer currently creates these objects at unit

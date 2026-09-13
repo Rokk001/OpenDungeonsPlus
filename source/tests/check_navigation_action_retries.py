@@ -9,13 +9,13 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source-ref')
 args = parser.parse_args()
 handlers = []
-for name in ('UseRoom', 'CarryEntity', 'ClaimWallTile'):
+for name in ('UseRoom', 'CarryEntity', 'ClaimWallTile', 'ClaimGroundTile', 'DigTile'):
     path = f'source/creatureaction/CreatureAction{name}.cpp'
     source = (subprocess.check_output(['git', 'show', args.source_ref + ':' + path], cwd=repo, text=True)
               if args.source_ref else (repo / path).read_text())
     start = source.index('if(!creature.setDestination(')
     end = source.index('return true;', start) + len('return true;')
-    handlers.append(f'bool attempt{name}(Creature& creature){{Tile* dest=nullptr;Tile* tileDest=nullptr;\n' + source[start:end] + '\n}')
+    handlers.append(f'bool attempt{name}(Creature& creature){{Tile* dest=nullptr;Tile* tileDest=nullptr;Tile tileClaim,tilePos;\n' + source[start:end] + '\n}')
 
 probe = r'''
 #include <iostream>
@@ -30,7 +30,7 @@ HANDLERS
 int main(){
  int checks=0,failures=0;
  const auto check=[&](bool ok,const char* message){++checks;if(!ok){++failures;std::cout<<"FAIL "<<message<<'\n';}};
- for(auto handler:{attemptUseRoom,attemptCarryEntity,attemptClaimWallTile}){
+ for(auto handler:{attemptUseRoom,attemptCarryEntity,attemptClaimWallTile,attemptClaimGroundTile,attemptDigTile}){
   Creature creature;
   for(int iteration=0;iteration<20;++iteration)if(!handler(creature))break;
   check(creature.requests==1,"failed destination is not retried twenty times in the same tick");
