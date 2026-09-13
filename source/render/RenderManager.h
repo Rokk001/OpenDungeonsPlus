@@ -324,6 +324,22 @@ private:
         coil
     };
 
+    struct CreatureFeedingBone
+    {
+        Ogre::Bone* mBone;
+        Ogre::Vector3 mPosition;
+        Ogre::Quaternion mOrientation;
+        bool mWasManual;
+        Ogre::Bone* mDriver = nullptr;
+    };
+    struct CreatureFeedingLimb
+    {
+        Ogre::Bone* mUpper;
+        Ogre::Bone* mLower;
+        Ogre::Bone* mTip;
+        Ogre::Vector3 mTipOffset;
+        Ogre::Vector3 mRestTip;
+    };
     struct CreatureFeedingAnimation
     {
         Creature* mCreature;
@@ -341,6 +357,11 @@ private:
         Ogre::Vector3 mChickenScale;
         Ogre::Bone* mHead;
         unsigned int mFeatherBursts;
+        std::vector<CreatureFeedingBone> mReachBones;
+        std::vector<Ogre::Bone*> mRoots;
+        Ogre::Bone* mSpine = nullptr;
+        CreatureFeedingLimb mArms[2] = {};
+        CreatureFeedingLimb mLegs[2] = {};
     };
     std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
 
@@ -412,6 +433,8 @@ private:
     void setCreatureDropGroundAnimation(Creature* creature);
     void clearCreatureCombatEffects(Creature* creature = nullptr);
     void startCreatureFeedingAnimation(Creature* creature, Ogre::Entity* entity);
+    void prepareCreatureFeedingReach(CreatureFeedingAnimation& feeding);
+    Ogre::Vector3 updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress);
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position);
     void clearChickenFeatherEffects();

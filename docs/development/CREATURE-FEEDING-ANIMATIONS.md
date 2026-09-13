@@ -1,5 +1,35 @@
 # Creature feeding animations
 
+## Ground pickup by creatures with hands
+
+The presentation currently interpolates the chicken directly to the head while
+only some humanoid forearms rotate; heavy and magical bipeds never reach for it.
+Use the inspected hand/arm and foot/leg chains to stage a grounded reach, contact,
+hand-carried lift and eating, restoring the pose on completion or cancellation.
+Keep the existing direct-feeding path for models without both hands and legs.
+The consumed copy must stay at its starting position until contact, then follow
+the actual hands rather than a separate flight path. Existing meal gameplay,
+the 2.2-second presentation duration, save format and version remain unchanged.
+
+The renderer now reaches with all 22 hand-equipped bipeds and preserves direct
+feeding for the other 11 models. It uses the measured limb lengths, keeps the
+chicken grounded through the first 28 percent, then carries it between the
+actual hands before eating; feather bursts follow the later bites. Short-legged
+models shuffle within their reach rather than stretching their legs. The dwarf
+with separate body/armour rigs drives both, and cancellation restores every
+manual-bone flag and pose. Root updates preserve Ogre's manual-bone dirty flag
+so the rendered skin matches the calculated hand contact.
+
+The combined real-Ogre probe passes 10,114 checks, including all 33 models,
+actual ground contact, carried-chicken attachment, skinning invalidation,
+unchanged limb lengths, completion/walking/pickup cleanup and rotated level-1/30
+reach cases. It also retains the sleep-culling, combat and accepted hand/drop/
+get-up regressions. Representative rendered reach, lift and eating phases were
+inspected, including the separate dwarf rigs. The committed
+`source/tests/check_feeding_limb.py` passes 64 focused solver checks against the
+installed Ogre library without a game or window. Release compilation passes;
+live gameplay and subjective appearance remain for the user's acceptance.
+
 ## Reported black rectangles
 
 The feather material alpha-blends a flare image whose black background has
