@@ -1,5 +1,21 @@
 # Configuring and compiling on Windows
 
+## Immediate missile visibility at the caster
+
+The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:
+2026-09-13 23:38:07, 4,837,376 bytes, SHA-256
+`A40BBBA85F5ACA22CF09B97A8AA90ECD50EF04D9D76E69BE786309A4543CA9BE`.
+New creature missiles are now announced to the launch tile's visible players
+before their first flight path, at the caster's actual XY position, rather than
+after movement in the following server turn. The user-accepted fireball
+appearance, arrow visibility, combat facing and 70% beds remain unchanged.
+
+Release compilation/runtime preparation and 17 production launch/vision checks
+pass (four failures before), together with 75 missile-collision, 180 fireball GPU
+and 19 attack-dispatch checks. The client-visible launch timing remains for user
+retest; no game was launched or stopped by the agent. No version, packet/save
+format or additional README change is required. See [combat feedback](CREATURE-COMBAT-FEEDBACK.md).
+
 ## Fireballs, readable arrows and combat-facing correction
 
 The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared after
