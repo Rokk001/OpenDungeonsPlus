@@ -76,6 +76,22 @@ crash diagnosis is tracked separately after this task's requested checkpoint.
 
 ## Verification
 
+### Open regression: fully furnished dormitory transit
+
+`check_room_object_navigation.py --packed-beds` now exercises a 3x3 dormitory
+with all nine worker beds present, surrounding walls and opposing doorways.
+It checks both travel directions at levels 1 and 30, confirms the underlying
+terrain route exists, and requires arrival without removing beds or crossing
+walls. This is an isolated fixture using the actual navigation implementation,
+not a manual game run or an exact reconstruction of the user's save.
+
+The current implementation fails all four transit attempts: 2,967 checks,
+four failures. The existing open-map furniture benchmark permits routing around
+the room and does not cover this acceptance requirement. The normal regression
+suite remains separate; passing it does not establish packed-room passability.
+No production behavior has been changed by this diagnostic checkpoint, and the
+navigation task is not ready for acceptance.
+
 ### Follow-up: stalls during combat testing
 
 The subsequent 15:56 user run still takes 4.1-4.4 seconds in upkeep and repeatedly

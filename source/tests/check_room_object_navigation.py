@@ -15,6 +15,7 @@ parser.add_argument('--food-source-ref')
 parser.add_argument('--trace-food', action='store_true')
 parser.add_argument('--trace-work', action='store_true')
 parser.add_argument('--benchmark', action='store_true')
+parser.add_argument('--packed-beds', action='store_true', help='Check the reported full-capacity dormitory transit regression')
 parser.add_argument('--saved-terrain', type=Path)
 parser.add_argument('--furniture-log', type=Path)
 parser.add_argument('--saved-food-cases', action='store_true')
@@ -288,11 +289,47 @@ int main(){
  creature=Creature{&map};ChickenEntity distant{&map,{8,5,0}};
  CreatureActionEatChicken::handleEatChicken(creature,&distant);
  check(distant.consumed==0&&creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains original tile path and 80 percent truncation");
+ PACKED_BEDS
  BENCHMARK
  SAVED_TERRAIN
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''.replace('SOURCE', source).replace('FOOD_HANDLER', food_handler).replace('WORK_GATES', '\n'.join(work_gates))
+probe = probe.replace('PACKED_BEDS', r'''
+ {
+  // A completely furnished room with two opposing doorways: an open-map
+  // benchmark can route around the room and misses the reported regression.
+  GameMap packed(11,11);Room dormitory;dormitory.type=RoomType::dormitory;
+  packed.rooms={&dormitory};
+  for(auto& tile:packed.tiles)tile.walkable=false;
+  std::vector<BuildingObject> beds(9);
+  for(int y=4;y<=6;++y)for(int x=4;x<=6;++x){
+   auto* tile=packed.getTile(x,y);tile->walkable=true;tile->room=&dormitory;
+   auto& bed=beds[(y-4)*3+x-4];bed.mesh="ImpBed";bed.pos={float(x),float(y),0};
+   dormitory.objects[tile]=&bed;
+  }
+  for(int x:{2,3,7,8})packed.getTile(x,5)->walkable=true;
+  for(int level:{1,30})for(bool reverse:{false,true}){
+   Creature walker{&packed};walker.level=level;walker.pos={reverse?8.f:2.f,5,0};
+   auto* destination=packed.getTile(reverse?2:8,5);
+   auto coarse=packed.path(&walker,destination);
+   check(!coarse.empty(),"packed dormitory terrain connects its opposing doorways");
+   std::vector<Ogre::Vector2> transit;
+   Creature::tileToVector2(coarse,transit,true,0);
+   RoomObjectNavigation::refine(walker,transit);
+   check(!transit.empty(),"packed worker beds must not make the dormitory impassable");
+   if(!transit.empty()){
+    check(transit.back()==Ogre::Vector2(float(destination->x),float(destination->y)),"packed-bed transit reaches the opposite doorway");
+    auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
+    for(const auto& point:transit){
+     check(terrainClear(walker,previous,point),"packed-bed transit cannot escape through the surrounding walls");
+     previous=point;
+    }
+   }
+   check(dormitory.objects.size()==9,"packed-bed transit preserves all nine placed beds");
+  }
+ }
+''' if args.packed_beds else '')
 probe = probe.replace('BENCHMARK', r'''
  std::vector<BuildingObject> crowd(100);room.type=RoomType::library;
  for(int i=0;i<100;++i){crowd[i].mesh="Bookcase";crowd[i].pos={float(2+i%10),float(2+i/10),0};crowd[i].angle=45;room.objects[map.getTile(2+i%10,2+i/10)]=&crowd[i];}
