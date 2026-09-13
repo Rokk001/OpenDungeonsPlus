@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+The September 13 cuff/grip and worker-tool feeding correction passes a clean
+Release rebuild and runtime preparation after the animation-state layout change.
+The executable is dated 2026-09-13 12:47:51, is 4,720,640 bytes, SHA-256
+`35EE3E672F9999E3A01712BB9FA1FF4403A2290BB7022DE698AA3B42FE2465AA`.
+The real-model renderer passes 10,124 checks (32 failures on the preceding
+feeding implementation), and the committed finger/limb solver passes 109 checks.
+Research 411, production 41, workshop 13, menu-cursor 60, feather/blood GPU
+10 each and legacy map-header 26 checks also pass. The preceding exclusive-window
+fix and its 624-check navigation result are retained. No game was launched or
+pushed; the newly reported ranged-combat presentation remains under investigation.
+
 The September 13 general window-navigation correction passes 624 isolated CEGUI
 checks, Release compilation and runtime preparation. Opening options, objectives,
 help, player information, cameras or settings now closes preceding dialogs through

@@ -30,10 +30,13 @@ int main()
         auto* upper = rig.createBone("upper");
         auto* lower = rig.createBone("lower");
         auto* hand = rig.createBone("hand");
+        auto* finger = rig.createBone("finger");
         torso->addChild(upper); upper->addChild(lower); lower->addChild(hand);
+        hand->addChild(finger);
         upper->setPosition(0, 0, .6f);
         lower->setPosition(0, 0, -.25f);
         hand->setPosition(0, 0, -.2f);
+        finger->setPosition(0, 0, -.06f);
         upper->setManuallyControlled(true); lower->setManuallyControlled(true);
         check(findFeedingBone(&rig, {"missing", "hand"}) == hand, "bone aliases resolve");
         check(findFeedingBone(&rig, {"absent"}) == nullptr, "missing limb is not invented");
@@ -51,6 +54,13 @@ int main()
                 check(std::abs(upper->_getDerivedPosition().distance(lower->_getDerivedPosition()) - .25f) < .0001f, "upper limb does not stretch");
                 check(std::abs(lower->_getDerivedPosition().distance(hand->_getDerivedPosition()) - .2f) < .0001f, "lower limb does not stretch");
                 check(rig.getManualBonesDirty(), "skin matrices remain invalidated for rendering");
+                upper->setOrientation(Ogre::Quaternion::IDENTITY);
+                lower->setOrientation(Ogre::Quaternion::IDENTITY);
+                rig._updateTransforms();
+                solveFeedingLimb(upper, lower, hand->getPosition() + finger->getPosition(), target);
+                check(finger->_getDerivedPosition().distance(target) < .0001f, "finger grip reaches food rather than the wrist");
+                check(std::abs(hand->_getDerivedPosition().distance(target) - .06f) < .0001f, "wrist stays clear of the food grip");
+                check(std::abs(lower->_getDerivedPosition().distance(hand->_getDerivedPosition()) - .2f) < .0001f, "finger grip preserves forearm length");
             }
         }
         solveFeedingLimb(upper, lower, hand->getPosition(), Ogre::Vector3(0, -5, 0));
