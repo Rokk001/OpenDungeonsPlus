@@ -1,5 +1,28 @@
 # Creature feeding animations
 
+## September 13 screenshot follow-up
+
+The 12:18:30 screenshot shows the Cultist's broad sleeve across the meal, not a
+book: its mesh has no equipment submesh or weapon-bone vertex assignments. The
+current solver places the chicken at the wrist bone, inside that sleeve. Its
+authored middle-finger joint provides a measured grip point beyond the cuff;
+use that point for contact and carrying without changing the sleeve geometry.
+Kobold's pick is embedded in its main mesh, with 36 vertices assigned to the
+separate `Pick` bone. Stow only that tool during feeding and restore its original
+bone scale when the meal ends or is interrupted. Do not hide body submeshes or
+change equipment ownership, meal timing or gameplay.
+
+The corrected grip follows the actual middle-finger joints; the isolated real
+Ogre matrix passes 10,124 checks (32 failures against the preceding commit), including worker tool restoration on completion
+and walking interruption. The extended committed limb test passes 109 checks,
+including finger contact, wrist clearance and unchanged forearm lengths. Three
+additional elevated camera angles for both affected models were rendered and
+inspected. The tool fades out before contact and returns during the existing
+release phase; cancellation restores its captured scale immediately. These
+visual-only corrections do not require a version or save-format change.
+Clean Release compilation and runtime preparation pass; the prepared executable
+is recorded in BUILDING.md. No manual game test was started.
+
 ## Ground pickup by creatures with hands
 
 The presentation currently interpolates the chicken directly to the head while

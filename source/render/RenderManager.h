@@ -331,6 +331,7 @@ private:
         Ogre::Quaternion mOrientation;
         bool mWasManual;
         Ogre::Bone* mDriver = nullptr;
+        Ogre::Vector3 mScale = Ogre::Vector3::UNIT_SCALE;
     };
     struct CreatureFeedingLimb
     {
@@ -339,6 +340,7 @@ private:
         Ogre::Bone* mTip;
         Ogre::Vector3 mTipOffset;
         Ogre::Vector3 mRestTip;
+        Ogre::Vector3 mGripOffset = Ogre::Vector3::ZERO;
     };
     struct CreatureFeedingAnimation
     {

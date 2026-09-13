@@ -3302,6 +3302,7 @@ void RenderManager::prepareCreatureFeedingReach(CreatureFeedingAnimation& feedin
             if(pose.mBone == bone)
                 return;
         feeding.mReachBones.push_back({bone, bone->getPosition(), bone->getOrientation(), bone->isManuallyControlled()});
+        feeding.mReachBones.back().mScale = bone->getScale();
         bone->setManuallyControlled(true);
     };
     for(unsigned short index = 0; index < skeleton->getNumBones(); ++index)
@@ -3314,9 +3315,26 @@ void RenderManager::prepareCreatureFeedingReach(CreatureFeedingAnimation& feedin
         }
     }
     retain(feeding.mSpine);
+    if(feeding.mEntity->getMesh()->getName() == "Cultist.mesh")
+    {
+        // The wrist is inside the wide cuff; grasp beyond it at the fingers.
+        for(unsigned int side = 0; side < 2; ++side)
+        {
+            auto& arm = feeding.mArms[side];
+            Ogre::Bone* finger = findFeedingBone(skeleton,
+                {side == 0 ? "f_middle.02.L" : "f_middle.02.R"});
+            if(finger != nullptr)
+                arm.mGripOffset = (arm.mTip->_getDerivedOrientation().Inverse() *
+                    (finger->_getDerivedPosition() - arm.mTip->_getDerivedPosition())) /
+                    arm.mTip->_getDerivedScale();
+        }
+    }
+    if(feeding.mEntity->getMesh()->getName() == "Kobold.mesh" && skeleton->hasBone("Pick"))
+        retain(skeleton->getBone("Pick"));
     for(auto* limb : {&left, &right, &leftLeg, &rightLeg})
     {
-        limb->mRestTip = limb->mTip->_getDerivedPosition();
+        limb->mRestTip = limb->mTip->_getDerivedPosition() +
+            limb->mTip->_getDerivedOrientation() * (limb->mTip->_getDerivedScale() * limb->mGripOffset);
         limb->mTipOffset = (limb->mLower->_getDerivedOrientation().Inverse() *
             (limb->mRestTip - limb->mLower->_getDerivedPosition())) / limb->mLower->_getDerivedScale();
         retain(limb->mUpper);
@@ -3353,6 +3371,10 @@ Ogre::Vector3 RenderManager::updateCreatureFeedingReach(CreatureFeedingAnimation
     {
         pose.mBone->setPosition(pose.mPosition);
         pose.mBone->setOrientation(pose.mOrientation);
+        pose.mBone->setScale(pose.mScale);
+        if(feeding.mEntity->getMesh()->getName() == "Kobold.mesh" && pose.mBone->getName() == "Pick")
+            pose.mBone->setScale(pose.mScale * (1.0f - smooth(progress / 0.12f) *
+                (1.0f - smooth((progress - 0.88f) / 0.12f))));
     }
     feeding.mEntity->getSkeleton()->_updateTransforms();
     const Ogre::Real reach = smooth(progress / 0.28f);
@@ -3441,7 +3463,11 @@ Ogre::Vector3 RenderManager::updateCreatureFeedingReach(CreatureFeedingAnimation
     for(Ogre::Bone* root : feeding.mRoots)
         root->_update(true, false);
     // Retain the manual-bone dirty flag so skinning refreshes its cached matrices.
-    return (feeding.mArms[0].mTip->_getDerivedPosition() + feeding.mArms[1].mTip->_getDerivedPosition()) * 0.5f;
+    Ogre::Vector3 grip = Ogre::Vector3::ZERO;
+    for(const auto& arm : feeding.mArms)
+        grip += arm.mTip->_getDerivedPosition() + arm.mTip->_getDerivedOrientation() *
+            (arm.mTip->_getDerivedScale() * arm.mGripOffset);
+    return grip * 0.5f;
 }
 
 void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,
@@ -3599,6 +3625,7 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
         {
             pose.mBone->setPosition(pose.mPosition);
             pose.mBone->setOrientation(pose.mOrientation);
+            pose.mBone->setScale(pose.mScale);
             pose.mBone->setManuallyControlled(pose.mWasManual);
         }
         if(it->mChickenEntity != nullptr)
