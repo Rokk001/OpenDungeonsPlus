@@ -62,7 +62,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Creature hand drop](CREATURE-HAND-DROP.md): short-click front-entry drops,
   held-button batch drops and the falling, grounded and get-up presentation.
 - [Creature combat feedback](CREATURE-COMBAT-FEEDBACK.md): creature-specific
-  skeletal attacks and directional recoil, weapon sparks, optional blood and deaths.
+  skeletal attacks, distinct ranged poses and continuous magic bolts, directional
+  recoil, weapon sparks, optional blood and deaths.
 - [Creature feeding animations](CREATURE-FEEDING-ANIMATIONS.md): species-group
   feeding rhythms, grounded hand pickup, cuff-clear finger grip, tool stowing and feathers.
 - [Creature sleep transitions](CREATURE-SLEEP-ANIMATIONS.md): authored sleep
