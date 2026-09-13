@@ -3,8 +3,8 @@ particle_system MissileMagic
 {
     material MissileMagic
     point_rendering            false
-    particle_width             0.16
-    particle_height            0.16
+    particle_width             0.34
+    particle_height            0.34
     cull_each                  false
     quota                      64
     billboard_type             point
@@ -12,17 +12,24 @@ particle_system MissileMagic
     emitter Point
     {
         angle                   0
-        colour                  0.55 0.8 1 1
+        colour                  1 1 1 1
         emission_rate           120
-        time_to_live            0.12
+        time_to_live            0.16
         velocity                0
     }
 
-    affector ColourFader
+    affector ColourInterpolator
     {
-        red                     -3.5
-        green                   -4.5
-        blue                    -4.5
-        alpha                   -8
+        time0                   0
+        colour0                 1 1 1 1
+        time1                   0.3
+        colour1                 1 0.65 0.25 0.85
+        time2                   1
+        colour2                 0.5 0.08 0.01 0
+    }
+
+    affector Scaler
+    {
+        rate                    -1.2
     }
 }

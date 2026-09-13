@@ -287,7 +287,9 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
             mWalkQueue.pop_front();
             if(mWalkQueue.empty())
             {
-                // Stop walking
+                // Apply travel facing before the queued end animation can turn
+                // toward its target; do not overwrite that facing afterwards.
+                setWalkDirection(Ogre::Vector3(walkDirection.x,walkDirection.y,0));
                 stopWalking();
                 break;
             }
@@ -298,7 +300,8 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
         }
     }
 
-    setWalkDirection(Ogre::Vector3(walkDirection.x,walkDirection.y,0));
+    if(!mWalkQueue.empty())
+        setWalkDirection(Ogre::Vector3(walkDirection.x,walkDirection.y,0));
     setPosition(Ogre::Vector3(newPosition.x,newPosition.y,newPosition3f.z));
 }
 

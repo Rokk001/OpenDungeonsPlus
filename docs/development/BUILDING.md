@@ -1,5 +1,24 @@
 # Configuring and compiling on Windows
 
+## Fireballs, readable arrows and combat-facing correction
+
+The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared after
+the user closed the game: 2026-09-13 23:29:21, 4,837,376 bytes, SHA-256
+`215E882C27CD61B854FA98236EEE3D596E983700BF944B67B89BF315E90D79F4`.
+This retains the 70% corner beds and movement fixes, and adds the combat-facing
+ordering correction, actual creature target positions, visible arrow shafts
+and the warm fireball shader/trail. Release compilation and runtime preparation
+pass; no game was launched or stopped by the agent.
+
+Focused checks pass: arrival facing 82 (eight failed before), attack dispatch
+19, fireball GPU frames at the configured flight speed 180, arrow GPU directions
+eight (four failed before), missile collision 75, real-model renderer 10,136,
+bed geometry 1,635 and generated resources 32. Rendered projectile previews were
+inspected. Full live combat appearance remains for the user's retest; bedroom
+passage/visible stepping is still unfinished. See [combat feedback](CREATURE-COMBAT-FEEDBACK.md).
+No save, packet, damage or version change is needed; the development index now
+describes the requested projectile presentation.
+
 ## Seventy-percent corner-bed correction in the normal executable
 
 The September 13 23:05 screenshot shows small centered beds. The then-running

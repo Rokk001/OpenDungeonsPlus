@@ -2233,6 +2233,11 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             }
 
 
+    // Keep the narrow arrow shaft visible at dungeon-camera scale without
+    // lengthening the projectile or changing its gameplay collision path.
+    if(meshName == "ArrowProjectile")
+        node->setScale(3.0f, 1.0f, 3.0f);
+
     Ogre::Entity* ent = nullptr;
     if(!meshName.empty())
     {

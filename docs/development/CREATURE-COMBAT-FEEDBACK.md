@@ -1,5 +1,47 @@
 # Creature combat feedback
 
+## September 13 projectile and facing correction
+
+The user rejects the current combat presentation: white-looking caster shots,
+unreadable arrows and attackers facing away from opponents. The existing magic
+effect uses many overlapping additive blue-white flares, not a fireball; replace
+its presentation with a warm core and flame trail. Archers already select the
+shipped arrow mesh, so inspect its rendered orientation and visibility rather
+than replacing their skill or damage rules.
+
+The movement update calls the queued attack animation when it reaches the final
+waypoint, then overwrites that attack direction with the previous walking
+direction. Fix the ordering at arrival and retain ordinary walking/end animations.
+Attack facing also aims at the target tile center rather than the creature's
+actual offset position; use the actual creature position while retaining tile
+aiming for buildings. Keep attack range, costs, damage and cooldowns unchanged.
+Work continues from the complete fork on `fix/combat-projectiles-and-facing`;
+the unrelated bedroom passage task remains queued on its own branch.
+
+The native arrow probe also reproduces four unreadable views out of eight:
+the inherited material requests missing `Panels_Diffuse.png` in its first pass
+before applying the bow texture. Use the arrow's existing bow texture in one
+lit pass, without the unrelated inherited panel texture. This removes the missing
+resource but does not fix the four failing views: the native thin shaft misses
+pixels when axis-aligned (eight visible tip pixels versus 66 diagonal pixels).
+Increase only the rendered cross-section threefold; retain the shipped mesh,
+native -Y flight axis, length and gameplay collision path.
+
+The fireball uses a procedurally shaded hot core and turbulent orange rim, with
+shrinking, fading trail particles and alpha blending instead of additive white
+overexposure. No new texture or dependency is required. Arrival facing passes
+82 checks (eight failed before), attack dispatch/offset targets 19, and missile
+collision 75. The actual arrow material/mesh passes eight directional GPU views
+after the shaft adjustment; rendered previews show the retained shaft and tip.
+The real-model renderer retains all 10,136 existing animation/lifecycle checks.
+The fireball passes 180 GPU checks over 60 frames at the configured 4.2 tiles
+per second, including a visible warm core and no white saturation; the rendered
+preview was inspected. The normal executable is prepared for retesting as
+recorded in [BUILDING.md](BUILDING.md).
+Gameplay choreography and appearance still require the user's retest; tests do
+not prove final live combat acceptance. No version or packet/save layout changes
+are needed; the development index now names fireballs and readable arrows.
+
 ## Ranged-attack readability follow-up
 
 The preceding attack dispatch always sent the melee combat animation, including
