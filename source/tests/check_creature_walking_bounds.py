@@ -8,7 +8,9 @@ import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--height-profile', action='store_true', help='Measure triangle-clipped walking envelopes below furniture heights without changing collision policy')
+parser.add_argument('--frames', type=int, default=120, help='Number of equal Walk intervals to sample, including both ends')
 args = parser.parse_args()
+assert args.frames > 0
 
 repo = Path(__file__).resolve().parents[2]
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
@@ -34,8 +36,8 @@ Ogre::Bone* findBone(Ogre::Skeleton* skeleton,std::initializer_list<const char*>
  return nullptr;
 }
 Ogre::AxisAlignedBox poseBounds;
-const float heights[]={.05f,.1f,.15f,.2f,.3f};
-Ogre::AxisAlignedBox heightBounds[5];
+const float heights[]={.05f,.1f,.15f,.2f,.3f,RoomObjectPath::lowWalkingHeight};
+Ogre::AxisAlignedBox heightBounds[6];
 bool profile=false;
 float radius(Ogre::Entity* entity){
  entity->addSoftwareAnimationRequest(false);entity->_updateAnimation();entity->removeSoftwareAnimationRequest(false);
@@ -48,7 +50,7 @@ float radius(Ogre::Entity* entity){
   Ogre::HardwareBufferLockGuard lock(buffer,Ogre::HardwareBuffer::HBL_READ_ONLY);
   auto* bytes=static_cast<unsigned char*>(lock.pData);
   for(size_t i=0;i<data->vertexCount;++i){float* vertex;position->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&vertex);result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));}
-  if(profile){
+  {
    if(part->getSubMesh()->operationType!=Ogre::RenderOperation::OT_TRIANGLE_LIST)
     throw std::runtime_error("Height profiling requires triangle-list meshes");
    auto* indices=part->getSubMesh()->indexData;
@@ -62,7 +64,8 @@ float radius(Ogre::Entity* entity){
      if(index>=data->vertexCount)throw std::runtime_error("Height profile vertex index outside animated data");
      float* vertex;position->baseVertexPointerToElement(bytes+(data->vertexStart+index)*buffer->getVertexSize(),&vertex);points[corner]=Ogre::Vector3(vertex);
     }
-    for(int band=0;band<5;++band)for(int corner=0;corner<3;++corner){
+    for(int band=0;band<6;++band)for(int corner=0;corner<3;++corner){
+     if(!profile&&band!=5)continue;
      const auto& a=points[corner];const auto& b=points[(corner+1)%3];
      if(a.z<=heights[band])heightBounds[band].merge(a);
      if((a.z<heights[band]&&b.z>heights[band])||(a.z>heights[band]&&b.z<heights[band]))
@@ -80,7 +83,8 @@ int main(int argc,char** argv){try{
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
  auto* scene=root.createSceneManager();int checks=0,failures=0;
- profile=argc>2;
+ profile=argc>3;
+ const int frames=std::stoi(argv[2]);
  if(profile)for(const std::string name:{BED_NAMES}){
   const auto mesh=Ogre::MeshManager::getSingleton().load(name+".mesh","Graphics");
   const auto support=getBedSupportPoint(mesh);
@@ -95,14 +99,23 @@ int main(int argc,char** argv){try{
   auto* skeleton=entity->getSkeleton();
   Ogre::Bone* joints[]={LEFT_UPPER,LEFT_LOWER,LEFT_TIP,RIGHT_UPPER,RIGHT_LOWER,RIGHT_TIP};
   Ogre::AxisAlignedBox jointBounds[6];
-  for(int frame=0;frame<=120;++frame){
-   walk->setTimePosition(walk->getLength()*frame/120);root._fireFrameStarted();root._fireFrameRenderingQueued();
+  for(int frame=0;frame<=frames;++frame){
+   walk->setTimePosition(walk->getLength()*frame/frames);root._fireFrameStarted();root._fireFrameRenderingQueued();
    float actual=radius(entity);++checks;
    if(profile)for(int joint=0;joint<6;++joint)if(joints[joint])jointBounds[joint].merge(joints[joint]->_getDerivedPosition());
    if(actual>model.radius||poseBounds.getMinimum().x<model.minX||poseBounds.getMinimum().y<model.minY||poseBounds.getMaximum().x>model.maxX||poseBounds.getMaximum().y>model.maxY){++failures;std::cout<<"FAIL "<<model.name<<" pose "<<frame<<" exceeds walking bounds "<<poseBounds<<'\n';}
    root._fireFrameEnded();
   }
-  if(profile)for(int band=0;band<5;++band)
+  bool foundLow=false;
+  for(const auto& low:RoomObjectPath::lowWalkingBounds)if(std::string(low.name)==model.name){
+   foundLow=true;const auto& actual=heightBounds[5];const float margin=RoomObjectPath::lowWalkingMargin;
+   ++checks;if(low.empty?!actual.isNull():(actual.isNull()||actual.getMinimum().x<low.minX-margin||
+    actual.getMinimum().y<low.minY-margin||actual.getMaximum().x>low.maxX+margin||actual.getMaximum().y>low.maxY+margin)){
+    ++failures;std::cout<<"FAIL low walking envelope "<<model.name<<" "<<actual<<'\n';
+   }
+  }
+  ++checks;if(!foundLow){++failures;std::cout<<"FAIL missing low walking envelope "<<model.name<<'\n';}
+  if(profile)for(int band=0;band<6;++band)
    std::cout<<"HEIGHT_PROFILE "<<model.name<<" z="<<heights[band]<<" bounds="<<heightBounds[band]<<'\n';
   if(profile)for(int joint=0;joint<6;++joint){
    std::cout<<"LEG_PROFILE "<<model.name<<" joint="<<joint;
@@ -124,7 +137,7 @@ with tempfile.TemporaryDirectory(prefix='odp-walking-bounds-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    result = subprocess.run([str(work / 'check.exe'), str(repo)] + (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
+    result = subprocess.run([str(work / 'check.exe'), str(repo), str(args.frames)] + (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'HEIGHT_PROFILE ', 'FURNITURE_HEIGHT ', 'LEG_PROFILE '))))
     if result.returncode:
         if 'FAIL ' not in result.stdout:

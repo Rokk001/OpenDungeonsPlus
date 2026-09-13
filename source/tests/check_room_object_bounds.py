@@ -45,6 +45,9 @@ int main(int argc,char** argv){try{
  for(const auto& row:RoomObjectPath::meshBounds){
   const auto mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
   const auto& b=mesh->getBounds();
+  if(std::isfinite(row.maxZ)){
+   ++checks;if(b.getMaximum().z>row.maxZ||row.maxZ-b.getMaximum().z>.00002f){++failures;std::cout<<"FAIL "<<row.name<<" low furniture height\n";}
+  }
   for(float delta:{row.minX-b.getMinimum().x,row.minY-b.getMinimum().y,row.maxX-b.getMaximum().x,row.maxY-b.getMaximum().y}){
    ++checks;if(std::abs(delta)>.00002f){++failures;std::cout<<"FAIL "<<row.name<<" stale asset bounds\n";}
   }

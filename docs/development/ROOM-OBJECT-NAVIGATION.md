@@ -2,6 +2,39 @@
 
 ## Free-strip routing follow-up
 
+The low-nest collision correction retains body/furniture separation in three
+dimensions for the measured low nest: projecting an entire animated body into
+XY wrongly blocks its arms against a bed only 0.073801 tiles high. Add a
+conservative animated-body envelope below that height (rounded upward) using the
+existing skinned-triangle measurement and interpolation margin. Use it only for
+objects fully below the measured band; taller furniture and unknown models keep
+the existing full-body bounds. This opens only physically clear ground-level
+gaps and does not substitute for the still-required visible stepping cases.
+
+Runtime now uses the measured lower-body band only when the entire object is
+below it, accounting for creature level and relative elevation. Ground feet stay
+solid; the two flying meshes have no triangles in that band. Taller/raised props,
+wide ground legs and unknown models retain conservative collision. Aligned-grid
+selection uses the body profile of the actual blocking object in mixed rooms.
+The refinement trigger also examines the direct start/goal segment so an existing
+outside tile route cannot suppress a usable interior gap.
+
+The added low-nest route cases fail eight checks at 6f0aa40d and now pass in both
+axes/directions, with and without coarse detours (6.19-6.22 tiles). The combined
+room/benchmark suite passes 6,727 checks; packed passage failures fall from 156
+to 148 of 5,293, without suppressing the remaining high-bed/large-body cases.
+The actual-mesh probe passes 39,699 checks at 1,201 Walk poses per creature,
+including all 33 lower-body envelopes; denser sampling exposed a weapon extremum
+in Defender, which is included in the measured bounds. Furniture geometry passes
+1,636 checks, including the exact low-nest top and unchanged 70% placement;
+generic geometry passes 7,270. Saved-map fixtures pass 5,145 checks, with the same
+295/322 food approaches reached; 84 route searches take 300.55 ms and food calls
+1,105.55 ms. The dense 20-route case is 281 ms: this is not a general speedup claim.
+Missile launch 17, combat-facing 82, idle retry 24, resource generation 14 and
+Release flags eight pass; Release/runtime preparation succeeds. No game was
+launched or stopped. Version/save/network formats are unchanged; the current
+binary and user retest limits are recorded in [BUILDING.md](BUILDING.md).
+
 The user accepts the 70% bed size and reports that creatures detour around the
 furnished area instead of using the free strips. Subtile routing already exists;
 the gap is not a blanket prohibition on occupied tiles. Inspection finds that

@@ -30,6 +30,7 @@ struct Obstacle
     bool hasBodyAxes = false;
     Ogre::Vector2 worldMinimum, worldMaximum;
     bool hasWorldBounds = false;
+    float maximumHeight = std::numeric_limits<float>::infinity();
 
     static Obstacle circle(const Ogre::Vector2& center, float clearanceRadius)
     {
@@ -424,7 +425,7 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
         return cost;
     };
     float bestCost = found ? length(result) : std::numeric_limits<float>::infinity();
-    const auto center = (obstacles.front().bodyMinimum + obstacles.front().bodyMaximum) * 0.5f;
+    auto center = (obstacles.front().bodyMinimum + obstacles.front().bodyMaximum) * 0.5f;
     Ogre::Vector2 furnitureCenter = Ogre::Vector2::ZERO;
     float nearest = std::numeric_limits<float>::infinity();
     for(const auto& obstacle : obstacles)
@@ -432,6 +433,7 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
         if(!obstacle.intersects(start, goal) || obstacle.position.squaredDistance(start) >= nearest)
             continue;
         nearest = obstacle.position.squaredDistance(start);
+        center = (obstacle.bodyMinimum + obstacle.bodyMaximum) * 0.5f;
         const auto localCenter = (obstacle.minimum + obstacle.maximum) * 0.5f;
         furnitureCenter = obstacle.position + Ogre::Vector2(
             localCenter.x * obstacle.cosine - localCenter.y * obstacle.sine,

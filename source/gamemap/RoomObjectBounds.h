@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <string>
 
 namespace RoomObjectPath
@@ -12,6 +13,7 @@ struct MeshBounds
 {
     const char* name;
     float minX, minY, maxX, maxY;
+    float maxZ = std::numeric_limits<float>::infinity();
 };
 
 // Mesh-local XY bounds measured from the shipped room furniture, not tile
@@ -30,7 +32,7 @@ static const MeshBounds meshBounds[] = {
     {"DungeonTempleObject", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
     {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
-    {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f},
+    {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f, .073802f},
     {"GoldstackLv1", -.197478f, -.175391f, .186379f, .185685f},
     {"GoldstackLv2", -.185184f, -.182552f, .185553f, .182552f},
     {"GoldstackLv3", -.331379f, -.301391f, .290679f, .182552f},
@@ -179,6 +181,53 @@ static const WalkingRadius walkingRadii[] = {
     {"Wyvern.mesh", .62f, -.56663f, -.318587f, .566629f, .619002f},
     {"lich.mesh", .65f, -.515405f, -.621f, .42628f, .647588f},
     {"skeleton.mesh", .44f, -.248051f, -.429675f, .279937f, .306748f}
+};
+
+// Skinned Walk triangles clipped below the low nest's top at level-one scale.
+// Higher levels keep this conservative band, not a narrower guessed footprint.
+// XY interpolation clearance matches the full walking catalog above.
+constexpr float lowWalkingHeight = .073802f / 1.02f;
+constexpr float lowWalkingMargin = .010001f;
+struct LowWalkingBounds
+{
+    const char* name;
+    float minX, minY, maxX, maxY;
+    bool empty = false;
+};
+static const LowWalkingBounds lowWalkingBounds[] = {
+    {"Adventurer.mesh", -.112240f, -.294087f, .109449f, .231574f},
+    {"CaveHornet.mesh", 0, 0, 0, 0, true},
+    {"Cultist.mesh", -.121249f, -.335677f, .121249f, .246237f},
+    {"DarkElf.mesh", -.0761223f, -.168468f, .116131f, .282344f},
+    {"Defender.mesh", -.248247f, -.880927f, .130284f, .258729f},
+    {"Dragon.mesh", -.132556f, -.308054f, .138703f, .244352f},
+    {"Dwarf1.mesh", -.122944f, -.239296f, .122842f, .173020f},
+    {"Dwarf2.mesh", -.124180f, -.238959f, .124005f, .170387f},
+    {"Elf.mesh", -.0761223f, -.168468f, .116131f, .282344f},
+    {"Gnome.mesh", -.0707926f, -.174931f, .0707784f, .182404f},
+    {"Goblin.mesh", -.0912782f, -.198021f, .106434f, .242258f},
+    {"Knight.mesh", -.196324f, -.358724f, .185533f, .223521f},
+    {"Kobold.mesh", -.137907f, -.153292f, .0846171f, .141323f},
+    {"Kreatur.mesh", -.467870f, -.623356f, .475000f, .537126f},
+    {"LavaSpawn.mesh", -.794633f, -.627326f, .789448f, 1.118940f},
+    {"Lizardman.mesh", -.108072f, -.365148f, .108144f, .293084f},
+    {"Monk.mesh", -.146848f, -.265317f, .146355f, .121055f},
+    {"NatureMonster.mesh", -.423010f, -.402615f, .423010f, .316681f},
+    {"Orc.mesh", -.134866f, -.251628f, .135191f, .271754f},
+    {"PitDemon.mesh", -.192091f, -.468387f, .192100f, .466103f},
+    {"Rat.mesh", -.118970f, -.444536f, .118308f, .570713f},
+    {"Roach.mesh", -.279384f, -.436215f, .279687f, .389623f},
+    {"RunelordDwarf.mesh", -.144517f, -.373079f, .144374f, .207467f},
+    {"Scarab.mesh", -.490259f, -.214609f, .496993f, .365987f},
+    {"Slime.mesh", -.127921f, -.401148f, .127929f, .195000f},
+    {"Spider.mesh", -.385552f, -.415697f, .385635f, .385744f},
+    {"TentacleAlbine.mesh", -.232143f, -.294768f, .231846f, .284454f},
+    {"TentacleGreen.mesh", -.232143f, -.294768f, .231846f, .284454f},
+    {"Troll.mesh", -.525680f, -.390118f, .532348f, .272789f},
+    {"Wizard.mesh", -.146740f, -.305335f, .131721f, .366651f},
+    {"Wyvern.mesh", 0, 0, 0, 0, true},
+    {"lich.mesh", -.329927f, -.610155f, .335792f, .640511f},
+    {"skeleton.mesh", -.164219f, -.423195f, .166207f, .293669f}
 };
 }
 
