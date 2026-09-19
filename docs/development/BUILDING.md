@@ -1,5 +1,19 @@
 # Configuring and compiling on Windows
 
+## Construction hammer and food lanes: normal September 19 executable
+
+The normal `build/windows/opendungeons-plus.exe` now contains the separate
+construction hammer and food-lane corrections: September 19 17:27:35,
+4,853,760 bytes, SHA-256
+`ABAFA35691BDCD04F6034F50F0A38C3977C34C6B6D38BD3987A531E2D7A12E62`.
+It was built in the fresh `build/review-followups` build tree and copied while
+the game was closed; runtime preparation succeeds. The old executable is kept
+as `build/review-followups/previous-normal-20260919.exe`. No game was launched.
+Use the staged build tree for subsequent incremental builds, or clean-build the
+normal tree before using its old object files with the changed renderer layout.
+The hammer passes 121 real-Ogre/controller checks; gameplay acceptance remains
+with the user and the separate large-body bed passages are still unresolved.
+
 ## Food approaches through bed lanes: staged September 19 build
 
 The separate `build/review-followups/opendungeons-plus.exe` compiles successfully:
