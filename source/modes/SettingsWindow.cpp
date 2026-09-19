@@ -290,6 +290,11 @@ void SettingsWindow::initConfig()
     float lightFactor = lightStr.empty() ? 0.0f : Helper::toFloat(lightStr);
     setLightFactorValue(lightFactor);
 
+    CEGUI::ToggleButton* bloodEffectsCheckbox = static_cast<CEGUI::ToggleButton*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
+    bloodEffectsCheckbox->setSelected(
+        config.getGameValue(Config::BLOOD_EFFECTS, "Yes", false) == "Yes");
+
     std::string panSpeedStr = config.getInputValue(Config::PAN_SPEED, "100", false);
     float panSpeedPercent = panSpeedStr.empty() ? 100.0f : Helper::toFloat(panSpeedStr);
     setPanSpeedValue(panSpeedPercent);
@@ -525,6 +530,11 @@ bool SettingsWindow::saveConfig()
     CEGUI::Slider* lightSlider = static_cast<CEGUI::Slider*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LightSlider"));
     config.setGameValue(Config::LIGHT_FACTOR, Helper::toString(lightSlider->getCurrentValue()));
+
+    CEGUI::ToggleButton* bloodEffectsCheckbox = static_cast<CEGUI::ToggleButton*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
+    config.setGameValue(Config::BLOOD_EFFECTS,
+        bloodEffectsCheckbox->isSelected() ? "Yes" : "No");
 
     CEGUI::Slider* panSpeedSlider = static_cast<CEGUI::Slider*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Input/InputSP/PanSpeedSlider"));
