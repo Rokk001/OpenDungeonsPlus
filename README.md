@@ -40,6 +40,8 @@ Creatures route through usable gaps around solid room furniture, including corne
 
 The hand holds a pointer-aligned hammer while building rooms, traps and doors; an eligible build request plays a leftward strike with the flat hammer face.
 
+Press Alt to toggle creature health and needs indicators on or off.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
