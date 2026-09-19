@@ -102,9 +102,9 @@ int main() {
         auto& resources = Ogre::ResourceGroupManager::getSingleton();
         resources.addResourceLocation("../../models", "FileSystem", "Graphics");
         resources.addResourceLocation("../../materials/textures", "FileSystem", "Graphics");
-        resources.addResourceLocation("C:/Users/mario/od-deps/install/Media/Main", "FileSystem", "OgreInternal");
-        resources.addResourceLocation("C:/Users/mario/od-deps/install/Media/Main", "FileSystem", "Graphics");
-        resources.addResourceLocation("C:/Users/mario/od-deps/install/Media/RTShaderLib/GLSL", "FileSystem", "Graphics");
+        resources.addResourceLocation("OGRE_PREFIX/Media/Main", "FileSystem", "OgreInternal");
+        resources.addResourceLocation("OGRE_PREFIX/Media/Main", "FileSystem", "Graphics");
+        resources.addResourceLocation("OGRE_PREFIX/Media/RTShaderLib/GLSL", "FileSystem", "Graphics");
         Ogre::RTShader::ShaderGenerator::initialize();
         resources.initialiseAllResourceGroups();
         resources.addResourceLocation("../../materials/scripts", "FileSystem", "Graphics");
@@ -233,8 +233,8 @@ probe = probe.replace('HELPERS', helpers).replace('FACTORY', factory).replace('M
 out = root / 'build/construction-hammer-check'
 out.mkdir(parents=True, exist_ok=True)
 cpp = out / 'check.cpp'
-cpp.write_text(probe, encoding='utf-8')
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
+cpp.write_text(probe.replace('OGRE_PREFIX', prefix.as_posix()), encoding='utf-8')
 command = ['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{prefix / "include/OGRE"}',
            f'/I{prefix / "include/OGRE/RTShaderSystem"}', str(cpp), '/Fe:check.exe', '/link',
            f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib']
