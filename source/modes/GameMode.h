@@ -289,6 +289,16 @@ private:
     //! \brief Builds the player settings window
     void buildPlayerSettingsWindow();
 
+    void updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed);
+    bool mCreatureIndicatorsVisible = false;
+    bool mIndicatorLeftAltDown = false;
+    bool mIndicatorRightAltDown = false;
+    void resetIdleHand();
+    void updateIdleHand(float elapsed, bool eligible);
+    float mIdleHandElapsed = 0.0f;
+    std::set<OIS::KeyCode> mIdleHandKeys;
+
+
 };
 
 #endif // GAMEMODE_H
