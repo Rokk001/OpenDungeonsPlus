@@ -234,9 +234,12 @@ void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* anim
         if(animation->getAnimationName() == "BuildSwing")
         {
             const float progress = animation->getTimePosition() / animation->getLength();
-            // Raise the head, then strike the exact pointer at mid-cycle.
+            // Draw the head up and back, then strike forward onto the pointer.
             if(progress < 0.5f)
+            {
                 offset.y += 0.045f * std::sin(progress * Ogre::Math::TWO_PI);
+                offset.z += 0.045f * std::sin(progress * Ogre::Math::TWO_PI);
+            }
         }
         model->setPosition(offset);
         return;
@@ -297,7 +300,7 @@ void createKeeperHandBuildAnimation(Ogre::Entity* hand)
         auto* swing = skeleton->createAnimation("BuildSwing", duration);
         const auto* wrist = skeleton->getBone("Hand1");
         const auto basis = hand->getParentSceneNode()->getOrientation() * wrist->_getDerivedOrientation();
-        const float angles[] = {0, -20, 55, 20, 0};
+        const float angles[] = {0, 20, -55, -20, 0};
         for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
         {
             if(!grip->hasNodeTrack(b))
@@ -311,7 +314,7 @@ void createKeeperHandBuildAnimation(Ogre::Entity* hand)
                 frame->setTranslate(rest.getTranslate());
                 frame->setScale(rest.getScale());
                 frame->setRotation(b == wrist->getHandle() ? basis.Inverse() *
-                    Ogre::Quaternion(Ogre::Degree(angles[i]), Ogre::Vector3::UNIT_Z) * basis * rest.getRotation() :
+                    Ogre::Quaternion(Ogre::Degree(angles[i]), Ogre::Vector3::UNIT_X) * basis * rest.getRotation() :
                     rest.getRotation());
             }
         }

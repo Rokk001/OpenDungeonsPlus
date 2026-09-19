@@ -186,18 +186,23 @@ int main() {
                 "build strike is one shot with only its hammer visible");
             for(int sample=0;sample<=16;++sample) {
                 r.mHandAnimationState->setTimePosition(r.mHandAnimationState->getLength()*sample/16.f);
-                engine._fireFrameStarted(); engine._fireFrameRenderingQueued();
-                alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
-                node->_update(true,true);
+                for(int settle=0;settle<2;++settle) {
+                    engine._fireFrameStarted(); engine._fireFrameRenderingQueued();
+                    alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
+                    node->_update(true,true);window->update();engine._fireFrameEnded();
+                }
                 const auto wrist=hand->getSkeleton()->getBone("Hand1")->getOrientation();
                 if(sample==0)restWrist=wrist;
                 if(sample==8)check(std::abs(restWrist.Dot(wrist))<.96f,"impact rotates the wrist rather than only translating the tool");
                 const auto face=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
-                check(std::abs(face.x)<.00001f&&std::abs(face.z)<.00001f,"strike stays on pointer axis without lateral drift");
+                const auto hammerTransform=node->_getFullTransform()*attachment->_getFullLocalTransform();
+                const auto normal=(hammerTransform*(r.mHammerStrikePoint-Ogre::Vector3::UNIT_X)-face).normalisedCopy();
+                if(scale==1.f && sample%4==0)std::cout<<"STRIKE_NORMAL sample="<<sample<<" value="<<normal<<'\n';
+                if(sample==8)check(normal.y<-.3f&&normal.z<-.8f,"hammer face strikes down and forward, not backward or sideways");
+                check(std::abs(face.x)<.00001f,"strike stays on pointer axis without lateral drift");
                 if(sample==0||sample>=8)check(face.length()<.00001f,"impact and recovery return precisely to pointer");
-                if(sample==4)check(face.y>.04f,"windup visibly raises the hammer before impact");
+                if(sample==4)check(face.y>.04f&&face.z>.04f,"windup raises and draws the hammer back before its forward impact");
                 check(hand->getSubEntity(0)->getMaterialName()=="Keeperhand/ToolGrip","strike retains solid closed grip");
-                window->update();engine._fireFrameEnded();
                 if(scale==1.f && sample%4==0)window->writeContentsToFile("hammer-strike-"+std::to_string(sample)+".png");
             }
             r.rrPlayBuildAnimation();check(r.mHandAnimationState->getTimePosition()==0,"next build restarts strike");
