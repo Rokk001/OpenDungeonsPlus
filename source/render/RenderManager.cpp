@@ -49,6 +49,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/Random.h"
 
 
 #include <OgreBone.h>
@@ -317,6 +318,156 @@ void createKeeperHandBuildAnimation(Ogre::Entity* hand)
     }
     if(!hand->hasAnimationState("BuildSwing"))
         hand->getAllAnimationStates()->createAnimationState("BuildSwing", 0, duration);
+}
+
+const char* const IDLE_HAND_ANIMATIONS[] = {"IdleWatch", "IdleYoyo"};
+
+void createKeeperHandIdleAnimations(Ogre::Entity* hand)
+{
+    auto* skeleton = hand->getMesh()->getSkeleton().get();
+    const auto* wrist = skeleton->getBone("Hand1");
+    const auto basis = hand->getParentSceneNode()->getOrientation() * wrist->_getDerivedOrientation();
+    for(const std::string name : IDLE_HAND_ANIMATIONS)
+    {
+        const bool watch = name == "IdleWatch";
+        const float duration = watch ? 3.0f : 4.2f;
+        if(!skeleton->hasAnimation(name))
+        {
+            auto* animation = skeleton->createAnimation(name, duration);
+            const auto* rest = skeleton->getAnimation("Idle");
+            const auto* pose = skeleton->getAnimation(watch ? "Dig" : "Point");
+            for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
+            {
+                Ogre::TransformKeyFrame start(nullptr, 0), bent(nullptr, 0);
+                if(rest->hasNodeTrack(b))
+                    rest->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &start);
+                if(pose->hasNodeTrack(b))
+                    pose->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &bent);
+                auto* track = animation->createNodeTrack(b);
+                for(int i = 0; i <= 6; ++i)
+                {
+                    const float weight = i == 0 || i == 6 ? 0.0f : 1.0f;
+                    auto* frame = track->createNodeKeyFrame(duration * i / 6.0f);
+                    auto rotation = Ogre::Quaternion::Slerp(weight * (watch ? 0.35f : 1.0f),
+                        start.getRotation(), bent.getRotation(), true);
+                    if(b == wrist->getHandle())
+                    {
+                        const float tilt = watch ? -25.0f + (i == 3 ? 8.0f : 0.0f) :
+                            -115.0f + (i % 2 ? 10.0f : -10.0f);
+                        const auto target = basis.Inverse() * Ogre::Quaternion(Ogre::Degree(tilt), Ogre::Vector3::UNIT_Z);
+                        rotation = Ogre::Quaternion::Slerp(weight, start.getRotation(), target, true);
+                    }
+                    frame->setRotation(rotation);
+                    frame->setTranslate(start.getTranslate());
+                    frame->setScale(start.getScale());
+                }
+            }
+        }
+        if(!hand->hasAnimationState(name))
+            hand->getAllAnimationStates()->createAnimationState(name, 0, duration);
+    }
+}
+
+void updateKeeperHandIdleProp(Ogre::Entity* hand, const Ogre::AnimationState* animation, Ogre::ManualObject* prop)
+{
+    hand->_updateAnimation();
+    const float time = animation->getTimePosition();
+    const float envelope = std::max(0.0f, std::min(1.0f,
+        std::min(time, animation->getLength() - time) / 0.45f));
+    prop->clear();
+    prop->setVisible(envelope > 0.0f);
+    if(envelope == 0.0f)
+        return;
+    prop->begin("HandTool/Idle", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+    const auto triangle = [&](const Ogre::Vector3& a, const Ogre::Vector3& b,
+        const Ogre::Vector3& c, const Ogre::ColourValue& colour)
+    {
+        for(const auto& position : {a, b, c})
+        {
+            prop->position(position);
+            prop->colour(colour);
+        }
+    };
+    const auto quad = [&](const Ogre::Vector3& a, const Ogre::Vector3& b, const Ogre::Vector3& c,
+        const Ogre::Vector3& d, const Ogre::ColourValue& colour)
+    {
+        triangle(a, b, c, colour);
+        triangle(a, c, d, colour);
+    };
+    const auto cylinder = [&](const Ogre::Vector3& centre, const Ogre::Quaternion& orientation,
+        float radius, float depth, const Ogre::ColourValue& side, const Ogre::ColourValue& face)
+    {
+        for(int i = 0; i < 32; ++i)
+        {
+            const float a = Ogre::Math::TWO_PI * i / 32.0f, b = Ogre::Math::TWO_PI * (i + 1) / 32.0f;
+            const auto p = orientation * Ogre::Vector3(radius * std::cos(a), radius * std::sin(a), 0);
+            const auto q = orientation * Ogre::Vector3(radius * std::cos(b), radius * std::sin(b), 0);
+            const auto z = orientation * Ogre::Vector3(0, 0, depth);
+            quad(centre + p - z, centre + q - z, centre + q + z, centre + p + z,
+                side * (0.7f + 0.3f * std::cos(a)));
+            triangle(centre + z, centre + p + z, centre + q + z, face);
+            triangle(centre - z, centre + q - z, centre + p - z, side);
+        }
+    };
+    if(animation->getAnimationName() == "IdleWatch")
+    {
+        const auto* wrist = hand->getSkeleton()->getBone("Hand1");
+        const auto rotation = wrist->_getDerivedOrientation();
+        const auto origin = wrist->_getDerivedPosition();
+        const auto point = [&](float x, float y, float z)
+        {
+            return origin + rotation * (Ogre::Vector3(x, y, z) * envelope + Ogre::Vector3(0,.0135f,0));
+        };
+        for(int i = 0; i < 32; ++i)
+        {
+            const float a = Ogre::Math::TWO_PI * i / 32.0f, b = Ogre::Math::TWO_PI * (i + 1) / 32.0f;
+            quad(point(.014f * std::cos(a), -.011f, .011f * std::sin(a)),
+                point(.014f * std::cos(b), -.011f, .011f * std::sin(b)),
+                point(.014f * std::cos(b), -.002f, .011f * std::sin(b)),
+                point(.014f * std::cos(a), -.002f, .011f * std::sin(a)), Ogre::ColourValue(.22f,.09f,.035f));
+        }
+        cylinder(point(0,-.0065f,.013f), rotation, .012f * envelope, .002f * envelope,
+            Ogre::ColourValue(.65f,.42f,.12f), Ogre::ColourValue(.92f,.82f,.59f));
+        for(int i = 0; i < 12; ++i)
+        {
+            const float angle = Ogre::Math::TWO_PI * i / 12.0f;
+            const auto radial = Ogre::Vector2(std::sin(angle), std::cos(angle));
+            const auto tangent = Ogre::Vector2(radial.y, -radial.x) * .00045f;
+            const auto a = radial * .0085f, b = radial * .0105f;
+            quad(point(a.x-tangent.x,a.y-.0065f-tangent.y,.0152f), point(a.x+tangent.x,a.y-.0065f+tangent.y,.0152f),
+                point(b.x+tangent.x,b.y-.0065f+tangent.y,.0152f), point(b.x-tangent.x,b.y-.0065f-tangent.y,.0152f),
+                Ogre::ColourValue(.1f,.06f,.025f));
+        }
+        for(const auto& tip : {Ogre::Vector2(-.004f,.003f), Ogre::Vector2(.006f,.004f)})
+            triangle(point(-.0007f,-.0065f,.0155f), point(.0007f,-.0065f,.0155f),
+                point(tip.x,tip.y-.0065f,.0155f), Ogre::ColourValue(.08f,.035f,.015f));
+    }
+    else
+    {
+        const auto* finger = hand->getSkeleton()->getBone("Index3");
+        const auto anchor = finger->_getDerivedPosition() + finger->_getDerivedOrientation() *
+            Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+        const auto view = hand->getParentSceneNode()->getOrientation().Inverse();
+        const float cycle = std::max(0.0f, std::min(3.0f, (time - .6f)));
+        const float drop = .5f - .5f * std::cos(cycle * Ogre::Math::TWO_PI);
+        const auto centre = anchor + view * Ogre::Vector3(0,-(.023f + .085f * drop) * envelope,0);
+        const auto stringWidth = view * Ogre::Vector3(.00035f,0,0);
+        quad(anchor-stringWidth, anchor+stringWidth, centre+stringWidth, centre-stringWidth,
+            Ogre::ColourValue(.9f,.84f,.66f));
+        const auto spin = view * Ogre::Quaternion(Ogre::Degree(35),Ogre::Vector3::UNIT_Y) *
+            Ogre::Quaternion(Ogre::Radian(time * 18.0f),Ogre::Vector3::UNIT_Z);
+        const auto axle = spin * Ogre::Vector3(0,0,.0035f * envelope);
+        const auto red = Ogre::ColourValue(.6f,.09f,.035f), gold = Ogre::ColourValue(.85f,.58f,.16f);
+        cylinder(centre, spin, .004f * envelope, .004f * envelope, gold, gold);
+        for(float side : {-1.0f,1.0f})
+            cylinder(centre + axle * side, spin, .014f * envelope, .002f * envelope, gold, red);
+        const auto cap = centre + spin * Ogre::Vector3(0,0,.0056f * envelope);
+        cylinder(cap, spin, .004f * envelope, .0003f * envelope, gold, gold);
+        triangle(cap + spin * Ogre::Vector3(0,0,.0004f),
+            cap + spin * Ogre::Vector3(.009f,.002f,.0004f) * envelope,
+            cap + spin * Ogre::Vector3(.009f,-.002f,.0004f) * envelope, gold);
+    }
+    prop->end();
 }
 
 void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>& points,
@@ -1054,6 +1205,7 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    rrCancelIdleHandAnimation();
     cancelCreatureStep();
     cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
@@ -1138,6 +1290,14 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     handModelNode->attachObject(keeperHandEnt);
     createKeeperHandDigAnimation(keeperHandEnt);
     createKeeperHandBuildAnimation(keeperHandEnt);
+    createKeeperHandIdleAnimations(keeperHandEnt);
+    mHandIdleProp = mSceneManager->createManualObject("KeeperHandIdleProp");
+    mHandIdleProp->setDynamic(true);
+    mHandIdleProp->setCastShadows(false);
+    mHandIdleProp->setLightMask(0);
+    mHandIdleProp->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
+    handModelNode->attachObject(mHandIdleProp);
+    mHandIdleProp->setVisible(false);
     mHeldCreatureGrip = mSceneManager->createSceneNode("KeeperHeldCreatureGrip");
     mHeldCreatureStorage = mSceneManager->createSceneNode("KeeperHeldCreatureStorage");
     if(mHandKeeperHandVisibility == 0)
@@ -1407,6 +1567,8 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         }
         alignKeeperHandPointer(mSceneManager->getEntity("keeperHandEnt"), mHandAnimationState,
             mHandHammer, mHammerStrikePoint);
+        if(rrIsIdleHandAnimationPlaying())
+            updateKeeperHandIdleProp(mSceneManager->getEntity("keeperHandEnt"), mHandAnimationState, mHandIdleProp);
     }
 
     for(auto it = mRoomConstructionEffects.begin(); it != mRoomConstructionEffects.end();)
@@ -4388,6 +4550,7 @@ void RenderManager::rrTemporaryDisplayCreaturesTextOverlay(Creature* creature, O
 
 void RenderManager::rrToggleHandSelectorVisibility()
 {
+    rrCancelIdleHandAnimation();
     // Keep the held creature's own visibility flags intact while hiding the hand.
     if(mHeldCreatureGrip->getParentSceneNode() != nullptr)
         mHandKeeperNode->removeChild(mHeldCreatureGrip);
@@ -4397,6 +4560,8 @@ void RenderManager::rrToggleHandSelectorVisibility()
         mHandKeeperHandVisibility &= ~0x01;
 
     mHandKeeperNode->setVisible(mHandKeeperHandVisibility == 0);
+    if(mHandIdleProp != nullptr)
+        mHandIdleProp->setVisible(false);
     if(mHandKeeperHandVisibility == 0)
         mHandKeeperNode->addChild(mHeldCreatureGrip);
 }
@@ -4594,7 +4759,12 @@ void RenderManager::moveWorldCoords(Ogre::Real x, Ogre::Real y)
 void RenderManager::rrSetHandPose(bool pointing, bool digging, bool building)
 {
     const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
-    mHandPose = digging ? "Dig" : (building ? "Build" : (pointing ? "Point" : (holding ? "Hold" : "Idle")));
+    const std::string pose = digging ? "Dig" : (building ? "Build" : (pointing ? "Point" : (holding ? "Hold" : "Idle")));
+    if(pose != mHandPose)
+    {
+        mHandPose = pose;
+        rrCancelIdleHandAnimation();
+    }
     if(mHandAnimationState != nullptr)
     {
         const std::string current = mHandAnimationState->getAnimationName();
@@ -4621,6 +4791,35 @@ void RenderManager::rrSetHandPose(bool pointing, bool digging, bool building)
 void RenderManager::rrPlayBuildAnimation()
 {
     mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "BuildSwing", false);
+}
+
+bool RenderManager::rrIsIdleHandAnimationPlaying() const
+{
+    if(mHandAnimationState == nullptr)
+        return false;
+    const auto& current = mHandAnimationState->getAnimationName();
+    return std::find(std::begin(IDLE_HAND_ANIMATIONS), std::end(IDLE_HAND_ANIMATIONS), current) !=
+        std::end(IDLE_HAND_ANIMATIONS);
+}
+
+bool RenderManager::rrPlayIdleHandAnimation()
+{
+    if(mHandKeeperHandVisibility != 0 || mHandPose == "Hold" || mHandAnimationState == nullptr ||
+        !mHandAnimationState->getLoop())
+        return false;
+    const auto count = sizeof(IDLE_HAND_ANIMATIONS) / sizeof(IDLE_HAND_ANIMATIONS[0]);
+    mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"),
+        IDLE_HAND_ANIMATIONS[Random::Uint(0, static_cast<unsigned>(count - 1))], false);
+    return true;
+}
+
+void RenderManager::rrCancelIdleHandAnimation()
+{
+    if(!rrIsIdleHandAnimationPlaying())
+        return;
+    auto* hand = mSceneManager->getEntity("keeperHandEnt");
+    mHandAnimationState = setEntityAnimation(hand, mHandPose, true);
+    alignKeeperHandPointer(hand, mHandAnimationState, mHandHammer, mHammerStrikePoint);
 }
 
 void RenderManager::rrPlayDigAnimation()
@@ -4799,6 +4998,8 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
             mHandPickaxe->setVisible(tool && mHandKeeperHandVisibility == 0);
         if(mHandHammer != nullptr)
             mHandHammer->setVisible(building && mHandKeeperHandVisibility == 0);
+        if(mHandIdleProp != nullptr)
+            mHandIdleProp->setVisible(false);
     }
 
     return animState;

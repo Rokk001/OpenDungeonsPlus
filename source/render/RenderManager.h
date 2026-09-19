@@ -178,6 +178,9 @@ public:
     void rrToggleHandSelectorVisibility();
     void rrSetHandPose(bool pointing, bool digging, bool building = false);
     void rrPlayBuildAnimation();
+    bool rrPlayIdleHandAnimation();
+    bool rrIsIdleHandAnimationPlaying() const;
+    void rrCancelIdleHandAnimation();
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
@@ -287,6 +290,7 @@ private:
     std::string mHandPose = "Idle";
     Ogre::ManualObject* mHandPickaxe = nullptr;
     Ogre::Entity* mHandHammer = nullptr;
+    Ogre::ManualObject* mHandIdleProp = nullptr;
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     Ogre::ManualObject* mTilePreview = nullptr;
 

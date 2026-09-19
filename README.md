@@ -120,6 +120,8 @@ The hand points at pickup targets and interface controls, and holds a pickaxe
 over diggable walls, which are outlined on hover.
 It holds a pointer-aligned hammer while placing rooms, traps or doors on the map;
 confirming an eligible build request plays a short hammer strike.
+After thirty seconds without input, the empty hand randomly checks a wristwatch
+or plays with a yo-yo; any input immediately returns it to the current action.
 Confirming or removing digging marks plays one short downward tool strike.
 It shows the selected action icon or a prohibition sign for an invalid
 target; the top strip describes the current target. Right-click cancels an active

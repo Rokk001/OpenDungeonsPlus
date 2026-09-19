@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
 
 namespace CEGUI
 {
@@ -132,6 +133,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Called when the game mode is activated
     //! Used to call the corresponding Gui Sheet.
     void activate() override;
+    void deactivate() override;
 
     //! \brief Called when exit button is pressed
     void popupExit(bool pause);
@@ -325,6 +327,10 @@ private:
     bool mCreatureIndicatorsVisible = false;
     bool mIndicatorLeftAltDown = false;
     bool mIndicatorRightAltDown = false;
+    void resetIdleHand();
+    void updateIdleHand(float elapsed, bool eligible);
+    float mIdleHandElapsed = 0.0f;
+    std::set<OIS::KeyCode> mIdleHandKeys;
 
     bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool closeTrapProductionQueue(const CEGUI::EventArgs& = {});

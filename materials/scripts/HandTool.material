@@ -38,6 +38,22 @@ material HandTool/Metal : HandTool/Wood
     }
 }
 
+material HandTool/Idle
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            diffuse vertexcolour
+            depth_check on
+            depth_write on
+            cull_hardware none
+        }
+    }
+}
+
 // The authored hammer keeps its complete diffuse atlas and original UVs.
 material HandTool/Hammer
 {
