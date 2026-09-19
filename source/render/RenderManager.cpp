@@ -4282,6 +4282,8 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
 
 void RenderManager::rrSetCreaturesTextOverlay(GameMap& gameMap, bool value)
 {
+    if(mCreatureTextOverlayDisplayed == value)
+        return;
     mCreatureTextOverlayDisplayed = value;
     for(Creature* creature : gameMap.getCreatures())
     {

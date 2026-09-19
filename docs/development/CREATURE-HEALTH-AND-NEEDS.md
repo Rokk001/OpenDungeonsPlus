@@ -1,5 +1,29 @@
 # Creature health and needs
 
+## Accepted hold-Alt follow-up
+
+Current gameplay enables overlays permanently on activation; keyboard abstraction
+already reports either Alt key for both backends. Reuse that state on activation
+and each gameplay frame, and update the renderer only when it changes. New
+creatures already inherit the renderer's current display request.
+
+Need symbols have independent permanent child timers, so hiding only the health
+child leaves them visible. Gate the complete creature overlay using the existing
+health child's display timer, after its normal update; retain map/death filtering
+and the editor's temporary-hover timer. No new timer or saved preference is needed.
+Branch: `fix/creature-indicator-alt`, based on complete checkpoint `05e63f71`.
+
+Production lifetime/modifier checks pass 35 assertions with OIS and 35 with SFML,
+covering either Alt key, release during pause, unchanged states, hidden/dead
+creatures, temporary hover expiry and persistent need-child hiding. The source
+checks cover gameplay activation/frame polling and the existing new-creature
+inheritance. Release compilation, normal runtime preparation, 32 resource and
+eight effective compiler-flag checks pass. The normal executable is September 19
+18:07:39, 4,854,272 bytes, SHA-256
+`CD65DC8235ACF5E33C44140B34E2994B8D1F227954871677A01FE3963ED24103`.
+No game was launched; manual key/visual acceptance remains with the user.
+README now documents hold-Alt; no release/save/network version change is needed.
+
 ## Existing path
 
 Creature simulation already maintains health, hunger, wakefulness and mood on
@@ -9,7 +33,7 @@ refusal, allied conflict or departure. Worker creatures retain their existing
 food and lair exemption.
 
 The renderer already attached health, level and cycling status children to each
-visible creature. Gameplay now enables that path continuously while preserving
+visible creature. Gameplay enables that path while Alt is held, preserving
 the editor's temporary hover display and inheritance by creatures rendered
 later.
 

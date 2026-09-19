@@ -506,7 +506,8 @@ void GameMode::activate()
     Gui& gui = getModeManager().getGui();
     gui.loadGuiSheet(Gui::inGameMenu);
     RenderManager::getSingleton().rrEnableHeldCreatureDisplay(true, mGameMap->getLocalPlayer());
-    RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap, true);
+    RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap,
+        getKeyboard()->isModifierDown(OIS::Keyboard::Alt));
 
     // We free the menu scene as it is not required anymore
     ODFrameListener::getSingleton().freeMainMenuScene();
@@ -1591,6 +1592,8 @@ bool GameMode::storeUserCamera(const CEGUI::EventArgs&)
 
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap,
+        getKeyboard()->isModifierDown(OIS::Keyboard::Alt));
     if(mRootWindow->getChild("ProductionWindow")->isVisible())
     {
         mProductionRefreshElapsed += evt.timeSinceLastFrame;
