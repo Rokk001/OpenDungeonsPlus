@@ -94,6 +94,7 @@ const Ogre::Real KEEPER_HAND_CREATURE_PICKED_OFFSET = 0.05f;
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_SCALE = 0.05f;
 const Ogre::Real CREATURE_DROP_ANIMATION_DURATION = 0.35f;
 const Ogre::Real CREATURE_GET_UP_ANIMATION_DURATION = 0.35f;
+const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
@@ -400,6 +401,7 @@ RenderManager::~RenderManager()
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
     mCreatureGetUpAnimations.clear();
+    clearRoomConstructionEffects();
     delete DebugDrawer::getSingletonPtr();
     mSceneManager->destroyInstanceManager(mInstanceManagerDirt);
     // mSceneManager->destroyInstanceManager(mInstanceManagerCloud);
@@ -664,6 +666,7 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
     mCreatureGetUpAnimations.clear();
+    clearRoomConstructionEffects();
     rrEnableHeldCreatureDisplay(false, gameMap->getLocalPlayer());
     rrDrawTilePreview({}, Ogre::ColourValue::White);
     rrSetHandPose(false, false);
@@ -1053,7 +1056,70 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         it = mCreatureGetUpAnimations.erase(it);
         creature->setAnimationState(EntityAnimation::idle_anim, true);
     }
+
+    for(auto it = mRoomConstructionEffects.begin(); it != mRoomConstructionEffects.end();)
+    {
+        it->mRemainingTime -= timeSinceLastFrame;
+        if(it->mRemainingTime > 0.0f)
+        {
+            ++it;
+            continue;
+        }
+
+        if(mSceneManager->hasParticleSystem(it->mParticleName))
+        {
+            Ogre::ParticleSystem* particleSystem = mSceneManager->getParticleSystem(it->mParticleName);
+            Ogre::SceneNode* node = particleSystem->getParentSceneNode();
+            if(node != nullptr)
+                node->detachObject(particleSystem);
+            mSceneManager->destroyParticleSystem(particleSystem);
+        }
+        if(mSceneManager->hasSceneNode(it->mNodeName))
+            mSceneManager->destroySceneNode(it->mNodeName);
+        it = mRoomConstructionEffects.erase(it);
+    }
     rrUpdateHeldCreature();
+}
+
+void RenderManager::rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles)
+{
+    for(Tile* tile : tiles)
+    {
+        if(tile == nullptr)
+            continue;
+
+        const std::string effectName = "RoomConstructionEffect_" +
+            Helper::toString(++mRoomConstructionEffectNumber);
+        const std::string nodeName = effectName + "_node";
+        const std::string particleName = effectName + "_particle";
+        Ogre::SceneNode* node = mRoomSceneNode->createChildSceneNode(nodeName,
+            Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                static_cast<Ogre::Real>(tile->getY()), 0.05f));
+        Ogre::ParticleSystem* particleSystem = mSceneManager->createParticleSystem(
+            particleName, "RoomConstruction");
+        particleSystem->setVisibilityFlags(CullingType::SHOW_ALL);
+        node->attachObject(particleSystem);
+        mRoomConstructionEffects.push_back(
+            {nodeName, particleName, ROOM_CONSTRUCTION_EFFECT_DURATION});
+    }
+}
+
+void RenderManager::clearRoomConstructionEffects()
+{
+    for(const RoomConstructionEffect& effect : mRoomConstructionEffects)
+    {
+        if(mSceneManager->hasParticleSystem(effect.mParticleName))
+        {
+            Ogre::ParticleSystem* particleSystem = mSceneManager->getParticleSystem(effect.mParticleName);
+            Ogre::SceneNode* node = particleSystem->getParentSceneNode();
+            if(node != nullptr)
+                node->detachObject(particleSystem);
+            mSceneManager->destroyParticleSystem(particleSystem);
+        }
+        if(mSceneManager->hasSceneNode(effect.mNodeName))
+            mSceneManager->destroySceneNode(effect.mNodeName);
+    }
+    mRoomConstructionEffects.clear();
 }
 
 Ogre::TexturePtr RenderManager::createPerlinTexture()
