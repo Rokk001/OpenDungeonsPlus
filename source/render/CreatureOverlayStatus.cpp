@@ -156,11 +156,6 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
 
 void CreatureOverlayStatus::update(Ogre::Real timeSincelastFrame)
 {
-    // If the creature is not on map, we do not display the overlays. Neither do we over a
-    // dead one: it lies there for a few turns before it is taken away, and its level and its
-    // mood are of no interest by then.
-    mMovableTextOverlay->setVisible(mCreature->getIsOnMap() && mCreature->isAlive());
-
     updateHealth();
 
     // A creature with several moods to show takes them in turns, one second each. No time
@@ -171,4 +166,9 @@ void CreatureOverlayStatus::update(Ogre::Real timeSincelastFrame)
         updateStatus(timeSincelastFrame);
 
     mMovableTextOverlay->update(timeSincelastFrame);
+    // Health, level and need symbols share the same request lifetime, including
+    // temporary editor hover; hidden or dead creatures never show the overlay.
+    const auto healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
+    mMovableTextOverlay->setVisible(mCreature->getIsOnMap() && mCreature->isAlive() &&
+        mMovableTextOverlay->isDisplayed(healthId));
 }

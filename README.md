@@ -22,6 +22,8 @@ following resources to learn the basic gameplay concepts:
 You can play singleplayer levels using the Skirmish menu, or host/join a
 multiplayer game by using the corresponding menus.
 
+Press Alt to toggle creature health and needs indicators on or off.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
