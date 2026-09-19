@@ -2823,6 +2823,8 @@ void GameMode::checkInputCommand()
             break;
         case SelectedAction::buildRoom:
             RoomManager::checkBuildRoom(mGameMap, mPlayerSelection.getNewRoomType(), inputManager, *this);
+            if(inputManager.mCommandState == InputCommandState::validated && mActionTargetValid)
+                RenderManager::getSingleton().rrPlayBuildAnimation();
             break;
         case SelectedAction::destroyRoom:
             RoomManager::checkSellRoomTiles(mGameMap, inputManager, *this);
@@ -2832,6 +2834,8 @@ void GameMode::checkInputCommand()
             break;
         case SelectedAction::buildTrap:
             TrapManager::checkBuildTrap(mGameMap, mPlayerSelection.getNewTrapType(), inputManager, *this);
+            if(inputManager.mCommandState == InputCommandState::validated && mActionTargetValid)
+                RenderManager::getSingleton().rrPlayBuildAnimation();
             break;
         case SelectedAction::destroyTrap:
             TrapManager::checkSellTrapTiles(mGameMap, inputManager, *this);
