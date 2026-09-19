@@ -405,6 +405,7 @@ GameMode::GameMode(ModeManager *modeManager):
 
 GameMode::~GameMode()
 {
+    resetIdleHand();
     TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, 16.0f);
     for(const MessageTab& tab : mMessageTabs)
         CEGUI::WindowManager::getSingleton().destroyWindow(tab.window);
@@ -446,6 +447,11 @@ GameMode::~GameMode()
 
 void GameMode::activate()
 {
+    resetIdleHand();
+    mIdleHandKeys.clear();
+    for(unsigned key = 1; key < 256; ++key)
+        if(getKeyboard()->isKeyDown(static_cast<OIS::KeyCode>(key)))
+            mIdleHandKeys.insert(static_cast<OIS::KeyCode>(key));
     // Loads the corresponding Gui sheet.
     Gui& gui = getModeManager().getGui();
     gui.loadGuiSheet(Gui::inGameMenu);
@@ -501,6 +507,7 @@ void GameMode::activate()
 
 bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 {
+    resetIdleHand();
     AbstractApplicationMode::mouseMoved(arg);
 
     auto mouseEvent = toSFMLMouseMove(arg);
@@ -688,6 +695,7 @@ void GameMode::sendPendingHandDropRequest(bool dropAllCreatures)
 
 bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
+    resetIdleHand();
     InputManager& inputManager = mModeManager->getInputManager();
 
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(
@@ -925,6 +933,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
+    resetIdleHand();
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
 
     InputManager& inputManager = mModeManager->getInputManager();
@@ -993,6 +1002,8 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 
 bool GameMode::keyPressed(const OIS::KeyEvent& arg)
 {
+    resetIdleHand();
+    mIdleHandKeys.insert(arg.key);
     updateCreatureIndicatorAlt(arg.key, true);
     if(mLoadMenu && mLoadMenu->isOpenInGame())
         return mLoadMenu->keyPressed(arg);
@@ -1273,6 +1284,8 @@ void GameMode::refreshPlayerGoals(const std::string& goalsDisplayString)
 
 bool GameMode::keyReleased(const OIS::KeyEvent &arg)
 {
+    resetIdleHand();
+    mIdleHandKeys.erase(arg.key);
     updateCreatureIndicatorAlt(arg.key, false);
     if(arg.key == OIS::KC_M)
         mMapKeyDown = false;
@@ -2625,7 +2638,46 @@ void GameMode::refreshActionFeedback(float elapsed)
         (mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
          mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap);
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging, building);
+    updateIdleHand(elapsed, !holding &&
+        !mGameMap->getGamePaused() && !cameraInputBlocked() &&
+        !inputManager.mLMouseDown && !inputManager.mRMouseDown && !inputManager.mMMouseDown &&
+        isConnected() && RenderManager::getSingleton().isKeeperHandVisible());
     refreshHeldCreatureIcons();
+}
+
+void GameMode::resetIdleHand()
+{
+    mIdleHandElapsed = 0.0f;
+    RenderManager::getSingleton().rrCancelIdleHandAnimation();
+}
+
+void GameMode::deactivate()
+{
+    resetIdleHand();
+    mIdleHandKeys.clear();
+    GameEditorModeBase::deactivate();
+}
+
+void GameMode::updateIdleHand(float elapsed, bool eligible)
+{
+    for(auto key = mIdleHandKeys.begin(); key != mIdleHandKeys.end();)
+    {
+        if(!getKeyboard()->isKeyDown(*key))
+            key = mIdleHandKeys.erase(key);
+        else
+            ++key;
+    }
+    if(!eligible || !mIdleHandKeys.empty())
+    {
+        resetIdleHand();
+        return;
+    }
+    RenderManager& renderer = RenderManager::getSingleton();
+    if(renderer.rrIsIdleHandAnimationPlaying())
+        return;
+    mIdleHandElapsed += elapsed;
+    if(mIdleHandElapsed >= 30.0f && renderer.rrPlayIdleHandAnimation())
+        mIdleHandElapsed = 0.0f;
 }
 
 void GameMode::refreshHeldCreatureIcons()
