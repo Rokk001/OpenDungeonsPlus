@@ -12,6 +12,7 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--compile-only', action='store_true')
+parser.add_argument('--pickaxe-audit', action='store_true')
 args = parser.parse_args()
 source = (root / 'source/render/RenderManager.cpp').read_text(encoding='utf-8')
 controller = (root / 'source/modes/GameMode.cpp').read_text(encoding='utf-8')
@@ -147,12 +148,35 @@ int main() {
             check(r.mHandHammer->isVisible() == (pose == "Build"), "hammer follows selected contextual pose");
             check(r.mHandPickaxe->isVisible() == (pose == "Dig"), "pickaxe remains exclusive to digging");
         }
+        {
+            const auto* grip = r.mHandPickaxe->getParentNode();
+            const Ogre::Quaternion original(Ogre::Degree(90), Ogre::Vector3::UNIT_Z);
+            check((grip->getOrientation()*Ogre::Vector3::UNIT_Y).positionEquals(original*Ogre::Vector3::UNIT_Y),
+                "blade roll preserves the shaft axis through the fingers");
+            check(std::abs((grip->getOrientation()*Ogre::Vector3::UNIT_X).dotProduct(original*Ogre::Vector3::UNIT_Z))>.6f,
+                "blade turns into depth instead of remaining broadside");
+            check(grip->getScale().positionEquals(Ogre::Vector3(.6f)), "alignment does not shrink the tool");
+        }
         for(const std::string action : {"Pickup", "Drop", "Slap"}) {
             r.mHandAnimationState = r.setEntityAnimation(hand, action, false);
             r.rrSetHandPose(false, false, true);
             check(!r.mHandHammer->isVisible() && !r.mHandPickaxe->isVisible(), "one-shot hides tools");
             r.mHandAnimationState = r.setEntityAnimation(hand, r.mHandPose, true);
             check(r.mHandHammer->isVisible(), "latest construction pose restored");
+        }
+        if(PICKAXE_AUDIT) {
+            node->setScale(1,1,1); r.rrSetHandPose(false,true,false);
+            auto* grip = r.mHandPickaxe->getParentNode();
+            const auto original = grip->getOrientation();
+            for(float angle:{0.f,30.f,45.f,60.f,90.f,120.f,-30.f,-60.f}) {
+                grip->setOrientation(original * Ogre::Quaternion(Ogre::Degree(angle), Ogre::Vector3::UNIT_Y));
+                for(int frame=0;frame<2;++frame) {
+                    engine._fireFrameStarted(); hand->_updateAnimation(); node->_update(true,true);
+                    window->update(); engine._fireFrameEnded();
+                }
+                window->writeContentsToFile("pickaxe-audit-"+std::to_string(int(angle))+".png");
+            }
+            grip->setOrientation(original);
         }
         r.rrPlayDigAnimation();
         check(r.mHandPickaxe->isVisible() && !r.mHandHammer->isVisible(), "dig strike retains pickaxe");
@@ -172,6 +196,7 @@ int main() {
 }
 '''
 probe = probe.replace('HELPERS', helpers).replace('FACTORY', factory).replace('METHODS', methods).replace('BUILDING', building)
+probe = probe.replace('PICKAXE_AUDIT', 'true' if args.pickaxe_audit else 'false')
 out = root / 'build/construction-hammer-check'
 out.mkdir(parents=True, exist_ok=True)
 cpp = out / 'check.cpp'
