@@ -31,6 +31,8 @@ Creature combat uses model-specific attacks, directional impact reactions, visib
 
 Creatures reach for and carry chicken meals using their available limb rigs, with brief feather effects and cleanup when eating is interrupted.
 
+Creatures settle into their beds, align with the mattress and restore their ground pose and facing when waking or interrupted.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
