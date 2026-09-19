@@ -42,6 +42,8 @@ The hand holds a pointer-aligned hammer while building rooms, traps and doors; a
 
 Press Alt to toggle creature health and needs indicators on or off.
 
+After thirty seconds without input, the empty hand randomly checks a wristwatch or plays with a yo-yo; any input immediately returns it to the current action.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
