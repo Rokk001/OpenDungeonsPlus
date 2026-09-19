@@ -8,6 +8,7 @@
 #include <functional>
 #include <limits>
 #include <queue>
+#include <unordered_map>
 #include <vector>
 
 namespace RoomObjectPath
@@ -228,18 +229,36 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
         }
     }
 
+    if(goals.size() == 1 && std::isfinite(maximumCost))
+    {
+        // Any improving route lies inside the start/goal distance ellipse.
+        // Cropping its bounding box avoids allocating a whole-map grid for
+        // every short lane comparison without imposing a search budget.
+        const auto center = (start + goals.front()) * 0.5f;
+        const auto delta = goals.front() - start;
+        const float halfX = 0.5f * std::sqrt(std::max(0.0f, maximumCost * maximumCost - delta.y * delta.y));
+        const float halfY = 0.5f * std::sqrt(std::max(0.0f, maximumCost * maximumCost - delta.x * delta.x));
+        minX = std::max(minX, int(std::floor(center.x - halfX - gridOffset.x)));
+        minY = std::max(minY, int(std::floor(center.y - halfY - gridOffset.y)));
+        maxX = std::min(maxX, int(std::ceil(center.x + halfX - gridOffset.x)));
+        maxY = std::min(maxY, int(std::ceil(center.y + halfY - gridOffset.y)));
+    }
     // Quarter-tile nodes refine the existing tile path only where furniture
     // obstructs it; endpoints retain the precise room-interaction offsets.
     const int width = (maxX - minX) * 4 + 1;
     const int height = (maxY - minY) * 4 + 1;
     if(width <= 0 || height <= 0)
         return false;
-    const int count = width * height;
-    std::vector<float> costs(count, std::numeric_limits<float>::infinity());
-    std::vector<int> parents(count, -1);
-    std::vector<size_t> terminals(count, 0);
-    std::vector<float> forwardCosts(count, std::numeric_limits<float>::infinity());
-    std::vector<int> forwardParents(count, -1);
+    struct SearchNode
+    {
+        float cost = std::numeric_limits<float>::infinity();
+        float forwardCost = std::numeric_limits<float>::infinity();
+        int parent = -1, forwardParent = -1;
+        size_t terminal = 0;
+    };
+    // A local or enclosed approach visits only a small fraction of a large map.
+    // Store visited nodes rather than initialize whole-map arrays per lane.
+    std::unordered_map<int, SearchNode> nodes;
     using Entry = std::pair<float, int>;
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> open;
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> forwardOpen;
@@ -254,10 +273,10 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     { return goals.size() == 1 ? 0.5f * (position(index).distance(goals.front()) - position(index).distance(start)) : 0.0f; };
     const auto add = [&](int index, float cost, int parent)
     {
-        if(cost >= costs[index])
+        if(cost >= nodes[index].cost)
             return;
-        costs[index] = cost;
-        parents[index] = parent;
+        nodes[index].cost = cost;
+        nodes[index].parent = parent;
         open.emplace(cost - potential(index), index);
     };
 
@@ -276,8 +295,8 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
             const auto point = position(index);
             if(clearPoint(obstacles, point) && clearSegment(obstacles, start, point, allowStartExit) && terrain(start, point))
             {
-                forwardCosts[index] = start.distance(point);
-                forwardOpen.emplace(forwardCosts[index] + potential(index), index);
+                nodes[index].forwardCost = start.distance(point);
+                forwardOpen.emplace(nodes[index].forwardCost + potential(index), index);
             }
         }
     if(forwardOpen.empty())
@@ -298,9 +317,9 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
             {
                 const int index = y * width + x;
                 const auto point = position(index);
-                if(point.distance(goal) < costs[index] && point.squaredDistance(goal) <= 0.25f && clearSegment(obstacles, point, goal) && terrain(point, goal))
+                if(point.distance(goal) < nodes[index].cost && point.squaredDistance(goal) <= 0.25f && clearSegment(obstacles, point, goal) && terrain(point, goal))
                 {
-                    terminals[index] = i;
+                    nodes[index].terminal = i;
                     add(index, point.distance(goal), -1);
                 }
             }
@@ -326,26 +345,26 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     bool forward = false;
     while(!open.empty() && !forwardOpen.empty())
     {
-        while(!open.empty() && open.top().first > costs[open.top().second] - potential(open.top().second) + 0.0001f)
+        while(!open.empty() && open.top().first > nodes[open.top().second].cost - potential(open.top().second) + 0.0001f)
             open.pop();
-        while(!forwardOpen.empty() && forwardOpen.top().first > forwardCosts[forwardOpen.top().second] + potential(forwardOpen.top().second) + 0.0001f)
+        while(!forwardOpen.empty() && forwardOpen.top().first > nodes[forwardOpen.top().second].forwardCost + potential(forwardOpen.top().second) + 0.0001f)
             forwardOpen.pop();
         if(open.empty() || forwardOpen.empty() ||
             open.top().first + forwardOpen.top().first >= best)
             break;
         forward = !forward;
         auto& frontier = forward ? forwardOpen : open;
-        auto& distances = forward ? forwardCosts : costs;
-        auto& links = forward ? forwardParents : parents;
+        const auto distance = forward ? &SearchNode::forwardCost : &SearchNode::cost;
+        const auto link = forward ? &SearchNode::forwardParent : &SearchNode::parent;
         const auto entry = frontier.top();
         frontier.pop();
         const int current = entry.second;
         const auto point = position(current);
         const int x = current % width, y = current / width;
-        if(forwardCosts[current] + costs[current] < best)
+        if(nodes[current].forwardCost + nodes[current].cost < best)
         {
             destination = current;
-            best = forwardCosts[current] + costs[current];
+            best = nodes[current].forwardCost + nodes[current].cost;
         }
         for(int dy = -1; dy <= 1; ++dy)
             for(int dx = -1; dx <= 1; ++dx)
@@ -354,35 +373,35 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
                     continue;
                 const int next = (y + dy) * width + x + dx;
                 const auto target = position(next);
-                const float nextCost = distances[current] + point.distance(target);
-                if(nextCost >= distances[next])
+                const float nextCost = nodes[current].*distance + point.distance(target);
+                if(nextCost >= nodes[next].*distance)
                     continue;
                 const auto from = forward ? point : target;
                 const auto to = forward ? target : point;
                 const int heading = forward ? (1 - dy) * 3 + 1 - dx : (dy + 1) * 3 + dx + 1;
                 if(!clearSegment(edgeObstacles[heading], from, to) || !terrain(from, to))
                     continue;
-                distances[next] = nextCost;
-                links[next] = current;
+                nodes[next].*distance = nextCost;
+                nodes[next].*link = current;
                 frontier.emplace(nextCost + (forward ? potential(next) : -potential(next)), next);
-                if(forwardCosts[next] + costs[next] < best)
+                if(nodes[next].forwardCost + nodes[next].cost < best)
                 {
                     destination = next;
-                    best = forwardCosts[next] + costs[next];
+                    best = nodes[next].forwardCost + nodes[next].cost;
                 }
             }
     }
     if(destination < 0)
         return false;
-    for(int index = destination; index >= 0; index = forwardParents[index])
+    for(int index = destination; index >= 0; index = nodes[index].forwardParent)
         result.push_back(position(index));
     std::reverse(result.begin(), result.end());
-    for(int index = parents[destination]; index >= 0; index = parents[index])
+    for(int index = nodes[destination].parent; index >= 0; index = nodes[index].parent)
         result.push_back(position(index));
     int terminal = destination;
-    while(parents[terminal] >= 0)
-        terminal = parents[terminal];
-    chosenGoal = terminals[terminal];
+    while(nodes[terminal].parent >= 0)
+        terminal = nodes[terminal].parent;
+    chosenGoal = nodes[terminal].terminal;
     result.push_back(goals[chosenGoal]);
 
     // Collapse only collinear runs: a visual/client interpolation must not cut a
@@ -427,6 +446,8 @@ inline bool routeToAnyAligned(const Ogre::Vector2& start, const std::vector<Ogre
         return cost;
     };
     float bestCost = found ? length(result) : std::numeric_limits<float>::infinity();
+    // Once a shared search selects a safe interaction endpoint, compare lane
+    // alternatives to that endpoint with A*, not repeated multi-goal Dijkstra.
     auto center = (obstacles.front().bodyMinimum + obstacles.front().bodyMaximum) * 0.5f;
     Ogre::Vector2 furnitureCenter = Ogre::Vector2::ZERO;
     float nearest = std::numeric_limits<float>::infinity();
@@ -457,12 +478,15 @@ inline bool routeToAnyAligned(const Ogre::Vector2& start, const std::vector<Ogre
             // A valid outside route must not suppress a shorter usable lane.
             // Bound each alternative by the best complete route already found.
             size_t candidateGoal = 0;
-            if(routeToAny(start, goals, obstacles, minX, minY, maxX, maxY,
+            const bool selectedEndpoint = found && goals.size() > 1;
+            const size_t selectedGoal = chosenGoal;
+            const auto targets = selectedEndpoint ? std::vector<Ogre::Vector2>{goals[chosenGoal]} : goals;
+            if(routeToAny(start, targets, obstacles, minX, minY, maxX, maxY,
                 terrain, candidate, candidateGoal, allowStartExit, offset, bestCost))
             {
                 bestCost = length(candidate);
                 result.swap(candidate);
-                chosenGoal = candidateGoal;
+                chosenGoal = selectedEndpoint ? selectedGoal : candidateGoal;
                 found = true;
             }
         }

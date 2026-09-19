@@ -325,6 +325,9 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
 {
     path.clear();
     GameMap& map = *creature.getGameMap();
+    Tile* startTile = creature.getPositionTile();
+    if(startTile == nullptr)
+        return false;
     const auto furniture = collect(map, 0.0f);
     const auto body = bodyObstacles(creature);
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
@@ -338,7 +341,7 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
             if(std::abs(dx) + std::abs(dy) > 1)
                 continue;
             Tile* tile = map.getTile(foodX + dx, foodY + dy);
-            if(!creature.canGoThroughTile(tile))
+            if(!creature.canGoThroughTile(tile) || !map.pathExists(&creature, startTile, tile))
                 continue;
             for(int y = 0; y < 8; ++y)
                 for(int x = 0; x < 8; ++x)

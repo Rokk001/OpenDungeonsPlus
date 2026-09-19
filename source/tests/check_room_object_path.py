@@ -174,6 +174,16 @@ int main(){
  check(routeToAny({2,5},detourGoals,furniture,0,0,12,12,floor,path,chosen)&&chosen>0&&path.back()==detourGoals[chosen],"shared search reconstructs the selected food approach after a detour");
  previous={2,5};for(const auto& p:path){check(clearSegment(furniture,previous,p)&&floor(previous,p),"shared-search route does not cut through furniture or terrain");previous=p;}
  check(!routeToAny({10,10},{{100,100},{100.1f,100.1f}},enclosed,0,0,127,127,openFloor,path,chosen)&&path.empty(),"all enclosed food candidates fail in one shared search");
+ check(routeToAnyAligned({2,5},detourGoals,furniture,0,0,12,12,floor,path,chosen)&&chosen>0&&path.back()==detourGoals[chosen],"aligned alternatives retain the selected food endpoint index");
+ const auto routeLength=[](Ogre::Vector2 start,const std::vector<Ogre::Vector2>& route){float length=0;for(const auto& point:route){length+=start.distance(point);start=point;}return length;};
+ for(const auto offset:{Ogre::Vector2(.07f,-.09f),Ogre::Vector2(-.08f,.11f)}){
+  std::vector<Ogre::Vector2> full,bounded;size_t fullGoal=0,boundedGoal=0;
+  const bool reached=routeToAny({2,5},{{10,5}},furniture,0,0,127,127,floor,full,fullGoal,true,offset);
+  check(reached,"unbounded reference has a safe detour");
+  const float limit=routeLength({2,5},full)+.01f;
+  check(routeToAny({2,5},{{10,5}},furniture,0,0,127,127,floor,bounded,boundedGoal,true,offset,limit),"ellipse crop retains improving offset-grid routes");
+  check(std::abs(routeLength({2,5},bounded)-routeLength({2,5},full))<.001f,"ellipse crop preserves the unrestricted route cost");
+ }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''
