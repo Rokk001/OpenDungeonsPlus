@@ -1,5 +1,41 @@
 # Construction hammer
 
+## Reuse the digging strike, September 20
+
+The user rejected the custom swing and explicitly requires the same hand angle
+and movement as wall digging, with only the tool replaced. Both static grips
+already use the same wrist and finger transforms, but construction has a separate
+0.28-second five-key swing instead of digging's three-key 4/30-second strike.
+Animated pointer recentering also cancels the natural wrist arc and substitutes
+a sideways translation. The hammer's independent head roll differs from the
+pickaxe's accepted tool orientation.
+
+Reuse the digging animation generator, retain only static resting-pointer
+alignment during the entire stroke, and align the hammer with the pickaxe's
+attachment after compensating for their different authored shaft axes.
+Check actual hand transforms and tool axes against digging frame by frame,
+including duration, fixed model offset and return to the resting pointer.
+This supersedes both custom strike interpretations below; construction input
+and all other hand actions remain unchanged.
+
+The new attachment-angle assertion fails against the previous implementation.
+After correction, 3,454 real-asset renderer checks pass, including all hand bone
+positions/orientations across 17 stroke samples at 80/100/120 percent scale,
+equal strike duration, tool-axis alignment, fixed pointer offset, visibility,
+restart and return-to-rest behavior. The isolated impact preview was inspected.
+The renderer test ran after one unchanged-binary retry following a transient
+Windows execution-policy block; the separate construction-input fixture was
+blocked before execution and is not claimed as freshly passed.
+
+Release compilation passes. The staged executable is September 20 02:38:45,
+4,872,192 bytes, SHA-256
+`19A4241D70D4BFC9ABDC17A119D0D2B4BBEE2E7D89233B7E44012516594FE630`.
+Deployment is deferred because the user's game is running; the normal executable
+still contains the rejected September 19 strike. No game was launched or stopped.
+Visual acceptance remains with the user. README already describes this same
+short construction strike; no version, network/save or input change is needed.
+This correction is local and has not been pushed to the existing hammer PR.
+
 ## Left-facing striking surface, September 19
 
 The user rejected the forward-pitch result: the hammer must strike left with its

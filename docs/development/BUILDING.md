@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+## Shared digging/construction strike: staged September 20 executable
+
+The staged Release executable now gives the hammer the same hand movement,
+duration and tool orientation as digging: September 20 02:38:45, 4,872,192 bytes,
+SHA-256 `19A4241D70D4BFC9ABDC17A119D0D2B4BBEE2E7D89233B7E44012516594FE630`.
+Compilation and 3,454 real-asset renderer checks pass; the separate input fixture
+was blocked by Windows before execution. See [construction strike](CONSTRUCTION-HAMMER.md).
+The user's game is running, so deployment remains pending and the normal
+executable still has the rejected September 19 21:21 strike below.
+No game was launched or stopped; user visual acceptance is pending.
+
 ## Left-facing construction strike: current September 19 executable
 
 The normal and staged Release executables correct the hammer to strike left with its flat
