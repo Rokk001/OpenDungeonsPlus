@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+## Pickaxe screenshot follow-up: current September 19 executable
+
+The normal executable matches `build/review-followups/opendungeons-plus.exe`:
+September 19 20:28:25, 4,859,904 bytes, SHA-256
+`0756E281C9572A739478F2AEBEFB903E4C0795801CCEE7F834D1C2256FA40326`.
+It retains the hammer strike, Alt toggle and dormitory resource corrections,
+and includes the revised pickaxe shaft roll. Release compilation and runtime
+preparation pass; the corrected real-model fixture passes 280 checks, Alt input
+128 and generated resources 32. The orientation preview was inspected; game
+acceptance remains with the user. The hash supersedes older entries below;
+file timestamps alone do not establish build ordering on this machine.
+
 ## Dormitory floor resources: September 19 follow-up
 
 The normal runtime's existing source junctions now provide corrected carpet and
