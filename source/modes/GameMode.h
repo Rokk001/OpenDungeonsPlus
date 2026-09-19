@@ -321,6 +321,11 @@ private:
     bool storeUserCamera(const CEGUI::EventArgs&);
     unsigned int mUserCameraSlot = 0;
 
+    void updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed);
+    bool mCreatureIndicatorsVisible = false;
+    bool mIndicatorLeftAltDown = false;
+    bool mIndicatorRightAltDown = false;
+
     bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool closeTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool updateTrapProductionButtons(const CEGUI::EventArgs& = {});

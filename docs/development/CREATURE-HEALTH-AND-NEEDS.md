@@ -1,5 +1,25 @@
 # Creature health and needs
 
+## Toggle-Alt correction
+
+The user clarified that each Alt press must toggle visibility and releasing Alt
+must leave that choice unchanged, superseding the hold-to-show interpretation
+below. The current activation/frame polling overwrites visibility from the
+physical modifier state, causing the reported behavior. Replace that assignment
+with an edge-triggered input latch and retain the display choice across mode
+reactivation. Start a new gameplay mode hidden, as before; keyboard repeats must
+not toggle repeatedly, and either Alt key must work. Preserve overlay lifetime,
+new-creature inheritance and editor hover behavior; no persistence or protocol
+change is required. Work remains on `fix/creature-indicator-alt` from `df45fc85`.
+
+The production input/lifetime fixture passes 64 checks with each backend (128
+total), including repeated events, release during pause, fast press/release,
+overlapping left/right Alt keys, activation with a key held and missed-release
+recovery. The renderer's existing visibility setter and child timers are unchanged.
+Release compilation succeeds (September 19 19:36:22, staged executable under
+`build/review-followups`); the running game prevents replacement of the normal
+executable, so deployment and user retest remain pending.
+
 ## Accepted hold-Alt follow-up
 
 Current gameplay enables overlays permanently on activation; keyboard abstraction
@@ -33,7 +53,7 @@ refusal, allied conflict or departure. Worker creatures retain their existing
 food and lair exemption.
 
 The renderer already attached health, level and cycling status children to each
-visible creature. Gameplay enables that path while Alt is held, preserving
+visible creature. Gameplay toggles that path on Alt presses, preserving
 the editor's temporary hover display and inheritance by creatures rendered
 later.
 
