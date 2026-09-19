@@ -131,6 +131,7 @@ public:
 
     //! Displays the overlay during time seconds. If time < 0, the overlay will be always displayed
     void displayOverlay(uint32_t childOverlayId, Ogre::Real time);
+    bool isDisplayed(uint32_t childOverlayId);
     void update(Ogre::Real timeSincelastFrame);
 
 private:
