@@ -17,6 +17,7 @@
 
 #include "entities/MovableGameEntity.h"
 
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -237,7 +238,9 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     mAnimationTime += addedTime;
     if (!getIsOnServerMap() && getAnimationState() != nullptr &&
         mPrevAnimationState != EntityAnimation::getup_anim &&
-        mPrevAnimationState != EntityAnimation::eat_chicken_anim)
+        mPrevAnimationState != EntityAnimation::eat_chicken_anim &&
+        !(mPrevAnimationState == EntityAnimation::sleep_anim &&
+          getObjectType() == GameEntityType::creature))
     {
         // If the animation has stopped we set it to idle if we have to
         if(mDestinationPlayIdleWhenAnimationEnds && getAnimationState()->hasEnded())
