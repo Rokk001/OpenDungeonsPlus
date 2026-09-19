@@ -36,6 +36,8 @@ Use Production beside the minimap or in Options to inspect owned trap orders and
 
 Research rooms, traps and spells through three levels in the skill tree; completed upgrades, research points and the selected order are retained in saved games.
 
+Creatures route through usable gaps around solid room furniture, including corner-aligned beds, without treating other creatures as route blockers.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
