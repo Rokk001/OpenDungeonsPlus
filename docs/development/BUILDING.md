@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+## Idle hand effects: current September 19 executable
+
+The normal executable now includes interruptible, randomly selected watch/yo-yo
+effects after thirty seconds without input, retaining all previous fork work.
+It matches the staged executable: September 19 20:58:18, 4,874,752 bytes, SHA-256
+`837A0A66FCBA05B1CAE09FF490D8628C580BD913CA9F0F2A8C5E8E073AA0D82F`.
+A clean Release build in `build/review-followups`, a subsequent up-to-date build
+and normal runtime preparation succeed. Timer/input checks pass 2,125, real hand
+rendering 415, menu restoration 100, Alt 128, construction input 560 and resource
+generation 32. See [idle effects](IDLE-HAND-ANIMATION.md) for coverage and manual
+acceptance. The game was closed during deployment; no game session was started.
+
 ## Pickaxe screenshot follow-up: current September 19 executable
 
 The normal executable matches `build/review-followups/opendungeons-plus.exe`:

@@ -60,6 +60,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   tool head and pose-specific depth occlusion, with render regression evidence.
 - [Construction hammer](CONSTRUCTION-HAMMER.md): the existing hammer model in
   the closed hand grip during room, trap and door placement.
+- [Idle hand effects](IDLE-HAND-ANIMATION.md): random watch/yo-yo one-shots after
+  thirty seconds, immediate input cancellation and contextual restoration.
 - [Pickaxe view alignment](PICKAXE-VIEW-ALIGNMENT.md): shaft-axis blade alignment
   with the existing grip, tool dimensions and digging strike preserved.
 - [Downward hand strike](HAND-DIG-ANIMATION.md): closed-grip motion on confirmed
