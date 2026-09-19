@@ -163,6 +163,10 @@ int main() {
         check(r.mHandHammer->getSubEntity(0)->getMaterialName() == "HandTool/Hammer", "isolated hand material");
         auto* attachment = static_cast<Ogre::TagPoint*>(r.mHandHammer->getParentNode());
         check(attachment->getPosition().positionEquals(Ogre::Vector3(0,.030f,-.009f)), "shaft uses accepted grasp position");
+        const auto oldHammerGrip=Ogre::Quaternion(Ogre::Degree(90),Ogre::Vector3::UNIT_Z)*
+            Ogre::Quaternion(Ogre::Degree(-90),Ogre::Vector3::UNIT_X)*Ogre::Quaternion(Ogre::Degree(90),Ogre::Vector3::UNIT_Z);
+        check((attachment->getOrientation()*Ogre::Vector3::UNIT_Z).positionEquals(oldHammerGrip*Ogre::Vector3::UNIT_Z),
+            "head roll leaves the shaft axis in the existing grip");
         std::cout << "HAMMER_FACE=" << r.mHammerStrikePoint << '\n';
         check(r.mHammerStrikePoint.x < 0 && r.mHammerStrikePoint.z > 0, "strike anchor belongs to the head rather than the shaft");
         for(float scale : {.8f, 1.f, 1.2f}) {
@@ -181,7 +185,8 @@ int main() {
         }
         for(float scale:{.8f,1.f,1.2f}) {
             node->setScale(scale,scale,scale);r.rrPlayBuildAnimation();
-            Ogre::Quaternion restWrist;
+            Ogre::Quaternion windupWrist;
+            Ogre::Vector3 previousFace;
             check(!r.mHandAnimationState->getLoop() && r.mHandHammer->isVisible() && !r.mHandPickaxe->isVisible(),
                 "build strike is one shot with only its hammer visible");
             for(int sample=0;sample<=16;++sample) {
@@ -192,16 +197,21 @@ int main() {
                     node->_update(true,true);window->update();engine._fireFrameEnded();
                 }
                 const auto wrist=hand->getSkeleton()->getBone("Hand1")->getOrientation();
-                if(sample==0)restWrist=wrist;
-                if(sample==8)check(std::abs(restWrist.Dot(wrist))<.96f,"impact rotates the wrist rather than only translating the tool");
+                if(sample==4)windupWrist=wrist;
+                if(sample==8)check(std::abs(windupWrist.Dot(wrist))<.96f,"strike rotates the wrist from windup into impact");
                 const auto face=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
                 const auto hammerTransform=node->_getFullTransform()*attachment->_getFullLocalTransform();
                 const auto normal=(hammerTransform*(r.mHammerStrikePoint-Ogre::Vector3::UNIT_X)-face).normalisedCopy();
                 if(scale==1.f && sample%4==0)std::cout<<"STRIKE_NORMAL sample="<<sample<<" value="<<normal<<'\n';
-                if(sample==8)check(normal.y<-.3f&&normal.z<-.8f,"hammer face strikes down and forward, not backward or sideways");
-                check(std::abs(face.x)<.00001f,"strike stays on pointer axis without lateral drift");
+                if(sample==8) {
+                    check(normal.x<-.99f&&std::abs(normal.y)<.02f&&std::abs(normal.z)<.02f,"flat hammer face points left at impact");
+                    check(normal.dotProduct((face-previousFace).normalisedCopy())>.99f,"incoming leftward motion hits with the flat face, not the side");
+                }
+                check(std::abs(face.y)<.00001f&&std::abs(face.z)<.00001f,"leftward strike stays at the target height and depth");
                 if(sample==0||sample>=8)check(face.length()<.00001f,"impact and recovery return precisely to pointer");
-                if(sample==4)check(face.y>.04f&&face.z>.04f,"windup raises and draws the hammer back before its forward impact");
+                if(sample==4)check(face.x>.04f,"windup draws the head right before the leftward strike");
+                if(sample>4&&sample<=8)check(face.x<previousFace.x,"striking head travels left throughout impact approach");
+                previousFace=face;
                 check(hand->getSubEntity(0)->getMaterialName()=="Keeperhand/ToolGrip","strike retains solid closed grip");
                 if(scale==1.f && sample%4==0)window->writeContentsToFile("hammer-strike-"+std::to_string(sample)+".png");
             }
