@@ -30,8 +30,13 @@ blocked before execution and is not claimed as freshly passed.
 Release compilation passes. The staged executable is September 20 02:38:45,
 4,872,192 bytes, SHA-256
 `19A4241D70D4BFC9ABDC17A119D0D2B4BBEE2E7D89233B7E44012516594FE630`.
-Deployment is deferred because the user's game is running; the normal executable
-still contains the rejected September 19 strike. No game was launched or stopped.
+Deployment subsequently succeeded after the game closed: the normal executable
+matches the staged hash, runtime preparation succeeds and 32 resource checks pass.
+The user's September 20 02:38:53/56/58 screenshots were inspected: they show the
+previous hammer orientation alongside the pickaxe reference and predate deployment.
+At feedback intake the normal executable still had the rejected September 19 hash;
+no further animation change was made before installing the already verified fix.
+No game was launched or stopped.
 Visual acceptance remains with the user. README already describes this same
 short construction strike; no version, network/save or input change is needed.
 This correction is local and has not been pushed to the existing hammer PR.
