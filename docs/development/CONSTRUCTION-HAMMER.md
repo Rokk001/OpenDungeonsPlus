@@ -27,10 +27,10 @@ binary passed on retry without security-policy changes.
 Release compilation and 32 normal-runtime resource checks pass. The staged
 executable is September 19 21:21:00, 4,874,752 bytes, SHA-256
 `0FACCAAE930C88DDE6F9C7662B850CAD74FC7AE05B383C7696A5E741630E1288`.
-Deployment is pending because the user's game is running; the normal executable
-still has the preceding `F210CC58...` hash and rejected forward-pitch motion.
-No game was launched or stopped. User visual acceptance remains pending after
-deployment. README still describes the same construction strike; no version,
+After the user closed the game, deployment and runtime preparation succeeded;
+the normal executable matches the staged hash above. No game was launched or
+stopped. User visual acceptance remains pending. README still describes the
+same construction strike; no version,
 save/network or input change is required.
 
 ## Strike-direction follow-up, September 19

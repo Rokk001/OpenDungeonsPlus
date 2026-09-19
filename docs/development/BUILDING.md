@@ -1,16 +1,16 @@
 # Configuring and compiling on Windows
 
-## Left-facing construction strike: staged September 19 executable
+## Left-facing construction strike: current September 19 executable
 
-The staged Release executable corrects the hammer to strike left with its flat
+The normal and staged Release executables correct the hammer to strike left with its flat
 face: September 19 21:21:00, 4,874,752 bytes, SHA-256
 `0FACCAAE930C88DDE6F9C7662B850CAD74FC7AE05B383C7696A5E741630E1288`.
 Compilation and 434 real hand/asset checks pass; 32 normal-runtime resource
 checks also pass. See [construction strike](CONSTRUCTION-HAMMER.md).
-The game is running, so deployment is deferred: the normal executable remains
-the preceding `F210CC58...` build described below, whose forward-pitch motion
-the user rejected. No game was launched or stopped; visual acceptance awaits
-deployment and the user's retest.
+After the user closed the game, deployment and runtime preparation succeeded;
+the normal executable now matches the staged hash above, superseding the
+rejected forward-pitch build below. No game was launched or stopped; visual
+acceptance awaits the user's retest.
 
 ## Forward construction strike: current September 19 executable
 
