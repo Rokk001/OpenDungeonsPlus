@@ -1,5 +1,38 @@
 # Construction hammer
 
+## Strike-direction follow-up, September 19
+
+The user reports a backward strike. The existing animation rotates around the
+view's Z axis, rolling the hammer sideways rather than pitching it toward the
+target. The actual mesh face normal at impact is (-.265626, .474071, -.839464):
+its vertical component points upward while the scripted head travel goes down.
+Pointer alignment also cancels all depth motion, leaving only a vertical bob.
+The native measurement reproduces this; an initial Windows execution-policy
+block was resolved by the explicitly approved retry, without policy changes.
+
+On `feature/construction-hammer`, from full checkpoint `84a901e7`, correct only
+the strike's axis/direction and its approach depth. Retain the grip, tool scale,
+rest pose, exact impact pointer, timing and construction input. Add assertions
+for the striking face's downward/forward direction and the head's approach
+from the camera side; previous positional checks alone did not cover direction.
+The new impact-direction assertion fails against the previous animation and
+passes with the forward pitch. At impact the face normal is now
+(.235980, -.406880, -.882475), directed down and into the view; the windup has
+positive depth and returns to the exact pointer on impact. The production
+renderer/asset fixture passes 418 checks at 80/100/120 percent scale, retaining
+the accepted pickaxe and idle behavior. Settled windup/impact previews were
+inspected; each frozen pose now renders twice so cached skinning and attachments
+agree. Windows briefly blocked a newly compiled probe; the same unchanged
+binary ran successfully on retry, without security-policy changes.
+
+Release compilation, normal runtime preparation and 32 resource checks pass.
+The normal executable matches the staged build: September 19 21:11:36,
+4,874,752 bytes, SHA-256
+`F210CC584F9C943946FB98E9A7148D0AA191E1B751712FAC0E921F16DED5AD3A`.
+No game was launched; the user must retest this corrected strike direction.
+README already describes the same construction strike; no release/version,
+save/network or input change is needed.
+
 ## Screenshot follow-up: strike and pointer alignment
 
 The September 19 19:21 captures show the hammer head outside the selected floor

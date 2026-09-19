@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+## Forward construction strike: current September 19 executable
+
+The normal executable includes the corrected forward hammer pitch and approach,
+while retaining the user's accepted fork features: September 19 21:11:36,
+4,874,752 bytes, SHA-256
+`F210CC584F9C943946FB98E9A7148D0AA191E1B751712FAC0E921F16DED5AD3A`.
+It matches the staged Release build. Compilation, runtime preparation and 32
+resource checks pass; the real hand/asset fixture passes 418 checks, including
+the impact-direction assertion that failed before correction. Settled rendered
+previews were inspected; see [construction strike](CONSTRUCTION-HAMMER.md).
+The game was closed during deployment and was not launched by the agent;
+user acceptance of this direction correction remains pending.
+
 ## Idle hand effects: current September 19 executable
 
 The normal executable now includes interruptible, randomly selected watch/yo-yo
