@@ -1100,6 +1100,24 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 RenderManager::getSingleton().rrCreateRoomConstructionEffect(tiles);
             break;
         }
+
+        case ServerNotificationType::creatureCombatImpact:
+        {
+            std::string creatureName;
+            bool weaponClash;
+            bool bodyDamage;
+            Ogre::Vector3 attackerPosition;
+            OD_ASSERT_TRUE(packetReceived >> creatureName >> weaponClash
+                >> bodyDamage >> attackerPosition);
+            Creature* creature = gameMap->getCreature(creatureName);
+            if(creature != nullptr &&
+               frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+            {
+                RenderManager::getSingleton().rrCreateCreatureCombatImpact(
+                    creature, weaponClash, bodyDamage, attackerPosition);
+            }
+            break;
+        }
         
         case ServerNotificationType::revealTiles:
         {
