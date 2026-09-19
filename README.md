@@ -118,6 +118,7 @@ available level, or Ctrl and comma to pick the lowest; counts retain their filte
 
 The hand points at pickup targets and interface controls, and holds a pickaxe
 over diggable walls, which are outlined on hover.
+It holds a hammer while placing rooms, traps or doors on the map.
 Confirming or removing digging marks plays one short downward tool strike.
 It shows the selected action icon or a prohibition sign for an invalid
 target; the top strip describes the current target. Right-click cancels an active

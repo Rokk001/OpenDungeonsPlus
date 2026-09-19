@@ -2664,7 +2664,10 @@ void GameMode::refreshActionFeedback(float elapsed)
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
          (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat())));
-    RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging);
+    const bool building = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
+        (mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
+         mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap);
+    RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging, building);
     refreshHeldCreatureIcons();
 }
 

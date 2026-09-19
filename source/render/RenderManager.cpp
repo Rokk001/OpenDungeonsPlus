@@ -117,7 +117,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
     Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
     const Ogre::Animation* pickup = skeleton->getAnimation("Pickup");
     // Reuse the existing rig's closed fingers; the index stays extended when pointing.
-    for(const std::string pose : {"Point", "Dig", "Hold"})
+    for(const std::string pose : {"Point", "Dig", "Build", "Hold"})
     {
         if(!skeleton->hasAnimation(pose))
         {
@@ -127,7 +127,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
                 const std::string& name = skeleton->getBone(b)->getName();
                 const bool finger = (pose != "Hold" && (name.find("Middle") == 0 || name.find("Midlle") == 0 ||
                     name.find("Ring") == 0 || name.find("Little") == 0)) || name.find("Thumb") == 0 ||
-                    ((pose == "Dig" || pose == "Hold") && name.find("Index") == 0);
+                    ((pose == "Dig" || pose == "Build" || pose == "Hold") && name.find("Index") == 0);
                 if(!finger || !pickup->hasNodeTrack(b))
                     continue;
                 Ogre::TransformKeyFrame sampled(nullptr, 0);
@@ -144,7 +144,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
                 wrist->setRotation(Ogre::Quaternion(Ogre::Degree(-15.0f), Ogre::Vector3::UNIT_Z) *
                     Ogre::Quaternion(Ogre::Degree(30.0f), Ogre::Vector3::UNIT_Y));
             }
-            if(pose == "Dig")
+            if(pose == "Dig" || pose == "Build")
             {
                 // Turn the gripping wrist so the tool emerges above the thumb.
                 Ogre::TransformKeyFrame* wrist = animation->createNodeTrack(
@@ -1084,6 +1084,18 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
         Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
     toolGrip->setScale(0.6f, 0.6f, 0.6f);
     mHandPickaxe->setVisible(false);
+    mHandHammer = mSceneManager->createEntity("KeeperHandHammer", "BasicHammer.mesh");
+    mHandHammer->setMaterialName("HandTool/Hammer", "Graphics");
+    mHandHammer->setCastShadows(false);
+    mHandHammer->setLightMask(0);
+    mHandHammer->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
+    // The authored hammer shaft runs along Z; align it with the existing grip.
+    Ogre::TagPoint* hammerGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandHammer,
+        Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
+        Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X) *
+        Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
+    hammerGrip->setScale(0.2f, 0.2f, 0.2f);
+    mHandHammer->setVisible(false);
     mHandKeeperNode->setScale(Ogre::Vector3::UNIT_SCALE * KEEPER_HAND_POS_Z);
     mHandKeeperNode->setPosition(0.0f, 0.0f, -KEEPER_HAND_POS_Z);
     handKeeperOverlay->add3D(mHandKeeperNode);
@@ -2664,7 +2676,7 @@ void RenderManager::rrOrderHand(Player* localPlayer)
         node->setPosition(creature ? Ogre::Vector3::ZERO : pos);
         ++i;
     }
-    rrSetHandPose(mHandPose == "Point", mHandPose == "Dig");
+    rrSetHandPose(mHandPose == "Point", mHandPose == "Dig", mHandPose == "Build");
     rrUpdateHeldCreature();
 }
 
@@ -4488,10 +4500,10 @@ void RenderManager::moveWorldCoords(Ogre::Real x, Ogre::Real y)
     }
 }
 
-void RenderManager::rrSetHandPose(bool pointing, bool digging)
+void RenderManager::rrSetHandPose(bool pointing, bool digging, bool building)
 {
     const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
-    mHandPose = digging ? "Dig" : (pointing ? "Point" : (holding ? "Hold" : "Idle"));
+    mHandPose = digging ? "Dig" : (building ? "Build" : (pointing ? "Point" : (holding ? "Hold" : "Idle")));
     if(mHandAnimationState != nullptr)
     {
         const std::string current = mHandAnimationState->getAnimationName();
@@ -4510,6 +4522,9 @@ void RenderManager::rrSetHandPose(bool pointing, bool digging)
     if(mHandPickaxe != nullptr)
         mHandPickaxe->setVisible(mHandKeeperHandVisibility == 0 && mHandAnimationState != nullptr &&
             ((digging && mHandAnimationState->getLoop()) || mHandAnimationState->getAnimationName() == "DigSwing"));
+    if(mHandHammer != nullptr)
+        mHandHammer->setVisible(mHandKeeperHandVisibility == 0 && mHandAnimationState != nullptr &&
+            mHandAnimationState->getAnimationName() == "Build");
 }
 
 void RenderManager::rrPlayDigAnimation()
@@ -4682,9 +4697,11 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
     if(animState != nullptr && ent->getName() == "keeperHandEnt")
     {
         const bool tool = animation == "Dig" || animation == "DigSwing";
-        ent->setMaterialName(tool || animation == "Hold" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
+        ent->setMaterialName(tool || animation == "Build" || animation == "Hold" ? "Keeperhand/ToolGrip" : "Keeperhand", "Graphics");
         if(mHandPickaxe != nullptr)
             mHandPickaxe->setVisible(tool && mHandKeeperHandVisibility == 0);
+        if(mHandHammer != nullptr)
+            mHandHammer->setVisible(animation == "Build" && mHandKeeperHandVisibility == 0);
     }
 
     return animState;
