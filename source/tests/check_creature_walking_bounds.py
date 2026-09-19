@@ -9,6 +9,7 @@ import tempfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--height-profile', action='store_true', help='Measure triangle-clipped walking envelopes below furniture heights without changing collision policy')
 parser.add_argument('--frames', type=int, default=120, help='Number of equal Walk intervals to sample, including both ends')
+parser.add_argument('--bone-profile', help='Report dominant-bone vertex extents for one mesh, without changing poses or collision policy')
 args = parser.parse_args()
 assert args.frames > 0
 
@@ -17,6 +18,7 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 models = set(re.findall(r'^\s*MeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
 catalog = set(re.findall(r'\{"([^"\n]+\.mesh)"', (repo / 'source/gamemap/RoomObjectBounds.h').read_text()))
 assert models == catalog, f'Walking bounds catalog mismatch: {models ^ catalog}'
+assert args.bone_profile is None or args.bone_profile in catalog
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 bed_support = renderer.split('Ogre::Vector3 getBedSupportPoint(', 1)[1].split('\nbool needsCreatureDropFallback(', 1)[0]
 bed_names = sorted(set(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M)))
@@ -39,6 +41,8 @@ Ogre::AxisAlignedBox poseBounds;
 const float heights[]={.05f,.1f,.15f,.2f,.3f,RoomObjectPath::lowWalkingHeight};
 Ogre::AxisAlignedBox heightBounds[6];
 bool profile=false;
+const std::string boneProfile="BONE_PROFILE";
+std::map<unsigned short,Ogre::AxisAlignedBox> boneBounds,lowBoneBounds;
 float radius(Ogre::Entity* entity){
  entity->addSoftwareAnimationRequest(false);entity->_updateAnimation();entity->removeSoftwareAnimationRequest(false);
  float result=0;poseBounds.setNull();
@@ -49,7 +53,19 @@ float radius(Ogre::Entity* entity){
   auto buffer=data->vertexBufferBinding->getBuffer(position->getSource());
   Ogre::HardwareBufferLockGuard lock(buffer,Ogre::HardwareBuffer::HBL_READ_ONLY);
   auto* bytes=static_cast<unsigned char*>(lock.pData);
-  for(size_t i=0;i<data->vertexCount;++i){float* vertex;position->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&vertex);result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));}
+  for(size_t i=0;i<data->vertexCount;++i){
+   float* vertex;position->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&vertex);
+   result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));
+   if(entity->getMesh()->getName()==boneProfile){
+    const auto& assignments=part->getSubMesh()->useSharedVertices?entity->getMesh()->getBoneAssignments():part->getSubMesh()->getBoneAssignments();
+    const auto range=assignments.equal_range(i);auto strongest=range.second;
+    for(auto weight=range.first;weight!=range.second;++weight)
+     if(strongest==range.second||weight->second.weight>strongest->second.weight)strongest=weight;
+    if(strongest==range.second)throw std::runtime_error("Bone profile found an unweighted vertex");
+    const auto bone=strongest->second.boneIndex;boneBounds[bone].merge(Ogre::Vector3(vertex));
+    if(vertex[2]<=RoomObjectPath::lowWalkingHeight)lowBoneBounds[bone].merge(Ogre::Vector3(vertex));
+   }
+  }
   {
    if(part->getSubMesh()->operationType!=Ogre::RenderOperation::OT_TRIANGLE_LIST)
     throw std::runtime_error("Height profiling requires triangle-list meshes");
@@ -92,6 +108,7 @@ int main(int argc,char** argv){try{
   std::cout<<"FURNITURE_HEIGHT "<<name<<" min="<<mesh->getBounds().getMinimum().z<<" max="<<mesh->getBounds().getMaximum().z<<" support="<<support.z<<'\n';
  }
  for(const auto& model:RoomObjectPath::walkingRadii){
+  boneBounds.clear();lowBoneBounds.clear();
   for(auto& bounds:heightBounds)bounds.setNull();
   auto* entity=scene->createEntity(model.name,model.name,"Graphics");
   auto* node=scene->getRootSceneNode()->createChildSceneNode();node->attachObject(entity);
@@ -123,12 +140,19 @@ int main(int argc,char** argv){try{
    if(joints[joint])std::cout<<" bone="<<joints[joint]->getName()<<" bounds="<<jointBounds[joint];else std::cout<<" missing";
    std::cout<<'\n';
   }
+  if(std::string(model.name)==boneProfile)for(const auto& part:boneBounds){
+   std::cout<<"DOMINANT_BONE "<<model.name<<" bone="<<skeleton->getBone(part.first)->getName()<<" bounds="<<part.second;
+   const auto low=lowBoneBounds.find(part.first);
+   if(low!=lowBoneBounds.end())std::cout<<" low="<<low->second;
+   std::cout<<'\n';
+  }
   node->detachAllObjects();scene->destroyEntity(entity);scene->destroySceneNode(node);
  }
  root.destroySceneManager(scene);std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''
 probe = probe.replace('BED_SUPPORT', bed_support).replace('BED_NAMES', ','.join('"' + name + '"' for name in bed_names))
+probe = probe.replace('BONE_PROFILE', args.bone_profile or '')
 for side in ('left', 'right'):
     for joint in ('Upper', 'Lower', 'Tip'):
         probe = probe.replace(side.upper() + '_' + joint.upper(), 'findBone(skeleton,' + leg_names[(side, joint)] + ')')
@@ -139,7 +163,7 @@ with tempfile.TemporaryDirectory(prefix='odp-walking-bounds-') as directory:
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     result = subprocess.run([str(work / 'check.exe'), str(repo), str(args.frames)] + (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
-    print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'HEIGHT_PROFILE ', 'FURNITURE_HEIGHT ', 'LEG_PROFILE '))))
+    print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'HEIGHT_PROFILE ', 'FURNITURE_HEIGHT ', 'LEG_PROFILE ', 'DOMINANT_BONE '))))
     if result.returncode:
         if 'FAIL ' not in result.stdout:
             print(result.stderr)
