@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+## Pickaxe alignment: normal September 19 executable
+
+Release compilation, normal runtime preparation and 32 resource checks pass.
+The executable is September 19 17:49:15, 4,854,272 bytes, SHA-256
+`404F344FB79BA27AEFB6FDA67CCFDA704E8B6671B93E96DA72E9BAAAAE421FE2`.
+It retains the construction hammer and food-lane corrections. The blade roll
+passes 124 real-model/controller checks; user visual acceptance remains pending.
+The build-tree and old-object precautions below still apply.
+
 ## Construction hammer and food lanes: normal September 19 executable
 
 The normal `build/windows/opendungeons-plus.exe` now contains the separate
