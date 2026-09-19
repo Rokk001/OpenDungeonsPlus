@@ -117,7 +117,10 @@ enum class ServerNotificationType
     creatureCombatImpact,
 
     // Presentation-only consumption of an authoritative chicken.
-    creatureChickenFeeding
+    creatureChickenFeeding,
+
+    // Owner-only reply to a production query or reorder request.
+    trapProductionQueue
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
