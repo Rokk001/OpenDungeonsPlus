@@ -16,7 +16,7 @@ endif()
 # Project version
 set(OD_MAJOR_VERSION 0)
 set(OD_MINOR_VERSION 7)
-set(OD_PATCH_LEVEL   1)
+set(OD_PATCH_LEVEL   2)
 
 # Set the project version ready to be used in the code.
 if(NOT MSVC)
@@ -343,6 +343,7 @@ set(OD_SOURCEFILES
 	
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
+    ${SRC}/game/TrapProductionData.cpp
     ${SRC}/game/PlayerSelection.cpp
     ${SRC}/game/Skill.cpp
     ${SRC}/game/SkillManager.cpp

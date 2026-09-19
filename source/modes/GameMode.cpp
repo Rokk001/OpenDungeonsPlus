@@ -65,6 +65,9 @@
 #include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/ToggleButton.h>
 #include <CEGUI/widgets/ProgressBar.h>
+#include <CEGUI/widgets/Listbox.h>
+#include <CEGUI/widgets/ListboxTextItem.h>
+#include <CEGUI/widgets/Scrollbar.h>
 
 #include <OgreRoot.h>
 #include <OgreRenderWindow.h>
@@ -136,6 +139,23 @@ GameMode::GameMode(ModeManager *modeManager):
 
     addEventConnection(mRootWindow->getChild("MiniMapZoomButton")->subscribeEvent(
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::zoomMiniMap, this)));
+    addEventConnection(mRootWindow->getChild("ResearchButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSkillWindow, this)));
+    for(const char* name : {"ProductionButton", "GameOptionsWindow/ProductionButton"})
+        addEventConnection(mRootWindow->getChild(name)->subscribeEvent(
+            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showTrapProductionQueue, this)));
+    addEventConnection(mRootWindow->getChild("ProductionWindow")->subscribeEvent(
+        CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::closeTrapProductionQueue, this)));
+    addEventConnection(mRootWindow->getChild("ProductionWindow/CloseButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::closeTrapProductionQueue, this)));
+    addEventConnection(mRootWindow->getChild("ProductionWindow/Orders")->subscribeEvent(
+        CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
+    addEventConnection(mRootWindow->getChild("ProductionWindow/MoveUp")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
+        { return moveTrapProductionOrder(true); })));
+    addEventConnection(mRootWindow->getChild("ProductionWindow/MoveDown")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
+        { return moveTrapProductionOrder(false); })));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::closeMap, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
@@ -442,6 +462,9 @@ void GameMode::activate()
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
+    guiSheet->getChild("ProductionWindow")->hide();
+    mTrapProductionData = TrapProductionData{};
+    mProductionRequestPending = false;
     mReturningToSettingsNavigation = false;
     guiSheet->getChild("SettingsWindow")->hide();
     guiSheet->getChild("SettingsNavigationWindow")->setModalState(false);
@@ -1522,6 +1545,12 @@ bool GameMode::storeUserCamera(const CEGUI::EventArgs&)
 
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    if(mRootWindow->getChild("ProductionWindow")->isVisible())
+    {
+        mProductionRefreshElapsed += evt.timeSinceLastFrame;
+        if(mProductionRefreshElapsed >= 1.0f)
+            requestTrapProductionQueue();
+    }
     if(mFullMap)
         updateMapDetail();
     GameEditorModeBase::onFrameStarted(evt);
@@ -1716,9 +1745,120 @@ void GameMode::syncPlayerSettings()
 
 bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
 {
+    while(closeTopWindow())
+    {
+    }
     resetSkillTree();
     mRootWindow->getChild("SkillTreeWindow")->show();
+    mRootWindow->getChild("SkillTreeWindow")->moveToFront();
     return true;
+}
+
+bool GameMode::showTrapProductionQueue(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* production = mRootWindow->getChild("ProductionWindow");
+    const bool wasVisible = production->isVisible();
+    while(closeTopWindow())
+    {
+    }
+    if(wasVisible)
+        return true;
+    production->show();
+    production->moveToFront();
+    requestTrapProductionQueue();
+    return true;
+}
+
+bool GameMode::closeTrapProductionQueue(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("ProductionWindow")->hide();
+    return true;
+}
+
+void GameMode::requestTrapProductionQueue()
+{
+    if(mProductionRequestPending || !isConnected())
+        return;
+    mProductionRequestPending = true;
+    mProductionRefreshElapsed = 0.0f;
+    updateTrapProductionButtons();
+    ODClient::getSingleton().queueClientNotification(
+        new ClientNotification(ClientNotificationType::askTrapProductionQueue));
+}
+
+bool GameMode::updateTrapProductionButtons(const CEGUI::EventArgs&)
+{
+    CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Orders"));
+    CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
+    const bool valid = selected != nullptr &&
+        selected->getID() < mTrapProductionData.orders.size();
+    mRootWindow->getChild("ProductionWindow/MoveUp")->setEnabled(valid && selected->getID() > 0);
+    mRootWindow->getChild("ProductionWindow/MoveDown")->setEnabled(valid && selected->getID() + 1 < mTrapProductionData.orders.size());
+    return true;
+}
+
+bool GameMode::moveTrapProductionOrder(bool earlier)
+{
+    if(!isConnected())
+        return true;
+    CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Orders"));
+    CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
+    if(selected == nullptr || selected->getID() >= mTrapProductionData.orders.size())
+        return true;
+    ClientNotification* request = new ClientNotification(ClientNotificationType::askMoveTrapProductionOrder);
+    request->mPacket << mTrapProductionData.orders[selected->getID()].name << earlier;
+    mProductionRequestPending = true;
+    mProductionRefreshElapsed = 0.0f;
+    updateTrapProductionButtons();
+    ODClient::getSingleton().queueClientNotification(request);
+    return true;
+}
+
+void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
+{
+    CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Orders"));
+    CEGUI::Listbox* workshops = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Workshops"));
+    std::string selectedName;
+    CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
+    if(selected != nullptr && selected->getID() < mTrapProductionData.orders.size())
+        selectedName = mTrapProductionData.orders[selected->getID()].name;
+    const float scroll = orders->getVertScrollbar()->getScrollPosition();
+    mProductionRequestPending = true;
+    orders->resetList();
+    workshops->resetList();
+    mTrapProductionData = data;
+    for(size_t index = 0; index < data.orders.size(); ++index)
+    {
+        const TrapProductionOrder& order = data.orders[index];
+        const std::string text = Helper::toString(index + 1) + ". " +
+            TrapManager::getTrapNameFromTrapType(order.type) + " - " +
+            Helper::toString(order.needed) + " required (" + order.name + ")";
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text, static_cast<CEGUI::uint>(index));
+        item->setTextParsingEnabled(false);
+        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        orders->addItem(item);
+        if(order.name == selectedName)
+            orders->setItemSelectState(item, true);
+    }
+    orders->getVertScrollbar()->setScrollPosition(scroll);
+    for(const TrapProductionWorkshop& workshop : data.workshops)
+    {
+        std::string text = workshop.name + ": ";
+        if(workshop.type == TrapType::nullTrapType)
+            text += "Idle";
+        else
+            text += TrapManager::getTrapNameFromTrapType(workshop.type) + " - " +
+                Helper::toString(workshop.points) + "/" + Helper::toString(workshop.required) + " work points";
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text);
+        item->setTextParsingEnabled(false);
+        workshops->addItem(item);
+    }
+    mRootWindow->getChild("ProductionWindow/OrdersLabel")->setText(
+        data.orders.empty() ? "No pending trap orders" : "Order priority (required items)");
+    mRootWindow->getChild("ProductionWindow/WorkshopsLabel")->setText(
+        data.workshops.empty() ? "No workshops" : "Work in progress");
+    mProductionRequestPending = false;
+    updateTrapProductionButtons();
 }
 
 bool GameMode::hideSkillWindow(const CEGUI::EventArgs&)
@@ -1795,7 +1935,7 @@ void GameMode::setOptionsPage(bool endGame)
 {
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
     for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
-        "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton"})
+        "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton", "ProductionButton"})
         options->getChild(name)->setVisible(!endGame);
     for(const char* name : {"QuitGameButton", "ExitGameButton", "BackButton"})
         options->getChild(name)->setVisible(endGame);
@@ -1836,11 +1976,10 @@ bool GameMode::showObjectivesFromOptions(const CEGUI::EventArgs& e)
     return showObjectivesWindow(e);
 }
 
-bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& /*e*/)
+bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& e)
 {
     mRootWindow->getChild("GameOptionsWindow")->hide();
-    showSkillWindow();
-    return true;
+    return toggleSkillWindow(e);
 }
 
 bool GameMode::loadGame(const CEGUI::EventArgs& /*e*/)
@@ -2143,7 +2282,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
 {
     // Determine the widget name and button accordingly to the SkillType given
     Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
-    bool isDone = localPlayerSeat->isSkillDone(resType);
+    const uint32_t level = localPlayerSeat->getSkillLevel(resType);
+    bool isDone = level >= 3;
     bool isAllowed = true;
     uint32_t queueNumber = 0;
     if(!isDone)
@@ -2262,6 +2402,27 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillButton->setEnabled(true);
         skillProgressBar->hide();
     }
+    guiSheet->getChild(castButtonName)->setVisible(level > 0 || !isAllowed);
+    const std::string levelText = level == 0 ? "0" : (level == 1 ? "I" : (level == 2 ? "II" : "III"));
+    skillButton->setText(levelText + (queueNumber > 0 ? "\n" + Helper::toString(queueNumber) : ""));
+    std::string description = Skills::skillTypeToPlayerVisibleString(resType) + " - level " +
+        Helper::toString(level) + "/3";
+    if(!isAllowed)
+        description += "\nUnavailable on this map.";
+    else if(level >= 3)
+        description += "\nMaximum level. " + SkillManager::getResearchDescription(resType, level);
+    else
+    {
+        description += "\nNext: level " + Helper::toString(level + 1) + " - " +
+            Helper::toString(SkillManager::getSkill(resType)->getNeededSkillPoints(level + 1)) + " research points.\n" +
+            SkillManager::getResearchDescription(resType, level + 1);
+        if(queueNumber > 0)
+            description += "\nQueue position: " + Helper::toString(queueNumber) + ".";
+        if(resType == curResType)
+            description += " Progress: " + Helper::toString(static_cast<int>(curSkillProgress * 100)) + "%.";
+    }
+    skillButton->setTooltipText(description);
+    skillButton->setUserString("ContextHelp", description);
 }
 
 void GameMode::refreshGuiSkill(bool forceRefresh)
@@ -2287,7 +2448,7 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
         for(auto it = mSkillPending.begin(); it != mSkillPending.end();)
         {
             SkillType resType = *it;
-            if(!localPlayerSeat->isSkillDone(resType))
+            if(localPlayerSeat->getSkillLevel(resType) == mSkillEditLevels[resType])
             {
                 ++it;
                 continue;
@@ -2295,6 +2456,8 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
 
             it = mSkillPending.erase(it);
         }
+        for(auto& entry : mSkillEditLevels)
+            entry.second = localPlayerSeat->getSkillLevel(entry.first);
     }
 
     localPlayerSeat->guiSkillRefreshed();
@@ -2819,15 +2982,21 @@ void GameMode::handlePlayerActionSelectTile()
 void GameMode::resetSkillTree()
 {
     mSkillPending = mGameMap->getLocalPlayer()->getSeat()->getSkillPending();
+    mSkillEditLevels.clear();
+    for(uint32_t index = 1; index < static_cast<uint32_t>(SkillType::countSkill); ++index)
+    {
+        const SkillType type = static_cast<SkillType>(index);
+        mSkillEditLevels[type] = mGameMap->getLocalPlayer()->getSeat()->getSkillLevel(type);
+    }
     mSkillCurrentCompletion.resetValue();
     mIsSkillWindowOpen = true;
 }
 
 bool GameMode::skillButtonTreeClicked(SkillType type)
 {
-    // If the skill is already done or not allowed, nothing to do
+    // Fully upgraded or map-disabled skills cannot be queued.
     const std::vector<SkillType>& skillDone = mGameMap->getLocalPlayer()->getSeat()->getSkillDone();
-    if(std::find(skillDone.begin(), skillDone.end(), type) != skillDone.end())
+    if(mGameMap->getLocalPlayer()->getSeat()->getSkillLevel(type) >= 3)
         return false;
     const std::vector<SkillType>& skillNotAllowed = mGameMap->getLocalPlayer()->getSeat()->getSkillNotAllowed();
     if(std::find(skillNotAllowed.begin(), skillNotAllowed.end(), type) != skillNotAllowed.end())
@@ -2838,6 +3007,9 @@ bool GameMode::skillButtonTreeClicked(SkillType type)
     {
         // The skill is pending. We remove it as well as all its dependencies
         mSkillPending.erase(it);
+
+        if(std::find(skillDone.begin(), skillDone.end(), type) != skillDone.end())
+            return true;
 
         for(it = mSkillPending.begin(); it != mSkillPending.end();)
         {
@@ -2865,7 +3037,10 @@ bool GameMode::skillButtonTreeClicked(SkillType type)
     // add them at the end of the list if all are available/done
     const Skill* skill = SkillManager::getSkill(type);
     std::vector<SkillType> dependencies;
-    skill->buildDependencies(skillDone, dependencies);
+    if(std::find(skillDone.begin(), skillDone.end(), type) != skillDone.end())
+        dependencies.push_back(type);
+    else
+        skill->buildDependencies(skillDone, dependencies);
 
     // We check if one of the dependencies is not available. If not, we cannot skill
     for(SkillType skillType : dependencies)
@@ -2903,7 +3078,7 @@ void GameMode::endSkillTree(bool apply)
         clientNotification->mPacket << nbItems;
         for(const SkillType& type : mSkillPending)
         {
-            clientNotification->mPacket << type;
+            clientNotification->mPacket << type << (mSkillEditLevels[type] + 1);
         }
         ODClient::getSingleton().queueClientNotification(clientNotification);
     }

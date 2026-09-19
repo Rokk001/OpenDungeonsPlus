@@ -785,6 +785,19 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::trapProductionQueue:
+        {
+            TrapProductionData data;
+            if(!importTrapProductionData(packetReceived, data))
+            {
+                OD_LOG_ERR("Invalid trap production snapshot");
+                return false;
+            }
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::GAME)
+                static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode())->refreshTrapProductionQueue(data);
+            break;
+        }
+
         case ServerNotificationType::entitiesRefresh:
         {
             uint32_t nbEntities;
@@ -1441,15 +1454,23 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             uint32_t nbItems;
             OD_ASSERT_TRUE(packetReceived >> nbItems);
             std::vector<SkillType> skills;
+            std::map<SkillType, uint32_t> levels;
+            if(nbItems >= static_cast<uint32_t>(SkillType::countSkill))
+                return false;
             while(nbItems > 0)
             {
                 nbItems--;
                 SkillType skill;
-                OD_ASSERT_TRUE(packetReceived >> skill);
+                uint32_t level;
+                if(!(packetReceived >> skill >> level) || skill <= SkillType::nullSkillType ||
+                   skill >= SkillType::countSkill || level < 1 || level > 3 || levels.count(skill) != 0)
+                    return false;
                 skills.push_back(skill);
+                levels[skill] = level;
             }
 
             getPlayer()->getSeat()->setSkillsDone(skills);
+            getPlayer()->getSeat()->setResearchLevels(levels);
             break;
         }
 

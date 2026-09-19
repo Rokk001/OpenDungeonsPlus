@@ -32,6 +32,9 @@ Creature combat uses model-specific attacks, directional impact reactions, visib
 Creatures reach for and carry chicken meals using their available limb rigs, with brief feather effects and cleanup when eating is interrupted.
 
 Creatures settle into their beds, align with the mattress and restore their ground pose and facing when waking or interrupted.
+Use Production beside the minimap or in Options to inspect owned trap orders and workshop progress, and move pending orders up or down in the production priority.
+
+Research rooms, traps and spells through three levels in the skill tree; completed upgrades, research points and the selected order are retained in saved games.
 
 ### Be part of the community
 
