@@ -1,5 +1,36 @@
 # Navigation around room objects
 
+## User acceptance, September 19
+
+The user accepted creature navigation around solid room objects and closed the
+task. The compact-passage investigation below stopped before any production
+pose/collision change. The diagnostic profiles are retained as measurements, not
+as a new acceptance gate; older packed-layout fixture failures do not reopen the
+accepted task. No additional movement, size, occupancy or speed changes were made.
+
+## Compact passage follow-up, September 19
+
+The user approved tucking arms and sideways walking, without reducing movement
+speed, changing body/bed sizes or allowing creatures to reserve/block each
+other's routes. The investigation used `fix/solid-room-object-navigation` from
+the complete idle-hand checkpoint `bac7c392`; route behavior was not changed.
+
+The current navigation source still matches the last food-route checkpoint.
+Repeating the installed-mesh Walk height profile passes 4,072 checks and confirms
+the Kobold's low envelope spans 0.2225241 along X and 0.294615 along Y before
+level scaling. At level 30 even that low envelope is wider than a 0.3-tile lane;
+the full Walk envelope is larger. Merely turning the existing animation sideways
+or ignoring arm bounds cannot establish physically clear transit. The existing
+renderer already has measured rig lookup and limb-solving paths used for feeding;
+inspect the actual vertex/bone contributions before choosing a compact pose.
+Any route relaxation must share the measured envelope of the visible passage
+animation, retaining normal-speed integration and furniture-only obstacles.
+The optional dominant-bone diagnostic also passes 4,072 checks: the integrated
+tool contributes the extreme X/Y footprint, while both feet remain wider than
+zero. These are diagnostic observations, not a new navigation implementation.
+The subsequent user acceptance above closes the task without further changes;
+README remains accurate and no release/version or save/network change is needed.
+
 ## Screenshot follow-up: food routes through bed lanes
 
 The September 14 16:08:44 save plus the current placed-object log reproduces a
