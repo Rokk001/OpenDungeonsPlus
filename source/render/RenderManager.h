@@ -176,7 +176,8 @@ public:
         const std::string& particleScript);
     void rrEntityRemoveParticleEffect(GameEntity* entity, Ogre::ParticleSystem* particleSystem);
     void rrToggleHandSelectorVisibility();
-    void rrSetHandPose(bool pointing, bool digging);
+    void rrSetHandPose(bool pointing, bool digging, bool building = false);
+    void rrPlayBuildAnimation();
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
@@ -282,6 +283,8 @@ private:
     Ogre::AnimationState* mHandAnimationState;
     std::string mHandPose = "Idle";
     Ogre::ManualObject* mHandPickaxe = nullptr;
+    Ogre::Entity* mHandHammer = nullptr;
+    Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     Ogre::ManualObject* mTilePreview = nullptr;
 
     struct CreatureCombatImpactEffect
