@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+## Construction strike and Alt toggle: normal September 19 executable
+
+The normal executable is September 19 20:58:12, 4,859,904 bytes, SHA-256
+`FC8115365FAC3471C011237608D8AA517E339D380464954164E4A34FEBD7DFF0`.
+It includes the separate Alt-toggle correction and pointer-aligned construction
+strike. Release compilation, runtime preparation and 32 resource checks pass;
+hammer rendering/input fixtures pass 838 checks and Alt input/lifetime 128.
+The game was closed at deployment and was not launched by the agent; user
+gameplay/visual acceptance remains pending. The earlier staged-only restriction
+below is superseded by this deployment. Continue using the current staged build
+tree, not stale objects in the normal tree.
+
 ## Alt-toggle correction: staged September 19 executable
 
 Release compilation succeeds in `build/review-followups`: September 19 19:36:22,

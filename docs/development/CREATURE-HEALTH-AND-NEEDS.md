@@ -18,7 +18,8 @@ overlapping left/right Alt keys, activation with a key held and missed-release
 recovery. The renderer's existing visibility setter and child timers are unchanged.
 Release compilation succeeds (September 19 19:36:22, staged executable under
 `build/review-followups`); the running game prevents replacement of the normal
-executable, so deployment and user retest remain pending.
+executable at that point. The subsequent September 19 20:58:12 combined build is
+now deployed after the game closed; see BUILDING.md. User retest remains pending.
 
 ## Accepted hold-Alt follow-up
 

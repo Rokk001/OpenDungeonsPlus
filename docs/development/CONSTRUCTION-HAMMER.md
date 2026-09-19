@@ -1,5 +1,41 @@
 # Construction hammer
 
+## Screenshot follow-up: strike and pointer alignment
+
+The September 19 19:21 captures show the hammer head outside the selected floor
+tile. The overlay follows the mouse at its model origin, while pointer alignment
+only handles the pointing finger; the hammer attachment is never aligned to
+that origin. The construction validation paths also queue their requests without
+triggering a hand animation. These are separate gaps in this same feature.
+
+Extend the existing one-shot hand lifecycle with a closed-grip construction
+strike and align the actual hammer striking face to the pointer, preserving
+the mouse ray and all build coordinates. Trigger once after validated room/trap
+input; previews, cancellation and invalid requests must not swing. Reuse the
+existing grip and mesh, not the digging blade or a new input mode. Work remains
+on `feature/construction-hammer`, from complete checkpoint `635c190b`.
+
+The production renderer/asset fixture passes 278 assertions, including wrist
+rotation, visible windup, exact pointer-axis alignment at rest and impact at
+80/100/120 percent scale, tool exclusivity and repeated playback. The original
+model-origin path reproduces the off-target head before alignment. The fixture
+now advances Ogre's queued-frame counter so bone animation is actually sampled;
+otherwise earlier isolated renders could reuse cached bones. Start, windup and
+impact renders were inspected. This does not substitute for user gameplay QA.
+
+The actual room/trap/door validators and construction dispatcher pass 560
+checks: valid single/area requests swing once, while preview, empty/outside
+selection, insufficient gold, invalid door placement and unrelated actions do
+not swing. The unchanged release guards still suppress canceled/GUI releases.
+The strike reports a locally eligible request, not a server success guarantee;
+packet data, costs and action timing are unchanged.
+
+Release compilation, normal runtime preparation and 32 resource checks pass;
+the normal September 19 20:58:12 executable includes this correction and the
+separate Alt toggle. The game was closed during deployment and was not launched
+by the agent. User acceptance remains pending; see BUILDING.md for its hash.
+README is updated; no version/save/network format change is needed.
+
 ## Existing path and scope
 
 The accepted review follow-up requests a hammer while building and retains the
