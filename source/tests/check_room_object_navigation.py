@@ -423,6 +423,46 @@ probe = probe.replace('PACKED_BEDS', r'''
  }
 ''' if args.packed_beds else '')
 probe = probe.replace('ROOM_LAYOUTS', r'''
+ for(bool vertical:{false,true})for(bool reverse:{false,true}){
+  GameMap packed(12,12);Room dormitory;dormitory.type=RoomType::dormitory;packed.rooms={&dormitory};
+  for(auto& tile:packed.tiles){tile.walkable=false;tile.room=&dormitory;}
+  for(int y=4;y<=6;++y)for(int x=4;x<=6;++x)packed.getTile(x,y)->walkable=true;
+  for(int i:{2,3,7,8})packed.getTile(vertical?5:i,vertical?i:5)->walkable=true;
+  std::vector<BuildingObject> beds(9);
+  for(int y=0;y<3;++y)for(int x=0;x<3;++x){
+   auto& bed=beds[y*3+x];bed.mesh="ImpBed";
+   placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
+  }
+  Creature walker{&packed};walker.mesh="Rat.mesh";walker.level=2;
+  walker.pos={vertical?5.f:reverse?8.f:2.f,vertical?(reverse?8.f:2.f):5.f,0};
+  const Ogre::Vector2 food(vertical?5.f:reverse?2.f:8.f,vertical?(reverse?2.f:8.f):5.f);
+  std::vector<Ogre::Vector2> direct{food};RoomObjectNavigation::refine(walker,direct);
+  check(!direct.empty(),"rat fits the measured tall-bed lane in both directions");
+  std::vector<Ogre::Vector2> approach;
+  check(RoomObjectNavigation::foodApproach(walker,food,approach),"food search must use the same usable bed lane as ordinary movement");
+  if(!approach.empty())check(!RoomObjectNavigation::blocked(walker,approach),"food lane keeps the actual rat body outside tall beds");
+ }
+ for(bool lowNest:{false,true})for(bool reverse:{false,true}){
+  GameMap packed(12,12);Room dormitory;dormitory.type=RoomType::dormitory;packed.rooms={&dormitory};
+  for(auto& tile:packed.tiles){tile.walkable=false;tile.room=&dormitory;}
+  for(int y=4;y<=6;++y)for(int x=4;x<=6;++x)packed.getTile(x,y)->walkable=true;
+  for(int x:{2,3,7,8})packed.getTile(x,5)->walkable=true;
+  std::vector<BuildingObject> beds(9);
+  for(int y=0;y<3;++y)for(int x=0;x<3;++x){
+   auto& bed=beds[y*3+x];bed.mesh=lowNest?"GoblinBed":"ImpBed";
+   placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
+  }
+  Creature walker{&packed};walker.level=30;walker.pos={reverse?8.f:2.f,5,0};
+  const Ogre::Vector2 food(reverse?2.f:8.f,5);std::vector<Ogre::Vector2> approach;
+  const bool reached=RoomObjectNavigation::foodApproach(walker,food,approach);
+  check(reached==lowNest,"food approach can cross low nests but not higher bed parts");
+  if(reached){
+   check(!approach.empty()&&!RoomObjectNavigation::blocked(walker,approach),"food transit uses the same server step permission");
+   check(RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(walker),approach.back(),food-approach.back()),"food interaction still stands outside the bed");
+   auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
+   for(const auto& point:approach){check(terrainClear(walker,previous,point),"food stepping cannot bypass corridor walls");previous=point;}
+  }
+ }
  for(bool lowNest:{false,true}){
   // Actual Rat bodies and Kobold lower-body triangles fit their respective
   // lanes; neither a root-aligned grid nor upper-body overhang may hide them.

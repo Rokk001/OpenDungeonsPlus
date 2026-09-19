@@ -220,7 +220,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     for(size_t i = 0; i < goals.size(); ++i)
     {
         const auto& goal = goals[i];
-        if(clearPoint(obstacles, goal) && terrain(goal, goal) && clearSegment(obstacles, start, goal, allowStartExit) && terrain(start, goal))
+        if(start.distance(goal) < maximumCost && clearPoint(obstacles, goal) && terrain(goal, goal) && clearSegment(obstacles, start, goal, allowStartExit) && terrain(start, goal))
         {
             chosenGoal = i;
             result.push_back(goal);
@@ -399,20 +399,22 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     return true;
 }
 
-inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
+inline bool routeToAnyAligned(const Ogre::Vector2& start, const std::vector<Ogre::Vector2>& goals,
     const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
-    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, bool allowStartExit = true)
+    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true)
 {
-    size_t chosenGoal = 0;
-    bool found = routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY,
+    bool found = routeToAny(start, goals, obstacles, minX, minY, maxX, maxY,
         terrain, result, chosenGoal, allowStartExit);
     if(found && result.size() == 1)
         return true;
     // Mesh roots are not necessarily centered on the body or furniture. A valid
     // narrow lane can fall between every root-aligned quarter-tile node even
     // though a body-centered lane fits. Keep the same exact edge/terrain checks.
-    if(obstacles.empty())
+    if(obstacles.empty() || goals.empty())
         return found;
+    const auto goal = found ? goals[chosenGoal] : *std::min_element(goals.begin(), goals.end(),
+        [&](const Ogre::Vector2& a, const Ogre::Vector2& b)
+        { return start.squaredDistance(a) < start.squaredDistance(b); });
     const auto length = [&](const std::vector<Ogre::Vector2>& path)
     {
         float cost = 0;
@@ -454,15 +456,26 @@ inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
             std::vector<Ogre::Vector2> candidate;
             // A valid outside route must not suppress a shorter usable lane.
             // Bound each alternative by the best complete route already found.
-            if(routeToAny(start, {goal}, obstacles, minX, minY, maxX, maxY,
-                terrain, candidate, chosenGoal, allowStartExit, offset, bestCost))
+            size_t candidateGoal = 0;
+            if(routeToAny(start, goals, obstacles, minX, minY, maxX, maxY,
+                terrain, candidate, candidateGoal, allowStartExit, offset, bestCost))
             {
                 bestCost = length(candidate);
                 result.swap(candidate);
+                chosenGoal = candidateGoal;
                 found = true;
             }
         }
     return found;
+}
+
+inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
+    const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
+    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, bool allowStartExit = true)
+{
+    size_t chosenGoal = 0;
+    return routeToAnyAligned(start, {goal}, obstacles, minX, minY, maxX, maxY,
+        terrain, result, chosenGoal, allowStartExit);
 }
 }
 

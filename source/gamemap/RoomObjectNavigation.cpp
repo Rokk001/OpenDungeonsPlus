@@ -60,6 +60,17 @@ bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vec
     }
     return true;
 }
+
+bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obstacle>& obstacles)
+{
+    const auto count = obstacles.size();
+    obstacles.erase(std::remove_if(obstacles.begin(), obstacles.end(), [&](RoomObjectPath::Obstacle obstacle)
+    {
+        return RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
+            1.0f + 0.02f * creature.getLevel(), creature.getPosition().z) > 0.0f;
+    }), obstacles.end());
+    return obstacles.size() != count;
+}
 }
 
 float RoomObjectNavigation::clearance(const Creature& creature)
@@ -353,22 +364,32 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         direction.normalise();
         // The last leg approaches in the orientation that made this standing
         // point usable; arbitrary grid diagonals can otherwise clip a wide body.
-        const auto staging = point - direction * (clearance(creature) + 0.5f);
-        Tile* tile = map.getTile(Helper::round(staging.x), Helper::round(staging.y));
-        if(!creature.canGoThroughTile(tile) || !terrainClear(creature, staging, point) ||
-            !RoomObjectPath::clearSegment(body, staging, point))
-            continue;
-        stagingPoints.push_back(staging);
-        standingPoints.push_back(point);
+        for(float approach = clearance(creature) + 0.5f; approach >= 0.125f; approach *= 0.5f)
+        {
+            const auto staging = point - direction * approach;
+            Tile* tile = map.getTile(Helper::round(staging.x), Helper::round(staging.y));
+            if(!creature.canGoThroughTile(tile) || !terrainClear(creature, staging, point) ||
+                !RoomObjectPath::clearSegment(body, staging, point))
+                continue;
+            stagingPoints.push_back(staging);
+            standingPoints.push_back(point);
+            break;
+        }
     }
     // These are alternatives for one food target, not independent jobs. Search
     // their shared movement graph once instead of retrying it for every offset.
     size_t chosen = 0;
     const auto terrain = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
     { return terrainClear(creature, from, to); };
-    if(!RoomObjectPath::routeToAny(start, stagingPoints, body, 0, 0,
+    if(!RoomObjectPath::routeToAnyAligned(start, stagingPoints, body, 0, 0,
         map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, path, chosen))
-        return false;
+    {
+        auto transit = body;
+        if(stagingPoints.empty() || !removeLowStepObstacles(creature, transit) ||
+            !RoomObjectPath::routeToAnyAligned(start, stagingPoints, transit, 0, 0,
+                map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, path, chosen))
+            return false;
+    }
     path.push_back(standingPoints[chosen]);
     return true;
 }
@@ -439,11 +460,7 @@ bool RoomObjectNavigation::blocked(Creature& creature, const std::vector<Ogre::V
     auto obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + 0.425f, interaction) :
         bodyObstacles(creature, interaction);
     if(!includeWalkDistortion)
-        obstacles.erase(std::remove_if(obstacles.begin(), obstacles.end(), [&](RoomObjectPath::Obstacle obstacle)
-        {
-            return RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
-                1.0f + 0.02f * creature.getLevel(), creature.getPosition().z) > 0.0f;
-        }), obstacles.end());
+        removeLowStepObstacles(creature, obstacles);
     Ogre::Vector2 previous(creature.getPosition().x, creature.getPosition().y);
     bool first = true;
     for(const auto& point : path)
