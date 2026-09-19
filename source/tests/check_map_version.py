@@ -51,9 +51,9 @@ bool list(std::stringstream& levelFile) { std::string nextParam; LIST return tru
 int main(int argc,char** argv) {
  int checks=0,failures=0;
  auto check=[&](bool result,const std::string& label){++checks;if(!result){++failures;std::cerr<<"FAIL "<<label<<"\n";}};
- for(const auto& version:{ODApplication::VERSIONSTRING,std::string("OpenDungeons_Version:0.7.1"),
+ for(const auto& version:{ODApplication::VERSIONSTRING,std::string("OpenDungeons_Version:0.7.1"),std::string("OpenDungeons_Version:0.7.2"),
      std::string("OpenDungeons_Version:0.6.0"),std::string("OpenDungeons_Version:99.0.0"),std::string("invalid")}) {
-  const bool supported=version==ODApplication::VERSIONSTRING || version=="OpenDungeons_Version:0.7.1";
+  const bool supported=version==ODApplication::VERSIONSTRING || version=="OpenDungeons_Version:0.7.1" || version=="OpenDungeons_Version:0.7.2";
   for(bool validInfo:{false,true}) {
    std::stringstream input(version+(validInfo?"\n[Info]\n":"\n[Broken]\n"));
    check(load(input)==(supported && validInfo),"loader: "+version);

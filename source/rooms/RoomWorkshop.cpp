@@ -20,6 +20,9 @@
 #include "game/SkillType.h"
 
 #include "entities/BuildingObject.h"
+#include "gamemap/RoomObjectNavigation.h"
+#include "creatureaction/CreatureActionWalkToTile.h"
+#include "utils/MakeUnique.h"
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -455,16 +458,16 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
         OD_LOG_ERR("unexpected null building object");
         return false;
     }
-    // We consider that the creature is in the good place if it is in the expected tile and not moving
-    Tile* expectedDest = getGameMap()->getTile(Helper::round(wantedX), Helper::round(wantedY));
-    if(expectedDest == nullptr)
+    std::vector<Ogre::Vector2> approach;
+    if(!RoomObjectNavigation::workApproach(creature, *ro, {wantedX, wantedY}, {-1, 1}, approach))
     {
-        OD_LOG_ERR("room=" + getName() + ", creature=" + creature.getName());
+        creature.popAction();
         return false;
     }
-    if(tileCreature != expectedDest)
+    if(!approach.empty())
     {
-        creature.setDestination(expectedDest);
+        creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false);
+        creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
         return false;
     }
 

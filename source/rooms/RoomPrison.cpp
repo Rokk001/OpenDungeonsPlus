@@ -486,6 +486,9 @@ void RoomPrison::addFencingObject(Tile* targetTile, BuildingObject* obj, GameMap
     mFencingObjects[targetTile] = obj;
     obj->addToGameMap(gameMap);
     obj->setPosition(obj->getPosition(),gameMap);
+    if(getIsOnServerMap())
+        for(Creature* creature : gameMap->getCreatures())
+            creature->checkWalkPathValid(true);
 }
 
 
