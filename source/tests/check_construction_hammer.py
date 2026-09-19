@@ -12,6 +12,8 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--compile-only', action='store_true')
+parser.add_argument('--pickaxe-audit', action='store_true')
+parser.add_argument('--idle-audit', action='store_true')
 args = parser.parse_args()
 source = (root / 'source/render/RenderManager.cpp').read_text(encoding='utf-8')
 controller = (root / 'source/modes/GameMode.cpp').read_text(encoding='utf-8')
@@ -35,10 +37,16 @@ helpers = '\n'.join(function(name) for name in [
     'void createKeeperHandBuildAnimation(', 'Ogre::Vector3 getHammerStrikePoint(',
     'void alignKeeperHandPointer(',
     'void addPickaxePrism('])
+helpers += '\n' + source[source.index('const char* const IDLE_HAND_ANIMATIONS[]'):source.index('void addPickaxePrism(')]
 methods = '\n'.join(function(name) for name in [
     'void RenderManager::rrSetHandPose(', 'void RenderManager::rrPlayDigAnimation(',
     'void RenderManager::rrPlayBuildAnimation(',
+    'bool RenderManager::rrIsIdleHandAnimationPlaying(', 'bool RenderManager::rrPlayIdleHandAnimation(',
+    'void RenderManager::rrCancelIdleHandAnimation(',
     'Ogre::AnimationState* RenderManager::setEntityAnimation('])
+hand_update = function('void RenderManager::updateRenderAnimations(').split('    for(auto it = mRoomConstructionEffects')[0]
+hand_update = hand_update.replace('void RenderManager::updateRenderAnimations(', 'void RenderManager::updateHand(') + '}\n'
+methods += '\n' + hand_update
 start = source.index('    mHandPickaxe = mSceneManager->createManualObject(')
 end = source.index('    mHandHammer->setVisible(false);', start) + len('    mHandHammer->setVisible(false);')
 factory = source[start:end]
@@ -54,6 +62,9 @@ probe = r'''
 #include <iostream>
 #define OD_LOG_ERR(message) ((void)0)
 const Ogre::uint8 OD_RENDER_QUEUE_ID_GUI = 101;
+namespace Random { unsigned choice=0; unsigned Uint(unsigned low,unsigned high) {
+    if(low!=0 || high!=1) throw std::runtime_error("idle random range"); return choice;
+} }
 HELPERS
 struct RenderManager {
     Ogre::SceneManager* mSceneManager = nullptr;
@@ -63,11 +74,16 @@ struct RenderManager {
     Ogre::AnimationState* mHandAnimationState = nullptr;
     Ogre::ManualObject* mHandPickaxe = nullptr;
     Ogre::Entity* mHandHammer = nullptr;
+    Ogre::ManualObject* mHandIdleProp = nullptr;
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     std::string mHandPose = "Idle";
     void rrSetHandPose(bool, bool, bool = false);
     void rrPlayDigAnimation();
     void rrPlayBuildAnimation();
+    bool rrIsIdleHandAnimationPlaying() const;
+    bool rrPlayIdleHandAnimation();
+    void rrCancelIdleHandAnimation();
+    void updateHand(float);
     Ogre::AnimationState* setEntityAnimation(Ogre::Entity*, const std::string&, bool);
     void createTools(Ogre::Entity* keeperHandEnt) { FACTORY }
 };
@@ -128,6 +144,10 @@ int main() {
         r.mHeldCreatureGrip = r.mSceneManager->createSceneNode();
         createKeeperHandPoses(hand); createKeeperHandDigAnimation(hand);
         createKeeperHandBuildAnimation(hand); r.createTools(hand);
+        createKeeperHandIdleAnimations(hand);
+        r.mHandIdleProp=r.mSceneManager->createManualObject("IdleProp");
+        r.mHandIdleProp->setDynamic(true);r.mHandIdleProp->setLightMask(0);
+        node->attachObject(r.mHandIdleProp);r.mHandIdleProp->setVisible(false);
         auto* camera = r.mSceneManager->createCamera("Camera");
         auto* cameraNode = r.mSceneManager->getRootSceneNode()->createChildSceneNode();
         cameraNode->attachObject(camera); cameraNode->setPosition(0, -.02f, .45f);
@@ -219,6 +239,72 @@ int main() {
         check(!r.mHandHammer->isVisible(), "hidden hand hides hammer");
         r.mHandKeeperHandVisibility = 0; r.rrSetHandPose(false, false, true);
         check(r.mHandHammer->isVisible(), "reshown hand restores hammer");
+        node->setScale(1,1,1);
+        for(unsigned choice:{0u,1u}) {
+            Random::choice=choice;r.rrSetHandPose(false,false);
+            // Complete the ordinary pointing transition before starting an idle effect.
+            r.mHandAnimationState=r.setEntityAnimation(hand,"Idle",true);
+            check(r.rrPlayIdleHandAnimation(),"idle effect starts on free hand");
+            check(r.rrIsIdleHandAnimationPlaying()&&!r.mHandAnimationState->getLoop(),"idle effect is a one-shot");
+            check(r.mHandAnimationState->getAnimationName()==IDLE_HAND_ANIMATIONS[choice],"random choice selects either authored effect");
+            check(!r.rrPlayIdleHandAnimation(),"active effect is not restarted");
+            auto* idle=r.mHandAnimationState;
+            Ogre::Vector3 firstWrist;
+            for(unsigned i=0;i<=12;++i) {
+                idle->setTimePosition(idle->getLength()*i/12.f);
+                for(int settle=0;settle<2;++settle) {
+                    engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+                    alignKeeperHandPointer(hand,idle);updateKeeperHandIdleProp(hand,idle,r.mHandIdleProp);
+                    node->_update(true,true);window->update();engine._fireFrameEnded();
+                }
+                check(!r.mHandHammer->isVisible()&&!r.mHandPickaxe->isVisible(),"idle effect hides normal tools");
+                check(r.mHandIdleProp->isVisible()==(i>0&&i<12),"props enter and leave with the effect");
+                if(i>0&&i<12) check(r.mHandIdleProp->getBoundingBox().getSize().length()<.3f,"prop remains hand-sized");
+                const auto wristAxis=hand->getSkeleton()->getBone("Hand1")->_getDerivedOrientation()*Ogre::Vector3::UNIT_Y;
+                if(i==0) firstWrist=wristAxis;
+                if(i==6) check((wristAxis-firstWrist).length()>.5f,"idle visibly turns the wrist rather than only showing a prop");
+                if(i==12) check((wristAxis-firstWrist).length()<.0001f,"idle ends at the original hand pose");
+                if(choice==1&&i>0&&i<12) {
+                    const auto* finger=hand->getSkeleton()->getBone("Index3");
+                    const auto anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                    const auto* data=r.mHandIdleProp->getSection(0)->getRenderOperation()->vertexData;
+                    const auto* element=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+                    auto buffer=data->vertexBufferBinding->getBuffer(element->getSource());
+                    Ogre::HardwareBufferLockGuard lock(buffer,Ogre::HardwareBuffer::HBL_READ_ONLY);
+                    auto* bytes=static_cast<unsigned char*>(lock.pData);float* a;float* b;
+                    element->baseVertexPointerToElement(bytes,&a);element->baseVertexPointerToElement(bytes+buffer->getVertexSize(),&b);
+                    check(((Ogre::Vector3(a)+Ogre::Vector3(b))*.5f-anchor).length()<.00001f,"yo-yo string stays attached to animated fingertip");
+                }
+                if(IDLE_AUDIT) window->writeContentsToFile("idle-"+std::to_string(choice)+"-"+std::to_string(i)+".png");
+            }
+            r.rrCancelIdleHandAnimation();
+            check(!r.rrIsIdleHandAnimationPlaying()&&!r.mHandIdleProp->isVisible(),"cancellation immediately hides prop");
+            check(r.mHandAnimationState->getAnimationName()=="Idle","cancellation restores current context");
+            r.rrPlayIdleHandAnimation();r.rrSetHandPose(false,false,true);
+            check(r.mHandAnimationState->getAnimationName()=="Build"&&r.mHandHammer->isVisible(),"new construction pose preempts idle effect");
+            check(r.rrPlayIdleHandAnimation(),"an untouched construction selection also permits idle feedback");
+            r.rrSetHandPose(false,false,true);
+            check(r.rrIsIdleHandAnimationPlaying(),"unchanged contextual pose does not cancel idle");
+            r.updateHand(5);
+            check(r.mHandAnimationState->getAnimationName()=="Build"&&r.mHandHammer->isVisible(),"natural completion restores selected tool");
+            r.rrSetHandPose(false,false);r.rrPlayIdleHandAnimation();r.updateHand(5);
+            check(!r.rrIsIdleHandAnimationPlaying()&&!r.mHandIdleProp->isVisible(),"production update returns naturally to the base pose without a prop");
+            r.mHandKeeperHandVisibility=1;
+            check(!r.rrPlayIdleHandAnimation(),"hidden hand cannot start an idle effect");
+            r.mHandKeeperHandVisibility=0;
+            for(const char* action:{"Pickup","Drop","Slap","DigSwing","BuildSwing"}) {
+                r.mHandAnimationState=r.setEntityAnimation(hand,action,false);
+                check(!r.rrPlayIdleHandAnimation(),"idle cannot interrupt an action animation");
+                r.rrCancelIdleHandAnimation();
+                check(r.mHandAnimationState->getAnimationName()==action,"idle cancellation leaves action animations unchanged");
+            }
+            r.updateHand(5);r.mHeldCreatureDisplayEnabled=true;
+            auto* held=r.mHeldCreatureGrip->createChildSceneNode();r.rrSetHandPose(false,false);
+            check(r.mHandPose=="Hold"&&!r.rrPlayIdleHandAnimation(),"held creature prevents idle effects");
+            r.mHeldCreatureGrip->removeChild(held);r.mSceneManager->destroySceneNode(held);
+            r.mHeldCreatureDisplayEnabled=false;
+        }
+        r.mSceneManager->destroyManualObject(r.mHandIdleProp);
         hand->detachAllObjectsFromBone();
         r.mSceneManager->destroyEntity(r.mHandHammer);
         r.mSceneManager->destroyManualObject(r.mHandPickaxe);
@@ -230,6 +316,8 @@ int main() {
 }
 '''
 probe = probe.replace('HELPERS', helpers).replace('FACTORY', factory).replace('METHODS', methods).replace('BUILDING', building)
+probe = probe.replace('PICKAXE_AUDIT', 'true' if args.pickaxe_audit else 'false')
+probe = probe.replace('IDLE_AUDIT', 'true' if args.idle_audit else 'false')
 out = root / 'build/construction-hammer-check'
 out.mkdir(parents=True, exist_ok=True)
 cpp = out / 'check.cpp'
