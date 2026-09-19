@@ -1964,4 +1964,5 @@ void ConfigManager::loadDefaultValuesForUserConfig(void)
     setGameValue("MinimapType",	"MiniMapDrawn");
     setGameValue("Nickname", "Player");
     setGameValue("UI Scale", "100");
+    setGameValue("Blood Effects", "Yes");
 }

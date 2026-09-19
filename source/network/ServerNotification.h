@@ -111,7 +111,10 @@ enum class ServerNotificationType
     creaturePanel,
 
     // Presentation-only burst for newly built gameplay room tiles.
-    roomConstructionEffect
+    roomConstructionEffect,
+
+    // Presentation-only creature melee impact.
+    creatureCombatImpact
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

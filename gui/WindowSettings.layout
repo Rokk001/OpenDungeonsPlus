@@ -213,6 +213,11 @@
                         <Property name="MaximumValue" value="250" />
                         <Property name="ClickStepSize" value="5" />
                     </Window>
+                    <Window type="OD/Checkbox" name="BloodEffectsCheckbox" >
+                        <Property name="Area" value="{{0,32},{0,250},{1,-48},{0,276}}" />
+                        <Property name="Text" value="Blood effects" />
+                        <Property name="TooltipText" value="Show subtle blood effects when creatures are hit." />
+                    </Window>
                 </Window>
             </Window>
         </Window>
