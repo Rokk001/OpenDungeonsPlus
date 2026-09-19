@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+## Alt-toggle correction: staged September 19 executable
+
+Release compilation succeeds in `build/review-followups`: September 19 19:36:22,
+4,855,296 bytes; the production input/lifetime fixture passes 128 checks.
+The user explicitly clarified press-to-toggle rather than hold-to-show.
+The game was running at deployment, so the normal executable was not replaced;
+close the game before copying and preparing this staged executable for retest.
+No game was launched or stopped by the agent, and no version or protocol changed.
+
 ## Food-lane search follow-up: normal September 19 executable
 
 The normal executable contains the food-lane search correction, construction
