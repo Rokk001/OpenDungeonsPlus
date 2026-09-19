@@ -1,6 +1,54 @@
 # Navigation around room objects
 
+## Screenshot follow-up: food routes through bed lanes
+
+The September 14 and 19 captures show the accepted corner beds and their clear
+strips; still images alone do not establish the creatures' complete routes.
+Tracing the food action identifies a concrete mismatch: ordinary movement tries
+body-aligned grids, while food approach searches only the root-aligned grid.
+An isolated level-two Rat fixture with the actual tall-bed placement reproduces
+four failures: ordinary movement reaches both ends on both axes, but food
+approach cannot cross the same room. Instrumentation also finds no staging
+points: the fixed long approach crosses the beds or the corridor walls even
+though the final standing position is clear. Shorten only obstructed final
+approaches, checking the entire segment, and reuse the existing aligned search
+for the food action's shared destination set, retaining final facing/clearance.
+Do not change bed sizes, creature sizes or tall-bed collision permissions.
+
+The corrected native fixture runs 7,315 checks, with the four new failures gone
+and the separate 140 packed large-body failures still open. Windows intermittently
+blocks other generated diagnostic binaries with error 4551, including an approved
+retry; no security settings were changed. This result is not gameplay acceptance
+or completion of the full navigation task. No bed/body sizing, save/network
+format or release version changes are required; the existing README navigation
+description remains accurate. The room-layout/benchmark regression passes 6,751
+checks, path geometry 7,270; dense-room 20-route timing is 289 ms. The separate
+Release build succeeds, including the preserved in-progress hand changes;
+`build/review-followups/opendungeons-plus.exe` is September 19 17:13:13,
+SHA-256 `8250829F818901B998794D84BB81003028B1CD48C051C1CEBCFC774DC050122C`.
+It has not been deployed to the normal game directory or gameplay-tested.
+
 ## Visible low-nest traversal
+
+The follow-up call-path audit finds that `foodApproach` still searches only its
+ground-body graph, whereas regular movement can cross a low nest and server
+validation accepts it. A worker separated from food by packed low nests can
+therefore fail before any walking path is submitted. Retain the existing safe
+food/staging endpoints and preferred ground search; if that search fails, reuse
+the same low-step eligibility for a fallback transit search. Higher beds and
+endpoint clearance must not be relaxed. Reproduce this with both corridor
+directions and retain a high-bed negative control before implementation.
+
+The local follow-up implements that fallback and adds both-direction low-nest
+cases with a high-bed negative control. On September 19, the existing isolated
+`--room-layouts --benchmark` probe compiled, but Windows refused to launch its
+temporary executable with WinError 4551. The approved execution retry failed
+identically; Code Integrity events 3033/3077 identify a signing-policy rejection.
+No test assertions ran in either attempt, and no security policy was changed.
+`git diff --check` passes for the scoped implementation, test and note. The
+existing September 14 00:54:09 Release binary and build/runtime logs are present;
+its identity is recorded in BUILDING.md. This is not renewed runtime validation
+or closure of the remaining packed-room failures. The follow-up is uncommitted.
 
 The remaining level-30 worker cannot fit its measured feet in a 30% lane even
 beside the lowest nest. Implement the authorized crossing using the existing XY

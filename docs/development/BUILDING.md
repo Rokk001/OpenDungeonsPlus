@@ -1,5 +1,35 @@
 # Configuring and compiling on Windows
 
+## Food approaches through bed lanes: staged September 19 build
+
+The separate `build/review-followups/opendungeons-plus.exe` compiles successfully:
+September 19 17:13:13, 4,853,760 bytes, SHA-256
+`8250829F818901B998794D84BB81003028B1CD48C051C1CEBCFC774DC050122C`.
+It includes the preserved in-progress hand changes and the food approach fix;
+it is not yet staged into the normal runtime or gameplay-tested. The normal
+executable below is unchanged. The four reproduced food-lane failures are gone;
+room/layout regression passes 6,751 and path geometry 7,270 checks. The separate
+140 packed large-body failures remain open; see [navigation](ROOM-OBJECT-NAVIGATION.md).
+
+## Food-route low-nest fallback: current binary and verification limit
+
+Inspection on September 19 identifies the existing normal executable
+`build/windows/opendungeons-plus.exe` as the September 14 00:54:09 build,
+4,850,688 bytes, SHA-256
+`DA857D8D84206FB303A20FC2AF95CBF9ACE322C14052CBDCA326A3C6A416B01E`.
+The existing `bed-lanes-normal-build.log` records compilation of
+`RoomObjectNavigation.cpp` and linking of this executable; the matching runtime
+log records successful preparation. This supersedes the 00:40:50 binary below.
+
+The uncommitted follow-up lets a food route use the existing low-nest crossing
+permission when ground transit fails, without relaxing its interaction endpoint
+or higher-bed collision. A September 19 rerun of the isolated room-layout and
+benchmark test compiled, but Windows Code Integrity blocked its executable
+before any assertions ran (WinError 4551, events 3033/3077). An approved execution
+retry produced the same rejection. No policy was changed or game launched;
+renewed test execution, the remaining packed-room failures and user gameplay
+acceptance remain unresolved. See [navigation evidence](ROOM-OBJECT-NAVIGATION.md).
+
 ## Visible traversal over low nests
 
 The normal `build/windows/opendungeons-plus.exe` is rebuilt and prepared:
