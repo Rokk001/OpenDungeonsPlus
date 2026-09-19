@@ -1,5 +1,14 @@
 # Configuring and compiling on Windows
 
+## Dormitory floor resources: September 19 follow-up
+
+The normal runtime's existing source junctions now provide corrected carpet and
+border materials for all dormitory layouts. The actual Ogre mesh/material/shader
+fixture passes 96 checks over sixteen neighbour masks, with full-pipeline
+previews; see [floor continuity](DORMITORY-FLOOR-BORDER.md). Restart the game to
+reload the resources; no C++ rebuild is needed, and the executable metadata
+below is unchanged. User visual acceptance remains pending.
+
 ## Construction strike and Alt toggle: normal September 19 executable
 
 The normal executable is September 19 20:58:12, 4,859,904 bytes, SHA-256

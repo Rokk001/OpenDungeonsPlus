@@ -76,6 +76,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Navigation around room objects](ROOM-OBJECT-NAVIGATION.md): rotated furniture
   footprints, height-aware low-nest clearance and visible crossing, body-sized
   food/work approaches and efficient failed-route searches.
+- [Dormitory floor continuity](DORMITORY-FLOOR-BORDER.md): complete carpet and
+  border variants for isolated, end and narrow passage tiles.
 - [Creature sleep transitions](CREATURE-SLEEP-ANIMATIONS.md): authored sleep
   entries or smooth skeletal settling, sustained rest and lifecycle cleanup.
 - [Trap production queue](TRAP-PRODUCTION-QUEUE.md): owner-only priority and
