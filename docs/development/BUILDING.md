@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+## Hold-Alt indicators: normal September 19 executable
+
+The normal executable includes hold-Alt health/needs visibility and all earlier
+fork work: September 19 18:07:39, 4,854,272 bytes, SHA-256
+`CD65DC8235ACF5E33C44140B34E2994B8D1F227954871677A01FE3963ED24103`.
+Release compilation, normal runtime preparation, 70 production lifetime/modifier
+checks (both input backends), 32 resource checks and eight compiler-flag checks
+pass. The game was closed during deployment and was not launched by the agent;
+user gameplay acceptance is pending. Incremental work continues in the staged
+build tree; clean-build the normal tree before reusing its older object files.
+
 ## Pickaxe alignment: normal September 19 executable
 
 Release compilation, normal runtime preparation and 32 resource checks pass.

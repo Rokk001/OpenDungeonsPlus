@@ -343,6 +343,11 @@ void MovableTextOverlay::displayOverlay(uint32_t childOverlayId, Ogre::Real time
     childOverlay.displayOverlay(time);
 }
 
+bool MovableTextOverlay::isDisplayed(uint32_t childOverlayId)
+{
+    return childOverlayId < mChildOverlays.size() && mChildOverlays[childOverlayId].isDisplayed();
+}
+
 void MovableTextOverlay::update(Ogre::Real timeSincelastFrame)
 {
     bool displayed = false;
