@@ -1,5 +1,38 @@
 # Construction hammer
 
+## Left-facing striking surface, September 19
+
+The user rejected the forward-pitch result: the hammer must strike left with its
+flat head surface, not move into depth against its side. The previous measured
+impact normal (.235980, -.406880, -.882475) confirms that it did not face left.
+The rest attachment normal is (.235980, .489505, -.839463); its shaft direction
+is (.290404, .788860, .541632), reconstructed from the previously measured rig
+bind rotations and the production attachment (also reproducing the measured
+face normal). Rolling only the head 93 degrees around its own shaft makes the
+face coplanar with the screen. A 20-degree leftward wrist strike then points the
+flat face left, approximately (-1, .004, 0), without moving the shaft in the grip.
+
+Replace the depth/vertical approach with a right-to-left head travel and retain
+the exact pointer contact at impact, tool size, timing and all build input.
+Verify both face direction and agreement with its incoming motion, rather than
+testing a generic wrist rotation. This supersedes the preceding forward-pitch
+interpretation below. Work remains on the construction branch from `4c5696ec`.
+The actual hand/asset fixture passes 434 checks, including flat-face direction,
+agreement with incoming leftward motion, unchanged shaft alignment and exact
+pointer contact at 80/100/120 percent scale. The measured impact normal is
+(-.999993, .00367308, -.00000669). Windup and impact renders were inspected.
+Windows initially blocked the new diagnostic executable; the same unchanged
+binary passed on retry without security-policy changes.
+
+Release compilation and 32 normal-runtime resource checks pass. The staged
+executable is September 19 21:21:00, 4,874,752 bytes, SHA-256
+`0FACCAAE930C88DDE6F9C7662B850CAD74FC7AE05B383C7696A5E741630E1288`.
+Deployment is pending because the user's game is running; the normal executable
+still has the preceding `F210CC58...` hash and rejected forward-pitch motion.
+No game was launched or stopped. User visual acceptance remains pending after
+deployment. README still describes the same construction strike; no version,
+save/network or input change is required.
+
 ## Strike-direction follow-up, September 19
 
 The user reports a backward strike. The existing animation rotates around the

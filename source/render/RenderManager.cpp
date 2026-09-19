@@ -234,12 +234,9 @@ void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* anim
         if(animation->getAnimationName() == "BuildSwing")
         {
             const float progress = animation->getTimePosition() / animation->getLength();
-            // Draw the head up and back, then strike forward onto the pointer.
+            // Draw the flat head back to the right, then strike left onto the pointer.
             if(progress < 0.5f)
-            {
-                offset.y += 0.045f * std::sin(progress * Ogre::Math::TWO_PI);
-                offset.z += 0.045f * std::sin(progress * Ogre::Math::TWO_PI);
-            }
+                offset.x += 0.045f * std::sin(progress * Ogre::Math::TWO_PI);
         }
         model->setPosition(offset);
         return;
@@ -300,7 +297,7 @@ void createKeeperHandBuildAnimation(Ogre::Entity* hand)
         auto* swing = skeleton->createAnimation("BuildSwing", duration);
         const auto* wrist = skeleton->getBone("Hand1");
         const auto basis = hand->getParentSceneNode()->getOrientation() * wrist->_getDerivedOrientation();
-        const float angles[] = {0, 20, -55, -20, 0};
+        const float angles[] = {0, -30, 20, 10, 0};
         for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
         {
             if(!grip->hasNodeTrack(b))
@@ -314,7 +311,7 @@ void createKeeperHandBuildAnimation(Ogre::Entity* hand)
                 frame->setTranslate(rest.getTranslate());
                 frame->setScale(rest.getScale());
                 frame->setRotation(b == wrist->getHandle() ? basis.Inverse() *
-                    Ogre::Quaternion(Ogre::Degree(angles[i]), Ogre::Vector3::UNIT_X) * basis * rest.getRotation() :
+                    Ogre::Quaternion(Ogre::Degree(angles[i]), Ogre::Vector3::UNIT_Z) * basis * rest.getRotation() :
                     rest.getRotation());
             }
         }
@@ -1340,11 +1337,11 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     mHandHammer->setCastShadows(false);
     mHandHammer->setLightMask(0);
     mHandHammer->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
-    // The authored hammer shaft runs along Z; align it with the existing grip.
+    // Keep the Z shaft in the grip; roll the flat striking face into the leftward swing plane.
     Ogre::TagPoint* hammerGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandHammer,
         Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
         Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X) *
-        Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
+        Ogre::Quaternion(Ogre::Degree(183.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
     hammerGrip->setScale(0.2f, 0.2f, 0.2f);
     mHandHammer->setVisible(false);
     mHandKeeperNode->setScale(Ogre::Vector3::UNIT_SCALE * KEEPER_HAND_POS_Z);
