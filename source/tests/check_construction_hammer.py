@@ -199,6 +199,13 @@ int main() {
             check(std::abs((grip->getOrientation()*Ogre::Vector3::UNIT_X).dotProduct(original*Ogre::Vector3::UNIT_Z))>.6f,
                 "blade turns into depth instead of remaining broadside");
             check(grip->getScale().positionEquals(Ogre::Vector3(.6f)), "alignment does not shrink the tool");
+            r.rrSetHandPose(false,true,false);
+            engine._fireFrameStarted();engine._fireFrameRenderingQueued();hand->_updateAnimation();node->_update(true,true);
+            const auto transform=grip->_getFullTransform();
+            const auto tips=transform*Ogre::Vector3(.085f,.043f,0)-transform*Ogre::Vector3(-.085f,.043f,0);
+            check(std::abs(tips.x)<.076f && std::abs(tips.z)>.065f,"gripping pose reduces blade width and increases depth");
+            check(tips.y/tips.x>.22f && tips.y/tips.x<.31f,"blade tips slope upward-right in the actual gripping pose");
+            engine._fireFrameEnded();
         }
         for(const std::string action : {"Pickup", "Drop", "Slap"}) {
             r.mHandAnimationState = r.setEntityAnimation(hand, action, false);
@@ -211,13 +218,17 @@ int main() {
             node->setScale(1,1,1); r.rrSetHandPose(false,true,false);
             auto* grip = r.mHandPickaxe->getParentNode();
             const auto original = grip->getOrientation();
-            for(float angle:{0.f,30.f,45.f,60.f,90.f,120.f,-30.f,-60.f}) {
-                grip->setOrientation(original * Ogre::Quaternion(Ogre::Degree(angle), Ogre::Vector3::UNIT_Y));
+            for(float angle:{0.f,30.f,45.f,55.f,60.f,75.f,90.f,120.f,-30.f,-60.f}) {
+                grip->setOrientation(Ogre::Quaternion(Ogre::Degree(90),Ogre::Vector3::UNIT_Z) *
+                    Ogre::Quaternion(Ogre::Degree(angle), Ogre::Vector3::UNIT_Y));
                 for(int frame=0;frame<2;++frame) {
                     engine._fireFrameStarted(); engine._fireFrameRenderingQueued(); hand->_updateAnimation(); node->_update(true,true);
                     window->update(); engine._fireFrameEnded();
                 }
                 window->writeContentsToFile("pickaxe-audit-"+std::to_string(int(angle))+".png");
+                const auto transform=grip->_getFullTransform();
+                const auto delta=transform*Ogre::Vector3(.085f,.043f,0)-transform*Ogre::Vector3(-.085f,.043f,0);
+                std::cout<<"PICKAXE_ANGLE="<<angle<<" TIP_DELTA="<<delta<<'\n';
             }
             grip->setOrientation(original);
         }
