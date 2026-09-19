@@ -16,7 +16,7 @@ endif()
 # Project version
 set(OD_MAJOR_VERSION 0)
 set(OD_MINOR_VERSION 7)
-set(OD_PATCH_LEVEL   2)
+set(OD_PATCH_LEVEL   3)
 
 # Set the project version ready to be used in the code.
 if(NOT MSVC)
@@ -353,6 +353,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/gamemap/DraggableTileContainer.cpp
     ${SRC}/gamemap/GameMap.cpp
+    ${SRC}/gamemap/RoomObjectNavigation.cpp
     ${SRC}/gamemap/MapHandler.cpp
     ${SRC}/gamemap/MiniMap.cpp
     ${SRC}/gamemap/MiniMapDrawn.cpp
