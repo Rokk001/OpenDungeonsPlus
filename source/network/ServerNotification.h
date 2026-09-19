@@ -114,7 +114,10 @@ enum class ServerNotificationType
     roomConstructionEffect,
 
     // Presentation-only creature melee impact.
-    creatureCombatImpact
+    creatureCombatImpact,
+
+    // Presentation-only consumption of an authoritative chicken.
+    creatureChickenFeeding
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
