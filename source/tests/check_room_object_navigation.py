@@ -89,6 +89,7 @@ struct GameMap {
  Tile* getTile(int x,int y){return x>=0&&x<sizeX&&y>=0&&y<sizeY?&tiles[y*sizeX+x]:nullptr;}
  const auto& getRooms()const{return rooms;}int getMapSizeX()const{return sizeX;}int getMapSizeY()const{return sizeY;}
  std::list<Tile*> path(Creature*,Tile*);
+ bool pathExists(Creature* creature,Tile*,Tile* target){return !path(creature,target).empty();}
 };
 struct Creature {
  GameMap* map;Ogre::Vector3 pos{1,5,0};Tile* home=nullptr;std::set<CreatureActionType> actions;int level=1;

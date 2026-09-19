@@ -1,5 +1,22 @@
 # Configuring and compiling on Windows
 
+## Food-lane search follow-up: normal September 19 executable
+
+The normal executable contains the food-lane search correction, construction
+hammer, pickaxe alignment and hold-Alt indicators: September 19 18:59:47,
+4,855,296 bytes, SHA-256
+`FDC2F21F750614AC4590603A164A54FF31C63E5809B9D5C85A0B62285AC25BB6`.
+Release compilation, runtime preparation and 32 resource checks pass. Navigation
+passes 6,751 room/layout, 7,277 path and 5,205 saved-food checks; the full packed
+suite still has 140 known large-body failures among 7,315 checks. Saved-food
+search reaches 336/382 targets, worst 78.594 ms, total 5,286.78 ms; aggregate
+cost remains above the earlier 297-target baseline, so gameplay responsiveness
+is not claimed fixed. See [navigation evidence](ROOM-OBJECT-NAVIGATION.md).
+The game was closed during deployment and was not launched by the agent.
+User gameplay acceptance and the large-body passage decision remain pending.
+Continue incremental builds in `build/review-followups`, or clean-build the
+normal tree before reusing its older object files.
+
 ## Hold-Alt indicators: normal September 19 executable
 
 The normal executable includes hold-Alt health/needs visibility and all earlier

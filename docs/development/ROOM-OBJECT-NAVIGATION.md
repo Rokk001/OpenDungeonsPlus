@@ -2,6 +2,30 @@
 
 ## Screenshot follow-up: food routes through bed lanes
 
+The September 14 16:08:44 save plus the current placed-object log reproduces a
+performance regression in the initial aligned food search: 382 calls take
+17,560.5 ms, worst 146.053 ms, versus 1,801.87 ms / 9.933 ms before this follow-up
+on the same fixture. Reachability improves from 297 to 336 but does not excuse
+the repeated multi-goal search cost. Once the shared search chooses an endpoint,
+compare aligned alternatives to that endpoint with the existing single-goal A*
+potential; retain shared-goal fallback only when the first graph cannot connect.
+Improving single-endpoint searches are bounded by their distance ellipse, and
+grid state is allocated only for visited nodes. Food candidates also reuse the
+map's existing terrain-connectivity check, without changing door/flood-fill rules.
+The resulting saved fixture reaches the same 336/382 food targets in 5,286.78 ms,
+worst 78.594 ms; all 5,205 assertions pass, including the existing 100-ms per-call
+limit. This remains slower in aggregate than the less capable 297-target baseline;
+it is not a claim that whole-game responsiveness is fixed. Dense-room 20-route
+timing is 346 ms and the room/layout regression passes 6,751 checks. The fixture
+uses the saved terrain/beds and logged fixed furniture, not a full game session.
+
+Final path regression passes 7,277 checks; the full packed suite still reports
+140 known large-body failures in 7,315 checks. Release compilation and runtime
+preparation pass, and the September 19 18:59:47 executable is deployed to the
+normal game directory; see [current binary metadata](BUILDING.md). No game was
+launched. The earlier staged-build state below records the initial correction,
+not the current deployment. Gameplay acceptance remains with the user.
+
 The September 14 and 19 captures show the accepted corner beds and their clear
 strips; still images alone do not establish the creatures' complete routes.
 Tracing the food action identifies a concrete mismatch: ordinary movement tries
