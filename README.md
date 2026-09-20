@@ -120,6 +120,7 @@ The hand points at pickup targets and interface controls, and holds a pickaxe
 over diggable walls, which are outlined on hover.
 It holds a pointer-aligned hammer while placing rooms, traps or doors on the map;
 confirming an eligible build request plays a short hammer strike.
+The left striking end of either ready tool is the mouse pointer used to select tiles.
 After thirty seconds without input, the empty hand randomly checks a wristwatch
 or plays with a yo-yo; any input immediately returns it to the current action.
 Confirming or removing digging marks plays one short downward tool strike.

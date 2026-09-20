@@ -181,15 +181,22 @@ int main() {
         check((attachment->getOrientation()*Ogre::Vector3::UNIT_X).positionEquals(pickaxeOrientation*Ogre::Vector3::UNIT_X),
             "hammer head uses the pickaxe head angle");
         std::cout << "HAMMER_FACE=" << r.mHammerStrikePoint << '\n';
-        check(r.mHammerStrikePoint.x < 0 && r.mHammerStrikePoint.z > 0, "strike anchor belongs to the head rather than the shaft");
-        r.rrPlayBuildAnimation();
-        r.mHandAnimationState->setTimePosition(r.mHandAnimationState->getLength()*.5f);
+        engine._fireFrameStarted();engine._fireFrameRenderingQueued();hand->_updateAnimation();node->_update(true,true);
+        const auto hammerTransform=attachment->_getFullTransform();
+        std::cout<<"HAMMER_HEAD_X_DIRECTION="<<(hammerTransform*Ogre::Vector3::UNIT_X-hammerTransform*Ogre::Vector3::ZERO)<<'\n';
+        const auto pickaxeTransform=r.mHandPickaxe->getParentNode()->_getFullTransform();
+        std::cout<<"PICKAXE_HEAD_X_DIRECTION="<<(pickaxeTransform*Ogre::Vector3::UNIT_X-pickaxeTransform*Ogre::Vector3::ZERO)<<'\n';
+        engine._fireFrameEnded();
+        check(r.mHammerStrikePoint.x > 0 && r.mHammerStrikePoint.z > 0, "cursor anchor belongs to the positive-X striking face");
         engine._fireFrameStarted();engine._fireFrameRenderingQueued();
         alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
         node->_update(true,true);window->update();engine._fireFrameEnded();
-        const auto impactFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
-        std::cout<<"IMPACT_POINTER_ERROR="<<impactFace.length()<<'\n';
-        check(impactFace.length()<.00001f,"construction contact aligns with the selected pointer at impact");
+        const auto readyFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
+        std::cout<<"READY_POINTER_ERROR="<<readyFace.length()<<'\n';
+        check(readyFace.length()<.00001f,"left hammer face is the pointer while selecting a tile");
+        const auto rightFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*
+            (r.mHammerStrikePoint-Ogre::Vector3(.1f,0,0)));
+        check(rightFace.x>readyFace.x,"the cursor face is visibly left of the opposite hammer end");
         r.mHandAnimationState=r.setEntityAnimation(hand,"Build",true);
         for(float scale : {.8f, 1.f, 1.2f}) {
             node->setScale(scale, scale, scale);
@@ -200,7 +207,7 @@ int main() {
             alignKeeperHandPointer(hand, r.mHandAnimationState, r.mHandHammer, r.mHammerStrikePoint);
             node->_update(true,true);
             const auto face = node->_getFullTransform() * (attachment->_getFullLocalTransform() * r.mHammerStrikePoint);
-            check(face.length() > .01f, "resting hammer is raised away from the impact pointer at each scale");
+            check(face.length() < .00001f, "resting hammer left face is the pointer at each scale");
             window->update();
             window->writeContentsToFile("hammer-" + std::to_string(int(scale * 100)) + ".png");
             engine._fireFrameEnded();
@@ -228,9 +235,9 @@ int main() {
                     "entering and leaving the stroke does not move the hand origin");
                 check(node->getPosition().positionEquals(restOffset,.00001f),
                     "pointer alignment does not translate or cancel the digging wrist arc");
-                if(sample==0||sample==16)check(face.length()>.01f,"resting hammer remains above its contact position");
-                if(sample==8) {
-                    check(face.length()<.00001f,"hammer hits the selected pointer at the stroke midpoint");
+                if(sample==8)check(face.length()>.01f,"accepted strike moves freely away from the cursor without following compensation");
+                if(sample==0||sample==16) {
+                    check(face.length()<.00001f,"ready left hammer face and completed stroke align with the pointer");
                     const auto originalFov=camera->getFOVy();const auto originalAspect=camera->getAspectRatio();
                     for(float fov:{45.f,70.f})for(float aspect:{1.f,1.6f,16.f/9.f}) {
                         camera->setFOVy(Ogre::Degree(fov));camera->setAspectRatio(aspect);
@@ -238,7 +245,7 @@ int main() {
                             r.moveCursor(x,y);
                             const auto projected=camera->getProjectionMatrix()*(r.mHandKeeperNode->getPosition()+20.f*face);
                             check(std::abs((projected.x+1.f)*.5f-x)<.00001f&&std::abs((1.f-projected.y)*.5f-y)<.00001f,
-                                "projected hammer contact matches the selection ray across screen positions and camera settings");
+                                "projected ready hammer left face matches the selection ray across screen positions and camera settings");
                         }
                     }
                     camera->setFOVy(originalFov);camera->setAspectRatio(originalAspect);
@@ -284,12 +291,34 @@ int main() {
                 "blade turns into depth instead of remaining broadside");
             check(grip->getScale().positionEquals(Ogre::Vector3(.6f)), "alignment does not shrink the tool");
             r.rrSetHandPose(false,true,false);
-            engine._fireFrameStarted();engine._fireFrameRenderingQueued();hand->_updateAnimation();node->_update(true,true);
+            engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+            alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint,r.mHandPickaxe);
+            hand->_updateAnimation();node->_update(true,true);
             const auto transform=grip->_getFullTransform();
             const auto tips=transform*Ogre::Vector3(.085f,.043f,0)-transform*Ogre::Vector3(-.085f,.043f,0);
+            check((transform*Ogre::Vector3(.085f,.043f,0)).length()<.00001f,"left pickaxe tip is the selection pointer");
+            check(tips.x<0,"the selected pickaxe tip is the screen-left striking end");
             check(std::abs(tips.x)<.076f && std::abs(tips.z)>.065f,"gripping pose reduces blade width and increases depth");
             check(tips.y/tips.x>.22f && tips.y/tips.x<.31f,"blade tips slope upward-right in the actual gripping pose");
             engine._fireFrameEnded();
+            const auto originalFov=camera->getFOVy();const auto originalAspect=camera->getAspectRatio();
+            for(float scale:{.8f,1.f,1.2f}) {
+                node->setScale(scale,scale,scale);
+                alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint,r.mHandPickaxe);
+                node->_update(true,true);
+                const auto tip=grip->_getFullTransform()*Ogre::Vector3(.085f,.043f,0);
+                check(tip.length()<.00001f,"left pickaxe cursor remains aligned at each scale");
+                for(float fov:{45.f,70.f})for(float aspect:{1.f,1.6f,16.f/9.f}) {
+                    camera->setFOVy(Ogre::Degree(fov));camera->setAspectRatio(aspect);
+                    for(float x:{.1f,.5f,.9f})for(float y:{.1f,.5f,.9f}) {
+                        r.moveCursor(x,y);
+                        const auto projected=camera->getProjectionMatrix()*(r.mHandKeeperNode->getPosition()+20.f*tip);
+                        check(std::abs((projected.x+1.f)*.5f-x)<.00001f&&std::abs((1.f-projected.y)*.5f-y)<.00001f,
+                            "projected left pickaxe tip is the pointer across screen positions and camera settings");
+                    }
+                }
+            }
+            camera->setFOVy(originalFov);camera->setAspectRatio(originalAspect);node->setScale(1,1,1);
         }
         for(const std::string action : {"Pickup", "Drop", "Slap"}) {
             r.mHandAnimationState = r.setEntityAnimation(hand, action, false);
