@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Creature level progression](CREATURE-LEVEL-PROGRESSION.md): thirty-level
+  power curve, increasing XP requirements and retained advancement surplus.
+
 - [Creature progress indicators](CREATURE-PROGRESS-INDICATORS.md): experience,
   attack-recovery dial and backward-compatible network negotiation.
 
