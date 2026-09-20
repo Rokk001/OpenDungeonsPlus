@@ -1,5 +1,33 @@
 # Construction hammer
 
+## Selected-tile alignment after accepted movement, September 20
+
+The user accepts the new hammer angle and stroke, but reports that the selected
+tile is misplaced in screenshots `ODscreenshot_2026-09-20_080648_0.png` and
+`ODscreenshot_2026-09-20_080651_1.png`. Preserve that accepted animation.
+The mouse ray and overlay origin both use the GUI pointer; construction uses
+the ray-selected tile. The hammer's fixed offset, however, is sampled at its
+resting pose, so its striking face leaves the selection when the wrist swings.
+The preceding checks explicitly accepted this gap at the impact frame.
+
+Sample the fixed offset at the existing stroke's midpoint instead of rest,
+without changing the bone animation, tool attachment, cursor ray, tile selection
+or build validation. Extend the real-asset test to require pointer contact at
+impact, the same offset at rest and throughout the stroke, and preserved
+frame-by-frame equality with digging; include projected screen positions.
+
+The impact assertion fails before the fix with a 0.052632-unit pointer offset
+and passes afterwards with a 0.0000000021-unit residual. All 3,668 real-asset
+checks pass, including unchanged digging-relative bone motion, a constant offset
+throughout the stroke, no jump from the resting pose and projected contact across
+three scales, six camera configurations and nine pointer positions.
+Release compilation, runtime preparation and 32 resource checks pass; the normal
+executable now contains the fix (September 20 08:30:00 Europe/Warsaw, 4,872,192
+bytes, SHA-256 `D8EB7D35D25F54B44B102554652D3AD882164FFF12B75F918EDCBA0F9722C65E`).
+No game was started; user verification of the selected field remains pending.
+README already describes pointer-aligned construction; no version, input or
+save/network change is required.
+
 ## Reuse the digging strike, September 20
 
 The user rejected the custom swing and explicitly requires the same hand angle
