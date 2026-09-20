@@ -287,12 +287,15 @@ int main() {
             Random::choice=choice;r.rrSetHandPose(false,false);
             // Complete the ordinary pointing transition before starting an idle effect.
             r.mHandAnimationState=r.setEntityAnimation(hand,"Idle",true);
+            engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+            alignKeeperHandPointer(hand,r.mHandAnimationState);hand->_updateAnimation();
+            node->_update(true,true);window->update();engine._fireFrameEnded();
+            const auto emptyHandRotation=hand->getSkeleton()->getBone("Hand1")->_getDerivedOrientation();
             check(r.rrPlayIdleHandAnimation(),"idle effect starts on free hand");
             check(r.rrIsIdleHandAnimationPlaying()&&!r.mHandAnimationState->getLoop(),"idle effect is a one-shot");
             check(r.mHandAnimationState->getAnimationName()==IDLE_HAND_ANIMATIONS[choice],"random choice selects either authored effect");
             check(!r.rrPlayIdleHandAnimation(),"active effect is not restarted");
             auto* idle=r.mHandAnimationState;
-            Ogre::Vector3 firstWrist;
             for(unsigned i=0;i<=12;++i) {
                 idle->setTimePosition(idle->getLength()*i/12.f);
                 for(int settle=0;settle<2;++settle) {
@@ -303,10 +306,9 @@ int main() {
                 check(!r.mHandHammer->isVisible()&&!r.mHandPickaxe->isVisible(),"idle effect hides normal tools");
                 check(r.mHandIdleProp->isVisible()==(i>0&&i<12),"props enter and leave with the effect");
                 if(i>0&&i<12) check(r.mHandIdleProp->getBoundingBox().getSize().length()<.3f,"prop remains hand-sized");
-                const auto wristAxis=hand->getSkeleton()->getBone("Hand1")->_getDerivedOrientation()*Ogre::Vector3::UNIT_Y;
-                if(i==0) firstWrist=wristAxis;
-                if(i==6) check((wristAxis-firstWrist).length()>.5f,"idle visibly turns the wrist rather than only showing a prop");
-                if(i==12) check((wristAxis-firstWrist).length()<.0001f,"idle ends at the original hand pose");
+                const auto wristRotation=hand->getSkeleton()->getBone("Hand1")->_getDerivedOrientation();
+                check(std::abs(emptyHandRotation.Dot(wristRotation))>.99999f,
+                    "watch and yo-yo keep the empty hand angle for their entire duration");
                 if(choice==1&&i>0&&i<12) {
                     const auto* finger=hand->getSkeleton()->getBone("Index3");
                     const auto anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
@@ -319,6 +321,26 @@ int main() {
                     check(((Ogre::Vector3(a)+Ogre::Vector3(b))*.5f-anchor).length()<.00001f,"yo-yo string stays attached to animated fingertip");
                 }
                 if(IDLE_AUDIT) window->writeContentsToFile("idle-"+std::to_string(choice)+"-"+std::to_string(i)+".png");
+            }
+            if(choice==1) {
+                const auto sampleFinger=[&](float time) {
+                    idle->setTimePosition(time);
+                    for(int settle=0;settle<2;++settle) {
+                        engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+                        alignKeeperHandPointer(hand,idle);updateKeeperHandIdleProp(hand,idle,r.mHandIdleProp);
+                        node->_update(true,true);window->update();engine._fireFrameEnded();
+                    }
+                    const auto* finger=hand->getSkeleton()->getBone("Index3");
+                    return finger->_getDerivedPosition()+finger->_getDerivedOrientation()*
+                        Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                };
+                for(int cycle=0;cycle<3;++cycle) {
+                    const auto release=sampleFinger(.6f+cycle);
+                    const auto pull=sampleFinger(1.1f+cycle);
+                    const auto returned=sampleFinger(1.6f+cycle);
+                    check((pull-release).length()>.003f,"each yo-yo turnaround has a visible finger pull");
+                    check((returned-release).length()<.0001f,"finger releases again for the next yo-yo cycle");
+                }
             }
             r.rrCancelIdleHandAnimation();
             check(!r.rrIsIdleHandAnimationPlaying()&&!r.mHandIdleProp->isVisible(),"cancellation immediately hides prop");
