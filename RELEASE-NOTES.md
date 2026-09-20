@@ -6,6 +6,10 @@ OpenDungeons since version 0.4.7, in reverse chronological order.
 The numbers preceded by a hash (e.g. #9) reference GitHub issue numbers on
 our repository at https://github.com/OpenDungeons/OpenDungeons
 
+### Unreleased
+
+* Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
+
 ### Version 0.7.3 - 20 September 2026
 
 **Highlights:**

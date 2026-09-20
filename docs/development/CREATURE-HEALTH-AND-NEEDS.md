@@ -1,5 +1,27 @@
 # Creature health and needs
 
+## Depleted-segment transparency, September 20
+
+Branch `fix/creature-health-transparency` starts from the complete release
+checkpoint `6eedb504`. The current texture generator composites a nearly opaque
+border and depleted fill, obscuring creature details beneath missing health.
+The existing material already uses alpha blending. Omit both strokes for depleted
+segments in the generator, leaving visible health, centre, owner tint, level/status
+cycling and the accepted Alt toggle unchanged. Regenerate the existing assets;
+no C++ or network change is needed.
+
+The texture regression checks the fill and both border bands in every health
+state, plus the unchanged centre: 200 checks pass, with 96 failures before the
+correction. The existing hidden-window OGRE overlay probe passes 234 checks
+across all eight health states and owner colours; the rendered matrix was
+inspected. Full-health and unhappy textures retain their byte-identical hashes.
+The normal build's materials junction points to these updated assets, so no
+executable rebuild or replacement is required; restart the game to reload them.
+No game was launched. User visual acceptance remains pending.
+
+README and the unreleased change note describe the new gaps. Application version
+0.7.3 remains unchanged because no new release or protocol change is requested.
+
 ## Toggle-Alt correction
 
 The user clarified that each Alt press must toggle visibility and releasing Alt
