@@ -1,5 +1,17 @@
 # Configuring and compiling on Windows
 
+## Empty-hand angle for idle effects: current September 20 executable
+
+The normal Release executable now retains the empty-hand angle during both
+watch and yo-yo effects, including the separate hammer-impact alignment below:
+September 20 08:38:12 Europe/Warsaw, 4,871,680 bytes, SHA-256
+`8474DC7A481512096AB6CD3A7C9FB990449FCB9092BBADA1BF06A942286AA1CD`.
+Normal and staged hashes match; 3,690 real-asset checks, Release compilation,
+runtime preparation and 32 resource checks pass.
+See [idle-hand angle](IDLE-HAND-ANIMATION.md) and [hammer contact](CONSTRUCTION-HAMMER.md).
+The game was closed during deployment; no game was launched and both corrections
+await user visual acceptance.
+
 ## Construction impact alignment: current September 20 executable
 
 The normal Release executable preserves the accepted hammer angle and movement

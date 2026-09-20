@@ -1,5 +1,36 @@
 # Interruptible idle hand effects
 
+## Match the empty-hand angle, September 20
+
+The user requests that both watch and yo-yo effects keep the ordinary empty
+hand's angle, instead of turning into a different presentation. The existing
+generator starts from the empty-hand pose, but replaces the wrist rotation with
+a view-based target (-25 degrees for the watch and roughly -115 for the yo-yo).
+The props already follow their existing wrist/fingertip attachment paths and
+the yo-yo has its own spinning/drop animation; no new effect is needed.
+
+On `fix/idle-hand-angle`, created from complete hammer checkpoint `0a7a37ca`,
+retain the sampled empty-hand wrist rotation for every effect frame, leaving
+finger poses, props, timer, random selection and interruption behavior unchanged.
+Replace the earlier test requiring a large wrist turn with full-orientation
+equality against the normal empty hand throughout both effects.
+
+The new orientation assertion fails against the previous wrist turns and passes
+after removing only those turns. All 3,690 real-asset checks pass, comparing both
+effects directly with the normal empty-hand wrist at thirteen time samples and
+retaining the hammer/contact, tool, prop attachment and cancellation regressions.
+Isolated empty-hand, watch and yo-yo previews were inspected; the props remain
+visible and the finger/prop animations are unchanged.
+
+Release compilation, runtime preparation and 32 resource checks pass; normal and
+staged executables match: September 20 08:38:12 Europe/Warsaw, 4,871,680 bytes,
+SHA-256 `8474DC7A481512096AB6CD3A7C9FB990449FCB9092BBADA1BF06A942286AA1CD`.
+The normal executable also retains the separate hammer-impact alignment fix.
+No game was launched or stopped, no Windows security settings were changed,
+and nothing was pushed. Both presentation follow-ups await user retest.
+README describes the same existing effects; no version, input, saved-setting
+or network change is required.
+
 ## Existing path and gap
 
 `GameMode` already receives mouse/key events and selects the contextual hand pose

@@ -298,7 +298,6 @@ void createKeeperHandIdleAnimations(Ogre::Entity* hand)
 {
     auto* skeleton = hand->getMesh()->getSkeleton().get();
     const auto* wrist = skeleton->getBone("Hand1");
-    const auto basis = hand->getParentSceneNode()->getOrientation() * wrist->_getDerivedOrientation();
     for(const std::string name : IDLE_HAND_ANIMATIONS)
     {
         const bool watch = name == "IdleWatch";
@@ -323,12 +322,7 @@ void createKeeperHandIdleAnimations(Ogre::Entity* hand)
                     auto rotation = Ogre::Quaternion::Slerp(weight * (watch ? 0.35f : 1.0f),
                         start.getRotation(), bent.getRotation(), true);
                     if(b == wrist->getHandle())
-                    {
-                        const float tilt = watch ? -25.0f + (i == 3 ? 8.0f : 0.0f) :
-                            -115.0f + (i % 2 ? 10.0f : -10.0f);
-                        const auto target = basis.Inverse() * Ogre::Quaternion(Ogre::Degree(tilt), Ogre::Vector3::UNIT_Z);
-                        rotation = Ogre::Quaternion::Slerp(weight, start.getRotation(), target, true);
-                    }
+                        rotation = start.getRotation();
                     frame->setRotation(rotation);
                     frame->setTranslate(start.getTranslate());
                     frame->setScale(start.getScale());
