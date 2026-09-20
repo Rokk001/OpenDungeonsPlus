@@ -235,6 +235,8 @@ void RoomTrainingHall::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile
 
 void RoomTrainingHall::refreshCreaturesDummies()
 {
+    for(Creature* creature : mCreaturesUsingRoom)
+        releaseInteractionPosition(creature);
     mCreaturesDummies.clear();
     mUnusedDummies.clear();
     nbTurnsNoChangeDummies = 0;

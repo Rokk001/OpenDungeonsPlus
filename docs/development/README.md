@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Room interaction positions](ROOM-INTERACTION-SPACING.md): endpoint-only
+  spacing for room users without adding obstacles to creature transit.
+
 - [Crypt corpse presentation](CRYPT-CORPSE-DECAY.md): grounded corpse poses,
   settling and an animated decay swarm during the existing crypt lifecycle.
 
