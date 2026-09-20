@@ -1,5 +1,19 @@
 # Creature moods and navigation icon presentation
 
+## Summon-worker identity follow-up
+
+The spell and research buttons both used the generic pickaxe atlas entry.
+The population/held-creature UI already provides cached square portraits of the
+faction's actual worker. Reuse that image for both summon-worker buttons during
+the existing skill refresh, selecting the same worker definition as the spell.
+The pointer action image follows through its existing button lookup, without
+changing workers, spell behavior or unrelated icons. No new assets, dependencies,
+version change or release note are required; this completes the existing icon
+presentation rather than adding a new command.
+Ten production-branch checks pass for both bundled worker identities, custom
+workers, unrelated skills and unavailable worker definitions; the cumulative
+Windows Release build passes. User visual acceptance remains pending.
+
 ## Existing paths and implementation
 
 The eleven mood states already had individual textures and shared status

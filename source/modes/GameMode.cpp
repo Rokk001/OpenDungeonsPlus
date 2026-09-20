@@ -2435,6 +2435,16 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     CEGUI::Window* skillsWindow = guiSheet->getChild("SkillTreeWindow/Skills");
 
     CEGUI::Window* skillButton = skillsWindow->getChild(skillButtonName);
+    if(resType == SkillType::spellSummonWorker)
+    {
+        const CreatureDefinition* worker = localPlayerSeat->getWorkerClassToSpawn();
+        if(worker != nullptr)
+        {
+            const CEGUI::String image = getCreatureHandIconImage(worker->getMeshName()).getName();
+            skillButton->setProperty("ButtonImage", image);
+            guiSheet->getChild(castButtonName)->setProperty("NormalImage", image);
+        }
+    }
     CEGUI::ProgressBar* skillProgressBar =
         static_cast<CEGUI::ProgressBar*>(skillsWindow->getChild(skillProgressBarName));
     if(isDone)
