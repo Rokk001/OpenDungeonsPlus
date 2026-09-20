@@ -102,7 +102,7 @@ struct Creature {
  std::string mesh="Kobold.mesh";const std::string& getMeshName()const{return mesh;}
  Ogre::Vector3 direction{0,-1,0};const Ogre::Vector3& getWalkDirection()const{return direction;}
  int cooldown=0,popped=0,walkActions=0,feeding=0,workReady=0;double food=0,hp=10;
- std::vector<Ogre::Vector2> walk;bool distortion=true;std::string animation;
+ std::vector<Ogre::Vector2> walk;bool distortion=true,alreadyRefined=false;std::string animation;
  GameMap* getGameMap(){return map;}const Ogre::Vector3& getPosition()const{return pos;}
  Tile* getHomeTile()const{return home;}bool isActionInList(CreatureActionType a)const{return actions.count(a)>0;}
  int getLevel()const{return level;}bool canGoThroughTile(Tile* t)const{return t&&t->walkable;}
@@ -116,7 +116,7 @@ struct Creature {
  void computeCreatureOverlayHealthValue(){}void fireChickenFeeding(const std::string&,const Ogre::Vector3&){++feeding;}
  void clearDestinations(const std::string& state,bool,bool){walk.clear();animation=state;}
  void setAnimationState(const std::string& state,bool,const Ogre::Vector3&,bool){animation=state;}
- void setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>&,bool);
+ void setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>&,bool,bool=false);
  template<typename T>void pushAction(std::unique_ptr<T>){++walkActions;}
 };
 std::list<Tile*> GameMap::path(Creature* creature,Tile* target){
@@ -132,8 +132,8 @@ std::list<Tile*> GameMap::path(Creature* creature,Tile* target){
  }return {};
 }
 SOURCE
-void Creature::setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& path,bool jitter){
- walk=path;distortion=jitter;if(RoomObjectNavigation::refine(*this,walk))distortion=false;
+void Creature::setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& path,bool jitter,bool refined){
+ walk=path;alreadyRefined=refined;distortion=jitter&&!refined;if(!refined&&RoomObjectNavigation::refine(*this,walk))distortion=false;
 }
 struct ChickenEntity {
  GameMap* map;Ogre::Vector3 pos;int consumed=0;
@@ -281,6 +281,7 @@ int main(){
    creature.pos={1,5,0};creature.workReady=0;
    roomWorkGate(type,creature,&object,target);
    check(creature.workReady==0&&creature.walkActions==1&&!creature.walk.empty()&&!creature.distortion,"actual room gate walks before work and suppresses client offsets");
+   check(creature.alreadyRefined&&creature.walk.back()==room.getInteractionPositions().at(&creature).position,"room dispatch preserves the exact reserved interaction endpoint");
   }
  }
  creature=Creature{&map};
