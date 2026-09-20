@@ -41,6 +41,7 @@ helpers += '\n' + source[source.index('const char* const IDLE_HAND_ANIMATIONS[]'
 methods = '\n'.join(function(name) for name in [
     'void RenderManager::rrSetHandPose(', 'void RenderManager::rrPlayDigAnimation(',
     'void RenderManager::rrPlayBuildAnimation(',
+    'void RenderManager::moveCursor(',
     'bool RenderManager::rrIsIdleHandAnimationPlaying(', 'bool RenderManager::rrPlayIdleHandAnimation(',
     'void RenderManager::rrCancelIdleHandAnimation(',
     'Ogre::AnimationState* RenderManager::setEntityAnimation('])
@@ -62,12 +63,17 @@ probe = r'''
 #include <iostream>
 #define OD_LOG_ERR(message) ((void)0)
 const Ogre::uint8 OD_RENDER_QUEUE_ID_GUI = 101;
+const Ogre::Real KEEPER_HAND_POS_Z = 20.0f;
 namespace Random { unsigned choice=0; unsigned Uint(unsigned low,unsigned high) {
     if(low!=0 || high!=1) throw std::runtime_error("idle random range"); return choice;
 } }
 HELPERS
 struct RenderManager {
     Ogre::SceneManager* mSceneManager = nullptr;
+    Ogre::Viewport* mViewport = nullptr;
+    Ogre::SceneNode* mHandKeeperNode = nullptr;
+    Ogre::Radian mCurrentFOVy = Ogre::Radian(0);
+    Ogre::Real mCurrentAspectRatio = 0, mFactorWidth = 0, mFactorHeight = 0;
     Ogre::SceneNode* mHeldCreatureGrip = nullptr;
     bool mHeldCreatureDisplayEnabled = false;
     unsigned mHandKeeperHandVisibility = 0;
@@ -80,6 +86,7 @@ struct RenderManager {
     void rrSetHandPose(bool, bool, bool = false);
     void rrPlayDigAnimation();
     void rrPlayBuildAnimation();
+    void moveCursor(float, float);
     bool rrIsIdleHandAnimationPlaying() const;
     bool rrPlayIdleHandAnimation();
     void rrCancelIdleHandAnimation();
@@ -154,6 +161,7 @@ int main() {
         cameraNode->lookAt(Ogre::Vector3(0, -.02f, 0), Ogre::Node::TS_WORLD);
         camera->setNearClipDistance(.001f);
         auto* viewport = window->addViewport(camera);
+        r.mViewport=viewport;r.mHandKeeperNode=r.mSceneManager->createSceneNode();
         viewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
         r.mHandAnimationState = r.setEntityAnimation(hand, "Idle", true);
         r.rrSetHandPose(false, false, true);
@@ -174,6 +182,15 @@ int main() {
             "hammer head uses the pickaxe head angle");
         std::cout << "HAMMER_FACE=" << r.mHammerStrikePoint << '\n';
         check(r.mHammerStrikePoint.x < 0 && r.mHammerStrikePoint.z > 0, "strike anchor belongs to the head rather than the shaft");
+        r.rrPlayBuildAnimation();
+        r.mHandAnimationState->setTimePosition(r.mHandAnimationState->getLength()*.5f);
+        engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+        alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
+        node->_update(true,true);window->update();engine._fireFrameEnded();
+        const auto impactFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
+        std::cout<<"IMPACT_POINTER_ERROR="<<impactFace.length()<<'\n';
+        check(impactFace.length()<.00001f,"construction contact aligns with the selected pointer at impact");
+        r.mHandAnimationState=r.setEntityAnimation(hand,"Build",true);
         for(float scale : {.8f, 1.f, 1.2f}) {
             node->setScale(scale, scale, scale);
             engine._fireFrameStarted(); engine._fireFrameRenderingQueued(); hand->_updateAnimation(); node->_update(true, true);
@@ -183,14 +200,17 @@ int main() {
             alignKeeperHandPointer(hand, r.mHandAnimationState, r.mHandHammer, r.mHammerStrikePoint);
             node->_update(true,true);
             const auto face = node->_getFullTransform() * (attachment->_getFullLocalTransform() * r.mHammerStrikePoint);
-            check(face.length() < .00001f, "hammer striking face matches pointer origin at each scale");
+            check(face.length() > .01f, "resting hammer is raised away from the impact pointer at each scale");
             window->update();
             window->writeContentsToFile("hammer-" + std::to_string(int(scale * 100)) + ".png");
             engine._fireFrameEnded();
         }
         for(float scale:{.8f,1.f,1.2f}) {
-            node->setScale(scale,scale,scale);r.rrPlayBuildAnimation();
+            node->setScale(scale,scale,scale);
+            alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
             Ogre::Vector3 restOffset;
+            const auto restingOffset=node->getPosition();
+            r.rrPlayBuildAnimation();
             check(r.mHandAnimationState->getLength()==hand->getAnimationState("DigSwing")->getLength(),
                 "construction uses exactly the digging strike duration");
             check(!r.mHandAnimationState->getLoop() && r.mHandHammer->isVisible() && !r.mHandPickaxe->isVisible(),
@@ -204,10 +224,25 @@ int main() {
                 }
                 const auto face=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
                 if(sample==0)restOffset=node->getPosition();
+                check(node->getPosition().positionEquals(restingOffset,.00001f),
+                    "entering and leaving the stroke does not move the hand origin");
                 check(node->getPosition().positionEquals(restOffset,.00001f),
                     "pointer alignment does not translate or cancel the digging wrist arc");
-                if(sample==0||sample==16)check(face.length()<.00001f,"rest and completed stroke align with pointer");
-                if(sample==8)check(face.length()>.01f,"hammer follows the natural digging arc away from rest");
+                if(sample==0||sample==16)check(face.length()>.01f,"resting hammer remains above its contact position");
+                if(sample==8) {
+                    check(face.length()<.00001f,"hammer hits the selected pointer at the stroke midpoint");
+                    const auto originalFov=camera->getFOVy();const auto originalAspect=camera->getAspectRatio();
+                    for(float fov:{45.f,70.f})for(float aspect:{1.f,1.6f,16.f/9.f}) {
+                        camera->setFOVy(Ogre::Degree(fov));camera->setAspectRatio(aspect);
+                        for(float x:{.1f,.5f,.9f})for(float y:{.1f,.5f,.9f}) {
+                            r.moveCursor(x,y);
+                            const auto projected=camera->getProjectionMatrix()*(r.mHandKeeperNode->getPosition()+20.f*face);
+                            check(std::abs((projected.x+1.f)*.5f-x)<.00001f&&std::abs((1.f-projected.y)*.5f-y)<.00001f,
+                                "projected hammer contact matches the selection ray across screen positions and camera settings");
+                        }
+                    }
+                    camera->setFOVy(originalFov);camera->setAspectRatio(originalAspect);
+                }
                 check(hand->getSubEntity(0)->getMaterialName()=="Keeperhand/ToolGrip","strike retains solid closed grip");
                 if(scale==1.f && sample%4==0)window->writeContentsToFile("hammer-strike-"+std::to_string(sample)+".png");
                 std::vector<Ogre::Quaternion> rotations;

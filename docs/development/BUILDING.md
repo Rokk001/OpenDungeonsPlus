@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+## Construction impact alignment: current September 20 executable
+
+The normal Release executable preserves the accepted hammer angle and movement
+while aligning its actual impact with the selected pointer: September 20 08:30:00
+Europe/Warsaw, 4,872,192 bytes, SHA-256
+`D8EB7D35D25F54B44B102554652D3AD882164FFF12B75F918EDCBA0F9722C65E`.
+All 3,668 real-asset checks, Release compilation, runtime preparation and 32
+resource checks pass; see [construction hammer](CONSTRUCTION-HAMMER.md).
+The game was closed during deployment; no game was launched and user retest
+of the selected field remains pending.
+
 ## Shared digging/construction strike: current September 20 executable
 
 The normal and staged Release executables now give the hammer the same hand movement,

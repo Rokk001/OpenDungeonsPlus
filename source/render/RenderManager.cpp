@@ -227,16 +227,17 @@ void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
     const bool building = animation->getAnimationName() == "Build" || animation->getAnimationName() == "BuildSwing";
     if(building && hammer != nullptr)
     {
-        // Keep the resting pointer offset fixed so the digging wrist arc is preserved.
-        const Ogre::Real time = animation->getTimePosition();
-        animation->setTimePosition(0);
-        hand->getSkeleton()->setAnimationState(*hand->getAllAnimationStates());
-        hand->getSkeleton()->_updateTransforms();
+        // Anchor the contact pose, keeping this offset fixed throughout the wrist arc.
+        Ogre::SkeletonInstance* skeleton = hand->getSkeleton();
+        auto* strike = skeleton->getAnimation("BuildSwing");
+        skeleton->reset();
+        strike->apply(skeleton, strike->getLength() * 0.5f);
+        skeleton->_updateTransforms();
         auto* grip = static_cast<Ogre::TagPoint*>(hammer->getParentNode());
         const Ogre::Vector3 face = grip->_getFullLocalTransform() * hammerPoint;
         model->setPosition(-(model->getOrientation() * (model->getScale() * face)));
-        animation->setTimePosition(time);
-        hand->getSkeleton()->setAnimationState(*hand->getAllAnimationStates());
+        skeleton->setAnimationState(*hand->getAllAnimationStates());
+        skeleton->_updateTransforms();
         hand->_updateAnimation();
         return;
     }
