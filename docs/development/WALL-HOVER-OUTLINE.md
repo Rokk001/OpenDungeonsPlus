@@ -1,5 +1,19 @@
 # Wall hover outline
 
+## Thick digging selection follow-up
+
+September 20 screenshots 18:44:30 and 18:44:39 show the same one-pixel wall-box
+outline for hovering and drag selection. Construction alone enables filled
+floor ribbons; digging never requests them. Extend the existing renderer with
+an explicit digging request, adding six-percent-wide top and side-face frame
+bands at the rendered wall height. Preserve construction floor geometry, fog
+representation, selection validation and all default non-digging callers.
+No new asset, save/protocol change or version bump is required.
+The actual renderer passes 577 geometry/colour checks, including unchanged
+construction ribbons, thick wall tops/sides, multi-tile selection and cleanup;
+both hover and drag dispatch explicitly request the thick digging frame.
+The cumulative Windows Release build passes; visual acceptance is user-owned.
+
 ## Scope and existing implementation
 
 Work branch: `fix/wall-hover-outline`, based on the accepted HUD checkpoint
