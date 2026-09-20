@@ -1,5 +1,24 @@
 # Research progression
 
+## Research-tree readability follow-up
+
+The tree currently overlays both Roman level numbers and queue positions on
+each button, while the fixed three-column layout never draws dependencies.
+`Skill::canBeSkilled` requires every direct prerequisite, not merely one;
+connections must represent those actual edges rather than inferred row order.
+Keep existing research, queue editing and cast-button availability unchanged.
+Replace numeric overlays with unresearched grey icons and level frames (none,
+silver, gold at levels 1, 2, 3), keeping queue position/cost in the tooltip and
+the existing current/queued state symbols. Reuse the existing layout and
+draw non-interactive connections behind its buttons. No save/protocol or version
+change is required. The 27 research buttons use a scoped look, with dim grey
+tint for level zero and thick proportional silver/gold frames; unrelated buttons
+retain their existing look. Tooltips explicitly list all immediate prerequisites.
+Connections use the actual dependency lists and remain behind clickable buttons.
+All 2,592 installed-CEGUI checks and 411 research-rule checks pass; the cumulative
+Release build passes. No manual game session was launched; appearance acceptance
+remains with the user. These controls do not change the underlying research queue.
+
 ## Exclusive research navigation
 
 The minimap research handler already toggles visibility, but opening the tree
