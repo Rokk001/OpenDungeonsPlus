@@ -1,5 +1,42 @@
 # Configuring and compiling on Windows
 
+## September 20 desktop shortcut and UI follow-ups: current executable
+
+The normal Release executable includes the complete prior fork plus the larger
+camera-scaled indicators, worker portrait, research frames/connections, selected
+room feedback, thick digging borders, in-game load-browser backdrop and Windows
+key minimization. Built September 20 18:03:39 UTC, 4,942,336 bytes, SHA-256
+`A226861026A9A5806E0059096F4A8A1B8A26E034787A59589ABF0C1315DFA700`.
+The game was closed before deployment; staged and normal hashes match, and the
+previous normal executable is preserved with its verified hash under
+`build/before-desktop-menu-20260920-2005/opendungeons-plus.exe`.
+
+Release compilation, runtime preparation and all 32 resource checks pass.
+Focused executed checks: 2,592 installed CEGUI research UI, 411 research rules,
+728 room selection, 577 construction/dig geometry, 20 installed CEGUI load-menu,
+and 452 stubbed desktop-key checks, all without failures. Earlier indicator and
+worker checks are recorded below. The idle-hand regression compiles but Windows
+application control blocks execution (4551); the updated Alt-default fixture
+has the same previously recorded limitation. No security policy was changed.
+No game was launched; desktop minimization/restoration and visual acceptance
+remain user tests. No push or PR was made and no release version was changed.
+
+## September 20 indicator readability and worker icon: preceding executable
+
+The normal Release executable includes the larger, camera-scaled creature
+indicators, their enabled gameplay default and the faction worker summon icon:
+September 20 17:08:24 UTC, 4,933,632 bytes, SHA-256
+`70CFF3361ECAC2CDEF4CB72AEF6C9A01E1DCA7BB62783ADA1576AC1282920D2D`.
+The game was closed before deployment; staged and normal hashes match.
+The previous executable is preserved in
+`build/before-indicator-worker-20260920-1918/opendungeons-plus.exe`.
+The clean indicator build and incremental worker build pass, as do 557 real
+Ogre caption/zoom, 377 progress/packet, 10 worker-icon and 32 resource checks.
+The new default/Alt native fixture compiles but is execution-blocked by Windows
+application control (4551); user appearance/input acceptance remains pending.
+No game was launched and no security setting changed. Later queued UI work is
+not yet present in this deployed executable.
+
 ## September 20 screenshot follow-ups: current executable
 
 The normal Release executable now includes the complete creature feature stack
