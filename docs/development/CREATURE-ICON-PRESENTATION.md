@@ -42,13 +42,13 @@ zoom, navigation at the user's scale, hover/selection/disabled feedback and
 health/experience legibility when a need symbol is displayed.
 
 Follow-up validation: the 110 mood-asset checks still pass. The new focused
-`check_navigation_icon_shading.py --compile-only` builds the actual shader with
-alpha, colour-artwork, engraved-detail and edge-contrast assertions at four icon
-sizes; these assertions have not run because Windows application control blocks
-new test executables. Earlier GUI render results above predate this relief change
-and must not be treated as its visual acceptance.
+`check_navigation_icon_shading.py` executes the actual shader: all 38,100 alpha,
+colour-artwork, engraved-detail and edge-contrast checks pass at four icon sizes.
+Earlier GUI render results above predate this relief change and must not be
+treated as its visual acceptance.
 The complete Windows Release build passed with the follow-up on September 20
-(`build/review-followups/icon-relief-build.log`); normal deployment is pending.
+(`build/review-followups/icon-relief-build.log`); the cumulative normal deployment
+is recorded in BUILDING.md.
 
 No release/version bump is requested. The development index and source-artwork
 instructions are updated; BUILDING.md records the cumulative executable.

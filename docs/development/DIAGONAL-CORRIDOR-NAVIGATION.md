@@ -18,7 +18,9 @@ The expanded production-navigation fixture reproduces 24 failures before the
 change across four corridor rotations and both travel directions. It also
 checks exact destination, diagonal distance, dense wall samples and client
 offset suppression, alongside the existing furniture regressions.
-The corrected fixture compiles, but Windows application control blocks execution
-with error 4551; no passing after-result is claimed and security is unchanged.
-The September 20 Release build succeeds. Runtime verification remains open,
-and game acceptance remains with the user.
+The final ordinary production-navigation run passes 6,678 checks, including the
+eight stair-corridor cases that previously failed. The separately expanded
+packed-bedroom/full-room run is still blocked by Windows application control
+(4551), so that expanded run is not counted as a pass. Security is unchanged.
+The September 20 Release build succeeds and is deployed; game acceptance remains
+with the user. See BUILDING.md for the current executable and validation limits.
