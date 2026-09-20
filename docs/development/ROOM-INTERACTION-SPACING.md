@@ -17,7 +17,7 @@ The same endpoint selection also covers torture apparatus, retaining the existin
 permission to enter the assigned apparatus. Its animation faces the direction
 used by the footprint check; effect placement remains on the assigned apparatus,
 even if the creature's separate stand position lies on an adjacent room tile.
-No runtime or visual validation has passed yet.
+Runtime validation results are recorded below; visual acceptance remains with the user.
 
 The shared four-workstation path now stores chosen endpoints in the owning room,
 keeps valid endpoints stable and releases them when room use ends or training
@@ -26,10 +26,17 @@ endpoint selection. Unoccupied stations retain their original straight stand-off
 lateral candidates are considered where a user already occupies that space.
 Room absorption transfers remaining reservations alongside remaining users.
 
-The expanded production navigation fixture compiles, including paired rat/spider
+The final dispatch also needs to retain that validated route: ordinary
+`MovableGameEntity::setWalkPath` refines routes again and may move the endpoint
+away from the reserved position. Workstation callers explicitly identify their
+already-refined path, preserving its checked final leg and disabling jitter;
+ordinary movement retains its existing refinement. This is not a network option.
+
+The production navigation fixture includes paired rat/spider
 users, stable repeated work cycles, endpoint release and identical passing routes
-with or without reservations. Windows blocks the executable before execution
-(application-control error 4551), so these are not passing runtime checks.
+with or without reservations. Its final ordinary run passes 6,678 checks; an
+additional packed-bedroom/full-room-layout run is still blocked before execution
+by Windows application control (4551), not counted as a pass.
 
 Other room interactions were inspected: dormitory creation reserves every bed
 tile for one owner, and sleeping centres the resting pose on that owner's bed;
@@ -45,10 +52,16 @@ position and that arrival becomes ready without repeated walking. The optional
 `--compile-only` mode explicitly reports that no checks ran; it does not attempt
 to evade the Windows application-control block.
 
-Windows Release compilation passed with the complete change on September 20
-(`build/review-followups/interaction-spacing-final-build.log`); the updated
-navigation fixture also compiles. Runtime separation and appearance remain
-unverified because of the execution block. The normal executable is unchanged.
+Windows Release compilation passed with the final dispatch correction on
+September 20 (`build/review-followups/work-route-dispatch-build.log`). The normal
+executable was updated with a verified backup; see BUILDING.md for the hash.
+
+The dispatch follow-up adds `check_work_route_dispatch.py`: it compiles the actual
+walk-path setter against a recording transport and refiner, covering exact
+validated endpoints, ordinary refinement, empty paths, client/server behaviour,
+unchanged packet flags and non-creature movement. All 41 actual dispatch checks
+pass. No movement-speed or transit-obstacle change is introduced. User appearance
+and the blocked expanded-layout regression remain unverified.
 
 Documentation/version assessment: development guide and index only; no release
 version, release changelog or top-level README change is needed for this work.

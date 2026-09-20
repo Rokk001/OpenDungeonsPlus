@@ -345,7 +345,7 @@ bool RoomTorture::useRoom(Creature& creature, bool forced)
             return false;
         if(!approach.empty())
         {
-            creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false);
+            creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false, true);
             creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
             return false;
         }
