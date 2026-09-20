@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Crypt corpse presentation](CRYPT-CORPSE-DECAY.md): grounded corpse poses,
+  settling and an animated decay swarm during the existing crypt lifecycle.
+
 - [Diagonal corridor movement](DIAGONAL-CORRIDOR-NAVIGATION.md): checked
   shortcuts through stair-shaped corridors without changing traversal rules.
 

@@ -456,6 +456,7 @@ private:
     void updateCreatureStep(Creature* creature);
     void cancelCreatureStep(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
+    void clearCreatureDecay(Creature* creature);
 
 
     Ogre::TexturePtr m_texture;

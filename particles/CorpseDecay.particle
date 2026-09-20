@@ -1,0 +1,29 @@
+particle_system CorpseDecay
+{
+    material        CombatBlood
+    particle_width  0.025
+    particle_height 0.025
+    quota           16
+    billboard_type  point
+
+    emitter Box
+    {
+        angle               85
+        colour_range_start  0.035 0.025 0.015 0.95
+        colour_range_end    0.12 0.09 0.04 0.9
+        emission_rate       8
+        time_to_live        1.2
+        direction           0 0 1
+        velocity            0.22
+        width               0.65
+        height              0.65
+        depth               0.1
+    }
+
+    affector DirectionRandomiser
+    {
+        randomness    1.8
+        scope         1
+        keep_velocity true
+    }
+}

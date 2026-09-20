@@ -746,6 +746,36 @@ bool needsCreatureDropFallback(Ogre::Entity* entity)
         entity->getMesh()->getName() == "lich.mesh" ||
         entity->getMesh()->getName() == "Cultist.mesh";
 }
+
+std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string& poseName, Ogre::Real duration)
+{
+    Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
+    const std::string name = "CorpseDecay";
+    if(!skeleton->hasAnimation(name))
+    {
+        const auto* source = skeleton->getAnimation(poseName);
+        auto* decay = skeleton->createAnimation(name, duration);
+        for(unsigned short boneIndex = 0; boneIndex < skeleton->getNumBones(); ++boneIndex)
+        {
+            auto* bone = skeleton->getBone(boneIndex);
+            Ogre::TransformKeyFrame pose(nullptr, 0);
+            if(source->hasNodeTrack(boneIndex))
+                source->getNodeTrack(boneIndex)->getInterpolatedKeyFrame(Ogre::TimeIndex(source->getLength()), &pose);
+            auto* track = decay->createNodeTrack(boneIndex);
+            for(unsigned key = 0; key <= 2; ++key)
+            {
+                const Ogre::Real progress = key * 0.5f;
+                auto* frame = track->createNodeKeyFrame(progress * duration);
+                frame->setRotation(pose.getRotation());
+                frame->setTranslate(pose.getTranslate());
+                frame->setScale(pose.getScale() * (bone->getParent() == nullptr ? 1.0f - 0.18f * progress : 1.0f));
+            }
+        }
+    }
+    if(!entity->hasAnimationState(name))
+        entity->getAllAnimationStates()->createAnimationState(name, 0, skeleton->getAnimation(name)->getLength());
+    return name;
+}
 }
 
 RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
@@ -2644,6 +2674,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
 
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    clearCreatureDecay(curCreature);
     cancelCreatureStep(curCreature);
     cancelCreatureSleepAnimation(curCreature);
     cancelCreatureFeedingAnimation(curCreature);
@@ -2823,6 +2854,7 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
 {
     if(curEntity->getObjectType() == GameEntityType::creature)
     {
+        clearCreatureDecay(static_cast<Creature*>(curEntity));
         cancelCreatureStep(static_cast<Creature*>(curEntity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureSleepAnimation(static_cast<Creature*>(curEntity));
@@ -3077,6 +3109,33 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     Creature* dropCreature = nullptr;
     if(curAnimatedObject->getObjectType() == GameEntityType::creature)
         dropCreature = static_cast<Creature*>(curAnimatedObject);
+
+    if(dropCreature != nullptr)
+        clearCreatureDecay(dropCreature);
+    if(anim == EntityAnimation::rot_anim && dropCreature != nullptr)
+    {
+        // Transport must end in a corpse pose, never replay a standing idle.
+        cancelCreatureDropAnimation(dropCreature);
+        rrSetObjectAnimationState(dropCreature, EntityAnimation::drop_anim, false);
+        auto* state = dropCreature->getAnimationState();
+        if(state != nullptr)
+        {
+            state->setLoop(false);
+            state->setTimePosition(state->getLength());
+            const Ogre::Real duration = std::max(1.0f,
+                static_cast<float>(ConfigManager::getSingleton().getRoomConfigInt32("CryptRotNbTurns")));
+            dropCreature->setAnimationState(setEntityAnimation(objectEntity,
+                createCreatureDecayAnimation(objectEntity, state->getAnimationName(), duration), false));
+        }
+        const std::string effectName = objectName + "_decay";
+        auto* swarm = mSceneManager->createParticleSystem(effectName, "CorpseDecay");
+        swarm->setCastShadows(false);
+        swarm->setQueryFlags(0);
+        auto* node = mCreatureSceneNode->createChildSceneNode(effectName + "_node",
+            dropCreature->getPosition() + Ogre::Vector3(0, 0, 0.15f));
+        node->attachObject(swarm);
+        return;
+    }
 
     if(dropCreature != nullptr)
     {
@@ -4002,6 +4061,23 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
         OD_LOG_ERR("Entity do not have node=" + entity->getName());
         return;
     }
+
+    const std::string decayName = entity->getOgreNamePrefix() + entity->getName() + "_decay";
+    if(entity->getObjectType() == GameEntityType::creature && mSceneManager->hasParticleSystem(decayName))
+    {
+        Ogre::Vector3 corpsePosition = position;
+        for(CreatureGroundPose& pose : mCreatureGroundPoses)
+        {
+            if(pose.mCreature != entity)
+                continue;
+            corpsePosition.z += pose.mNode->getPosition().z - pose.mStandingZ;
+            pose.mStandingZ = position.z;
+        }
+        entity->getEntityNode()->setPosition(corpsePosition);
+        mSceneManager->getParticleSystem(decayName)->getParentSceneNode()->setPosition(
+            position + Ogre::Vector3(0, 0, 0.15f));
+        return;
+    }
          
     entity->getEntityNode()->setPosition(position);
     if(entity->getObjectType() == GameEntityType::creature)
@@ -4492,6 +4568,8 @@ void RenderManager::rrNormalizeAmbient(Creature* creature)
 
 void RenderManager::rrCarryEntity(Creature* carrier, GameEntity* carried)
 {
+    if(carried->getObjectType() == GameEntityType::creature)
+        clearCreatureDecay(static_cast<Creature*>(carried));
     Ogre::Entity* carrierEnt = mSceneManager->getEntity(carrier->getOgreNamePrefix() + carrier->getName());
     Ogre::Entity* carriedEnt = mSceneManager->getEntity(carried->getOgreNamePrefix() + carried->getName());
     Ogre::SceneNode* carrierNode = mSceneManager->getSceneNode(carrierEnt->getName() + "_node");
@@ -4514,6 +4592,18 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
     carried->setParentNodeDetachFlags(
         EntityParentNodeAttach::DETACH_CARRIED, false);
     carriedNode->setInheritScale(true);
+}
+
+void RenderManager::clearCreatureDecay(Creature* creature)
+{
+    const std::string name = creature->getOgreNamePrefix() + creature->getName() + "_decay";
+    if(!mSceneManager->hasParticleSystem(name))
+        return;
+    auto* swarm = mSceneManager->getParticleSystem(name);
+    auto* node = swarm->getParentSceneNode();
+    node->detachObject(swarm);
+    mSceneManager->destroyParticleSystem(swarm);
+    mSceneManager->destroySceneNode(node);
 }
 
 void RenderManager::rrSetCreaturesTextOverlay(GameMap& gameMap, bool value)
