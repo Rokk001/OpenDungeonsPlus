@@ -178,16 +178,40 @@ int main() {
         const auto pickaxeOrientation=r.mHandPickaxe->getParentNode()->getOrientation();
         check((attachment->getOrientation()*Ogre::Vector3::UNIT_Z).positionEquals(pickaxeOrientation*Ogre::Vector3::UNIT_Y),
             "hammer shaft uses the pickaxe angle despite different authored axes");
-        check((attachment->getOrientation()*Ogre::Vector3::UNIT_X).positionEquals(pickaxeOrientation*Ogre::Vector3::UNIT_X),
-            "hammer head uses the pickaxe head angle");
         std::cout << "HAMMER_FACE=" << r.mHammerStrikePoint << '\n';
+        const auto mesh = r.mHandHammer->getMesh();
+        std::vector<Ogre::Vector3> vertices;
+        for(unsigned sub=0;sub<mesh->getNumSubMeshes();++sub) {
+            const auto* part=mesh->getSubMesh(sub);
+            const auto* data=part->useSharedVertices?mesh->sharedVertexData:part->vertexData;
+            const auto* element=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+            auto buffer=data->vertexBufferBinding->getBuffer(element->getSource());
+            Ogre::HardwareBufferLockGuard lock(buffer,Ogre::HardwareBuffer::HBL_READ_ONLY);
+            auto* bytes=static_cast<unsigned char*>(lock.pData);
+            for(size_t i=0;i<data->vertexCount;++i) {
+                float* value;
+                element->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&value);
+                vertices.emplace_back(value);
+            }
+        }
+        Ogre::Vector3 leftFace=vertices.front(), oppositeFace=vertices.front();
+        for(const auto& vertex:vertices) {
+            if(vertex.y>leftFace.y)leftFace=vertex;
+            if(vertex.y<oppositeFace.y)oppositeFace=vertex;
+        }
+        const auto headAxis=(leftFace-oppositeFace).normalisedCopy();
+        check((attachment->getOrientation()*headAxis).positionEquals(
+            pickaxeOrientation*Ogre::Vector3::UNIT_X,.002f),
+            "actual hammer striking faces match the pickaxe head angle");
+        check(r.mHammerStrikePoint.positionEquals(leftFace,.00001f),
+            "hammer cursor uses the actual striking face rather than the side of its head");
         engine._fireFrameStarted();engine._fireFrameRenderingQueued();hand->_updateAnimation();node->_update(true,true);
         const auto hammerTransform=attachment->_getFullTransform();
         std::cout<<"HAMMER_HEAD_X_DIRECTION="<<(hammerTransform*Ogre::Vector3::UNIT_X-hammerTransform*Ogre::Vector3::ZERO)<<'\n';
         const auto pickaxeTransform=r.mHandPickaxe->getParentNode()->_getFullTransform();
         std::cout<<"PICKAXE_HEAD_X_DIRECTION="<<(pickaxeTransform*Ogre::Vector3::UNIT_X-pickaxeTransform*Ogre::Vector3::ZERO)<<'\n';
         engine._fireFrameEnded();
-        check(r.mHammerStrikePoint.x > 0 && r.mHammerStrikePoint.z > 0, "cursor anchor belongs to the positive-X striking face");
+        check(r.mHammerStrikePoint.y > .08f && r.mHammerStrikePoint.z > .27f, "cursor anchor belongs to the positive-Y striking face");
         engine._fireFrameStarted();engine._fireFrameRenderingQueued();
         alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
         node->_update(true,true);window->update();engine._fireFrameEnded();
@@ -195,7 +219,7 @@ int main() {
         std::cout<<"READY_POINTER_ERROR="<<readyFace.length()<<'\n';
         check(readyFace.length()<.00001f,"left hammer face is the pointer while selecting a tile");
         const auto rightFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*
-            (r.mHammerStrikePoint-Ogre::Vector3(.1f,0,0)));
+            oppositeFace);
         check(rightFace.x>readyFace.x,"the cursor face is visibly left of the opposite hammer end");
         r.mHandAnimationState=r.setEntityAnimation(hand,"Build",true);
         for(float scale : {.8f, 1.f, 1.2f}) {
@@ -307,6 +331,9 @@ int main() {
                 alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint,r.mHandPickaxe);
                 node->_update(true,true);
                 const auto tip=grip->_getFullTransform()*Ogre::Vector3(.085f,.043f,0);
+                const auto pickaxeAxis=tip-grip->_getFullTransform()*Ogre::Vector3(-.085f,.043f,0);
+                const auto hammerAxis=attachment->_getFullTransform()*leftFace-
+                    attachment->_getFullTransform()*oppositeFace;
                 check(tip.length()<.00001f,"left pickaxe cursor remains aligned at each scale");
                 for(float fov:{45.f,70.f})for(float aspect:{1.f,1.6f,16.f/9.f}) {
                     camera->setFOVy(Ogre::Degree(fov));camera->setAspectRatio(aspect);
@@ -315,6 +342,13 @@ int main() {
                         const auto projected=camera->getProjectionMatrix()*(r.mHandKeeperNode->getPosition()+20.f*tip);
                         check(std::abs((projected.x+1.f)*.5f-x)<.00001f&&std::abs((1.f-projected.y)*.5f-y)<.00001f,
                             "projected left pickaxe tip is the pointer across screen positions and camera settings");
+                        const auto origin=r.mHandKeeperNode->getPosition();
+                        const auto projection=camera->getProjectionMatrix();
+                        const auto hammerLine=projection*(origin-20.f*hammerAxis)-projection*origin;
+                        const auto pickaxeLine=projection*(origin-20.f*pickaxeAxis)-projection*origin;
+                        check(Ogre::Vector2(hammerLine.x,hammerLine.y).normalisedCopy().dotProduct(
+                            Ogre::Vector2(pickaxeLine.x,pickaxeLine.y).normalisedCopy())>.9999f,
+                            "actual hammer face axis and pickaxe blade have the same projected angle at the pointer");
                     }
                 }
             }

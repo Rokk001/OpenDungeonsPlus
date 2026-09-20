@@ -184,8 +184,8 @@ void createKeeperHandPoses(Ogre::Entity* hand)
 
 Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
 {
-    // Positive X is the screen-left striking face in the accepted tool grip.
-    float faceX = -std::numeric_limits<float>::infinity();
+    // The authored head runs along Y; positive Y is the screen-left striking face.
+    float faceY = -std::numeric_limits<float>::infinity();
     Ogre::Vector3 sum = Ogre::Vector3::ZERO;
     unsigned count = 0;
     for(unsigned sub = 0; sub < mesh->getNumSubMeshes(); ++sub)
@@ -200,13 +200,13 @@ Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
         {
             float* value;
             element->baseVertexPointerToElement(bytes + (data->vertexStart + i) * buffer->getVertexSize(), &value);
-            if(value[0] > faceX + 0.00001f)
+            if(value[1] > faceY + 0.00001f)
             {
-                faceX = value[0];
+                faceY = value[1];
                 sum = Ogre::Vector3::ZERO;
                 count = 0;
             }
-            if(std::abs(value[0] - faceX) < 0.00001f)
+            if(std::abs(value[1] - faceY) < 0.00001f)
             {
                 sum += Ogre::Vector3(value);
                 ++count;
@@ -1322,11 +1322,12 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     mHandHammer->setCastShadows(false);
     mHandHammer->setLightMask(0);
     mHandHammer->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
-    // Match the pickaxe attachment, converting the hammer's Z shaft to its Y shaft axis.
+    // Match the pickaxe's Y shaft and X head using the hammer's authored Z shaft and Y head.
     Ogre::TagPoint* hammerGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandHammer,
         Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
         Ogre::Quaternion(Ogre::Degree(55.0f), Ogre::Vector3::UNIT_Y) *
-        Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X), Ogre::Vector3(0,0.030f,-0.009f));
+        Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X) *
+        Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
     hammerGrip->setScale(0.2f, 0.2f, 0.2f);
     mHandHammer->setVisible(false);
     mHandKeeperNode->setScale(Ogre::Vector3::UNIT_SCALE * KEEPER_HAND_POS_Z);
