@@ -1062,6 +1062,8 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 bool GameMode::keyPressed(const OIS::KeyEvent& arg)
 {
     resetIdleHand();
+    if(handleDesktopKey(arg))
+        return true;
     mIdleHandKeys.insert(arg.key);
     updateCreatureIndicatorAlt(arg.key, true);
     if(handleScreenshotKey(arg))

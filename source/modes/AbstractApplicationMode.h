@@ -127,6 +127,9 @@ public:
     {}
 
 protected:
+    //! Release the foreground Windows game window to the desktop.
+    bool handleDesktopKey(const OIS::KeyEvent& arg);
+
     //! Capture the current view before a GUI or input submode consumes the key.
     bool handleScreenshotKey(const OIS::KeyEvent& arg);
 
