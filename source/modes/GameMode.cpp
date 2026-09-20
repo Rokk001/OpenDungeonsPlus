@@ -2513,8 +2513,10 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillProgressBar->hide();
     }
     guiSheet->getChild(castButtonName)->setVisible(level > 0 || !isAllowed);
-    const std::string levelText = level == 0 ? "0" : (level == 1 ? "I" : (level == 2 ? "II" : "III"));
-    skillButton->setText(levelText + (queueNumber > 0 ? "\n" + Helper::toString(queueNumber) : ""));
+    skillButton->setText("");
+    skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
+    skillButton->setProperty("ResearchLevelColour", level >= 3 ? "FFFFC947" :
+        level == 2 ? "FFD5DFE8" : "00FFFFFF");
     std::string description = Skills::skillTypeToPlayerVisibleString(resType) + " - level " +
         Helper::toString(level) + "/3";
     if(!isAllowed)
@@ -2530,6 +2532,15 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
             description += "\nQueue position: " + Helper::toString(queueNumber) + ".";
         if(resType == curResType)
             description += " Progress: " + Helper::toString(static_cast<int>(curSkillProgress * 100)) + "%.";
+    }
+    const auto& dependencies = SkillManager::getSkill(resType)->getDependencies();
+    if(!dependencies.empty())
+    {
+        description += "\nRequires all: ";
+        for(size_t i = 0; i < dependencies.size(); ++i)
+            description += (i == 0 ? "" : ", ") +
+                Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType());
+        description += ".";
     }
     skillButton->setTooltipText(description);
     skillButton->setUserString("ContextHelp", description);
@@ -2578,9 +2589,65 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
     {
         refreshSkillButtonState(skillButtonName, castButtonName, skillProgressBarName, resType);
     });
+    refreshSkillConnections();
     getModeManager().getGui().arrangeRoomButtons(mRootWindow->getChild(Gui::TAB_ROOMS));
     getModeManager().getGui().arrangeTrapButtons(mRootWindow->getChild(Gui::TAB_TRAPS));
     getModeManager().getGui().arrangeSpellButtons(mRootWindow->getChild(Gui::TAB_SPELLS));
+}
+
+void GameMode::refreshSkillConnections()
+{
+    std::map<SkillType, CEGUI::Window*> buttons;
+    CEGUI::Window* skills = mRootWindow->getChild("SkillTreeWindow/Skills");
+    SkillManager::listAllSkills([&](const std::string& name, const std::string&,
+        const std::string&, SkillType type) { buttons[type] = skills->getChild(name); });
+    Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    for(const auto& entry : buttons)
+    {
+        CEGUI::Window* target = entry.second;
+        CEGUI::Window* parent = target->getParent();
+        const auto& parentRect = parent->getUnclippedOuterRect().get();
+        const auto& end = target->getUnclippedOuterRect().get();
+        if(parentRect.getWidth() <= 0 || parentRect.getHeight() <= 0)
+            continue;
+        for(const Skill* dependency : SkillManager::getSkill(entry.first)->getDependencies())
+        {
+            CEGUI::Window* source = buttons.at(dependency->getType());
+            const auto& start = source->getUnclippedOuterRect().get();
+            const float x1 = (start.left() + start.getWidth() * 0.5f - parentRect.left()) / parentRect.getWidth();
+            const float x2 = (end.left() + end.getWidth() * 0.5f - parentRect.left()) / parentRect.getWidth();
+            const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight();
+            const float y2 = (end.top() - parentRect.top()) / parentRect.getHeight();
+            const float middle = (y1 + y2) * 0.5f;
+            const float width = 0.012f;
+            const float height = width * parentRect.getWidth() / parentRect.getHeight();
+            const float segments[][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
+                {std::min(x1, x2) - width * .5f, middle, std::abs(x2 - x1) + width, height},
+                {x2 - width * .5f, middle, width, y2 - middle}};
+            for(unsigned part = 0; part < 3; ++part)
+            {
+                const std::string name = "ResearchLink_" + Helper::toString(static_cast<uint32_t>(dependency->getType())) +
+                    "_" + Helper::toString(static_cast<uint32_t>(entry.first)) + "_" + Helper::toString(part);
+                CEGUI::Window* line;
+                if(parent->isChild(name))
+                    line = parent->getChild(name);
+                else
+                {
+                    line = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", name);
+                    line->setProperty("FrameEnabled", "False");
+                    line->setProperty("BackgroundEnabled", "False");
+                    line->setProperty("Image", "OpenDungeonsSkin/SelectionBrush");
+                    line->setMousePassThroughEnabled(true);
+                    line->setRiseOnClickEnabled(false);
+                    parent->addChild(line);
+                    line->moveToBack();
+                }
+                line->setArea(CEGUI::UVector2(CEGUI::UDim(segments[part][0], 0), CEGUI::UDim(segments[part][1], 0)),
+                    CEGUI::USize(CEGUI::UDim(segments[part][2], 0), CEGUI::UDim(segments[part][3], 0)));
+                line->setProperty("ImageColours", seat->getSkillLevel(dependency->getType()) > 0 ? "FFC8AE6E" : "FF626262");
+            }
+        }
+    }
 }
 
 void GameMode::refreshSpellButtonCoolDowns()

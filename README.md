@@ -78,7 +78,9 @@ skip orders already covered by stock or unreachable from their location.
 The adjacent Skill button opens the existing research tree; both research and
 production are also available through F10. The four original corner controls
 are retained, making six minimap navigation buttons in total.
-All 27 research entries have three levels; the tree shows the current level,
+All 27 research entries have three levels; unresearched icons are greyed out,
+level one has no level frame, level two has a silver frame and level three a gold
+frame. Connections show the required research; tooltips show the current level,
 next benefit, point cost and queue position before selection. Upgrades retain
 map restrictions and are saved with research progress and the selected order.
 
