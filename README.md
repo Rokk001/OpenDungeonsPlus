@@ -106,8 +106,9 @@ The Creatures tab shows portraits and counts by type, with Total, Jobs, Fighting
 and Moods views and separate worker counts. Use the arrows to browse creature
 types, left-click a count to pick up a matching available creature, or right-click
 a portrait to move the camera to one of that type.
-Press Alt to toggle visible creatures' segmented, owner-coloured health rings
-above their heads. Each ring's centre alternates the level with allied hunger,
+Visible creatures' segmented, owner-coloured health rings are enabled by default;
+press Alt to switch them off or on. The rings and their outlined level numbers
+grow when zooming in. Each ring's centre alternates the level with allied hunger,
 tiredness and urgent mood or activity states, which drive the creatures'
 existing autonomous responses. Depleted health segments disappear so creatures
 remain visible through the gaps.
