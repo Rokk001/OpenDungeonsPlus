@@ -1,5 +1,33 @@
 # Construction hammer
 
+## Left tool end as the cursor, September 20
+
+The user clarifies that the visible left striking end itself must select the
+tile for both hammer and pickaxe, not a future contact pose or the hand origin.
+Screenshots at 08:44:06/19/29 show the misplaced selection. The current hammer
+offset samples the midpoint of its swing, while the pickaxe has no tool-specific
+pointer alignment at all. The preceding contact-only fix therefore does not
+satisfy this clarified cursor requirement.
+
+On `fix/tool-cursor-hotspots`, from complete checkpoint `3dc51836`, identify the
+screen-left end from the existing rig/attachment, align that end in the ready
+pose with the actual pointer, and preserve a constant offset during its strike.
+Keep accepted angle/motion, world-ray selection, building and digging input
+unchanged; verify both tool hotspots and projected pointer positions.
+
+The actual rig measurement places positive local X to screen-left for both
+tools (hammer axis X = -0.145042; pickaxe = -0.435126). The hammer now uses its
+positive-X face centre and the pickaxe its authored positive-X blade tip.
+The ready-pose offset stays fixed through both accepted strike animations.
+All 4,020 real-asset checks pass, including both left ends, projected cursor
+positions over three scales/six camera configurations/nine screen positions,
+unchanged tool orientation and frame-by-frame strike equality. Release,
+runtime preparation and 32 resource checks pass. The normal executable is
+September 20 09:16:01 Europe/Warsaw, 4,872,704 bytes, SHA-256
+`FA118F4310C661BBE1CC2E27794FD1D544D1E0972C3C9A1D043E47F03B716853`.
+No game was launched; user retest remains pending. README now identifies the
+left ready-pose end as the pointer; no version, input or packet change is needed.
+
 ## Selected-tile alignment after accepted movement, September 20
 
 The user accepts the new hammer angle and stroke, but reports that the selected

@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+## Left tool-end cursors: current September 20 executable
+
+Both hammer and pickaxe now align their ready-pose left striking end with the
+mouse pointer, preserving accepted angles and strikes: September 20 09:16:01
+Europe/Warsaw, 4,872,704 bytes, SHA-256
+`FA118F4310C661BBE1CC2E27794FD1D544D1E0972C3C9A1D043E47F03B716853`.
+All 4,020 real-asset checks, Release compilation, runtime preparation and 32
+resource checks pass. The normal executable is updated; no game was launched.
+See [tool cursor alignment](CONSTRUCTION-HAMMER.md); user retest is pending.
+
 ## Empty-hand angle for idle effects: current September 20 executable
 
 The normal Release executable now retains the empty-hand angle during both
