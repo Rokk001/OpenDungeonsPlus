@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Creature progress indicators](CREATURE-PROGRESS-INDICATORS.md): experience,
+  attack-recovery dial and backward-compatible network negotiation.
+
 - [Server shutdown ownership](SERVER-SHUTDOWN.md): reproduced self-wait on exit,
   owner-thread cleanup and isolated SFML lifecycle regression.
 
