@@ -7,7 +7,8 @@ The normal build reads the regenerated textures through its existing materials
 junction; restart the game to reload them. The executable below is unchanged.
 The focused asset regression passes 200 checks (96 failures before), and the
 hidden-window OGRE overlay probe passes 234 checks; its colour/state matrix was
-inspected. No game was launched; user visual acceptance remains pending.
+inspected. No game was launched by the assistant; the user accepted this result
+on September 20.
 See [health indicator transparency](CREATURE-HEALTH-AND-NEEDS.md).
 
 ## Hammer head-axis correction: current September 20 executable
