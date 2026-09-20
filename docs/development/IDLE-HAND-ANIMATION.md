@@ -22,7 +22,8 @@ restoration and accepted left tool cursors. Pull/release previews were inspected
 Release compilation, runtime preparation and 32 resource checks pass. The normal
 executable is September 20 09:29:35 Europe/Warsaw, 4,873,728 bytes, SHA-256
 `07125307B5F0DEC495101EF0AF23E708E54A3B086DE56676410D2D53B0DA2D91`.
-No game was launched or stopped; user retest remains pending. README already
+No game was launched or stopped by the assistant; the user accepted the yo-yo
+finger motion on September 20 and confirmed the overall goal complete. README already
 describes the yo-yo effect, so no wording, version or network change is required.
 
 ## Match the empty-hand angle, September 20
