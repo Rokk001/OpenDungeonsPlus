@@ -122,6 +122,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
   retained confirmation cancellation and focused verification.
 - [Escape navigation](ESCAPE-NAVIGATION.md): closing one dialog or returning
   from front-end screens through the existing cancel/back handlers.
+- [Windows desktop shortcut](WINDOWS-DESKTOP-SHORTCUT.md): minimize the active
+  game window with either Windows key, including exclusive keyboard capture.
 - [Exit confirmation layout](QUIT-DIALOG-LAYOUT.md): complete title/replay text,
   scaled bounds and control-hit verification.
 - [Community exit page](COMMUNITY-EXIT-PAGE.md): explicit Discord and close

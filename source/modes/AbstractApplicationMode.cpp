@@ -34,6 +34,10 @@
 
 #include <algorithm>
 
+#if defined OIS_WIN32_PLATFORM
+#include <windows.h>
+#endif
+
 namespace
 {
 void collectEscapeWindows(CEGUI::Window* window, std::vector<CEGUI::Window*>& windows)
@@ -103,6 +107,8 @@ bool AbstractApplicationMode::mouseReleased(const OIS::MouseEvent& arg, OIS::Mou
 
 bool AbstractApplicationMode::keyPressed(const OIS::KeyEvent& arg)
 {
+    if(handleDesktopKey(arg))
+        return true;
     if(handleScreenshotKey(arg))
         return true;
 
@@ -121,6 +127,22 @@ bool AbstractApplicationMode::keyPressed(const OIS::KeyEvent& arg)
         break;
     }
     return true;
+}
+
+bool AbstractApplicationMode::handleDesktopKey(const OIS::KeyEvent& arg)
+{
+#if defined OIS_WIN32_PLATFORM
+    if(arg.key == OIS::KC_LWIN || arg.key == OIS::KC_RWIN)
+    {
+        size_t windowHandle = 0;
+        ODFrameListener::getSingleton().getRenderWindow()->getCustomAttribute("WINDOW", &windowHandle);
+        const HWND window = reinterpret_cast<HWND>(windowHandle);
+        if(window != nullptr && GetForegroundWindow() == window)
+            ShowWindow(window, SW_MINIMIZE);
+        return true;
+    }
+#endif
+    return false;
 }
 
 bool AbstractApplicationMode::handleScreenshotKey(const OIS::KeyEvent& arg)

@@ -1493,6 +1493,8 @@ bool EditorMode::hidePortalWaveWindow(const CEGUI::EventArgs& /*arg*/)
 
 bool EditorMode::keyPressed(const OIS::KeyEvent &arg)
 {
+    if(handleDesktopKey(arg))
+        return true;
     if(handleScreenshotKey(arg))
         return true;
 
