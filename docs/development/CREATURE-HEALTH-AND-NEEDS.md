@@ -17,7 +17,10 @@ across all eight health states and owner colours; the rendered matrix was
 inspected. Full-health and unhappy textures retain their byte-identical hashes.
 The normal build's materials junction points to these updated assets, so no
 executable rebuild or replacement is required; restart the game to reload them.
-No game was launched. User visual acceptance remains pending.
+No game was launched by the assistant. The user accepted the result on September
+20 and requested publication in the existing health-and-needs pull request.
+PR #108 was updated with functional commit `8fcbbf2d`; its published fixed reply
+links that commit, and its description records the changed transparency.
 
 README and the unreleased change note describe the new gaps. Application version
 0.7.3 remains unchanged because no new release or protocol change is requested.
