@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Diagonal corridor movement](DIAGONAL-CORRIDOR-NAVIGATION.md): checked
+  shortcuts through stair-shaped corridors without changing traversal rules.
+
 - [Notification badge dismissal](NOTIFICATION-BADGE-DISMISSAL.md): right-click
   removes either read or unread messages without opening them.
 
