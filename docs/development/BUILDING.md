@@ -1,5 +1,15 @@
 # Configuring and compiling on Windows
 
+## Yo-yo finger pull: current September 20 executable
+
+The normal Release executable adds synchronized finger flex/release to all three
+yo-yo cycles without changing the accepted wrist angle or tool cursor hotspots:
+September 20 09:29:35 Europe/Warsaw, 4,873,728 bytes, SHA-256
+`07125307B5F0DEC495101EF0AF23E708E54A3B086DE56676410D2D53B0DA2D91`.
+All 4,026 real-asset checks, Release compilation, runtime preparation and 32
+resource checks pass; no game was launched. See [yo-yo follow-up](IDLE-HAND-ANIMATION.md).
+The user accepted the preceding left tool cursor correction; yo-yo retest is pending.
+
 ## Left tool-end cursors: current September 20 executable
 
 Both hammer and pickaxe now align their ready-pose left striking end with the
