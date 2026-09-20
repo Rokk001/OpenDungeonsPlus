@@ -2,6 +2,18 @@
 
 ## Summon-worker identity follow-up
 
+September 21 correction: the worker pointer used below is initialized only by
+the server's seat initialization; client seat packets carry the faction but not
+that pointer. The earlier isolated fixture populated the pointer and therefore
+missed the real client failure. Resolve an absent pointer from the received
+faction and the client's already-loaded creature definitions, without changing
+server spawning or packet formats. Extend regression coverage with null-pointer
+client seats for both factions and map-specific definitions before applying it.
+The expanded probe reproduces six failures before the correction and passes all
+16 checks afterwards; the installed CEGUI research-button regression passes
+2,592 checks, and the cumulative Release build succeeds. Visual acceptance is
+still pending; no game was launched.
+
 The spell and research buttons both used the generic pickaxe atlas entry.
 The population/held-creature UI already provides cached square portraits of the
 faction's actual worker. Reuse that image for both summon-worker buttons during

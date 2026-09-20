@@ -18,7 +18,15 @@ probe = r'''
 namespace CEGUI {using String=std::string;}
 enum class SkillType {spellSummonWorker,other};
 struct CreatureDefinition {std::string mesh;std::string getMeshName()const{return mesh;}};
-struct Seat {const CreatureDefinition* worker;const CreatureDefinition* getWorkerClassToSpawn(){return worker;}};
+struct Seat {const CreatureDefinition* worker;std::string faction="Keeper";
+ const CreatureDefinition* getWorkerClassToSpawn(){return worker;}
+ const std::string& getFaction(){return faction;}};
+struct ConfigManager {std::map<std::string,std::string> workers;
+ static ConfigManager& getSingleton(){static ConfigManager config;return config;}
+ std::string getFactionWorkerClass(const std::string& faction){return workers[faction];}};
+struct GameMap {std::map<std::string,CreatureDefinition> definitions;
+ const CreatureDefinition* getClassDescription(const std::string& name){auto i=definitions.find(name);return i==definitions.end()?nullptr:&i->second;}};
+GameMap map;GameMap* mGameMap=&map;
 struct Image {std::string mesh;std::string getName()const{return "CreatureHandIcon/"+mesh;}};
 Image getCreatureHandIconImage(const std::string& mesh){return {mesh};}
 struct Window {std::map<std::string,std::string> properties;Window* child=nullptr;
@@ -38,6 +46,16 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
   auto saved=skill.properties;refresh(SkillType::other,&seat,&skill,&root);check(skill.properties==saved);
  }
  seat.worker=nullptr;auto saved=skill.properties;refresh(SkillType::spellSummonWorker,&seat,&skill,&root);check(skill.properties==saved);
+ // A real client receives faction and definitions, never the server's worker pointer.
+ for(const auto& faction:{"Keeper","Adventurer","Custom"}){
+  seat.faction=faction;const std::string name=seat.faction+"Worker";
+  const std::string mesh=seat.faction=="Keeper"?"Kobold.mesh":seat.faction=="Adventurer"?"Dwarf1.mesh":"custom-worker.mesh";
+  ConfigManager::getSingleton().workers[seat.faction]=name;map.definitions[name]={mesh};
+  skill.properties["ButtonImage"]="pickaxe";cast.properties["NormalImage"]="pickaxe";
+  refresh(SkillType::spellSummonWorker,&seat,&skill,&root);
+  check(skill.properties["ButtonImage"]=="CreatureHandIcon/"+mesh);
+  check(cast.properties["NormalImage"]=="CreatureHandIcon/"+mesh);
+ }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''.replace('BRANCH', branch)

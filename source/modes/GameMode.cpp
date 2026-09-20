@@ -2440,6 +2440,9 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     if(resType == SkillType::spellSummonWorker)
     {
         const CreatureDefinition* worker = localPlayerSeat->getWorkerClassToSpawn();
+        if(worker == nullptr)
+            worker = mGameMap->getClassDescription(ConfigManager::getSingleton().getFactionWorkerClass(
+                localPlayerSeat->getFaction()));
         if(worker != nullptr)
         {
             const CEGUI::String image = getCreatureHandIconImage(worker->getMeshName()).getName();
