@@ -38,7 +38,7 @@ Research rooms, traps and spells through three levels in the skill tree; complet
 
 Creatures route through usable gaps around solid room furniture, including corner-aligned beds, without treating other creatures as route blockers.
 
-The hand holds a pointer-aligned hammer while building rooms, traps and doors; an eligible build request plays a leftward strike with the flat hammer face.
+The hand holds a pointer-aligned hammer while building rooms, traps and doors; an eligible build request reuses the digging hand angle and strike movement.
 
 ### Be part of the community
 
