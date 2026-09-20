@@ -324,7 +324,7 @@ private:
     unsigned int mUserCameraSlot = 0;
 
     void updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed);
-    bool mCreatureIndicatorsVisible = false;
+    bool mCreatureIndicatorsVisible = true;
     bool mIndicatorLeftAltDown = false;
     bool mIndicatorRightAltDown = false;
     void resetIdleHand();
