@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Creature moods and navigation icons](CREATURE-ICON-PRESENTATION.md): coloured
+  mood artwork and relief shading of existing navigation symbols.
+
 - [Creature level progression](CREATURE-LEVEL-PROGRESSION.md): thirty-level
   power curve, increasing XP requirements and retained advancement surplus.
 
