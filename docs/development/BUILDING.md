@@ -1,5 +1,31 @@
 # Configuring and compiling on Windows
 
+## Creature feature queue: current September 20 executable
+
+The normal Release executable includes coloured creature moods/navigation,
+experience and attack-recovery overlays, and thirty-level vitality/power growth:
+September 20 11:16:52 UTC, 4,882,944 bytes, SHA-256
+`C899BE3A489C6E2D32A1E6B45FE10C3BC28C188428911DD72F2242B7BD119E56`.
+The clean baseline build and both cumulative builds succeeded in
+`build/review-followups`; staged and normal executable hashes match.
+The prior normal executable is preserved in
+`build/before-creature-features-2026-09-20/opendungeons-plus.exe`.
+
+Runtime preparation and all 32 resource-generation checks pass. Focused checks:
+377 progress/packet, 128 Alt, 5,115 level/stat, 986 default XP, 17 missile launch,
+110 mood-asset, 200 health transparency, 299 actual Ogre overlay and 1,506
+installed CEGUI/Ogre layout/colour checks passed. Exact comparisons preserve
+all 34 species' total XP budgets. Windows application control blocked the
+expanded level probe (180 additional channel cases) and a later packet rerun;
+those two newly compiled runs are not counted as passes. No security settings
+were changed. See [progress](CREATURE-PROGRESS-INDICATORS.md),
+[level development](CREATURE-LEVEL-PROGRESSION.md) and
+[icons](CREATURE-ICON-PRESENTATION.md) for scope and validation limits.
+
+All three features are ready for user gameplay/visual testing. The game was
+closed during deployment and was not launched by the assistant. No push or
+release publication was requested or performed.
+
 ## Depleted health segments: September 20 asset update
 
 Missing health now leaves transparent gaps instead of dark segments and borders.

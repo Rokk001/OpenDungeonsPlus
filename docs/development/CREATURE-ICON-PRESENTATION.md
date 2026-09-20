@@ -1,0 +1,39 @@
+# Creature moods and navigation icon presentation
+
+## Existing paths and implementation
+
+The eleven mood states already had individual textures and shared status
+materials. Their meanings, bit values, cycling, display size and visibility
+remain unchanged. New original coloured artwork replaces those textures:
+amber/red mood severity, gold payment/stun, warm food, cool sleep/KO, iron prison
+and a crimson rally banner. The 64px assets are resampled from the source atlas
+under `tools/artwork`; the generation prompt and packaging command are recorded
+there. The old health generator no longer overwrites the separate unhappy icon.
+
+Navigation categories and utilities already had procedural silhouettes in
+`Gui.cpp`; these now receive coloured metal/enamel shading rather than being
+replaced with bitmap approximations. The existing static icon atlas is similarly
+shaded in memory. Original textures, named regions, source alpha, terrain
+swatches, coloured artwork and the hand prohibition symbol remain intact.
+No button size, position, input binding, tooltip, selection or disabled-state
+behaviour changes. Image resources are created once during GUI initialization.
+
+## Verification
+
+- `source/tests/check_creature_icon_presentation.ps1`: 110 checks pass for all
+  eleven assets, transparent corners, colour/silhouette coverage, uniqueness
+  and material references.
+- Existing health transparency test: 200 checks pass.
+- Hidden-window actual CEGUI/Ogre fixture: 1,506 checks pass, including every
+  source-alpha pixel, unchanged terrain swatches, coloured procedural symbols,
+  layout, selection and hit-target checks across viewport/UI scales.
+- Actual creature overlay fixture: 299 checks pass with the new mood textures.
+  HUD and creature status renders were inspected; these are isolated renders,
+  not a game session. Local fixtures are in `build/windows`.
+
+Manual acceptance remains with the user: readability of every mood at normal
+zoom, navigation at the user's scale, hover/selection/disabled feedback and
+health/experience legibility when a need symbol is displayed.
+
+No release/version bump is requested. The development index and source-artwork
+instructions are updated; BUILDING.md records the cumulative executable.

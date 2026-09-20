@@ -44,6 +44,7 @@
 #include <CEGUI/widgets/ScrolledContainer.h>
 #include <CEGUI/widgets/Tooltip.h>
 #include <CEGUI/Event.h>
+#include <OgreImage.h>
 
 #include <algorithm>
 #include <cmath>
@@ -140,8 +141,84 @@ void createMiniMapCornerImages()
     }
 }
 
+void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
+        unsigned char red, unsigned char green, unsigned char blue)
+{
+    const auto original = pixels;
+    const unsigned char colour[] = {red, green, blue};
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            const int i = (y * size + x) * 4;
+            // Keep coloured artwork and the exact silhouette/antialiasing.
+            const int brightest = std::max(original[i], std::max(original[i + 1], original[i + 2]));
+            const int darkest = std::min(original[i], std::min(original[i + 1], original[i + 2]));
+            if(original[i + 3] == 0 || brightest - darkest > 40)
+                continue;
+            const float upperAlpha = x > 0 && y > 0 ? original[((y - 1) * size + x - 1) * 4 + 3] / 255.0f : 0;
+            const float lowerAlpha = x + 1 < size && y + 1 < size ? original[((y + 1) * size + x + 1) * 4 + 3] / 255.0f : 0;
+            const float relief = 0.24f * (lowerAlpha - upperAlpha);
+            const float light = (0.95f - 0.25f * y / size + relief) * brightest / 255.0f;
+            for(int channel = 0; channel < 3; ++channel)
+                pixels[i + channel] = static_cast<unsigned char>(std::max(0.0f,
+                    std::min(255.0f, colour[channel] * light + 110.0f * std::max(0.0f, relief))));
+        }
+    }
+}
+
+void colourNavigationAtlas()
+{
+    Ogre::Image source;
+    source.load("ODIcons.png", "GUI");
+    const int width = static_cast<int>(source.getWidth());
+    const int height = static_cast<int>(source.getHeight());
+    std::vector<unsigned char> pixels(width * height * 4);
+    for(int y = 0; y < height; ++y)
+        for(int x = 0; x < width; ++x)
+        {
+            const auto colour = source.getColourAt(x, y, 0);
+            const int i = (y * width + x) * 4;
+            pixels[i] = static_cast<unsigned char>(colour.r * 255 + 0.5f);
+            pixels[i + 1] = static_cast<unsigned char>(colour.g * 255 + 0.5f);
+            pixels[i + 2] = static_cast<unsigned char>(colour.b * 255 + 0.5f);
+            pixels[i + 3] = static_cast<unsigned char>(colour.a * 255 + 0.5f);
+        }
+    const unsigned char palette[][3] = {
+        {132, 186, 242}, {234, 137, 80}, {231, 183, 100}, {248, 206, 88},
+        {192, 151, 236}, {148, 217, 151}, {214, 199, 156}, {217, 158, 91}};
+    // The first three resource badges and terrain swatches retain their artwork.
+    for(int row = 0; row < height; row += 64)
+    {
+        const int size = row == 0 ? 32 : 64;
+        for(int column = 0; column + size <= width; column += size)
+        {
+            if((row == 0 && column < 96) || (row == 64 && column < 448))
+                continue;
+            std::vector<unsigned char> icon(size * size * 4);
+            for(int y = 0; y < size; ++y)
+                std::copy_n(pixels.begin() + ((row + y) * width + column) * 4, size * 4, icon.begin() + y * size * 4);
+            const auto& colour = palette[(column / size) % 8];
+            shadeNavigationIcon(icon, size, colour[0], colour[1], colour[2]);
+            for(int y = 0; y < size; ++y)
+                std::copy_n(icon.begin() + y * size * 4, size * 4, pixels.begin() + ((row + y) * width + column) * 4);
+        }
+    }
+    auto& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("ColouredNavigationAtlas");
+    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(width, height), CEGUI::Texture::PF_RGBA);
+    auto image = CEGUI::ImageManager::getSingleton().getIterator();
+    while(!image.isAtEnd())
+    {
+        if(image.getCurrentKey().find("OpenDungeonsIcons/") == 0 &&
+           image.getCurrentKey() != "OpenDungeonsIcons/Prohibition")
+            static_cast<CEGUI::BasicImage*>(image.getCurrentValue().first)->setTexture(&texture);
+        ++image;
+    }
+}
+
 void createNavigationImages()
 {
+    colourNavigationAtlas();
     createMiniMapCornerImages();
     const int size = 64;
     std::vector<unsigned char> pixels(size * size * 4, 0);
@@ -174,6 +251,7 @@ void createNavigationImages()
         }
     }
     CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("MapZoom");
+    shadeNavigationIcon(pixels, size, 245, 199, 115);
     texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
     CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
         "BasicImage", "OpenDungeonsIcons/MapZoom"));
@@ -193,6 +271,7 @@ void createNavigationImages()
         }
     }
     CEGUI::Texture& returnTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("MenuReturn");
+    shadeNavigationIcon(pixels, size, 235, 190, 116);
     returnTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
     CEGUI::BasicImage& returnImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
         "BasicImage", "OpenDungeonsIcons/MenuReturn"));
@@ -262,6 +341,8 @@ void createNavigationImages()
             }
         }
         CEGUI::Texture& categoryTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(categories[category]);
+        const unsigned char colours[][3] = {{240, 138, 102}, {146, 201, 246}, {130, 237, 180}, {241, 193, 107}};
+        shadeNavigationIcon(pixels, size, colours[category][0], colours[category][1], colours[category][2]);
         categoryTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
         CEGUI::BasicImage& categoryImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
             "BasicImage", std::string("OpenDungeonsIcons/") + categories[category]));
@@ -321,6 +402,7 @@ void createNavigationImages()
             }
         }
         CEGUI::Texture& utilityTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(utilities[utility]);
+        shadeNavigationIcon(pixels, size, 244, 204, 126);
         utilityTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
         CEGUI::BasicImage& utilityImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
             "BasicImage", std::string("OpenDungeonsIcons/") + utilities[utility]));
@@ -331,6 +413,7 @@ void createNavigationImages()
             for(size_t i = 0; i < pixels.size(); i += 4)
                 pixels[i] = pixels[i + 1] = pixels[i + 2] = 224;
             CEGUI::Texture& readTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("NavigationMessagesRead");
+            shadeNavigationIcon(pixels, size, 171, 155, 126);
             readTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
             CEGUI::BasicImage& readImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
                 "BasicImage", "OpenDungeonsIcons/NavigationMessagesRead"));
