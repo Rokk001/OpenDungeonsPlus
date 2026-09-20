@@ -15,4 +15,6 @@ No other in-game transparent selection page was found.
 
 The installed CEGUI probe passes 20 checks, including repeated in-game/main-menu
 switching, retained saved items, full-viewport coverage and loading text above
-the backdrop. Release compilation and user appearance acceptance are pending.
+the backdrop. The cumulative Release build passes in
+`build/review-followups/desktop-menu-build.log`; user appearance acceptance is
+pending.
