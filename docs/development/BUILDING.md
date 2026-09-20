@@ -1,6 +1,33 @@
 # Configuring and compiling on Windows
 
-## Creature feature queue: current September 20 executable
+## September 20 screenshot follow-ups: current executable
+
+The normal Release executable now includes the complete creature feature stack
+and the construction border, unread-badge dismissal, diagonal-corridor movement,
+crypt decay, interaction spacing, stronger icon relief and outlined level digits.
+Built September 20 14:14:25 UTC, 4,932,608 bytes, SHA-256
+`922693A656B6E9214AF53A5530F91B78FD83BDAB51CD629914E48F5141C96440`.
+The final Release build passed in `build/review-followups`; the normal executable
+in `build/windows` has the identical hash. The game was closed and not launched.
+The prior normal executable is preserved, with its hash verified, in
+`build/before-september20-followups-20260920/opendungeons-plus.exe`.
+
+Runtime preparation and all 32 normal-build resource checks pass. Final executed
+checks: 6,678 navigation/interaction, 41 exact workstation dispatch, 38,100 icon
+shading, 377 progress/packet, 5,295 level/power, 986 XP across 34 species, 110 mood
+assets and 200 unchanged health-transparency checks, all with zero failures.
+Earlier in this queue, 333 construction-geometry and 2,900 notification GUI checks
+also passed. User gameplay and appearance acceptance remain pending.
+
+Windows application control still blocks the crypt-decay and level-caption
+Ogre fixtures, plus the expanded packed-bedroom/full-room navigation run, before
+execution (4551). Their compilation is successful, not their runtime validation.
+The blocking policy is recorded by CodeIntegrity event 3077; no security policy
+was changed and no executable was disguised to evade it. Other native fixtures
+listed above did execute successfully, so this is not a blanket claim that all
+tests are blocked. No push, pull request or release publication was performed.
+
+## Creature feature queue: previous September 20 executable
 
 The normal Release executable includes coloured creature moods/navigation,
 experience and attack-recovery overlays, and thirty-level vitality/power growth:

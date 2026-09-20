@@ -35,10 +35,9 @@ instead of silently mixing a separately releasable combat fix into the feature.
 - Default XP validation: 986 checks passed; separate exact-decimal comparison
   confirmed all 34 species' original total XP budgets are unchanged.
 - Missile launch/visibility regression: 17 checks passed.
-- The expanded probe adds 180 checks of production melee/ranged channel
-  calculations; it compiles, but Windows application control blocked that new
-  executable (4551). It also blocked the refreshed packet regression; the earlier
-  377 packet checks passed before the level change. These are not runtime passes.
+- The final expanded probe passes 5,295 checks, including the additional 180
+  production melee/ranged channel cases; the refreshed packet regression passes
+  377 checks. These successful runs supersede the earlier 4551-blocked attempts.
 - Test entry points: `source/tests/check_creature_level_progression.py`,
   `source/tests/check_creature_progress.py`,
   `source/tests/check_missile_launch_visibility.py`.
