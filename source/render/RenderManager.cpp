@@ -211,8 +211,9 @@ Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
     return count == 0 ? Ogre::Vector3::ZERO : sum / float(count);
 }
 
-void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* animation,
-    Ogre::Entity* hammer = nullptr, const Ogre::Vector3& hammerPoint = Ogre::Vector3::ZERO)
+void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
+    Ogre::Entity* hammer = nullptr, const Ogre::Vector3& hammerPoint = Ogre::Vector3::ZERO,
+    Ogre::ManualObject* pickaxe = nullptr)
 {
     const float weight = animation->getAnimationName() == "Point" ? 1.0f :
         (animation->getAnimationName() == "PointTransition" ?
@@ -220,20 +221,22 @@ void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* anim
     Ogre::SceneNode* model = hand->getParentSceneNode();
     model->setPosition(Ogre::Vector3::ZERO);
     const bool building = animation->getAnimationName() == "Build" || animation->getAnimationName() == "BuildSwing";
-    if(building && hammer != nullptr)
+    const bool digging = animation->getAnimationName() == "Dig" || animation->getAnimationName() == "DigSwing";
+    Ogre::MovableObject* tool = building ? static_cast<Ogre::MovableObject*>(hammer) : (digging ? pickaxe : nullptr);
+    if(tool != nullptr)
     {
+        Ogre::SkeletonInstance* skeleton = hand->getSkeleton();
+        Ogre::Animation* pose = skeleton->getAnimation(building ? "Build" : "Dig");
+        skeleton->reset();
+        pose->apply(skeleton, 0);
+        skeleton->_updateTransforms();
+        Ogre::TagPoint* grip = static_cast<Ogre::TagPoint*>(tool->getParentNode());
+        const Ogre::Vector3 point = building ? hammerPoint : Ogre::Vector3(0.085f, 0.043f, 0);
+        const Ogre::Vector3 face = grip->_getFullLocalTransform() * point;
+        model->setPosition(-(model->getOrientation() * (model->getScale() * face)));
+        skeleton->setAnimationState(*hand->getAllAnimationStates());
+        skeleton->_updateTransforms();
         hand->_updateAnimation();
-        auto* grip = static_cast<Ogre::TagPoint*>(hammer->getParentNode());
-        const Ogre::Vector3 face = grip->_getFullLocalTransform() * hammerPoint;
-        Ogre::Vector3 offset = -(model->getOrientation() * (model->getScale() * face));
-        if(animation->getAnimationName() == "BuildSwing")
-        {
-            const float progress = animation->getTimePosition() / animation->getLength();
-            // Draw the flat head back to the right, then strike left onto the pointer.
-            if(progress < 0.5f)
-                offset.x += 0.045f * std::sin(progress * Ogre::Math::TWO_PI);
-        }
-        model->setPosition(offset);
         return;
     }
     if(weight == 0.0f)
@@ -1345,7 +1348,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             mHandAnimationState = setEntityAnimation(ent, mHandPose, true);
         }
         alignKeeperHandPointer(mSceneManager->getEntity("keeperHandEnt"), mHandAnimationState,
-            mHandHammer, mHammerStrikePoint);
+            mHandHammer, mHammerStrikePoint, mHandPickaxe);
     }
 
 
