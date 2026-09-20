@@ -1,5 +1,19 @@
 # Navigation appearance
 
+## Persistent room-selection follow-up
+
+The action resolver already returns the selected room button, and the shared
+navigation look already draws `SelectionColour` in normal/hover/pressed states;
+only creature-panel filters currently assign it. Extend the existing per-frame
+action feedback to set this property on the matching room button and clear it
+on all other rooms, reusing the established gold highlight. Selection remains
+visible away from the pointer and while paused; canceling or changing action
+clears it. No new state, widget, input rule, version or release note is needed.
+All 728 production feedback checks pass across 13 room choices, cancellation,
+other actions and unchanged frames; the four existing look states include the
+selection layer. The cumulative Release build passes; user visual acceptance
+remains pending.
+
 ## Existing path and diagnosed gap
 
 The existing game layout already places the 176-square circular minimap at the
