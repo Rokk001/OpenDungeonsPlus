@@ -11,6 +11,7 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 source = (repo / 'source/gamemap/RoomObjectNavigation.cpp').read_text()
 source = re.sub(r'^#include[^\n]*\n', '', source, flags=re.M)
 parser = argparse.ArgumentParser()
+parser.add_argument('--compile-only', action='store_true', help='Compile the fixture without executing its checks')
 parser.add_argument('--food-source-ref')
 parser.add_argument('--trace-food', action='store_true')
 parser.add_argument('--trace-work', action='store_true')
@@ -76,6 +77,11 @@ void placeBed(BuildingObject& bed,int x,int y,int width,int height,float rotatio
 }
 struct Room {
  RoomType type=RoomType::hatchery;std::map<Tile*,BuildingObject*> objects;std::vector<Creature*> users;
+ struct InteractionPosition {const BuildingObject* object;Ogre::Vector2 position,direction;};
+ std::map<Creature*,InteractionPosition> interactionPositions;
+ const auto& getInteractionPositions()const{return interactionPositions;}
+ void reserveInteractionPosition(Creature* c,const InteractionPosition& p){interactionPositions[c]=p;}
+ void releaseInteractionPosition(Creature* c){interactionPositions.erase(c);}
  RoomType getType()const{return type;}const auto& getBuildingObjects()const{return objects;}
  Creature* getCreatureUsingRoom(unsigned i){return i<users.size()?users[i]:nullptr;}
 };
@@ -340,6 +346,51 @@ int main(){
  creature=Creature{&map};ChickenEntity distant{&map,{8,5,0}};
  CreatureActionEatChicken::handleEatChicken(creature,&distant);
  check(distant.consumed==0&&creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains original tile path and 80 percent truncation");
+ {
+  GameMap stations;Room workRoom;workRoom.type=RoomType::trainingHall;stations.rooms={&workRoom};
+  for(auto& tile:stations.tiles)tile.room=&workRoom;
+  BuildingObject dummy;dummy.mesh="TrainingDummy1";dummy.pos={8,8.2f,0};
+  workRoom.objects[stations.getTile(8,8)]=&dummy;
+  Creature first{&stations},second{&stations},passing{&stations};
+  first.mesh="Rat.mesh";second.mesh="Spider.mesh";first.pos={3,4,0};second.pos={4,4,0};
+  const Ogre::Vector2 wanted(8,7.7f),facing(8,8.2f);
+  std::vector<Ogre::Vector2> route;
+  check(RoomObjectNavigation::workApproach(first,dummy,wanted,{0,0},route)&&!route.empty(),"first station user obtains an endpoint");
+  check(workRoom.interactionPositions.count(&first)==1,"endpoint is reserved while approaching");
+  const auto original=workRoom.interactionPositions.at(&first).position;
+  first.pos={original.x,original.y,0};
+  check(RoomObjectNavigation::workApproach(second,dummy,wanted,{0,0},route)&&!route.empty(),"second user obtains a separate reachable endpoint");
+  const auto adjacent=workRoom.interactionPositions.at(&second).position;
+  check(interactionPositionClear(second,adjacent,facing-adjacent),"oriented user footprints do not overlap");
+  check(std::abs(adjacent.x-original.x)>.01f,"second user moves sideways, not onto the first");
+  second.pos={adjacent.x,adjacent.y,0};
+  check(RoomObjectNavigation::workApproach(first,dummy,wanted,{0,0},route)&&route.empty(),"first user's chosen endpoint remains stable");
+  check(RoomObjectNavigation::workApproach(second,dummy,wanted,{0,0},route)&&route.empty(),"second user's chosen endpoint remains stable");
+  passing.pos={original.x-2,original.y,0};
+  const auto occupiedGeometry=RoomObjectNavigation::bodyObstacles(passing);
+  std::vector<Ogre::Vector2> occupiedRoute{{original.x+2,original.y}},freeRoute=occupiedRoute;
+  RoomObjectNavigation::refine(passing,occupiedRoute);
+  workRoom.releaseInteractionPosition(&first);workRoom.releaseInteractionPosition(&second);
+  check(workRoom.interactionPositions.empty(),"released room users free their endpoints");
+  check(RoomObjectNavigation::bodyObstacles(passing).size()==occupiedGeometry.size(),"station users never become transit obstacles");
+  RoomObjectNavigation::refine(passing,freeRoute);
+  check(occupiedRoute==freeRoute,"passing route is identical with occupied or free interaction slots");
+ }
+ {
+  GameMap cells;Room torture;torture.type=RoomType::torture;cells.rooms={&torture};
+  for(auto& tile:cells.tiles)tile.room=&torture;
+  BuildingObject apparatus;apparatus.mesh="TortureObject";apparatus.pos={7,7,0};
+  torture.objects[cells.getTile(7,7)]=&apparatus;
+  Creature victim{&cells};victim.pos={3,7,0};victim.actions.insert(CreatureActionType::useRoom);
+  torture.users={&victim};std::vector<Ogre::Vector2> route;
+  check(RoomObjectNavigation::workApproach(victim,apparatus,{7,7},{0,-1},route)&&!route.empty(),"reserved victim can enter its own apparatus");
+  check(!route.empty()&&route.back()==Ogre::Vector2(7,7),"unoccupied apparatus preserves its central interaction position");
+  if(!route.empty()){
+   victim.pos={route.back().x,route.back().y,0};
+   check(RoomObjectNavigation::workApproach(victim,apparatus,{7,7},{0,-1},route)&&route.empty(),"torture endpoint becomes ready without repeated movement");
+  }
+  torture.releaseInteractionPosition(&victim);
+ }
  PACKED_BEDS
  ROOM_LAYOUTS
  BENCHMARK
@@ -722,4 +773,7 @@ with tempfile.TemporaryDirectory(prefix='odp-room-navigation-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++14', f'/I{work}', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
+    if args.compile_only:
+        print('COMPILE ONLY: fixture built; runtime checks were not executed')
+    else:
+        subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
