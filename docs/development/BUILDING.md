@@ -1,5 +1,16 @@
 # Configuring and compiling on Windows
 
+## Hammer head-axis correction: current September 20 executable
+
+The normal Release executable aligns the hammer's actual striking-face axis
+with the pickaxe while retaining left-end pointer alignment and strike motion:
+September 20 10:48:12 Europe/Warsaw, 4,873,728 bytes, SHA-256
+`42494EF1450B2E9EF3F086C8A1B30960ED1B72C3099B0589AF702B0D88641C5C`.
+All 4,189 real-asset checks, Release compilation, runtime preparation and 32
+resource checks pass; staged and normal executable hashes match.
+No game was launched; hammer angle and the preceding yo-yo correction await
+user retest. See [hammer correction](CONSTRUCTION-HAMMER.md).
+
 ## Yo-yo finger pull: current September 20 executable
 
 The normal Release executable adds synchronized finger flex/release to all three

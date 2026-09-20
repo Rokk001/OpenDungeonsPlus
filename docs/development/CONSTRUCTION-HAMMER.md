@@ -1,5 +1,32 @@
 # Construction hammer
 
+## Authored head-axis correction, September 20
+
+The user accepted both tool cursor hotspots but reports the hammer still has a
+different angle in screenshots at 09:26:30/34. On `fix/hammer-grip-angle`, from
+complete checkpoint `8e632679`, inspection of the actual mesh vertices identifies
+the gap: the hammer shaft follows Z, but its striking faces are along Y, not X.
+The previous attachment checks compared the wrong nominal head axis. Its maximum
+Y face is centred at (0.0002255, 0.089139, 0.279020); maximum X is a side of the
+head, not a striking face.
+
+Rotate the authored head about its shaft so Y maps to the pickaxe's X head axis,
+retaining the Z-to-Y shaft mapping, hand pose and identical strike animation.
+Keep the accepted visible left-end cursor behaviour by anchoring the actual
+positive-Y striking face after this rotation. Verify actual mesh face directions
+and projected angles as well as the existing pointer and animation regressions.
+
+The actual-face regression fails before the correction and passes afterwards;
+all 4,189 real-asset checks pass, including 162 projected head-angle comparisons,
+unchanged shaft/grip and strike motion, both left-end cursors and the yo-yo pulls.
+Isolated hammer/pickaxe previews were inspected; no game was launched.
+Release compilation, runtime preparation and 32 resource checks pass. Both
+staged and normal executables are September 20 10:48:12 Europe/Warsaw,
+4,873,728 bytes, SHA-256
+`42494EF1450B2E9EF3F086C8A1B30960ED1B72C3099B0589AF702B0D88641C5C`.
+User visual acceptance remains pending. README already describes the unchanged
+tool behaviour; no README, version, input or network change is needed.
+
 ## Left tool end as the cursor, September 20
 
 The user clarifies that the visible left striking end itself must select the
