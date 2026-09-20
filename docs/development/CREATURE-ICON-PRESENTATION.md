@@ -18,6 +18,12 @@ swatches, coloured artwork and the hand prohibition symbol remain intact.
 No button size, position, input binding, tooltip, selection or disabled-state
 behaviour changes. Image resources are created once during GUI initialization.
 
+The September 20 screenshot follow-up concerns shallow navigation relief: the
+old one-pixel alpha gradient produces mostly flat tinted silhouettes at enlarged
+HUD scales. Strengthen the existing shader with size-relative bevel sampling,
+a shaded face and a narrow enamel reflection, while retaining every source-alpha
+pixel and coloured asset. Mood artwork and icon meanings do not need replacing.
+
 ## Verification
 
 - `source/tests/check_creature_icon_presentation.ps1`: 110 checks pass for all
@@ -34,6 +40,15 @@ behaviour changes. Image resources are created once during GUI initialization.
 Manual acceptance remains with the user: readability of every mood at normal
 zoom, navigation at the user's scale, hover/selection/disabled feedback and
 health/experience legibility when a need symbol is displayed.
+
+Follow-up validation: the 110 mood-asset checks still pass. The new focused
+`check_navigation_icon_shading.py --compile-only` builds the actual shader with
+alpha, colour-artwork, engraved-detail and edge-contrast assertions at four icon
+sizes; these assertions have not run because Windows application control blocks
+new test executables. Earlier GUI render results above predate this relief change
+and must not be treated as its visual acceptance.
+The complete Windows Release build passed with the follow-up on September 20
+(`build/review-followups/icon-relief-build.log`); normal deployment is pending.
 
 No release/version bump is requested. The development index and source-artwork
 instructions are updated; BUILDING.md records the cumulative executable.

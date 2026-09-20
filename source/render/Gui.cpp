@@ -146,6 +146,12 @@ void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
 {
     const auto original = pixels;
     const unsigned char colour[] = {red, green, blue};
+    const int bevelWidth = std::max(1, size / 16);
+    const auto alpha = [&](int x, int y)
+    {
+        return x >= 0 && y >= 0 && x < size && y < size ?
+            original[(y * size + x) * 4 + 3] / 255.0f : 0.0f;
+    };
     for(int y = 0; y < size; ++y)
     {
         for(int x = 0; x < size; ++x)
@@ -156,13 +162,18 @@ void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
             const int darkest = std::min(original[i], std::min(original[i + 1], original[i + 2]));
             if(original[i + 3] == 0 || brightest - darkest > 40)
                 continue;
-            const float upperAlpha = x > 0 && y > 0 ? original[((y - 1) * size + x - 1) * 4 + 3] / 255.0f : 0;
-            const float lowerAlpha = x + 1 < size && y + 1 < size ? original[((y + 1) * size + x + 1) * 4 + 3] / 255.0f : 0;
-            const float relief = 0.24f * (lowerAlpha - upperAlpha);
-            const float light = (0.95f - 0.25f * y / size + relief) * brightest / 255.0f;
+            const float relief = 0.55f * (alpha(x + bevelWidth, y + bevelWidth) -
+                alpha(x - bevelWidth, y - bevelWidth)) +
+                0.25f * (alpha(x + 1, y + 1) - alpha(x - 1, y - 1));
+            const float face = 0.98f - 0.42f * y / size;
+            const float reflection = 0.12f * std::max(0.0f,
+                1.0f - std::abs((y + 0.35f * x) / size - 0.38f) / 0.09f);
+            const float light = std::max(0.0f, face + 0.65f * std::min(0.0f, relief));
+            const float highlight = std::min(0.85f, std::max(0.0f, relief) + reflection);
             for(int channel = 0; channel < 3; ++channel)
                 pixels[i + channel] = static_cast<unsigned char>(std::max(0.0f,
-                    std::min(255.0f, colour[channel] * light + 110.0f * std::max(0.0f, relief))));
+                    std::min(255.0f, ((1.0f - highlight) * colour[channel] * light +
+                        highlight * 255.0f) * brightest / 255.0f)));
         }
     }
 }
