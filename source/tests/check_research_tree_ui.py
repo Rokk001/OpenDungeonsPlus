@@ -55,11 +55,15 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string&){return CEGUI::I
 struct Seat {uint32_t level=0,queue=0;bool current=false;std::vector<SkillType> denied;
  uint32_t getSkillLevel(SkillType)const{return level;}
  const CreatureDefinition* getWorkerClassToSpawn(){return nullptr;}
+ std::string getFaction(){return "Keeper";}
  const std::vector<SkillType>& getSkillNotAllowed()const{return denied;}
  uint32_t isSkillPending(SkillType)const{return queue;}
  bool getCurrentSkillProgress(SkillType& t,float& p){t=SkillType::roomTrainingHall;p=.5f;return current;}};
 struct Player {Seat seat;Seat* getSeat(){return &seat;}};
-struct GameMap {Player player;Player* getLocalPlayer(){return &player;}};
+struct GameMap {Player player;Player* getLocalPlayer(){return &player;}
+ const CreatureDefinition* getClassDescription(const std::string&){static CreatureDefinition worker;return &worker;}};
+struct ConfigManager {static ConfigManager& getSingleton(){static ConfigManager config;return config;}
+ std::string getFactionWorkerClass(const std::string&){return "Kobold";}};
 struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;
  SkillType getType()const{return type;}const std::vector<const Skill*>& getDependencies()const{return parents;}
  int getNeededSkillPoints(uint32_t level)const{return 100*level;}};
