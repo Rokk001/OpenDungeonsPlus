@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Notification badge dismissal](NOTIFICATION-BADGE-DISMISSAL.md): right-click
+  removes either read or unread messages without opening them.
+
 - [Construction preview border](CONSTRUCTION-PREVIEW-BORDER.md): thick floor
   selection ribbons with unchanged digging outlines and validity colours.
 
