@@ -109,7 +109,8 @@ a portrait to move the camera to one of that type.
 Press Alt to toggle visible creatures' segmented, owner-coloured health rings
 above their heads. Each ring's centre alternates the level with allied hunger,
 tiredness and urgent mood or activity states, which drive the creatures'
-existing autonomous responses.
+existing autonomous responses. Depleted health segments disappear so creatures
+remain visible through the gaps.
 The population panel uses illustrated portraits where artwork is supplied;
 creatures without artwork retain their model preview. Artwork and its generation
 records are described in the [portrait asset guide](materials/portraits/README.md).
