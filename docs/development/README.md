@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Construction preview border](CONSTRUCTION-PREVIEW-BORDER.md): thick floor
+  selection ribbons with unchanged digging outlines and validity colours.
+
 - [Creature moods and navigation icons](CREATURE-ICON-PRESENTATION.md): coloured
   mood artwork and relief shading of existing navigation symbols.
 

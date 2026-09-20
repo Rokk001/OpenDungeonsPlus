@@ -4813,7 +4813,7 @@ void RenderManager::rrPlayDigAnimation()
     mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "DigSwing", false);
 }
 
-void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour)
+void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction)
 {
     if(mTilePreview == nullptr)
     {
@@ -4869,6 +4869,31 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
         }
     }
     mTilePreview->end();
+    if(construction)
+    {
+        mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+        for(Tile* tile : tiles)
+        {
+            if(tile->isFullTile())
+                continue;
+            const float x = static_cast<float>(tile->getX());
+            const float y = static_cast<float>(tile->getY());
+            const Ogre::Vector3 outer[] = {{x-0.5f,y-0.5f,0.045f}, {x+0.5f,y-0.5f,0.045f},
+                {x+0.5f,y+0.5f,0.045f}, {x-0.5f,y+0.5f,0.045f}};
+            const Ogre::Vector3 inner[] = {{x-0.44f,y-0.44f,0.045f}, {x+0.44f,y-0.44f,0.045f},
+                {x+0.44f,y+0.44f,0.045f}, {x-0.44f,y+0.44f,0.045f}};
+            for(int i = 0; i < 4; ++i)
+            {
+                const int next = (i + 1) % 4;
+                for(const auto& point : {outer[i], outer[next], inner[next], outer[i], inner[next], inner[i]})
+                {
+                    mTilePreview->position(point);
+                    mTilePreview->colour(colour);
+                }
+            }
+        }
+        mTilePreview->end();
+    }
 }
 
 void RenderManager::entitySlapped()
