@@ -6,6 +6,25 @@ OpenDungeons since version 0.4.7, in reverse chronological order.
 The numbers preceded by a hash (e.g. #9) reference GitHub issue numbers on
 our repository at https://github.com/OpenDungeons/OpenDungeons
 
+### Version 0.7.3 - 20 September 2026
+
+**Highlights:**
+
+* Added a self-contained Windows x64 release package
+* Added scalable gameplay interfaces, contextual controls and improved navigation
+* Added creature panels, health and needs indicators, and level-aware selection
+* Improved creature combat, projectiles, sleeping, feeding and room-object navigation
+* Added animated hand tools, construction feedback and interruptible idle effects
+* Improved room lighting, dynamic shadows, claimed terrain and the main-menu presentation
+
+**General:**
+
+* Added camera presets, full-map navigation and room cycling
+* Added research progression and persistent workshop production priorities
+* Improved dormitory layouts, bed traversal and room borders
+* Improved Windows startup, resource configuration, shutdown and Release performance
+* Fixed projectile collisions, legacy save loading and several interface regressions
+
 ### Version 0.7.1 - 24 Aug 2016
 
 **Highlights:**

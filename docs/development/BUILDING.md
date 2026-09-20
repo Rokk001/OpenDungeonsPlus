@@ -8,8 +8,9 @@ September 20 10:48:12 Europe/Warsaw, 4,873,728 bytes, SHA-256
 `42494EF1450B2E9EF3F086C8A1B30960ED1B72C3099B0589AF702B0D88641C5C`.
 All 4,189 real-asset checks, Release compilation, runtime preparation and 32
 resource checks pass; staged and normal executable hashes match.
-No game was launched; hammer angle and the preceding yo-yo correction await
-user retest. See [hammer correction](CONSTRUCTION-HAMMER.md).
+No game was launched by the assistant; the user accepted the hammer angle and
+preceding yo-yo correction on September 20 and confirmed the overall goal complete.
+See [hammer correction](CONSTRUCTION-HAMMER.md).
 
 ## Yo-yo finger pull: current September 20 executable
 

@@ -24,7 +24,8 @@ Release compilation, runtime preparation and 32 resource checks pass. Both
 staged and normal executables are September 20 10:48:12 Europe/Warsaw,
 4,873,728 bytes, SHA-256
 `42494EF1450B2E9EF3F086C8A1B30960ED1B72C3099B0589AF702B0D88641C5C`.
-User visual acceptance remains pending. README already describes the unchanged
+The user accepted the hammer grip angle on September 20 and confirmed the overall
+goal complete. README already describes the unchanged
 tool behaviour; no README, version, input or network change is needed.
 
 ## Left tool end as the cursor, September 20
