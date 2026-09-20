@@ -143,12 +143,43 @@ int main() {
         check(r.mHandHammer->getSubEntity(0)->getMaterialName() == "HandTool/Hammer", "isolated hand material");
         auto* attachment = static_cast<Ogre::TagPoint*>(r.mHandHammer->getParentNode());
         check(attachment->getPosition().positionEquals(Ogre::Vector3(0,.030f,-.009f)), "shaft uses accepted grasp position");
-        const auto oldHammerGrip=Ogre::Quaternion(Ogre::Degree(90),Ogre::Vector3::UNIT_Z)*
-            Ogre::Quaternion(Ogre::Degree(-90),Ogre::Vector3::UNIT_X)*Ogre::Quaternion(Ogre::Degree(90),Ogre::Vector3::UNIT_Z);
-        check((attachment->getOrientation()*Ogre::Vector3::UNIT_Z).positionEquals(oldHammerGrip*Ogre::Vector3::UNIT_Z),
-            "head roll leaves the shaft axis in the existing grip");
-        std::cout << "HAMMER_FACE=" << r.mHammerStrikePoint << '\n';
-        check(r.mHammerStrikePoint.x < 0 && r.mHammerStrikePoint.z > 0, "strike anchor belongs to the head rather than the shaft");
+        const auto pickaxeOrientation=r.mHandPickaxe->getParentNode()->getOrientation();
+        check((attachment->getOrientation()*Ogre::Vector3::UNIT_Z).positionEquals(
+            pickaxeOrientation*Ogre::Vector3::UNIT_Y), "hammer shaft matches the pickaxe shaft angle");
+        const auto mesh=r.mHandHammer->getMesh();
+        std::vector<Ogre::Vector3> vertices;
+        for(unsigned sub=0;sub<mesh->getNumSubMeshes();++sub) {
+            const auto* part=mesh->getSubMesh(sub);
+            const auto* data=part->useSharedVertices?mesh->sharedVertexData:part->vertexData;
+            const auto* element=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+            auto buffer=data->vertexBufferBinding->getBuffer(element->getSource());
+            Ogre::HardwareBufferLockGuard lock(buffer,Ogre::HardwareBuffer::HBL_READ_ONLY);
+            auto* bytes=static_cast<unsigned char*>(lock.pData);
+            for(size_t i=0;i<data->vertexCount;++i) {
+                float* value;
+                element->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&value);
+                vertices.emplace_back(value);
+            }
+        }
+        Ogre::Vector3 leftFace=vertices.front(),oppositeFace=vertices.front();
+        for(const auto& vertex:vertices) {
+            if(vertex.y>leftFace.y)leftFace=vertex;
+            if(vertex.y<oppositeFace.y)oppositeFace=vertex;
+        }
+        const auto headAxis=(leftFace-oppositeFace).normalisedCopy();
+        check((attachment->getOrientation()*headAxis).positionEquals(
+            pickaxeOrientation*Ogre::Vector3::UNIT_X,.002f),
+            "actual hammer striking faces match the pickaxe head angle");
+        check(r.mHammerStrikePoint.positionEquals(leftFace,.00001f),
+            "hammer cursor uses the actual screen-left striking face");
+        engine._fireFrameStarted();engine._fireFrameRenderingQueued();hand->_updateAnimation();node->_update(true,true);
+        alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
+        node->_update(true,true);window->update();engine._fireFrameEnded();
+        const auto readyFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
+        check(readyFace.length()<.00001f,"left hammer face is the pointer while selecting a tile");
+        const auto rightFace=node->_getFullTransform()*(attachment->_getFullLocalTransform()*oppositeFace);
+        check(rightFace.x>readyFace.x,"the cursor face is visibly left of the opposite hammer end");
+        r.mHandAnimationState=r.setEntityAnimation(hand,"Build",true);
         for(float scale : {.8f, 1.f, 1.2f}) {
             node->setScale(scale, scale, scale);
             engine._fireFrameStarted(); engine._fireFrameRenderingQueued(); hand->_updateAnimation(); node->_update(true, true);
@@ -164,9 +195,12 @@ int main() {
             engine._fireFrameEnded();
         }
         for(float scale:{.8f,1.f,1.2f}) {
-            node->setScale(scale,scale,scale);r.rrPlayBuildAnimation();
-            Ogre::Quaternion windupWrist;
-            Ogre::Vector3 previousFace;
+            node->setScale(scale,scale,scale);
+            alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
+            const auto restingOffset=node->getPosition();
+            r.rrPlayBuildAnimation();
+            check(r.mHandAnimationState->getLength()==hand->getAnimationState("DigSwing")->getLength(),
+                "construction uses exactly the digging strike duration");
             check(!r.mHandAnimationState->getLoop() && r.mHandHammer->isVisible() && !r.mHandPickaxe->isVisible(),
                 "build strike is one shot with only its hammer visible");
             for(int sample=0;sample<=16;++sample) {
@@ -176,24 +210,33 @@ int main() {
                     alignKeeperHandPointer(hand,r.mHandAnimationState,r.mHandHammer,r.mHammerStrikePoint);
                     node->_update(true,true);window->update();engine._fireFrameEnded();
                 }
-                const auto wrist=hand->getSkeleton()->getBone("Hand1")->getOrientation();
-                if(sample==4)windupWrist=wrist;
-                if(sample==8)check(std::abs(windupWrist.Dot(wrist))<.96f,"strike rotates the wrist from windup into impact");
                 const auto face=node->_getFullTransform()*(attachment->_getFullLocalTransform()*r.mHammerStrikePoint);
-                const auto hammerTransform=node->_getFullTransform()*attachment->_getFullLocalTransform();
-                const auto normal=(hammerTransform*(r.mHammerStrikePoint-Ogre::Vector3::UNIT_X)-face).normalisedCopy();
-                if(scale==1.f && sample%4==0)std::cout<<"STRIKE_NORMAL sample="<<sample<<" value="<<normal<<'\n';
-                if(sample==8) {
-                    check(normal.x<-.99f&&std::abs(normal.y)<.02f&&std::abs(normal.z)<.02f,"flat hammer face points left at impact");
-                    check(normal.dotProduct((face-previousFace).normalisedCopy())>.99f,"incoming leftward motion hits with the flat face, not the side");
-                }
-                check(std::abs(face.y)<.00001f&&std::abs(face.z)<.00001f,"leftward strike stays at the target height and depth");
-                if(sample==0||sample>=8)check(face.length()<.00001f,"impact and recovery return precisely to pointer");
-                if(sample==4)check(face.x>.04f,"windup draws the head right before the leftward strike");
-                if(sample>4&&sample<=8)check(face.x<previousFace.x,"striking head travels left throughout impact approach");
-                previousFace=face;
+                check(node->getPosition().positionEquals(restingOffset,.00001f),
+                    "pointer alignment preserves the digging wrist arc");
+                if(sample==8)check(face.length()>.01f,"strike moves freely away from the ready pointer");
+                if(sample==0||sample==16)check(face.length()<.00001f,
+                    "ready hammer face and completed stroke align with the pointer");
                 check(hand->getSubEntity(0)->getMaterialName()=="Keeperhand/ToolGrip","strike retains solid closed grip");
                 if(scale==1.f && sample%4==0)window->writeContentsToFile("hammer-strike-"+std::to_string(sample)+".png");
+                std::vector<Ogre::Quaternion> rotations;
+                std::vector<Ogre::Vector3> positions;
+                for(unsigned short b=0;b<hand->getSkeleton()->getNumBones();++b) {
+                    const auto* bone=hand->getSkeleton()->getBone(b);
+                    rotations.push_back(bone->_getDerivedOrientation());
+                    positions.push_back(bone->_getDerivedPosition());
+                }
+                r.mHandAnimationState=r.setEntityAnimation(hand,"DigSwing",false);
+                r.mHandAnimationState->setTimePosition(r.mHandAnimationState->getLength()*sample/16.f);
+                engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+                hand->_updateAnimation();node->_update(true,true);window->update();engine._fireFrameEnded();
+                for(unsigned short b=0;b<hand->getSkeleton()->getNumBones();++b) {
+                    const auto* bone=hand->getSkeleton()->getBone(b);
+                    check(std::abs(rotations[b].Dot(bone->_getDerivedOrientation()))>.99999f,
+                        "every hammer hand bone matches the digging angle at the same stroke time");
+                    check(positions[b].positionEquals(bone->_getDerivedPosition(),.00001f),
+                        "every hammer hand bone matches the digging movement at the same stroke time");
+                }
+                r.mHandAnimationState=r.setEntityAnimation(hand,"BuildSwing",false);
             }
             r.rrPlayBuildAnimation();check(r.mHandAnimationState->getTimePosition()==0,"next build restarts strike");
             r.mHandAnimationState=r.setEntityAnimation(hand,r.mHandPose,true);
