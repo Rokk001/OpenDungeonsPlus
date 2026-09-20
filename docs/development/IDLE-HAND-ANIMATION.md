@@ -1,5 +1,30 @@
 # Interruptible idle hand effects
 
+## Yo-yo finger pull, September 20
+
+The user accepted the empty-hand angle and then reported that the yo-yo uses a
+static pointing index finger without a corresponding pulling motion. Preserve
+that accepted wrist angle and the watch effect. The yo-yo string already follows
+the actual fingertip, and the toy performs three one-second drop/return cycles
+starting at 0.6 seconds. Only the finger's interior animation keys stay static.
+
+On `fix/yoyo-finger-motion`, from complete tool-cursor checkpoint `6cef1fca`, add
+an index-finger flex/release synchronized with the bottom of each existing
+yo-yo cycle. Reuse the rig's authored closed-finger rotations to avoid guessing
+joint axes. Keep the finger attachment, prop trajectory, wrist, timing, random
+choice and cancellation paths unchanged; check all three pulls on the real rig.
+
+The added real-rig test fails before the correction (finger displacement below
+one billionth of a model unit); afterwards each of the three pulls moves the
+fingertip by 0.0275003 model units and returns it to the extended pose. All 4,026
+renderer checks pass, including the unchanged wrist, string attachment, effect
+restoration and accepted left tool cursors. Pull/release previews were inspected.
+Release compilation, runtime preparation and 32 resource checks pass. The normal
+executable is September 20 09:29:35 Europe/Warsaw, 4,873,728 bytes, SHA-256
+`07125307B5F0DEC495101EF0AF23E708E54A3B086DE56676410D2D53B0DA2D91`.
+No game was launched or stopped; user retest remains pending. README already
+describes the yo-yo effect, so no wording, version or network change is required.
+
 ## Match the empty-hand angle, September 20
 
 The user requests that both watch and yo-yo effects keep the ordinary empty

@@ -311,22 +311,37 @@ void createKeeperHandIdleAnimations(Ogre::Entity* hand)
             auto* animation = skeleton->createAnimation(name, duration);
             const auto* rest = skeleton->getAnimation("Idle");
             const auto* pose = skeleton->getAnimation(watch ? "Dig" : "Point");
+            const auto* fingerGrip = skeleton->getAnimation("Dig");
             for(unsigned short b = 0; b < skeleton->getNumBones(); ++b)
             {
-                Ogre::TransformKeyFrame start(nullptr, 0), bent(nullptr, 0);
+                const bool yoyoFinger = !watch && skeleton->getBone(b)->getName().find("Index") == 0 &&
+                    fingerGrip->hasNodeTrack(b);
+                Ogre::TransformKeyFrame start(nullptr, 0), bent(nullptr, 0), curled(nullptr, 0);
                 if(rest->hasNodeTrack(b))
                     rest->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &start);
                 if(pose->hasNodeTrack(b))
                     pose->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &bent);
+                if(yoyoFinger)
+                    fingerGrip->getNodeTrack(b)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &curled);
                 auto* track = animation->createNodeTrack(b);
-                for(int i = 0; i <= 6; ++i)
+                const int steps = yoyoFinger ? 42 : 6;
+                for(int i = 0; i <= steps; ++i)
                 {
-                    const float weight = i == 0 || i == 6 ? 0.0f : 1.0f;
-                    auto* frame = track->createNodeKeyFrame(duration * i / 6.0f);
+                    const float time = duration * i / steps;
+                    const float weight = std::min(1.0f, std::min(time, duration - time) / (duration / 6.0f));
+                    auto* frame = track->createNodeKeyFrame(time);
                     auto rotation = Ogre::Quaternion::Slerp(weight * (watch ? 0.35f : 1.0f),
                         start.getRotation(), bent.getRotation(), true);
                     if(b == wrist->getHandle())
                         rotation = start.getRotation();
+                    if(yoyoFinger)
+                    {
+                        // Pull as the existing yo-yo reaches full extension, then release.
+                        const float cycle = std::max(0.0f, std::min(3.0f, time - 0.6f));
+                        const float pull = std::max(0.0f, -std::cos(cycle * Ogre::Math::TWO_PI));
+                        rotation = Ogre::Quaternion::Slerp(0.4f * weight * pull,
+                            rotation, curled.getRotation(), true);
+                    }
                     frame->setRotation(rotation);
                     frame->setTranslate(start.getTranslate());
                     frame->setScale(start.getScale());

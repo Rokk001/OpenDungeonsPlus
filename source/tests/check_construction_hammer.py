@@ -392,6 +392,26 @@ int main() {
                 }
                 if(IDLE_AUDIT) window->writeContentsToFile("idle-"+std::to_string(choice)+"-"+std::to_string(i)+".png");
             }
+            if(choice==1) {
+                const auto sampleFinger=[&](float time) {
+                    idle->setTimePosition(time);
+                    for(int settle=0;settle<2;++settle) {
+                        engine._fireFrameStarted();engine._fireFrameRenderingQueued();
+                        alignKeeperHandPointer(hand,idle);updateKeeperHandIdleProp(hand,idle,r.mHandIdleProp);
+                        node->_update(true,true);window->update();engine._fireFrameEnded();
+                    }
+                    const auto* finger=hand->getSkeleton()->getBone("Index3");
+                    return finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                };
+                for(int cycle=0;cycle<3;++cycle) {
+                    const auto release=sampleFinger(.6f+cycle);
+                    const auto pull=sampleFinger(1.1f+cycle);
+                    const auto returned=sampleFinger(1.6f+cycle);
+                    std::cout<<"YOYO_FINGER_PULL="<<(pull-release).length()<<'\n';
+                    check((pull-release).length()>.003f,"each yo-yo turnaround has a visible finger pull");
+                    check((returned-release).length()<.0001f,"finger releases again for the next yo-yo cycle");
+                }
+            }
             r.rrCancelIdleHandAnimation();
             check(!r.rrIsIdleHandAnimationPlaying()&&!r.mHandIdleProp->isVisible(),"cancellation immediately hides prop");
             check(r.mHandAnimationState->getAnimationName()=="Idle","cancellation restores current context");
