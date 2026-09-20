@@ -23,6 +23,12 @@ Cooldowns still reset when loading saved games, as they did before this change.
 Two shared generated atlases avoid per-creature texture/material allocation.
 Regenerate with `tools/generate-creature-progress-overlays.ps1`.
 
+The September 20 screenshot shows dark level digits losing contrast against
+dark owner colours and the recovery dial. Add a thin warm-light outline behind
+the existing dark level glyphs only. Reuse the same font, caption, position and
+lifetime, including empty captions during mood display; retain accepted petal
+transparency and all progress values/timing. No health asset changes are needed.
+
 ## Verification
 
 - `source/tests/check_creature_progress.py`: 377 compiled production-method and
@@ -36,6 +42,15 @@ Regenerate with `tools/generate-creature-progress-overlays.ps1`.
 - No game was launched. Manual acceptance: XP gains/reset after level-up,
   repeated melee/casts, pause, Alt, multiple moods, ownership colours and a
   multiplayer peer/replay with and without the new capability.
+
+September 20 caption follow-up: Windows Release compilation passes
+(`build/review-followups/level-outline-build.log`). The production Ogre caption
+fixture `check_level_caption_outline.py --compile-only` compiles all checks for
+levels 1–30, foreground/outline ordering, size/position synchronization, mood
+replacement, hiding, reuse and cleanup. Its runtime checks have not run because
+Windows application control blocks newly compiled test executables. The existing
+200 health-transparency and 32 resource-generation checks still pass. Earlier
+299-check render evidence above predates the outlined caption.
 
 ## Release scope
 
