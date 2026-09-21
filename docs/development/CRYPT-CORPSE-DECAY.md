@@ -1,5 +1,7 @@
 # Crypt corpse presentation
 
+September 21 completion: the user accepted the deployed visible decomposition.
+
 September 21: the user accepted the lying pose, but rejected the missing visible
 decomposition and flies; pose acceptance does not cover that remaining effect.
 
@@ -22,8 +24,10 @@ particle counts. The current preview was inspected without launching the game.
 
 The clean Windows Release build passed (header layout changed); logs are
 `build/review-followups/crypt-visible-build.log`, `crypt-visible-render.log` and
-`crypt-visible-decay.log`. The new executable is built but deployment is waiting
-for the user to close the game; do not mark it ready in the normal start file.
+`crypt-visible-decay.log`. With the game closed, the normal executable was
+updated and its hash verified against the build; the previous executable is
+preserved in `build/before-crypt-visible-20260921`. Runtime preparation and all
+32 resource checks pass; the user subsequently accepted the visual result.
 The original pose and 18% skeletal settling remain unchanged. The visible
 material effect follows the existing base-duration animation; research still
 controls removal independently, so it can remove an already visibly decaying
