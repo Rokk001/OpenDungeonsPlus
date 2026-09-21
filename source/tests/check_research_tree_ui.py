@@ -107,7 +107,10 @@ int main(int argc,char** argv){try{
   map.player.seat.level=level;map.player.seat.queue=2;map.player.seat.current=level<3;
   SkillManager::listAllSkills([&](const std::string& name,const std::string& cast,const std::string& bar,SkillType type){
    game.refreshSkillButtonState(name,cast,bar,type);auto* b=root->getChild("SkillTreeWindow/Skills/"+name);
-   check(b->getText().empty(),"no confusing numeric overlay");
+   check(b->getText().empty(),"queue numbers stay absent from the icon");
+   auto* badge=b->getChild("ResearchLevel");
+   check(badge->getText()==std::to_string(level)+"/3","actual current and maximum level visible on every node");
+   check(badge->isVisible()&&badge->isMousePassThroughEnabled()&&!badge->isClippedByParent(),"badge visible below icon without intercepting clicks");
    check(b->getProperty("ButtonImageColour")== (level==0?"FF666666":"FFFFFFFF"),"unresearched icons are greyed and researched icons retain colour");
    check(b->getProperty("ResearchLevelColour")== (level==3?"FFFFC947":level==2?"FFD5DFE8":"00FFFFFF"),"level has no, silver or gold frame");
    check(b->isDisabled()==(level==3),"max-level selection rule preserved");
@@ -150,16 +153,24 @@ int main(int argc,char** argv){try{
  game.mIsSkillWindowOpen=true;game.refreshSkillConnections();
  for(const auto size:{CEGUI::Sizef(800,600),CEGUI::Sizef(1280,720),CEGUI::Sizef(1920,1200)})for(float user:{.8f,1.f,1.2f}){
   renderer.setDisplaySize(size);const float scale=std::min(size.d_width/1024.f,size.d_height/768.f)*user;
+  auto fonts=CEGUI::FontManager::getSingleton().getIterator();
+  while(!fonts.isAtEnd()){fonts.getCurrentValue()->setNativeResolution(CEGUI::Sizef(800/user,600/user));fonts.getCurrentValue()->setAutoScaled(CEGUI::ASM_Min);++fonts;}
+  CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(size);
   for(const auto& p:authored){auto area=p.second;area.d_min.d_x.d_offset*=scale;area.d_min.d_y.d_offset*=scale;area.d_max.d_x.d_offset*=scale;area.d_max.d_y.d_offset*=scale;p.first->setArea(area);}
   game.refreshSkillConnections();
   for(const auto& p:data){auto* button=root->getChild("SkillTreeWindow/Skills/"+p.second.path);auto* parent=button->getParent();
    auto rect=button->getUnclippedOuterRect().get();auto bounds=parent->getUnclippedOuterRect().get();
+   auto* badge=button->getChild("ResearchLevel");auto label=badge->getUnclippedOuterRect().get();
+   check(label.top()>=rect.bottom()-.5f&&label.bottom()<=bounds.bottom(),"level badge below icon and inside graph");
+   check(label.getWidth()>=badge->getFont()->getTextExtent(badge->getText())&&label.getHeight()>=badge->getFont()->getLineSpacing(),"level text fits at every scale");
+   check(label.left()>=bounds.left()&&label.right()<=bounds.right(),"level badge stays in its category");
    check(rect.left()>=bounds.left()&&rect.right()<=bounds.right()&&rect.top()>=bounds.top()&&rect.bottom()<=bounds.bottom(),"symbol stays inside its graph column");
    check(std::abs(rect.getWidth()-rect.getHeight())<2,"square symbols at all viewport scales");
    check(!parent->isChild(button->getName()+"Label")&&!parent->isChild(button->getName()+"Status"),"no prose around symbol nodes");
    for(const auto& other:data)if(other.first!=p.first){auto r=root->getChild("SkillTreeWindow/Skills/"+other.second.path)->getUnclippedOuterRect().get();
     check(rect.right()<=r.left()||rect.left()>=r.right()||rect.bottom()<=r.top()||rect.top()>=r.bottom(),"node hit areas never overlap");}
    auto* bar=static_cast<CEGUI::ProgressBar*>(button->getChild(button->getName()+"ProgressBar"));
+   check(bar->getUnclippedOuterRect().get().bottom()<=label.top(),"level count never covers current progress");
    if(p.first==SkillType::roomTrainingHall){
     check(button->getProperty("ResearchBackgroundColour")=="FFB76A23","active node highlighted");
     check(bar->isVisible()&&bar->getProgress()==.5f&&bar->getAlpha()==1,"real progress visible on active node");}
@@ -202,6 +213,9 @@ if args.render:
                           'CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");colourNavigationAtlas();createSummonWorkerIcon();')
     probe = probe.replace(' windows.destroyWindow(root);', r'''
  renderer.setDisplaySize(CEGUI::Sizef(1280,960));
+ auto fonts=CEGUI::FontManager::getSingleton().getIterator();
+ while(!fonts.isAtEnd()){fonts.getCurrentValue()->setNativeResolution(CEGUI::Sizef(800,600));fonts.getCurrentValue()->setAutoScaled(CEGUI::ASM_Min);++fonts;}
+ CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(CEGUI::Sizef(1280,960));
  for(const auto& p:authored){auto area=p.second;area.d_min.d_x.d_offset*=1.25f;area.d_min.d_y.d_offset*=1.25f;area.d_max.d_x.d_offset*=1.25f;area.d_max.d_y.d_offset*=1.25f;p.first->setArea(area);}
  auto& seat=map.player.seat;seat.currentType=SkillType::roomArena;seat.current=true;seat.level=0;
  for(const auto& p:data)if(p.second.parents.empty())seat.levels[p.first]=1;

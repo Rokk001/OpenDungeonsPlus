@@ -2509,6 +2509,24 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
     skillButton->setProperty("ResearchLevelColour", level >= 3 ? "FFFFC947" :
         level == 2 ? "FFD5DFE8" : "00FFFFFF");
+    CEGUI::Window* levelBadge;
+    if(skillButton->isChild("ResearchLevel"))
+        levelBadge = skillButton->getChild("ResearchLevel");
+    else
+    {
+        levelBadge = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText", "ResearchLevel");
+        levelBadge->setFont("MedievalSharp-10");
+        levelBadge->setProperty("HorzFormatting", "CentreAligned");
+        levelBadge->setProperty("VertFormatting", "CentreAligned");
+        levelBadge->setProperty("FrameEnabled", "False");
+        levelBadge->setProperty("BackgroundEnabled", "True");
+        levelBadge->setProperty("BackgroundColours", "FF25282D");
+        levelBadge->setProperty("TextColours", "FFFFFFFF");
+        levelBadge->setMousePassThroughEnabled(true);
+        levelBadge->setClippedByParent(false);
+        skillButton->addChild(levelBadge);
+    }
+    levelBadge->setText(Helper::toString(level) + "/3");
     std::string description = Skills::skillTypeToPlayerVisibleString(resType) + " - level " +
         Helper::toString(level) + "/3";
     if(!isAllowed)
@@ -2635,6 +2653,14 @@ void GameMode::refreshSkillConnections()
         button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
             CEGUI::UDim(.055f + depths[entry.first] * .265f, 0)),
             CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
+        if(button->isChild("ResearchLevel"))
+        {
+            auto* badge = button->getChild("ResearchLevel");
+            const float badgeWidth = badge->getFont()->getTextExtent("3/3") + 8.0f;
+            const float badgeHeight = badge->getFont()->getLineSpacing() + 2.0f;
+            badge->setArea(CEGUI::UVector2(CEGUI::UDim(.5f, -badgeWidth * .5f), CEGUI::UDim(1, 0)),
+                CEGUI::USize(CEGUI::UDim(0, badgeWidth), CEGUI::UDim(0, badgeHeight)));
+        }
     }
 
     // Shared bars represent an ALL-prerequisite junction, not alternative routes.

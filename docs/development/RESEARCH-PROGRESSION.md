@@ -2,6 +2,24 @@
 
 ## Research-tree readability follow-up
 
+September 21: the user accepted the permanent connections but requested visible
+current/max levels on each node. The existing refresh already computes levels
+0..3 and frame colors, but clears button text and renders no numeric badge.
+Add a compact non-interactive label at the bottom of each existing symbol;
+preserve all accepted node/connection geometry, progress, state icons and frames.
+Use the existing font and static-text widget, with measured text dimensions so
+the badge remains legible at each supported UI scale. Queue numbers stay absent.
+
+The correction passes 51,301 installed-CEGUI checks with actual font scaling
+across nine display/UI-scale combinations and a real Ogre offscreen render;
+the inspected preview shows 0/3, 1/3, 2/3 and 3/3 without covering progress.
+All 411 research-rule regressions, Release compilation, runtime preparation and
+32 resource checks pass; deployment is recorded in BUILDING.md. The initial
+render executable was blocked by Windows application control, but the expanded
+font-scaling fixture later ran successfully without any security-policy change.
+No gameplay session was launched; user acceptance of the new numeric labels
+remains pending. No control, version, README or release-changelog change is needed.
+
 The September 21 visual revision replaces the rejected text-heavy main view
 with symbol nodes and permanent prerequisite paths. Remove node-name/status
 paragraphs, the separate activity banner and the details panel; retain optional

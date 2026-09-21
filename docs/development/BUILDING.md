@@ -1,5 +1,23 @@
 # Configuring and compiling on Windows
 
+## September 21 visible research levels: current executable
+
+The normal Release executable includes per-node 0/3 through 3/3 level badges,
+the revised worker head icon and all prior features; accepted connections and
+gameplay are unchanged. Built September 21 07:17:45 UTC, 4,953,600 bytes, SHA-256
+`B4375D65CDA8D74ABB00E8DC11567C538C84563718EF0246764AC5DB8FFE82D1`.
+The game was closed, and both backup and deployment hashes match; the previous
+binary remains in `build/before-research-level-labels-20260921`.
+
+Release, runtime preparation, 51,301 installed-CEGUI checks with real rendering
+and font scaling, 411 research-rule checks and 32 resource checks pass. The
+1280x960 offscreen preview was inspected; no game was launched. An earlier
+render attempt was application-control blocked; the expanded fixture completed
+without any security change. Logs use `build/review-followups/research-level-labels-*`.
+Worker icon and level-label appearance remain for user acceptance; no push or
+release was performed, and the newly reported crypt-worker departure issue has
+only been diagnosed, not changed in this executable.
+
 ## September 21 worker head symbol: current executable
 
 The normal Release binary includes the revised pointed-ear worker head symbol
