@@ -227,9 +227,66 @@ void colourNavigationAtlas()
     }
 }
 
+void createSummonWorkerIcon()
+{
+    const int size = 64;
+    std::vector<unsigned char> pixels(size * size * 4, 0);
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            int coverage = 0;
+            for(int sy = 0; sy < 4; ++sy)
+            {
+                for(int sx = 0; sx < 4; ++sx)
+                {
+                    const float px = x + (sx + 0.5f) * 0.25f;
+                    const float py = y + (sy + 0.5f) * 0.25f;
+                    const auto line = [&](float ax, float ay, float bx, float by, float radius)
+                    {
+                        const float dx = bx - ax;
+                        const float dy = by - ay;
+                        const float t = std::max(0.0f, std::min(1.0f,
+                            ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+                        const float ex = px - ax - t * dx;
+                        const float ey = py - ay - t * dy;
+                        return ex * ex + ey * ey <= radius * radius;
+                    };
+                    const float headX = (px - 28.0f) / 7.0f;
+                    const float headY = (py - 18.0f) / 8.0f;
+                    const float bodyX = (px - 28.0f) / 8.0f;
+                    const float bodyY = (py - 35.0f) / 11.0f;
+                    const float earX = std::abs(px - 28.0f);
+                    const bool ears = earX >= 5.0f && earX <= 16.0f &&
+                        py >= 19.0f - 0.5f * earX && py <= 26.0f - earX;
+                    const bool worker = headX * headX + headY * headY <= 1.0f || ears ||
+                        bodyX * bodyX + bodyY * bodyY <= 1.0f ||
+                        line(22, 29, 14, 37, 3) || line(14, 37, 17, 42, 3) ||
+                        line(34, 29, 42, 37, 3) || line(42, 37, 39, 42, 3) ||
+                        line(24, 43, 21, 53, 3.5f) || line(32, 43, 35, 53, 3.5f) ||
+                        line(21, 54, 16, 54, 3) || line(35, 54, 40, 54, 3);
+                    const bool glint = std::abs(px - 49.0f) / 5.0f + std::abs(py - 13.0f) / 7.0f <= 1.0f;
+                    coverage += worker || glint ? 1 : 0;
+                }
+            }
+            const int i = (y * size + x) * 4;
+            pixels[i] = pixels[i + 1] = pixels[i + 2] = 255;
+            pixels[i + 3] = static_cast<unsigned char>(coverage * 255 / 16);
+        }
+    }
+    shadeNavigationIcon(pixels, size, 132, 186, 242);
+    auto& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("SummonWorkerSymbol");
+    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+    auto& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().get(
+        "OpenDungeonsIcons/SummonWorkerButton"));
+    image.setTexture(&texture);
+    image.setArea(CEGUI::Rectf(0, 0, size, size));
+}
+
 void createNavigationImages()
 {
     colourNavigationAtlas();
+    createSummonWorkerIcon();
     createMiniMapCornerImages();
     const int size = 64;
     std::vector<unsigned char> pixels(size * size * 4, 0);

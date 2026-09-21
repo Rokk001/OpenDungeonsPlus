@@ -2,6 +2,24 @@
 
 ## Summon-worker identity follow-up
 
+The user rejected the worker portrait as inconsistent with the simple navigation
+symbols. The current refresh overrides the shared summon image with a rendered
+creature portrait. Remove that override and replace only the existing summon
+image with a small pointed-ear worker silhouette and summoning glint, generated
+through the same supersampled shape and enamel-shading path as the navigation
+icons. Keep its existing named image so spell, research and pointer feedback
+share the symbol without faction/model dependence. Creature portraits elsewhere,
+spell rules, layouts and other icons remain unchanged; no raster-generation
+dependency or new atlas file is required. Branch: `fix/summon-worker-symbol`.
+
+The replacement passes 1,306 compiled symbol/binding checks, the 38,100 existing
+shading checks and all 8,884 installed-CEGUI research regressions. The generated
+symbol was inspected beside three actual neighbouring icons and at 32 pixels.
+The silhouette has transparent padding, pointed ears, separate legs and a small
+summoning glint, without a portrait background or model render. Release and 32
+resource checks pass; deployment is recorded in BUILDING.md. User acceptance
+remains open. No control, release version or root README change is required.
+
 September 21 correction: the worker pointer used below is initialized only by
 the server's seat initialization; client seat packets carry the faction but not
 that pointer. The earlier isolated fixture populated the pointer and therefore
