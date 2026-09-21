@@ -242,30 +242,24 @@ void createSummonWorkerIcon()
                 {
                     const float px = x + (sx + 0.5f) * 0.25f;
                     const float py = y + (sy + 0.5f) * 0.25f;
-                    const auto line = [&](float ax, float ay, float bx, float by, float radius)
+                    const auto ellipse = [&](float cx, float cy, float rx, float ry)
                     {
-                        const float dx = bx - ax;
-                        const float dy = by - ay;
-                        const float t = std::max(0.0f, std::min(1.0f,
-                            ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
-                        const float ex = px - ax - t * dx;
-                        const float ey = py - ay - t * dy;
-                        return ex * ex + ey * ey <= radius * radius;
+                        const float dx = (px - cx) / rx;
+                        const float dy = (py - cy) / ry;
+                        return dx * dx + dy * dy <= 1.0f;
                     };
-                    const float headX = (px - 28.0f) / 7.0f;
-                    const float headY = (py - 18.0f) / 8.0f;
-                    const float bodyX = (px - 28.0f) / 8.0f;
-                    const float bodyY = (py - 35.0f) / 11.0f;
                     const float earX = std::abs(px - 28.0f);
-                    const bool ears = earX >= 5.0f && earX <= 16.0f &&
-                        py >= 19.0f - 0.5f * earX && py <= 26.0f - earX;
-                    const bool worker = headX * headX + headY * headY <= 1.0f || ears ||
-                        bodyX * bodyX + bodyY * bodyY <= 1.0f ||
-                        line(22, 29, 14, 37, 3) || line(14, 37, 17, 42, 3) ||
-                        line(34, 29, 42, 37, 3) || line(42, 37, 39, 42, 3) ||
-                        line(24, 43, 21, 53, 3.5f) || line(32, 43, 35, 53, 3.5f) ||
-                        line(21, 54, 16, 54, 3) || line(35, 54, 40, 54, 3);
-                    const bool glint = std::abs(px - 49.0f) / 5.0f + std::abs(py - 13.0f) / 7.0f <= 1.0f;
+                    const bool ears = earX <= 22.0f &&
+                        py >= 31.0f - 0.55f * earX && py <= 45.0f - 1.15f * earX;
+                    const bool crown = py >= 7.0f && py <= 20.0f &&
+                        (std::abs(px - 26.0f) <= (py - 7.0f) * 0.35f ||
+                         std::abs(px - 17.0f) <= (py - 10.0f) * 0.3f);
+                    const bool face = ellipse(28, 30, 16, 18) || ellipse(28, 43, 10, 11);
+                    const bool eyes = ellipse(21, 31, 5, 6) || ellipse(35, 31, 5, 6);
+                    const bool nose = std::abs(px - 28.0f) <= 2.5f && py >= 39 && py <= 43;
+                    const bool mouth = py >= 47 && py <= 49 && std::abs(px - 28.0f) <= 4;
+                    const bool worker = (face || ears || crown) && !eyes && !nose && !mouth;
+                    const bool glint = std::abs(px - 51.0f) / 5.0f + std::abs(py - 46.0f) / 7.0f <= 1.0f;
                     coverage += worker || glint ? 1 : 0;
                 }
             }
