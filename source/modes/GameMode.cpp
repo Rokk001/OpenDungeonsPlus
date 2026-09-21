@@ -2547,10 +2547,18 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         " (Apply saves queue changes)." : ".");
     skillButton->setUserString("ResearchDetails", description);
     skillButton->setUserString("ResearchState", state);
-    // Long research help belongs inside the window, not in the one-line HUD strip.
-    skillButton->setTooltipText("");
+    // Keep explanations optional; the main tree communicates through its nodes and paths.
+    skillButton->setTooltipText(description);
     skillButton->setUserString("ContextHelp", Skills::skillTypeToPlayerVisibleString(resType));
-    skillProgressBar->hide();
+    skillButton->setProperty("ResearchBackgroundColour", state == "Researching" ? "FFB76A23" :
+        state == "Queued" ? "FF31576B" : level > 0 ? "FF773C32" : "FF292E34");
+    skillProgressBar->setArea(CEGUI::UVector2(CEGUI::UDim(.12f, 0), CEGUI::UDim(.82f, 0)),
+        CEGUI::USize(CEGUI::UDim(.76f, 0), CEGUI::UDim(.09f, 0)));
+    skillProgressBar->setProperty("VerticalProgress", "False");
+    skillProgressBar->setProperty("ReversedProgress", "False");
+    skillProgressBar->setAlpha(1.0f);
+    skillProgressBar->setProgress(state == "Researching" ? curSkillProgress : 0.0f);
+    skillProgressBar->setVisible(state == "Researching");
 }
 
 void GameMode::refreshGuiSkill(bool forceRefresh)
@@ -2609,98 +2617,47 @@ void GameMode::refreshSkillConnections()
     SkillManager::listAllSkills([&](const std::string& name, const std::string&,
         const std::string&, SkillType type) { buttons[type] = skills->getChild(name); });
     Seat* seat = mGameMap->getLocalPlayer()->getSeat();
-    CEGUI::Window* tree = mRootWindow->getChild("SkillTreeWindow");
-    const CEGUI::String focus = tree->getUserString("ResearchFocus");
-    SkillType current;
-    float progress = 0.0f;
-    const bool researching = seat->getCurrentSkillProgress(current, progress);
-    tree->getChild("CurrentResearch")->setText(researching ? "Researching: " +
-        Skills::skillTypeToPlayerVisibleString(current) + " - level " +
-        Helper::toString(seat->getSkillLevel(current) + 1) + " - " +
-        Helper::toString(static_cast<int>(progress * 100)) + "%" : "No active research - select research, then Apply");
-    auto* currentBar = static_cast<CEGUI::ProgressBar*>(tree->getChild("CurrentResearchProgress"));
-    currentBar->setProgress(researching ? progress : 0.0f);
-
-    // Derive tiers from actual dependencies; keep the authored horizontal order.
     std::map<SkillType, unsigned> depths;
     for(size_t pass = 0; pass < buttons.size(); ++pass)
         for(const auto& entry : buttons)
             for(const Skill* dependency : SkillManager::getSkill(entry.first)->getDependencies())
                 depths[entry.first] = std::max(depths[entry.first], depths[dependency->getType()] + 1);
+
     for(const auto& entry : buttons)
     {
         CEGUI::Window* button = entry.second;
         CEGUI::Window* parent = button->getParent();
-        const float x = button->getXPosition().d_scale;
-        const float y = 0.02f + depths[entry.first] * 0.245f;
-        const float width = .16f;
-        const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
-        // Store the centre before replacing the original centred offset layout.
         if(!button->isUserStringDefined("ResearchCentre"))
-            button->setUserString("ResearchCentre", Helper::toString(x));
-        const float centre = .5f + (CEGUI::PropertyHelper<float>::fromString(button->getUserString("ResearchCentre")) - .5f) * 1.11f;
-        button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0), CEGUI::UDim(y, 0)),
+            button->setUserString("ResearchCentre", Helper::toString(button->getXPosition().d_scale));
+        const float centre = CEGUI::PropertyHelper<float>::fromString(button->getUserString("ResearchCentre"));
+        const float width = .22f;
+        const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
+        button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
+            CEGUI::UDim(.055f + depths[entry.first] * .265f, 0)),
             CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
-        std::string title = Skills::skillTypeToPlayerVisibleString(entry.first);
-        if(title.compare(0, 4, "The ") == 0)
-            title.erase(0, 4);
-        for(const std::string suffix : {" Room", " Spell", " spell"})
-            if(title.size() >= suffix.size() && title.compare(title.size() - suffix.size(), suffix.size(), suffix) == 0)
-                title.erase(title.size() - suffix.size());
-        title.erase(std::remove(title.begin(), title.end(), '\''), title.end());
-        if(title == "TrainingHall")
-            title = "Training Hall";
-        for(unsigned part = 0; part < 2; ++part)
-        {
-            const CEGUI::String name = button->getName() + (part == 0 ? "Label" : "Status");
-            CEGUI::Window* label;
-            if(parent->isChild(name))
-                label = parent->getChild(name);
-            else
-            {
-                label = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText", name);
-                label->setProperty("FrameEnabled", "False");
-                label->setProperty("BackgroundEnabled", "False");
-                label->setProperty("HorzFormatting", "WordWrapCentreAligned");
-                label->setProperty("VertFormatting", "CentreAligned");
-                label->setProperty("TextParsingEnabled", "False");
-                label->setFont("MedievalSharp-8");
-                label->setMousePassThroughEnabled(true);
-                parent->addChild(label);
-            }
-            label->setArea(CEGUI::UVector2(CEGUI::UDim(centre - .16f, 0), CEGUI::UDim(y + height + (part == 0 ? 0 : .090f), 0)),
-                CEGUI::USize(CEGUI::UDim(.32f, 0), CEGUI::UDim(part == 0 ? .090f : .045f, 0)));
-            const CEGUI::String state = button->getUserString("ResearchState");
-            const CEGUI::String badge = state == "Researching" ? "Active" : state == "Available" ? "Ready" :
-                state == "Complete" ? "Max" : state == "Unavailable" ? "Blocked" : state;
-            label->setText(part == 0 ? CEGUI::String(title) : badge);
-            label->setProperty("TextColours", part == 0 ? "FFF1E3C6" :
-                state == "Researching" ? "FFFFD15C" : state == "Queued" ? "FF8ED5FF" : "FFB7B7B7");
-        }
-        if(button->getName() == focus)
-            tree->getChild("ResearchDetails")->setText(button->getUserString("ResearchDetails"));
     }
+
+    // Shared bars represent an ALL-prerequisite junction, not alternative routes.
     for(const auto& entry : buttons)
     {
         CEGUI::Window* target = entry.second;
         CEGUI::Window* parent = target->getParent();
-        const auto& parentRect = parent->getUnclippedOuterRect().get();
-        const auto& end = target->getUnclippedOuterRect().get();
+        const auto parentRect = parent->getUnclippedOuterRect().get();
+        const auto end = target->getUnclippedOuterRect().get();
         if(parentRect.getWidth() <= 0 || parentRect.getHeight() <= 0)
             continue;
         const auto& required = SkillManager::getSkill(entry.first)->getDependencies();
         const bool allReady = std::all_of(required.begin(), required.end(), [seat](const Skill* prerequisite)
             { return seat->getSkillLevel(prerequisite->getType()) > 0; });
-        for(const Skill* dependency : SkillManager::getSkill(entry.first)->getDependencies())
+        for(const Skill* dependency : required)
         {
-            CEGUI::Window* source = buttons.at(dependency->getType());
-            const auto& start = source->getUnclippedOuterRect().get();
-            const float x1 = (start.left() + start.getWidth() * 0.5f - parentRect.left()) / parentRect.getWidth();
-            const float x2 = (end.left() + end.getWidth() * 0.5f - parentRect.left()) / parentRect.getWidth();
-            const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight() + .135f;
+            const auto start = buttons.at(dependency->getType())->getUnclippedOuterRect().get();
+            const float x1 = (start.left() + start.getWidth() * .5f - parentRect.left()) / parentRect.getWidth();
+            const float x2 = (end.left() + end.getWidth() * .5f - parentRect.left()) / parentRect.getWidth();
+            const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight();
             const float y2 = (end.top() - parentRect.top()) / parentRect.getHeight();
-            const float middle = (y1 + y2) * 0.5f;
-            const float width = 0.012f;
+            const float middle = (y1 + y2) * .5f;
+            const float width = .012f;
             const float height = width * parentRect.getWidth() / parentRect.getHeight();
             const float segments[][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
                 {std::min(x1, x2) - width * .5f, middle, std::abs(x2 - x1) + width, height},
@@ -2725,26 +2682,35 @@ void GameMode::refreshSkillConnections()
                 }
                 line->setArea(CEGUI::UVector2(CEGUI::UDim(segments[part][0], 0), CEGUI::UDim(segments[part][1], 0)),
                     CEGUI::USize(CEGUI::UDim(segments[part][2], 0), CEGUI::UDim(segments[part][3], 0)));
-                line->setVisible(focus.empty() || target->getName() == focus);
-                line->setProperty("ImageColours", focus.empty() ? "FF626262" :
-                    (part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady) ? "FF87D68D" : "FFFFBA65");
+                line->setProperty("ImageColours",
+                    (part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady) ? "FFD28B54" : "FF656A70");
             }
-            const CEGUI::String arrowName = target->getName() + "DependencyArrow";
-            CEGUI::Window* arrow;
-            if(parent->isChild(arrowName))
-                arrow = parent->getChild(arrowName);
+        }
+        if(required.size() > 1)
+        {
+            // All nodes at a tier share the same predecessor set in this tree.
+            const CEGUI::String name = "ResearchJunction_" + Helper::toString(depths[entry.first]);
+            CEGUI::Window* junction;
+            if(parent->isChild(name))
+                junction = parent->getChild(name);
             else
             {
-                arrow = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", arrowName);
-                arrow->setProperty("FrameEnabled", "False");
-                arrow->setProperty("BackgroundEnabled", "False");
-                arrow->setProperty("Image", "OpenDungeonsSkin/MiniVertScrollDownNormal");
-                arrow->setMousePassThroughEnabled(true);
-                parent->addChild(arrow);
+                junction = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText", name);
+                junction->setProperty("HorzFormatting", "CentreAligned");
+                junction->setProperty("VertFormatting", "CentreAligned");
+                junction->setProperty("FrameEnabled", "False");
+                junction->setProperty("BackgroundEnabled", "True");
+                junction->setFont("MedievalSharp-10");
+                junction->setText("&");
+                junction->setMousePassThroughEnabled(true);
+                parent->addChild(junction);
             }
-            arrow->setArea(CEGUI::UVector2(CEGUI::UDim(x2 - .025f, 0), CEGUI::UDim(y2 - .012f, 0)),
-                CEGUI::USize(CEGUI::UDim(.05f, 0), CEGUI::UDim(.012f, 0)));
-            arrow->setVisible(focus.empty() || target->getName() == focus);
+            const auto start = buttons.at(required.front()->getType())->getUnclippedOuterRect().get();
+            const float middle = (start.bottom() + end.top() - 2 * parentRect.top()) / (2 * parentRect.getHeight());
+            const float height = .075f * parentRect.getWidth() / parentRect.getHeight();
+            junction->setArea(CEGUI::UVector2(CEGUI::UDim(.4625f, 0), CEGUI::UDim(middle - height * .5f, 0)),
+                CEGUI::USize(CEGUI::UDim(.075f, 0), CEGUI::UDim(height, 0)));
+            junction->setProperty("TextColours", allReady ? "FFFFC480" : "FF989DA3");
         }
     }
 }
@@ -2795,25 +2761,6 @@ void GameMode::refreshActionFeedback(float elapsed)
         CEGUI::Window* hover = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
         if(hover != nullptr)
         {
-            if(mIsSkillWindowOpen)
-            {
-                CEGUI::Window* tree = mRootWindow->getChild("SkillTreeWindow");
-                const auto point = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
-                // Include labels and disabled/max-level nodes without changing click rules.
-                SkillManager::listAllSkills([&](const std::string& name, const std::string&,
-                    const std::string&, SkillType)
-                {
-                    CEGUI::Window* button = tree->getChild("Skills/" + name);
-                    CEGUI::Rectf area = button->getUnclippedOuterRect().get();
-                    CEGUI::Window* status = button->getParent()->getChild(button->getName() + "Status");
-                    area.d_max.d_y = status->getUnclippedOuterRect().get().bottom();
-                    if(area.isPointInRect(point) && tree->getUserString("ResearchFocus") != button->getName())
-                    {
-                        tree->setUserString("ResearchFocus", button->getName());
-                        refreshSkillConnections();
-                    }
-                });
-            }
             SkillManager::updateCostTooltip(mGameMap, mRootWindow, hover);
             mActionTargetText = hover->isUserStringDefined("ContextHelp") ?
                 hover->getUserString("ContextHelp").c_str() : "";

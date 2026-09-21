@@ -2,6 +2,29 @@
 
 ## Research-tree readability follow-up
 
+The September 21 visual revision replaces the rejected text-heavy main view
+with symbol nodes and permanent prerequisite paths. Remove node-name/status
+paragraphs, the separate activity banner and the details panel; retain optional
+hover descriptions. Use coloured node backgrounds and a bright on-node progress
+strip for current research, keeping grey unreached icons and silver/gold level
+frames. Shared prerequisite buses join at an ampersand to communicate that all
+connected predecessors are required. Do not hide unrelated links on hover or
+change any dependency, cost, effect or queue control.
+
+The revised installed-CEGUI fixture passes 50,113 checks across nine viewport/UI
+scale combinations, including all actual prerequisite edges, mixed prerequisite
+completion, non-overlapping square nodes, paths outside symbol interiors,
+permanent visibility, on-node progress, retained frames and optional hover help.
+All 411 research-rule regressions pass. The same fixture also runs with an actual
+Ogre renderer and produces an inspected 1280x960 offscreen preview containing
+locked, unlocked, queued, active, silver and gold nodes. The render run passed
+49,807 checks before the final 306 mixed-prerequisite assertions were added.
+Preview: `build/review-followups/research-visual-graph-preview.png`.
+Windows Release compilation and runtime/resource validation pass; the normal
+executable is recorded in BUILDING.md. No game was launched, and appearance
+acceptance remains with the user. Controls and research rules are unchanged;
+no release version, root README or release-changelog update is required.
+
 September 21 rejected presentation: the actual screenshot shows overlapping
 same-row bus segments with mixed completion colours, unnamed icons, a faint
 current-work symbol and a long description clipped in the global help strip.

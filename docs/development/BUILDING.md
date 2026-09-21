@@ -1,5 +1,23 @@
 # Configuring and compiling on Windows
 
+## September 21 graphical research tree: current executable
+
+The normal Release executable includes the symbol-and-path research tree, with
+on-node active progress and no persistent explanation panel; the worker symbol
+and accepted demolition effect remain included. Built September 21 06:18:18 UTC,
+4,951,552 bytes, SHA-256
+`7531A4C494E799C0654A5CA6DBBD499CAE6E803888360066C0F27587F2F6534D`.
+The game was closed during deployment; staged/normal and backup hashes were
+verified, with the previous binary in `build/before-research-visual-graph-20260921`.
+
+Release and runtime preparation pass, as do 50,113 installed-CEGUI graph checks,
+411 research-rule regressions and 32 resource checks. The isolated Ogre/CEGUI
+render passes its 49,807-check matrix and its exact 1280x960 preview was inspected;
+the later 306 mixed-prerequisite assertions ran with the installed null renderer.
+Logs use `build/review-followups/research-visual-graph-*`; no game was launched,
+no security policy changed and no push/PR/release performed. User visual
+acceptance remains open for the worker symbol and the revised research graph.
+
 ## September 21 worker symbol: current executable
 
 The normal Release executable replaces the rejected summon portrait with a
