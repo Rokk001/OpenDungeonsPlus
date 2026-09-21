@@ -1,5 +1,18 @@
 # Configuring and compiling on Windows
 
+## September 21 worker symbol: current executable
+
+The normal Release executable replaces the rejected summon portrait with a
+simple worker symbol using the existing navigation shading; it retains the
+accepted room-demolition effect. Built September 21 06:11:21 UTC, 4,959,232 bytes,
+SHA-256 `A690B57BE42F1E4FA152EDAC956CD3D04FA43818FC077FF33BCB3616B1D657F3`.
+The game was closed; backup and deployment hashes match, with the previous
+executable preserved under `build/before-worker-symbol-20260921`.
+Release, 1,306 symbol checks, 38,100 shader checks, 8,884 installed-CEGUI research
+regressions and 32 resources checks pass. The generated comparison preview was
+inspected; no game was launched. The new research-tree revision is not yet in
+this executable; worker-symbol user acceptance remains open.
+
 ## September 21 room demolition effect: current executable
 
 The normal Release executable now includes the visible per-tile room-demolition
