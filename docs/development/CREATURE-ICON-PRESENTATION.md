@@ -2,6 +2,18 @@
 
 ## Summon-worker identity follow-up
 
+September 21 simplification: the user explicitly rejected both the crown tufts
+and separate summoning sparkle. Remove those two shape components only, keeping
+the round head, ears, facial cutouts, existing shading and shared image binding.
+Update the production-symbol probe to require transparent pixels in both removed
+regions; no new artwork, gameplay change or dependency is needed.
+
+The simplified production icon passes 2,325 checks, including transparent crown
+and sparkle regions; its native comparison preview was inspected at normal and
+small sizes. Release, runtime preparation and 32 resources checks pass, with
+the normal binary deployed as recorded in BUILDING.md. No release version,
+changelog or root README update is required for removing the rejected details.
+
 September 21 silhouette correction: the existing full-body symbol is readable
 but lacks the requested worker identity. Keep the current named image and enamel
 renderer, replacing only its shape with a large round head, pointed ears, crown
