@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Room demolition effect](ROOM-DEMOLITION-EFFECT.md): existing room particles
+  on successfully removed visible tiles, with unchanged sale rules.
+
 - [Room interaction positions](ROOM-INTERACTION-SPACING.md): endpoint-only
   spacing for room users without adding obstacles to creature transit.
 
