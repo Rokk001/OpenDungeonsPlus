@@ -1,5 +1,26 @@
 # Configuring and compiling on Windows
 
+## September 21 worker portrait, research guidance and room demolition
+
+The normal Release executable now includes the corrected client-side worker
+portrait, named research nodes with activity/progress and in-window prerequisite
+details, and room-area demolition using the construction-width preview.
+Built September 21 00:07:53 UTC, 4,956,672 bytes, SHA-256
+`86ABC929C0221C1C84033E1206E4B36C5BF2B35DFB768C384C7AF2DF8181D1CC`.
+The game was closed before deployment; staged and normal hashes match.
+The previous executable is preserved with a verified backup hash under
+`build/before-september21-ui-followups/opendungeons-plus.exe`.
+
+All three cumulative Release builds passed. Executed checks: 16 worker icon
+(six reproduced failures before correction), 8,884 installed-CEGUI research UI
+including real hover dispatch and formatted-text extents at nine size/scale
+combinations, 411 research-rule regressions and 42 room-demolition checks with
+exact eligible request coordinates. Runtime preparation and 32 resource checks
+also pass. The unchanged preview renderer's geometry rerun was execution-blocked
+by Windows application control (4551); its previous pass is not a new run.
+No security settings were changed and no game was launched. User appearance and
+gameplay acceptance remain pending; no push, PR or release version was requested.
+
 ## September 20 desktop shortcut and UI follow-ups: current executable
 
 The normal Release executable includes the complete prior fork plus the larger
