@@ -56,10 +56,11 @@ int main(int argc,char** argv){try{
   int a=alpha(x,y);opaque+=a==255;partial+=a>0&&a<255;
   if(x<6||x>=58||y<5||y>=59)check(a==0,"transparent padding, no portrait background");}
  check(opaque>450&&opaque<1500,"compact silhouette");check(partial>80,"supersampled smooth edges");
- for(auto point:{std::pair<int,int>{28,18},{18,15},{38,14},{28,35},{14,37},{42,37},{18,54},{38,54},{49,13}})
+ for(auto point:{std::pair<int,int>{28,18},{26,11},{9,22},{46,22},{28,34},{28,51},{51,46}})
   {if(alpha(point.first,point.second)<=200)std::cout<<"sample "<<point.first<<","<<point.second<<" alpha="<<int(alpha(point.first,point.second))<<'\n';
-   check(alpha(point.first,point.second)>200,"head ears body limbs and summon glint");}
- check(alpha(28,54)==0,"separate legs remain readable");check(alpha(44,24)==0,"glint separate from body");
+   check(alpha(point.first,point.second)>200,"round head pointed ears crown and summon glint");}
+ for(auto point:{std::pair<int,int>{21,31},{35,31},{28,41},{28,48},{44,46}})
+  check(alpha(point.first,point.second)==0,"eyes nose mouth and sparkle separation remain open");
  check(p[(35*64+28)*4+2]>p[(35*64+28)*4],"existing blue enamel palette");
  Ogre::Root root("","","");root.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
  Ogre::ResourceGroupManager::getSingleton().addResourceLocation(std::string(argv[1])+"/gui","FileSystem","General");

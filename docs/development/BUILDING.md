@@ -1,5 +1,21 @@
 # Configuring and compiling on Windows
 
+## September 21 worker head symbol: current executable
+
+The normal Release binary includes the revised pointed-ear worker head symbol
+and retains the accepted research connections and all prior features. Built
+September 21 07:01:17 UTC, 4,951,040 bytes, SHA-256
+`12A8DACDE917EABAA17F6DD746DCCEF33A52A89698F76D1DE7CD63EC1A5C8D5C`.
+Backup and deployed hashes were verified with the game closed; the previous
+binary is in `build/before-worker-head-20260921`.
+
+Release, 1,307 compiled symbol checks, runtime preparation and 32 resource
+checks pass; the generated icon comparison was inspected without launching
+the game. The unchanged shading regression rerun is blocked by application
+control (4551), not reported as passed. No policy change, push or release was
+performed; user icon acceptance remains pending and numeric research levels
+are not included yet. Logs use `build/review-followups/worker-head-*`.
+
 ## September 21 graphical research tree: current executable
 
 The normal Release executable includes the symbol-and-path research tree, with

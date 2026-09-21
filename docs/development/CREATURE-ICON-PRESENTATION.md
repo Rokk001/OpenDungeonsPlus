@@ -2,6 +2,21 @@
 
 ## Summon-worker identity follow-up
 
+September 21 silhouette correction: the existing full-body symbol is readable
+but lacks the requested worker identity. Keep the current named image and enamel
+renderer, replacing only its shape with a large round head, pointed ears, crown
+tufts and negative-space eyes/nose, plus a separate summoning sparkle. Both
+navigation consumers and pointer feedback retain the same binding. Reference
+evidence is private; no new asset or dependency is introduced.
+
+The head-symbol correction passes 1,307 compiled shape/binding checks, and its
+32-pixel preview was inspected beside the actual navigation symbols. Release,
+runtime preparation and 32 resource checks pass; the normal executable is
+updated (see BUILDING.md). The unchanged shading-only regression compiled but
+Windows application control blocked its executable with error 4551; that rerun
+is not a pass and no security policy was changed. User appearance acceptance is
+pending. No version, changelog or root README change is needed for this correction.
+
 The user rejected the worker portrait as inconsistent with the simple navigation
 symbols. The current refresh overrides the shared summon image with a rendered
 creature portrait. Remove that override and replace only the existing summon
