@@ -61,6 +61,9 @@ descriptions and review comments.
 
 Maintain `docs/internal/OPEN-TASKS-OVERVIEW.md` as the concise, current task
 overview throughout implementation. The user explicitly approved this workflow.
+When a queued task is completed or ready for testing, commit its scoped work,
+update the overview and immediately continue with the next queued task;
+individual task readiness is not a reason to stop the authorized queue.
 Use only the two-column task/status table, with short status labels.
 Mark the currently worked task with `RUNNING` in its existing status cell.
 Do not add a heading, introductory text, extra marker column, long explanations,
@@ -377,5 +380,8 @@ currently target Mario's Windows installation, with paths recorded in the docs.
 Keep changes within the user's request and preserve existing work.
 Do not read `.env` or other secret files.
 Manual game tests, QA and visual acceptance are performed by the user.
+When the user refers to a game screenshot, check the game's configured local
+screenshot output before claiming that no screenshot is available; absence of a
+chat attachment alone is not evidence that the screenshot cannot be found.
 When changing setup paths, versions, commands or verified build status, update the
 linked documentation in the same task so the next session has the current state.

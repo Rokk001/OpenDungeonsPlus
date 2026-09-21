@@ -1,5 +1,8 @@
 # Creature level progression
 
+September 21: the user accepted level progression and increasing creature power;
+the separate experience/recovery indicator acceptance remains open.
+
 ## Existing paths and bounded change
 
 Levels already increased HP/defenses linearly and attack channels through skill

@@ -1,5 +1,7 @@
 # Creature experience and recovery indicators
 
+September 21: the user accepted the experience and attack-recovery indicators.
+
 ## Existing implementation and change
 
 Creature overlays already contain owner-coloured health segments, a centred
