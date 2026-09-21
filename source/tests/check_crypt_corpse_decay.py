@@ -139,14 +139,18 @@ int main(int argc,char** argv){try{
   check(second->hasAnimationState(name),"another creature sharing the skeleton has its own animation state");
   scene->destroyEntity(second);scene->destroyEntity(entity);
  }
+ // Material rendering is verified by the installed-renderer fixture separately.
+ Ogre::MaterialManager::getSingleton().create("CorpseFlies","Graphics");
  std::ifstream stream(std::string(argv[1])+"/particles/CorpseDecay.particle");
  Ogre::DataStreamPtr data(new Ogre::FileStreamDataStream("CorpseDecay.particle",&stream,false));
  Ogre::ParticleSystemManager::getSingleton().parseScript(data,"Graphics");
  auto* effect=scene->createParticleSystem("corpse","CorpseDecay");
- check(effect->getParticleQuota()==16,"fly count is bounded");
+ check(effect->getParticleQuota()==24,"fly count is bounded");
  check(effect->getNumEmitters()==1&&effect->getNumAffectors()==1,"fly script parses with emitter and movement affector");
  check(effect->getAffector(0)->getType()=="DirectionRandomiser","flies have animated erratic movement");
  check(effect->getEmitter(0)->getEmissionRate()>0,"swarm emits throughout corpse decay");
+ check(effect->getMaterialName()=="CorpseFlies","flies use their winged silhouette, not blood flares");
+ check(effect->getDefaultWidth()>=.1f&&effect->getDefaultHeight()>=.1f,"flies remain readable at dungeon-camera scale");
  scene->destroyParticleSystem(effect);root.destroySceneManager(scene);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

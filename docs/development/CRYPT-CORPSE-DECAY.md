@@ -1,5 +1,34 @@
 # Crypt corpse presentation
 
+September 21: the user accepted the lying pose, but rejected the missing visible
+decomposition and flies; pose acceptance does not cover that remaining effect.
+
+The actual client update advances the decay animation, and an isolated hidden
+Ogre render confirms eight live particles and root scales 1, 0.91 and 0.82 at
+the start, middle and end. The gap is presentation: the corpse keeps its intact
+texture and only shrinks 18%, while 0.025-unit dark flare particles are barely
+visible at dungeon-camera scale. This reproduces the weak presentation without
+running the game. Extend the existing decay state with per-corpse mottling and
+gradual surface breakup plus readable winged flies, preserving the accepted
+pose, living-creature materials, transport cleanup and server economy.
+
+The correction now passes 12,595 production pose/delivery/particle checks and
+24 installed-OpenGL render/cleanup checks, including 746 visible fly pixels,
+changing swarm images, three distinct surface stages, unchanged shared living
+materials, restoration of original appearance and removal of private materials
+and particle systems. An early preview read the previous front buffer; the
+fixture now reads the just-rendered back buffer and measures pixels, not merely
+particle counts. The current preview was inspected without launching the game.
+
+The clean Windows Release build passed (header layout changed); logs are
+`build/review-followups/crypt-visible-build.log`, `crypt-visible-render.log` and
+`crypt-visible-decay.log`. The new executable is built but deployment is waiting
+for the user to close the game; do not mark it ready in the normal start file.
+The original pose and 18% skeletal settling remain unchanged. The visible
+material effect follows the existing base-duration animation; research still
+controls removal independently, so it can remove an already visibly decaying
+corpse before the base-duration surface breakup finishes.
+
 September 21 verification follow-up: the previously execution-blocked fixture
 now starts but stops while creating its first entity because its headless setup
 never initialized the material manager. The game performs that initialization
