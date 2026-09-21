@@ -1,5 +1,22 @@
 # Configuring and compiling on Windows
 
+## September 21 visible crypt decay: built, deployment pending
+
+The clean Release build in `build/review-followups` includes visible winged flies
+and per-corpse progressive surface decay, preserving the accepted lying pose and
+the preceding worker-departure correction. Built September 21 08:06:02 UTC,
+4,956,672 bytes, SHA-256
+`4FF2439C42E15A40732BDEC1E6ECC4BA668FD095176D76ABC79F14AB683DC378`.
+All 12,595 focused checks and 24 installed-renderer checks pass; the latter
+measures visible particles, changing images, living-material isolation and
+actual production cleanup. Logs use `build/review-followups/crypt-visible-*`.
+
+The game is currently running, so deployment was stopped before creating a
+backup or replacing any executable; the normal executable is still the crypt
+worker-departure build below. Runtime staging and resource checks for the new
+binary remain pending. No game was launched, no release version changed and
+no remote publication occurred.
+
 ## September 21 crypt worker departure: current executable
 
 The normal Release executable uses free crypt delivery tiles instead of wall
