@@ -2,6 +2,24 @@
 
 ## Current gameplay entry point
 
+September 21 room-demolition correction: the screenshot uses the common Sell
+control, whose handler explicitly passes only the pointed tile to the existing
+room validator. The separate room validator already supports a rectangle, so
+dragging in the common control never reaches that capability. Reuse it for a
+room-area drag (including an empty starting tile), preserving single-click and
+trap-start behavior, ownership/portal exclusions and server refund validation.
+Room demolition previews reuse the existing construction ribbon; trap-only
+previews and invalid-selection behavior remain unchanged. No protocol/version
+change or dependency is needed, and the README does not describe this gesture.
+The focused production-code fixture passes 42 checks: four drag directions,
+multi-tile preview/refund and request coordinates, ownership/portal exclusions,
+empty starts, invalid endpoints, unchanged single-tile/trap routing and preview
+flags. The renderer itself is unchanged; its geometry regression compiles but
+this rerun is blocked before execution by Windows application control (4551),
+so its previous 577-check pass is not claimed as a new run. No policy was changed.
+The cumulative Release build passes; deployment and manual acceptance remain
+tracked in BUILDING.md and the private task overview.
+
 Gameplay now exposes only the shared minimap Sell control. The legacy room and
 trap removal buttons are hidden in the game sheet, and construction actions
 start in the freed column. The editor retains its separate area-removal tools.
