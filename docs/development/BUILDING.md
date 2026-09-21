@@ -1,5 +1,20 @@
 # Configuring and compiling on Windows
 
+## September 21 simplified worker icon: current executable
+
+The normal Release executable removes the worker icon's rejected crown tufts
+and sparkle while retaining its head, ears and facial cutouts. Built September
+21 07:26:53 UTC, 4,953,600 bytes, SHA-256
+`D52B21F37FBAA0A06CE548A9BC01A62A21863E02CA6668FB96E29B06DA4D2B7D`.
+With the game closed, backup and deployment hashes match; the prior binary is
+preserved in `build/before-worker-simple-20260921`.
+
+Release, 2,325 production-symbol checks, runtime preparation and 32 resource
+checks pass; the icon preview was inspected without starting the game. Logs use
+`build/review-followups/worker-simple-*`. User visual acceptance is pending;
+crypt departure and the reported missing visible decay are not corrected in
+this binary. No security settings, release version or remote branches changed.
+
 ## September 21 visible research levels: current executable
 
 The normal Release executable includes per-node 0/3 through 3/3 level badges,

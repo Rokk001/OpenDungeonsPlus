@@ -251,16 +251,12 @@ void createSummonWorkerIcon()
                     const float earX = std::abs(px - 28.0f);
                     const bool ears = earX <= 22.0f &&
                         py >= 31.0f - 0.55f * earX && py <= 45.0f - 1.15f * earX;
-                    const bool crown = py >= 7.0f && py <= 20.0f &&
-                        (std::abs(px - 26.0f) <= (py - 7.0f) * 0.35f ||
-                         std::abs(px - 17.0f) <= (py - 10.0f) * 0.3f);
                     const bool face = ellipse(28, 30, 16, 18) || ellipse(28, 43, 10, 11);
                     const bool eyes = ellipse(21, 31, 5, 6) || ellipse(35, 31, 5, 6);
                     const bool nose = std::abs(px - 28.0f) <= 2.5f && py >= 39 && py <= 43;
                     const bool mouth = py >= 47 && py <= 49 && std::abs(px - 28.0f) <= 4;
-                    const bool worker = (face || ears || crown) && !eyes && !nose && !mouth;
-                    const bool glint = std::abs(px - 51.0f) / 5.0f + std::abs(py - 46.0f) / 7.0f <= 1.0f;
-                    coverage += worker || glint ? 1 : 0;
+                    const bool worker = (face || ears) && !eyes && !nose && !mouth;
+                    coverage += worker ? 1 : 0;
                 }
             }
             const int i = (y * size + x) * 4;

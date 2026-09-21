@@ -56,11 +56,13 @@ int main(int argc,char** argv){try{
   int a=alpha(x,y);opaque+=a==255;partial+=a>0&&a<255;
   if(x<6||x>=58||y<5||y>=59)check(a==0,"transparent padding, no portrait background");}
  check(opaque>450&&opaque<1500,"compact silhouette");check(partial>80,"supersampled smooth edges");
- for(auto point:{std::pair<int,int>{28,18},{26,11},{9,22},{46,22},{28,34},{28,51},{51,46}})
+ for(auto point:{std::pair<int,int>{28,18},{9,22},{46,22},{28,34},{28,51}})
   {if(alpha(point.first,point.second)<=200)std::cout<<"sample "<<point.first<<","<<point.second<<" alpha="<<int(alpha(point.first,point.second))<<'\n';
-   check(alpha(point.first,point.second)>200,"round head pointed ears crown and summon glint");}
+   check(alpha(point.first,point.second)>200,"round head pointed ears and face remain");}
  for(auto point:{std::pair<int,int>{21,31},{35,31},{28,41},{28,48},{44,46}})
-  check(alpha(point.first,point.second)==0,"eyes nose mouth and sparkle separation remain open");
+  check(alpha(point.first,point.second)==0,"eyes nose mouth and surrounding space remain open");
+ for(int y=0;y<12;++y)for(int x=0;x<64;++x)check(alpha(x,y)==0,"no crown tufts or horns above head");
+ for(int y=38;y<59;++y)for(int x=46;x<58;++x)check(alpha(x,y)==0,"no magical sparkle beside worker");
  check(p[(35*64+28)*4+2]>p[(35*64+28)*4],"existing blue enamel palette");
  Ogre::Root root("","","");root.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
  Ogre::ResourceGroupManager::getSingleton().addResourceLocation(std::string(argv[1])+"/gui","FileSystem","General");
