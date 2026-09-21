@@ -3035,20 +3035,23 @@ void GameMode::updateSelectedTiles()
         mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap;
     const bool digging = mPlayerSelection.getCurrentAction() == SelectedAction::none ||
         mPlayerSelection.getCurrentAction() == SelectedAction::selectTile;
+    const bool roomDemolition = mPlayerSelection.getCurrentAction() == SelectedAction::destroyRoom ||
+        (mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding &&
+         std::any_of(mPreviewTiles.begin(), mPreviewTiles.end(), [](Tile* tile) { return tile->getIsRoom(); }));
     if(!mActionTargetValid && !building)
         mPreviewTiles.clear();
     const Ogre::ColourValue colour = mActionTargetValid ? Ogre::ColourValue(0.35f, 0.3f, 1.0f) :
         Ogre::ColourValue(1.0f, 0.15f, 0.1f);
     if(mPreviewTiles == mSelectedTiles)
     {
-        RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building, digging);
+        RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition, digging);
         return;
     }
     Player* player = mGameMap->getLocalPlayer();
     for(Tile* tile : mSelectedTiles)
         tile->setSelected(false, player);
     mSelectedTiles = mPreviewTiles;
-    RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building, digging);
+    RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition, digging);
 }
 
 void GameMode::unselectAllTiles()
@@ -3166,6 +3169,16 @@ bool GameMode::toggleSell(const CEGUI::EventArgs& e)
 void GameMode::handlePlayerActionSell()
 {
     const InputManager& inputManager = mModeManager->getInputManager();
+    if(inputManager.mCommandState != InputCommandState::infoOnly &&
+       (inputManager.mXPos != inputManager.mLStartDragX || inputManager.mYPos != inputManager.mLStartDragY))
+    {
+        Tile* start = mGameMap->getTile(inputManager.mLStartDragX, inputManager.mLStartDragY);
+        if(start != nullptr && !start->getIsTrap())
+        {
+            RoomManager::checkSellRoomTiles(mGameMap, inputManager, *this);
+            return;
+        }
+    }
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     if(tile != nullptr && tile->getIsTrap())
         TrapManager::checkSellTrapTiles(mGameMap, inputManager, *this, {tile});
