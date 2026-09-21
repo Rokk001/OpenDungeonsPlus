@@ -33,6 +33,10 @@ probe = r'''
 #define OD_LOG_ERR(x) do {} while(false)
 int checks=0,failures=0;
 void check(bool pass,const char* label){++checks;if(!pass){++failures;std::cout<<"FAIL "<<label<<'\n';}}
+bool sameRotation(const Ogre::Quaternion& a,const Ogre::Quaternion& b){
+ // Component-space comparison avoids acos(dot(q,q)) rejecting q itself after float rounding.
+ return std::min((a-b).Norm(),(a+b).Norm())<=1e-10f;
+}
 HELPERS
 enum class GameEntityType {creature,other};
 namespace EntityAnimation {const std::string rot_anim="Rot",die_anim="Die";}
@@ -57,6 +61,8 @@ struct RoomCrypt:Room {
 OFFSETS
 ROOM_METHODS
 int main(int argc,char** argv){try{
+ check(sameRotation(Ogre::Quaternion::IDENTITY,-Ogre::Quaternion::IDENTITY),"quaternion sign does not change a rotation");
+ check(!sameRotation(Ogre::Quaternion::IDENTITY,Ogre::Quaternion(Ogre::Radian(.001f),Ogre::Vector3::UNIT_X)),"rotation check rejects a genuine angular error");
  RoomCrypt room;Tile spot{4-OFFSET_TILE_X,5-OFFSET_TILE_Y},wrong{9,9};Creature carrier,corpse;
  carrier.tile=corpse.tile=&room.map.destination;
  room.mRottingCreatures[&spot]={&corpse,-1};
@@ -76,6 +82,8 @@ int main(int argc,char** argv){try{
 
  Ogre::Root root("","","crypt-decay.log");
  Ogre::DefaultHardwareBufferManager buffers;
+ Ogre::MaterialManager::getSingleton().initialise();
+ Ogre::ParticleSystemManager::getSingleton()._initialise();
  root.loadPlugin(std::string(argv[2])+"/bin/Plugin_ParticleFX");
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
@@ -95,7 +103,7 @@ int main(int argc,char** argv){try{
    if(source->hasNodeTrack(bone))source->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(source->getLength()),&expected);
    for(float progress:{0.f,.5f,1.f}){
     Ogre::TransformKeyFrame actual(nullptr,0);decay->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(80*progress),&actual);
-    check(actual.getRotation().equals(expected.getRotation(),Ogre::Radian(.0001f)),"corpse retains final ground-pose rotation");
+    check(sameRotation(actual.getRotation(),expected.getRotation()),"corpse retains final ground-pose rotation");
     check(actual.getTranslate().positionEquals(expected.getTranslate(),.0001f),"corpse retains final ground-pose translation");
     const float scale=skeleton->getBone(bone)->getParent()?1.f:1.f-.18f*progress;
     check(actual.getScale().positionEquals(expected.getScale()*scale,.0001f),"settling changes root scale only");

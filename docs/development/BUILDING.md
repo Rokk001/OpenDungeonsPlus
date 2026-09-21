@@ -2,6 +2,11 @@
 
 ## September 21 worker portrait, research guidance and room demolition
 
+Subsequent headless crypt verification passes all 12,584 checks after fixture-only
+initialization and numerical-comparison corrections; the game binary and hash
+below are unchanged. This supersedes the earlier crypt execution block, not the
+remaining user appearance acceptance.
+
 The normal Release executable now includes the corrected client-side worker
 portrait, named research nodes with activity/progress and in-window prerequisite
 details, and room-area demolition using the construction-width preview.

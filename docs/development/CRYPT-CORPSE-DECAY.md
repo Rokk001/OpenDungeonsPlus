@@ -1,5 +1,23 @@
 # Crypt corpse presentation
 
+September 21 verification follow-up: the previously execution-blocked fixture
+now starts but stops while creating its first entity because its headless setup
+never initialized the material manager. The game performs that initialization
+through renderer startup; this is a fixture error, not evidence of a game crash.
+Initialize the same default materials before creating test entities, following
+the existing isolated asset probes; do not alter corpse behavior or assertions.
+The particle manager also needed its normal billboard-factory initialization.
+Once initialization succeeded, the angular quaternion comparison reported 711
+failures even for quaternions compared with themselves: float dot-product
+rounding was amplified by acos. Compare quaternion components up to sign with
+squared error at most 1e-10 instead, retaining a negative control that rejects
+a genuine 0.001-radian difference. No production code or asset was changed.
+
+The final September 21 run passes all 12,584 checks, including all configured
+creature meshes, delivery/interruption, removal, final skeletal poses, settling,
+animation reuse and the actual fly particle script. This supersedes the blocked
+fixture status below; visual game acceptance remains with the user.
+
 The crypt accepts only dead creatures and starts a server-side rotting counter
 after transport, but never requests a lying/decay animation at that transition.
 The client release handler only reattaches the scene node and changes position;
@@ -22,7 +40,7 @@ restored. The effect follows position updates and is removed on pickup as well.
 The settling animation uses the base configured decay duration; research still
 controls the server's actual corpse-removal time without changing its rewards.
 
-Validation: the focused production-code fixture compiles, but Windows application
+Initial September 20 validation: the focused production-code fixture compiles, but Windows application
 control blocks its executable with error 4551 before any checks run. Consequently
 there is no runtime or visual pass. The fixture covers crypt delivery/interruption,
 spot removal, every configured skeleton's final pose and settling keys, shared
@@ -30,7 +48,9 @@ animation reuse and particle-template parsing. Game appearance remains for the
 user to test after deployment; release compilation is recorded separately below.
 
 Windows Release compilation passed on September 20 in `build/review-followups`
-(`crypt-final-build.log`). The normal executable has not been replaced.
+(`crypt-final-build.log`). The complete implementation has since been deployed
+in the normal executable recorded at the top of BUILDING.md; the September 21
+test-only correction requires no game rebuild or redeployment.
 
 This is a local feature, not a release: the development index is updated without
 a version bump or release changelog entry; the top-level README needs no change.
