@@ -1,5 +1,21 @@
 # Configuring and compiling on Windows
 
+## September 21 crypt worker departure: current executable
+
+The normal Release executable uses free crypt delivery tiles instead of wall
+statue tiles, retaining all accepted features. Built September 21 07:41:36 UTC,
+4,952,576 bytes, SHA-256
+`E71726749328ED5E218E4A805B6AF3DE7206C326342908CB2940561EA6907063`.
+The game was closed; backup and deployment hashes match, with the previous binary
+preserved in `build/before-crypt-delivery-20260921`.
+
+Release, runtime preparation and 32 resource checks pass; the retained fixture
+log records 12,593 delivery/decay checks without failures. The navigation fixture
+previously passed 6,958 checks; its latest unchanged rerun compiled but execution
+was application-control blocked (4551), not reported as a new runtime pass.
+Logs use `build/review-followups/crypt-delivery-*`; no game or manual QA was run,
+no security settings changed, and visible decomposition remains a separate task.
+
 ## September 21 simplified worker icon: current executable
 
 The normal Release executable removes the worker icon's rejected crown tufts

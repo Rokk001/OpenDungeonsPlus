@@ -18,6 +18,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 - [Crypt corpse presentation](CRYPT-CORPSE-DECAY.md): grounded corpse poses,
   settling and an animated decay swarm during the existing crypt lifecycle.
 
+- [Crypt worker departure](CRYPT-WORKER-DEPARTURE.md): free delivery tiles
+  beside grave furniture, preserving safe departure after carrying a corpse.
+
 - [Diagonal corridor movement](DIAGONAL-CORRIDOR-NAVIGATION.md): checked
   shortcuts through stair-shaped corridors without changing traversal rules.
 
