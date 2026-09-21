@@ -68,7 +68,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
   input.mCommandState=InputCommandState::building;sent.clear();game.handlePlayerActionSell();
   check(game.selected.size()==6);check(game.text=="60");check(sent.empty());
   input.mCommandState=InputCommandState::validated;game.handlePlayerActionSell();
-  check(sent.size()==1);check(sent.back().data.size()==13&&sent.back().data[0]==6);check(game.selected.empty());
+  check(sent.size()==1);check(sent.back().data==std::vector<int>({6,0,0,0,1,0,2,1,0,2,0,2,2}));check(game.selected.empty());
  }
  input.mCommandState=InputCommandState::infoOnly;input.mXPos=0;input.mYPos=0;game.handlePlayerActionSell();
  check(game.selected.size()==1&&game.text=="10");
