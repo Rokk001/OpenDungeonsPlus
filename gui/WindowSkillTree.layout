@@ -2,14 +2,33 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="SkillTreeWindow" >
-        <Property name="Area" value="{{0.5,-305},{0.5,-220},{0.5,305},{0.5,220}}" />
+        <Property name="Area" value="{{0.5,-380},{0.5,-320},{0.5,380},{0.5,320}}" />
         <Property name="Text" value="Skill Tree" />
         <Property name="SizingEnabled" value="False" />
+        <UserString name="ResearchFocus" value="" />
+        <Window type="OD/StaticText" name="CurrentResearch">
+            <Property name="Area" value="{{0,20},{0,32},{1,-20},{0,58}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Text" value="No active research" />
+        </Window>
+        <Window type="OD/ProgressBar" name="CurrentResearchProgress">
+            <Property name="Area" value="{{0,20},{0,60},{1,-20},{0,70}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
+        <Window type="OD/StaticText" name="ResearchDetails">
+            <Property name="Area" value="{{0,20},{1,-152},{1,-20},{1,-52}}" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="VertScrollbar" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Point at a research icon: arrows show every required predecessor; all must be researched to level 1." />
+        </Window>
         <Window type="OD/StaticImage" name="Skills" >
-            <Property name="Area" value="{{0,20},{0,35},{1,-20},{1,-108}}" />
+            <Property name="Area" value="{{0,20},{0,78},{1,-20},{1,-160}}" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Window type="OD/StaticImage" name="AttackSkills" >
-                <Property name="Area" value="{{0,10},{0,10},{0,190},{1,-10}}" />
+                <Property name="Area" value="{{0,4},{0,4},{0.3333,-4},{1,-4}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameColours" value="tl:FFFF0000 tr:FFFF0000 bl:FFFFFFFF br:FFFFFFFF" />
                 <Window type="OD/ResearchButton" name="TrainingHallButton" >
@@ -167,7 +186,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticImage" name="TacticSkills" >
-                <Property name="Area" value="{{0,195},{0,10},{0,375},{1,-10}}" />
+                <Property name="Area" value="{{0.3333,4},{0,4},{0.6667,-4},{1,-4}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Window type="OD/ResearchButton" name="TreasuryButton" >
                     <Property name="Area" value="{{0.2,-25},{0,15},{0.2,25},{0,65}}" />
@@ -307,7 +326,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticImage" name="MagicSkills" >
-                <Property name="Area" value="{{0,380},{0,10},{0,560},{1,-10}}" />
+                <Property name="Area" value="{{0.6667,4},{0,4},{1,-4},{1,-4}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameColours" value="tl:FF0000FF tr:FF0000FF bl:FFFFFFFF br:FFFFFFFF" />
                 <Window type="OD/ResearchButton" name="SummonWorkerButton" >
@@ -493,14 +512,14 @@
             <Property name="TooltipText" value="Unselect all pending skills in the tree" />
         </Window>
         <Window type="OD/MenuSymbolButton" name="CancelButton" >
-            <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
+            <Property name="Area" value="{{1,-100},{1,-46},{1,-62},{1,-8}}" />
             <Property name="NormalImage" value="OpenDungeonsSkin/CloseButtonNormal" />
             <Property name="HoverImage" value="OpenDungeonsSkin/CloseButtonNormal" />
             <Property name="PushedImage" value="OpenDungeonsSkin/CloseButtonNormal" />
             <Property name="TooltipText" value="Do not save modifications to the skill tree" />
         </Window>
         <Window type="OD/MenuSymbolButton" name="ApplyButton" >
-            <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
+            <Property name="Area" value="{{1,-54},{1,-46},{1,-16},{1,-8}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
             <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
             <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />

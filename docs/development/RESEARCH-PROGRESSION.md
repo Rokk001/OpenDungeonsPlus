@@ -2,6 +2,34 @@
 
 ## Research-tree readability follow-up
 
+September 21 rejected presentation: the actual screenshot shows overlapping
+same-row bus segments with mixed completion colours, unnamed icons, a faint
+current-work symbol and a long description clipped in the global help strip.
+Keep research rules and selection semantics unchanged. Add named nodes, explicit
+researching/queued/locked states, an always-visible current-research banner and
+progress bar, and a wrapped in-window detail panel listing each required item
+as ready or missing. Show only the inspected node's direct incoming connections,
+with direction arrows and an explicit ALL-required explanation; this removes
+ambiguous overlapping unrelated paths without hiding prerequisites from details.
+Inspecting changes only presentation, never the pending research queue.
+Keep grey unresearched icons and the requested silver/gold upgrade frames.
+No version bump or release changelog is needed for this unreleased correction.
+The overview keeps neutral connections until an icon is inspected; inspection
+isolates that node's incoming paths, with green ready predecessors and amber
+missing predecessors, plus downward arrows. Full details remain in the window
+after the pointer leaves, including each prerequisite and its completion state.
+Labels and compact status badges are separate from the unchanged upgrade frames.
+
+The expanded installed-CEGUI fixture passes 8,884 checks, including actual hover
+dispatch, all 27 names, active/idle research, all four completion levels, exact
+incoming-edge filtering, retained queue/cast rules and formatted text extents at
+800x600, 1280x720 and 1920x1200 with 80%, 100% and 120% UI scale. It initially
+found clipped labels at small sizes; the final layout passes those same checks.
+Some intermediate native runs were blocked by Windows application control;
+the final recorded run executed successfully without changing security settings.
+Release compilation and deployment are recorded in BUILDING.md; user visual
+acceptance is still required, and the fixture does not launch the game.
+
 The tree currently overlays both Roman level numbers and queue positions on
 each button, while the fixed three-column layout never draws dependencies.
 `Skill::canBeSkilled` requires every direct prerequisite, not merely one;
