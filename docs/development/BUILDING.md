@@ -1,5 +1,23 @@
 # Configuring and compiling on Windows
 
+## September 21 room demolition effect: current executable
+
+The normal Release executable now includes the visible per-tile room-demolition
+burst, reusing the existing room particle assets and retaining the complete prior
+fork. Built September 21 06:01:33 UTC, 4,956,672 bytes, SHA-256
+`D90CEE506ED340A8B8CF28D29F6E0D8211A05E12EC304A51F214F0B32694CDFB`.
+The game was closed before deployment; normal/staged hashes match, and the prior
+executable is backed up with its hash verified in
+`build/before-room-demolition-effect-20260921/opendungeons-plus.exe`.
+
+Release compilation and runtime preparation pass in the corresponding
+`build/review-followups/room-demolition-effect-*.log` files, together with 62
+production sale-effect checks, 42 selection regressions, 12 existing effect
+source checks, ten installed Ogre particle checks and 32 resource checks.
+The isolated hidden render shows nine bursts and 324 live particles; its preview
+was inspected. No game was launched and no security policy changed; in-game
+appearance acceptance remains with the user. No push or release was requested.
+
 ## September 21 worker portrait, research guidance and room demolition
 
 Subsequent headless crypt verification passes all 12,584 checks after fixture-only
