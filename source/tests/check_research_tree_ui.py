@@ -1,10 +1,14 @@
 """Run production research-button and dependency rendering against installed CEGUI."""
 from pathlib import Path
+import argparse
 import os
 import re
 import subprocess
 import tempfile
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--render', action='store_true', help='Save an isolated Ogre/CEGUI graph preview without launching the game')
+args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 game = (repo / 'source/modes/GameMode.cpp').read_text()
@@ -37,9 +41,6 @@ for line in manager[manager.index('SkillManager::SkillManager()'):manager.index(
     if match := re.search(r'(lvl\ddepends)\.push_back\(skill\)', line):
         dependencies.setdefault(match[1], []).append(current)
 assert len(model) == 27
-feedback = function('void GameMode::refreshActionFeedback(')
-inspect_start = feedback.index('            if(mIsSkillWindowOpen)', feedback.index('if(hover != nullptr)'))
-inspect_block = feedback[inspect_start:feedback.index('            SkillManager::updateCostTooltip', inspect_start)]
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents))
     for key, (path, parents) in model.items())
@@ -59,13 +60,13 @@ probe = r'''
 namespace Helper {template<class T>std::string toString(T v){return std::to_string(v);}}
 struct CreatureDefinition {std::string getMeshName()const{return "Kobold.mesh";}};
 const CEGUI::Image& getCreatureHandIconImage(const std::string&){return CEGUI::ImageManager::getSingleton().get("OpenDungeonsIcons/WorkerButton");}
-struct Seat {uint32_t level=0,queue=0;bool current=false;std::vector<SkillType> denied;
- uint32_t getSkillLevel(SkillType)const{return level;}
+struct Seat {uint32_t level=0,queue=0;bool current=false;std::vector<SkillType> denied;std::map<SkillType,uint32_t> levels;SkillType currentType=SkillType::roomTrainingHall;
+ uint32_t getSkillLevel(SkillType t)const{auto i=levels.find(t);return i==levels.end()?level:i->second;}
  const CreatureDefinition* getWorkerClassToSpawn(){return nullptr;}
  std::string getFaction(){return "Keeper";}
  const std::vector<SkillType>& getSkillNotAllowed()const{return denied;}
  uint32_t isSkillPending(SkillType)const{return queue;}
- bool getCurrentSkillProgress(SkillType& t,float& p){t=SkillType::roomTrainingHall;p=.5f;return current;}};
+ bool getCurrentSkillProgress(SkillType& t,float& p){t=currentType;p=.5f;return current;}};
 struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct GameMap {Player player;Player* getLocalPlayer(){return &player;}
  const CreatureDefinition* getClassDescription(const std::string&){static CreatureDefinition worker;return &worker;}};
@@ -83,7 +84,7 @@ namespace Skills {NAMES}
 struct GameMode {CEGUI::Window* mRootWindow;GameMap* mGameMap;bool mIsSkillWindowOpen=false;std::vector<SkillType> mSkillPending;
  struct Progress {CEGUI::ProgressBar* mProgressBar=nullptr;float mCompleteness=0;void setValue(CEGUI::ProgressBar* b,float p){mProgressBar=b;mCompleteness=p;}}mSkillCurrentCompletion;
  void refreshSkillButtonState(const std::string&,const std::string&,const std::string&,SkillType);
- void refreshSkillConnections();void inspect();};
+ void refreshSkillConnections();};
 METHODS
 int main(int argc,char** argv){try{
  Ogre::Root ogre("","","research-tree-Ogre.log");ogre.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
@@ -113,7 +114,8 @@ int main(int argc,char** argv){try{
    check(root->getChild(cast)->isVisible()==(level>0),"unlocked actions stay available during upgrades");
    check(b->getUserString("ResearchDetails").find(level==3?"Maximum level":"Queue position: 2")!=CEGUI::String::npos,"queue and level information remains accessible");
    check(b->getUserString("ResearchDetails").find("Requires all (level 1):")!=CEGUI::String::npos || data.at(type).parents.empty(),"prerequisites are explicitly all required");
-   check(b->getTooltipText().empty(),"long details never overflow an external tooltip");
+   check(b->getTooltipText()==b->getUserString("ResearchDetails"),"descriptions are optional hover help, not persistent panels");
+   check(b->getChild(b->getName()+"ProgressBar")->isVisible()==(type==SkillType::roomTrainingHall&&level<3),"only the current node displays progress");
   });
   game.refreshSkillConnections();game.refreshSkillConnections();
   for(const auto& p:data){auto* button=root->getChild("SkillTreeWindow/Skills/"+p.second.path);auto* parent=button->getParent();
@@ -121,60 +123,110 @@ int main(int argc,char** argv){try{
     auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
     check(line->isMousePassThroughEnabled(),"connections do not intercept clicks");
     check(line->getPixelSize().d_width>0&&line->getPixelSize().d_height>0,"each immediate edge has positive geometry");
-    check(line->getProperty("ImageColours").find("FF626262")!=CEGUI::String::npos,"overview edges stay neutral without mixed overlapping colours");
+    check(line->getProperty("ImageColours").find(level>0?"FFD28B54":"FF656A70")!=CEGUI::String::npos,"permanent paths reflect actual prerequisite completion");
    }
   }
   system.getDefaultGUIContext().draw();
  }
  auto* tree=root->getChild("SkillTreeWindow");
- map.player.seat.level=0;map.player.seat.current=true;map.player.seat.queue=2;
- SkillManager::listAllSkills([&](const std::string& n,const std::string& c,const std::string& b,SkillType t){game.refreshSkillButtonState(n,c,b,t);});
- game.mIsSkillWindowOpen=true;
- for(const auto& inspected:data){
-  auto* target=root->getChild("SkillTreeWindow/Skills/"+inspected.second.path);
-  auto rect=target->getUnclippedOuterRect().get();system.getDefaultGUIContext().injectMousePosition((rect.left()+rect.right())*.5f,(rect.top()+rect.bottom())*.5f);
-  game.inspect();
-  check(tree->getUserString("ResearchFocus")==target->getName(),"production hover inspection identifies the pointed node");
-  check(tree->getChild("ResearchDetails")->getText()==target->getUserString("ResearchDetails"),"inspected details stay inside the window");
-  check(tree->getChild("CurrentResearch")->getText().find("50%")!=CEGUI::String::npos,"current research progress is always explicit");
-  check(static_cast<CEGUI::ProgressBar*>(tree->getChild("CurrentResearchProgress"))->getProgress()==.5f,"visible progress uses current research");
-  for(const auto& p:data){auto* button=root->getChild("SkillTreeWindow/Skills/"+p.second.path);auto* parent=button->getParent();
-   auto* label=parent->getChild(button->getName()+"Label");auto* status=parent->getChild(button->getName()+"Status");
-   check(!label->getText().empty()&&!status->getText().empty(),"each node has a visible name and status");
-   check(status->getUnclippedOuterRect().get().bottom()<=parent->getUnclippedOuterRect().get().bottom(),"node status fits inside its column");
-   for(auto* dep:p.second.parents)for(int part=0;part<3;++part){auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dep->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
-    check(line->isVisible()==(p.first==inspected.first),"only the inspected node's incoming prerequisites are emphasized");
+ check(!tree->isChild("CurrentResearch")&&!tree->isChild("ResearchDetails"),"no text banner or explanation panel");
+ map.player.seat.level=0;
+ for(const auto& p:data)if(p.second.parents.size()>1){
+  auto* parent=root->getChild("SkillTreeWindow/Skills/"+p.second.path)->getParent();
+  map.player.seat.levels.clear();map.player.seat.levels[p.second.parents.front()->type]=1;
+  for(bool complete:{false,true}){
+   if(complete)for(auto* dependency:p.second.parents)map.player.seat.levels[dependency->type]=1;
+   game.refreshSkillConnections();
+   for(auto* dependency:p.second.parents)for(int part=0;part<3;++part){
+    auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
+    bool ready=part==0?map.player.seat.getSkillLevel(dependency->type)>0:complete;
+    check(line->getProperty("ImageColours").find(ready?"FFD28B54":"FF656A70")!=CEGUI::String::npos,"shared bus unlocks only when ALL prerequisites are complete");
    }
   }
  }
- map.player.seat.current=false;game.refreshSkillConnections();
- check(tree->getChild("CurrentResearch")->getText().find("No active research")!=CEGUI::String::npos,"idle research does not claim work is in progress");
+ map.player.seat.levels.clear();
+ map.player.seat.level=0;map.player.seat.current=true;map.player.seat.queue=2;
+ SkillManager::listAllSkills([&](const std::string& n,const std::string& c,const std::string& b,SkillType t){game.refreshSkillButtonState(n,c,b,t);});
+ game.mIsSkillWindowOpen=true;game.refreshSkillConnections();
  for(const auto size:{CEGUI::Sizef(800,600),CEGUI::Sizef(1280,720),CEGUI::Sizef(1920,1200)})for(float user:{.8f,1.f,1.2f}){
   renderer.setDisplaySize(size);const float scale=std::min(size.d_width/1024.f,size.d_height/768.f)*user;
-  auto fonts=CEGUI::FontManager::getSingleton().getIterator();while(!fonts.isAtEnd()){
-   fonts.getCurrentValue()->setNativeResolution(CEGUI::Sizef(800/user,600/user));fonts.getCurrentValue()->setAutoScaled(CEGUI::ASM_Min);++fonts;
-  }
-  CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(size);
   for(const auto& p:authored){auto area=p.second;area.d_min.d_x.d_offset*=scale;area.d_min.d_y.d_offset*=scale;area.d_max.d_x.d_offset*=scale;area.d_max.d_y.d_offset*=scale;p.first->setArea(area);}
   game.refreshSkillConnections();
   for(const auto& p:data){auto* button=root->getChild("SkillTreeWindow/Skills/"+p.second.path);auto* parent=button->getParent();
-   for(const char* suffix:{"Label","Status"}){auto* label=parent->getChild(button->getName()+suffix);
-    const float extent=CEGUI::PropertyHelper<float>::fromString(label->getProperty("VertExtent"));
-    if(extent>label->getPixelSize().d_height+1)std::cout<<"CLIPPED "<<p.second.path<<" "<<suffix<<" "<<extent<<"/"<<label->getPixelSize().d_height<<'\n';
-    check(extent<=label->getPixelSize().d_height+1,"real formatted name/status fits at supported viewport and UI scales");
+   auto rect=button->getUnclippedOuterRect().get();auto bounds=parent->getUnclippedOuterRect().get();
+   check(rect.left()>=bounds.left()&&rect.right()<=bounds.right()&&rect.top()>=bounds.top()&&rect.bottom()<=bounds.bottom(),"symbol stays inside its graph column");
+   check(std::abs(rect.getWidth()-rect.getHeight())<2,"square symbols at all viewport scales");
+   check(!parent->isChild(button->getName()+"Label")&&!parent->isChild(button->getName()+"Status"),"no prose around symbol nodes");
+   for(const auto& other:data)if(other.first!=p.first){auto r=root->getChild("SkillTreeWindow/Skills/"+other.second.path)->getUnclippedOuterRect().get();
+    check(rect.right()<=r.left()||rect.left()>=r.right()||rect.bottom()<=r.top()||rect.top()>=r.bottom(),"node hit areas never overlap");}
+   auto* bar=static_cast<CEGUI::ProgressBar*>(button->getChild(button->getName()+"ProgressBar"));
+   if(p.first==SkillType::roomTrainingHall){
+    check(button->getProperty("ResearchBackgroundColour")=="FFB76A23","active node highlighted");
+    check(bar->isVisible()&&bar->getProgress()==.5f&&bar->getAlpha()==1,"real progress visible on active node");}
+   for(auto* dep:p.second.parents)for(int part=0;part<3;++part){auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dep->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
+    check(line->isVisible(),"all prerequisite paths stay visible without hover");
+    auto edge=line->getUnclippedOuterRect().get();
+    check(edge.getWidth()>0&&edge.getHeight()>0,"positive edge geometry");
+    for(const auto& other:data){auto r=root->getChild("SkillTreeWindow/Skills/"+other.second.path)->getUnclippedOuterRect().get();
+     check(edge.right()<=r.left()+1||edge.left()>=r.right()-1||edge.bottom()<=r.top()+1||edge.top()>=r.bottom()-1,"connections never cross symbol interiors");}
    }
   }
  }
  windows.destroyWindow(root);CEGUI::System::destroy();CEGUI::NullRenderer::destroy(renderer);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
-'''.replace('METHODS', function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')+'\nvoid GameMode::inspect(){'+inspect_block+'}').replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end])
+'''.replace('METHODS', function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end])
+if args.render:
+    native = (repo / 'source/render/Gui.cpp').read_text()
+    icon_methods = native[native.index('void shadeNavigationIcon('):native.index('void createNavigationImages(')]
+    probe = probe.replace('#include <CEGUI/RendererModules/Null/Renderer.h>', '#include <CEGUI/RendererModules/Ogre/Renderer.h>\n#include <CEGUI/BasicImage.h>\n#include <Ogre.h>\n#include <OgreRenderTexture.h>\n#include <OgreHardwarePixelBuffer.h>\n#include <RTShaderSystem/OgreShaderGenerator.h>\n#include <Bites/OgreSGTechniqueResolverListener.h>')
+    probe = probe.replace('int main(int argc,char** argv)', icon_methods + '\nint main(int argc,char** argv)')
+    probe = probe.replace('auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));', r'''
+ ogre.loadPlugin(std::string(argv[2])+"/bin/RenderSystem_GL3Plus");
+ auto* renderSystem=ogre.getAvailableRenderers().front();ogre.setRenderSystem(renderSystem);
+ renderSystem->setConfigOption("Full Screen","No");ogre.initialise(false);
+ Ogre::NameValuePairList options;options["hidden"]="true";
+ auto* window=ogre.createRenderWindow("Research graph preview",1280,960,false,&options);window->setAutoUpdated(false);
+ resources.addResourceLocation(std::string(argv[2])+"/Media/Main","FileSystem","OgreInternal");
+ resources.addResourceLocation(std::string(argv[2])+"/Media/RTShaderLib/GLSL","FileSystem","General");
+ resources.initialiseAllResourceGroups();
+ Ogre::RTShader::ShaderGenerator::initialize();auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
+ OgreBites::SGTechniqueResolverListener listener(shaders);Ogre::MaterialManager::getSingleton().addListener(&listener);
+ auto* scene=ogre.createSceneManager("DefaultSceneManager");auto* camera=scene->createCamera("Camera");
+ shaders->addSceneManager(scene);Ogre::MaterialManager::getSingleton().setActiveScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+ scene->getRootSceneNode()->createChildSceneNode()->attachObject(camera);
+ window->addViewport(camera)->setBackgroundColour(Ogre::ColourValue(.02f,.03f,.04f));
+ auto& renderer=CEGUI::OgreRenderer::create(*window);renderer.setFrameControlExecutionEnabled(false);
+ renderer.setDisplaySize(CEGUI::Sizef(1920,1200));''')
+    probe = probe.replace('CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");',
+                          'CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");colourNavigationAtlas();createSummonWorkerIcon();')
+    probe = probe.replace(' windows.destroyWindow(root);', r'''
+ renderer.setDisplaySize(CEGUI::Sizef(1280,960));
+ for(const auto& p:authored){auto area=p.second;area.d_min.d_x.d_offset*=1.25f;area.d_min.d_y.d_offset*=1.25f;area.d_max.d_x.d_offset*=1.25f;area.d_max.d_y.d_offset*=1.25f;p.first->setArea(area);}
+ auto& seat=map.player.seat;seat.currentType=SkillType::roomArena;seat.current=true;seat.level=0;
+ for(const auto& p:data)if(p.second.parents.empty())seat.levels[p.first]=1;
+ seat.levels[SkillType::roomTrainingHall]=2;seat.levels[SkillType::roomTreasury]=3;
+ seat.levels[SkillType::spellCallToWar]=1;seat.levels[SkillType::spellCreatureExplosion]=1;seat.levels[SkillType::roomPrison]=1;
+ game.mSkillPending={SkillType::roomArena,SkillType::roomTorture};
+ SkillManager::listAllSkills([&](const std::string& n,const std::string& c,const std::string& b,SkillType t){game.refreshSkillButtonState(n,c,b,t);});
+ game.refreshSkillConnections();
+ for(const auto& p:data)root->getChild("cast"+std::to_string(int(p.first)))->hide();
+ system.getDefaultGUIContext().injectMousePosition(0,0);
+ auto texture=Ogre::TextureManager::getSingleton().createManual("ResearchPreview","General",Ogre::TEX_TYPE_2D,1280,960,0,Ogre::PF_BYTE_RGBA,Ogre::TU_RENDERTARGET);
+ auto* target=texture->getBuffer()->getRenderTarget();target->setAutoUpdated(false);
+ target->addViewport(camera)->setBackgroundColour(Ogre::ColourValue(.02f,.03f,.04f));
+ renderer.setDefaultRootRenderTarget(*target);renderSystem->setScissorTest(false);
+ target->update(false);system.renderAllGUIContexts();
+ target->writeContentsToFile(std::string(argv[1])+"/build/review-followups/research-visual-graph-preview.png");
+ renderer.setDefaultRootRenderTarget(*window);target->removeAllViewports();Ogre::TextureManager::getSingleton().remove(texture->getHandle());
+ windows.destroyWindow(root);''')
+    probe = probe.replace('CEGUI::NullRenderer::destroy(renderer);', 'CEGUI::OgreRenderer::destroy(renderer);shaders->removeSceneManager(scene);ogre.destroySceneManager(scene);Ogre::MaterialManager::getSingleton().removeListener(&listener);Ogre::RTShader::ShaderGenerator::destroy();')
 with tempfile.TemporaryDirectory(prefix='odp-research-tree-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     cegui_source = prefix.parent / 'src/cegui/cegui'
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/DCEGUINULLRENDERER_EXPORTS',
-        f'/I{repo / "source"}', f'/I{prefix / "include/cegui-0"}', f'/I{cegui_source / "include"}', f'/I{prefix / "include/OGRE"}',
+        f'/I{repo / "source"}', f'/I{prefix / "include/cegui-0"}', f'/I{cegui_source / "include"}', f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}',
         'check.cpp', *[str(cegui_source / 'src/RendererModules/Null' / (name+'.cpp')) for name in ('Renderer','GeometryBuffer','Texture','TextureTarget')],
-        '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib'], cwd=work, check=True)
+        '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work, check=True)

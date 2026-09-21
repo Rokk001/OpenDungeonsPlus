@@ -5,27 +5,8 @@
         <Property name="Area" value="{{0.5,-380},{0.5,-320},{0.5,380},{0.5,320}}" />
         <Property name="Text" value="Skill Tree" />
         <Property name="SizingEnabled" value="False" />
-        <UserString name="ResearchFocus" value="" />
-        <Window type="OD/StaticText" name="CurrentResearch">
-            <Property name="Area" value="{{0,20},{0,32},{1,-20},{0,58}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="Text" value="No active research" />
-        </Window>
-        <Window type="OD/ProgressBar" name="CurrentResearchProgress">
-            <Property name="Area" value="{{0,20},{0,60},{1,-20},{0,70}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
-        <Window type="OD/StaticText" name="ResearchDetails">
-            <Property name="Area" value="{{0,20},{1,-152},{1,-20},{1,-52}}" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            <Property name="VertFormatting" value="TopAligned" />
-            <Property name="VertScrollbar" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="Point at a research icon: arrows show every required predecessor; all must be researched to level 1." />
-        </Window>
         <Window type="OD/StaticImage" name="Skills" >
-            <Property name="Area" value="{{0,20},{0,78},{1,-20},{1,-160}}" />
+            <Property name="Area" value="{{0,20},{0,38},{1,-20},{1,-64}}" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Window type="OD/StaticImage" name="AttackSkills" >
                 <Property name="Area" value="{{0,4},{0,4},{0.3333,-4},{1,-4}}" />
