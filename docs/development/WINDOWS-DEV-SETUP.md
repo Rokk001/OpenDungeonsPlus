@@ -2,8 +2,8 @@
 
 September 22: the current prepared Release executable includes the dungeon
 temple duplication fix; the clean build, focused checks, deployment and resource
-validation pass, with user gameplay retest pending as recorded in
-[BUILDING.md](BUILDING.md#september-22-dungeon-temple-duplication-ready-for-user-retest).
+validation pass, with the dungeon-heart retest confirmed by the user as recorded in
+[BUILDING.md](BUILDING.md#september-22-dungeon-temple-duplication-user-verified).
 
 Current work is `feature/action-state-feedback`, continuing from the user's
 accepted GUI-scaling baseline. On September 6, 2026 the Release build and runtime
