@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Dungeon heart combat](DUNGEON-HEART-COMBAT.md): an enemy-only central target,
+  protected floor and independently saved heart health.
+
 - [Dungeon temple duplication](DUNGEON-TEMPLE-DUPLICATION.md): retain a single
   dungeon core when damage disconnects its floor tiles.
 

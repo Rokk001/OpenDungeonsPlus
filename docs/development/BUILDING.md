@@ -1,5 +1,23 @@
 # Configuring and compiling on Windows
 
+## September 22 dungeon heart combat: deployed for user testing
+
+The clean Release build completed at 09:41:17 UTC, 4,961,280 bytes, SHA-256
+`857D237686EACF98CBD95B58C0A34CFB74A06719E5EBEFDEA25DBC480DDC1C52`.
+The normal executable in `build/windows` now contains protected heart floors
+and enemy-only attacks against the heart itself. The game was closed during
+deployment; backup and deployment hashes match. The preceding executable is
+preserved in `build/before-heart-combat-20260922`.
+
+All 46 heart-combat, 51 sale-selection and 361 duplication checks pass;
+runtime preparation and all 32 resource checks pass. The enemy-discovery fixture
+compiled but Windows blocked execution with error 4551, including the approved
+external run; it is not a runtime pass. The clean build log is
+`build/review-followups/heart-combat-release.log`.
+See [heart combat](DUNGEON-HEART-COMBAT.md) for scope and verification limits.
+User gameplay verification of floor protection, enemy attacks and defeat remains
+pending; no game was launched, release version changed or remote push performed.
+
 ## September 22 dungeon temple duplication: user verified
 
 The normal Release executable retains a single dungeon core when damaged floor
