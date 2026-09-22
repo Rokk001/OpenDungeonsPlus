@@ -1,10 +1,10 @@
 # Windows development environment
 
-September 22: the current prepared Release executable also protects the visible
-heart footprint against construction, including its overhanging edges.
-The build, 250 construction checks, 51 demolition checks and 32 resource checks
-pass; the user construction retest remains pending, as recorded in
-[BUILDING.md](BUILDING.md#september-22-heart-construction-footprint-deployed-for-user-testing).
+September 22: the current prepared Release executable also suppresses the
+incorrect success message and hammer animation for rejected treasury clicks.
+The build, 745 input/dispatch checks, 250 footprint checks and 32 resource checks
+pass; the user click/animation retest remains pending, as recorded in
+[BUILDING.md](BUILDING.md#september-22-rejected-heart-clicks-deployed-for-user-testing).
 The preceding heart combat verification limits remain documented below that entry.
 
 Current work is `feature/action-state-feedback`, continuing from the user's

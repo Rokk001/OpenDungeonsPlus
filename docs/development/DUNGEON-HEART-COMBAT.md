@@ -40,6 +40,16 @@ The shared validator also gates trap placement and server room packets, so the
 protection is not limited to the treasury preview. No header layout changed;
 an incremental Release rebuild is sufficient for this follow-up.
 
+The next user retest exposed treasury click feedback: its empty-selection path
+reports a white zero-cost build message, which the game dispatch interprets as
+success and uses to trigger the hammer. It returns without sending a build
+packet; the latest user log contains no new room after loading. Replace this
+success feedback with the existing failure path and extend the production
+dispatch fixture to cover treasury clicks, not just hover and ordinary rooms.
+All 745 input/dispatch checks now pass (five hammer failures before), together
+with the 250 footprint checks and 32 resource checks. Release compilation and
+hash-verified deployment pass; user click/animation retest remains pending.
+
 The production-method heart fixture passes 46 checks, including the actual
 server heart object, owner/allied/unknown rejection, independent damage,
 single death notification, retained floor, editor removal and save/legacy-load

@@ -1,5 +1,20 @@
 # Configuring and compiling on Windows
 
+## September 22 rejected heart clicks: deployed for user testing
+
+The current Release executable was built at 10:06:37 UTC, 4,962,816 bytes,
+SHA-256 `9CA399AAAC561ADA4F31DDFCE5EA7DCCAEB18B75A89B1C7EA3941241E6596855`.
+Rejected treasury clicks now retain failure feedback and do not trigger the
+hammer animation. The empty-selection path sends no construction packet.
+All 745 production input/dispatch checks pass (five failures before), together
+with 250 footprint checks, runtime preparation and 32 resource checks.
+The game was closed during hash-verified backup and deployment; the preceding
+executable remains in `build/before-heart-click-20260922`. The build log is
+`build/review-followups/heart-click-release.log`.
+User click/animation retest is pending; no game was launched and nothing pushed.
+This corrects the same unmerged feature and requires no release-version or
+top-level README/changelog change; the heart combat note records the diagnosis.
+
 ## September 22 heart construction footprint: deployed for user testing
 
 The Release follow-up completed at 09:55:50 UTC, 4,963,328 bytes, SHA-256
