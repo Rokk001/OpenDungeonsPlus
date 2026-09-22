@@ -80,6 +80,10 @@ struct RoomDungeonTemple:Room {
  void updateActiveSpots(GameMap* =nullptr) override;void updateTemplePosition();
  TEMPLE_OVERRIDE
 };
+struct DungeonHeartObject:PersistentObject {
+ DungeonHeartObject(GameMap* m,RoomDungeonTemple& r,Tile* t):
+  PersistentObject(m,r,"DungeonTempleObject",t,0.0,false){}
+};
 struct RoomManager {static Room* createRoom(GameMap* m,int type){
  return type?static_cast<Room*>(new RoomDungeonTemple(m)):new Room(m);}};
 SPLIT
