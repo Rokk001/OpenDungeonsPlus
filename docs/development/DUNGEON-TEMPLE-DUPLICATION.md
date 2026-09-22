@@ -39,9 +39,12 @@ Before/after fixture output and the build log are retained under
 `build/review-followups/temple-duplication-*`. See [BUILDING.md](BUILDING.md)
 for the deployed timestamp and hash.
 
-The screenshot establishes the visible symptom, but its exact map/save and
-preceding actions are unavailable; user confirmation of that scenario remains
-required. No game or manual QA is launched by the agent.
+September 22 user verification: the user confirmed that removing floor tiles
+did not split the dungeon heart, explicitly clarifying that the tested object
+was the heart rather than the creature entrance portal. Demolition and combat
+damage call the same virtual splitting hook after tile removal. Together with
+the production-method regression, this closes the duplication fix. Paul's exact
+map/save was not replayed, and no game or manual QA was launched by the agent.
 
 This scoped local fix does not change a release version, configuration or public
 usage; the development note/index and build record carry the relevant updates,

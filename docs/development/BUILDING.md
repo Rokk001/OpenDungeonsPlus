@@ -1,6 +1,6 @@
 # Configuring and compiling on Windows
 
-## September 22 dungeon temple duplication: ready for user retest
+## September 22 dungeon temple duplication: user verified
 
 The normal Release executable retains a single dungeon core when damaged floor
 tiles become disconnected; other room splitting remains unchanged. The clean
@@ -14,8 +14,9 @@ checks pass (24 failures before), as do 62 room-demolition regressions, runtime
 preparation and 32 resource checks. Logs use
 `build/review-followups/temple-duplication-*`.
 The [temple diagnosis](DUNGEON-TEMPLE-DUPLICATION.md) records the code path and
-verification limits; Paul's exact gameplay scenario still needs user retesting.
-No game was launched, no release version changed and nothing was pushed.
+verification limits; the user explicitly confirmed the dungeon-heart demolition
+retest, exercising the same splitting hook used after combat damage.
+No game was launched by the agent, no release version changed and nothing was pushed.
 
 ## September 21 visible crypt decay: deployed and accepted
 
