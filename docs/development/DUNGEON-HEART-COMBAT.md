@@ -19,6 +19,27 @@ this targeted combat/protection change.
 
 ## Verification
 
+### Construction footprint follow-up
+
+The September 22 user log records a treasury built at (56,102), while the
+heart room covers (57..59,101..103), centred at (58,102). The shipped heart
+mesh extends 1.73308 units from its centre, overlapping the supposedly free
+adjacent tile. The existing building flag correctly protects the nine room
+tiles but does not represent this visible overhang. Reuse the measured bounds
+in `RoomObjectBounds.h` in the shared tile construction validator, on both
+client and server, without changing editor placement or creature navigation.
+Treasury hover preview also needs to use that existing validator instead of
+unconditionally offering construction. This completes the unmerged heart
+protection feature on its existing branch; no numerical rebalance is involved.
+
+The extracted production construction validator and treasury hover pass 250
+checks (76 failures before the fix), including the logged overlapping tile,
+all surrounding footprint edges, ordinary land, existing buildings, editor
+placement and portal isolation. All 51 demolition-selection regressions pass.
+The shared validator also gates trap placement and server room packets, so the
+protection is not limited to the treasury preview. No header layout changed;
+an incremental Release rebuild is sufficient for this follow-up.
+
 The production-method heart fixture passes 46 checks, including the actual
 server heart object, owner/allied/unknown rejection, independent damage,
 single death notification, retained floor, editor removal and save/legacy-load

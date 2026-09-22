@@ -1,5 +1,23 @@
 # Configuring and compiling on Windows
 
+## September 22 heart construction footprint: deployed for user testing
+
+The Release follow-up completed at 09:55:50 UTC, 4,963,328 bytes, SHA-256
+`278A8B4E588643AF3B62CC565E2435202E49F8050792318E48E6C029A5DA5E98`.
+The normal executable now rejects construction under the visible heart mesh,
+including its overhang beyond the logical room tiles; treasury hover uses the
+same validator. Existing demolition protection remains unchanged and was
+confirmed by the user before this follow-up.
+
+All 250 construction checks pass (76 failed before), as do 51 demolition
+regressions, Release compilation, runtime preparation and 32 resource checks.
+Backup and deployed hashes match; the previous executable remains in
+`build/before-heart-construction-20260922`. The build log is
+`build/review-followups/heart-construction-release.log`.
+User construction retest remains pending; no game was launched or push made.
+The existing [heart combat note](DUNGEON-HEART-COMBAT.md) records the diagnosis;
+this follow-up needs no release-version or top-level README/changelog change.
+
 ## September 22 dungeon heart combat: deployed for user testing
 
 The clean Release build completed at 09:41:17 UTC, 4,961,280 bytes, SHA-256
