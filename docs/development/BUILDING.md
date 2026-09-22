@@ -11,7 +11,8 @@ with 250 footprint checks, runtime preparation and 32 resource checks.
 The game was closed during hash-verified backup and deployment; the preceding
 executable remains in `build/before-heart-click-20260922`. The build log is
 `build/review-followups/heart-click-release.log`.
-User click/animation retest is pending; no game was launched and nothing pushed.
+The user subsequently confirmed successful in-game retests; no game was launched
+by the agent. The functional changes were later published in PRs #129 and #143.
 This corrects the same unmerged feature and requires no release-version or
 top-level README/changelog change; the heart combat note records the diagnosis.
 

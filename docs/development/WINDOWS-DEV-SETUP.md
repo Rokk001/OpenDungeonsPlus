@@ -3,7 +3,7 @@
 September 22: the current prepared Release executable also suppresses the
 incorrect success message and hammer animation for rejected treasury clicks.
 The build, 745 input/dispatch checks, 250 footprint checks and 32 resource checks
-pass; the user click/animation retest remains pending, as recorded in
+pass; the user confirmed successful click/animation retests, as recorded in
 [BUILDING.md](BUILDING.md#september-22-rejected-heart-clicks-deployed-for-user-testing).
 The preceding heart combat verification limits remain documented below that entry.
 

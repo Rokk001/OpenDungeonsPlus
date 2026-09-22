@@ -1,5 +1,10 @@
 # Dungeon heart combat
 
+September 22 acceptance update: after the rejected-click follow-up was deployed,
+the user reported successful in-game retests. This supersedes the pending user
+retest status in the historical entries below; Windows-blocked automated probes
+remain explicitly unverified, and no agent-run game test is claimed.
+
 The existing room exposes every floor tile as a combat target and stores damage
 per tile. Its persistent central object has no health or attackability; the room
 can also be sold. The requested behaviour is an enemy-only attackable heart,
