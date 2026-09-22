@@ -1773,6 +1773,13 @@ std::vector<GameEntity*> GameMap::getVisibleForce(const std::vector<Tile*>& visi
         if(enemyForce)
         {
             tile->fillWithEntities(returnList, SelectionEntityWanted::creatureAliveEnemyAttackable, seat->getPlayer());
+            for(GameEntity* entity : tile->getEntitiesInTile())
+            {
+                if(entity->getObjectType() == GameEntityType::persistentObject
+                    && entity->isAttackable(tile, seat)
+                    && std::find(returnList.begin(), returnList.end(), entity) == returnList.end())
+                    returnList.push_back(entity);
+            }
             Building* building = tile->getCoveringBuilding();
             if((building != nullptr) &&
                (!building->getSeat()->isAlliedSeat(seat)) &&

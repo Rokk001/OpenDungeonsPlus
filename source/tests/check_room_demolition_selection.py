@@ -30,7 +30,7 @@ probe = r'''
 #include <vector>
 namespace Ogre {struct ColourValue {static const int Red=0,White=1;};}
 enum class InputCommandState {infoOnly,building,validated};
-enum class TileVisual {normal,portalRoom,portalWaveRoom};
+enum class TileVisual {normal,portalRoom,portalWaveRoom,dungeonTempleRoom};
 struct Seat{};struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct Tile {int x,y;bool room=true,trap=false;Seat* seat=nullptr;TileVisual visual=TileVisual::normal;
  bool getIsRoom(){return room;}bool getIsTrap(){return trap;}Seat* getSeat(){return seat;}
@@ -79,6 +79,12 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
  input.mXPos=2;input.mYPos=2;game.handlePlayerActionSell();check(game.selected.size()==1&&game.text=="trap");
  for(auto action:{SelectedAction::none,SelectedAction::selectTile,SelectedAction::buildRoom,SelectedAction::buildTrap,SelectedAction::destroyRoom,SelectedAction::destroyTrap,SelectedAction::sellBuilding})
  for(bool room:{false,true}){Tile t{0,0,room};check(thick({action},{&t})==(action==SelectedAction::buildRoom||action==SelectedAction::buildTrap||action==SelectedAction::destroyRoom||(action==SelectedAction::sellBuilding&&room)));}
+ // Heart tiles must never be offered or sent for demolition.
+ map.tiles[{0,0}]={0,0,true,false,map.player.getSeat(),TileVisual::dungeonTempleRoom};
+ input.mXPos=0;input.mYPos=0;input.mLStartDragX=0;input.mLStartDragY=0;
+ for(auto state:{InputCommandState::infoOnly,InputCommandState::building,InputCommandState::validated}){
+  input.mCommandState=state;sent.clear();game.handlePlayerActionSell();
+  check(game.selected.empty());check(sent.empty());check(game.text=="Dungeon hearts cannot be sold.");}
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;}
 '''.replace('FLAGS', flags).replace('METHODS', function(game, 'void GameMode::handlePlayerActionSell(') + '\n' +
     function(rooms, signature, first) + '\n' + function(rooms, signature, second))

@@ -72,6 +72,13 @@ class RoomTreasuryFactory : public RoomFactory
         int32_t playerGold = static_cast<int32_t>(player->getSeat()->getGold());
         if(inputManager.mCommandState == InputCommandState::infoOnly)
         {
+            Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+            if(tile == nullptr || !tile->isBuildableUpon(player->getSeat()))
+            {
+                inputCommand.unselectAllTiles();
+                inputCommand.displayTileBuildFailure(tile, player->getSeat());
+                return;
+            }
             // First treasury tile is free
             if(nbTreasuries <= 0)
                 pricePerTarget = 0;
