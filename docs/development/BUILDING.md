@@ -1,5 +1,22 @@
 # Configuring and compiling on Windows
 
+## September 22 dungeon temple duplication: ready for user retest
+
+The normal Release executable retains a single dungeon core when damaged floor
+tiles become disconnected; other room splitting remains unchanged. The clean
+build in `build/review-followups` completed September 22 08:48:24 UTC,
+4,956,672 bytes, SHA-256
+`A48E536C48B1E3427276AA64558AE28BE51353260378935B979009C6400DD1CC`.
+
+With the game closed, backup and deployment hashes were verified; the previous
+binary remains in `build/before-temple-duplication-20260922`. All 361 focused
+checks pass (24 failures before), as do 62 room-demolition regressions, runtime
+preparation and 32 resource checks. Logs use
+`build/review-followups/temple-duplication-*`.
+The [temple diagnosis](DUNGEON-TEMPLE-DUPLICATION.md) records the code path and
+verification limits; Paul's exact gameplay scenario still needs user retesting.
+No game was launched, no release version changed and nothing was pushed.
+
 ## September 21 visible crypt decay: deployed and accepted
 
 The clean Release build in `build/review-followups` includes visible winged flies

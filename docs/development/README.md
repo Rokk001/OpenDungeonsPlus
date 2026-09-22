@@ -9,6 +9,9 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 ## Available guides
 
+- [Dungeon temple duplication](DUNGEON-TEMPLE-DUPLICATION.md): retain a single
+  dungeon core when damage disconnects its floor tiles.
+
 - [Room demolition effect](ROOM-DEMOLITION-EFFECT.md): existing room particles
   on successfully removed visible tiles, with unchanged sale rules.
 
