@@ -34,6 +34,22 @@ public:
     //! \brief Updates the temple position when in editor mode.
     void updateActiveSpots(GameMap* gameMap = nullptr) override;
 
+    bool canSeatSellBuilding(Seat* seat) const override
+    { return false; }
+    bool isAttackable(Tile* tile, Seat* seat) const override
+    { return false; }
+    bool canAttackHeart(Tile* tile, Seat* seat) const;
+    double getHP(Tile* tile) const override;
+    double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage,
+        double magicalDamage, double elementDamage, Tile* tileTakingDamage, bool ko) override
+    { return 0.0; }
+    double takeHeartDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage,
+        double magicalDamage, double elementDamage, Tile* tileTakingDamage);
+    bool removeCoveredTile(Tile* tile) override;
+    void doUpkeep() override;
+    void exportToStream(std::ostream& os) const override;
+    bool importFromStream(std::istream& is) override;
+
     void checkForSplit() override
     {
         // Damaged floor must not create another dungeon core. Keep the original
@@ -61,6 +77,9 @@ protected:
 private:
     //! \brief The reference of the temple object
     BuildingObject* mTempleObject;
+
+    //! One health pool for the heart, independent of individual floor tiles.
+    double mHeartHP;
 
     //! \brief Updates the temple mesh position.
     void updateTemplePosition();

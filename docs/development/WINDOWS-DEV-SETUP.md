@@ -1,9 +1,10 @@
 # Windows development environment
 
-September 22: the current prepared Release executable includes the dungeon
-temple duplication fix; the clean build, focused checks, deployment and resource
-validation pass, with the dungeon-heart retest confirmed by the user as recorded in
-[BUILDING.md](BUILDING.md#september-22-dungeon-temple-duplication-user-verified).
+September 22: the current prepared Release executable includes protected heart
+floors and enemy-only heart combat, retaining the accepted duplication fix.
+Clean compilation, deployment and resource validation pass; gameplay acceptance
+remains pending and the enemy-discovery fixture is Windows-blocked, as recorded in
+[BUILDING.md](BUILDING.md#september-22-dungeon-heart-combat-deployed-for-user-testing).
 
 Current work is `feature/action-state-feedback`, continuing from the user's
 accepted GUI-scaling baseline. On September 6, 2026 the Release build and runtime
