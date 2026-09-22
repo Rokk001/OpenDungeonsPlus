@@ -100,8 +100,8 @@ class RoomTreasuryFactory : public RoomFactory
 
         if(buildableTiles.empty())
         {
-            std::string txt = formatBuildRoom(RoomTreasury::mRoomType, 0);
-            inputCommand.displayText(Ogre::ColourValue::White, txt);
+            inputCommand.displayTileBuildFailure(gameMap->getTile(inputManager.mXPos, inputManager.mYPos),
+                player->getSeat());
             return;
         }
 

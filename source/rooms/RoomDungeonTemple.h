@@ -34,6 +34,12 @@ public:
     //! \brief Updates the temple position when in editor mode.
     void updateActiveSpots(GameMap* gameMap = nullptr) override;
 
+    void checkForSplit() override
+    {
+        // Damaged floor must not create another dungeon core. Keep the original
+        // room and persistent object until the whole temple is destroyed.
+    }
+
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
