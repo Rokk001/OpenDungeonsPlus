@@ -26,6 +26,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/RoomObjectBounds.h"
 #include "network/ODClient.h"
 #include "network/ODPacket.h"
 #include "network/ClientNotification.h"
@@ -1185,6 +1186,29 @@ bool Tile::isBuildableUpon(Seat* seat) const
         return false;
     if(!isClaimedForSeat(seat))
         return false;
+
+    // The heart mesh extends beyond its room tiles. Protect that visible
+    // footprint on both client and server without blocking navigation.
+    if(!getGameMap()->isInEditorMode())
+    {
+        for(auto* object : getGameMap()->getRenderedMovableEntities())
+        {
+            if(object->getMeshName() != "DungeonTempleObject")
+                continue;
+            for(const auto& bounds : RoomObjectPath::meshBounds)
+            {
+                if(object->getMeshName() != bounds.name)
+                    continue;
+                const auto position = object->getPosition();
+                if(getX() + 0.5f > position.x + bounds.minX &&
+                    getX() - 0.5f < position.x + bounds.maxX &&
+                    getY() + 0.5f > position.y + bounds.minY &&
+                    getY() - 0.5f < position.y + bounds.maxY)
+                    return false;
+                break;
+            }
+        }
+    }
 
     return true;
 }
