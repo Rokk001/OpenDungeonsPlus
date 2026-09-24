@@ -1712,6 +1712,10 @@ The script also loads the environment helper itself and uses:
 - Installation target: `build\windows\install`.
 - Python under `C:\Users\mario\AppData\Local\Programs\Python\Python310`:
   `python.exe`, `include`, `libs\python310.lib`, `libs\python310_d.lib`.
+- Machine-specific locations from
+  [windows-paths.ps1](../../scripts/win32/windows-paths.ps1); see
+  [WINDOWS-PREREQUISITES.md](WINDOWS-PREREQUISITES.md#directories-and-tools)
+  for the defaults and the environment variables that override them.
 
 The configuration log is replaced on every invocation:
 `C:\Users\mario\od-deps\logs\opendungeons-configure.log`.

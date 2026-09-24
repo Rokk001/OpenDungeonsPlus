@@ -10,6 +10,18 @@ it does not guarantee that the downloads will remain available later.
 External root: `C:\Users\mario\od-deps`, with the subdirectories `src`, `build`,
 `install`, `tools`, `downloads` and `logs`.
 For an empty installation, create these directories before running the scripts.
+
+The scripts in `scripts/win32` read these locations from
+[windows-paths.ps1](../../scripts/win32/windows-paths.ps1). By default they use
+`%USERPROFILE%\od-deps`, Python 3.10 under
+`%LOCALAPPDATA%\Programs\Python\Python310` and the Visual Studio 2022 Build Tools
+under `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`. Set
+`OD_DEPS_ROOT`, `OD_PYTHON_ROOT` or `OD_VS_PATH` before running a script to use
+other locations, for example a Visual Studio Community installation:
+
+```powershell
+$env:OD_VS_PATH = 'C:\Program Files\Microsoft Visual Studio\2022\Community'
+```
 Git, VS Code, 7-Zip and the Visual C++ runtime were already installed.
 The 7-Zip used is `C:\Users\mario\scoop\shims\7z.exe`.
 
