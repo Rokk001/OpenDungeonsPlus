@@ -173,7 +173,7 @@ void RoomHatchery::doUpkeep()
         return;
 
     // We spawn 1 chicken per chicken coop (until chickens are maxed)
-    const auto obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
+    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
     for(Tile* chickenCoopTile : mCentralActiveSpotTiles)
     {
         Ogre::Vector2 freePosition;
