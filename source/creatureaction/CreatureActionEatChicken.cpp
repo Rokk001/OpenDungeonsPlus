@@ -85,7 +85,7 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
     const bool clearReach = RoomObjectPath::clearSegment(
         RoomObjectNavigation::collect(*creature.getGameMap(), 0.0f),
         Ogre::Vector2(creature.getPosition().x, creature.getPosition().y), foodPosition);
-    const auto bodyObstacles = RoomObjectNavigation::bodyObstacles(creature);
+    const std::vector<RoomObjectPath::Obstacle> bodyObstacles = RoomObjectNavigation::bodyObstacles(creature);
     const bool clearBody = RoomObjectPath::clearPoint(bodyObstacles,
         Ogre::Vector2(creature.getPosition().x, creature.getPosition().y),
         foodPosition - Ogre::Vector2(creature.getPosition().x, creature.getPosition().y));
@@ -104,14 +104,14 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
         }
         else
         {
-            const auto tiles = creature.getGameMap()->path(&creature, chickenTile);
+            const std::list<Tile*> tiles = creature.getGameMap()->path(&creature, chickenTile);
             if(tiles.empty())
             {
                 creature.popAction();
                 return true;
             }
             // Preserve the original tile-based chase away from furniture.
-            auto chase = tiles;
+            std::list<Tile*> chase = tiles;
             if(chase.size() > 2)
                 chase.resize(8 * chase.size() / 10);
             creature.tileToVector2(chase, path, true, 0.0);
