@@ -66,6 +66,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <functional>
 
 const std::string TEXT_SEAT_ID_PREFIX = "TextSeat";
 const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
@@ -1092,7 +1093,7 @@ bool GameMode::cameraInputBlocked()
 void GameMode::updateCameraControls(float elapsed)
 {
     CameraManager* camera = ODFrameListener::getSingleton().getCameraManager();
-    const auto down = [this](OIS::KeyCode key) { return getKeyboard()->isKeyDown(key); };
+    const std::function<bool(OIS::KeyCode)> down = [this](OIS::KeyCode key) { return getKeyboard()->isKeyDown(key); };
     if(cameraInputBlocked())
     {
         camera->move(CameraManager::fullStop);
