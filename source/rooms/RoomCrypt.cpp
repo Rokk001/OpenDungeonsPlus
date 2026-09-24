@@ -290,8 +290,8 @@ Tile* RoomCrypt::getDeliveryTile(Tile* spot)
 {
     // Wall statues may occupy the old fixed delivery tile and prevent turning.
     const int offsets[][2] = {{OFFSET_TILE_X, OFFSET_TILE_Y}, {-1, 0}, {1, 0}, {0, 1}};
-    const auto& objects = getBuildingObjects();
-    for(const auto& offset : offsets)
+    const std::map<Tile*, BuildingObject*>& objects = getBuildingObjects();
+    for(const int (&offset)[2] : offsets)
     {
         Tile* tile = getGameMap()->getTile(spot->getX() + offset[0], spot->getY() + offset[1]);
         if(tile != nullptr && tile->getCoveringRoom() == this && objects.find(tile) == objects.end())
