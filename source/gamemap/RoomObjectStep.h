@@ -14,7 +14,7 @@ inline float prepareLowStep(Obstacle& obstacle, const std::string& mesh,
     const float height = obstacle.maximumHeight - groundZ;
     if(height <= 0.0f || height > lowWalkingHeight * 1.02f || height > lowWalkingHeight * scale)
         return 0.0f;
-    for(const auto& body : lowWalkingBounds)
+    for(const LowWalkingBounds& body : lowWalkingBounds)
         if(mesh == body.name && !body.empty)
         {
             obstacle.bodyMinimum = Ogre::Vector2(body.minX - lowWalkingMargin, body.minY - lowWalkingMargin) * scale;
@@ -32,7 +32,7 @@ inline float lowStepElevation(const Obstacle& obstacle, Ogre::Vector2 position,
     if(direction.squaredLength() < 0.000001f)
         direction = obstacle.initialHeading;
     direction.normalise();
-    const auto body = obstacle.forHeading(direction);
+    const Obstacle body = obstacle.forHeading(direction);
     if(body.contains(position))
         return rise;
     float distance = rise;
@@ -40,7 +40,7 @@ inline float lowStepElevation(const Obstacle& obstacle, Ogre::Vector2 position,
     // A parallel, physically clear lane does not trigger either intersection.
     for(float sign : {-1.0f, 1.0f})
     {
-        const auto reach = direction * (sign * rise);
+        const Ogre::Vector2 reach = direction * (sign * rise);
         if(!body.intersects(position, position + reach))
             continue;
         float low = 0.0f, high = 1.0f;
