@@ -1191,15 +1191,15 @@ bool Tile::isBuildableUpon(Seat* seat) const
     // footprint on both client and server without blocking navigation.
     if(!getGameMap()->isInEditorMode())
     {
-        for(auto* object : getGameMap()->getRenderedMovableEntities())
+        for(RenderedMovableEntity* object : getGameMap()->getRenderedMovableEntities())
         {
             if(object->getMeshName() != "DungeonTempleObject")
                 continue;
-            for(const auto& bounds : RoomObjectPath::meshBounds)
+            for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
             {
                 if(object->getMeshName() != bounds.name)
                     continue;
-                const auto position = object->getPosition();
+                const Ogre::Vector3 position = object->getPosition();
                 if(getX() + 0.5f > position.x + bounds.minX &&
                     getX() - 0.5f < position.x + bounds.maxX &&
                     getY() + 0.5f > position.y + bounds.minY &&
