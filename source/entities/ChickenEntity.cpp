@@ -137,7 +137,7 @@ void ChickenEntity::doUpkeep()
     if(possibleTileMove.empty())
         return;
 
-    const auto obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
+    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
     const Ogre::Vector2 start(getPosition().x, getPosition().y);
     std::vector<Ogre::Vector2> positions;
     for(Tile* candidate : possibleTileMove)
