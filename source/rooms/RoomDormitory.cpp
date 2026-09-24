@@ -262,11 +262,11 @@ void RoomDormitory::createBed(Tile* sleepTile, int x, int y, int width, int heig
     Ogre::Real zMesh = 0;
     double visualAngle = rotationAngle;
     Ogre::Vector2 visualScale = Ogre::Vector2::ZERO;
-    for(const auto& bounds : RoomObjectPath::meshBounds)
+    for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
     {
         if(c->getDefinition()->getBedMeshName() != bounds.name)
             continue;
-        const auto placement = RoomObjectPath::bedPlacement(bounds, x, y, width, height,
+        const RoomObjectPath::BedPlacement placement = RoomObjectPath::bedPlacement(bounds, x, y, width, height,
             float(rotationAngle), c->getName());
         xMesh = placement.x;
         yMesh = placement.y;
