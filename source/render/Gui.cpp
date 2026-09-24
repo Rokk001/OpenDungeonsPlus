@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <functional>
 
 namespace
 {
@@ -129,7 +130,7 @@ void createMiniMapCornerImages()
         const std::string name = "MiniMapCorner" + std::to_string(corner);
         CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
         texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
-        auto& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
             "BasicImage", "OpenDungeonsIcons/" + name));
         image.setTexture(&texture);
         image.setArea(CEGUI::Rectf(0, 0, size, size));
@@ -139,10 +140,10 @@ void createMiniMapCornerImages()
 void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
         unsigned char red, unsigned char green, unsigned char blue)
 {
-    const auto original = pixels;
+    const std::vector<unsigned char> original = pixels;
     const unsigned char colour[] = {red, green, blue};
     const int bevelWidth = std::max(1, size / 16);
-    const auto alpha = [&](int x, int y)
+    const std::function<float(int, int)> alpha = [&](int x, int y)
     {
         return x >= 0 && y >= 0 && x < size && y < size ?
             original[(y * size + x) * 4 + 3] / 255.0f : 0.0f;
@@ -182,7 +183,7 @@ void colourNavigationAtlas()
     for(int y = 0; y < height; ++y)
         for(int x = 0; x < width; ++x)
         {
-            const auto colour = source.getColourAt(x, y, 0);
+            const Ogre::ColourValue colour = source.getColourAt(x, y, 0);
             const int i = (y * width + x) * 4;
             pixels[i] = static_cast<unsigned char>(colour.r * 255 + 0.5f);
             pixels[i + 1] = static_cast<unsigned char>(colour.g * 255 + 0.5f);
@@ -202,15 +203,15 @@ void colourNavigationAtlas()
             std::vector<unsigned char> icon(size * size * 4);
             for(int y = 0; y < size; ++y)
                 std::copy_n(pixels.begin() + ((row + y) * width + column) * 4, size * 4, icon.begin() + y * size * 4);
-            const auto& colour = palette[(column / size) % 8];
+            const unsigned char (&colour)[3] = palette[(column / size) % 8];
             shadeNavigationIcon(icon, size, colour[0], colour[1], colour[2]);
             for(int y = 0; y < size; ++y)
                 std::copy_n(icon.begin() + y * size * 4, size * 4, pixels.begin() + ((row + y) * width + column) * 4);
         }
     }
-    auto& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("ColouredNavigationAtlas");
+    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("ColouredNavigationAtlas");
     texture.loadFromMemory(pixels.data(), CEGUI::Sizef(width, height), CEGUI::Texture::PF_RGBA);
-    auto image = CEGUI::ImageManager::getSingleton().getIterator();
+    CEGUI::ImageManager::ImageIterator image = CEGUI::ImageManager::getSingleton().getIterator();
     while(!image.isAtEnd())
     {
         if(image.getCurrentKey().find("OpenDungeonsIcons/") == 0 &&
@@ -235,7 +236,7 @@ void createSummonWorkerIcon()
                 {
                     const float px = x + (sx + 0.5f) * 0.25f;
                     const float py = y + (sy + 0.5f) * 0.25f;
-                    const auto ellipse = [&](float cx, float cy, float rx, float ry)
+                    const std::function<bool(float, float, float, float)> ellipse = [&](float cx, float cy, float rx, float ry)
                     {
                         const float dx = (px - cx) / rx;
                         const float dy = (py - cy) / ry;
@@ -258,9 +259,9 @@ void createSummonWorkerIcon()
         }
     }
     shadeNavigationIcon(pixels, size, 132, 186, 242);
-    auto& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("SummonWorkerSymbol");
+    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("SummonWorkerSymbol");
     texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
-    auto& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().get(
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().get(
         "OpenDungeonsIcons/SummonWorkerButton"));
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(0, 0, size, size));
@@ -323,7 +324,7 @@ void createNavigationImages()
                     {
                         const float px = x + (sx + 0.5f) * 0.25f;
                         const float py = y + (sy + 0.5f) * 0.25f;
-                        auto line = [&](float ax, float ay, float bx, float by, float radius)
+                        std::function<bool(float, float, float, float, float)> line = [&](float ax, float ay, float bx, float by, float radius)
                         {
                             const float dx = bx - ax;
                             const float dy = by - ay;
@@ -396,7 +397,7 @@ void createNavigationImages()
                         // Utility cells are narrower than the square category cells.
                         const float px = (x + (sx + 0.5f) * 0.25f) * 32.0f / size;
                         const float py = (y + (sy + 0.5f) * 0.25f) * 52.0f / size;
-                        auto line = [&](float ax, float ay, float bx, float by, float radius)
+                        std::function<bool(float, float, float, float, float)> line = [&](float ax, float ay, float bx, float by, float radius)
                         {
                             const float dx = bx - ax;
                             const float dy = by - ay;
@@ -445,7 +446,7 @@ void createNavigationImages()
     pixels.resize(badgeSize * badgeSize * 4);
     for(int badge = 0; badge < 2; ++badge)
     {
-        auto inSymbol = [badge](float dx, float dy)
+        std::function<bool(float, float)> inSymbol = [badge](float dx, float dy)
         {
             if(badge == 0)
             {
@@ -650,7 +651,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
         CEGUI::WindowManager::EventWindowDestroyed,
         CEGUI::Event::Subscriber(&Gui::onWindowDestroyed, this));
 
-    for(const auto& sheet : mSheets)
+    for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
         registerWindow(sheet.second);
     applyScale(renderer.getDisplaySize());
 
@@ -843,10 +844,10 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
 
     updateResourceScaling(displaySize);
 
-    for(const auto& scaledWindow : mScaledWindows)
+    for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
         applyScale(scaledWindow.first, scaledWindow.second, scale);
 
-    const auto gameSheet = mSheets.find(inGameMenu);
+    const std::map<guiSheet, CEGUI::Window*>::iterator gameSheet = mSheets.find(inGameMenu);
     if(gameSheet != mSheets.end())
     {
         arrangeRoomButtons(gameSheet->second->getChild(TAB_ROOMS));
