@@ -17,6 +17,7 @@
 
 #include "rooms/RoomDungeonTemple.h"
 
+#include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "entities/Creature.h"
@@ -25,6 +26,9 @@
 #include "entities/PersistentObject.h"
 #include "entities/SkillEntity.h"
 #include "entities/Tile.h"
+#include "network/ODPacket.h"
+#include "network/ODServer.h"
+#include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
 #include "utils/LogManager.h"
 
@@ -138,7 +142,8 @@ static RoomRegister reg(new RoomDungeonTempleFactory);
 RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
     mTempleObject(nullptr),
-    mHeartHP(-1.0)
+    mHeartHP(-1.0),
+    mCriticalWarningSent(false)
 {
     setMeshName("DungeonTemple");
 }
@@ -172,6 +177,22 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
     mHeartHP -= damageDone;
     if(mHeartHP <= 0.0)
         fireEntityDead();
+    else if(!mCriticalWarningSent && !getGameMap()->isInEditorMode()
+        && mHeartHP <= 0.11 * Building::getHP(nullptr))
+    {
+        // Warn the owner once, at the first hit after the heart is already at or
+        // below 11 % of its durability. The killing hit sends nothing (defeat handles it).
+        mCriticalWarningSent = true;
+        Player* owner = getSeat()->getPlayer();
+        if(owner != nullptr && owner->getIsHuman() && !owner->getHasLost())
+        {
+            ServerNotification* serverNotification = new ServerNotification(
+                ServerNotificationType::chatServer, owner);
+            serverNotification->mPacket << "Your dungeon heart is in critical condition!"
+                << EventShortNoticeType::majorGameEvent;
+            ODServer::getSingleton().queueServerNotification(serverNotification);
+        }
+    }
     if(getSeat()->getPlayer() != nullptr)
         getGameMap()->playerIsFighting(getSeat()->getPlayer(), tileTakingDamage);
     return damageDone;
