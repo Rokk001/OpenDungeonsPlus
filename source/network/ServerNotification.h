@@ -132,7 +132,14 @@ enum class ServerNotificationType
     // int32_t seatId and 6 uint32_t (keepers defeated, creatures killed, heroes destroyed,
     // rooms captured, items made, creatures converted).
     // Appended last so that no existing numeric value changes.
-    levelStatistics
+    levelStatistics,
+
+    // Owner-only dungeon heart health for the ring of the top-left badge:
+    // + float healthFraction (0 to 1, heart health / total durability), bool underAttack.
+    // Sent to a human owner when the fraction changed by at least one percentage point, when the
+    // heart is destroyed, and once when the game starts or is loaded.
+    // Appended last so that no existing numeric value changes.
+    heartHealth
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

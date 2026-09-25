@@ -103,6 +103,10 @@ public:
     //! \brief Sets the user-selected UI scale and applies it immediately.
     void setUserScalePercent(float scalePercent);
 
+    //! \brief Redraws the heart badge of the top-left corner: its ring shows the given health
+    //! fraction (0 to 1) of the dungeon heart and its background glows while under attack.
+    void updateHeartBadge(float healthFraction, bool underAttack);
+
     //! \brief Arranges visible gameplay actions and retains their scaled layout.
     void arrangeRoomButtons(CEGUI::Window* rooms);
     void arrangeTrapButtons(CEGUI::Window* traps);

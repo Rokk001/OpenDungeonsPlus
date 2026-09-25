@@ -1,0 +1,43 @@
+# Dungeon heart health ring
+
+## Behaviour
+
+The green ring of the heart badge in the top-left corner (next to the mana number) shows the
+health of the local player's dungeon heart. It is drawn clockwise from 15 degrees over
+`330 * healthFraction` degrees, so a full ring ends at 345 degrees and leaves a small gap at
+the top. The unlit part stays as a dark groove. A destroyed heart (fraction 0) shows no green.
+While the heart is under attack the badge glows magenta behind the silver heart; the glow is
+switched off after 3 seconds without a further message and never shows on a destroyed heart.
+
+`healthFraction` is the remaining heart health divided by the total durability of the dungeon
+temple (`RoomDungeonTemple::getHeartHealthFraction`). The gold badge is not changed.
+
+## How it works
+
+- The badges are still generated procedurally at start-up by `createNavigationImages` in
+  `source/render/Gui.cpp`, now through `drawBadgePixels`. `Gui::updateHeartBadge` draws the
+  heart badge again into the same CEGUI texture (`ManaBadge`), so the layout, the image
+  scaling, the tooltips and the resource strip are unchanged.
+- The rules (arc, one-point step, glow timer) are in `source/game/HeartHealthRing.h`.
+- New server notification `heartHealth` (last value of `ServerNotificationType`):
+  `float healthFraction`, `bool underAttack`, sent to the owning human player only.
+- `notifyHeartHealth` in `source/network/ODServer.cpp` runs once per turn for every client. It
+  sends when the fraction changed by at least one percentage point since the previous message,
+  when the heart is destroyed, and once for a client that has not been told anything yet,
+  which covers a new game and a loaded game. `underAttack` is true when the health fell since
+  the previous message.
+- `ODClient` keeps the state (`HeartHealthRing::BadgeState`), resets it on `clientAccepted`, and
+  `GameMode::onFrameStarted` runs the glow timer and redraws the badge when needed.
+
+## Verification and limits
+
+`source/tests/check_heart_health_ring.py` compiles the production rules, `notifyHeartHealth`,
+the heart health and save methods and `drawBadgePixels` into a fixture. It checks the arc
+for 0, 10, 50 and 100 percent, clamping, the one-point rule, the human-owner-only delivery, the
+payload order, the glow timer, a save and load round trip and the wiring in the client and the
+game mode. On Windows, application control sometimes blocks freshly compiled fixtures (error
+4551); the script retries four times.
+
+Not verified: how the badge looks in the running game. The magenta glow strength and the
+dark groove colour are estimates. Hits smaller than one percentage point in total are not
+sent, so a very slow attack lights the glow only at each full point.

@@ -20,6 +20,7 @@
 
 #include "network/ODSocketClient.h"
 #include "network/ClientNotification.h"
+#include "game/HeartHealthRing.h"
 #include "game/LevelStatistics.h"
 
 #include <OgreSingleton.h>
@@ -95,6 +96,10 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline const LevelStatistics& getLevelStatistics() const
     { return mLevelStatistics; }
 
+    //! \brief What the heart health ring of the top-left badge has to show
+    inline HeartHealthRing::BadgeState& getHeartBadge()
+    { return mHeartBadge; }
+
     inline void pause()
     { mGameClock.pause(); }
 
@@ -125,6 +130,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     // Debriefing counters sent by the server after playerDefeated
     bool mHasLevelStatistics;
     LevelStatistics mLevelStatistics;
+
+    // Heart health received with heartHealth
+    HeartHealthRing::BadgeState mHeartBadge;
 
 };
 
