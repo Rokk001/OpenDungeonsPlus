@@ -528,7 +528,7 @@ for signature in ('bool GameMode::mouseMoved(', 'bool GameMode::mousePressed(', 
 print('WIRING OK: keys stay fully blocked, the mouse handlers inject into the interface only while the debriefing is open')
 activate = function(menu_main, 'void MenuModeMain::activate(')
 assert activate.index('showMainMenuButtons(true);') < activate.index('consumeSkirmishSubMenuRequest()') < activate.index('giveFocus();')
-assert 'toggleSubMenu(WINDOW_SKIRMISH)' in activate
+assert 'toggleSubMenu(WINDOW_SKIRMISH)' in function(menu_main, 'void MenuModeMain::onFrameStarted(')
 assert 'mDefeatDebriefing' in function(game_mode, 'void GameMode::destroyDefeatWindows(')
 assert 'child == mDefeatDebriefing' in function(game_mode, 'void GameMode::hideInterfaceForDefeat(')
 assert 'destroyDefeatWindows();' in function(game_mode, 'GameMode::~GameMode(')

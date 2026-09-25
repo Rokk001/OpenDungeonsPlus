@@ -26,6 +26,7 @@ namespace Ogre
 class Rectangle2D;
 }
 
+#include "render/MenuFlight.h"
 #include "renderscene/RenderScene.h"
 
 #include <OgrePrerequisites.h>
@@ -47,6 +48,12 @@ public:
     void updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame);
     void readSceneMenu(const std::string& fileName);
+
+    //! Starts the flight into the menu (used after the defeat debriefing). False if one is already running.
+    bool startFlight()
+    { return mFlight.start(); }
+    bool isFlightActive() const
+    { return mFlight.isActive(); }
 
 private:
     enum class AtmosphereEffectType
@@ -78,6 +85,7 @@ private:
     std::vector<AtmosphereEffect> mAtmosphereEffects;
     Ogre::SceneManager* mAtmosphereSceneManager = nullptr;
     Ogre::Real mAtmosphereTime = 0.0f;
+    MenuFlight mFlight;
 };
 
 #endif // RENDERSCENEMENU_H

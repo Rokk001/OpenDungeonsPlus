@@ -670,6 +670,20 @@ void ODFrameListener::freeMainMenuScene()
     mCameraManager.setMainMenuProjection(false);
 }
 
+void ODFrameListener::startMainMenuFlight()
+{
+    if(!mIsMainMenuCreated)
+        return;
+
+    if(mMainScene->startFlight())
+        mMainScene->updateMenu(mCameraManager, *mRenderManager, 0.0f);
+}
+
+bool ODFrameListener::isMainMenuFlightActive() const
+{
+    return mIsMainMenuCreated && mMainScene->isFlightActive();
+}
+
 void ODFrameListener::updateMenuScene(Ogre::Real timeSinceLastFrame)
 {
     if(!mIsMainMenuCreated)
