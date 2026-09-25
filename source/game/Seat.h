@@ -20,6 +20,7 @@
 
 #include "entities/NodeType.h"
 #include "game/SeatData.h"
+#include "game/SeatStatistics.h"
 
 
 #include <Ogre.h>
@@ -130,6 +131,16 @@ public:
 
     inline bool isRogueSeat() const
     { return mId == 0; }
+
+    inline SeatStatistics& getStatistics()
+    { return mStatistics; }
+
+    inline const SeatStatistics& getStatistics() const
+    { return mStatistics; }
+
+    //! \brief Counts a creature of victimSeat killed on behalf of this seat: nothing if the seats are
+    //! allied, a hero if the victim seat plays the Hero faction, a creature otherwise.
+    void recordCreatureKill(const Seat* victimSeat);
 
     inline uint32_t getTeamIndex() const
     { return mTeamIndex; }
@@ -344,6 +355,9 @@ private:
 
     //! \brief The player sitting on this seat
     Player* mPlayer;
+
+    //! \brief Counters shown in the level debriefing (server side, not saved)
+    SeatStatistics mStatistics;
 
     //! \brief The total amount of gold coins mined by workers under this seat's control.
     int mGoldMined;
