@@ -810,6 +810,18 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::playerDefeated:
+        {
+            int32_t conquerorSeatId;
+            int32_t heartTileX;
+            int32_t heartTileY;
+            OD_ASSERT_TRUE(packetReceived >> conquerorSeatId >> heartTileX >> heartTileY);
+            // Ignored when the client is not in the game mode (menu, editor, replay)
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::GAME)
+                static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode())->startDefeatSequence(conquerorSeatId, heartTileX, heartTileY);
+            break;
+        }
+
         case ServerNotificationType::entitiesRefresh:
         {
             uint32_t nbEntities;

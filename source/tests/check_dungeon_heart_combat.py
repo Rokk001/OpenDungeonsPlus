@@ -25,9 +25,10 @@ probe = r'''
 #include <sstream>
 #include <string>
 #include <vector>
-struct Tile{};
-struct Player {bool human=true;bool lost=false;bool getIsHuman()const{return human;}bool getHasLost()const{return lost;}};
-struct Seat {int team;Player* player=nullptr;Player* getPlayer(){return player;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
+struct Tile{int getX()const{return 3;}int getY()const{return 4;}};
+struct Player {bool human=true;bool lost=false;int conqueror=-1,heartX=-1,heartY=-1,recorded=0;bool getIsHuman()const{return human;}bool getHasLost()const{return lost;}
+ void recordHeartDestroyed(int c,int x,int y){conqueror=c;heartX=x;heartY=y;++recorded;}};
+struct Seat {int team;Player* player=nullptr;int id=0;Player* getPlayer(){return player;}int getId()const{return id;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
 enum class ServerNotificationType {chatServer};
 enum class EventShortNoticeType {majorGameEvent};
 struct ODPacket {std::vector<std::string> texts;int majorEvents=0;
@@ -77,7 +78,7 @@ METHODS
 HEART_OBJECT;
 int main(){int checks=0,failures=0;
  auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
- Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2};Tile centre,floor;BuildingObject object{&centre};
+ Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre);
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
  check(core.getSeat()==&owner,"heart entity carries room ownership");
@@ -110,7 +111,9 @@ int main(){int checks=0,failures=0;
  check(core.takeDamage(&attacker,999,0,0,0,&centre,false)==234,"lethal damage clamped");
  check(core.deaths==1&&core.getHP(nullptr)==0,"object death listeners notified");
  check(heart.dead==1&&!heart.canAttackHeart(&centre,&enemy),"death fires once and disables targeting");
+ check(ownerPlayer.recorded==1&&ownerPlayer.conqueror==5&&ownerPlayer.heartX==3&&ownerPlayer.heartY==4,"owner records conqueror seat and heart tile on death");
  check(heart.takeHeartDamage(&attacker,999,0,0,0,&centre)==0&&heart.dead==1,"dead heart cannot be hit twice");
+ check(ownerPlayer.recorded==1,"conqueror recorded only once");
  heart.doUpkeep();check(heart.removed==2&&heart.mCoveredTiles.empty(),"heart death releases the existing room lifecycle");
  // Critical-health warning (threshold 11 % of 250 = 27.5)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
@@ -147,6 +150,8 @@ int main(){int checks=0,failures=0;
  {server.queue.clear();map.editor=true;BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.mHeartHP=20;
   h.takeHeartDamage(&hitter,1,0,0,0,&centre);map.editor=false;
   check(server.queue.empty(),"no warning in editor mode");}
+ {Player p;Seat s{1,&p};BuildingObject noTile{nullptr};RoomDungeonTemple h(&map,&s);h.mTempleObject=&noTile;
+  h.takeHeartDamage(&hitter,999,0,0,0,nullptr);check(p.recorded==1&&p.conqueror==5&&p.heartX==-1&&p.heartY==-1,"unknown centre tile is recorded as -1/-1");}
  map.editor=true;RoomDungeonTemple edit(&map,&owner);edit.mCoveredTiles={&floor};
  check(edit.removeCoveredTile(&floor),"editor editing preserved");
  std::stringstream level;edit.exportToStream(level);check(level.str().find("HeartHP")==std::string::npos,"editor maps do not persist combat damage");
