@@ -20,6 +20,9 @@
 
 #include "GameEditorModeBase.h"
 
+#include "modes/DebriefingTable.h"
+#include "modes/DefeatHeartBurst.h"
+#include "modes/DefeatSequence.h"
 #include "modes/InputCommand.h"
 #include "modes/InputBridge.h"
 #include "modes/SettingsWindow.h"
@@ -28,9 +31,11 @@
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace CEGUI
 {
@@ -171,6 +176,10 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! player lost. conquerorSeatId is the seat that destroyed the heart (-1 if unknown); the heart tile
     //! is the centre tile of the destroyed heart (-1/-1 if unknown).
     void startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY);
+
+    //! \brief Called once when the defeat sequence has run to its end (the screen is black).
+    //! Opens the debriefing window on the black screen.
+    void onDefeatSequenceFinished();
 
     //! \brief Shows/hides/toggles the options window
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
@@ -385,6 +394,46 @@ private:
     bool mIndicatorLeftAltDown = false;
     bool mIndicatorRightAltDown = false;
 
+    //! \brief Brings the defeat sequence to the wall-clock time now (does nothing before it starts)
+    void updateDefeatSequence(std::chrono::steady_clock::time_point now);
+    //! \brief Puts the camera on a low oblique view of the given floor position without a flight
+    void cutCameraToHeart(const Ogre::Vector3& heartPosition);
+    void createDefeatWindows();
+    void destroyDefeatWindows();
+    //! Loads the debriefing window (summary lines, confirm button) and shows the pointer again
+    void showDefeatDebriefing();
+    //! Fills the hidden statistics area of the debriefing with the rows and shows it (nothing for no rows)
+    void fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows);
+    //! The confirm button of the debriefing: leaves to the main menu with the skirmish sub-menu open
+    bool onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& arg);
+    //! \brief Hides every window of the game interface except the ones of the defeat sequence
+    void hideInterfaceForDefeat();
+    void startDefeatSwirl();
+    //! The copy of the heart bursts: it is removed, the burst effects start (unless time is already past the
+    //! explosion phase) and the rubble is created
+    void startDefeatBurst(float time);
+    //! Removes every scene object of the sequence (effects, copy of the heart, rubble); safe to call again
+    void stopDefeatEffects();
+
+    DefeatSequence mDefeatSequence;
+    //! Position of the destroyed heart in the scene
+    Ogre::Vector3 mDefeatHeartPosition;
+    //! Direction (horizontal, unit length) in which the swirl travels
+    Ogre::Vector3 mDefeatSwirlDirection;
+    bool mDefeatExplosionEffectActive = false;
+    bool mDefeatSwirlEffectActive = false;
+    bool mDefeatSwirlDone = false;
+    //! The client-only copy of the heart exists (from the start until the burst)
+    bool mDefeatHeartShown = false;
+    bool mDefeatBurstDone = false;
+    //! The rubble exists (from the burst until the end of the sequence)
+    bool mDefeatRubbleShown = false;
+    std::vector<DefeatRubblePiece> mDefeatRubble;
+    CEGUI::Window* mDefeatTint = nullptr;
+    CEGUI::Window* mDefeatFade = nullptr;
+    CEGUI::Window* mDefeatSubtitle = nullptr;
+    CEGUI::Window* mDefeatCameraMarker = nullptr;
+    CEGUI::Window* mDefeatDebriefing = nullptr;
 
 };
 

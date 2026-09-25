@@ -70,6 +70,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
 
 void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
+    mFlight.reset();
     renderManager.rrSetHandPose(false, false);
     Ogre::Rectangle2D* background = static_cast<Ogre::Rectangle2D*>(
         renderManager.getSceneManager()->getSceneNode("Background")->getAttachedObject(0));
@@ -105,8 +106,11 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     const Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().getByName("MainMenuBackground.png", "Graphics");
     const Ogre::Real imageAspect = static_cast<Ogre::Real>(texture->getWidth()) / texture->getHeight();
     const Ogre::Real viewportAspect = static_cast<Ogre::Real>(viewport->getActualWidth()) / viewport->getActualHeight();
-    const Ogre::Real halfWidth = std::min(1.0f, imageAspect / viewportAspect);
-    const Ogre::Real halfHeight = std::min(1.0f, viewportAspect / imageAspect);
+    // During the flight the picture is zoomed around its centre
+    mFlight.advance(timeSinceLastFrame);
+    const Ogre::Real flightScale = mFlight.getScale();
+    const Ogre::Real halfWidth = std::min(1.0f, imageAspect / viewportAspect) * flightScale;
+    const Ogre::Real halfHeight = std::min(1.0f, viewportAspect / imageAspect) * flightScale;
     Ogre::Rectangle2D* background = static_cast<Ogre::Rectangle2D*>(
         renderManager.getSceneManager()->getSceneNode("Background")->getAttachedObject(0));
     background->setCorners(-halfWidth, halfHeight, halfWidth, -halfHeight);
