@@ -181,7 +181,7 @@ public:
     { return mHasLost; }
 
     //! \brief Remembers who destroyed this player's dungeon heart and where it stood. Called by the
-    //! heart room when its health reaches 0 (the room is removed shortly after). Use -1 for unknown values.
+    //! heart room when its health reaches 0 (the heart object is removed shortly after). Use -1 for unknown values.
     inline void recordHeartDestroyed(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY)
     {
         mConquerorSeatId = conquerorSeatId;
