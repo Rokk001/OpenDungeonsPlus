@@ -212,20 +212,24 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
 
 bool RoomDungeonTemple::removeCoveredTile(Tile* tile)
 {
-    if(!getGameMap()->isInEditorMode() && getHP(nullptr) > 0.0)
+    // The floor of a heart is never released in game mode, not even when the heart is
+    // destroyed: the platform stays as a ruin (see doUpkeep).
+    if(!getGameMap()->isInEditorMode())
         return false;
     return Room::removeCoveredTile(tile);
 }
 
 void RoomDungeonTemple::doUpkeep()
 {
-    if(getHP(nullptr) <= 0.0)
+    if(getHP(nullptr) <= 0.0 && mTempleObject != nullptr && mTempleObject->notifyRemoveAsked())
     {
-        // Only destruction of the heart releases its floor and triggers the
-        // existing last-temple defeat and persistent-object cleanup paths.
-        const std::vector<Tile*> tiles = mCoveredTiles;
-        for(Tile* tile : tiles)
-            Room::removeCoveredTile(tile);
+        // The heart is destroyed: only the heart object is released. The floor tiles stay
+        // covered by this room as an inert ruin, so the platform keeps its look. The room
+        // no longer counts as a dungeon temple because getHP() is 0 (see
+        // GameMap::getRoomsByType and Seat::computeSeatBeginTurn), which starts the
+        // existing last-temple defeat path.
+        removeAllBuildingObjects();
+        mTempleObject = nullptr;
     }
     Room::doUpkeep();
 }
@@ -267,7 +271,8 @@ void RoomDungeonTemple::updateActiveSpots(GameMap* gameMap)
         updateTemplePosition();
     else
     {
-        if(mTempleObject == nullptr)
+        // A destroyed heart (ruin) has no temple object and must not get a new one
+        if(mTempleObject == nullptr && getHP(nullptr) > 0.0)
         {
             // We check if the temple already exists (that can happen if it has
             // been restored after restoring a saved game)
@@ -381,6 +386,13 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
 
 void RoomDungeonTemple::restoreInitialEntityState()
 {
+    // A destroyed heart (ruin) has no temple object, only its floor has to be restored
+    if(mTempleObject == nullptr && getHP(nullptr) <= 0.0)
+    {
+        Room::restoreInitialEntityState();
+        return;
+    }
+
     // We need to use seats with vision before calling Room::restoreInitialEntityState
     // because it will empty the list
     if(mTempleObject == nullptr)
