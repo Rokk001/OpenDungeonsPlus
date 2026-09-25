@@ -150,6 +150,8 @@ public:
     void destroyDefeatWindows();
     void hideInterfaceForDefeat();
     void onDefeatSequenceFinished();
+    // The finished hook removes the scene objects of the sequence (checked in check_defeat_heart_burst.py)
+    void stopDefeatEffects() {}
     void showDefeatDebriefing();
     void fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows);
     bool onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& arg);

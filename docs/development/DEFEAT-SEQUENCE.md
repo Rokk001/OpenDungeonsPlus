@@ -15,7 +15,9 @@ t = 0 is the moment `GameMode::startDefeatSequence` is called. All values live i
 | Time (s) | What happens |
 |---|---|
 | 0 | The whole interface, the pointer, the hand and the creature texts disappear. The camera cuts (no flight) to a low oblique view of the heart. A small camera symbol is shown in the top right corner until the end. |
-| 0 to 15 | Explosion effect at the heart (`particles/HeartExplosion.particle`), red tint over the scene, subtitle "Your dungeon heart has been destroyed." |
+| 0 to 0.8 | A client-only copy of the heart stands on the platform; it shakes, pulses and its core glows red, more and more. |
+| 0.8 | The heart bursts: the copy disappears, flash, fireballs, green sparks and smoke start (see "Heart burst"), the rubble flies out and lands on the platform within 1 s. |
+| 0 to 15 | Red tint over the scene, subtitle "Your dungeon heart has been destroyed.". The burst effects are removed at 15 s; the rubble stays until the end. |
 | 15 to 15.5 | The red tint fades out. |
 | 15.5 to 18.5 | Swirl (`particles/DefeatSwirl.particle`) in the seat colour of the conqueror moves 14 tiles away from the heart, away from the camera. Skipped if the conqueror seat is -1 or not known to the client. |
 | 19.5 to 28.5 | Linear fade to black. |
@@ -39,7 +41,7 @@ height and angle.
   child window of the game sheet each frame (so windows the game shows again, such as
   chat or event messages, disappear again), sets the alpha of a red and a black full
   screen `OD/StaticText` window, sets the subtitle text and drives the effects.
-- Effects use `RenderManager::rrCreateFreeParticleEffect`, `rrMoveFreeParticleEffect`
+- Particle effects use `RenderManager::rrCreateFreeParticleEffect`, `rrMoveFreeParticleEffect`
   and `rrDestroyFreeParticleEffect`. The swirl script has no colour of its own: the
   emitter colour is set to the seat colour at runtime, so there is one script for all
   seats.
@@ -54,6 +56,44 @@ height and angle.
   handlers stay fully blocked, so Escape and hotkeys do nothing in the debriefing.
 - When the mode is destroyed the effects and windows are removed, and the hand and
   pointer are made visible again for the next game.
+
+## Heart burst
+
+The server removes the heart object one turn before it reports the defeat (in the log of a test
+game: `removeEntity` at turn 10, `playerDefeated` at turn 11), so the camera used to cut to an empty
+platform. The burst is therefore built on the client only:
+
+- `RenderManager::rrCreateDefeatHeart` places a copy of the real heart: an entity of
+  `DungeonTempleObject.mesh` at the heart tile, no turn, scale 1, as `rrCreateRenderedMovableEntity`
+  places the real one. Its three materials are clones (`DefeatHeart_<name>`), so that
+  `rrUpdateDefeatHeart` can shift their self-illumination towards red without touching other hearts.
+  Until 0.8 s it shakes sideways (up to 0.07 tiles), pulses in size (up to 8 %) and glows.
+- At 0.8 s `GameMode::startDefeatBurst` removes the copy, starts the four systems of
+  `particles/HeartExplosion.particle` 1 above the floor and creates the rubble. `HeartExplosion`:
+  about 45 fireballs thrown out and up at once, then fewer for 3 s and a few embers until about 12 s;
+  they fall under gravity, stop on the floor (`DeflectorPlane`) and fade from yellow to dark red.
+  `HeartExplosionFlash`: a short bright glow. `HeartExplosionSparks`: turquoise-green sparks, a fast
+  burst and then sparks rising for 12 s. `HeartExplosionSmoke`: dark smoke for 2.5 s. Every emitter
+  has a duration, so the burst is strongest at first and dies out. The added (additive) particles
+  fade by colour; their alpha has no effect with additive blending.
+- The rubble is 18 pieces of a small procedural shard mesh (`DefeatHeartShard`, an irregular
+  five-sided slab made with `Ogre::ManualObject`) with the heart's own shell material `Stacheln`.
+  `DefeatHeartBurst::buildRubbleLayout` (`source/modes/DefeatHeartBurst.h`) places them always the
+  same way within 0.85 tiles of the centre, higher and more tilted in the middle of the pile, with
+  varied turn and size. `rubblePoseAt` flies every piece from the heart's middle on an arc to its
+  place, turning, within 1 s after the burst.
+- New assets, made for this project: `materials/textures/DefeatFireball.png` (a soft round glow
+  drawn by a small Pillow script) and `materials/scripts/DefeatSequence.material` (`DefeatFireball`,
+  and `DefeatSmoke` with the existing `Smoke15Frames.png`). The sparks use the existing
+  `CombatSparks` material.
+- Everything is found by name, not kept as a pointer. `stopDefeatEffects` removes the burst effects,
+  the swirl, the copy with its cloned materials, and the rubble with its mesh; it runs from the
+  finished hook (the screen is black by then) and from the destructor.
+
+The swirl was nearly invisible before: its `Ring` emitter had no `depth`, and Ogre's area emitters
+default to 100, so the ring spread its particles over 100 units up and down (bounding box z from -50
+to +50 in the render check). It now has a depth of 0.1, stays low (the camera sees only about 1 above
+the floor a few tiles behind the heart) and fades by colour.
 
 ## Debriefing
 
@@ -156,17 +196,23 @@ the finished hook opens the window once, that the packet values are used for "Le
 and the time (and the client values without a packet), the table rows and the windows
 made from them, and that confirming requests the main menu once and sets the hand-over
 exactly once. The game was not run.
+`source/tests/check_defeat_heart_burst.py` checks the pure functions of `DefeatHeartBurst.h`
+(timing, layout inside the platform, determinism, settle animation) and runs the real driver of
+`GameMode.cpp` with the real render functions, models, materials and particle scripts in a hidden
+Ogre window: it counts changed, warm and green pixels at chosen times, writes the pictures to
+`build/defeat-burst-preview/`, and checks that nothing is left after the end and after an early stop.
 `source/tests/check_defeat_camera_culling.py` runs the real camera cut and the real
 `CullingManager::computeIntersectionPoints` with the Ogre library: with pitch 60 and the game
 camera's 45 degree field of view every corner ray reaches the floor (with the former 68 the two
 upper rays did not, which filled the log and left stale culling corners).
 `source/tests/check_defeat_debriefing_click.py` clicks the real layout with the CEGUI library.
 These parts are guesses that need a look in the game: the camera height and pitch
-(`CAMERA_HEIGHT`, `CAMERA_PITCH`), the look of both particle scripts (both use the
-existing `CombatSparks` material, so the fireballs are soft flares, not textured
-flames), the tint strength, the swirl direction and shape, the subtitle position and
-font, the size, tint and look of the drawn camera glyph, and whether the `Ring`
-emitter and the runtime emitter colour behave as expected in the used Ogre version.
+(`CAMERA_HEIGHT`, `CAMERA_PITCH`), the whole look of the heart burst (shake, glow colour, the
+sizes, colours, rates and lifetimes of the four burst systems, the smoke, the shard shape, its
+material and the pile layout are guesses modelled on the reference recording; the fireballs are soft
+glows, not textured flames; the render check has no walls, map lights or red tint), the tint
+strength, the swirl direction and shape, the subtitle position and font, and the size, tint and look
+of the drawn camera glyph.
 
 For the debriefing these are guesses that need a look in the game: the look of the
 statistics table (column widths, row height, seat colours, scrolling), the size, position,

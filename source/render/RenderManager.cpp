@@ -1934,6 +1934,195 @@ void RenderManager::rrDestroyFreeParticleEffect(const std::string& effectName)
         mSceneManager->destroySceneNode(nodeName);
 }
 
+// Defeat sequence: the copy of the heart and its rubble. Everything is found by name, so nothing keeps a
+// pointer that could outlive the scene objects.
+namespace
+{
+const std::string DEFEAT_HEART_NODE = "DefeatHeart_node";
+const std::string DEFEAT_HEART_ENTITY = "DefeatHeart_entity";
+const std::string DEFEAT_HEART_MESH = "DungeonTempleObject.mesh";
+const std::string DEFEAT_HEART_MATERIAL_PREFIX = "DefeatHeart_";
+const std::string DEFEAT_SHARD_MESH = "DefeatHeartShard";
+//! The heart's metal shell, so that the rubble reads as pieces of the heart
+const std::string DEFEAT_SHARD_MATERIAL = "Stacheln";
+//! Red the heart glows in just before it bursts (above 1, so that it outshines the orange core)
+const Ogre::ColourValue DEFEAT_HEART_HOT_COLOUR(1.6f, 0.1f, 0.02f);
+
+std::string defeatRubbleEntityName(size_t index)
+{
+    return "DefeatRubble_" + std::to_string(index);
+}
+
+//! One flat-shaded triangle of the shard mesh, counter-clockwise seen from outside
+void addDefeatShardTriangle(Ogre::ManualObject* object, const Ogre::Vector3& a, const Ogre::Vector3& b,
+    const Ogre::Vector3& c)
+{
+    const Ogre::Vector3 normal = (b - a).crossProduct(c - a).normalisedCopy();
+    const Ogre::Vector3 corners[3] = {a, b, c};
+    for(int i = 0; i < 3; ++i)
+    {
+        object->position(corners[i]);
+        object->normal(normal);
+        object->textureCoord(corners[i].x / 0.6f + 0.5f, corners[i].y / 0.6f + 0.5f);
+    }
+}
+
+//! A flat, irregular five-sided slab about 0.65 wide and 0.07 thick, its lower face a little smaller
+void createDefeatShardMesh(Ogre::SceneManager* sceneManager)
+{
+    const float angles[5] = {0.0f, 75.0f, 150.0f, 220.0f, 290.0f};
+    const float radii[5] = {0.32f, 0.22f, 0.36f, 0.19f, 0.28f};
+    const float halfThickness = 0.035f;
+    Ogre::Vector3 top[5];
+    Ogre::Vector3 bottom[5];
+    for(int i = 0; i < 5; ++i)
+    {
+        const float x = radii[i] * Ogre::Math::Cos(Ogre::Degree(angles[i]));
+        const float y = radii[i] * Ogre::Math::Sin(Ogre::Degree(angles[i]));
+        top[i] = Ogre::Vector3(x, y, halfThickness);
+        bottom[i] = Ogre::Vector3(0.8f * x, 0.8f * y, -halfThickness);
+    }
+    Ogre::ManualObject* object = sceneManager->createManualObject();
+    object->begin(DEFEAT_SHARD_MATERIAL, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+    for(int i = 0; i < 5; ++i)
+    {
+        const int next = (i + 1) % 5;
+        addDefeatShardTriangle(object, Ogre::Vector3(0.0f, 0.0f, halfThickness), top[i], top[next]);
+        addDefeatShardTriangle(object, Ogre::Vector3(0.0f, 0.0f, -halfThickness), bottom[next], bottom[i]);
+        addDefeatShardTriangle(object, top[i], bottom[i], bottom[next]);
+        addDefeatShardTriangle(object, top[i], bottom[next], top[next]);
+    }
+    object->end();
+    object->convertToMesh(DEFEAT_SHARD_MESH, "Graphics");
+    sceneManager->destroyManualObject(object);
+}
+}
+
+void RenderManager::rrCreateDefeatHeart(const Ogre::Vector3& position)
+{
+    if(mSceneManager->hasSceneNode(DEFEAT_HEART_NODE) || mSceneManager->hasEntity(DEFEAT_HEART_ENTITY))
+    {
+        OD_LOG_ERR("Defeat heart already exists");
+        return;
+    }
+    Ogre::SceneNode* node = mSceneManager->getRootSceneNode()->createChildSceneNode(DEFEAT_HEART_NODE, position);
+    Ogre::Entity* entity = mSceneManager->createEntity(DEFEAT_HEART_ENTITY, DEFEAT_HEART_MESH);
+    for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
+    {
+        Ogre::SubEntity* part = entity->getSubEntity(sub);
+        const Ogre::MaterialPtr& material = part->getMaterial();
+        const std::string cloneName = DEFEAT_HEART_MATERIAL_PREFIX + material->getName();
+        removeIfExists<Ogre::MaterialManager>(cloneName, material->getGroup());
+        part->setMaterial(material->clone(cloneName));
+    }
+    node->attachObject(entity);
+}
+
+void RenderManager::rrUpdateDefeatHeart(const Ogre::Vector3& position, Ogre::Real scale, Ogre::Real glow)
+{
+    if(!mSceneManager->hasSceneNode(DEFEAT_HEART_NODE) || !mSceneManager->hasEntity(DEFEAT_HEART_ENTITY))
+        return;
+    Ogre::SceneNode* node = mSceneManager->getSceneNode(DEFEAT_HEART_NODE);
+    node->setPosition(position);
+    node->setScale(scale, scale, scale);
+    Ogre::Entity* entity = mSceneManager->getEntity(DEFEAT_HEART_ENTITY);
+    for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
+    {
+        const Ogre::MaterialPtr& material = entity->getSubEntity(sub)->getMaterial();
+        Ogre::MaterialPtr original = Ogre::MaterialManager::getSingleton().getByName(
+            material->getName().substr(DEFEAT_HEART_MATERIAL_PREFIX.size()));
+        if(!original || original->getNumTechniques() == 0 || original->getTechnique(0)->getNumPasses() == 0)
+            continue;
+        const Ogre::ColourValue base = original->getTechnique(0)->getPass(0)->getSelfIllumination();
+        const Ogre::ColourValue colour = base * (1.0f - glow) + DEFEAT_HEART_HOT_COLOUR * glow;
+        // Every technique: the shader generator renders the heart with a technique of its own
+        for(unsigned short technique = 0; technique < material->getNumTechniques(); ++technique)
+        {
+            for(unsigned short pass = 0; pass < material->getTechnique(technique)->getNumPasses(); ++pass)
+                material->getTechnique(technique)->getPass(pass)->setSelfIllumination(colour);
+        }
+    }
+}
+
+void RenderManager::rrDestroyDefeatHeart()
+{
+    std::vector<Ogre::MaterialPtr> clones;
+    if(mSceneManager->hasEntity(DEFEAT_HEART_ENTITY))
+    {
+        Ogre::Entity* entity = mSceneManager->getEntity(DEFEAT_HEART_ENTITY);
+        for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
+            clones.push_back(entity->getSubEntity(sub)->getMaterial());
+        Ogre::SceneNode* node = entity->getParentSceneNode();
+        if(node != nullptr)
+            node->detachObject(entity);
+        mSceneManager->destroyEntity(entity);
+    }
+    if(mSceneManager->hasSceneNode(DEFEAT_HEART_NODE))
+        mSceneManager->destroySceneNode(DEFEAT_HEART_NODE);
+    for(size_t i = 0; i < clones.size(); ++i)
+    {
+        if(clones[i]->getName().compare(0, DEFEAT_HEART_MATERIAL_PREFIX.size(), DEFEAT_HEART_MATERIAL_PREFIX) == 0)
+            Ogre::MaterialManager::getSingleton().remove(clones[i]);
+    }
+}
+
+void RenderManager::rrCreateDefeatRubble(size_t count)
+{
+    if(!Ogre::MeshManager::getSingleton().resourceExists(DEFEAT_SHARD_MESH, "Graphics"))
+        createDefeatShardMesh(mSceneManager);
+    for(size_t index = 0; index < count; ++index)
+    {
+        const std::string name = defeatRubbleEntityName(index);
+        if(mSceneManager->hasSceneNode(name + "_node") || mSceneManager->hasEntity(name))
+        {
+            OD_LOG_ERR("Defeat rubble already exists: " + name);
+            continue;
+        }
+        Ogre::SceneNode* node = mSceneManager->getRootSceneNode()->createChildSceneNode(name + "_node");
+        Ogre::Entity* entity = mSceneManager->createEntity(name, DEFEAT_SHARD_MESH);
+        node->attachObject(entity);
+    }
+}
+
+void RenderManager::rrMoveDefeatRubblePiece(size_t index, const Ogre::Vector3& position,
+    const Ogre::Vector3& rotation, const Ogre::Vector3& scale)
+{
+    const std::string nodeName = defeatRubbleEntityName(index) + "_node";
+    if(!mSceneManager->hasSceneNode(nodeName))
+        return;
+    Ogre::SceneNode* node = mSceneManager->getSceneNode(nodeName);
+    node->setPosition(position);
+    node->resetOrientation();
+    node->roll(Ogre::Degree(rotation.z));
+    node->pitch(Ogre::Degree(rotation.x));
+    node->yaw(Ogre::Degree(rotation.y));
+    node->setScale(scale);
+}
+
+void RenderManager::rrDestroyDefeatRubble()
+{
+    // The pieces are numbered from 0 without gaps
+    for(size_t index = 0; ; ++index)
+    {
+        const std::string name = defeatRubbleEntityName(index);
+        const bool hasEntity = mSceneManager->hasEntity(name);
+        const bool hasNode = mSceneManager->hasSceneNode(name + "_node");
+        if(!hasEntity && !hasNode)
+            break;
+        if(hasEntity)
+        {
+            Ogre::Entity* entity = mSceneManager->getEntity(name);
+            Ogre::SceneNode* node = entity->getParentSceneNode();
+            if(node != nullptr)
+                node->detachObject(entity);
+            mSceneManager->destroyEntity(entity);
+        }
+        if(hasNode)
+            mSceneManager->destroySceneNode(name + "_node");
+    }
+    removeIfExists<Ogre::MeshManager>(DEFEAT_SHARD_MESH, "Graphics");
+}
+
 void RenderManager::clearRoomConstructionEffects()
 {
     for(const RoomConstructionEffect& effect : mRoomConstructionEffects)

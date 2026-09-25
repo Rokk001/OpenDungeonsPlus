@@ -191,6 +191,20 @@ public:
         const Ogre::Vector3& position, const Ogre::ColourValue* colour);
     void rrMoveFreeParticleEffect(const std::string& effectName, const Ogre::Vector3& position);
     void rrDestroyFreeParticleEffect(const std::string& effectName);
+    //! Client-only copy of the dungeon heart for the defeat sequence (the server has already removed the
+    //! real heart object), placed like the real one: DungeonTempleObject mesh on the floor, no turn, scale 1.
+    //! Its materials are clones, so that its core can glow without changing other hearts.
+    void rrCreateDefeatHeart(const Ogre::Vector3& position);
+    //! Moves and scales the copy; glow 0 is its normal look, 1 the hottest red
+    void rrUpdateDefeatHeart(const Ogre::Vector3& position, Ogre::Real scale, Ogre::Real glow);
+    void rrDestroyDefeatHeart();
+    //! Creates count rubble pieces of the burst heart (a small procedural shard mesh with the heart's
+    //! own shell material), one scene node each, hidden until they are first moved
+    void rrCreateDefeatRubble(size_t count);
+    //! Places rubble piece index; rotation holds the degrees around the x, y and z axes
+    void rrMoveDefeatRubblePiece(size_t index, const Ogre::Vector3& position, const Ogre::Vector3& rotation,
+        const Ogre::Vector3& scale);
+    void rrDestroyDefeatRubble();
     void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
         bool bodyDamage, const Ogre::Vector3& attackerPosition);
     void rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,

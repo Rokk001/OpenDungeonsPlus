@@ -86,6 +86,10 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
+//! The particle systems of the heart burst (particles/HeartExplosion.particle), all created at the burst
+const size_t DEFEAT_BURST_EFFECT_COUNT = 4;
+const std::string DEFEAT_BURST_EFFECT_NAMES[DEFEAT_BURST_EFFECT_COUNT] = {DEFEAT_EXPLOSION_EFFECT_NAME, "DefeatHeartExplosionFlash", "DefeatHeartExplosionSparks", "DefeatHeartExplosionSmoke"};
+const std::string DEFEAT_BURST_EFFECT_SCRIPTS[DEFEAT_BURST_EFFECT_COUNT] = {"HeartExplosion", "HeartExplosionFlash", "HeartExplosionSparks", "HeartExplosionSmoke"};
 const std::string DEFEAT_SWIRL_EFFECT_NAME = "DefeatSwirl";
 const std::string DEFEAT_CAMERA_MARKER_IMAGE = "OpenDungeonsIcons/CameraIcon";
 const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
@@ -2007,11 +2011,13 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
 
     createDefeatWindows();
 
-    Ogre::Vector3 explosionPosition = mDefeatHeartPosition;
-    explosionPosition.z = 0.8f;
-    renderManager.rrCreateFreeParticleEffect(DEFEAT_EXPLOSION_EFFECT_NAME, "HeartExplosion",
-        explosionPosition, nullptr);
-    mDefeatExplosionEffectActive = true;
+    // The server has already removed the heart object, so a client-only copy stands in for it: it shakes
+    // and glows until it bursts (the burst effects start in updateDefeatSequence)
+    if(mDefeatSequence.isHeartKnown())
+    {
+        renderManager.rrCreateDefeatHeart(mDefeatHeartPosition);
+        mDefeatHeartShown = true;
+    }
 
     updateDefeatSequence(startTime);
 }
@@ -2132,15 +2138,51 @@ void GameMode::startDefeatSwirl()
     mDefeatSwirlEffectActive = true;
 }
 
+void GameMode::startDefeatBurst(float time)
+{
+    mDefeatBurstDone = true;
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if(mDefeatHeartShown)
+    {
+        renderManager.rrDestroyDefeatHeart();
+        mDefeatHeartShown = false;
+    }
+    // A single frame may have run past the explosion phase; then its particles are skipped
+    if(DefeatSequence::isExplosionEffectActiveAt(time))
+    {
+        Ogre::Vector3 position = mDefeatHeartPosition;
+        position.z = DefeatHeartBurstSettings::BURST_HEIGHT;
+        for(size_t i = 0; i < DEFEAT_BURST_EFFECT_COUNT; ++i)
+            renderManager.rrCreateFreeParticleEffect(DEFEAT_BURST_EFFECT_NAMES[i], DEFEAT_BURST_EFFECT_SCRIPTS[i],
+                position, nullptr);
+        mDefeatExplosionEffectActive = true;
+    }
+    if(mDefeatSequence.isHeartKnown())
+    {
+        mDefeatRubble = DefeatHeartBurst::buildRubbleLayout();
+        renderManager.rrCreateDefeatRubble(mDefeatRubble.size());
+        mDefeatRubbleShown = true;
+    }
+}
+
 void GameMode::stopDefeatEffects()
 {
     RenderManager& renderManager = RenderManager::getSingleton();
     if(mDefeatExplosionEffectActive)
-        renderManager.rrDestroyFreeParticleEffect(DEFEAT_EXPLOSION_EFFECT_NAME);
+    {
+        for(size_t i = 0; i < DEFEAT_BURST_EFFECT_COUNT; ++i)
+            renderManager.rrDestroyFreeParticleEffect(DEFEAT_BURST_EFFECT_NAMES[i]);
+    }
     if(mDefeatSwirlEffectActive)
         renderManager.rrDestroyFreeParticleEffect(DEFEAT_SWIRL_EFFECT_NAME);
+    if(mDefeatHeartShown)
+        renderManager.rrDestroyDefeatHeart();
+    if(mDefeatRubbleShown)
+        renderManager.rrDestroyDefeatRubble();
     mDefeatExplosionEffectActive = false;
     mDefeatSwirlEffectActive = false;
+    mDefeatHeartShown = false;
+    mDefeatRubbleShown = false;
 }
 
 void GameMode::updateDefeatSequence(std::chrono::steady_clock::time_point now)
@@ -2162,9 +2204,30 @@ void GameMode::updateDefeatSequence(std::chrono::steady_clock::time_point now)
     else
         mDefeatSubtitle->setText("");
 
+    if(!mDefeatBurstDone && DefeatHeartBurst::isBurstDueAt(time))
+        startDefeatBurst(time);
+    if(mDefeatHeartShown)
+    {
+        const Ogre::Vector3 shake(DefeatHeartBurst::heartShakeXAt(time), DefeatHeartBurst::heartShakeYAt(time), 0.0f);
+        renderManager.rrUpdateDefeatHeart(mDefeatHeartPosition + shake, DefeatHeartBurst::heartPulseScaleAt(time),
+            DefeatHeartBurst::heartGlowAt(time));
+    }
+    if(mDefeatRubbleShown)
+    {
+        const float sinceBurst = time - DefeatHeartBurstSettings::BURST_TIME;
+        for(size_t i = 0; i < mDefeatRubble.size(); ++i)
+        {
+            const DefeatRubblePiece& piece = mDefeatRubble[i];
+            const DefeatRubblePose pose = DefeatHeartBurst::rubblePoseAt(piece, sinceBurst);
+            renderManager.rrMoveDefeatRubblePiece(i, mDefeatHeartPosition + Ogre::Vector3(pose.x, pose.y, pose.z),
+                Ogre::Vector3(pose.tiltX, pose.tiltY, pose.turn), Ogre::Vector3(piece.scaleX, piece.scaleY, piece.scaleZ));
+        }
+    }
+
     if(mDefeatExplosionEffectActive && !DefeatSequence::isExplosionEffectActiveAt(time))
     {
-        renderManager.rrDestroyFreeParticleEffect(DEFEAT_EXPLOSION_EFFECT_NAME);
+        for(size_t i = 0; i < DEFEAT_BURST_EFFECT_COUNT; ++i)
+            renderManager.rrDestroyFreeParticleEffect(DEFEAT_BURST_EFFECT_NAMES[i]);
         mDefeatExplosionEffectActive = false;
     }
 
@@ -2194,6 +2257,8 @@ void GameMode::updateDefeatSequence(std::chrono::steady_clock::time_point now)
 void GameMode::onDefeatSequenceFinished()
 {
     OD_LOG_INF("Defeat sequence finished");
+    // The screen is black: the rubble and whatever effect is left can go
+    stopDefeatEffects();
     if(!mDefeatSequence.openDebriefing())
         return;
     // The screen stays black; the subtitle and the camera marker make room for the debriefing

@@ -42,6 +42,7 @@ probe = r'''
 #include <string>
 #include <vector>
 #include "modes/DefeatSequence.h"
+#include "modes/DefeatHeartBurst.h"
 
 std::vector<std::string> gLog;
 #define OD_LOG_INF(x) gLog.push_back(x)
@@ -93,6 +94,20 @@ struct RenderManager
     {Effect e;e.event="move";e.name=name;e.hasColour=false;e.position=p;effects.push_back(e);}
     void rrDestroyFreeParticleEffect(const std::string& name)
     {Effect e;e.event="destroy";e.name=name;e.hasColour=false;effects.push_back(e);}
+    // The copy of the heart and the rubble are recorded as effects named "Heart" and "Rubble"
+    size_t rubbleCount = 0;
+    void rrCreateDefeatHeart(const Ogre::Vector3& p)
+    {Effect e;e.event="create";e.name="Heart";e.hasColour=false;e.position=p;effects.push_back(e);}
+    void rrUpdateDefeatHeart(const Ogre::Vector3& p, float, float)
+    {Effect e;e.event="move";e.name="Heart";e.hasColour=false;e.position=p;effects.push_back(e);}
+    void rrDestroyDefeatHeart()
+    {Effect e;e.event="destroy";e.name="Heart";e.hasColour=false;effects.push_back(e);}
+    void rrCreateDefeatRubble(size_t count)
+    {rubbleCount=count;Effect e;e.event="create";e.name="Rubble";e.hasColour=false;effects.push_back(e);}
+    void rrMoveDefeatRubblePiece(size_t, const Ogre::Vector3& p, const Ogre::Vector3&, const Ogre::Vector3&)
+    {Effect e;e.event="move";e.name="Rubble";e.hasColour=false;e.position=p;effects.push_back(e);}
+    void rrDestroyDefeatRubble()
+    {Effect e;e.event="destroy";e.name="Rubble";e.hasColour=false;effects.push_back(e);}
 };
 struct Camera {Ogre::Vector3 direction;Ogre::Vector3 getDerivedDirection() const {return direction;}};
 struct CameraManager {Camera camera;Camera* getActiveCamera(){return &camera;}};
@@ -110,6 +125,7 @@ public:
     GameMode():mRootWindow(&mRoot),mGameMap(&mMap){}
     void updateDefeatSequence(std::chrono::steady_clock::time_point now);
     void startDefeatSwirl();
+    void startDefeatBurst(float time);
     void stopDefeatEffects();
     void hideInterfaceForDefeat();
     void onDefeatSequenceFinished();
@@ -121,6 +137,10 @@ public:
     bool mDefeatExplosionEffectActive = false;
     bool mDefeatSwirlEffectActive = false;
     bool mDefeatSwirlDone = false;
+    bool mDefeatHeartShown = false;
+    bool mDefeatBurstDone = false;
+    bool mDefeatRubbleShown = false;
+    std::vector<DefeatRubblePiece> mDefeatRubble;
     CEGUI::Window* mDefeatTint = nullptr;
     CEGUI::Window* mDefeatFade = nullptr;
     CEGUI::Window* mDefeatSubtitle = nullptr;
@@ -133,6 +153,7 @@ public:
 };
 UPDATE
 SWIRL
+BURST
 STOP
 HIDE
 FINISHED
@@ -154,6 +175,9 @@ struct Run
     float finishWallTime = -1;
     CEGUI::Window ui1, ui2, tint, fade, subtitle, marker;
     int explosionDestroys = 0, swirlCreates = 0, swirlDestroys = 0, swirlMoves = 0;
+    int burstCreates = 0, heartMoves = 0, heartDestroys = 0, rubbleCreates = 0, rubbleMoves = 0, rubbleDestroys = 0;
+    float burstTime = -1, heartDestroyTime = -1, rubbleCreateTime = -1, rubbleDestroyTime = -1, burstHeight = -1;
+    float largestShake = 0;
     float firstExplosionDestroy = -1, swirlCreateTime = -1, swirlDestroyTime = -1, finishTime = -1;
     bool sequenceWindowHidden = false;
     int uiShownAfterHide = 0;
@@ -173,8 +197,12 @@ struct Run
         now = start;
         mode.mDefeatSequence.start(conqueror, hx, hy, start);
         mode.mDefeatHeartPosition = Ogre::Vector3(float(hx), float(hy), 0.0f);
-        mode.mDefeatExplosionEffectActive = true;
-        RenderManager::getSingleton().rrCreateFreeParticleEffect("DefeatHeartExplosion", "HeartExplosion", mode.mDefeatHeartPosition, nullptr);
+        // As startDefeatSequence: the copy of the heart stands there; the explosion starts at the burst
+        if(mode.mDefeatSequence.isHeartKnown())
+        {
+            mode.mDefeatHeartShown = true;
+            RenderManager::getSingleton().rrCreateDefeatHeart(mode.mDefeatHeartPosition);
+        }
     }
 
     // one frame of dt seconds of wall clock; the game calls the update from both frame hooks, so
@@ -208,6 +236,18 @@ struct Run
                 lastSwirlDistance = distance;
             }
             if(e.name == "DefeatSwirl" && e.event == "destroy") {++swirlDestroys;swirlDestroyTime = t;}
+            if(e.event == "create" && e.name.compare(0, 20, "DefeatHeartExplosion") == 0) {++burstCreates;burstTime = t;burstHeight = e.position.z;}
+            if(e.name == "Heart" && e.event == "move")
+            {
+                ++heartMoves;
+                float shake = std::sqrt((e.position.x - mode.mDefeatHeartPosition.x) * (e.position.x - mode.mDefeatHeartPosition.x)
+                    + (e.position.y - mode.mDefeatHeartPosition.y) * (e.position.y - mode.mDefeatHeartPosition.y));
+                if(shake > largestShake) largestShake = shake;
+            }
+            if(e.name == "Heart" && e.event == "destroy") {++heartDestroys;heartDestroyTime = t;}
+            if(e.name == "Rubble" && e.event == "create") {++rubbleCreates;rubbleCreateTime = t;}
+            if(e.name == "Rubble" && e.event == "move") ++rubbleMoves;
+            if(e.name == "Rubble" && e.event == "destroy") {++rubbleDestroys;rubbleDestroyTime = t;}
         }
         if(!wasFinished && mode.mDefeatSequence.isFinished())
         {
@@ -273,6 +313,11 @@ int main()
         Run run;run.begin(1, 17, 23);
         for(int i = 0; i < 60 * 40; ++i) run.frame(1.0f / 60.0f);
         check(run.explosionDestroys == 1 && run.firstExplosionDestroy >= 14.99f && run.firstExplosionDestroy < 15.1f, "explosion effect is removed once, at about 15 s");
+        check(run.burstCreates == 4 && run.burstTime >= 0.8f && run.burstTime < 0.82f && near(run.burstHeight, DefeatHeartBurstSettings::BURST_HEIGHT), "the four burst effects start once, at the burst (0.8 s), in the heart's middle");
+        check(run.heartMoves > 40 && run.largestShake > 0.02f && run.largestShake <= DefeatHeartBurstSettings::SHAKE_AMPLITUDE * 1.4143f, "until the burst the copy of the heart shakes around its tile");
+        check(run.heartDestroys == 1 && run.heartDestroyTime >= 0.8f && run.heartDestroyTime < 0.82f, "the copy of the heart disappears once, at the burst");
+        check(run.rubbleCreates == 1 && run.rubbleCreateTime >= 0.8f && run.rubbleCreateTime < 0.82f && RenderManager::getSingleton().rubbleCount == DefeatHeartBurstSettings::RUBBLE_PIECES, "the rubble is created once at the burst, with every piece");
+        check(run.rubbleMoves > 1000 && run.rubbleDestroys == 1 && run.rubbleDestroyTime >= 29.5f && run.rubbleDestroyTime < 29.6f, "the rubble is placed every frame and removed once, at the end (black screen)");
         check(run.swirlCreates == 1 && run.swirlCreateTime >= 15.5f && run.swirlCreateTime < 15.6f, "swirl is created once at about 15.5 s");
         check(run.swirlColourGiven && near(run.swirlColour.r, 0.2f) && near(run.swirlColour.g, 0.9f) && near(run.swirlColour.b, 0.1f) && near(run.swirlColour.a, 1.0f), "swirl uses the seat colour of the conqueror with full opacity");
         check(run.swirlMoves > 100 && run.swirlMonotonic && run.lastSwirlDistance > 12.0f && run.lastSwirlDistance <= DefeatSequenceSettings::SWIRL_DISTANCE + 0.01f, "swirl moves away from the heart along the camera direction");
@@ -330,7 +375,9 @@ int main()
         run.frame(15.4f);
         run.frame(3.5f);
         run.frame(12.0f);
-        check(run.explosionDestroys == 1 && run.swirlCreates == 0 && !run.mode.mDefeatSwirlEffectActive, "a frame across the whole swirl skips it without leaving an effect");
+        check(run.burstCreates == 0 && run.explosionDestroys == 0 && run.swirlCreates == 0 && !run.mode.mDefeatSwirlEffectActive, "a first frame past the explosion phase skips the burst effects and the swirl without leaving an effect");
+        check(run.heartDestroys == 1 && run.rubbleCreates == 1, "... but the copy of the heart still bursts into rubble");
+        check(run.rubbleDestroys == 1, "a frame across the end removes the rubble");
         check(run.finishes == 1 && run.mode.mDebriefingShown == 1 && near(run.fade.alpha, 1.0f), "a frame across the end finishes once");
     }
     {
@@ -348,8 +395,18 @@ int main()
         Run run;run.begin(1, 17, 23);
         for(int i = 0; i < 60 * 8; ++i) run.frame(1.0f / 60.0f);
         run.mode.stopDefeatEffects();
-        int destroys = 0;for(size_t i = 0; i < RenderManager::getSingleton().effects.size(); ++i) if(RenderManager::getSingleton().effects[i].event == "destroy") ++destroys;
-        check(destroys == 1 && !run.mode.mDefeatExplosionEffectActive, "leaving the mode removes the running effect");
+        int destroys = 0, rubble = 0, all = 0;
+        for(size_t i = 0; i < RenderManager::getSingleton().effects.size(); ++i)
+        {
+            const Effect& e = RenderManager::getSingleton().effects[i];
+            if(e.event == "destroy") ++all;
+            if(e.event == "destroy" && e.name.compare(0, 20, "DefeatHeartExplosion") == 0) ++destroys;
+            if(e.event == "destroy" && e.name == "Rubble") ++rubble;
+        }
+        check(destroys == 4 && rubble == 1 && !run.mode.mDefeatExplosionEffectActive && !run.mode.mDefeatRubbleShown, "leaving the mode removes the running burst effects and the rubble");
+        run.mode.stopDefeatEffects();
+        int after = 0;for(size_t i = 0; i < RenderManager::getSingleton().effects.size(); ++i) if(RenderManager::getSingleton().effects[i].event == "destroy") ++after;
+        check(after == all, "stopping again removes nothing more");
     }
     std::cout << "CHECKS=" << gChecks << " FAILURES=" << gFailures << '\n';
     return gFailures ? 1 : 0;
@@ -358,9 +415,11 @@ int main()
 
 constants = '\n'.join(constant(name) for name in (
     'DEFEAT_EXPLOSION_EFFECT_NAME', 'DEFEAT_SWIRL_EFFECT_NAME', 'DEFEAT_FIRST_SUBTITLE', 'DEFEAT_SECOND_SUBTITLE'))
+constants += '\n' + '\n'.join(re.findall(r'^const (?:size_t|std::string) DEFEAT_BURST_\w+.*;$', game_mode, re.MULTILINE))
 probe = (probe.replace('CONSTANTS', constants)
     .replace('UPDATE', function(game_mode, 'void GameMode::updateDefeatSequence('))
     .replace('SWIRL\n', function(game_mode, 'void GameMode::startDefeatSwirl(') + '\n')
+    .replace('BURST\n', function(game_mode, 'void GameMode::startDefeatBurst(') + '\n')
     .replace('STOP', function(game_mode, 'void GameMode::stopDefeatEffects('))
     .replace('HIDE', function(game_mode, 'void GameMode::hideInterfaceForDefeat('))
     .replace('FINISHED', function(game_mode, 'void GameMode::onDefeatSequenceFinished(')))
