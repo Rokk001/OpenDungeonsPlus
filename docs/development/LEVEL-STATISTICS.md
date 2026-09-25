@@ -4,8 +4,7 @@
 
 The server counts a few per-seat values during a level and sends a snapshot to a
 defeated human player, so the client can fill a debriefing table with one column
-per seat. This change only produces and stores the data; showing it is a separate
-step.
+per seat. The defeat debriefing shows them as a table (see "Debriefing table").
 
 ## Counters
 
@@ -70,6 +69,35 @@ entries) and keeps it in `ODClient`: `hasLevelStatistics()` and
 client is not in the game mode, and the stored data is cleared when a new game
 connection is accepted.
 
+## Debriefing table
+
+`GameMode::showDefeatDebriefing` fills the hidden container `Panel/StatisticsArea` of
+`gui/WindowDefeatDebriefing.layout` (now a `OD/MenuScrollablePane`, the scrolling
+widget of the settings windows, so more rows or a small window scroll instead of
+being cut off) when `ODClient::hasLevelStatistics()` is true.
+
+- `source/modes/DebriefingTable.h` holds the pure part: `buildDebriefingTable` turns
+  `LevelStatistics` into rows (label plus one cell per seat, in the order of the
+  packet, with the seat id and the number as text), and small helpers give the CEGUI
+  area strings and the colour text. No seats gives no rows and the area stays hidden.
+- `GameMode::fillDefeatStatistics` only creates `OD/StaticText` windows from those
+  rows inside the area: a label on the left (40 % of the width) and one centred number
+  per seat in the rest, 26 px per row. It destroys nothing itself: the windows are
+  children of the debriefing window and go with it.
+- Rows, in this order: Enemy keepers defeated, Enemy creatures killed, Heroes
+  destroyed, Rooms captured, Items made, Creatures converted.
+- Colour: each number is drawn in the colour of its seat, `Seat::getColorValue()` of
+  the seat the client's `GameMap` knows under that id (`TextColours` property). A seat
+  the client does not know is drawn in white. There is no column header, as in the
+  reference: the colour identifies the seat.
+- "Level won" and "Time elapsed" use the packet (`levelWon`, `elapsedSeconds`, the
+  snapshot at defeat time) when statistics were received, and the client's own values
+  (not won, turn number over turns per second) otherwise.
+
+Rows deliberately left out: mana saved, creatures commanded and creature level
+trained. The reference game shows them, but what they count is not established, so a
+wrong number would be worse than none. Rank and score are left out for the same reason.
+
 ## Verification limits
 
 `source/tests/check_level_statistics.py` compiles the production
@@ -80,3 +108,12 @@ the wiring (enum position, hook placement, client read order) in the sources.
 `check_dungeon_heart_combat.py` covers the heart counter through the real
 `takeHeartDamage`. The network round trip, the client handler and the real
 counting in a running skirmish were not run.
+
+`source/tests/check_defeat_debriefing.py` checks the pure table (row order and labels,
+one cell per seat in packet order, numbers, no seats gives no rows and a hidden area),
+that the packet values replace the client values for "Level won" and the time, and, with
+mocked windows, the windows created for the rows and the colour set on each cell. What
+is not verified because the game was not run: how the table looks (column widths, the
+26 px row height, font size, that the scrolling pane shows no scrollbar for six rows
+inside the 480 px panel, that the `TextColours` property with a single AARRGGBB value is
+taken by the static text skin) and the real seat colours.

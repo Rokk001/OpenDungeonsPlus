@@ -20,6 +20,7 @@
 
 #include "GameEditorModeBase.h"
 
+#include "modes/DebriefingTable.h"
 #include "modes/DefeatSequence.h"
 #include "modes/InputCommand.h"
 #include "modes/InputBridge.h"
@@ -33,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace CEGUI
 {
@@ -399,6 +401,8 @@ private:
     void destroyDefeatWindows();
     //! Loads the debriefing window (summary lines, confirm button) and shows the pointer again
     void showDefeatDebriefing();
+    //! Fills the hidden statistics area of the debriefing with the rows and shows it (nothing for no rows)
+    void fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows);
     //! The confirm button of the debriefing: leaves to the main menu with the skirmish sub-menu open
     bool onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& arg);
     //! \brief Hides every window of the game interface except the ones of the defeat sequence
