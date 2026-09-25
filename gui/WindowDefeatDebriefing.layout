@@ -45,8 +45,9 @@
                 <Property name="HorzFormatting" value="LeftAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
-            <Window type="DefaultWindow" name="StatisticsArea" >
+            <Window type="OD/MenuScrollablePane" name="StatisticsArea" >
                 <Property name="Visible" value="False" />
+                <Property name="ContentPaneAutoSized" value="False" />
                 <Property name="Area" value="{{0,40},{0,168},{1,-40},{1,-100}}" />
             </Window>
             <Window type="OD/MenuSymbolButton" name="ConfirmButton" >

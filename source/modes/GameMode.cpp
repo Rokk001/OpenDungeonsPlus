@@ -88,7 +88,6 @@ const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
 const std::string DEFEAT_SWIRL_EFFECT_NAME = "DefeatSwirl";
 const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
 const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
-const std::string DEFEAT_DEBRIEFING_OUTCOME = "Level won: No";
 const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
@@ -2203,9 +2202,15 @@ void GameMode::showDefeatDebriefing()
 
     const std::string nick = mGameMap->getLocalPlayer()->getNick();
     mDefeatDebriefing->getChild("Panel/PlayerName")->setText(reinterpret_cast<const CEGUI::utf8*>(nick.c_str()));
-    mDefeatDebriefing->getChild("Panel/Outcome")->setText(DEFEAT_DEBRIEFING_OUTCOME);
-    const int64_t seconds = debriefingElapsedSeconds(mGameMap->getTurnNumber(), ODApplication::turnsPerSecond);
+    // The statistics snapshot taken by the server at the defeat wins over the client's own values
+    const bool hasStatistics = ODClient::getSingleton().hasLevelStatistics();
+    const LevelStatistics& statistics = ODClient::getSingleton().getLevelStatistics();
+    mDefeatDebriefing->getChild("Panel/Outcome")->setText(debriefingOutcomeText(debriefingLevelWon(hasStatistics, statistics, false)));
+    const int64_t clientSeconds = debriefingElapsedSeconds(mGameMap->getTurnNumber(), ODApplication::turnsPerSecond);
+    const int64_t seconds = debriefingSeconds(hasStatistics, statistics, clientSeconds);
     mDefeatDebriefing->getChild("Panel/Elapsed")->setText(DEFEAT_DEBRIEFING_ELAPSED + formatDebriefingTime(seconds));
+    if(hasStatistics)
+        fillDefeatStatistics(buildDebriefingTable(statistics));
 
     addEventConnection(
         mDefeatDebriefing->getChild("Panel/ConfirmButton")->subscribeEvent(
@@ -2216,6 +2221,47 @@ void GameMode::showDefeatDebriefing()
 
     // The pointer is back for the button; the hand stays hidden
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
+}
+
+void GameMode::fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows)
+{
+    if(rows.empty())
+        return;
+
+    CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* area = mDefeatDebriefing->getChild("Panel/StatisticsArea");
+    for(size_t row = 0; row < rows.size(); ++row)
+    {
+        CEGUI::Window* label = windowManager.createWindow("OD/StaticText", "DefeatStatisticsLabel" + std::to_string(row));
+        label->setProperty("Area", debriefingLabelArea(row));
+        label->setProperty("Font", "MedievalSharp-12");
+        label->setProperty("FrameEnabled", "False");
+        label->setProperty("BackgroundEnabled", "False");
+        label->setProperty("HorzFormatting", "LeftAligned");
+        label->setProperty("VertFormatting", "CentreAligned");
+        label->setText(rows[row].mLabel);
+        area->addChild(label);
+
+        const std::vector<DebriefingTableCell>& cells = rows[row].mCells;
+        for(size_t column = 0; column < cells.size(); ++column)
+        {
+            // A seat the client does not know is drawn in white
+            Seat* seat = mGameMap->getSeatById(cells[column].mSeatId);
+            const Ogre::ColourValue colour = (seat == nullptr) ? Ogre::ColourValue::White : seat->getColorValue();
+            CEGUI::Window* cell = windowManager.createWindow("OD/StaticText",
+                "DefeatStatisticsCell" + std::to_string(row) + "_" + std::to_string(column));
+            cell->setProperty("Area", debriefingCellArea(row, column, cells.size()));
+            cell->setProperty("Font", "MedievalSharp-12");
+            cell->setProperty("FrameEnabled", "False");
+            cell->setProperty("BackgroundEnabled", "False");
+            cell->setProperty("HorzFormatting", "CentreAligned");
+            cell->setProperty("VertFormatting", "CentreAligned");
+            cell->setProperty("TextColours", debriefingColourText(colour.getAsARGB()));
+            cell->setText(cells[column].mText);
+            area->addChild(cell);
+        }
+    }
+    area->show();
 }
 
 void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)

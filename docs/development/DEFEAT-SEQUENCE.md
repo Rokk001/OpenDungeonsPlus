@@ -59,12 +59,22 @@ to change), adds it to the game sheet above the black cover, hides the subtitle 
 "CAM" marker, and shows the pointer again (the hand stays hidden). The window shows:
 
 - the title "Mission debriefing", the local player's nickname,
-- "Level won: No",
-- "Time elapsed: mm:ss" (h:mm:ss from one hour on), from `debriefingElapsedSeconds`:
-  the client map's turn number divided by `ODApplication::turnsPerSecond`,
-- an empty, hidden container `Panel/StatisticsArea` for the statistics table, so that
-  the table can be added below the summary lines without a new layout,
+- "Level won: No" or "Level won: Yes",
+- "Time elapsed: mm:ss" (h:mm:ss from one hour on),
+- the statistics table in `Panel/StatisticsArea` (a scrollable pane, hidden until it has
+  content): one row per statistic, one column per seat, each number in the seat colour,
 - one confirm button (the existing tick icon).
+
+"Level won" and the time come from the statistics packet (`ODClient::hasLevelStatistics()`,
+a snapshot taken by the server at the moment of the defeat) when it was received. Without
+a packet the client's own values are used: not won, and `debriefingElapsedSeconds`, the
+client map's turn number divided by `ODApplication::turnsPerSecond`.
+
+The table has the rows Enemy keepers defeated, Enemy creatures killed, Heroes destroyed,
+Rooms captured, Items made and Creatures converted. It is built from the statistics by
+the pure function `buildDebriefingTable` in `source/modes/DebriefingTable.h`, and
+`GameMode::fillDefeatStatistics` creates the text windows. The counters, the packet and
+the details of the table are described in [LEVEL-STATISTICS.md](LEVEL-STATISTICS.md).
 
 Rank and score are not shown. `hideInterfaceForDefeat` skips the debriefing window and
 `destroyDefeatWindows` (called from the destructor) destroys it.
@@ -90,8 +100,10 @@ stops the hosted game for every other player too. Server behaviour was not chang
   plays the existing Lost voice), no rank or score.
 - The reference G key that toggles the interface does not exist in this fork, so the
   interface is hidden by the sequence itself.
-- The statistics table of the debriefing (a later task) and any restart, keep-watching
-  or quit choice: the reference offers only the confirm button.
+- The reference rows mana saved, creatures commanded and creature level trained: their
+  meaning is not established, so they are not shown (see LEVEL-STATISTICS.md).
+- Any restart, keep-watching or quit choice: the reference offers only the confirm
+  button.
 
 ## Verification limits
 
@@ -101,8 +113,10 @@ above, the one-shot guard, the swirl colour and the missing swirl for an unknown
 conqueror, and that the input handlers start with the gate.
 `source/tests/check_defeat_debriefing.py` covers the time text (0, 59, 60, 3599, over an
 hour, invalid input), the input routing decision through the real handler guards, that
-the finished hook opens the window once, and that confirming requests the main menu
-once and sets the hand-over exactly once. The game was not run.
+the finished hook opens the window once, that the packet values are used for "Level won"
+and the time (and the client values without a packet), the table rows and the windows
+made from them, and that confirming requests the main menu once and sets the hand-over
+exactly once. The game was not run.
 These parts are guesses that need a look in the game: the camera height and pitch
 (`CAMERA_HEIGHT`, `CAMERA_PITCH`), the look of both particle scripts (both use the
 existing `CombatSparks` material, so the fireballs are soft flares, not textured
@@ -110,7 +124,8 @@ flames), the tint strength, the swirl direction and shape, the subtitle position
 font, the "CAM" text standing in for the camera symbol, and whether the `Ring`
 emitter and the runtime emitter colour behave as expected in the used Ogre version.
 
-For the debriefing these are guesses that need a look in the game: the size, position,
+For the debriefing these are guesses that need a look in the game: the look of the
+statistics table (column widths, row height, seat colours, scrolling), the size, position,
 colours and fonts in the layout (a dark panel stands in for the stone corridor of the
 reference), the h:mm:ss form for games over an hour, that the tick button renders with
 the used button type, that clicks reach the button through the black cover windows, and
