@@ -14,7 +14,7 @@ t = 0 is the moment `GameMode::startDefeatSequence` is called. All values live i
 
 | Time (s) | What happens |
 |---|---|
-| 0 | The whole interface, the pointer, the hand and the creature texts disappear. The camera cuts (no flight) to a low oblique view of the heart. A small "CAM" marker is shown in the top right corner until the end. |
+| 0 | The whole interface, the pointer, the hand and the creature texts disappear. The camera cuts (no flight) to a low oblique view of the heart. A small camera symbol is shown in the top right corner until the end. |
 | 0 to 15 | Explosion effect at the heart (`particles/HeartExplosion.particle`), red tint over the scene, subtitle "Your dungeon heart has been destroyed." |
 | 15 to 15.5 | The red tint fades out. |
 | 15.5 to 18.5 | Swirl (`particles/DefeatSwirl.particle`) in the seat colour of the conqueror moves 14 tiles away from the heart, away from the camera. Skipped if the conqueror seat is -1 or not known to the client. |
@@ -56,8 +56,12 @@ height and angle.
 returns true only once). `GameMode::showDefeatDebriefing` loads
 `gui/WindowDefeatDebriefing.layout` (picked up with the rest of `gui/`, no build list
 to change), adds it to the game sheet above the black cover, hides the subtitle and the
-"CAM" marker, and shows the pointer again (the hand stays hidden). The window shows:
+camera symbol, and shows the pointer again (the hand stays hidden). The window shows:
 
+- a stone surface: the tiled `ODHudSurface/Stone` image (the one the HUD navigation frame
+  uses) fills the whole screen, slightly dimmed, and the panel is the same stone, dimmed
+  further so the white text stays readable. Both are `OD/StaticImage` windows in the layout,
+  darkened with `ImageColours`,
 - the title "Mission debriefing", the local player's nickname,
 - "Level won: No" or "Level won: Yes",
 - "Time elapsed: mm:ss" (h:mm:ss from one hour on),
@@ -79,6 +83,15 @@ the details of the table are described in [LEVEL-STATISTICS.md](LEVEL-STATISTICS
 Rank and score are not shown. `hideInterfaceForDefeat` skips the debriefing window and
 `destroyDefeatWindows` (called from the destructor) destroys it.
 
+### Camera symbol
+
+The symbol in the top right corner is an `OD/StaticImage` window (`DefeatCameraMarker`, 40 by
+40 pixels, tinted red through `ImageColours`) showing `OpenDungeonsIcons/CameraIcon`. The
+project had no camera, eye or film icon, so a new white 32 by 32 glyph was drawn (a small
+script with Pillow, not part of the repository) into the free cell at x 0, y 32 of
+`gui/ODIcons.png` and registered in `gui/ODIcons.imageset`. The whole `gui` directory is
+installed, so nothing else lists it.
+
 ### Leaving to the menu
 
 The confirm button calls `DefeatSequence::confirmDebriefing` (true once, so a double
@@ -88,6 +101,22 @@ sets a flag on the `ModeManager` and requests `MENU_MAIN`, the same request as
 (`consumeSkirmishSubMenuRequest`) after resetting its windows and opens the skirmish
 sub-menu the way its skirmish button does, the nearest equivalent of the reference's
 single-player menu (there is no campaign in this fork).
+
+The main menu of this fork is a flat picture (`MainMenuBackground.png` on a full screen
+rectangle, with animated fire, mist and ember overlays, see `RenderSceneMenu`), not a 3D
+scene, and it has no camera path or intro flight to reuse. The reference flies the camera
+through a 3D corridor; that cannot be reproduced here, so `MenuFlight` (`source/render/MenuFlight.h`)
+approximates it as a zoom: for 3 seconds the picture (and with it the overlays) starts at 1.6
+times its normal size around its centre and settles to exactly the normal size, slowing down
+towards the end (cubic ease-out). `RenderSceneMenu::updateMenu` applies the scale to the
+rectangle corners; the frame time step is clamped to 0.25 s.
+
+The flight runs only when the hand-over flag was set: `MenuModeMain::activate` then hides the
+menu buttons, starts the flight (`ODFrameListener::startMainMenuFlight`) after the scene was
+created, and `MenuModeMain::onFrameStarted` opens the skirmish sub-menu when the flight is no
+longer active. So the sub-menu appears at the end of the flight, and since no menu control is
+visible during the flight, input to the menu is effectively ignored. Every other way into the
+main menu is unchanged. Freeing the menu scene stops a running flight.
 
 Destroying the game mode is what disconnects: `GameEditorModeBase::~GameEditorModeBase`
 disconnects the client and stops the server if this process runs one. So a defeated
@@ -121,13 +150,20 @@ These parts are guesses that need a look in the game: the camera height and pitc
 (`CAMERA_HEIGHT`, `CAMERA_PITCH`), the look of both particle scripts (both use the
 existing `CombatSparks` material, so the fireballs are soft flares, not textured
 flames), the tint strength, the swirl direction and shape, the subtitle position and
-font, the "CAM" text standing in for the camera symbol, and whether the `Ring`
+font, the size, tint and look of the drawn camera glyph, and whether the `Ring`
 emitter and the runtime emitter colour behave as expected in the used Ogre version.
 
 For the debriefing these are guesses that need a look in the game: the look of the
 statistics table (column widths, row height, seat colours, scrolling), the size, position,
-colours and fonts in the layout (a dark panel stands in for the stone corridor of the
-reference), the h:mm:ss form for games over an hour, that the tick button renders with
+colours and fonts in the layout (the dimmed stone surface stands in for the stone corridor
+picture of the reference, and the tint values are guesses), the h:mm:ss form for games over an hour, that the tick button renders with
 the used button type, that clicks reach the button through the black cover windows, and
 that the main menu shows its skirmish sub-menu correctly when entered this way (the
 mouse position is not moved onto a button, as it is at the first start).
+For the flight: that the zoom looks like a flight at all (start scale 1.6, duration 3 s, easing
+are guesses), that the overlays follow the zoom without a visible jump at its end, and that
+the buttons and the sub-menu appear correctly afterwards. The flight tests
+(`source/tests/check_defeat_menu_flight.py`) cover the timing and path functions (start, end,
+clamping, restart only after the end), the frame hook that opens the sub-menu once, the
+hand-over flag being consumed once, that the camera symbol is an image window with an existing,
+non-empty icon, and that every image the layout names exists in the imagesets.

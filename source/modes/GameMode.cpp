@@ -86,6 +86,7 @@ const double AUTOSCROLL_EDGE_RATIO = 0.02;
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
 const std::string DEFEAT_SWIRL_EFFECT_NAME = "DefeatSwirl";
+const std::string DEFEAT_CAMERA_MARKER_IMAGE = "OpenDungeonsIcons/CameraIcon";
 const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
 const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
 const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
@@ -2048,26 +2049,24 @@ void GameMode::createDefeatWindows()
     mDefeatSubtitle->setProperty("TextColours", "FFFFFFFF");
     mDefeatSubtitle->setProperty("HorzFormatting", "CentreAligned");
 
-    // Stands for the camera symbol of the reference, shown while the sequence runs
-    mDefeatCameraMarker = windowManager.createWindow("OD/StaticText", "DefeatCameraMarker");
-    mDefeatCameraMarker->setFont("MedievalSharp-10");
-    mDefeatCameraMarker->setArea(CEGUI::UDim(1, -90), CEGUI::UDim(0, 10), CEGUI::UDim(0, 80), CEGUI::UDim(0, 30));
-    mDefeatCameraMarker->setProperty("TextColours", "FFFF4848");
-    mDefeatCameraMarker->setProperty("HorzFormatting", "RightAligned");
-    mDefeatCameraMarker->setText("CAM");
+    // The camera symbol of the reference, shown while the sequence runs
+    mDefeatCameraMarker = windowManager.createWindow("OD/StaticImage", "DefeatCameraMarker");
+    mDefeatCameraMarker->setArea(CEGUI::UDim(1, -50), CEGUI::UDim(0, 10), CEGUI::UDim(0, 40), CEGUI::UDim(0, 40));
+    mDefeatCameraMarker->setProperty("Image", DEFEAT_CAMERA_MARKER_IMAGE);
+    mDefeatCameraMarker->setProperty("ImageColours", "FFFF4848");
+    mDefeatCameraMarker->setProperty("FrameEnabled", "False");
+    mDefeatCameraMarker->setProperty("BackgroundEnabled", "False");
+    mDefeatCameraMarker->setMousePassThroughEnabled(true);
+    mDefeatCameraMarker->setAlwaysOnTop(true);
+    mRootWindow->addChild(mDefeatCameraMarker);
 
-    CEGUI::Window* labels[2] = {mDefeatSubtitle, mDefeatCameraMarker};
-    for(size_t i = 0; i < 2; ++i)
-    {
-        CEGUI::Window* label = labels[i];
-        label->setProperty("FrameEnabled", "False");
-        label->setProperty("BackgroundEnabled", "False");
-        label->setProperty("TextParsingEnabled", "False");
-        label->setProperty("VertFormatting", "CentreAligned");
-        label->setMousePassThroughEnabled(true);
-        label->setAlwaysOnTop(true);
-        mRootWindow->addChild(label);
-    }
+    mDefeatSubtitle->setProperty("FrameEnabled", "False");
+    mDefeatSubtitle->setProperty("BackgroundEnabled", "False");
+    mDefeatSubtitle->setProperty("TextParsingEnabled", "False");
+    mDefeatSubtitle->setProperty("VertFormatting", "CentreAligned");
+    mDefeatSubtitle->setMousePassThroughEnabled(true);
+    mDefeatSubtitle->setAlwaysOnTop(true);
+    mRootWindow->addChild(mDefeatSubtitle);
 }
 
 void GameMode::destroyDefeatWindows()
