@@ -22,6 +22,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "game/HeartHealthRing.h"
 #include "game/Player.h"
@@ -2015,6 +2016,17 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
     // and glows until it bursts (the burst effects start in updateDefeatSequence)
     if(mDefeatSequence.isHeartKnown())
     {
+        // The server may remove the real heart object only a moment later: hide it, so that it does
+        // not stand in the copy. Its node is destroyed with it, nothing keeps a pointer to it.
+        const std::vector<RenderedMovableEntity*>& objects = mGameMap->getRenderedMovableEntities();
+        for(std::vector<RenderedMovableEntity*>::const_iterator it = objects.begin(); it != objects.end(); ++it)
+        {
+            RenderedMovableEntity* object = *it;
+            if(object->getMeshName() == "DungeonTempleObject" && object->getEntityNode() != nullptr
+                && object->getPositionTile() != nullptr && object->getPositionTile()->getX() == heartTileX
+                && object->getPositionTile()->getY() == heartTileY)
+                object->getEntityNode()->setVisible(false);
+        }
         renderManager.rrCreateDefeatHeart(mDefeatHeartPosition);
         mDefeatHeartShown = true;
     }
@@ -2292,8 +2304,12 @@ void GameMode::showDefeatDebriefing()
         )
     );
 
-    // The pointer is back for the button; the hand stays hidden
+    // The pointer is back for the button. The CEGUI arrow image of this game is transparent
+    // (OpenDungeonsSkin/MouseArrow): the visible pointer is the keeper hand, which the sequence hid.
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if(!renderManager.isKeeperHandVisible())
+        renderManager.rrToggleHandSelectorVisibility();
 }
 
 void GameMode::fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows)

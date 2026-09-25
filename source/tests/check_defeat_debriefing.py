@@ -194,6 +194,11 @@ struct ODClient
     bool hasLevelStatistics() const {return has;}
     const LevelStatistics& getLevelStatistics() const {return statistics;}
 };
+// The visible pointer of the game is the keeper hand (the CEGUI arrow image is transparent)
+struct RenderManager {bool handVisible=false;int toggles=0;
+ static RenderManager& getSingleton(){static RenderManager manager;return manager;}
+ bool isKeeperHandVisible() const {return handVisible;}
+ void rrToggleHandSelectorVisibility(){handVisible=!handVisible;++toggles;}};
 struct ODApplication {static double turnsPerSecond;};
 double ODApplication::turnsPerSecond = 1.4;
 struct Player {std::string nick;const std::string& getNick() const {return nick;}};
@@ -352,6 +357,8 @@ int main()
         mode.mMap.turn = 84;
         finish(mode.mDefeatSequence);
         gCursorShown = gCursorHidden = 0;
+        RenderManager::getSingleton().handVisible = false;
+        RenderManager::getSingleton().toggles = 0;
         mode.onDefeatSequenceFinished();
         check(gLayoutLoads == 1 && mode.mDefeatDebriefing != nullptr, "the hook loads the debriefing layout");
         check(mode.mRoot.children.size() == 3 && mode.mRoot.children[2] == mode.mDefeatDebriefing && mode.mDefeatDebriefing->alwaysOnTop, "the window is added to the game sheet, on top");
@@ -365,6 +372,8 @@ int main()
         mode.onDefeatSequenceFinished();
         mode.onDefeatSequenceFinished();
         check(gLayoutLoads == 1 && gCursorShown == 1, "calling the hook again changes nothing");
+        check(RenderManager::getSingleton().handVisible && RenderManager::getSingleton().toggles == 1,
+            "the keeper hand, the visible pointer, comes back once for the button");
         check(gMissing == 0, "every window the code asks for exists in the layout");
 
         // Leaving: exactly one request for the main menu, with the sub-menu hand-over
@@ -541,6 +550,18 @@ names = [path for path, _ in windows]
 assert 'type="OD/MenuScrollablePane" name="StatisticsArea"' in layout_path.read_text()
 assert 'buildDebriefingTable(statistics)' in function(game_mode, 'void GameMode::showDefeatDebriefing(')
 print('WIRING OK: the statistics area is a scrollable pane and the debriefing builds the table from the received statistics')
+# The CEGUI arrow of this game is fully transparent: without the keeper hand the debriefing had no visible
+# pointer at all, which looked like a blocked mouse
+from PIL import Image
+skin = (repo / 'gui/ODSkin.imageset').read_text()
+arrow = re.search(r'<Image height="(\d+)" name="MouseArrow" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', skin)
+assert arrow
+height, width, left, top = (int(value) for value in arrow.groups())
+arrow_pixels = Image.open(repo / 'gui/ODSkin.png').convert('RGBA').crop((left, top, left + width, top + height))
+assert max(pixel[3] for pixel in arrow_pixels.getdata()) == 0, 'the arrow became visible: the hand may not be needed any more'
+show = function(game_mode, 'void GameMode::showDefeatDebriefing(')
+assert 'rrToggleHandSelectorVisibility()' in show and 'isKeeperHandVisible()' in show
+print('WIRING OK: the CEGUI arrow is transparent, so the debriefing brings the keeper hand back as the pointer')
 for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
     assert needed in names, needed
 assert 'OpenDungeonsIcons/CheckIcon' in layout_path.read_text()
