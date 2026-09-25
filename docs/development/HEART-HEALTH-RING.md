@@ -9,8 +9,8 @@ the top. The unlit part stays as a dark groove. A destroyed heart (fraction 0) s
 While the heart is under attack the badge glows magenta behind the silver heart; the glow is
 switched off after 3 seconds without a further message and never shows on a destroyed heart.
 
-`healthFraction` is the remaining heart health divided by the total durability of the dungeon
-temple (`RoomDungeonTemple::getHeartHealthFraction`). The gold badge is not changed.
+`healthFraction` is the remaining heart health divided by the health of an undamaged heart,
+`RoomDungeonTemple::getHeartMaxHP` (`getHeartHealthFraction`). The gold badge is not changed.
 
 ## How it works
 

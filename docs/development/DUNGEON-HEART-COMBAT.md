@@ -16,11 +16,17 @@ target discovery. The ordinary room target/damage and sale paths reject the
 heart's floor. Actual heart death releases the room through the existing cleanup
 and last-temple defeat paths. Editor tile removal remains available.
 
-Preserve existing total durability when loading old maps/saves rather than
-introducing an unrelated balance change. A tagged optional room record saves
-the independent remaining heart health; old files without it still load.
-Numerical rebalancing, regeneration and unrelated resource rewards are outside
-this targeted combat/protection change.
+The heart's health is its own pool of 10000 per room tile
+(`RoomDungeonTemple::HEART_HP_PER_TILE`), 90000 for the usual 3 by 3 heart. It
+no longer comes from the floor tiles' durability (9 tiles of 10, so 90 in all,
+which one strong blow destroyed while the ring barely moved). The top-left ring
+shows the remaining health divided by this maximum. Only fighters damage an
+enemy heart: `takeHeartDamage` ignores worker creatures, and a worker given a
+non-creature target drops its fight action. A tagged optional room record saves
+the independent remaining heart health; old files without it load with an
+undamaged heart. Saves written before this change keep their saved number, which
+was out of 90, so such a heart loads nearly destroyed.
+Regeneration of the heart and unrelated resource rewards are not part of it.
 
 ## Verification
 
