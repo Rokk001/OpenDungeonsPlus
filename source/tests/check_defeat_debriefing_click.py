@@ -111,6 +111,11 @@ struct ODClient
     bool hasLevelStatistics() const {return has;}
     const LevelStatistics& getLevelStatistics() const {return statistics;}
 };
+// The visible pointer of the game is the keeper hand (the CEGUI arrow image is transparent)
+struct RenderManager {bool handVisible=false;int toggles=0;
+ static RenderManager& getSingleton(){static RenderManager manager;return manager;}
+ bool isKeeperHandVisible() const {return handVisible;}
+ void rrToggleHandSelectorVisibility(){handVisible=!handVisible;++toggles;}};
 struct ODApplication {static double turnsPerSecond;};
 double ODApplication::turnsPerSecond = 1.4;
 struct Player {std::string nick;const std::string& getNick() const {return nick;}};

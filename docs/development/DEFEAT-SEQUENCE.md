@@ -101,7 +101,10 @@ the floor a few tiles behind the heart) and fades by colour.
 returns true only once). `GameMode::showDefeatDebriefing` loads
 `gui/WindowDefeatDebriefing.layout` (picked up with the rest of `gui/`, no build list
 to change), adds it to the game sheet above the black cover, hides the subtitle and the
-camera symbol, and shows the pointer again (the hand stays hidden). The window shows:
+camera symbol, and shows the pointer again: the CEGUI cursor and the keeper hand. The
+arrow image of the CEGUI cursor (`OpenDungeonsSkin/MouseArrow`) is fully transparent in this
+game; the visible pointer is the hand. With the hand still hidden, as before, the debriefing had
+no visible pointer, which looked like a blocked mouse. The window shows:
 
 - a stone surface: the tiled `ODHudSurface/Stone` image (the one the HUD navigation frame
   uses) fills the whole screen, slightly dimmed, and the panel is the same stone, dimmed
