@@ -21,6 +21,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/PersistentObject.h"
@@ -139,6 +140,8 @@ class RoomDungeonTempleFactory : public RoomFactory
 static RoomRegister reg(new RoomDungeonTempleFactory);
 }
 
+const double RoomDungeonTemple::HEART_HP_PER_TILE = 10000.0;
+
 RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
     mTempleObject(nullptr),
@@ -150,7 +153,12 @@ RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
 
 double RoomDungeonTemple::getHP(Tile* tile) const
 {
-    return mHeartHP < 0.0 ? Building::getHP(nullptr) : mHeartHP;
+    return mHeartHP < 0.0 ? getHeartMaxHP() : mHeartHP;
+}
+
+double RoomDungeonTemple::getHeartMaxHP() const
+{
+    return HEART_HP_PER_TILE * static_cast<double>(numCoveredTiles());
 }
 
 bool RoomDungeonTemple::canAttackHeart(Tile* tile, Seat* seat) const
@@ -166,9 +174,13 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
 {
     if(attacker == nullptr || !canAttackHeart(tileTakingDamage, attacker->getSeat()))
         return 0.0;
+    // Only fighters damage an enemy heart; workers leave it alone
+    if(attacker->getObjectType() == GameEntityType::creature
+        && static_cast<Creature*>(attacker)->getDefinition()->isWorker())
+        return 0.0;
 
     if(mHeartHP < 0.0)
-        mHeartHP = Building::getHP(nullptr);
+        mHeartHP = getHeartMaxHP();
     const double damage = std::max(0.0, absoluteDamage)
         + std::max(0.0, physicalDamage - getPhysicalDefense())
         + std::max(0.0, magicalDamage - getMagicalDefense())
@@ -190,7 +202,7 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
         fireEntityDead();
     }
     else if(!mCriticalWarningSent && !getGameMap()->isInEditorMode()
-        && mHeartHP <= 0.11 * Building::getHP(nullptr))
+        && mHeartHP <= 0.11 * getHeartMaxHP())
     {
         // Warn the owner once, at the first hit after the heart is already at or
         // below 11 % of its durability. The killing hit sends nothing (defeat handles it).
@@ -238,22 +250,34 @@ void RoomDungeonTemple::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
     if(!getGameMap()->isInEditorMode())
-        os << "HeartHP " << getHP(nullptr) << '\n';
+        os << "HeartHealth " << getHP(nullptr) << '\n';
 }
 
 bool RoomDungeonTemple::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
         return false;
-    // Old maps and saves have no room-level health record; retain their total
-    // remaining durability without interpreting the following room as health.
-    mHeartHP = Building::getHP(nullptr);
+    // Old maps and saves have no room-level health record: their heart starts
+    // undamaged, without interpreting the following room as health.
+    mHeartHP = getHeartMaxHP();
     is >> std::ws;
     if(is.peek() == 'H')
     {
         std::string marker;
-        if(!(is >> marker >> mHeartHP) || marker != "HeartHP"
-            || !std::isfinite(mHeartHP) || mHeartHP < 0.0)
+        double value;
+        if(!(is >> marker >> value) || !std::isfinite(value) || value < 0.0)
+            return false;
+        if(marker == "HeartHealth")
+            mHeartHP = std::min(value, getHeartMaxHP());
+        else if(marker == "HeartHP")
+        {
+            // Saves written before the heart had its own health: the value was measured against
+            // the durability of the floor tiles. Keep the same share of the new maximum.
+            const double floorDurability = Building::getHP(nullptr);
+            mHeartHP = floorDurability > 0.0
+                ? std::min(1.0, value / floorDurability) * getHeartMaxHP() : 0.0;
+        }
+        else
             return false;
     }
     return true;
