@@ -20,6 +20,7 @@
 
 #include "GameEditorModeBase.h"
 
+#include "modes/DefeatSequence.h"
 #include "modes/InputCommand.h"
 #include "modes/InputBridge.h"
 #include "modes/SettingsWindow.h"
@@ -172,6 +173,10 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! player lost. conquerorSeatId is the seat that destroyed the heart (-1 if unknown); the heart tile
     //! is the centre tile of the destroyed heart (-1/-1 if unknown).
     void startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY);
+
+    //! \brief Called once when the defeat sequence has run to its end (the screen is black).
+    //! Empty on purpose: the debriefing window is the next step and will be started from here.
+    void onDefeatSequenceFinished();
 
     //! \brief Shows/hides/toggles the options window
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
@@ -385,6 +390,30 @@ private:
 
     //! \brief Builds the player settings window
     void buildPlayerSettingsWindow();
+
+    //! \brief Advances the defeat sequence by one frame (does nothing before it starts)
+    void updateDefeatSequence(float elapsed);
+    //! \brief Puts the camera on a low oblique view of the given floor position without a flight
+    void cutCameraToHeart(const Ogre::Vector3& heartPosition);
+    void createDefeatWindows();
+    void destroyDefeatWindows();
+    //! \brief Hides every window of the game interface except the ones of the defeat sequence
+    void hideInterfaceForDefeat();
+    void startDefeatSwirl();
+    void stopDefeatEffects();
+
+    DefeatSequence mDefeatSequence;
+    //! Position of the destroyed heart in the scene
+    Ogre::Vector3 mDefeatHeartPosition;
+    //! Direction (horizontal, unit length) in which the swirl travels
+    Ogre::Vector3 mDefeatSwirlDirection;
+    bool mDefeatExplosionEffectActive = false;
+    bool mDefeatSwirlEffectActive = false;
+    bool mDefeatSwirlDone = false;
+    CEGUI::Window* mDefeatTint = nullptr;
+    CEGUI::Window* mDefeatFade = nullptr;
+    CEGUI::Window* mDefeatSubtitle = nullptr;
+    CEGUI::Window* mDefeatCameraMarker = nullptr;
 
 };
 

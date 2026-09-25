@@ -64,6 +64,7 @@
 #include <OgreMesh.h>
 #include <OgreMovableObject.h>
 #include <OgreOverlayContainer.h>
+#include <OgreParticleEmitter.h>
 #include <OgreParticleSystem.h>
 #include <OgrePrerequisites.h>
 #include <OgreQuaternion.h>
@@ -1886,6 +1887,51 @@ void RenderManager::rrCreateRoomConstructionEffect(const std::vector<Tile*>& til
         mRoomConstructionEffects.push_back(
             {nodeName, particleName, ROOM_CONSTRUCTION_EFFECT_DURATION});
     }
+}
+
+void RenderManager::rrCreateFreeParticleEffect(const std::string& effectName, const std::string& particleScript,
+    const Ogre::Vector3& position, const Ogre::ColourValue* colour)
+{
+    const std::string nodeName = effectName + "_node";
+    const std::string particleName = effectName + "_particle";
+    if(mSceneManager->hasParticleSystem(particleName) || mSceneManager->hasSceneNode(nodeName))
+    {
+        OD_LOG_ERR("Free particle effect already exists: " + effectName);
+        return;
+    }
+
+    Ogre::SceneNode* node = mSceneManager->getRootSceneNode()->createChildSceneNode(nodeName, position);
+    Ogre::ParticleSystem* particleSystem = mSceneManager->createParticleSystem(particleName, particleScript);
+    particleSystem->setVisibilityFlags(CullingType::SHOW_ALL);
+    if(colour != nullptr)
+    {
+        for(unsigned short i = 0; i < particleSystem->getNumEmitters(); ++i)
+            particleSystem->getEmitter(i)->setColour(*colour);
+    }
+    node->attachObject(particleSystem);
+}
+
+void RenderManager::rrMoveFreeParticleEffect(const std::string& effectName, const Ogre::Vector3& position)
+{
+    const std::string nodeName = effectName + "_node";
+    if(mSceneManager->hasSceneNode(nodeName))
+        mSceneManager->getSceneNode(nodeName)->setPosition(position);
+}
+
+void RenderManager::rrDestroyFreeParticleEffect(const std::string& effectName)
+{
+    const std::string particleName = effectName + "_particle";
+    const std::string nodeName = effectName + "_node";
+    if(mSceneManager->hasParticleSystem(particleName))
+    {
+        Ogre::ParticleSystem* particleSystem = mSceneManager->getParticleSystem(particleName);
+        Ogre::SceneNode* node = particleSystem->getParentSceneNode();
+        if(node != nullptr)
+            node->detachObject(particleSystem);
+        mSceneManager->destroyParticleSystem(particleSystem);
+    }
+    if(mSceneManager->hasSceneNode(nodeName))
+        mSceneManager->destroySceneNode(nodeName);
 }
 
 void RenderManager::clearRoomConstructionEffects()

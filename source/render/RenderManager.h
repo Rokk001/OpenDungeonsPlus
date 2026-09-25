@@ -184,6 +184,13 @@ public:
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
+
+    //! \brief Creates a free-standing particle effect that stays until rrDestroyFreeParticleEffect().
+    //! \param colour If not null, the colour of every emitter of the script is set to it.
+    void rrCreateFreeParticleEffect(const std::string& effectName, const std::string& particleScript,
+        const Ogre::Vector3& position, const Ogre::ColourValue* colour);
+    void rrMoveFreeParticleEffect(const std::string& effectName, const Ogre::Vector3& position);
+    void rrDestroyFreeParticleEffect(const std::string& effectName);
     void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
         bool bodyDamage, const Ogre::Vector3& attackerPosition);
     void rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,

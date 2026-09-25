@@ -32,10 +32,9 @@ If the client is not in the game mode (menu, editor) the message is ignored.
 centre tile on the owning `Player` (`recordHeartDestroyed`) when the heart's health
 reaches 0, because the room is removed shortly afterwards.
 
-## Not implemented yet
+## Client presentation
 
-`GameMode::startDefeatSequence` only writes a log line. The client presentation
-(interface hiding, camera, explosion, fade, debriefing) is a separate step.
+`GameMode::startDefeatSequence` runs the sequence described in [DEFEAT-SEQUENCE.md](DEFEAT-SEQUENCE.md).
 
 ## Verification limits
 
