@@ -82,10 +82,14 @@ struct Player {
  RECORD
  void notifyNoMoreDungeonTemple();
 };
+enum class GameEntityType {creature, other};
+struct CreatureDefinition {bool isWorker()const{return false;}};
 struct GameEntity {Seat* seat;int deaths=0;GameEntity(Seat* s=nullptr):seat(s){}virtual ~GameEntity()=default;
+ virtual GameEntityType getObjectType()const{return GameEntityType::other;}
  Seat* getSeat(){return seat;}void setSeat(Seat* s){seat=s;}void fireEntityDead(){++deaths;}
  virtual bool isAttackable(Tile*,Seat*)const{return false;}virtual double getHP(Tile*)const{return 0;}
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 0;}};
+struct Creature:GameEntity {CreatureDefinition definition;const CreatureDefinition* getDefinition()const{return &definition;}};
 struct Building {double floorHP=250;virtual ~Building()=default;virtual double getHP(Tile*)const{return floorHP;}};
 struct BuildingObject;
 struct Room:Building {
@@ -129,6 +133,7 @@ struct RoomDungeonTemple:Room {
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  RoomType getType() const override{return RoomType::dungeonTemple;}
  INLINE_METHODS
+ static const double HEART_HP_PER_TILE;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const override;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -170,7 +175,7 @@ int main(){
 
  // The heart dies
  GameEntity attacker(&enemy);
- check(heart.takeHeartDamage(&attacker,999,0,0,0,&centre)==250,"lethal blow clamped to the heart health");
+ check(heart.takeHeartDamage(&attacker,99999,0,0,0,&centre)==20000,"lethal blow clamped to the heart health (10000 per room tile)");
  check(heart.dead==1&&heart.getHP(nullptr)==0,"heart death fires once");
  owner.computeSeatBeginTurn();
  check(owner.getNbRooms(RoomType::dungeonTemple)==0,"seat has no temple as soon as the heart is dead");
@@ -214,7 +219,7 @@ int main(){
 
  // Save and load of the destroyed state
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
- check(save.str().find("HeartHP 0")!=std::string::npos,"destroyed state is written with the room");
+ check(save.str().find("HeartHealth 0")!=std::string::npos,"destroyed state is written with the room");
  RoomDungeonTemple loaded(&map,&owner);TileData loadedCentre,loadedFloor;addFloor(loaded,&centre,&floor,&loadedCentre,&loadedFloor);
  check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==0,"destroyed heart loads");
  std::string next;save>>next;check(next=="[/Room]","load keeps the room boundary");
@@ -231,7 +236,7 @@ int main(){
 
  // A damaged living heart still loads with its object
  {RoomDungeonTemple living(&map,&owner);TileData livingCentre,livingFloor;addFloor(living,&centre,&floor,&livingCentre,&livingFloor);
-  std::stringstream damaged("250\nHeartHP 100\n[/Room]\n");
+  std::stringstream damaged("250\nHeartHealth 100\n[/Room]\n");
   check(living.importFromStream(damaged)&&living.getHP(nullptr)==100,"damaged heart round trip");
   int asked=g_removeAsked;living.updateActiveSpots(&map);living.restoreInitialEntityState();
   check(living.added==1&&living.mTempleObject!=nullptr&&living.restored==1,"living loaded heart gets its object back");
@@ -240,7 +245,7 @@ int main(){
  // Removal is retried while a seat that saw the heart has no vision on it
  {map.mRooms.clear();RoomDungeonTemple late(&map,&owner);TileData lateCentre,lateFloor;addFloor(late,&centre,&floor,&lateCentre,&lateFloor);
   map.mRooms.push_back(&late);late.updateActiveSpots(&map);
-  g_removeAllowed=false;late.takeHeartDamage(&attacker,999,0,0,0,&centre);
+  g_removeAllowed=false;late.takeHeartDamage(&attacker,99999,0,0,0,&centre);
   late.doUpkeep();late.doUpkeep();
   check(late.objectsRemoved==0&&late.mTempleObject!=nullptr&&late.mCoveredTiles.size()==2,"object stays while removal is refused");
   g_removeAllowed=true;late.doUpkeep();late.doUpkeep();
@@ -250,15 +255,17 @@ int main(){
  {map.editor=true;RoomDungeonTemple edit(&map,&owner);TileData editCentre,editFloor;addFloor(edit,&centre,&floor,&editCentre,&editFloor);
   check(edit.removeCoveredTile(&floor)&&edit.mCoveredTiles.size()==1,"editor can still remove floor tiles");
   edit.updateActiveSpots(&map);check(edit.added==1&&edit.mTempleObject!=nullptr,"editor still places the heart object");
-  std::stringstream level;edit.exportToStream(level);check(level.str().find("HeartHP")==std::string::npos,"editor maps do not persist heart health");
+  std::stringstream level;edit.exportToStream(level);check(level.str().find("Heart")==std::string::npos,"editor maps do not persist heart health");
   map.editor=false;}
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''
 inline = '\n'.join(function(temple_header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
-methods = '\n'.join(function(temple, sig) for sig in (
-    'double RoomDungeonTemple::getHP(', 'bool RoomDungeonTemple::canAttackHeart(',
+methods = 'const double RoomDungeonTemple::HEART_HP_PER_TILE = ' + \
+    temple.split('const double RoomDungeonTemple::HEART_HP_PER_TILE = ')[1].split(';')[0] + ';\n'
+methods += '\n'.join(function(temple, sig) for sig in (
+    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream(', 'void RoomDungeonTemple::updateActiveSpots(',
