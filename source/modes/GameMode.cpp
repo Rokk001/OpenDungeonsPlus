@@ -23,6 +23,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/HeartHealthRing.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillManager.h"
@@ -1716,6 +1717,11 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     }
     player->frameStarted(evt.timeSinceLastFrame);
     mCreaturePanel->update();
+
+    HeartHealthRing::BadgeState& heartBadge = ODClient::getSingleton().getHeartBadge();
+    heartBadge.update(evt.timeSinceLastFrame);
+    if(heartBadge.takeDirty())
+        mModeManager->getGui().updateHeartBadge(heartBadge.mFraction, heartBadge.mGlow);
 
     // After frameStarted, so that the countdown shown is the one just computed.
     refreshActionFeedback(evt.timeSinceLastFrame);

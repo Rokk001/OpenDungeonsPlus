@@ -407,6 +407,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> ODApplication::turnsPerSecond);
             mHasLevelStatistics = false;
             mLevelStatistics = LevelStatistics();
+            mHeartBadge = HeartHealthRing::BadgeState();
 
             OD_ASSERT_TRUE(packetReceived >> nbPlayers);
             for(int i = 0; i < nbPlayers; ++i)
@@ -845,6 +846,15 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 mLevelStatistics = statistics;
                 mHasLevelStatistics = true;
             }
+            break;
+        }
+
+        case ServerNotificationType::heartHealth:
+        {
+            float healthFraction;
+            bool underAttack;
+            OD_ASSERT_TRUE(packetReceived >> healthFraction >> underAttack);
+            mHeartBadge.receive(healthFraction, underAttack);
             break;
         }
 

@@ -24,6 +24,7 @@
 #include "entities/MapLight.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/HeartHealthRing.h"
 #include "game/Player.h"
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
@@ -39,6 +40,7 @@
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
 #include "rooms/RoomWorkshop.h"
@@ -73,6 +75,40 @@ static const int32_t MASTER_SERVER_STATUS_FINISHED = 2;
 
 namespace
 {
+    //! \brief Tells a human player about the health of its dungeon heart when the fraction changed
+    //! by at least one percentage point since the last message, when the heart is destroyed,
+    //! and once when the game starts or is loaded (nothing was sent to this client yet). A drop
+    //! since the last message means the heart is under attack.
+    void notifyHeartHealth(GameMap* gameMap, ODSocketClient* sock, Player* player)
+    {
+        if(!player->getIsHuman() || player->getSeat() == nullptr)
+            return;
+
+        Room* heart = nullptr;
+        for(Room* room : gameMap->getRooms())
+        {
+            if(room->getType() == RoomType::dungeonTemple && room->getSeat() == player->getSeat())
+            {
+                heart = room;
+                break;
+            }
+        }
+        if(heart == nullptr)
+            return;
+
+        const float fraction = static_cast<float>(static_cast<RoomDungeonTemple*>(heart)->getHeartHealthFraction());
+        const float lastSent = sock->getHeartHealthSent();
+        if(!HeartHealthRing::shouldNotify(lastSent, fraction))
+            return;
+
+        const bool underAttack = lastSent >= 0.0f && fraction < lastSent;
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::heartHealth, player);
+        serverNotification->mPacket << fraction << underAttack;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+        sock->setHeartHealthSent(fraction);
+    }
+
     //! \brief Gives a creature the level the editor asked for. Levelling raises the maximum
     //! HP without healing, which is what we want in game but not here: a creature placed in
     //! a level is expected to start it in full health.
@@ -406,6 +442,8 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         seat->exportToPacketForUpdate(serverNotification->mPacket);
         serverNotification->mPacket << goals;
         ODServer::getSingleton().queueServerNotification(serverNotification);
+
+        notifyHeartHealth(gameMap, sock, player);
 
         // Here, the creature list is pulled. It could be possible that the creature dies before the stat window is
         // closed. So, if we cannot find the creature, we just erase it.

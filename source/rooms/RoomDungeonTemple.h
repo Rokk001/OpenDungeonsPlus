@@ -40,6 +40,8 @@ public:
     { return false; }
     bool canAttackHeart(Tile* tile, Seat* seat) const;
     double getHP(Tile* tile) const override;
+    //! \brief Remaining heart health divided by the total durability, from 0 to 1.
+    double getHeartHealthFraction() const;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage,
         double magicalDamage, double elementDamage, Tile* tileTakingDamage, bool ko) override
     { return 0.0; }

@@ -50,6 +50,7 @@ class ODSocketClient
             mSource(ODSource::none),
             mPlayer(nullptr),
             mLastTurnAck(-1),
+            mHeartHealthSent(-1.0f),
             mPendingTimestamp(-1),
             mSupportsLiveNickname(false),
             mSupportsCreatureMood(false),
@@ -85,6 +86,9 @@ class ODSocketClient
         void setSupportsCreatureProgress(bool supported) { mSupportsCreatureProgress = supported; }
         int64_t getLastTurnAck() { return mLastTurnAck; }
         void setLastTurnAck(int64_t lastTurnAck) { mLastTurnAck = lastTurnAck; }
+        //! \brief Heart health fraction of the last heartHealth message sent, negative if none
+        float getHeartHealthSent() const { return mHeartHealthSent; }
+        void setHeartHealthSent(float fraction) { mHeartHealthSent = fraction; }
         const std::string& getState() {return mState;}
         bool isDataAvailable(int miliseconds=5);
         int32_t getGameTimeMillis()
@@ -138,6 +142,7 @@ class ODSocketClient
         sf::TcpSocket mSockClient;
         Player* mPlayer;
         int64_t mLastTurnAck;
+        float mHeartHealthSent;
         std::string mState;
 
 

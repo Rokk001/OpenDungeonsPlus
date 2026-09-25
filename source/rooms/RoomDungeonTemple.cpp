@@ -153,6 +153,14 @@ double RoomDungeonTemple::getHP(Tile* tile) const
     return mHeartHP < 0.0 ? Building::getHP(nullptr) : mHeartHP;
 }
 
+double RoomDungeonTemple::getHeartHealthFraction() const
+{
+    const double totalDurability = Building::getHP(nullptr);
+    if(totalDurability <= 0.0)
+        return 0.0;
+    return std::max(0.0, std::min(1.0, getHP(nullptr) / totalDurability));
+}
+
 bool RoomDungeonTemple::canAttackHeart(Tile* tile, Seat* seat) const
 {
     return seat != nullptr && getSeat() != nullptr && !getSeat()->isAlliedSeat(seat)
