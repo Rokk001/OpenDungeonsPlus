@@ -75,6 +75,9 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mCreatureCannotFindBed(0.0f),
     mCreatureCannotFindFood(0.0f),
     mHasLost(false),
+    mConquerorSeatId(-1),
+    mDefeatHeartTileX(-1),
+    mDefeatHeartTileY(-1),
     mSpellsCooldown(std::vector<PlayerSpellData>(static_cast<uint32_t>(SpellType::nbSpells), PlayerSpellData(0, 0.0f))),
     mWorkersActions(std::vector<uint32_t>(static_cast<uint32_t>(CreatureActionType::nb), 0))
 {
@@ -456,6 +459,15 @@ void Player::notifyNoMoreDungeonTemple()
             ODServer::getSingleton().queueServerNotification(serverNotification);
         }
         mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::AllyDefeated);
+    }
+
+    // Tell the defeated human player's client to start the defeat sequence (this player only, once)
+    if(getIsHuman())
+    {
+        ServerNotification *serverNotification = new ServerNotification(
+            ServerNotificationType::playerDefeated, this);
+        serverNotification->mPacket << mConquerorSeatId << mDefeatHeartTileX << mDefeatHeartTileY;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
 

@@ -180,6 +180,15 @@ public:
     inline bool getHasLost() const
     { return mHasLost; }
 
+    //! rief Remembers who destroyed this player's dungeon heart and where it stood. Called by the
+    //! heart room when its health reaches 0 (the room is removed shortly after). Use -1 for unknown values.
+    inline void recordHeartDestroyed(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY)
+    {
+        mConquerorSeatId = conquerorSeatId;
+        mDefeatHeartTileX = heartTileX;
+        mDefeatHeartTileY = heartTileY;
+    }
+
     //! \brief Notify the player is fighting
     //! Should be called on the server game map for human players only. tile represents
     //! the place where the fight is happening and player is the Player actually fighting
@@ -287,6 +296,12 @@ private:
     float mCreatureCannotFindFood;
 
     bool mHasLost;
+
+    //! rief Seat id that dealt the final blow to the heart, and the heart centre tile. -1 if unknown.
+    //! Filled on the server by recordHeartDestroyed and sent with the playerDefeated notification.
+    int32_t mConquerorSeatId;
+    int32_t mDefeatHeartTileX;
+    int32_t mDefeatHeartTileY;
 
     //! \brief List of tiles there is an event on. Used on client and server
     std::vector<PlayerEvent*> mEvents;

@@ -1905,6 +1905,12 @@ bool GameMode::moveTrapProductionOrder(bool earlier)
     return true;
 }
 
+void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY)
+{
+    OD_LOG_INF("Defeat sequence requested: conquerorSeatId=" + Helper::toString(conquerorSeatId)
+        + ", heartTile=" + Helper::toString(heartTileX) + "," + Helper::toString(heartTileY));
+}
+
 void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
 {
     CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("ProductionWindow/Orders"));

@@ -120,7 +120,12 @@ enum class ServerNotificationType
     creatureChickenFeeding,
 
     // Owner-only reply to a production query or reorder request.
-    trapProductionQueue
+    trapProductionQueue,
+
+    // Owner-only start of the defeat sequence for a defeated human player:
+    // + int32_t conquerorSeatId (-1 if unknown), int32_t heartTileX, int32_t heartTileY (-1/-1 if unknown).
+    // Appended last so that no existing numeric value changes.
+    playerDefeated
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
