@@ -118,7 +118,17 @@ int main(){int checks=0,failures=0;
  std::stringstream legacy("80\n[/Room]\n");RoomDungeonTemple old(&map,&owner);
  check(old.importFromStream(legacy)&&old.getHP(nullptr)==90000,"a heart without a health record starts undamaged");
  legacy>>next;check(next=="[/Room]","legacy boundary not consumed");
- for(const char* text:{"250\nHeartHP -1\n", "250\nHeartHP nan\n", "250\nHeartHP nope\n"}){
+ check(save.str().find("HeartHealth 19984")!=std::string::npos,"the health is saved as HeartHealth on the heart's own scale");
+ // Saves from before the heart had its own health: HeartHP was measured against the floor durability (250 here)
+ {std::stringstream full("250\nHeartHP 250\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(full)&&h.getHP(nullptr)==90000,"an old save with a full heart (HeartHP equal to the floor durability) loads full");}
+ {std::stringstream half("250\nHeartHP 125\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(half)&&h.getHP(nullptr)==45000,"an old half damaged heart keeps its share of the health");}
+ {std::stringstream ruin("250\nHeartHP 0\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(ruin)&&h.getHP(nullptr)==0,"an old destroyed heart stays destroyed");}
+ {std::stringstream big("250\nHeartHealth 999999\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(big)&&h.getHP(nullptr)==90000,"a saved health above the maximum is limited to it");}
+ for(const char* text:{"250\nHeartHP -1\n", "250\nHeartHP nan\n", "250\nHeartHP nope\n", "250\nHeartHealth -1\n", "250\nHeartSomething 5\n"}){
   std::stringstream bad(text);RoomDungeonTemple invalid(&map,&owner);check(!invalid.importFromStream(bad),"invalid health rejected");}
  {Creature worker(&enemy,true);Creature fighter(&enemy,false);
   check(heart.takeHeartDamage(&worker,999,999,999,999,&centre)==0&&heart.getHP(nullptr)==19984,"an enemy worker cannot damage the heart");
@@ -170,7 +180,7 @@ int main(){int checks=0,failures=0;
   h.takeHeartDamage(&hitter,99999,0,0,0,nullptr);check(p.recorded==1&&p.conqueror==5&&p.heartX==-1&&p.heartY==-1,"unknown centre tile is recorded as -1/-1");}
  map.editor=true;RoomDungeonTemple edit(&map,&owner);edit.mCoveredTiles={&floor};
  check(edit.removeCoveredTile(&floor),"editor editing preserved");
- std::stringstream level;edit.exportToStream(level);check(level.str().find("HeartHP")==std::string::npos,"editor maps do not persist combat damage");
+ std::stringstream level;edit.exportToStream(level);check(level.str().find("Heart")==std::string::npos,"editor maps do not persist combat damage");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''

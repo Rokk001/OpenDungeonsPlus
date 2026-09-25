@@ -16,8 +16,10 @@ switched off after 3 seconds without a further message and never shows on a dest
 
 - The badges are still generated procedurally at start-up by `createNavigationImages` in
   `source/render/Gui.cpp`, now through `drawBadgePixels`. `Gui::updateHeartBadge` draws the
-  heart badge again into the same CEGUI texture (`ManaBadge`), so the layout, the image
-  scaling, the tooltips and the resource strip are unchanged.
+  heart badge again and writes it with `blitFromMemory` into the existing texture (`ManaBadge`),
+  so the layout, the image scaling, the tooltips and the resource strip are unchanged. It first
+  used `loadFromMemory`: the CEGUI Ogre renderer then makes a new Ogre texture, while the badge
+  window keeps drawing the Ogre texture stored in its cached geometry, so the ring never moved.
 - The rules (arc, one-point step, glow timer) are in `source/game/HeartHealthRing.h`.
 - New server notification `heartHealth` (last value of `ServerNotificationType`):
   `float healthFraction`, `bool underAttack`, sent to the owning human player only.
@@ -37,6 +39,9 @@ for 0, 10, 50 and 100 percent, clamping, the one-point rule, the human-owner-onl
 payload order, the glow timer, a save and load round trip and the wiring in the client and the
 game mode. On Windows, application control sometimes blocks freshly compiled fixtures (error
 4551); the script retries four times.
+`source/tests/check_heart_badge_texture.py` runs the real `updateHeartBadge` with the CEGUI Ogre
+renderer in a hidden window: it reproduces that `loadFromMemory` replaces the Ogre texture, and
+reads back that the update keeps the texture and holds the ring of the new health.
 
 Not verified: how the badge looks in the running game. The magenta glow strength and the
 dark groove colour are estimates. Hits smaller than one percentage point in total are not
