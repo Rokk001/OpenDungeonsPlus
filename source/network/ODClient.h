@@ -20,6 +20,7 @@
 
 #include "network/ODSocketClient.h"
 #include "network/ClientNotification.h"
+#include "game/LevelStatistics.h"
 
 #include <OgreSingleton.h>
 
@@ -87,6 +88,13 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline bool getIsPlayerConfig() const
     { return mIsPlayerConfig; }
 
+    //! @brief True once the debriefing counters of the lost level have been received
+    inline bool hasLevelStatistics() const
+    { return mHasLevelStatistics; }
+
+    inline const LevelStatistics& getLevelStatistics() const
+    { return mLevelStatistics; }
+
     inline void pause()
     { mGameClock.pause(); }
 
@@ -113,6 +121,10 @@ class ODClient: public Ogre::Singleton<ODClient>,
 
     // true if the server told us we are allowed to configure the game. False otherwise
     bool mIsPlayerConfig;
+
+    // Debriefing counters sent by the server after playerDefeated
+    bool mHasLevelStatistics;
+    LevelStatistics mLevelStatistics;
 
 };
 
