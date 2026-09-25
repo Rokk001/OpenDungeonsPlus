@@ -12,6 +12,7 @@
             <Property name="VertFormatting" value="Tiled" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
+            <Property name="RiseOnClickEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="Panel" >
             <Property name="Area" value="{{0.5,-320},{0.5,-240},{0.5,320},{0.5,240}}" />

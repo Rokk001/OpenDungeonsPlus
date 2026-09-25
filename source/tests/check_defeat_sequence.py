@@ -14,6 +14,8 @@ game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 game_mode_header = (repo / 'source/modes/GameMode.h').read_text()
 sequence_header = (repo / 'source/modes/DefeatSequence.h').read_text()
 client = (repo / 'source/network/ODClient.cpp').read_text()
+frame_listener = (repo / 'source/render/ODFrameListener.cpp').read_text()
+mode_manager = (repo / 'source/modes/ModeManager.cpp').read_text()
 
 
 def function(text, signature):
@@ -106,7 +108,7 @@ class GameMode
 {
 public:
     GameMode():mRootWindow(&mRoot),mGameMap(&mMap){}
-    void updateDefeatSequence(float elapsed);
+    void updateDefeatSequence(std::chrono::steady_clock::time_point now);
     void startDefeatSwirl();
     void stopDefeatEffects();
     void hideInterfaceForDefeat();
@@ -139,10 +141,17 @@ int gChecks = 0, gFailures = 0;
 void check(bool ok, const char* msg) {++gChecks;if(!ok){++gFailures;std::cout << "FAIL " << msg << '\n';}}
 bool near(float a, float b) {return std::fabs(a - b) < 0.001f;}
 typedef DefeatSequence DS;
+std::chrono::steady_clock::duration seconds(double value)
+{
+    return std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(value));
+}
 
 struct Run
 {
     GameMode mode;
+    std::chrono::steady_clock::time_point start, now;
+    int finishes = 0;
+    float finishWallTime = -1;
     CEGUI::Window ui1, ui2, tint, fade, subtitle, marker;
     int explosionDestroys = 0, swirlCreates = 0, swirlDestroys = 0, swirlMoves = 0;
     float firstExplosionDestroy = -1, swirlCreateTime = -1, swirlDestroyTime = -1, finishTime = -1;
@@ -160,19 +169,25 @@ struct Run
         ODFrameListener::getSingleton().cameraManager.camera.direction = Ogre::Vector3(0, 1, -0.5f);
         mode.mRoot.children = {&ui1, &ui2, &tint, &fade, &subtitle, &marker};
         mode.mDefeatTint = &tint;mode.mDefeatFade = &fade;mode.mDefeatSubtitle = &subtitle;mode.mDefeatCameraMarker = &marker;
-        mode.mDefeatSequence.start(conqueror, hx, hy);
+        start = std::chrono::steady_clock::time_point() + seconds(1000.0);
+        now = start;
+        mode.mDefeatSequence.start(conqueror, hx, hy, start);
         mode.mDefeatHeartPosition = Ogre::Vector3(float(hx), float(hy), 0.0f);
         mode.mDefeatExplosionEffectActive = true;
         RenderManager::getSingleton().rrCreateFreeParticleEffect("DefeatHeartExplosion", "HeartExplosion", mode.mDefeatHeartPosition, nullptr);
     }
 
-    // one frame; the interface is shown again first, as game code does when it refreshes a window
-    void frame(float dt)
+    // one frame of dt seconds of wall clock; the game calls the update from both frame hooks, so
+    // updatesPerFrame calls see the same time; the interface is shown again first, as game code does
+    // when it refreshes a window
+    void frame(float dt, int updatesPerFrame = 1)
     {
         ui1.visible = true;
         size_t before = RenderManager::getSingleton().effects.size();
         bool wasFinished = mode.mDefeatSequence.isFinished();
-        mode.updateDefeatSequence(dt);
+        now += seconds(dt);
+        for(int call = 0; call < updatesPerFrame; ++call)
+            mode.updateDefeatSequence(now);
         if(ui1.visible || ui2.visible) ++uiShownAfterHide;
         if(!mode.mDefeatSequence.isFinished() && (!tint.visible || !fade.visible || !subtitle.visible || !marker.visible)) sequenceWindowHidden = true;
         float t = mode.mDefeatSequence.getElapsed();
@@ -194,7 +209,11 @@ struct Run
             }
             if(e.name == "DefeatSwirl" && e.event == "destroy") {++swirlDestroys;swirlDestroyTime = t;}
         }
-        if(!wasFinished && mode.mDefeatSequence.isFinished()) {finishTime = t;}
+        if(!wasFinished && mode.mDefeatSequence.isFinished())
+        {
+            finishTime = t;++finishes;
+            finishWallTime = static_cast<float>(std::chrono::duration<double>(now - start).count());
+        }
     }
 };
 
@@ -219,24 +238,34 @@ int main()
     // One-shot guard, input gate, step limit
     DefeatSequence sequence;
     check(!sequence.isStarted() && !sequence.blocksInput(), "input is not blocked before the start");
-    check(!sequence.advance(1.0f) && near(sequence.getElapsed(), 0.0f), "a sequence that was not started does not advance");
-    check(sequence.start(2, 17, 23), "first start request is accepted");
+    const std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::time_point() + seconds(100.0);
+    check(near(DS::secondsBetween(t0, t0 + seconds(29.5)), 29.5f) && near(DS::secondsBetween(t0, t0), 0.0f)
+        && near(DS::secondsBetween(t0, t0 - seconds(3.0)), 0.0f), "wall-clock seconds since the start, never negative");
+    check(!sequence.advanceTo(t0 + seconds(1.0)) && near(sequence.getElapsed(), 0.0f), "a sequence that was not started does not advance");
+    check(sequence.start(2, 17, 23, t0), "first start request is accepted");
     check(sequence.blocksInput() && sequence.isHeartKnown() && sequence.isSwirlWanted(), "started: input blocked, heart known, swirl wanted");
-    check(!sequence.start(3, 5, 6), "second start request is ignored");
+    check(!sequence.start(3, 5, 6, t0 + seconds(4.0)), "second start request is ignored");
     check(sequence.getConquerorSeatId() == 2 && sequence.getHeartTileX() == 17 && sequence.getHeartTileY() == 23, "second request did not change the data");
-    sequence.advance(10.0f);
-    check(near(sequence.getElapsed(), DefeatSequenceSettings::MAX_STEP), "one slow frame advances at most the step limit");
-    sequence.advance(-3.0f);
-    check(near(sequence.getElapsed(), DefeatSequenceSettings::MAX_STEP), "negative time is ignored");
+    sequence.advanceTo(t0 + seconds(4.0));
+    check(near(sequence.getElapsed(), 4.0f), "the second request did not move the start time");
+    sequence.advanceTo(t0 + seconds(10.0));
+    check(near(sequence.getElapsed(), 10.0f), "one long frame moves the timeline by exactly its wall-clock length");
+    sequence.advanceTo(t0 + seconds(10.0));
+    sequence.advanceTo(t0 + seconds(10.0));
+    check(near(sequence.getElapsed(), 10.0f), "more updates at the same time (several per frame) change nothing");
+    sequence.advanceTo(t0 + seconds(7.0));
+    sequence.advanceTo(t0 - seconds(3.0));
+    check(near(sequence.getElapsed(), 10.0f), "an earlier time or a time before the start is ignored");
     int ends = 0;
-    for(int i = 0; i < 1000; ++i) if(sequence.advance(0.1f)) ++ends;
+    for(int i = 0; i < 1000; ++i) if(sequence.advanceTo(t0 + seconds(10.0 + 0.1 * i))) ++ends;
     check(ends == 1, "the end is reported exactly once");
-    check(sequence.isFinished() && sequence.blocksInput() && !sequence.start(1, 1, 1), "after the end input stays blocked and a restart is refused");
+    check(sequence.getElapsed() >= 29.5f && sequence.getElapsed() < 29.6f, "the end is reached at 29.5 s of wall clock");
+    check(sequence.isFinished() && sequence.blocksInput() && !sequence.start(1, 1, 1, t0), "after the end input stays blocked and a restart is refused");
     DefeatSequence unknown;
-    unknown.start(-1, -1, -1);
+    unknown.start(-1, -1, -1, t0);
     check(!unknown.isSwirlWanted() && !unknown.isHeartKnown(), "-1 conqueror: no swirl; -1 heart: position unknown");
     DefeatSequence halfKnown;
-    halfKnown.start(0, 4, -1);
+    halfKnown.start(0, 4, -1, t0);
     check(!halfKnown.isHeartKnown() && halfKnown.isSwirlWanted(), "a heart with only one coordinate counts as unknown; seat 0 is a valid conqueror");
 
     // The GameMode driver over a whole sequence at 60 frames per second
@@ -268,6 +297,41 @@ int main()
         check(run.subtitle.text == "" && near(run.fade.alpha, 0.0f), "at 19 s there is no subtitle and no fade yet");
         for(int i = 0; i < 60 * 2; ++i) run.frame(1.0f / 60.0f);
         check(run.subtitle.text == "That's it for today. Until next time." && run.fade.alpha > 0.15f && run.fade.alpha < 0.18f, "at 21 s the fade has begun and the second subtitle shows");
+    }
+    // Two updates per frame, as the game does it (ODFrameListener::frameStarted and ModeManager::update both
+    // call onFrameStarted): the timeline must still take 29.5 s of wall clock, not half of it
+    {
+        Run run;run.begin(1, 17, 23);
+        int frames = 0;
+        while(!run.mode.mDefeatSequence.isFinished() && frames < 40 * 60) {run.frame(1.0f / 40.0f, 2);++frames;}
+        check(run.finishes == 1 && run.finishWallTime >= 29.5f && run.finishWallTime < 29.53f, "two updates per frame: the end comes after 29.5 s of wall clock");
+        check(frames >= 1180 && frames <= 1181, "two updates per frame at 40 fps: about 1180 frames until the end");
+        check(run.explosionDestroys == 1 && run.firstExplosionDestroy >= 15.0f && run.firstExplosionDestroy < 15.03f, "two updates per frame: the explosion ends at 15 s");
+        check(run.swirlCreates == 1 && run.swirlDestroys == 1 && run.swirlDestroyTime >= 18.5f && run.swirlDestroyTime < 18.53f, "two updates per frame: the swirl runs until 18.5 s");
+        check(run.mode.mDebriefingShown == 1, "two updates per frame: the debriefing opens once");
+        for(int i = 0; i < 100; ++i) run.frame(1.0f / 40.0f, 3);
+        check(run.finishes == 1 && run.mode.mDebriefingShown == 1 && near(run.fade.alpha, 1.0f), "after the end further updates keep the screen black and open nothing again");
+    }
+    // Long frames: the timeline keeps to the wall clock, no effect is left behind and every one-shot runs once
+    {
+        Run run;run.begin(1, 17, 23);
+        run.frame(0.1f);
+        run.frame(6.0f);
+        run.frame(0.9f);
+        check(near(run.tint.alpha, 0.35f) && run.subtitle.text == "Your dungeon heart has been destroyed.", "after a 6 s frame the timeline is at 7 s");
+        for(int i = 0; i < 40; ++i) run.frame(0.9f);
+        check(run.finishes == 1 && run.finishWallTime >= 29.5f && run.finishWallTime < 30.41f, "0.9 s frames: the end comes with the first frame after 29.5 s");
+        check(run.explosionDestroys == 1 && !run.mode.mDefeatExplosionEffectActive, "0.9 s frames: the explosion is removed once");
+        check(run.swirlCreates == 1 && run.swirlDestroys == 1 && !run.mode.mDefeatSwirlEffectActive, "0.9 s frames: the swirl is created and removed once");
+        check(run.mode.mDebriefingShown == 1 && near(run.fade.alpha, 1.0f), "0.9 s frames: black screen and one debriefing");
+    }
+    {
+        Run run;run.begin(1, 17, 23);
+        run.frame(15.4f);
+        run.frame(3.5f);
+        run.frame(12.0f);
+        check(run.explosionDestroys == 1 && run.swirlCreates == 0 && !run.mode.mDefeatSwirlEffectActive, "a frame across the whole swirl skips it without leaving an effect");
+        check(run.finishes == 1 && run.mode.mDebriefingShown == 1 && near(run.fade.alpha, 1.0f), "a frame across the end finishes once");
     }
     {
         Run run;run.begin(-1, 17, 23);
@@ -310,9 +374,15 @@ for signature in ('bool GameMode::mouseMoved(', 'bool GameMode::mousePressed(', 
     assert 'return true;' in body[:body.index('resetIdleHand();')], signature
 print('WIRING OK: mouse move/press/release and key press/release are gated first and return before any game code while the sequence runs')
 assert 'if(mDefeatSequence.blocksInput())' in function(game_mode, 'void GameMode::updateCameraControls(')
-assert 'updateDefeatSequence(evt.timeSinceLastFrame);' in function(game_mode, 'void GameMode::onFrameStarted(')
+assert 'updateDefeatSequence(std::chrono::steady_clock::now());' in function(game_mode, 'void GameMode::onFrameStarted(')
 start = function(game_mode, 'void GameMode::startDefeatSequence(')
 assert 'if(!mDefeatSequence.start(' in start and start.index('return;') < start.index('cutCameraToHeart')
+assert 'mDefeatSequence.start(conquerorSeatId, heartTileX, heartTileY, startTime)' in start and 'updateDefeatSequence(startTime);' in start
+assert 'mDefeatSequence.advanceTo(now)' in function(game_mode, 'void GameMode::updateDefeatSequence(')
+# The reason for the clock: onFrameStarted of the current mode runs twice per frame
+assert 'currentMode->onFrameStarted(evt);' in function(frame_listener, 'bool ODFrameListener::frameStarted(')
+assert 'mModeManager->update(evt);' in function(frame_listener, 'bool ODFrameListener::frameRenderingQueued(')
+assert 'currentMode->onFrameStarted(evt);' in function(mode_manager, 'void ModeManager::update(')
 assert 'mDefeatSequence.isHeartKnown()' in start and 'getCameraViewTarget()' in start
 assert 'onDefeatSequenceFinished' in game_mode_header
 assert 'startDefeatSequence(conquerorSeatId, heartTileX, heartTileY)' in client

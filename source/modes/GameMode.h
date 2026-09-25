@@ -30,6 +30,7 @@
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
+#include <chrono>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -393,8 +394,8 @@ private:
     //! \brief Builds the player settings window
     void buildPlayerSettingsWindow();
 
-    //! \brief Advances the defeat sequence by one frame (does nothing before it starts)
-    void updateDefeatSequence(float elapsed);
+    //! \brief Brings the defeat sequence to the wall-clock time now (does nothing before it starts)
+    void updateDefeatSequence(std::chrono::steady_clock::time_point now);
     //! \brief Puts the camera on a low oblique view of the given floor position without a flight
     void cutCameraToHeart(const Ogre::Vector3& heartPosition);
     void createDefeatWindows();
