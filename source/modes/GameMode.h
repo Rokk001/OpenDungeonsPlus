@@ -175,7 +175,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY);
 
     //! \brief Called once when the defeat sequence has run to its end (the screen is black).
-    //! Empty on purpose: the debriefing window is the next step and will be started from here.
+    //! Opens the debriefing window on the black screen.
     void onDefeatSequenceFinished();
 
     //! \brief Shows/hides/toggles the options window
@@ -397,6 +397,10 @@ private:
     void cutCameraToHeart(const Ogre::Vector3& heartPosition);
     void createDefeatWindows();
     void destroyDefeatWindows();
+    //! Loads the debriefing window (summary lines, confirm button) and shows the pointer again
+    void showDefeatDebriefing();
+    //! The confirm button of the debriefing: leaves to the main menu with the skirmish sub-menu open
+    bool onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& arg);
     //! \brief Hides every window of the game interface except the ones of the defeat sequence
     void hideInterfaceForDefeat();
     void startDefeatSwirl();
@@ -414,6 +418,7 @@ private:
     CEGUI::Window* mDefeatFade = nullptr;
     CEGUI::Window* mDefeatSubtitle = nullptr;
     CEGUI::Window* mDefeatCameraMarker = nullptr;
+    CEGUI::Window* mDefeatDebriefing = nullptr;
 
 };
 
