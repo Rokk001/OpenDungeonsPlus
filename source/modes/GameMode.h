@@ -167,6 +167,11 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void closeSkillWindow(bool saveSkill);
     void refreshTrapProductionQueue(const TrapProductionData& data);
 
+    //! \brief Entry point of the defeat sequence, called once when the server reports that the local
+    //! player lost. conquerorSeatId is the seat that destroyed the heart (-1 if unknown); the heart tile
+    //! is the centre tile of the destroyed heart (-1/-1 if unknown).
+    void startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY);
+
     //! \brief Shows/hides/toggles the options window
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
     bool hideOptionsWindow(const CEGUI::EventArgs& = {});

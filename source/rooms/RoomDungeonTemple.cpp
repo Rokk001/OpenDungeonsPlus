@@ -176,7 +176,19 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
     const double damageDone = std::min(mHeartHP, damage);
     mHeartHP -= damageDone;
     if(mHeartHP <= 0.0)
+    {
+        // The room is removed shortly after death: keep what the defeat notification needs on the owner.
+        attacker->getSeat()->getStatistics().mKeepersDefeated++;
+        Player* owner = getSeat()->getPlayer();
+        if(owner != nullptr)
+        {
+            Tile* heartTile = mTempleObject->getPositionTile();
+            owner->recordHeartDestroyed(attacker->getSeat()->getId(),
+                heartTile != nullptr ? heartTile->getX() : -1,
+                heartTile != nullptr ? heartTile->getY() : -1);
+        }
         fireEntityDead();
+    }
     else if(!mCriticalWarningSent && !getGameMap()->isInEditorMode()
         && mHeartHP <= 0.11 * Building::getHP(nullptr))
     {
