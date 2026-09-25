@@ -468,6 +468,30 @@ void Player::notifyNoMoreDungeonTemple()
             ServerNotificationType::playerDefeated, this);
         serverNotification->mPacket << mConquerorSeatId << mDefeatHeartTileX << mDefeatHeartTileY;
         ODServer::getSingleton().queueServerNotification(serverNotification);
+
+        // Snapshot of the debriefing counters of every seat with a player (not the rogue seat)
+        std::vector<Seat*> statisticsSeats;
+        for(Seat* seat : mGameMap->getSeats())
+        {
+            if(seat->isRogueSeat() || (seat->getPlayer() == nullptr))
+                continue;
+
+            statisticsSeats.push_back(seat);
+        }
+
+        serverNotification = new ServerNotification(ServerNotificationType::levelStatistics, this);
+        int32_t elapsedSeconds = static_cast<int32_t>(mGameMap->getTurnNumber() / ODApplication::turnsPerSecond);
+        bool levelWon = false;
+        serverNotification->mPacket << elapsedSeconds << levelWon << static_cast<int32_t>(statisticsSeats.size());
+        for(Seat* seat : statisticsSeats)
+        {
+            const SeatStatistics& statistics = seat->getStatistics();
+            serverNotification->mPacket << static_cast<int32_t>(seat->getId());
+            serverNotification->mPacket << statistics.mKeepersDefeated << statistics.mCreaturesKilled
+                << statistics.mHeroesDestroyed << statistics.mRoomsCaptured << statistics.mItemsMade
+                << statistics.mCreaturesConverted;
+        }
+        ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
 

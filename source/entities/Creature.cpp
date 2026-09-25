@@ -2271,6 +2271,7 @@ std::string Creature::getStatsText()
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
+    bool wasAlive = isAlive();
     mNbTurnsWithoutBattle = 0;
     physicalDamage = std::max(physicalDamage - getPhysicalDefense(), 0.0);
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
@@ -2294,7 +2295,12 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     computeCreatureOverlayMoodValue();
 
     if(!isAlive())
+    {
+        // The killing blow counts once for the debriefing (a KO does not get here)
+        if(wasAlive && (attacker != nullptr) && (attacker->getSeat() != nullptr))
+            attacker->getSeat()->recordCreatureKill(getSeat());
         fireEntityDead();
+    }
 
     if(!getIsOnServerMap())
         return damageDone;

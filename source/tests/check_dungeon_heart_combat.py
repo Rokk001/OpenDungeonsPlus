@@ -28,7 +28,8 @@ probe = r'''
 struct Tile{int getX()const{return 3;}int getY()const{return 4;}};
 struct Player {bool human=true;bool lost=false;int conqueror=-1,heartX=-1,heartY=-1,recorded=0;bool getIsHuman()const{return human;}bool getHasLost()const{return lost;}
  void recordHeartDestroyed(int c,int x,int y){conqueror=c;heartX=x;heartY=y;++recorded;}};
-struct Seat {int team;Player* player=nullptr;int id=0;Player* getPlayer(){return player;}int getId()const{return id;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
+struct SeatStatistics {unsigned mKeepersDefeated=0;};
+struct Seat {int team;Player* player=nullptr;int id=0;SeatStatistics stats;SeatStatistics& getStatistics(){return stats;}Player* getPlayer(){return player;}int getId()const{return id;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
 enum class ServerNotificationType {chatServer};
 enum class EventShortNoticeType {majorGameEvent};
 struct ODPacket {std::vector<std::string> texts;int majorEvents=0;
@@ -114,6 +115,7 @@ int main(){int checks=0,failures=0;
  check(ownerPlayer.recorded==1&&ownerPlayer.conqueror==5&&ownerPlayer.heartX==3&&ownerPlayer.heartY==4,"owner records conqueror seat and heart tile on death");
  check(heart.takeHeartDamage(&attacker,999,0,0,0,&centre)==0&&heart.dead==1,"dead heart cannot be hit twice");
  check(ownerPlayer.recorded==1,"conqueror recorded only once");
+ check(enemy.stats.mKeepersDefeated==1&&owner.stats.mKeepersDefeated==0,"final blow counts one defeated keeper for the attacker seat only, once");
  heart.doUpkeep();check(heart.removed==2&&heart.mCoveredTiles.empty(),"heart death releases the existing room lifecycle");
  // Critical-health warning (threshold 11 % of 250 = 27.5)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};

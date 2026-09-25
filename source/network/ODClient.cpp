@@ -65,7 +65,8 @@ template<> ODClient* Ogre::Singleton<ODClient>::msSingleton = nullptr;
 
 ODClient::ODClient() :
     ODSocketClient(),
-    mIsPlayerConfig(false)
+    mIsPlayerConfig(false),
+    mHasLevelStatistics(false)
 {
 }
 
@@ -404,6 +405,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         {
             int32_t nbPlayers;
             OD_ASSERT_TRUE(packetReceived >> ODApplication::turnsPerSecond);
+            mHasLevelStatistics = false;
+            mLevelStatistics = LevelStatistics();
 
             OD_ASSERT_TRUE(packetReceived >> nbPlayers);
             for(int i = 0; i < nbPlayers; ++i)
@@ -819,6 +822,29 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             // Ignored when the client is not in the game mode (menu, editor, replay)
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::GAME)
                 static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode())->startDefeatSequence(conquerorSeatId, heartTileX, heartTileY);
+            break;
+        }
+
+        case ServerNotificationType::levelStatistics:
+        {
+            LevelStatistics statistics;
+            int32_t seatCount;
+            OD_ASSERT_TRUE(packetReceived >> statistics.mElapsedSeconds >> statistics.mLevelWon >> seatCount);
+            for(int32_t i = 0; i < seatCount; ++i)
+            {
+                LevelStatisticsSeat seatStatistics;
+                OD_ASSERT_TRUE(packetReceived >> seatStatistics.mSeatId >> seatStatistics.mKeepersDefeated
+                    >> seatStatistics.mCreaturesKilled >> seatStatistics.mHeroesDestroyed
+                    >> seatStatistics.mRoomsCaptured >> seatStatistics.mItemsMade
+                    >> seatStatistics.mCreaturesConverted);
+                statistics.mSeats.push_back(seatStatistics);
+            }
+            // Ignored when the client is not in the game mode (menu, editor, replay)
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::GAME)
+            {
+                mLevelStatistics = statistics;
+                mHasLevelStatistics = true;
+            }
             break;
         }
 

@@ -28,14 +28,17 @@ probe = r'''
 #include <vector>
 #define OD_LOG_INF(x)
 namespace Helper {template<typename T> std::string toString(T v){return std::to_string(v);}}
-enum class ServerNotificationType {chatServer, playerDefeated};
+enum class ServerNotificationType {chatServer, playerDefeated, levelStatistics};
 enum class EventShortNoticeType {majorGameEvent};
 enum class RoomType {dungeonTemple};
 enum class SoundRelativeKeeperStatements {Lost, Defeat, AllyDefeated};
 struct ODPacket {std::vector<std::string> texts;std::vector<int32_t> ints;
  ODPacket& operator<<(const char* t){texts.push_back(t);return *this;}
  ODPacket& operator<<(EventShortNoticeType){return *this;}
- ODPacket& operator<<(int32_t v){ints.push_back(v);return *this;}};
+ ODPacket& operator<<(int32_t v){ints.push_back(v);return *this;}
+ ODPacket& operator<<(uint32_t){return *this;}ODPacket& operator<<(bool){return *this;}};
+struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=4.0;
+struct SeatStatistics {uint32_t mKeepersDefeated=0,mCreaturesKilled=0,mHeroesDestroyed=0,mRoomsCaptured=0,mItemsMade=0,mCreaturesConverted=0;};
 struct Player;
 struct ServerNotification {ServerNotificationType type;Player* player;ODPacket mPacket;
  ServerNotification(ServerNotificationType t,Player* p):type(t),player(p){}};
@@ -53,9 +56,10 @@ struct Player {
  RECORD
  void notifyNoMoreDungeonTemple();
 };
-struct Seat {int id,team;Player* player=nullptr;
+struct Seat {int id,team;Player* player=nullptr;SeatStatistics stats;
+ bool isRogueSeat()const{return id==0;}const SeatStatistics& getStatistics()const{return stats;}
  int getId()const{return id;}Player* getPlayer(){return player;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
-struct GameMapMock {std::vector<Seat*> seats;std::vector<Room*> temples;int sounds=0;
+struct GameMapMock {int64_t turn=0;int64_t getTurnNumber()const{return turn;}std::vector<Seat*> seats;std::vector<Room*> temples;int sounds=0;
  std::vector<Room*> getRoomsByType(RoomType){return temples;}
  std::vector<Seat*>& getSeats(){return seats;}
  void fireRelativeSound(std::vector<Seat*>&,SoundRelativeKeeperStatements){++sounds;}};
@@ -78,8 +82,8 @@ int main(){int checks=0,failures=0;
  {// unknown conqueror and heart position
   server.queue.clear();GameMapMock map;Seat a{1,1};Player pa(&a,true);a.player=&pa;pa.mGameMap=&map;map.seats={&a};
   pa.notifyNoMoreDungeonTemple();
-  check(server.queue.size()==2&&server.queue[1]->type==ServerNotificationType::playerDefeated,"defeat notification follows the chat text");
-  if(server.queue.size()==2){ODPacket& p=server.queue[1]->mPacket;
+  check(server.queue.size()==3&&server.queue[1]->type==ServerNotificationType::playerDefeated,"defeat notification follows the chat text");
+  if(server.queue.size()==3){ODPacket& p=server.queue[1]->mPacket;
    check(p.ints.size()==3&&p.ints[0]==-1&&p.ints[1]==-1&&p.ints[2]==-1,"unknown values are sent as -1");}}
  {// bot loses: nothing
   server.queue.clear();GameMapMock map;Seat a{1,1};Player pa(&a,false);a.player=&pa;pa.mGameMap=&map;map.seats={&a};
@@ -114,8 +118,8 @@ assert 'startDefeatSequence(conquerorSeatId, heartTileX, heartTileY)' in handler
 assert 'ModeManager::GAME' in handler
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert enum_body.rstrip().endswith('playerDefeated')
-print('WIRING OK: enum value is last, client handler reads 3 int32 and guards on GAME mode')
+assert 'playerDefeated,' in enum_body and enum_body.rstrip().endswith('levelStatistics')
+print('WIRING OK: enum value is not moved (only levelStatistics was appended after it), client handler reads 3 int32 and guards on GAME mode')
 
 with tempfile.TemporaryDirectory(prefix='odp-defeat-notification-') as directory:
     work = Path(directory)

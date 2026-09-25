@@ -178,6 +178,7 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
     if(mHeartHP <= 0.0)
     {
         // The room is removed shortly after death: keep what the defeat notification needs on the owner.
+        attacker->getSeat()->getStatistics().mKeepersDefeated++;
         Player* owner = getSeat()->getPlayer();
         if(owner != nullptr)
         {
