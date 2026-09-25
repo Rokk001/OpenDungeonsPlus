@@ -43,6 +43,8 @@ public:
     //! Health of an undamaged heart: HEART_HP_PER_TILE for every tile of the room
     //! (90000 for the usual 3 by 3 heart), independent of the floor tiles' own durability.
     double getHeartMaxHP() const;
+    //! \brief Remaining heart health divided by getHeartMaxHP(), from 0 to 1.
+    double getHeartHealthFraction() const;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage,
         double magicalDamage, double elementDamage, Tile* tileTakingDamage, bool ko) override
     { return 0.0; }

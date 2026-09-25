@@ -21,6 +21,7 @@
  */
 
 #include "render/Gui.h"
+#include "game/HeartHealthRing.h"
 #include "render/RenderManager.h"
 
 #include "ODApplication.h"
@@ -138,6 +139,87 @@ void createMiniMapCornerImages()
             "BasicImage", "OpenDungeonsIcons/" + name));
         image.setTexture(&texture);
         image.setArea(CEGUI::Rectf(0, 0, size, size));
+    }
+}
+
+const int BADGE_SIZE = 128;
+
+//! \brief True if the point (dx, dy) from the badge centre belongs to the symbol of the badge:
+//! the heart for badge 0, the coin sign otherwise.
+bool isInBadgeSymbol(int badge, float dx, float dy)
+{
+    if(badge == 0)
+    {
+        const float hx = dx / 13;
+        const float hy = -dy / 13;
+        const float heart = hx * hx + hy * hy - 1;
+        return heart * heart * heart - hx * hx * hy * hy * hy <= 0;
+    }
+    const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
+    const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
+    return (std::abs(dx) < 1.5f && std::abs(dy) < 20)
+        || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
+        || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
+}
+
+//! \brief Draws a 128x128 HUD badge. The ring of the heart badge (badge 0) shows the health
+//! of the dungeon heart, and its background glows magenta while the heart is under attack.
+void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float healthFraction, bool underAttack)
+{
+    const int badgeSize = BADGE_SIZE;
+    pixels.resize(badgeSize * badgeSize * 4);
+    for(int y = 0; y < badgeSize; ++y)
+    {
+        for(int x = 0; x < badgeSize; ++x)
+        {
+            const float dx = (x + 0.5f) * 64 / badgeSize - 32;
+            const float dy = (y + 0.5f) * 64 / badgeSize - 32;
+            const float radius = std::sqrt(dx * dx + dy * dy);
+            const float light = -(dx + dy) / std::max(1.0f, radius * 1.414214f);
+            const int i = (y * badgeSize + x) * 4;
+            unsigned char shade = static_cast<unsigned char>(std::max(0.0f, 28 - radius * 0.6f));
+            pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
+            if(badge == 0 && underAttack && radius <= 22)
+            {
+                // Magenta glow behind the heart while it is under attack
+                const float glow = 0.4f + 0.6f * (radius / 22) * (radius / 22);
+                pixels[i] = static_cast<unsigned char>(shade + (225 - shade) * glow);
+                pixels[i + 1] = static_cast<unsigned char>(shade + (35 - shade) * glow);
+                pixels[i + 2] = static_cast<unsigned char>(shade + (190 - shade) * glow);
+            }
+            if(radius > 25)
+            {
+                const float slope = std::max(-1.0f, std::min(1.0f, (radius - 28) / 3));
+                const float face = std::sqrt(std::max(0.0f, 1 - slope * slope));
+                shade = static_cast<unsigned char>(std::max(12.0f,
+                    74 + 92 * light * slope + 65 * face));
+                pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
+            }
+            else if(radius > 22 && radius < 24)
+            {
+                const float relief = 0.65f + 0.35f * light * (radius - 23);
+                // The ring of the heart badge is the health of the dungeon heart: the lit part
+                // is green, the rest stays as a dark groove
+                const bool lit = badge != 0 || HeartHealthRing::isRingLit(dx, dy, healthFraction);
+                pixels[i] = static_cast<unsigned char>((badge == 0 ? (lit ? 24 : 14) : 210) * relief);
+                pixels[i + 1] = static_cast<unsigned char>((badge == 0 ? (lit ? 178 : 38) : 171) * relief);
+                pixels[i + 2] = static_cast<unsigned char>((badge == 0 ? (lit ? 114 : 30) : 35) * relief);
+            }
+            if(isInBadgeSymbol(badge, dx, dy))
+            {
+                const float highlight = std::exp(-((dx + 5) * (dx + 5) + (dy + 6) * (dy + 6)) / 35);
+                float relief = 174 - dx * 1.4f - dy * 2.4f + 48 * highlight;
+                if(!isInBadgeSymbol(badge, dx - 1, dy - 1))
+                    relief = 244;
+                else if(!isInBadgeSymbol(badge, dx + 1, dy + 1))
+                    relief = 72;
+                pixels[i] = pixels[i + 1] = pixels[i + 2] =
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f, relief)));
+            }
+            else if(isInBadgeSymbol(badge, dx - 1.5f, dy - 1.5f))
+                pixels[i] = pixels[i + 1] = pixels[i + 2] = 4;
+            pixels[i + 3] = static_cast<unsigned char>(std::max(0.0f, std::min(1.0f, 31 - radius)) * 255);
+        }
     }
 }
 
@@ -340,67 +422,10 @@ void createNavigationImages()
         }
     }
 
-    const int badgeSize = 128;
-    pixels.resize(badgeSize * badgeSize * 4);
+    const int badgeSize = BADGE_SIZE;
     for(int badge = 0; badge < 2; ++badge)
     {
-        std::function<bool(float, float)> inSymbol = [badge](float dx, float dy)
-        {
-            if(badge == 0)
-            {
-                const float hx = dx / 13;
-                const float hy = -dy / 13;
-                const float heart = hx * hx + hy * hy - 1;
-                return heart * heart * heart - hx * hx * hy * hy * hy <= 0;
-            }
-            const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
-            const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
-            return (std::abs(dx) < 1.5f && std::abs(dy) < 20)
-                || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
-                || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
-        };
-        for(int y = 0; y < badgeSize; ++y)
-        {
-            for(int x = 0; x < badgeSize; ++x)
-            {
-                const float dx = (x + 0.5f) * 64 / badgeSize - 32;
-                const float dy = (y + 0.5f) * 64 / badgeSize - 32;
-                const float radius = std::sqrt(dx * dx + dy * dy);
-                const float light = -(dx + dy) / std::max(1.0f, radius * 1.414214f);
-                const int i = (y * badgeSize + x) * 4;
-                unsigned char shade = static_cast<unsigned char>(std::max(0.0f, 28 - radius * 0.6f));
-                pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
-                if(radius > 25)
-                {
-                    const float slope = std::max(-1.0f, std::min(1.0f, (radius - 28) / 3));
-                    const float face = std::sqrt(std::max(0.0f, 1 - slope * slope));
-                    shade = static_cast<unsigned char>(std::max(12.0f,
-                        74 + 92 * light * slope + 65 * face));
-                    pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
-                }
-                else if(radius > 22 && radius < 24)
-                {
-                    const float relief = 0.65f + 0.35f * light * (radius - 23);
-                    pixels[i] = static_cast<unsigned char>((badge == 0 ? 24 : 210) * relief);
-                    pixels[i + 1] = static_cast<unsigned char>((badge == 0 ? 178 : 171) * relief);
-                    pixels[i + 2] = static_cast<unsigned char>((badge == 0 ? 114 : 35) * relief);
-                }
-                if(inSymbol(dx, dy))
-                {
-                    const float highlight = std::exp(-((dx + 5) * (dx + 5) + (dy + 6) * (dy + 6)) / 35);
-                    float relief = 174 - dx * 1.4f - dy * 2.4f + 48 * highlight;
-                    if(!inSymbol(dx - 1, dy - 1))
-                        relief = 244;
-                    else if(!inSymbol(dx + 1, dy + 1))
-                        relief = 72;
-                    pixels[i] = pixels[i + 1] = pixels[i + 2] =
-                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f, relief)));
-                }
-                else if(inSymbol(dx - 1.5f, dy - 1.5f))
-                    pixels[i] = pixels[i + 1] = pixels[i + 2] = 4;
-                pixels[i + 3] = static_cast<unsigned char>(std::max(0.0f, std::min(1.0f, 31 - radius)) * 255);
-            }
-        }
+        drawBadgePixels(pixels, badge, 1.0f, false);
         const std::string name = badge == 0 ? "ManaBadge" : "GoldBadge";
         CEGUI::Texture& badgeTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
         badgeTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(badgeSize, badgeSize), CEGUI::Texture::PF_RGBA);
@@ -871,6 +896,18 @@ void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
 
     CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(displaySize);
     CEGUI::ImageManager::getSingleton().notifyDisplaySizeChanged(displaySize);
+}
+
+void Gui::updateHeartBadge(float healthFraction, bool underAttack)
+{
+    std::vector<unsigned char> pixels;
+    drawBadgePixels(pixels, 0, healthFraction, underAttack);
+    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->getTexture("ManaBadge");
+    // Write into the existing texture: loadFromMemory of the Ogre renderer makes a new Ogre texture,
+    // while the badge window keeps drawing the old one from its cached geometry, so the ring never changed
+    texture.blitFromMemory(pixels.data(), CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(BADGE_SIZE),
+        static_cast<float>(BADGE_SIZE)));
+    CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 
 CEGUI::Window* Gui::getGuiSheet(guiSheet sheet)

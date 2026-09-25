@@ -161,6 +161,14 @@ double RoomDungeonTemple::getHeartMaxHP() const
     return HEART_HP_PER_TILE * static_cast<double>(numCoveredTiles());
 }
 
+double RoomDungeonTemple::getHeartHealthFraction() const
+{
+    const double maxHP = getHeartMaxHP();
+    if(maxHP <= 0.0)
+        return 0.0;
+    return std::max(0.0, std::min(1.0, getHP(nullptr) / maxHP));
+}
+
 bool RoomDungeonTemple::canAttackHeart(Tile* tile, Seat* seat) const
 {
     return seat != nullptr && getSeat() != nullptr && !getSeat()->isAlliedSeat(seat)
