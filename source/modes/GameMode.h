@@ -21,6 +21,7 @@
 #include "GameEditorModeBase.h"
 
 #include "modes/DebriefingTable.h"
+#include "modes/DefeatHeartBurst.h"
 #include "modes/DefeatSequence.h"
 #include "modes/InputCommand.h"
 #include "modes/InputBridge.h"
@@ -409,6 +410,10 @@ private:
     //! \brief Hides every window of the game interface except the ones of the defeat sequence
     void hideInterfaceForDefeat();
     void startDefeatSwirl();
+    //! The copy of the heart bursts: it is removed, the burst effects start (unless time is already past the
+    //! explosion phase) and the rubble is created
+    void startDefeatBurst(float time);
+    //! Removes every scene object of the sequence (effects, copy of the heart, rubble); safe to call again
     void stopDefeatEffects();
 
     DefeatSequence mDefeatSequence;
@@ -419,6 +424,12 @@ private:
     bool mDefeatExplosionEffectActive = false;
     bool mDefeatSwirlEffectActive = false;
     bool mDefeatSwirlDone = false;
+    //! The client-only copy of the heart exists (from the start until the burst)
+    bool mDefeatHeartShown = false;
+    bool mDefeatBurstDone = false;
+    //! The rubble exists (from the burst until the end of the sequence)
+    bool mDefeatRubbleShown = false;
+    std::vector<DefeatRubblePiece> mDefeatRubble;
     CEGUI::Window* mDefeatTint = nullptr;
     CEGUI::Window* mDefeatFade = nullptr;
     CEGUI::Window* mDefeatSubtitle = nullptr;
