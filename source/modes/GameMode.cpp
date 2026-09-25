@@ -1742,7 +1742,9 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         mSkillCurrentCompletion.mProgressBar->setProgress(mSkillCurrentCompletion.mCompletenessDisplayed);
     }
 
-    updateDefeatSequence(evt.timeSinceLastFrame);
+    // onFrameStarted runs more than once per frame (from ODFrameListener::frameStarted and from
+    // ModeManager::update), so the sequence follows the clock instead of summing frame times
+    updateDefeatSequence(std::chrono::steady_clock::now());
 }
 
 void GameMode::onFrameEnded(const Ogre::FrameEvent& evt)
@@ -1968,7 +1970,8 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
 {
     OD_LOG_INF("Defeat sequence requested: conquerorSeatId=" + Helper::toString(conquerorSeatId)
         + ", heartTile=" + Helper::toString(heartTileX) + "," + Helper::toString(heartTileY));
-    if(!mDefeatSequence.start(conquerorSeatId, heartTileX, heartTileY))
+    const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    if(!mDefeatSequence.start(conquerorSeatId, heartTileX, heartTileY, startTime))
     {
         OD_LOG_INF("Defeat sequence already running, request ignored");
         return;
@@ -2010,7 +2013,7 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
         explosionPosition, nullptr);
     mDefeatExplosionEffectActive = true;
 
-    updateDefeatSequence(0.0f);
+    updateDefeatSequence(startTime);
 }
 
 void GameMode::cutCameraToHeart(const Ogre::Vector3& heartPosition)
@@ -2140,12 +2143,12 @@ void GameMode::stopDefeatEffects()
     mDefeatSwirlEffectActive = false;
 }
 
-void GameMode::updateDefeatSequence(float elapsed)
+void GameMode::updateDefeatSequence(std::chrono::steady_clock::time_point now)
 {
     if(!mDefeatSequence.isStarted())
         return;
 
-    const bool finished = mDefeatSequence.advance(elapsed);
+    const bool finished = mDefeatSequence.advanceTo(now);
     const float time = mDefeatSequence.getElapsed();
     RenderManager& renderManager = RenderManager::getSingleton();
 

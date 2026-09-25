@@ -29,7 +29,12 @@ height and angle.
 
 - `DefeatSequence` (header only) holds the state and the pure timeline functions
   (`phaseAt`, `redTintAlphaAt`, `blackAlphaAt`, subtitle and swirl windows). A second
-  `start` is ignored. One slow frame advances at most 0.25 s so no phase is skipped.
+  `start` is ignored. The timeline follows the wall clock: `start` stores a
+  `std::chrono::steady_clock` time and `advanceTo(now)` sets the elapsed time to now minus
+  that start. `GameMode::onFrameStarted` runs twice per frame in this fork (from
+  `ODFrameListener::frameStarted` and from `ModeManager::update`), so summing frame times
+  ran the sequence at double speed (29.5 s took 15 s); with the clock, repeated calls in a
+  frame change nothing and a long frame moves the timeline by exactly its length.
 - `GameMode::updateDefeatSequence` runs at the end of `onFrameStarted`. It hides every
   child window of the game sheet each frame (so windows the game shows again, such as
   chat or event messages, disappear again), sets the alpha of a red and a black full
@@ -68,6 +73,11 @@ camera symbol, and shows the pointer again (the hand stays hidden). The window s
 - the statistics table in `Panel/StatisticsArea` (a scrollable pane, hidden until it has
   content): one row per statistic, one column per seat, each number in the seat colour,
 - one confirm button (the existing tick icon).
+
+The full screen stone `Background` has `RiseOnClickEnabled` off. CEGUI raises a clicked
+window in front of its siblings, so without it a click on the stone beside the panel put
+the opaque stone in front of the panel: a grey screen with the button covered, and no way
+out because keys are blocked during the defeat.
 
 "Level won" and the time come from the statistics packet (`ODClient::hasLevelStatistics()`,
 a snapshot taken by the server at the moment of the defeat) when it was received. Without
@@ -146,6 +156,11 @@ the finished hook opens the window once, that the packet values are used for "Le
 and the time (and the client values without a packet), the table rows and the windows
 made from them, and that confirming requests the main menu once and sets the hand-over
 exactly once. The game was not run.
+`source/tests/check_defeat_camera_culling.py` runs the real camera cut and the real
+`CullingManager::computeIntersectionPoints` with the Ogre library: with pitch 60 and the game
+camera's 45 degree field of view every corner ray reaches the floor (with the former 68 the two
+upper rays did not, which filled the log and left stale culling corners).
+`source/tests/check_defeat_debriefing_click.py` clicks the real layout with the CEGUI library.
 These parts are guesses that need a look in the game: the camera height and pitch
 (`CAMERA_HEIGHT`, `CAMERA_PITCH`), the look of both particle scripts (both use the
 existing `CombatSparks` material, so the fireballs are soft flares, not textured

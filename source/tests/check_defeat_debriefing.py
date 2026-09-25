@@ -283,10 +283,12 @@ Routing route(Probe& probe)
     return r;
 }
 
+const std::chrono::steady_clock::time_point gStart = std::chrono::steady_clock::time_point();
+
 void finish(DefeatSequence& sequence)
 {
-    sequence.start(1, 3, 4);
-    while(!sequence.advance(0.25f)) {}
+    sequence.start(1, 3, 4, gStart);
+    sequence.advanceTo(gStart + std::chrono::seconds(30));
 }
 
 int main()
@@ -313,11 +315,11 @@ int main()
     DefeatSequence gate;
     check(!gate.blocksInput() && !gate.allowsGuiInput() && !gate.isDebriefingOpen(), "not started: nothing blocked, no debriefing");
     check(!gate.openDebriefing() && !gate.confirmDebriefing(), "not started: neither open nor confirm work");
-    gate.start(1, 3, 4);
+    gate.start(1, 3, 4, gStart);
     check(gate.blocksInput() && !gate.allowsGuiInput(), "started: game and interface blocked");
     check(!gate.openDebriefing() && !gate.allowsGuiInput(), "the debriefing cannot open before the end");
     check(!gate.confirmDebriefing(), "confirm before the debriefing does nothing");
-    while(!gate.advance(0.25f)) {}
+    gate.advanceTo(gStart + std::chrono::seconds(30));
     check(gate.blocksInput() && !gate.allowsGuiInput(), "at the end but before the debriefing: still blocked");
     check(gate.openDebriefing() && gate.isDebriefingOpen() && gate.blocksInput() && gate.allowsGuiInput(), "the debriefing opens once: game blocked, interface reachable");
     check(!gate.openDebriefing(), "the debriefing does not open twice");
@@ -328,11 +330,11 @@ int main()
         Probe probe;
         Routing r = route(probe);
         check(!r.moved && !r.pressed && !r.released && !r.keyDown && !r.keyUp && r.moves == 0 && r.downs == 0 && r.ups == 0, "before the sequence: everything reaches the game, nothing is injected here");
-        probe.mDefeatSequence.start(1, 3, 4);
+        probe.mDefeatSequence.start(1, 3, 4, gStart);
         r = route(probe);
         check(r.moved && r.pressed && r.released && r.keyDown && r.keyUp, "sequence running: all input is swallowed");
         check(r.moves == 0 && r.downs == 0 && r.ups == 0, "sequence running: nothing reaches the interface either");
-        while(!probe.mDefeatSequence.advance(0.25f)) {}
+        probe.mDefeatSequence.advanceTo(gStart + std::chrono::seconds(30));
         r = route(probe);
         check(r.moved && r.pressed && r.released && r.keyDown && r.keyUp && r.moves == 0 && r.downs == 0 && r.ups == 0, "black screen before the debriefing: still fully blocked");
         probe.mDefeatSequence.openDebriefing();
@@ -376,7 +378,7 @@ int main()
         GameMode mode;
         gModeRequests = 0;
         CEGUI::EventArgs args;
-        mode.mDefeatSequence.start(1, 3, 4);
+        mode.mDefeatSequence.start(1, 3, 4, gStart);
         mode.onClickDefeatDebriefingConfirm(args);
         check(gModeRequests == 0 && !mode.mManager.mOpenSkirmishSubMenu, "a click without an open debriefing leaves nothing");
         GameMode early;

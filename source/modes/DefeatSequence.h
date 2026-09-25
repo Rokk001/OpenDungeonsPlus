@@ -18,6 +18,7 @@
 #ifndef DEFEATSEQUENCE_H
 #define DEFEATSEQUENCE_H
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 
@@ -38,13 +39,14 @@ namespace DefeatSequenceSettings
     const float SECOND_SUBTITLE_START = 20.5f;
     //! End of the timeline; the debriefing window opens on the black screen afterwards
     const float FINISH = 29.5f;
-    //! Longest time step taken into account, so that a slow frame cannot skip a phase
-    const float MAX_STEP = 0.25f;
 
     //! Low oblique camera used for the cut: height above the floor and pitch in degrees
-    //! (0 looks straight down, like the game camera's default of 25)
+    //! (0 looks straight down, like the game camera's default of 25).
+    //! The pitch plus half the vertical field of view (22.5 degrees for the game camera's 45)
+    //! must stay below 90, otherwise the upper corner rays of the view never reach the floor
+    //! and CullingManager cannot compute the visible tiles.
     const float CAMERA_HEIGHT = 2.0f;
-    const float CAMERA_PITCH = 68.0f;
+    const float CAMERA_PITCH = 60.0f;
 }
 
 //! Seconds elapsed in the game: the turn number divided by the turns per second.
@@ -97,33 +99,39 @@ public:
         mDebriefingOpen(false),
         mDebriefingConfirmed(false),
         mElapsed(0.0f),
+        mStartTime(),
         mConquerorSeatId(-1),
         mHeartTileX(-1),
         mHeartTileY(-1)
     {
     }
 
-    //! \brief Starts the sequence. Returns false (and changes nothing) if it was already started.
-    bool start(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY)
+    //! \brief Starts the sequence at startTime (wall clock). Returns false (and changes nothing) if it
+    //! was already started.
+    bool start(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY,
+        std::chrono::steady_clock::time_point startTime)
     {
         if(mStarted)
             return false;
         mStarted = true;
+        mStartTime = startTime;
         mConquerorSeatId = conquerorSeatId;
         mHeartTileX = heartTileX;
         mHeartTileY = heartTileY;
         return true;
     }
 
-    //! \brief Advances the timeline. Returns true exactly once, on the step that reaches the end.
-    bool advance(float elapsed)
+    //! \brief Moves the timeline to the wall-clock time now: the elapsed time is now minus the start
+    //! time, not a sum of frame times. Calling it again with the same or an earlier time changes
+    //! nothing, so it does not matter how often per frame it runs, and a long frame moves the
+    //! timeline by exactly its length. Returns true exactly once, on the call that reaches the end.
+    bool advanceTo(std::chrono::steady_clock::time_point now)
     {
         if(!mStarted || mFinished)
             return false;
-        if(elapsed > DefeatSequenceSettings::MAX_STEP)
-            elapsed = DefeatSequenceSettings::MAX_STEP;
-        if(elapsed > 0.0f)
-            mElapsed += elapsed;
+        const float time = secondsBetween(mStartTime, now);
+        if(time > mElapsed)
+            mElapsed = time;
         if(mElapsed < DefeatSequenceSettings::FINISH)
             return false;
         mFinished = true;
@@ -176,6 +184,16 @@ public:
     //! \brief The swirl needs the seat colour of the conqueror; without a conqueror it is skipped
     bool isSwirlWanted() const
     { return mConquerorSeatId >= 0; }
+
+    //! Seconds from start to now; 0 when now is not after start
+    static float secondsBetween(std::chrono::steady_clock::time_point start,
+        std::chrono::steady_clock::time_point now)
+    {
+        if(now <= start)
+            return 0.0f;
+        const std::chrono::duration<float> seconds = now - start;
+        return seconds.count();
+    }
 
     static Phase phaseAt(float t)
     {
@@ -242,6 +260,7 @@ private:
     bool mDebriefingOpen;
     bool mDebriefingConfirmed;
     float mElapsed;
+    std::chrono::steady_clock::time_point mStartTime;
     int32_t mConquerorSeatId;
     int32_t mHeartTileX;
     int32_t mHeartTileY;
