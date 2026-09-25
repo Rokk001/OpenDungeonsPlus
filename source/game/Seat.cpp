@@ -188,6 +188,17 @@ bool Seat::isAlliedSeat(const Seat *seat) const
     return getTeamId() == seat->getTeamId();
 }
 
+void Seat::recordCreatureKill(const Seat* victimSeat)
+{
+    if((victimSeat == nullptr) || isAlliedSeat(victimSeat))
+        return;
+
+    if(victimSeat->getFaction() == "Hero")
+        ++mStatistics.mHeroesDestroyed;
+    else
+        ++mStatistics.mCreaturesKilled;
+}
+
 bool Seat::canOwnedCreatureBePickedUpBy(const Seat* seat) const
 {
     // Note : if we want to allow players to pickup allied creatures, we can do that here.
