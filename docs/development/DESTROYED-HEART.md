@@ -19,7 +19,7 @@ rest of the game (and through the defeat sequence).
 - The ruin cannot be attacked (`canAttackHeart` needs health and a heart object),
   cannot be sold, claimed, repaired or built upon (tiles stay covered), and its
   floor tiles are never released in game mode (`removeCoveredTile`).
-- Saved games: the room is written with `HeartHP 0`. On load the ruin gets no new
+- Saved games: the room is written with `HeartHealth 0`. On load the ruin gets no new
   heart object (`updateActiveSpots`) and restores only its floor
   (`restoreInitialEntityState`).
 - The editor is unchanged.

@@ -23,9 +23,11 @@ which one strong blow destroyed while the ring barely moved). The top-left ring
 shows the remaining health divided by this maximum. Only fighters damage an
 enemy heart: `takeHeartDamage` ignores worker creatures, and a worker given a
 non-creature target drops its fight action. A tagged optional room record saves
-the independent remaining heart health; old files without it load with an
-undamaged heart. Saves written before this change keep their saved number, which
-was out of 90, so such a heart loads nearly destroyed.
+the remaining heart health as `HeartHealth`; files without it load with an
+undamaged heart. Saves written before, with the record `HeartHP`, measured the
+health against the floor durability; they load with the same share of the new
+maximum (`HeartHP 90` of 90 becomes 90000, `HeartHP 0` stays a ruin). Without
+this, a heart from such a save had 90 of 90000 and fell to one hit.
 Regeneration of the heart and unrelated resource rewards are not part of it.
 
 ## Verification

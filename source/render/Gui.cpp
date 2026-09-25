@@ -1049,7 +1049,10 @@ void Gui::updateHeartBadge(float healthFraction, bool underAttack)
     std::vector<unsigned char> pixels;
     drawBadgePixels(pixels, 0, healthFraction, underAttack);
     CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->getTexture("ManaBadge");
-    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(BADGE_SIZE, BADGE_SIZE), CEGUI::Texture::PF_RGBA);
+    // Write into the existing texture: loadFromMemory of the Ogre renderer makes a new Ogre texture,
+    // while the badge window keeps drawing the old one from its cached geometry, so the ring never changed
+    texture.blitFromMemory(pixels.data(), CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(BADGE_SIZE),
+        static_cast<float>(BADGE_SIZE)));
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 

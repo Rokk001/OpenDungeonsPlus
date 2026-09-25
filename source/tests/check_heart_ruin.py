@@ -219,7 +219,7 @@ int main(){
 
  // Save and load of the destroyed state
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
- check(save.str().find("HeartHP 0")!=std::string::npos,"destroyed state is written with the room");
+ check(save.str().find("HeartHealth 0")!=std::string::npos,"destroyed state is written with the room");
  RoomDungeonTemple loaded(&map,&owner);TileData loadedCentre,loadedFloor;addFloor(loaded,&centre,&floor,&loadedCentre,&loadedFloor);
  check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==0,"destroyed heart loads");
  std::string next;save>>next;check(next=="[/Room]","load keeps the room boundary");
@@ -236,7 +236,7 @@ int main(){
 
  // A damaged living heart still loads with its object
  {RoomDungeonTemple living(&map,&owner);TileData livingCentre,livingFloor;addFloor(living,&centre,&floor,&livingCentre,&livingFloor);
-  std::stringstream damaged("250\nHeartHP 100\n[/Room]\n");
+  std::stringstream damaged("250\nHeartHealth 100\n[/Room]\n");
   check(living.importFromStream(damaged)&&living.getHP(nullptr)==100,"damaged heart round trip");
   int asked=g_removeAsked;living.updateActiveSpots(&map);living.restoreInitialEntityState();
   check(living.added==1&&living.mTempleObject!=nullptr&&living.restored==1,"living loaded heart gets its object back");
@@ -255,7 +255,7 @@ int main(){
  {map.editor=true;RoomDungeonTemple edit(&map,&owner);TileData editCentre,editFloor;addFloor(edit,&centre,&floor,&editCentre,&editFloor);
   check(edit.removeCoveredTile(&floor)&&edit.mCoveredTiles.size()==1,"editor can still remove floor tiles");
   edit.updateActiveSpots(&map);check(edit.added==1&&edit.mTempleObject!=nullptr,"editor still places the heart object");
-  std::stringstream level;edit.exportToStream(level);check(level.str().find("HeartHP")==std::string::npos,"editor maps do not persist heart health");
+  std::stringstream level;edit.exportToStream(level);check(level.str().find("Heart")==std::string::npos,"editor maps do not persist heart health");
   map.editor=false;}
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }

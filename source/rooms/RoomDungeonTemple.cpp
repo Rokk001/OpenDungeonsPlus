@@ -258,7 +258,7 @@ void RoomDungeonTemple::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
     if(!getGameMap()->isInEditorMode())
-        os << "HeartHP " << getHP(nullptr) << '\n';
+        os << "HeartHealth " << getHP(nullptr) << '\n';
 }
 
 bool RoomDungeonTemple::importFromStream(std::istream& is)
@@ -272,8 +272,20 @@ bool RoomDungeonTemple::importFromStream(std::istream& is)
     if(is.peek() == 'H')
     {
         std::string marker;
-        if(!(is >> marker >> mHeartHP) || marker != "HeartHP"
-            || !std::isfinite(mHeartHP) || mHeartHP < 0.0)
+        double value;
+        if(!(is >> marker >> value) || !std::isfinite(value) || value < 0.0)
+            return false;
+        if(marker == "HeartHealth")
+            mHeartHP = std::min(value, getHeartMaxHP());
+        else if(marker == "HeartHP")
+        {
+            // Saves written before the heart had its own health: the value was measured against
+            // the durability of the floor tiles. Keep the same share of the new maximum.
+            const double floorDurability = Building::getHP(nullptr);
+            mHeartHP = floorDurability > 0.0
+                ? std::min(1.0, value / floorDurability) * getHeartMaxHP() : 0.0;
+        }
+        else
             return false;
     }
     return true;
