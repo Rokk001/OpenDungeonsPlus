@@ -23,6 +23,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -86,6 +87,16 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
+const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
+//! The particle systems of the heart burst (particles/HeartExplosion.particle), all created at the burst
+const size_t DEFEAT_BURST_EFFECT_COUNT = 4;
+const std::string DEFEAT_BURST_EFFECT_NAMES[DEFEAT_BURST_EFFECT_COUNT] = {DEFEAT_EXPLOSION_EFFECT_NAME, "DefeatHeartExplosionFlash", "DefeatHeartExplosionSparks", "DefeatHeartExplosionSmoke"};
+const std::string DEFEAT_BURST_EFFECT_SCRIPTS[DEFEAT_BURST_EFFECT_COUNT] = {"HeartExplosion", "HeartExplosionFlash", "HeartExplosionSparks", "HeartExplosionSmoke"};
+const std::string DEFEAT_SWIRL_EFFECT_NAME = "DefeatSwirl";
+const std::string DEFEAT_CAMERA_MARKER_IMAGE = "OpenDungeonsIcons/CameraIcon";
+const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
+const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
+const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
@@ -407,6 +418,15 @@ GameMode::GameMode(ModeManager *modeManager):
 GameMode::~GameMode()
 {
     resetIdleHand();
+    if(mDefeatSequence.isStarted())
+    {
+        stopDefeatEffects();
+        destroyDefeatWindows();
+        // The hand and the pointer belong to the game, give them back to the next one
+        if(!RenderManager::getSingleton().isKeeperHandVisible())
+            RenderManager::getSingleton().rrToggleHandSelectorVisibility();
+        CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
+    }
     TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, 16.0f);
     for(const MessageTab& tab : mMessageTabs)
         CEGUI::WindowManager::getSingleton().destroyWindow(tab.window);
@@ -509,6 +529,12 @@ void GameMode::activate()
 bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 {
     resetIdleHand();
+    if(mDefeatSequence.blocksInput())
+    {
+        if(mDefeatSequence.allowsGuiInput())
+            AbstractApplicationMode::mouseMoved(arg);
+        return true;
+    }
     AbstractApplicationMode::mouseMoved(arg);
 
     auto mouseEvent = toSFMLMouseMove(arg);
@@ -697,6 +723,12 @@ void GameMode::sendPendingHandDropRequest(bool dropAllCreatures)
 bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
     resetIdleHand();
+    if(mDefeatSequence.blocksInput())
+    {
+        if(mDefeatSequence.allowsGuiInput())
+            CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(Gui::convertButton(id));
+        return true;
+    }
     InputManager& inputManager = mModeManager->getInputManager();
 
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(
@@ -935,6 +967,12 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
     resetIdleHand();
+    if(mDefeatSequence.blocksInput())
+    {
+        if(mDefeatSequence.allowsGuiInput())
+            CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
+        return true;
+    }
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
 
     InputManager& inputManager = mModeManager->getInputManager();
@@ -1004,6 +1042,8 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 bool GameMode::keyPressed(const OIS::KeyEvent& arg)
 {
     resetIdleHand();
+    if(mDefeatSequence.blocksInput())
+        return true;
     mIdleHandKeys.insert(arg.key);
     updateCreatureIndicatorAlt(arg.key, true);
     if(mLoadMenu && mLoadMenu->isOpenInGame())
@@ -1286,6 +1326,8 @@ void GameMode::refreshPlayerGoals(const std::string& goalsDisplayString)
 bool GameMode::keyReleased(const OIS::KeyEvent &arg)
 {
     resetIdleHand();
+    if(mDefeatSequence.blocksInput())
+        return true;
     mIdleHandKeys.erase(arg.key);
     updateCreatureIndicatorAlt(arg.key, false);
     if(arg.key == OIS::KC_M)
@@ -1341,6 +1383,11 @@ void GameMode::updateCameraControls(float elapsed)
     const std::function<bool(OIS::KeyCode)> down = [this](OIS::KeyCode key) { return getKeyboard()->isKeyDown(key); };
     if(!down(OIS::KC_M))
         mMapKeyDown = false;
+    if(mDefeatSequence.blocksInput())
+    {
+        camera->move(CameraManager::fullStop);
+        return;
+    }
     if(cameraInputBlocked())
     {
         camera->move(CameraManager::fullStop);
@@ -1641,6 +1688,10 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 
         mSkillCurrentCompletion.mProgressBar->setProgress(mSkillCurrentCompletion.mCompletenessDisplayed);
     }
+
+    // onFrameStarted runs more than once per frame (from ODFrameListener::frameStarted and from
+    // ModeManager::update), so the sequence follows the clock instead of summing frame times
+    updateDefeatSequence(std::chrono::steady_clock::now());
 }
 
 void GameMode::onFrameEnded(const Ogre::FrameEvent& evt)
@@ -1688,6 +1739,15 @@ void GameMode::notifyGuiAction(GuiAction guiAction)
         default:
             break;
     }
+}
+
+bool GameMode::onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& /*arg*/)
+{
+    if(!mDefeatSequence.confirmDebriefing())
+        return true;
+    // Same way out as the quit menu, but the main menu opens with the skirmish sub-menu
+    mModeManager->requestMainMenuWithSkirmishSubMenu();
+    return true;
 }
 
 bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
@@ -1898,6 +1958,382 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
 {
     OD_LOG_INF("Defeat sequence requested: conquerorSeatId=" + Helper::toString(conquerorSeatId)
         + ", heartTile=" + Helper::toString(heartTileX) + "," + Helper::toString(heartTileY));
+    const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    if(!mDefeatSequence.start(conquerorSeatId, heartTileX, heartTileY, startTime))
+    {
+        OD_LOG_INF("Defeat sequence already running, request ignored");
+        return;
+    }
+
+    // Nothing the player was doing may go on: drop the held buttons and the pending hand drop
+    InputManager& inputManager = mModeManager->getInputManager();
+    inputManager.mLMouseDown = false;
+    inputManager.mRMouseDown = false;
+    inputManager.mMMouseDown = false;
+    mPendingHandDrop = false;
+
+    // The pointer, the hand and the texts that follow it disappear with the interface
+    CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
+    TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if(renderManager.isKeeperHandVisible())
+        renderManager.rrToggleHandSelectorVisibility();
+    renderManager.rrSetCreaturesTextOverlay(*mGameMap, false);
+
+    CameraManager* cameraManager = ODFrameListener::getSingleton().getCameraManager();
+    if(mDefeatSequence.isHeartKnown())
+    {
+        mDefeatHeartPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTileX),
+            static_cast<Ogre::Real>(heartTileY), 0.0f);
+    }
+    else
+    {
+        // Unknown heart: stay where the camera looks instead of jumping somewhere
+        mDefeatHeartPosition = cameraManager->getCameraViewTarget();
+    }
+    cutCameraToHeart(mDefeatHeartPosition);
+
+    createDefeatWindows();
+
+    // The server has already removed the heart object, so a client-only copy stands in for it: it shakes
+    // and glows until it bursts (the burst effects start in updateDefeatSequence)
+    if(mDefeatSequence.isHeartKnown())
+    {
+        // The server may remove the real heart object only a moment later: hide it, so that it does
+        // not stand in the copy. Its node is destroyed with it, nothing keeps a pointer to it.
+        const std::vector<RenderedMovableEntity*>& objects = mGameMap->getRenderedMovableEntities();
+        for(std::vector<RenderedMovableEntity*>::const_iterator it = objects.begin(); it != objects.end(); ++it)
+        {
+            RenderedMovableEntity* object = *it;
+            if(object->getMeshName() == "DungeonTempleObject" && object->getEntityNode() != nullptr
+                && object->getPositionTile() != nullptr && object->getPositionTile()->getX() == heartTileX
+                && object->getPositionTile()->getY() == heartTileY)
+                object->getEntityNode()->setVisible(false);
+        }
+        renderManager.rrCreateDefeatHeart(mDefeatHeartPosition);
+        mDefeatHeartShown = true;
+    }
+
+    updateDefeatSequence(startTime);
+}
+
+void GameMode::cutCameraToHeart(const Ogre::Vector3& heartPosition)
+{
+    CameraManager* cameraManager = ODFrameListener::getSingleton().getCameraManager();
+    cameraManager->resetCamera(Ogre::Vector3(heartPosition.x, heartPosition.y,
+        DefeatSequenceSettings::CAMERA_HEIGHT), Ogre::Vector3(DefeatSequenceSettings::CAMERA_PITCH, 0.0f, 0.0f));
+
+    // The camera looks obliquely, so move it back until the heart is what it looks at
+    Ogre::Vector3 viewTarget = cameraManager->getCameraViewTarget();
+    Ogre::Vector3 position = cameraManager->getActiveCameraNode()->getPosition();
+    position.x += heartPosition.x - viewTarget.x;
+    position.y += heartPosition.y - viewTarget.y;
+    cameraManager->getActiveCameraNode()->setPosition(position);
+}
+
+void GameMode::createDefeatWindows()
+{
+    CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
+
+    mDefeatTint = windowManager.createWindow("OD/StaticText", "DefeatTint");
+    mDefeatTint->setProperty("BackgroundColours", "FFFF0000");
+    mDefeatFade = windowManager.createWindow("OD/StaticText", "DefeatFade");
+    mDefeatFade->setProperty("BackgroundColours", "FF000000");
+
+    CEGUI::Window* covers[2] = {mDefeatTint, mDefeatFade};
+    for(size_t i = 0; i < 2; ++i)
+    {
+        CEGUI::Window* cover = covers[i];
+        cover->setProperty("FrameEnabled", "False");
+        cover->setProperty("BackgroundEnabled", "True");
+        cover->setAlpha(0.0f);
+        cover->setArea(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0), CEGUI::UDim(1, 0));
+        cover->setMousePassThroughEnabled(true);
+        cover->setAlwaysOnTop(true);
+        mRootWindow->addChild(cover);
+    }
+
+    mDefeatSubtitle = windowManager.createWindow("OD/StaticText", "DefeatSubtitle");
+    mDefeatSubtitle->setFont("MedievalSharp-20");
+    mDefeatSubtitle->setArea(CEGUI::UDim(0.1f, 0), CEGUI::UDim(0.8f, 0), CEGUI::UDim(0.8f, 0), CEGUI::UDim(0.1f, 0));
+    mDefeatSubtitle->setProperty("TextColours", "FFFFFFFF");
+    mDefeatSubtitle->setProperty("HorzFormatting", "CentreAligned");
+
+    // A camera symbol in the top right corner, shown while the sequence runs
+    mDefeatCameraMarker = windowManager.createWindow("OD/StaticImage", "DefeatCameraMarker");
+    mDefeatCameraMarker->setArea(CEGUI::UDim(1, -50), CEGUI::UDim(0, 10), CEGUI::UDim(0, 40), CEGUI::UDim(0, 40));
+    mDefeatCameraMarker->setProperty("Image", DEFEAT_CAMERA_MARKER_IMAGE);
+    mDefeatCameraMarker->setProperty("ImageColours", "FFFF4848");
+    mDefeatCameraMarker->setProperty("FrameEnabled", "False");
+    mDefeatCameraMarker->setProperty("BackgroundEnabled", "False");
+    mDefeatCameraMarker->setMousePassThroughEnabled(true);
+    mDefeatCameraMarker->setAlwaysOnTop(true);
+    mRootWindow->addChild(mDefeatCameraMarker);
+
+    mDefeatSubtitle->setProperty("FrameEnabled", "False");
+    mDefeatSubtitle->setProperty("BackgroundEnabled", "False");
+    mDefeatSubtitle->setProperty("TextParsingEnabled", "False");
+    mDefeatSubtitle->setProperty("VertFormatting", "CentreAligned");
+    mDefeatSubtitle->setMousePassThroughEnabled(true);
+    mDefeatSubtitle->setAlwaysOnTop(true);
+    mRootWindow->addChild(mDefeatSubtitle);
+}
+
+void GameMode::destroyDefeatWindows()
+{
+    CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window** windows[5] = {&mDefeatTint, &mDefeatFade, &mDefeatSubtitle, &mDefeatCameraMarker,
+        &mDefeatDebriefing};
+    for(size_t i = 0; i < 5; ++i)
+    {
+        if(*windows[i] != nullptr)
+            windowManager.destroyWindow(*windows[i]);
+        *windows[i] = nullptr;
+    }
+}
+
+void GameMode::hideInterfaceForDefeat()
+{
+    for(size_t index = 0; index < mRootWindow->getChildCount(); ++index)
+    {
+        CEGUI::Window* child = mRootWindow->getChildAtIdx(index);
+        if(child == mDefeatTint || child == mDefeatFade || child == mDefeatSubtitle
+           || child == mDefeatCameraMarker || child == mDefeatDebriefing)
+            continue;
+        if(child->isVisible())
+            child->hide();
+    }
+}
+
+void GameMode::startDefeatSwirl()
+{
+    mDefeatSwirlDone = true;
+    Seat* conqueror = mGameMap->getSeatById(mDefeatSequence.getConquerorSeatId());
+    if(conqueror == nullptr)
+    {
+        OD_LOG_INF("Defeat sequence: unknown conqueror seat, no swirl");
+        return;
+    }
+    Ogre::ColourValue seatColour = conqueror->getColorValue();
+    seatColour.a = 1.0f;
+
+    // Away from the camera, so that the swirl visibly leaves the heart across the floor
+    Ogre::Vector3 direction = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()
+        ->getDerivedDirection();
+    direction.z = 0.0f;
+    if(direction.squaredLength() < 0.0001f)
+        direction = Ogre::Vector3::UNIT_Y;
+    direction.normalise();
+    mDefeatSwirlDirection = direction;
+
+    Ogre::Vector3 position = mDefeatHeartPosition;
+    position.z = 0.15f;
+    RenderManager::getSingleton().rrCreateFreeParticleEffect(DEFEAT_SWIRL_EFFECT_NAME, "DefeatSwirl",
+        position, &seatColour);
+    mDefeatSwirlEffectActive = true;
+}
+
+void GameMode::startDefeatBurst(float time)
+{
+    mDefeatBurstDone = true;
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if(mDefeatHeartShown)
+    {
+        renderManager.rrDestroyDefeatHeart();
+        mDefeatHeartShown = false;
+    }
+    // A single frame may have run past the explosion phase; then its particles are skipped
+    if(DefeatSequence::isExplosionEffectActiveAt(time))
+    {
+        Ogre::Vector3 position = mDefeatHeartPosition;
+        position.z = DefeatHeartBurstSettings::BURST_HEIGHT;
+        for(size_t i = 0; i < DEFEAT_BURST_EFFECT_COUNT; ++i)
+            renderManager.rrCreateFreeParticleEffect(DEFEAT_BURST_EFFECT_NAMES[i], DEFEAT_BURST_EFFECT_SCRIPTS[i],
+                position, nullptr);
+        mDefeatExplosionEffectActive = true;
+    }
+    if(mDefeatSequence.isHeartKnown())
+    {
+        mDefeatRubble = DefeatHeartBurst::buildRubbleLayout();
+        renderManager.rrCreateDefeatRubble(mDefeatRubble.size());
+        mDefeatRubbleShown = true;
+    }
+}
+
+void GameMode::stopDefeatEffects()
+{
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if(mDefeatExplosionEffectActive)
+    {
+        for(size_t i = 0; i < DEFEAT_BURST_EFFECT_COUNT; ++i)
+            renderManager.rrDestroyFreeParticleEffect(DEFEAT_BURST_EFFECT_NAMES[i]);
+    }
+    if(mDefeatSwirlEffectActive)
+        renderManager.rrDestroyFreeParticleEffect(DEFEAT_SWIRL_EFFECT_NAME);
+    if(mDefeatHeartShown)
+        renderManager.rrDestroyDefeatHeart();
+    if(mDefeatRubbleShown)
+        renderManager.rrDestroyDefeatRubble();
+    mDefeatExplosionEffectActive = false;
+    mDefeatSwirlEffectActive = false;
+    mDefeatHeartShown = false;
+    mDefeatRubbleShown = false;
+}
+
+void GameMode::updateDefeatSequence(std::chrono::steady_clock::time_point now)
+{
+    if(!mDefeatSequence.isStarted())
+        return;
+
+    const bool finished = mDefeatSequence.advanceTo(now);
+    const float time = mDefeatSequence.getElapsed();
+    RenderManager& renderManager = RenderManager::getSingleton();
+
+    hideInterfaceForDefeat();
+    mDefeatTint->setAlpha(DefeatSequence::redTintAlphaAt(time));
+    mDefeatFade->setAlpha(DefeatSequence::blackAlphaAt(time));
+    if(DefeatSequence::isSecondSubtitleVisibleAt(time))
+        mDefeatSubtitle->setText(DEFEAT_SECOND_SUBTITLE);
+    else if(DefeatSequence::isFirstSubtitleVisibleAt(time))
+        mDefeatSubtitle->setText(DEFEAT_FIRST_SUBTITLE);
+    else
+        mDefeatSubtitle->setText("");
+
+    if(!mDefeatBurstDone && DefeatHeartBurst::isBurstDueAt(time))
+        startDefeatBurst(time);
+    if(mDefeatHeartShown)
+    {
+        const Ogre::Vector3 shake(DefeatHeartBurst::heartShakeXAt(time), DefeatHeartBurst::heartShakeYAt(time), 0.0f);
+        renderManager.rrUpdateDefeatHeart(mDefeatHeartPosition + shake, DefeatHeartBurst::heartPulseScaleAt(time),
+            DefeatHeartBurst::heartGlowAt(time));
+    }
+    if(mDefeatRubbleShown)
+    {
+        const float sinceBurst = time - DefeatHeartBurstSettings::BURST_TIME;
+        for(size_t i = 0; i < mDefeatRubble.size(); ++i)
+        {
+            const DefeatRubblePiece& piece = mDefeatRubble[i];
+            const DefeatRubblePose pose = DefeatHeartBurst::rubblePoseAt(piece, sinceBurst);
+            renderManager.rrMoveDefeatRubblePiece(i, mDefeatHeartPosition + Ogre::Vector3(pose.x, pose.y, pose.z),
+                Ogre::Vector3(pose.tiltX, pose.tiltY, pose.turn), Ogre::Vector3(piece.scaleX, piece.scaleY, piece.scaleZ));
+        }
+    }
+
+    if(mDefeatExplosionEffectActive && !DefeatSequence::isExplosionEffectActiveAt(time))
+    {
+        for(size_t i = 0; i < DEFEAT_BURST_EFFECT_COUNT; ++i)
+            renderManager.rrDestroyFreeParticleEffect(DEFEAT_BURST_EFFECT_NAMES[i]);
+        mDefeatExplosionEffectActive = false;
+    }
+
+    if(!mDefeatSwirlDone && mDefeatSequence.isSwirlWanted() && DefeatSequence::isSwirlActiveAt(time))
+        startDefeatSwirl();
+    if(mDefeatSwirlEffectActive)
+    {
+        if(DefeatSequence::isSwirlActiveAt(time))
+        {
+            Ogre::Vector3 position = mDefeatHeartPosition
+                + mDefeatSwirlDirection * (DefeatSequenceSettings::SWIRL_DISTANCE
+                    * DefeatSequence::swirlProgressAt(time));
+            position.z = 0.15f;
+            renderManager.rrMoveFreeParticleEffect(DEFEAT_SWIRL_EFFECT_NAME, position);
+        }
+        else
+        {
+            renderManager.rrDestroyFreeParticleEffect(DEFEAT_SWIRL_EFFECT_NAME);
+            mDefeatSwirlEffectActive = false;
+        }
+    }
+
+    if(finished)
+        onDefeatSequenceFinished();
+}
+
+void GameMode::onDefeatSequenceFinished()
+{
+    OD_LOG_INF("Defeat sequence finished");
+    // The screen is black: the rubble and whatever effect is left can go
+    stopDefeatEffects();
+    if(!mDefeatSequence.openDebriefing())
+        return;
+    // The screen stays black; the subtitle and the camera marker make room for the debriefing
+    mDefeatSubtitle->hide();
+    mDefeatCameraMarker->hide();
+    showDefeatDebriefing();
+}
+
+void GameMode::showDefeatDebriefing()
+{
+    mDefeatDebriefing = CEGUI::WindowManager::getSingleton().loadLayoutFromFile("WindowDefeatDebriefing.layout");
+    mDefeatDebriefing->setAlwaysOnTop(true);
+    mRootWindow->addChild(mDefeatDebriefing);
+
+    const std::string nick = mGameMap->getLocalPlayer()->getNick();
+    mDefeatDebriefing->getChild("Panel/PlayerName")->setText(reinterpret_cast<const CEGUI::utf8*>(nick.c_str()));
+    // The statistics snapshot taken by the server at the defeat wins over the client's own values
+    const bool hasStatistics = ODClient::getSingleton().hasLevelStatistics();
+    const LevelStatistics& statistics = ODClient::getSingleton().getLevelStatistics();
+    mDefeatDebriefing->getChild("Panel/Outcome")->setText(debriefingOutcomeText(debriefingLevelWon(hasStatistics, statistics, false)));
+    const int64_t clientSeconds = debriefingElapsedSeconds(mGameMap->getTurnNumber(), ODApplication::turnsPerSecond);
+    const int64_t seconds = debriefingSeconds(hasStatistics, statistics, clientSeconds);
+    mDefeatDebriefing->getChild("Panel/Elapsed")->setText(DEFEAT_DEBRIEFING_ELAPSED + formatDebriefingTime(seconds));
+    if(hasStatistics)
+        fillDefeatStatistics(buildDebriefingTable(statistics));
+
+    addEventConnection(
+        mDefeatDebriefing->getChild("Panel/ConfirmButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::onClickDefeatDebriefingConfirm, this)
+        )
+    );
+
+    // The pointer is back for the button. The CEGUI arrow image of this game is transparent
+    // (OpenDungeonsSkin/MouseArrow): the visible pointer is the keeper hand, which the sequence hid.
+    CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if(!renderManager.isKeeperHandVisible())
+        renderManager.rrToggleHandSelectorVisibility();
+}
+
+void GameMode::fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows)
+{
+    if(rows.empty())
+        return;
+
+    CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* area = mDefeatDebriefing->getChild("Panel/StatisticsArea");
+    for(size_t row = 0; row < rows.size(); ++row)
+    {
+        CEGUI::Window* label = windowManager.createWindow("OD/StaticText", "DefeatStatisticsLabel" + std::to_string(row));
+        label->setProperty("Area", debriefingLabelArea(row));
+        label->setProperty("Font", "MedievalSharp-12");
+        label->setProperty("FrameEnabled", "False");
+        label->setProperty("BackgroundEnabled", "False");
+        label->setProperty("HorzFormatting", "LeftAligned");
+        label->setProperty("VertFormatting", "CentreAligned");
+        label->setText(rows[row].mLabel);
+        area->addChild(label);
+
+        const std::vector<DebriefingTableCell>& cells = rows[row].mCells;
+        for(size_t column = 0; column < cells.size(); ++column)
+        {
+            // A seat the client does not know is drawn in white
+            Seat* seat = mGameMap->getSeatById(cells[column].mSeatId);
+            const Ogre::ColourValue colour = (seat == nullptr) ? Ogre::ColourValue::White : seat->getColorValue();
+            CEGUI::Window* cell = windowManager.createWindow("OD/StaticText",
+                "DefeatStatisticsCell" + std::to_string(row) + "_" + std::to_string(column));
+            cell->setProperty("Area", debriefingCellArea(row, column, cells.size()));
+            cell->setProperty("Font", "MedievalSharp-12");
+            cell->setProperty("FrameEnabled", "False");
+            cell->setProperty("BackgroundEnabled", "False");
+            cell->setProperty("HorzFormatting", "CentreAligned");
+            cell->setProperty("VertFormatting", "CentreAligned");
+            cell->setProperty("TextColours", debriefingColourText(colour.getAsARGB()));
+            cell->setText(cells[column].mText);
+            area->addChild(cell);
+        }
+    }
+    area->show();
 }
 
 bool GameMode::hideSkillWindow(const CEGUI::EventArgs&)
