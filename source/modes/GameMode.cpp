@@ -88,6 +88,8 @@ const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
 const std::string DEFEAT_SWIRL_EFFECT_NAME = "DefeatSwirl";
 const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
 const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
+const std::string DEFEAT_DEBRIEFING_OUTCOME = "Level won: No";
+const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
@@ -577,7 +579,11 @@ void GameMode::activate()
 bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 {
     if(mDefeatSequence.blocksInput())
+    {
+        if(mDefeatSequence.allowsGuiInput())
+            AbstractApplicationMode::mouseMoved(arg);
         return true;
+    }
     resetIdleHand();
     AbstractApplicationMode::mouseMoved(arg);
 
@@ -771,7 +777,11 @@ void GameMode::sendPendingHandDropRequest(bool dropAllCreatures)
 bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
     if(mDefeatSequence.blocksInput())
+    {
+        if(mDefeatSequence.allowsGuiInput())
+            CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(Gui::convertButton(id));
         return true;
+    }
     resetIdleHand();
     InputManager& inputManager = mModeManager->getInputManager();
 
@@ -1011,7 +1021,11 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
     if(mDefeatSequence.blocksInput())
+    {
+        if(mDefeatSequence.allowsGuiInput())
+            CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
         return true;
+    }
     resetIdleHand();
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
 
@@ -1772,6 +1786,15 @@ void GameMode::notifyGuiAction(GuiAction guiAction)
     }
 }
 
+bool GameMode::onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& /*arg*/)
+{
+    if(!mDefeatSequence.confirmDebriefing())
+        return true;
+    // Same way out as the quit menu, but the main menu opens with the skirmish sub-menu
+    mModeManager->requestMainMenuWithSkirmishSubMenu();
+    return true;
+}
+
 bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 {
     if(mExitToDesktop)
@@ -2051,8 +2074,9 @@ void GameMode::createDefeatWindows()
 void GameMode::destroyDefeatWindows()
 {
     CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
-    CEGUI::Window** windows[4] = {&mDefeatTint, &mDefeatFade, &mDefeatSubtitle, &mDefeatCameraMarker};
-    for(size_t i = 0; i < 4; ++i)
+    CEGUI::Window** windows[5] = {&mDefeatTint, &mDefeatFade, &mDefeatSubtitle, &mDefeatCameraMarker,
+        &mDefeatDebriefing};
+    for(size_t i = 0; i < 5; ++i)
     {
         if(*windows[i] != nullptr)
             windowManager.destroyWindow(*windows[i]);
@@ -2066,7 +2090,7 @@ void GameMode::hideInterfaceForDefeat()
     {
         CEGUI::Window* child = mRootWindow->getChildAtIdx(index);
         if(child == mDefeatTint || child == mDefeatFade || child == mDefeatSubtitle
-           || child == mDefeatCameraMarker)
+           || child == mDefeatCameraMarker || child == mDefeatDebriefing)
             continue;
         if(child->isVisible())
             child->hide();
@@ -2163,8 +2187,35 @@ void GameMode::updateDefeatSequence(float elapsed)
 void GameMode::onDefeatSequenceFinished()
 {
     OD_LOG_INF("Defeat sequence finished");
-    // The debriefing window is the next task and will be opened from here. Until then the
-    // screen stays black and the input stays blocked.
+    if(!mDefeatSequence.openDebriefing())
+        return;
+    // The screen stays black; the subtitle and the camera marker make room for the debriefing
+    mDefeatSubtitle->hide();
+    mDefeatCameraMarker->hide();
+    showDefeatDebriefing();
+}
+
+void GameMode::showDefeatDebriefing()
+{
+    mDefeatDebriefing = CEGUI::WindowManager::getSingleton().loadLayoutFromFile("WindowDefeatDebriefing.layout");
+    mDefeatDebriefing->setAlwaysOnTop(true);
+    mRootWindow->addChild(mDefeatDebriefing);
+
+    const std::string nick = mGameMap->getLocalPlayer()->getNick();
+    mDefeatDebriefing->getChild("Panel/PlayerName")->setText(reinterpret_cast<const CEGUI::utf8*>(nick.c_str()));
+    mDefeatDebriefing->getChild("Panel/Outcome")->setText(DEFEAT_DEBRIEFING_OUTCOME);
+    const int64_t seconds = debriefingElapsedSeconds(mGameMap->getTurnNumber(), ODApplication::turnsPerSecond);
+    mDefeatDebriefing->getChild("Panel/Elapsed")->setText(DEFEAT_DEBRIEFING_ELAPSED + formatDebriefingTime(seconds));
+
+    addEventConnection(
+        mDefeatDebriefing->getChild("Panel/ConfirmButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::onClickDefeatDebriefingConfirm, this)
+        )
+    );
+
+    // The pointer is back for the button; the hand stays hidden
+    CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
 }
 
 void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)

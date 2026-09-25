@@ -19,6 +19,7 @@
 #define DEFEATSEQUENCE_H
 
 #include <cstdint>
+#include <string>
 
 //! \brief Timings (seconds after the heart was destroyed) and look of the defeat sequence.
 namespace DefeatSequenceSettings
@@ -35,7 +36,7 @@ namespace DefeatSequenceSettings
     const float FADE_START = 19.5f;
     const float FADE_END = 28.5f;
     const float SECOND_SUBTITLE_START = 20.5f;
-    //! End of the part implemented here; the debriefing window takes over afterwards
+    //! End of the timeline; the debriefing window opens on the black screen afterwards
     const float FINISH = 29.5f;
     //! Longest time step taken into account, so that a slow frame cannot skip a phase
     const float MAX_STEP = 0.25f;
@@ -44,6 +45,35 @@ namespace DefeatSequenceSettings
     //! (0 looks straight down, like the game camera's default of 25)
     const float CAMERA_HEIGHT = 2.0f;
     const float CAMERA_PITCH = 68.0f;
+}
+
+//! Seconds elapsed in the game: the turn number divided by the turns per second.
+//! Unusable input (no turns yet, no turn rate) gives 0.
+inline int64_t debriefingElapsedSeconds(int64_t turnNumber, double turnsPerSecond)
+{
+    if(turnNumber <= 0 || turnsPerSecond <= 0.0)
+        return 0;
+    return static_cast<int64_t>(static_cast<double>(turnNumber) / turnsPerSecond);
+}
+
+//! Formats seconds as mm:ss, or h:mm:ss from one hour on. Negative values give 00:00.
+inline std::string formatDebriefingTime(int64_t seconds)
+{
+    if(seconds < 0)
+        seconds = 0;
+    const int64_t hours = seconds / 3600;
+    const int64_t minutes = (seconds / 60) % 60;
+    const int64_t rest = seconds % 60;
+    std::string result;
+    if(hours > 0)
+        result += std::to_string(hours) + ":";
+    if(minutes < 10)
+        result += "0";
+    result += std::to_string(minutes) + ":";
+    if(rest < 10)
+        result += "0";
+    result += std::to_string(rest);
+    return result;
 }
 
 //! \brief State and timeline of the defeat sequence.
@@ -64,6 +94,8 @@ public:
     DefeatSequence() :
         mStarted(false),
         mFinished(false),
+        mDebriefingOpen(false),
+        mDebriefingConfirmed(false),
         mElapsed(0.0f),
         mConquerorSeatId(-1),
         mHeartTileX(-1),
@@ -98,11 +130,36 @@ public:
         return true;
     }
 
-    //! \brief True from the start on, also after the end: the screen stays black and input stays blocked.
+    //! Opens the debriefing after the end of the timeline. Returns true exactly once.
+    bool openDebriefing()
+    {
+        if(!mFinished || mDebriefingOpen)
+            return false;
+        mDebriefingOpen = true;
+        return true;
+    }
+
+    //! The confirm button of the debriefing was clicked. Returns true exactly once, and only
+    //! while the debriefing is open, so a double click leaves the game only once.
+    bool confirmDebriefing()
+    {
+        if(!mDebriefingOpen || mDebriefingConfirmed)
+            return false;
+        mDebriefingConfirmed = true;
+        return true;
+    }
+
+    //! True from the start on, also after the end: the screen stays black and the game gets no input.
     bool isStarted() const
     { return mStarted; }
     bool blocksInput() const
     { return mStarted; }
+    //! While the debriefing is open the mouse still reaches the interface (not the game),
+    //! so that its button can be clicked. Before that everything stays blocked.
+    bool allowsGuiInput() const
+    { return mDebriefingOpen; }
+    bool isDebriefingOpen() const
+    { return mDebriefingOpen; }
     bool isFinished() const
     { return mFinished; }
     float getElapsed() const
@@ -182,6 +239,8 @@ public:
 private:
     bool mStarted;
     bool mFinished;
+    bool mDebriefingOpen;
+    bool mDebriefingConfirmed;
     float mElapsed;
     int32_t mConquerorSeatId;
     int32_t mHeartTileX;

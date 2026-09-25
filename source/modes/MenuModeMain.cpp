@@ -164,6 +164,9 @@ void MenuModeMain::activate()
     window->getChild(WINDOW_SETTINGS)->hide();
     mSettingsPageOpen = false;
     showMainMenuButtons(true);
+    // Coming from the defeat debriefing: go on in the skirmish sub-menu
+    if(getModeManager().consumeSkirmishSubMenuRequest())
+        toggleSubMenu(WINDOW_SKIRMISH);
 
     giveFocus();
 

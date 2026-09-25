@@ -111,6 +111,8 @@ public:
     void stopDefeatEffects();
     void hideInterfaceForDefeat();
     void onDefeatSequenceFinished();
+    void showDefeatDebriefing() {++mDebriefingShown;}
+    int mDebriefingShown = 0;
     DefeatSequence mDefeatSequence;
     Ogre::Vector3 mDefeatHeartPosition;
     Ogre::Vector3 mDefeatSwirlDirection;
@@ -121,6 +123,7 @@ public:
     CEGUI::Window* mDefeatFade = nullptr;
     CEGUI::Window* mDefeatSubtitle = nullptr;
     CEGUI::Window* mDefeatCameraMarker = nullptr;
+    CEGUI::Window* mDefeatDebriefing = nullptr;
     CEGUI::Window mRoot;
     CEGUI::Window* mRootWindow;
     GameMap mMap;
@@ -171,7 +174,7 @@ struct Run
         bool wasFinished = mode.mDefeatSequence.isFinished();
         mode.updateDefeatSequence(dt);
         if(ui1.visible || ui2.visible) ++uiShownAfterHide;
-        if(!tint.visible || !fade.visible || !subtitle.visible || !marker.visible) sequenceWindowHidden = true;
+        if(!mode.mDefeatSequence.isFinished() && (!tint.visible || !fade.visible || !subtitle.visible || !marker.visible)) sequenceWindowHidden = true;
         float t = mode.mDefeatSequence.getElapsed();
         std::vector<Effect>& effects = RenderManager::getSingleton().effects;
         for(size_t i = before; i < effects.size(); ++i)
@@ -249,7 +252,8 @@ int main()
         int finishedLogs = 0;for(size_t i = 0; i < gLog.size(); ++i) if(gLog[i] == "Defeat sequence finished") ++finishedLogs;
         check(finishedLogs == 1, "the finished hook runs exactly once");
         check(run.uiShownAfterHide == 0, "windows that the game shows again are hidden in the same frame");
-        check(!run.sequenceWindowHidden, "the windows of the sequence itself are never hidden");
+        check(!run.sequenceWindowHidden, "the windows of the sequence itself are never hidden while the sequence runs");
+        check(run.mode.mDebriefingShown == 1 && !run.subtitle.visible && !run.marker.visible, "the debriefing is opened once and takes the place of subtitle and marker");
         check(near(run.fade.alpha, 1.0f) && near(run.tint.alpha, 0.0f), "the screen ends black without tint");
         check(run.subtitle.text == "That's it for today. Until next time.", "the second subtitle stays until the end");
     }
@@ -298,12 +302,13 @@ probe = (probe.replace('CONSTANTS', constants)
     .replace('FINISHED', function(game_mode, 'void GameMode::onDefeatSequenceFinished(')))
 
 # Static wiring checks on the production sources.
-guard = '{\n    if(mDefeatSequence.blocksInput())\n        return true;\n'
+guard = '{\n    if(mDefeatSequence.blocksInput())\n'
 for signature in ('bool GameMode::mouseMoved(', 'bool GameMode::mousePressed(', 'bool GameMode::mouseReleased(',
                   'bool GameMode::keyPressed(', 'bool GameMode::keyReleased('):
     body = function(game_mode, signature)
     assert body[body.index('{'):].startswith(guard), signature
-print('WIRING OK: mouse move/press/release and key press/release return before anything else while the sequence runs')
+    assert 'return true;' in body[:body.index('resetIdleHand();')], signature
+print('WIRING OK: mouse move/press/release and key press/release are gated first and return before any game code while the sequence runs')
 assert 'if(mDefeatSequence.blocksInput())' in function(game_mode, 'void GameMode::updateCameraControls(')
 assert 'updateDefeatSequence(evt.timeSinceLastFrame);' in function(game_mode, 'void GameMode::onFrameStarted(')
 start = function(game_mode, 'void GameMode::startDefeatSequence(')
