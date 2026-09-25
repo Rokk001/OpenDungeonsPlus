@@ -46,10 +46,11 @@ struct GameEntity {Seat* seat;int deaths=0;GameEntity(Seat* s=nullptr):seat(s){}
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 0;}};
 struct GameMap {bool editor=false;int fights=0;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}};
-struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}};
+struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}bool notifyRemoveAsked(){return true;}};
 struct Building {double floorHP=250;double getHP(Tile*)const{return floorHP;}};
 struct Room:Building {
- GameMap* map;Seat* seat;int dead=0,removed=0,upkeep=0;std::vector<Tile*> mCoveredTiles;
+ GameMap* map;Seat* seat;int dead=0,removed=0,upkeep=0,objectsRemoved=0;std::vector<Tile*> mCoveredTiles;
+ void removeAllBuildingObjects(){++objectsRemoved;}
  Room(GameMap* m,Seat* s):map(m),seat(s){}virtual ~Room()=default;
  GameMap* getGameMap()const{return map;}Seat* getSeat()const{return seat;}
  double getPhysicalDefense(){return 1;}double getMagicalDefense(){return 2;}double getElementDefense(){return 3;}
@@ -116,7 +117,7 @@ int main(){int checks=0,failures=0;
  check(heart.takeHeartDamage(&attacker,999,0,0,0,&centre)==0&&heart.dead==1,"dead heart cannot be hit twice");
  check(ownerPlayer.recorded==1,"conqueror recorded only once");
  check(enemy.stats.mKeepersDefeated==1&&owner.stats.mKeepersDefeated==0,"final blow counts one defeated keeper for the attacker seat only, once");
- heart.doUpkeep();check(heart.removed==2&&heart.mCoveredTiles.empty(),"heart death releases the existing room lifecycle");
+ heart.doUpkeep();check(heart.removed==0&&heart.mCoveredTiles.size()==2&&heart.objectsRemoved==1&&heart.mTempleObject==nullptr,"heart death releases only the heart object and keeps the floor");
  // Critical-health warning (threshold 11 % of 250 = 27.5)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
  const char* warning="Your dungeon heart is in critical condition!";
