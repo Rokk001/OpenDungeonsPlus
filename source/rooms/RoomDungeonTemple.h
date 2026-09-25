@@ -81,6 +81,10 @@ private:
     //! One health pool for the heart, independent of individual floor tiles.
     double mHeartHP;
 
+    //! True once the critical-health warning was sent to the owner. Not saved: a reloaded
+    //! game with an already critical heart warns once again at the next hit.
+    bool mCriticalWarningSent;
+
     //! \brief Updates the temple mesh position.
     void updateTemplePosition();
 };

@@ -23,15 +23,27 @@ probe = r'''
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 struct Tile{};
-struct Seat {int team;void* getPlayer(){return this;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
+struct Player {bool human=true;bool lost=false;bool getIsHuman()const{return human;}bool getHasLost()const{return lost;}};
+struct Seat {int team;Player* player=nullptr;Player* getPlayer(){return player;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
+enum class ServerNotificationType {chatServer};
+enum class EventShortNoticeType {majorGameEvent};
+struct ODPacket {std::vector<std::string> texts;int majorEvents=0;
+ ODPacket& operator<<(const std::string& t){texts.push_back(t);return *this;}
+ ODPacket& operator<<(EventShortNoticeType){++majorEvents;return *this;}};
+struct ServerNotification {ServerNotificationType type;Player* player;ODPacket mPacket;
+ ServerNotification(ServerNotificationType t,Player* p):type(t),player(p){}};
+struct ODServer {std::vector<ServerNotification*> queue;
+ static ODServer& getSingleton(){static ODServer server;return server;}
+ void queueServerNotification(ServerNotification* n){queue.push_back(n);}};
 struct GameEntity {Seat* seat;int deaths=0;GameEntity(Seat* s=nullptr):seat(s){}
  Seat* getSeat(){return seat;}void setSeat(Seat* s){seat=s;}void fireEntityDead(){++deaths;}
  virtual bool isAttackable(Tile*,Seat*)const{return false;}virtual double getHP(Tile*)const{return 0;}
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 0;}};
 struct GameMap {bool editor=false;int fights=0;
- bool isInEditorMode(){return editor;}void playerIsFighting(void*,Tile*){++fights;}};
+ bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}};
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}};
 struct Building {double floorHP=250;double getHP(Tile*)const{return floorHP;}};
 struct Room:Building {
@@ -50,7 +62,7 @@ struct Room:Building {
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}
 };
 struct RoomDungeonTemple:Room {
- BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;
+ BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const;
@@ -65,7 +77,7 @@ METHODS
 HEART_OBJECT;
 int main(){int checks=0,failures=0;
  auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
- Seat owner{1},ally{1},enemy{2};Tile centre,floor;BuildingObject object{&centre};
+ Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2};Tile centre,floor;BuildingObject object{&centre};
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre);
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
  check(core.getSeat()==&owner,"heart entity carries room ownership");
@@ -100,6 +112,41 @@ int main(){int checks=0,failures=0;
  check(heart.dead==1&&!heart.canAttackHeart(&centre,&enemy),"death fires once and disables targeting");
  check(heart.takeHeartDamage(&attacker,999,0,0,0,&centre)==0&&heart.dead==1,"dead heart cannot be hit twice");
  heart.doUpkeep();check(heart.removed==2&&heart.mCoveredTiles.empty(),"heart death releases the existing room lifecycle");
+ // Critical-health warning (threshold 11 % of 250 = 27.5)
+ ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
+ const char* warning="Your dungeon heart is in critical condition!";
+ {server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;
+  h.takeHeartDamage(&hitter,200,0,0,0,&centre);
+  h.takeHeartDamage(&hitter,22.4,0,0,0,&centre);
+  check(server.queue.empty(),"no warning above 11 percent");
+  h.takeHeartDamage(&hitter,0.1,0,0,0,&centre);
+  check(server.queue.size()==1,"exactly one warning at the threshold");
+  if(server.queue.size()==1){ServerNotification* n=server.queue[0];
+   check(n->type==ServerNotificationType::chatServer&&n->player==&ownerPlayer,"warning goes to the owner only");
+   check(n->mPacket.texts.size()==1&&n->mPacket.texts[0]==warning&&n->mPacket.majorEvents==1,"warning text and event type");}
+  h.takeHeartDamage(&hitter,1,0,0,0,&centre);h.takeHeartDamage(&hitter,1,0,0,0,&centre);
+  check(server.queue.size()==1,"no second warning on further hits");
+  h.takeHeartDamage(&hitter,999,0,0,0,&centre);
+  check(h.dead==1&&server.queue.size()==1,"killing hit sends no extra warning");}
+ {server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.mHeartHP=20;
+  h.takeHeartDamage(&hitter,1,0,0,0,&centre);
+  check(server.queue.size()==1,"first hit while already below the threshold warns once");
+  h.takeHeartDamage(&hitter,1,0,0,0,&centre);
+  check(server.queue.size()==1,"no repeat after a low first hit");}
+ {server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.mHeartHP=20;
+  h.takeHeartDamage(&hitter,999,0,0,0,&centre);
+  check(h.dead==1&&server.queue.empty(),"killing hit from below the threshold sends no warning");}
+ {server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;
+  h.takeHeartDamage(&hitter,999,0,0,0,&centre);
+  check(h.dead==1&&server.queue.empty(),"one-blow kill from full health sends no warning");}
+ {Player bot;bot.human=false;Player loser;loser.lost=true;Seat botSeat{1,&bot},lostSeat{1,&loser},emptySeat{1};
+  for(Seat* seat:{&botSeat,&lostSeat,&emptySeat}){
+   server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,seat);h.mTempleObject=&obj;h.mHeartHP=20;
+   h.takeHeartDamage(&hitter,1,0,0,0,&centre);
+   check(server.queue.empty(),"no warning for a non-human, lost or absent owner");}}
+ {server.queue.clear();map.editor=true;BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.mHeartHP=20;
+  h.takeHeartDamage(&hitter,1,0,0,0,&centre);map.editor=false;
+  check(server.queue.empty(),"no warning in editor mode");}
  map.editor=true;RoomDungeonTemple edit(&map,&owner);edit.mCoveredTiles={&floor};
  check(edit.removeCoveredTile(&floor),"editor editing preserved");
  std::stringstream level;edit.exportToStream(level);check(level.str().find("HeartHP")==std::string::npos,"editor maps do not persist combat damage");
