@@ -95,7 +95,9 @@ struct Building {
 struct Room : Building {
     RoomType mType;
     Seat* mSeat;
-    Room(RoomType type, Seat* seat) : mType(type), mSeat(seat) {}
+    unsigned mTiles;
+    Room(RoomType type, Seat* seat) : mType(type), mSeat(seat), mTiles(9) {}
+    unsigned numCoveredTiles() const {return mTiles;}
     RoomType getType() const {return mType;}
     Seat* getSeat() const {return mSeat;}
     virtual void exportToStream(std::ostream& os) const {os << mFloorHP << '\n';}
@@ -111,6 +113,8 @@ struct RoomDungeonTemple : Room {
     double mHeartHP;
     RoomDungeonTemple(GameMap* map, Seat* seat) : Room(RoomType::dungeonTemple, seat), mMap(map), mHeartHP(-1.0) {}
     GameMap* getGameMap() const {return mMap;}
+    static const double HEART_HP_PER_TILE;
+    double getHeartMaxHP() const;
     double getHP(Tile* tile) const override;
     double getHeartHealthFraction() const;
     void exportToStream(std::ostream& os) const override;
@@ -271,10 +275,10 @@ void checkServer()
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.empty(), "nothing is sent while the health does not change");
 
-    ownHeart.mHeartHP = 248.0;
+    ownHeart.mHeartHP = 89280.0;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.empty(), "a change below one point is not sent");
-    ownHeart.mHeartHP = 247.0;
+    ownHeart.mHeartHP = 88920.0;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.size() == 1, "a change of one point is sent");
     if(queue.mQueue.size() == 1)
@@ -282,14 +286,14 @@ void checkServer()
             "a hit is sent with its fraction and underAttack");
     queue.mQueue.clear();
 
-    ownHeart.mHeartHP = 25.0;
+    ownHeart.mHeartHP = 9000.0;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[0], 0.1), "10 percent heart is sent");
     queue.mQueue.clear();
-    ownHeart.mHeartHP = 24.0;
+    ownHeart.mHeartHP = 8640.0;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.empty(), "0.4 point below the last message is not sent");
-    ownHeart.mHeartHP = 0.5;
+    ownHeart.mHeartHP = 180.0;
     notifyHeartHealth(&map, &socket, &human);
     queue.mQueue.clear();
     ownHeart.mHeartHP = 0.0;
@@ -304,7 +308,7 @@ void checkServer()
     check(queue.mQueue.empty(), "a destroyed heart is not sent again");
 
     ODSocketClient robotSocket;
-    ownHeart.mHeartHP = 100.0;
+    ownHeart.mHeartHP = 36000.0;
     notifyHeartHealth(&map, &robotSocket, &robot);
     check(queue.mQueue.empty(), "nothing is sent to a non-human player");
     ODSocketClient enemySocket;
@@ -327,7 +331,7 @@ void checkSaveAndLoad()
     Player human(&mine, true);
     GameMap map;
     RoomDungeonTemple saved(&map, &mine);
-    saved.mHeartHP = 25.0;
+    saved.mHeartHP = 9000.0;
     std::stringstream stream;
     saved.exportToStream(stream);
     stream << "[/Room]\n";
@@ -350,8 +354,13 @@ void checkSaveAndLoad()
     RoomDungeonTemple dead(&loadedMap, &mine);
     dead.mHeartHP = 0.0;
     check(near(dead.getHeartHealthFraction(), 0.0), "destroyed heart has fraction 0");
-    dead.mFloorHP = 0.0;
-    check(near(dead.getHeartHealthFraction(), 0.0), "no durability gives fraction 0");
+    dead.mTiles = 0;
+    check(near(dead.getHeartHealthFraction(), 0.0), "a room without tiles gives fraction 0");
+    RoomDungeonTemple half(&loadedMap, &mine);
+    half.mFloorHP = 90.0;
+    half.mHeartHP = 45000.0;
+    check(near(half.getHeartMaxHP(), 90000.0) && near(half.getHeartHealthFraction(), 0.5),
+        "the ring follows the heart's own 90000 health (10000 per tile), not the floor durability");
 }
 
 void checkDrawing()
@@ -402,8 +411,10 @@ int main()
 }
 '''
 
-temple_methods = '\n'.join(function(temple, signature) for signature in (
-    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
+temple_methods = 'const double RoomDungeonTemple::HEART_HP_PER_TILE = ' + \
+    temple.split('const double RoomDungeonTemple::HEART_HP_PER_TILE = ')[1].split(';')[0] + ';\n'
+temple_methods += '\n'.join(function(temple, signature) for signature in (
+    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
     'void RoomDungeonTemple::exportToStream(', 'bool RoomDungeonTemple::importFromStream('))
 badge_start = gui.index('const int BADGE_SIZE = 128;')
 badge_code = 'const int BADGE_SIZE = 128;\n' + function(gui, 'void drawBadgePixels(') + '\n'
