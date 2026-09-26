@@ -145,7 +145,8 @@ void createMiniMapCornerImages()
 const int BADGE_SIZE = 128;
 
 //! \brief Draws a 128x128 HUD badge. The ring of the heart badge (badge 0) shows the health
-//! of the dungeon heart, and its background glows magenta while the heart is under attack.
+//! of the dungeon heart as six segments separated by spokes, and its background glows magenta
+//! while the heart is under attack.
 void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float healthFraction, bool underAttack)
 {
     const int badgeSize = BADGE_SIZE;
@@ -198,9 +199,17 @@ void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float health
                 // The ring of the heart badge is the health of the dungeon heart: the lit part
                 // is green, the rest stays as a dark groove
                 const bool lit = badge != 0 || HeartHealthRing::isRingLit(dx, dy, healthFraction);
-                pixels[i] = static_cast<unsigned char>((badge == 0 ? (lit ? 24 : 14) : 210) * relief);
-                pixels[i + 1] = static_cast<unsigned char>((badge == 0 ? (lit ? 178 : 38) : 171) * relief);
-                pixels[i + 2] = static_cast<unsigned char>((badge == 0 ? (lit ? 114 : 30) : 35) * relief);
+                if(badge == 0 && HeartHealthRing::isSpoke(dx, dy))
+                {
+                    // The spokes between the six segments are part of the silver rim
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(120 * relief);
+                }
+                else
+                {
+                    pixels[i] = static_cast<unsigned char>((badge == 0 ? (lit ? 24 : 14) : 210) * relief);
+                    pixels[i + 1] = static_cast<unsigned char>((badge == 0 ? (lit ? 178 : 38) : 171) * relief);
+                    pixels[i + 2] = static_cast<unsigned char>((badge == 0 ? (lit ? 114 : 30) : 35) * relief);
+                }
             }
             if(inSymbol(dx, dy))
             {

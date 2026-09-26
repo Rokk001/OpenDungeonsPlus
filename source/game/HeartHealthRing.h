@@ -26,11 +26,15 @@
 //! any engine type so that the server rules, the client state and the drawing share them.
 namespace HeartHealthRing
 {
-    //! Where a full ring starts, in degrees clockwise from the top.
-    const float RING_START_DEGREES = 15.0f;
+    //! The ring is split into this many segments by spokes; one segment stands for one sixth of
+    //! the health. The segments are filled clockwise from the top.
+    const int SEGMENT_COUNT = 6;
 
-    //! Length of a full ring in degrees (it ends at 345 degrees).
-    const float RING_FULL_SPAN_DEGREES = 330.0f;
+    //! Angular size of one segment in degrees.
+    const float SEGMENT_DEGREES = 360.0f / SEGMENT_COUNT;
+
+    //! Half width in degrees of the spoke that separates two segments. The first spoke is at the top.
+    const float SPOKE_HALF_DEGREES = 3.0f;
 
     //! The server only tells the owner about changes of at least one percentage point.
     const float NOTIFY_STEP = 0.01f;
@@ -46,24 +50,46 @@ namespace HeartHealthRing
         return std::min(1.0f, fraction);
     }
 
-    //! \brief Number of degrees of the ring that are shown for a health fraction.
-    inline float visibleSpanDegrees(float fraction)
+    //! \brief Angle in degrees, clockwise from the top, of the point (dx, dy) from the badge
+    //! centre (y pointing down), in [0, 360).
+    inline float ringDegrees(float dx, float dy)
     {
-        return RING_FULL_SPAN_DEGREES * clampFraction(fraction);
-    }
-
-    //! \brief True if the ring pixel at (dx, dy) from the badge centre (y pointing down) is part
-    //! of the visible arc: clockwise from RING_START_DEGREES over the visible span.
-    inline bool isRingLit(float dx, float dy, float fraction)
-    {
-        const float span = visibleSpanDegrees(fraction);
-        if(span <= 0.0f)
-            return false;
-
         float degrees = std::atan2(dx, -dy) * 180.0f / 3.14159265f;
         if(degrees < 0.0f)
             degrees += 360.0f;
-        return degrees >= RING_START_DEGREES && degrees <= RING_START_DEGREES + span;
+        if(degrees >= 360.0f)
+            degrees = 0.0f;
+        return degrees;
+    }
+
+    //! \brief True if the ring pixel at (dx, dy) is on one of the spokes between the segments.
+    inline bool isSpoke(float dx, float dy)
+    {
+        const float inSegment = std::fmod(ringDegrees(dx, dy), SEGMENT_DEGREES);
+        return inSegment < SPOKE_HALF_DEGREES || inSegment > SEGMENT_DEGREES - SPOKE_HALF_DEGREES;
+    }
+
+    //! \brief True if the ring pixel at (dx, dy) is lit. Segment k covers the health from k/6 to
+    //! (k+1)/6: it is lit completely when the health is above that, and a segment that is only
+    //! partly covered is lit clockwise over the covered part. The spokes are never lit.
+    inline bool isRingLit(float dx, float dy, float fraction)
+    {
+        if(isSpoke(dx, dy))
+            return false;
+
+        const float degrees = ringDegrees(dx, dy);
+        const int segment = std::min(SEGMENT_COUNT - 1, static_cast<int>(degrees / SEGMENT_DEGREES));
+        const float covered = std::max(0.0f, std::min(1.0f,
+            clampFraction(fraction) * SEGMENT_COUNT - segment));
+        return degrees - segment * SEGMENT_DEGREES <= covered * SEGMENT_DEGREES;
+    }
+
+    //! \brief Health in whole percent for the tooltip, rounded to the nearest, 0 to 100.
+    inline int healthPercent(double hp, double maxHP)
+    {
+        if(!(maxHP > 0.0))
+            return 0;
+        return static_cast<int>(std::floor(100.0 * clampFraction(static_cast<float>(hp / maxHP)) + 0.5));
     }
 
     //! \brief Server side: should the owner be told about the new fraction? lastSent is the

@@ -40,6 +40,7 @@ update = function(gui, 'void Gui::updateHeartBadge(').replace('void Gui::updateH
 badge_code = 'const int BADGE_SIZE = 128;\n' + function(gui, 'void drawBadgePixels(') + '\n'
 
 probe = r'''
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -64,6 +65,16 @@ std::vector<unsigned char> readBack(CEGUI::Texture& texture)
     Ogre::PixelBox box(BADGE_SIZE, BADGE_SIZE, 1, ogreTexture->getFormat(), pixels.data());
     ogreTexture->getBuffer()->blitToMemory(box);
     return pixels;
+}
+
+// Is the ring pixel at an angle (degrees clockwise from the top) green? Spokes are grey, the groove is dark.
+bool ringGreen(const std::vector<unsigned char>& pixels, float angle)
+{
+    const float radians = angle * 3.14159265f / 180.0f;
+    const int x = static_cast<int>((23.0f * std::sin(radians) + 32.0f) * BADGE_SIZE / 64.0f);
+    const int y = static_cast<int>((-23.0f * std::cos(radians) + 32.0f) * BADGE_SIZE / 64.0f);
+    const int i = (y * BADGE_SIZE + x) * 4;
+    return pixels[i + 1] - pixels[i] > 40;
 }
 
 int main(int argc, char** argv)
@@ -130,6 +141,25 @@ int main(int argc, char** argv)
     drawBadgePixels(empty, 0, 0.0f, false);
     check(readBack(badge) == empty && static_cast<CEGUI::OgreTexture&>(badge).getOgreTexture().get() == shown.get(),
         "a destroyed heart empties the shown ring");
+
+    // Six segments: 0, 17, 50 and 100 percent and a partly filled segment, read back from the shown texture
+    const float mids[6] = {30.0f, 90.0f, 150.0f, 210.0f, 270.0f, 330.0f};
+    const float fractions[5] = {0.0f, 0.17f, 0.5f, 1.0f, 0.22f};
+    const int expectedSegments[5] = {0, 1, 3, 6, 1};
+    for(int f = 0; f < 5; ++f)
+    {
+        updateHeartBadge(fractions[f], false);
+        const std::vector<unsigned char> shownPixels = readBack(badge);
+        int green = 0;
+        for(int k = 0; k < 6; ++k)
+            green += ringGreen(shownPixels, mids[k]) ? 1 : 0;
+        check(green == expectedSegments[f], "the shown ring has the whole segments of " + std::to_string(fractions[f]));
+        check(!ringGreen(shownPixels, 0.0f) && !ringGreen(shownPixels, 60.0f) && !ringGreen(shownPixels, 180.0f),
+            "the spokes of the shown ring are not green");
+        if(f == 4)
+            check(ringGreen(shownPixels, 75.0f) && !ringGreen(shownPixels, 110.0f),
+                "the shown ring fills a partly covered segment only in part");
+    }
 
     CEGUI::OgreRenderer::destroySystem();
     Ogre::MaterialManager::getSingleton().removeListener(&listener);
