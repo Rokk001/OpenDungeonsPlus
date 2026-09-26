@@ -29,7 +29,7 @@ PALETTE = {
     "iron_lit": (96, 84, 72),        # bevel facing the light
     "inset": (27, 20, 15),           # dark brown stone of wells, lists and window bodies
     "inset_lit": (44, 33, 24),
-    "stone": (108, 86, 64),           # tile background; the category colour of a tab multiplies it
+    "stone": (74, 56, 40),            # tile background; the category colour of a tab multiplies it
     "bronze_dark": (50, 26, 8),
     "bronze": (196, 136, 66),
     "bronze_bright": (226, 150, 66),
@@ -477,7 +477,7 @@ def paint(atlas):
     r = RECTS["ButtonBackground"]
     px, py = grid(r[3], r[2])
     d = np.hypot(px - r[2] * 0.42, py - r[3] * 0.38) / (r[2] * 0.75)
-    base = col("stone")[None, None, :] * (1.05 - 0.62 * np.clip(d, 0, 1) ** 0.9)[..., None]
+    base = col("stone")[None, None, :] * (1.05 - 0.70 * np.clip(d, 0, 1) ** 0.9)[..., None]
     base = base + (soft_noise(r[3], r[2], 131, 7) * 3.0 + fine_noise(r[3], r[2], 132) * 2.0)[..., None]
     put(r, opaque(base), "button background")
     r = RECTS["ButtonHoverEffect"]
