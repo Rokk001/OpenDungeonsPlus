@@ -1540,7 +1540,7 @@ CEGUI::Window* Gui::createInfoWindow(const std::string& name)
 {
     CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
     CEGUI::Window* window = wmgr.loadLayoutFromFile("WindowStats.layout");
-    wmgr.renameWindow(window, name);
+    window->setName(name);
     registerWindowHierarchy(window);
     return window;
 }
