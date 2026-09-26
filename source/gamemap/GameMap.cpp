@@ -63,6 +63,7 @@
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 
+#include "ODApplication.h"
 
 #include <OgreAxisAlignedBox.h>
 #include <OgreEntity.h>
@@ -81,6 +82,36 @@
 const std::string DEFAULT_NICK = "You";
 
 using namespace std;
+
+namespace
+{
+//! Mana the dungeon heart produces on its own, per second.
+const double MANA_HEART_INCOME_PER_SECOND = 30.0;
+//! The tile part of the mana income is capped: one mana per second per claimed
+//! tile, up to this many tiles.
+const double MANA_INCOME_TILES_CAP = 500.0;
+//! Mana each worker costs to keep, per second.
+const double MANA_WORKER_UPKEEP_PER_SECOND = 7.0;
+
+//! \brief Mana a seat gains per second: the heart plus one per claimed tile,
+//! the tile part capped. The tiles of the heart area are not counted again.
+double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTiles)
+{
+    const unsigned int tiles = numClaimedTiles > numHeartTiles
+        ? numClaimedTiles - numHeartTiles
+        : 0;
+    double tilesIncome = static_cast<double>(tiles);
+    if (tilesIncome > MANA_INCOME_TILES_CAP)
+        tilesIncome = MANA_INCOME_TILES_CAP;
+    return MANA_HEART_INCOME_PER_SECOND + tilesIncome;
+}
+
+//! \brief Mana per second all the workers of a seat cost together.
+double manaUpkeepPerSecond(unsigned int numWorkers)
+{
+    return static_cast<double>(numWorkers) * MANA_WORKER_UPKEEP_PER_SECOND;
+}
+}
 
 /*! \brief A helper class for the A* search in the GameMap::path function.
 *
@@ -1279,17 +1310,9 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         // Add the amount of mana this seat accrued this turn if the player has a dungeon temple
         if(seat->getNbRooms(RoomType::dungeonTemple) == 0)
         {
-            seat->mManaDelta = 0;
             seat->getPlayer()->notifyNoMoreDungeonTemple();
         }
-        else
-        {
-            seat->mManaDelta = 50 + seat->getNumClaimedTiles();
-            seat->mMana += seat->mManaDelta;
-            double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
-            if (seat->mMana > maxMana)
-                seat->mMana = maxMana;
-        }
+        updateSeatMana(seat);
 
         // Update the count on how much gold is available in all of the treasuries claimed by the given seat.
         seat->mGold = 0;
@@ -1327,6 +1350,43 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 
     timeTaken = stopwatch.getMicroseconds();
     return timeTaken;
+}
+
+void GameMap::updateSeatMana(Seat* seat)
+{
+    if (seat->getNbRooms(RoomType::dungeonTemple) == 0)
+    {
+        seat->mManaDelta = 0.0;
+        seat->mManaIncomePerSecond = 0.0;
+        seat->mManaUpkeepPerSecond = 0.0;
+        return;
+    }
+
+    // The tiles of the heart area are part of the heart income and not counted again
+    unsigned int numHeartTiles = 0;
+    for (Room* room : getRooms())
+    {
+        if (room->getSeat() != seat)
+            continue;
+        if (room->getType() != RoomType::dungeonTemple)
+            continue;
+        if (room->getHP(nullptr) <= 0.0)
+            continue;
+        numHeartTiles += room->numCoveredTiles();
+    }
+
+    seat->mManaIncomePerSecond = manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles);
+    seat->mManaUpkeepPerSecond = manaUpkeepPerSecond(seat->getNumCreaturesWorkers());
+    seat->mManaDelta = (seat->mManaIncomePerSecond - seat->mManaUpkeepPerSecond)
+        / ODApplication::turnsPerSecond;
+    seat->mMana += seat->mManaDelta;
+
+    // Worker upkeep never brings the mana below 0 and the stored mana has a maximum
+    if (seat->mMana < 0.0)
+        seat->mMana = 0.0;
+    const double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
+    if (seat->mMana > maxMana)
+        seat->mMana = maxMana;
 }
 
 void GameMap::updateAnimations(Ogre::Real timeSinceLastFrame)

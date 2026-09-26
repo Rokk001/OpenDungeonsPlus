@@ -57,6 +57,8 @@
 #include "utils/LogManager.h"
 #include "ODApplication.h"
 
+#include <OgreSceneNode.h>
+
 #include <boost/lexical_cast.hpp>
 
 #include <string>
@@ -613,6 +615,15 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_LOG_ERR("entityType=" + Helper::toString(static_cast<int32_t>(entityType)) + ", entityName=" + entityName);
                 break;
             }
+
+            // A redeemed worker can be in the local player's hand: remove it and detach its
+            // scene node, which is still parented to the hand while it is held
+            Player* localPlayer = gameMapPointer->getLocalPlayer();
+            if(localPlayer != nullptr)
+                localPlayer->removeEntityFromHand(entity);
+            Ogre::SceneNode* entityNode = entity->getEntityNode();
+            if(entityNode != nullptr && entityNode->getParentSceneNode() != nullptr)
+                entityNode->getParentSceneNode()->removeChild(entityNode);
 
             entity->removeEntityFromPositionTile(gameMapPointer);
             entity->removeFromGameMap(gameMapPointer);

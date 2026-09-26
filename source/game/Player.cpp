@@ -28,14 +28,17 @@
 #include "gamemap/Pathfinding.h"
 #include "render/RenderManager.h"
 #include "rooms/Room.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomType.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/SpellManager.h"
+#include "spells/SpellSummonWorker.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
 #include "network/ODPacket.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
@@ -339,6 +342,11 @@ void Player::dropHand(Tile *t, unsigned int index)
        static_cast<Ogre::Real>(t->getY()), 0);
     if(mGameMap->isServerGameMap())
     {
+        // Dropping an own worker into the heart redeems it: the worker is removed and
+        // half of its summoning price is paid back
+        if(redemWorkerInHeart(entity, t))
+            return;
+
         entity->drop(pos);
         entity->fireDropEntity(this, t);
         if(!mGameMap->isInEditorMode() && entity->getObjectType() == GameEntityType::creature)
@@ -366,6 +374,72 @@ void Player::dropHand(Tile *t, unsigned int index)
     RenderManager::getSingleton().rrDropHand(entity, this);
 }
 
+void Player::removeEntityFromHand(GameEntity* entity)
+{
+    for(unsigned int index = 0; index < mObjectsInHand.size(); ++index)
+    {
+        if(mObjectsInHand[index] != entity)
+            continue;
+        mObjectsInHand.erase(mObjectsInHand.begin() + index);
+        return;
+    }
+}
+
+bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
+{
+    // Only a human dropping an own worker on the tile of a living own heart redeems it.
+    // AI auto-drops and anything else is left to the regular drop.
+    if(!getIsHuman())
+        return false;
+    if(entity == nullptr || tile == nullptr)
+        return false;
+    if(entity->getObjectType() != GameEntityType::creature)
+        return false;
+
+    Creature* worker = static_cast<Creature*>(entity);
+    if(worker->getDefinition() == nullptr || !worker->getDefinition()->isWorker())
+        return false;
+    if(worker->getSeat() != getSeat())
+        return false;
+
+    RoomDungeonTemple* heart = nullptr;
+    std::vector<Room*> dungeonTemples = mGameMap->getRoomsByType(RoomType::dungeonTemple);
+    for(Room* room : dungeonTemples)
+    {
+        if(room->getSeat() != getSeat())
+            continue;
+        if(room->getHP(nullptr) <= 0.0)
+            continue;
+        RoomDungeonTemple* temple = static_cast<RoomDungeonTemple*>(room);
+        if(temple->getHeartTile() == tile)
+        {
+            heart = temple;
+            break;
+        }
+    }
+    if(heart == nullptr)
+        return false;
+
+    // Half of what summoning this worker costs at the current worker count
+    int32_t refund = static_cast<int32_t>(
+        SpellSummonWorker::getNextWorkerPriceForPlayer(mGameMap, this) / 2);
+    getSeat()->addMana(static_cast<double>(refund));
+
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket
+        << "You redeemed your worker into " + Helper::toString(refund) + " mana"
+        << EventShortNoticeType::majorGameEvent;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+
+    // The worker is gone for every seat that saw it, including this one
+    entity->fireRemoveEntityToSeatsWithVision(mGameMap);
+    entity->removeEntityFromPositionTile();
+    entity->removeFromGameMap(mGameMap);
+    entity->deleteYourself(mGameMap, mGameMap->getNodeType());
+    return true;
+}
+
 void Player::rotateHand(Direction d)
 {
     if(mObjectsInHand.size() > 1)
@@ -390,6 +464,35 @@ void Player::notifyNoMoreDungeonTemple()
 
     mHasLost = true;
     OD_LOG_INF("Player seatId=" + Helper::toString(getSeat()->getId()) + " lost");
+
+    // In a single player game the remaining mana of the destroyed heart goes to the
+    // conqueror and the defeated seat is left with none
+    int numHumanPlayers = 0;
+    for(Seat* seat : mGameMap->getSeats())
+    {
+        if(seat->getPlayer() == nullptr)
+            continue;
+        if(!seat->getPlayer()->getIsHuman())
+            continue;
+        ++numHumanPlayers;
+    }
+    if(numHumanPlayers == 1 && mConquerorSeatId >= 0)
+    {
+        Seat* conquerorSeat = nullptr;
+        for(Seat* seat : mGameMap->getSeats())
+        {
+            if(seat->getId() != mConquerorSeatId)
+                continue;
+            conquerorSeat = seat;
+            break;
+        }
+        if(conquerorSeat != nullptr && conquerorSeat != getSeat())
+        {
+            double remainingMana = getSeat()->getMana();
+            getSeat()->addMana(-remainingMana);
+            conquerorSeat->addMana(remainingMana);
+        }
+    }
 
     // We check if there is still a player in the team with a dungeon temple. If yes, we notify the player he lost his dungeon
     // if no, we notify the team they lost

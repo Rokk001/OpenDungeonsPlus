@@ -60,7 +60,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mSlapEffectDuration(15),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
-    mMaxManaPerSeat(250000.0),
+    mMaxManaPerSeat(200000.0),
     mClaimingWallPenalty(0.8),
     mDigCoefGold(5.0),
     mDigCoefGem(1.0),
