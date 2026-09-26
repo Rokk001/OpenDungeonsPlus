@@ -156,7 +156,9 @@ int main(){int checks=0,failures=0;
  heart.doUpkeep();check(heart.getHP(nullptr)==0,"a destroyed heart never heals");
  {RoomDungeonTemple h(&map,&owner);h.doUpkeep();check(h.getHP(nullptr)==10000,"an undamaged heart stays at the maximum");
   h.mHeartHP=9999.5;h.doUpkeep();check(h.getHP(nullptr)==10000,"healing stops at the maximum");
-  h.mHeartHP=1;h.doUpkeep();h.doUpkeep();check(std::abs(h.getHP(nullptr)-(1+2*2.5/1.4))<1e-9,"healing adds up turn by turn");}
+  h.mHeartHP=1;h.doUpkeep();h.doUpkeep();check(std::abs(h.getHP(nullptr)-(1+2*2.5/1.4))<1e-9,"healing adds up turn by turn");
+  h.mCriticalWarningSent=true;h.mHeartHP=1097;h.doUpkeep();check(h.mCriticalWarningSent,"healing inside the critical range keeps the warning spent");
+  h.mHeartHP=1100;h.doUpkeep();check(!h.mCriticalWarningSent,"healing above 11 % re-arms the critical warning");}
  // Critical-health warning (threshold 11 % of 10000 = 1100)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
  const char* warning="Your dungeon heart is in critical condition!";
