@@ -2915,7 +2915,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", okIcon);
-        skillButton->setProperty("StateImageColour", "FF00BB00");
+        skillButton->setProperty("StateImageColour", "FF3CB46E");
         skillButton->setEnabled(false);
         skillProgressBar->hide();
     }
@@ -2924,7 +2924,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", abortIcon);
-        skillButton->setProperty("StateImageColour", "FFBB0000");
+        skillButton->setProperty("StateImageColour", "FFC4472A");
         skillButton->setEnabled(false);
         skillProgressBar->hide();
     }
@@ -2938,7 +2938,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
             skillButton->setText(Helper::toString(queueNumber));
 
         skillButton->setProperty("StateImage", workIcon);
-        skillButton->setProperty("StateImageColour", "FF888800");
+        skillButton->setProperty("StateImageColour", "FFC8A030");
         skillButton->setEnabled(true);
         if (curSkillProgress > 0.0f)
         {
@@ -2979,7 +2979,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     skillButton->setText("");
     skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
     skillButton->setProperty("ResearchLevelColour", level >= 3 ? "FFFFC947" :
-        level == 2 ? "FFD5DFE8" : "00FFFFFF");
+        level == 2 ? "FFC98A4A" : "00FFFFFF");
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))
         levelBadge = skillButton->getChild("ResearchLevel");
@@ -2991,7 +2991,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         levelBadge->setProperty("VertFormatting", "CentreAligned");
         levelBadge->setProperty("FrameEnabled", "False");
         levelBadge->setProperty("BackgroundEnabled", "True");
-        levelBadge->setProperty("BackgroundColours", "FF25282D");
+        levelBadge->setProperty("BackgroundColours", "FF2A1F16");
         levelBadge->setProperty("TextColours", "FFFFFFFF");
         levelBadge->setMousePassThroughEnabled(true);
         levelBadge->setClippedByParent(false);
@@ -3040,7 +3040,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     skillButton->setTooltipText(description);
     skillButton->setUserString("ContextHelp", Skills::skillTypeToPlayerVisibleString(resType));
     skillButton->setProperty("ResearchBackgroundColour", state == "Researching" ? "FFB76A23" :
-        state == "Queued" ? "FF31576B" : level > 0 ? "FF773C32" : "FF292E34");
+        state == "Queued" ? "FF6A5424" : level > 0 ? "FF773C32" : "FF2E2117");
     skillProgressBar->setArea(CEGUI::UVector2(CEGUI::UDim(.12f, 0), CEGUI::UDim(.82f, 0)),
         CEGUI::USize(CEGUI::UDim(.76f, 0), CEGUI::UDim(.09f, 0)));
     skillProgressBar->setProperty("VerticalProgress", "False");
@@ -3180,7 +3180,7 @@ void GameMode::refreshSkillConnections()
                 line->setArea(CEGUI::UVector2(CEGUI::UDim(segments[part][0], 0), CEGUI::UDim(segments[part][1], 0)),
                     CEGUI::USize(CEGUI::UDim(segments[part][2], 0), CEGUI::UDim(segments[part][3], 0)));
                 line->setProperty("ImageColours",
-                    (part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady) ? "FFD28B54" : "FF656A70");
+                    (part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady) ? "FFD28B54" : "FF6A5A46");
             }
         }
         if(required.size() > 1)
@@ -3207,7 +3207,7 @@ void GameMode::refreshSkillConnections()
             const float height = .075f * parentRect.getWidth() / parentRect.getHeight();
             junction->setArea(CEGUI::UVector2(CEGUI::UDim(.4625f, 0), CEGUI::UDim(middle - height * .5f, 0)),
                 CEGUI::USize(CEGUI::UDim(.075f, 0), CEGUI::UDim(height, 0)));
-            junction->setProperty("TextColours", allReady ? "FFFFC480" : "FF989DA3");
+            junction->setProperty("TextColours", allReady ? "FFFFC480" : "FF9A8A70");
         }
     }
 }

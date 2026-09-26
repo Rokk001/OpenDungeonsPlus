@@ -11,7 +11,7 @@
             <Window type="OD/StaticImage" name="AttackSkills" >
                 <Property name="Area" value="{{0,4},{0,4},{0.3333,-4},{1,-4}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="FrameColours" value="tl:FFFF0000 tr:FFFF0000 bl:FFFFFFFF br:FFFFFFFF" />
+                <Property name="FrameColours" value="tl:FFE0623A tr:FFE0623A bl:FFFFFFFF br:FFFFFFFF" />
                 <Window type="OD/ResearchButton" name="TrainingHallButton" >
                     <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/TrainingHallButton" />
@@ -309,7 +309,7 @@
             <Window type="OD/StaticImage" name="MagicSkills" >
                 <Property name="Area" value="{{0.6667,4},{0,4},{1,-4},{1,-4}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="FrameColours" value="tl:FF0000FF tr:FF0000FF bl:FFFFFFFF br:FFFFFFFF" />
+                <Property name="FrameColours" value="tl:FFD68AA0 tr:FFD68AA0 bl:FFFFFFFF br:FFFFFFFF" />
                 <Window type="OD/ResearchButton" name="SummonWorkerButton" >
                     <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/SummonWorkerButton" />
