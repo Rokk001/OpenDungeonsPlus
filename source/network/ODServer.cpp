@@ -78,7 +78,8 @@ namespace
     //! \brief Tells a human player about the health of its dungeon heart when the fraction changed
     //! by at least one percentage point since the last message, when the heart is destroyed,
     //! and once when the game starts or is loaded (nothing was sent to this client yet). A drop
-    //! since the last message means the heart is under attack.
+    //! since the last message means the heart is under attack. A change of the whole HP alone
+    //! (healing) is sent at most once per second.
     void notifyHeartHealth(GameMap* gameMap, ODSocketClient* sock, Player* player)
     {
         if(!player->getIsHuman() || player->getSeat() == nullptr)
@@ -100,8 +101,12 @@ namespace
         const float fraction = static_cast<float>(temple->getHeartHealthFraction());
         const double heartHP = std::floor(temple->getHP(nullptr));
         const float lastSent = sock->getHeartHealthSent();
-        // The ring only needs a message per percentage point, the tooltip shows the exact HP
-        if(!HeartHealthRing::shouldNotify(lastSent, fraction) && heartHP == sock->getHeartHPSent())
+        // The ring only needs a message per percentage point (or on destruction), the tooltip shows
+        // the exact HP: a message that only carries a new whole HP is sent at most once per second
+        const int64_t turn = gameMap->getTurnNumber();
+        const bool hpDue = heartHP != sock->getHeartHPSent()
+            && HeartHealthRing::isHpMessageDue(turn - sock->getHeartMessageTurn(), ODApplication::turnsPerSecond);
+        if(!HeartHealthRing::shouldNotify(lastSent, fraction) && !hpDue)
             return;
 
         const bool underAttack = lastSent >= 0.0f && fraction < lastSent;
@@ -111,6 +116,7 @@ namespace
         ODServer::getSingleton().queueServerNotification(serverNotification);
         sock->setHeartHealthSent(fraction);
         sock->setHeartHPSent(heartHP);
+        sock->setHeartMessageTurn(turn);
     }
 
     //! \brief Gives a creature the level the editor asked for. Levelling raises the maximum
