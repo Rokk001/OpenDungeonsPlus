@@ -196,16 +196,16 @@ void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float health
                     74 + 92 * light * slope + 65 * face));
                 pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
             }
-            else if(radius > 22 && radius < 24)
+            else if(radius > 21 && radius < 24.5f)
             {
-                const float relief = 0.65f + 0.35f * light * (radius - 23);
+                const float relief = 0.65f + 0.35f * light * (radius - 22.75f);
                 // The ring of the heart badge is the health of the dungeon heart: the lit part
                 // is green, the rest stays as a dark groove
                 const bool lit = badge != 0 || HeartHealthRing::isRingLit(dx, dy, healthFraction);
                 if(badge == 0 && HeartHealthRing::isSpoke(dx, dy))
                 {
                     // The spokes between the six segments are part of the silver rim
-                    pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(120 * relief);
+                    pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(225 * relief);
                 }
                 else
                 {

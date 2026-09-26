@@ -34,7 +34,7 @@ namespace HeartHealthRing
     const float SEGMENT_DEGREES = 360.0f / SEGMENT_COUNT;
 
     //! Half width in degrees of the spoke that separates two segments. The first spoke is at the top.
-    const float SPOKE_HALF_DEGREES = 3.0f;
+    const float SPOKE_HALF_DEGREES = 5.0f;
 
     //! The server only tells the owner about changes of at least one percentage point.
     const float NOTIFY_STEP = 0.01f;
