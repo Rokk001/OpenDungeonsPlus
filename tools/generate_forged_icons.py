@@ -4,8 +4,8 @@
 Every room, trap, spell, worker and category emblem is rendered from height-field layers by
 tools/forged_emblem.py (bump lighting from the top left, forged bronze, gold, iron, gem and ember
 materials, cavity shading and cast shadows, 4x4 supersampling). The motifs live in
-tools/forged_motifs.py. Slot emblems (128 px) sit on a bronze medallion with a dark well and
-rivets, the small symbols (64 px) stand on their own. The image names of the imageset do not
+tools/forged_motifs.py. Slot emblems (128 px) and the mini emblems (64 px) fill a square tile with a dark
+stone well and a fine bronze edge line, the small symbols stand on their own. The image names of the imageset do not
 change, so no layout entry has to move.
 
 Usage: python tools/generate_forged_icons.py            rebuilds the atlas and the imageset
@@ -33,16 +33,16 @@ def render_icon(name):
     spec = fm.ICONS[name]
     c = Canvas(cells=spec["cells"], ss=4, extent=spec.get("extent", (1.0, 1.0)), seed=sum(ord(ch) for ch in name) % 997 + 1)
     if spec["kind"] is not None:
-        fm.medallion(c, spec["kind"])
-        c.glow_r = 0.80
+        fm.tile(c, spec["kind"], spec.get("rivets", True))
+        c.glow_r = fm.TILE_HALF
     snap = c.snapshot()
     c.set_zoom(spec.get("zoom", 1.0))
     spec["draw"](c)
     c.set_zoom(1.0)
     if spec["kind"] is not None:
-        c.restore_outside(snap, 0.80)
+        c.restore_outside(snap, fm.TILE_HALF)
     if spec["kind"] is not None:
-        fm.vignette(c)
+        fm.tile_vignette(c)
         return c.render()
     return c.render(drop=(0.04, 0.06, 0.04, 0.7))
 

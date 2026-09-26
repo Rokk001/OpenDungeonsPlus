@@ -1,7 +1,7 @@
 """Materials, frames and motifs of the forged emblems (see generate_forged_icons.py).
 
-Every motif draws into a forged_emblem.Canvas in design space -1..1 (y down). Slot emblems have a
-medallion whose dark well has radius 0.8, so motifs keep inside about 0.68. Small symbols stand
+Every motif draws into a forged_emblem.Canvas in design space -1..1 (y down). Slot emblems fill a
+square tile whose dark well reaches 0.9, so motifs keep inside about 0.85. Small symbols stand
 without a frame and may use the whole square.
 """
 import numpy as np
@@ -39,7 +39,7 @@ FLESH = Mat((214, 170, 120), (160, 116, 76), spec=0.25, shin=14, mottle=0.12)
 YELLOW = Mat((255, 222, 96), (240, 176, 50), spec=0.4, shin=16, mottle=0.08)
 GLASS = Mat((90, 60, 36), (40, 24, 14), spec=0.9, shin=60, mottle=0.0, grain=0.0)
 
-# Well colours of the medallions: centre and edge, per category
+# Well colours of the square tiles: centre and edge, per category
 WELL = {
     "room": ((78, 52, 32), (22, 14, 10)),
     "spell": ((100, 40, 24), (26, 10, 8)),
@@ -80,24 +80,30 @@ def star(n, ro, ri, cx=0.0, cy=0.0, rot=0.0):
 # ---------------------------------------------------------------------------------------------
 # Frames
 # ---------------------------------------------------------------------------------------------
-def medallion(c, kind):
-    """Bronze ring with rivets around a dark recessed well."""
+TILE_HALF = 0.90      # half width of the drawing area inside the frame of a square tile
+TILE_RAD = 0.10
+
+
+def tile(c, kind, rivets=True):
+    """Square tile: dark stone well with a category tint, a bronze edge line with a bevel, small corner rivets."""
     centre, edge = WELL[kind]
-    c.add(c.circle(0, 0, 0.995), CONTOUR, z=0.0, bevel=0.01)
-    c.add(c.circle(0, 0, 0.965), BRONZE, z=0.11, bevel=0.07)
-    c.fill_well(c.circle(0, 0, 0.80), centre, edge, r=0.8, z=0.0)
-    c.add(c.ring(0, 0, 0.80, 0.022), GOLD_DARK, z=0.10, bevel=0.02)
-    for k in range(12):
-        ang = deg(15 + 30 * k)
-        c.add(c.circle(0.885 * np.cos(ang), 0.885 * np.sin(ang), 0.034), GOLD, z=0.05, bevel=0.034, base=0.09)
-    c.glow(0.0, 0.05, 0.75, WELL_GLOW[kind], 0.6)
+    c.clip_box = (TILE_HALF, TILE_RAD)
+    c.add(c.box(0, 0, 0.995, 0.995, 0.135), CONTOUR, z=0.0, bevel=0.01)
+    c.add(c.box(0, 0, 0.965, 0.965, 0.115), BRONZE, z=0.10, bevel=0.05)
+    c.fill_well(c.box(0, 0, TILE_HALF + 0.012, TILE_HALF + 0.012, TILE_RAD + 0.012), centre, edge, r=1.30, z=0.0)
+    c.add(c.ring_box(0, 0, TILE_HALF + 0.012, TILE_RAD + 0.012, 0.012), GOLD_DARK, z=0.07, bevel=0.012)
+    if rivets:
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                c.add(c.circle(0.82 * sx, 0.82 * sy, 0.028), GOLD, z=0.04, bevel=0.028, base=0.05)
+    c.glow(0.0, 0.05, 0.85, WELL_GLOW[kind], 0.6)
 
 
-def vignette(c):
-    """Dark inner edge of the well so that the motif reads as lit from within."""
-    d = np.hypot(c.X, c.Y)
-    k = np.clip((d - 0.58) / 0.24, 0, 1) ** 1.6 * (d < 0.82)
-    c.alb *= (1.0 - 0.42 * k)[..., None]
+def tile_vignette(c):
+    """Darkens the edge of the tile so that the motif reads as lit from within."""
+    d = np.maximum(np.abs(c.X0), np.abs(c.Y0))
+    k = np.clip((d - 0.62) / 0.28, 0, 1) ** 1.6 * (d < 0.92)
+    c.alb *= (1.0 - 0.40 * k)[..., None]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -906,7 +912,7 @@ def m_message_read(c):
 # ---------------------------------------------------------------------------------------------
 # The icon table. kind None: a frameless symbol. cells: pixel size of the cell in the atlas.
 # ---------------------------------------------------------------------------------------------
-def _slot(fn, kind, zoom=1.10):
+def _slot(fn, kind, zoom=1.05):
     return {"draw": fn, "kind": kind, "cells": 128, "zoom": zoom}
 
 
@@ -914,8 +920,8 @@ def _sym(fn, cells=64, zoom=1.0, extent=(1.0, 1.0)):
     return {"draw": fn, "kind": None, "cells": cells, "zoom": zoom, "extent": extent}
 
 
-def _mini(fn, kind, zoom=0.95):
-    return {"draw": fn, "kind": kind, "cells": 64, "zoom": zoom}
+def _mini(fn, kind, zoom=1.02):
+    return {"draw": fn, "kind": kind, "cells": 64, "zoom": zoom, "rivets": False}
 
 
 TALL = (1.0, 1.625)   # the 32 x 52 units of a message tab
@@ -979,7 +985,7 @@ ICONS = {
     # small symbols on a mini medallion: the population panel and the research states
     "CogIcon": _mini(m_gear, "room"),
     "HourglassIcon": _mini(m_hourglass, "room"),
-    "HammerAnvilIcon": _mini(m_workshop, "room", 1.05),
+    "HammerAnvilIcon": _mini(m_workshop, "room", 1.08),
     # navigation emblems (frameless, 128 px)
     "RoomsButton": _sym(m_house, 128),
     "SpellsButton": _sym(m_wand, 128),

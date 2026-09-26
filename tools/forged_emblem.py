@@ -73,6 +73,7 @@ class Canvas:
         self.dx, self.dy = self.dx0, self.dy0
         self.px = min(self.dx, self.dy)
         self.glow_r = None
+        self.clip_box = None
         self.alb = np.zeros((n, n, 3), dtype=np.float32)
         self.h = np.zeros((n, n), dtype=np.float32)
         self.a = np.zeros((n, n), dtype=np.float32)
@@ -93,8 +94,9 @@ class Canvas:
         return [a.copy() for a in (self.alb, self.h, self.a, self.spec, self.shin, self.metal, self.emit)]
 
     def restore_outside(self, snap, r):
-        """Undoes everything drawn since the snapshot outside the circle of radius r (soft edge)."""
-        keep = np.clip((np.hypot(self.X0, self.Y0) - r) / self.dx0 + 0.5, 0, 1)
+        """Undoes everything drawn since the snapshot outside the circle of radius r, or outside the
+        rounded square set with clip_box (soft edge)."""
+        keep = np.clip(self._outside(r) / self.dx0 + 0.5, 0, 1)
         for cur, old in zip((self.alb, self.h, self.a, self.spec, self.shin, self.metal, self.emit), snap):
             k = keep[..., None] if cur.ndim == 3 else keep
             cur[...] = cur * (1 - k) + old * k
@@ -160,6 +162,10 @@ class Canvas:
             cond = ((ay > self.Y) != (by > self.Y)) & (self.X < (bx - ax) * (self.Y - ay) / (by - ay + 1e-12) + ax)
             inside ^= cond
         return np.where(inside, -d, d)
+
+    def ring_box(self, cx, cy, half, rad, w):
+        """Outline of a rounded square (half width `half`, corner radius `rad`), w wide on both sides."""
+        return np.abs(self.box(cx, cy, half, half, rad)) - w
 
     def ring(self, cx, cy, r, w):
         return np.abs(np.hypot(self.X - cx, self.Y - cy) - r) - w
@@ -270,10 +276,18 @@ class Canvas:
         f = np.exp(-(d ** power)) * strength * self._glow_mask()
         self.emit += np.array(colour, dtype=np.float32)[None, None, :] * f[..., None] * (self.a > 0)[..., None]
 
+    def _outside(self, r):
+        """Signed distance out of the drawing area: a circle of radius r, or the rounded square clip_box."""
+        if self.clip_box is not None:
+            half, rad = self.clip_box
+            qx, qy = np.abs(self.X0) - (half - rad), np.abs(self.Y0) - (half - rad)
+            return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - rad
+        return np.hypot(self.X0, self.Y0) - r
+
     def _glow_mask(self):
         if self.glow_r is None:
             return 1.0
-        return np.clip((self.glow_r - np.hypot(self.X0, self.Y0)) / 0.06, 0, 1)
+        return np.clip(-self._outside(self.glow_r) / 0.06, 0, 1)
 
     def glow_sdf(self, sdf, colour, reach=0.1, strength=1.0):
         f = np.exp(-np.maximum(sdf, 0) / reach) * strength * self._glow_mask()

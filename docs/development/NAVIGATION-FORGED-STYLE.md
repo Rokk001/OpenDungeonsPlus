@@ -88,9 +88,10 @@ backgrounds and logos.
   `tools/generate_forged_icons.py` with the height-field renderer `tools/forged_emblem.py` (layers with a
   material and a rounded height profile, bump lighting from the top left, specular, cavity shading, cast
   shadows, 4x4 supersampling) and the motifs in `tools/forged_motifs.py` (materials are the one place for
-  colours). Room, trap, spell and worker slots are 128 px medallions: bronze ring with rivets around a dark
-  well that is tinted per category. Small symbols (64 px) stand without a frame; the population panel and
-  research state icons (cog, hourglass, hammer and anvil) get a mini medallion. Category tabs, panel,
+  colours). Room, trap, spell and worker slots are 128 px square tiles with slightly rounded corners: the motif
+  fills a dark stone well that is tinted per category, framed by a fine bronze edge line with a bevel and small
+  corner rivets, no circle or medallion ring. Small symbols (64 px) stand without a frame; the population panel
+  and research state icons (cog, hourglass, hammer and anvil) are 64 px tiles of the same kind without rivets. Category tabs, panel,
   objectives, message tabs and the menu return arrow are frameless emblems (the tall ones are drawn in the
   32 x 52 unit shape they are shown in). All image names are unchanged. The terrain swatches are kept.
   `Gui.cpp` no longer draws or tints these images at run time. Run `python tools/generate_forged_icons.py`;
