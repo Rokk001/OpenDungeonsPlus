@@ -133,7 +133,7 @@ struct RoomDungeonTemple:Room {
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  RoomType getType() const override{return RoomType::dungeonTemple;}
  INLINE_METHODS
- static const double HEART_HP_PER_TILE;double getHeartMaxHP()const;
+ static const double HEART_MAX_HP;static const double HEART_HEAL_PER_SECOND;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const override;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -175,7 +175,7 @@ int main(){
 
  // The heart dies
  GameEntity attacker(&enemy);
- check(heart.takeHeartDamage(&attacker,99999,0,0,0,&centre)==20000,"lethal blow clamped to the heart health (10000 per room tile)");
+ check(heart.takeHeartDamage(&attacker,99999,0,0,0,&centre)==10000,"lethal blow clamped to the heart health (10000, whatever the number of tiles)");
  check(heart.dead==1&&heart.getHP(nullptr)==0,"heart death fires once");
  owner.computeSeatBeginTurn();
  check(owner.getNbRooms(RoomType::dungeonTemple)==0,"seat has no temple as soon as the heart is dead");
@@ -219,7 +219,7 @@ int main(){
 
  // Save and load of the destroyed state
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
- check(save.str().find("HeartHealth 0")!=std::string::npos,"destroyed state is written with the room");
+ check(save.str().find("HeartHealth10000 0")!=std::string::npos,"destroyed state is written with the room");
  RoomDungeonTemple loaded(&map,&owner);TileData loadedCentre,loadedFloor;addFloor(loaded,&centre,&floor,&loadedCentre,&loadedFloor);
  check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==0,"destroyed heart loads");
  std::string next;save>>next;check(next=="[/Room]","load keeps the room boundary");
@@ -236,7 +236,7 @@ int main(){
 
  // A damaged living heart still loads with its object
  {RoomDungeonTemple living(&map,&owner);TileData livingCentre,livingFloor;addFloor(living,&centre,&floor,&livingCentre,&livingFloor);
-  std::stringstream damaged("250\nHeartHealth 100\n[/Room]\n");
+  std::stringstream damaged("250\nHeartHealth10000 100\n[/Room]\n");
   check(living.importFromStream(damaged)&&living.getHP(nullptr)==100,"damaged heart round trip");
   int asked=g_removeAsked;living.updateActiveSpots(&map);living.restoreInitialEntityState();
   check(living.added==1&&living.mTempleObject!=nullptr&&living.restored==1,"living loaded heart gets its object back");
@@ -262,8 +262,7 @@ int main(){
 '''
 inline = '\n'.join(function(temple_header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
-methods = 'const double RoomDungeonTemple::HEART_HP_PER_TILE = ' + \
-    temple.split('const double RoomDungeonTemple::HEART_HP_PER_TILE = ')[1].split(';')[0] + ';\n'
+methods = temple[temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
 methods += '\n'.join(function(temple, sig) for sig in (
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
