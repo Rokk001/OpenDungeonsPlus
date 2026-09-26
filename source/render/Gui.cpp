@@ -107,41 +107,6 @@ public:
 };
 const CEGUI::String MiniMapCornerButton::WidgetTypeName("OD/MiniMapCornerBase");
 
-void createMiniMapCornerImages()
-{
-    CEGUI::WindowFactoryManager::addFactory<CEGUI::TplWindowFactory<MiniMapCornerButton>>();
-    const int size = 128;
-    for(int corner = 0; corner < 4; ++corner)
-    {
-        std::vector<unsigned char> pixels(size * size * 4, 0);
-        for(int y = 0; y < size; ++y)
-        {
-            for(int x = 0; x < size; ++x)
-            {
-                const float u = ((corner & 1) ? size - x - 0.5f : x + 0.5f) * 44.0f / size;
-                const float v = ((corner & 2) ? size - y - 0.5f : y + 0.5f) * 44.0f / size;
-                const float curve = std::sqrt((88.0f - u) * (88.0f - u) + (88.0f - v) * (88.0f - v)) - 88.0f;
-                const float edge = std::min(curve, std::min(std::min(u, v), std::min(44.0f - u, 44.0f - v)));
-                if(edge <= 0.0f)
-                    continue;
-                const float shade = edge < 1.0f ? 12.0f : edge < 2.0f ? 116.0f : edge < 3.0f ? 62.0f : 24.0f - 10.0f * y / size;
-                const int i = (y * size + x) * 4;
-                pixels[i] = static_cast<unsigned char>(shade);
-                pixels[i + 1] = static_cast<unsigned char>(shade + 3.0f);
-                pixels[i + 2] = static_cast<unsigned char>(shade + 5.0f);
-                pixels[i + 3] = static_cast<unsigned char>(255.0f * std::min(1.0f, edge * size / 44.0f));
-            }
-        }
-        const std::string name = "MiniMapCorner" + std::to_string(corner);
-        CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
-        texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
-        auto& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
-            "BasicImage", "OpenDungeonsIcons/" + name));
-        image.setTexture(&texture);
-        image.setArea(CEGUI::Rectf(0, 0, size, size));
-    }
-}
-
 const int BADGE_SIZE = 128;
 
 float badgeClamp(float value, float low, float high)
@@ -595,6 +560,668 @@ void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float health
     }
 }
 
+//! \brief Puts a layer (colour 0-255, opacity 0-1) over a colour that already has an opacity.
+void navOver(float* colour, float& alpha, float red, float green, float blue, float layerAlpha)
+{
+    const float total = layerAlpha + alpha * (1.0f - layerAlpha);
+    if(total <= 0.0f)
+        return;
+    colour[0] = (red * layerAlpha + colour[0] * alpha * (1.0f - layerAlpha)) / total;
+    colour[1] = (green * layerAlpha + colour[1] * alpha * (1.0f - layerAlpha)) / total;
+    colour[2] = (blue * layerAlpha + colour[2] * alpha * (1.0f - layerAlpha)) / total;
+    alpha = total;
+}
+
+//! \brief Averages the samples of one pixel (colour weighted by opacity) into 8 bit RGBA.
+void navStore(unsigned char* pixel, const float* sum, float alphaSum, int samples)
+{
+    if(alphaSum <= 0.0f)
+    {
+        pixel[0] = pixel[1] = pixel[2] = pixel[3] = 0;
+        return;
+    }
+    for(int channel = 0; channel < 3; ++channel)
+        pixel[channel] = static_cast<unsigned char>(badgeClamp(sum[channel] / alphaSum, 0.0f, 255.0f));
+    pixel[3] = static_cast<unsigned char>(badgeClamp(alphaSum / samples, 0.0f, 1.0f) * 255.0f);
+}
+
+//! \brief Forged metal lit from the top left: the colour runs from dark to bright with the light
+//! on the normal, with a hard glint. The occlusion darkens crevices.
+void navMetal(float* colour, const float* dark, const float* bright, const float* normal, float occlusion)
+{
+    const float diffuse = std::max(0.0f, normal[0] * -0.50f + normal[1] * -0.60f + normal[2] * 0.62f);
+    const float halfway = std::max(0.0f, normal[0] * -0.26f + normal[1] * -0.31f + normal[2] * 0.91f);
+    const float tone = std::pow(std::min(1.0f, diffuse * 1.15f), 0.85f);
+    const float reflection = 0.80f + 0.36f * badgeClamp(0.5f - 0.5f * normal[1] + 0.25f * normal[0], 0.0f, 1.0f);
+    const float sharp = std::pow(halfway, 40.0f);
+    const float broad = std::pow(halfway, 10.0f);
+    for(int channel = 0; channel < 3; ++channel)
+        colour[channel] = (dark[channel] + (bright[channel] - dark[channel]) * tone) * reflection * occlusion;
+    colour[0] += 255.0f * (0.85f * sharp + 0.12f * broad);
+    colour[1] += 236.0f * (0.85f * sharp + 0.10f * broad);
+    colour[2] += 170.0f * (0.85f * sharp + 0.06f * broad);
+}
+
+const float NAV_GOLD_DARK[3] = {70.0f, 38.0f, 10.0f};
+const float NAV_GOLD_BRIGHT[3] = {255.0f, 208.0f, 96.0f};
+const float NAV_BRONZE_DARK[3] = {50.0f, 26.0f, 8.0f};
+const float NAV_BRONZE_BRIGHT[3] = {226.0f, 150.0f, 66.0f};
+const float NAV_STEEL_DARK[3] = {14.0f, 14.0f, 22.0f};
+const float NAV_STEEL_BRIGHT[3] = {150.0f, 138.0f, 142.0f};
+
+const int MINIMAP_RIM_SIZE = 384;
+const float MINIMAP_RIM_RADIUS = 88.0f;
+const int MINIMAP_NORTH_SIZE = 64;
+const float MINIMAP_NORTH_RADIUS = 8.5f;
+
+//! \brief One point of the minimap frame in map units from the centre of the map (88 is the outer
+//! edge): a forged iron ring with a bronze edge line, sixteen bronze rivets and a bright bronze
+//! lip. Inside the ring lies a translucent warm stone haze that darkens towards the ring and
+//! below the ring's upper left edge, so the black of unexplored ground reads as dark stone.
+void navRimPoint(float* colour, float& alpha, float dx, float dy, int x, int y)
+{
+    const float radius = std::sqrt(dx * dx + dy * dy);
+    const float light = -(dx + dy) / std::max(1.0f, radius * 1.414214f);
+    colour[0] = colour[1] = colour[2] = 0.0f;
+    alpha = 0.0f;
+    if(radius > MINIMAP_RIM_RADIUS)
+        return;
+    if(radius > 79.6f)
+    {
+        alpha = 1.0f;
+        const float slope = badgeClamp((radius - 83.7f) / 2.1f, -1.0f, 1.0f);
+        const float face = std::sqrt(std::max(0.0f, 1.0f - slope * slope));
+        const float mottle = badgeFbm(dx * 0.45f + 30.0f, dy * 0.45f);
+        const float value = badgeClamp((0.075f + 0.10f * face + 0.20f * light * slope + 0.022f * badgeNoise(x, y))
+            * (0.82f + 0.36f * mottle), 0.04f, 1.0f);
+        badgeSet(colour, 255.0f, 214.0f, 172.0f, value);
+        if(radius > 85.8f)
+            badgeSet(colour, 196.0f, 136.0f, 66.0f, 0.62f + 0.38f * light);
+        if(radius > 87.2f)
+            badgeSet(colour, 12.0f, 8.0f, 6.0f, 1.0f);
+        if(radius < 81.6f)
+            badgeSet(colour, 224.0f, 166.0f, 88.0f, 0.72f + 0.38f * light);
+        if(radius < 80.2f)
+            badgeSet(colour, 10.0f, 6.0f, 4.0f, 1.0f);
+        // Sixteen domed rivets
+        const float degrees = std::atan2(dx, -dy) * 57.29578f;
+        const float index = std::floor((degrees - 11.25f) / 22.5f + 0.5f);
+        const float angle = (index * 22.5f + 11.25f) * 0.0174533f;
+        const float rivetX = dx - 83.7f * std::sin(angle);
+        const float rivetY = dy + 83.7f * std::cos(angle);
+        const float rivet = std::sqrt(rivetX * rivetX + rivetY * rivetY);
+        if(rivet < 1.7f)
+        {
+            const float height = std::sqrt(std::max(0.0f, 1.0f - (rivet / 1.7f) * (rivet / 1.7f)));
+            const float normal[3] = {rivetX / 1.7f, rivetY / 1.7f, height};
+            const float diffuse = std::max(0.0f, normal[0] * -0.50f + normal[1] * -0.60f + normal[2] * 0.62f);
+            const float halfway = std::max(0.0f, normal[0] * -0.26f + normal[1] * -0.31f + normal[2] * 0.91f);
+            badgeSet(colour, 200.0f, 140.0f, 72.0f, 0.34f + 0.92f * diffuse);
+            badgeMix(colour, 255.0f, 236.0f, 190.0f, 0.85f * std::pow(halfway, 18.0f));
+        }
+        else if(rivet < 2.4f)
+            badgeMix(colour, 6.0f, 3.0f, 2.0f, 0.65f);
+        return;
+    }
+    const float stone = badgeFbm(dx * 0.30f + 40.0f, dy * 0.30f);
+    navOver(colour, alpha, 132.0f, 104.0f, 72.0f, 0.13f + 0.09f * stone);
+    const float vignette = badgeSmoothstep(46.0f, 79.6f, radius);
+    navOver(colour, alpha, 10.0f, 6.0f, 4.0f, 0.66f * vignette * std::sqrt(vignette));
+    const float reach = 3.5f + 5.5f * std::max(0.0f, light + 0.15f);
+    navOver(colour, alpha, 2.0f, 1.0f, 1.0f, 0.55f * std::exp(-(79.6f - radius) / reach));
+}
+
+//! \brief Draws the frame of the minimap into a square texture: the circle touches its edges.
+void drawMiniMapRimPixels(std::vector<unsigned char>& pixels)
+{
+    const int size = MINIMAP_RIM_SIZE;
+    pixels.resize(size * size * 4);
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            float sum[3] = {0.0f, 0.0f, 0.0f};
+            float alphaSum = 0.0f;
+            for(int sampleY = 0; sampleY < 2; ++sampleY)
+            {
+                for(int sampleX = 0; sampleX < 2; ++sampleX)
+                {
+                    const float dx = (x + (sampleX + 0.5f) * 0.5f) * 2.0f * MINIMAP_RIM_RADIUS / size - MINIMAP_RIM_RADIUS;
+                    const float dy = (y + (sampleY + 0.5f) * 0.5f) * 2.0f * MINIMAP_RIM_RADIUS / size - MINIMAP_RIM_RADIUS;
+                    float colour[3];
+                    float alpha;
+                    navRimPoint(colour, alpha, dx, dy, x, y);
+                    for(int channel = 0; channel < 3; ++channel)
+                        sum[channel] += colour[channel] * alpha;
+                    alphaSum += alpha;
+                }
+            }
+            navStore(&pixels[(y * size + x) * 4], sum, alphaSum, 4);
+        }
+    }
+}
+
+//! \brief Outline of the letter N of the compass marker. Negative on the letter.
+float navLetterDistance(float x, float y)
+{
+    float d = badgeTaper(x, y, -2.4f, -3.6f, -2.4f, 3.6f, 0.75f, 0.75f);
+    d = std::min(d, badgeTaper(x, y, 2.4f, -3.6f, 2.4f, 3.6f, 0.75f, 0.75f));
+    return std::min(d, badgeTaper(x, y, -2.4f, -3.6f, 2.4f, 3.6f, 0.75f, 0.75f));
+}
+
+float navLetterHeight(float x, float y)
+{
+    const float distance = navLetterDistance(x, y);
+    return distance < 0.0f ? 1.5f * badgeRound(-distance, 0.75f) : 0.0f;
+}
+
+//! \brief One point of the compass marker in units from its centre: a round bronze boss with a
+//! dark stone well and a raised gold N. The rim is 8.5 units wide.
+void navNorthPoint(float* colour, float& alpha, float x, float y)
+{
+    const float radius = std::sqrt(x * x + y * y);
+    const float light = -(x + y) / std::max(1.0f, radius * 1.414214f);
+    colour[0] = colour[1] = colour[2] = 0.0f;
+    alpha = 0.0f;
+    if(radius > MINIMAP_NORTH_RADIUS)
+    {
+        const float shadow = badgeCircle(x, y, 0.7f, 1.0f, MINIMAP_NORTH_RADIUS);
+        navOver(colour, alpha, 3.0f, 2.0f, 2.0f, 0.55f * (1.0f - badgeSmoothstep(-0.3f, 1.6f, shadow)));
+        return;
+    }
+    alpha = 1.0f;
+    if(radius > 5.9f)
+    {
+        const float across = badgeClamp((radius - 7.0f) / 1.0f, -1.0f, 1.0f);
+        const float height = std::sqrt(std::max(0.0f, 1.0f - across * across));
+        const float tilt = 0.9f * across;
+        const float normal[3] = {tilt * x / radius, tilt * y / radius, std::sqrt(1.0f - tilt * tilt)};
+        navMetal(colour, NAV_BRONZE_DARK, NAV_BRONZE_BRIGHT, normal, 0.72f + 0.28f * height);
+        if(radius > 8.0f)
+            badgeMix(colour, 8.0f, 4.0f, 2.0f, 0.68f);
+        if(radius < 6.3f)
+            badgeMix(colour, 8.0f, 4.0f, 2.0f, 0.68f);
+        return;
+    }
+    const float low = std::max(0.0f, y / 6.0f);
+    badgeSet(colour, 255.0f, 230.0f, 214.0f, (0.13f - 0.045f * radius / 5.9f) + 0.16f * low * low);
+    badgeMix(colour, 3.0f, 2.0f, 2.0f, 0.55f * badgeSmoothstep(3.6f, 5.9f, radius) * (0.5f + 0.5f * light));
+    const float shadow = navLetterDistance(x - 0.5f, y - 0.8f);
+    badgeMix(colour, 2.0f, 1.0f, 1.0f, 0.75f * (1.0f - badgeSmoothstep(-0.2f, 0.9f, shadow)));
+    const float letter = navLetterDistance(x, y);
+    if(letter > 0.0f)
+        return;
+    float normal[3];
+    badgeNormal(navLetterHeight, x, y, normal);
+    float gold[3];
+    navMetal(gold, NAV_GOLD_DARK, NAV_GOLD_BRIGHT, normal, 0.85f + 0.15f * badgeSmoothstep(0.0f, 0.7f, -letter));
+    badgeMix(colour, gold[0], gold[1], gold[2], 1.0f);
+}
+
+void drawMiniMapNorthPixels(std::vector<unsigned char>& pixels)
+{
+    const int size = MINIMAP_NORTH_SIZE;
+    pixels.resize(size * size * 4);
+    const int samples = 3;
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            float sum[3] = {0.0f, 0.0f, 0.0f};
+            float alphaSum = 0.0f;
+            for(int sampleY = 0; sampleY < samples; ++sampleY)
+            {
+                for(int sampleX = 0; sampleX < samples; ++sampleX)
+                {
+                    const float px = ((x + (sampleX + 0.5f) / samples) / size - 0.5f) * 2.0f * 10.0f;
+                    const float py = ((y + (sampleY + 0.5f) / samples) / size - 0.5f) * 2.0f * 10.0f;
+                    float colour[3];
+                    float alpha;
+                    navNorthPoint(colour, alpha, px, py);
+                    for(int channel = 0; channel < 3; ++channel)
+                        sum[channel] += colour[channel] * alpha;
+                    alphaSum += alpha;
+                }
+            }
+            navStore(&pixels[(y * size + x) * 4], sum, alphaSum, samples * samples);
+        }
+    }
+}
+
+const int CORNER_PLATE_SIZE = 128;
+const float CORNER_PLATE_UNITS = 44.0f;
+const float CORNER_MEDALLION = 13.4f;
+
+//! \brief Depth inside a corner plate in corner units (44 square, the corner of the screen at the
+//! origin). The plate is a square with a rounded corner whose far side is cut out by the map circle.
+float navPlateDepth(float u, float v)
+{
+    const float curve = std::sqrt((88.0f - u) * (88.0f - u) + (88.0f - v) * (88.0f - v)) - 88.0f;
+    return std::min(-badgeBox(u, v, 22.0f, 22.0f, 22.0f, 22.0f, 2.6f), curve);
+}
+
+//! \brief One point of a corner plate. State 0 is the resting plate, 1 the hovered plate with
+//! glowing embers in the well and a brighter edge, 2 the pressed plate whose medallion is sunk in.
+//! The plate is blackened iron with a bronze edge line and bevel, two bronze rivets and a bronze
+//! medallion around a dark stone well. flipX and flipY turn corner coordinates into screen ones.
+void navPlatePoint(float* colour, float& alpha, float u, float v, float flipX, float flipY, int state, int x, int y)
+{
+    colour[0] = colour[1] = colour[2] = 0.0f;
+    alpha = 0.0f;
+    const float depth = navPlateDepth(u, v);
+    if(depth <= 0.0f)
+        return;
+    alpha = 1.0f;
+    const float step = 0.3f;
+    float gradientX = flipX * (navPlateDepth(u + step, v) - navPlateDepth(u - step, v));
+    float gradientY = flipY * (navPlateDepth(u, v + step) - navPlateDepth(u, v - step));
+    const float length = std::max(0.001f, std::sqrt(gradientX * gradientX + gradientY * gradientY));
+    gradientX /= length;
+    gradientY /= length;
+    const float facing = 0.5f * gradientX + 0.6f * gradientY;
+    const float bevel = badgeClamp((3.9f - depth) / 2.2f, 0.0f, 1.0f);
+    const float tilt = 0.9f * bevel;
+    const float lit = facing * tilt + 0.62f * std::sqrt(1.0f - tilt * tilt);
+    const float mottle = badgeFbm(u * 0.8f + 3.0f, v * 0.8f);
+    const float value = badgeClamp(0.02f + 0.30f * lit + 0.022f * badgeNoise(x, y) + 0.05f * (mottle - 0.5f), 0.04f, 1.0f);
+    badgeSet(colour, 255.0f, 214.0f, 172.0f, value);
+    if(depth < 1.75f)
+        badgeSet(colour, 196.0f, 136.0f, 66.0f, badgeClamp((0.62f + 0.64f * facing) * (state == 1 ? 1.3f : 1.0f), 0.2f, 1.3f));
+    if(depth < 0.55f)
+        badgeMix(colour, 8.0f, 5.0f, 4.0f, 0.68f);
+    // Two domed rivets on the outer arms of the plate
+    for(int rivetIndex = 0; rivetIndex < 2; ++rivetIndex)
+    {
+        const float rivetU = rivetIndex == 0 ? 39.0f : 5.2f;
+        const float rivetV = rivetIndex == 0 ? 5.2f : 39.0f;
+        const float rivetX = flipX * (u - rivetU);
+        const float rivetY = flipY * (v - rivetV);
+        const float rivet = std::sqrt(rivetX * rivetX + rivetY * rivetY);
+        if(rivet < 1.6f)
+        {
+            const float height = std::sqrt(std::max(0.0f, 1.0f - (rivet / 1.6f) * (rivet / 1.6f)));
+            const float normal[3] = {rivetX / 1.6f, rivetY / 1.6f, height};
+            const float diffuse = std::max(0.0f, normal[0] * -0.50f + normal[1] * -0.60f + normal[2] * 0.62f);
+            const float halfway = std::max(0.0f, normal[0] * -0.26f + normal[1] * -0.31f + normal[2] * 0.91f);
+            badgeSet(colour, 200.0f, 140.0f, 72.0f, 0.34f + 0.92f * diffuse);
+            badgeMix(colour, 255.0f, 236.0f, 190.0f, 0.85f * std::pow(halfway, 18.0f));
+        }
+        else if(rivet < 2.3f)
+            badgeMix(colour, 6.0f, 3.0f, 2.0f, 0.65f);
+    }
+    // The medallion: a bronze bezel around a dark well
+    const float medallionX = flipX * (u - CORNER_MEDALLION);
+    const float medallionY = flipY * (v - CORNER_MEDALLION);
+    const float radius = std::sqrt(medallionX * medallionX + medallionY * medallionY);
+    const float direction = state == 2 ? -1.0f : 1.0f;
+    const float mediumLight = -(medallionX + medallionY) / std::max(1.0f, radius * 1.414214f) * direction;
+    if(state == 1 && radius > 11.8f)
+        badgeMix(colour, 255.0f, 150.0f, 50.0f, 0.45f * std::exp(-(radius - 11.8f) / 1.5f));
+    if(radius > 11.8f)
+        return;
+    if(radius > 9.5f)
+    {
+        const float across = badgeClamp((radius - 10.35f) / 0.85f, -1.0f, 1.0f);
+        const float height = std::sqrt(std::max(0.0f, 1.0f - across * across));
+        const float bezelTilt = 0.9f * across * direction;
+        const float normal[3] = {bezelTilt * medallionX / radius, bezelTilt * medallionY / radius,
+            std::sqrt(1.0f - bezelTilt * bezelTilt)};
+        navMetal(colour, state == 1 ? NAV_GOLD_DARK : NAV_BRONZE_DARK, state == 1 ? NAV_GOLD_BRIGHT : NAV_BRONZE_BRIGHT,
+            normal, (0.7f + 0.3f * height) * (state == 2 ? 0.75f : 1.0f));
+        if(radius > 11.3f)
+            badgeMix(colour, 8.0f, 4.0f, 3.0f, 0.7f);
+        if(radius < 9.9f)
+            badgeMix(colour, 8.0f, 4.0f, 3.0f, 0.7f);
+        return;
+    }
+    const float low = std::max(0.0f, medallionY / 9.5f);
+    badgeSet(colour, 255.0f, 230.0f, 214.0f, 0.15f - 0.05f * radius / 9.5f + 0.20f * low * low);
+    if(state == 1)
+    {
+        const float ember = 0.35f + 0.65f * std::pow(1.0f - radius / 9.5f, 1.2f);
+        colour[0] += 250.0f * ember * (0.5f + 0.5f * low);
+        colour[1] += 96.0f * ember * (0.5f + 0.5f * low);
+        colour[2] += 16.0f * ember * (0.5f + 0.5f * low);
+    }
+    const float wall = badgeSmoothstep(6.8f, 9.5f, radius);
+    badgeMix(colour, 3.0f, 2.0f, 2.0f, (state == 2 ? 0.8f : 0.55f) * wall * (0.5f + 0.5f * mediumLight));
+    if(state == 2)
+        badgeMix(colour, 3.0f, 2.0f, 2.0f, 0.25f);
+}
+
+//! \brief Draws a 128x128 plate for the given screen corner (0 top left, 1 top right, 2 bottom
+//! left, 3 bottom right) with 3x3 samples per pixel.
+void drawCornerPlatePixels(std::vector<unsigned char>& pixels, int corner, int state)
+{
+    const int size = CORNER_PLATE_SIZE;
+    const int samples = 3;
+    pixels.resize(size * size * 4);
+    const float flipX = (corner & 1) ? -1.0f : 1.0f;
+    const float flipY = (corner & 2) ? -1.0f : 1.0f;
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            float sum[3] = {0.0f, 0.0f, 0.0f};
+            float alphaSum = 0.0f;
+            for(int sampleY = 0; sampleY < samples; ++sampleY)
+            {
+                for(int sampleX = 0; sampleX < samples; ++sampleX)
+                {
+                    const float screenX = (x + (sampleX + 0.5f) / samples) * CORNER_PLATE_UNITS / size;
+                    const float screenY = (y + (sampleY + 0.5f) / samples) * CORNER_PLATE_UNITS / size;
+                    const float u = (corner & 1) ? CORNER_PLATE_UNITS - screenX : screenX;
+                    const float v = (corner & 2) ? CORNER_PLATE_UNITS - screenY : screenY;
+                    float colour[3];
+                    float alpha;
+                    navPlatePoint(colour, alpha, u, v, flipX, flipY, state, x, y);
+                    for(int channel = 0; channel < 3; ++channel)
+                        sum[channel] += badgeClamp(colour[channel], 0.0f, 255.0f) * alpha;
+                    alphaSum += alpha;
+                }
+            }
+            navStore(&pixels[(y * size + x) * 4], sum, alphaSum, samples * samples);
+        }
+    }
+}
+
+const int NAV_ICON_SIZE = 64;
+const int NAV_ICON_HELP = 0;
+const int NAV_ICON_SELL = 1;
+const int NAV_ICON_OPTIONS = 2;
+const int NAV_ICON_ZOOM = 3;
+
+//! \brief Relief of an embossed symbol: a rounded ridge inside the outline of the symbol.
+float navRelief(float distance)
+{
+    return distance < 0.0f ? 4.0f * badgeRound(-distance, 3.2f) : 0.0f;
+}
+
+//! \brief Unit normal of the relief of a symbol given by its outline.
+void navIconNormal(float (*distance)(float, float), float x, float y, float* normal)
+{
+    const float step = 0.35f;
+    const float gradientX = (navRelief(distance(x + step, y)) - navRelief(distance(x - step, y))) / (2.0f * step);
+    const float gradientY = (navRelief(distance(x, y + step)) - navRelief(distance(x, y - step))) / (2.0f * step);
+    const float length = std::sqrt(gradientX * gradientX + gradientY * gradientY + 1.0f);
+    normal[0] = -gradientX / length;
+    normal[1] = -gradientY / length;
+    normal[2] = 1.0f / length;
+}
+
+//! \brief Outline of the question mark. Negative on the symbol.
+float navHelpDistance(float x, float y)
+{
+    float d = badgeCircle(x, y, 0.2f, 19.5f, 3.7f);
+    float previousX = 0.0f;
+    float previousY = 0.0f;
+    const int steps = 14;
+    for(int step = 0; step <= steps; ++step)
+    {
+        const float angle = (-200.0f + 280.0f * step / steps) * 0.0174533f;
+        const float pointX = 12.0f * std::cos(angle);
+        const float pointY = -8.0f + 12.0f * std::sin(angle);
+        if(step > 0)
+            d = std::min(d, badgeTaper(x, y, previousX, previousY, pointX, pointY, 3.3f, 3.3f));
+        previousX = pointX;
+        previousY = pointY;
+    }
+    return std::min(d, badgeTaper(x, y, previousX, previousY, 0.2f, 8.6f, 3.3f, 3.3f));
+}
+
+//! \brief Outline of the fuse of the bomb. Negative on the rope.
+float navFuseDistance(float x, float y)
+{
+    float d = badgeTaper(x, y, 6.5f, -13.5f, 9.0f, -18.0f, 1.5f, 1.5f);
+    d = std::min(d, badgeTaper(x, y, 9.0f, -18.0f, 14.0f, -21.0f, 1.5f, 1.5f));
+    d = std::min(d, badgeTaper(x, y, 14.0f, -21.0f, 19.0f, -19.0f, 1.5f, 1.5f));
+    return std::min(d, badgeTaper(x, y, 19.0f, -19.0f, 20.5f, -14.0f, 1.5f, 1.5f));
+}
+
+//! \brief Outline of the spark at the end of the fuse: a bright core with four rays.
+float navSparkDistance(float x, float y)
+{
+    float d = badgeCircle(x, y, 20.5f, -14.0f, 2.0f);
+    d = std::min(d, badgeTaper(x, y, 16.5f, -14.0f, 24.5f, -14.0f, 0.5f, 0.5f));
+    d = std::min(d, badgeTaper(x, y, 20.5f, -19.0f, 20.5f, -9.0f, 0.5f, 0.5f));
+    d = std::min(d, badgeTaper(x, y, 17.0f, -17.5f, 24.0f, -10.5f, 0.4f, 0.4f));
+    return std::min(d, badgeTaper(x, y, 24.0f, -17.5f, 17.0f, -10.5f, 0.4f, 0.4f));
+}
+
+float navBombBodyDistance(float x, float y)
+{
+    return badgeCircle(x, y, -5.0f, 4.5f, 17.0f);
+}
+
+float navBombNeckDistance(float x, float y)
+{
+    return badgeTaper(x, y, 1.0f, -8.0f, 6.5f, -13.5f, 6.5f, 5.0f);
+}
+
+float navBombDistance(float x, float y)
+{
+    return std::min(badgeSmoothMin(navBombBodyDistance(x, y), navBombNeckDistance(x, y), 2.0f),
+        std::min(navFuseDistance(x, y), navSparkDistance(x, y)));
+}
+
+//! \brief Outline of the gear: eight teeth, a hub hole and six recessed dots.
+float navGearDistance(float x, float y)
+{
+    const float radius = std::sqrt(x * x + y * y);
+    const float tooth = badgeSmoothstep(0.1f, 0.5f, std::cos(8.0f * std::atan2(y, x)));
+    float d = radius - (16.5f + 5.5f * tooth);
+    d = std::max(d, 6.6f - radius);
+    for(int dot = 0; dot < 6; ++dot)
+    {
+        const float angle = (dot * 60.0f + 30.0f) * 0.0174533f;
+        d = std::max(d, 1.7f - badgeCircle(x, y, 12.4f * std::cos(angle), 12.4f * std::sin(angle), 0.0f));
+    }
+    return d;
+}
+
+float navLensDistance(float x, float y)
+{
+    return badgeCircle(x, y, -7.0f, -7.0f, 16.2f);
+}
+
+float navHandleDistance(float x, float y)
+{
+    return std::min(badgeTaper(x, y, 4.5f, 4.5f, 20.0f, 20.0f, 4.2f, 3.6f), badgeTaper(x, y, 3.6f, 3.6f, 8.0f, 8.0f, 5.6f, 5.6f));
+}
+
+//! \brief Outline of the magnifier (frame and handle). Negative on the symbol.
+float navMagnifierDistance(float x, float y)
+{
+    return std::min(navLensDistance(x, y), navHandleDistance(x, y));
+}
+
+//! \brief Colour and opacity of one point of a symbol: the metal of the given palette, embossed
+//! from the outline, over a soft drop shadow.
+void navMetalSymbol(float* colour, float& alpha, float (*distance)(float, float),
+        const float* dark, const float* bright, float x, float y)
+{
+    const float outline = distance(x, y);
+    colour[0] = colour[1] = colour[2] = 0.0f;
+    alpha = 0.0f;
+    if(outline >= 0.0f)
+    {
+        const float shadow = distance(x - 1.4f, y - 1.8f);
+        navOver(colour, alpha, 4.0f, 2.0f, 2.0f, 0.62f * (1.0f - badgeSmoothstep(-0.5f, 2.2f, shadow)));
+        return;
+    }
+    float normal[3];
+    navIconNormal(distance, x, y, normal);
+    navMetal(colour, dark, bright, normal, 0.62f + 0.38f * badgeSmoothstep(0.0f, 1.4f, -outline));
+    alpha = 1.0f;
+}
+
+//! \brief One point of the bomb: a steel sphere with a bronze cap, a rope fuse and a glowing spark.
+void navBombPoint(float* colour, float& alpha, float x, float y)
+{
+    const float body = navBombBodyDistance(x, y);
+    const float neck = navBombNeckDistance(x, y);
+    const float fuse = navFuseDistance(x, y);
+    const float spark = navSparkDistance(x, y);
+    colour[0] = colour[1] = colour[2] = 0.0f;
+    alpha = 0.0f;
+    const float outline = navBombDistance(x, y);
+    if(outline >= 0.0f)
+    {
+        const float shadow = navBombDistance(x - 1.4f, y - 1.8f);
+        navOver(colour, alpha, 4.0f, 2.0f, 2.0f, 0.62f * (1.0f - badgeSmoothstep(-0.5f, 2.2f, shadow)));
+        navOver(colour, alpha, 255.0f, 140.0f, 30.0f, 0.55f * (1.0f - badgeSmoothstep(0.0f, 4.5f, spark)));
+        return;
+    }
+    alpha = 1.0f;
+    if(spark < 0.0f)
+    {
+        const float core = badgeSmoothstep(-2.0f, 0.0f, spark);
+        colour[0] = 255.0f;
+        colour[1] = 244.0f - 110.0f * core;
+        colour[2] = 190.0f - 160.0f * core;
+        return;
+    }
+    float normal[3];
+    if(body < neck - 1.0f && body < fuse)
+    {
+        const float sphereX = (x + 5.0f) / 17.0f;
+        const float sphereY = (y - 4.5f) / 17.0f;
+        normal[0] = sphereX;
+        normal[1] = sphereY;
+        normal[2] = std::sqrt(std::max(0.0f, 1.0f - sphereX * sphereX - sphereY * sphereY));
+        navMetal(colour, NAV_STEEL_DARK, NAV_STEEL_BRIGHT, normal, 0.85f + 0.15f * badgeSmoothstep(0.0f, 1.0f, -body));
+        badgeMix(colour, 3.0f, 2.0f, 3.0f, 0.75f * badgeSmoothstep(0.55f, 1.0f, std::sqrt(sphereX * sphereX + sphereY * sphereY)));
+        return;
+    }
+    navIconNormal(navBombDistance, x, y, normal);
+    if(fuse < neck)
+    {
+        const float rope = 0.5f + 0.5f * std::sin((x + y) * 2.4f);
+        navMetal(colour, NAV_BRONZE_DARK, NAV_BRONZE_BRIGHT, normal, 0.55f + 0.30f * rope);
+        badgeMix(colour, 120.0f, 100.0f, 70.0f, 0.35f);
+    }
+    else
+        navMetal(colour, NAV_BRONZE_DARK, NAV_BRONZE_BRIGHT, normal, 0.62f + 0.38f * badgeSmoothstep(0.0f, 1.4f, -neck));
+}
+
+//! \brief One point of the magnifier: a gold frame and a bronze grip around a dark glass with a glint.
+void navMagnifierPoint(float* colour, float& alpha, float x, float y)
+{
+    const float lens = navLensDistance(x, y);
+    const float glassX = x + 7.0f;
+    const float glassY = y + 7.0f;
+    const float glassRadius = std::sqrt(glassX * glassX + glassY * glassY);
+    if(lens < 0.0f && glassRadius < 11.4f)
+    {
+        alpha = 1.0f;
+        const float depth = glassRadius / 11.4f;
+        colour[0] = 14.0f + 26.0f * (1.0f - depth);
+        colour[1] = 44.0f + 52.0f * (1.0f - depth);
+        colour[2] = 52.0f + 48.0f * (1.0f - depth);
+        const float towards = -(glassX + glassY) / std::max(1.0f, glassRadius * 1.414214f);
+        const float shade = badgeSmoothstep(0.7f, 1.0f, depth) * (0.5f + 0.5f * towards);
+        badgeMix(colour, 2.0f, 6.0f, 8.0f, 0.75f * shade);
+        const float streak = std::exp(-((glassRadius - 7.6f) / 1.1f) * ((glassRadius - 7.6f) / 1.1f)) * badgeSmoothstep(0.6f, 0.95f, towards);
+        badgeMix(colour, 214.0f, 244.0f, 250.0f, 0.78f * streak);
+        const float glint = std::exp(-((x + 4.0f) * (x + 4.0f) + (y + 2.0f) * (y + 2.0f)) / 3.0f);
+        badgeMix(colour, 230.0f, 252.0f, 255.0f, 0.55f * glint);
+        return;
+    }
+    const float handle = navHandleDistance(x, y);
+    if(handle >= 0.0f || lens < 0.0f)
+    {
+        navMetalSymbol(colour, alpha, navMagnifierDistance, NAV_GOLD_DARK, NAV_GOLD_BRIGHT, x, y);
+        return;
+    }
+    float normal[3];
+    navIconNormal(navMagnifierDistance, x, y, normal);
+    const float along = (x + y) * 0.7071f;
+    const bool band = std::abs(std::fmod(along, 3.6f) - 1.8f) > 1.3f && handle < -0.2f && along > 8.2f;
+    const bool collar = badgeTaper(x, y, 3.6f, 3.6f, 8.0f, 8.0f, 5.6f, 5.6f) < 0.0f;
+    if(collar)
+        navMetal(colour, NAV_GOLD_DARK, NAV_GOLD_BRIGHT, normal, 0.7f + 0.3f * badgeSmoothstep(0.0f, 1.4f, -handle));
+    else
+        navMetal(colour, NAV_BRONZE_DARK, NAV_BRONZE_BRIGHT, normal, (band ? 0.55f : 0.85f) * (0.62f + 0.38f * badgeSmoothstep(0.0f, 1.4f, -handle)));
+    alpha = 1.0f;
+}
+
+//! \brief Draws a 64x64 embossed symbol of the corner plates with 3x3 samples per pixel.
+void drawNavigationSymbolPixels(std::vector<unsigned char>& pixels, int symbol)
+{
+    const int size = NAV_ICON_SIZE;
+    const int samples = 3;
+    pixels.resize(size * size * 4);
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            float sum[3] = {0.0f, 0.0f, 0.0f};
+            float alphaSum = 0.0f;
+            for(int sampleY = 0; sampleY < samples; ++sampleY)
+            {
+                for(int sampleX = 0; sampleX < samples; ++sampleX)
+                {
+                    // The symbols are drawn in a 64 unit square around their centre and enlarged a little
+                    const float zoom = 1.18f;
+                    const float shift = symbol == NAV_ICON_SELL ? 3.0f : 0.0f;
+                    const float px = ((x + (sampleX + 0.5f) / samples) - size * 0.5f) / zoom + shift;
+                    const float py = ((y + (sampleY + 0.5f) / samples) - size * 0.5f) / zoom;
+                    float colour[3];
+                    float alpha;
+                    if(symbol == NAV_ICON_HELP)
+                        navMetalSymbol(colour, alpha, navHelpDistance, NAV_GOLD_DARK, NAV_GOLD_BRIGHT, px, py);
+                    else if(symbol == NAV_ICON_SELL)
+                        navBombPoint(colour, alpha, px, py);
+                    else if(symbol == NAV_ICON_OPTIONS)
+                        navMetalSymbol(colour, alpha, navGearDistance, NAV_GOLD_DARK, NAV_GOLD_BRIGHT, px, py);
+                    else
+                        navMagnifierPoint(colour, alpha, px, py);
+                    for(int channel = 0; channel < 3; ++channel)
+                        sum[channel] += badgeClamp(colour[channel], 0.0f, 255.0f) * alpha;
+                    alphaSum += alpha;
+                }
+            }
+            navStore(&pixels[(y * size + x) * 4], sum, alphaSum, samples * samples);
+        }
+    }
+}
+
+//! \brief Creates a texture and an image of the same content under OpenDungeonsIcons/.
+void createNavigationImage(const std::string& name, const std::vector<unsigned char>& pixels, int size)
+{
+    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
+    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", "OpenDungeonsIcons/" + name));
+    image.setTexture(&texture);
+    image.setArea(CEGUI::Rectf(0, 0, size, size));
+}
+
+void createMiniMapCornerImages()
+{
+    CEGUI::WindowFactoryManager::addFactory<CEGUI::TplWindowFactory<MiniMapCornerButton>>();
+    const char* suffixes[] = {"", "Hover", "Pressed"};
+    std::vector<unsigned char> pixels;
+    for(int corner = 0; corner < 4; ++corner)
+    {
+        for(int state = 0; state < 3; ++state)
+        {
+            drawCornerPlatePixels(pixels, corner, state);
+            createNavigationImage("MiniMapCorner" + std::to_string(corner) + suffixes[state], pixels, CORNER_PLATE_SIZE);
+        }
+    }
+    drawMiniMapRimPixels(pixels);
+    createNavigationImage("MiniMapRim", pixels, MINIMAP_RIM_SIZE);
+    drawMiniMapNorthPixels(pixels);
+    createNavigationImage("MiniMapNorth", pixels, MINIMAP_NORTH_SIZE);
+    const char* symbols[] = {"NavHelp", "NavSell", "NavOptions", "MapZoom"};
+    for(int symbol = 0; symbol < 4; ++symbol)
+    {
+        drawNavigationSymbolPixels(pixels, symbol);
+        createNavigationImage(symbols[symbol], pixels, NAV_ICON_SIZE);
+    }
+}
+
 void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
         unsigned char red, unsigned char green, unsigned char blue)
 {
@@ -734,42 +1361,6 @@ void createNavigationImages()
     createMiniMapCornerImages();
     const int size = 64;
     std::vector<unsigned char> pixels(size * size * 4, 0);
-    const float handleStart = 36.0f;
-    const float handleEnd = 53.0f;
-    const float handleLengthSquared = 2.0f * (handleEnd - handleStart) * (handleEnd - handleStart);
-    for(int y = 0; y < size; ++y)
-    {
-        for(int x = 0; x < size; ++x)
-        {
-            const float dx = x + 0.5f - 25.0f;
-            const float dy = y + 0.5f - 25.0f;
-            const float ringDistance = std::abs(std::sqrt(dx * dx + dy * dy) - 15.0f);
-            const float handleX = x + 0.5f - handleStart;
-            const float handleY = y + 0.5f - handleStart;
-            const float handleT = std::max(0.0f, std::min(1.0f,
-                ((handleX + handleY) * (handleEnd - handleStart)) / handleLengthSquared));
-            const float nearestX = handleStart + handleT * (handleEnd - handleStart);
-            const float nearestY = handleStart + handleT * (handleEnd - handleStart);
-            const float segmentX = x + 0.5f - nearestX;
-            const float segmentY = y + 0.5f - nearestY;
-            const float handleDistance = std::sqrt(segmentX * segmentX + segmentY * segmentY);
-            const float coverage = std::max(0.0f, std::min(1.0f,
-                std::max(3.0f - ringDistance, 3.0f - handleDistance)));
-            const int i = (y * size + x) * 4;
-            pixels[i] = 232;
-            pixels[i + 1] = 226;
-            pixels[i + 2] = 202;
-            pixels[i + 3] = static_cast<unsigned char>(coverage * 255.0f);
-        }
-    }
-    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("MapZoom");
-    shadeNavigationIcon(pixels, size, 245, 199, 115);
-    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
-    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
-        "BasicImage", "OpenDungeonsIcons/MapZoom"));
-    image.setTexture(&texture);
-    image.setArea(CEGUI::Rectf(0, 0, size, size));
-
     for(int y = 0; y < size; ++y)
     {
         for(int x = 0; x < size; ++x)
