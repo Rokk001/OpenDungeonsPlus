@@ -1536,6 +1536,15 @@ void Gui::registerWindow(CEGUI::Window* window)
         registerWindow(window->getChildAtIdx(i));
 }
 
+CEGUI::Window* Gui::createInfoWindow(const std::string& name)
+{
+    CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* window = wmgr.loadLayoutFromFile("WindowStats.layout");
+    wmgr.renameWindow(window, name);
+    registerWindowHierarchy(window);
+    return window;
+}
+
 void Gui::setUserScalePercent(float scalePercent)
 {
     if(scalePercent != scalePercent)
