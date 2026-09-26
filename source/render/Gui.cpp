@@ -190,15 +190,32 @@ void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float health
             }
             if(radius > 25)
             {
+                // Dark iron frame: a bright inner lip next to the groove, a bevelled body lit from
+                // the top left with a fine grain, twelve rivets and a dark outer contour
                 const float slope = std::max(-1.0f, std::min(1.0f, (radius - 28) / 3));
                 const float face = std::sqrt(std::max(0.0f, 1 - slope * slope));
-                shade = static_cast<unsigned char>(std::max(12.0f,
-                    74 + 92 * light * slope + 65 * face));
-                pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
+                float value = 34 + 52 * light * slope + 24 * face
+                    + static_cast<float>(((x * 73856093) ^ (y * 19349663)) % 7 - 3);
+                if(radius < 26.2f)
+                    value = 150 + 50 * light;
+                const float degrees = std::atan2(dx, -dy) * 57.29578f;
+                const float step = std::fmod(degrees + 375.0f, 30.0f);
+                const float tangent = (step > 15 ? step - 30 : step) * 0.0174533f * radius;
+                const float rivet = std::sqrt(tangent * tangent + (radius - 28.3f) * (radius - 28.3f));
+                if(rivet < 1.0f)
+                    value = 100 + 60 * light;
+                else if(rivet < 1.5f)
+                    value = 14;
+                if(radius > 30.2f)
+                    value *= 0.45f;
+                value = std::max(10.0f, std::min(255.0f, value));
+                pixels[i] = static_cast<unsigned char>(value);
+                pixels[i + 1] = static_cast<unsigned char>(value * 0.96f);
+                pixels[i + 2] = static_cast<unsigned char>(value * 1.04f);
             }
             else if(radius > 21 && radius < 24.5f)
             {
-                const float relief = 0.65f + 0.35f * light * (radius - 22.75f);
+                const float relief = std::min(1.2f, 0.65f + 0.35f * light * (radius - 22.75f));
                 // The ring of the heart badge is the health of the dungeon heart: the lit part
                 // is green, the rest stays as a dark groove
                 const bool lit = badge != 0 || HeartHealthRing::isRingLit(dx, dy, healthFraction);
