@@ -258,6 +258,9 @@ void RoomDungeonTemple::doUpkeep()
     {
         mHeartHP = std::min(getHeartMaxHP(),
             mHeartHP + HEART_HEAL_PER_SECOND / ODApplication::turnsPerSecond);
+        // Healing above the critical level re-arms the warning for the next drop below it
+        if(mHeartHP > 0.11 * getHeartMaxHP())
+            mCriticalWarningSent = false;
     }
     Room::doUpkeep();
 }
