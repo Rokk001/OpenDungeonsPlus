@@ -82,6 +82,8 @@ namespace HeartHealthRing
     {
         BadgeState() :
             mFraction(1.0f),
+            mHP(-1.0),
+            mMaxHP(-1.0),
             mGlow(false),
             mGlowRemaining(0.0f),
             mDirty(true)
@@ -93,6 +95,14 @@ namespace HeartHealthRing
             mFraction = clampFraction(fraction);
             mGlow = underAttack && mFraction > 0.0f;
             mGlowRemaining = mGlow ? ATTACK_GLOW_SECONDS : 0.0f;
+            mDirty = true;
+        }
+
+        //! \brief Stores the exact heart HP of the last message of the server, for the tooltip.
+        void setPoints(double hp, double maxHP)
+        {
+            mHP = hp;
+            mMaxHP = maxHP;
             mDirty = true;
         }
 
@@ -119,6 +129,8 @@ namespace HeartHealthRing
         }
 
         float mFraction;
+        double mHP;
+        double mMaxHP;
         bool mGlow;
         float mGlowRemaining;
         bool mDirty;
