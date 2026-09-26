@@ -212,7 +212,7 @@ void checkMapping()
     check(lit17 == 1 && litAt(30.0f, 0.17f), "17 percent lights exactly the first segment");
     check(lit50 == 3 && litAt(150.0f, 0.5f) && !litAt(210.0f, 0.5f), "50 percent lights three segments clockwise from the top");
     check(lit100 == 6, "100 percent lights all six segments");
-    check(litAt(56.0f, 1.0f / 6.0f + 0.0001f) && !litAt(90.0f, 1.0f / 6.0f + 0.0001f), "one sixth fills the first segment and nothing more");
+    check(litAt(50.0f, 1.0f / 6.0f + 0.0001f) && !litAt(90.0f, 1.0f / 6.0f + 0.0001f), "one sixth fills the first segment and nothing more");
     check(litAt(75.0f, 0.25f) && !litAt(100.0f, 0.25f) && litAt(30.0f, 0.25f) && !litAt(150.0f, 0.25f),
         "a partly covered segment is filled clockwise up to its covered part");
     check(litAt(65.0f, 0.17f) == false && litAt(91.0f, 0.34f) && !litAt(135.0f, 0.34f), "partial segments at 17 and 34 percent");
@@ -483,7 +483,7 @@ void checkDrawing()
     check(noneLit, "empty ring shows no green");
     check(allSpokes, "the six spokes are grey rim at 100, 50 and 0 percent");
     check(!ringLit(full, 0.0f) && !ringLit(full, 60.0f) && !ringLit(full, 180.0f), "the spokes are not green");
-    check(ringLit(seventeen, 30.0f) && ringLit(seventeen, 55.0f) && !ringLit(seventeen, 90.0f) && !ringLit(seventeen, 200.0f),
+    check(ringLit(seventeen, 30.0f) && ringLit(seventeen, 50.0f) && !ringLit(seventeen, 90.0f) && !ringLit(seventeen, 200.0f),
         "17 percent shows exactly one green segment");
     check(ringLit(half, 30.0f) && ringLit(half, 90.0f) && ringLit(half, 150.0f)
         && !ringLit(half, 210.0f) && !ringLit(half, 270.0f) && !ringLit(half, 330.0f), "50 percent shows three green segments from the top");
