@@ -40,6 +40,8 @@ public:
     { return false; }
     bool canAttackHeart(Tile* tile, Seat* seat) const;
     double getHP(Tile* tile) const override;
+    //! \brief The tile the heart object stands on, or null when the heart has no object (ruin).
+    Tile* getHeartTile() const;
     //! Health of an undamaged heart: HEART_MAX_HP, independent of the number of tiles of the
     //! room and of the floor tiles' own durability.
     double getHeartMaxHP() const;

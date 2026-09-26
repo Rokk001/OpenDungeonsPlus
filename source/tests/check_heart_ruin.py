@@ -66,8 +66,13 @@ struct Seat;
 struct TileData{std::vector<Seat*> mSeatsVision;};
 struct GameMap;
 struct Room;
+struct ConfigManager {static double maxManaPerSeat;
+ static ConfigManager& getSingleton(){static ConfigManager c;return c;}
+ double getMaxManaPerSeat()const{return maxManaPerSeat;}};
+double ConfigManager::maxManaPerSeat=200000.0;
 struct Seat {
  int team;int id;Player* mPlayer=nullptr;GameMap* mGameMap=nullptr;void* mCurrentSkill=nullptr;SeatStatistics stats;
+ double mMana=0.0;double getMana()const{return mMana;}void addMana(double mana);
  std::vector<uint32_t> mNbRooms=std::vector<uint32_t>(static_cast<uint32_t>(RoomType::nbRooms),0);
  Seat(int t,int i):team(t),id(i){}
  void addSkillPoints(int){}
@@ -273,6 +278,7 @@ methods += '\n' + '\n'.join([
     function(game_map, 'std::vector<Room*> GameMap::getRoomsByType('),
     function(game_map, 'unsigned int GameMap::numRoomsByTypeAndSeat('),
     function(seat, 'void Seat::computeSeatBeginTurn('),
+    function(seat, 'void Seat::addMana('),
     function(seat_data, 'uint32_t SeatData::getNbRooms(').replace('SeatData::', 'Seat::'),
     function(player, 'void Player::notifyNoMoreDungeonTemple('),
 ])
