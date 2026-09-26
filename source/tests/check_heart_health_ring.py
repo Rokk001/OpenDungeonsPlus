@@ -173,7 +173,21 @@ bool ringLit(const std::vector<unsigned char>& pixels, float angle)
 {
     int r, g, b;
     pixelAt(pixels, angle, 23.0f, r, g, b);
-    return g > 60 && r < 80;
+    return g - r > 40;
+}
+
+// A spoke is part of the silver rim: grey, neither green nor the dark groove
+bool spokeAt(const std::vector<unsigned char>& pixels, float angle)
+{
+    int r, g, b;
+    pixelAt(pixels, angle, 23.0f, r, g, b);
+    return r == g && g == b && g > 60;
+}
+
+bool litAt(float degrees, float fraction)
+{
+    const float radians = degrees * 3.14159265f / 180.0f;
+    return HeartHealthRing::isRingLit(std::sin(radians), -std::cos(radians), fraction);
 }
 
 bool glowing(const std::vector<unsigned char>& pixels)
@@ -185,29 +199,44 @@ bool glowing(const std::vector<unsigned char>& pixels)
 
 void checkMapping()
 {
-    check(near(HeartHealthRing::visibleSpanDegrees(0.0f), 0.0), "0 percent shows no arc");
-    check(near(HeartHealthRing::visibleSpanDegrees(0.1f), 33.0), "10 percent shows 33 degrees");
-    check(near(HeartHealthRing::visibleSpanDegrees(0.5f), 165.0), "50 percent shows 165 degrees");
-    check(near(HeartHealthRing::visibleSpanDegrees(1.0f), 330.0), "100 percent shows 330 degrees");
-    check(near(HeartHealthRing::visibleSpanDegrees(-0.5f), 0.0), "negative fraction clamps to 0");
-    check(near(HeartHealthRing::visibleSpanDegrees(7.0f), 330.0), "fraction above 1 clamps to 330");
-    check(near(HeartHealthRing::visibleSpanDegrees(std::numeric_limits<float>::quiet_NaN()), 0.0), "NaN shows nothing");
-    check(near(HeartHealthRing::RING_START_DEGREES + HeartHealthRing::visibleSpanDegrees(0.1f), 48.0),
-        "10 percent ends near 50 degrees");
-    bool monotone = true;
-    float previous = -1.0f;
-    for(int i = 0; i <= 100; ++i)
+    const float mids[6] = {30.0f, 90.0f, 150.0f, 210.0f, 270.0f, 330.0f};
+    int lit0 = 0, lit17 = 0, lit50 = 0, lit100 = 0;
+    for(int k = 0; k < 6; ++k)
     {
-        const float span = HeartHealthRing::visibleSpanDegrees(i / 100.0f);
-        monotone = monotone && span >= previous;
-        previous = span;
+        lit0 += litAt(mids[k], 0.0f);
+        lit17 += litAt(mids[k], 0.17f);
+        lit50 += litAt(mids[k], 0.5f);
+        lit100 += litAt(mids[k], 1.0f);
     }
-    check(monotone, "arc never grows when the health falls");
-    check(HeartHealthRing::isRingLit(std::sin(0.35f), -std::cos(0.35f), 1.0f), "full ring lit at 20 degrees");
-    check(!HeartHealthRing::isRingLit(std::sin(0.05f), -std::cos(0.05f), 1.0f), "full ring has its gap at the top (3 degrees)");
-    check(!HeartHealthRing::isRingLit(-std::sin(0.05f), -std::cos(0.05f), 1.0f), "full ring has its gap at the top (357 degrees)");
-    check(HeartHealthRing::isRingLit(0.0f, 1.0f, 1.0f), "full ring lit at the bottom");
-    check(!HeartHealthRing::isRingLit(0.0f, 1.0f, 0.0f), "empty ring lit nowhere");
+    check(lit0 == 0, "0 percent lights no segment");
+    check(lit17 == 1 && litAt(30.0f, 0.17f), "17 percent lights exactly the first segment");
+    check(lit50 == 3 && litAt(150.0f, 0.5f) && !litAt(210.0f, 0.5f), "50 percent lights three segments clockwise from the top");
+    check(lit100 == 6, "100 percent lights all six segments");
+    check(litAt(56.0f, 1.0f / 6.0f + 0.0001f) && !litAt(90.0f, 1.0f / 6.0f + 0.0001f), "one sixth fills the first segment and nothing more");
+    check(litAt(75.0f, 0.25f) && !litAt(100.0f, 0.25f) && litAt(30.0f, 0.25f) && !litAt(150.0f, 0.25f),
+        "a partly covered segment is filled clockwise up to its covered part");
+    check(litAt(65.0f, 0.17f) == false && litAt(91.0f, 0.34f) && !litAt(135.0f, 0.34f), "partial segments at 17 and 34 percent");
+    bool spokes = true;
+    for(int k = 0; k < 6; ++k)
+    {
+        spokes = spokes && !litAt(k * 60.0f, 1.0f) && !litAt(k * 60.0f + 2.0f, 1.0f) && !litAt(k * 60.0f - 2.0f, 1.0f);
+        spokes = spokes && HeartHealthRing::isSpoke(std::sin(k * 1.0471976f), -std::cos(k * 1.0471976f));
+    }
+    check(spokes, "a spoke separates every two segments and is never lit");
+    check(!HeartHealthRing::isSpoke(std::sin(0.5236f), -std::cos(0.5236f)), "the middle of a segment is no spoke");
+    check(lit0 == 0 && !litAt(30.0f, -0.5f) && !litAt(30.0f, std::numeric_limits<float>::quiet_NaN()), "negative fraction and NaN show nothing");
+    check(litAt(330.0f, 7.0f) && litAt(30.0f, 7.0f), "fraction above 1 clamps to a full ring");
+    bool monotone = true;
+    for(int i = 0; i < 100; ++i)
+        for(int degrees = 0; degrees < 360; ++degrees)
+            monotone = monotone && (!litAt(static_cast<float>(degrees), i / 100.0f) || litAt(static_cast<float>(degrees), (i + 1) / 100.0f));
+    check(monotone, "a lit pixel never goes dark when the health rises");
+    check(HeartHealthRing::healthPercent(1700.0, 10000.0) == 17, "1700 of 10000 is 17 percent");
+    check(HeartHealthRing::healthPercent(0.0, 10000.0) == 0 && HeartHealthRing::healthPercent(10000.0, 10000.0) == 100, "0 and 100 percent");
+    check(HeartHealthRing::healthPercent(5000.0, 10000.0) == 50, "5000 of 10000 is 50 percent");
+    check(HeartHealthRing::healthPercent(1649.0, 10000.0) == 16 && HeartHealthRing::healthPercent(1650.0, 10000.0) == 17,
+        "the percentage is rounded to the nearest");
+    check(HeartHealthRing::healthPercent(20000.0, 10000.0) == 100 && HeartHealthRing::healthPercent(5.0, 0.0) == 0, "percentage is clamped");
 }
 
 void checkNotifyRule()
@@ -428,24 +457,38 @@ void checkSaveAndLoad()
 void checkDrawing()
 {
     std::vector<unsigned char> full;
-    std::vector<unsigned char> tenth;
     std::vector<unsigned char> half;
     std::vector<unsigned char> empty;
     std::vector<unsigned char> attacked;
+    std::vector<unsigned char> seventeen;
+    std::vector<unsigned char> quarter;
     drawBadgePixels(full, 0, 1.0f, false);
-    drawBadgePixels(tenth, 0, 0.1f, false);
+    drawBadgePixels(seventeen, 0, 0.17f, false);
+    drawBadgePixels(quarter, 0, 0.25f, false);
     drawBadgePixels(half, 0, 0.5f, false);
     drawBadgePixels(empty, 0, 0.0f, false);
     drawBadgePixels(attacked, 0, 0.5f, true);
     check(full.size() == static_cast<size_t>(BADGE_SIZE * BADGE_SIZE * 4), "badge has its full size");
-    check(ringLit(full, 20.0f) && ringLit(full, 90.0f) && ringLit(full, 180.0f) && ringLit(full, 270.0f) && ringLit(full, 340.0f),
-        "full ring is green all around");
-    check(!ringLit(full, 5.0f) && !ringLit(full, 355.0f), "full ring has its gap at the top");
-    check(ringLit(tenth, 20.0f) && ringLit(tenth, 45.0f), "10 percent arc starts at the top going clockwise");
-    check(!ringLit(tenth, 60.0f) && !ringLit(tenth, 180.0f) && !ringLit(tenth, 300.0f), "10 percent arc ends near 50 degrees");
-    check(ringLit(half, 170.0f) && !ringLit(half, 195.0f) && !ringLit(half, 300.0f), "50 percent arc ends at the bottom");
-    check(!ringLit(empty, 20.0f) && !ringLit(empty, 90.0f) && !ringLit(empty, 180.0f) && !ringLit(empty, 340.0f),
-        "empty ring shows no green");
+    const float mids[6] = {30.0f, 90.0f, 150.0f, 210.0f, 270.0f, 330.0f};
+    bool allLit = true;
+    bool noneLit = true;
+    bool allSpokes = true;
+    for(int k = 0; k < 6; ++k)
+    {
+        allLit = allLit && ringLit(full, mids[k]);
+        noneLit = noneLit && !ringLit(empty, mids[k]);
+        allSpokes = allSpokes && spokeAt(full, k * 60.0f) && spokeAt(empty, k * 60.0f) && spokeAt(half, k * 60.0f);
+    }
+    check(allLit, "full ring is green in all six segments");
+    check(noneLit, "empty ring shows no green");
+    check(allSpokes, "the six spokes are grey rim at 100, 50 and 0 percent");
+    check(!ringLit(full, 0.0f) && !ringLit(full, 60.0f) && !ringLit(full, 180.0f), "the spokes are not green");
+    check(ringLit(seventeen, 30.0f) && ringLit(seventeen, 55.0f) && !ringLit(seventeen, 90.0f) && !ringLit(seventeen, 200.0f),
+        "17 percent shows exactly one green segment");
+    check(ringLit(half, 30.0f) && ringLit(half, 90.0f) && ringLit(half, 150.0f)
+        && !ringLit(half, 210.0f) && !ringLit(half, 270.0f) && !ringLit(half, 330.0f), "50 percent shows three green segments from the top");
+    check(ringLit(quarter, 30.0f) && ringLit(quarter, 70.0f) && !ringLit(quarter, 110.0f) && !ringLit(quarter, 150.0f),
+        "a partly covered segment is drawn partly filled");
     check(!glowing(full) && !glowing(empty), "no glow without attack");
     check(glowing(attacked), "magenta glow while under attack");
     check(ringLit(attacked, 90.0f) && !ringLit(attacked, 250.0f), "glow does not change the ring");
@@ -508,13 +551,18 @@ assert 'ODClient::getSingleton().getHeartBadge()' in frame
 assert 'heartBadge.update(evt.timeSinceLastFrame);' in frame
 assert 'heartBadge.takeDirty()' in frame
 assert 'getGui().updateHeartBadge(heartBadge.mFraction, heartBadge.mGlow);' in frame
-assert 'heartIcon->setTooltipText(heartText.str());' in frame
+assert 'HeartHealthRing::healthPercent(heartBadge.mHP, heartBadge.mMaxHP)' in frame
+assert '"Dungeon heart at "' in frame and '" %. Right-click moves the view to the heart."' in frame
+assert 'setTooltipText' not in frame and 'Dungeon Heart:' not in frame
+click = function(game_mode, 'bool GameMode::clickHeartBadge(')
+assert 'CEGUI::RightButton' in click and 'focusRoom(RoomType::dungeonTemple);' in click and 'cameraInputBlocked()' in click
+assert 'getChild(Gui::DISPLAY_MANA)->getChild("Icon")->subscribeEvent(' in game_mode and '&GameMode::clickHeartBadge' in game_mode
 assert 'void updateHeartBadge(float healthFraction, bool underAttack);' in gui_header
 assert 'ODServer::getSingleton().queueServerNotification(serverNotification);\n\n        notifyHeartHealth(gameMap, sock, player);' in server
 # Badge geometry and the resource strip are untouched; the heart badge says what it shows
 assert layout.count('OpenDungeonsIcons/ManaBadge') == 1 and layout.count('OpenDungeonsIcons/GoldBadge') == 1
 assert layout.count('<Property name="TooltipText" value="Your Mana" />') == 1
-assert layout.count('<Property name="TooltipText" value="Dungeon Heart Health" />') == 1
+assert layout.count('<Property name="TooltipText" value="Dungeon heart health bar" />') == 1
 assert '{{0,-4},{0,-2},{0,60},{0,62}}' in layout
 created = function(gui, 'void createNavigationImages(')
 assert 'drawBadgePixels(pixels, badge, 1.0f, false);' in created
