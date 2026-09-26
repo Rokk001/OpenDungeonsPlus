@@ -501,6 +501,19 @@ void checkDrawing()
     std::vector<unsigned char> again;
     drawBadgePixels(again, 0, 1.0f, false);
     check(again == full, "drawing is deterministic");
+
+    // The symbols: a red heart muscle in the middle of the well, a gold coin rim with a skull inside
+    int r, g, b;
+    pixelAt(full, 0.0f, 3.0f, r, g, b);
+    check(r > 100 && r > 3 * g && r > 3 * b, "the heart body is red in the middle of the well");
+    pixelAt(full, 90.0f, 17.0f, r, g, b);
+    check(r < 60 && g < 60, "outside the heart the well is dark stone");
+    pixelAt(goldFull, 315.0f, 17.2f, r, g, b);
+    check(r > 130 && r > g && g > b, "the coin rim is warm gold");
+    pixelAt(goldFull, 0.0f, 9.0f, r, g, b);
+    check(r > 90 && r > g && g > b, "the coin field is warm gold");
+    pixelAt(goldFull, 294.6f, 3.85f, r, g, b);
+    check(r < 70, "the eye socket of the skull is dark");
 }
 
 int main()
@@ -521,8 +534,10 @@ temple_methods += '\n'.join(function(temple, signature) for signature in (
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
     'void RoomDungeonTemple::exportToStream(', 'bool RoomDungeonTemple::importFromStream('))
 badge_start = gui.index('const int BADGE_SIZE = 128;')
-badge_helpers = ('float badgeClamp(', 'void badgeMix(', 'void badgeSet(', 'float badgeNoise(', 'bool badgeInHeart(',
-                 'bool badgeInDollar(', 'int badgeSymbol(', 'void badgeFrame(', 'void badgeGemRing(', 'void badgeBeadRing(',
+badge_helpers = ('float badgeClamp(', 'void badgeMix(', 'void badgeSet(', 'float badgeNoise(', 'float badgeSmoothstep(', 'float badgeSmoothMin(',
+                 'float badgeHash(', 'float badgeValueNoise(', 'float badgeFbm(', 'float badgeCircle(', 'float badgeTaper(', 'float badgeBox(',
+                 'float badgeRound(', 'float badgeHeartDistance(', 'float badgeHeartVeins(', 'float badgeHeartHeight(', 'float badgeSkullDistance(',
+                 'float badgeCoinHeight(', 'void badgeNormal(', 'float badgeCavity(', 'void badgeFrame(', 'void badgeGemRing(', 'void badgeBeadRing(',
                  'void badgeHeartWell(', 'void badgeCoinWell(', 'void drawBadgePixels(')
 badge_code = 'const int BADGE_SIZE = 128;\n' + '\n'.join(function(gui, signature) for signature in badge_helpers) + '\n'
 probe = (probe.replace('RULES_HEADER', rules.as_posix())
