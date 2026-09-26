@@ -492,9 +492,9 @@
         </Window>
         <Window type="OD/MenuSymbolButton" name="CancelButton" >
             <Property name="Area" value="{{1,-100},{1,-46},{1,-62},{1,-8}}" />
-            <Property name="NormalImage" value="OpenDungeonsSkin/CloseButtonNormal" />
-            <Property name="HoverImage" value="OpenDungeonsSkin/CloseButtonNormal" />
-            <Property name="PushedImage" value="OpenDungeonsSkin/CloseButtonNormal" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
+            <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
+            <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="TooltipText" value="Do not save modifications to the skill tree" />
         </Window>
         <Window type="OD/MenuSymbolButton" name="ApplyButton" >

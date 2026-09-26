@@ -118,4 +118,24 @@ assert 'FrameColours' not in tree and 'SelectionBrush' not in tree, 'skill tree 
 material = (repo / 'materials/scripts/SquareSelector.material').read_text()
 assert 'material SquareSelector' in material and 'emissive 1.0 0.70' in material
 assert 'setMaterialName("SquareSelector")' in (repo / 'source/render/RenderManager.cpp').read_text()
+# Third pass: one symbol style for every close and confirm button, iron scrollbars and list frames in the menus, warm text.
+for layout in (repo / 'gui').glob('*.layout'):
+    body = layout.read_text()
+    assert 'OpenDungeonsSkin/CloseButton' not in body, layout.name + ' still uses the old close button image with its own frame'
+    for button in re.finditer(r'<Window type="OD/MenuSymbolButton"[^>]*>(.*?)</Window>', body, re.S):
+        assert set(re.findall(r'OpenDungeonsSkin/', button[1])) == set(), layout.name + ': symbol buttons use icon atlas images'
+def look_block(name):
+    a = look.index('<WidgetLook name="%s"' % name)
+    end = look.find('</WidgetLook>', a)
+    return look[a:] if end < 0 else look[a:end]
+thumb = look_block('OD/MenuScrollbarThumb')
+assert 'SelectionBrush' not in thumb and 'inherits="OD/VerticalScrollbarThumb"' in thumb, 'menu scrollbar thumb is the forged iron thumb'
+for name in ('OD/MenuListbox', 'OD/MenuMultiColumnList'):
+    block = look_block(name)
+    assert 'section="main"' in block, name + ' has the forged inset frame'
+assert 'FFE8DCC0' in look_block('OD/StaticText') and 'FFFFFFFF' not in look_block('OD/Tooltip').split('name="label"')[1].split('</TextComponent>')[0],     'labels and tooltips use the warm bone text colour'
+for f in ('source/entities/Creature.cpp', 'source/entities/Tile.cpp', 'source/gamemap/GameMap.cpp', 'source/modes/GameMode.cpp',
+          'source/network/ChatEventMessage.cpp'):
+    code = (repo / f).read_text()
+    assert 'CCBBBBFF' not in code and "colour='FFFFFFFF'" not in code, f + ' has a cold or hard white text colour'
 print('FORGED ICONS OK: %d icons checked, %d square tiles' % (checked, len(squares)))

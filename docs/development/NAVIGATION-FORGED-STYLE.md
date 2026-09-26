@@ -149,3 +149,33 @@ Not verified in the running game: nothing was built. The skill tree and the mess
 look'n'feel through CEGUI and Ogre (`check_research_tree_ui.py --render` and a layout render laid over a screenshot),
 the bar, the icon tiles and the texture grade only as montages. The new selection material and the hand texture have
 not been seen in the 3D scene.
+
+## Third pass: leftover details of the menus and windows
+
+- **Close buttons**: every back and cancel button (`OD/MenuSymbolButton`) now uses `OpenDungeonsIcons/AbortIcon`, the
+  same gold symbol as the message dialog, for the normal, hover and pressed image. Before, the menus and several
+  windows pointed at `OpenDungeonsSkin/CloseButton*`, an old picture that carries its own frame and is stretched
+  from 15 px, which gave a blocky X in a yellow frame next to the forged check mark.
+- **Menu scrollbar** `OD/MenuScrollbarThumb` is the forged iron thumb with grip lines of `OD/VerticalScrollbarThumb`
+  (it drew the flat white selection brush before); track and arrows were already forged.
+- **List frame in the menus**: `OD/MenuListbox` (load game, replay, skirmish, multiplayer, map editor) draws the same
+  stone inset with iron frame as the lists in the windows (`OD/Listbox`, section `main`). The item area is moved in
+  by the width of that frame and the scrollbar sits inside it; the window areas of the layouts are unchanged.
+  `OD/MenuMultiColumnList` (server list) got the thin frame of `OD/MultiColumnList`.
+- **Text colours**: `OD/StaticText` defaults to bone (`FFE8DCC0`) instead of pure white, the tooltip text is bone
+  too, and so are chat text and the reset colour of event notices. The section titles of the info windows for
+  creatures, tiles, the map and the help (`formatTitleOn` in `Creature.cpp`, `Tile.cpp`, `GameMap.cpp`,
+  `GameMode.cpp`) were pale lavender (`CCBBBBFF`); they are gold now (`FFF2C860`), the body text bone.
+  Items of a listbox are drawn by CEGUI in white and are not changed by any look; a change would need a colour on
+  every created item.
+- **Left as it is on purpose**: mana and its rate are mint green, growing counts turn red when negative (a resource
+  signal), the "done" tick of the skill tree is green, the red quit icon of the options window, the orange message
+  plaques of the notice queue (unread signal). The unused `OD/VUMeter` look keeps a green.
+- **Not caused by the skin**: the creature and tile info windows (`createStatsWindow` in `Creature.cpp` and
+  `Tile.cpp`) create their text as a plain `OD/StaticText` with centred vertical and unwrapped horizontal
+  formatting; long text is centred vertically, so the first line runs under the title bar, and lines longer than the
+  window are cut on the right. The frame geometry did not change since before the forged pass. The help window layout
+  shows the fix: `TopAligned`, `WordWrapLeftAligned`, `VertScrollbar` true. Not applied here.
+- Version label in the main menu logo: unchanged, it overlaps the "s" of "Plus" at some sizes.
+- Checks: `check_forged_icons.py` (no old close images, symbol buttons use atlas icons, thumb, list frames, bone text
+  colours, no cold colour left in the source).
