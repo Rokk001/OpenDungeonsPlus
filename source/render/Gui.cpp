@@ -144,28 +144,229 @@ void createMiniMapCornerImages()
 
 const int BADGE_SIZE = 128;
 
-//! \brief Draws a 128x128 HUD badge. The ring of the heart badge (badge 0) shows the health
-//! of the dungeon heart as six segments separated by spokes, and its background glows magenta
-//! while the heart is under attack.
+float badgeClamp(float value, float low, float high)
+{
+    return std::max(low, std::min(high, value));
+}
+
+//! \brief Pulls the colour (0-255 per channel) towards the given colour by the given amount (0-1).
+void badgeMix(float* colour, float red, float green, float blue, float amount)
+{
+    const float weight = badgeClamp(amount, 0.0f, 1.0f);
+    colour[0] += (red - colour[0]) * weight;
+    colour[1] += (green - colour[1]) * weight;
+    colour[2] += (blue - colour[2]) * weight;
+}
+
+void badgeSet(float* colour, float red, float green, float blue, float scale)
+{
+    colour[0] = red * scale;
+    colour[1] = green * scale;
+    colour[2] = blue * scale;
+}
+
+//! \brief Fine grain in [-1, 1] that only depends on the pixel.
+float badgeNoise(int x, int y)
+{
+    const unsigned int hash = (static_cast<unsigned int>(x) * 73856093u) ^ (static_cast<unsigned int>(y) * 19349663u);
+    return static_cast<float>(hash % 7u) / 3.0f - 1.0f;
+}
+
+bool badgeInHeart(float dx, float dy)
+{
+    const float hx = dx / 13;
+    const float hy = -dy / 13;
+    const float heart = hx * hx + hy * hy - 1;
+    return heart * heart * heart - hx * hx * hy * hy * hy <= 0;
+}
+
+bool badgeInDollar(float dx, float dy)
+{
+    const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
+    const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
+    return (std::abs(dx) < 1.5f && std::abs(dy) < 20)
+        || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
+        || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
+}
+
+//! \brief Where a point lies on an embossed symbol lit from the top left: 0 outside, 1 face,
+//! 2 lit edge, 3 shaded edge, 4 drop shadow next to the symbol.
+int badgeSymbol(bool (*inside)(float, float), float dx, float dy)
+{
+    if(inside(dx, dy))
+    {
+        if(!inside(dx - 1, dy - 1))
+            return 2;
+        if(!inside(dx + 1, dy + 1))
+            return 3;
+        return 1;
+    }
+    return inside(dx - 1.5f, dy - 1.5f) ? 4 : 0;
+}
+
+//! \brief The outer frame (radius above 25.4): blackened iron with a bronze edge line, a bright
+//! bronze lip towards the ring, twelve domed bronze rivets and a dark contour.
+void badgeFrame(float* colour, float dx, float dy, float radius, float light, float grain)
+{
+    const float slope = badgeClamp((radius - 28.2f) / 2.8f, -1.0f, 1.0f);
+    const float face = std::sqrt(std::max(0.0f, 1 - slope * slope));
+    const float value = badgeClamp(0.11f + 0.12f * face + 0.20f * light * slope + 0.022f * grain, 0.05f, 1.0f);
+    badgeSet(colour, 255, 214, 172, value);
+    if(radius > 29.5f && radius < 30.2f)
+        badgeSet(colour, 196, 136, 66, 0.62f + 0.38f * light);
+    if(radius < 26.2f)
+        badgeSet(colour, 224, 166, 88, 0.72f + 0.38f * light);
+    const float degrees = std::atan2(dx, -dy) * 57.29578f;
+    const float step = std::fmod(degrees + 375.0f, 30.0f);
+    const float tangent = (step > 15 ? step - 30 : step) * 0.0174533f * radius;
+    const float rivet = std::sqrt(tangent * tangent + (radius - 28.2f) * (radius - 28.2f));
+    if(rivet < 1.35f)
+        badgeSet(colour, 190, 132, 70, 0.55f + 0.75f * (1 - rivet / 1.35f) * (0.5f + 0.5f * light) + 0.3f * light);
+    else if(rivet < 2.0f)
+        badgeMix(colour, 6, 3, 2, 0.6f);
+    if(radius > 30.3f)
+    {
+        colour[0] *= 0.35f;
+        colour[1] *= 0.33f;
+        colour[2] *= 0.32f;
+    }
+}
+
+//! \brief The ring channel of the heart badge: six emerald gems, lit or dark obsidian, set
+//! between bronze spokes.
+void badgeGemRing(float* colour, float dx, float dy, float radius, float light, bool lit)
+{
+    const float across = (radius - 20.8f) / 4.6f;
+    const float dome = std::sin(3.14159265f * badgeClamp(across, 0.0f, 1.0f));
+    const float inSegment = std::fmod(HeartHealthRing::ringDegrees(dx, dy), HeartHealthRing::SEGMENT_DEGREES);
+    if(HeartHealthRing::isSpoke(dx, dy))
+    {
+        const float offset = std::abs(inSegment < 30.0f ? inSegment : inSegment - HeartHealthRing::SEGMENT_DEGREES)
+            / HeartHealthRing::SPOKE_HALF_DEGREES;
+        badgeSet(colour, 226, 168, 92, (0.76f + 0.30f * light) * (0.68f + 0.32f * dome) * (1.08f - 0.30f * offset));
+        if(offset > 0.82f)
+            badgeMix(colour, 12, 6, 3, 0.55f);
+        return;
+    }
+    const float edge = std::min(inSegment - HeartHealthRing::SPOKE_HALF_DEGREES,
+        HeartHealthRing::SEGMENT_DEGREES - HeartHealthRing::SPOKE_HALF_DEGREES - inSegment);
+    const float bevel = badgeClamp(edge * 0.0174533f * radius / 1.3f, 0.0f, 1.0f);
+    const float relief = dome * (0.45f + 0.55f * bevel);
+    const float shine = std::pow(std::max(0.0f, light), 5.0f) * dome * dome * bevel;
+    if(lit)
+    {
+        const float depth = std::pow(relief, 1.3f);
+        colour[0] = 4 + 30 * depth;
+        colour[1] = 66 + 142 * depth;
+        colour[2] = 40 + 92 * depth;
+        badgeMix(colour, 232, 255, 240, 0.75f * shine);
+    }
+    else
+    {
+        colour[0] = 22 + 26 * relief;
+        colour[1] = 15 + 15 * relief;
+        colour[2] = 18 + 17 * relief;
+        badgeMix(colour, 120, 100, 96, 0.5f * shine);
+    }
+}
+
+//! \brief The ring channel of the gold badge: a band of gold beads.
+void badgeBeadRing(float* colour, float dx, float dy, float radius, float light)
+{
+    const float phase = std::fmod(HeartHealthRing::ringDegrees(dx, dy), 15.0f) - 7.5f;
+    const float along = phase * 0.0174533f * radius;
+    const float across = radius - 23.1f;
+    const float distance = std::sqrt(along * along + across * across) / 2.15f;
+    if(distance >= 1.0f)
+    {
+        badgeSet(colour, 60, 36, 12, 0.6f);
+        return;
+    }
+    const float height = std::sqrt(1 - distance * distance);
+    badgeSet(colour, 246, 190, 74, 0.35f + 0.42f * height + 0.34f * light * (1 - height));
+    badgeMix(colour, 255, 244, 190, 0.7f * std::pow(std::max(0.0f, light * height), 6.0f));
+}
+
+//! \brief The well of the heart badge: dark stone with glowing embers at its foot and the heart
+//! as a faceted ruby. While the heart is under attack a magenta glow lies behind it.
+void badgeHeartWell(float* colour, float dx, float dy, float radius, float light, bool underAttack)
+{
+    const float low = std::max(0.0f, dy / 20.0f);
+    colour[0] = 38 - 12 * radius / 20.8f + 74 * low * low;
+    colour[1] = 22 - 8 * radius / 20.8f + 26 * low * low;
+    colour[2] = 20 - 7 * radius / 20.8f + 6 * low * low;
+    if(underAttack)
+    {
+        const float glow = 0.4f + 0.6f * (radius / 22) * (radius / 22);
+        colour[0] += (225 - colour[0]) * glow;
+        colour[1] += (35 - colour[1]) * glow;
+        colour[2] += (190 - colour[2]) * glow;
+    }
+    if(radius > 19.4f)
+        badgeMix(colour, 4, 2, 2, 0.30f + 0.32f * light);
+    const float halo = std::exp(-((dx * dx + (dy + 1) * (dy + 1)) / 150.0f)) * 0.42f;
+    badgeMix(colour, 190, 32, 28, halo * (underAttack ? 0.5f : 1.0f));
+    const int kind = badgeSymbol(badgeInHeart, dx, dy);
+    if(kind == 4)
+        badgeMix(colour, 6, 2, 3, 0.75f);
+    else if(kind == 1)
+    {
+        const float sheen = std::exp(-((dx + 5) * (dx + 5) + (dy + 5.5f) * (dy + 5.5f)) / 22.0f);
+        const float deep = badgeClamp(0.5f - dy * 0.022f + (dx < 0 ? 0.10f : -0.08f), 0.0f, 1.0f);
+        colour[0] = 122 + 92 * deep;
+        colour[1] = 8 + 22 * deep;
+        colour[2] = 20 + 14 * deep;
+        if(underAttack)
+            badgeMix(colour, 255, 90, 80, 0.30f);
+        badgeMix(colour, 255, 214, 200, 0.7f * sheen);
+    }
+    else if(kind == 2)
+        badgeSet(colour, 255, 128, 108, 1.0f);
+    else if(kind == 3)
+        badgeSet(colour, 74, 4, 12, 1.0f);
+}
+
+//! \brief The well of the gold badge: an embossed gold coin with a reeded rim and a raised dollar sign.
+void badgeCoinWell(float* colour, float dx, float dy, float radius, float light)
+{
+    badgeSet(colour, 60, 40, 22, 0.45f);
+    if(radius > 19.4f)
+    {
+        badgeMix(colour, 4, 2, 2, 0.30f + 0.32f * light);
+        return;
+    }
+    if(radius > 16.8f)
+    {
+        const float reeding = 0.86f + 0.14f * std::cos(HeartHealthRing::ringDegrees(dx, dy) * 0.0174533f * 60.0f);
+        badgeSet(colour, 240, 184, 66, reeding * (0.62f + 0.38f * light));
+        if(radius > 19.0f)
+            badgeMix(colour, 60, 36, 10, 0.45f);
+        return;
+    }
+    const float field = 0.66f + 0.14f * light - 0.10f * radius / 16.8f;
+    badgeSet(colour, 226, 160, 52, field);
+    if(radius > 16.0f)
+        badgeSet(colour, 100, 62, 16, 1.0f);
+    const int kind = badgeSymbol(badgeInDollar, dx, dy);
+    if(kind == 4)
+        badgeMix(colour, 60, 34, 8, 0.65f);
+    else if(kind == 1)
+        badgeSet(colour, 255, 222, 118, 0.80f + 0.20f * light + 0.04f * (dy / 20.0f));
+    else if(kind == 2)
+        badgeSet(colour, 255, 246, 200, 1.0f);
+    else if(kind == 3)
+        badgeSet(colour, 156, 100, 24, 1.0f);
+}
+
+//! \brief Draws a 128x128 HUD badge in the look of a forged dungeon medallion: a blackened iron
+//! frame with bronze rivets around a ring and a well. The ring of the heart badge (badge 0)
+//! shows the health of the dungeon heart as six emerald gems separated by bronze spokes, its
+//! well holds a ruby heart and glows magenta while the heart is under attack. The gold badge
+//! (badge 1) is a beaded ring around an embossed coin.
 void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float healthFraction, bool underAttack)
 {
     const int badgeSize = BADGE_SIZE;
     pixels.resize(badgeSize * badgeSize * 4);
-    auto inSymbol = [badge](float dx, float dy)
-    {
-        if(badge == 0)
-        {
-            const float hx = dx / 13;
-            const float hy = -dy / 13;
-            const float heart = hx * hx + hy * hy - 1;
-            return heart * heart * heart - hx * hx * hy * hy * hy <= 0;
-        }
-        const float upper = std::sqrt((dx + 1) * (dx + 1) + (dy + 7) * (dy + 7));
-        const float lower = std::sqrt((dx - 1) * (dx - 1) + (dy - 7) * (dy - 7));
-        return (std::abs(dx) < 1.5f && std::abs(dy) < 20)
-            || (std::abs(upper - 8) < 1.8f && (dx < 0 || dy < -7))
-            || (std::abs(lower - 8) < 1.8f && (dx > 0 || dy > 7));
-    };
     for(int y = 0; y < badgeSize; ++y)
     {
         for(int x = 0; x < badgeSize; ++x)
@@ -174,74 +375,24 @@ void drawBadgePixels(std::vector<unsigned char>& pixels, int badge, float health
             const float dy = (y + 0.5f) * 64 / badgeSize - 32;
             const float radius = std::sqrt(dx * dx + dy * dy);
             const float light = -(dx + dy) / std::max(1.0f, radius * 1.414214f);
-            const int i = (y * badgeSize + x) * 4;
-            unsigned char shade = static_cast<unsigned char>(std::max(0.0f, 28 - radius * 0.6f));
-            pixels[i] = pixels[i + 1] = pixels[i + 2] = shade;
-            if(badge == 0 && underAttack && radius <= 22)
+            float colour[3] = {0.0f, 0.0f, 0.0f};
+            if(radius > 25.4f)
+                badgeFrame(colour, dx, dy, radius, light, badgeNoise(x, y));
+            else if(radius > 20.8f)
             {
-                // Magenta glow behind the heart while it is under attack
-                const float glow = 0.4f + 0.6f * (radius / 22) * (radius / 22);
-                pixels[i] = static_cast<unsigned char>(shade + (225 - shade) * glow);
-                pixels[i + 1] = static_cast<unsigned char>(shade + (35 - shade) * glow);
-                pixels[i + 2] = static_cast<unsigned char>(shade + (190 - shade) * glow);
-            }
-            if(radius > 25)
-            {
-                // Dark iron frame: a bright inner lip next to the groove, a bevelled body lit from
-                // the top left with a fine grain, twelve rivets and a dark outer contour
-                const float slope = std::max(-1.0f, std::min(1.0f, (radius - 28) / 3));
-                const float face = std::sqrt(std::max(0.0f, 1 - slope * slope));
-                float value = 34 + 52 * light * slope + 24 * face
-                    + static_cast<float>(((x * 73856093) ^ (y * 19349663)) % 7 - 3);
-                if(radius < 26.2f)
-                    value = 150 + 50 * light;
-                const float degrees = std::atan2(dx, -dy) * 57.29578f;
-                const float step = std::fmod(degrees + 375.0f, 30.0f);
-                const float tangent = (step > 15 ? step - 30 : step) * 0.0174533f * radius;
-                const float rivet = std::sqrt(tangent * tangent + (radius - 28.3f) * (radius - 28.3f));
-                if(rivet < 1.0f)
-                    value = 100 + 60 * light;
-                else if(rivet < 1.5f)
-                    value = 14;
-                if(radius > 30.2f)
-                    value *= 0.45f;
-                value = std::max(10.0f, std::min(255.0f, value));
-                pixels[i] = static_cast<unsigned char>(value);
-                pixels[i + 1] = static_cast<unsigned char>(value * 0.96f);
-                pixels[i + 2] = static_cast<unsigned char>(value * 1.04f);
-            }
-            else if(radius > 21 && radius < 24.5f)
-            {
-                const float relief = std::min(1.2f, 0.65f + 0.35f * light * (radius - 22.75f));
-                // The ring of the heart badge is the health of the dungeon heart: the lit part
-                // is green, the rest stays as a dark groove
-                const bool lit = badge != 0 || HeartHealthRing::isRingLit(dx, dy, healthFraction);
-                if(badge == 0 && HeartHealthRing::isSpoke(dx, dy))
-                {
-                    // The spokes between the six segments are part of the silver rim
-                    pixels[i] = pixels[i + 1] = pixels[i + 2] = static_cast<unsigned char>(225 * relief);
-                }
+                if(badge == 0)
+                    badgeGemRing(colour, dx, dy, radius, light, HeartHealthRing::isRingLit(dx, dy, healthFraction));
                 else
-                {
-                    pixels[i] = static_cast<unsigned char>((badge == 0 ? (lit ? 24 : 14) : 210) * relief);
-                    pixels[i + 1] = static_cast<unsigned char>((badge == 0 ? (lit ? 178 : 38) : 171) * relief);
-                    pixels[i + 2] = static_cast<unsigned char>((badge == 0 ? (lit ? 114 : 30) : 35) * relief);
-                }
+                    badgeBeadRing(colour, dx, dy, radius, light);
             }
-            if(inSymbol(dx, dy))
-            {
-                const float highlight = std::exp(-((dx + 5) * (dx + 5) + (dy + 6) * (dy + 6)) / 35);
-                float relief = 174 - dx * 1.4f - dy * 2.4f + 48 * highlight;
-                if(!inSymbol(dx - 1, dy - 1))
-                    relief = 244;
-                else if(!inSymbol(dx + 1, dy + 1))
-                    relief = 72;
-                pixels[i] = pixels[i + 1] = pixels[i + 2] =
-                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f, relief)));
-            }
-            else if(inSymbol(dx - 1.5f, dy - 1.5f))
-                pixels[i] = pixels[i + 1] = pixels[i + 2] = 4;
-            pixels[i + 3] = static_cast<unsigned char>(std::max(0.0f, std::min(1.0f, 31 - radius)) * 255);
+            else if(badge == 0)
+                badgeHeartWell(colour, dx, dy, radius, light, underAttack);
+            else
+                badgeCoinWell(colour, dx, dy, radius, light);
+            const int i = (y * badgeSize + x) * 4;
+            for(int channel = 0; channel < 3; ++channel)
+                pixels[i + channel] = static_cast<unsigned char>(badgeClamp(colour[channel], 0.0f, 255.0f));
+            pixels[i + 3] = static_cast<unsigned char>(badgeClamp(31 - radius, 0.0f, 1.0f) * 255);
         }
     }
 }
