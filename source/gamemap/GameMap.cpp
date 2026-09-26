@@ -99,6 +99,9 @@ const int AUTO_WORKERS_TARGET = 4;
 //! Seconds the living dungeon heart waits between two workers it creates.
 const double AUTO_WORKER_INTERVAL_SECONDS = 5.0;
 
+//! \brief Squared distance within which an enemy creature triggers the heart defence.
+const int HEART_DEFENCE_RANGE_SQUARED = 7 * 7;
+
 //! \brief Mana a seat gains per second: the heart plus one per claimed tile,
 //! the tile part capped. The tiles of the heart area are not counted again.
 double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTiles)
@@ -1320,6 +1323,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         }
         updateSeatMana(seat);
         updateSeatAutoWorkers(seat, timeSinceLastTurn);
+        updateSeatHeartDefense(seat);
 
         // Update the count on how much gold is available in all of the treasuries claimed by the given seat.
         seat->mGold = 0;
@@ -1447,6 +1451,136 @@ void GameMap::updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn)
         newCreature->setPosition(spawnPosition);
         ++seat->mNumCreaturesWorkers;
     }
+}
+
+void GameMap::updateSeatHeartDefense(Seat* seat)
+{
+    // Only a living heart is defended
+    Room* heartRoom = nullptr;
+    for (Room* room : getRooms())
+    {
+        if (room->getSeat() != seat)
+            continue;
+        if (room->getType() != RoomType::dungeonTemple)
+            continue;
+        if (room->getHP(nullptr) <= 0.0)
+            continue;
+        heartRoom = room;
+        break;
+    }
+
+    Tile* heartTile = heartRoom != nullptr
+        ? static_cast<RoomDungeonTemple*>(heartRoom)->getHeartTile()
+        : nullptr;
+    if (heartRoom == nullptr || heartTile == nullptr)
+    {
+        // No living heart: no defence, and a running defence ends
+        seat->mHeartDefenceActive = false;
+        seat->mHeartDefenceHeartDamaged = false;
+        return;
+    }
+
+    // The nearest living enemy creature in range of the heart
+    Tile* nearestEnemyTile = nullptr;
+    int nearestDistanceSquared = HEART_DEFENCE_RANGE_SQUARED + 1;
+    for (Creature* creature : getCreatures())
+    {
+        if (creature == nullptr)
+            continue;
+        if (creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()))
+            continue;
+        if (!creature->isAlive() || !creature->getIsOnMap())
+            continue;
+        Tile* creatureTile = creature->getPositionTile();
+        if (creatureTile == nullptr)
+            continue;
+        const int distanceSquared = Pathfinding::squaredDistanceTile(*heartTile, *creatureTile);
+        if (distanceSquared < nearestDistanceSquared)
+        {
+            nearestDistanceSquared = distanceSquared;
+            nearestEnemyTile = creatureTile;
+        }
+    }
+
+    if (nearestEnemyTile == nullptr)
+    {
+        // No enemy in range: everyone returns to normal work
+        seat->mHeartDefenceActive = false;
+        seat->mHeartDefenceHeartDamaged = false;
+        return;
+    }
+
+    // While an enemy is in range, a damaged heart takes the runners to itself
+    seat->mHeartDefenceHeartDamaged =
+        heartRoom->getHP(nullptr) < static_cast<RoomDungeonTemple*>(heartRoom)->getHeartMaxHP();
+
+    if (!seat->mHeartDefenceActive)
+    {
+        // The defence starts: the alarm call sounds, not the combat music
+        seat->mHeartDefenceActive = true;
+        Player* owner = seat->getPlayer();
+        if (owner != nullptr && owner->getIsHuman() && !owner->getHasLost())
+        {
+            std::vector<Seat*> seats;
+            seats.push_back(seat);
+            fireRelativeSound(seats, SoundRelativeKeeperStatements::WeAreUnderAttack);
+        }
+    }
+}
+
+Tile* GameMap::getHeartDefenceTargetTile(Creature& runner, Seat* seat)
+{
+    Room* heartRoom = nullptr;
+    for (Room* room : getRooms())
+    {
+        if (room->getSeat() != seat)
+            continue;
+        if (room->getType() != RoomType::dungeonTemple)
+            continue;
+        if (room->getHP(nullptr) <= 0.0)
+            continue;
+        heartRoom = room;
+        break;
+    }
+    Tile* heartTile = heartRoom != nullptr
+        ? static_cast<RoomDungeonTemple*>(heartRoom)->getHeartTile()
+        : nullptr;
+    if (heartTile == nullptr)
+        return nullptr;
+
+    // A damaged heart takes the runners; otherwise they rally the nearest fighter
+    if (!seat->getHeartDefenceHeartDamaged())
+    {
+        Tile* nearestFighterTile = nullptr;
+        bool foundFighter = false;
+        int nearestDistanceSquared = 0;
+        for (Creature* creature : getCreatures())
+        {
+            if (creature == nullptr || creature == &runner)
+                continue;
+            if (creature->getSeat() == nullptr || !seat->isAlliedSeat(creature->getSeat()))
+                continue;
+            if (!creature->isAlive() || !creature->getIsOnMap())
+                continue;
+            if (creature->getDefinition()->isHeartDefenceRunner())
+                continue; // fighters only
+            Tile* fighterTile = creature->getPositionTile();
+            if (fighterTile == nullptr)
+                continue;
+            const int distanceSquared = Pathfinding::squaredDistanceTile(*runner.getPositionTile(), *fighterTile);
+            if (!foundFighter || distanceSquared < nearestDistanceSquared)
+            {
+                foundFighter = true;
+                nearestDistanceSquared = distanceSquared;
+                nearestFighterTile = fighterTile;
+            }
+        }
+        if (nearestFighterTile != nullptr)
+            return nearestFighterTile;
+    }
+
+    // No fighter to rally, or the heart is damaged: hold the heart
+    return heartTile;
 }
 
 void GameMap::updateAnimations(Ogre::Real timeSinceLastFrame)

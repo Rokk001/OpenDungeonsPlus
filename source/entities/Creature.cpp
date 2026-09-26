@@ -27,6 +27,7 @@
 #include "creatureaction/CreatureActionFlee.h"
 #include "creatureaction/CreatureActionGetFee.h"
 #include "creatureaction/CreatureActionGoCallToWar.h"
+#include "creatureaction/CreatureActionGoDefendHeart.h"
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
@@ -1125,6 +1126,7 @@ void Creature::doUpkeep()
         return;
 
     decidePrioritaryAction();
+    handleHeartDefence();
 
     // The loopback variable allows creatures to begin processing a new
     // action immediately after some other action happens.
@@ -1175,6 +1177,23 @@ void Creature::decidePrioritaryAction()
         if(!behaviour->processBehaviour(*this))
             return;
     }
+}
+
+void Creature::handleHeartDefence()
+{
+    if(!getDefinition()->isHeartDefenceRunner())
+        return;
+
+    Seat* seat = getSeat();
+    if(seat == nullptr || !seat->getHeartDefenceActive())
+        return;
+
+    if(isActionInList(CreatureActionType::goDefendHeart))
+        return;
+
+    // The heart defence is on: drop the current job and run to the defence point
+    clearActionQueue();
+    pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
 bool Creature::handleIdleAction()
