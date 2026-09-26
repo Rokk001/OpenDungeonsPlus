@@ -176,12 +176,12 @@ bool ringLit(const std::vector<unsigned char>& pixels, float angle)
     return g - r > 40;
 }
 
-// A spoke is part of the silver rim: grey, neither green nor the dark groove
+// A spoke is a bar of warm bronze: red over green over blue and clearly lit, neither a green gem nor the dark socket
 bool spokeAt(const std::vector<unsigned char>& pixels, float angle)
 {
     int r, g, b;
     pixelAt(pixels, angle, 23.0f, r, g, b);
-    return r == g && g == b && g > 60;
+    return r > 60 && r > g && g > b;
 }
 
 bool litAt(float degrees, float fraction)
@@ -481,7 +481,7 @@ void checkDrawing()
     }
     check(allLit, "full ring is green in all six segments");
     check(noneLit, "empty ring shows no green");
-    check(allSpokes, "the six spokes are grey rim at 100, 50 and 0 percent");
+    check(allSpokes, "the six spokes are bronze bars at 100, 50 and 0 percent");
     check(!ringLit(full, 0.0f) && !ringLit(full, 60.0f) && !ringLit(full, 180.0f), "the spokes are not green");
     check(ringLit(seventeen, 30.0f) && ringLit(seventeen, 50.0f) && !ringLit(seventeen, 90.0f) && !ringLit(seventeen, 200.0f),
         "17 percent shows exactly one green segment");
@@ -521,8 +521,10 @@ temple_methods += '\n'.join(function(temple, signature) for signature in (
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
     'void RoomDungeonTemple::exportToStream(', 'bool RoomDungeonTemple::importFromStream('))
 badge_start = gui.index('const int BADGE_SIZE = 128;')
-badge_code = ('const int BADGE_SIZE = 128;\n' + function(gui, 'bool isInBadgeSymbol(') + '\n'
-              + function(gui, 'void drawBadgePixels(') + '\n')
+badge_helpers = ('float badgeClamp(', 'void badgeMix(', 'void badgeSet(', 'float badgeNoise(', 'bool badgeInHeart(',
+                 'bool badgeInDollar(', 'int badgeSymbol(', 'void badgeFrame(', 'void badgeGemRing(', 'void badgeBeadRing(',
+                 'void badgeHeartWell(', 'void badgeCoinWell(', 'void drawBadgePixels(')
+badge_code = 'const int BADGE_SIZE = 128;\n' + '\n'.join(function(gui, signature) for signature in badge_helpers) + '\n'
 probe = (probe.replace('RULES_HEADER', rules.as_posix())
          .replace('TEMPLE_METHODS', temple_methods)
          .replace('SERVER_FUNCTION', function(server, 'void notifyHeartHealth('))
