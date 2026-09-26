@@ -372,10 +372,13 @@ struct Seat
     bool isAlliedSeat(Seat* s) { return s && team == s->team; }
     bool isRogueSeat() const { return id == 0; }
     const SeatStatistics& getStatistics() const { return stats; }
+    double getMana() const { return mMana; }
+    void addMana(double mana) { mMana += mana; }
     int id;
     int team;
     Player* player;
     SeatStatistics stats;
+    double mMana = 0.0;
 };
 struct GameMapMock
 {

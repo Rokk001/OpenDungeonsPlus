@@ -805,6 +805,12 @@ private:
     void decidePrioritaryAction();
 
     //! \brief A sub-function called by doTurn()
+    //! While the seat's heart defence is on, the runners (the workers and the two cheap,
+    //! fast scout creatures) drop their current job and run to the seat's fighters, or to
+    //! the heart while it is damaged.
+    void handleHeartDefence();
+
+    //! \brief A sub-function called by doTurn()
     //! This functions will handle the creature idle action logic.
     //! \return true when another action should handled after that one.
     bool handleIdleAction();
