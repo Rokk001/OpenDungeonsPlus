@@ -62,4 +62,60 @@ bar = skin[y:y + h, x:x + w]
 assert bar[..., 3].min() == 255 and (bar[..., 2] > bar[..., 0] + 5).mean() < 0.01
 game = (repo / 'gui/ModeGame.layout').read_text()
 assert game.count('OpenDungeonsSkin/ForgedBar') == 2 and 'FFB98B56' not in game
+# The bar is a run of segments with fine joints: several segments differ, only some carry a vent slot.
+skin_rects = {m[2]: tuple(int(m[i]) for i in (4, 5, 3, 1)) for m in re.finditer(
+    r'<Image height="(\d+)" name="([^"]+)" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', skin_set)}
+assert w >= 384 and w % 64 == 0, 'the bar must be several segments wide'
+segments = [bar[:, i * 64:(i + 1) * 64, :3] for i in range(w // 64)]
+assert min(np.abs(segments[i] - segments[j]).mean() for i in range(len(segments)) for j in range(i + 1, len(segments))) > 1.0,     'bar segments repeat exactly'
+mid = [seg[20:28, 16:48, :3].mean() for seg in segments]
+vents = [m for m in mid if m < 0.85 * np.median(mid)]
+assert 1 <= len(vents) <= len(segments) // 2, 'vent slots must be present in only some segments'
+joint = bar[12:36, 64, :3].mean()
+assert joint < bar[12:36, 60, :3].mean() * 0.8, 'joints between segments are fine dark lines'
+# Research tiles: material states instead of flat colour squares.
+def tile(name):
+    x, y, tw, th = skin_rects[name]
+    return skin[y:y + th, x:x + tw]
+luma = lambda t: (t[..., :3] * [0.3, 0.59, 0.11]).sum(axis=2)
+locked, learned, working, queued, focus = (tile('ResearchTile' + n) for n in ('Locked', 'Learned', 'Working', 'Queued', 'Focus'))
+for name, t in (('Locked', locked), ('Learned', learned), ('Working', working), ('Queued', queued)):
+    assert t[..., 3].min() > 0 or t[0, 0, 3] < 255, name
+    body = t[6:-6, 6:-6, :3]
+    assert body.std() > 2.0, 'research tile %s is a flat square' % name
+    rgb = t[t[..., 3] > 200][:, :3]
+    assert (rgb[:, 2] > rgb[:, 0] + 12).mean() < 0.01, 'research tile %s has cold pixels' % name
+assert luma(locked)[8:-8, 8:-8].mean() < luma(learned)[8:-8, 8:-8].mean() * 0.6, 'locked must be much darker than learned'
+assert luma(locked).mean() < luma(queued).mean() < luma(working).mean(), 'locked < queued < working brightness'
+assert (working[..., 0] - working[..., 2]).mean() > 60, 'working glows in ember colours'
+edge = learned[1:4, 10:-10, :3].mean(axis=(0, 1))
+assert edge[0] > 150 and edge[0] > edge[2] * 1.6, 'learned has a warm gold or bronze edge'
+assert focus[30, 30, 3] < 40 and focus[1, 10:-10, 3].min() > 200, 'focus is a rim with a clear centre'
+assert (focus[1, 10:-10, 0] > 200).all(), 'focus rim is gold'
+# Small stretched images have a ring of their own edge colour around them, so the texture filter never blends with a frame piece.
+for name in ('StaticBackdrop', 'EditBoxMiddle', 'ComboboxEditBackground', 'MenuMiddle', 'MultiListMiddle', 'TooltipMiddle',
+             'ComboboxListBackdrop', 'VerticalSliderMiddle', 'HorizontalSliderMiddle', 'TabContentPaneMiddle'):
+    x, y, tw, th = skin_rects[name]
+    inner = skin[y:y + th, x:x + tw, :3]
+    assert inner.std(axis=(0, 1)).max() < 12, name + ' carries noise that stretches into streaks'
+    assert np.abs(skin[y - 1, x:x + tw, :3] - skin[y, x:x + tw, :3]).max() < 1 and         np.abs(skin[y:y + th, x - 1, :3] - skin[y:y + th, x, :3]).max() < 1, name + ' has no clean edge ring'
+    assert skin[y - 1:y + th + 1, x - 1:x + tw + 1, 3].min() == 255, name + ' ring is not opaque'
+# Layout and look'n'feel wiring of the states
+look = (repo / 'gui/OD.looknfeel').read_text()
+scheme = (repo / 'gui/ODSkin.scheme').read_text()
+game_code = (repo / 'source/modes/GameMode.cpp').read_text()
+assert 'ResearchBackgroundColour' not in look and 'ResearchBackgroundColour' not in game_code
+for n in ('Locked', 'Learned', 'Working', 'Queued'):
+    assert 'OpenDungeonsSkin/ResearchTile' + n in game_code, n
+assert 'ResearchTileFocus' in look and 'OD/EventPanel' in scheme
+for f in ('WindowGameEvent.layout', 'WindowEvent.layout'):
+    assert 'type="OD/EventPanel" name="GameEventText"' in (repo / 'gui' / f).read_text(), f
+sym = look[look.index('<WidgetLook name="OD/MenuSymbolButton"'):]
+sym = sym[:sym.index('</WidgetLook>')]
+assert all(s in sym for s in ('plate_normal', 'plate_hover', 'plate_pushed', 'ButtonTopLeftHighlight', 'ButtonTopLeftPushed')),     'symbol buttons sit on forged plates with hover and pressed'
+tree = (repo / 'gui/WindowSkillTree.layout').read_text()
+assert 'FrameColours' not in tree and 'SelectionBrush' not in tree, 'skill tree columns use no flat tints'
+material = (repo / 'materials/scripts/SquareSelector.material').read_text()
+assert 'material SquareSelector' in material and 'emissive 1.0 0.70' in material
+assert 'setMaterialName("SquareSelector")' in (repo / 'source/render/RenderManager.cpp').read_text()
 print('FORGED ICONS OK: %d icons checked, %d square tiles' % (checked, len(squares)))

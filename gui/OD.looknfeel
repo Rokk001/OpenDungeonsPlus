@@ -4550,18 +4550,18 @@
 
     <WidgetLook name="OD/ResearchButton" inherits="OD/ImageButton">
         <PropertyDefinition name="ResearchLevelColour" initialValue="00FFFFFF" redrawOnWrite="true" />
-        <PropertyDefinition name="ResearchBackgroundColour" initialValue="FF2E2117" redrawOnWrite="true" />
+        <PropertyDefinition name="ResearchTileImage" initialValue="OpenDungeonsSkin/ResearchTileLocked" redrawOnWrite="true" />
         <ImagerySection name="research">
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchBackgroundColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="ResearchTileImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="ButtonImage" /><ColourRectProperty name="ButtonImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.08" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.92" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.08" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.08" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.08" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.84" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.92" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.08" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.08" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.84" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.95" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.95" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.7" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.7" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.27" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.27" type="Height" /></Dim></Area><ImageProperty name="StateImage" /><ColourRectProperty name="StateImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
         </ImagerySection>
         <ImagerySection name="research_hover">
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/ButtonHoverEffect" /><Colours topLeft="66FFFFFF" topRight="66FFFFFF" bottomLeft="66FFFFFF" bottomRight="66FFFFFF" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/ResearchTileFocus" /><Colours topLeft="FFFFFFFF" topRight="FFFFFFFF" bottomLeft="FFFFFFFF" bottomRight="FFFFFFFF" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
         </ImagerySection>
         <StateImagery name="Normal"><Layer><Section section="research" /></Layer></StateImagery>
         <StateImagery name="Hover"><Layer><Section section="research" /><Section section="research_hover" /></Layer></StateImagery>
@@ -5485,28 +5485,139 @@
         <StateImagery name="Enabled" /><StateImagery name="Disabled" />
     </WidgetLook>
 
+    <!-- A symbol button sits on a forged iron plate like the corner buttons of the minimap: normal, hover as ember, pressed sunk in. -->
     <WidgetLook name="OD/MenuSymbolButton" inherits="OD/InvisibleButton">
-        <ImagerySection name="outline"><FrameComponent>
+        <ImagerySection name="plate_normal"><FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsSkin/VerticalSliderTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsSkin/VerticalSliderTopRight" />
-                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/VerticalSliderBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsSkin/VerticalSliderBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsSkin/VerticalSliderLeft" />
-                <Image component="RightEdge" name="OpenDungeonsSkin/VerticalSliderRight" />
-                <Image component="BottomEdge" name="OpenDungeonsSkin/VerticalSliderBottom" />
-                <Image component="TopEdge" name="OpenDungeonsSkin/VerticalSliderTop" />
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/ButtonTopLeftNormal" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightNormal" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftNormal" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightNormal" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/ButtonLeftNormal" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/ButtonRightNormal" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/ButtonBottomNormal" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/ButtonTopNormal" />
+                <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleNormal" />
+            </FrameComponent></ImagerySection>
+        <ImagerySection name="plate_hover"><FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/ButtonTopLeftHighlight" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightHighlight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftHighlight" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightHighlight" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/ButtonLeftHighlight" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/ButtonRightHighlight" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/ButtonBottomHighlight" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/ButtonTopHighlight" />
+                <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleHighlight" />
+            </FrameComponent></ImagerySection>
+        <ImagerySection name="plate_pushed"><FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/ButtonTopLeftPushed" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightPushed" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftPushed" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightPushed" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/ButtonLeftPushed" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/ButtonRightPushed" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/ButtonBottomPushed" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/ButtonTopPushed" />
+                <Image component="Background" name="OpenDungeonsSkin/ButtonMiddlePushed" />
+            </FrameComponent></ImagerySection>
+        <ImagerySection name="symbol_normal"><ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.17" offset="0" type="Width" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.17" offset="0" type="Height" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.66" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="0.66" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="NormalImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent></ImagerySection>
+        <ImagerySection name="symbol_hover"><ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.17" offset="0" type="Width" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.17" offset="0" type="Height" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.66" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="0.66" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="HoverImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent></ImagerySection>
+        <ImagerySection name="symbol_pushed"><ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.17" offset="1" type="Width" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.17" offset="1" type="Height" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.66" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="0.66" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="PushedImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent></ImagerySection>
+        <StateImagery name="Normal"><Layer><Section section="plate_normal" /><Section section="symbol_normal" /></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section section="plate_hover" /><Section section="symbol_hover" /></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section section="plate_pushed" /><Section section="symbol_pushed" /></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section section="plate_hover" /><Section section="symbol_hover" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="plate_normal"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section><Section section="symbol_normal"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+    </WidgetLook>
 
+    <!-- Message panel of the game: the forged window frame with rivets and one even stone inset, without a title bar. -->
+    <WidgetLook name="OD/EventPanel" inherits="OD/StaticText">
+        <NamedArea name="WithFrameTextRenderArea">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="10" /></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="10" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><AbsoluteDim value="10" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><AbsoluteDim value="10" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="WithFrameTextRenderAreaVScroll">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="10" /></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="10" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><WidgetDim dimension="Width" widget="__auto_vscrollbar__" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><AbsoluteDim value="10" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <ImagerySection name="forged_frame">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/WindowTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/WindowTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/WindowBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/WindowBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/WindowLeftEdge" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/WindowRightEdge" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/WindowTopEdge" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/WindowBottomEdge" />
+                <Image component="Background" name="OpenDungeonsSkin/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
             </FrameComponent>
-            </ImagerySection>
-        <StateImagery name="Normal"><Layer><Section section="outline" /><Section section="normal" /></Layer></StateImagery>
-        <StateImagery name="Hover"><Layer><Section section="outline" /><Section section="hover" /></Layer></StateImagery>
-        <StateImagery name="Pushed"><Layer><Section section="outline" /><Section section="pushed" /></Layer></StateImagery>
+        </ImagerySection>
+        <StateImagery name="EnabledFrame"><Layer><Section section="forged_frame" /></Layer></StateImagery>
+        <StateImagery name="DisabledFrame"><Layer><Section section="forged_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <StateImagery name="WithFrameEnabledBackground" />
+        <StateImagery name="WithFrameDisabledBackground" />
     </WidgetLook>
 
     <WidgetLook name="OD/SettingsSliderThumb" inherits="OD/HorizontalSliderThumb">
