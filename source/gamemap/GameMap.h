@@ -685,6 +685,10 @@ private:
     //! Updates active objects (creatures, rooms, ...), goals, count each team Workers, gold, mana and claimed tiles
     unsigned long int doMiscUpkeep(double timeSinceLastTurn);
 
+    //! \brief Applies the per-second mana income and worker upkeep of one seat for the current
+    //! turn. A seat without a living dungeon heart gains and spends nothing.
+    void updateSeatMana(Seat* seat);
+
     //! \brief Resets the unique numbers
     void resetUniqueNumbers();
 

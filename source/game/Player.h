@@ -160,6 +160,14 @@ public:
     //! \brief Drops the creature on tile t. Returns the dropped creature
     void dropHand(Tile *t, unsigned int index = 0);
 
+    //! \brief Removes an entity from the hand without dropping it on the map.
+    void removeEntityFromHand(GameEntity* entity);
+
+    //! \brief Redeems an own worker dropped on the tile of a living own dungeon heart: the worker
+    //! is removed from the game and half of the summoning price (current worker count) is paid
+    //! back in mana. Returns true when the drop was redeemed.
+    bool redemWorkerInHeart(GameEntity* entity, Tile* tile);
+
     void rotateHand(Direction d);
 
     //! \brief Clears all creatures that a player might have in his hand
