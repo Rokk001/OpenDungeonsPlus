@@ -96,17 +96,21 @@ namespace
         if(heart == nullptr)
             return;
 
-        const float fraction = static_cast<float>(static_cast<RoomDungeonTemple*>(heart)->getHeartHealthFraction());
+        RoomDungeonTemple* temple = static_cast<RoomDungeonTemple*>(heart);
+        const float fraction = static_cast<float>(temple->getHeartHealthFraction());
+        const double heartHP = std::floor(temple->getHP(nullptr));
         const float lastSent = sock->getHeartHealthSent();
-        if(!HeartHealthRing::shouldNotify(lastSent, fraction))
+        // The ring only needs a message per percentage point, the tooltip shows the exact HP
+        if(!HeartHealthRing::shouldNotify(lastSent, fraction) && heartHP == sock->getHeartHPSent())
             return;
 
         const bool underAttack = lastSent >= 0.0f && fraction < lastSent;
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::heartHealth, player);
-        serverNotification->mPacket << fraction << underAttack;
+        serverNotification->mPacket << fraction << underAttack << heartHP << temple->getHeartMaxHP();
         ODServer::getSingleton().queueServerNotification(serverNotification);
         sock->setHeartHealthSent(fraction);
+        sock->setHeartHPSent(heartHP);
     }
 
     //! \brief Gives a creature the level the editor asked for. Levelling raises the maximum

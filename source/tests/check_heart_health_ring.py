@@ -67,6 +67,7 @@ struct ODPacket {
     std::vector<std::string> kinds;
     std::vector<double> values;
     ODPacket& operator<<(float v) {kinds.push_back("float"); values.push_back(v); return *this;}
+    ODPacket& operator<<(double v) {kinds.push_back("double"); values.push_back(v); return *this;}
     ODPacket& operator<<(bool v) {kinds.push_back("bool"); values.push_back(v ? 1.0 : 0.0); return *this;}
 };
 struct ServerNotification {
@@ -82,9 +83,12 @@ struct ODServer {
 };
 struct ODSocketClient {
     float mSent;
-    ODSocketClient() : mSent(-1.0f) {}
+    double mHPSent;
+    ODSocketClient() : mSent(-1.0f), mHPSent(-1.0) {}
     float getHeartHealthSent() const {return mSent;}
     void setHeartHealthSent(float f) {mSent = f;}
+    double getHeartHPSent() const {return mHPSent;}
+    void setHeartHPSent(double hp) {mHPSent = hp;}
 };
 struct Building {
     double mFloorHP;
@@ -266,10 +270,12 @@ void checkServer()
     {
         const ServerNotification* n = queue.mQueue[0];
         check(n->mType == ServerNotificationType::heartHealth && n->mPlayer == &human, "start message goes to the owner");
-        check(n->mPacket.kinds.size() == 2 && n->mPacket.kinds[0] == "float" && n->mPacket.kinds[1] == "bool",
-            "payload order is float healthFraction then bool underAttack");
-        check(n->mPacket.values.size() == 2 && near(n->mPacket.values[0], 1.0) && n->mPacket.values[1] == 0.0,
-            "start message is a full heart that is not under attack");
+        check(n->mPacket.kinds.size() == 4 && n->mPacket.kinds[0] == "float" && n->mPacket.kinds[1] == "bool"
+            && n->mPacket.kinds[2] == "double" && n->mPacket.kinds[3] == "double",
+            "payload order is float healthFraction, bool underAttack, double heart HP, double heart max HP");
+        check(n->mPacket.values.size() == 4 && near(n->mPacket.values[0], 1.0) && n->mPacket.values[1] == 0.0
+            && near(n->mPacket.values[2], 90000.0) && near(n->mPacket.values[3], 90000.0),
+            "start message is a full heart of 90000 HP that is not under attack");
     }
     queue.mQueue.clear();
     notifyHeartHealth(&map, &socket, &human);
@@ -277,7 +283,12 @@ void checkServer()
 
     ownHeart.mHeartHP = 89280.0;
     notifyHeartHealth(&map, &socket, &human);
-    check(queue.mQueue.empty(), "a change below one point is not sent");
+    check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[2], 89280.0),
+        "a change below one point is sent too, so that the tooltip shows the exact HP");
+    queue.mQueue.clear();
+    ownHeart.mHeartHP = 89280.4;
+    notifyHeartHealth(&map, &socket, &human);
+    check(queue.mQueue.empty(), "a change below one whole HP is not sent");
     ownHeart.mHeartHP = 88920.0;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.size() == 1, "a change of one point is sent");
@@ -292,7 +303,9 @@ void checkServer()
     queue.mQueue.clear();
     ownHeart.mHeartHP = 8640.0;
     notifyHeartHealth(&map, &socket, &human);
-    check(queue.mQueue.empty(), "0.4 point below the last message is not sent");
+    check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[2], 8640.0),
+        "0.4 point below the last message is sent for the tooltip");
+    queue.mQueue.clear();
     ownHeart.mHeartHP = 180.0;
     notifyHeartHealth(&map, &socket, &human);
     queue.mQueue.clear();
@@ -433,8 +446,9 @@ assert enumerators.count('heartHealth') == 1
 assert 'case ServerNotificationType::heartHealth:\n            return "heartHealth";' in notification_source
 case = client[client.index('case ServerNotificationType::heartHealth:'):]
 case = case[:case.index('break;')]
-assert 'packetReceived >> healthFraction >> underAttack' in case
+assert 'packetReceived >> healthFraction >> underAttack >> heartHP >> heartMaxHP' in case
 assert 'mHeartBadge.receive(healthFraction, underAttack);' in case
+assert 'mHeartBadge.setPoints(heartHP, heartMaxHP);' in case
 assert 'float healthFraction;' in case and 'bool underAttack;' in case
 accepted = client[client.index('case ServerNotificationType::clientAccepted:'):]
 accepted = accepted[:accepted.index('break;')]
@@ -445,11 +459,13 @@ assert 'ODClient::getSingleton().getHeartBadge()' in frame
 assert 'heartBadge.update(evt.timeSinceLastFrame);' in frame
 assert 'heartBadge.takeDirty()' in frame
 assert 'getGui().updateHeartBadge(heartBadge.mFraction, heartBadge.mGlow);' in frame
+assert 'heartIcon->setTooltipText(heartText.str());' in frame
 assert 'void updateHeartBadge(float healthFraction, bool underAttack);' in gui_header
 assert 'ODServer::getSingleton().queueServerNotification(serverNotification);\n\n        notifyHeartHealth(gameMap, sock, player);' in server
-# Badge geometry, tooltips and the resource strip are untouched
+# Badge geometry and the resource strip are untouched; the heart badge says what it shows
 assert layout.count('OpenDungeonsIcons/ManaBadge') == 1 and layout.count('OpenDungeonsIcons/GoldBadge') == 1
-assert layout.count('<Property name="TooltipText" value="Your Mana" />') == 2
+assert layout.count('<Property name="TooltipText" value="Your Mana" />') == 1
+assert layout.count('<Property name="TooltipText" value="Dungeon Heart Health" />') == 1
 assert '{{0,-4},{0,-2},{0,60},{0,62}}' in layout
 created = function(gui, 'void createNavigationImages(')
 assert 'drawBadgePixels(pixels, badge, 1.0f, false);' in created

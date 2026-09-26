@@ -853,8 +853,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         {
             float healthFraction;
             bool underAttack;
-            OD_ASSERT_TRUE(packetReceived >> healthFraction >> underAttack);
+            double heartHP;
+            double heartMaxHP;
+            OD_ASSERT_TRUE(packetReceived >> healthFraction >> underAttack >> heartHP >> heartMaxHP);
             mHeartBadge.receive(healthFraction, underAttack);
+            mHeartBadge.setPoints(heartHP, heartMaxHP);
             break;
         }
 

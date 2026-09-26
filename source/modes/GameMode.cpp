@@ -1727,6 +1727,19 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     heartBadge.update(evt.timeSinceLastFrame);
     if(heartBadge.takeDirty())
         mModeManager->getGui().updateHeartBadge(heartBadge.mFraction, heartBadge.mGlow);
+    // Every frame, so that the text also survives the GUI being rebuilt
+    if(heartBadge.mMaxHP > 0.0)
+    {
+        std::ostringstream heartText;
+        heartText << "Dungeon Heart: " << static_cast<int64_t>(heartBadge.mHP) << "/"
+            << static_cast<int64_t>(heartBadge.mMaxHP);
+        CEGUI::Window* heartIcon = mRootWindow->getChild(Gui::DISPLAY_MANA)->getChild("Icon");
+        if(heartIcon->getTooltipText() != heartText.str())
+        {
+            heartIcon->setTooltipText(heartText.str());
+            heartIcon->setUserString("ContextHelp", heartText.str());
+        }
+    }
 
     // After frameStarted, so that the countdown shown is the one just computed.
     refreshActionFeedback(evt.timeSinceLastFrame);

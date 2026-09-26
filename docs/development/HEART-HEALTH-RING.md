@@ -17,19 +17,23 @@ switched off after 3 seconds without a further message and never shows on a dest
 - The badges are still generated procedurally at start-up by `createNavigationImages` in
   `source/render/Gui.cpp`, now through `drawBadgePixels`. `Gui::updateHeartBadge` draws the
   heart badge again and writes it with `blitFromMemory` into the existing texture (`ManaBadge`),
-  so the layout, the image scaling, the tooltips and the resource strip are unchanged. It first
+  so the layout, the image scaling and the resource strip are unchanged; only the badge tooltip
+  reads "Dungeon Heart Health" instead of "Your Mana". It first
   used `loadFromMemory`: the CEGUI Ogre renderer then makes a new Ogre texture, while the badge
   window keeps drawing the Ogre texture stored in its cached geometry, so the ring never moved.
 - The rules (arc, one-point step, glow timer) are in `source/game/HeartHealthRing.h`.
 - New server notification `heartHealth` (last value of `ServerNotificationType`):
-  `float healthFraction`, `bool underAttack`, sent to the owning human player only.
+  `float healthFraction`, `bool underAttack`, `double heartHP`, `double heartMaxHP`, sent to the
+  owning human player only.
 - `notifyHeartHealth` in `source/network/ODServer.cpp` runs once per turn for every client. It
   sends when the fraction changed by at least one percentage point since the previous message,
-  when the heart is destroyed, and once for a client that has not been told anything yet,
-  which covers a new game and a loaded game. `underAttack` is true when the health fell since
-  the previous message.
-- `ODClient` keeps the state (`HeartHealthRing::BadgeState`), resets it on `clientAccepted`, and
-  `GameMode::onFrameStarted` runs the glow timer and redraws the badge when needed.
+  when the whole heart HP changed (so the tooltip is exact), when the heart is destroyed, and
+  once for a client that has not been told anything yet, which covers a new game and a loaded
+  game. `underAttack` is true when the health fell since the previous message.
+- `ODClient` keeps the state (`HeartHealthRing::BadgeState`, including the exact HP set with
+  `setPoints`), resets it on `clientAccepted`, and `GameMode::onFrameStarted` runs the glow
+  timer, redraws the badge when needed and sets the tooltip of the badge icon to
+  "Dungeon Heart: 23954/90000" (current/maximum HP).
 
 ## Verification and limits
 
