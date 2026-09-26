@@ -1299,7 +1299,7 @@ void GameMode::refreshMainUI()
     tempSS.str("");
     tempSS << (mySeat->getManaDelta() >= 0 ? "+" : "") << mySeat->getManaDelta();
     widget->getChild("Change")->setText(tempSS.str());
-    widget->getChild("Change")->setProperty("TextColours", mySeat->getManaDelta() >= 0 ? "FF00C880" : "FFFF4848");
+    widget->getChild("Change")->setProperty("TextColours", mySeat->getManaDelta() >= 0 ? "FF7FE3A6" : "FFFF4848");
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
