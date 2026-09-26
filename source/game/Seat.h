@@ -180,6 +180,9 @@ public:
 
     bool takeMana(double mana);
 
+    //! \brief Adds mana to the seat's mana, clamped between 0 and the maximum per seat
+    void addMana(double mana);
+
     inline Ogre::Vector3 getStartingPosition() const
     { return Ogre::Vector3(static_cast<Ogre::Real>(mStartingX), static_cast<Ogre::Real>(mStartingY), 0); }
 
