@@ -3,17 +3,28 @@
 ## Behaviour
 
 The ring of the heart badge in the top-left corner (next to the mana number) shows the
-health of the local player's dungeon heart. It is split into six segments by spokes that are part
-of the silver rim, the first spoke at the top. One segment stands for one sixth of the health and
-the segments fill green clockwise from the top: at 17 % one segment is green, at 50 % three. A
-segment that is only partly covered is filled only in part, clockwise over the covered share. The
-unlit part stays as a dark groove. A destroyed heart (fraction 0) shows no green.
-While the heart is under attack the badge glows magenta behind the silver heart; the glow is
+health of the local player's dungeon heart. It is split into six segments by bronze spokes,
+the first spoke at the top. One segment stands for one sixth of the health and
+the segments light up as emerald gems clockwise from the top: at 17 % one gem is lit, at 50 % three. A
+segment that is only partly covered is lit only in part, clockwise over the covered share. The
+unlit part stays as a dark obsidian socket. A destroyed heart (fraction 0) shows no green.
+While the heart is under attack the badge glows magenta behind the ruby heart; the glow is
 switched off after 3 seconds without a further message and never shows on a destroyed heart.
 
 `healthFraction` is the remaining heart health divided by the health of an undamaged heart,
 `RoomDungeonTemple::getHeartMaxHP` (`getHeartHealthFraction`), a fixed 10000. A living heart
-heals 2.5 per second up to that maximum (`RoomDungeonTemple::doUpkeep`). The gold badge is not changed.
+heals 2.5 per second up to that maximum (`RoomDungeonTemple::doUpkeep`).
+
+## Look of the top-left HUD
+
+Both badges are forged medallions in the palette of the title image: a blackened iron frame with a
+bronze edge line, a bright bronze lip and twelve domed bronze rivets around a ring and a well. The
+heart badge has six emerald gems between bronze spokes around a dark stone well with glowing embers
+at its foot and a faceted ruby heart; the gold badge has a ring of gold beads around an embossed,
+reeded gold coin with a raised dollar sign. The two number strips (`OD/ResourceDisplay` in
+`gui/OD.looknfeel`) are dark brown stone insets in a bronze-tinted frame; the gold number is
+warm gold, the mana number and its change a light emerald. All of it is drawn in
+`drawBadgePixels` and its `badge*` helpers; no image assets were added.
 
 ## How it works
 
