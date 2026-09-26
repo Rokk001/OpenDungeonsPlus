@@ -8,7 +8,7 @@ the first spoke at the top. One segment stands for one sixth of the health and
 the segments light up as emerald gems clockwise from the top: at 17 % one gem is lit, at 50 % three. A
 segment that is only partly covered is lit only in part, clockwise over the covered share. The
 unlit part stays as a dark obsidian socket. A destroyed heart (fraction 0) shows no green.
-While the heart is under attack the badge glows magenta behind the ruby heart; the glow is
+While the heart is under attack the badge glows magenta behind the heart; the glow is
 switched off after 3 seconds without a further message and never shows on a destroyed heart.
 
 `healthFraction` is the remaining heart health divided by the health of an undamaged heart,
@@ -20,11 +20,15 @@ heals 2.5 per second up to that maximum (`RoomDungeonTemple::doUpkeep`).
 Both badges are forged medallions in the palette of the title image: a blackened iron frame with a
 bronze edge line, a bright bronze lip and twelve domed bronze rivets around a ring and a well. The
 heart badge has six emerald gems between bronze spokes around a dark stone well with glowing embers
-at its foot and a faceted ruby heart; the gold badge has a ring of gold beads around an embossed,
-reeded gold coin with a raised dollar sign. The two number strips (`OD/ResourceDisplay` in
+at its foot and the dungeon heart, a lit muscle with two lobes, rising vessels, raised veins, an inner
+ember glow, a rim light and a wet shine; the gold badge has a ring of gold beads around a worn gold
+coin with a reeded rim, a ring of pearls and a skull struck into a hammered field. The two number strips (`OD/ResourceDisplay` in
 `gui/OD.looknfeel`) are dark brown stone insets in a bronze-tinted frame; the gold number is
 warm gold, the mana number and its change a light emerald. All of it is drawn in
-`drawBadgePixels` and its `badge*` helpers; no image assets were added.
+`drawBadgePixels` and its `badge*` helpers; no image assets were added. The heart and the coin are
+rendered from height maps (outline distance fields plus noise) with bump lighting from the top left,
+specular highlights, ambient occlusion and a cavity term for dirt and patina, and the whole well is
+sampled 3x3 per pixel, so the edges are soft.
 
 ## How it works
 
