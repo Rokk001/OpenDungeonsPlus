@@ -693,6 +693,16 @@ private:
     //! until the seat has four workers. A seat without a living dungeon heart creates none.
     void updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn);
 
+    //! \brief Checks each turn whether an enemy creature is within range of the seat's
+    //! living heart. While one is, the seat's runners defend the heart. The alarm call
+    //! sounds once, when the defence starts, not the combat music.
+    void updateSeatHeartDefense(Seat* seat);
+
+    //! \brief The tile a runner of the seat moves to during the heart defence: the heart
+    //! tile while the heart is damaged, otherwise the nearest allied fighter, and the
+    //! heart tile when there is no fighter to rally.
+    Tile* getHeartDefenceTargetTile(Creature& runner, Seat* seat);
+
     //! \brief Resets the unique numbers
     void resetUniqueNumbers();
 
