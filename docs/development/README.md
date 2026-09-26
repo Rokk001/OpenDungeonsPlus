@@ -56,6 +56,8 @@ is also recorded in [AGENTS.md](../../AGENTS.md) at the project root.
 
 - [Minimap navigation stacking](MINIMAP-NAVIGATION-LAYER.md): preserving access
   to the corner controls after clicking the minimap.
+- [Forged minimap and corner controls](NAVIGATION-FORGED-STYLE.md): iron ring, compass
+  boss, corner plates and embossed symbols in the style of the top left badges.
 - [Map navigation](MAP-NAVIGATION.md): full-map controls, pointer detail, minimap zoom,
   tile colours, focus shortcuts and verification limits.
 - [Contributing to the original project](CONTRIBUTING-WORKFLOW.md): fork, synchronization,
