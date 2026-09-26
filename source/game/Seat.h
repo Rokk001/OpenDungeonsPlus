@@ -365,6 +365,10 @@ private:
     //! \brief The total amount of gold coins mined by workers under this seat's control.
     int mGoldMined;
 
+    //! \brief Seconds accumulated towards the next worker the living dungeon heart
+    //! creates for this seat. Server side only, not saved with the level.
+    double mAutoWorkerTimer;
+
     //! \brief The actual color that this color index translates into.
     Ogre::ColourValue mColorValue;
 

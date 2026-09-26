@@ -49,6 +49,7 @@
 #include "render/CreatureOverlayStatus.h"
 #include "render/ODFrameListener.h"
 #include "rooms/Room.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortal.h"
 #include "rooms/RoomTreasury.h"
@@ -92,6 +93,11 @@ const double MANA_HEART_INCOME_PER_SECOND = 30.0;
 const double MANA_INCOME_TILES_CAP = 500.0;
 //! Mana each worker costs to keep, per second.
 const double MANA_WORKER_UPKEEP_PER_SECOND = 7.0;
+
+//! Workers a seat holds before its living heart stops creating more.
+const int AUTO_WORKERS_TARGET = 4;
+//! Seconds the living dungeon heart waits between two workers it creates.
+const double AUTO_WORKER_INTERVAL_SECONDS = 5.0;
 
 //! \brief Mana a seat gains per second: the heart plus one per claimed tile,
 //! the tile part capped. The tiles of the heart area are not counted again.
@@ -1313,6 +1319,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
             seat->getPlayer()->notifyNoMoreDungeonTemple();
         }
         updateSeatMana(seat);
+        updateSeatAutoWorkers(seat, timeSinceLastTurn);
 
         // Update the count on how much gold is available in all of the treasuries claimed by the given seat.
         seat->mGold = 0;
@@ -1387,6 +1394,59 @@ void GameMap::updateSeatMana(Seat* seat)
     const double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
     if (seat->mMana > maxMana)
         seat->mMana = maxMana;
+}
+
+void GameMap::updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn)
+{
+    if (seat->getNumCreaturesWorkers() >= AUTO_WORKERS_TARGET)
+    {
+        // At the target the heart is done creating and the clock starts over
+        seat->mAutoWorkerTimer = 0.0;
+        return;
+    }
+
+    // Only a living heart creates workers
+    Room* heartRoom = nullptr;
+    for (Room* room : getRooms())
+    {
+        if (room->getSeat() != seat)
+            continue;
+        if (room->getType() != RoomType::dungeonTemple)
+            continue;
+        if (room->getHP(nullptr) <= 0.0)
+            continue;
+        heartRoom = room;
+        break;
+    }
+    if (heartRoom == nullptr)
+    {
+        seat->mAutoWorkerTimer = 0.0;
+        return;
+    }
+
+    Tile* heartTile = static_cast<RoomDungeonTemple*>(heartRoom)->getHeartTile();
+    const CreatureDefinition* classToSpawn = seat->getWorkerClassToSpawn();
+    if (heartTile == nullptr || classToSpawn == nullptr)
+    {
+        seat->mAutoWorkerTimer = 0.0;
+        return;
+    }
+
+    seat->mAutoWorkerTimer += timeSinceLastTurn;
+    while (seat->mAutoWorkerTimer >= AUTO_WORKER_INTERVAL_SECONDS
+        && seat->getNumCreaturesWorkers() < AUTO_WORKERS_TARGET)
+    {
+        seat->mAutoWorkerTimer -= AUTO_WORKER_INTERVAL_SECONDS;
+        Creature* newCreature = new Creature(this, classToSpawn, seat);
+        newCreature->addToGameMap();
+        Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(heartTile->getX()),
+                                    static_cast<Ogre::Real>(heartTile->getY()),
+                                    static_cast<Ogre::Real>(0.0));
+        newCreature->addParticleEffect("SummonWorker", 3);
+        newCreature->createMesh();
+        newCreature->setPosition(spawnPosition);
+        ++seat->mNumCreaturesWorkers;
+    }
 }
 
 void GameMap::updateAnimations(Ogre::Real timeSinceLastFrame)
