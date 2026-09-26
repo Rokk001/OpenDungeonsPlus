@@ -61,7 +61,7 @@
                     <Property name="Image" value="OpenDungeonsIcons/ManaBadge" />
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
-                    <Property name="TooltipText" value="Your Mana" />
+                    <Property name="TooltipText" value="Dungeon Heart Health" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
