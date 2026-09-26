@@ -689,6 +689,10 @@ private:
     //! turn. A seat without a living dungeon heart gains and spends nothing.
     void updateSeatMana(Seat* seat);
 
+    //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
+    //! until the seat has four workers. A seat without a living dungeon heart creates none.
+    void updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn);
+
     //! \brief Resets the unique numbers
     void resetUniqueNumbers();
 
