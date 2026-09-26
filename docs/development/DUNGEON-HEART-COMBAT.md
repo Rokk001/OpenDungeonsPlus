@@ -16,19 +16,22 @@ target discovery. The ordinary room target/damage and sale paths reject the
 heart's floor. Actual heart death releases the room through the existing cleanup
 and last-temple defeat paths. Editor tile removal remains available.
 
-The heart's health is its own pool of 10000 per room tile
-(`RoomDungeonTemple::HEART_HP_PER_TILE`), 90000 for the usual 3 by 3 heart. It
+The heart's health is its own pool with a fixed maximum of 10000
+(`RoomDungeonTemple::HEART_MAX_HP`), whatever the number of tiles of the room. It
 no longer comes from the floor tiles' durability (9 tiles of 10, so 90 in all,
 which one strong blow destroyed while the ring barely moved). The top-left ring
 shows the remaining health divided by this maximum. Only fighters damage an
 enemy heart: `takeHeartDamage` ignores worker creatures, and a worker given a
 non-creature target drops its fight action. A tagged optional room record saves
-the remaining heart health as `HeartHealth`; files without it load with an
-undamaged heart. Saves written before, with the record `HeartHP`, measured the
-health against the floor durability; they load with the same share of the new
-maximum (`HeartHP 90` of 90 becomes 90000, `HeartHP 0` stays a ruin). Without
-this, a heart from such a save had 90 of 90000 and fell to one hit.
-Regeneration of the heart and unrelated resource rewards are not part of it.
+the remaining heart health as `HeartHealth10000`; files without it load with an
+undamaged heart. Older saves are converted by share, so a full heart stays full
+and a ruin stays a ruin: the record `HeartHealth` (10000 per room tile, 90000
+for a 3 by 3 heart) is divided by that old maximum, and the record `HeartHP`,
+which measured the health against the floor durability, by the durability
+(`HeartHP 90` of 90 becomes 10000, `HeartHP 0` stays a ruin).
+A living heart heals 2.5 per second (`HEART_HEAL_PER_SECOND`, added as
+`2.5 / turnsPerSecond` in every `doUpkeep`) up to the maximum; a destroyed heart
+(0) never heals. Unrelated resource rewards are not part of it.
 
 ## Verification
 

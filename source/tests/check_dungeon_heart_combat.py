@@ -53,6 +53,7 @@ struct Creature:GameEntity {CreatureDefinition definition;Creature(Seat* s,bool 
 struct GameMap {bool editor=false;int fights=0;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}};
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}bool notifyRemoveAsked(){return true;}};
+struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
 struct Building {double floorHP=250;double getHP(Tile*)const{return floorHP;}};
 struct Room:Building {
  GameMap* map;Seat* seat;int dead=0,removed=0,upkeep=0,objectsRemoved=0;std::vector<Tile*> mCoveredTiles;
@@ -76,7 +77,7 @@ struct RoomDungeonTemple:Room {
  BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
- static const double HEART_HP_PER_TILE;double getHeartMaxHP()const;
+ static const double HEART_MAX_HP;static const double HEART_HEAL_PER_SECOND;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -93,8 +94,8 @@ int main(){int checks=0,failures=0;
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre);
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
  check(core.getSeat()==&owner,"heart entity carries room ownership");
- check(RoomDungeonTemple::HEART_HP_PER_TILE==10000&&RoomDungeonTemple(&map,&owner).getHeartMaxHP()==90000,"10000 per tile, 90000 for a 3 by 3 heart");
- check(heart.getHP(nullptr)==20000&&heart.floorHP==250,"an undamaged heart has 10000 per room tile, independent of the floor durability");
+ check(RoomDungeonTemple::HEART_MAX_HP==10000&&RoomDungeonTemple(&map,&owner).getHeartMaxHP()==10000&&heart.getHeartMaxHP()==10000,"the maximum is a fixed 10000, whatever the number of tiles");
+ check(heart.getHP(nullptr)==10000&&heart.floorHP==250,"an undamaged heart has 10000, independent of the floor durability");
  for(Seat* seat:{&owner,&ally,&enemy,static_cast<Seat*>(nullptr)}){
   GameEntity attacker{seat};
   check(!heart.canSeatSellBuilding(seat),"no gameplay demolition permission");
@@ -109,31 +110,42 @@ int main(){int checks=0,failures=0;
  check(heart.takeHeartDamage(nullptr,99,0,0,0,&centre)==0,"unattributed damage rejected");
  check(heart.takeHeartDamage(&attacker,99,0,0,0,&floor)==0,"enemy cannot damage the floor");
  check(core.takeDamage(&attacker,4,5,6,7,&centre,false)==16,"actual heart entity receives damage");
- check(heart.getHP(nullptr)==19984&&heart.floorHP==250,"heart damage never reduces floor health");
+ check(heart.getHP(nullptr)==9984&&heart.floorHP==250,"heart damage never reduces floor health");
  check(heart.dead==0&&map.fights==1,"nonlethal hit reports combat without death");
  heart.doUpkeep();check(heart.removed==0&&heart.upkeep==1,"living heart retains all floor tiles");
+ check(std::abs(heart.getHP(nullptr)-(9984+2.5/1.4))<1e-9,"a living damaged heart heals 2.5 per second, per turn 2.5 / turnsPerSecond");
+ heart.mHeartHP=9984;
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
- RoomDungeonTemple loaded(&map,&owner);check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==19984,"damaged heart round trip");
+ RoomDungeonTemple loaded(&map,&owner);check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==9984,"damaged heart round trip");
  std::string next;save>>next;check(next=="[/Room]","save parser preserves room boundary");
  std::stringstream legacy("80\n[/Room]\n");RoomDungeonTemple old(&map,&owner);
- check(old.importFromStream(legacy)&&old.getHP(nullptr)==90000,"a heart without a health record starts undamaged");
+ check(old.importFromStream(legacy)&&old.getHP(nullptr)==10000,"a heart without a health record starts undamaged");
  legacy>>next;check(next=="[/Room]","legacy boundary not consumed");
- check(save.str().find("HeartHealth 19984")!=std::string::npos,"the health is saved as HeartHealth on the heart's own scale");
+ check(save.str().find("HeartHealth10000 9984")!=std::string::npos,"the health is saved as HeartHealth10000, on the scale of the fixed maximum");
  // Saves from before the heart had its own health: HeartHP was measured against the floor durability (250 here)
  {std::stringstream full("250\nHeartHP 250\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(full)&&h.getHP(nullptr)==90000,"an old save with a full heart (HeartHP equal to the floor durability) loads full");}
+  check(h.importFromStream(full)&&h.getHP(nullptr)==10000,"an old save with a full heart (HeartHP equal to the floor durability) loads full");}
  {std::stringstream half("250\nHeartHP 125\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(half)&&h.getHP(nullptr)==45000,"an old half damaged heart keeps its share of the health");}
+  check(h.importFromStream(half)&&h.getHP(nullptr)==5000,"an old half damaged heart keeps its share of the health");}
  {std::stringstream ruin("250\nHeartHP 0\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
   check(h.importFromStream(ruin)&&h.getHP(nullptr)==0,"an old destroyed heart stays destroyed");}
+ {std::stringstream big("250\nHeartHealth10000 999999\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(big)&&h.getHP(nullptr)==10000,"a saved health above the maximum is limited to it");}
+ // Saves from when the heart had 10000 health per room tile (90000 for the nine tiles of these fixtures)
+ {std::stringstream full("250\nHeartHealth 90000\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(full)&&h.getHP(nullptr)==10000,"a full heart of the per-tile scale stays full");}
+ {std::stringstream half("250\nHeartHealth 45000\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(half)&&h.getHP(nullptr)==5000,"a damaged heart of the per-tile scale keeps its share");}
+ {std::stringstream ruin("250\nHeartHealth 0\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(ruin)&&h.getHP(nullptr)==0,"a ruin of the per-tile scale stays a ruin");}
  {std::stringstream big("250\nHeartHealth 999999\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(big)&&h.getHP(nullptr)==90000,"a saved health above the maximum is limited to it");}
- for(const char* text:{"250\nHeartHP -1\n", "250\nHeartHP nan\n", "250\nHeartHP nope\n", "250\nHeartHealth -1\n", "250\nHeartSomething 5\n"}){
+  check(h.importFromStream(big)&&h.getHP(nullptr)==10000,"a per-tile value above its maximum is limited to the full heart");}
+ for(const char* text:{"250\nHeartHP -1\n", "250\nHeartHP nan\n", "250\nHeartHP nope\n", "250\nHeartHealth -1\n", "250\nHeartHealth10000 -1\n", "250\nHeartSomething 5\n"}){
   std::stringstream bad(text);RoomDungeonTemple invalid(&map,&owner);check(!invalid.importFromStream(bad),"invalid health rejected");}
  {Creature worker(&enemy,true);Creature fighter(&enemy,false);
-  check(heart.takeHeartDamage(&worker,999,999,999,999,&centre)==0&&heart.getHP(nullptr)==19984,"an enemy worker cannot damage the heart");
-  check(heart.takeHeartDamage(&fighter,4,0,0,0,&centre)==4&&heart.getHP(nullptr)==19980,"an enemy fighter damages the heart");}
- check(core.takeDamage(&attacker,99999,0,0,0,&centre,false)==19980,"lethal damage clamped");
+  check(heart.takeHeartDamage(&worker,999,999,999,999,&centre)==0&&heart.getHP(nullptr)==9984,"an enemy worker cannot damage the heart");
+  check(heart.takeHeartDamage(&fighter,4,0,0,0,&centre)==4&&heart.getHP(nullptr)==9980,"an enemy fighter damages the heart");}
+ check(core.takeDamage(&attacker,99999,0,0,0,&centre,false)==9980,"lethal damage clamped");
  check(core.deaths==1&&core.getHP(nullptr)==0,"object death listeners notified");
  check(heart.dead==1&&!heart.canAttackHeart(&centre,&enemy),"death fires once and disables targeting");
  check(ownerPlayer.recorded==1&&ownerPlayer.conqueror==5&&ownerPlayer.heartX==3&&ownerPlayer.heartY==4,"owner records conqueror seat and heart tile on death");
@@ -141,11 +153,15 @@ int main(){int checks=0,failures=0;
  check(ownerPlayer.recorded==1,"conqueror recorded only once");
  check(enemy.stats.mKeepersDefeated==1&&owner.stats.mKeepersDefeated==0,"final blow counts one defeated keeper for the attacker seat only, once");
  heart.doUpkeep();check(heart.removed==0&&heart.mCoveredTiles.size()==2&&heart.objectsRemoved==1&&heart.mTempleObject==nullptr,"heart death releases only the heart object and keeps the floor");
- // Critical-health warning (threshold 11 % of 90000 = 9900)
+ heart.doUpkeep();check(heart.getHP(nullptr)==0,"a destroyed heart never heals");
+ {RoomDungeonTemple h(&map,&owner);h.doUpkeep();check(h.getHP(nullptr)==10000,"an undamaged heart stays at the maximum");
+  h.mHeartHP=9999.5;h.doUpkeep();check(h.getHP(nullptr)==10000,"healing stops at the maximum");
+  h.mHeartHP=1;h.doUpkeep();h.doUpkeep();check(std::abs(h.getHP(nullptr)-(1+2*2.5/1.4))<1e-9,"healing adds up turn by turn");}
+ // Critical-health warning (threshold 11 % of 10000 = 1100)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
  const char* warning="Your dungeon heart is in critical condition!";
  {server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;
-  h.takeHeartDamage(&hitter,80000,0,0,0,&centre);
+  h.takeHeartDamage(&hitter,8800,0,0,0,&centre);
   h.takeHeartDamage(&hitter,99.9,0,0,0,&centre);
   check(server.queue.empty(),"no warning above 11 percent");
   h.takeHeartDamage(&hitter,0.2,0,0,0,&centre);
@@ -191,8 +207,7 @@ methods = '\n'.join(function(source, sig) for sig in (
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream('))
-methods = 'const double RoomDungeonTemple::HEART_HP_PER_TILE = ' + \
-    source.split('const double RoomDungeonTemple::HEART_HP_PER_TILE = ')[1].split(';')[0] + ';\n' + methods
+methods = source[source.index('const double RoomDungeonTemple::HEART_MAX_HP'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
 probe = probe.replace('INLINE_METHODS', inline).replace('METHODS', methods)
 probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject :'))
 with tempfile.TemporaryDirectory(prefix='odp-heart-combat-') as directory:

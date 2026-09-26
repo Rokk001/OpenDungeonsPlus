@@ -40,8 +40,8 @@ public:
     { return false; }
     bool canAttackHeart(Tile* tile, Seat* seat) const;
     double getHP(Tile* tile) const override;
-    //! Health of an undamaged heart: HEART_HP_PER_TILE for every tile of the room
-    //! (90000 for the usual 3 by 3 heart), independent of the floor tiles' own durability.
+    //! Health of an undamaged heart: HEART_MAX_HP, independent of the number of tiles of the
+    //! room and of the floor tiles' own durability.
     double getHeartMaxHP() const;
     //! \brief Remaining heart health divided by getHeartMaxHP(), from 0 to 1.
     double getHeartHealthFraction() const;
@@ -85,8 +85,10 @@ private:
 
     //! One health pool for the heart, independent of individual floor tiles.
     double mHeartHP;
-    //! Health of the heart per room tile
-    static const double HEART_HP_PER_TILE;
+    //! Health of an undamaged heart
+    static const double HEART_MAX_HP;
+    //! Health a living, damaged heart regains per second
+    static const double HEART_HEAL_PER_SECOND;
 
     //! True once the critical-health warning was sent to the owner. Not saved: a reloaded
     //! game with an already critical heart warns once again at the next hit.
