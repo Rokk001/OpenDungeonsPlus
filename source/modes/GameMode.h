@@ -354,6 +354,7 @@ private:
     bool closeMap(const CEGUI::EventArgs& = {});
     bool clickMap(const CEGUI::EventArgs&);
     bool zoomMiniMap(const CEGUI::EventArgs&);
+    bool clickHeartBadge(const CEGUI::EventArgs&);
     void updateMapDetail();
     void focusRoom(RoomType type);
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
