@@ -108,7 +108,7 @@ public:
     void removeAllBuildingObjects(GameMap* gameMap = nullptr);
     const std::map<Tile*, BuildingObject*>& getBuildingObjects() const
     { return mBuildingObjects; }
-    Tile* getCentralTile();
+    Tile* getCentralTile() const;
 
     virtual bool isClaimable(Seat* seat) const
     { return false; }

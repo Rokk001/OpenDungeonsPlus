@@ -19,6 +19,7 @@ seat = read('source/game/Seat.cpp')
 seat_data = read('source/game/SeatData.cpp')
 tile = read('source/entities/Tile.cpp')
 building = read('source/entities/Building.cpp')
+treasury_object = read('source/entities/TreasuryObject.cpp')
 
 
 def function(text, signature):
@@ -35,6 +36,7 @@ probe = r'''
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -61,9 +63,13 @@ struct ServerNotification {ServerNotificationType type;Player* player;ODPacket m
 struct ODServer {std::vector<ServerNotification*> queue;
  static ODServer& getSingleton(){static ODServer server;return server;}
  void queueServerNotification(ServerNotification* n){queue.push_back(n);}};
-struct Tile{int getX()const{return 3;}int getY()const{return 4;}static std::string displayAsString(const Tile*){return "tile";}};
+struct Tile{int mX=0,mY=0;Tile(int x=0,int y=0):mX(x),mY(y){}int getX()const{return mX;}int getY()const{return mY;}static std::string displayAsString(const Tile*){return "tile";}};
 struct Seat;
-struct TileData{std::vector<Seat*> mSeatsVision;};
+struct TileData{double mHP=0.0;std::vector<Seat*> mSeatsVision;virtual ~TileData()=default;};
+struct RoomTreasuryTileData:TileData{int mGoldInTile=0;std::string mMeshOfTile;};
+namespace Ogre {typedef double Real;struct Vector3{Real x,y,z;Vector3(Real a,Real b,Real c):x(a),y(b),z(c){}};}
+struct Random {static double Double(double min,double max){return (min+max)*0.5;}};
+#define OD_ASSERT_TRUE_MSG(cond,msg) do{if(!(cond)){std::cout<<"ASSERT FAILED: "<<(msg)<<'\n';std::exit(1);}}while(0)
 struct GameMap;
 struct Room;
 struct ConfigManager {static double maxManaPerSeat;
@@ -89,13 +95,14 @@ struct Player {
 };
 enum class GameEntityType {creature, other};
 struct CreatureDefinition {bool isWorker()const{return false;}};
-struct GameEntity {Seat* seat;int deaths=0;GameEntity(Seat* s=nullptr):seat(s){}virtual ~GameEntity()=default;
+struct GameEntity {Seat* seat;int deaths=0;std::string mName;GameEntity(Seat* s=nullptr):seat(s){}virtual ~GameEntity()=default;
+ const std::string& getName()const{return mName;}
  virtual GameEntityType getObjectType()const{return GameEntityType::other;}
  Seat* getSeat(){return seat;}void setSeat(Seat* s){seat=s;}void fireEntityDead(){++deaths;}
  virtual bool isAttackable(Tile*,Seat*)const{return false;}virtual double getHP(Tile*)const{return 0;}
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 0;}};
 struct Creature:GameEntity {CreatureDefinition definition;const CreatureDefinition* getDefinition()const{return &definition;}};
-struct Building {double floorHP=250;virtual ~Building()=default;virtual double getHP(Tile*)const{return floorHP;}};
+struct Building:GameEntity {Building():GameEntity(nullptr){}double floorHP=250;virtual ~Building()=default;virtual double getHP(Tile*)const{return floorHP;}};
 struct BuildingObject;
 struct Room:Building {
  GameMap* map;Seat* seat;int dead=0,doUpkeeps=0,restored=0,added=0,objectsRemoved=0;
@@ -115,9 +122,11 @@ struct Room:Building {
  virtual void restoreInitialEntityState(){++restored;}
  virtual void exportToStream(std::ostream& os)const{os<<floorHP<<'\n';}
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}
- bool getIsOnServerMap()const{return true;}Tile* getCentralTile(){return central;}
+ bool getIsOnServerMap()const{return true;}Tile* getCentralTile()const{return central;}
  uint32_t numCoveredTiles()const{return static_cast<uint32_t>(mCoveredTiles.size());}
  void addBuildingObject(Tile* t,BuildingObject* o){++added;mBuildingObjects[t]=o;}
+ void removeBuildingObject(Tile* t){mBuildingObjects.erase(t);}
+ static int roomSounds;static void fireRoomSound(Tile&,const std::string&){++roomSounds;}
  void removeAllBuildingObjects(){objectsRemoved+=static_cast<int>(mBuildingObjects.size());mBuildingObjects.clear();}
 };
 struct PlainRoom:Room {PlainRoom(GameMap* m,Seat* s):Room(m,s){}};
@@ -126,15 +135,23 @@ struct GameMap {bool editor=false;int fights=0,sounds=0;std::vector<Room*> mRoom
  int64_t getTurnNumber()const{return 0;}std::vector<Seat*>& getSeats(){return seats;}std::vector<Room*>& getRooms(){return mRooms;}
  void fireRelativeSound(std::vector<Seat*>&,SoundRelativeKeeperStatements){++sounds;}
  std::vector<Room*> getRoomsByType(RoomType type) const;unsigned int numRoomsByTypeAndSeat(RoomType type, const Seat* seat) const;};
+int Room::roomSounds=0;
 bool g_removeAllowed=true;int g_removeAsked=0;
-struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}
+struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):GameEntity(nullptr),tile(t){}
+ BuildingObject(GameMap*,Room&,const std::string&,Tile* t,double,double,double,double,bool):GameEntity(nullptr),tile(t){}
+ Tile* getPositionTile(){return tile;}
  virtual bool notifyRemoveAsked(){++g_removeAsked;return g_removeAllowed;}
  void notifySeatsWithVision(const std::vector<Seat*>&){}};
+struct TreasuryObject:GameEntity {int mGoldValue=0;static std::vector<TreasuryObject*> spawned;
+ TreasuryObject(GameMap*,int v):GameEntity(nullptr),mGoldValue(v){spawned.push_back(this);}
+ void addToGameMap(){}void createMesh(){}void setPosition(Ogre::Vector3){}
+ static const char* getMeshNameForGold(int gold);};
+std::vector<TreasuryObject*> TreasuryObject::spawned;
 struct PersistentObject:BuildingObject {
  PersistentObject(GameMap*,Room&,const char*,Tile* t,double,bool):BuildingObject(t){}
 };
 struct RoomDungeonTemple:Room {
- BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;
+ BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;bool mGoldChanged=false;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  RoomType getType() const override{return RoomType::dungeonTemple;}
  INLINE_METHODS
@@ -142,6 +159,8 @@ struct RoomDungeonTemple:Room {
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const override;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
+ Tile* getHeartTile() const;Tile* getRingCenterTile() const;bool isTreasuryTile(Tile*) const;
+ void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);
  void exportToStream(std::ostream&)const override;bool importFromStream(std::istream&)override;
  void updateActiveSpots(GameMap* gameMap);void updateTemplePosition();void restoreInitialEntityState()override;
 };
@@ -156,7 +175,7 @@ void turn(GameMap& map,Seat& seat){
  seat.computeSeatBeginTurn();
  if(seat.getNbRooms(RoomType::dungeonTemple)==0)seat.mPlayer->notifyNoMoreDungeonTemple();
 }
-void addFloor(RoomDungeonTemple& heart,Tile* centre,Tile* floor,TileData* centreData,TileData* floorData){
+void addFloor(RoomDungeonTemple& heart,Tile* centre,Tile* floor,RoomTreasuryTileData* centreData,RoomTreasuryTileData* floorData){
  heart.central=centre;heart.mCoveredTiles.push_back(centre);heart.mCoveredTiles.push_back(floor);
  heart.mTileData[centre]=centreData;heart.mTileData[floor]=floorData;
 }
@@ -165,7 +184,8 @@ int main(){
  GameMap map;Seat owner(1,1),enemy(2,5);Player ownerPlayer(&owner,true),enemyPlayer(&enemy,false);
  owner.mPlayer=&ownerPlayer;owner.mGameMap=&map;enemy.mPlayer=&enemyPlayer;enemy.mGameMap=&map;
  ownerPlayer.mGameMap=&map;enemyPlayer.mGameMap=&map;map.seats.push_back(&owner);map.seats.push_back(&enemy);
- Tile centre,floor;TileData centreData,floorData;
+ // Both tiles sit inside the 3x3 core, so the H6 gold ring never sees them
+ Tile centre(3,4),floor(4,4);RoomTreasuryTileData centreData,floorData;
  RoomDungeonTemple heart(&map,&owner);addFloor(heart,&centre,&floor,&centreData,&floorData);
  PlainRoom other(&map,&owner);map.mRooms.push_back(&other);map.mRooms.push_back(&heart);
 
@@ -225,7 +245,7 @@ int main(){
  // Save and load of the destroyed state
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
  check(save.str().find("HeartHealth10000 0")!=std::string::npos,"destroyed state is written with the room");
- RoomDungeonTemple loaded(&map,&owner);TileData loadedCentre,loadedFloor;addFloor(loaded,&centre,&floor,&loadedCentre,&loadedFloor);
+ RoomDungeonTemple loaded(&map,&owner);RoomTreasuryTileData loadedCentre,loadedFloor;addFloor(loaded,&centre,&floor,&loadedCentre,&loadedFloor);
  check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==0,"destroyed heart loads");
  std::string next;save>>next;check(next=="[/Room]","load keeps the room boundary");
  map.mRooms.clear();map.mRooms.push_back(&other);map.mRooms.push_back(&loaded);
@@ -240,7 +260,7 @@ int main(){
  check(count(server,&ownerPlayer,ServerNotificationType::chatServer)==chatBefore+1,"a loaded game with a ruin runs the defeat chain once, as it did without a room");
 
  // A damaged living heart still loads with its object
- {RoomDungeonTemple living(&map,&owner);TileData livingCentre,livingFloor;addFloor(living,&centre,&floor,&livingCentre,&livingFloor);
+ {RoomDungeonTemple living(&map,&owner);RoomTreasuryTileData livingCentre,livingFloor;addFloor(living,&centre,&floor,&livingCentre,&livingFloor);
   std::stringstream damaged("250\nHeartHealth10000 100\n[/Room]\n");
   check(living.importFromStream(damaged)&&living.getHP(nullptr)==100,"damaged heart round trip");
   int asked=g_removeAsked;living.updateActiveSpots(&map);living.restoreInitialEntityState();
@@ -248,7 +268,7 @@ int main(){
   check(g_removeAsked==asked&&errorsLogged==errorsBefore,"living loaded heart is not asked to disappear");}
 
  // Removal is retried while a seat that saw the heart has no vision on it
- {map.mRooms.clear();RoomDungeonTemple late(&map,&owner);TileData lateCentre,lateFloor;addFloor(late,&centre,&floor,&lateCentre,&lateFloor);
+ {map.mRooms.clear();RoomDungeonTemple late(&map,&owner);RoomTreasuryTileData lateCentre,lateFloor;addFloor(late,&centre,&floor,&lateCentre,&lateFloor);
   map.mRooms.push_back(&late);late.updateActiveSpots(&map);
   g_removeAllowed=false;late.takeHeartDamage(&attacker,99999,0,0,0,&centre);
   late.doUpkeep();late.doUpkeep();
@@ -257,7 +277,7 @@ int main(){
   check(late.objectsRemoved==1&&late.mTempleObject==nullptr&&late.mCoveredTiles.size()==2,"object released once removal is allowed, floor kept");}
 
  // Editor is unchanged
- {map.editor=true;RoomDungeonTemple edit(&map,&owner);TileData editCentre,editFloor;addFloor(edit,&centre,&floor,&editCentre,&editFloor);
+ {map.editor=true;RoomDungeonTemple edit(&map,&owner);RoomTreasuryTileData editCentre,editFloor;addFloor(edit,&centre,&floor,&editCentre,&editFloor);
   check(edit.removeCoveredTile(&floor)&&edit.mCoveredTiles.size()==1,"editor can still remove floor tiles");
   edit.updateActiveSpots(&map);check(edit.added==1&&edit.mTempleObject!=nullptr,"editor still places the heart object");
   std::stringstream level;edit.exportToStream(level);check(level.str().find("Heart")==std::string::npos,"editor maps do not persist heart health");
@@ -271,7 +291,10 @@ methods = temple[temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):te
 methods += '\n'.join(function(temple, sig) for sig in (
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
-    'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
+    'void RoomDungeonTemple::doUpkeep(', 'Tile* RoomDungeonTemple::getHeartTile(',
+    'Tile* RoomDungeonTemple::getRingCenterTile(', 'bool RoomDungeonTemple::isTreasuryTile(',
+    'void RoomDungeonTemple::updateTreasuryMeshesForTile(',
+    'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream(', 'void RoomDungeonTemple::updateActiveSpots(',
     'void RoomDungeonTemple::updateTemplePosition(', 'void RoomDungeonTemple::restoreInitialEntityState('))
 methods += '\n' + '\n'.join([
@@ -281,6 +304,7 @@ methods += '\n' + '\n'.join([
     function(seat, 'void Seat::addMana('),
     function(seat_data, 'uint32_t SeatData::getNbRooms(').replace('SeatData::', 'Seat::'),
     function(player, 'void Player::notifyNoMoreDungeonTemple('),
+    function(treasury_object, 'const char* TreasuryObject::getMeshNameForGold('),
 ])
 probe = probe.replace('INLINE_METHODS', inline).replace('RECORD', function(player_header, 'inline void recordHeartDestroyed('))
 probe = probe.replace('HEART_OBJECT', function(temple, 'class DungeonHeartObject :'))
