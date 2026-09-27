@@ -36,6 +36,7 @@ helpers = '\n'.join(function(name) for name in [
     'void createKeeperHandPoses(', 'void createKeeperHandDigAnimation(',
     'void createKeeperHandBuildAnimation(', 'Ogre::Vector3 getHammerStrikePoint(',
     'void alignKeeperHandPointer(',
+    'void setCreatureDecayProgress(',
     'void addPickaxePrism('])
 helpers += '\n' + source[source.index('const char* const IDLE_HAND_ANIMATIONS[]'):source.index('void addPickaxePrism(')]
 methods = '\n'.join(function(name) for name in [
@@ -57,6 +58,9 @@ probe = r'''
 #include <OgreTagPoint.h>
 #include <OgreKeyFrame.h>
 #include <OgreSubMesh.h>
+#include <algorithm>
+#include <map>
+#include <vector>
 #include <limits>
 #include <OgreRTShaderSystem.h>
 #include <Bites/OgreSGTechniqueResolverListener.h>
@@ -68,6 +72,11 @@ namespace Random { unsigned choice=0; unsigned Uint(unsigned low,unsigned high) 
     if(low!=0 || high!=1) throw std::runtime_error("idle random range"); return choice;
 } }
 HELPERS
+struct Creature {
+    Ogre::AnimationState* getAnimationState() const { return nullptr; }
+    std::string getOgreNamePrefix() const { return ""; }
+    std::string getName() const { return ""; }
+};
 struct RenderManager {
     Ogre::SceneManager* mSceneManager = nullptr;
     Ogre::Viewport* mViewport = nullptr;
@@ -83,6 +92,7 @@ struct RenderManager {
     Ogre::ManualObject* mHandIdleProp = nullptr;
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     std::string mHandPose = "Idle";
+    std::map<Creature*, std::vector<Ogre::MaterialPtr>> mCreatureDecayMaterials;
     void rrSetHandPose(bool, bool, bool = false);
     void rrPlayDigAnimation();
     void rrPlayBuildAnimation();
