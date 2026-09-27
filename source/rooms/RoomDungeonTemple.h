@@ -18,6 +18,7 @@
 #ifndef ROOMDUNGEONTEMPLE_H
 #define ROOMDUNGEONTEMPLE_H
 
+#include "rooms/HeartHealthTier.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
@@ -40,9 +41,11 @@ public:
 
     virtual void restoreInitialEntityState() override;
 
+    virtual void doUpkeep() override;
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
-    
+
 protected:
     virtual void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
 
@@ -56,8 +59,21 @@ private:
     //! \brief The reference of the temple object
     BuildingObject* mTempleObject;
 
+    //! \brief The heart health tier the currently displayed mTempleObject was built for.
+    HeartHealthTier mCurrentHeartTier;
+
     //! \brief Updates the temple mesh position.
     void updateTemplePosition();
+
+    //! \brief Computes the heart's current health tier from its tiles' HP.
+    HeartHealthTier computeHeartHealthTier() const;
+
+    //! \brief Returns the mesh name to use for the given heart health tier.
+    static const std::string& getMeshNameForHeartTier(HeartHealthTier tier);
+
+    //! \brief Rebuilds the temple object if the heart's health tier changed since
+    //! the last check.
+    void checkHeartHealthTier();
 };
 
 #endif // ROOMDUNGEONTEMPLE_H

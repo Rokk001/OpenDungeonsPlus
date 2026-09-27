@@ -1,0 +1,48 @@
+// DungeonHeartObject: the three health-tier variants of the animated heart
+// (assets-src/DungeonHeartObject.blend). Kept in its own script so the
+// existing DungeonTemple.material (used by the room platform mesh) is left
+// untouched.
+material DungeonHeartHealthy
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.05 0.0 0.08 1.0
+            diffuse 0.30 0.02 0.42 1.0
+            specular 0.3 0.3 0.3 1.0 12.5
+            emissive 0.33 0.03 0.51 1.0
+        }
+    }
+}
+
+material DungeonHeartDamaged
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.05 0.05 0.05 1.0
+            diffuse 0.30 0.27 0.30 1.0
+            specular 0.15 0.15 0.15 1.0 12.5
+            emissive 0.03 0.02 0.03 1.0
+        }
+    }
+}
+
+material DungeonHeartCritical
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.0 0.0 0.0 1.0
+            diffuse 0.03 0.02 0.035 1.0
+            specular 0.1 0.1 0.1 1.0 12.5
+            emissive 0.03 0.0 0.01 1.0
+        }
+    }
+}

@@ -35,6 +35,12 @@ const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
 namespace
 {
+//! \brief The heart's three health-tier mesh variants. Each has its own rig and
+//! a baked "Pulse" animation running at a tier-specific speed (see assets-src/DungeonHeartObject.blend).
+const std::string HeartMeshNameHealthy = "DungeonHeartObjectHealthy";
+const std::string HeartMeshNameDamaged = "DungeonHeartObjectDamaged";
+const std::string HeartMeshNameCritical = "DungeonHeartObjectCritical";
+
 class RoomDungeonTempleFactory : public RoomFactory
 {
     TileVisual getVisualType() const override
@@ -102,7 +108,8 @@ static RoomRegister reg(new RoomDungeonTempleFactory);
 
 RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
-    mTempleObject(nullptr)
+    mTempleObject(nullptr),
+    mCurrentHeartTier(HeartHealthTier::healthy)
 {
     setMeshName("DungeonTemple");
 }
@@ -157,8 +164,66 @@ void RoomDungeonTemple::updateTemplePosition()
     if (centralTile == nullptr)
         return;
 
-    mTempleObject = new PersistentObject(getGameMap(), *this, "DungeonTempleObject", centralTile, 0.0, false);
+    mCurrentHeartTier = computeHeartHealthTier();
+    mTempleObject = new PersistentObject(getGameMap(), *this, getMeshNameForHeartTier(mCurrentHeartTier),
+        centralTile, 0.0, false, 1.0f, "Pulse", true);
     addBuildingObject(centralTile, mTempleObject);
+}
+
+HeartHealthTier RoomDungeonTemple::computeHeartHealthTier() const
+{
+    uint32_t nbTiles = numCoveredTiles();
+    if(nbTiles == 0)
+        return HeartHealthTier::critical;
+
+    double maxHP = static_cast<double>(nbTiles) * Building::DEFAULT_TILE_HP;
+    double fraction = getHP(nullptr) / maxHP;
+
+    return computeHeartHealthTierFromFraction(fraction);
+}
+
+const std::string& RoomDungeonTemple::getMeshNameForHeartTier(HeartHealthTier tier)
+{
+    switch(tier)
+    {
+        case HeartHealthTier::damaged:
+            return HeartMeshNameDamaged;
+        case HeartHealthTier::critical:
+            return HeartMeshNameCritical;
+        case HeartHealthTier::healthy:
+        default:
+            return HeartMeshNameHealthy;
+    }
+}
+
+void RoomDungeonTemple::checkHeartHealthTier()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    if(mTempleObject == nullptr)
+        return;
+
+    HeartHealthTier tier = computeHeartHealthTier();
+    if(tier == mCurrentHeartTier)
+        return;
+
+    // The heart's health tier changed: rebuild the temple object with the
+    // matching mesh/rig/animation. updateTemplePosition() recomputes the tier
+    // itself and keeps the object on the same central tile.
+    updateTemplePosition();
+}
+
+void RoomDungeonTemple::doUpkeep()
+{
+    Room::doUpkeep();
+
+    // If the room just got removed (no more covered tiles), there is nothing
+    // left to check a heart tier for.
+    if(numCoveredTiles() == 0)
+        return;
+
+    checkHeartHealthTier();
 }
 
 void RoomDungeonTemple::destroyMeshLocal(NodeType nt)
