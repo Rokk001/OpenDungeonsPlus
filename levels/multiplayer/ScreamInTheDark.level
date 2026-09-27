@@ -4979,16 +4979,32 @@ ProtectDungeonTemple	NULL
 9	5
 [/Room]
 [Room]
-1	DungeonTemple2	2	9
+1	DungeonTemple2	2	25
+91	5
+91	6
+91	7
+91	8
+91	9
+92	5
 92	6
 92	7
 92	8
+92	9
+93	5
 93	6
 93	7
 93	8
+93	9
+94	5
 94	6
 94	7
 94	8
+94	9
+95	5
+95	6
+95	7
+95	8
+95	9
 [/Room]
 [Room]
 4	Portal2	2	9
@@ -5029,16 +5045,32 @@ ProtectDungeonTemple	NULL
 9	5
 [/Room]
 [Room]
-1	DungeonTemple4	4	9
+1	DungeonTemple4	4	25
+91	91
+91	92
+91	93
+91	94
+91	95
+92	91
 92	92
 92	93
 92	94
+92	95
+93	91
 93	92
 93	93
 93	94
+93	95
+94	91
 94	92
 94	93
 94	94
+94	95
+95	91
+95	92
+95	93
+95	94
+95	95
 [/Room]
 [Room]
 4	Portal4	4	9
