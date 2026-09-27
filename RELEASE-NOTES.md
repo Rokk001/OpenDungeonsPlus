@@ -9,6 +9,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 ### Unreleased
 
 * Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
+* Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
 
 ### Version 0.7.3 - 20 September 2026
 
