@@ -9,6 +9,9 @@ plugins.cfg
 plugins_d.cfg
 resources.cfg
 
+docs/internal
+HANDOVER.md
+
 *.bin
 *.dll
 *.exe
