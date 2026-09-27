@@ -176,7 +176,7 @@ BuildingObject* Building::getBuildingObjectFromTile(Tile* tile)
     return obj;
 }
 
-Tile* Building::getCentralTile()
+Tile* Building::getCentralTile() const
 {
     if (mCoveredTiles.empty() && mCoveredTilesDestroyed.empty())
         return nullptr;
