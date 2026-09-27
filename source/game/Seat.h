@@ -180,6 +180,9 @@ public:
 
     bool takeMana(double mana);
 
+    //! \brief Adds mana to the seat's mana, clamped between 0 and the maximum per seat
+    void addMana(double mana);
+
     inline Ogre::Vector3 getStartingPosition() const
     { return Ogre::Vector3(static_cast<Ogre::Real>(mStartingX), static_cast<Ogre::Real>(mStartingY), 0); }
 
@@ -211,6 +214,17 @@ public:
     //! \brief Returns the first (default) worker class definition.
     inline const CreatureDefinition* getWorkerClassToSpawn()
     { return mDefaultWorkerClass; }
+
+    //! \brief True while an enemy creature is within range of the seat's living heart.
+    //! Server side only, not saved with the level: the first turn after a load
+    //! decides the defence state again.
+    inline bool getHeartDefenceActive() const
+    { return mHeartDefenceActive; }
+
+    //! \brief True while the seat's heart has lost health during the current heart
+    //! defence: the runners head to the heart instead of rallying the fighters.
+    inline bool getHeartDefenceHeartDamaged() const
+    { return mHeartDefenceHeartDamaged; }
 
     //! \brief Returns true if the given seat is allied. False otherwise
     bool isAlliedSeat(const Seat *seat) const;
@@ -361,6 +375,19 @@ private:
 
     //! \brief The total amount of gold coins mined by workers under this seat's control.
     int mGoldMined;
+
+    //! \brief Seconds accumulated towards the next worker the living dungeon heart
+    //! creates for this seat. Server side only, not saved with the level.
+    double mAutoWorkerTimer;
+
+    //! \brief True while an enemy creature is within range of the seat's living heart.
+    //! Server side only, not saved with the level.
+    bool mHeartDefenceActive;
+
+    //! \brief True while the seat's heart has lost health during the current heart
+    //! defence, so the runners head to the heart instead of rallying the fighters.
+    //! Server side only, not saved with the level.
+    bool mHeartDefenceHeartDamaged;
 
     //! \brief The actual color that this color index translates into.
     Ogre::ColourValue mColorValue;

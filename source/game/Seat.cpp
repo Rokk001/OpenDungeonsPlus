@@ -72,6 +72,9 @@ Seat::Seat(GameMap* gameMap) :
     mGameMap(gameMap),
     mPlayer(nullptr),
     mGoldMined(0),
+    mAutoWorkerTimer(0.0),
+    mHeartDefenceActive(false),
+    mHeartDefenceHeartDamaged(false),
     mDefaultWorkerClass(nullptr),
     mTeamIndex(0),
     mIsDebuggingVision(false),
@@ -333,6 +336,16 @@ bool Seat::takeMana(double mana)
 
     mMana -= mana;
     return true;
+}
+
+void Seat::addMana(double mana)
+{
+    mMana += mana;
+    if (mMana < 0.0)
+        mMana = 0.0;
+    double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
+    if (mMana > maxMana)
+        mMana = maxMana;
 }
 
 bool Seat::sortForMapSave(Seat* s1, Seat* s2)

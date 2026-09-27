@@ -1356,10 +1356,14 @@ void GameMode::refreshMainUI()
     tempSS.str("");
     tempSS << mySeat->getMana();
     widget->setText(tempSS.str());
+    // Show the mana income and the worker upkeep per second separately, the colour follows
+    // the net of both
     tempSS.str("");
-    tempSS << (mySeat->getManaDelta() >= 0 ? "+" : "") << mySeat->getManaDelta();
+    tempSS << "+" << static_cast<long>(mySeat->getManaIncomePerSecond())
+        << " / -" << static_cast<long>(mySeat->getManaUpkeepPerSecond());
     widget->getChild("Change")->setText(tempSS.str());
-    widget->getChild("Change")->setProperty("TextColours", mySeat->getManaDelta() >= 0 ? "FF7FE3A6" : "FFFF4848");
+    widget->getChild("Change")->setProperty("TextColours",
+        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() ? "FF7FE3A6" : "FFFF4848");
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
