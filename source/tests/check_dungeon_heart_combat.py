@@ -22,9 +22,15 @@ probe = r'''
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
+#define OD_LOG_ERR(x)
+#define OD_LOG_INF(x)
+namespace Ogre {typedef double Real;struct Vector3{Real x,y,z;Vector3(Real a,Real b,Real c):x(a),y(b),z(c){}};}
+struct TileData {virtual ~TileData()=default;};
+struct RoomTreasuryTileData:TileData {int mGoldInTile=0;std::string mMeshOfTile;};
 struct Tile{int getX()const{return 3;}int getY()const{return 4;}};
 struct Player {bool human=true;bool lost=false;int conqueror=-1,heartX=-1,heartY=-1,recorded=0;bool getIsHuman()const{return human;}bool getHasLost()const{return lost;}
  void recordHeartDestroyed(int c,int x,int y){conqueror=c;heartX=x;heartY=y;++recorded;}};
@@ -52,12 +58,13 @@ struct Creature:GameEntity {CreatureDefinition definition;Creature(Seat* s,bool 
  const CreatureDefinition* getDefinition()const{return &definition;}};
 struct GameMap {bool editor=false;int fights=0;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}};
+struct TreasuryObject {TreasuryObject(GameMap*,int){}void addToGameMap(){}void createMesh(){}void setPosition(Ogre::Vector3){}};
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}bool notifyRemoveAsked(){return true;}};
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
 struct Building {double floorHP=250;double getHP(Tile*)const{return floorHP;}};
 struct Room:Building {
- GameMap* map;Seat* seat;int dead=0,removed=0,upkeep=0,objectsRemoved=0;std::vector<Tile*> mCoveredTiles;
- void removeAllBuildingObjects(){++objectsRemoved;}
+ GameMap* map;Seat* seat;int dead=0,removed=0,upkeep=0,objectsRemoved=0;std::vector<Tile*> mCoveredTiles;std::map<Tile*,TileData*> mTileData;
+ void removeAllBuildingObjects(){++objectsRemoved;}void removeBuildingObject(Tile*){}
  static Tile* nineTiles(){static Tile tiles[9];return tiles;}
  Room(GameMap* m,Seat* s):map(m),seat(s){for(int i=0;i<9;++i)mCoveredTiles.push_back(nineTiles()+i);}virtual ~Room()=default;
  unsigned numCoveredTiles()const{return static_cast<unsigned>(mCoveredTiles.size());}
@@ -74,7 +81,8 @@ struct Room:Building {
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}
 };
 struct RoomDungeonTemple:Room {
- BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;
+ BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;bool mGoldChanged=false;
+ bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
  static const double HEART_MAX_HP;static const double HEART_HEAL_PER_SECOND;double getHeartMaxHP()const;
@@ -88,6 +96,8 @@ struct PersistentObject:BuildingObject {
 };
 METHODS
 HEART_OBJECT;
+bool RoomDungeonTemple::isTreasuryTile(Tile*)const{return false;}
+void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*){}
 int main(){int checks=0,failures=0;
  auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};
@@ -196,7 +206,7 @@ int main(){int checks=0,failures=0;
   check(server.queue.empty(),"no warning in editor mode");}
  {Player p;Seat s{1,&p};BuildingObject noTile{nullptr};RoomDungeonTemple h(&map,&s);h.mTempleObject=&noTile;
   h.takeHeartDamage(&hitter,99999,0,0,0,nullptr);check(p.recorded==1&&p.conqueror==5&&p.heartX==-1&&p.heartY==-1,"unknown centre tile is recorded as -1/-1");}
- map.editor=true;RoomDungeonTemple edit(&map,&owner);edit.mCoveredTiles={&floor};
+ map.editor=true;RoomDungeonTemple edit(&map,&owner);edit.mCoveredTiles={&floor};edit.mTileData[&floor]=new RoomTreasuryTileData;
  check(edit.removeCoveredTile(&floor),"editor editing preserved");
  std::stringstream level;edit.exportToStream(level);check(level.str().find("Heart")==std::string::npos,"editor maps do not persist combat damage");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
