@@ -1354,7 +1354,7 @@ void GameMode::refreshMainUI()
 
     widget = guiSheet->getChild(Gui::DISPLAY_MANA);
     tempSS.str("");
-    tempSS << mySeat->getMana();
+    tempSS << static_cast<long>(mySeat->getMana());
     widget->setText(tempSS.str());
     // Show the mana income and the worker upkeep per second separately, the colour follows
     // the net of both
