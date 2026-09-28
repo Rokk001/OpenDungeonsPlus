@@ -58,7 +58,7 @@ struct Room {
  std::map<Tile*,TileData*> mTileData;std::map<Tile*,BuildingObject*> mBuildingObjects;
  std::vector<Creature*> mCreaturesUsingRoom;
  Room(GameMap* m):map(m){}virtual ~Room(){for(auto& p:mTileData)delete p.second;removeAllBuildingObjects();}
- GameMap* getGameMap(){return map;}bool getIsOnServerMap(){return map->server;}
+ GameMap* getGameMap()const{return map;}bool getIsOnServerMap(){return map->server;}
  int getType(){return temple?1:0;}int getSeat(){return 1;}
  void setIsOnMap(bool){}void setName(const std::string&){}void setSeat(int){}
  void createMesh(){}void splitRoom(Room&,const std::vector<Tile*>&){}
@@ -67,7 +67,7 @@ struct Room {
  static void reorderRoomTiles(std::vector<Tile*>& tiles){std::sort(tiles.begin(),tiles.end(),
  [](Tile* a,Tile* b){return a->x==b->x?a->y<b->y:a->x<b->x;});}
  virtual void checkForSplit();virtual void updateActiveSpots(GameMap* =nullptr){}
- Tile* getCentralTile();
+ Tile* getCentralTile() const;
  void removeAllBuildingObjects(){for(auto& p:mBuildingObjects)delete p.second;mBuildingObjects.clear();}
  void addBuildingObject(Tile* t,BuildingObject* b){mBuildingObjects[t]=b;}
 };
@@ -76,6 +76,7 @@ struct PersistentObject:BuildingObject {
 };
 struct RoomDungeonTemple:Room {
  BuildingObject* mTempleObject=nullptr;
+ double getHP(Tile*)const{return 10000.0;}
  RoomDungeonTemple(GameMap* m):Room(m){temple=true;}
  double getHP(Tile*)const{return 1.0;} // a living heart; the destroyed one is covered by check_heart_ruin.py
  void updateActiveSpots(GameMap* =nullptr) override;void updateTemplePosition();
