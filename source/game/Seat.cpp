@@ -72,6 +72,7 @@ Seat::Seat(GameMap* gameMap) :
     mGameMap(gameMap),
     mPlayer(nullptr),
     mGoldMined(0),
+    mAutoWorkerTimer(0.0),
     mDefaultWorkerClass(nullptr),
     mTeamIndex(0),
     mIsDebuggingVision(false),
