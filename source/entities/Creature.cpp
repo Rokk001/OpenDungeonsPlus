@@ -422,13 +422,8 @@ void Creature::exportToStream(std::ostream& os) const
 
     os << "\t" << mWeaponDropDeath;
 
-    uint32_t nbCreatureEffects = 0;
-    for(EntityParticleEffect* effect : mEntityParticleEffects)
-    {
-        if(effect->getEntityParticleEffectType() == EntityParticleEffectType::creature)
-            ++nbCreatureEffects;
-    }
-    os << "\t" << nbCreatureEffects;
+    uint32_t nbEffects = mEntityParticleEffects.size();
+    os << "\t" << nbEffects;
     for(EntityParticleEffect* effect : mEntityParticleEffects)
     {
         // We only save creature particle effects. The other are expected to be re-created
@@ -613,6 +608,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
 
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
+    exportProgressToPacket(os, seat);
 }
 
 void Creature::importFromPacket(ODPacket& is)
@@ -667,6 +663,7 @@ void Creature::importFromPacket(ODPacket& is)
 
     importMoodFromPacket(is);
     importActivityFromPacket(is);
+    importProgressFromPacket(is);
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
 
@@ -877,27 +874,6 @@ void Creature::doUpkeep()
     // We apply creature effects if any
     for(auto it =  mEntityParticleEffects.begin(); it != mEntityParticleEffects.end();)
     {
-        EntityParticleEffect* entityEffect = *it;
-        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
-        {
-            if(entityEffect->mNbTurnsEffect < 0)
-            {
-                ++it;
-                continue;
-            }
-
-            if(entityEffect->mNbTurnsEffect > 0)
-            {
-                --entityEffect->mNbTurnsEffect;
-                ++it;
-                continue;
-            }
-
-            delete entityEffect;
-            it = mEntityParticleEffects.erase(it);
-            continue;
-        }
-
         CreatureParticleEffect* effect = static_cast<CreatureParticleEffect*>(*it);
         if(effect->mEffect->upkeepEffect(*this))
         {
@@ -1081,6 +1057,11 @@ void Creature::doUpkeep()
     ++mNbTurnsWithoutBattle;
 
     bool isWarmUp = false;
+    if(mAttackRecoveryTurns > 0)
+    {
+        --mAttackRecoveryTurns;
+        mNeedFireRefresh = true;
+    }
     // We use creature skills if we can
     for(CreatureSkillData& skillData : mSkillData)
     {
@@ -1736,6 +1717,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     os << seatPrisonId;
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
+    exportProgressToPacket(os, seat);
 }
 
 void Creature::updateFromPacket(ODPacket& is)
@@ -1784,6 +1766,45 @@ void Creature::updateFromPacket(ODPacket& is)
 
     importMoodFromPacket(is);
     importActivityFromPacket(is);
+    importProgressFromPacket(is);
+}
+
+double Creature::getExperienceProgress() const
+{
+    if(!getIsOnServerMap())
+        return mExperienceProgress;
+    if(mLevel >= MAX_LEVEL)
+        return 1.0;
+    const double needed = mDefinition->getXPNeededWhenLevel(mLevel);
+    return needed > 0.0 ? std::max(0.0, std::min(1.0, mExp / needed)) : 0.0;
+}
+
+void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
+{
+    if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
+        return;
+    os << getExperienceProgress() << mAttackRecoveryTurns << mAttackRecoveryDuration
+       << mAttackRecoverySerial;
+}
+
+void Creature::importProgressFromPacket(ODPacket& is)
+{
+    mHasProgressInformation = false;
+    if(!ODClient::getSingleton().supportsCreatureProgress())
+        return;
+    double experience;
+    uint32_t remaining, duration, serial;
+    OD_ASSERT_TRUE(is >> experience >> remaining >> duration >> serial);
+    if(!std::isfinite(experience) || experience < 0.0 || experience > 1.0 || remaining > duration)
+    {
+        OD_LOG_ERR("Invalid creature progress for " + getName());
+        return;
+    }
+    mExperienceProgress = experience;
+    mAttackRecoveryTurns = remaining;
+    mAttackRecoveryDuration = duration;
+    mAttackRecoverySerial = serial;
+    mHasProgressInformation = true;
 }
 
 void Creature::exportMoodToPacket(ODPacket& os, const Seat* seat) const
@@ -2284,6 +2305,7 @@ void Creature::receiveExp(double experience)
         return;
 
     mExp += experience;
+    mNeedFireRefresh = true;
 }
 
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
@@ -2310,6 +2332,12 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         &entityAttack, &tileAttack, ko, notifyPlayerIfHit);
     skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
     skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
+
+    // Both timers count down together; either can postpone the next attack.
+    mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);
+    mAttackRecoveryTurns = mAttackRecoveryDuration;
+    ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
 
     // Fighting is tiring
     decreaseWakefulness(0.5);
@@ -3302,13 +3330,6 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
     mEntityParticleEffects.push_back(particleEffect);
 
     mNeedFireRefresh = true;
-}
-
-void Creature::addParticleEffect(const std::string& effectScript, uint32_t nbTurns)
-{
-    EntityParticleEffect* effect = new EntityParticleEffect(
-        nextParticleSystemsName(), effectScript, nbTurns);
-    mEntityParticleEffects.push_back(effect);
 }
 
 bool Creature::removeCreatureEffect(CreatureEffect* effectForDeletion)

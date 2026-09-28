@@ -1630,6 +1630,7 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
 
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+
     // Recover releases missed while focus was elsewhere without changing the toggle.
     if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))
         updateCreatureIndicatorAlt(OIS::KC_LMENU, false);
