@@ -176,6 +176,25 @@ void createKeeperHandPoses(Ogre::Entity* hand)
         hand->getAllAnimationStates()->createAnimationState("PointTransition", 0, duration);
 }
 
+void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* animation)
+{
+    const float weight = animation->getAnimationName() == "Point" ? 1.0f :
+        (animation->getAnimationName() == "PointTransition" ?
+            animation->getTimePosition() / animation->getLength() : 0.0f);
+    Ogre::SceneNode* model = hand->getParentSceneNode();
+    model->setPosition(Ogre::Vector3::ZERO);
+    if(weight == 0.0f)
+        return;
+
+    hand->_updateAnimation();
+    const Ogre::Bone* index = hand->getSkeleton()->getBone("Index3");
+    // Centre of the distal fingertip cap in Keeperhand.mesh, in Index3 bind space.
+    const Ogre::Vector3 tipLocal(-0.000284253f, 0.0155774f, 0.000218656f);
+    const Ogre::Vector3 tip = index->_getDerivedPosition() +
+        index->_getDerivedOrientation() * (index->_getDerivedScale() * tipLocal);
+    model->setPosition(-(model->getOrientation() * tip) * weight);
+}
+
 void createKeeperHandDigAnimation(Ogre::Entity* hand)
 {
     Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
@@ -1016,6 +1035,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             Ogre::Entity* ent = mSceneManager->getEntity("keeperHandEnt");
             mHandAnimationState = setEntityAnimation(ent, mHandPose, true);
         }
+        alignKeeperHandPointer(mSceneManager->getEntity("keeperHandEnt"), mHandAnimationState);
     }
     rrUpdateHeldCreature();
 }
@@ -2825,6 +2845,80 @@ void RenderManager::moveCursor(float relX, float relY)
     }
 
     mHandKeeperNode->setPosition(mFactorWidth * (relX - 0.5f), mFactorHeight * (0.5f - relY), -KEEPER_HAND_POS_Z);
+}
+
+Ogre::FloatRect RenderManager::getHandCursorBounds(float relX, float relY) const
+{
+    Ogre::FloatRect bounds(relX, relY, relX, relY);
+    if(mHandKeeperNode == nullptr || mHandKeeperHandVisibility != 0 || mViewport == nullptr)
+        return bounds;
+
+    Ogre::Entity* hand = mSceneManager->getEntity("keeperHandEnt");
+    const Ogre::Camera* camera = mViewport->getCamera();
+    const float height = KEEPER_HAND_POS_Z * Ogre::Math::Tan(camera->getFOVy() * 0.5f) * 2.0f;
+    const Ogre::Vector3 origin(height * camera->getAspectRatio() * (relX - 0.5f),
+        height * (0.5f - relY), -KEEPER_HAND_POS_Z);
+    const Ogre::SceneNode* model = hand->getParentSceneNode();
+    if(hand->getAnimationState("Point")->getEnabled())
+    {
+        // The mesh box includes empty space around the animated pointing pose.
+        hand->addSoftwareAnimationRequest(false);
+        try
+        {
+            hand->_updateAnimation();
+        }
+        catch(...)
+        {
+            hand->removeSoftwareAnimationRequest(false);
+            throw;
+        }
+        hand->removeSoftwareAnimationRequest(false);
+        for(unsigned int sub = 0; sub < hand->getNumSubEntities(); ++sub)
+        {
+            Ogre::SubEntity* part = hand->getSubEntity(sub);
+            if(!part->isVisible())
+                continue;
+            Ogre::VertexData* data = part->getSubMesh()->useSharedVertices ?
+                hand->_getSkelAnimVertexData() : part->_getSkelAnimVertexData();
+            const Ogre::VertexElement* element = data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+            Ogre::HardwareVertexBufferSharedPtr buffer = data->vertexBufferBinding->getBuffer(element->getSource());
+            Ogre::HardwareBufferLockGuard lock(buffer, Ogre::HardwareBuffer::HBL_READ_ONLY);
+            unsigned char* bytes = static_cast<unsigned char*>(lock.pData);
+            for(size_t i = 0; i < data->vertexCount; ++i)
+            {
+                float* vertex = nullptr;
+                element->baseVertexPointerToElement(bytes +
+                    (data->vertexStart + i) * buffer->getVertexSize(), &vertex);
+                const Ogre::Vector3 local = model->getPosition() + model->getOrientation() *
+                    (model->getScale() * Ogre::Vector3(vertex[0], vertex[1], vertex[2]));
+                const Ogre::Vector3 projected = camera->getProjectionMatrix() * (origin +
+                    mHandKeeperNode->getOrientation() * (mHandKeeperNode->getScale() * local));
+                const float x = (projected.x + 1.0f) * 0.5f;
+                const float y = (1.0f - projected.y) * 0.5f;
+                bounds.left = std::min(bounds.left, x);
+                bounds.top = std::min(bounds.top, y);
+                bounds.right = std::max(bounds.right, x);
+                bounds.bottom = std::max(bounds.bottom, y);
+            }
+        }
+        return bounds;
+    }
+    const Ogre::AxisAlignedBox::Corners corners = hand->getBoundingBox().getAllCorners();
+    for(int i = 0; i < 8; ++i)
+    {
+        // Overlay's parent already follows the world camera; use camera-local transforms.
+        const Ogre::Vector3 local = model->getPosition() +
+            model->getOrientation() * (model->getScale() * corners[i]);
+        const Ogre::Vector3 projected = camera->getProjectionMatrix() * (origin +
+            mHandKeeperNode->getOrientation() * (mHandKeeperNode->getScale() * local));
+        const float x = (projected.x + 1.0f) * 0.5f;
+        const float y = (1.0f - projected.y) * 0.5f;
+        bounds.left = std::min(bounds.left, x);
+        bounds.top = std::min(bounds.top, y);
+        bounds.right = std::max(bounds.right, x);
+        bounds.bottom = std::max(bounds.bottom, y);
+    }
+    return bounds;
 }
 
 void RenderManager::moveWorldCoords(Ogre::Real x, Ogre::Real y)
