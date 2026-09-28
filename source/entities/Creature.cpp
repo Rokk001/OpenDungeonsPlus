@@ -1416,7 +1416,8 @@ bool Creature::handleIdleAction()
     if(setDestination(tileDest))
         return false;
 
-    return true;
+    // Retry failed wandering next turn, not repeatedly in this upkeep.
+    return false;
 }
 
 bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
@@ -2364,7 +2365,7 @@ void Creature::receiveExp(double experience)
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
-    // Turn to face the entity we are attacking and set the animation state to Attack.
+    // Keep ranged skills visually distinct, including shots at adjacent targets.
     const Ogre::Vector3& pos = getPosition();
     const Ogre::Vector3 target = entityAttack.getObjectType() == GameEntityType::creature ?
         entityAttack.getPosition() : Ogre::Vector3(tileAttack.getX(), tileAttack.getY(), 0);
