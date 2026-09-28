@@ -236,6 +236,28 @@ void createKeeperHandDigAnimation(Ogre::Entity* hand)
         hand->getAllAnimationStates()->createAnimationState("DigSwing", 0, duration);
 }
 
+void alignKeeperHandPickaxePointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
+    Ogre::ManualObject* pickaxe)
+{
+    Ogre::SceneNode* model = hand->getParentSceneNode();
+    model->setPosition(Ogre::Vector3::ZERO);
+    const std::string& name = animation->getAnimationName();
+    if(pickaxe == nullptr || (name != "Dig" && name != "DigSwing"))
+        return;
+
+    Ogre::SkeletonInstance* skeleton = hand->getSkeleton();
+    Ogre::Animation* pose = skeleton->getAnimation("Dig");
+    skeleton->reset();
+    pose->apply(skeleton, 0);
+    skeleton->_updateTransforms();
+    Ogre::TagPoint* grip = static_cast<Ogre::TagPoint*>(pickaxe->getParentNode());
+    const Ogre::Vector3 tip = grip->_getFullLocalTransform() * Ogre::Vector3(0.085f, 0.043f, 0);
+    model->setPosition(-(model->getOrientation() * (model->getScale() * tip)));
+    skeleton->setAnimationState(*hand->getAllAnimationStates());
+    skeleton->_updateTransforms();
+    hand->_updateAnimation();
+}
+
 void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>& points,
     float depth, const Ogre::ColourValue& colour, const Ogre::FloatRect& surface,
     const Ogre::FloatRect& textureArea)
@@ -1084,7 +1106,8 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     mHandPickaxe->end();
     // The closed fingers wrap around the shaft across the palm, below its back.
     Ogre::TagPoint* toolGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandPickaxe,
-        Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
+        Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
+        Ogre::Quaternion(Ogre::Degree(55.0f), Ogre::Vector3::UNIT_Y), Ogre::Vector3(0,0.030f,-0.009f));
     toolGrip->setScale(0.6f, 0.6f, 0.6f);
     mHandPickaxe->setVisible(false);
     mHandKeeperNode->setScale(Ogre::Vector3::UNIT_SCALE * KEEPER_HAND_POS_Z);
@@ -1554,6 +1577,8 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         Creature* creature = it->mCreature;
         it = mCreatureGetUpAnimations.erase(it);
         creature->setAnimationState(EntityAnimation::idle_anim, true);
+        alignKeeperHandPickaxePointer(mSceneManager->getEntity("keeperHandEnt"),
+            mHandAnimationState, mHandPickaxe);
     }
     rrUpdateHeldCreature();
 }
