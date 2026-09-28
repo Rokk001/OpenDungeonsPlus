@@ -23,7 +23,10 @@
 #include "render/GroundShadowCameraSetup.h"
 
 #include "camera/CullingManager.h"
+#include "gamemap/RoomObjectBounds.h"
+#include "gamemap/RoomObjectStep.h"
 
+#include "entities/BuildingObject.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntity.h"
@@ -682,6 +685,7 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
 
 RenderManager::~RenderManager()
 {
+    cancelCreatureStep();
     cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
     clearChickenFeatherEffects();
@@ -974,6 +978,7 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
         mSceneManager->destroySceneNode("DungeonGroundUnderlayNode");
         Ogre::MeshManager::getSingleton().remove("DungeonGroundUnderlayMesh", "Graphics");
     }
+    cancelCreatureStep();
     cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
     clearChickenFeatherEffects();
@@ -1342,6 +1347,9 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         mSceneManager->destroySceneNode(it->mNode);
         it = mChickenFeatherEffects.erase(it);
     }
+
+    for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
+        updateCreatureStep(*it++);
 
     std::vector<Creature*> finishedFeeding;
     for(CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
@@ -2223,6 +2231,17 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     node->setPosition(renderedMovableEntity->getPosition());
     node->roll(Ogre::Degree(renderedMovableEntity->getRotationAngle()));
 
+    if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
+        for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+            if(meshName == bounds.name)
+            {
+                const Ogre::Vector2 placedScale = static_cast<BuildingObject*>(renderedMovableEntity)->getFurnitureScale();
+                const RoomObjectPath::FurnitureScale scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
+                    RoomObjectPath::FurnitureScale{placedScale.x, placedScale.y};
+                node->setScale(scale.x, scale.y, 1.0f);
+                break;
+            }
+
 
     // Keep the narrow arrow shaft visible at dungeon-camera scale without
     // lengthening the projectile or changing its gameplay collision path.
@@ -2380,6 +2399,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
 
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    cancelCreatureStep(curCreature);
     cancelCreatureSleepAnimation(curCreature);
     cancelCreatureFeedingAnimation(curCreature);
     clearCreatureCombatEffects(curCreature);
@@ -2558,6 +2578,7 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
 {
     if(curEntity->getObjectType() == GameEntityType::creature)
     {
+        cancelCreatureStep(static_cast<Creature*>(curEntity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureSleepAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureDropAnimation(static_cast<Creature*>(curEntity));
@@ -2814,6 +2835,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
 
     if(dropCreature != nullptr)
     {
+        if(anim == EntityAnimation::sleep_anim || anim == EntityAnimation::eat_chicken_anim || anim == EntityAnimation::getup_anim)
+            cancelCreatureStep(dropCreature);
         cancelCreatureSleepAnimation(dropCreature);
         cancelCreatureFeedingAnimation(dropCreature);
     }
@@ -3736,6 +3759,69 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
     }
          
     entity->getEntityNode()->setPosition(position);
+    if(entity->getObjectType() == GameEntityType::creature)
+        updateCreatureStep(static_cast<Creature*>(entity));
+}
+
+void RenderManager::updateCreatureStep(Creature* creature)
+{
+    Ogre::SceneNode* node = creature->getEntityNode();
+    if(node == nullptr || !creature->getIsOnMap())
+    {
+        cancelCreatureStep(creature);
+        return;
+    }
+    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0)
+        return;
+    const Ogre::Vector3 position = creature->getPosition();
+    const Ogre::Vector2 point(position.x, position.y);
+    const Ogre::Vector2 direction(creature->getWalkDirection().x, creature->getWalkDirection().y);
+    float lift = 0.0f;
+    for(RenderedMovableEntity* candidate : creature->getGameMap()->getRenderedMovableEntities())
+    {
+        if(candidate->getObjectType() != GameEntityType::buildingObject || candidate->getEntityNode() == nullptr)
+            continue;
+        for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+        {
+            if(candidate->getMeshName() != bounds.name || !std::isfinite(bounds.maxZ))
+                continue;
+            const Ogre::Vector2 placed = static_cast<BuildingObject*>(candidate)->getFurnitureScale();
+            const RoomObjectPath::FurnitureScale scale = placed == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
+                RoomObjectPath::FurnitureScale{placed.x, placed.y};
+            const float angle = float(candidate->getRotationAngle()) * 0.01745329252f;
+            RoomObjectPath::Obstacle obstacle{{bounds.minX * scale.x, bounds.minY * scale.y},
+                {bounds.maxX * scale.x, bounds.maxY * scale.y},
+                {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};
+            obstacle.maximumHeight = candidate->getPosition().z + bounds.maxZ;
+            const float rise = RoomObjectPath::prepareLowStep(obstacle, creature->getMeshName(),
+                1.0f + 0.02f * creature->getLevel(), position.z);
+            if(!creature->isMoving() && !obstacle.contains(point, direction))
+                continue;
+            lift = std::max(lift, RoomObjectPath::lowStepElevation(obstacle, point, direction, rise));
+            break;
+        }
+    }
+    node->setPosition(position + Ogre::Vector3(0, 0, lift));
+    if(lift > 0.0f)
+        mSteppingCreatures.insert(creature);
+    else
+        mSteppingCreatures.erase(creature);
+}
+
+void RenderManager::cancelCreatureStep(Creature* creature)
+{
+    for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
+    {
+        Creature* current = *it;
+        if(creature != nullptr && creature != current)
+        {
+            ++it;
+            continue;
+        }
+        if(current->getEntityNode() != nullptr)
+            current->getEntityNode()->setPosition(current->getPosition());
+        it = mSteppingCreatures.erase(it);
+    }
 }
 
 void RenderManager::rrMoveMapLightFlicker(MapLight* mapLight, const Ogre::Vector3& position)

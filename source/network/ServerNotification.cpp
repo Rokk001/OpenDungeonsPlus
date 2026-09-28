@@ -152,6 +152,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "creatureCombatImpact";
         case ServerNotificationType::creatureChickenFeeding:
             return "creatureChickenFeeding";
+        case ServerNotificationType::trapProductionQueue:
+            return "trapProductionQueue";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));

@@ -84,6 +84,7 @@ enum class ClientNotificationType
     // Append new messages to preserve existing network and replay identifiers.
     changeNick,
     askHandDropAll,
+
     askTrapProductionQueue,
     askMoveTrapProductionOrder
 };
