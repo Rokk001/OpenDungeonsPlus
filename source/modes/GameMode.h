@@ -35,9 +35,10 @@ class Window;
 }
 
 class Creature;
-class MiniMapDrawnFull;
 class CreaturePanel;
 class GameEntity;
+class MiniMapDrawnFull;
+class MenuModeLoad;
 
 enum class SpellType;
 enum class SkillType;
@@ -123,6 +124,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
     void onFrameEnded(const Ogre::FrameEvent& evt) override;
+    void receiveEventShortNotice(EventMessage* event) override;
 
     //! \brief Called when the game mode is activated
     //! Used to call the corresponding Gui Sheet.
@@ -164,6 +166,10 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
     bool hideOptionsWindow(const CEGUI::EventArgs& = {});
     bool toggleOptionsWindow(const CEGUI::EventArgs& = {});
+    bool closeOptionsWindow(const CEGUI::EventArgs& = {});
+    bool showEndGameFromOptions(const CEGUI::EventArgs& = {});
+    void setOptionsPage(bool endGame);
+    bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
     void toggleAllowTileDebugWindow(){ showTileDebugWindow = !showTileDebugWindow ;};
     //! \brief Refreshes the player current goals.
@@ -214,7 +220,9 @@ protected:
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
     bool saveGame(const CEGUI::EventArgs& e = {});
+    bool loadGame(const CEGUI::EventArgs& e = {});
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
+    void initializeSettingsNavigation();
 
     //! \brief Handle the keyboard input in normal mode
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
@@ -229,6 +237,24 @@ private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
     void refreshHeldCreatureIcons();
+    bool shouldExpireEventMessages() const override { return false; }
+    void showEventMessages();
+    void showEventMessage(EventMessage* message, bool raiseWindow);
+    void dismissEventMessage(EventMessage* message);
+    bool onEventMessagesClicked(const CEGUI::EventArgs& arg);
+    void updateEventMessageIndicator(float elapsed);
+    struct MessageTab
+    {
+        EventMessage* message;
+        CEGUI::Window* window;
+        bool read;
+        float position;
+    };
+    std::vector<MessageTab> mMessageTabs;
+    EventMessage* mSelectedEventMessage = nullptr;
+    float mEventMessageFlashTime = 0.0f;
+
+    std::unique_ptr<MenuModeLoad> mLoadMenu;
     //! \brief Whether the pending exit confirmation should leave to the desktop
     //! rather than back to the main menu. Set by the button that opened the
     //! confirmation popup.
@@ -248,6 +274,7 @@ private:
 
     //! \brief The settings window.
     SettingsWindow mSettings;
+    bool mReturningToSettingsNavigation = false;
 
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window
@@ -313,6 +340,8 @@ private:
     bool toggleQuery(const CEGUI::EventArgs& e);
     GameEntity* getQueryTarget(Tile* tile) const;
     void handlePlayerActionQuery();
+    bool toggleSell(const CEGUI::EventArgs& e);
+    void handlePlayerActionSell();
     void updateSelectedTiles();
 
     //! \brief Builds the player settings window

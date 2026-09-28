@@ -29,6 +29,11 @@ user-data directory.
 The [creature portrait exporter](tools/portraits/README.md) builds a standalone
 tool for rendering the configured creature models to PNG files.
 
+Use Load Game in the game options, or F8 while hosting a local game, to open
+the saved-game browser; Back preserves the current game until another save is
+selected. Loaded single-player saves resume their stored side without a new
+seat-selection step. Long save descriptions can be scrolled.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
