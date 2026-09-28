@@ -18,6 +18,7 @@
 #ifndef ROOMDUNGEONTEMPLE_H
 #define ROOMDUNGEONTEMPLE_H
 
+#include "rooms/HeartHealthTier.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 // The treasury tile data is a complete type here so the covariant createTileData() override
@@ -113,6 +114,9 @@ private:
     //! game with an already critical heart warns once again at the next hit.
     bool mCriticalWarningSent;
 
+    //! \brief The heart health tier the currently displayed mTempleObject was built for.
+    HeartHealthTier mCurrentHeartTier;
+
     //! \brief Updates the temple mesh position.
     void updateTemplePosition();
 
@@ -125,6 +129,16 @@ private:
 
     //! True when the gold of a ring tile changed and its mesh needs a refresh in doUpkeep().
     bool mGoldChanged;
+
+    //! \brief Computes the heart's current health tier from its health fraction.
+    HeartHealthTier computeHeartHealthTier() const;
+
+    //! \brief Returns the mesh name to use for the given heart health tier.
+    static const std::string& getMeshNameForHeartTier(HeartHealthTier tier);
+
+    //! \brief Rebuilds the temple object if the heart's health tier changed since
+    //! the last check.
+    void checkHeartHealthTier();
 };
 
 #endif // ROOMDUNGEONTEMPLE_H

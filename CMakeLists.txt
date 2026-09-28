@@ -441,6 +441,7 @@ set(OD_SOURCEFILES
     ${SRC}/renderscene/RenderSceneWait.cpp
     
     ${SRC}/rooms/FencedRoom.cpp
+    ${SRC}/rooms/HeartHealthTier.cpp
     ${SRC}/rooms/Room.cpp
     ${SRC}/rooms/RoomArena.cpp
     ${SRC}/rooms/RoomBridge.cpp
