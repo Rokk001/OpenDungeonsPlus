@@ -29,6 +29,8 @@ probe = r'''
 struct Node {Node* parent=nullptr;bool visible=true;Node* getParentSceneNode(){return parent;}void removeChild(Node* n){n->parent=nullptr;}void addChild(Node* n){if(n->parent)throw std::runtime_error("duplicate parent");n->parent=this;}void setVisible(bool v){visible=v;}};
 struct RenderManager {
  Node hand,grip;Node* mHandKeeperNode=&hand;Node* mHeldCreatureGrip=&grip;uint32_t mHandKeeperHandVisibility=0;
+ Node prop;Node* mHandIdleProp=&prop;bool idlePlaying=false;
+ void rrCancelIdleHandAnimation(){idlePlaying=false;prop.setVisible(false);}
  RenderManager(){hand.addChild(&grip);}
  VISIBLE
  void rrToggleHandSelectorVisibility();
@@ -39,8 +41,11 @@ int main(){int checks=0;try{
  auto check=[&](bool value){++checks;if(!value)throw std::runtime_error("menu hand restoration failed");};
  RenderManager r;
  for(int repeat=0;repeat<20;++repeat){
+  r.idlePlaying=true;r.prop.setVisible(true);
   r.rrToggleHandSelectorVisibility();check(!r.isKeeperHandVisible() && !r.hand.visible && !r.grip.parent);
+  check(!r.idlePlaying&&!r.prop.visible);
   resetMenu(r);check(r.isKeeperHandVisible() && r.hand.visible && r.grip.parent==&r.hand);
+  check(!r.prop.visible);
   resetMenu(r);check(r.isKeeperHandVisible() && r.hand.visible && r.grip.parent==&r.hand);
  }
  std::cout<<"CHECKS="<<checks<<" FAILURES=0\n";

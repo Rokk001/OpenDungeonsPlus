@@ -47,6 +47,12 @@ Research rooms, traps and spells through three levels in the skill tree; complet
 
 Creatures route through usable gaps around solid room furniture, including corner-aligned beds, without treating other creatures as route blockers.
 
+The hand holds a pointer-aligned hammer while building rooms, traps and doors; an eligible build request reuses the digging hand angle and strike movement.
+
+Press Alt to toggle creature health and needs indicators on or off.
+
+After thirty seconds without input, the empty hand randomly checks a wristwatch or plays with a yo-yo while retaining its normal angle; the index finger follows each yo-yo pull, and any input immediately returns the hand to the current action.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
