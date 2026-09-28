@@ -841,3 +841,15 @@ std::string SkillManager::getSelectedButton(const PlayerSelection& playerSelecti
     const SkillDef* skill = getSkillManager().mSkills.at(static_cast<uint32_t>(skills[type]));
     return skill->getGuiPath() + skill->mButtonName;
 }
+
+void SkillManager::listAllRooms(const std::function<void(RoomType, const std::string&)>& func)
+{
+    for(const SkillDef* skill : getSkillManager().mSkills)
+    {
+        if(skill == nullptr || skill->getSkillFamily() != SkillFamily::rooms)
+            continue;
+
+        const SkillDefRoom* room = static_cast<const SkillDefRoom*>(skill);
+        func(room->mRoomType, room->getGuiPath() + room->mButtonName);
+    }
+}
