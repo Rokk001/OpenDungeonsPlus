@@ -419,7 +419,7 @@ GameMode::GameMode(ModeManager *modeManager):
     );
 
     //Exit confirmation box
-    auto cancelExitWindow =
+    std::function<bool(const CEGUI::EventArgs&)> cancelExitWindow =
           [this](const CEGUI::EventArgs&)
           {
                   popupExit(false);
@@ -571,8 +571,8 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     resetIdleHand();
     AbstractApplicationMode::mouseMoved(arg);
 
-    auto mouseEvent = toSFMLMouseMove(arg);
-    auto mouseDelta = MouseMoveEvent{mPreviousMousePosition.x - mouseEvent.x, mPreviousMousePosition.y - mouseEvent.y};
+    MouseMoveEvent mouseEvent = toSFMLMouseMove(arg);
+    MouseMoveEvent mouseDelta = MouseMoveEvent{mPreviousMousePosition.x - mouseEvent.x, mPreviousMousePosition.y - mouseEvent.y};
     mPreviousMousePosition = mouseEvent;
 
     if (!isConnected())
@@ -2672,7 +2672,7 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
     if(mIsSkillWindowOpen && localPlayerSeat->getGuiSkillNeedsRefresh())
     {
         // We check if the temporary current pending list changed.
-        for(auto it = mSkillPending.begin(); it != mSkillPending.end();)
+        for(std::vector<SkillType>::iterator it = mSkillPending.begin(); it != mSkillPending.end();)
         {
             SkillType resType = *it;
             if(localPlayerSeat->getSkillLevel(resType) == mSkillEditLevels[resType])
@@ -3422,7 +3422,7 @@ bool GameMode::skillButtonTreeClicked(SkillType type)
     if(std::find(skillNotAllowed.begin(), skillNotAllowed.end(), type) != skillNotAllowed.end())
         return false;
 
-    auto it = std::find(mSkillPending.begin(), mSkillPending.end(), type);
+    std::vector<SkillType>::iterator it = std::find(mSkillPending.begin(), mSkillPending.end(), type);
     if(it != mSkillPending.end())
     {
         // The skill is pending. We remove it as well as all its dependencies

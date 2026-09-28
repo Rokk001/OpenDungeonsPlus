@@ -875,7 +875,7 @@ void Creature::doUpkeep()
     }
 
     // We apply creature effects if any
-    for(auto it =  mEntityParticleEffects.begin(); it != mEntityParticleEffects.end();)
+    for(std::vector<EntityParticleEffect*>::iterator it =  mEntityParticleEffects.begin(); it != mEntityParticleEffects.end();)
     {
         CreatureParticleEffect* effect = static_cast<CreatureParticleEffect*>(*it);
         if(effect->mEffect->upkeepEffect(*this))
@@ -3296,7 +3296,7 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
 bool Creature::removeCreatureEffect(CreatureEffect* effectForDeletion)
 {
     mNeedFireRefresh = false;
-    for(auto it =  mEntityParticleEffects.begin(); it != mEntityParticleEffects.end(); ++it)
+    for(std::vector<EntityParticleEffect*>::iterator it =  mEntityParticleEffects.begin(); it != mEntityParticleEffects.end(); ++it)
     {
         CreatureParticleEffect* effect = static_cast<CreatureParticleEffect*>(*it);
         if(effect->mEffect == effectForDeletion)

@@ -4255,8 +4255,8 @@ std::string RenderManager::consoleListAnimationsForMesh(const std::string& meshN
         ret += "\nBone: " + boneName;
     }
 #else
-    auto bones = objectEntity->getSkeleton()->getBones();
-    for(const auto b : bones)
+    Ogre::Skeleton::BoneList bones = objectEntity->getSkeleton()->getBones();
+    for(const Ogre::Bone* b : bones)
     {
         if(b)
         {
@@ -4750,10 +4750,10 @@ std::string RenderManager::setMaterialOpacity(const std::string& materialName, f
     }
 
     // Loop over the techniques for the new material
-    for (auto i = 0; i < newMaterial->getNumTechniques(); ++i)
+    for (int i = 0; i < newMaterial->getNumTechniques(); ++i)
     {
         Ogre::Technique* technique = newMaterial->getTechnique(i);
-        for(auto j = 0; j < technique->getNumPasses(); ++j)
+        for(int j = 0; j < technique->getNumPasses(); ++j)
         {
             // Set alpha value for all passes
             Ogre::Pass* pass = technique->getPass(j);

@@ -124,7 +124,7 @@ GameEntity::GameEntity(
 
 GameEntity::~GameEntity()
 {
-    for (auto* e : mEntityParticleEffects)
+    for (EntityParticleEffect* e : mEntityParticleEffects)
     {
         delete e;
     };
@@ -255,7 +255,7 @@ void GameEntity::firePickupEntity(Player* playerPicking)
         }
     }
 
-    for(auto it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
+    for(std::vector<GameEntityListener*>::iterator it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
     {
         GameEntityListener* listener = *it;
         if(listener->notifyPickedUp(this))
@@ -316,7 +316,7 @@ void GameEntity::fireDropEntity(Player* playerPicking, Tile* tile)
         }
     }
 
-    for(auto it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
+    for(std::vector<GameEntityListener*>::iterator it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
     {
         GameEntityListener* listener = *it;
         if(listener->notifyDropped(this))
@@ -525,7 +525,7 @@ std::string GameEntity::nextParticleSystemsName()
 
 void GameEntity::clientUpkeep()
 {
-    for(auto it = mEntityParticleEffects.begin(); it != mEntityParticleEffects.end();)
+    for(std::vector<EntityParticleEffect*>::iterator it = mEntityParticleEffects.begin(); it != mEntityParticleEffects.end();)
     {
         EntityParticleEffect* effect = *it;
         // We check if it is a permanent effect
@@ -574,7 +574,7 @@ void GameEntity::addGameEntityListener(GameEntityListener* listener)
 
 void GameEntity::removeGameEntityListener(GameEntityListener* listener)
 {
-    auto it = std::find(mGameEntityListeners.begin(), mGameEntityListeners.end(), listener);
+    std::vector<GameEntityListener*>::iterator it = std::find(mGameEntityListeners.begin(), mGameEntityListeners.end(), listener);
     if(it == mGameEntityListeners.end())
     {
         OD_LOG_ERR("Entity=" + listener->getListenerName() + " not listening entity=" + getName() + " but wants to stop listening");
@@ -586,7 +586,7 @@ void GameEntity::removeGameEntityListener(GameEntityListener* listener)
 
 void GameEntity::fireEntityDead()
 {
-    for(auto it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
+    for(std::vector<GameEntityListener*>::iterator it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
     {
         GameEntityListener* listener = *it;
         if(listener->notifyDead(this))
@@ -601,7 +601,7 @@ void GameEntity::fireEntityDead()
 
 void GameEntity::fireEntityRemoveFromGameMap()
 {
-    for(auto it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
+    for(std::vector<GameEntityListener*>::iterator it = mGameEntityListeners.begin(); it != mGameEntityListeners.end();)
     {
         GameEntityListener* listener = *it;
         if(listener->notifyRemovedFromGameMap(this))
