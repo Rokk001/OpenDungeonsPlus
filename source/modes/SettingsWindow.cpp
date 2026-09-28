@@ -20,6 +20,7 @@
 #include "gamemap/MiniMap.h"
 #include "network/ODClient.h"
 #include "camera/CameraManager.h"
+#include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "utils/ConfigManager.h"
@@ -44,11 +45,13 @@
 #include <algorithm>
 #include <exception>
 #include <map>
+#include <sstream>
 
-SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow):
+SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui):
     mSettingsWindow(nullptr),
     mApplyWindow(nullptr),
-    mRootWindow(rootWindow)
+    mRootWindow(rootWindow),
+    mGui(gui)
 {
     if (rootWindow == nullptr)
     {
@@ -146,7 +149,15 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow):
         )
     );
 
+    addEventConnection(
+        mSettingsWindow->getChild("MainTabControl/Video/VideoSP/UIScaleCombobox")->subscribeEvent(
+            CEGUI::Combobox::EventListSelectionAccepted,
+            CEGUI::Event::Subscriber(&SettingsWindow::onUiScaleChanged, this)
+        )
+    );
+
     initConfig();
+    mGui.registerWindowHierarchy(mApplyWindow);
 }
 
 SettingsWindow::~SettingsWindow()
@@ -332,6 +343,32 @@ void SettingsWindow::initConfig()
         vsCheckBox->setSelected((vsync.currentValue == "Yes"));
     }
 
+    CEGUI::Combobox* uiScaleCb = static_cast<CEGUI::Combobox*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
+    uiScaleCb->setReadOnly(true);
+    uiScaleCb->resetList();
+    int configuredUiScale = 100;
+    std::istringstream uiScaleParser(config.getGameValue(Config::UI_SCALE, "100", false));
+    if(!(uiScaleParser >> configuredUiScale))
+        configuredUiScale = 100;
+    configuredUiScale = std::max(static_cast<int>(Gui::MIN_UI_SCALE_PERCENT),
+        std::min(static_cast<int>(Gui::MAX_UI_SCALE_PERCENT), configuredUiScale));
+    configuredUiScale = (configuredUiScale + 5) / 10 * 10;
+    for(uint32_t uiScale = Gui::MIN_UI_SCALE_PERCENT;
+        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += 10)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
+            Helper::toString(uiScale) + "%", uiScale);
+        item->setSelectionBrushImage(selImg);
+        uiScaleCb->addItem(item);
+        if(static_cast<int>(uiScale) == configuredUiScale)
+        {
+            uiScaleCb->setItemSelectState(item, true);
+            uiScaleCb->setText(item->getText());
+        }
+    }
+    mGui.setUserScalePercent(static_cast<float>(configuredUiScale));
+
     //! First of all, clear up the previously created windows.
     CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
     CEGUI::Window* parentWindow = mSettingsWindow->getChild("MainTabControl/Video/VideoSP/");
@@ -371,13 +408,13 @@ void SettingsWindow::initConfig()
 
         // The text next to the combobox
         CEGUI::DefaultWindow* videoCbText = static_cast<CEGUI::DefaultWindow*>(videoTab->createChild("OD/StaticText", optionName + "_Text"));
-        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, 155 + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 30));
+        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 34));
         videoCbText->setText(optionName + ": ");
         videoCbText->setProperty("FrameEnabled", "False");
         videoCbText->setProperty("BackgroundEnabled", "False");
 
         CEGUI::Combobox* videoCb = static_cast<CEGUI::Combobox*>(videoTab->createChild("OD/Combobox", optionName));
-        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, 160 + offset), CEGUI::UDim(0.5, -20),
+        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.5, -20),
                          CEGUI::UDim(0, config.possibleValues.size() * 17 + 30));
         videoCb->setReadOnly(true);
         videoCb->setSortingEnabled(true);
@@ -401,8 +438,10 @@ void SettingsWindow::initConfig()
             }
             ++cbIndex;
         }
-        offset += 30;
+        offset += 40;
     }
+
+    mGui.registerWindowHierarchy(mSettingsWindow);
 }
 
 bool SettingsWindow::saveConfig()
@@ -459,6 +498,12 @@ bool SettingsWindow::saveConfig()
     CEGUI::Slider* volumeSlider = static_cast<CEGUI::Slider*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/MusicSlider"));
     config.setAudioValue(Config::MUSIC_VOLUME, Helper::toString(volumeSlider->getCurrentValue()));
+
+    CEGUI::Combobox* uiScaleCb = static_cast<CEGUI::Combobox*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
+    CEGUI::ListboxItem* uiScaleItem = uiScaleCb->getSelectedItem();
+    if(uiScaleItem != nullptr)
+        config.setGameValue(Config::UI_SCALE, Helper::toString(uiScaleItem->getID()));
 
     CEGUI::ToggleButton* dynamicShadowsCheckBox = static_cast<CEGUI::ToggleButton*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/DynamicShadowsCheckbox"));
@@ -692,6 +737,16 @@ bool SettingsWindow::onMusicVolumeChanged(const CEGUI::EventArgs&)
     CEGUI::Slider* volumeSlider = static_cast<CEGUI::Slider*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/MusicSlider"));
     setMusicVolumeValue(volumeSlider->getCurrentValue());
+    return true;
+}
+
+bool SettingsWindow::onUiScaleChanged(const CEGUI::EventArgs&)
+{
+    CEGUI::Combobox* uiScaleCb = static_cast<CEGUI::Combobox*>(
+        mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
+    CEGUI::ListboxItem* selectedItem = uiScaleCb->getSelectedItem();
+    if(selectedItem != nullptr)
+        mGui.setUserScalePercent(static_cast<float>(selectedItem->getID()));
     return true;
 }
 
