@@ -3142,6 +3142,21 @@ void Creature::fireCombatImpact(bool weaponClash, bool bodyDamage,
     }
 }
 
+void Creature::fireChickenFeeding(const std::string& chickenName,
+    const Ogre::Vector3& chickenPosition)
+{
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureChickenFeeding, seat->getPlayer());
+        notification->mPacket << getName() << chickenName << chickenPosition;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
@@ -3625,4 +3640,3 @@ void Creature::normalizeAmbient()
     RenderManager::getSingleton().rrNormalizeAmbient(this);
 
 }
-
