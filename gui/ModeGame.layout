@@ -15,7 +15,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="HorzFormatting" value="Tiled" />
             <Window type="OD/ResourceDisplay" name="GoldDisplay" >
-                <Property name="TextColours" value="FFFFCE00" />
+                <Property name="TextColours" value="FFF6CB62" />
                 <Property name="Area" value="{{0,204},{0,2},{0,400},{0,44}}" />
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -36,7 +36,7 @@
                 </Window>
             </Window>
             <Window type="OD/ResourceDisplay" name="ManaDisplay" >
-                <Property name="TextColours" value="FF00C880" />
+                <Property name="TextColours" value="FF7FE3A6" />
                 <Property name="Area" value="{{0,4},{0,2},{0,200},{0,44}}" />
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -49,7 +49,7 @@
                     <Property name="Font" value="MedievalSharp-8" />
                     <Property name="Area" value="{{0,64},{0,22},{1,-4},{0,42}}" />
                     <Property name="Text" value="+0" />
-                    <Property name="TextColours" value="FF00C880" />
+                    <Property name="TextColours" value="FF7FE3A6" />
                     <Property name="HorzFormatting" value="LeftAligned" />
                     <Property name="VertFormatting" value="CentreAligned" />
                     <Property name="FrameEnabled" value="False" />
@@ -61,7 +61,7 @@
                     <Property name="Image" value="OpenDungeonsIcons/ManaBadge" />
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
-                    <Property name="TooltipText" value="Dungeon Heart Health" />
+                    <Property name="TooltipText" value="Dungeon heart health bar" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />

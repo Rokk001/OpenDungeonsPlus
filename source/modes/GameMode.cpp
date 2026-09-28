@@ -197,6 +197,8 @@ GameMode::GameMode(ModeManager *modeManager):
 
     addEventConnection(mRootWindow->getChild("MiniMapZoomButton")->subscribeEvent(
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::zoomMiniMap, this)));
+    addEventConnection(mRootWindow->getChild(Gui::DISPLAY_MANA)->getChild("Icon")->subscribeEvent(
+        CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::clickHeartBadge, this)));
     addEventConnection(mRootWindow->getChild("ResearchButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSkillWindow, this)));
     for(const char* name : {"ProductionButton", "GameOptionsWindow/ProductionButton"})
@@ -1421,7 +1423,7 @@ void GameMode::refreshMainUI()
     tempSS.str("");
     tempSS << (mySeat->getManaDelta() >= 0 ? "+" : "") << mySeat->getManaDelta();
     widget->getChild("Change")->setText(tempSS.str());
-    widget->getChild("Change")->setProperty("TextColours", mySeat->getManaDelta() >= 0 ? "FF00C880" : "FFFF4848");
+    widget->getChild("Change")->setProperty("TextColours", mySeat->getManaDelta() >= 0 ? "FF7FE3A6" : "FFFF4848");
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
@@ -1621,6 +1623,17 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
     return true;
 }
 
+bool GameMode::clickHeartBadge(const CEGUI::EventArgs& arg)
+{
+    const CEGUI::MouseEventArgs& mouse = static_cast<const CEGUI::MouseEventArgs&>(arg);
+    if(mouse.button != CEGUI::RightButton)
+        return false;
+    // focusRoom does nothing when the local player has no living heart
+    if(!cameraInputBlocked())
+        focusRoom(RoomType::dungeonTemple);
+    return true;
+}
+
 void GameMode::updateMapDetail()
 {
     CEGUI::Window* map = mRootWindow->getChild("MapWindow/MapImage");
@@ -1805,14 +1818,11 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(heartBadge.mMaxHP > 0.0)
     {
         std::ostringstream heartText;
-        heartText << "Dungeon Heart: " << static_cast<int64_t>(heartBadge.mHP) << "/"
-            << static_cast<int64_t>(heartBadge.mMaxHP);
+        heartText << "Dungeon heart at " << HeartHealthRing::healthPercent(heartBadge.mHP, heartBadge.mMaxHP)
+            << " %. Right-click moves the view to the heart.";
         CEGUI::Window* heartIcon = mRootWindow->getChild(Gui::DISPLAY_MANA)->getChild("Icon");
-        if(heartIcon->getTooltipText() != heartText.str())
-        {
-            heartIcon->setTooltipText(heartText.str());
+        if(!heartIcon->isUserStringDefined("ContextHelp") || heartIcon->getUserString("ContextHelp") != heartText.str())
             heartIcon->setUserString("ContextHelp", heartText.str());
-        }
     }
 
     // After frameStarted, so that the countdown shown is the one just computed.
