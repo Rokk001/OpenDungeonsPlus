@@ -373,6 +373,11 @@ public:
     //! \note Returns a path for the given creature to the given destination.
     std::list<Tile*> path(const Creature* creature, Tile* destination, bool throughDiggableTiles = false);
 
+    //! \brief The tile a runner of the seat moves to during the heart defence: the heart
+    //! tile while the heart is damaged, otherwise the nearest allied fighter, and the
+    //! heart tile when there is no fighter to rally.
+    Tile* getHeartDefenceTargetTile(Creature& runner, Seat* seat);
+
     //! \brief Loops over the visibleTiles and returns any creature/room/trap in those tiles allied with the given seat
     //! (or if enemyForce is true, is not allied)
     std::vector<GameEntity*> getVisibleForce(const std::vector<Tile*>& visibleTiles, Seat* seat, bool enemyForce);
@@ -692,6 +697,11 @@ private:
     //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
     //! until the seat has four workers. A seat without a living dungeon heart creates none.
     void updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn);
+
+    //! \brief Checks each turn whether an enemy creature is within range of the seat's
+    //! living heart. While one is, the seat's runners defend the heart. The alarm call
+    //! sounds once, when the defence starts, not the combat music.
+    void updateSeatHeartDefense(Seat* seat);
 
     //! \brief Resets the unique numbers
     void resetUniqueNumbers();
