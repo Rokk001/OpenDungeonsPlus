@@ -114,7 +114,10 @@ enum class ServerNotificationType
     roomConstructionEffect,
 
     // Owner-only reply to a production query or reorder request.
-    trapProductionQueue
+    trapProductionQueue,
+
+    // Presentation-only creature melee impact.
+    creatureCombatImpact
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
