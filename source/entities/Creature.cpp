@@ -67,6 +67,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "giftboxes/GiftBoxSkill.h"
 
 #include "modes/GameEditorModeConsole.h"
@@ -423,8 +424,13 @@ void Creature::exportToStream(std::ostream& os) const
 
     os << "\t" << mWeaponDropDeath;
 
-    uint32_t nbEffects = mEntityParticleEffects.size();
-    os << "\t" << nbEffects;
+    uint32_t nbCreatureEffects = 0;
+    for(EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() == EntityParticleEffectType::creature)
+            ++nbCreatureEffects;
+    }
+    os << "\t" << nbCreatureEffects;
     for(EntityParticleEffect* effect : mEntityParticleEffects)
     {
         // We only save creature particle effects. The other are expected to be re-created
@@ -878,6 +884,27 @@ void Creature::doUpkeep()
     // We apply creature effects if any
     for(std::vector<EntityParticleEffect*>::iterator it =  mEntityParticleEffects.begin(); it != mEntityParticleEffects.end();)
     {
+        EntityParticleEffect* entityEffect = *it;
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+        {
+            if(entityEffect->mNbTurnsEffect < 0)
+            {
+                ++it;
+                continue;
+            }
+
+            if(entityEffect->mNbTurnsEffect > 0)
+            {
+                --entityEffect->mNbTurnsEffect;
+                ++it;
+                continue;
+            }
+
+            delete entityEffect;
+            it = mEntityParticleEffects.erase(it);
+            continue;
+        }
+
         CreatureParticleEffect* effect = static_cast<CreatureParticleEffect*>(*it);
         if(effect->mEffect->upkeepEffect(*this))
         {
@@ -900,6 +927,9 @@ void Creature::doUpkeep()
         if(mKoTurnCounter > 0)
             return;
 
+        if(!getGameMap()->isInEditorMode())
+            setAnimationState(EntityAnimation::getup_anim, false,
+                Ogre::Vector3::ZERO, false);
         computeCreatureOverlayMoodValue();
         return;
     }
@@ -2336,9 +2366,13 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
 {
     // Turn to face the entity we are attacking and set the animation state to Attack.
     const Ogre::Vector3& pos = getPosition();
-    Ogre::Vector3 walkDirection(tileAttack.getX() - pos.x, tileAttack.getY() - pos.y, 0);
+    const Ogre::Vector3 target = entityAttack.getObjectType() == GameEntityType::creature ?
+        entityAttack.getPosition() : Ogre::Vector3(tileAttack.getX(), tileAttack.getY(), 0);
+    Ogre::Vector3 walkDirection(target.x - pos.x, target.y - pos.y, 0);
     walkDirection.normalise();
-    setAnimationState(EntityAnimation::attack_anim, false, walkDirection, true);
+    const bool ranged = skillData.mSkill->getRangeMax(this, &entityAttack) > 1.0;
+    setAnimationState(ranged ? EntityAnimation::ranged_attack_anim :
+        EntityAnimation::combat_attack_anim, false, walkDirection, true);
     fireCreatureSound(CreatureSound::Attack);
     setNbTurnsWithoutBattle(0);
 
@@ -2696,6 +2730,8 @@ bool Creature::setDestination(Tile* tile)
     std::vector<Ogre::Vector2> path;
     tileToVector2(result, path, true, 0.0);
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path,true);
+    if(!isMoving() && posTile != tile)
+        return false;
     pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
     return true;
 }
@@ -3175,6 +3211,37 @@ void Creature::fireCreatureSound(CreatureSound sound)
     }
 }
 
+void Creature::fireCombatImpact(bool weaponClash, bool bodyDamage,
+    const Ogre::Vector3& attackerPosition)
+{
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureCombatImpact, seat->getPlayer());
+        notification->mPacket << getName() << weaponClash << bodyDamage
+            << attackerPosition;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
+void Creature::fireChickenFeeding(const std::string& chickenName,
+    const Ogre::Vector3& chickenPosition)
+{
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureChickenFeeding, seat->getPlayer());
+        notification->mPacket << getName() << chickenName << chickenPosition;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
@@ -3318,6 +3385,13 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
     mNeedFireRefresh = true;
 }
 
+void Creature::addParticleEffect(const std::string& effectScript, uint32_t nbTurns)
+{
+    EntityParticleEffect* effect = new EntityParticleEffect(
+        nextParticleSystemsName(), effectScript, nbTurns);
+    mEntityParticleEffects.push_back(effect);
+}
+
 bool Creature::removeCreatureEffect(CreatureEffect* effectForDeletion)
 {
     mNeedFireRefresh = false;
@@ -3392,7 +3466,7 @@ void Creature::correctEntityMovePosition(Ogre::Vector2& position)
     //     position.z += Random::Double(-offset, offset);
 }
 
-void Creature::checkWalkPathValid()
+void Creature::checkWalkPathValid(bool includeWalkDistortion)
 {
     bool stop = false;
     for(const Ogre::Vector2& dest : mWalkQueue)
@@ -3410,6 +3484,10 @@ void Creature::checkWalkPathValid()
             break;
         }
     }
+
+    if(!stop && getIsOnServerMap())
+        stop = RoomObjectNavigation::blocked(*this,
+            std::vector<Ogre::Vector2>(mWalkQueue.begin(), mWalkQueue.end()), includeWalkDistortion);
 
     if(!stop)
         return;
