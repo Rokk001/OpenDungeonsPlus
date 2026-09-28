@@ -26,6 +26,9 @@ Press Print Screen to save a PNG screenshot from menus, dialogs, gameplay or
 the editor; images use the existing timestamped filenames in the configured
 user-data directory.
 
+The [creature portrait exporter](tools/portraits/README.md) builds a standalone
+tool for rendering the configured creature models to PNG files.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
