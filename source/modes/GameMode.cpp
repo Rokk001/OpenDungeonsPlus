@@ -3001,6 +3001,8 @@ void GameMode::updateSelectedTiles()
     const bool roomDemolition = mPlayerSelection.getCurrentAction() == SelectedAction::destroyRoom ||
         (mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding &&
          std::any_of(mPreviewTiles.begin(), mPreviewTiles.end(), [](Tile* tile) { return tile->getIsRoom(); }));
+    const bool digging = mPlayerSelection.getCurrentAction() == SelectedAction::none ||
+        mPlayerSelection.getCurrentAction() == SelectedAction::selectTile;
     if(!mActionTargetValid && !building)
         mPreviewTiles.clear();
     const Ogre::ColourValue colour = mActionTargetValid ? Ogre::ColourValue(0.35f, 0.3f, 1.0f) :
