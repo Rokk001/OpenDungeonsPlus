@@ -27,6 +27,7 @@
 #include "entities/PersistentObject.h"
 #include "entities/SkillEntity.h"
 #include "entities/Tile.h"
+#include "ODApplication.h"
 #include "network/ODPacket.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -140,7 +141,8 @@ class RoomDungeonTempleFactory : public RoomFactory
 static RoomRegister reg(new RoomDungeonTempleFactory);
 }
 
-const double RoomDungeonTemple::HEART_HP_PER_TILE = 10000.0;
+const double RoomDungeonTemple::HEART_MAX_HP = 10000.0;
+const double RoomDungeonTemple::HEART_HEAL_PER_SECOND = 2.5;
 
 RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
@@ -158,7 +160,7 @@ double RoomDungeonTemple::getHP(Tile* tile) const
 
 double RoomDungeonTemple::getHeartMaxHP() const
 {
-    return HEART_HP_PER_TILE * static_cast<double>(numCoveredTiles());
+    return HEART_MAX_HP;
 }
 
 double RoomDungeonTemple::getHeartHealthFraction() const
@@ -251,6 +253,15 @@ void RoomDungeonTemple::doUpkeep()
         removeAllBuildingObjects();
         mTempleObject = nullptr;
     }
+    // A living heart heals up to its maximum; a destroyed one (0) never does
+    if(mHeartHP > 0.0 && mHeartHP < getHeartMaxHP())
+    {
+        mHeartHP = std::min(getHeartMaxHP(),
+            mHeartHP + HEART_HEAL_PER_SECOND / ODApplication::turnsPerSecond);
+        // Healing above the critical level re-arms the warning for the next drop below it
+        if(mHeartHP > 0.11 * getHeartMaxHP())
+            mCriticalWarningSent = false;
+    }
     Room::doUpkeep();
 }
 
@@ -258,7 +269,7 @@ void RoomDungeonTemple::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
     if(!getGameMap()->isInEditorMode())
-        os << "HeartHealth " << getHP(nullptr) << '\n';
+        os << "HeartHealth10000 " << getHP(nullptr) << '\n';
 }
 
 bool RoomDungeonTemple::importFromStream(std::istream& is)
@@ -275,8 +286,16 @@ bool RoomDungeonTemple::importFromStream(std::istream& is)
         double value;
         if(!(is >> marker >> value) || !std::isfinite(value) || value < 0.0)
             return false;
-        if(marker == "HeartHealth")
+        if(marker == "HeartHealth10000")
             mHeartHP = std::min(value, getHeartMaxHP());
+        else if(marker == "HeartHealth")
+        {
+            // Saves from when the heart had 10000 health per room tile: keep the same share of
+            // the fixed maximum.
+            const double oldMaxHP = 10000.0 * static_cast<double>(numCoveredTiles());
+            mHeartHP = oldMaxHP > 0.0
+                ? std::min(1.0, value / oldMaxHP) * getHeartMaxHP() : 0.0;
+        }
         else if(marker == "HeartHP")
         {
             // Saves written before the heart had its own health: the value was measured against

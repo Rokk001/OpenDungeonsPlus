@@ -52,6 +52,7 @@ class ODSocketClient
             mLastTurnAck(-1),
             mHeartHealthSent(-1.0f),
             mHeartHPSent(-1.0),
+            mHeartMessageTurn(-1),
             mPendingTimestamp(-1),
             mSupportsLiveNickname(false),
             mSupportsCreatureMood(false),
@@ -93,6 +94,9 @@ class ODSocketClient
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
         double getHeartHPSent() const { return mHeartHPSent; }
         void setHeartHPSent(double hp) { mHeartHPSent = hp; }
+        //! \brief Turn of the last heartHealth message sent, negative if none
+        int64_t getHeartMessageTurn() const { return mHeartMessageTurn; }
+        void setHeartMessageTurn(int64_t turn) { mHeartMessageTurn = turn; }
         const std::string& getState() {return mState;}
         bool isDataAvailable(int miliseconds=5);
         int32_t getGameTimeMillis()
@@ -148,6 +152,7 @@ class ODSocketClient
         int64_t mLastTurnAck;
         float mHeartHealthSent;
         double mHeartHPSent;
+        int64_t mHeartMessageTurn;
         std::string mState;
 
 

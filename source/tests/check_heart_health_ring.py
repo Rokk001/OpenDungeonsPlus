@@ -81,10 +81,15 @@ struct ODServer {
     static ODServer& getSingleton() {static ODServer server; return server;}
     void queueServerNotification(ServerNotification* n) {mQueue.push_back(n);}
 };
+struct ODApplication {static double turnsPerSecond;};
+double ODApplication::turnsPerSecond = 1.4;
 struct ODSocketClient {
     float mSent;
     double mHPSent;
-    ODSocketClient() : mSent(-1.0f), mHPSent(-1.0) {}
+    int64_t mTurn;
+    ODSocketClient() : mSent(-1.0f), mHPSent(-1.0), mTurn(-1) {}
+    int64_t getHeartMessageTurn() const {return mTurn;}
+    void setHeartMessageTurn(int64_t t) {mTurn = t;}
     float getHeartHealthSent() const {return mSent;}
     void setHeartHealthSent(float f) {mSent = f;}
     double getHeartHPSent() const {return mHPSent;}
@@ -109,6 +114,9 @@ struct Room : Building {
 };
 struct GameMap {
     std::vector<Room*> mRooms;
+    int64_t mTurn;
+    GameMap() : mTurn(0) {}
+    int64_t getTurnNumber() const {return mTurn;}
     const std::vector<Room*>& getRooms() const {return mRooms;}
     bool isInEditorMode() const {return false;}
 };
@@ -117,7 +125,8 @@ struct RoomDungeonTemple : Room {
     double mHeartHP;
     RoomDungeonTemple(GameMap* map, Seat* seat) : Room(RoomType::dungeonTemple, seat), mMap(map), mHeartHP(-1.0) {}
     GameMap* getGameMap() const {return mMap;}
-    static const double HEART_HP_PER_TILE;
+    static const double HEART_MAX_HP;
+    static const double HEART_HEAL_PER_SECOND;
     double getHeartMaxHP() const;
     double getHP(Tile* tile) const override;
     double getHeartHealthFraction() const;
@@ -209,6 +218,9 @@ void checkNotifyRule()
     check(!HeartHealthRing::shouldNotify(1.0f, 0.992f), "less than one point is not sent");
     check(HeartHealthRing::shouldNotify(1.0f, 0.99f), "exactly one point is sent");
     check(HeartHealthRing::shouldNotify(0.5f, 0.489f), "more than one point is sent");
+    check(!HeartHealthRing::isHpMessageDue(0, 1.4) && !HeartHealthRing::isHpMessageDue(1, 1.4), "an HP-only message is not due within a second");
+    check(HeartHealthRing::isHpMessageDue(2, 1.4) && HeartHealthRing::isHpMessageDue(1, 1.0), "an HP-only message is due after a second");
+    check(HeartHealthRing::isHpMessageDue(-5, 1.4), "a turn counter that went backwards counts as due");
     check(HeartHealthRing::shouldNotify(0.005f, 0.0f), "destroyed heart is sent even below one point");
     check(!HeartHealthRing::shouldNotify(0.0f, 0.0f), "destroyed heart is sent only once");
 }
@@ -274,48 +286,84 @@ void checkServer()
             && n->mPacket.kinds[2] == "double" && n->mPacket.kinds[3] == "double",
             "payload order is float healthFraction, bool underAttack, double heart HP, double heart max HP");
         check(n->mPacket.values.size() == 4 && near(n->mPacket.values[0], 1.0) && n->mPacket.values[1] == 0.0
-            && near(n->mPacket.values[2], 90000.0) && near(n->mPacket.values[3], 90000.0),
-            "start message is a full heart of 90000 HP that is not under attack");
+            && near(n->mPacket.values[2], 10000.0) && near(n->mPacket.values[3], 10000.0),
+            "start message is a full heart of 10000 HP that is not under attack");
     }
     queue.mQueue.clear();
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.empty(), "nothing is sent while the health does not change");
 
-    ownHeart.mHeartHP = 89280.0;
+    // Whole HP changes without a percentage point: at most one message per second (1.4 turns)
+    map.mTurn = 1;
+    ownHeart.mHeartHP = 9920.0;
     notifyHeartHealth(&map, &socket, &human);
-    check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[2], 89280.0),
-        "a change below one point is sent too, so that the tooltip shows the exact HP");
+    check(queue.mQueue.empty(), "a change below one point within a second of the last message is held back");
+    map.mTurn = 2;
+    notifyHeartHealth(&map, &socket, &human);
+    check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[2], 9920.0),
+        "a change below one point is sent once a second has passed, so that the tooltip shows the exact HP");
     queue.mQueue.clear();
-    ownHeart.mHeartHP = 89280.4;
+    ownHeart.mHeartHP = 9920.4;
+    map.mTurn = 4;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.empty(), "a change below one whole HP is not sent");
-    ownHeart.mHeartHP = 88920.0;
+    ownHeart.mHeartHP = 9880.0;
     notifyHeartHealth(&map, &socket, &human);
-    check(queue.mQueue.size() == 1, "a change of one point is sent");
+    check(queue.mQueue.size() == 1, "a change of one point is sent at once, even within a second of the last message");
     if(queue.mQueue.size() == 1)
         check(near(queue.mQueue[0]->mPacket.values[0], 0.988) && queue.mQueue[0]->mPacket.values[1] == 1.0,
             "a hit is sent with its fraction and underAttack");
     queue.mQueue.clear();
 
-    ownHeart.mHeartHP = 9000.0;
+    ownHeart.mHeartHP = 1000.0;
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[0], 0.1), "10 percent heart is sent");
     queue.mQueue.clear();
-    ownHeart.mHeartHP = 8640.0;
+    ownHeart.mHeartHP = 960.0;
     notifyHeartHealth(&map, &socket, &human);
-    check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[2], 8640.0),
-        "0.4 point below the last message is sent for the tooltip");
+    check(queue.mQueue.empty(), "0.4 point below the last message is held back within the second");
+    map.mTurn = 5;
+    notifyHeartHealth(&map, &socket, &human);
+    check(queue.mQueue.empty(), "and still held back one turn (0.7 s) after the last message");
+    map.mTurn = 6;
+    notifyHeartHealth(&map, &socket, &human);
+    check(queue.mQueue.size() == 1 && near(queue.mQueue[0]->mPacket.values[2], 960.0),
+        "0.4 point below the last message is sent for the tooltip after a second");
     queue.mQueue.clear();
-    ownHeart.mHeartHP = 180.0;
+
+    // Healing: the whole HP grows every turn, so the tooltip is refreshed every second turn only
+    ownHeart.mHeartHP = 5000.0;
+    map.mTurn = 7;
+    notifyHeartHealth(&map, &socket, &human);
+    queue.mQueue.clear();
+    int healMessages = 0;
+    bool healNeverAttacked = true;
+    for(int turn = 8; turn <= 17; ++turn)
+    {
+        map.mTurn = turn;
+        ownHeart.mHeartHP += 2.5 / 1.4;
+        queue.mQueue.clear();
+        notifyHeartHealth(&map, &socket, &human);
+        healMessages += static_cast<int>(queue.mQueue.size());
+        if(!queue.mQueue.empty())
+            healNeverAttacked = healNeverAttacked && queue.mQueue[0]->mPacket.values[1] == 0.0;
+    }
+    check(healMessages == 5, "healing sends one message every second turn, not one per turn");
+    check(healNeverAttacked, "healing is never reported as an attack");
+    queue.mQueue.clear();
+
+    ownHeart.mHeartHP = 18.0;
+    map.mTurn = 18;
     notifyHeartHealth(&map, &socket, &human);
     queue.mQueue.clear();
     ownHeart.mHeartHP = 0.0;
     notifyHeartHealth(&map, &socket, &human);
-    check(queue.mQueue.size() == 1, "a destroyed heart is sent even below one point");
+    check(queue.mQueue.size() == 1, "a destroyed heart is sent at once, even within a second of the last message");
     if(queue.mQueue.size() == 1)
         check(near(queue.mQueue[0]->mPacket.values[0], 0.0) && queue.mQueue[0]->mPacket.values[1] == 1.0,
             "destroyed heart message has fraction 0");
     queue.mQueue.clear();
+    map.mTurn = 30;
     notifyHeartHealth(&map, &socket, &human);
     notifyHeartHealth(&map, &socket, &human);
     check(queue.mQueue.empty(), "a destroyed heart is not sent again");
@@ -344,7 +392,7 @@ void checkSaveAndLoad()
     Player human(&mine, true);
     GameMap map;
     RoomDungeonTemple saved(&map, &mine);
-    saved.mHeartHP = 9000.0;
+    saved.mHeartHP = 1000.0;
     std::stringstream stream;
     saved.exportToStream(stream);
     stream << "[/Room]\n";
@@ -371,9 +419,10 @@ void checkSaveAndLoad()
     check(near(dead.getHeartHealthFraction(), 0.0), "a room without tiles gives fraction 0");
     RoomDungeonTemple half(&loadedMap, &mine);
     half.mFloorHP = 90.0;
-    half.mHeartHP = 45000.0;
-    check(near(half.getHeartMaxHP(), 90000.0) && near(half.getHeartHealthFraction(), 0.5),
-        "the ring follows the heart's own 90000 health (10000 per tile), not the floor durability");
+    half.mTiles = 25;
+    half.mHeartHP = 5000.0;
+    check(near(half.getHeartMaxHP(), 10000.0) && near(half.getHeartHealthFraction(), 0.5),
+        "the ring follows the heart's own fixed 10000 health, not the floor durability or the number of tiles");
 }
 
 void checkDrawing()
@@ -424,8 +473,7 @@ int main()
 }
 '''
 
-temple_methods = 'const double RoomDungeonTemple::HEART_HP_PER_TILE = ' + \
-    temple.split('const double RoomDungeonTemple::HEART_HP_PER_TILE = ')[1].split(';')[0] + ';\n'
+temple_methods = temple[temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
 temple_methods += '\n'.join(function(temple, signature) for signature in (
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
     'void RoomDungeonTemple::exportToStream(', 'bool RoomDungeonTemple::importFromStream('))

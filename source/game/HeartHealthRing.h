@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 //! \brief Rules of the dungeon heart health ring of the top-left HUD badge. Kept free of
 //! any engine type so that the server rules, the client state and the drawing share them.
@@ -75,6 +76,14 @@ namespace HeartHealthRing
         if(fraction <= 0.0f)
             return lastSent > 0.0f;
         return std::abs(fraction - lastSent) >= NOTIFY_STEP - 0.0001f;
+    }
+
+    //! \brief Server side: may a message that only carries a new whole HP be sent? At most one per
+    //! second. A turn counter that went backwards (a new game on the same socket) counts as due.
+    inline bool isHpMessageDue(int64_t turnsSinceLastMessage, double turnsPerSecond)
+    {
+        return turnsSinceLastMessage < 0
+            || static_cast<double>(turnsSinceLastMessage) >= turnsPerSecond;
     }
 
     //! \brief Client side: what the badge shows and whether it has to be redrawn.
