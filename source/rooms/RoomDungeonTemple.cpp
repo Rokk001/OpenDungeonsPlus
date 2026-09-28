@@ -158,6 +158,11 @@ double RoomDungeonTemple::getHP(Tile* tile) const
     return mHeartHP < 0.0 ? getHeartMaxHP() : mHeartHP;
 }
 
+Tile* RoomDungeonTemple::getHeartTile() const
+{
+    return mTempleObject != nullptr ? mTempleObject->getPositionTile() : nullptr;
+}
+
 double RoomDungeonTemple::getHeartMaxHP() const
 {
     return HEART_MAX_HP;

@@ -347,6 +347,16 @@ bool Seat::takeMana(double mana)
     return true;
 }
 
+void Seat::addMana(double mana)
+{
+    mMana += mana;
+    if (mMana < 0.0)
+        mMana = 0.0;
+    double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
+    if (mMana > maxMana)
+        mMana = maxMana;
+}
+
 bool Seat::sortForMapSave(Seat* s1, Seat* s2)
 {
     return s1->mId < s2->mId;
