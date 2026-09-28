@@ -16,6 +16,7 @@
  */
 
 #include "entities/Creature.h"
+#include "entities/CreatureProgression.h"
 
 #include "creatureaction/CreatureAction.h"
 #include "creatureaction/CreatureActionClaimGroundTile.h"
@@ -65,7 +66,6 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
-#include "gamemap/RoomObjectNavigation.h"
 #include "giftboxes/GiftBoxSkill.h"
 
 #include "modes/GameEditorModeConsole.h"
@@ -526,16 +526,16 @@ void Creature::buildStats()
     if (multiplier <= 0.0)
         return;
 
-    mMaxHP += mDefinition->getHpPerLevel() * multiplier;
+    mMaxHP = CreatureProgression::stat(mMaxHP, mDefinition->getHpPerLevel(), mLevel);
     mDigRate += mDefinition->getDigRatePerLevel() * multiplier;
     mClaimRate += mDefinition->getClaimRatePerLevel() * multiplier;
     mGroundSpeed += mDefinition->getGroundSpeedPerLevel() * multiplier;
     mWaterSpeed += mDefinition->getWaterSpeedPerLevel() * multiplier;
     mLavaSpeed += mDefinition->getLavaSpeedPerLevel() * multiplier;
 
-    mPhysicalDefense += mDefinition->getPhysicalDefPerLevel() * multiplier;
-    mMagicalDefense += mDefinition->getMagicalDefPerLevel() * multiplier;
-    mElementDefense += mDefinition->getElementDefPerLevel() * multiplier;
+    mPhysicalDefense = CreatureProgression::stat(mPhysicalDefense, mDefinition->getPhysicalDefPerLevel(), mLevel);
+    mMagicalDefense = CreatureProgression::stat(mMagicalDefense, mDefinition->getMagicalDefPerLevel(), mLevel);
+    mElementDefense = CreatureProgression::stat(mElementDefense, mDefinition->getElementDefPerLevel(), mLevel);
 }
 
 Creature* Creature::getCreatureFromStream(GameMap* gameMap, std::istream& is)
@@ -783,10 +783,13 @@ void Creature::computeVisibleTiles()
 void Creature::setLevel(unsigned int level)
 {
     // Reset XP once the level has been acquired.
-    mLevel = std::min(MAX_LEVEL, level);
+    mLevel = std::max(1u, std::min(MAX_LEVEL, level));
     mExp = 0.0;
 
+    const double previousMaxHP = mMaxHP;
     buildStats();
+    if(mHp > 0.0 && previousMaxHP > 0.0)
+        mHp = std::min(mMaxHP, mHp * mMaxHP / previousMaxHP);
 
     mNeedFireRefresh = true;
 }
@@ -896,9 +899,6 @@ void Creature::doUpkeep()
         if(mKoTurnCounter > 0)
             return;
 
-        if(!getGameMap()->isInEditorMode())
-            setAnimationState(EntityAnimation::getup_anim, false,
-                Ogre::Vector3::ZERO, false);
         computeCreatureOverlayMoodValue();
         return;
     }
@@ -1367,8 +1367,7 @@ bool Creature::handleIdleAction()
     if(setDestination(tileDest))
         return false;
 
-    // Retry failed wandering next turn, not repeatedly in this upkeep.
-    return false;
+    return true;
 }
 
 bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
@@ -1664,23 +1663,22 @@ double Creature::getElementDefense() const
 
 void Creature::checkLevelUp()
 {
-    if (getLevel() >= MAX_LEVEL)
-        return;
-
-    // Check the returned value.
-    double newXP = mDefinition->getXPNeededWhenLevel(getLevel());
-
-    // An error occurred
-    if (newXP <= 0.0)
+    while(getLevel() < MAX_LEVEL)
     {
-        OD_LOG_ERR("creature=" + getName() + ", newXP=" + Helper::toString(newXP));
-        return;
+        const double newXP = mDefinition->getXPNeededWhenLevel(getLevel());
+        if(!std::isfinite(newXP) || newXP <= 0.0)
+        {
+            OD_LOG_ERR("creature=" + getName() + ", newXP=" + Helper::toString(newXP));
+            return;
+        }
+        if(mExp < newXP)
+            return;
+
+        const double remainingXP = mExp - newXP;
+        setLevel(mLevel + 1);
+        mExp = remainingXP;
     }
-
-    if (mExp < newXP)
-        return;
-
-    setLevel(mLevel + 1);
+    mExp = 0.0;
 }
 
 void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat) 
@@ -2301,7 +2299,7 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 
 void Creature::receiveExp(double experience)
 {
-    if (experience < 0)
+    if (!std::isfinite(experience) || experience < 0 || mLevel >= MAX_LEVEL)
         return;
 
     mExp += experience;
@@ -2311,15 +2309,11 @@ void Creature::receiveExp(double experience)
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
-    // Keep ranged skills visually distinct, including shots at adjacent targets.
+    // Turn to face the entity we are attacking and set the animation state to Attack.
     const Ogre::Vector3& pos = getPosition();
-    const Ogre::Vector3 target = entityAttack.getObjectType() == GameEntityType::creature ?
-        entityAttack.getPosition() : Ogre::Vector3(tileAttack.getX(), tileAttack.getY(), 0);
-    Ogre::Vector3 walkDirection(target.x - pos.x, target.y - pos.y, 0);
+    Ogre::Vector3 walkDirection(tileAttack.getX() - pos.x, tileAttack.getY() - pos.y, 0);
     walkDirection.normalise();
-    const bool ranged = skillData.mSkill->getRangeMax(this, &entityAttack) > 1.0;
-    setAnimationState(ranged ? EntityAnimation::ranged_attack_anim :
-        EntityAnimation::combat_attack_anim, false, walkDirection, true);
+    setAnimationState(EntityAnimation::attack_anim, false, walkDirection, true);
     fireCreatureSound(CreatureSound::Attack);
     setNbTurnsWithoutBattle(0);
 
@@ -2677,8 +2671,6 @@ bool Creature::setDestination(Tile* tile)
     std::vector<Ogre::Vector2> path;
     tileToVector2(result, path, true, 0.0);
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path,true);
-    if(!isMoving() && posTile != tile)
-        return false;
     pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
     return true;
 }
@@ -3158,37 +3150,6 @@ void Creature::fireCreatureSound(CreatureSound sound)
     }
 }
 
-void Creature::fireCombatImpact(bool weaponClash, bool bodyDamage,
-    const Ogre::Vector3& attackerPosition)
-{
-    for(Seat* seat : mSeatsWithVisionNotified)
-    {
-        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
-            continue;
-
-        ServerNotification* notification = new ServerNotification(
-            ServerNotificationType::creatureCombatImpact, seat->getPlayer());
-        notification->mPacket << getName() << weaponClash << bodyDamage
-            << attackerPosition;
-        ODServer::getSingleton().queueServerNotification(notification);
-    }
-}
-
-void Creature::fireChickenFeeding(const std::string& chickenName,
-    const Ogre::Vector3& chickenPosition)
-{
-    for(Seat* seat : mSeatsWithVisionNotified)
-    {
-        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
-            continue;
-
-        ServerNotification* notification = new ServerNotification(
-            ServerNotificationType::creatureChickenFeeding, seat->getPlayer());
-        notification->mPacket << getName() << chickenName << chickenPosition;
-        ODServer::getSingleton().queueServerNotification(notification);
-    }
-}
-
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
@@ -3406,7 +3367,7 @@ void Creature::correctEntityMovePosition(Ogre::Vector2& position)
     //     position.z += Random::Double(-offset, offset);
 }
 
-void Creature::checkWalkPathValid(bool includeWalkDistortion)
+void Creature::checkWalkPathValid()
 {
     bool stop = false;
     for(const Ogre::Vector2& dest : mWalkQueue)
@@ -3424,10 +3385,6 @@ void Creature::checkWalkPathValid(bool includeWalkDistortion)
             break;
         }
     }
-
-    if(!stop && getIsOnServerMap())
-        stop = RoomObjectNavigation::blocked(*this,
-            std::vector<Ogre::Vector2>(mWalkQueue.begin(), mWalkQueue.end()), includeWalkDistortion);
 
     if(!stop)
         return;
