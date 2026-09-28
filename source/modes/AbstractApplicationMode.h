@@ -130,6 +130,9 @@ protected:
     //! Close the frontmost visible GUI window through its existing cancel handler.
     bool closeTopWindow();
 
+    //! Capture the current view before a GUI or input submode consumes the key.
+    bool handleScreenshotKey(const OIS::KeyEvent& arg);
+
     ModeManager& getModeManager()
     {
         return *mModeManager;
