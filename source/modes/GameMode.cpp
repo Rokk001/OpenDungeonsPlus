@@ -2182,7 +2182,7 @@ void GameMode::dismissEventMessage(EventMessage* message)
 {
     std::vector<MessageTab>::iterator found = std::find_if(mMessageTabs.begin(), mMessageTabs.end(),
         [message](const MessageTab& tab) { return tab.message == message; });
-    if(found == mMessageTabs.end() || !found->read)
+    if(found == mMessageTabs.end())
         return;
     if(mSelectedEventMessage == message)
     {
