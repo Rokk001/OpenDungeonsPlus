@@ -111,7 +111,10 @@ enum class ServerNotificationType
     creaturePanel,
 
     // Presentation-only burst for newly built gameplay room tiles.
-    roomConstructionEffect
+    roomConstructionEffect,
+
+    // Owner-only reply to a production query or reorder request.
+    trapProductionQueue
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

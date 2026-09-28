@@ -36,6 +36,8 @@ seat-selection step. Long save descriptions can be scrolled.
 
 The main-menu artwork includes flowing mist, flickering firelight, rising embers, acid glow and lightning effects.
 
+Use Production beside the minimap or in Options to inspect owned trap orders and workshop progress, and move pending orders up or down in the production priority.
+
 ### Be part of the community
 
 As free software aficionados, we value community-based development and
