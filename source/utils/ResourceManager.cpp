@@ -50,7 +50,6 @@
 #include <OgreRenderTarget.h>
 #include <OgreGpuProgramManager.h>
 #include <OgreFileSystemLayer.h>
-#include <OgreResourceGroupManager.h>
 
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
@@ -517,15 +516,6 @@ void ResourceManager::setupOgreResources(uint16_t shaderLanguageVersion)
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
                     archName, typeName, secName, false);
 #endif
-            // Ogre::ShadowVolumeExtrudeProgram looks up its built-in shader
-            // scripts in the engine-internal "OgreInternal" resource group,
-            // not in the game's own groups, so Media/Main needs to be
-            // registered there as well.
-            if(typeName == "FileSystem" && hasFileEnding(archName, "/Main"))
-            {
-                Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-                        archName, typeName, Ogre::RGN_INTERNAL, false);
-            }
         }
     }
 
