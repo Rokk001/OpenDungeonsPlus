@@ -13,6 +13,7 @@ shader = source[source.index('void shadeNavigationIcon('):source.index('\nvoid c
 code = r'''
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <vector>
 SHADER
