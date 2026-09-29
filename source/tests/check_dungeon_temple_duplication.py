@@ -78,7 +78,6 @@ struct RoomDungeonTemple:Room {
  BuildingObject* mTempleObject=nullptr;
  double getHP(Tile*)const{return 10000.0;}
  RoomDungeonTemple(GameMap* m):Room(m){temple=true;}
- double getHP(Tile*)const{return 1.0;} // a living heart; the destroyed one is covered by check_heart_ruin.py
  void updateActiveSpots(GameMap* =nullptr) override;void updateTemplePosition();
  TEMPLE_OVERRIDE
 };
