@@ -108,7 +108,7 @@ int main(int argc,char** argv){try{
    check(badge->getText()==std::to_string(level)+"/3","actual current and maximum level visible on every node");
    check(badge->isVisible()&&badge->isMousePassThroughEnabled()&&!badge->isClippedByParent(),"badge visible below icon without intercepting clicks");
    check(b->getProperty("ButtonImageColour")== (level==0?"FF666666":"FFFFFFFF"),"unresearched icons are greyed and researched icons retain colour");
-   check(b->getProperty("ResearchLevelColour")== (level==3?"FFFFC947":level==2?"FFD5DFE8":"00FFFFFF"),"level has no, silver or gold frame");
+   check(b->getProperty("ResearchLevelColour")== (level==3?"FFFFC947":level==2?"FFC98A4A":"00FFFFFF"),"level has no, bronze or gold frame");
    check(b->isDisabled()==(level==3),"max-level selection rule preserved");
    check(root->getChild(cast)->isVisible()==(level>0),"unlocked actions stay available during upgrades");
    check(b->getUserString("ResearchDetails").find(level==3?"Maximum level":"Queue position: 2")!=CEGUI::String::npos,"queue and level information remains accessible");
@@ -122,7 +122,7 @@ int main(int argc,char** argv){try{
     auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
     check(line->isMousePassThroughEnabled(),"connections do not intercept clicks");
     check(line->getPixelSize().d_width>0&&line->getPixelSize().d_height>0,"each immediate edge has positive geometry");
-    check(line->getProperty("ImageColours").find(level>0?"FFD28B54":"FF656A70")!=CEGUI::String::npos,"permanent paths reflect actual prerequisite completion");
+    check(line->getProperty("ImageColours").find(level>0?"FFD28B54":"FF6A5A46")!=CEGUI::String::npos,"permanent paths reflect actual prerequisite completion");
    }
   }
   system.getDefaultGUIContext().draw();
@@ -139,7 +139,7 @@ int main(int argc,char** argv){try{
    for(auto* dependency:p.second.parents)for(int part=0;part<3;++part){
     auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
     bool ready=part==0?map.player.seat.getSkillLevel(dependency->type)>0:complete;
-    check(line->getProperty("ImageColours").find(ready?"FFD28B54":"FF656A70")!=CEGUI::String::npos,"shared bus unlocks only when ALL prerequisites are complete");
+    check(line->getProperty("ImageColours").find(ready?"FFD28B54":"FF6A5A46")!=CEGUI::String::npos,"shared bus unlocks only when ALL prerequisites are complete");
    }
   }
  }
