@@ -23,7 +23,7 @@ for name in sorted(used - runtime):
     assert name in rects, 'missing in imageset: ' + name
 for name in ('NavigationCreatures', 'NavigationRooms', 'NavigationSpells', 'NavigationWorkshop', 'NavigationPanel',
              'NavigationObjectives', 'NavigationMessages', 'NavigationMessagesRead', 'MenuReturn',
-             'HourglassIcon', 'CogIcon', 'HammerAnvilIcon'):
+             'HourglassIcon', 'CogIcon', 'HammerAnvilIcon', 'PlayIcon', 'CameraIcon'):
     assert name in rects, name
 terrain = {'GoldButton', 'LavaButton', 'RockButton', 'WaterButton', 'DirtButton', 'ClaimedButton', 'GemButton'}
 checked = 0
