@@ -163,6 +163,12 @@ public:
     
     void setActiveCamera(const Ogre::String& ss);
 
+    //! \brief Updates the active camera projection for the current viewport size.
+    void setViewportSize(unsigned int width, unsigned int height);
+
+    //! \brief Preserves the authored menu scene's horizontal framing while active.
+    void setMainMenuProjection(bool enabled);
+
     inline Ogre::Camera* getActiveCamera()
     {
         return  mActiveCamera;
@@ -224,6 +230,8 @@ private:
 
     Ogre::Camera* mActiveCamera;
     Ogre::SceneNode* mActiveCameraNode;
+    bool mMainMenuProjection;
+    Ogre::Radian mMainMenuBaseFovY;
 
     // std::map<unsigned int, PosWithOrient> mCameraHistory;
     GameMap* mGameMap;
