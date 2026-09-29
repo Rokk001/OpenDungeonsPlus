@@ -5167,7 +5167,7 @@ void RenderManager::rrCancelIdleHandAnimation()
         return;
     Ogre::Entity* hand = mSceneManager->getEntity("keeperHandEnt");
     mHandAnimationState = setEntityAnimation(hand, mHandPose, true);
-    alignKeeperHandPointer(hand, mHandAnimationState, mHandHammer, mHammerStrikePoint);
+    alignKeeperHandPointer(hand, mHandAnimationState, mHandHammer, mHammerStrikePoint, mHandPickaxe);
 }
 
 void RenderManager::rrPlayDigAnimation()
