@@ -162,8 +162,8 @@ void colourNavigationAtlas()
             pixels[i + 3] = static_cast<unsigned char>(colour.a * 255 + 0.5f);
         }
     const unsigned char palette[][3] = {
-        {132, 186, 242}, {234, 137, 80}, {231, 183, 100}, {248, 206, 88},
-        {192, 151, 236}, {148, 217, 151}, {214, 199, 156}, {217, 158, 91}};
+        {228, 124, 76}, {226, 150, 84}, {240, 196, 108}, {248, 212, 120},
+        {216, 164, 100}, {236, 184, 96}, {220, 196, 148}, {212, 152, 92}};
     for(int row = 0; row < height; row += 64)
     {
         const int size = row == 0 ? 32 : 64;
@@ -1442,7 +1442,7 @@ void createNavigationImages()
             }
         }
         CEGUI::Texture& categoryTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(categories[category]);
-        const unsigned char colours[][3] = {{240, 138, 102}, {146, 201, 246}, {130, 237, 180}, {241, 193, 107}};
+        const unsigned char colours[][3] = {{236, 132, 88}, {246, 204, 112}, {232, 156, 132}, {206, 178, 104}};
         shadeNavigationIcon(pixels, size, colours[category][0], colours[category][1], colours[category][2]);
         categoryTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
         CEGUI::BasicImage& categoryImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
