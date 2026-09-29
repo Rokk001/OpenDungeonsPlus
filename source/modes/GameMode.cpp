@@ -1144,53 +1144,6 @@ bool GameMode::keyReleasedNormal(const OIS::KeyEvent &arg)
 
     switch (arg.key)
     {
-    case OIS::KC_LEFT:
-    case OIS::KC_A:
-        frameListener.moveCamera(CameraManager::Direction::stopLeft);
-        directionKeyPressed = false;
-        break;
-
-    case OIS::KC_RIGHT:
-    case OIS::KC_D:
-        frameListener.moveCamera(CameraManager::Direction::stopRight);
-        directionKeyPressed = false;
-        break;
-
-    case OIS::KC_UP:
-    case OIS::KC_W:
-        frameListener.moveCamera(CameraManager::Direction::stopForward);
-        directionKeyPressed = false;
-        break;
-
-    case OIS::KC_DOWN:
-    case OIS::KC_S:
-        frameListener.moveCamera(CameraManager::Direction::stopBackward);
-        directionKeyPressed = false;
-        break;
-
-    case OIS::KC_Q:
-        frameListener.moveCamera(CameraManager::Direction::stopRotLeft);
-        break;
-
-    case OIS::KC_E:
-        frameListener.moveCamera(CameraManager::Direction::stopRotRight);
-        break;
-
-    case OIS::KC_HOME:
-        frameListener.moveCamera(CameraManager::Direction::stopDown);
-        break;
-
-    case OIS::KC_END:
-        frameListener.moveCamera(CameraManager::Direction::stopUp);
-        break;
-
-    case OIS::KC_PGUP:
-        frameListener.moveCamera(CameraManager::Direction::stopRotUp);
-        break;
-
-    case OIS::KC_PGDOWN:
-        frameListener.moveCamera(CameraManager::Direction::stopRotDown);
-        break;
 
     default:
         break;
