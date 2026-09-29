@@ -320,3 +320,34 @@ Dateien mit den meisten Konfliktschritten: `source/modes/GameMode.cpp` (13), `so
 ## Probelauf: Methode
 
 Temporärer Worktree im Scratchpad, detached auf `upstream/shaders-improvement`. Jeder Schritt mit `git merge --no-ff --no-commit`, Konflikte nach Regel 5 automatisch aufgelöst (`git blame --ignore-revs-file` auf beiden Seiten, `merge.conflictStyle=diff3`, `rerere` aus), das Ergebnis als unreferenzierter Commit zur Basis des nächsten Schritts. Kein Branch, kein Push, keine Änderung im Hauptcheckout. Der Worktree wurde danach entfernt. Grenzen: Die Simulation schreibt keine `auto`-Typen aus und kompiliert nicht; "per Datei-Datum" heisst, die Zeilen liessen sich im Blame nicht eindeutig zuordnen und es zählte der jüngste inhaltliche Commit an der Datei.
+
+## Übernahme der GUI-Modernisierung aus der alten Linie (`test/construction-hammer-fixture`)
+
+Stand: 29.09.2026. Die Überarbeitung aller Icons, der Spielnavigation, des Hauptmenüs, der Untermenüs und der Leisten ("forged"-Look: geschwärztes Eisen, Bronze, Glut) steckt weder in einem PR noch in `full-build-h1-h7`, sondern nur in der lokalen Kette `feature/hud-navigation-style` (Spitze `6ce7bc00`) → `feature/mouse-cursor-precision` → `test/construction-hammer-fixture` (Spitze `ddcd97a3`, 27.09. 15:16). Die Kette liegt auf der alten Linie und hat keinen gemeinsamen Vorfahren mit upstream. Deshalb wurde wie bei `full-build-h1-h7` über die Dateibäume verglichen (`git diff integration/all test/construction-hammer-fixture`) und jedes Thema als eigener Commit übernommen, nicht per cherry-pick. Technisch wurde der Diff der Ursprungs-Commits mit `git apply -3` auf `integration/all` gelegt; Konflikte sind in der jeweiligen Commit-Message begründet.
+
+Regeln für diese Übernahme (Vorgabe Mario): Die GUI-Themen haben Vorrang, Grafiken und Layouts kommen in der Fassung der Kette. Bei Kollisionen mit Inhalten aus `full-build-h1-h7` (H7-Herzmodell, Kreatur-Code) bleibt die full-build-Fassung. Bei Kollisionen mit PR-Inhalten gewinnt der spätere inhaltliche Commit (Stil-Commits "spell out variable types" zählen nicht). Ändern beide Seiten verschiedene Zeilen, bleibt beides. Kein `auto`, C++11.
+
+| Commit | Thema | Ursprung in der Kette |
+|---|---|---|
+| `09ea387f` | Minimap: Eisenring, Kompass-Buckel, Eckplatten mit Glut-Hover, Symbole | `82a85613`, `0ef7d9a7` (26.09.) |
+| `7a05aa0d` | Fenster-Skin-Atlas, Hauptmenü-Buttons, Tab-Tönung, warme Text- und Forschungsfarben | `7afc74f2`, `18adfeb6`, `5b0b68e4`, `f10ebca5` (26.09.) |
+| `d1bc5737` | Icon-Atlas (Emblem-Renderer), geschmiedete Leiste, quadratische Icon-Kacheln | `f5cf22b7`, `c432954b`, `be9c3b40` (26.09.) |
+| `8a6ca81d` | Forschungskacheln, Nachrichtenpanel, Symbol-Buttons, Schliessen-Symbole, Menü-Scrollbar und Listenrahmen, Auswahlmaterial, Hand-Textur, warme Texte | `3ceb4333`, `b8dbf3d6`, `0ed4f91a`, `0c7003ce` (26.09.) |
+| `87495103` | Info-Fenster aus `WindowStats.layout` mit fester Grösse, Kamera- und Play-Icon im Optionsmenü | `bb953b70`, `f46dce1a`, `06f93d73` (26.09.) |
+| `e5a6f561` | Mana im HUD als ganze Zahl | `6ce7bc00` (27.09.) |
+| `ad716056` | Fingerspitze der Hand exakt auf dem Mauspixel | `32cf6b37` (27.09.) |
+| `6c3371ca` | Test: Bauhammer-Fixture kennt den Verwesungszustand | `ddcd97a3` (27.09.) |
+| `9fa41984` | F5 speichert wieder, F4/F6 rufen Kamera 1/3 ab | `02cd27e7` (07.09.) |
+| `ad8b1bef` | Grosse Karte über den Minimap-Buttons | `25a38df3` (07.09.) |
+| `b7caf5a6` | Hauptmenü-Bildausschnitt auf Breitbild | `e81d7b4b` (06.09.) |
+| `6fe6dd49` | Test: doppelte `getHP()`-Attrappe in `check_dungeon_temple_duplication.py` entfernt | `186b5695` (27.09.) |
+| `18fe646b` | Release-Notes 0.7.3 und "Unreleased" | `b2e1b8c7`, `b76a570f`, `258449a3` |
+| `7ebceec3` | Kurzer Tooltip und Kontexthilfe für Query- und Minimap-Zoom-Button | `bf13d7c9` (08.09.) |
+| `cce491bf` | Zwei `\brief`-Tags in `MiniMap.cpp` (Steuerzeichen aus der Kette) | Korrektur |
+
+Nicht übernommen:
+
+- Die privaten Arbeitsnotizen der alten Linie unter `docs/development/` (rund 80 Dateien, u.a. `BUILDING.md`, `TASKS.md`, `WINDOWS-DEV-SETUP.md`, die Feature-Protokolle) und `AGENTS.md`: Werkstattprotokolle mit lokalen Pfaden und Build-Nachweisen, nicht für den öffentlichen Branch. Übernommen ist nur `NAVIGATION-FORGED-STYLE.md`, die Beschreibung des Designs und seiner Generatoren.
+- Der `README.md` der Kette: eigene Fork-Fassung mit Links auf die privaten Notizen; der README von `integration/all` stammt aus den PRs.
+- Stellen, an denen `integration/all` die neuere Fassung hat: die Stil-Commits (ausgeschriebene Typen statt `auto`), die Community-Seite (#110, upstream), Chat-Texte und Sprach-Untertitel (24.09.), Mittelklick-Statistikfenster (#194, Entscheidung Mario), Reihenfolge der Eingabe-Prüfungen der Niederlage-Sequenz, die zugehörigen Tests, sowie Schattenfunktion und H7-Herzmodell nach der full-build-Regel.
+- `check_construction_hammer.py` der Kette enthält darüber hinaus einen lokalen Abhängigkeitspfad und Prüfungen gegen die alte Hand-Positionierung; nur die Verwesungs-Attrappe (`ddcd97a3`) ist übernommen.
