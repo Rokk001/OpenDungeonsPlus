@@ -5007,6 +5007,8 @@
     </WidgetLook>
     <WidgetLook name="OD/MiniMapCornerButton" inherits="OD/GameTabButton">
         <PropertyDefinition name="CornerBackground" initialValue="" redrawOnWrite="true" />
+        <PropertyDefinition name="CornerHoverBackground" initialValue="" redrawOnWrite="true" />
+        <PropertyDefinition name="CornerPushedBackground" initialValue="" redrawOnWrite="true" />
         <PropertyDefinition name="CornerIconArea" initialValue="{{0.09,0},{0.09,0},{0.52,0},{0.52,0}}" redrawOnWrite="true" />
         <ImagerySection name="corner">
             <ImageryComponent>
@@ -5017,6 +5019,32 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
                 <ImageProperty name="CornerBackground" />
+                <VertFormat type="Stretched" />
+                <HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="corner_hover">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="CornerHoverBackground" />
+                <VertFormat type="Stretched" />
+                <HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="corner_pushed">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="CornerPushedBackground" />
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
@@ -5034,13 +5062,13 @@
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-                <Section section="corner"><Colours topLeft="FFFFDF99" topRight="FFFFDF99" bottomLeft="FFFFDF99" bottomRight="FFFFDF99" /></Section>
-                <Section section="corner_symbol" />
+                <Section section="corner_hover" />
+                <Section section="corner_symbol"><Colours topLeft="FFFFEBC0" topRight="FFFFEBC0" bottomLeft="FFFFEBC0" bottomRight="FFFFEBC0" /></Section>
             </Layer>
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-                <Section section="corner"><Colours topLeft="FF999999" topRight="FF999999" bottomLeft="FF999999" bottomRight="FF999999" /></Section>
+                <Section section="corner_pushed" />
                 <Section section="corner_symbol"><Colours topLeft="FFBBBBBB" topRight="FFBBBBBB" bottomLeft="FFBBBBBB" bottomRight="FFBBBBBB" /></Section>
             </Layer>
         </StateImagery>
