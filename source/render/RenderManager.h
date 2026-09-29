@@ -290,10 +290,6 @@ private:
     Ogre::SceneNode* mHandLightNode;
     Ogre::SceneNode* mHandLightNode2;
     Ogre::Camera* mShadowCam;
-    Ogre::Radian mCurrentFOVy;
-    Ogre::Real mCurrentAspectRatio;
-    Ogre::Real mFactorWidth;
-    Ogre::Real mFactorHeight;
 
     // As a workaround for some issues, we create dummy entities too small to be seen
     // and attach them to the keeper hand. This vector allows to keep a track and delete
