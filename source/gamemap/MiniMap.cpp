@@ -92,7 +92,7 @@ public:
     }
 
 private:
-    //! rief The compass marker: a bronze boss with a gold N, drawn by Gui.cpp, on the ring at the north.
+    //! \brief The compass marker: a bronze boss with a gold N, drawn by Gui.cpp, on the ring at the north.
     void drawNorth(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
             const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const
     {
@@ -107,7 +107,7 @@ private:
         marker.render(buffer, boss, clip, colours);
     }
 
-    //! rief The forged iron ring around the map with a translucent stone haze inside, drawn by Gui.cpp.
+    //! \brief The forged iron ring around the map with a translucent stone haze inside, drawn by Gui.cpp.
     void drawFrame(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
             const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const
     {
