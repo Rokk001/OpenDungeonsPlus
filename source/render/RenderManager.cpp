@@ -2767,13 +2767,22 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
         Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName + ".mesh","Graphics");
         unsigned short src, dest;
-    
-        if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
-        {
-            meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
-        } 
 
-        
+        // Meshes without texture coordinates (like the dungeon heart, which only uses
+        // plain colour materials) cannot get tangents; Ogre throws for them.
+        try
+        {
+            if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+            {
+                meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+            }
+        }
+        catch(const Ogre::ItemIdentityException&)
+        {
+            OD_LOG_INF("No texture coordinates to build tangents from for mesh " + meshName);
+        }
+
+
         ent = mSceneManager->createEntity(tempString, meshPtr);
         node->attachObject(ent); 
     }
