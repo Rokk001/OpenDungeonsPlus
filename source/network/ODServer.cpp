@@ -968,7 +968,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             clientSocket->setState("nick");
             // Tell the client to give us their nickname
             ODPacket packetSend;
-            packetSend << ServerNotificationType::pickNick << mServerMode << true << true << true << true;
+            packetSend << ServerNotificationType::pickNick << mServerMode << true << true << true << true << true;
             clientSocket->send(packetSend);
             break;
         }
@@ -1000,6 +1000,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> creaturePanel);
             clientSocket->setSupportsCreaturePanel(creaturePanel);
+
+            bool creatureProgress = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> creatureProgress);
+            clientSocket->setSupportsCreatureProgress(creatureProgress);
 
             // NOTE : playerId 0 is reserved for inactive players and 1 is reserved for AI
             int32_t playerId = mUniqueNumberPlayer + Seat::PLAYER_ID_HUMAN_MIN;
@@ -1054,6 +1059,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             packetSend << clientSocket->supportsCreatureMood();
             packetSend << clientSocket->supportsCreatureActivity();
             packetSend << clientSocket->supportsCreaturePanel();
+            packetSend << clientSocket->supportsCreatureProgress();
             clientSocket->send(packetSend);
             mSeatsConfigured = true;
             break;
@@ -1352,6 +1358,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 packetSend << client->supportsCreatureMood();
                 packetSend << client->supportsCreatureActivity();
                 packetSend << client->supportsCreaturePanel();
+                packetSend << client->supportsCreatureProgress();
                 client->send(packetSend);
             }
 
@@ -2920,6 +2927,12 @@ bool ODServer::supportsCreatureActivity(Player* player)
 {
     ODSocketClient* client = getClientFromPlayer(player);
     return client != nullptr && client->supportsCreatureActivity();
+}
+
+bool ODServer::supportsCreatureProgress(Player* player)
+{
+    ODSocketClient* client = getClientFromPlayer(player);
+    return client != nullptr && client->supportsCreatureProgress();
 }
 
 ODSocketClient* ODServer::getClientFromPlayer(Player* player)
