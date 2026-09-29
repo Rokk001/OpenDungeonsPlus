@@ -35,6 +35,7 @@
 #include "gamemap/MiniMapCamera.h"
 #include "gamemap/MiniMapDrawnFull.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/RoomObjectBounds.h"
 #include "modes/GameEditorModeConsole.h"
 #include "modes/InputBridge.h"
 #include "modes/MenuModeLoad.h"
@@ -2165,7 +2166,7 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
         for(std::vector<RenderedMovableEntity*>::const_iterator it = objects.begin(); it != objects.end(); ++it)
         {
             RenderedMovableEntity* object = *it;
-            if(object->getMeshName() == "DungeonTempleObject" && object->getEntityNode() != nullptr
+            if(RoomObjectPath::isDungeonHeartMesh(object->getMeshName()) && object->getEntityNode() != nullptr
                 && object->getPositionTile() != nullptr && object->getPositionTile()->getX() == heartTileX
                 && object->getPositionTile()->getY() == heartTileY)
                 object->getEntityNode()->setVisible(false);

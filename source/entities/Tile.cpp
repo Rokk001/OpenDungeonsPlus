@@ -1196,7 +1196,7 @@ bool Tile::isBuildableUpon(Seat* seat) const
     {
         for(RenderedMovableEntity* object : getGameMap()->getRenderedMovableEntities())
         {
-            if(object->getMeshName() != "DungeonTempleObject")
+            if(!RoomObjectPath::isDungeonHeartMesh(object->getMeshName()))
                 continue;
             for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
             {

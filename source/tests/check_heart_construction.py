@@ -45,15 +45,17 @@ std::string formatBuildRoom(int,int){return "build";}
 METHOD
 void hover(GameMap* gameMap,const InputManager& inputManager,InputCommand& inputCommand){HOVER}
 int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++failures;};
- GameMap map;Tile tile{&map};Seat seat;Object heart{"DungeonTempleObject",{58,102}};
+ GameMap map;Tile tile{&map};Seat seat;Object heart{"",{58,102}};
  map.objects={&heart};map.hovered=&tile;
+ // Every health tier mesh blocks the tiles under its measured footprint.
+ for(const char* mesh:{"DungeonHeartObjectHealthy","DungeonHeartObjectDamaged","DungeonHeartObjectCritical"})
  for(int x=54;x<=62;++x)for(int y=98;y<=106;++y){
-  tile.x=x;tile.y=y;bool expected=std::abs(x-58)>2||std::abs(y-102)>2;
+  heart.mesh=mesh;tile.x=x;tile.y=y;bool expected=std::abs(x-58)>1||y<101||y>104;
   check(tile.isBuildableUpon(&seat)==expected);
   InputCommand command;hover(&map,InputManager{},command);
   check(command.selected==(expected?1:0));check(command.failures==(expected?0:1));
  }
- tile.x=56;tile.y=102;map.editor=true;check(tile.isBuildableUpon(&seat));map.editor=false;
+ tile.x=58;tile.y=102;map.editor=true;check(tile.isBuildableUpon(&seat));map.editor=false;
  map.objects.clear();check(tile.isBuildableUpon(&seat));
  Object portal{"PortalObject",{58,102}};map.objects={&portal};check(tile.isBuildableUpon(&seat));
  tile.building=true;check(!tile.isBuildableUpon(&seat));tile.building=false;
