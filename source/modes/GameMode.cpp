@@ -1149,7 +1149,7 @@ void GameMode::refreshMainUI()
 
     widget = guiSheet->getChild(Gui::DISPLAY_MANA);
     tempSS.str("");
-    tempSS << mySeat->getMana();
+    tempSS << static_cast<long>(mySeat->getMana());
     widget->setText(tempSS.str());
     tempSS.str("");
     tempSS << (mySeat->getManaDelta() >= 0 ? "+" : "") << mySeat->getManaDelta();
