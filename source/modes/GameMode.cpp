@@ -3549,14 +3549,14 @@ void GameMode::updateSelectedTiles()
         Ogre::ColourValue(1.0f, 0.15f, 0.1f);
     if(mPreviewTiles == mSelectedTiles)
     {
-        RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition);
+        RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition, digging);
         return;
     }
     Player* player = mGameMap->getLocalPlayer();
     for(Tile* tile : mSelectedTiles)
         tile->setSelected(false, player);
     mSelectedTiles = mPreviewTiles;
-    RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition);
+    RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition, digging);
 }
 
 void GameMode::unselectAllTiles()
