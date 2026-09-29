@@ -2683,6 +2683,7 @@ void RenderManager::rrTemporalMarkTile(Tile* curTile)
     {
         std::string tileNodeName = tileName + "_node";
         ent = mSceneMgr->createEntity(selectorName, "SquareSelector.mesh");
+        ent->setMaterialName("SquareSelector");
         ent->setLightMask(0);
         ent->setCastShadows(false);
         Ogre::SceneNode* tileNode = mSceneManager->getSceneNode(tileNodeName);
