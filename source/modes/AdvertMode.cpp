@@ -69,10 +69,15 @@ void AdvertMode::activate()
 
 bool AdvertMode::showWWW()
 {
-    ODFrameListener::getSingletonPtr()->requestExit();
+#if defined(_WIN32)
+    system("start \"\" \"https://discord.gg/K2JPXuchZV\"");
+#elif defined(__APPLE__)
+    system("open 'https://discord.gg/K2JPXuchZV'");
+#else
     system("xdg-open 'https://discord.gg/K2JPXuchZV'");
+#endif
+    ODFrameListener::getSingletonPtr()->requestExit();
     return true;
-
 }
 
 
