@@ -939,18 +939,10 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
+    // The stats window opens when the middle button is released without the pointer having moved,
+    // so that rotating the camera over creatures does not open windows (see mouseReleased)
     if (id == OIS::MB_Middle)
-    {
-        GameEntity* closestEntity = getQueryTarget(tileClicked);
-        if(closestEntity == nullptr)
-        {
-            if(showTileDebugWindow)
-                tileClicked->createStatsWindow();
-        }
-        else
-            closestEntity->createStatsWindow();
         return true;
-    }
 
     // Right mouse button down
     if (id == OIS::MB_Right)
