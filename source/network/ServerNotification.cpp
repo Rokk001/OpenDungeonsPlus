@@ -146,8 +146,6 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "creaturePanel";
         case ServerNotificationType::roomConstructionEffect:
             return "roomConstructionEffect";
-        case ServerNotificationType::trapProductionQueue:
-            return "trapProductionQueue";
         case ServerNotificationType::creatureCombatImpact:
             return "creatureCombatImpact";
         case ServerNotificationType::creatureChickenFeeding:

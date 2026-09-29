@@ -113,9 +113,6 @@ enum class ServerNotificationType
     // Presentation-only burst for successfully built or sold gameplay room tiles.
     roomConstructionEffect,
 
-    // Owner-only reply to a production query or reorder request.
-    trapProductionQueue,
-
     // Presentation-only creature melee impact.
     creatureCombatImpact,
 
