@@ -7,7 +7,7 @@
 //  - DungeonHeart{Healthy,Damaged,Critical}.geo written by generate_heart_geometry.py (the heart itself).
 // Output (another folder): DungeonHeartObject{Healthy,Damaged,Critical}.{mesh,skeleton}, each mesh with
 //  - a "Heart" submesh (material DungeonHeart<Tier>), skinned to the bones "Root" and "Pulse";
-//  - a "Pedestal" submesh with the material "Stacheln": the steps and claws of the temple's metal part (without the
+//  - a "Pedestal" submesh with the material "Obsidian": the steps and claws of the temple's metal part (without the
 //    old spherical lattice that stood for the heart), bound to "Root", and the metal parts of the heart (band, collar
 //    and struts) that come with the .geo file. The claws are tilted outwards and stretched up to stand around the bigger heart.
 //
@@ -327,7 +327,7 @@ int run(int argc, char** argv)
     Ogre::DefaultHardwareBufferManager* bufferManager = new Ogre::DefaultHardwareBufferManager();
     Ogre::ResourceGroupManager::getSingleton().addResourceLocation(in, "FileSystem");
     // Ogre keeps a material name in a mesh only while a material of that name exists; empty ones are enough here
-    const char* materials[4] = {"Stacheln", "DungeonHeartHealthy", "DungeonHeartDamaged", "DungeonHeartCritical"};
+    const char* materials[4] = {"Obsidian", "DungeonHeartHealthy", "DungeonHeartDamaged", "DungeonHeartCritical"};
     for(int i = 0; i < 4; ++i)
         Ogre::MaterialManager::getSingleton().create(materials[i], Ogre::RGN_DEFAULT);
 
@@ -365,7 +365,7 @@ int run(int argc, char** argv)
         fleshSub->setMaterialName("DungeonHeart" + tier);
         fillSubMesh(fleshSub, flesh.vertices, flesh.indices, rootBone, pulseBone, box, radius);
         Ogre::SubMesh* metalSub = heart->createSubMesh("Pedestal");
-        metalSub->setMaterialName("Stacheln");
+        metalSub->setMaterialName("Obsidian");
         fillSubMesh(metalSub, metal.vertices, metal.indices, rootBone, pulseBone, box, radius);
         heart->_setBounds(box, false);
         heart->_setBoundingSphereRadius(radius);
