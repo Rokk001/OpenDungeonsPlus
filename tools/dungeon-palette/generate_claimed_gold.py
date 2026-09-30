@@ -8,15 +8,15 @@ byte-identical files. Needs numpy and Pillow.
 Claimed floor: dark, muted flagstone with hairline cracks. The tile is truly periodic and everything that is not a
 flat colour is faded out in a thin strip along the tile border, so a border pixel does not depend on the rotation
 of the piece (the claimed pieces are randomly rotated by 90 degrees) and neighbouring tiles continue without a
-frame. The only trace of the tile grid is a very faint joint. The area under the ownership marker (ClaimedMask.png)
-is kept dark, exactly as before, because the shader blends the seat colour into it.
+frame. The only trace of the tile grid is a very faint joint. The ownership marker (ClaimedMask.png) is a small dark
+metal stud; the shader blends the seat colour into the masked area.
 
 Gold vein: dark rock with irregular veins and nuggets of gold. Periodic, so it tiles seamlessly both with the
 world space UV of upward facing surfaces (one repeat per tile) and with the mesh UV of the side faces.
 
 Both come with a tangent space normal map (red = -d height / dx, green = +d height / dy, image y pointing down).
 
-Usage: python generate_claimed_gold.py [output folder] [--check]
+Usage: python generate_claimed_gold.py [output folder] [--check] [--mask=<ClaimedMask.png>]
 """
 
 import os
@@ -26,6 +26,7 @@ import numpy as np
 from PIL import Image
 
 N = 512
+MASK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials', 'textures', 'ClaimedMask.png')
 
 # Target tones (8 bit) and the claimed floor tone.
 CLAIMED_BASE = np.array([80.0, 73.0, 65.0])
@@ -100,12 +101,28 @@ def claimed():
     joint = 1.0 - smoothstep(0.0, 3.0, _LO)
     lum = lum - 0.08 * joint
     rgb = CLAIMED_BASE[None, None, :] * lum[..., None]
-    # the ownership marker area stays dark (the shader blends the seat colour into it)
-    mask = np.asarray(Image.open(os.path.join(os.path.dirname(__file__), '..', '..', 'materials', 'textures',
-                                               'ClaimedMask.png')).convert('L').resize((N, N), Image.BILINEAR),
-                      dtype=float) / 255.0
-    rgb = rgb * (1.0 - mask[..., None])
+    # ownership stud: a dark metal dome at the position of the ownership mask (the shader blends the seat colour
+    # into the masked area); position and size are read from ClaimedMask.png so a changed mask is followed
+    mask = np.asarray(Image.open(MASK_PATH).convert('L').resize((N, N), Image.BILINEAR), dtype=float) / 255.0
+    weight = mask / max(mask.sum(), 1e-9)
+    cx = (weight * _XX).sum()
+    cy = (weight * _YY).sum()
+    radius = np.sqrt((mask > 0.5).sum() / np.pi) * 0.92
+    dx = (_XX - cx) / radius
+    dy = (_YY - cy) / radius
+    d2 = dx * dx + dy * dy
+    inside = d2 < 1.0
+    nz = np.sqrt(np.clip(1.0 - d2, 0.0, 1.0))
+    light = np.array([-0.45, -0.55, 0.70])
+    light /= np.linalg.norm(light)
+    lit = np.clip(dx * light[0] + dy * light[1] + nz * light[2], 0.0, 1.0)
+    stud = np.array([74.0, 76.0, 82.0])[None, None, :] * (0.30 + 0.85 * lit[..., None] ** 1.5)
+    stud = stud * smoothstep(1.0, 0.72, np.sqrt(d2))[..., None].clip(0.35, 1.0)
+    shadow = 1.0 - 0.45 * np.exp(-np.clip(np.sqrt(d2) - 1.0, 0.0, None) * 6.0) * (~inside)
+    rgb = rgb * shadow[..., None]
+    rgb = np.where(inside[..., None], stud, rgb)
     height = 0.6 * border * (0.5 * mottle + 0.4 * grain) - 1.4 * crack - 0.3 * joint
+    height = height + 6.0 * nz * inside
     return rgb, normal_map(height, 0.8) * 255.0
 
 
@@ -130,11 +147,14 @@ def gold():
 
 
 def main():
+    global MASK_PATH
     out = 'materials/textures'
     check = False
     for arg in sys.argv[1:]:
         if arg == '--check':
             check = True
+        elif arg.startswith('--mask='):
+            MASK_PATH = arg[len('--mask='):]
         else:
             out = arg
     os.makedirs(out, exist_ok=True)
