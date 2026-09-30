@@ -42,6 +42,12 @@ void main() {
     vec3 P = (worldMatrix * position).xyz;
     vec3 T = normalize(vec3(worldMatrix * vec4(tangent, 0.0)));
     vec3 B = normalize(vec3(worldMatrix * vec4(cross(tangent, normal), 0.0))); 
+
+    // upward facing surfaces use world space UV so the texture continues across tile borders
+    float uvWeight = worldUvWeight(normalize(mat3(worldMatrix) * normal));
+    vec2 worldUV = worldTileUV(P);
+    T = normalize(mix(T, vec3(1.0, 0.0, 0.0), uvWeight));
+    B = normalize(mix(B, vec3(0.0, -1.0, 0.0), uvWeight));
  
     // apply deformation
     vec3 PT = deform(P + T);
@@ -58,7 +64,7 @@ void main() {
     FragPos = P;
     VertexPos = lightMatrix * vec4(P, 1.0);
  
-    out_UV0 = uv_0;
-    out_UV1 = uv_1;
+    out_UV0 = mix(uv_0, worldUV, uvWeight);
+    out_UV1 = mix(uv_1, worldUV, uvWeight);
 
 }  

@@ -94,3 +94,16 @@ float tileBorderFade(vec2 p) {
     vec2 f = smoothstep(0.0, TILE_BORDER_FADE, d);
     return f.x * f.y;
 }
+
+
+/* Weight (0..1) for switching from the per tile mesh UV to world space UV on upward facing
+ * surfaces. The tileset rotates the tile meshes by multiples of 90 degrees and every mesh has
+ * its own UV layout, so the mesh UV of two neighbouring tiles do not line up on the shared
+ * border. World space UV (one texture repeat per tile, tile borders at n + 0.5) do. */
+float worldUvWeight(vec3 worldNormal) {
+    return smoothstep(0.6, 0.9, worldNormal.z);
+}
+
+vec2 worldTileUV(vec3 worldPos) {
+    return vec2(worldPos.x + 0.5, 0.5 - worldPos.y);
+}
