@@ -56,6 +56,7 @@ namespace
 {
 //! \brief The heart's three health-tier mesh variants. Each has its own rig and
 //! a baked "Pulse" animation running at a tier-specific speed (see assets-src/DungeonHeartObject.blend).
+//! Every mesh also holds the temple's pedestal the heart stands on (see tools/heart-on-temple).
 const std::string HeartMeshNameHealthy = "DungeonHeartObjectHealthy";
 const std::string HeartMeshNameDamaged = "DungeonHeartObjectDamaged";
 const std::string HeartMeshNameCritical = "DungeonHeartObjectCritical";
