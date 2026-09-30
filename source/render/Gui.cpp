@@ -1549,6 +1549,15 @@ CEGUI::Window* Gui::createInfoWindow(const std::string& name)
     return window;
 }
 
+CEGUI::Window* Gui::createCreatureProfileWindow(const std::string& name)
+{
+    CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* window = wmgr.loadLayoutFromFile("WindowCreatureProfile.layout");
+    window->setName(name);
+    registerWindowHierarchy(window);
+    return window;
+}
+
 void Gui::setUserScalePercent(float scalePercent)
 {
     if(scalePercent != scalePercent)
