@@ -16,6 +16,13 @@ add_boost_test(00-SocialGenerator
         ${SRC}/social/SocialGenerator.h
         ${SRC}/social/SocialGenerator.cpp)
 
+add_boost_test(00-PostLog
+        SOURCES
+        test_PostLog.cpp
+        ${SRC}/social/SocialRng.h
+        ${SRC}/social/PostLog.h
+        ${SRC}/social/PostLog.cpp)
+
 add_boost_test(00-ODPacket
         SOURCES
         test_ODPacket.cpp

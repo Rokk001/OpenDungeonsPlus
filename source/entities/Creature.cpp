@@ -71,6 +71,7 @@
 #include "giftboxes/GiftBoxSkill.h"
 
 #include "modes/GameEditorModeConsole.h"
+#include "modes/GameMode.h"
 #include "modes/ModeManager.h"
 
 #include "network/ODClient.h"
@@ -81,6 +82,9 @@
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/SocialWindow.h"
+#include "social/CreaturePosts.h"
+#include "social/PostLog.h"
 #include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
 #include "rooms/RoomCrypt.h"
@@ -1871,6 +1875,13 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
 
 void Creature::updateFromPacket(ODPacket& is)
 {
+    // What changed in this update can become a post of the feed. The state is only copied
+    // for creatures of the local player while the feed is running.
+    const bool postSource = isSocialFeedSource();
+    social::CreatureSnapshot socialBefore;
+    if(postSource)
+        fillSocialSnapshot(socialBefore);
+
     MovableGameEntity::updateFromPacket(is);
 
     int seatId;
@@ -1898,6 +1909,7 @@ void Creature::updateFromPacket(ODPacket& is)
         else
         {
             setSeat(seat);
+            social::PostLog::getSingleton().rosterChanged();
         }
     }
 
@@ -1916,6 +1928,57 @@ void Creature::updateFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+
+    if(postSource)
+    {
+        social::CreatureSnapshot socialAfter;
+        fillSocialSnapshot(socialAfter);
+        social::CreaturePosts::reportUpdate(getGameMap()->getTurnNumber(), getName(),
+            getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
+    }
+}
+
+bool Creature::isSocialFeedSource() const
+{
+    if(!social::PostLog::getSingleton().isActive() || getIsOnServerMap())
+        return false;
+
+    Player* localPlayer = getGameMap()->getLocalPlayer();
+    return (localPlayer != nullptr) && (getSeat() == localPlayer->getSeat());
+}
+
+void Creature::fillSocialSnapshot(social::CreatureSnapshot& snapshot) const
+{
+    snapshot.mLevel = mLevel;
+    snapshot.mHealthStage = mOverlayHealthValue;
+    snapshot.mMoodBits = mOverlayMoodValue;
+    snapshot.mMoodLevel = mMoodValue;
+    snapshot.mActivity = mActivity;
+}
+
+void Creature::socialCreatureAdded()
+{
+    social::PostLog::getSingleton().rosterChanged();
+    socialEvent(social::PostCategory::Arrived);
+}
+
+void Creature::socialCreatureRemoved()
+{
+    social::PostLog::getSingleton().rosterChanged();
+    if(!isSocialFeedSource())
+        return;
+
+    social::CreaturePosts::reportRemoval(getGameMap()->getTurnNumber(), getName(),
+        getDefinition()->getClassName(), getDefinition()->isWorker(), mOverlayMoodValue);
+}
+
+void Creature::socialEvent(social::PostCategory category)
+{
+    if(!isSocialFeedSource())
+        return;
+
+    social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
+        getDefinition()->getClassName(), getDefinition()->isWorker(), category, 0);
 }
 
 double Creature::getExperienceProgress() const
@@ -2291,6 +2354,8 @@ void Creature::createStatsWindow()
         CEGUI::Event::Subscriber(&Creature::ProfileTabClicked, this));
     mStatsWindow->getChild("StatsTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&Creature::StatsTabClicked, this));
+    mStatsWindow->getChild("BookTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&Creature::BookTabClicked, this));
 
     // Set the window title
     mStatsWindow->setText(getName() + " (" + getDefinition()->getClassName() + ")");
@@ -2340,6 +2405,14 @@ bool Creature::ProfileTabClicked(const CEGUI::EventArgs& /*e*/)
 bool Creature::StatsTabClicked(const CEGUI::EventArgs& /*e*/)
 {
     showStatsPage(true);
+    return true;
+}
+
+bool Creature::BookTabClicked(const CEGUI::EventArgs& /*e*/)
+{
+    GameMode* gameMode = dynamic_cast<GameMode*>(ODFrameListener::getSingleton().getModeManager()->getCurrentMode());
+    if(gameMode != nullptr)
+        gameMode->showSocialWindow(getName());
     return true;
 }
 
@@ -2403,14 +2476,28 @@ void Creature::refreshProfilePage()
 
     CEGUI::Window* friendsText = page->getChild("FriendsText");
     CEGUI::Window* statusText = page->getChild("StatusText");
+    CEGUI::Window* latestText = page->getChild("LatestText");
     friendsText->setVisible(isAllied);
     statusText->setVisible(isAllied);
+    latestText->setVisible(isAllied);
     if(!isAllied)
         return;
 
-    std::vector<std::string> friends;
-    std::string foe;
-    findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), friends, foe);
+    // The friends only change when a creature is added, removed or changes seat, so they are
+    // computed again only when the roster version of the post log changed
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
+    const social::SocialProfileCache::FriendsAndFoe* cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+    if(cachedFriends == nullptr)
+    {
+        social::SocialProfileCache::FriendsAndFoe computed;
+        computed.mRosterVersion = rosterVersion;
+        findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), computed.mFriends, computed.mFoe);
+        cache.storeFriendsAndFoe(getName(), computed);
+        cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+    }
+    const std::vector<std::string>& friends = cachedFriends->mFriends;
+    const std::string& foe = cachedFriends->mFoe;
     std::string friendsLine = "Friends: " + (friends.empty() ? std::string("none yet") : joinProfileList(friends));
     friendsLine += "      Foe: " + (foe.empty() ? std::string("none") : foe);
     friendsText->setText(friendsLine);
@@ -2419,6 +2506,9 @@ void Creature::refreshProfilePage()
         getName(), definition->getClassName(), definition->isWorker(),
         getProfileMoodState(getOverlayMoodValue(), mMoodValue));
     statusText->setText(moodLine.empty() ? std::string("") : "Status: " + moodLine);
+
+    std::string latestLine = SocialWindow::describeLatestPost(getName(), getGameMap()->getTurnNumber());
+    latestText->setText(latestLine.empty() ? std::string("Latest: nothing posted yet") : latestLine);
 }
 
 std::string Creature::getStatsText()

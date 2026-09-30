@@ -59,6 +59,11 @@ public:
     static std::string postTemplate(const SocialData& data, const std::string& creatureName,
         const std::string& className, bool isWorker, const std::string& category, uint32_t variant);
 
+    //! \brief Text of a feed post: the template of the category expanded with the profile and the
+    //! given level and room ("library", ...). Empty if the category has no template.
+    static std::string renderPost(const SocialData& data, const CreatureProfile& profile, bool isWorker,
+        const std::string& category, uint32_t variant, int32_t level, const std::string& room);
+
     //! \brief One line with all profile fields, used to compare profiles byte for byte.
     static std::string serialize(const CreatureProfile& profile);
 };

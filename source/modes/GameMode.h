@@ -48,6 +48,7 @@ class CreaturePanel;
 class GameEntity;
 class MiniMapDrawnFull;
 class MenuModeLoad;
+class SocialWindow;
 
 enum class SpellType;
 enum class SkillType;
@@ -155,6 +156,12 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool hideObjectivesWindow(const CEGUI::EventArgs& = {});
     bool toggleObjectivesWindow(const CEGUI::EventArgs& = {});
 
+    //! \brief Shows/toggles the Dungeonbook (creature list and post feed) and closes it again
+    bool toggleSocialWindow(const CEGUI::EventArgs& = {});
+    //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
+    //! creature card (the card stays open)
+    void showSocialWindow(const std::string& selectedCreature);
+
     //! \brief Shows/hides/toggles the player settings window
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
@@ -256,6 +263,7 @@ protected:
 
 private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
+    std::unique_ptr<SocialWindow> mSocialWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
     void refreshHeldCreatureIcons();
     bool shouldExpireEventMessages() const override { return false; }

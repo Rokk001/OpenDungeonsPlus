@@ -57,6 +57,12 @@ namespace CEGUI
 class Window;
 }
 
+namespace social
+{
+enum class PostCategory : uint8_t;
+struct CreatureSnapshot;
+}
+
 namespace Ogre
 {
 class ParticleSystem;
@@ -145,6 +151,7 @@ public:
     void updateStatsWindow(const std::string& txt);
     bool ProfileTabClicked(const CEGUI::EventArgs& /*e*/);
     bool StatsTabClicked(const CEGUI::EventArgs& /*e*/);
+    bool BookTabClicked(const CEGUI::EventArgs& /*e*/);
     std::string getStatsText();
 
     //! \brief Get the level of the object
@@ -481,6 +488,15 @@ public:
 
     inline uint32_t getOverlayMoodValue() const
     { return mOverlayMoodValue; }
+
+    //! \brief Called on the client when the creature was added to or is about to be removed
+    //! from the game map, updates the roster version of the creature profiles and, for a
+    //! creature of the local player, adds an arrival or a leaving/death post to the feed.
+    void socialCreatureAdded();
+    void socialCreatureRemoved();
+
+    //! \brief Adds a post of this category to the feed if the creature belongs to the local player.
+    void socialEvent(social::PostCategory category);
 
     inline int32_t getNbTurnsWithoutBattle() const
     { return mNbTurnsWithoutBattle; }
