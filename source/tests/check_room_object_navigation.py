@@ -160,7 +160,7 @@ int main(){
   object.mesh=row.name;object.angle=rotation;object.pos={5,5,0};
   const float angle=rotation*.01745329252f;
   const auto placed=RoomObjectNavigation::collect(map,0);
-  if(object.mesh=="PortalObject"||object.mesh=="DungeonTempleObject"){
+  if(object.mesh=="PortalObject"||RoomObjectPath::isDungeonHeartMesh(object.mesh)){
    check(placed.empty(),"portal and dungeon heart do not create furniture blockers");
    for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30}){
     creature.mesh=model.name;creature.level=level;creature.pos={1,5,0};
@@ -606,7 +606,8 @@ if args.saved_terrain:
     floor = [(int(row[0]), int(row[1])) for row in rows[2:] if int(row[2]) in (1, 2, 3, 6) and float(row[3]) == 0]
     # Only use objects whose placed orientation is fixed by their room source;
     # randomized treasury angles and saved bed rotations are not guessed.
-    angles = {'ChickenCoop': 0, 'Bookcase': 45, 'Podium': 45, 'DungeonTempleObject': 0, 'PortalObject': 0,
+    angles = {'ChickenCoop': 0, 'Bookcase': 45, 'Podium': 45, 'DungeonHeartObjectHealthy': 0, 'DungeonHeartObjectDamaged': 0,
+              'DungeonHeartObjectCritical': 0, 'PortalObject': 0,
               'WorkshopMachine1': 30, 'WorkshopMachine2': 30}
     objects = {}
     saved_bed_info = {}

@@ -115,7 +115,7 @@ int main(int argc,char** argv){try{
    ++failures;std::cout<<"FAIL creature-specific bed angle\n";
   }
  }
- for(const char* name:{"FenceCorner","FenceStraight","PortalObject","DungeonTempleObject","Bookcase","Podium"})
+ for(const char* name:{"FenceCorner","FenceStraight","PortalObject","DungeonHeartObjectHealthy","DungeonHeartObjectDamaged","DungeonHeartObjectCritical","Bookcase","Podium"})
   for(const auto& row:RoomObjectPath::meshBounds)if(std::string(row.name)==name){
    const auto scale=RoomObjectPath::furnitureScale(row);
    ++checks;if(scale.x!=1||scale.y!=1){++failures;std::cout<<"FAIL unchanged object "<<name<<'\n';}

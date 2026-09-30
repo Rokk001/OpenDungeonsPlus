@@ -29,7 +29,9 @@ static const MeshBounds meshBounds[] = {
     {"ChickenCoop", -.203275f, -.4f, .796725f, .4f},
     {"Chimney", -.63f, .0721364f, .63f, .583136f},
     {"DragonBed", -.941213f, -.96306f, .886655f, .969738f},
-    {"DungeonTempleObject", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
+    {"DungeonHeartObjectCritical", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
+    {"DungeonHeartObjectDamaged", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
+    {"DungeonHeartObjectHealthy", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
     {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
     {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f, .073802f},
@@ -62,6 +64,13 @@ static const MeshBounds meshBounds[] = {
     {"WorkshopMachine2", -.730786f, -.336f, .5376f, .338177f}
 };
 
+// The dungeon heart has one mesh per health tier (see RoomDungeonTemple.cpp).
+inline bool isDungeonHeartMesh(const std::string& name)
+{
+    return name == "DungeonHeartObjectHealthy" || name == "DungeonHeartObjectDamaged" ||
+        name == "DungeonHeartObjectCritical";
+}
+
 // Narrow the visible furniture and its navigation bounds together. Leave Z
 // unchanged so authored working heights and bed support surfaces stay valid.
 // Large beds keep their existing multi-tile allocation; this is not a capacity
@@ -75,7 +84,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 {
     const std::string name(bounds.name);
     if(name == "FenceCorner" || name == "FenceStraight" ||
-       name == "PortalObject" || name == "DungeonTempleObject")
+       name == "PortalObject" || isDungeonHeartMesh(name))
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.
