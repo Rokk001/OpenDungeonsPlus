@@ -111,7 +111,7 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
-    'hatchery': (0.28, 0.88, (1.10, 1.00, 0.86)),
+    'hatchery': (0.28, 0.81, (1.10, 1.00, 0.86)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
     'treasury': (1.00, 0.76, (0.90, 0.95, 1.12)),
     'trainingHall': (0.80, 0.85, (0.98, 1.00, 1.06)),
@@ -120,6 +120,25 @@ TONE = {
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
 }
+
+
+# Repetition pass (docs/internal/FLOORS.md, "F2 repetition pass"): a texture repeats on every tile, so broad blotches
+# and brightness gradients show up as a lattice. flatten() divides the colours by a periodic low-pass of their
+# luminance (sigma in texture px, strength 0..1), so nothing larger than about a fifth of a tile keeps a different
+# mean brightness; the mean luminance stays. Applied to the open floor field before the wall bands are added.
+FLATTEN = {
+    'library': (48.0, 0.5), 'hatchery': (48.0, 0.8), 'dormitory': (48.0, 0.6), 'dungeonTemple': (48.0, 0.5),
+    'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'casino': (48.0, 0.7), 'prison': (40.0, 0.8),
+    'arena': (48.0, 0.8), 'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
+    'portalWave': (48.0, 0.7),
+}
+
+
+def flatten(arr, sigma, strength):
+    lum = (arr * np.array([0.2126, 0.7152, 0.0722])).sum(-1)
+    low = blur(lum, sigma)
+    ratio = np.clip(lum.mean() / np.maximum(low, 1e-4), 0.6, 1.6) ** strength
+    return arr * ratio[..., None]
 
 
 def tone(arr, room):
@@ -244,16 +263,20 @@ def straw_bundle(sp, rng, cx, cy, ang, count, length, width, rgb, mapper=None, f
 
 
 def scatter_straw(sp, seed, bundles, loose, box, rgb, mapper=None, bundle_len=(54, 88), loose_len=(40, 72),
-                  width=5.0, angle=None, spread=0.6, fan=0.55):
+                  width=5.0, angle=None, spread=0.6, fan=0.55, blue=False):
     rng = np.random.RandomState(seed)
     total = bundles + loose
     w, h = box[2] - box[0], box[3] - box[1]
     ny = max(1, int(round(np.sqrt(total * h / float(w)))))
     nx = int(np.ceil(total / float(ny)))
     cells = rng.permutation(nx * ny)[:total]  # jittered grid: spread evenly, no empty areas and no heaps
+    centres = blue_noise_points(seed + 5, total, 0) if blue else None  # wrapping blue noise: no lattice at all
     for i in range(total):
-        cx = box[0] + (cells[i] % nx + 0.5 + rng.uniform(-0.45, 0.45)) * w / nx
-        cy = box[1] + (cells[i] // nx + 0.5 + rng.uniform(-0.45, 0.45)) * h / ny
+        if blue:
+            cx, cy = centres[i]
+        else:
+            cx = box[0] + (cells[i] % nx + 0.5 + rng.uniform(-0.45, 0.45)) * w / nx
+            cy = box[1] + (cells[i] // nx + 0.5 + rng.uniform(-0.45, 0.45)) * h / ny
         ang = rng.uniform(0, np.pi) if angle is None else angle + rng.uniform(-spread, spread)
         if i < bundles:
             if i % 2 == 0:
@@ -279,10 +302,10 @@ def plank_layout(seed):
     while True:
         heights, total = [], 0
         while total < N - 40:
-            heights.append(int(rng.randint(54, 112)))
+            heights.append(int(rng.randint(48, 92)))
             total += heights[-1]
         heights[-1] -= total - N
-        if 44 <= heights[-1] <= 120:
+        if 40 <= heights[-1] <= 100:
             break
     ys = np.concatenate([[0], np.cumsum(heights)])
     row_of = np.zeros(N, dtype=int)
@@ -297,7 +320,7 @@ def plank_layout(seed):
     x = np.arange(N)
     for r in range(len(heights)):
         u = rng.uniform()
-        count = 1 if u < 0.42 else (2 if u < 0.85 else 3)
+        count = 1 if u < 0.22 else (2 if u < 0.65 else 3)
         w = rng.uniform(0.55, 1.45, count)
         lengths = w / w.sum() * N
         start = rng.uniform(0, N)
@@ -324,7 +347,7 @@ def dormitory_field():
     ids, dd, row_of, boards, ys = plank_layout(601)
     rng = np.random.RandomState(602)
     nb = len(boards)
-    bright = rng.uniform(0.66, 1.26, nb)[ids]
+    bright = rng.uniform(0.76, 1.18, nb)[ids]
     warm = rng.uniform(-0.03, 0.03, nb)[ids]
     lift = rng.uniform(-0.25, 0.25, nb)[ids]
     oy = rng.randint(0, N, nb)[ids]
@@ -358,10 +381,10 @@ def dormitory_field():
             col = col * (1.0 - area[..., None] * (0.25 + 0.3 * ring[..., None]))
             hgt = hgt - 0.3 * area
     # worn walkways (lighter, smoother) and dark stains
-    wear = smoothstep(0.7, 1.5, fbm(64, 2.2, 2.2, 2))
-    col = mix(col, np.clip(col * 1.16 + 0.008, 0, 1), wear * 0.6)
-    stain = smoothstep(0.9, 1.9, fbm(65, 3.0, 3.0, 3))
-    col = col * (1.0 - 0.32 * stain)[..., None]
+    wear = smoothstep(0.7, 1.5, fbm(64, 8.0, 8.0, 2))
+    col = mix(col, np.clip(col * 1.16 + 0.008, 0, 1), wear * 0.35)
+    stain = smoothstep(0.9, 1.9, fbm(65, 10.0, 10.0, 3))
+    col = col * (1.0 - 0.22 * stain)[..., None]
     # splits along the grain
     split = 1.0 - smoothstep(0.0, 0.05, np.abs(fbm(66, 4.0, 60.0, 2)))
     split = split * smoothstep(1.0, 1.7, np.abs(fbm(67, 2.0, 2.0, 1))) * smoothstep(PLANK_GAP_W + 3.0, PLANK_GAP_W + 10.0, dd)
@@ -374,7 +397,8 @@ def dormitory_field():
     hgt = hgt * 0.6 + 1.8 * smoothstep(PLANK_GAP_W - 1.0, PLANK_GAP_W + 5.0, dd)
     # scattered straw
     sp = Sprites(wrap=True)
-    scatter_straw(sp, 604, 4, 9, (0, 0, N, N), (0.56, 0.44, 0.21), bundle_len=(50, 80), loose_len=(40, 64), width=4.6)
+    scatter_straw(sp, 604, 8, 16, (0, 0, N, N), (0.56, 0.44, 0.21), bundle_len=(40, 66), loose_len=(36, 58), width=4.4,
+                  blue=True)
     col, hgt = overlay(col, hgt, sp, 0.8)
     return col, hgt
 
@@ -410,20 +434,20 @@ def library_field():
     qi, qj = _YY // Q, _XX // Q
     ly, lx = _YY % Q, _XX % Q
     slab = qi * 2 + qj
-    bright = rng.uniform(0.86, 1.14, 4)[slab]
-    tintb = rng.uniform(-0.03, 0.03, 4)[slab]
+    bright = rng.uniform(0.94, 1.06, 4)[slab]
+    tintb = rng.uniform(-0.015, 0.015, 4)[slab]
     wobble = 2.2 * nz(21, 18.0, 18.0, 2)
     dd = np.minimum(np.minimum(lx, Q - 1 - lx), np.minimum(ly, Q - 1 - ly)).astype(float)
     dd = dd + wobble * smoothstep(3.0, 12.0, dd)
-    mott = nz(22, 5.0, 5.0, 3)
+    mott = nz(22, 14.0, 14.0, 3)
     grit = nz(23, 140.0, 140.0, 2)
     col = STONE[None, None, :] * bright[..., None]
     col = col + tintb[..., None] * np.array([-0.5, 0.0, 0.8])[None, None, :]
-    col = col * (1.0 + 0.11 * mott[..., None] + 0.05 * grit[..., None])
+    col = col * (1.0 + 0.07 * mott[..., None] + 0.05 * grit[..., None])
     hgt = 0.22 * mott + 0.08 * grit
     # scuffed, rubbed paths
-    wear = smoothstep(0.6, 1.4, nz(24, 2.2, 2.2, 2))
-    col = mix(col, np.clip(col * 1.16 + 0.01, 0, 1), wear * 0.8)
+    wear = smoothstep(0.6, 1.4, nz(24, 9.0, 9.0, 2))
+    col = mix(col, np.clip(col * 1.16 + 0.01, 0, 1), wear * 0.3)
     hgt = hgt - 0.12 * wear
     # cracks and chips
     crack = 1.0 - smoothstep(0.0, 0.085, np.abs(nz(25, 9.0, 9.0, 3)))
@@ -431,8 +455,8 @@ def library_field():
     col = col * (1.0 - 0.55 * crack)[..., None]
     hgt = hgt - 0.9 * crack
     # inky dust stains
-    ink = smoothstep(0.3, 2.3, nz(27, 3.2, 3.2, 3))
-    col = mix(col, np.array([0.075, 0.08, 0.115])[None, None, :] * (1.0 + 0.3 * grit[..., None]), ink * 0.6)
+    ink = smoothstep(0.9, 2.3, nz(27, 12.0, 12.0, 3))
+    col = mix(col, np.array([0.075, 0.08, 0.115])[None, None, :] * (1.0 + 0.3 * grit[..., None]), ink * 0.4)
     # gaps and bevels
     t = smoothstep(GW - 1.0, GW + 1.5, dd)
     col = mix(np.broadcast_to(np.array([0.045, 0.045, 0.06]), col.shape), col, t)
@@ -481,26 +505,26 @@ def feather(sp, cx, cy, ang, length, rgb):
 
 def hatchery_field():
     # broad clods and soft mud patches, little fine grain (it reads as noise at game camera height)
-    lump = fbm(31, 9.0, 9.0, 3)
+    # (repetition pass: patches are small and many, no broad tone field, straw and feathers on wrapping blue noise)
+    lump = fbm(31, 12.0, 12.0, 3)
     grit = fbm(32, 55.0, 55.0, 2)
-    tone = fbm(33, 3.0, 3.0, 3)
-    col = EARTH[None, None, :] * (1.0 + 0.10 * tone[..., None] + 0.06 * lump[..., None] + 0.018 * grit[..., None])
-    hgt = 0.6 * lump + 0.1 * grit + 0.15 * tone
+    col = EARTH[None, None, :] * (1.0 + 0.06 * lump[..., None] + 0.018 * grit[..., None])
+    hgt = 0.6 * lump + 0.1 * grit
     # dark, damp mud patches with soft borders
-    mud = smoothstep(0.15, 1.7, fbm(34, 3.2, 3.2, 3))
+    mud = smoothstep(0.35, 1.8, fbm(34, 11.0, 11.0, 3))
     mudcol = MUD[None, None, :] * (1.0 + 0.08 * lump[..., None])
-    col = mix(col, mudcol, mud * 0.72)
+    col = mix(col, mudcol, mud * 0.52)
     hgt = mix(hgt, hgt * 0.4 - 0.4, mud)
     # trodden, pale dust
-    dust = smoothstep(0.9, 1.8, fbm(35, 5.0, 5.0, 2))
-    col = mix(col, np.clip(col * 1.12 + 0.012, 0, 1), dust * 0.55)
+    dust = smoothstep(0.9, 1.8, fbm(35, 13.0, 13.0, 2))
+    col = mix(col, np.clip(col * 1.12 + 0.012, 0, 1), dust * 0.35)
     sp = Sprites(wrap=True)
-    scatter_straw(sp, 301, 11, 6, (0, 0, N, N), (0.72, 0.58, 0.33), bundle_len=(50, 84), loose_len=(44, 70),
-                  width=5.6)
+    scatter_straw(sp, 301, 17, 15, (0, 0, N, N), (0.72, 0.58, 0.33), bundle_len=(40, 72), loose_len=(40, 64),
+                  width=5.0, blue=True)
     fr = np.random.RandomState(302)
-    for _ in range(3):
-        feather(sp, fr.uniform(0, N), fr.uniform(0, N), fr.uniform(0, np.pi), fr.uniform(26, 34),
-                (0.66, 0.63, 0.56))
+    for _ in range(6):
+        feather(sp, fr.uniform(0, N), fr.uniform(0, N), fr.uniform(0, np.pi), fr.uniform(20, 28),
+                (0.58, 0.54, 0.46))
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
 
@@ -584,30 +608,30 @@ def temple_field():
     ember cracks of their own. The room shader has no emissive term, so the glow is painted into the diffuse
     texture. The whole texture wraps, so it needs the same rotation on every tile: see [dungeonTempleRoom] in
     config/tilesets.cfg."""
-    count = 8
-    idx, dd, off = voronoi_slabs(431, count, 34.0, 5.0, 433)
+    count = 11
+    idx, dd, off = voronoi_slabs(431, count, 30.0, 5.0, 433)
     rng = np.random.RandomState(432)
-    bright = rng.uniform(0.80, 1.18, count)[idx]
+    bright = rng.uniform(0.88, 1.14, count)[idx]
     tintb = rng.uniform(-0.02, 0.02, count)[idx]
-    tilt = rng.uniform(-0.10, 0.10, (count, 2))[idx]
+    tilt = rng.uniform(-0.06, 0.06, (count, 2))[idx]
     crackslab = (rng.uniform(0, 1, count) < 0.45)[idx]
     # chipped edges: small bites out of the slab rim
     chip = smoothstep(0.9, 1.8, fbm(423, 38.0, 38.0, 2))
     dd = np.maximum(dd - 6.0 * chip, 0.0)
-    mott = fbm(42, 4.0, 4.0, 3)
+    mott = fbm(42, 11.0, 11.0, 3)
     grit = fbm(43, 90.0, 90.0, 2)
     col = BASALT[None, None, :] * (bright * (1.0 + (tilt * off).sum(-1) / 90.0))[..., None]
     col = col + tintb[..., None] * np.array([0.5, 0.0, 0.6])[None, None, :]
-    col = col * (1.0 + 0.16 * mott[..., None] + 0.05 * np.clip(grit, -2.0, 2.0)[..., None])
+    col = col * (1.0 + 0.09 * mott[..., None] + 0.05 * np.clip(grit, -2.0, 2.0)[..., None])
     hgt = 0.2 * mott + 0.1 * grit
-    wear = smoothstep(0.6, 1.5, fbm(44, 2.3, 2.3, 2))
-    col = mix(col, np.clip(col * 1.12 + 0.004, 0, 1), wear * 0.6)
+    wear = smoothstep(0.6, 1.5, fbm(44, 8.0, 8.0, 2))
+    col = mix(col, np.clip(col * 1.12 + 0.004, 0, 1), wear * 0.3)
     pit = smoothstep(2.3, 2.9, fbm(47, 70.0, 70.0, 1))
     col = col * (1.0 - 0.35 * pit)[..., None]
     hgt = hgt - 0.6 * pit
     # heat and width along the joints
-    heat = smoothstep(-0.85, 0.75, fbm(424, 4.2, 4.2, 2) + 0.35 * fbm(425, 11.0, 11.0, 1))
-    hw = 2.3 + 3.9 * smoothstep(-0.6, 1.0, fbm(426, 5.0, 5.0, 2))
+    heat = smoothstep(-0.85, 0.75, fbm(424, 8.0, 8.0, 2) + 0.35 * fbm(425, 14.0, 14.0, 1))
+    hw = 2.3 + 3.9 * smoothstep(-0.6, 1.0, fbm(426, 9.0, 9.0, 2))
     halo = np.exp(-(dd / (hw * 3.6 + 5.0)) ** 2) * heat ** 1.4
     col = col + halo[..., None] * np.array([0.150, 0.020, 0.010])[None, None, :]
     core = 1.0 - smoothstep(hw * 0.55, hw * 1.7, dd)
@@ -683,13 +707,13 @@ def crypt_field():
     lum = col.mean(-1)
     low = blur(lum, 2.2)
     joint = 1.0 - smoothstep(0.12, 0.27, low)
-    moss_n = pn(61, 6.0, 6.0, 3)
+    moss_n = pn(61, 14.0, 14.0, 3)
     grit = pn(62, 120.0, 120.0, 2)
     moss = smoothstep(-0.1, 1.0, moss_n) * joint
     mosscol = np.array([0.15, 0.19, 0.10])[None, None, :] * (0.75 + 0.45 * (grit[..., None] * 0.5 + 0.5))
     col = mix(col, mosscol, np.clip(moss * 0.9, 0, 0.85))
     # grey-green lichen speckles on the stones
-    patch = smoothstep(0.7, 1.6, pn(63, 4.0, 4.0, 2))
+    patch = smoothstep(0.7, 1.6, pn(63, 12.0, 12.0, 2))
     speck = smoothstep(1.4, 2.2, pn(64, 55.0, 55.0, 1)) * patch * (1.0 - joint)
     col = mix(col, np.array([0.36, 0.40, 0.32])[None, None, :] * (0.8 + 0.3 * grit[..., None]), speck * 0.55)
     # cracks
@@ -739,10 +763,10 @@ SAND_DARK = np.array([0.185, 0.172, 0.150])
 
 
 def training_hall_field():
-    tone = fbm(401, 4.0, 4.0, 3)
+    tone = fbm(401, 12.0, 12.0, 3)
     lump = fbm(402, 30.0, 30.0, 3)
     grit = fbm(403, 170.0, 170.0, 2)
-    col = SAND[None, None, :] * (1.0 + 0.07 * tone[..., None] + 0.055 * lump[..., None] + 0.06 * grit[..., None])
+    col = SAND[None, None, :] * (1.0 + 0.035 * tone[..., None] + 0.055 * lump[..., None] + 0.06 * grit[..., None])
     hgt = 0.5 * lump + 0.35 * grit + 0.15 * tone
     # pale sawdust flecks and dark damp grains
     fleck = smoothstep(1.5, 2.4, fbm(404, 110.0, 110.0, 1))
@@ -752,20 +776,20 @@ def training_hall_field():
     rng = np.random.RandomState(406)
     # worn, compacted circles (darker, smoother)
     worn = Layer()
-    for _ in range(6):
-        worn.ellipse(rng.uniform(0, N), rng.uniform(0, N), rng.uniform(55, 95), rng.uniform(50, 90),
+    for _ in range(16):
+        worn.ellipse(rng.uniform(0, N), rng.uniform(0, N), rng.uniform(28, 52), rng.uniform(26, 48),
                      rng.uniform(0, np.pi), 255)
     worn_m = np.clip(blur(worn.result(), 10.0), 0.0, 1.0)
-    worn_m = worn_m * (0.65 + 0.35 * smoothstep(-0.8, 0.8, fbm(407, 9.0, 9.0, 2)))
-    col = col * (1.0 - 0.17 * worn_m)[..., None]
+    worn_m = worn_m * (0.65 + 0.35 * smoothstep(-0.8, 0.8, fbm(407, 14.0, 14.0, 2)))
+    col = col * (1.0 - 0.09 * worn_m)[..., None]
     hgt = mix(hgt, hgt * 0.4 - 0.3, worn_m)
     # scuff marks: short curved drag lines
     scuff = Layer()
-    for _ in range(46):
+    for _ in range(72):
         x, y = rng.uniform(0, N), rng.uniform(0, N)
         ang = rng.uniform(0, 2 * np.pi)
         curve = rng.uniform(-0.05, 0.05)
-        length = rng.uniform(30, 95)
+        length = rng.uniform(26, 70)
         pts = []
         for t in np.linspace(0.0, 1.0, 10):
             a = ang + curve * t * length * 0.1
@@ -776,8 +800,8 @@ def training_hall_field():
     hgt = hgt - 0.9 * scuff_m
     # boot prints: sole and heel pairs
     prints = Layer()
-    for _ in range(16):
-        cx, cy = rng.uniform(0, N), rng.uniform(0, N)
+    centres = blue_noise_points(409, 34, 0)
+    for cx, cy in centres:
         ang = rng.uniform(0, 2 * np.pi)
         ca, sa = np.cos(ang), np.sin(ang)
         for k in range(2):
@@ -786,7 +810,7 @@ def training_hall_field():
             prints.ellipse(px + ca * 12, py + sa * 12, 15, 8.5, ang, 255)
             prints.ellipse(px - ca * 12, py - sa * 12, 7.5, 7, ang, 255)
     pm = np.clip(blur(prints.result(), 0.8), 0.0, 1.0)
-    col = mix(col, SAND_DARK[None, None, :] * 0.9, pm * 0.45)
+    col = mix(col, SAND_DARK[None, None, :] * 0.9, pm * 0.42)
     hgt = hgt - 1.6 * pm
     return col, hgt
 
@@ -827,7 +851,7 @@ def casino_field():
     length = HB_L * HB_W
     dist = np.minimum(np.minimum(u, length - 1 - u), np.minimum(v, HB_W - 1 - v))
     rng = np.random.RandomState(501)
-    ptone = rng.uniform(0.80, 1.22, pid.max() + 1)
+    ptone = rng.uniform(0.86, 1.16, pid.max() + 1)
     phue = rng.uniform(-0.03, 0.03, pid.max() + 1)
     pt = ptone[pid]
     ph = phue[pid]
@@ -839,13 +863,13 @@ def casino_field():
     col = col * (1.0 + 0.05 * fbm(503, 160.0, 160.0, 2))[..., None]
     hgt = 0.35 * grain + 0.3 * fbm(504, 40.0, 40.0, 2)
     # worn, sanded spots in front of the tables (lighter, smoother)
-    worn = smoothstep(0.85, 1.9, fbm(505, 3.5, 3.5, 2))
-    col = col * (1.0 + 0.22 * worn)[..., None]
+    worn = smoothstep(0.85, 1.9, fbm(505, 10.0, 10.0, 2))
+    col = col * (1.0 + 0.12 * worn)[..., None]
     # spilled drinks: dark reddish blotches with a drying rim
-    sn = fbm(506, 6.0, 6.0, 3)
+    sn = fbm(506, 15.0, 15.0, 3)
     stain = smoothstep(1.25, 1.55, sn)
     rim = np.clip(1.0 - np.abs(sn - 1.25) / 0.09, 0.0, 1.0) * 0.6
-    col = mix(col, col * np.array([0.52, 0.40, 0.36])[None, None, :], np.clip(stain * 0.8 + rim * 0.3, 0, 1))
+    col = mix(col, col * np.array([0.60, 0.48, 0.44])[None, None, :], np.clip(stain * 0.7 + rim * 0.25, 0, 1))
     # dark joints and bevels
     t = smoothstep(0.6, 2.2, dist)
     col = mix(np.broadcast_to(WOOD_GAP, col.shape), col, t)
@@ -869,15 +893,15 @@ def prison_field():
     mud = MUD_BROWN[None, None, :] * (0.85 + 0.25 * lum[..., None] / 0.3) * (1.0 + 0.08 * grit[..., None])
     col = mix(col, np.clip(mud, 0, 1), mortar * 0.92)
     # damp darkening on the cobbles
-    damp = smoothstep(0.2, 1.4, fbm(602, 5.0, 5.0, 3))
-    col = col * (1.0 - 0.18 * damp)[..., None]
+    damp = smoothstep(0.2, 1.4, fbm(602, 14.0, 14.0, 3))
+    col = col * (1.0 - 0.10 * damp)[..., None]
     # rust stains
-    rn = fbm(603, 4.5, 4.5, 3)
+    rn = fbm(603, 13.0, 13.0, 3)
     rust = smoothstep(0.85, 1.6, rn) * (0.6 + 0.4 * smoothstep(-1.0, 1.0, fbm(604, 40.0, 40.0, 2)))
-    col = mix(col, RUST[None, None, :] * (0.7 + 0.5 * lum[..., None] / 0.3), rust * 0.32)
+    col = mix(col, RUST[None, None, :] * (0.7 + 0.5 * lum[..., None] / 0.3), rust * 0.24)
     # straw wisps
     sp = Sprites(wrap=True)
-    draw_straws(sp, straw_segments(605, 34, (0, 0, N, N), (22, 42)), (0.50, 0.40, 0.20))
+    draw_straws(sp, straw_segments(605, 48, (0, 0, N, N), (20, 38)), (0.50, 0.40, 0.20))
     sc, sa, _ = sp.result()
     col = mix(col, sc, sa * 0.92)
     return col, None
@@ -928,10 +952,10 @@ BLOOD = np.array([0.155, 0.055, 0.045])
 
 
 def arena_field():
-    tone = fbm(701, 3.5, 3.5, 3)
+    tone = fbm(701, 12.0, 12.0, 3)
     lump = fbm(702, 24.0, 24.0, 3)
     grit = fbm(703, 190.0, 190.0, 2)
-    col = ARENA_SAND[None, None, :] * (1.0 + 0.07 * tone[..., None] + 0.05 * lump[..., None] + 0.06 * grit[..., None])
+    col = ARENA_SAND[None, None, :] * (1.0 + 0.035 * tone[..., None] + 0.05 * lump[..., None] + 0.06 * grit[..., None])
     hgt = 0.45 * lump + 0.4 * grit + 0.15 * tone
     rng = np.random.RandomState(704)
     # gravel: small pebbles, lighter and darker
@@ -948,11 +972,11 @@ def arena_field():
     hgt = hgt + 1.3 * lm + 0.9 * dm
     # raked / scratched grooves: groups of parallel lines
     scratch = Layer()
-    for _ in range(14):
+    for _ in range(24):
         x, y = rng.uniform(0, N), rng.uniform(0, N)
         ang = rng.uniform(0, 2 * np.pi)
         curve = rng.uniform(-0.04, 0.04)
-        length = rng.uniform(90, 230)
+        length = rng.uniform(60, 140)
         for k in range(rng.randint(2, 5)):
             off = (k - 1.0) * rng.uniform(5.0, 8.0)
             pts = []
@@ -962,24 +986,24 @@ def arena_field():
                             y + np.cos(ang) * off + np.sin(a) * length * t))
             scratch.line(pts, rng.uniform(1.4, 2.4), 255)
     sm = np.clip(blur(scratch.result(), 0.8) * 1.3, 0.0, 1.0)
-    col = mix(col, np.array([0.19, 0.145, 0.105])[None, None, :], sm * 0.6)
+    col = mix(col, np.array([0.19, 0.145, 0.105])[None, None, :], sm * 0.45)
     hgt = hgt - 1.8 * sm
     # worn, packed ground
-    worn = smoothstep(0.7, 1.8, fbm(705, 3.0, 3.0, 2))
-    col = col * (1.0 - 0.10 * worn)[..., None]
+    worn = smoothstep(0.7, 1.8, fbm(705, 10.0, 10.0, 2))
+    col = col * (1.0 - 0.06 * worn)[..., None]
     # blood: dark brown-red stains with a drying rim, plus a few drag smears
-    bn = fbm(706, 5.5, 5.5, 3)
+    bn = fbm(706, 15.0, 15.0, 3)
     stain = smoothstep(1.3, 1.6, bn)
     rim = np.clip(1.0 - np.abs(bn - 1.3) / 0.1, 0.0, 1.0)
-    col = mix(col, BLOOD[None, None, :] * (0.85 + 0.3 * grit[..., None]), np.clip(stain * 0.78 + rim * 0.22, 0, 0.85))
+    col = mix(col, BLOOD[None, None, :] * (0.85 + 0.3 * grit[..., None]), np.clip(stain * 0.6 + rim * 0.2, 0, 0.7))
     hgt = hgt - 0.5 * stain
     smear = Layer()
-    for _ in range(9):
+    for _ in range(16):
         x, y = rng.uniform(0, N), rng.uniform(0, N)
         ang = rng.uniform(0, 2 * np.pi)
-        smear.line([(x, y), (x + np.cos(ang) * 60, y + np.sin(ang) * 60)], rng.uniform(5, 9), 255)
+        smear.line([(x, y), (x + np.cos(ang) * 40, y + np.sin(ang) * 40)], rng.uniform(4, 7), 255)
     smm = np.clip(blur(smear.result(), 2.5) * 1.2, 0.0, 1.0)
-    col = mix(col, BLOOD[None, None, :] * 1.1, smm * 0.4)
+    col = mix(col, BLOOD[None, None, :] * 1.1, smm * 0.28)
     return col, hgt
 
 
@@ -987,9 +1011,9 @@ SLAB = np.array([0.238, 0.196, 0.186])
 
 
 def torture_field():
-    pid, dist, count = row_layout(801, 4, 120, 230, 7.0, 802)
+    pid, dist, count = row_layout(801, 6, 90, 190, 4.0, 802)
     rng = np.random.RandomState(803)
-    tone = rng.uniform(0.82, 1.18, count)[pid]
+    tone = rng.uniform(0.90, 1.10, count)[pid]
     hue = rng.uniform(-0.02, 0.025, count)[pid]
     mottle = fbm(804, 14.0, 14.0, 3)
     grit = fbm(805, 170.0, 170.0, 2)
@@ -997,13 +1021,13 @@ def torture_field():
     col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
     hgt = 0.5 * mottle + 0.4 * grit
     # wet patches: darker, a little bluer
-    wet = smoothstep(0.1, 1.3, fbm(806, 4.0, 4.0, 3))
-    col = col * (1.0 - 0.22 * wet)[..., None] * np.array([0.98, 1.0, 1.03])[None, None, :]
+    wet = smoothstep(0.1, 1.3, fbm(806, 12.0, 12.0, 3))
+    col = col * (1.0 - 0.12 * wet)[..., None] * np.array([0.98, 1.0, 1.03])[None, None, :]
     hgt = hgt * (1.0 - 0.5 * wet)
     # dark stains
-    sn = fbm(807, 5.0, 5.0, 3)
+    sn = fbm(807, 14.0, 14.0, 3)
     stain = smoothstep(1.2, 1.6, sn)
-    col = mix(col, np.array([0.085, 0.065, 0.06])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.8)
+    col = mix(col, np.array([0.085, 0.065, 0.06])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.6)
     # dark, wet joints with a bevel
     t = smoothstep(0.8, 3.2, dist)
     col = mix(np.broadcast_to(np.array([0.045, 0.047, 0.052]), col.shape), col, t)
@@ -1011,30 +1035,29 @@ def torture_field():
     # drain grooves: short curved channels
     rng2 = np.random.RandomState(808)
     groove = Layer()
-    for _ in range(5):
+    for _ in range(9):
         x, y = rng2.uniform(0, N), rng2.uniform(0, N)
         ang = rng2.uniform(0, 2 * np.pi)
         curve = rng2.uniform(-0.08, 0.08)
-        length = rng2.uniform(70, 150)
+        length = rng2.uniform(40, 90)
         pts = []
         for tt in np.linspace(0.0, 1.0, 12):
             a = ang + curve * tt * length * 0.1
             pts.append((x + np.cos(a) * length * tt, y + np.sin(a) * length * tt))
-        groove.line(pts, rng2.uniform(4.0, 6.0), 255)
+        groove.line(pts, rng2.uniform(3.0, 4.5), 255)
     gm = np.clip(blur(groove.result(), 0.9), 0.0, 1.0)
-    col = mix(col, np.array([0.04, 0.042, 0.048])[None, None, :], gm * 0.85)
+    col = mix(col, np.array([0.04, 0.042, 0.048])[None, None, :], gm * 0.6)
     hgt = hgt - 3.0 * gm
     # iron grates: dark recess with raised bars
     back = Layer()
     bars = Layer()
-    for _ in range(3):
-        cx, cy = rng2.uniform(0, N), rng2.uniform(0, N)
-        w, h = 46, 30
+    for cx, cy in blue_noise_points(810, 8, 0):
+        w, h = 26, 17
         back.polygon([(cx - w / 2, cy - h / 2), (cx + w / 2, cy - h / 2), (cx + w / 2, cy + h / 2),
                       (cx - w / 2, cy + h / 2)], 255)
-        for k in range(7):
-            bx = cx - w / 2 + 4 + k * (w - 8) / 6.0
-            bars.line([(bx, cy - h / 2 + 2), (bx, cy + h / 2 - 2)], 3.0, 255)
+        for k in range(5):
+            bx = cx - w / 2 + 3 + k * (w - 6) / 4.0
+            bars.line([(bx, cy - h / 2 + 2), (bx, cy + h / 2 - 2)], 2.2, 255)
     bm = np.clip(back.result(), 0.0, 1.0)
     brm = np.clip(bars.result(), 0.0, 1.0)
     col = mix(col, np.array([0.03, 0.03, 0.034])[None, None, :], bm * 0.92)
@@ -1049,9 +1072,9 @@ RUST_ORANGE = np.array([0.30, 0.15, 0.08])
 
 
 def workshop_field():
-    pid, dist, count = row_layout(901, 8, 210, 340, 3.5, 902)
+    pid, dist, count = row_layout(901, 8, 160, 300, 3.0, 902)
     rng = np.random.RandomState(903)
-    tone = rng.uniform(0.80, 1.18, count)[pid]
+    tone = rng.uniform(0.88, 1.12, count)[pid]
     hue = rng.uniform(-0.02, 0.02, count)[pid]
     grain = fbm(904, 4.0, 110.0, 3)
     grit = fbm(905, 150.0, 150.0, 2)
@@ -1059,16 +1082,16 @@ def workshop_field():
     col = col * (1.0 + 0.12 * grain + 0.05 * grit)[..., None]
     hgt = 0.45 * grain + 0.25 * grit
     # soot: dark, slightly cool darkening in broad patches
-    soot = smoothstep(-0.2, 1.4, fbm(906, 3.5, 3.5, 3))
-    col = col * (1.0 - 0.30 * soot)[..., None] * np.array([1.0, 0.98, 0.96])[None, None, :]
+    soot = smoothstep(-0.2, 1.4, fbm(906, 10.0, 10.0, 3))
+    col = col * (1.0 - 0.16 * soot)[..., None] * np.array([1.0, 0.98, 0.96])[None, None, :]
     # dark joints
     t = smoothstep(0.6, 2.6, dist)
     col = mix(np.broadcast_to(np.array([0.03, 0.025, 0.024]), col.shape), col, t)
     col = col * (0.85 + 0.15 * smoothstep(1.0, 5.0, dist))[..., None]
     hgt = hgt + 2.0 * smoothstep(0.6, 4.0, dist)
     # oil: dark bluish-black blotches
-    oil = smoothstep(1.35, 1.65, fbm(907, 6.5, 6.5, 3))
-    col = mix(col, np.array([0.045, 0.045, 0.055])[None, None, :], oil * 0.85)
+    oil = smoothstep(1.35, 1.65, fbm(907, 16.0, 16.0, 3))
+    col = mix(col, np.array([0.045, 0.045, 0.055])[None, None, :], oil * 0.6)
     hgt = hgt - 0.6 * oil
     # rust spots: small orange-brown flecks
     rust = smoothstep(1.5, 2.1, fbm(908, 26.0, 26.0, 2)) * smoothstep(0.0, 1.2, fbm(909, 4.0, 4.0, 2))
@@ -1076,18 +1099,20 @@ def workshop_field():
     # iron plates with rivets
     plates = Layer()
     rivets = Layer()
-    for (cx, cy, w, h) in ((96, 120, 100, 60), (330, 290, 80, 100), (150, 430, 110, 52)):
+    prng = np.random.RandomState(912)
+    for cx, cy in blue_noise_points(913, 10, 0):
+        w, h = prng.uniform(34, 56), prng.uniform(26, 46)
         plates.polygon([(cx - w / 2, cy - h / 2), (cx + w / 2, cy - h / 2), (cx + w / 2, cy + h / 2),
                         (cx - w / 2, cy + h / 2)], 255)
         for sx in (-1, 1):
             for sy in (-1, 1):
-                rivets.ellipse(cx + sx * (w / 2 - 7), cy + sy * (h / 2 - 7), 3.2, 3.2, 0.0, 255)
+                rivets.ellipse(cx + sx * (w / 2 - 5), cy + sy * (h / 2 - 5), 2.4, 2.4, 0.0, 255)
     pm = np.clip(plates.result(), 0.0, 1.0)
     edge = np.clip(pm - blur(pm, 2.5), 0.0, 1.0)
     rv = np.clip(blur(rivets.result(), 0.6) * 1.3, 0.0, 1.0)
     plate_col = IRON[None, None, :] * (0.85 + 0.35 * (grit[..., None] * 0.5 + 0.5)) * (1.0 - 0.3 * soot)[..., None]
     col = mix(col, plate_col, pm)
-    plate_rust = pm * smoothstep(1.1, 1.7, fbm(911, 10.0, 10.0, 3)) * 0.55
+    plate_rust = pm * smoothstep(1.1, 1.7, fbm(911, 14.0, 14.0, 3)) * 0.45
     col = mix(col, RUST_ORANGE[None, None, :], plate_rust)
     col = mix(col, col * 1.5, rv * 0.7)
     col = col * (1.0 - 0.6 * edge)[..., None]
@@ -1124,9 +1149,9 @@ def rune_layer(seed, count, glyph, width):
 
 
 def portal_field():
-    pid, dist, count = row_layout(1001, 3, 150, 270, 6.0, 1002)
+    pid, dist, count = row_layout(1001, 5, 110, 200, 4.0, 1002)
     rng = np.random.RandomState(1003)
-    tone = rng.uniform(0.84, 1.16, count)[pid]
+    tone = rng.uniform(0.90, 1.10, count)[pid]
     hue = rng.uniform(-0.02, 0.02, count)[pid]
     mottle = fbm(1004, 12.0, 12.0, 3)
     grit = fbm(1005, 160.0, 160.0, 2)
@@ -1134,8 +1159,8 @@ def portal_field():
     col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
     hgt = 0.5 * mottle + 0.4 * grit
     # worn, smoother patches where the stone is walked
-    worn = smoothstep(0.3, 1.5, fbm(1006, 3.0, 3.0, 2))
-    col = col * (1.0 + 0.10 * worn)[..., None]
+    worn = smoothstep(0.3, 1.5, fbm(1006, 10.0, 10.0, 2))
+    col = col * (1.0 + 0.05 * worn)[..., None]
     hgt = hgt * (1.0 - 0.4 * worn)
     # dark grimy joints with a bevel
     t = smoothstep(0.8, 3.0, dist)
@@ -1143,20 +1168,20 @@ def portal_field():
     col = col * (0.86 + 0.14 * smoothstep(1.0, 6.0, dist))[..., None]
     hgt = hgt * 0.7 + 2.4 * smoothstep(0.8, 5.0, dist)
     # faint violet bloom in some patches
-    bloom = smoothstep(0.6, 1.8, fbm(1007, 4.5, 4.5, 3))
-    col = mix(col, col * np.array([1.08, 0.96, 1.22])[None, None, :], bloom * 0.6)
+    bloom = smoothstep(0.6, 1.8, fbm(1007, 13.0, 13.0, 3))
+    col = mix(col, col * np.array([1.08, 0.96, 1.22])[None, None, :], bloom * 0.4)
     # hairline rune grooves: glyphs plus a few thin groove lines
-    runes = np.clip(blur(rune_layer(1008, 30, 13, 1.3), 0.5) * 1.4, 0.0, 1.0)
+    runes = np.clip(blur(rune_layer(1008, 40, 11, 1.4), 0.5) * 1.4, 0.0, 1.0)
     rng2 = np.random.RandomState(1009)
     lines = Layer()
-    for _ in range(7):
+    for _ in range(11):
         x, y = rng2.uniform(0, N), rng2.uniform(0, N)
         ang = rng2.choice([0.0, np.pi / 2, np.pi / 4, -np.pi / 4]) + rng2.uniform(-0.04, 0.04)
-        length = rng2.uniform(60, 140)
+        length = rng2.uniform(40, 100)
         lines.line([(x, y), (x + np.cos(ang) * length, y + np.sin(ang) * length)], 1.2, 255)
     lm = np.clip(blur(lines.result(), 0.5) * 1.4, 0.0, 1.0)
     groove = np.clip(runes + lm * 0.8, 0.0, 1.0)
-    col = mix(col, np.array([0.06, 0.045, 0.085])[None, None, :], groove * 0.75)
+    col = mix(col, np.array([0.06, 0.045, 0.085])[None, None, :], groove * 0.8)
     col = mix(col, col * np.array([1.0, 0.95, 1.35])[None, None, :], blur(groove, 1.6) * 0.35)
     hgt = hgt - 2.6 * groove
     return col, hgt
@@ -1165,7 +1190,7 @@ def portal_field():
 def portal_wave_field():
     pid, dist, count = row_layout(1101, 7, 70, 150, 3.0, 1102)
     rng = np.random.RandomState(1103)
-    tone = rng.uniform(0.80, 1.18, count)[pid]
+    tone = rng.uniform(0.88, 1.12, count)[pid]
     hue = rng.uniform(-0.02, 0.02, count)[pid]
     mottle = fbm(1104, 16.0, 16.0, 3)
     grit = fbm(1105, 190.0, 190.0, 2)
@@ -1173,25 +1198,28 @@ def portal_wave_field():
     col = col * (1.0 + 0.11 * mottle + 0.08 * grit)[..., None]
     hgt = 0.55 * mottle + 0.4 * grit
     # damp, cooler patches
-    damp = smoothstep(0.2, 1.4, fbm(1106, 3.5, 3.5, 3))
-    col = col * (1.0 - 0.15 * damp)[..., None] * np.array([0.97, 1.0, 1.05])[None, None, :]
+    damp = smoothstep(0.2, 1.4, fbm(1106, 11.0, 11.0, 3))
+    col = col * (1.0 - 0.08 * damp)[..., None] * np.array([0.97, 1.0, 1.05])[None, None, :]
     # dark joints
     t = smoothstep(0.7, 2.8, dist)
     col = mix(np.broadcast_to(np.array([0.035, 0.042, 0.055]), col.shape), col, t)
     col = col * (0.85 + 0.15 * smoothstep(1.0, 5.0, dist))[..., None]
     hgt = hgt * 0.7 + 2.2 * smoothstep(0.7, 4.5, dist)
-    # concentric wave grooves around the tile centre (distance on the torus, so the pattern is periodic), warped
-    # by noise and broken into arcs
-    dx = wrap_dist(_XX + 0.0, N / 2.0)
-    dy = wrap_dist(_YY + 0.0, N / 2.0)
-    radius = np.sqrt(dx ** 2 + dy ** 2) + 3.0 * fbm(1107, 3.0, 3.0, 2)
-    phase = radius / 32.0
-    ring = np.abs(phase - np.round(phase)) * 32.0
-    groove = 1.0 - smoothstep(0.8, 2.6, ring)
-    arcs = smoothstep(-0.4, 0.5, fbm(1108, 2.5, 2.5, 2))
+    # ripple arcs: broken concentric rings around scattered points (distance on the torus, so the pattern is
+    # periodic and has no ring centre at the tile centre)
+    groove = np.zeros((N, N))
+    prng = np.random.RandomState(1109)
+    arcs = smoothstep(-0.3, 0.5, fbm(1108, 7.0, 7.0, 2))
+    for cx, cy in blue_noise_points(1110, 15, 0):
+        dx = wrap_dist(_XX + 0.0, cx)
+        dy = wrap_dist(_YY + 0.0, cy)
+        radius = np.sqrt(dx ** 2 + dy ** 2) + 2.5 * fbm(1107, 8.0, 8.0, 2)
+        r0 = prng.uniform(14.0, 34.0)
+        for k in range(prng.randint(1, 4)):
+            groove = np.maximum(groove, (1.0 - smoothstep(1.0, 3.0, np.abs(radius - r0 - 17.0 * k))) * (1.0 - smoothstep(60.0, 80.0, radius)))
     groove = np.clip(groove * arcs, 0.0, 1.0)
-    col = mix(col, np.array([0.05, 0.065, 0.095])[None, None, :], groove * 0.8)
-    col = mix(col, col * np.array([0.95, 1.05, 1.30])[None, None, :], blur(groove, 2.0) * 0.30)
+    col = mix(col, np.array([0.05, 0.065, 0.095])[None, None, :], groove * 0.85)
+    col = mix(col, col * np.array([0.95, 1.05, 1.30])[None, None, :], blur(groove, 2.0) * 0.26)
     hgt = hgt - 2.0 * groove
     return col, hgt
 
@@ -1408,6 +1436,8 @@ ROOMS = {
 def build(room):
     spec = ROOMS[room]
     field_col, field_hgt = spec['field']()
+    if room in FLATTEN:
+        field_col = flatten(field_col, *FLATTEN[room])
     result = {}
     for name, (sides, normal_name) in spec['pieces'].items():
         col, hgt = field_col.copy(), (field_hgt.copy() if field_hgt is not None else None)
