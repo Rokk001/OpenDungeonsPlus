@@ -31,7 +31,7 @@ int main(int argc,char** argv){try{
   groups.addResourceLocation(path,"FileSystem","Graphics");
  groups.initialiseAllResourceGroups();groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");
  auto& materials=Ogre::MaterialManager::getSingleton();
- for(const auto* name:{"Dormitory.material","Dormitory1100.material","Dormitory1011.material","Dormitory1111.material"})
+ for(const auto* name:{MATERIAL_FILES})
   materials.parseScript(groups.openResource(name,"Graphics"),"Graphics");
  // Pixel assertions isolate the actual fragment shader from world deformation;
  // the second render uses the unchanged production vertex shader as well.
@@ -93,6 +93,7 @@ int main(int argc,char** argv){try{
  root.destroySceneManager(scene);return failures?1:0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
 '''
+probe = probe.replace('MATERIAL_FILES', ','.join('"%s.material"' % material for material in sorted({material for _, material, _ in tiles})))
 probe = probe.replace('VARIANTS', ','.join('{%d,"%s",%sf}' % (mask, material, rotation) for mask, material, rotation in tiles))
 out = repo / 'build/dormitory-floor-check'
 out.mkdir(parents=True, exist_ok=True)
