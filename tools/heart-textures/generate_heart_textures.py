@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Generates the textures of the dungeon heart (materials/textures/DungeonHeart*.png).
 
-The heart mesh is mapped with a spherical projection (see tools/heart-on-temple), so the images are
-seamless on all edges and are twice as wide as high. Everything is procedural and seeded, running the
-script again gives byte-identical files.
+The heart mesh (tools/heart-on-temple) is mapped by a spherical projection around its x axis onto the upper part
+of the image; the lower part holds the walls, lips and openings of the vessel stubs. Every texel of the body knows
+its point on the heart's surface (taken from the mesh), so the veins, cracks and injuries are painted in 3D and
+match the geometry that belongs to them. Everything is procedural and seeded, running the script again gives
+byte-identical files.
 
-  DungeonHeartHealthy.png   colour of the healthy heart: violet, mottled, with dark-indigo veins
-  DungeonHeartDamaged.png   the same surface faded to a grey-mauve
-  DungeonHeartCritical.png  the same surface almost black, veins with a faint red glow
-  DungeonHeartNormal.png    tangent space normal map of the surface (bumps, veins, creases), shared by the tiers
+  DungeonHeart<Tier>.png        colour: crimson muscle with dark veins; the injured tiers get bruises, scars,
+                                cracks and a little blood, but keep the colours of the heart
+  DungeonHeart<Tier>Normal.png  tangent space normal map (fibres, veins, creases, cracks, scars, wounds)
+  DungeonHeart<Tier>Glow.png    faint embers in cracks and wounds, added on top of the lit surface
 
 Usage: python generate_heart_textures.py [output folder]
 Needs numpy and Pillow.
@@ -20,86 +22,316 @@ import sys
 import numpy as np
 from PIL import Image
 
-WIDTH = 512
-HEIGHT = 256
-SEED = 7
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, '..', 'heart-on-temple'))
+import heart_shape as hs  # noqa: E402
+import generate_heart_geometry as gg  # noqa: E402
+
+WIDTH = 1024
+HEIGHT = 512
+BODY_ROWS = int(round(hs.BODY_V * HEIGHT))
+SEED = 11
+
+# Colours (the palette follows the heart icon of the HUD: deep red with darker veins)
+DARK = np.array([0.30, 0.030, 0.045])
+MID = np.array([0.62, 0.070, 0.085])
+LIGHT = np.array([0.80, 0.150, 0.140])
+VEIN = np.array([0.24, 0.020, 0.040])
+VEIN_EDGE = np.array([0.72, 0.13, 0.12])
+GROOVE = np.array([0.20, 0.020, 0.035])
+BRUISE = np.array([0.17, 0.025, 0.11])
+BLOOD = np.array([0.60, 0.020, 0.030])
+BLOOD_EDGE = np.array([1.00, 0.20, 0.15])
+SCAR = np.array([0.70, 0.36, 0.32])
+THREAD = np.array([0.10, 0.045, 0.045])
+CRACK = np.array([0.075, 0.012, 0.015])
+ASH = np.array([0.30, 0.11, 0.10])
+EMBER = np.array([1.00, 0.34, 0.06])
+
+# Per tier: tone towards ash, brightness, amount of cracks, brightness of the embers
+TIER_LOOK = {
+    'Healthy': (0.00, 1.00, 0.00, 0.35),
+    'Damaged': (0.18, 1.00, 0.30, 0.25),
+    'Critical': (0.32, 0.95, 0.55, 0.40),
+}
 
 
-def smooth(t):
-    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
+def clamp01(x):
+    return np.clip(x, 0.0, 1.0)
 
 
-def periodic_noise(rng, cells_x, cells_y):
-    """Value noise in [0, 1] that repeats every WIDTH x HEIGHT pixels."""
-    lattice = rng.random((cells_y, cells_x))
-    ys = np.arange(HEIGHT) * cells_y / HEIGHT
-    xs = np.arange(WIDTH) * cells_x / WIDTH
-    y0 = np.floor(ys).astype(int)
-    x0 = np.floor(xs).astype(int)
-    fy = smooth(ys - y0)[:, None]
-    fx = smooth(xs - x0)[None, :]
-    y1 = (y0 + 1) % cells_y
-    x1 = (x0 + 1) % cells_x
-    top = lattice[np.ix_(y0, x0)] * (1.0 - fx) + lattice[np.ix_(y0, x1)] * fx
-    bottom = lattice[np.ix_(y1, x0)] * (1.0 - fx) + lattice[np.ix_(y1, x1)] * fx
-    return top * (1.0 - fy) + bottom * fy
+def colour_of(rgb, n):
+    return np.broadcast_to(rgb, (n, 3))
 
 
-def fbm(rng, base_x, octaves, gain=0.5):
-    total = np.zeros((HEIGHT, WIDTH))
+def mix(a, b, t):
+    return a * (1.0 - t[:, None]) + b * t[:, None]
+
+
+def hash3(ix, iy, iz, seed):
+    h = (ix.astype(np.uint64) * np.uint64(374761393)) ^ (iy.astype(np.uint64) * np.uint64(668265263)) \
+        ^ (iz.astype(np.uint64) * np.uint64(2147483629)) ^ np.uint64(seed * 1274126177 & 0xFFFFFFFF)
+    h &= np.uint64(0xFFFFFFFF)
+    h = ((h ^ (h >> np.uint64(13))) * np.uint64(1274126177)) & np.uint64(0xFFFFFFFF)
+    h ^= h >> np.uint64(16)
+    return (h & np.uint64(0xFFFFFF)).astype(np.float64) / 16777215.0
+
+
+def noise3(p, seed=0):
+    """Value noise in [0, 1] at the points p (N x 3)."""
+    base = np.floor(p)
+    f = p - base
+    i = base.astype(np.int64) + 1000
+    u = f * f * (3.0 - 2.0 * f)
+    result = 0.0
+    for dx in (0, 1):
+        for dy in (0, 1):
+            for dz in (0, 1):
+                w = (u[:, 0] if dx else 1.0 - u[:, 0]) * (u[:, 1] if dy else 1.0 - u[:, 1]) \
+                    * (u[:, 2] if dz else 1.0 - u[:, 2])
+                result = result + w * hash3(i[:, 0] + dx, i[:, 1] + dy, i[:, 2] + dz, seed)
+    return result
+
+
+def fbm3(p, octaves, seed=0, gain=0.5):
+    total = 0.0
     amplitude = 1.0
     norm = 0.0
     for octave in range(octaves):
-        cells_x = base_x * 2 ** octave
-        total += amplitude * periodic_noise(rng, cells_x, max(cells_x // 2, 1))
+        total = total + amplitude * noise3(p * (2.0 ** octave), seed + octave * 17)
         norm += amplitude
         amplitude *= gain
     return total / norm
 
 
-def warp(field, dx, dy, amount):
-    """Shifts the field by (dx, dy) * amount pixels, wrapping around."""
-    ys, xs = np.mgrid[0:HEIGHT, 0:WIDTH]
-    sx = (xs + (dx - 0.5) * amount).astype(int) % WIDTH
-    sy = (ys + (dy - 0.5) * amount).astype(int) % HEIGHT
-    return field[sy, sx]
+def worley_edges(p, seed=0):
+    """F2 - F1 of a 3D cellular noise: small along the boundaries of the cells (a network of thin lines)."""
+    base = np.floor(p)
+    f1 = np.full(len(p), 9.0)
+    f2 = np.full(len(p), 9.0)
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                cell = base + np.array([dx, dy, dz])
+                i = cell.astype(np.int64) + 1000
+                point = cell + np.stack([hash3(i[:, 0], i[:, 1], i[:, 2], seed + 1),
+                                         hash3(i[:, 0], i[:, 1], i[:, 2], seed + 2),
+                                         hash3(i[:, 0], i[:, 1], i[:, 2], seed + 3)], axis=1)
+                d = np.linalg.norm(p - point, axis=1)
+                closer = d < f1
+                f2 = np.where(closer, f1, np.minimum(f2, d))
+                f1 = np.where(closer, d, f1)
+    return f2 - f1
 
 
-def mix(a, b, t):
-    return a[None, None, :] * (1.0 - t[:, :, None]) + b[None, None, :] * t[:, :, None]
+def rasterise(image, covered, uv, values):
+    """Interpolates the vertex values of one triangle over its texels (u wraps around the image)."""
+    u = uv[:, 0] * WIDTH
+    v = uv[:, 1] * HEIGHT
+    x0, x1 = int(np.floor(u.min())), int(np.ceil(u.max()))
+    y0, y1 = max(int(np.floor(v.min())), 0), min(int(np.ceil(v.max())), HEIGHT - 1)
+    gx, gy = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(y0, y1 + 1) + 0.5)
+    area = (u[1] - u[0]) * (v[2] - v[0]) - (u[2] - u[0]) * (v[1] - v[0])
+    if abs(area) < 1.0e-9:
+        return
+    w0 = ((u[1] - gx) * (v[2] - gy) - (u[2] - gx) * (v[1] - gy)) / area
+    w1 = ((u[2] - gx) * (v[0] - gy) - (u[0] - gx) * (v[2] - gy)) / area
+    w2 = 1.0 - w0 - w1
+    inside = (w0 >= -0.03) & (w1 >= -0.03) & (w2 >= -0.03)
+    if not inside.any():
+        return
+    px = gx[inside].astype(int) % WIDTH
+    py = gy[inside].astype(int)
+    image[py, px] = w0[inside][:, None] * values[0] + w1[inside][:, None] * values[1] + w2[inside][:, None] * values[2]
+    covered[py, px] = True
 
 
-def build_surface():
-    rng = np.random.default_rng(SEED)
-    mottle = fbm(rng, 6, 5)
-    fine = fbm(rng, 32, 3)
-    # Muscle fibres: noise stretched along the heart's height
-    fibres = 0.6 * periodic_noise(rng, 64, 4) + 0.4 * periodic_noise(rng, 128, 8)
-    # Veins: thin curved lines where a warped noise field crosses 0.5, a coarse and a fine network
-    net = warp(fbm(rng, 5, 4), fbm(rng, 4, 2), fbm(rng, 4, 2), 70.0)
-    net_fine = warp(fbm(rng, 9, 4), fbm(rng, 6, 2), fbm(rng, 6, 2), 40.0)
-    veins = smooth(np.clip(1.0 - np.abs(net - 0.5) / 0.018, 0.0, 1.0))
-    veins = np.maximum(veins, 0.7 * smooth(np.clip(1.0 - np.abs(net_fine - 0.5) / 0.012, 0.0, 1.0)))
-    # Broad creases between the muscle bulges
-    net2 = warp(fbm(rng, 3, 3), fbm(rng, 3, 2), fbm(rng, 3, 2), 110.0)
-    creases = smooth(np.clip(1.0 - np.abs(net2 - 0.5) / 0.035, 0.0, 1.0))
-    height = 0.55 * mottle + 0.25 * fine + 0.30 * fibres + 0.40 * veins - 0.60 * creases
-    return mottle, fine + 0.6 * (fibres - 0.5), veins, creases, height
-
-
-def colours(mottle, fine, veins, creases, tint_mask, dark, light, tint, vein, crease, glow=None):
-    t = np.clip((mottle - 0.25) / 0.5, 0.0, 1.0) * 0.8 + 0.2 * fine
-    image = mix(np.array(dark), np.array(light), t)
-    image = mix_layer(image, np.array(tint), tint_mask * 0.6)
-    image = mix_layer(image, np.array(crease), creases * 0.85)
-    image = mix_layer(image, np.array(vein), veins * 0.9)
-    if glow is not None:
-        image = mix_layer(image, np.array(glow), (veins ** 2) * 0.7)
+def fill_holes(image, covered):
+    """Copies values into texels no triangle reached (next to the seam and the poles)."""
+    image = image.copy()
+    covered = covered.copy()
+    for _ in range(4):
+        if covered.all():
+            break
+        for shift, axis in ((1, 0), (-1, 0), (1, 1), (-1, 1)):
+            neighbour = np.roll(image, shift, axis=axis)
+            neighbour_covered = np.roll(covered, shift, axis=axis)
+            take = (~covered) & neighbour_covered
+            image[take] = neighbour[take]
+            covered = covered | take
     return image
 
 
-def mix_layer(image, colour, amount):
-    return image * (1.0 - amount[:, :, None]) + colour[None, None, :] * amount[:, :, None]
+def body_positions(heart):
+    """The point of the heart's surface (local coordinates) of every texel of the body part of the image."""
+    dirs, tris = gg.icosphere(gg.LEVEL)
+    dirs = dirs @ gg.rotation(0.043, 0.061).T
+    pos = hs.surface(dirs, heart.f)
+    u, v = hs.uv_from_direction(pos)
+    image = np.zeros((HEIGHT, WIDTH, 3))
+    covered = np.zeros((HEIGHT, WIDTH), dtype=bool)
+    for tri in tris:
+        uu = u[tri].copy()
+        if uu.max() - uu.min() > 0.5:
+            uu = np.where(uu < 0.5, uu + 1.0, uu)
+        rasterise(image, covered, np.stack([uu, v[tri]], axis=1), pos[tri])
+    image = fill_holes(image, covered)
+    return image[:BODY_ROWS].reshape(-1, 3)
+
+
+def paint_body(tier, heart, p):
+    """Colour, height (in tile units) and glow of the body texels p (N x 3, local surface points) for one tier."""
+    ash, dark, crack_amount, ember_amount = TIER_LOOK[tier]
+    n = len(p)
+    injuries = hs.INJURIES[tier]
+
+    # Muscle: large mottling, fibres running slanted along the height, fine grain
+    mottle = fbm3(p * 2.2, 4, SEED)
+    fibres = fbm3(np.stack([p[:, 0] * 9.0 + 3.0 * p[:, 2], p[:, 1] * 9.0 - 2.0 * p[:, 2], p[:, 2] * 2.0], axis=1), 3, SEED + 40)
+    grain = fbm3(p * 24.0, 2, SEED + 80)
+    t = clamp01((mottle - 0.30) / 0.42) * 0.75 + 0.25 * fibres
+    colour = mix(colour_of(DARK, n), colour_of(MID, n), clamp01(t * 1.6))
+    colour = mix(colour, colour_of(LIGHT, n), clamp01((t - 0.62) * 2.2) * 0.55)
+    colour = colour * (0.90 + 0.20 * grain)[:, None]
+    height = 0.006 * (fibres - 0.5) + 0.004 * (grain - 0.5) + 0.010 * (mottle - 0.5)
+    glow = np.zeros((n, 3))
+
+    # Grooves between the chambers
+    groove = np.zeros(n)
+    for radius, points in heart.grooves:
+        d, _ = hs.dist_polyline(p, points)
+        groove = np.maximum(groove, 1.0 - hs.smoothstep(radius * 0.6, radius * 2.2, d))
+    colour = mix(colour, colour_of(GROOVE, n), groove * 0.75)
+    height -= 0.02 * groove
+
+    # Veins: dark ridges with a lighter edge (the ridges themselves are geometry, this is their paint)
+    vein_mask = np.zeros(n)
+    vein_edge = np.zeros(n)
+    for r0, r1, control in hs.VEINS:
+        path = hs.path_points(heart.f, control, gg.VEIN_SAMPLES)
+        d, along = hs.dist_polyline(p, path)
+        radius = (r0 + (r1 - r0) * along) * gg.VEIN_SCALE
+        vein_mask = np.maximum(vein_mask, 1.0 - hs.smoothstep(radius * 0.55, radius * 0.95, d))
+        vein_edge = np.maximum(vein_edge, (1.0 - hs.smoothstep(radius * 0.95, radius * 1.9, d)) * (d > radius * 0.7))
+    colour = mix(colour, colour_of(VEIN_EDGE, n), vein_edge * 0.16)
+    colour = mix(colour, colour_of(VEIN, n), vein_mask * 0.90)
+    height += 0.012 * vein_mask
+
+    # Capillaries: thin dark lines
+    capillary = (1.0 - hs.smoothstep(0.012, 0.045, worley_edges(p * 9.0, SEED + 100))) \
+        * hs.smoothstep(0.42, 0.62, fbm3(p * 3.0, 2, SEED + 120)) * 0.8
+    colour = mix(colour, colour_of(VEIN, n), capillary * 0.55)
+    height -= 0.004 * capillary
+
+    # Cracks with embers (the healthy heart has only a few hairline ones)
+    edges = worley_edges(p * 4.2, SEED + 200)
+    zone = fbm3(p * 1.7, 3, SEED + 210)
+    if tier == 'Healthy':
+        crack = (1.0 - hs.smoothstep(0.006, 0.022, edges)) * hs.smoothstep(0.76, 0.86, zone) * 0.7
+    else:
+        crack = (1.0 - hs.smoothstep(0.010, 0.040, edges)) \
+            * hs.smoothstep(0.62 - 0.30 * crack_amount, 0.74 - 0.30 * crack_amount, zone) * crack_amount
+    colour = mix(colour, colour_of(CRACK, n), crack * 0.95)
+    height -= 0.014 * crack
+    glow += EMBER[None, :] * (crack * ember_amount * 0.35)[:, None]
+
+    # Tone of the tier: duller, browner, darker (the injuries below keep their own colours)
+    colour = mix(colour, colour_of(ASH, n), np.full(n, ash)) * dark
+
+    # Injuries: dents (in the geometry), bruises, cuts, scars with stitches
+    for centre, radius, depth in heart.dent_points:
+        d = np.linalg.norm(p - centre, axis=1)
+        rim = 1.0 - hs.smoothstep(radius * 0.8, radius * 1.5, d)
+        inner = 1.0 - hs.smoothstep(radius * 0.3, radius * 0.95, d)
+        colour = mix(colour, colour_of(BRUISE, n), rim * 0.5)
+        colour = mix(colour, colour_of(BLOOD, n), inner * 0.55)
+        height += 0.008 * rim
+    for centre_dir, radius in injuries['bruises']:
+        centre = hs.surface_point([centre_dir], heart.f)[0]
+        d = np.linalg.norm(p - centre, axis=1)
+        wobble = fbm3(p * 7.0, 3, SEED + 300)
+        mask = clamp01((1.0 - hs.smoothstep(radius * 0.5, radius * (1.2 + 0.4 * wobble), d)) * (0.75 + 0.35 * wobble))
+        colour = mix(colour, colour_of(BRUISE, n), mask)
+        colour = colour * (1.0 - 0.25 * mask)[:, None]
+    for points in heart.slit_points:
+        d, _ = hs.dist_polyline(p, points)
+        raw = 1.0 - hs.smoothstep(0.018, 0.075, d)
+        core = 1.0 - hs.smoothstep(0.008, 0.030, d)
+        colour = mix(colour, colour_of(BLOOD_EDGE, n) * 0.85, raw * 0.55)
+        colour = mix(colour, colour_of(CRACK, n), core)
+        height -= 0.02 * core
+        glow += EMBER[None, :] * (core * ember_amount * 0.6)[:, None]
+    for control in injuries['scars']:
+        line = hs.path_points(heart.f, control, 24)
+        d, along = hs.dist_polyline(p, line)
+        ridge = 1.0 - hs.smoothstep(0.014, 0.030, d)
+        colour = mix(colour, colour_of(SCAR, n), ridge * 0.85)
+        height += 0.012 * ridge
+        length = np.linalg.norm(np.diff(line, axis=0), axis=1).sum()
+        tick = np.abs(((along * length) / 0.07) % 1.0 - 0.5) < 0.10
+        stitch = tick * (d < 0.05) * (d > 0.004)
+        colour = mix(colour, colour_of(THREAD, n), stitch * 0.9)
+        height += 0.004 * stitch
+
+    # Blood: trickles running down from the wounds and a wet spot at each (no pools)
+    blood = np.zeros(n)
+    length = {'Damaged': 0.36, 'Critical': 0.55}.get(tier, 0.0)
+    for w in heart.wound_points():
+        # across the trickle: along x on the front and back of the heart, along y on its sides
+        across_axis = 0 if abs(w[1]) > abs(w[0]) else 1
+        horizontal = np.abs(p[:, across_axis] - w[across_axis])
+        down = w[2] - p[:, 2]
+        near = np.linalg.norm(p - w, axis=1)
+        wobble = 0.012 * np.sin(down * 38.0 + w[0] * 20.0)
+        width = 0.050 * (1.0 - 0.45 * clamp01(down / length))
+        streak = (1.0 - hs.smoothstep(width * 0.6, width, np.abs(horizontal - wobble))) \
+            * (down > 0.0) * (down < length) * hs.smoothstep(length, length * 0.6, down)
+        drop = 1.0 - hs.smoothstep(0.03, 0.055, np.hypot(horizontal - wobble, down - length * 0.92))
+        spot = 1.0 - hs.smoothstep(0.04, 0.09, near)
+        blood = np.maximum(blood, np.maximum(np.maximum(streak, drop), spot))
+    colour = mix(colour, colour_of(BLOOD, n), blood * 0.95)
+    colour = mix(colour, colour_of(BLOOD_EDGE, n), blood * (1.0 - hs.smoothstep(0.35, 0.8, blood)) * 0.6)
+    height += 0.003 * blood
+
+    return colour, height, glow
+
+
+def paint_bands():
+    """Rows below the body: walls, lips and openings of the vessel stubs (colour, height and glow images)."""
+    rows = HEIGHT - BODY_ROWS
+    ys, xs = np.mgrid[BODY_ROWS:HEIGHT, 0:WIDTH]
+    angle = xs / WIDTH * 2.0 * np.pi
+    circle = np.stack([np.cos(angle), np.sin(angle)], axis=-1).reshape(-1, 2)
+    v = (ys.reshape(-1) + 0.5) / HEIGHT
+    n = len(v)
+    fibres = fbm3(np.stack([circle[:, 0] * 6.0, circle[:, 1] * 6.0, v * 3.0], axis=1), 3, SEED + 500)
+    grain = fbm3(np.stack([circle[:, 0] * 14.0, circle[:, 1] * 14.0, v * 30.0], axis=1), 2, SEED + 510)
+    rim = (v >= hs.RIM_V[0] - 0.005) & (v < hs.RIM_V[1] + 0.005)
+    hole = v >= hs.HOLE_V[0] - 0.005
+    streaks = noise3(np.stack([circle[:, 0] * 10.0, circle[:, 1] * 10.0, np.zeros(n)], axis=1), SEED + 520)
+    stripes = clamp01(np.abs(streaks - 0.5) * 6.0)
+    colour = mix(colour_of(DARK, n), colour_of(LIGHT, n), clamp01(fibres * 1.5 - 0.1))
+    colour = mix(colour_of(VEIN, n), colour, 0.35 + 0.65 * stripes)
+    lip = mix(colour_of(np.array([0.62, 0.20, 0.17]), n), colour_of(np.array([0.84, 0.42, 0.36]), n), clamp01(grain * 1.4))
+    inner = colour_of(np.array([0.09, 0.012, 0.018]), n) * (0.6 + 0.8 * grain[:, None])
+    colour = np.where(rim[:, None], lip, colour)
+    colour = np.where(hole[:, None], inner, colour)
+    height = 0.008 * (fibres - 0.5) + 0.004 * (grain - 0.5)
+    glow = np.zeros((n, 3))
+    deep = hole & (v > hs.HOLE_V[1] - 0.04)
+    glow[deep] = EMBER * (0.10 + 0.10 * grain[deep])[:, None]
+    return colour.reshape(rows, WIDTH, 3), height.reshape(rows, WIDTH), glow.reshape(rows, WIDTH, 3)
+
+
+def normal_map(height, strength):
+    """Tangent space normal map; the image's rows run along +v (down), +u to the right."""
+    dx = (np.roll(height, -1, axis=1) - np.roll(height, 1, axis=1)) * 0.5
+    dy = (np.roll(height, -1, axis=0) - np.roll(height, 1, axis=0)) * 0.5
+    nx = -dx * strength
+    ny = -dy * strength
+    nz = np.ones_like(nx)
+    length = np.sqrt(nx * nx + ny * ny + nz * nz)
+    return np.stack([nx / length, ny / length, nz / length], axis=2) * 0.5 + 0.5
 
 
 def to_png(array, path):
@@ -107,40 +339,25 @@ def to_png(array, path):
     Image.fromarray(data, 'RGB').save(path, optimize=True)
 
 
-def normal_map(height, strength=10.0):
-    """Tangent space normal map, +Y (green) points towards larger v of the image (down)."""
-    dx = (np.roll(height, -1, axis=1) - np.roll(height, 1, axis=1)) * 0.5
-    dy = (np.roll(height, -1, axis=0) - np.roll(height, 1, axis=0)) * 0.5
-    nx = -dx * strength
-    ny = dy * strength
-    nz = np.ones_like(nx)
-    length = np.sqrt(nx * nx + ny * ny + nz * nz)
-    return np.stack([nx / length, ny / length, nz / length], axis=2) * 0.5 + 0.5
-
-
 def main():
-    if len(sys.argv) > 1:
-        out = sys.argv[1]
-    else:
-        out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials', 'textures')
-    mottle, fine, veins, creases, height = build_surface()
-    tint_mask = smooth(np.clip((fbm(np.random.default_rng(SEED + 1), 4, 3) - 0.45) / 0.25, 0.0, 1.0))
-
-    healthy = colours(mottle, fine, veins, creases, tint_mask,
-        dark=(0.20, 0.03, 0.32), light=(0.58, 0.22, 0.72),
-        tint=(0.66, 0.16, 0.50), vein=(0.10, 0.03, 0.28), crease=(0.09, 0.01, 0.15))
-    damaged = colours(mottle, fine, veins, creases, tint_mask,
-        dark=(0.19, 0.17, 0.20), light=(0.46, 0.43, 0.47),
-        tint=(0.50, 0.42, 0.44), vein=(0.11, 0.10, 0.13), crease=(0.08, 0.07, 0.09))
-    critical = colours(mottle, fine, veins, creases, tint_mask,
-        dark=(0.05, 0.03, 0.055), light=(0.24, 0.15, 0.22),
-        tint=(0.26, 0.10, 0.12), vein=(0.10, 0.03, 0.05), crease=(0.015, 0.008, 0.015),
-        glow=(0.65, 0.05, 0.06))
-
-    to_png(healthy, os.path.join(out, 'DungeonHeartHealthy.png'))
-    to_png(damaged, os.path.join(out, 'DungeonHeartDamaged.png'))
-    to_png(critical, os.path.join(out, 'DungeonHeartCritical.png'))
-    to_png(normal_map(height), os.path.join(out, 'DungeonHeartNormal.png'))
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, '..', '..', 'materials', 'textures')
+    band_colour, band_height, band_glow = paint_bands()
+    for tier in hs.TIERS:
+        heart = hs.Heart(tier)
+        colour, height, glow = paint_body(tier, heart, body_positions(heart))
+        image = np.zeros((HEIGHT, WIDTH, 3))
+        heights = np.zeros((HEIGHT, WIDTH))
+        glows = np.zeros((HEIGHT, WIDTH, 3))
+        image[:BODY_ROWS] = colour.reshape(BODY_ROWS, WIDTH, 3)
+        heights[:BODY_ROWS] = height.reshape(BODY_ROWS, WIDTH)
+        glows[:BODY_ROWS] = glow.reshape(BODY_ROWS, WIDTH, 3)
+        image[BODY_ROWS:] = band_colour
+        heights[BODY_ROWS:] = band_height
+        glows[BODY_ROWS:] = band_glow
+        to_png(image, os.path.join(out, 'DungeonHeart%s.png' % tier))
+        to_png(normal_map(heights, 60.0), os.path.join(out, 'DungeonHeart%sNormal.png' % tier))
+        to_png(glows, os.path.join(out, 'DungeonHeart%sGlow.png' % tier))
+        print('%s done' % tier)
 
 
 if __name__ == '__main__':
