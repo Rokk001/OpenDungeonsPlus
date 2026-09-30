@@ -740,6 +740,10 @@ private:
     //! \brief Fills the profile page of the creature card.
     void refreshProfilePage();
 
+    //! \brief True if the creature belongs to the local player and the feed is running.
+    bool isSocialFeedSource() const;
+    void fillSocialSnapshot(social::CreatureSnapshot& snapshot) const;
+
     CEGUI::Window*  mStatsWindow;
     int32_t         mNbTurnsWithoutBattle;
 
