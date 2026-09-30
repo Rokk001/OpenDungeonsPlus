@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury and crypt
+"""Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury, crypt, training hall,
+casino and prison
 (materials/textures/).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
@@ -10,17 +11,19 @@ Every room is built from one base field (the open floor) plus decoration bands t
 pieces match. The tile borders are made seam-free in two ways:
   - library and dormitory: slabs / planks are separated by gaps that run along the tile border and the tile
     centre lines, the gaps are the same on both sides of a border;
-  - hatchery: all noise is truly periodic (FFT noise on a wrapping grid, no mirroring) and is faded to zero in a
-    thin strip (6 px) at the tile border, so the border pixels are the same whatever the rotation of the neighbouring
-    piece; loose objects (straw, feathers) keep a margin to the border;
+  - hatchery, training hall, casino, prison: every layer is truly periodic (FFT noise on a wrapping grid, loose
+    objects are drawn with all tile offsets so they continue on the opposite side), so there is no border band at
+    all; the seamless wrap is checked with --check and --seamcheck (texture rolled by half a tile);
   - dungeon temple and treasury: irregular slabs (random rectangle subdivision) inside a gap that runs along
     the tile border, so nothing but the constant gap colour touches the border;
   - crypt: derived from the original cobble texture (tools/room-floors/Crypt-source.png, Yughues, CC0);
-    darkened, moss and lichen and cracks are added with periodic noise that fades out at the tile border.
+    darkened, moss and lichen and cracks are added with periodic noise that fades out at the tile border;
+  - prison: derived from the original Prison.png read from git history (commit 6db9aa611), mortar turned to mud,
+    plus rust and straw.
 The room shader has no specular term, so only a diffuse texture and a matching tangent space normal map
 (red = -d height / dx, green = +d height / dy, image y pointing down) are written.
 
-Usage: python generate_room_floors.py [output folder] [--check]
+Usage: python generate_room_floors.py [output folder] [--check] [--seamcheck=<folder for the rolled previews>]
 """
 
 import os
@@ -105,21 +108,25 @@ def to_image(arr):
 # loose objects (straw, feathers), drawn supersampled with Pillow
 
 class Sprites(object):
-    def __init__(self):
+    def __init__(self, wrap=False):
+        # wrap: objects crossing a tile edge continue on the opposite side (drawn with all tile offsets)
+        self.offsets = [(dx, dy) for dx in (-N, 0, N) for dy in (-N, 0, N)] if wrap else [(0, 0)]
         self.colour = Image.new('RGBA', (N * SUPER, N * SUPER), (0, 0, 0, 0))
         self.height = Image.new('L', (N * SUPER, N * SUPER), 0)
         self.cdraw = ImageDraw.Draw(self.colour)
         self.hdraw = ImageDraw.Draw(self.height)
 
     def line(self, p0, p1, width, rgb, lift):
-        pts = [(p0[0] * SUPER, p0[1] * SUPER), (p1[0] * SUPER, p1[1] * SUPER)]
-        self.cdraw.line(pts, fill=tuple(int(c * 255) for c in rgb) + (255,), width=max(1, int(width * SUPER)))
-        self.hdraw.line(pts, fill=int(lift * 255), width=max(1, int(width * SUPER)))
+        for ox, oy in self.offsets:
+            pts = [((p0[0] + ox) * SUPER, (p0[1] + oy) * SUPER), ((p1[0] + ox) * SUPER, (p1[1] + oy) * SUPER)]
+            self.cdraw.line(pts, fill=tuple(int(c * 255) for c in rgb) + (255,), width=max(1, int(width * SUPER)))
+            self.hdraw.line(pts, fill=int(lift * 255), width=max(1, int(width * SUPER)))
 
     def polygon(self, pts, rgb, lift):
-        pts = [(x * SUPER, y * SUPER) for x, y in pts]
-        self.cdraw.polygon(pts, fill=tuple(int(c * 255) for c in rgb) + (255,))
-        self.hdraw.polygon(pts, fill=int(lift * 255))
+        for ox, oy in self.offsets:
+            shifted = [((x + ox) * SUPER, (y + oy) * SUPER) for x, y in pts]
+            self.cdraw.polygon(shifted, fill=tuple(int(c * 255) for c in rgb) + (255,))
+            self.hdraw.polygon(shifted, fill=int(lift * 255))
 
     def result(self):
         rgba = np.asarray(self.colour.resize((N, N), Image.BOX)).astype(float) / 255.0
@@ -358,25 +365,25 @@ def feather(sp, cx, cy, ang, length, rgb):
 
 
 def hatchery_field():
-    lump = pn(31, 34.0, 34.0, 3)
-    grit = pn(32, 170.0, 170.0, 2)
-    tone = pn(33, 4.0, 4.0, 3)
+    lump = fbm(31, 34.0, 34.0, 3)
+    grit = fbm(32, 170.0, 170.0, 2)
+    tone = fbm(33, 4.0, 4.0, 3)
     col = EARTH[None, None, :] * (1.0 + 0.085 * tone[..., None] + 0.085 * lump[..., None] + 0.05 * grit[..., None])
     hgt = 0.6 * lump + 0.25 * grit + 0.15 * tone
     # dark mud patches, flat and damp
-    mud = smoothstep(0.55, 1.35, pn(34, 4.4, 4.4, 3))
+    mud = smoothstep(0.55, 1.35, fbm(34, 4.4, 4.4, 3))
     mudcol = MUD[None, None, :] * (1.0 + 0.10 * lump[..., None])
     col = mix(col, mudcol, mud * 0.82)
     hgt = mix(hgt, hgt * 0.35 - 0.5, mud)
     # trodden, pale dust
-    dust = smoothstep(0.9, 1.8, pn(35, 6.0, 6.0, 2))
+    dust = smoothstep(0.9, 1.8, fbm(35, 6.0, 6.0, 2))
     col = mix(col, np.clip(col * 1.12 + 0.015, 0, 1), dust * 0.6)
-    sp = Sprites()
-    box = (MARGIN + 8, MARGIN + 8, N - MARGIN - 8, N - MARGIN - 8)
+    sp = Sprites(wrap=True)
+    box = (0, 0, N, N)
     draw_straws(sp, straw_segments(301, 90, box, (22, 42)), (0.60, 0.48, 0.23))
     fr = np.random.RandomState(302)
     for _ in range(4):
-        feather(sp, fr.uniform(60, N - 60), fr.uniform(60, N - 60), fr.uniform(0, np.pi), fr.uniform(22, 30),
+        feather(sp, fr.uniform(0, N), fr.uniform(0, N), fr.uniform(0, np.pi), fr.uniform(22, 30),
                 (0.66, 0.63, 0.56))
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
@@ -384,13 +391,13 @@ def hatchery_field():
 
 def hatchery_band(col, hgt, side):
     d = depth_map(side)
-    fringe = 1.0 - smoothstep(18.0, 84.0, d + 22.0 * pn(71, 13.0, 13.0, 3))
-    dirt = np.array([0.205, 0.15, 0.10])[None, None, :] * (1.0 + 0.12 * pn(72, 110.0, 110.0, 2)[..., None])
+    fringe = 1.0 - smoothstep(18.0, 84.0, d + 22.0 * fbm(71, 13.0, 13.0, 3))
+    dirt = np.array([0.205, 0.15, 0.10])[None, None, :] * (1.0 + 0.12 * fbm(72, 110.0, 110.0, 2)[..., None])
     col = mix(col, dirt, fringe * 0.62)
     col = col * (1.0 - 0.22 * (1.0 - smoothstep(0.0, 40.0, d)))[..., None]
     hgt = hgt - 0.45 * fringe
-    sp = Sprites()
-    segs = straw_segments(80 + ord(side), 34, (MARGIN + 8, 8, N - MARGIN - 8, 72), (26, 46), 0.0, 0.45)
+    sp = Sprites(wrap=True)
+    segs = straw_segments(80 + ord(side), 34, (0, 8, N, 72), (26, 46), 0.0, 0.45)
     draw_straws(sp, segs, (0.62, 0.49, 0.235), side_mapper(side))
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
@@ -542,6 +549,199 @@ def crypt_field():
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# training hall, casino, prison (F2 batch 3): every layer is truly periodic (objects wrap around the tile edge)
+
+class Layer(object):
+    """Wrapping greyscale mask drawn supersampled (objects crossing a tile edge continue on the other side)."""
+
+    def __init__(self):
+        self.img = Image.new('L', (N * SUPER, N * SUPER), 0)
+        self.draw = ImageDraw.Draw(self.img)
+
+    def _each(self, pts):
+        for ox in (-N, 0, N):
+            for oy in (-N, 0, N):
+                yield [((x + ox) * SUPER, (y + oy) * SUPER) for x, y in pts]
+
+    def polygon(self, pts, val=255):
+        for shifted in self._each(pts):
+            self.draw.polygon(shifted, fill=val)
+
+    def line(self, pts, width, val=255):
+        for shifted in self._each(pts):
+            self.draw.line(shifted, fill=val, width=max(1, int(width * SUPER)))
+
+    def ellipse(self, cx, cy, rx, ry, ang, val=255):
+        ca, sa = np.cos(ang), np.sin(ang)
+        pts = []
+        for t in np.linspace(0.0, 2.0 * np.pi, 28, endpoint=False):
+            ex, ey = rx * np.cos(t), ry * np.sin(t)
+            pts.append((cx + ca * ex - sa * ey, cy + sa * ex + ca * ey))
+        self.polygon(pts, val)
+
+    def result(self):
+        return np.asarray(self.img.resize((N, N), Image.BOX)).astype(float) / 255.0
+
+
+SAND = np.array([0.355, 0.283, 0.205])
+SAND_DARK = np.array([0.215, 0.165, 0.115])
+
+
+def training_hall_field():
+    tone = fbm(401, 4.0, 4.0, 3)
+    lump = fbm(402, 30.0, 30.0, 3)
+    grit = fbm(403, 170.0, 170.0, 2)
+    col = SAND[None, None, :] * (1.0 + 0.07 * tone[..., None] + 0.055 * lump[..., None] + 0.06 * grit[..., None])
+    hgt = 0.5 * lump + 0.35 * grit + 0.15 * tone
+    # pale sawdust flecks and dark damp grains
+    fleck = smoothstep(1.5, 2.4, fbm(404, 110.0, 110.0, 1))
+    col = mix(col, np.array([0.50, 0.41, 0.29])[None, None, :], fleck * 0.55)
+    damp = smoothstep(1.6, 2.5, fbm(405, 100.0, 100.0, 1))
+    col = mix(col, SAND_DARK[None, None, :], damp * 0.5)
+    rng = np.random.RandomState(406)
+    # worn, compacted circles (darker, smoother)
+    worn = Layer()
+    for _ in range(6):
+        worn.ellipse(rng.uniform(0, N), rng.uniform(0, N), rng.uniform(55, 95), rng.uniform(50, 90),
+                     rng.uniform(0, np.pi), 255)
+    worn_m = np.clip(blur(worn.result(), 10.0), 0.0, 1.0)
+    worn_m = worn_m * (0.65 + 0.35 * smoothstep(-0.8, 0.8, fbm(407, 9.0, 9.0, 2)))
+    col = col * (1.0 - 0.17 * worn_m)[..., None]
+    hgt = mix(hgt, hgt * 0.4 - 0.3, worn_m)
+    # scuff marks: short curved drag lines
+    scuff = Layer()
+    for _ in range(46):
+        x, y = rng.uniform(0, N), rng.uniform(0, N)
+        ang = rng.uniform(0, 2 * np.pi)
+        curve = rng.uniform(-0.05, 0.05)
+        length = rng.uniform(30, 95)
+        pts = []
+        for t in np.linspace(0.0, 1.0, 10):
+            a = ang + curve * t * length * 0.1
+            pts.append((x + np.cos(a) * length * t, y + np.sin(a) * length * t))
+        scuff.line(pts, rng.uniform(1.6, 3.6), 255)
+    scuff_m = np.clip(blur(scuff.result(), 0.9) * 1.4, 0.0, 1.0)
+    col = mix(col, SAND_DARK[None, None, :] * (0.9 + 0.2 * grit[..., None]), scuff_m * 0.55)
+    hgt = hgt - 0.9 * scuff_m
+    # boot prints: sole and heel pairs
+    prints = Layer()
+    for _ in range(16):
+        cx, cy = rng.uniform(0, N), rng.uniform(0, N)
+        ang = rng.uniform(0, 2 * np.pi)
+        ca, sa = np.cos(ang), np.sin(ang)
+        for k in range(2):
+            side = (k - 0.5) * 22.0
+            px, py = cx - sa * side, cy + ca * side
+            prints.ellipse(px + ca * 12, py + sa * 12, 15, 8.5, ang, 255)
+            prints.ellipse(px - ca * 12, py - sa * 12, 7.5, 7, ang, 255)
+    pm = np.clip(blur(prints.result(), 0.8), 0.0, 1.0)
+    col = mix(col, SAND_DARK[None, None, :] * 0.9, pm * 0.45)
+    hgt = hgt - 1.6 * pm
+    return col, hgt
+
+
+WOOD = np.array([0.325, 0.225, 0.185])
+WOOD_GAP = np.array([0.045, 0.03, 0.026])
+HB_W = 32
+HB_L = 4
+HB_T = N // HB_W  # 16 cells per tile
+
+
+def herringbone_ids():
+    """Plank id, orientation (0 = along x, 1 = along y) and position inside the plank for every cell [x][y]."""
+    cell_id = -np.ones((HB_T, HB_T), dtype=int)
+    cell_dir = np.zeros((HB_T, HB_T), dtype=int)
+    cell_pos = np.zeros((HB_T, HB_T), dtype=int)
+    anchors = sorted({((i + 4 * j) % HB_T, (i - 4 * j) % HB_T) for i in range(-20, 21) for j in range(-20, 21)})
+    for index, (ax, ay) in enumerate(anchors):
+        for k in range(HB_L):
+            for (x, y, d) in ((ax + k, ay, 0), (ax + 4, ay - 3 + k, 1)):
+                cell_id[x % HB_T, y % HB_T] = index * 2 + d
+                cell_dir[x % HB_T, y % HB_T] = d
+                cell_pos[x % HB_T, y % HB_T] = k
+    return cell_id, cell_dir, cell_pos
+
+
+def casino_field():
+    cell_id, cell_dir, cell_pos = herringbone_ids()
+    cx = _XX // HB_W
+    cy = _YY // HB_W
+    pid = cell_id[cx, cy]
+    direction = cell_dir[cx, cy]
+    along_cells = cell_pos[cx, cy]
+    lx = _XX % HB_W
+    ly = _YY % HB_W
+    u = np.where(direction == 0, along_cells * HB_W + lx, along_cells * HB_W + ly).astype(float)  # along plank
+    v = np.where(direction == 0, ly, lx).astype(float)  # across plank
+    length = HB_L * HB_W
+    dist = np.minimum(np.minimum(u, length - 1 - u), np.minimum(v, HB_W - 1 - v))
+    rng = np.random.RandomState(501)
+    ptone = rng.uniform(0.80, 1.22, pid.max() + 1)
+    phue = rng.uniform(-0.03, 0.03, pid.max() + 1)
+    pt = ptone[pid]
+    ph = phue[pid]
+    grain_h = fbm(502, 5.0, 100.0, 3)
+    grain = np.where(direction == 0, grain_h, grain_h.T)
+    col = WOOD[None, None, :] * pt[..., None]
+    col = col + np.stack([ph, ph * 0.3, -ph * 0.5], -1)
+    col = col * (1.0 + 0.11 * grain)[..., None]
+    col = col * (1.0 + 0.05 * fbm(503, 160.0, 160.0, 2))[..., None]
+    hgt = 0.35 * grain + 0.3 * fbm(504, 40.0, 40.0, 2)
+    # worn, sanded spots in front of the tables (lighter, smoother)
+    worn = smoothstep(0.85, 1.9, fbm(505, 3.5, 3.5, 2))
+    col = col * (1.0 + 0.22 * worn)[..., None]
+    # spilled drinks: dark reddish blotches with a drying rim
+    sn = fbm(506, 6.0, 6.0, 3)
+    stain = smoothstep(1.25, 1.55, sn)
+    rim = np.clip(1.0 - np.abs(sn - 1.25) / 0.09, 0.0, 1.0) * 0.6
+    col = mix(col, col * np.array([0.52, 0.40, 0.36])[None, None, :], np.clip(stain * 0.8 + rim * 0.3, 0, 1))
+    # dark joints and bevels
+    t = smoothstep(0.6, 2.2, dist)
+    col = mix(np.broadcast_to(WOOD_GAP, col.shape), col, t)
+    col = col * (0.82 + 0.18 * smoothstep(1.0, 6.0, dist))[..., None]
+    hgt = hgt * 0.6 + 2.2 * smoothstep(0.6, 4.5, dist) - 0.4 * stain
+    return col, hgt
+
+
+def git_source(path, commit):
+    """Reads a file from git history (so the original does not have to be committed a second time)."""
+    import io
+    import subprocess
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+    data = subprocess.check_output(['git', 'show', '%s:%s' % (commit, path)], cwd=root)
+    return Image.open(io.BytesIO(data)).convert('RGB')
+
+
+MUD_BROWN = np.array([0.175, 0.135, 0.098])
+RUST = np.array([0.30, 0.17, 0.10])
+
+
+def prison_field():
+    # the original Prison.png (commit 6db9aa611): dark blue-grey cobbles with light mortar
+    col = np.asarray(git_source('materials/textures/Prison.png', '6db9aa611')).astype(float) / 255.0
+    lum = col.mean(-1)
+    low = blur(lum, 1.6)
+    # mortar = the light parts between the cobbles
+    mortar = smoothstep(0.30, 0.42, low)
+    grit = fbm(601, 130.0, 130.0, 2)
+    mud = MUD_BROWN[None, None, :] * (0.85 + 0.25 * lum[..., None] / 0.3) * (1.0 + 0.08 * grit[..., None])
+    col = mix(col, np.clip(mud, 0, 1), mortar * 0.92)
+    # damp darkening on the cobbles
+    damp = smoothstep(0.2, 1.4, fbm(602, 5.0, 5.0, 3))
+    col = col * (1.0 - 0.18 * damp)[..., None]
+    # rust stains
+    rn = fbm(603, 4.5, 4.5, 3)
+    rust = smoothstep(0.85, 1.6, rn) * (0.6 + 0.4 * smoothstep(-1.0, 1.0, fbm(604, 40.0, 40.0, 2)))
+    col = mix(col, RUST[None, None, :] * (0.7 + 0.5 * lum[..., None] / 0.3), rust * 0.32)
+    # straw wisps
+    sp = Sprites(wrap=True)
+    draw_straws(sp, straw_segments(605, 34, (0, 0, N, N), (22, 42)), (0.50, 0.40, 0.20))
+    sc, sa, _ = sp.result()
+    col = mix(col, sc, sa * 0.92)
+    return col, None
+
+
+# ---------------------------------------------------------------------------------------------------------------
 
 ROOMS = {
     'dormitory': {
@@ -557,7 +757,7 @@ ROOMS = {
                    'Library0011': ('TL', 'Library1100Normal'), 'Library1111': ('', 'Library1111Normal')},
     },
     'hatchery': {
-        'field': hatchery_field, 'band': hatchery_band, 'strength': 1.15,
+        'field': hatchery_field, 'band': hatchery_band, 'strength': 1.15, 'rot_invariant': False,
         'pieces': {'Farm0000': ('TBLR', 'Farm0000Normal'), 'Farm1000': ('TBL', 'Farm1000Normal'),
                    'Farm1010': ('TB', 'Farm1010Normal'), 'Farm1011': ('T', 'Farm1011Normal'),
                    'Farm1100': ('TL', 'Farm1100Normal'), 'Farm': ('', 'FarmNormal')},
@@ -574,6 +774,19 @@ ROOMS = {
         # the existing CryptNormal.png is kept
         'field': crypt_field, 'band': None, 'strength': 0.0,
         'pieces': {'Crypt': ('', None)},
+    },
+    'trainingHall': {
+        'field': training_hall_field, 'band': None, 'strength': 1.2,
+        'pieces': {'TrainingHallFloor': ('', 'TrainingHallFloorNormal')},
+    },
+    'casino': {
+        'field': casino_field, 'band': None, 'strength': 1.3,
+        'pieces': {'CasinoFloor': ('', 'CasinoFloorNormal')},
+    },
+    'prison': {
+        # the existing PrisonNormal.png is kept
+        'field': prison_field, 'band': None, 'strength': 0.0,
+        'pieces': {'Prison': ('', None)},
     },
 }
 
@@ -605,14 +818,56 @@ def border_check(result):
     return worst
 
 
+def wrap_check(result):
+    """Periodicity: the jump across the tile wrap-around divided by the typical jump between neighbouring
+    pixels (about 1 or less when there is no seam). Also: the sides of a piece that are not exposed must equal
+    the base piece (far away from the exposed sides)."""
+    worst = 0.0
+    base = None
+    for name, (col, hgt, _, sides) in result.items():
+        if not sides:
+            base = col
+    for name, (col, hgt, _, sides) in result.items():
+        for axis, ends in ((0, 'TB'), (1, 'LR')):
+            if any(e in sides for e in ends):
+                continue  # a wall fringe on an exposed side is meant to end there
+            typical = np.abs(np.diff(col, axis=axis)).mean()
+            jump = np.abs(np.take(col, 0, axis=axis) - np.take(col, N - 1, axis=axis)).mean()
+            worst = max(worst, jump / (typical + 1e-9))
+        if sides and base is not None:
+            for side, sl in (('T', (slice(0, 3), slice(200, N - 200))), ('B', (slice(N - 3, N), slice(200, N - 200))),
+                             ('L', (slice(200, N - 200), slice(0, 3))), ('R', (slice(200, N - 200), slice(N - 3, N)))):
+                if side not in sides:
+                    diff = np.abs(col[sl] - base[sl]).max()
+                    if diff > 0.02:
+                        print(name, 'side', side, 'differs from the base tile by', diff)
+    return worst
+
+
+def seam_image(result):
+    """The open floor piece rolled by half a tile in x and y (the former borders cross the middle), tiled 2x2."""
+    for col, _, _, sides in result.values():
+        if not sides:
+            return to_image(np.tile(np.roll(col, (N // 2, N // 2), (0, 1)), (2, 2, 1)))
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     out = args[0] if args else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials',
                                             'textures')
+    seam_dir = None
+    for a in sys.argv[1:]:
+        if a.startswith('--seamcheck='):
+            seam_dir = a.split('=', 1)[1]
+    seam_rooms = ('hatchery', 'trainingHall', 'casino', 'prison') if seam_dir else ()
     for room in ROOMS:
         result, strength = build(room)
         if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('hatchery', 'dormitory', 'library')):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
+        if '--check' in sys.argv and room in ('hatchery', 'trainingHall', 'casino', 'prison'):
+            print(room, 'wrap seam ratio (about 1 or less = no seam): %.2f' % wrap_check(result))
+        if room in seam_rooms:
+            seam_image(result).save(os.path.join(seam_dir, 'f2-%s-seamcheck.png' % room.lower()))
         for name, (col, hgt, normal_name, _) in result.items():
             to_image(col).save(os.path.join(out, name + '.png'), optimize=True)
             if normal_name is not None:
