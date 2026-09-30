@@ -1566,7 +1566,7 @@ void GameMode::setHelpWindowText()
         << "Use your hand wisely to keep all minions under control and let your dungeon thrive!" << std::endl
         << "  - Mouse left click: Select an action, Confirm an action." << std::endl
         << "  - Mouse right click: Unselect an action, Slap a creature (grin)." << std::endl
-        << "  - Mouse middle click (on a creature): Show debugging information." << std::endl
+        << "  - Mouse middle click (on a creature): Show the creature profile." << std::endl
         << "You can select multiple tiles for some actions by left clicking and dragging the mouse." << std::endl << std::endl;
     txt << formatTitleOn << "Basic workflow" << formatTitleOff << std::endl
         << "As an overlord of the underworld, your evil plan is to build a strong dungeon and to crush your neighbours."

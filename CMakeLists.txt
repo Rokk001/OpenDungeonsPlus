@@ -418,6 +418,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/social/SocialData.cpp
     ${SRC}/social/SocialGenerator.cpp
+    ${SRC}/social/SocialProfileCache.cpp
 
     ${SRC}/renderscene/RenderScene.cpp
     ${SRC}/renderscene/RenderSceneAddEntity.cpp

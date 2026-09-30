@@ -20,7 +20,7 @@ for prop in ('Font" value="MedievalSharp-8', 'VertFormatting" value="TopAligned'
 assert 'VertScrollbar' not in layout, 'no scrolling wanted'
 for name in ('Creature', 'Tile'):
     text = (repo / 'source/entities' / (name + '.cpp')).read_text()
-    assert 'createInfoWindow(' in text, name
+    assert ('createCreatureProfileWindow(' if name == 'Creature' else 'createInfoWindow(') in text, name
     assert 'CEGUI::UDim(0, 380)' not in text, name + ' still sets an own size'
     assert "MedievalSharp-12" not in text, name + ' still uses the large title font'
 print('ok')
