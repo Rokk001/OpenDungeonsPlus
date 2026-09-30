@@ -39,9 +39,9 @@ LIGHT = np.array([0.80, 0.150, 0.140])
 VEIN = np.array([0.24, 0.020, 0.040])
 VEIN_EDGE = np.array([0.72, 0.13, 0.12])
 GROOVE = np.array([0.20, 0.020, 0.035])
-BRUISE = np.array([0.17, 0.025, 0.11])
-BLOOD = np.array([0.60, 0.020, 0.030])
-BLOOD_EDGE = np.array([1.00, 0.20, 0.15])
+BRUISE = np.array([0.30, 0.035, 0.17])
+BLOOD = np.array([0.42, 0.000, 0.010])
+BLOOD_EDGE = np.array([0.90, 0.14, 0.12])
 SCAR = np.array([0.70, 0.36, 0.32])
 THREAD = np.array([0.10, 0.045, 0.045])
 CRACK = np.array([0.075, 0.012, 0.015])
@@ -51,8 +51,8 @@ EMBER = np.array([1.00, 0.34, 0.06])
 # Per tier: tone towards ash, brightness, amount of cracks, brightness of the embers
 TIER_LOOK = {
     'Healthy': (0.00, 1.00, 0.00, 0.35),
-    'Damaged': (0.18, 1.00, 0.30, 0.25),
-    'Critical': (0.32, 0.95, 0.55, 0.40),
+    'Damaged': (0.22, 0.95, 0.50, 0.25),
+    'Critical': (0.40, 0.88, 0.80, 0.40),
 }
 
 
@@ -229,7 +229,7 @@ def paint_body(tier, heart, p):
     if tier == 'Healthy':
         crack = (1.0 - hs.smoothstep(0.006, 0.022, edges)) * hs.smoothstep(0.76, 0.86, zone) * 0.7
     else:
-        crack = (1.0 - hs.smoothstep(0.010, 0.040, edges)) \
+        crack = (1.0 - hs.smoothstep(0.018, 0.070, edges)) \
             * hs.smoothstep(0.62 - 0.30 * crack_amount, 0.74 - 0.30 * crack_amount, zone) * crack_amount
     colour = mix(colour, colour_of(CRACK, n), crack * 0.95)
     height -= 0.014 * crack
@@ -250,32 +250,35 @@ def paint_body(tier, heart, p):
         centre = hs.surface_point([centre_dir], heart.f)[0]
         d = np.linalg.norm(p - centre, axis=1)
         wobble = fbm3(p * 7.0, 3, SEED + 300)
-        mask = clamp01((1.0 - hs.smoothstep(radius * 0.5, radius * (1.2 + 0.4 * wobble), d)) * (0.75 + 0.35 * wobble))
+        radius = radius * 0.62
+        mask = clamp01((1.0 - hs.smoothstep(radius * 0.7, radius * (1.3 + 0.4 * wobble), d)) * (0.95 + 0.35 * wobble))
         colour = mix(colour, colour_of(BRUISE, n), mask)
-        colour = colour * (1.0 - 0.25 * mask)[:, None]
+        core = clamp01((1.0 - hs.smoothstep(radius * 0.25, radius * 0.75, d)) * mask)
+        colour = mix(colour, colour_of(BRUISE, n) * 0.45, core * 0.7)
     for points in heart.slit_points:
         d, _ = hs.dist_polyline(p, points)
-        raw = 1.0 - hs.smoothstep(0.018, 0.075, d)
-        core = 1.0 - hs.smoothstep(0.008, 0.030, d)
-        colour = mix(colour, colour_of(BLOOD_EDGE, n) * 0.85, raw * 0.55)
+        raw = 1.0 - hs.smoothstep(0.030, 0.11, d)
+        core = 1.0 - hs.smoothstep(0.014, 0.045, d)
+        colour = mix(colour, colour_of(BLOOD, n), raw * 0.9)
         colour = mix(colour, colour_of(CRACK, n), core)
         height -= 0.02 * core
-        glow += EMBER[None, :] * (core * ember_amount * 0.6)[:, None]
+        glow += EMBER[None, :] * (core * ember_amount * 0.15)[:, None]
     for control in injuries['scars']:
         line = hs.path_points(heart.f, control, 24)
         d, along = hs.dist_polyline(p, line)
-        ridge = 1.0 - hs.smoothstep(0.014, 0.030, d)
+        ridge = 1.0 - hs.smoothstep(0.022, 0.045, d)
         colour = mix(colour, colour_of(SCAR, n), ridge * 0.85)
         height += 0.012 * ridge
         length = np.linalg.norm(np.diff(line, axis=0), axis=1).sum()
         tick = np.abs(((along * length) / 0.07) % 1.0 - 0.5) < 0.10
-        stitch = tick * (d < 0.05) * (d > 0.004)
+        stitch = tick * (d < 0.07) * (d > 0.006)
         colour = mix(colour, colour_of(THREAD, n), stitch * 0.9)
         height += 0.004 * stitch
 
     # Blood: trickles running down from the wounds and a wet spot at each (no pools)
     blood = np.zeros(n)
-    length = {'Damaged': 0.36, 'Critical': 0.55}.get(tier, 0.0)
+    wet = np.zeros(n)
+    length = {'Damaged': 0.55, 'Critical': 0.80}.get(tier, 0.0)
     for w in heart.wound_points():
         # across the trickle: along x on the front and back of the heart, along y on its sides
         across_axis = 0 if abs(w[1]) > abs(w[0]) else 1
@@ -283,14 +286,18 @@ def paint_body(tier, heart, p):
         down = w[2] - p[:, 2]
         near = np.linalg.norm(p - w, axis=1)
         wobble = 0.012 * np.sin(down * 38.0 + w[0] * 20.0)
-        width = 0.050 * (1.0 - 0.45 * clamp01(down / length))
+        width = 0.075 * (1.0 - 0.40 * clamp01(down / length))
         streak = (1.0 - hs.smoothstep(width * 0.6, width, np.abs(horizontal - wobble))) \
             * (down > 0.0) * (down < length) * hs.smoothstep(length, length * 0.6, down)
-        drop = 1.0 - hs.smoothstep(0.03, 0.055, np.hypot(horizontal - wobble, down - length * 0.92))
-        spot = 1.0 - hs.smoothstep(0.04, 0.09, near)
+        drop = 1.0 - hs.smoothstep(0.045, 0.085, np.hypot(horizontal - wobble, down - length * 0.92))
+        spot = 1.0 - hs.smoothstep(0.07, 0.14, near)
+        glint = (1.0 - hs.smoothstep(0.004, 0.014, np.abs(horizontal - wobble - 0.02))) * (down > 0.04)             * (down < length * 0.85)
+        wet = np.maximum(wet, glint * streak)
         blood = np.maximum(blood, np.maximum(np.maximum(streak, drop), spot))
     colour = mix(colour, colour_of(BLOOD, n), blood * 0.95)
-    colour = mix(colour, colour_of(BLOOD_EDGE, n), blood * (1.0 - hs.smoothstep(0.35, 0.8, blood)) * 0.6)
+    # wet look: a bright rim along the edge of the blood and a glint down the middle of the trickles
+    colour = mix(colour, colour_of(BLOOD_EDGE, n), blood * (1.0 - hs.smoothstep(0.35, 0.8, blood)) * 0.8)
+    colour = mix(colour, colour_of(BLOOD_EDGE, n), wet * 0.5)
     height += 0.003 * blood
 
     return colour, height, glow
