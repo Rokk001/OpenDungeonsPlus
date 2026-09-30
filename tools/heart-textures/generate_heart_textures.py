@@ -2,7 +2,7 @@
 """Generates the textures of the dungeon heart (materials/textures/DungeonHeart*.png).
 
 The heart mesh (tools/heart-on-temple) is mapped by a spherical projection around its x axis onto the upper part
-of the image; the lower part holds the walls, lips and openings of the vessel stubs. Every texel of the body knows
+of the image; the lower part holds the walls of the closed vessel stubs. Every texel of the body knows
 its point on the heart's surface (taken from the mesh), so the veins, cracks and injuries are painted in 3D and
 match the geometry that belongs to them. Everything is procedural and seeded, running the script again gives
 byte-identical files.
@@ -33,10 +33,10 @@ BODY_ROWS = int(round(hs.BODY_V * HEIGHT))
 SEED = 11
 
 # Colours (the palette follows the heart icon of the HUD: deep red with darker veins)
-DARK = np.array([0.30, 0.030, 0.045])
-MID = np.array([0.62, 0.070, 0.085])
-LIGHT = np.array([0.80, 0.150, 0.140])
-VEIN = np.array([0.24, 0.020, 0.040])
+DARK = np.array([0.20, 0.020, 0.035])
+MID = np.array([0.52, 0.075, 0.085])
+LIGHT = np.array([0.72, 0.18, 0.16])
+VEIN = np.array([0.14, 0.010, 0.030])
 VEIN_EDGE = np.array([0.72, 0.13, 0.12])
 GROOVE = np.array([0.20, 0.020, 0.035])
 BRUISE = np.array([0.30, 0.035, 0.17])
@@ -47,6 +47,9 @@ THREAD = np.array([0.10, 0.045, 0.045])
 CRACK = np.array([0.075, 0.012, 0.015])
 ASH = np.array([0.30, 0.11, 0.10])
 EMBER = np.array([1.00, 0.34, 0.06])
+SINEW = np.array([0.78, 0.40, 0.32])
+SINEW_DARK = np.array([0.42, 0.11, 0.11])
+VEIN_GLOW = np.array([0.85, 0.10, 0.05])
 
 # Per tier: tone towards ash, brightness, amount of cracks, brightness of the embers
 TIER_LOOK = {
@@ -192,8 +195,8 @@ def paint_body(tier, heart, p):
     t = clamp01((mottle - 0.30) / 0.42) * 0.75 + 0.25 * fibres
     colour = mix(colour_of(DARK, n), colour_of(MID, n), clamp01(t * 1.6))
     colour = mix(colour, colour_of(LIGHT, n), clamp01((t - 0.62) * 2.2) * 0.55)
-    colour = colour * (0.90 + 0.20 * grain)[:, None]
-    height = 0.006 * (fibres - 0.5) + 0.004 * (grain - 0.5) + 0.010 * (mottle - 0.5)
+    colour = colour * (0.78 + 0.44 * grain)[:, None]
+    height = 0.012 * (fibres - 0.5) + 0.006 * (grain - 0.5) + 0.016 * (mottle - 0.5)
     glow = np.zeros((n, 3))
 
     # Grooves between the chambers
@@ -201,7 +204,7 @@ def paint_body(tier, heart, p):
     for radius, points in heart.grooves:
         d, _ = hs.dist_polyline(p, points)
         groove = np.maximum(groove, 1.0 - hs.smoothstep(radius * 0.6, radius * 2.2, d))
-    colour = mix(colour, colour_of(GROOVE, n), groove * 0.75)
+    colour = mix(colour, colour_of(GROOVE, n), groove * 0.95)
     height -= 0.02 * groove
 
     # Veins: dark ridges with a lighter edge (the ridges themselves are geometry, this is their paint)
@@ -213,9 +216,27 @@ def paint_body(tier, heart, p):
         radius = (r0 + (r1 - r0) * along) * gg.VEIN_SCALE
         vein_mask = np.maximum(vein_mask, 1.0 - hs.smoothstep(radius * 0.55, radius * 0.95, d))
         vein_edge = np.maximum(vein_edge, (1.0 - hs.smoothstep(radius * 0.95, radius * 1.9, d)) * (d > radius * 0.7))
-    colour = mix(colour, colour_of(VEIN_EDGE, n), vein_edge * 0.16)
-    colour = mix(colour, colour_of(VEIN, n), vein_mask * 0.90)
-    height += 0.012 * vein_mask
+    colour = mix(colour, colour_of(VEIN_EDGE, n), vein_edge * 0.30)
+    colour = mix(colour, colour_of(VEIN, n), vein_mask * 0.97)
+    height += 0.02 * vein_mask
+
+    # Glow of the blood in the veins, seen through the wrapping
+    glow += VEIN_GLOW[None, :] * (vein_mask * (0.5 + 0.5 * mottle) * (0.6 if tier == 'Healthy' else 0.4))[:, None]
+
+    # Sinew strands wrapped round the body: pale fibrous bands with dark edges (the bands themselves are geometry)
+    strand_mask = np.zeros(n)
+    strand_edge = np.zeros(n)
+    for path in gg.strand_paths(heart):
+        d, along = hs.dist_polyline(p, path)
+        taper = 0.35 + 0.65 * np.clip(4.0 * np.minimum(along, 1.0 - along), 0.0, 1.0)
+        width = gg.STRAND_WIDTH * taper
+        strand_mask = np.maximum(strand_mask, 1.0 - hs.smoothstep(width * 0.55, width * 0.95, d))
+        strand_edge = np.maximum(strand_edge, (1.0 - hs.smoothstep(width * 0.95, width * 1.7, d)) * (d > width * 0.6))
+    threads = fbm3(np.stack([p[:, 0] * 30.0, p[:, 1] * 30.0, p[:, 2] * 30.0], axis=1), 2, SEED + 60)
+    colour = mix(colour, colour_of(SINEW_DARK, n), strand_edge * 0.75)
+    colour = mix(colour, mix(colour_of(SINEW, n), colour_of(SINEW_DARK, n), clamp01(threads * 1.6 - 0.3)), strand_mask * 0.92)
+    height += 0.02 * strand_mask + 0.008 * strand_mask * (threads - 0.5) - 0.008 * strand_edge
+    glow *= (1.0 - 0.7 * strand_mask)[:, None]
 
     # Capillaries: thin dark lines
     capillary = (1.0 - hs.smoothstep(0.012, 0.045, worley_edges(p * 9.0, SEED + 100))) \
@@ -304,7 +325,7 @@ def paint_body(tier, heart, p):
 
 
 def paint_bands():
-    """Rows below the body: walls, lips and openings of the vessel stubs (colour, height and glow images)."""
+    """Rows below the body: the walls of the vessel stubs and the sinew bands wrapped round them (colour, height, glow)."""
     rows = HEIGHT - BODY_ROWS
     ys, xs = np.mgrid[BODY_ROWS:HEIGHT, 0:WIDTH]
     angle = xs / WIDTH * 2.0 * np.pi
@@ -313,20 +334,15 @@ def paint_bands():
     n = len(v)
     fibres = fbm3(np.stack([circle[:, 0] * 6.0, circle[:, 1] * 6.0, v * 3.0], axis=1), 3, SEED + 500)
     grain = fbm3(np.stack([circle[:, 0] * 14.0, circle[:, 1] * 14.0, v * 30.0], axis=1), 2, SEED + 510)
-    rim = (v >= hs.RIM_V[0] - 0.005) & (v < hs.RIM_V[1] + 0.005)
-    hole = v >= hs.HOLE_V[0] - 0.005
     streaks = noise3(np.stack([circle[:, 0] * 10.0, circle[:, 1] * 10.0, np.zeros(n)], axis=1), SEED + 520)
     stripes = clamp01(np.abs(streaks - 0.5) * 6.0)
     colour = mix(colour_of(DARK, n), colour_of(LIGHT, n), clamp01(fibres * 1.5 - 0.1))
     colour = mix(colour_of(VEIN, n), colour, 0.35 + 0.65 * stripes)
-    lip = mix(colour_of(np.array([0.62, 0.20, 0.17]), n), colour_of(np.array([0.84, 0.42, 0.36]), n), clamp01(grain * 1.4))
-    inner = colour_of(np.array([0.09, 0.012, 0.018]), n) * (0.6 + 0.8 * grain[:, None])
-    colour = np.where(rim[:, None], lip, colour)
-    colour = np.where(hole[:, None], inner, colour)
+    sinew = v >= hs.SINEW_V[0] - 0.005
+    band = mix(colour_of(SINEW_DARK, n), colour_of(SINEW, n), clamp01(grain * 1.6))
+    colour = np.where(sinew[:, None], band, colour)
     height = 0.008 * (fibres - 0.5) + 0.004 * (grain - 0.5)
     glow = np.zeros((n, 3))
-    deep = hole & (v > hs.HOLE_V[1] - 0.04)
-    glow[deep] = EMBER * (0.10 + 0.10 * grain[deep])[:, None]
     return colour.reshape(rows, WIDTH, 3), height.reshape(rows, WIDTH), glow.reshape(rows, WIDTH, 3)
 
 
@@ -362,7 +378,7 @@ def main():
         heights[BODY_ROWS:] = band_height
         glows[BODY_ROWS:] = band_glow
         to_png(image, os.path.join(out, 'DungeonHeart%s.png' % tier))
-        to_png(normal_map(heights, 60.0), os.path.join(out, 'DungeonHeart%sNormal.png' % tier))
+        to_png(normal_map(heights, 110.0), os.path.join(out, 'DungeonHeart%sNormal.png' % tier))
         to_png(glows, os.path.join(out, 'DungeonHeart%sGlow.png' % tier))
         print('%s done' % tier)
 

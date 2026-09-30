@@ -13,15 +13,16 @@ The heart's centre is the origin and its apex points down.
 import numpy as np
 
 TIERS = ('Healthy', 'Damaged', 'Critical')
-# The injured tiers shrink a little, about the apex, so that the apex stays on the pedestal
-TIER_SCALE = {'Healthy': 1.00, 'Damaged': 0.96, 'Critical': 0.92}
+# Size of the whole heart relative to the shape below, about the apex, so that the apex stays on the pedestal
+HEART_SIZE = 0.75
+# The injured tiers shrink a little more
+TIER_SCALE = {'Healthy': HEART_SIZE, 'Damaged': HEART_SIZE * 0.96, 'Critical': HEART_SIZE * 0.92}
 
 # Texture layout (v, top to bottom): the body is mapped by a spherical projection around the x axis onto
-# the first part of the image, the second part holds the walls, rims and openings of the vessel stubs
+# the first part of the image, the second part holds the walls of the vessel stubs and the sinew bands wrapped round them
 BODY_V = 0.75
-WALL_V = (0.77, 0.86)
-RIM_V = (0.87, 0.92)
-HOLE_V = (0.93, 0.99)
+WALL_V = (0.77, 0.92)
+SINEW_V = (0.93, 0.99)
 
 
 def unit(v):
@@ -161,7 +162,7 @@ VEINS = (
     (0.040, 0.020, ((-0.88, 0.10, 0.60), (-0.94, 0.05, 0.07), (-0.70, -0.02, -0.45))),
 )
 
-# Vessel stubs: (radius at the root, radius at the opening, control points from inside the body to the opening)
+# Vessel stubs: (radius at the root, radius at the end, control points from inside the body to the rounded end)
 VESSELS = (
     (0.21, 0.17, ((0.10, -0.02, 0.55), (0.16, 0.00, 0.95), (0.30, 0.02, 1.30), (0.52, 0.02, 1.52))),
     (0.18, 0.15, ((-0.15, -0.20, 0.60), (-0.20, -0.18, 1.00), (-0.30, -0.12, 1.40), (-0.36, -0.10, 1.56))),

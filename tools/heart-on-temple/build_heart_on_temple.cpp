@@ -40,10 +40,10 @@ const Ogre::Vector3 LATTICE_CENTRE(0.0f, 0.0f, 1.2f);
 // CLAW_TILT (radians) about the point (CLAW_PIVOT_RADIUS, CLAW_PIVOT_HEIGHT) of their foot and stretched in height by
 // CLAW_STRETCH_Z, so that they stand around the bigger heart
 const float CLAW_MIN_HEIGHT = 2.0f;
-const float CLAW_TILT = 0.2443f;
+const float CLAW_TILT = 0.1f;
 const float CLAW_PIVOT_RADIUS = 1.45f;
 const float CLAW_PIVOT_HEIGHT = 0.03f;
-const float CLAW_STRETCH_Z = 1.15f;
+const float CLAW_STRETCH_Z = 1.05f;
 
 struct Vertex
 {

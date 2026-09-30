@@ -25,7 +25,15 @@ STEP_Z = 0.418      # top step of the pedestal
 APEX_Z = 0.42       # the apex of the heart sits on it
 LEVEL = 4           # subdivisions of the body's icosphere
 VEIN_SAMPLES = 22   # points along a vein
-VEIN_SCALE = 1.3    # thickness of the raised veins relative to VEINS in heart_shape.py
+VESSEL_LENGTH = 0.72 # the vessel stubs are short and chubby, they grow out of the wrapping
+DOME_HEIGHT = 1.0    # height of the rounded end of a vessel stub relative to its radius
+STRANDS = 7          # sinew strands per winding direction; two families cross each other like cocoon silk
+STRAND_TURNS = 0.62  # how far a strand winds round the body (turns)
+STRAND_WIDTH = 0.072 # half width of a strand
+STRAND_THICK = 0.038 # half thickness of a strand
+STRAND_TEAR = 0.24   # strands are torn open this close to a wound
+IRON_BAND = False    # the iron band with rivets round the body (the strands wrap the heart instead)
+VEIN_SCALE = 2.0    # thickness of the raised veins relative to VEINS in heart_shape.py
 
 
 class Submesh:
@@ -173,44 +181,95 @@ def add_veins(flesh, heart, apex_z):
         add_spherical(flesh, pos, nrm, tris, pulse_weight(pos[:, 2], apex_z))
 
 
+def strand_paths(heart):
+    """The sinew strands winding round the body (points on its surface), cut open at the wounds of the injured tiers."""
+    tears = [c for c, _, _ in heart.dent_points]
+    for pts in heart.slit_points:
+        tears += [pt for pt in pts]
+    tears = np.array(tears) if tears else np.zeros((0, 3))
+    runs = []
+    t = np.linspace(0.0, 1.0, 44)
+    for family in (1.0, -1.0):
+        for k in range(STRANDS):
+            phase = 2.0 * np.pi * (k + (0.5 if family < 0 else 0.0)) / STRANDS
+            alpha = 0.30 + (2.45 - 0.30) * t
+            phi = phase + family * STRAND_TURNS * 2.0 * np.pi * t
+            dirs = np.stack([np.sin(alpha) * np.cos(phi), np.sin(alpha) * np.sin(phi), -np.cos(alpha)], axis=1)
+            path = hs.surface(dirs, heart.f)
+            keep = np.ones(len(path), dtype=bool)
+            for tear in tears:
+                keep &= np.linalg.norm(path - tear, axis=1) > STRAND_TEAR
+            start = None
+            for i in range(len(path) + 1):
+                ok = i < len(path) and keep[i]
+                if ok and start is None:
+                    start = i
+                if not ok and start is not None:
+                    if i - start >= 5:
+                        runs.append(path[start:i])
+                    start = None
+    return runs
+
+
+def add_strands(flesh, heart, apex_z):
+    for path in strand_paths(heart):
+        normals = hs.gradient(heart.f, path)
+        along = np.linspace(0.0, 1.0, len(path))
+        taper = 0.35 + 0.65 * np.clip(4.0 * np.minimum(along, 1.0 - along), 0.0, 1.0)
+        centre = path + normals * (0.30 * STRAND_THICK)
+        tangents = hs.unit(np.gradient(centre, axis=0))
+        binormals = hs.unit(np.cross(tangents, normals))
+        nrm_frame = hs.unit(np.cross(binormals, tangents))
+        pos, nrm, _, _, tris = sweep(centre, STRAND_THICK * taper, STRAND_WIDTH * taper, 8, nrm_frame, binormals)
+        add_spherical(flesh, pos, nrm, tris, pulse_weight(pos[:, 2], apex_z))
+
+
 def add_vessels(flesh, apex_z):
     for r0, r1, control in hs.VESSELS:
-        centre = hs.catmull_rom(np.array(control, dtype=float), 12)
+        control = np.array(control, dtype=float)
+        control = control[0] + (control - control[0]) * VESSEL_LENGTH
+        centre = hs.catmull_rom(control, 12)
+        r1 = 0.62 * r1     # the stub tapers towards its tip
         radii = lerp_radius(r0, r1, len(centre))
         tangents, normals, binormals = frames_for(centre)
         pos, nrm, u, s, tris = sweep(centre, radii, radii, 12, normals, binormals)
-        v = hs.WALL_V[0] + (hs.WALL_V[1] - hs.WALL_V[0]) * s
-        base = flesh.add(pos, nrm, np.stack([u * 2.0, v], axis=1), 1.0)
-        flesh.add_tris(tris + base)
         end, t_end, n_end, b_end = centre[-1], tangents[-1], normals[-1], binormals[-1]
-        # lip: a torus around the opening
-        lip_r, lip_minor = 0.86 * r1, 0.17 * r1
+        # closed, rounded end: the tube runs on into a dome that tapers to a point
+        cap_steps = 8
+        theta = np.linspace(0.0, 0.5 * np.pi, cap_steps + 1)[1:]
+        cap_centres = end[None, :] + t_end[None, :] * (r1 * DOME_HEIGHT * np.sin(theta))[:, None]
+        cap_radii = np.maximum(r1 * np.cos(theta), 0.02 * r1)
+        cap_pos = [pos.reshape(len(centre), 13, 3)]
+        cap_nrm = [nrm.reshape(len(centre), 13, 3)]
+        angles = np.linspace(0.0, 2.0 * np.pi, 13)
+        radial = np.cos(angles)[:, None] * n_end + np.sin(angles)[:, None] * b_end
+        for k in range(cap_steps):
+            cap_pos.append((cap_centres[k] + cap_radii[k] * radial)[None])
+            cap_nrm.append(hs.unit(np.cos(theta[k]) * radial + np.sin(theta[k]) * t_end)[None])
+        pos = np.concatenate(cap_pos).reshape(-1, 3)
+        nrm = np.concatenate(cap_nrm).reshape(-1, 3)
+        rings = len(centre) + cap_steps
+        index = np.arange(rings * 13).reshape(rings, 13)
+        tris = []
+        for i in range(rings - 1):
+            for j in range(12):
+                tris.append((index[i][j], index[i][j + 1], index[i + 1][j]))
+                tris.append((index[i][j + 1], index[i + 1][j + 1], index[i + 1][j]))
+        s = np.linspace(0.0, 1.0, rings)[:, None] * np.ones((1, 13))
+        u = np.ones((rings, 1)) * (angles / (2.0 * np.pi))[None, :]
+        v = hs.WALL_V[0] + (hs.WALL_V[1] - hs.WALL_V[0]) * s.reshape(-1)
+        base = flesh.add(pos, nrm, np.stack([u.reshape(-1) * 2.0, v], axis=1), 1.0)
+        flesh.add_tris(np.array(tris) + base)
+        # sinew bands wrapped round the stub
         ring_angles = np.linspace(0.0, 2.0 * np.pi, 25)
-        ring = end + lip_r * (np.cos(ring_angles)[:, None] * n_end + np.sin(ring_angles)[:, None] * b_end)
-        out_n = hs.unit(ring - end)
-        pos, nrm, u, s, tris = sweep(ring, lip_minor, lip_minor, 8, out_n, np.broadcast_to(t_end, ring.shape))
-        rim_v = 0.5 * (hs.RIM_V[0] + hs.RIM_V[1])
-        base = flesh.add(pos, nrm, np.stack([u * 2.0, np.full(len(u), rim_v)], axis=1), 1.0)
-        flesh.add_tris(tris + base)
-        # inside: a short wall and the floor of the opening
-        inner_r, depth = 0.74 * r1, 0.10
-        top = end + inner_r * (np.cos(ring_angles)[:, None] * n_end + np.sin(ring_angles)[:, None] * b_end)
-        bottom = top - t_end * depth
-        wall_pos = np.vstack([top, bottom])
-        wall_nrm = hs.unit(-np.vstack([top - end, bottom - (end - t_end * depth)]))
-        wall_uv = np.stack([np.tile(np.linspace(0, 2, 25), 2), np.repeat([hs.HOLE_V[0], hs.HOLE_V[1] - 0.03], 25)], axis=1)
-        base = flesh.add(wall_pos, wall_nrm, wall_uv, 1.0)
-        wall_tris = []
-        for j in range(24):
-            wall_tris.append((base + j, base + j + 1, base + 25 + j))
-            wall_tris.append((base + j + 1, base + 26 + j, base + 25 + j))
-        flesh.add_tris(np.array(wall_tris))
-        floor_centre = end - t_end * depth
-        floor_pos = np.vstack([floor_centre[None, :], bottom])
-        floor_uv = np.vstack([[1.0, hs.HOLE_V[1]], np.stack([np.linspace(0, 2, 25), np.full(25, hs.HOLE_V[1] - 0.03)], axis=1)])
-        floor_nrm = np.broadcast_to(t_end, floor_pos.shape)
-        base = flesh.add(floor_pos, floor_nrm, floor_uv, 1.0)
-        flesh.add_tris(np.array([(base, base + 1 + j, base + 2 + j) for j in range(24)]))
+        for f in (0.35, 0.62, 0.88):
+            i = int(f * (len(centre) - 1))
+            ring = centre[i] + 1.02 * radii[i] * (np.cos(ring_angles)[:, None] * normals[i] + np.sin(ring_angles)[:, None] * binormals[i])
+            out_n = hs.unit(ring - centre[i])
+            rpos, rnrm, ru, _, rtris = sweep(ring, 0.17 * radii[i], 0.45 * radii[i], 8, out_n,
+                                             np.broadcast_to(tangents[i], ring.shape))
+            base = flesh.add(rpos, rnrm, np.stack([ru * 2.0, np.full(len(ru), 0.5 * (hs.SINEW_V[0] + hs.SINEW_V[1]))], axis=1), 1.0)
+            flesh.add_tris(rtris + base)
 
 
 def strap(iron, heart, apex_z, centre, tilt, width, thickness, level_w):
@@ -283,9 +342,11 @@ def build(tier):
     apex_z = apex_local[2]
     add_spherical(flesh, body, normals, tris, pulse_weight(body[:, 2], apex_z))
     add_veins(flesh, heart, apex_z)
+    add_strands(flesh, heart, apex_z)
     add_vessels(flesh, apex_z)
-    band_path, band_normals = strap(iron, heart, apex_z, np.array([0.0, 0.0, -0.05]), 0.22, 0.095, 0.060, 1.0)
-    add_rivets(iron, band_path, band_normals, 14, 0.062, 1.0)
+    if IRON_BAND:
+        band_path, band_normals = strap(iron, heart, apex_z, np.array([0.0, 0.0, -0.05]), 0.22, 0.095, 0.060, 1.0)
+        add_rivets(iron, band_path, band_normals, 14, 0.062, 1.0)
     add_cradle(iron, heart, apex_local, apex_z)
     return heart, flesh, iron, apex_local
 
