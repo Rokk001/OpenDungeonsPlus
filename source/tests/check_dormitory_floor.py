@@ -14,9 +14,11 @@ for line in section.splitlines():
         bits, mesh, material, rx, ry, rz = fields
         tiles.append((int(bits, 2), material, float(rz)))
 assert sorted(mask for mask, _, _ in tiles) == list(range(16))
+tiles.sort(key=lambda tile: tile[0] != 15)  # the open piece first: its edge strips are the reference
 probe = r'''
 #include <Ogre.h>
 #include <OgreHighLevelGpuProgramManager.h>
+#include <cmath>
 #include <iostream>
 int main(int argc,char** argv){try{
  Ogre::Root root("","","dormitory.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
@@ -49,6 +51,7 @@ int main(int argc,char** argv){try{
  auto* tile=scene->createEntity("Floor","Room.mesh","Graphics");node->attachObject(tile);
  struct Variant{int mask;const char* material;float rotation;};
  const Variant variants[]={VARIANTS};
+ float baseEdge[4]={0,0,0,0};
  int checks=0,failures=0;auto check=[&](bool ok,const std::string& why){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<why<<'\n';}};
  for(const auto& variant:variants){
   auto material=materials.getByName(variant.material,"Graphics");material->load();
@@ -74,10 +77,13 @@ int main(int argc,char** argv){try{
     if(direction==1||direction==3){x=direction==1?241:14;y=along;}
     average+=image.getColourAt(x,y,0);
    }
-   // Open sides continue the plank floor; exposed sides carry the darker wall-side band.
+   // Open sides continue the plank floor (same pixels as the open piece, the boards are not uniform so the
+   // strip is compared with the open piece, not with the centre); exposed sides carry the darker wall-side band.
    const float edgeLuma=(average.r+average.g+average.b)/3.f/64.f;
-   const bool open=edgeLuma>centerLuma*.9f;
+   if(variant.mask==15)baseEdge[direction]=edgeLuma;
+   const bool open=edgeLuma>baseEdge[direction]*.8f;
    check(open==bool(variant.mask&(1<<direction)),"mask "+std::to_string(variant.mask)+" boundary "+std::to_string(direction));
+   if(open)check(std::fabs(edgeLuma-baseEdge[direction])<baseEdge[direction]*.03f,"mask "+std::to_string(variant.mask)+" open boundary "+std::to_string(direction)+" continues the planks");
   }
   check(centerColour.r>centerColour.g*1.15f&&centerLuma>.08f,"oak plank center "+std::to_string(variant.mask));
   tile->setMaterialName(material->getName(),"Graphics");root.renderOneFrame();root.renderOneFrame();
