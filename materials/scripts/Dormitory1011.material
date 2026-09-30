@@ -58,7 +58,7 @@ material Dormitory1011 //: RTSS/NormalMapping_MultiPass
         
             texture_unit normalmap
             {
-                texture DormitoryNormal.png
+                texture Dormitory1011Normal.png
             }  
             texture_unit shadowmap
             {
