@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generates the floor textures of the hatchery, library and dormitory (materials/textures/).
+"""Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury and crypt
+(materials/textures/).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
 byte-identical files. Needs numpy and Pillow.
@@ -9,9 +10,13 @@ Every room is built from one base field (the open floor) plus decoration bands t
 pieces match. The tile borders are made seam-free in two ways:
   - library and dormitory: slabs / planks are separated by gaps that run along the tile border and the tile
     centre lines, the gaps are the same on both sides of a border;
-  - hatchery: all noise is blended into a mirror/transpose symmetric version at the tile border, so the border
-    pixels are the same whatever the rotation of the neighbouring piece; loose objects (straw, feathers) keep
-    a margin to the border.
+  - hatchery: all noise is truly periodic (FFT noise on a wrapping grid, no mirroring) and is faded to zero in a
+    thin strip (6 px) at the tile border, so the border pixels are the same whatever the rotation of the neighbouring
+    piece; loose objects (straw, feathers) keep a margin to the border;
+  - dungeon temple and treasury: irregular slabs (random rectangle subdivision) inside a gap that runs along
+    the tile border, so nothing but the constant gap colour touches the border;
+  - crypt: derived from the original cobble texture (tools/room-floors/Crypt-source.png, Yughues, CC0);
+    darkened, moss and lichen and cracks are added with periodic noise that fades out at the tile border.
 The room shader has no specular term, so only a diffuse texture and a matching tangent space normal map
 (red = -d height / dx, green = +d height / dy, image y pointing down) are written.
 
@@ -71,6 +76,15 @@ def nz(seed, fx, fy=None, octaves=3):
     """fbm that is mirror and transpose symmetric at the tile border (see module docstring)."""
     n = fbm(seed, fx, fy, octaves)
     return n * (1.0 - _BORDER_W) + n[_LO, _HI] * _BORDER_W
+
+
+_FADE = smoothstep(0.0, 6.0, _LO.astype(float))
+
+
+def pn(seed, fx, fy=None, octaves=3):
+    """Truly periodic noise (no mirroring) that is faded to zero in a thin strip along the tile border, so that
+    border pixels do not depend on the rotation of the piece."""
+    return fbm(seed, fx, fy, octaves) * _FADE
 
 
 def normal_map(height, strength):
@@ -344,18 +358,18 @@ def feather(sp, cx, cy, ang, length, rgb):
 
 
 def hatchery_field():
-    lump = nz(31, 34.0, 34.0, 3)
-    grit = nz(32, 170.0, 170.0, 2)
-    tone = nz(33, 4.0, 4.0, 3)
+    lump = pn(31, 34.0, 34.0, 3)
+    grit = pn(32, 170.0, 170.0, 2)
+    tone = pn(33, 4.0, 4.0, 3)
     col = EARTH[None, None, :] * (1.0 + 0.085 * tone[..., None] + 0.085 * lump[..., None] + 0.05 * grit[..., None])
     hgt = 0.6 * lump + 0.25 * grit + 0.15 * tone
     # dark mud patches, flat and damp
-    mud = smoothstep(0.55, 1.35, nz(34, 4.4, 4.4, 3))
+    mud = smoothstep(0.55, 1.35, pn(34, 4.4, 4.4, 3))
     mudcol = MUD[None, None, :] * (1.0 + 0.10 * lump[..., None])
     col = mix(col, mudcol, mud * 0.82)
     hgt = mix(hgt, hgt * 0.35 - 0.5, mud)
     # trodden, pale dust
-    dust = smoothstep(0.9, 1.8, nz(35, 6.0, 6.0, 2))
+    dust = smoothstep(0.9, 1.8, pn(35, 6.0, 6.0, 2))
     col = mix(col, np.clip(col * 1.12 + 0.015, 0, 1), dust * 0.6)
     sp = Sprites()
     box = (MARGIN + 8, MARGIN + 8, N - MARGIN - 8, N - MARGIN - 8)
@@ -370,8 +384,8 @@ def hatchery_field():
 
 def hatchery_band(col, hgt, side):
     d = depth_map(side)
-    fringe = 1.0 - smoothstep(18.0, 84.0, d + 22.0 * nz(71, 13.0, 13.0, 3))
-    dirt = np.array([0.205, 0.15, 0.10])[None, None, :] * (1.0 + 0.12 * nz(72, 110.0, 110.0, 2)[..., None])
+    fringe = 1.0 - smoothstep(18.0, 84.0, d + 22.0 * pn(71, 13.0, 13.0, 3))
+    dirt = np.array([0.205, 0.15, 0.10])[None, None, :] * (1.0 + 0.12 * pn(72, 110.0, 110.0, 2)[..., None])
     col = mix(col, dirt, fringe * 0.62)
     col = col * (1.0 - 0.22 * (1.0 - smoothstep(0.0, 40.0, d)))[..., None]
     hgt = hgt - 0.45 * fringe
@@ -380,6 +394,151 @@ def hatchery_band(col, hgt, side):
     draw_straws(sp, segs, (0.62, 0.49, 0.235), side_mapper(side))
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# dungeon temple and treasury: irregular slabs inside a gap along the tile border
+
+def bsp_rects(seed, min_size, max_size, p_split):
+    """Random rectangle subdivision of the whole tile; returns a list of (x0, y0, x1, y1)."""
+    rng = np.random.RandomState(seed)
+    rects = []
+
+    def split(x0, y0, x1, y1):
+        w, h = x1 - x0, y1 - y0
+        can_v, can_h = w >= 2 * min_size, h >= 2 * min_size
+        want = w > max_size or h > max_size or rng.uniform() < p_split
+        if not (can_v or can_h) or not want:
+            rects.append((x0, y0, x1, y1))
+            return
+        if can_v and (w >= h or not can_h):
+            cut = x0 + int(np.clip(rng.uniform(0.36, 0.64) * w, min_size, w - min_size))
+            split(x0, y0, cut, y1)
+            split(cut, y0, x1, y1)
+        else:
+            cut = y0 + int(np.clip(rng.uniform(0.36, 0.64) * h, min_size, h - min_size))
+            split(x0, y0, x1, cut)
+            split(x0, cut, x1, y1)
+
+    split(0, 0, N, N)
+    return rects
+
+
+def slab_maps(rects):
+    """Slab index and distance (pixels) to the nearest slab edge for every pixel."""
+    ids = np.zeros((N, N), dtype=int)
+    dd = np.zeros((N, N))
+    for i, (x0, y0, x1, y1) in enumerate(rects):
+        ly = (_YY[y0:y1, x0:x1] - y0)
+        lx = (_XX[y0:y1, x0:x1] - x0)
+        ids[y0:y1, x0:x1] = i
+        dd[y0:y1, x0:x1] = np.minimum(np.minimum(lx, x1 - x0 - 1 - lx), np.minimum(ly, y1 - y0 - 1 - ly))
+    return ids, dd
+
+
+BASALT = np.array([0.168, 0.156, 0.168])
+TEMPLE_GAP = np.array([0.105, 0.040, 0.034])
+
+
+def temple_field():
+    rects = bsp_rects(401, 175, 360, 0.0)
+    ids, dd = slab_maps(rects)
+    rng = np.random.RandomState(402)
+    bright = rng.uniform(0.86, 1.14, len(rects))[ids]
+    tintb = rng.uniform(-0.03, 0.03, len(rects))[ids]
+    gw = 4
+    dd = dd + 3.0 * pn(41, 14.0, 14.0, 2) * smoothstep(4.0, 14.0, dd)
+    mott = fbm(42, 4.0, 4.0, 3)
+    grit = fbm(43, 150.0, 150.0, 2)
+    col = BASALT[None, None, :] * bright[..., None]
+    col = col + tintb[..., None] * np.array([0.6, 0.0, 0.5])[None, None, :] * 0.6
+    col = col * (1.0 + 0.10 * mott[..., None] + 0.06 * grit[..., None])
+    hgt = 0.2 * mott + 0.1 * grit
+    # slightly polished worn centres
+    wear = smoothstep(0.6, 1.5, fbm(44, 2.3, 2.3, 2))
+    col = mix(col, np.clip(col * 1.18 + 0.008, 0, 1), wear * 0.7)
+    # fine cracks
+    crack = 1.0 - smoothstep(0.0, 0.05, np.abs(fbm(45, 11.0, 11.0, 3)))
+    crack = crack * smoothstep(0.2, 0.9, np.abs(fbm(46, 3.0, 3.0, 1)))
+    col = mix(col, np.broadcast_to(np.array([0.045, 0.02, 0.02]), col.shape), crack[..., None] * 0.8)
+    hgt = hgt - 0.8 * crack
+    # worn chips
+    chip = smoothstep(2.3, 2.9, fbm(47, 70.0, 70.0, 1))
+    col = col * (1.0 - 0.35 * chip)[..., None]
+    hgt = hgt - 0.6 * chip
+    # warm grout in the gaps, bevels
+    t = smoothstep(gw - 1.0, gw + 1.5, dd)
+    col = mix(np.broadcast_to(TEMPLE_GAP, col.shape), col, t)
+    col = col * (0.72 + 0.28 * smoothstep(gw, gw + 10.0, dd))[..., None]
+    hgt = hgt * 0.7 + 2.4 * smoothstep(gw - 1.0, gw + 6.0, dd)
+    return col, hgt
+
+
+SLATE = np.array([0.255, 0.272, 0.312])
+TREASURY_GAP = np.array([0.050, 0.055, 0.070])
+
+
+def treasury_field():
+    rects = bsp_rects(411, 70, 190, 0.45)
+    ids, dd = slab_maps(rects)
+    rng = np.random.RandomState(412)
+    bright = rng.uniform(0.84, 1.16, len(rects))[ids]
+    tintb = rng.uniform(-0.04, 0.04, len(rects))[ids]
+    gw = 2
+    dd = dd + 2.0 * pn(51, 20.0, 20.0, 2) * smoothstep(3.0, 10.0, dd)
+    mott = fbm(52, 6.0, 6.0, 3)
+    grit = fbm(53, 150.0, 150.0, 2)
+    col = SLATE[None, None, :] * bright[..., None]
+    col = col + tintb[..., None] * np.array([-0.6, 0.0, 0.8])[None, None, :]
+    col = col * (1.0 + 0.09 * mott[..., None] + 0.05 * grit[..., None])
+    hgt = 0.2 * mott + 0.08 * grit
+    # chalky wear
+    chalk = smoothstep(0.5, 1.6, fbm(54, 3.0, 3.0, 3))
+    col = mix(col, np.array([0.40, 0.41, 0.44])[None, None, :] * (1.0 + 0.1 * grit[..., None]), chalk * 0.30)
+    hgt = hgt - 0.12 * chalk
+    # hairline cracks
+    crack = 1.0 - smoothstep(0.0, 0.04, np.abs(fbm(55, 10.0, 10.0, 3)))
+    crack = crack * smoothstep(0.3, 1.0, np.abs(fbm(56, 3.0, 3.0, 1)))
+    col = col * (1.0 - 0.5 * crack)[..., None]
+    hgt = hgt - 0.6 * crack
+    # thin dark joints, bevels
+    t = smoothstep(gw - 1.0, gw + 1.2, dd)
+    col = mix(np.broadcast_to(TREASURY_GAP, col.shape), col, t)
+    col = col * (0.76 + 0.24 * smoothstep(gw, gw + 8.0, dd))[..., None]
+    hgt = hgt * 0.7 + 2.0 * smoothstep(gw - 1.0, gw + 5.0, dd)
+    return col, hgt
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# crypt: the original cobbles, darkened, with moss and lichen in the joints and a few cracks
+
+def blur(img, sigma):
+    k = np.fft.fftfreq(N)
+    filt = np.exp(-2.0 * (np.pi * sigma) ** 2 * (k[None, :] ** 2 + k[:, None] ** 2))
+    return np.fft.ifft2(np.fft.fft2(img) * filt).real
+
+
+def crypt_field():
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Crypt-source.png')
+    col = np.asarray(Image.open(src).convert('RGB')).astype(float) / 255.0
+    col = col * 0.85
+    lum = col.mean(-1)
+    low = blur(lum, 2.2)
+    joint = 1.0 - smoothstep(0.12, 0.27, low)
+    moss_n = pn(61, 6.0, 6.0, 3)
+    grit = pn(62, 120.0, 120.0, 2)
+    moss = smoothstep(-0.1, 1.0, moss_n) * joint
+    mosscol = np.array([0.15, 0.19, 0.10])[None, None, :] * (0.75 + 0.45 * (grit[..., None] * 0.5 + 0.5))
+    col = mix(col, mosscol, np.clip(moss * 0.9, 0, 0.85))
+    # grey-green lichen speckles on the stones
+    patch = smoothstep(0.7, 1.6, pn(63, 4.0, 4.0, 2))
+    speck = smoothstep(1.4, 2.2, pn(64, 55.0, 55.0, 1)) * patch * (1.0 - joint)
+    col = mix(col, np.array([0.36, 0.40, 0.32])[None, None, :] * (0.8 + 0.3 * grit[..., None]), speck * 0.55)
+    # cracks
+    crack = 1.0 - smoothstep(0.0, 0.05, np.abs(pn(65, 9.0, 9.0, 3)))
+    crack = crack * smoothstep(0.3, 1.0, np.abs(pn(66, 3.0, 3.0, 1)))
+    col = col * (1.0 - 0.6 * crack)[..., None]
+    return col, None
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -403,6 +562,19 @@ ROOMS = {
                    'Farm1010': ('TB', 'Farm1010Normal'), 'Farm1011': ('T', 'Farm1011Normal'),
                    'Farm1100': ('TL', 'Farm1100Normal'), 'Farm': ('', 'FarmNormal')},
     },
+    'dungeonTemple': {
+        'field': temple_field, 'band': None, 'strength': 1.3, 'rot_invariant': True,
+        'pieces': {'DungeonTempleFloor': ('', 'DungeonTempleFloorNormal')},
+    },
+    'treasury': {
+        'field': treasury_field, 'band': None, 'strength': 1.3, 'rot_invariant': True,
+        'pieces': {'Treasury': ('', 'TreasuryNormal')},
+    },
+    'crypt': {
+        # the existing CryptNormal.png is kept
+        'field': crypt_field, 'band': None, 'strength': 0.0,
+        'pieces': {'Crypt': ('', None)},
+    },
 }
 
 
@@ -411,7 +583,7 @@ def build(room):
     field_col, field_hgt = spec['field']()
     result = {}
     for name, (sides, normal_name) in spec['pieces'].items():
-        col, hgt = field_col.copy(), field_hgt.copy()
+        col, hgt = field_col.copy(), (field_hgt.copy() if field_hgt is not None else None)
         for side in sides:
             col, hgt = spec['band'](col, hgt, side)
         result[name] = (col, hgt, normal_name, sides)
@@ -439,11 +611,12 @@ def main():
                                             'textures')
     for room in ROOMS:
         result, strength = build(room)
-        if '--check' in sys.argv:
+        if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('hatchery', 'dormitory', 'library')):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
         for name, (col, hgt, normal_name, _) in result.items():
             to_image(col).save(os.path.join(out, name + '.png'), optimize=True)
-            to_image(normal_map(hgt, strength)).save(os.path.join(out, normal_name + '.png'), optimize=True)
+            if normal_name is not None:
+                to_image(normal_map(hgt, strength)).save(os.path.join(out, normal_name + '.png'), optimize=True)
             print(name, 'mean RGB', (col.reshape(-1, 3).mean(0) * 255).round().astype(int))
 
 
