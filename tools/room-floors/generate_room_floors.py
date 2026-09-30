@@ -106,6 +106,30 @@ def normal_map(height, strength):
     return nrm * 0.5 + 0.5
 
 
+# Calibrated tone correction (see docs/internal/FLOORS.md, "Calibration"): per room (saturation factor, brightness
+# factor, colour tint), applied to the finished diffuse colours. The room shader raises saturation (x1.3) and the warm room
+# lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
+# in the game's lighting. Rooms that are not listed are left as painted.
+TONE = {
+    'hatchery': (0.20, 0.72, (1.06, 1.00, 0.90)),
+    'dormitory': (0.20, 1.00, (1.10, 1.00, 0.90)),
+    'dungeonTemple': (1.00, 1.55, (1.00, 1.00, 1.00)),
+    'trainingHall': (0.80, 0.85, (0.98, 1.00, 1.06)),
+    'casino': (0.25, 1.05, (1.10, 0.97, 0.94)),
+    'arena': (0.32, 0.85, (1.00, 1.00, 0.95)),
+    'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
+    'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
+}
+
+
+def tone(arr, room):
+    if room not in TONE:
+        return arr
+    sat, gain, tint = TONE[room]
+    lum = (arr * np.array([0.2126, 0.7152, 0.0722])).sum(-1, keepdims=True)
+    return (lum + (arr - lum) * sat) * np.array(tint) * gain
+
+
 def to_image(arr):
     return Image.fromarray((np.clip(arr, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8), 'RGB')
 
@@ -1269,7 +1293,7 @@ def build(room):
         col, hgt = field_col.copy(), (field_hgt.copy() if field_hgt is not None else None)
         for side in sides:
             col, hgt = spec['band'](col, hgt, side)
-        result[name] = (col, hgt, normal_name, sides)
+        result[name] = (tone(col, room), hgt, normal_name, sides)
     return result, spec['strength']
 
 
@@ -1350,6 +1374,7 @@ def main():
                                                         'models', 'WoodBridge.mesh'))
     if '--check' in sys.argv:
         print('WoodBridge painted zone %.1f %% of the atlas, mesh UV pixels %.1f %%' % (zone.mean() * 100, covered.mean() * 100))
+    col = tone(col, 'bridgeWooden')
     to_image(col).convert('RGBA').save(os.path.join(out, 'WoodBridge.png'), optimize=True)
     to_image(normal_map(hgt, 1.3)).convert('RGBA').save(os.path.join(out, 'WoodBridgeNormal.png'), optimize=True)
     print('WoodBridge mean RGB of the UV pixels', (col[covered].mean(0) * 255).round().astype(int))
