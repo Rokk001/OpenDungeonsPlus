@@ -143,6 +143,8 @@ public:
     void destroyStatsWindow();
     bool CloseStatsWindow(const CEGUI::EventArgs& /*e*/);
     void updateStatsWindow(const std::string& txt);
+    bool ProfileTabClicked(const CEGUI::EventArgs& /*e*/);
+    bool StatsTabClicked(const CEGUI::EventArgs& /*e*/);
     std::string getStatsText();
 
     //! \brief Get the level of the object
@@ -716,6 +718,11 @@ private:
 
     //! Weapon that will be dropped when the creature dies
     std::string     mWeaponDropDeath;
+
+    //! \brief Shows the stats page (true) or the profile page (false) of the creature card.
+    void showStatsPage(bool stats);
+    //! \brief Fills the profile page of the creature card.
+    void refreshProfilePage();
 
     CEGUI::Window*  mStatsWindow;
     int32_t         mNbTurnsWithoutBattle;

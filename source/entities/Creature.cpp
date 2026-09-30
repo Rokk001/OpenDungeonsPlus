@@ -77,9 +77,12 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "render/CreatureOverlayStatus.h"
+#include "render/CreaturePortrait.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "social/SocialGenerator.h"
+#include "social/SocialProfileCache.h"
 #include "rooms/RoomCrypt.h"
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomPrison.h"
@@ -101,6 +104,7 @@
 #include <CEGUI/WindowManager.h>
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/FrameWindow.h>
+#include <CEGUI/widgets/ProgressBar.h>
 #include <CEGUI/widgets/PushButton.h>
 
 #include <OgreQuaternion.h>
@@ -116,6 +120,99 @@ static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
+
+namespace
+{
+//! \brief Friends are the creatures of the seat with an affinity above this value
+const uint32_t PROFILE_FRIEND_MIN_AFFINITY = 600;
+//! \brief The foe is the creature with an affinity below this value
+const uint32_t PROFILE_FOE_MAX_AFFINITY = 150;
+const uint32_t PROFILE_MAX_FRIENDS = 2;
+
+typedef std::pair<uint32_t, std::string> ProfileAffinity;
+
+bool isHigherAffinity(const ProfileAffinity& a, const ProfileAffinity& b)
+{
+    if(a.first != b.first)
+        return a.first > b.first;
+
+    return a.second < b.second;
+}
+
+//! \brief Picks the friends and the foe of a creature among the creatures of a seat (see
+//! SocialGenerator::affinity). Only computed when the creature card is refreshed.
+void findFriendsAndFoe(const std::string& name, const std::vector<Creature*>& mates,
+    std::vector<std::string>& friends, std::string& foe)
+{
+    std::vector<ProfileAffinity> affinities;
+    for(Creature* mate : mates)
+    {
+        if(mate->getName() == name)
+            continue;
+
+        affinities.push_back(ProfileAffinity(social::SocialGenerator::affinity(name, mate->getName()), mate->getName()));
+    }
+    std::sort(affinities.begin(), affinities.end(), isHigherAffinity);
+
+    for(const ProfileAffinity& affinity : affinities)
+    {
+        if((affinity.first <= PROFILE_FRIEND_MIN_AFFINITY) || (friends.size() >= PROFILE_MAX_FRIENDS))
+            break;
+
+        friends.push_back(affinity.second);
+    }
+    if(!affinities.empty() && (affinities.back().first < PROFILE_FOE_MAX_AFFINITY))
+        foe = affinities.back().second;
+}
+
+//! \brief State name used to look up the mood line of the creature (see social-texts.cfg)
+std::string getProfileMoodState(uint32_t moodBits, CreatureMoodLevel moodLevel)
+{
+    if((moodBits & CreatureMoodValues::KoTemp) != 0)
+        return "KoTemp";
+    if((moodBits & CreatureMoodValues::InJail) != 0)
+        return "InJail";
+    if((moodBits & CreatureMoodValues::LeaveDungeon) != 0)
+        return "LeaveDungeon";
+    if((moodBits & CreatureMoodValues::GetFee) != 0)
+        return "GetFee";
+    if((moodBits & CreatureMoodValues::Hungry) != 0)
+        return "Hungry";
+    if((moodBits & CreatureMoodValues::Tired) != 0)
+        return "Tired";
+
+    switch(moodLevel)
+    {
+        case CreatureMoodLevel::Happy:
+            return "Happy";
+        case CreatureMoodLevel::Neutral:
+            return "Neutral";
+        case CreatureMoodLevel::Upset:
+            return "Upset";
+        case CreatureMoodLevel::Angry:
+            return "Angry";
+        case CreatureMoodLevel::Furious:
+            return "Furious";
+        default:
+            return "Unknown";
+    }
+}
+
+std::string joinProfileList(const std::vector<std::string>& values)
+{
+    std::string result;
+    for(const std::string& value : values)
+    {
+        if(value.empty())
+            continue;
+
+        if(!result.empty())
+            result += ", ";
+        result += value;
+    }
+    return result;
+}
+}
 
 CreatureParticleEffect::CreatureParticleEffect(Creature& creature, const std::string& name, const std::string& script, int32_t nbTurnsEffect,
         CreatureEffect* effect) :
@@ -2183,19 +2280,27 @@ void Creature::createStatsWindow()
 
     CEGUI::Window* rootWindow = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
 
-    mStatsWindow = ODFrameListener::getSingleton().getModeManager()->getGui().createInfoWindow(
+    mStatsWindow = ODFrameListener::getSingleton().getModeManager()->getGui().createCreatureProfileWindow(
         std::string("CreatureStatsWindows_") + getName());
 
     // We want to close the window when the cross is clicked
     mStatsWindow->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
         CEGUI::Event::Subscriber(&Creature::CloseStatsWindow, this));
+    mStatsWindow->getChild("ProfileTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&Creature::ProfileTabClicked, this));
+    mStatsWindow->getChild("StatsTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&Creature::StatsTabClicked, this));
 
     // Set the window title
     mStatsWindow->setText(getName() + " (" + getDefinition()->getClassName() + ")");
 
+    mStatsWindow->getChild("ProfilePage/Portrait")->setProperty("Image",
+        getCreaturePanelPortraitImage(getDefinition()->getMeshName()).getName());
+
     rootWindow->addChild(mStatsWindow);
     mStatsWindow->show();
 
+    showStatsPage(false);
     updateStatsWindow("Loading...");
 }
 
@@ -2219,8 +2324,100 @@ void Creature::updateStatsWindow(const std::string& txt)
     if (mStatsWindow == nullptr)
         return;
 
-    CEGUI::Window* textWindow = mStatsWindow->getChild("TextDisplay");
+    CEGUI::Window* textWindow = mStatsWindow->getChild("StatsText");
     textWindow->setText(txt);
+    // The server refreshes the statistics while the card is open, so the profile page follows
+    refreshProfilePage();
+}
+
+bool Creature::ProfileTabClicked(const CEGUI::EventArgs& /*e*/)
+{
+    showStatsPage(false);
+    return true;
+}
+
+bool Creature::StatsTabClicked(const CEGUI::EventArgs& /*e*/)
+{
+    showStatsPage(true);
+    return true;
+}
+
+void Creature::showStatsPage(bool stats)
+{
+    if (mStatsWindow == nullptr)
+        return;
+
+    mStatsWindow->getChild("ProfilePage")->setVisible(!stats);
+    mStatsWindow->getChild("StatsText")->setVisible(stats);
+    mStatsWindow->getChild("ProfileTab")->setDisabled(!stats);
+    mStatsWindow->getChild("StatsTab")->setDisabled(stats);
+}
+
+void Creature::refreshProfilePage()
+{
+    if (mStatsWindow == nullptr)
+        return;
+
+    const CreatureDefinition* definition = getDefinition();
+    const social::CreatureProfile& profile = social::SocialProfileCache::getSingleton().getProfile(
+        getName(), definition->getClassName(), definition->isWorker());
+
+    // Mood, friends and the like are only known for creatures of the local player and its allies
+    Seat* localSeat = nullptr;
+    if(getGameMap()->getLocalPlayer() != nullptr)
+        localSeat = getGameMap()->getLocalPlayer()->getSeat();
+    bool isAllied = (localSeat != nullptr) &&
+        (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
+
+    CEGUI::Window* page = mStatsWindow->getChild("ProfilePage");
+    page->getChild("NameText")->setText(profile.getFullName());
+
+    std::string handle = "@" + getName() + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
+        " - Level " + Helper::toString(getLevel());
+    if(isAllied && (mMoodValue != CreatureMoodLevel::Unknown))
+        handle += "   (mood: " + getProfileMoodState(0, mMoodValue) + ")";
+    page->getChild("HandleText")->setText(handle);
+
+    std::string age = "Age " + profile.mAgeText;
+    if(profile.mAgeText != Helper::toString(profile.mAge))
+        age = profile.mAgeText;
+    page->getChild("AgeText")->setText(age + " - " + profile.mGender + " - " + profile.mRelationship);
+    page->getChild("FromText")->setText("From: " + profile.mHometown);
+    page->getChild("JobText")->setText("Job: " + profile.mJob);
+    page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
+    std::vector<std::string> likes(profile.mLikes, profile.mLikes + 2);
+    std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + 2);
+    page->getChild("LikesText")->setText("Likes: " + joinProfileList(likes));
+    page->getChild("DislikesText")->setText("Dislikes: " + joinProfileList(dislikes));
+
+    // Health is shown as the same stage the creature overlay uses, the client has no exact value
+    CEGUI::ProgressBar* healthBar = static_cast<CEGUI::ProgressBar*>(page->getChild("HealthBar"));
+    healthBar->setProgress(1.0f - static_cast<float>(mOverlayHealthValue) /
+        static_cast<float>(NB_OVERLAY_HEALTH_VALUES - 1));
+    CEGUI::ProgressBar* experienceBar = static_cast<CEGUI::ProgressBar*>(page->getChild("ExperienceBar"));
+    bool showExperience = isAllied && hasProgressInformation();
+    experienceBar->setVisible(showExperience);
+    if(showExperience)
+        experienceBar->setProgress(static_cast<float>(getExperienceProgress()));
+
+    CEGUI::Window* friendsText = page->getChild("FriendsText");
+    CEGUI::Window* statusText = page->getChild("StatusText");
+    friendsText->setVisible(isAllied);
+    statusText->setVisible(isAllied);
+    if(!isAllied)
+        return;
+
+    std::vector<std::string> friends;
+    std::string foe;
+    findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), friends, foe);
+    std::string friendsLine = "Friends: " + (friends.empty() ? std::string("none yet") : joinProfileList(friends));
+    friendsLine += "      Foe: " + (foe.empty() ? std::string("none") : foe);
+    friendsText->setText(friendsLine);
+
+    std::string moodLine = social::SocialGenerator::moodLine(social::SocialProfileCache::getSingleton().getData(),
+        getName(), definition->getClassName(), definition->isWorker(),
+        getProfileMoodState(getOverlayMoodValue(), mMoodValue));
+    statusText->setText(moodLine.empty() ? std::string("") : "Status: " + moodLine);
 }
 
 std::string Creature::getStatsText()

@@ -104,6 +104,10 @@ public:
     //! WindowStats.layout, registered for scaling. The caller adds it to the root window.
     CEGUI::Window* createInfoWindow(const std::string& name);
 
+    //! \brief Creates the fixed size creature profile window from WindowCreatureProfile.layout,
+    //! registered for scaling. The caller adds it to the root window.
+    CEGUI::Window* createCreatureProfileWindow(const std::string& name);
+
     //! \brief Sets the user-selected UI scale and applies it immediately.
     void setUserScalePercent(float scalePercent);
 
