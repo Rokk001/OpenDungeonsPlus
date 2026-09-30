@@ -114,6 +114,7 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
+    'library': (0.22, 1.00, (1.02, 1.0, 0.99)),
     'hatchery': (0.15, 0.72, (1.09, 1.00, 0.85)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
     'treasury': (1.00, 0.76, (0.93, 0.95, 1.06)),
@@ -265,6 +266,58 @@ def straw_bundle(sp, rng, cx, cy, ang, count, length, width, rgb, mapper=None, f
             sp.line(q0, q1, max(1.5, width * wd * 0.38), np.clip(np.array(rgb) * tn * 1.16, 0, 1), 0.95)
 
 
+def tuft_stalks(rng, cx, cy, ang, count, length, spread):
+    stalks = []
+    for _ in range(count):
+        if rng.uniform() < 0.72:
+            a = ang + rng.normal(0.0, spread * 0.45) + (np.pi if rng.uniform() < 0.5 else 0.0)
+        else:
+            a = ang + rng.uniform(-1.4, 1.4) + (np.pi if rng.uniform() < 0.5 else 0.0)
+        ln = rng.uniform(length[0], length[1])
+        lat = rng.uniform(-12.0, 12.0)
+        bx, by = cx - np.sin(ang) * lat, cy + np.cos(ang) * lat
+        start = -ln * rng.uniform(0.35, 0.65)
+        bend = rng.uniform(-4.0, 4.0)
+        pts = []
+        for t in (0.0, 0.33, 0.66, 1.0):
+            al = start + t * ln
+            off = bend * np.sin(np.pi * t)
+            pts.append((bx + np.cos(a) * al - np.sin(a) * off, by + np.sin(a) * al + np.cos(a) * off))
+        stalks.append((pts, rng.uniform(0.80, 1.16), rng.uniform(0.85, 1.25)))
+    return stalks
+
+
+def straw_tuft(sp, rng, cx, cy, ang, count, length, width, rgb, mapper=None, spread=0.95):
+    """A heap of thin straw stalks (chicken farm): most stalks lie roughly in one direction, a few cross them, all
+    overlapping around a darker core; every stalk tapers towards both ends, has its own shade of golden brown and a
+    soft shadow, and there is a dark soft patch under the core. Stalks near the centre are darker, the tips lighter
+    and sparse, so the outline is ragged and not a solid blob. `spread` (rad) is the scatter of the direction."""
+    def mp(q):
+        return mapper(*q) if mapper is not None else q
+    stalks = tuft_stalks(rng, cx, cy, ang, count, length, spread)
+    if sp is None:
+        return stalks
+    for wd, al in ((1.0, 26), (0.78, 30), (0.55, 34), (0.32, 38)):
+        d = length[1] * 0.22
+        sp.line(mp((cx - np.cos(ang) * d, cy - np.sin(ang) * d)), mp((cx + np.cos(ang) * d, cy + np.sin(ang) * d)),
+                14.0 + 22.0 * wd, (0.05, 0.035, 0.02), 0.0, al)
+    taper = (1.0, 0.85, 0.5)
+    for pts, tn, wd in stalks:
+        for i in range(3):
+            q0, q1 = mp(pts[i]), mp(pts[i + 1])
+            w = width * taper[i] * wd
+            sp.line((q0[0] + 1.5, q0[1] + 2.5), (q1[0] + 1.5, q1[1] + 2.5), w + 1.5, (0.05, 0.035, 0.02), 0.0, 100)
+    for pts, tn, wd in stalks:
+        for i in range(3):
+            q0, q1 = mp(pts[i]), mp(pts[i + 1])
+            dist = np.hypot(pts[i][0] - cx, pts[i][1] - cy)
+            core = 0.74 + 0.26 * np.clip(dist / (length[1] * 0.5), 0.0, 1.0)
+            w = width * taper[i] * wd
+            col = np.clip(np.array(rgb) * tn * core, 0, 1)
+            sp.line(q0, q1, w, col, 0.6)
+            sp.line(q0, q1, max(1.0, w * 0.3), np.clip(col * 1.15, 0, 1), 0.85)
+
+
 def scatter_straw(sp, seed, bundles, loose, box, rgb, mapper=None, bundle_len=(54, 88), loose_len=(40, 72),
                   width=5.0, angle=None, spread=0.6, fan=0.55, blue=False):
     rng = np.random.RandomState(seed)
@@ -302,44 +355,40 @@ def interior_points(rng, count, lo, hi, min_dist):
     return pts
 
 
-def scatter_groups(sp, seed, groups, clumps, loose, spread, rgb, bundle_len, width, lo, hi, edge=36.0):
-    """Straw in loose groups: `groups` centres inside [lo, hi]^2, each with a few large clumps (bundles and fanned
-    tufts) and some loose strands close by; calm bare ground between the groups. Every clump is turned until
-    all its strands stay at least `edge` px inside the tile, so the variants of a floor match at every border."""
+def scatter_groups(sp, seed, groups, clumps, loose, spread, rgb, stalk_len, width, lo, hi, edge=36.0):
+    """Straw in loose groups: `groups` centres inside [lo, hi]^2, each with a few heaps of thin stalks (straw_tuft)
+    and some single stalks close by; calm bare ground between the groups. Every heap keeps all its stalks at least
+    `edge` px inside the tile, so the variants of a floor match at every border."""
     rng = np.random.RandomState(seed)
-    reach = bundle_len[1] + 12.0
 
-    def place(cx, cy, fan):
-        """A direction for which the clump stays inside the tile (None if there is none)."""
-        for _ in range(60):
-            ang = rng.uniform(0, np.pi)
-            spread_a = 0.5 if fan else 0.25
-            ends = [(cx + np.cos(ang + d) * reach * (1.0 if fan else 0.5) * sgn,
-                     cy + np.sin(ang + d) * reach * (1.0 if fan else 0.5) * sgn)
-                    for d in (-spread_a, 0.0, spread_a) for sgn in ((1.0,) if fan else (1.0, -1.0))]
-            if all(edge < x < N - edge and edge < y < N - edge for x, y in ends):
-                return ang
-        return None
+    def fits(state, cx, cy, ang, count, length, sp_):
+        """True when all stalks of the heap that would be drawn from this random state stay `edge` px inside."""
+        saved = rng.get_state()
+        rng.set_state(state)
+        stalks = tuft_stalks(rng, cx, cy, ang, count, length, sp_)
+        rng.set_state(saved)
+        return all(edge < x < N - edge and edge < y < N - edge for pts, _, _ in stalks for x, y in pts)
 
-    for gx, gy in interior_points(rng, groups, lo, hi, 130.0):
-        for k in range(rng.randint(clumps[0], clumps[1] + 1)):
-            a = rng.uniform(0, 2 * np.pi)
-            r = rng.uniform(0.1, 1.0) * spread
-            cx, cy = gx + np.cos(a) * r, gy + np.sin(a) * r * 0.8
-            ang = place(cx, cy, k % 2 == 0)
-            if ang is None:
-                continue
-            if k % 2 == 0:
-                straw_bundle(sp, rng, cx, cy, ang, rng.randint(9, 14), bundle_len, width, rgb, fan=0.5)
-            else:
-                straw_bundle(sp, rng, cx, cy, ang, rng.randint(8, 12), bundle_len, width, rgb)
-        for k in range(loose):
-            a = rng.uniform(0, 2 * np.pi)
-            r = rng.uniform(0.5, 1.4) * spread
-            cx, cy = gx + np.cos(a) * r, gy + np.sin(a) * r * 0.8
-            ang = place(cx, cy, False)
-            if ang is not None:
-                straw_bundle(sp, rng, cx, cy, ang, 1, bundle_len, width * 0.9, rgb)
+    for gx, gy in interior_points(rng, groups, lo, hi, 110.0):
+        n_clumps = rng.randint(clumps[0], clumps[1] + 1)
+        for k in range(n_clumps + loose):
+            big = k < n_clumps
+            length = stalk_len if big else (stalk_len[0] * 0.6, stalk_len[1] * 0.7)
+            sp_ = 0.95 if big else 0.3
+            placed = False
+            for _ in range(40):
+                a = rng.uniform(0, 2 * np.pi)
+                r = rng.uniform(0.1, 1.0) * spread
+                cx, cy = gx + np.cos(a) * r, gy + np.sin(a) * r * 0.8
+                ang = rng.uniform(0, np.pi)
+                count = rng.randint(22, 31) if big else rng.randint(2, 4)
+                state = rng.get_state()
+                # the heap draws from the state saved right after `count` was chosen
+                if fits(state, cx, cy, ang, count, length, sp_):
+                    placed = True
+                    break
+            if placed:
+                straw_tuft(sp, rng, cx, cy, ang, count, length, width if big else width * 0.9, rgb, spread=sp_)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -479,25 +528,53 @@ def dormitory_band(col, hgt, side):
 # ---------------------------------------------------------------------------------------------------------------
 # library: worn dark stone slabs, ink stains, burgundy dust next to the shelves
 
-STONE = np.array([0.245, 0.25, 0.285])
-Q = N // 2
+STONE = np.array([0.262, 0.240, 0.208])
 GW = 3
 
 
+def slab_layout(seed, rows, h_range, w_range, warp_amp, warp_seed):
+    """Wrapping rows of slabs of different height; every row is cut into slabs of random width with its own random
+    offset, so there is no grid. Returns slab id, distance to the nearest joint (pixels), slab count."""
+    rng = np.random.RandomState(seed)
+    hs = rng.uniform(h_range[0], h_range[1], rows)
+    hs = hs * N / hs.sum()
+    starts = np.concatenate([[0.0], np.cumsum(hs)[:-1]])
+    y0 = rng.uniform(0, N)
+    xw = (_XX + warp_amp * fbm(warp_seed, 7.0, 7.0, 2)) % N
+    yw = (_YY + warp_amp * fbm(warp_seed + 1, 7.0, 7.0, 2) - y0) % N
+    row = np.searchsorted(starts, yw, 'right') - 1
+    ry = yw - starts[row]
+    dist = np.minimum(ry, hs[row] - ry)
+    pid = np.zeros((N, N), dtype=int)
+    count = 0
+    for r in range(rows):
+        widths = []
+        total = 0.0
+        while total < N:
+            widths.append(rng.uniform(w_range[0], w_range[1]))
+            total += widths[-1]
+        widths = np.array(widths) * N / total
+        cuts = (rng.uniform(0, N) + np.concatenate([[0.0], np.cumsum(widths)[:-1]])) % N
+        cuts.sort()
+        mask = row == r
+        xs = xw[mask]
+        idx = np.searchsorted(cuts, xs, 'right') - 1
+        pid[mask] = count + idx % len(cuts)
+        dx = np.min(wrap_dist(xs[:, None], cuts[None, :]), axis=1)
+        dist[mask] = np.minimum(dist[mask], dx)
+        count += len(cuts)
+    return pid, dist, count
+
+
 def library_field():
-    rng = np.random.RandomState(201)
-    qi, qj = _YY // Q, _XX // Q
-    ly, lx = _YY % Q, _XX % Q
-    slab = qi * 2 + qj
-    bright = rng.uniform(0.94, 1.06, 4)[slab]
-    tintb = rng.uniform(-0.015, 0.015, 4)[slab]
-    wobble = 2.2 * nz(21, 18.0, 18.0, 2)
-    dd = np.minimum(np.minimum(lx, Q - 1 - lx), np.minimum(ly, Q - 1 - ly)).astype(float)
-    dd = dd + wobble * smoothstep(3.0, 12.0, dd)
+    pid, dd, count = slab_layout(201, 4, (70, 300), (90, 420), 7.0, 21)
+    rng = np.random.RandomState(202)
+    bright = rng.uniform(0.88, 1.10, count)[pid]
+    tintb = rng.uniform(-0.02, 0.02, count)[pid]
     mott = nz(22, 14.0, 14.0, 3)
     grit = nz(23, 140.0, 140.0, 2)
     col = STONE[None, None, :] * bright[..., None]
-    col = col + tintb[..., None] * np.array([-0.5, 0.0, 0.8])[None, None, :]
+    col = col + tintb[..., None] * np.array([0.6, 0.2, -0.6])[None, None, :]
     col = col * (1.0 + 0.07 * mott[..., None] + 0.05 * grit[..., None])
     hgt = 0.22 * mott + 0.08 * grit
     # scuffed, rubbed paths
@@ -511,10 +588,10 @@ def library_field():
     hgt = hgt - 0.9 * crack
     # inky dust stains
     ink = smoothstep(0.9, 2.3, nz(27, 12.0, 12.0, 3))
-    col = mix(col, np.array([0.075, 0.08, 0.115])[None, None, :] * (1.0 + 0.3 * grit[..., None]), ink * 0.4)
+    col = mix(col, np.array([0.105, 0.09, 0.08])[None, None, :] * (1.0 + 0.3 * grit[..., None]), ink * 0.4)
     # gaps and bevels
     t = smoothstep(GW - 1.0, GW + 1.5, dd)
-    col = mix(np.broadcast_to(np.array([0.045, 0.045, 0.06]), col.shape), col, t)
+    col = mix(np.broadcast_to(np.array([0.055, 0.048, 0.042]), col.shape), col, t)
     col = col * (0.7 + 0.3 * smoothstep(GW, GW + 10.0, dd))[..., None]
     hgt = hgt * 0.7 + 2.2 * smoothstep(GW - 1.0, GW + 6.0, dd)
     return col, hgt
@@ -589,8 +666,8 @@ def hatchery_field(variant=0):
     straw pattern repeats from tile to tile."""
     col, hgt = hatchery_base()
     sp = Sprites()
-    scatter_groups(sp, 301 + 17 * variant, 3 + variant % 2, (2, 3), 2, 44.0, (0.72, 0.58, 0.33), (70, 110), 7.4, 90.0,
-                   422.0)
+    scatter_groups(sp, 301 + 17 * variant, 2 + variant % 2, (1, 2), 1, 56.0, (0.74, 0.51, 0.18), (84, 124), 5.2, 60.0,
+                   452.0)
     fr = np.random.RandomState(302 + variant)
     for _ in range(2):
         feather(sp, fr.uniform(60, N - 60), fr.uniform(60, N - 60), fr.uniform(0, np.pi), fr.uniform(20, 28),
@@ -606,9 +683,18 @@ def hatchery_band(col, hgt, side):
     col = col * (1.0 - 0.22 * (1.0 - smoothstep(0.0, 40.0, d)))[..., None]
     hgt = hgt - 0.45 * fringe
     sp = Sprites(wrap=True)
-    # strands must not cross the wall line (the sprites wrap around the tile): depth >= 50, spread and length limited
-    scatter_straw(sp, 80 + ord(side), 3, 4, (0, 50, N, 88), (0.68, 0.54, 0.30), side_mapper(side),
-                  bundle_len=(44, 70), loose_len=(40, 64), width=5.4, angle=0.0, spread=0.3, fan=0.35)
+    # stalks must not cross the wall line (the sprites wrap around the tile): depth >= 50, spread and length limited
+    rng = np.random.RandomState(80 + ord(side))
+    mp = side_mapper(side)
+    for k in range(6):
+        cx = (k + 0.5) * N / 6.0 + rng.uniform(-30.0, 30.0)
+        cy = rng.uniform(84.0, 96.0)
+        if k % 2 == 0:
+            straw_tuft(sp, rng, cx, cy, rng.uniform(-0.2, 0.2), rng.randint(9, 14), (40, 58), 4.4, (0.72, 0.50, 0.18), mp,
+                       spread=0.4)
+        else:
+            straw_tuft(sp, rng, cx, cy, rng.uniform(-0.2, 0.2), rng.randint(2, 4), (34, 50), 4.0, (0.72, 0.50, 0.18), mp,
+                       spread=0.25)
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
 
@@ -617,8 +703,8 @@ def hatchery_band(col, hgt, side):
 # dungeon temple and treasury: irregular slabs inside a gap along the tile border
 
 BASALT = np.array([0.118, 0.110, 0.113])
-EMBER = np.array([0.80, 0.125, 0.05])
-EMBER_HOT = np.array([0.95, 0.30, 0.08])
+EMBER = np.array([0.88, 0.15, 0.05])
+EMBER_HOT = np.array([1.0, 0.50, 0.13])
 EMBER_DEEP = np.array([0.26, 0.035, 0.03])
 JOINT_COLD = np.array([0.030, 0.020, 0.022])
 
@@ -678,6 +764,7 @@ def ember_cracks(seed, count, margin):
     rng = np.random.RandomState(seed)
     core = Layer()
     halo = Layer()
+    hot = Layer()
 
     def crack(cx, cy, ang, length, wander, wmax, heat0):
         n = int(length / 9.0)
@@ -696,9 +783,10 @@ def ember_cracks(seed, count, margin):
             heat = np.clip(heat0 * (0.6 + 0.4 * np.sin(phase + u * 7.0)) * (0.3 + 0.7 * taper), 0.0, 1.0)
             if heat < 0.15:
                 continue  # cold stretch: only the dark hairline of the stone
-            w = 2.2 + wmax * taper
+            w = 4.6 + wmax * taper
             core.line([pts[i], pts[i + 1]], w, int(255 * heat))
-            halo.line([pts[i], pts[i + 1]], w + 8.0, int(255 * heat))
+            hot.line([pts[i], pts[i + 1]], w * 0.42, int(255 * heat))
+            halo.line([pts[i], pts[i + 1]], w + 20.0, int(255 * heat))
         return pts
 
     def fits(cx, cy, ang, length):
@@ -707,12 +795,12 @@ def ember_cracks(seed, count, margin):
 
     for _ in range(count):
         for _ in range(200):
-            length = rng.uniform(230, 330)
+            length = rng.uniform(210, 300)
             ang = rng.uniform(0, np.pi)
             cx, cy = rng.uniform(margin, N - margin, 2)
             if fits(cx, cy, ang, length):
                 break
-        pts = crack(cx, cy, ang, length, rng.uniform(8, 15), 2.4, rng.uniform(0.85, 1.0))
+        pts = crack(cx, cy, ang, length, rng.uniform(8, 15), 4.4, rng.uniform(0.9, 1.0))
         for _ in range(rng.randint(1, 3)):
             k = rng.randint(len(pts) // 4, 3 * len(pts) // 4)
             bl = rng.uniform(50, 90)
@@ -720,8 +808,9 @@ def ember_cracks(seed, count, margin):
             bx = pts[k][0] + np.cos(ba) * bl / 2.0
             by = pts[k][1] + np.sin(ba) * bl / 2.0
             if fits(bx, by, ba, bl):
-                crack(bx, by, ba, bl, 3.0, 1.3, rng.uniform(0.6, 0.85))
-    return np.clip(blur(core.result(), 0.9) * 1.5, 0.0, 1.0), np.clip(blur(halo.result(), 7.0) * 2.0, 0.0, 1.0)
+                crack(bx, by, ba, bl, 3.0, 2.4, rng.uniform(0.7, 0.9))
+    return (np.clip(blur(core.result(), 1.2) * 1.5, 0.0, 1.0), np.clip(blur(halo.result(), 9.0) * 2.2, 0.0, 1.0),
+            np.clip(blur(hot.result(), 1.0) * 1.5, 0.0, 1.0))
 
 
 _TEMPLE_BASE = []
@@ -759,23 +848,32 @@ def temple_base():
     col = flatten(col, 48.0, 0.5)
     hgt = hgt - 0.8 * core
     hgt = hgt * 0.7 + 1.6 * smoothstep(1.0, 8.0, dd * (1.0 - 0.6 * present))
-    _TEMPLE_BASE.append((col, hgt))
+    _TEMPLE_BASE.append((col, hgt, dd))
     return _TEMPLE_BASE[0]
 
 
 def temple_field(variant=0):
-    """Dark basalt with a few long, irregular ember cracks (the glow is painted into the diffuse texture: the room
-    shader has no emissive term). The glow is sparse so the heart stays the focal point. The cracks never come
+    """Dark basalt with a few clearly glowing ember cracks and joint sections (the glow is painted into the diffuse
+    texture: the room shader has no emissive term): a bright hot core, an ember body and a soft red falloff, the
+    rest of the joints stays dark. Per tile 2-3 glowing features, so the heart stays the focal point. Nothing glows
     near the tile border, so the four variants (`DungeonTempleFloor`, `...B`, `...C`, `...D`, picked at random per
-    tile through [oneOf] in config/tilesets.cfg) differ only in the cracks and still match at every border; there
-    is no tile-shaped motif. The whole texture wraps, so it needs the same rotation on every tile."""
-    col, hgt = temple_base()
-    cm, hm = ember_cracks(440 + variant, (2, 1, 2, 0)[variant], 56)
-    col = col + hm[..., None] * np.array([0.060, 0.008, 0.004])[None, None, :]
-    ramp = mix(np.broadcast_to(EMBER_DEEP * 1.4, col.shape), np.broadcast_to(EMBER * 0.85, col.shape),
-               smoothstep(0.25, 0.7, cm))
-    ramp = mix(ramp, np.broadcast_to(EMBER_HOT * 0.8, col.shape), smoothstep(0.85, 1.0, cm) * 0.6)
-    col = mix(col, ramp, smoothstep(0.08, 0.4, cm))
+    tile through [oneOf] in config/tilesets.cfg) differ only in these features and still match at every border;
+    there is no tile-shaped motif. The whole texture wraps, so it needs the same rotation on every tile."""
+    col, hgt, dd = temple_base()
+    cm, hm, tm = ember_cracks(440 + variant, (2, 1, 2, 1)[variant], 66)
+    # glowing stretches of the slab joints: a few irregular sections of the dark joint net
+    window = smoothstep(62.0, 84.0, _LO.astype(float))
+    sec = smoothstep(1.2, 1.7, fbm(460 + variant, 3.0, 3.0, 2)) * window
+    jc = (1.0 - smoothstep(1.4, 4.2, dd)) * sec
+    jh = (1.0 - smoothstep(0.0, 1.8, dd)) * sec
+    cm = np.maximum(cm, jc * 0.95)
+    tm = np.maximum(tm, jh * 0.9)
+    hm = np.maximum(hm, np.clip(blur(jc, 9.0) * 2.2, 0.0, 1.0))
+    col = col + hm[..., None] * np.array([0.11, 0.014, 0.006])[None, None, :]
+    ramp = mix(np.broadcast_to(EMBER_DEEP * 1.6, col.shape), np.broadcast_to(EMBER, col.shape),
+               smoothstep(0.2, 0.6, cm))
+    ramp = mix(ramp, np.broadcast_to(EMBER_HOT, col.shape), smoothstep(0.3, 0.9, tm))
+    col = mix(col, ramp, smoothstep(0.06, 0.35, cm))
     hgt = hgt - 0.8 * cm
     return col, hgt
 
@@ -1502,10 +1600,13 @@ ROOMS = {
                    'Dormitory1010': ('BT', 'Dormitory1010Normal')},
     },
     'library': {
-        'field': library_field, 'band': library_band, 'strength': 1.3,
-        'pieces': {'Library0000': ('TBLR', 'Library0000Normal'), 'Library0001': ('TBL', 'Library0001Normal'),
-                   'Library0101': ('TB', 'Library0101Normal'), 'Library1011': ('T', 'Library1011Normal'),
-                   'Library0011': ('TL', 'Library1100Normal'), 'Library1111': ('', 'Library1111Normal')},
+        # irregular slabs with random offsets: like the dormitory, every tile uses rotation 0 and there is one piece
+        # per neighbour mask (image sides that are exposed, see [libraryRoom] in tilesets.cfg)
+        'field': library_field, 'band': library_band, 'strength': 1.3, 'rot_invariant': False,
+        'pieces': dict(('Library' + m, (sides, 'Library' + m + 'Normal')) for m, sides in (
+            ('1111', ''), ('1011', 'B'), ('0111', 'R'), ('1101', 'L'), ('1110', 'T'), ('0110', 'RT'), ('1100', 'LT'),
+            ('0011', 'RB'), ('1001', 'BL'), ('0000', 'RBLT'), ('0001', 'RBL'), ('0010', 'RBT'), ('0100', 'RLT'),
+            ('1000', 'BLT'), ('0101', 'RL'), ('1010', 'BT'))),
     },
     'hatchery': {
         # the open piece has four variants (straw in the interior only, flat calm earth along the tile border), picked

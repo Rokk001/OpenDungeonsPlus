@@ -56,7 +56,7 @@ material Library1100 //: RTSS/NormalMapping_MultiPass
             // We use blending, so that we can see the underlying texture.
             texture_unit decalmap
             {
-                texture Library0011.png
+                texture Library1100.png
             }
         
             texture_unit normalmap
