@@ -116,12 +116,12 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
-    'library': (0.22, 1.00, (1.02, 1.0, 0.99)),
+    'library': (0.62, 0.95, (1.0, 1.0, 1.0)),
     'hatchery': (0.15, 0.72, (1.09, 1.00, 0.85)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
     'treasury': (1.00, 0.76, (0.93, 0.95, 1.06)),
     'trainingHall': (0.30, 1.00, (1.03, 1.00, 0.98)),
-    'casino': (0.25, 1.05, (1.10, 0.97, 0.94)),
+    'casino': (0.22, 1.00, (1.02, 1.0, 0.99)),
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
 }
@@ -132,8 +132,8 @@ TONE = {
 # luminance (sigma in texture px, strength 0..1), so nothing larger than about a fifth of a tile keeps a different
 # mean brightness; the mean luminance stays. Applied to the open floor field before the wall bands are added.
 FLATTEN = {
-    'library': (48.0, 0.5), 'dormitory': (48.0, 0.6),
-    'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'casino': (48.0, 0.7), 'prison': (40.0, 0.8),
+    'dormitory': (48.0, 0.6), 'casino': (48.0, 0.5),
+    'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'prison': (40.0, 0.8),
     'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
     'portalWave': (48.0, 0.7),
 }
@@ -527,7 +527,7 @@ def dormitory_band(col, hgt, side):
 
 
 # ---------------------------------------------------------------------------------------------------------------
-# library: worn dark stone slabs, ink stains, burgundy dust next to the shelves
+# casino: worn dark stone slabs, ink stains (plain tiles, no edge pieces; was the library floor before the carpet)
 
 STONE = np.array([0.262, 0.240, 0.208])
 GW = 3
@@ -567,7 +567,7 @@ def slab_layout(seed, rows, h_range, w_range, warp_amp, warp_seed):
     return pid, dist, count
 
 
-def library_field():
+def stone_slab_field():
     pid, dd, count = slab_layout(201, 4, (70, 300), (90, 420), 7.0, 21)
     rng = np.random.RandomState(202)
     bright = rng.uniform(0.88, 1.10, count)[pid]
@@ -598,19 +598,132 @@ def library_field():
     return col, hgt
 
 
-def library_band(col, hgt, side):
-    d = depth_map(side)
-    dw = d + 14.0 * nz(61, 12.0, 12.0, 2)
-    a = 1.0 - smoothstep(4.0, 130.0, dw)
-    col = col * (1.0 - 0.34 * (1.0 - smoothstep(0.0, 80.0, dw)))[..., None]
-    tint = np.array([0.30, 0.125, 0.165])
-    lum = col.mean(-1, keepdims=True)
-    col = mix(col, tint[None, None, :] * (lum / 0.23) * 0.95, a * 0.24)
-    dust = smoothstep(0.4, 1.4, nz(62, 9.0, 9.0, 2)) * (1.0 - smoothstep(10.0, 100.0, dw))
-    col = mix(col, np.array([0.12, 0.085, 0.10])[None, None, :], dust * 0.5)
-    hgt = hgt + 0.25 * dust
+# ---------------------------------------------------------------------------------------------------------------
+# library: terracotta carpet with a fine dense small-scale pattern, a wide darker red-brown patterned border band and a
+# narrow light grey stone frame along the shelves / room edge. Everything is truly periodic (motif cells of 32 px and
+# 64 px, the border ornament 32 px), so the pieces line up across tiles.
+
+CARPET = np.array([0.345, 0.168, 0.092])
+CARPET_DEEP = np.array([0.150, 0.072, 0.050])
+CARPET_RED = np.array([0.500, 0.205, 0.095])
+CARPET_SAND = np.array([0.400, 0.255, 0.140])
+BORDER = np.array([0.255, 0.108, 0.070])
+BORDER_DARK = np.array([0.150, 0.066, 0.046])
+BORDER_LIGHT = np.array([0.400, 0.190, 0.098])
+FRAME = np.array([0.400, 0.385, 0.350])
+FRAME_DARK = np.array([0.210, 0.200, 0.185])
+BORDER_W = 132.0
+FRAME_W = 16.0
+_CARPET_FINISH = []
+
+
+def carpet_finish():
+    """Weave, dust and wear shared by the field and the border: (brightness factor, height)."""
+    if not _CARPET_FINISH:
+        weave = 0.5 * np.sin(_XX * (2.0 * np.pi / 4.0)) * np.sin(_YY * (2.0 * np.pi / 4.0)) + 0.5 * np.sin(_XX * (2.0 * np.pi / 8.0) + _YY * (2.0 * np.pi / 8.0))
+        blot = fbm(71, 13.0, 13.0, 3)
+        grit = fbm(72, 120.0, 120.0, 2)
+        wear = smoothstep(0.7, 1.7, fbm(73, 9.0, 9.0, 2))          # rubbed, threadbare, slightly lighter and dustier
+        dust = smoothstep(0.8, 2.0, fbm(74, 11.0, 11.0, 3))        # settled dust
+        mult = 1.0 + 0.035 * weave + 0.050 * blot + 0.04 * grit + 0.10 * wear + 0.05 * dust
+        hgt = 0.10 * weave + 0.12 * blot - 0.08 * wear
+        _CARPET_FINISH.append((mult, hgt))
+    return _CARPET_FINISH[0]
+
+
+def motif_layer(cell, seed, radius, stagger):
+    """Small motifs (dot, diamond or short bar, randomly chosen, sized, shifted and left out per cell) on a grid of
+    `cell` px, every second row shifted by `stagger` cells. Returns the coverage of the dots, diamonds and bars."""
+    n = N // cell
+    rng = np.random.RandomState(seed)
+    kind = rng.randint(0, 3, (n, n))
+    size = rng.uniform(0.7, 1.25, (n, n))
+    offx = rng.uniform(-0.30, 0.30, (n, n)) * cell
+    offy = rng.uniform(-0.30, 0.30, (n, n)) * cell
+    present = rng.uniform(0, 1, (n, n)) < 0.72
+    cy = (_YY // cell).astype(int)
+    shift = ((cy % 2) * stagger * cell).astype(int)
+    cxs = ((_XX + shift) // cell).astype(int) % n
+    fx = ((_XX + shift) % cell).astype(float) - cell / 2 - offx[cy, cxs]
+    fy = (_YY % cell).astype(float) - cell / 2 - offy[cy, cxs]
+    k = kind[cy, cxs]
+    s = size[cy, cxs] * radius
+    ok = present[cy, cxs]
+    dot = 1.0 - smoothstep(s * 0.7, s * 0.7 + 1.6, np.sqrt(fx ** 2 + fy ** 2))
+    dia = 1.0 - smoothstep(s * 0.9, s * 0.9 + 1.8, np.abs(fx) + np.abs(fy))
+    bar = (1.0 - smoothstep(s * 1.15, s * 1.15 + 1.6, np.abs(fx))) * (1.0 - smoothstep(s * 0.38, s * 0.38 + 1.4, np.abs(fy)))
+    return dot * (k == 0) * ok, dia * (k == 1) * ok, bar * (k == 2) * ok
+
+
+def library_field():
+    blot = fbm(82, 6.0, 6.0, 3)
+    sandy = smoothstep(0.55, 0.95, np.clip(0.5 + 0.5 * blot, 0, 1)) * 0.25
+    base = mix(np.broadcast_to(CARPET, (N, N, 3)).copy(), CARPET_SAND[None, None, :], sandy)
+    # dense small pattern: a staggered grid of small motifs in red-orange, a second one in dark brown, sand flecks
+    d1, m1, b1 = motif_layer(64, 83, 11.0, 0.5)
+    d2, m2, b2 = motif_layer(64, 84, 9.0, 0.0)
+    d3, m3, b3 = motif_layer(32, 85, 5.0, 0.5)
+    red = np.clip(d1 + m1 * 0.9 + b1 * 0.8, 0, 1)
+    deep = np.clip(d2 * 0.9 + m2 + b2 * 0.9, 0, 1)
+    sand = np.clip(d3 + m3 * 0.8, 0, 1)
+    # fine diagonal thread lines between the motifs so that the field reads as woven textile
+    lat = smoothstep(6.0, 7.4, np.abs(((_XX + _YY) % 16).astype(float) - 8.0))
+    col = mix(base, CARPET_DEEP[None, None, :], lat * 0.12)
+    col = mix(col, CARPET_DEEP[None, None, :], deep * 0.85)
+    col = mix(col, CARPET_RED[None, None, :], red * 0.9)
+    col = mix(col, CARPET_SAND[None, None, :], sand * 0.45)
+    mult, hgt = carpet_finish()
+    col = col * mult[..., None]
+    hgt = hgt + 0.30 * (red + sand) - 0.25 * deep
     return col, hgt
 
+
+def library_band(col, hgt, sides):
+    """Light grey stone frame at the wall, then a wide dark red-brown patterned border along every exposed side. The
+    depth is the distance to the nearest exposed side, which mitres the corners. Drawn on top of the open field, so
+    sides that are not exposed stay identical to it."""
+    depth = np.full((N, N), 1e9)
+    along = np.zeros((N, N))
+    for side in sides:
+        dmap = depth_map(side)
+        amap = _XX if side in 'TB' else _YY
+        closer = dmap < depth
+        along = np.where(closer, amap, along)
+        depth = np.minimum(depth, dmap)
+    depth = depth + 2.0 * fbm(91, 25.0, 25.0, 2)
+    inner = depth - FRAME_W                                          # distance into the carpet border
+    fa = (along % 32.0) - 16.0
+
+    def line(pos, hw):
+        return 1.0 - smoothstep(hw, hw + 1.6, np.abs(inner - pos))
+
+    # ornamental stripes parallel to the edge: two thin light lines, a dark wide stripe with a chain of diamonds, a
+    # zig-zag line, and a dark line toward the field
+    stripe1 = line(10.0, 1.5)
+    stripe2 = line(17.0, 1.0)
+    dark = 1.0 - smoothstep(0.8, 2.0, np.abs(inner - 38.0) - 9.0)
+    chain = 1.0 - smoothstep(0.8, 2.2, np.abs(np.abs(fa) + np.abs(inner - 38.0) - 7.0) / 1.414)
+    zig = 1.0 - smoothstep(0.8, 2.0, np.abs((inner - 70.0) - (np.abs(fa) - 8.0)) / 1.414)
+    bcol = np.broadcast_to(BORDER, (N, N, 3)).copy()
+    bcol = mix(bcol, BORDER_DARK[None, None, :], dark * 0.75)
+    bcol = mix(bcol, BORDER_LIGHT[None, None, :], chain * 0.85)
+    bcol = mix(bcol, BORDER_LIGHT[None, None, :], np.clip(stripe1 + stripe2, 0, 1) * 0.75)
+    bcol = mix(bcol, BORDER_LIGHT[None, None, :] * 0.85, zig * 0.75)
+    bcol = mix(bcol, BORDER_DARK[None, None, :], line(BORDER_W - FRAME_W - 12.0, 2.0) * 0.8)
+    mult, bhgt = carpet_finish()
+    bcol = bcol * mult[..., None]
+    hb = bhgt + 0.30 * np.clip(chain + stripe1 + stripe2 + zig * 0.8, 0, 1) - 0.15 * dark
+    # stone frame between the wall and the carpet
+    fcol = mix(np.broadcast_to(FRAME, (N, N, 3)).copy(), FRAME_DARK[None, None, :], 0.5 * np.clip(0.5 + 0.5 * fbm(92, 30.0, 30.0, 2), 0, 1))
+    fcol = fcol * (0.92 + 0.08 * np.clip(fbm(93, 140.0, 140.0, 2), -1, 1))[..., None]
+    fcol = mix(fcol, FRAME_DARK[None, None, :] * 0.5, 1.0 - smoothstep(1.0, 4.0, depth))              # wall contact
+    fcol = mix(fcol, FRAME_DARK[None, None, :] * 0.7, 1.0 - smoothstep(1.0, 2.6, np.abs(depth - FRAME_W + 1.0)))  # groove
+    fhgt = 0.45 + 0.1 * fbm(94, 60.0, 60.0, 2)
+    inframe = 1.0 - smoothstep(FRAME_W - 2.0, FRAME_W, depth)
+    bcol = mix(bcol, fcol, inframe)
+    hb = hb * (1.0 - inframe) + fhgt * inframe
+    cover = 1.0 - smoothstep(BORDER_W - 3.0, BORDER_W + 1.5, depth)
+    return mix(col, bcol, cover), hgt * (1.0 - cover) + hb * cover
 
 # ---------------------------------------------------------------------------------------------------------------
 # hatchery: trodden earth, mud, straw and feathers
@@ -1752,9 +1865,9 @@ ROOMS = {
                    'Dormitory1010': ('BT', 'Dormitory1010Normal')},
     },
     'library': {
-        # irregular slabs with random offsets: like the dormitory, every tile uses rotation 0 and there is one piece
+        # carpet with a border: like the dormitory, every tile uses rotation 0 and there is one piece
         # per neighbour mask (image sides that are exposed, see [libraryRoom] in tilesets.cfg)
-        'field': library_field, 'band': library_band, 'strength': 1.3, 'rot_invariant': False,
+        'field': library_field, 'band': library_band, 'band_all': True, 'strength': 0.7, 'rot_invariant': False,
         'pieces': dict(('Library' + m, (sides, 'Library' + m + 'Normal')) for m, sides in (
             ('1111', ''), ('1011', 'B'), ('0111', 'R'), ('1101', 'L'), ('1110', 'T'), ('0110', 'RT'), ('1100', 'LT'),
             ('0011', 'RB'), ('1001', 'BL'), ('0000', 'RBLT'), ('0001', 'RBL'), ('0010', 'RBT'), ('0100', 'RLT'),
@@ -1797,7 +1910,7 @@ ROOMS = {
         'pieces': {'TrainingHallFloor': ('', 'TrainingHallFloorNormal')},
     },
     'casino': {
-        'field': casino_field, 'band': None, 'strength': 1.3,
+        'field': stone_slab_field, 'band': None, 'strength': 1.3,
         'pieces': {'CasinoFloor': ('', 'CasinoFloorNormal')},
     },
     'prison': {
@@ -1843,8 +1956,11 @@ def build(room):
                 fields[variant] = (flatten(fields[variant][0], *FLATTEN[room]), fields[variant][1])
         field_col, field_hgt = fields[variant]
         col, hgt = field_col.copy(), (field_hgt.copy() if field_hgt is not None else None)
-        for side in sides:
-            col, hgt = spec['band'](col, hgt, side)
+        if spec.get('band_all') and sides:
+            col, hgt = spec['band'](col, hgt, sides)
+        else:
+            for side in sides:
+                col, hgt = spec['band'](col, hgt, side)
         result[name] = (tone(col, spec.get('tone', room)), hgt, normal_name, sides)
     return result, spec['strength']
 
