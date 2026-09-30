@@ -16,6 +16,9 @@ pieces match. The tile borders are made seam-free in two ways:
     all; the seamless wrap is checked with --check and --seamcheck (texture rolled by half a tile);
   - dungeon temple and treasury: irregular slabs (random rectangle subdivision) inside a gap that runs along
     the tile border, so nothing but the constant gap colour touches the border;
+  - dungeon temple, open hatchery piece: four variants each (the temple's ember cracks and the hatchery's straw
+    clumps stay away from the tile border, the rest is one shared periodic base), picked at random per tile
+    through [oneOf] in config/tilesets.cfg, so no motif repeats from tile to tile;
   - crypt: derived from the original cobble texture (Yughues, CC0) read from git history (commit 2ac74a729^);
     darkened, moss and lichen and cracks are added with periodic noise that fades out at the tile border;
   - prison: derived from the original Prison.png read from git history (commit 6db9aa611), mortar turned to mud,
@@ -111,12 +114,12 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
-    'hatchery': (0.28, 0.81, (1.10, 1.00, 0.86)),
+    'hatchery': (0.15, 0.72, (1.09, 1.00, 0.85)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
-    'treasury': (1.00, 0.76, (0.90, 0.95, 1.12)),
-    'trainingHall': (0.80, 0.85, (0.98, 1.00, 1.06)),
+    'treasury': (1.00, 0.76, (0.93, 0.95, 1.06)),
+    'trainingHall': (0.30, 0.72, (0.96, 1.00, 1.03)),
     'casino': (0.25, 1.05, (1.10, 0.97, 0.94)),
-    'arena': (0.32, 0.85, (1.00, 1.00, 0.95)),
+    'arena': (0.25, 0.82, (1.03, 1.00, 0.94)),
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
 }
@@ -127,7 +130,7 @@ TONE = {
 # luminance (sigma in texture px, strength 0..1), so nothing larger than about a fifth of a tile keeps a different
 # mean brightness; the mean luminance stays. Applied to the open floor field before the wall bands are added.
 FLATTEN = {
-    'library': (48.0, 0.5), 'hatchery': (48.0, 0.8), 'dormitory': (48.0, 0.6), 'dungeonTemple': (48.0, 0.5),
+    'library': (48.0, 0.5), 'dormitory': (48.0, 0.6),
     'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'casino': (48.0, 0.7), 'prison': (40.0, 0.8),
     'arena': (48.0, 0.8), 'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
     'portalWave': (48.0, 0.7),
@@ -287,6 +290,58 @@ def scatter_straw(sp, seed, bundles, loose, box, rgb, mapper=None, bundle_len=(5
             straw_bundle(sp, rng, cx, cy, ang, 1, loose_len, width * 0.9, rgb, mapper)
 
 
+def interior_points(rng, count, lo, hi, min_dist):
+    """`count` random points in the square [lo, hi]^2 that are at least `min_dist` apart (best effort)."""
+    pts = []
+    tries = 0
+    while len(pts) < count:
+        c = rng.uniform(lo, hi, 2)
+        tries += 1
+        if all(np.hypot(*(c - q)) >= min_dist for q in pts) or tries > 400:
+            pts.append(c)
+    return pts
+
+
+def scatter_groups(sp, seed, groups, clumps, loose, spread, rgb, bundle_len, width, lo, hi, edge=36.0):
+    """Straw in loose groups: `groups` centres inside [lo, hi]^2, each with a few large clumps (bundles and fanned
+    tufts) and some loose strands close by; calm bare ground between the groups. Every clump is turned until
+    all its strands stay at least `edge` px inside the tile, so the variants of a floor match at every border."""
+    rng = np.random.RandomState(seed)
+    reach = bundle_len[1] + 12.0
+
+    def place(cx, cy, fan):
+        """A direction for which the clump stays inside the tile (None if there is none)."""
+        for _ in range(60):
+            ang = rng.uniform(0, np.pi)
+            spread_a = 0.5 if fan else 0.25
+            ends = [(cx + np.cos(ang + d) * reach * (1.0 if fan else 0.5) * sgn,
+                     cy + np.sin(ang + d) * reach * (1.0 if fan else 0.5) * sgn)
+                    for d in (-spread_a, 0.0, spread_a) for sgn in ((1.0,) if fan else (1.0, -1.0))]
+            if all(edge < x < N - edge and edge < y < N - edge for x, y in ends):
+                return ang
+        return None
+
+    for gx, gy in interior_points(rng, groups, lo, hi, 130.0):
+        for k in range(rng.randint(clumps[0], clumps[1] + 1)):
+            a = rng.uniform(0, 2 * np.pi)
+            r = rng.uniform(0.1, 1.0) * spread
+            cx, cy = gx + np.cos(a) * r, gy + np.sin(a) * r * 0.8
+            ang = place(cx, cy, k % 2 == 0)
+            if ang is None:
+                continue
+            if k % 2 == 0:
+                straw_bundle(sp, rng, cx, cy, ang, rng.randint(9, 14), bundle_len, width, rgb, fan=0.5)
+            else:
+                straw_bundle(sp, rng, cx, cy, ang, rng.randint(8, 12), bundle_len, width, rgb)
+        for k in range(loose):
+            a = rng.uniform(0, 2 * np.pi)
+            r = rng.uniform(0.5, 1.4) * spread
+            cx, cy = gx + np.cos(a) * r, gy + np.sin(a) * r * 0.8
+            ang = place(cx, cy, False)
+            if ang is not None:
+                straw_bundle(sp, rng, cx, cy, ang, 1, bundle_len, width * 0.9, rgb)
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # dormitory: coarse, dark planks in long boards, staggered butt joints, knots, wear, some straw
 
@@ -397,7 +452,7 @@ def dormitory_field():
     hgt = hgt * 0.6 + 1.8 * smoothstep(PLANK_GAP_W - 1.0, PLANK_GAP_W + 5.0, dd)
     # scattered straw
     sp = Sprites(wrap=True)
-    scatter_straw(sp, 604, 8, 16, (0, 0, N, N), (0.56, 0.44, 0.21), bundle_len=(40, 66), loose_len=(36, 58), width=4.4,
+    scatter_straw(sp, 604, 1, 2, (0, 0, N, N), (0.56, 0.44, 0.21), bundle_len=(40, 66), loose_len=(36, 58), width=4.4,
                   blue=True)
     col, hgt = overlay(col, hgt, sp, 0.8)
     return col, hgt
@@ -415,7 +470,7 @@ def dormitory_band(col, hgt, side):
     hgt = hgt + 0.4 * dirt
     # straw gathered at the wall
     sp = Sprites()
-    scatter_straw(sp, 60 + ord(side), 5, 8, (MARGIN + 34, 40, N - MARGIN - 34, 96), (0.60, 0.47, 0.22),
+    scatter_straw(sp, 60 + ord(side), 8, 10, (MARGIN + 34, 40, N - MARGIN - 34, 96), (0.60, 0.47, 0.22),
                   side_mapper(side), bundle_len=(50, 78), loose_len=(40, 64), width=5.0, angle=0.0, spread=0.8)
     col, hgt = overlay(col, hgt, sp, 0.8)
     return col, hgt
@@ -503,30 +558,44 @@ def feather(sp, cx, cy, ang, length, rgb):
             1.0, tuple(c * 0.75 for c in rgb), 0.8)
 
 
-def hatchery_field():
-    # broad clods and soft mud patches, little fine grain (it reads as noise at game camera height)
-    # (repetition pass: patches are small and many, no broad tone field, straw and feathers on wrapping blue noise)
+_HATCHERY_BASE = []
+
+
+def hatchery_base():
+    """Calm trodden earth shared by all variants: broad clods, soft mud patches, hardly any fine grain, flat in
+    brightness. It wraps and is the same in all variants, so the tiles match at every border (the open piece needs
+    rotation 0 for that)."""
+    if _HATCHERY_BASE:
+        return _HATCHERY_BASE[0]
     lump = fbm(31, 12.0, 12.0, 3)
     grit = fbm(32, 55.0, 55.0, 2)
-    col = EARTH[None, None, :] * (1.0 + 0.06 * lump[..., None] + 0.018 * grit[..., None])
+    col = EARTH[None, None, :] * (1.0 + 0.045 * lump[..., None] + 0.012 * grit[..., None])
     hgt = 0.6 * lump + 0.1 * grit
-    # dark, damp mud patches with soft borders
     mud = smoothstep(0.35, 1.8, fbm(34, 11.0, 11.0, 3))
     mudcol = MUD[None, None, :] * (1.0 + 0.08 * lump[..., None])
-    col = mix(col, mudcol, mud * 0.52)
+    col = mix(col, mudcol, mud * 0.40)
     hgt = mix(hgt, hgt * 0.4 - 0.4, mud)
-    # trodden, pale dust
     dust = smoothstep(0.9, 1.8, fbm(35, 13.0, 13.0, 2))
     col = mix(col, np.clip(col * 1.12 + 0.012, 0, 1), dust * 0.35)
-    sp = Sprites(wrap=True)
-    scatter_straw(sp, 301, 17, 15, (0, 0, N, N), (0.72, 0.58, 0.33), bundle_len=(40, 72), loose_len=(40, 64),
-                  width=5.0, blue=True)
-    fr = np.random.RandomState(302)
-    for _ in range(6):
-        feather(sp, fr.uniform(0, N), fr.uniform(0, N), fr.uniform(0, np.pi), fr.uniform(20, 28),
+    col = flatten(col, 48.0, 0.8)
+    _HATCHERY_BASE.append((col, hgt))
+    return _HATCHERY_BASE[0]
+
+
+def hatchery_field(variant=0):
+    """Trodden earth with straw in a few loose groups of large clumps (and a few feathers). The straw stays inside the
+    tile (at least 24 px from the border), so the four variants of the open piece (Farm, FarmB, FarmC, FarmD,
+    picked at random per tile through [oneOf] in config/tilesets.cfg) match each other at every border and no
+    straw pattern repeats from tile to tile."""
+    col, hgt = hatchery_base()
+    sp = Sprites()
+    scatter_groups(sp, 301 + 17 * variant, 3 + variant % 2, (2, 3), 2, 44.0, (0.72, 0.58, 0.33), (70, 110), 7.4, 90.0,
+                   422.0)
+    fr = np.random.RandomState(302 + variant)
+    for _ in range(2):
+        feather(sp, fr.uniform(60, N - 60), fr.uniform(60, N - 60), fr.uniform(0, np.pi), fr.uniform(20, 28),
                 (0.58, 0.54, 0.46))
-    col, hgt = overlay(col, hgt, sp, 0.9)
-    return col, hgt
+    return overlay(col, hgt, sp, 0.9)
 
 
 def hatchery_band(col, hgt, side):
@@ -538,7 +607,7 @@ def hatchery_band(col, hgt, side):
     hgt = hgt - 0.45 * fringe
     sp = Sprites(wrap=True)
     # strands must not cross the wall line (the sprites wrap around the tile): depth >= 50, spread and length limited
-    scatter_straw(sp, 80 + ord(side), 5, 7, (0, 50, N, 88), (0.68, 0.54, 0.30), side_mapper(side),
+    scatter_straw(sp, 80 + ord(side), 3, 4, (0, 50, N, 88), (0.68, 0.54, 0.30), side_mapper(side),
                   bundle_len=(44, 70), loose_len=(40, 64), width=5.4, angle=0.0, spread=0.3, fan=0.35)
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
@@ -547,7 +616,7 @@ def hatchery_band(col, hgt, side):
 # ---------------------------------------------------------------------------------------------------------------
 # dungeon temple and treasury: irregular slabs inside a gap along the tile border
 
-BASALT = np.array([0.098, 0.090, 0.104])
+BASALT = np.array([0.118, 0.110, 0.113])
 EMBER = np.array([0.80, 0.125, 0.05])
 EMBER_HOT = np.array([0.95, 0.30, 0.08])
 EMBER_DEEP = np.array([0.26, 0.035, 0.03])
@@ -601,51 +670,113 @@ def voronoi_slabs(seed, count, weight_amp, warp_amp, warp_seed):
     return idx, (d2 - d1) * 0.5, off
 
 
-def temple_field():
-    """Cracked near-black basalt: a few large polygonal slabs of very different size, chipped along their rims; the
-    cracks between them glow like embers seeping through the stone: the joint width and the heat vary along each
-    joint (hot core, red ember, soft halo onto the stone, some stretches dim or cold), a few slabs carry faint
-    ember cracks of their own. The room shader has no emissive term, so the glow is painted into the diffuse
-    texture. The whole texture wraps, so it needs the same rotation on every tile: see [dungeonTempleRoom] in
-    config/tilesets.cfg."""
-    count = 11
-    idx, dd, off = voronoi_slabs(431, count, 30.0, 5.0, 433)
+def ember_cracks(seed, count, margin):
+    """A few long, irregular ember cracks as wrapping masks (core, halo). Every crack is a slightly wandering line
+    (two random sine waves as lateral offset) that stays `margin` px away from the tile border and tapers out at
+    both ends, so nothing touches the border (the variants of the temple floor differ only here and still match at
+    every border); the heat (brightness) varies along the crack and some stretches go cold (no glow)."""
+    rng = np.random.RandomState(seed)
+    core = Layer()
+    halo = Layer()
+
+    def crack(cx, cy, ang, length, wander, wmax, heat0):
+        n = int(length / 9.0)
+        ts = np.linspace(-0.5, 0.5, n + 1)
+        ph = rng.uniform(0, 6.28, 2)
+        fr = rng.uniform(1.6, 3.4, 2)
+        pts = []
+        for t in ts:
+            off = wander * (np.sin(ph[0] + fr[0] * 6.28 * t) + 0.5 * np.sin(ph[1] + fr[1] * 6.28 * t))
+            al = t * length
+            pts.append((cx + np.cos(ang) * al - np.sin(ang) * off, cy + np.sin(ang) * al + np.cos(ang) * off))
+        phase = rng.uniform(0, 6.28)
+        for i in range(n):
+            u = (i + 0.5) / n
+            taper = np.sin(np.pi * u) ** 0.6
+            heat = np.clip(heat0 * (0.6 + 0.4 * np.sin(phase + u * 7.0)) * (0.3 + 0.7 * taper), 0.0, 1.0)
+            if heat < 0.15:
+                continue  # cold stretch: only the dark hairline of the stone
+            w = 2.2 + wmax * taper
+            core.line([pts[i], pts[i + 1]], w, int(255 * heat))
+            halo.line([pts[i], pts[i + 1]], w + 8.0, int(255 * heat))
+        return pts
+
+    def fits(cx, cy, ang, length):
+        ex, ey = abs(np.cos(ang)) * length / 2.0, abs(np.sin(ang)) * length / 2.0
+        return margin + ex + 20 < cx < N - margin - ex - 20 and margin + ey + 20 < cy < N - margin - ey - 20
+
+    for _ in range(count):
+        for _ in range(200):
+            length = rng.uniform(230, 330)
+            ang = rng.uniform(0, np.pi)
+            cx, cy = rng.uniform(margin, N - margin, 2)
+            if fits(cx, cy, ang, length):
+                break
+        pts = crack(cx, cy, ang, length, rng.uniform(8, 15), 2.4, rng.uniform(0.85, 1.0))
+        for _ in range(rng.randint(1, 3)):
+            k = rng.randint(len(pts) // 4, 3 * len(pts) // 4)
+            bl = rng.uniform(50, 90)
+            ba = ang + rng.choice([-1.0, 1.0]) * rng.uniform(0.4, 0.9)
+            bx = pts[k][0] + np.cos(ba) * bl / 2.0
+            by = pts[k][1] + np.sin(ba) * bl / 2.0
+            if fits(bx, by, ba, bl):
+                crack(bx, by, ba, bl, 3.0, 1.3, rng.uniform(0.6, 0.85))
+    return np.clip(blur(core.result(), 0.9) * 1.5, 0.0, 1.0), np.clip(blur(halo.result(), 7.0) * 2.0, 0.0, 1.0)
+
+
+_TEMPLE_BASE = []
+
+
+def temple_base():
+    """The basalt floor shared by all variants of the temple floor: a few large slabs of very different size cut by
+    thin, cold, broken joints (no honeycomb, no glow), chipped, pitted, flat in brightness. It wraps."""
+    if _TEMPLE_BASE:
+        return _TEMPLE_BASE[0]
+    count = 6
+    idx, dd, off = voronoi_slabs(431, count, 70.0, 6.0, 433)
     rng = np.random.RandomState(432)
-    bright = rng.uniform(0.88, 1.14, count)[idx]
-    tintb = rng.uniform(-0.02, 0.02, count)[idx]
-    tilt = rng.uniform(-0.06, 0.06, (count, 2))[idx]
-    crackslab = (rng.uniform(0, 1, count) < 0.45)[idx]
-    # chipped edges: small bites out of the slab rim
+    bright = rng.uniform(0.94, 1.08, count)[idx]
+    tintb = rng.uniform(-0.006, 0.006, count)[idx]
+    tilt = rng.uniform(-0.04, 0.04, (count, 2))[idx]
     chip = smoothstep(0.9, 1.8, fbm(423, 38.0, 38.0, 2))
-    dd = np.maximum(dd - 6.0 * chip, 0.0)
+    dd = np.maximum(dd - 4.0 * chip, 0.0)
     mott = fbm(42, 11.0, 11.0, 3)
     grit = fbm(43, 90.0, 90.0, 2)
     col = BASALT[None, None, :] * (bright * (1.0 + (tilt * off).sum(-1) / 90.0))[..., None]
     col = col + tintb[..., None] * np.array([0.5, 0.0, 0.6])[None, None, :]
-    col = col * (1.0 + 0.09 * mott[..., None] + 0.05 * np.clip(grit, -2.0, 2.0)[..., None])
+    col = col * (1.0 + 0.08 * mott[..., None] + 0.04 * np.clip(grit, -2.0, 2.0)[..., None])
     hgt = 0.2 * mott + 0.1 * grit
     wear = smoothstep(0.6, 1.5, fbm(44, 8.0, 8.0, 2))
     col = mix(col, np.clip(col * 1.12 + 0.004, 0, 1), wear * 0.3)
     pit = smoothstep(2.3, 2.9, fbm(47, 70.0, 70.0, 1))
     col = col * (1.0 - 0.35 * pit)[..., None]
     hgt = hgt - 0.6 * pit
-    # heat and width along the joints
-    heat = smoothstep(-0.85, 0.75, fbm(424, 8.0, 8.0, 2) + 0.35 * fbm(425, 14.0, 14.0, 1))
-    hw = 2.3 + 3.9 * smoothstep(-0.6, 1.0, fbm(426, 9.0, 9.0, 2))
-    halo = np.exp(-(dd / (hw * 3.6 + 5.0)) ** 2) * heat ** 1.4
-    col = col + halo[..., None] * np.array([0.150, 0.020, 0.010])[None, None, :]
-    core = 1.0 - smoothstep(hw * 0.55, hw * 1.7, dd)
-    jc = mix(np.broadcast_to(JOINT_COLD, col.shape), np.broadcast_to(EMBER_DEEP, col.shape), smoothstep(0.05, 0.4, heat))
-    jc = mix(jc, np.broadcast_to(EMBER, col.shape), smoothstep(0.35, 0.78, heat))
-    hot = (1.0 - smoothstep(0.0, hw * 0.8, dd)) * smoothstep(0.55, 1.0, heat)
-    jc = mix(jc, np.broadcast_to(EMBER_HOT, col.shape), hot * 0.8)
-    col = mix(col, jc, core)
-    # faint ember cracks inside some slabs
-    crack = 1.0 - smoothstep(0.0, 0.03, np.abs(fbm(45, 11.0, 11.0, 3)))
-    crack = crack * crackslab * smoothstep(0.4, 1.1, np.abs(fbm(46, 3.0, 3.0, 1))) * smoothstep(10.0, 22.0, dd)
-    col = mix(col, np.broadcast_to(EMBER_DEEP * 1.25, col.shape), crack * 0.8)
-    hgt = hgt - 0.8 * crack
-    hgt = hgt * 0.7 + 2.6 * smoothstep(1.5, 10.0, dd)
+    # thin, cold, broken joints: dark, but only a little darker than the stone, and missing on parts of the rim
+    hw = 1.5 + 1.2 * smoothstep(-0.6, 1.0, fbm(426, 9.0, 9.0, 2))
+    present = smoothstep(-0.2, 0.6, fbm(427, 5.0, 5.0, 2))
+    core = (1.0 - smoothstep(hw * 0.6, hw * 1.6, dd)) * present
+    col = mix(col, np.broadcast_to(JOINT_COLD, col.shape), core * 0.6)
+    col = flatten(col, 48.0, 0.5)
+    hgt = hgt - 0.8 * core
+    hgt = hgt * 0.7 + 1.6 * smoothstep(1.0, 8.0, dd * (1.0 - 0.6 * present))
+    _TEMPLE_BASE.append((col, hgt))
+    return _TEMPLE_BASE[0]
+
+
+def temple_field(variant=0):
+    """Dark basalt with a few long, irregular ember cracks (the glow is painted into the diffuse texture: the room
+    shader has no emissive term). The glow is sparse so the heart stays the focal point. The cracks never come
+    near the tile border, so the four variants (`DungeonTempleFloor`, `...B`, `...C`, `...D`, picked at random per
+    tile through [oneOf] in config/tilesets.cfg) differ only in the cracks and still match at every border; there
+    is no tile-shaped motif. The whole texture wraps, so it needs the same rotation on every tile."""
+    col, hgt = temple_base()
+    cm, hm = ember_cracks(440 + variant, (2, 1, 2, 0)[variant], 56)
+    col = col + hm[..., None] * np.array([0.060, 0.008, 0.004])[None, None, :]
+    ramp = mix(np.broadcast_to(EMBER_DEEP * 1.4, col.shape), np.broadcast_to(EMBER * 0.85, col.shape),
+               smoothstep(0.25, 0.7, cm))
+    ramp = mix(ramp, np.broadcast_to(EMBER_HOT * 0.8, col.shape), smoothstep(0.85, 1.0, cm) * 0.6)
+    col = mix(col, ramp, smoothstep(0.08, 0.4, cm))
+    hgt = hgt - 0.8 * cm
     return col, hgt
 
 
@@ -769,8 +900,8 @@ def training_hall_field():
     col = SAND[None, None, :] * (1.0 + 0.035 * tone[..., None] + 0.055 * lump[..., None] + 0.06 * grit[..., None])
     hgt = 0.5 * lump + 0.35 * grit + 0.15 * tone
     # pale sawdust flecks and dark damp grains
-    fleck = smoothstep(1.5, 2.4, fbm(404, 110.0, 110.0, 1))
-    col = mix(col, np.array([0.44, 0.42, 0.37])[None, None, :], fleck * 0.55)
+    fleck = smoothstep(1.2, 2.2, fbm(404, 110.0, 110.0, 1))
+    col = mix(col, np.array([0.50, 0.47, 0.40])[None, None, :], fleck * 0.8)
     damp = smoothstep(1.6, 2.5, fbm(405, 100.0, 100.0, 1))
     col = mix(col, SAND_DARK[None, None, :], damp * 0.5)
     rng = np.random.RandomState(406)
@@ -948,7 +1079,7 @@ def row_layout(seed, rows, min_w, max_w, warp_amp, warp_seed):
 
 
 ARENA_SAND = np.array([0.345, 0.283, 0.212])
-BLOOD = np.array([0.155, 0.055, 0.045])
+BLOOD = np.array([0.240, 0.045, 0.035])
 
 
 def arena_field():
@@ -993,8 +1124,8 @@ def arena_field():
     col = col * (1.0 - 0.06 * worn)[..., None]
     # blood: dark brown-red stains with a drying rim, plus a few drag smears
     bn = fbm(706, 15.0, 15.0, 3)
-    stain = smoothstep(1.3, 1.6, bn)
-    rim = np.clip(1.0 - np.abs(bn - 1.3) / 0.1, 0.0, 1.0)
+    stain = smoothstep(1.15, 1.45, bn)
+    rim = np.clip(1.0 - np.abs(bn - 1.15) / 0.1, 0.0, 1.0)
     col = mix(col, BLOOD[None, None, :] * (0.85 + 0.3 * grit[..., None]), np.clip(stain * 0.6 + rim * 0.2, 0, 0.7))
     hgt = hgt - 0.5 * stain
     smear = Layer()
@@ -1377,14 +1508,23 @@ ROOMS = {
                    'Library0011': ('TL', 'Library1100Normal'), 'Library1111': ('', 'Library1111Normal')},
     },
     'hatchery': {
+        # the open piece has four variants (straw in the interior only, flat calm earth along the tile border), picked
+        # at random per tile through [oneOf] in config/tilesets.cfg; the wall pieces use variant 0 as their base
         'field': hatchery_field, 'band': hatchery_band, 'strength': 1.15, 'rot_invariant': False,
-        'pieces': {'Farm0000': ('TBLR', 'Farm0000Normal'), 'Farm1000': ('TBL', 'Farm1000Normal'),
+        'variant_of': {'FarmB': 1, 'FarmC': 2, 'FarmD': 3},
+        'pieces': {'FarmB': ('', 'FarmBNormal'), 'FarmC': ('', 'FarmCNormal'), 'FarmD': ('', 'FarmDNormal'),
+                   'Farm0000': ('TBLR', 'Farm0000Normal'), 'Farm1000': ('TBL', 'Farm1000Normal'),
                    'Farm1010': ('TB', 'Farm1010Normal'), 'Farm1011': ('T', 'Farm1011Normal'),
                    'Farm1100': ('TL', 'Farm1100Normal'), 'Farm': ('', 'FarmNormal')},
     },
     'dungeonTemple': {
+        # four variants, picked at random per tile: same base, different ember cracks (see temple_field)
         'field': temple_field, 'band': None, 'strength': 1.3,
-        'pieces': {'DungeonTempleFloor': ('', 'DungeonTempleFloorNormal')},
+        'variant_of': {'DungeonTempleFloorB': 1, 'DungeonTempleFloorC': 2, 'DungeonTempleFloorD': 3},
+        'pieces': {'DungeonTempleFloor': ('', 'DungeonTempleFloorNormal'),
+                   'DungeonTempleFloorB': ('', 'DungeonTempleFloorBNormal'),
+                   'DungeonTempleFloorC': ('', 'DungeonTempleFloorCNormal'),
+                   'DungeonTempleFloorD': ('', 'DungeonTempleFloorDNormal')},
     },
     'treasury': {
         'field': treasury_field, 'band': None, 'strength': 1.3,
@@ -1435,11 +1575,15 @@ ROOMS = {
 
 def build(room):
     spec = ROOMS[room]
-    field_col, field_hgt = spec['field']()
-    if room in FLATTEN:
-        field_col = flatten(field_col, *FLATTEN[room])
+    fields = {}
     result = {}
     for name, (sides, normal_name) in spec['pieces'].items():
+        variant = spec.get('variant_of', {}).get(name, 0)  # variants of the open field (see temple_field)
+        if variant not in fields:
+            fields[variant] = spec['field'](variant) if 'variant_of' in spec else spec['field']()
+            if room in FLATTEN:
+                fields[variant] = (flatten(fields[variant][0], *FLATTEN[room]), fields[variant][1])
+        field_col, field_hgt = fields[variant]
         col, hgt = field_col.copy(), (field_hgt.copy() if field_hgt is not None else None)
         for side in sides:
             col, hgt = spec['band'](col, hgt, side)
