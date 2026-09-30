@@ -449,8 +449,8 @@ def slab_maps(rects):
     return ids, dd
 
 
-BASALT = np.array([0.168, 0.156, 0.168])
-TEMPLE_GAP = np.array([0.105, 0.040, 0.034])
+BASALT = np.array([0.150, 0.136, 0.162])
+TEMPLE_GAP = np.array([0.215, 0.052, 0.046])
 
 
 def temple_field():
@@ -459,7 +459,7 @@ def temple_field():
     rng = np.random.RandomState(402)
     bright = rng.uniform(0.86, 1.14, len(rects))[ids]
     tintb = rng.uniform(-0.03, 0.03, len(rects))[ids]
-    gw = 4
+    gw = 12
     dd = dd + 3.0 * pn(41, 14.0, 14.0, 2) * smoothstep(4.0, 14.0, dd)
     mott = fbm(42, 4.0, 4.0, 3)
     grit = fbm(43, 150.0, 150.0, 2)
@@ -598,8 +598,8 @@ class Layer(object):
         return np.asarray(self.img.resize((N, N), Image.BOX)).astype(float) / 255.0
 
 
-SAND = np.array([0.355, 0.283, 0.205])
-SAND_DARK = np.array([0.215, 0.165, 0.115])
+SAND = np.array([0.300, 0.284, 0.256])
+SAND_DARK = np.array([0.185, 0.172, 0.150])
 
 
 def training_hall_field():
@@ -610,7 +610,7 @@ def training_hall_field():
     hgt = 0.5 * lump + 0.35 * grit + 0.15 * tone
     # pale sawdust flecks and dark damp grains
     fleck = smoothstep(1.5, 2.4, fbm(404, 110.0, 110.0, 1))
-    col = mix(col, np.array([0.50, 0.41, 0.29])[None, None, :], fleck * 0.55)
+    col = mix(col, np.array([0.44, 0.42, 0.37])[None, None, :], fleck * 0.55)
     damp = smoothstep(1.6, 2.5, fbm(405, 100.0, 100.0, 1))
     col = mix(col, SAND_DARK[None, None, :], damp * 0.5)
     rng = np.random.RandomState(406)
@@ -655,7 +655,7 @@ def training_hall_field():
     return col, hgt
 
 
-WOOD = np.array([0.325, 0.225, 0.185])
+WOOD = np.array([0.255, 0.170, 0.150])
 WOOD_GAP = np.array([0.045, 0.03, 0.026])
 HB_W = 32
 HB_L = 4
@@ -847,7 +847,7 @@ def arena_field():
     return col, hgt
 
 
-SLAB = np.array([0.235, 0.233, 0.232])
+SLAB = np.array([0.238, 0.196, 0.186])
 
 
 def torture_field():
@@ -963,7 +963,7 @@ def workshop_field():
 # portal, portal wave (F2 batch 5): every layer is truly periodic; the wooden bridge atlas follows below
 
 PORTAL_STONE = np.array([0.182, 0.172, 0.208])
-WAVE_STONE = np.array([0.194, 0.212, 0.248])
+WAVE_STONE = np.array([0.165, 0.212, 0.222])
 
 
 def rune_layer(seed, count, glyph, width):
@@ -1329,7 +1329,7 @@ def main():
     for a in sys.argv[1:]:
         if a.startswith('--seamcheck='):
             seam_dir = a.split('=', 1)[1]
-    seam_rooms = ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop', 'portal',
+    seam_rooms = ('hatchery', 'dungeonTemple', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop', 'portal',
                   'portalWave') if seam_dir else ()
     for room in ROOMS:
         result, strength = build(room)
