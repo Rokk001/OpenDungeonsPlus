@@ -1330,13 +1330,17 @@ def bridge_atlas(mesh_path):
 ROOMS = {
     'dormitory': {
         # the planks run along x on every piece and every tile uses rotation 0, so the boards continue across
-        # the pieces; one piece per exposed side set (image sides), named after its neighbour mask in tilesets.cfg
+        # the pieces; one piece per neighbour mask (image sides that are exposed, see [dormitoryRoom] in tilesets.cfg)
         'field': dormitory_field, 'band': dormitory_band, 'strength': 1.4, 'rot_invariant': False,
         'pieces': {'Dormitory1111': ('', 'Dormitory1111Normal'), 'Dormitory': ('', 'DormitoryNormal'),
                    'Dormitory1011': ('B', 'Dormitory1011Normal'), 'Dormitory0111': ('R', 'Dormitory0111Normal'),
                    'Dormitory1101': ('L', 'Dormitory1101Normal'), 'Dormitory1110': ('T', 'Dormitory1110Normal'),
                    'Dormitory0110': ('RT', 'Dormitory0110Normal'), 'Dormitory1100': ('LT', 'Dormitory1100Normal'),
-                   'Dormitory0011': ('RB', 'Dormitory0011Normal'), 'Dormitory1001': ('BL', 'Dormitory1001Normal')},
+                   'Dormitory0011': ('RB', 'Dormitory0011Normal'), 'Dormitory1001': ('BL', 'Dormitory1001Normal'),
+                   'Dormitory0000': ('RBLT', 'Dormitory0000Normal'), 'Dormitory0001': ('RBL', 'Dormitory0001Normal'),
+                   'Dormitory0010': ('RBT', 'Dormitory0010Normal'), 'Dormitory0100': ('RLT', 'Dormitory0100Normal'),
+                   'Dormitory1000': ('BLT', 'Dormitory1000Normal'), 'Dormitory0101': ('RL', 'Dormitory0101Normal'),
+                   'Dormitory1010': ('BT', 'Dormitory1010Normal')},
     },
     'library': {
         'field': library_field, 'band': library_band, 'strength': 1.3,
