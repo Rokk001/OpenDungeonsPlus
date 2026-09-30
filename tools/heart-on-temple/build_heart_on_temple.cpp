@@ -8,6 +8,8 @@
 //  - the pedestal (steps and claws of the temple's "Stacheln" part, without the old spherical lattice
 //    that stood for the heart) is added as a second submesh, bound to the "Root" bone, so that only the
 //    heart pulses;
+//  - the heart gets texture coordinates (spherical projection around its centre, seam vertices are duplicated),
+//    so that the heart materials can use a texture and a normal map (see tools/heart-textures);
 //  - the skeletons' bone positions are moved and scaled the same way as the heart.
 //
 // Build (Visual Studio developer prompt, Ogre installed in %D%):
@@ -26,6 +28,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -108,6 +111,141 @@ float transformHeart(Ogre::Mesh* mesh, Ogre::AxisAlignedBox& box, Ogre::Real& ra
     }
     buffer->unlock();
     return lift;
+}
+
+// Gives the heart texture coordinates: spherical projection around the centre of its bounds (u = angle around
+// the vertical axis, v = angle from the bottom). Triangles that cross the u seam get their own copies of the
+// vertices with u shifted by one, so that a wrapping texture is continuous across the seam. The heart's
+// vertex data is rebuilt (position, normal, texture coordinates) and the bone assignments are copied to
+// every duplicated vertex.
+void addHeartUvs(Ogre::Mesh* mesh)
+{
+    Ogre::VertexData* data = mesh->sharedVertexData;
+    const Ogre::VertexElement* position = data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+    const Ogre::VertexElement* normal = data->vertexDeclaration->findElementBySemantic(Ogre::VES_NORMAL);
+    Ogre::HardwareVertexBufferSharedPtr buffer = data->vertexBufferBinding->getBuffer(position->getSource());
+    std::vector<Vertex> old(data->vertexCount);
+    unsigned char* base = static_cast<unsigned char*>(buffer->lock(Ogre::HardwareBuffer::HBL_READ_ONLY));
+    Ogre::AxisAlignedBox box;
+    for(size_t i = 0; i < data->vertexCount; ++i)
+    {
+        unsigned char* vertex = base + i * buffer->getVertexSize();
+        float* p;
+        float* n;
+        position->baseVertexPointerToElement(vertex, &p);
+        normal->baseVertexPointerToElement(vertex, &n);
+        old[i].position = Ogre::Vector3(p[0], p[1], p[2]);
+        old[i].normal = Ogre::Vector3(n[0], n[1], n[2]);
+        box.merge(old[i].position);
+    }
+    buffer->unlock();
+    const Ogre::Vector3 centre = box.getCenter();
+
+    Ogre::SubMesh* sub = mesh->getSubMesh(0);
+    Ogre::HardwareIndexBufferSharedPtr index = sub->indexData->indexBuffer;
+    std::vector<unsigned int> triangles(sub->indexData->indexCount);
+    const bool wide = index->getType() == Ogre::HardwareIndexBuffer::IT_32BIT;
+    void* raw = index->lock(Ogre::HardwareBuffer::HBL_READ_ONLY);
+    for(size_t i = 0; i < triangles.size(); ++i)
+        triangles[i] = wide ? static_cast<unsigned int*>(raw)[i] : static_cast<unsigned short*>(raw)[i];
+    index->unlock();
+
+    const float PI = 3.14159265f;
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> origin;
+    std::map<std::pair<unsigned int, int>, unsigned short> created;
+    std::vector<unsigned short> indices;
+    for(size_t t = 0; t + 2 < triangles.size(); t += 3)
+    {
+        float u[3];
+        float v[3];
+        bool onAxis[3];
+        for(size_t k = 0; k < 3; ++k)
+        {
+            const Ogre::Vector3 d = old[triangles[t + k]].position - centre;
+            const float horizontal = std::sqrt(d.x * d.x + d.y * d.y);
+            onAxis[k] = horizontal < 0.02f;
+            u[k] = std::atan2(d.y, d.x) / (2.0f * PI) + 0.5f;
+            v[k] = std::atan2(horizontal, -d.z) / PI;
+        }
+        // A vertex on the axis has no angle of its own: take the angle of the triangle's other corners
+        for(size_t k = 0; k < 3; ++k)
+        {
+            if(onAxis[k])
+            {
+                const size_t a = (k + 1) % 3;
+                const size_t b = (k + 2) % 3;
+                u[k] = (onAxis[a] ? u[b] : (onAxis[b] ? u[a] : 0.5f * (u[a] + u[b])));
+            }
+        }
+        const float uMin = std::min(u[0], std::min(u[1], u[2]));
+        const float uMax = std::max(u[0], std::max(u[1], u[2]));
+        const bool crossesSeam = (uMax - uMin) > 0.5f;
+        for(size_t k = 0; k < 3; ++k)
+        {
+            const int shift = (crossesSeam && u[k] < 0.5f) ? 1 : 0;
+            const std::pair<unsigned int, int> key(triangles[t + k], shift);
+            std::map<std::pair<unsigned int, int>, unsigned short>::iterator it = created.find(key);
+            if(it == created.end())
+            {
+                Vertex vertex = old[triangles[t + k]];
+                vertex.uv = Ogre::Vector2(u[k] + static_cast<float>(shift), v[k]);
+                it = created.insert(std::make_pair(key, static_cast<unsigned short>(vertices.size()))).first;
+                vertices.push_back(vertex);
+                origin.push_back(triangles[t + k]);
+            }
+            indices.push_back(it->second);
+        }
+    }
+
+    // Vertex data: position, normal, texture coordinates
+    Ogre::VertexDeclaration* decl = data->vertexDeclaration;
+    decl->removeAllElements();
+    data->vertexBufferBinding->unsetAllBindings();
+    size_t offset = 0;
+    offset += decl->addElement(0, offset, Ogre::VET_FLOAT3, Ogre::VES_POSITION).getSize();
+    offset += decl->addElement(0, offset, Ogre::VET_FLOAT3, Ogre::VES_NORMAL).getSize();
+    offset += decl->addElement(0, offset, Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES, 0).getSize();
+    data->vertexCount = vertices.size();
+    data->vertexStart = 0;
+    Ogre::HardwareVertexBufferSharedPtr fresh = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
+        offset, vertices.size(), Ogre::HBU_CPU_ONLY);
+    float* out = static_cast<float*>(fresh->lock(Ogre::HardwareBuffer::HBL_DISCARD));
+    for(size_t i = 0; i < vertices.size(); ++i)
+    {
+        *out++ = vertices[i].position.x;
+        *out++ = vertices[i].position.y;
+        *out++ = vertices[i].position.z;
+        *out++ = vertices[i].normal.x;
+        *out++ = vertices[i].normal.y;
+        *out++ = vertices[i].normal.z;
+        *out++ = vertices[i].uv.x;
+        *out++ = vertices[i].uv.y;
+    }
+    fresh->unlock();
+    data->vertexBufferBinding->setBinding(0, fresh);
+
+    sub->indexData->indexCount = indices.size();
+    sub->indexData->indexStart = 0;
+    sub->indexData->indexBuffer = Ogre::HardwareBufferManager::getSingleton().createIndexBuffer(
+        Ogre::HardwareIndexBuffer::IT_16BIT, indices.size(), Ogre::HBU_CPU_ONLY);
+    sub->indexData->indexBuffer->writeData(0, indices.size() * sizeof(unsigned short), &indices[0], true);
+
+    // Skinning: every copy of a vertex keeps the assignments of the vertex it was copied from
+    const Ogre::Mesh::VertexBoneAssignmentList assignments = mesh->getBoneAssignments();
+    mesh->clearBoneAssignments();
+    for(size_t i = 0; i < vertices.size(); ++i)
+    {
+        std::pair<Ogre::Mesh::VertexBoneAssignmentList::const_iterator, Ogre::Mesh::VertexBoneAssignmentList::const_iterator> range
+            = assignments.equal_range(origin[i]);
+        for(Ogre::Mesh::VertexBoneAssignmentList::const_iterator it = range.first; it != range.second; ++it)
+        {
+            Ogre::VertexBoneAssignment assignment = it->second;
+            assignment.vertexIndex = static_cast<unsigned int>(i);
+            mesh->addBoneAssignment(assignment);
+        }
+    }
+    std::cout << "heart uv: " << old.size() << " -> " << vertices.size() << " vertices\n";
 }
 
 // Reads the temple's first submesh ("Stacheln", the metal part) and returns its vertices and the triangles that are not the lattice
@@ -270,6 +408,7 @@ int run(int argc, char** argv)
         Ogre::AxisAlignedBox box;
         Ogre::Real radius = 0.0f;
         const float lift = transformHeart(heart.get(), box, radius);
+        addHeartUvs(heart.get());
         addPedestal(heart.get(), vertices, indices, box, radius);
         heart->_setBounds(box, false);
         heart->_setBoundingSphereRadius(radius);
