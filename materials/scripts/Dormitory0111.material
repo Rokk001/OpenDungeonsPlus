@@ -1,8 +1,8 @@
-// Dungeon temple floor (room shader, same world deformation as the claimed floor)
+// Dormitory0111
 // import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
 
 
-vertex_program myDungeonTempleFloorVertexShader glsl
+vertex_program myDormitory0111VertexShader glsl
 {
   source Room.vert
     default_params
@@ -15,7 +15,7 @@ vertex_program myDungeonTempleFloorVertexShader glsl
   
 }
 
-fragment_program myDungeonTempleFloorFragmentShader glsl
+fragment_program myDormitory0111FragmentShader glsl
 {
   source Room.frag
     default_params
@@ -30,7 +30,7 @@ fragment_program myDungeonTempleFloorFragmentShader glsl
 }
 
 
-material DungeonTempleFloor //: RTSS/NormalMapping_MultiPass
+material Dormitory0111 //: RTSS/NormalMapping_MultiPass
 {
     
     technique
@@ -38,11 +38,11 @@ material DungeonTempleFloor //: RTSS/NormalMapping_MultiPass
 
         pass 
         {
-            vertex_program_ref myDungeonTempleFloorVertexShader
+            vertex_program_ref myDormitory0111VertexShader
             {
                 
             }
-            fragment_program_ref myDungeonTempleFloorFragmentShader
+            fragment_program_ref myDormitory0111FragmentShader
             { 
                 param_named decalmap int 0
                 param_named normalmap int 1
@@ -53,12 +53,12 @@ material DungeonTempleFloor //: RTSS/NormalMapping_MultiPass
             // We use blending, so that we can see the underlying texture.
             texture_unit decalmap
             {
-                texture DungeonTempleFloor.png
+                texture Dormitory0111.png
             }
         
             texture_unit normalmap
             {
-                texture DungeonTempleFloorNormal.png
+                texture Dormitory0111Normal.png
             }  
             texture_unit shadowmap
             {
