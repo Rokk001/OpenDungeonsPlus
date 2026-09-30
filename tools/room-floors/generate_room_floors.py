@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury, crypt, training hall,
-casino and prison
+casino, prison, arena, torture chamber and workshop
 (materials/textures/).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
@@ -16,10 +16,12 @@ pieces match. The tile borders are made seam-free in two ways:
     all; the seamless wrap is checked with --check and --seamcheck (texture rolled by half a tile);
   - dungeon temple and treasury: irregular slabs (random rectangle subdivision) inside a gap that runs along
     the tile border, so nothing but the constant gap colour touches the border;
-  - crypt: derived from the original cobble texture (tools/room-floors/Crypt-source.png, Yughues, CC0);
+  - crypt: derived from the original cobble texture (Yughues, CC0) read from git history (commit 2ac74a729^);
     darkened, moss and lichen and cracks are added with periodic noise that fades out at the tile border;
   - prison: derived from the original Prison.png read from git history (commit 6db9aa611), mortar turned to mud,
-    plus rust and straw.
+    plus rust and straw;
+  - arena, torture, workshop: every layer is truly periodic (see training hall); the torture slabs and the
+    workshop planks come from a wrapping row layout with warped joints.
 The room shader has no specular term, so only a diffuse texture and a matching tangent space normal map
 (red = -d height / dx, green = +d height / dy, image y pointing down) are written.
 
@@ -517,6 +519,15 @@ def treasury_field():
 
 
 # ---------------------------------------------------------------------------------------------------------------
+def git_source(path, commit):
+    """Reads a file from git history (so the original does not have to be committed a second time)."""
+    import io
+    import subprocess
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+    data = subprocess.check_output(['git', 'show', '%s:%s' % (commit, path)], cwd=root)
+    return Image.open(io.BytesIO(data)).convert('RGB')
+
+
 # crypt: the original cobbles, darkened, with moss and lichen in the joints and a few cracks
 
 def blur(img, sigma):
@@ -526,8 +537,8 @@ def blur(img, sigma):
 
 
 def crypt_field():
-    src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Crypt-source.png')
-    col = np.asarray(Image.open(src).convert('RGB')).astype(float) / 255.0
+    # the original Crypt.png (before F2 batch 2)
+    col = np.asarray(git_source('materials/textures/Crypt.png', '2ac74a729^')).astype(float) / 255.0
     col = col * 0.85
     lum = col.mean(-1)
     low = blur(lum, 2.2)
@@ -703,15 +714,6 @@ def casino_field():
     return col, hgt
 
 
-def git_source(path, commit):
-    """Reads a file from git history (so the original does not have to be committed a second time)."""
-    import io
-    import subprocess
-    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
-    data = subprocess.check_output(['git', 'show', '%s:%s' % (commit, path)], cwd=root)
-    return Image.open(io.BytesIO(data)).convert('RGB')
-
-
 MUD_BROWN = np.array([0.175, 0.135, 0.098])
 RUST = np.array([0.30, 0.17, 0.10])
 
@@ -739,6 +741,218 @@ def prison_field():
     sc, sa, _ = sp.result()
     col = mix(col, sc, sa * 0.92)
     return col, None
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# arena, torture, workshop (F2 batch 4): every layer is truly periodic
+
+def wrap_dist(a, b):
+    d = np.abs(a - b) % N
+    return np.minimum(d, N - d)
+
+
+def row_layout(seed, rows, min_w, max_w, warp_amp, warp_seed):
+    """Wrapping rows of slabs / planks. Every row is cut into pieces of random width (min_w..max_w, wrapping
+    around the tile), the coordinates are warped by periodic noise so the joints are not ruler straight.
+    Returns piece id, distance to the nearest joint in pixels and the number of pieces."""
+    rng = np.random.RandomState(seed)
+    row_h = N // rows
+    xw = (_XX + warp_amp * fbm(warp_seed, 7.0, 7.0, 2)) % N
+    yw = (_YY + warp_amp * fbm(warp_seed + 1, 7.0, 7.0, 2)) % N
+    row = np.minimum((yw // row_h).astype(int), rows - 1)
+    ry = yw - row * row_h
+    dist = np.minimum(ry, row_h - ry)
+    pid = np.zeros((N, N), dtype=int)
+    count = 0
+    for r in range(rows):
+        widths = []
+        total = 0.0
+        while total < N:
+            widths.append(rng.uniform(min_w, max_w))
+            total += widths[-1]
+        widths = np.array(widths) * N / total
+        cuts = (rng.uniform(0, N) + np.concatenate([[0.0], np.cumsum(widths)[:-1]])) % N
+        cuts.sort()
+        mask = row == r
+        xs = xw[mask]
+        idx = np.searchsorted(cuts, xs, 'right') - 1
+        pid[mask] = count + idx % len(cuts)
+        dx = np.min(wrap_dist(xs[:, None], cuts[None, :]), axis=1)
+        dist[mask] = np.minimum(dist[mask], dx)
+        count += len(cuts)
+    return pid, dist, count
+
+
+ARENA_SAND = np.array([0.345, 0.283, 0.212])
+BLOOD = np.array([0.155, 0.055, 0.045])
+
+
+def arena_field():
+    tone = fbm(701, 3.5, 3.5, 3)
+    lump = fbm(702, 24.0, 24.0, 3)
+    grit = fbm(703, 190.0, 190.0, 2)
+    col = ARENA_SAND[None, None, :] * (1.0 + 0.07 * tone[..., None] + 0.05 * lump[..., None] + 0.06 * grit[..., None])
+    hgt = 0.45 * lump + 0.4 * grit + 0.15 * tone
+    rng = np.random.RandomState(704)
+    # gravel: small pebbles, lighter and darker
+    light = Layer()
+    dark = Layer()
+    for k in range(1100):
+        r = rng.uniform(1.6, 4.6)
+        target = light if k % 2 == 0 else dark
+        target.ellipse(rng.uniform(0, N), rng.uniform(0, N), r, r * rng.uniform(0.6, 1.0), rng.uniform(0, np.pi), 255)
+    lm = np.clip(blur(light.result(), 0.5) * 1.3, 0.0, 1.0)
+    dm = np.clip(blur(dark.result(), 0.5) * 1.3, 0.0, 1.0)
+    col = mix(col, np.array([0.47, 0.39, 0.29])[None, None, :] * (0.9 + 0.2 * grit[..., None]), lm * 0.6)
+    col = mix(col, np.array([0.20, 0.15, 0.11])[None, None, :], dm * 0.6)
+    hgt = hgt + 1.3 * lm + 0.9 * dm
+    # raked / scratched grooves: groups of parallel lines
+    scratch = Layer()
+    for _ in range(14):
+        x, y = rng.uniform(0, N), rng.uniform(0, N)
+        ang = rng.uniform(0, 2 * np.pi)
+        curve = rng.uniform(-0.04, 0.04)
+        length = rng.uniform(90, 230)
+        for k in range(rng.randint(2, 5)):
+            off = (k - 1.0) * rng.uniform(5.0, 8.0)
+            pts = []
+            for t in np.linspace(0.0, 1.0, 12):
+                a = ang + curve * t * length * 0.1
+                pts.append((x - np.sin(ang) * off + np.cos(a) * length * t,
+                            y + np.cos(ang) * off + np.sin(a) * length * t))
+            scratch.line(pts, rng.uniform(1.4, 2.4), 255)
+    sm = np.clip(blur(scratch.result(), 0.8) * 1.3, 0.0, 1.0)
+    col = mix(col, np.array([0.19, 0.145, 0.105])[None, None, :], sm * 0.6)
+    hgt = hgt - 1.8 * sm
+    # worn, packed ground
+    worn = smoothstep(0.7, 1.8, fbm(705, 3.0, 3.0, 2))
+    col = col * (1.0 - 0.10 * worn)[..., None]
+    # blood: dark brown-red stains with a drying rim, plus a few drag smears
+    bn = fbm(706, 5.5, 5.5, 3)
+    stain = smoothstep(1.3, 1.6, bn)
+    rim = np.clip(1.0 - np.abs(bn - 1.3) / 0.1, 0.0, 1.0)
+    col = mix(col, BLOOD[None, None, :] * (0.85 + 0.3 * grit[..., None]), np.clip(stain * 0.78 + rim * 0.22, 0, 0.85))
+    hgt = hgt - 0.5 * stain
+    smear = Layer()
+    for _ in range(9):
+        x, y = rng.uniform(0, N), rng.uniform(0, N)
+        ang = rng.uniform(0, 2 * np.pi)
+        smear.line([(x, y), (x + np.cos(ang) * 60, y + np.sin(ang) * 60)], rng.uniform(5, 9), 255)
+    smm = np.clip(blur(smear.result(), 2.5) * 1.2, 0.0, 1.0)
+    col = mix(col, BLOOD[None, None, :] * 1.1, smm * 0.4)
+    return col, hgt
+
+
+SLAB = np.array([0.235, 0.233, 0.232])
+
+
+def torture_field():
+    pid, dist, count = row_layout(801, 4, 120, 230, 7.0, 802)
+    rng = np.random.RandomState(803)
+    tone = rng.uniform(0.82, 1.18, count)[pid]
+    hue = rng.uniform(-0.02, 0.025, count)[pid]
+    mottle = fbm(804, 14.0, 14.0, 3)
+    grit = fbm(805, 170.0, 170.0, 2)
+    col = SLAB[None, None, :] * tone[..., None] + np.stack([-hue * 0.3, hue * 0.1, hue * 0.5], -1) * 0.5
+    col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
+    hgt = 0.5 * mottle + 0.4 * grit
+    # wet patches: darker, a little bluer
+    wet = smoothstep(0.1, 1.3, fbm(806, 4.0, 4.0, 3))
+    col = col * (1.0 - 0.22 * wet)[..., None] * np.array([0.98, 1.0, 1.03])[None, None, :]
+    hgt = hgt * (1.0 - 0.5 * wet)
+    # dark stains
+    sn = fbm(807, 5.0, 5.0, 3)
+    stain = smoothstep(1.2, 1.6, sn)
+    col = mix(col, np.array([0.085, 0.065, 0.06])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.8)
+    # dark, wet joints with a bevel
+    t = smoothstep(0.8, 3.2, dist)
+    col = mix(np.broadcast_to(np.array([0.045, 0.047, 0.052]), col.shape), col, t)
+    hgt = hgt * 0.7 + 2.6 * smoothstep(0.8, 5.0, dist)
+    # drain grooves: short curved channels
+    rng2 = np.random.RandomState(808)
+    groove = Layer()
+    for _ in range(5):
+        x, y = rng2.uniform(0, N), rng2.uniform(0, N)
+        ang = rng2.uniform(0, 2 * np.pi)
+        curve = rng2.uniform(-0.08, 0.08)
+        length = rng2.uniform(70, 150)
+        pts = []
+        for tt in np.linspace(0.0, 1.0, 12):
+            a = ang + curve * tt * length * 0.1
+            pts.append((x + np.cos(a) * length * tt, y + np.sin(a) * length * tt))
+        groove.line(pts, rng2.uniform(4.0, 6.0), 255)
+    gm = np.clip(blur(groove.result(), 0.9), 0.0, 1.0)
+    col = mix(col, np.array([0.04, 0.042, 0.048])[None, None, :], gm * 0.85)
+    hgt = hgt - 3.0 * gm
+    # iron grates: dark recess with raised bars
+    back = Layer()
+    bars = Layer()
+    for _ in range(3):
+        cx, cy = rng2.uniform(0, N), rng2.uniform(0, N)
+        w, h = 46, 30
+        back.polygon([(cx - w / 2, cy - h / 2), (cx + w / 2, cy - h / 2), (cx + w / 2, cy + h / 2),
+                      (cx - w / 2, cy + h / 2)], 255)
+        for k in range(7):
+            bx = cx - w / 2 + 4 + k * (w - 8) / 6.0
+            bars.line([(bx, cy - h / 2 + 2), (bx, cy + h / 2 - 2)], 3.0, 255)
+    bm = np.clip(back.result(), 0.0, 1.0)
+    brm = np.clip(bars.result(), 0.0, 1.0)
+    col = mix(col, np.array([0.03, 0.03, 0.034])[None, None, :], bm * 0.92)
+    col = mix(col, np.array([0.16, 0.13, 0.11])[None, None, :] * (0.8 + 0.4 * grit[..., None]), brm * 0.9)
+    hgt = hgt - 3.2 * bm + 3.6 * brm
+    return col, hgt
+
+
+WORKSHOP_PLANK = np.array([0.262, 0.205, 0.176])
+IRON = np.array([0.135, 0.13, 0.13])
+RUST_ORANGE = np.array([0.30, 0.15, 0.08])
+
+
+def workshop_field():
+    pid, dist, count = row_layout(901, 8, 210, 340, 3.5, 902)
+    rng = np.random.RandomState(903)
+    tone = rng.uniform(0.80, 1.18, count)[pid]
+    hue = rng.uniform(-0.02, 0.02, count)[pid]
+    grain = fbm(904, 4.0, 110.0, 3)
+    grit = fbm(905, 150.0, 150.0, 2)
+    col = WORKSHOP_PLANK[None, None, :] * tone[..., None] + np.stack([hue, hue * 0.4, -hue * 0.5], -1) * 0.5
+    col = col * (1.0 + 0.12 * grain + 0.05 * grit)[..., None]
+    hgt = 0.45 * grain + 0.25 * grit
+    # soot: dark, slightly cool darkening in broad patches
+    soot = smoothstep(-0.2, 1.4, fbm(906, 3.5, 3.5, 3))
+    col = col * (1.0 - 0.30 * soot)[..., None] * np.array([1.0, 0.98, 0.96])[None, None, :]
+    # dark joints
+    t = smoothstep(0.6, 2.6, dist)
+    col = mix(np.broadcast_to(np.array([0.03, 0.025, 0.024]), col.shape), col, t)
+    col = col * (0.85 + 0.15 * smoothstep(1.0, 5.0, dist))[..., None]
+    hgt = hgt + 2.0 * smoothstep(0.6, 4.0, dist)
+    # oil: dark bluish-black blotches
+    oil = smoothstep(1.35, 1.65, fbm(907, 6.5, 6.5, 3))
+    col = mix(col, np.array([0.045, 0.045, 0.055])[None, None, :], oil * 0.85)
+    hgt = hgt - 0.6 * oil
+    # rust spots: small orange-brown flecks
+    rust = smoothstep(1.5, 2.1, fbm(908, 26.0, 26.0, 2)) * smoothstep(0.0, 1.2, fbm(909, 4.0, 4.0, 2))
+    col = mix(col, RUST_ORANGE[None, None, :] * (0.8 + 0.4 * grit[..., None]), rust * 0.6)
+    # iron plates with rivets
+    plates = Layer()
+    rivets = Layer()
+    for (cx, cy, w, h) in ((96, 120, 100, 60), (330, 290, 80, 100), (150, 430, 110, 52)):
+        plates.polygon([(cx - w / 2, cy - h / 2), (cx + w / 2, cy - h / 2), (cx + w / 2, cy + h / 2),
+                        (cx - w / 2, cy + h / 2)], 255)
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                rivets.ellipse(cx + sx * (w / 2 - 7), cy + sy * (h / 2 - 7), 3.2, 3.2, 0.0, 255)
+    pm = np.clip(plates.result(), 0.0, 1.0)
+    edge = np.clip(pm - blur(pm, 2.5), 0.0, 1.0)
+    rv = np.clip(blur(rivets.result(), 0.6) * 1.3, 0.0, 1.0)
+    plate_col = IRON[None, None, :] * (0.85 + 0.35 * (grit[..., None] * 0.5 + 0.5)) * (1.0 - 0.3 * soot)[..., None]
+    col = mix(col, plate_col, pm)
+    plate_rust = pm * smoothstep(1.1, 1.7, fbm(911, 10.0, 10.0, 3)) * 0.55
+    col = mix(col, RUST_ORANGE[None, None, :], plate_rust)
+    col = mix(col, col * 1.5, rv * 0.7)
+    col = col * (1.0 - 0.6 * edge)[..., None]
+    hgt = hgt + 3.0 * pm + 2.5 * rv - 1.2 * edge
+    return col, hgt
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -787,6 +1001,19 @@ ROOMS = {
         # the existing PrisonNormal.png is kept
         'field': prison_field, 'band': None, 'strength': 0.0,
         'pieces': {'Prison': ('', None)},
+    },
+    'arena': {
+        # Arena.png is repainted in place: the pit meshes (ArenaLowered, ArenaFallOf) use the material Arena
+        'field': arena_field, 'band': None, 'strength': 1.3,
+        'pieces': {'Arena': ('', 'ArenaNormal')},
+    },
+    'torture': {
+        'field': torture_field, 'band': None, 'strength': 1.3,
+        'pieces': {'TortureFloor': ('', 'TortureFloorNormal')},
+    },
+    'workshop': {
+        'field': workshop_field, 'band': None, 'strength': 1.3,
+        'pieces': {'WorkshopFloor': ('', 'WorkshopFloorNormal')},
     },
 }
 
@@ -859,12 +1086,12 @@ def main():
     for a in sys.argv[1:]:
         if a.startswith('--seamcheck='):
             seam_dir = a.split('=', 1)[1]
-    seam_rooms = ('hatchery', 'trainingHall', 'casino', 'prison') if seam_dir else ()
+    seam_rooms = ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop') if seam_dir else ()
     for room in ROOMS:
         result, strength = build(room)
         if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('hatchery', 'dormitory', 'library')):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
-        if '--check' in sys.argv and room in ('hatchery', 'trainingHall', 'casino', 'prison'):
+        if '--check' in sys.argv and room in ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop'):
             print(room, 'wrap seam ratio (about 1 or less = no seam): %.2f' % wrap_check(result))
         if room in seam_rooms:
             seam_image(result).save(os.path.join(seam_dir, 'f2-%s-seamcheck.png' % room.lower()))
