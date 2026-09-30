@@ -23,7 +23,7 @@ import sys
 import numpy as np
 from PIL import Image
 
-ORIGINAL_COMMIT = '21320e9d6'  # a commit before the palette change; the wall atlases were unchanged there
+ORIGINAL_COMMIT = os.environ.get('WALL_ATLAS_COMMIT', '21320e9d6')  # a commit before the palette change, with the unregraded wall atlases
 
 LUMA = np.array([0.299, 0.587, 0.114])
 
