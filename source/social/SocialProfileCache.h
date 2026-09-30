@@ -23,7 +23,9 @@
 
 #include <map>
 #include <set>
+#include <stdint.h>
 #include <string>
+#include <vector>
 
 namespace social
 {
@@ -34,6 +36,19 @@ namespace social
 class SocialProfileCache
 {
 public:
+    //! \brief Friends and foe of a creature, valid for one version of the roster of the local player
+    struct FriendsAndFoe
+    {
+        FriendsAndFoe() :
+            mRosterVersion(0)
+        {
+        }
+
+        uint32_t mRosterVersion;
+        std::vector<std::string> mFriends;
+        std::string mFoe;
+    };
+
     static SocialProfileCache& getSingleton();
 
     //! \brief Returns the profile of the creature, generating it on first use.
@@ -43,6 +58,15 @@ public:
     //! \brief The loaded social data (loaded on the first call).
     const SocialData& getData();
 
+    //! \brief The cached friends and foe of the creature, or nullptr if there is none or it was
+    //! computed for another roster version (see PostLog::getRosterVersion).
+    const FriendsAndFoe* findFriendsAndFoe(const std::string& creatureName, uint32_t rosterVersion) const;
+
+    void storeFriendsAndFoe(const std::string& creatureName, const FriendsAndFoe& friendsAndFoe);
+
+    //! \brief Forgets the profiles and friends, called when the game is left. The loaded data stays.
+    void clear();
+
 private:
     SocialProfileCache();
     void loadData();
@@ -50,6 +74,7 @@ private:
     bool mDataLoaded;
     SocialData mData;
     std::map<std::string, CreatureProfile> mProfiles;
+    std::map<std::string, FriendsAndFoe> mFriends;
     std::set<std::string> mLoggedUnmappedClasses;
 };
 

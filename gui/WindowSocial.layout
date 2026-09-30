@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GUILayout version="4">
+    <Window type="OD/FrameWindow" name="SocialWindow">
+        <Property name="Area" value="{{0.5,-360},{0.5,-260},{0.5,360},{0.5,260}}" />
+        <Property name="Text" value="Dungeonbook" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/StaticText" name="CreaturesLabel">
+            <Property name="Area" value="{{0,16},{0,30},{0,300},{0,54}}" />
+            <Property name="Text" value="Creatures" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+        </Window>
+        <Window type="OD/Button" name="FilterButton">
+            <Property name="Area" value="{{0,16},{0,58},{0,300},{0,88}}" />
+            <Property name="Text" value="Show: all creatures" />
+            <Property name="TooltipText" value="Click to show all creatures, workers, fighters or unhappy creatures." />
+        </Window>
+        <Window type="OD/Listbox" name="CreatureList">
+            <Property name="Area" value="{{0,16},{0,94},{0,300},{1,-60}}" />
+            <Property name="Sort" value="False" />
+            <Property name="TooltipText" value="Double click a creature to open its profile." />
+        </Window>
+        <Window type="OD/Button" name="OpenProfileButton">
+            <Property name="Area" value="{{0,16},{1,-52},{0,300},{1,-18}}" />
+            <Property name="Text" value="Open profile" />
+            <Property name="Disabled" value="True" />
+        </Window>
+        <Window type="OD/StaticText" name="FeedLabel">
+            <Property name="Area" value="{{0,316},{0,30},{1,-16},{0,54}}" />
+            <Property name="Text" value="Feed" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+        </Window>
+        <Window type="OD/Button" name="FeedModeButton">
+            <Property name="Area" value="{{0,316},{0,58},{1,-16},{0,88}}" />
+            <Property name="Text" value="Posts of: everyone" />
+            <Property name="TooltipText" value="Click to switch between all posts and the posts of the selected creature." />
+        </Window>
+        <Window type="OD/StaticText" name="FeedText">
+            <Property name="Area" value="{{0,316},{0,94},{1,-16},{1,-18}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertScrollbar" value="True" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+    </Window>
+</GUILayout>

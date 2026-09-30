@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="CreatureProfileWindow" >
-        <Property name="Area" value="{{0.5,-270},{0.5,-245},{0.5,270},{0.5,245}}" />
+        <Property name="Area" value="{{0.5,-270},{0.5,-258},{0.5,270},{0.5,258}}" />
         <Property name="SizingEnabled" value="False" />
         <Window type="DefaultWindow" name="ProfilePage" >
             <Property name="Area" value="{{0.0,0},{0.0,0},{1.0,0},{1.0,-56}}" />
@@ -101,6 +101,14 @@
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
             </Window>
+            <Window type="OD/StaticText" name="LatestText" >
+                <Property name="Area" value="{{0.0,16},{0.0,430},{1.0,-16},{0.0,458}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="VertFormatting" value="TopAligned" />
+                <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            </Window>
         </Window>
         <Window type="OD/StaticText" name="StatsText" >
             <Property name="Area" value="{{0.0,20},{0.0,34},{1.0,-20},{1.0,-56}}" />
@@ -124,8 +132,7 @@
         <Window type="OD/Button" name="BookTab" >
             <Property name="Area" value="{{0.5,70},{1.0,-48},{0.5,190},{1.0,-16}}" />
             <Property name="Text" value="Dungeonbook" />
-            <Property name="Disabled" value="True" />
-            <Property name="TooltipText" value="Coming soon: what the minions post about their day" />
+            <Property name="TooltipText" value="Open the Dungeonbook with this creature selected" />
         </Window>
     </Window>
 </GUILayout>

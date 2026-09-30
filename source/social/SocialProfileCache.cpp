@@ -74,4 +74,25 @@ const CreatureProfile& SocialProfileCache::getProfile(const std::string& creatur
     return inserted.first->second;
 }
 
+const SocialProfileCache::FriendsAndFoe* SocialProfileCache::findFriendsAndFoe(const std::string& creatureName,
+    uint32_t rosterVersion) const
+{
+    std::map<std::string, FriendsAndFoe>::const_iterator it = mFriends.find(creatureName);
+    if((it == mFriends.end()) || (it->second.mRosterVersion != rosterVersion))
+        return nullptr;
+
+    return &it->second;
+}
+
+void SocialProfileCache::storeFriendsAndFoe(const std::string& creatureName, const FriendsAndFoe& friendsAndFoe)
+{
+    mFriends[creatureName] = friendsAndFoe;
+}
+
+void SocialProfileCache::clear()
+{
+    mProfiles.clear();
+    mFriends.clear();
+}
+
 }
