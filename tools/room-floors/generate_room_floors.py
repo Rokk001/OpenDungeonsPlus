@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury, crypt, training hall,
-casino, prison, arena, torture chamber and workshop
+casino, prison, arena, torture chamber, workshop, portal and portal wave, plus the UV atlas of the wooden bridge
 (materials/textures/).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
@@ -22,6 +22,10 @@ pieces match. The tile borders are made seam-free in two ways:
     plus rust and straw;
   - arena, torture, workshop: every layer is truly periodic (see training hall); the torture slabs and the
     workshop planks come from a wrapping row layout with warped joints.
+  - portal, portal wave: every layer is truly periodic (see training hall); slabs from a wrapping row layout with
+    hairline rune grooves (portal) or concentric wave grooves on the torus (portal wave);
+  - wooden bridge: the UV atlas WoodBridge.png is painted from scratch (one plank per mesh UV quad, nail heads,
+    dirt, cracks); the UV layout is read from models/WoodBridge.mesh, WoodBridgeMask.png is not touched.
 The room shader has no specular term, so only a diffuse texture and a matching tangent space normal map
 (red = -d height / dx, green = +d height / dy, image y pointing down) are written.
 
@@ -956,6 +960,236 @@ def workshop_field():
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# portal, portal wave (F2 batch 5): every layer is truly periodic; the wooden bridge atlas follows below
+
+PORTAL_STONE = np.array([0.182, 0.172, 0.208])
+WAVE_STONE = np.array([0.194, 0.212, 0.248])
+
+
+def rune_layer(seed, count, glyph, width):
+    """Hairline rune glyphs: a stem plus a few short straight strokes (horizontal, vertical, diagonal) inside a
+    small box."""
+    rng = np.random.RandomState(seed)
+    layer = Layer()
+    for _ in range(count):
+        cx, cy = rng.uniform(0, N), rng.uniform(0, N)
+        half = glyph * rng.uniform(0.7, 1.1)
+        pts = [(rng.randint(0, 3) - 1, rng.randint(0, 3) - 1) for _ in range(rng.randint(3, 6))]
+        if rng.randint(0, 2) == 0:
+            layer.line([(cx, cy - half), (cx, cy + half)], width, 255)
+        else:
+            layer.line([(cx - half, cy), (cx + half, cy)], width, 255)
+        for k in range(len(pts) - 1):
+            a, b = pts[k], pts[k + 1]
+            if a == b:
+                continue
+            layer.line([(cx + a[0] * half, cy + a[1] * half), (cx + b[0] * half, cy + b[1] * half)], width, 255)
+    return layer.result()
+
+
+def portal_field():
+    pid, dist, count = row_layout(1001, 3, 150, 270, 6.0, 1002)
+    rng = np.random.RandomState(1003)
+    tone = rng.uniform(0.84, 1.16, count)[pid]
+    hue = rng.uniform(-0.02, 0.02, count)[pid]
+    mottle = fbm(1004, 12.0, 12.0, 3)
+    grit = fbm(1005, 160.0, 160.0, 2)
+    col = PORTAL_STONE[None, None, :] * tone[..., None] + np.stack([hue * 0.6, -hue * 0.3, hue * 0.8], -1) * 0.4
+    col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
+    hgt = 0.5 * mottle + 0.4 * grit
+    # worn, smoother patches where the stone is walked
+    worn = smoothstep(0.3, 1.5, fbm(1006, 3.0, 3.0, 2))
+    col = col * (1.0 + 0.10 * worn)[..., None]
+    hgt = hgt * (1.0 - 0.4 * worn)
+    # dark grimy joints with a bevel
+    t = smoothstep(0.8, 3.0, dist)
+    col = mix(np.broadcast_to(np.array([0.045, 0.042, 0.058]), col.shape), col, t)
+    col = col * (0.86 + 0.14 * smoothstep(1.0, 6.0, dist))[..., None]
+    hgt = hgt * 0.7 + 2.4 * smoothstep(0.8, 5.0, dist)
+    # faint violet bloom in some patches
+    bloom = smoothstep(0.6, 1.8, fbm(1007, 4.5, 4.5, 3))
+    col = mix(col, col * np.array([1.08, 0.96, 1.22])[None, None, :], bloom * 0.6)
+    # hairline rune grooves: glyphs plus a few thin groove lines
+    runes = np.clip(blur(rune_layer(1008, 30, 13, 1.3), 0.5) * 1.4, 0.0, 1.0)
+    rng2 = np.random.RandomState(1009)
+    lines = Layer()
+    for _ in range(7):
+        x, y = rng2.uniform(0, N), rng2.uniform(0, N)
+        ang = rng2.choice([0.0, np.pi / 2, np.pi / 4, -np.pi / 4]) + rng2.uniform(-0.04, 0.04)
+        length = rng2.uniform(60, 140)
+        lines.line([(x, y), (x + np.cos(ang) * length, y + np.sin(ang) * length)], 1.2, 255)
+    lm = np.clip(blur(lines.result(), 0.5) * 1.4, 0.0, 1.0)
+    groove = np.clip(runes + lm * 0.8, 0.0, 1.0)
+    col = mix(col, np.array([0.06, 0.045, 0.085])[None, None, :], groove * 0.75)
+    col = mix(col, col * np.array([1.0, 0.95, 1.35])[None, None, :], blur(groove, 1.6) * 0.35)
+    hgt = hgt - 2.6 * groove
+    return col, hgt
+
+
+def portal_wave_field():
+    pid, dist, count = row_layout(1101, 7, 70, 150, 3.0, 1102)
+    rng = np.random.RandomState(1103)
+    tone = rng.uniform(0.80, 1.18, count)[pid]
+    hue = rng.uniform(-0.02, 0.02, count)[pid]
+    mottle = fbm(1104, 16.0, 16.0, 3)
+    grit = fbm(1105, 190.0, 190.0, 2)
+    col = WAVE_STONE[None, None, :] * tone[..., None] + np.stack([-hue * 0.5, hue * 0.2, hue * 0.6], -1) * 0.4
+    col = col * (1.0 + 0.11 * mottle + 0.08 * grit)[..., None]
+    hgt = 0.55 * mottle + 0.4 * grit
+    # damp, cooler patches
+    damp = smoothstep(0.2, 1.4, fbm(1106, 3.5, 3.5, 3))
+    col = col * (1.0 - 0.15 * damp)[..., None] * np.array([0.97, 1.0, 1.05])[None, None, :]
+    # dark joints
+    t = smoothstep(0.7, 2.8, dist)
+    col = mix(np.broadcast_to(np.array([0.035, 0.042, 0.055]), col.shape), col, t)
+    col = col * (0.85 + 0.15 * smoothstep(1.0, 5.0, dist))[..., None]
+    hgt = hgt * 0.7 + 2.2 * smoothstep(0.7, 4.5, dist)
+    # concentric wave grooves around the tile centre (distance on the torus, so the pattern is periodic), warped
+    # by noise and broken into arcs
+    dx = wrap_dist(_XX + 0.0, N / 2.0)
+    dy = wrap_dist(_YY + 0.0, N / 2.0)
+    radius = np.sqrt(dx ** 2 + dy ** 2) + 3.0 * fbm(1107, 3.0, 3.0, 2)
+    phase = radius / 32.0
+    ring = np.abs(phase - np.round(phase)) * 32.0
+    groove = 1.0 - smoothstep(0.8, 2.6, ring)
+    arcs = smoothstep(-0.4, 0.5, fbm(1108, 2.5, 2.5, 2))
+    groove = np.clip(groove * arcs, 0.0, 1.0)
+    col = mix(col, np.array([0.05, 0.065, 0.095])[None, None, :], groove * 0.8)
+    col = mix(col, col * np.array([0.95, 1.05, 1.30])[None, None, :], blur(groove, 2.0) * 0.30)
+    hgt = hgt - 2.0 * groove
+    return col, hgt
+
+
+# wooden bridge atlas -------------------------------------------------------------------------------------------
+
+def mesh_uv_triangles(mesh_path):
+    """Texture coordinates and triangle list of models/WoodBridge.mesh (OGRE binary mesh v1.8, one sub mesh, 48
+    byte vertices with the texture coordinates at offset 24, 16 bit indices)."""
+    import struct
+    with open(mesh_path, 'rb') as f:
+        data = f.read()
+    found = {}
+
+    def walk(pos, end):
+        end = min(end, len(data))  # the length of the mesh chunk is a little too large in this file
+        while pos + 6 <= end:
+            cid, ln = struct.unpack_from('<HI', data, pos)
+            body = pos + 6
+            if cid == 0x3000:
+                walk(body + 1, pos + ln)
+            elif cid == 0x5000:
+                found['count'], = struct.unpack_from('<I', data, body)
+                walk(body + 4, pos + ln)
+            elif cid == 0x5200:
+                walk(body + 4, pos + ln)
+            elif cid == 0x5210:
+                found['verts'] = np.frombuffer(data[body:body + found['count'] * 48], dtype='<f4').reshape(-1, 12)
+            elif cid == 0x4000:
+                e = data.index(b'\n', body) + 1
+                icount, = struct.unpack_from('<I', data, e + 1)
+                found['idx'] = np.frombuffer(data[e + 6:e + 6 + icount * 2], dtype='<u2').reshape(-1, 3)
+            pos += ln
+
+    walk(24, len(data))
+    return found['verts'][:, 6:8].astype(float), found['idx']
+
+
+def id_map_grow(ids, steps):
+    """Fills the pixels with id 0 around the painted ones with the neighbouring id (steps pixels wide)."""
+    out = ids.copy()
+    for _ in range(steps):
+        empty = out == 0
+        pad = np.pad(out, 1)
+        best = np.zeros_like(out)
+        for oy in (0, 1, 2):
+            for ox in (0, 1, 2):
+                nb = pad[oy:oy + N, ox:ox + N]
+                best = np.where((best == 0) & (nb != 0), nb, best)
+        out = np.where(empty, best, out)
+    return out
+
+
+def bridge_atlas(mesh_path):
+    """Repaints the UV atlas of the wooden bridge. Every quad (two triangles) of the mesh is one plank; the
+    planks are painted on the pixels of the mesh UVs plus a 14 px padding (no texture filtering bleed), the rest
+    of the atlas is a neutral flat colour. Returns colour, height, painted zone and the pixels used by the UVs."""
+    uv, tris = mesh_uv_triangles(mesh_path)
+    ids_img = Image.new('I', (N, N), 0)
+    draw = ImageDraw.Draw(ids_img)
+    count = len(tris) // 2
+    boxes = np.zeros((count + 1, 4))
+    for i in range(count):
+        pts = uv[np.concatenate([tris[2 * i], tris[2 * i + 1]])] * N
+        boxes[i + 1] = (pts[:, 0].min(), pts[:, 1].min(), pts[:, 0].max(), pts[:, 1].max())
+        for tri in (tris[2 * i], tris[2 * i + 1]):
+            draw.polygon([(uv[k, 0] * N, uv[k, 1] * N) for k in tri], fill=i + 1)
+    ids = np.asarray(ids_img).astype(int)
+    covered = ids != 0
+    ids = id_map_grow(ids, 14)
+    zone = ids != 0
+    rng = np.random.RandomState(1201)
+    tone = rng.uniform(0.84, 1.16, count + 1)
+    hue = rng.uniform(-0.03, 0.03, count + 1)
+    off_y = rng.randint(0, N, count + 1)
+    off_x = rng.randint(0, N, count + 1)
+    yy = (_YY + off_y[ids]) % N
+    xx = (_XX + off_x[ids]) % N
+    ga = fbm(1202, 3.0, 70.0, 3)[yy, xx]
+    gb = fbm(1203, 2.0, 22.0, 3)[yy, xx]
+    grit = fbm(1204, 150.0, 150.0, 2)
+    base = np.array([0.435, 0.348, 0.283])
+    col = base[None, None, :] * tone[ids][..., None] + np.stack([hue[ids] * 0.6, hue[ids] * 0.2, -hue[ids] * 0.5], -1) * 0.5
+    # weathering: silvery grey streaks along the grain
+    silver = smoothstep(0.3, 1.6, gb)
+    col = mix(col, np.array([0.40, 0.375, 0.345])[None, None, :] * tone[ids][..., None], silver * 0.45)
+    col = col * (1.0 + 0.12 * ga + 0.05 * grit)[..., None]
+    hgt = 0.6 * ga + 0.3 * gb + 0.25 * grit
+    # dark joints at the plank border (bounding box of the quad)
+    edge = np.minimum(np.minimum(_YY - boxes[ids, 1], boxes[ids, 3] - _YY),
+                      np.minimum(_XX - boxes[ids, 0], boxes[ids, 2] - _XX))
+    t = smoothstep(0.2, 2.2, edge)
+    col = mix(np.broadcast_to(np.array([0.045, 0.036, 0.030]), col.shape), col, t)
+    col = col * (0.78 + 0.22 * smoothstep(1.0, 7.0, edge))[..., None]
+    hgt = hgt * 0.7 + 2.0 * smoothstep(0.2, 4.0, edge)
+    # dirt: dark brown blotches, more along the joints
+    dirt = smoothstep(0.2, 1.7, fbm(1205, 5.0, 5.0, 3)) * 0.5 + (1.0 - smoothstep(2.0, 10.0, edge)) * 0.35
+    col = mix(col, np.array([0.135, 0.105, 0.075])[None, None, :], np.clip(dirt, 0.0, 0.8) * 0.6)
+    # cracks along the grain
+    rng2 = np.random.RandomState(1206)
+    cracks = Layer()
+    for _ in range(40):
+        x, y = rng2.uniform(0, N), rng2.uniform(0, N)
+        length = rng2.uniform(30, 90)
+        cracks.line([(x, y), (x + length, y + rng2.uniform(-2, 2))], 1.2, 255)
+    cm = np.clip(blur(cracks.result(), 0.5) * 1.4, 0.0, 1.0) * 0.8
+    col = mix(col, np.array([0.08, 0.06, 0.045])[None, None, :], cm)
+    hgt = hgt - 1.5 * cm
+    # nail heads near both ends of the wide planks, with a rust streak running down
+    nails = Layer()
+    streak = Layer()
+    for i in range(1, count + 1):
+        w = boxes[i, 2] - boxes[i, 0]
+        h = boxes[i, 3] - boxes[i, 1]
+        if w < 60 or h < 14:
+            continue
+        sy = (boxes[i, 1] + boxes[i, 3]) * 0.5 + rng2.uniform(-h * 0.22, h * 0.22)
+        for sx in (boxes[i, 0] + 11.0, boxes[i, 2] - 11.0):
+            nails.ellipse(sx, sy, 2.6, 2.6, 0.0, 255)
+            streak.line([(sx, sy), (sx + rng2.uniform(-0.5, 0.5), sy + rng2.uniform(5, 11))], 1.6, 255)
+    nm = np.clip(blur(nails.result(), 0.5) * 1.4, 0.0, 1.0)
+    sm = np.clip(blur(streak.result(), 0.8) * 1.4, 0.0, 1.0)
+    rim = np.clip(blur(nm, 1.6) - nm, 0.0, 1.0)
+    col = mix(col, np.array([0.30, 0.24, 0.19])[None, None, :], np.clip(rim * 1.2, 0.0, 0.5))
+    col = mix(col, np.array([0.11, 0.07, 0.05])[None, None, :], sm * 0.45)
+    col = mix(col, np.array([0.055, 0.050, 0.048])[None, None, :], nm * 0.95)
+    hgt = hgt + 2.2 * nm - 0.6 * sm
+    # outside the painted zone: neutral dark grey-brown, flat normal
+    col = np.where(zone[..., None], col, np.array([0.20, 0.17, 0.15])[None, None, :])
+    hgt = np.where(zone, hgt, 0.0)
+    return col, hgt, zone, covered
+
+
+# ---------------------------------------------------------------------------------------------------------------
 
 ROOMS = {
     'dormitory': {
@@ -1014,6 +1248,15 @@ ROOMS = {
     'workshop': {
         'field': workshop_field, 'band': None, 'strength': 1.3,
         'pieces': {'WorkshopFloor': ('', 'WorkshopFloorNormal')},
+    },
+    'portal': {
+        # own file, Claimed.png / ClaimedMask.png (claimed ground, seat colour emblem mask) stay untouched
+        'field': portal_field, 'band': None, 'strength': 1.3,
+        'pieces': {'PortalFloor': ('', 'PortalFloorNormal')},
+    },
+    'portalWave': {
+        'field': portal_wave_field, 'band': None, 'strength': 1.3,
+        'pieces': {'PortalWaveFloor': ('', 'PortalWaveFloorNormal')},
     },
 }
 
@@ -1086,12 +1329,14 @@ def main():
     for a in sys.argv[1:]:
         if a.startswith('--seamcheck='):
             seam_dir = a.split('=', 1)[1]
-    seam_rooms = ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop') if seam_dir else ()
+    seam_rooms = ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop', 'portal',
+                  'portalWave') if seam_dir else ()
     for room in ROOMS:
         result, strength = build(room)
         if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('hatchery', 'dormitory', 'library')):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
-        if '--check' in sys.argv and room in ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop'):
+        if '--check' in sys.argv and room in ('hatchery', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop',
+                                                          'portal', 'portalWave'):
             print(room, 'wrap seam ratio (about 1 or less = no seam): %.2f' % wrap_check(result))
         if room in seam_rooms:
             seam_image(result).save(os.path.join(seam_dir, 'f2-%s-seamcheck.png' % room.lower()))
@@ -1100,6 +1345,14 @@ def main():
             if normal_name is not None:
                 to_image(normal_map(hgt, strength)).save(os.path.join(out, normal_name + '.png'), optimize=True)
             print(name, 'mean RGB', (col.reshape(-1, 3).mean(0) * 255).round().astype(int))
+    # wooden bridge atlas (repainted in place, the UV layout comes from the mesh)
+    col, hgt, zone, covered = bridge_atlas(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
+                                                        'models', 'WoodBridge.mesh'))
+    if '--check' in sys.argv:
+        print('WoodBridge painted zone %.1f %% of the atlas, mesh UV pixels %.1f %%' % (zone.mean() * 100, covered.mean() * 100))
+    to_image(col).convert('RGBA').save(os.path.join(out, 'WoodBridge.png'), optimize=True)
+    to_image(normal_map(hgt, 1.3)).convert('RGBA').save(os.path.join(out, 'WoodBridgeNormal.png'), optimize=True)
+    print('WoodBridge mean RGB of the UV pixels', (col[covered].mean(0) * 255).round().astype(int))
 
 
 if __name__ == '__main__':
