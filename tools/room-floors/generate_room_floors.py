@@ -116,11 +116,11 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
-    'library': (0.62, 0.95, (1.0, 1.0, 1.0)),
+    'library': (0.36, 0.72, (1.03, 0.96, 1.04)),
     'hatchery': (0.15, 0.72, (1.09, 1.00, 0.85)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
     'treasury': (1.00, 0.76, (0.93, 0.95, 1.06)),
-    'trainingHall': (0.30, 1.00, (1.03, 1.00, 0.98)),
+    'trainingHall': (0.50, 0.70, (1.06, 1.00, 0.88)),
     'casino': (0.22, 1.00, (1.02, 1.0, 0.99)),
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
@@ -607,12 +607,12 @@ CARPET = np.array([0.345, 0.168, 0.092])
 CARPET_DEEP = np.array([0.150, 0.072, 0.050])
 CARPET_RED = np.array([0.500, 0.205, 0.095])
 CARPET_SAND = np.array([0.400, 0.255, 0.140])
-BORDER = np.array([0.255, 0.108, 0.070])
-BORDER_DARK = np.array([0.150, 0.066, 0.046])
-BORDER_LIGHT = np.array([0.400, 0.190, 0.098])
-FRAME = np.array([0.400, 0.385, 0.350])
-FRAME_DARK = np.array([0.210, 0.200, 0.185])
-BORDER_W = 132.0
+BORDER = np.array([0.215, 0.085, 0.060])
+BORDER_DARK = np.array([0.120, 0.050, 0.038])
+BORDER_LIGHT = np.array([0.560, 0.340, 0.205])
+FRAME = np.array([0.520, 0.500, 0.455])
+FRAME_DARK = np.array([0.275, 0.260, 0.240])
+BORDER_W = 200.0
 FRAME_W = 16.0
 _CARPET_FINISH = []
 
@@ -693,26 +693,30 @@ def library_band(col, hgt, sides):
     depth = depth + 2.0 * fbm(91, 25.0, 25.0, 2)
     inner = depth - FRAME_W                                          # distance into the carpet border
     fa = (along % 32.0) - 16.0
+    fb = (along % 64.0) - 32.0
 
     def line(pos, hw):
         return 1.0 - smoothstep(hw, hw + 1.6, np.abs(inner - pos))
 
-    # ornamental stripes parallel to the edge: two thin light lines, a dark wide stripe with a chain of diamonds, a
-    # zig-zag line, and a dark line toward the field
-    stripe1 = line(10.0, 1.5)
-    stripe2 = line(17.0, 1.0)
-    dark = 1.0 - smoothstep(0.8, 2.0, np.abs(inner - 38.0) - 9.0)
-    chain = 1.0 - smoothstep(0.8, 2.2, np.abs(np.abs(fa) + np.abs(inner - 38.0) - 7.0) / 1.414)
-    zig = 1.0 - smoothstep(0.8, 2.0, np.abs((inner - 70.0) - (np.abs(fa) - 8.0)) / 1.414)
+    # ornamental stripes parallel to the edge: two light lines, a wide dark stripe with a chain of large diamonds (64 px
+    # period), a light line, a zig-zag line, and a dark line toward the field
+    stripe1 = line(14.0, 4.0)
+    stripe2 = line(30.0, 2.4)
+    dark = 1.0 - smoothstep(0.8, 2.0, np.abs(inner - 66.0) - 20.0)
+    chain = 1.0 - smoothstep(0.0, 2.0, (np.abs(fb) + np.abs(inner - 66.0) - 17.0) / 1.414)
+    core = 1.0 - smoothstep(0.0, 2.0, (np.abs(fb) + np.abs(inner - 66.0) - 6.0) / 1.414)
+    stripe3 = line(106.0, 3.4)
+    zig = 1.0 - smoothstep(1.6, 3.4, np.abs((inner - 132.0) - (np.abs(fa) - 8.0)) / 1.414)
     bcol = np.broadcast_to(BORDER, (N, N, 3)).copy()
-    bcol = mix(bcol, BORDER_DARK[None, None, :], dark * 0.75)
-    bcol = mix(bcol, BORDER_LIGHT[None, None, :], chain * 0.85)
-    bcol = mix(bcol, BORDER_LIGHT[None, None, :], np.clip(stripe1 + stripe2, 0, 1) * 0.75)
-    bcol = mix(bcol, BORDER_LIGHT[None, None, :] * 0.85, zig * 0.75)
-    bcol = mix(bcol, BORDER_DARK[None, None, :], line(BORDER_W - FRAME_W - 12.0, 2.0) * 0.8)
+    bcol = mix(bcol, BORDER_DARK[None, None, :], dark * 0.8)
+    bcol = mix(bcol, BORDER_LIGHT[None, None, :] * 0.92, chain * 0.9)
+    bcol = mix(bcol, BORDER_DARK[None, None, :], core * 0.85)
+    bcol = mix(bcol, BORDER_LIGHT[None, None, :], np.clip(stripe1 + stripe2 + stripe3, 0, 1) * 0.85)
+    bcol = mix(bcol, BORDER_LIGHT[None, None, :] * 0.9, zig * 0.8)
+    bcol = mix(bcol, BORDER_DARK[None, None, :], line(BORDER_W - FRAME_W - 14.0, 3.0) * 0.85)
     mult, bhgt = carpet_finish()
     bcol = bcol * mult[..., None]
-    hb = bhgt + 0.30 * np.clip(chain + stripe1 + stripe2 + zig * 0.8, 0, 1) - 0.15 * dark
+    hb = bhgt + 0.30 * np.clip(chain + stripe1 + stripe2 + stripe3 + zig * 0.8, 0, 1) - 0.15 * dark
     # stone frame between the wall and the carpet
     fcol = mix(np.broadcast_to(FRAME, (N, N, 3)).copy(), FRAME_DARK[None, None, :], 0.5 * np.clip(0.5 + 0.5 * fbm(92, 30.0, 30.0, 2), 0, 1))
     fcol = fcol * (0.92 + 0.08 * np.clip(fbm(93, 140.0, 140.0, 2), -1, 1))[..., None]
@@ -1303,8 +1307,8 @@ SAND_DARK = np.array([0.240, 0.200, 0.145])
 
 
 def training_hall_field():
-    """Warm, fine-grained ochre sand: two grain scales, a few small pebbles with a little shadow, a handful of
-    boot prints and drag marks. Everything is periodic (objects are drawn with all tile offsets)."""
+    """Warm, fine-grained ochre sand: two grain scales, a few small pebbles with a little shadow and some
+    drag marks. Everything is periodic (objects are drawn with all tile offsets)."""
     tone = fbm(401, 9.0, 9.0, 3)
     lump = fbm(402, 26.0, 26.0, 3)
     grain = fbm(403, 130.0, 130.0, 2)
@@ -1349,23 +1353,6 @@ def training_hall_field():
     scuff_m = np.clip(blur(scuff.result(), 1.3) * 1.3, 0.0, 1.0)
     col = mix(col, SAND_DARK[None, None, :] * (0.92 + 0.16 * grain[..., None]), scuff_m * 0.38)
     hgt = hgt - 0.8 * scuff_m
-    # boot prints: sole and heel pairs, pressed in with a slightly raised rim
-    prints = Layer()
-    centres = blue_noise_points(409, 2, 0)
-    for cx, cy in centres:
-        ang = rng.uniform(0, 2 * np.pi)
-        ca, sa = np.cos(ang), np.sin(ang)
-        for k in range(2):
-            side = (k - 0.5) * 24.0
-            stride = k * 18.0 - 9.0
-            px, py = cx - sa * side + ca * stride, cy + ca * side + sa * stride
-            prints.ellipse(px + ca * 15, py + sa * 15, 20, 11, ang, 255)
-            prints.ellipse(px - ca * 16, py - sa * 16, 10, 9, ang, 255)
-    pm = np.clip(blur(prints.result(), 0.9), 0.0, 1.0)
-    rim = np.clip(blur(prints.result(), 3.0) - pm * 0.6, 0.0, 1.0)
-    col = mix(col, SAND_DARK[None, None, :] * 0.85, pm * 0.42)
-    col = col * (1.0 + 0.05 * rim)[..., None]
-    hgt = hgt - 2.0 * pm + 0.6 * rim
     return col, hgt
 
 
