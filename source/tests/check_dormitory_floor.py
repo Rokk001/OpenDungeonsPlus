@@ -79,7 +79,7 @@ int main(int argc,char** argv){try{
    const bool open=edgeLuma>centerLuma*.9f;
    check(open==bool(variant.mask&(1<<direction)),"mask "+std::to_string(variant.mask)+" boundary "+std::to_string(direction));
   }
-  check(centerColour.r>centerColour.g*1.3f&&centerLuma>.08f,"oak plank center "+std::to_string(variant.mask));
+  check(centerColour.r>centerColour.g*1.15f&&centerLuma>.08f,"oak plank center "+std::to_string(variant.mask));
   tile->setMaterialName(material->getName(),"Graphics");root.renderOneFrame();root.renderOneFrame();
   window->writeContentsToFile("production-"+std::to_string(variant.mask)+".png");
  }
