@@ -31,6 +31,7 @@
 
 #include <CEGUI/widgets/Listbox.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
+#include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/Window.h>
 
 #include <algorithm>
