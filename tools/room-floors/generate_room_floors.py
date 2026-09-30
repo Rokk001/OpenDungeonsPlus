@@ -14,8 +14,10 @@ pieces match. The tile borders are made seam-free in two ways:
   - hatchery, training hall, casino, prison: every layer is truly periodic (FFT noise on a wrapping grid, loose
     objects are drawn with all tile offsets so they continue on the opposite side), so there is no border band at
     all; the seamless wrap is checked with --check and --seamcheck (texture rolled by half a tile);
-  - dungeon temple and treasury: irregular slabs (random rectangle subdivision) inside a gap that runs along
+  - dungeon temple: irregular slabs (random rectangle subdivision) inside a gap that runs along
     the tile border, so nothing but the constant gap colour touches the border;
+  - treasury: marble checkerboard, 4x4 squares per tile with grout along the tile border, four variants; the arena
+    uses the former treasury flagstones;
   - dungeon temple, open hatchery piece: four variants each (the temple's ember cracks and the hatchery's straw
     clumps stay away from the tile border, the rest is one shared periodic base), picked at random per tile
     through [oneOf] in config/tilesets.cfg, so no motif repeats from tile to tile;
@@ -118,9 +120,8 @@ TONE = {
     'hatchery': (0.15, 0.72, (1.09, 1.00, 0.85)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
     'treasury': (1.00, 0.76, (0.93, 0.95, 1.06)),
-    'trainingHall': (0.30, 0.72, (0.96, 1.00, 1.03)),
+    'trainingHall': (0.30, 1.00, (1.03, 1.00, 0.98)),
     'casino': (0.25, 1.05, (1.10, 0.97, 0.94)),
-    'arena': (0.25, 0.82, (1.03, 1.00, 0.94)),
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
 }
@@ -133,7 +134,7 @@ TONE = {
 FLATTEN = {
     'library': (48.0, 0.5), 'dormitory': (48.0, 0.6),
     'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'casino': (48.0, 0.7), 'prison': (40.0, 0.8),
-    'arena': (48.0, 0.8), 'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
+    'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
     'portalWave': (48.0, 0.7),
 }
 
@@ -934,9 +935,10 @@ def temple_field(variant=0):
     return col, hgt
 
 
-def treasury_field():
+def flagstone_field():
     """Cold grey flagstones as irregular crazy paving (no grid, no joints along the tile border; the whole
-    texture wraps, so it needs the same rotation on every tile: see [treasuryRoom] in config/tilesets.cfg)."""
+    texture wraps, so it needs the same rotation on every tile: see [arenaRoom] in config/tilesets.cfg). This was
+    the treasury floor until the checkerboard came back; the arena uses it now, unchanged."""
     idx, edge, off = voronoi_slabs(411, 22, 30.0, 2.5, 413)
     rng = np.random.RandomState(412)
     count = 22
@@ -975,6 +977,146 @@ def git_source(path, commit):
     root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
     data = subprocess.check_output(['git', 'show', '%s:%s' % (commit, path)], cwd=root)
     return Image.open(io.BytesIO(data)).convert('RGB')
+
+
+# treasury: marble checkerboard (dark slate and light grey-white squares, dark grout), four variants
+
+CHK = 4                      # squares per tile and axis (even, so the checker continues across tiles)
+SQ = N // CHK
+MARBLE_DARK = np.array([0.056, 0.060, 0.074])
+MARBLE_LIGHT = np.array([0.282, 0.290, 0.312])
+CHECK_GROUT = np.array([0.018, 0.018, 0.021])
+GROUT_HALF = 3.4             # half width of the grout in px; the grout lines run along the tile border
+_SQ_PX = ((_XX + 0.5) % SQ) - SQ / 2.0     # position inside the square (centre 0)
+_SQ_PY = ((_YY + 0.5) % SQ) - SQ / 2.0
+_SQ_I = ((_XX // SQ) % CHK).astype(int)
+_SQ_J = ((_YY // SQ) % CHK).astype(int)
+
+
+def square_sdf():
+    """Signed distance (px, negative inside) to the rounded square of every checker cell."""
+    half = SQ / 2.0 - GROUT_HALF
+    radius = 7.0
+    qx = np.abs(_SQ_PX) - (half - radius)
+    qy = np.abs(_SQ_PY) - (half - radius)
+    return np.hypot(np.maximum(qx, 0.0), np.maximum(qy, 0.0)) + np.minimum(np.maximum(qx, qy), 0.0) - radius
+
+
+def shear(field, k):
+    """Shears a periodic field by whole pixels per column (y + k * x), which keeps it periodic: horizontal streaks
+    become diagonal ones."""
+    return field[(_YY + k * _XX) % N, _XX]
+
+
+def blob(layer, rng, cx, cy, radius, squash=0.7):
+    layer.ellipse(cx, cy, radius, radius * squash, rng.uniform(0, np.pi), 255)
+
+
+def treasury_field(variant=0):
+    """Marble checkerboard modelled on the original treasury floor: 4x4 squares per tile, even brightness per
+    colour, dark grout. The grout and the square outlines are the same in all variants; veining, dirt, stains,
+    scratches and chips are drawn inside the squares only, so a tile border is always just grout and the variants
+    (picked at random per tile through [oneOf]) fit next to each other. Every tile has an even number of squares,
+    so the checker continues across tile borders with the same phase."""
+    sdf = square_sdf()
+    inside = 1.0 - smoothstep(-1.0, 0.8, sdf)
+    depth = np.clip(-sdf, 0.0, None)
+    rng = np.random.RandomState(810 + variant * 37)
+    seed = 820 + variant * 40
+    dark_sq = ((_SQ_I + _SQ_J) % 2 == 0)
+    dk = dark_sq[..., None]
+    sq_tone = rng.uniform(-0.025, 0.025, (CHK, CHK))[_SQ_J, _SQ_I]
+    sq_vein = rng.uniform(0.6, 1.2, (CHK, CHK))[_SQ_J, _SQ_I]
+    base = np.where(dk, MARBLE_DARK[None, None, :], MARBLE_LIGHT[None, None, :])
+    cloud = fbm(seed + 1, 4.0, 4.0, 3)
+    grain = fbm(seed + 2, 150.0, 150.0, 2)
+    fine = fbm(seed + 3, 60.0, 60.0, 2)
+    col = base * (1.0 + sq_tone + np.where(dark_sq, 0.14, 0.07) * cloud + 0.035 * grain + 0.02 * fine)[..., None]
+    hgt = 0.12 * cloud + 0.10 * grain
+    # marble veins: warped ridge lines, grey on the light marble, pale on the dark marble
+    wx = fbm(seed + 4, 2.5, 2.5, 2)
+    v1 = shear(fbm(seed + 5, 2.6, 2.6, 3), 1) + 0.30 * wx
+    v2 = shear(fbm(seed + 6, 4.0, 4.0, 3), -1) + 0.15 * wx
+    v3 = fbm(seed + 7, 13.0, 13.0, 2)
+    main = np.exp(-(v1 / 0.17) ** 2)
+    side = np.exp(-(v2 / 0.12) ** 2) * 0.55
+    hair = np.exp(-(v3 / 0.06) ** 2) * 0.25
+    veins = np.clip(main + side + hair, 0.0, 1.0) * sq_vein
+    vein_fade = smoothstep(3.0, 16.0, depth)
+    vein_col = np.where(dk, np.array([0.17, 0.172, 0.185])[None, None, :], np.array([0.14, 0.142, 0.150])[None, None, :])
+    vein_amt = np.where(dark_sq, 0.50, 0.55) * veins * vein_fade
+    col = mix(col, vein_col, vein_amt)
+    # soft light cloudiness in the light marble (toned down, no bright patches)
+    pale = smoothstep(0.6, 1.9, fbm(seed + 8, 3.0, 3.0, 2)) * vein_fade
+    col = col + (np.where(dark_sq, 0.0, 1.0) * pale * 0.05)[..., None]
+    hgt = hgt - 0.35 * veins * vein_fade
+    # dirt: grime gathers along the edges of the squares, irregular
+    grime_n = smoothstep(-0.3, 1.4, fbm(seed + 9, 9.0, 9.0, 3))
+    grime = (1.0 - smoothstep(0.0, 14.0, depth)) * grime_n
+    col = col * (1.0 - 0.34 * grime)[..., None]
+    col = col * (0.88 + 0.12 * smoothstep(0.0, 6.0, depth))[..., None]
+    # broad dusty wear
+    dust = smoothstep(0.5, 1.8, fbm(seed + 10, 5.0, 5.0, 3)) * 0.14
+    col = mix(col, np.array([0.17, 0.165, 0.155])[None, None, :] * np.where(dk, 0.55, 1.0), dust)
+    # stains: soft irregular blotches, only a few, never the same spot (random per variant)
+    stain = Layer()
+    tint = Layer()
+    for _ in range(5):
+        i, j = rng.randint(0, CHK, 2)
+        blob(stain, rng, i * SQ + SQ / 2.0 + rng.uniform(-38, 38), j * SQ + SQ / 2.0 + rng.uniform(-38, 38),
+             rng.uniform(9, 22))
+    for _ in range(2):
+        i, j = rng.randint(0, CHK, 2)
+        blob(tint, rng, i * SQ + SQ / 2.0 + rng.uniform(-36, 36), j * SQ + SQ / 2.0 + rng.uniform(-36, 36),
+             rng.uniform(5, 10), 0.8)
+    sm = np.clip(blur(stain.result(), 5.0) * 2.2, 0.0, 1.0) * (0.55 + 0.45 * smoothstep(-0.6, 0.8, fbm(seed + 11, 10.0, 10.0, 2)))
+    sm = sm * smoothstep(4.0, 12.0, depth)
+    col = mix(col, np.where(dk, np.array([0.105, 0.098, 0.090])[None, None, :], np.array([0.185, 0.160, 0.130])[None, None, :]),
+              sm * 0.42)
+    tm = np.clip(blur(tint.result(), 3.0) * 2.0, 0.0, 1.0) * smoothstep(4.0, 12.0, depth)
+    col = mix(col, np.array([0.205, 0.120, 0.070])[None, None, :] * np.where(dk, 0.6, 1.0), tm * 0.28)
+    # scratches and scuffs: a few short pale lines
+    scr = Layer()
+    for _ in range(9):
+        i, j = rng.randint(0, CHK, 2)
+        x, y = i * SQ + SQ / 2.0 + rng.uniform(-30, 30), j * SQ + SQ / 2.0 + rng.uniform(-30, 30)
+        ang = rng.uniform(0, 2 * np.pi)
+        ln = rng.uniform(12, 34)
+        scr.line([(x, y), (x + np.cos(ang) * ln, y + np.sin(ang) * ln)], rng.uniform(0.8, 1.4), 255)
+    scm = np.clip(blur(scr.result(), 0.6) * 1.4, 0.0, 1.0) * smoothstep(5.0, 12.0, depth)
+    col = mix(col, np.array([0.17, 0.17, 0.175])[None, None, :], scm * 0.35)
+    hgt = hgt - 0.6 * scm
+    # hairline cracks inside a square
+    crk = Layer()
+    for _ in range(2):
+        i, j = rng.randint(0, CHK, 2)
+        x, y = i * SQ + SQ / 2.0 + rng.uniform(-20, 20), j * SQ + SQ / 2.0 + rng.uniform(-20, 20)
+        ang = rng.uniform(0, 2 * np.pi)
+        pts = [(x, y)]
+        for _ in range(7):
+            ang += rng.uniform(-0.6, 0.6)
+            x, y = x + np.cos(ang) * 9.0, y + np.sin(ang) * 9.0
+            pts.append((x, y))
+        crk.line(pts, 1.1, 255)
+    cm = np.clip(blur(crk.result(), 0.6) * 1.3, 0.0, 1.0) * smoothstep(5.0, 12.0, depth)
+    col = col * (1.0 - 0.5 * cm)[..., None]
+    hgt = hgt - 0.8 * cm
+    # chipped corners at the inner grout crossings
+    chip = Layer()
+    for _ in range(2):
+        a, b = rng.randint(1, CHK, 2)
+        sx, sy = rng.choice([-1, 1], 2)
+        blob(chip, rng, a * SQ + sx * (GROUT_HALF + 2.0), b * SQ + sy * (GROUT_HALF + 2.0), rng.uniform(4, 7), 0.8)
+    chm = np.clip(blur(chip.result(), 0.7) * 1.4, 0.0, 1.0)
+    col = mix(col, CHECK_GROUT[None, None, :] * 1.5, chm * 0.85 * inside)
+    hgt = hgt - 1.2 * chm
+    # grout (shared by all variants) and the raised, slightly bevelled squares
+    gn = fbm(880, 60.0, 60.0, 2)
+    grout = CHECK_GROUT[None, None, :] * (1.0 + 0.25 * gn[..., None])
+    col = mix(np.broadcast_to(grout, col.shape), col, inside)
+    bevel = smoothstep(0.0, 6.0, depth)
+    hgt = hgt * 0.6 + 2.2 * bevel - 1.0 * (1.0 - inside)
+    return col, hgt
 
 
 # crypt: the original cobbles, darkened, with moss and lichen in the joints and a few cracks
@@ -1043,60 +1185,74 @@ class Layer(object):
         return np.asarray(self.img.resize((N, N), Image.BOX)).astype(float) / 255.0
 
 
-SAND = np.array([0.300, 0.284, 0.256])
-SAND_DARK = np.array([0.185, 0.172, 0.150])
+SAND = np.array([0.405, 0.335, 0.250])
+SAND_DARK = np.array([0.240, 0.200, 0.145])
 
 
 def training_hall_field():
-    tone = fbm(401, 12.0, 12.0, 3)
-    lump = fbm(402, 30.0, 30.0, 3)
-    grit = fbm(403, 170.0, 170.0, 2)
-    col = SAND[None, None, :] * (1.0 + 0.035 * tone[..., None] + 0.055 * lump[..., None] + 0.06 * grit[..., None])
-    hgt = 0.5 * lump + 0.35 * grit + 0.15 * tone
-    # pale sawdust flecks and dark damp grains
-    fleck = smoothstep(1.2, 2.2, fbm(404, 110.0, 110.0, 1))
-    col = mix(col, np.array([0.50, 0.47, 0.40])[None, None, :], fleck * 0.8)
-    damp = smoothstep(1.6, 2.5, fbm(405, 100.0, 100.0, 1))
-    col = mix(col, SAND_DARK[None, None, :], damp * 0.5)
+    """Warm, fine-grained ochre sand: two grain scales, a few small pebbles with a little shadow, a handful of
+    boot prints and drag marks. Everything is periodic (objects are drawn with all tile offsets)."""
+    tone = fbm(401, 9.0, 9.0, 3)
+    lump = fbm(402, 26.0, 26.0, 3)
+    grain = fbm(403, 130.0, 130.0, 2)
+    fine = fbm(408, 230.0, 230.0, 1)
+    ripple = fbm(410, 7.0, 46.0, 2)
+    col = SAND[None, None, :] * (1.0 + 0.03 * tone[..., None] + 0.03 * lump[..., None] + 0.075 * grain[..., None]
+                                 + 0.05 * fine[..., None])
+    hgt = 0.4 * lump + 0.26 * grain + 0.12 * fine + 0.08 * ripple + 0.12 * tone
+    # slightly paler dry patches and a few darker compacted ones
+    dry = smoothstep(0.6, 1.7, fbm(404, 5.0, 5.0, 2))
+    col = mix(col, np.array([0.47, 0.39, 0.265])[None, None, :], dry * 0.25)
     rng = np.random.RandomState(406)
-    # worn, compacted circles (darker, smoother)
-    worn = Layer()
-    for _ in range(16):
-        worn.ellipse(rng.uniform(0, N), rng.uniform(0, N), rng.uniform(28, 52), rng.uniform(26, 48),
-                     rng.uniform(0, np.pi), 255)
-    worn_m = np.clip(blur(worn.result(), 10.0), 0.0, 1.0)
-    worn_m = worn_m * (0.65 + 0.35 * smoothstep(-0.8, 0.8, fbm(407, 14.0, 14.0, 2)))
-    col = col * (1.0 - 0.09 * worn_m)[..., None]
-    hgt = mix(hgt, hgt * 0.4 - 0.3, worn_m)
-    # scuff marks: short curved drag lines
+    # small pebbles, light, mid and dark, each with a short shadow to the lower right
+    pebbles = [Layer(), Layer(), Layer()]
+    shadow = Layer()
+    for k in range(80):
+        r = rng.uniform(2.6, 5.4)
+        x, y = rng.uniform(0, N), rng.uniform(0, N)
+        ry = r * rng.uniform(0.65, 1.0)
+        a = rng.uniform(0, np.pi)
+        shadow.ellipse(x + 1.6, y + 1.8, r * 1.05, ry * 1.05, a, 255)
+        pebbles[(0, 0, 1, 1, 2)[k % 5]].ellipse(x, y, r, ry, a, 255)
+    sh = np.clip(blur(shadow.result(), 1.1) * 1.3, 0.0, 1.0)
+    col = col * (1.0 - 0.32 * sh)[..., None]
+    for lyr, rgb in zip(pebbles, (np.array([0.55, 0.48, 0.37]), np.array([0.36, 0.31, 0.25]), np.array([0.27, 0.23, 0.18]))):
+        m = np.clip(blur(lyr.result(), 0.55) * 1.4, 0.0, 1.0)
+        col = mix(col, rgb[None, None, :] * (0.92 + 0.16 * grain[..., None]), m * 0.85)
+        hgt = hgt + 2.0 * m
+    hgt = hgt - 0.8 * sh
+    # drag marks: short curved scuffs, soft
     scuff = Layer()
-    for _ in range(72):
+    for _ in range(16):
         x, y = rng.uniform(0, N), rng.uniform(0, N)
         ang = rng.uniform(0, 2 * np.pi)
         curve = rng.uniform(-0.05, 0.05)
-        length = rng.uniform(26, 70)
+        length = rng.uniform(40, 90)
         pts = []
         for t in np.linspace(0.0, 1.0, 10):
             a = ang + curve * t * length * 0.1
             pts.append((x + np.cos(a) * length * t, y + np.sin(a) * length * t))
-        scuff.line(pts, rng.uniform(1.6, 3.6), 255)
-    scuff_m = np.clip(blur(scuff.result(), 0.9) * 1.4, 0.0, 1.0)
-    col = mix(col, SAND_DARK[None, None, :] * (0.9 + 0.2 * grit[..., None]), scuff_m * 0.55)
-    hgt = hgt - 0.9 * scuff_m
-    # boot prints: sole and heel pairs
+        scuff.line(pts, rng.uniform(2.6, 4.6), 255)
+    scuff_m = np.clip(blur(scuff.result(), 1.3) * 1.3, 0.0, 1.0)
+    col = mix(col, SAND_DARK[None, None, :] * (0.92 + 0.16 * grain[..., None]), scuff_m * 0.38)
+    hgt = hgt - 0.8 * scuff_m
+    # boot prints: sole and heel pairs, pressed in with a slightly raised rim
     prints = Layer()
-    centres = blue_noise_points(409, 34, 0)
+    centres = blue_noise_points(409, 2, 0)
     for cx, cy in centres:
         ang = rng.uniform(0, 2 * np.pi)
         ca, sa = np.cos(ang), np.sin(ang)
         for k in range(2):
-            side = (k - 0.5) * 22.0
-            px, py = cx - sa * side, cy + ca * side
-            prints.ellipse(px + ca * 12, py + sa * 12, 15, 8.5, ang, 255)
-            prints.ellipse(px - ca * 12, py - sa * 12, 7.5, 7, ang, 255)
-    pm = np.clip(blur(prints.result(), 0.8), 0.0, 1.0)
-    col = mix(col, SAND_DARK[None, None, :] * 0.9, pm * 0.42)
-    hgt = hgt - 1.6 * pm
+            side = (k - 0.5) * 24.0
+            stride = k * 18.0 - 9.0
+            px, py = cx - sa * side + ca * stride, cy + ca * side + sa * stride
+            prints.ellipse(px + ca * 15, py + sa * 15, 20, 11, ang, 255)
+            prints.ellipse(px - ca * 16, py - sa * 16, 10, 9, ang, 255)
+    pm = np.clip(blur(prints.result(), 0.9), 0.0, 1.0)
+    rim = np.clip(blur(prints.result(), 3.0) - pm * 0.6, 0.0, 1.0)
+    col = mix(col, SAND_DARK[None, None, :] * 0.85, pm * 0.42)
+    col = col * (1.0 + 0.05 * rim)[..., None]
+    hgt = hgt - 2.0 * pm + 0.6 * rim
     return col, hgt
 
 
@@ -1230,66 +1386,6 @@ def row_layout(seed, rows, min_w, max_w, warp_amp, warp_seed):
         dist[mask] = np.minimum(dist[mask], dx)
         count += len(cuts)
     return pid, dist, count
-
-
-ARENA_SAND = np.array([0.345, 0.283, 0.212])
-BLOOD = np.array([0.240, 0.045, 0.035])
-
-
-def arena_field():
-    tone = fbm(701, 12.0, 12.0, 3)
-    lump = fbm(702, 24.0, 24.0, 3)
-    grit = fbm(703, 190.0, 190.0, 2)
-    col = ARENA_SAND[None, None, :] * (1.0 + 0.035 * tone[..., None] + 0.05 * lump[..., None] + 0.06 * grit[..., None])
-    hgt = 0.45 * lump + 0.4 * grit + 0.15 * tone
-    rng = np.random.RandomState(704)
-    # gravel: small pebbles, lighter and darker
-    light = Layer()
-    dark = Layer()
-    for k in range(1100):
-        r = rng.uniform(1.6, 4.6)
-        target = light if k % 2 == 0 else dark
-        target.ellipse(rng.uniform(0, N), rng.uniform(0, N), r, r * rng.uniform(0.6, 1.0), rng.uniform(0, np.pi), 255)
-    lm = np.clip(blur(light.result(), 0.5) * 1.3, 0.0, 1.0)
-    dm = np.clip(blur(dark.result(), 0.5) * 1.3, 0.0, 1.0)
-    col = mix(col, np.array([0.47, 0.39, 0.29])[None, None, :] * (0.9 + 0.2 * grit[..., None]), lm * 0.6)
-    col = mix(col, np.array([0.20, 0.15, 0.11])[None, None, :], dm * 0.6)
-    hgt = hgt + 1.3 * lm + 0.9 * dm
-    # raked / scratched grooves: groups of parallel lines
-    scratch = Layer()
-    for _ in range(24):
-        x, y = rng.uniform(0, N), rng.uniform(0, N)
-        ang = rng.uniform(0, 2 * np.pi)
-        curve = rng.uniform(-0.04, 0.04)
-        length = rng.uniform(60, 140)
-        for k in range(rng.randint(2, 5)):
-            off = (k - 1.0) * rng.uniform(5.0, 8.0)
-            pts = []
-            for t in np.linspace(0.0, 1.0, 12):
-                a = ang + curve * t * length * 0.1
-                pts.append((x - np.sin(ang) * off + np.cos(a) * length * t,
-                            y + np.cos(ang) * off + np.sin(a) * length * t))
-            scratch.line(pts, rng.uniform(1.4, 2.4), 255)
-    sm = np.clip(blur(scratch.result(), 0.8) * 1.3, 0.0, 1.0)
-    col = mix(col, np.array([0.19, 0.145, 0.105])[None, None, :], sm * 0.45)
-    hgt = hgt - 1.8 * sm
-    # worn, packed ground
-    worn = smoothstep(0.7, 1.8, fbm(705, 10.0, 10.0, 2))
-    col = col * (1.0 - 0.06 * worn)[..., None]
-    # blood: dark brown-red stains with a drying rim, plus a few drag smears
-    bn = fbm(706, 15.0, 15.0, 3)
-    stain = smoothstep(1.15, 1.45, bn)
-    rim = np.clip(1.0 - np.abs(bn - 1.15) / 0.1, 0.0, 1.0)
-    col = mix(col, BLOOD[None, None, :] * (0.85 + 0.3 * grit[..., None]), np.clip(stain * 0.6 + rim * 0.2, 0, 0.7))
-    hgt = hgt - 0.5 * stain
-    smear = Layer()
-    for _ in range(16):
-        x, y = rng.uniform(0, N), rng.uniform(0, N)
-        ang = rng.uniform(0, 2 * np.pi)
-        smear.line([(x, y), (x + np.cos(ang) * 40, y + np.sin(ang) * 40)], rng.uniform(4, 7), 255)
-    smm = np.clip(blur(smear.result(), 2.5) * 1.2, 0.0, 1.0)
-    col = mix(col, BLOOD[None, None, :] * 1.1, smm * 0.28)
-    return col, hgt
 
 
 SLAB = np.array([0.238, 0.196, 0.186])
@@ -1684,8 +1780,12 @@ ROOMS = {
                    'DungeonTempleFloorD': ('', 'DungeonTempleFloorDNormal')},
     },
     'treasury': {
-        'field': treasury_field, 'band': None, 'strength': 1.3,
-        'pieces': {'Treasury': ('', 'TreasuryNormal')},
+        # marble checkerboard, four variants (same grout and squares, different veining, dirt and stains), picked at
+        # random per tile through [oneOf] in config/tilesets.cfg; painted as is, no tone correction
+        'field': treasury_field, 'band': None, 'strength': 1.3, 'tone': None,
+        'variant_of': {'TreasuryFloorB': 1, 'TreasuryFloorC': 2, 'TreasuryFloorD': 3},
+        'pieces': {'Treasury': ('', 'TreasuryNormal'), 'TreasuryFloorB': ('', 'TreasuryFloorBNormal'),
+                   'TreasuryFloorC': ('', 'TreasuryFloorCNormal'), 'TreasuryFloorD': ('', 'TreasuryFloorDNormal')},
     },
     'crypt': {
         # the existing CryptNormal.png is kept
@@ -1706,8 +1806,9 @@ ROOMS = {
         'pieces': {'Prison': ('', None)},
     },
     'arena': {
-        # Arena.png is repainted in place: the pit meshes (ArenaLowered, ArenaFallOf) use the material Arena
-        'field': arena_field, 'band': None, 'strength': 1.3,
+        # Arena.png is repainted in place: the pit meshes (ArenaLowered, ArenaFallOf) use the material Arena. It shows
+        # the former treasury floor (irregular flagstones), painted with the treasury's tone correction
+        'field': flagstone_field, 'band': None, 'strength': 1.3, 'tone': 'treasury',
         'pieces': {'Arena': ('', 'ArenaNormal')},
     },
     'torture': {
@@ -1744,7 +1845,7 @@ def build(room):
         col, hgt = field_col.copy(), (field_hgt.copy() if field_hgt is not None else None)
         for side in sides:
             col, hgt = spec['band'](col, hgt, side)
-        result[name] = (tone(col, room), hgt, normal_name, sides)
+        result[name] = (tone(col, spec.get('tone', room)), hgt, normal_name, sides)
     return result, spec['strength']
 
 
