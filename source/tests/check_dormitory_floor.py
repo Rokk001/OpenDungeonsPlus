@@ -63,6 +63,10 @@ int main(int argc,char** argv){try{
   Ogre::Image image;image.create(Ogre::PF_BYTE_RGB,256,256);
   window->copyContentsToMemory(image.getPixelBox(),Ogre::RenderTarget::FB_FRONT);
   image.save("mask-"+std::to_string(variant.mask)+".png");
+  Ogre::ColourValue centerColour(0,0,0,0);
+  for(int along=96;along<160;++along)for(int across=96;across<160;++across)centerColour+=image.getColourAt(along,across,0);
+  centerColour=centerColour*(1.f/4096.f);
+  const float centerLuma=(centerColour.r+centerColour.g+centerColour.b)/3.f;
   for(int direction=0;direction<4;++direction){
    Ogre::ColourValue average(0,0,0,0);
    for(int along=96;along<160;++along){
@@ -70,11 +74,12 @@ int main(int argc,char** argv){try{
     if(direction==1||direction==3){x=direction==1?241:14;y=along;}
     average+=image.getColourAt(x,y,0);
    }
-   const bool carpet=average.r>average.g*1.65f;
-   check(carpet==bool(variant.mask&(1<<direction)),"mask "+std::to_string(variant.mask)+" boundary "+std::to_string(direction));
+   // Open sides continue the plank floor; exposed sides carry the darker wall-side band.
+   const float edgeLuma=(average.r+average.g+average.b)/3.f/64.f;
+   const bool open=edgeLuma>centerLuma*.9f;
+   check(open==bool(variant.mask&(1<<direction)),"mask "+std::to_string(variant.mask)+" boundary "+std::to_string(direction));
   }
-  const auto center=image.getColourAt(128,128,0);
-  check(center.r>center.g*1.65f&&center.r>.2f,"woven carpet center "+std::to_string(variant.mask));
+  check(centerColour.r>centerColour.g*1.3f&&centerLuma>.08f,"oak plank center "+std::to_string(variant.mask));
   tile->setMaterialName(material->getName(),"Graphics");root.renderOneFrame();root.renderOneFrame();
   window->writeContentsToFile("production-"+std::to_string(variant.mask)+".png");
  }
