@@ -1819,7 +1819,8 @@ namespace
 {
 const std::string DEFEAT_HEART_NODE = "DefeatHeart_node";
 const std::string DEFEAT_HEART_ENTITY = "DefeatHeart_entity";
-const std::string DEFEAT_HEART_MESH = "DungeonTempleObject.mesh";
+//! The destroyed heart has no health left, so it stood in its critical tier; the mesh includes the temple's pedestal
+const std::string DEFEAT_HEART_MESH = "DungeonHeartObjectCritical.mesh";
 const std::string DEFEAT_HEART_MATERIAL_PREFIX = "DefeatHeart_";
 const std::string DEFEAT_SHARD_MESH = "DefeatHeartShard";
 //! The heart's metal shell, so that the rubble reads as pieces of the heart

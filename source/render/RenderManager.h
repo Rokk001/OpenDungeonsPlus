@@ -192,7 +192,7 @@ public:
     void rrMoveFreeParticleEffect(const std::string& effectName, const Ogre::Vector3& position);
     void rrDestroyFreeParticleEffect(const std::string& effectName);
     //! Client-only copy of the dungeon heart for the defeat sequence (the server has already removed the
-    //! real heart object), placed like the real one: DungeonTempleObject mesh on the floor, no turn, scale 1.
+    //! real heart object), placed like the real one: critical-tier heart mesh (with the temple's pedestal) on the floor, no turn, scale 1.
     //! Its materials are clones, so that its core can glow without changing other hearts.
     void rrCreateDefeatHeart(const Ogre::Vector3& position);
     //! Moves and scales the copy; glow 0 is its normal look, 1 the hottest red
