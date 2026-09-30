@@ -756,61 +756,120 @@ def voronoi_slabs(seed, count, weight_amp, warp_amp, warp_seed):
     return idx, (d2 - d1) * 0.5, off
 
 
-def ember_cracks(seed, count, margin):
-    """A few long, irregular ember cracks as wrapping masks (core, halo). Every crack is a slightly wandering line
-    (two random sine waves as lateral offset) that stays `margin` px away from the tile border and tapers out at
-    both ends, so nothing touches the border (the variants of the temple floor differ only here and still match at
-    every border); the heat (brightness) varies along the crack and some stretches go cold (no glow)."""
+def route_joints(dd, a, b, lo, hi):
+    """Cheapest 8-connected path from a to b (x, y pixels) that prefers the slab joints (small distance `dd` to the
+    nearest slab edge), confined to the square lo..hi (A* with a straight-line heuristic)."""
+    import heapq
+    x0, x1 = max(lo, int(min(a[0], b[0])) - 60), min(hi, int(max(a[0], b[0])) + 60)
+    y0, y1 = max(lo, int(min(a[1], b[1])) - 60), min(hi, int(max(a[1], b[1])) + 60)
+    cost = (1.0 + 0.9 * np.minimum(dd[y0:y1 + 1, x0:x1 + 1], 12.0)).tolist()
+    w = x1 - x0 + 1
+    start, goal = (int(a[0]) - x0, int(a[1]) - y0), (int(b[0]) - x0, int(b[1]) - y0)
+    best = {start: 0.0}
+    prev = {}
+    heap = [(0.0, start)]
+    steps = [(1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0), (1, 1, 1.414), (-1, 1, 1.414), (1, -1, 1.414),
+             (-1, -1, 1.414)]
+    while heap:
+        f, cur = heapq.heappop(heap)
+        if cur == goal:
+            break
+        g = best[cur]
+        if f - np.hypot(goal[0] - cur[0], goal[1] - cur[1]) > g + 1e-6:
+            continue
+        for sx, sy, sl in steps:
+            nx, ny = cur[0] + sx, cur[1] + sy
+            if nx < 0 or ny < 0 or nx >= w or ny > y1 - y0:
+                continue
+            ng = g + sl * cost[ny][nx]
+            if ng < best.get((nx, ny), 1e18):
+                best[(nx, ny)] = ng
+                prev[(nx, ny)] = cur
+                heapq.heappush(heap, (ng + np.hypot(goal[0] - nx, goal[1] - ny), (nx, ny)))
+    path = [goal]
+    while path[-1] != start:
+        path.append(prev[path[-1]])
+    path.reverse()
+    pts = np.array([(x + x0, y + y0) for x, y in path], dtype=float)
+    k = 4  # smooth the pixel staircase, keep the ends
+    sm = pts.copy()
+    for i in range(len(pts)):
+        j0, j1 = max(0, i - k), min(len(pts), i + k + 1)
+        sm[i] = pts[j0:j1].mean(axis=0)
+    sm[0], sm[-1] = pts[0], pts[-1]
+    return [tuple(p) for p in sm[::4]] + [tuple(sm[-1])]
+
+
+def joint_cracks(dd, seed, plan, margin):
+    """Long glowing cracks that follow the slab joints (masks core, halo, hot as wrapping arrays). `plan` is a list of
+    (length, branches); every crack is routed along the joint net between two points about `length` px apart, so it
+    meanders from slab edge to slab edge like a real crack, tapers out at both ends, has cold (dark) stretches and a
+    few short branches. Nothing gets closer than `margin` px to the tile border, so all variants match at every
+    border."""
     rng = np.random.RandomState(seed)
     core = Layer()
     halo = Layer()
     hot = Layer()
+    lo, hi = margin, N - 1 - margin
 
-    def crack(cx, cy, ang, length, wander, wmax, heat0):
-        n = int(length / 9.0)
-        ts = np.linspace(-0.5, 0.5, n + 1)
-        ph = rng.uniform(0, 6.28, 2)
-        fr = rng.uniform(1.6, 3.4, 2)
-        pts = []
-        for t in ts:
-            off = wander * (np.sin(ph[0] + fr[0] * 6.28 * t) + 0.5 * np.sin(ph[1] + fr[1] * 6.28 * t))
-            al = t * length
-            pts.append((cx + np.cos(ang) * al - np.sin(ang) * off, cy + np.sin(ang) * al + np.cos(ang) * off))
+    def snap(x, y):
+        x, y = int(np.clip(x, lo, hi)), int(np.clip(y, lo, hi))
+        x0, y0 = max(lo, x - 8), max(lo, y - 8)
+        patch = dd[y0:min(hi, y + 8) + 1, x0:min(hi, x + 8) + 1]
+        iy, ix = np.unravel_index(np.argmin(patch), patch.shape)
+        return (x0 + ix, y0 + iy)
+
+    def draw(pts, wmax, heat0):
+        # jagged like a real fracture: small sideways jitter on every vertex (none at the ends)
+        jit = np.convolve(rng.normal(0.0, 1.6, len(pts)), [0.25, 0.5, 0.25], mode='same')
+        jit[0] = jit[-1] = 0.0
+        jp = []
+        for i, (x, y) in enumerate(pts):
+            j0, j1 = pts[max(0, i - 1)], pts[min(len(pts) - 1, i + 1)]
+            tg = np.arctan2(j1[1] - j0[1], j1[0] - j0[0])
+            jp.append((x - np.sin(tg) * jit[i], y + np.cos(tg) * jit[i]))
+        pts = jp
+        n = len(pts) - 1
         phase = rng.uniform(0, 6.28)
+        cold = rng.uniform(0, 6.28)
+        wob = rng.uniform(0.75, 1.25, n)
         for i in range(n):
             u = (i + 0.5) / n
-            taper = np.sin(np.pi * u) ** 0.6
-            heat = np.clip(heat0 * (0.6 + 0.4 * np.sin(phase + u * 7.0)) * (0.3 + 0.7 * taper), 0.0, 1.0)
+            taper = np.sin(np.pi * u) ** 0.5
+            heat = heat0 * (0.72 + 0.28 * np.sin(phase + u * 6.0)) * (0.35 + 0.65 * taper)
+            heat *= 1.0 - 0.9 * smoothstep(0.6, 0.95, np.sin(cold + u * 7.0))  # dims towards cold stretches
             if heat < 0.15:
-                continue  # cold stretch: only the dark hairline of the stone
-            w = 4.6 + wmax * taper
+                continue  # cold stretch: only the dark joint of the stone
+            w = (2.4 + wmax * taper) * wob[i]
             core.line([pts[i], pts[i + 1]], w, int(255 * heat))
-            hot.line([pts[i], pts[i + 1]], w * 0.42, int(255 * heat))
-            halo.line([pts[i], pts[i + 1]], w + 20.0, int(255 * heat))
-        return pts
+            hot.line([pts[i], pts[i + 1]], w * 0.45, int(255 * heat))
+            halo.line([pts[i], pts[i + 1]], w + 13.0, int(255 * heat))
 
-    def fits(cx, cy, ang, length):
-        ex, ey = abs(np.cos(ang)) * length / 2.0, abs(np.sin(ang)) * length / 2.0
-        return margin + ex + 20 < cx < N - margin - ex - 20 and margin + ey + 20 < cy < N - margin - ey - 20
-
-    for _ in range(count):
-        for _ in range(200):
-            length = rng.uniform(210, 300)
-            ang = rng.uniform(0, np.pi)
-            cx, cy = rng.uniform(margin, N - margin, 2)
-            if fits(cx, cy, ang, length):
+    for length, branches in plan:
+        pts = None
+        for _ in range(300):
+            ang = rng.uniform(0, 2.0 * np.pi)
+            sx, sy = rng.uniform(lo, hi, 2)
+            ex, ey = sx + np.cos(ang) * length, sy + np.sin(ang) * length
+            if lo <= ex <= hi and lo <= ey <= hi:
+                pts = route_joints(dd, snap(sx, sy), snap(ex, ey), lo, hi)
                 break
-        pts = crack(cx, cy, ang, length, rng.uniform(8, 15), 4.4, rng.uniform(0.9, 1.0))
-        for _ in range(rng.randint(1, 3)):
+        if pts is None:
+            continue
+        draw(pts, 3.0, rng.uniform(0.85, 1.0))
+        for _ in range(branches):
             k = rng.randint(len(pts) // 4, 3 * len(pts) // 4)
-            bl = rng.uniform(50, 90)
-            ba = ang + rng.choice([-1.0, 1.0]) * rng.uniform(0.4, 0.9)
-            bx = pts[k][0] + np.cos(ba) * bl / 2.0
-            by = pts[k][1] + np.sin(ba) * bl / 2.0
-            if fits(bx, by, ba, bl):
-                crack(bx, by, ba, bl, 3.0, 2.4, rng.uniform(0.7, 0.9))
-    return (np.clip(blur(core.result(), 1.2) * 1.5, 0.0, 1.0), np.clip(blur(halo.result(), 9.0) * 2.2, 0.0, 1.0),
-            np.clip(blur(hot.result(), 1.0) * 1.5, 0.0, 1.0))
+            tang = np.arctan2(pts[k + 1][1] - pts[k - 1][1], pts[k + 1][0] - pts[k - 1][0])
+            for _ in range(40):
+                ba = tang + rng.choice([-1.0, 1.0]) * rng.uniform(0.6, 1.2)
+                bl = rng.uniform(70, 120)
+                tx, ty = pts[k][0] + np.cos(ba) * bl, pts[k][1] + np.sin(ba) * bl
+                if lo <= tx <= hi and lo <= ty <= hi:
+                    bp = route_joints(dd, snap(*pts[k]), snap(tx, ty), lo, hi)
+                    draw(bp, 1.6, rng.uniform(0.7, 0.85))
+                    break
+    return (np.clip(blur(core.result(), 1.0) * 1.5, 0.0, 1.0), np.clip(blur(halo.result(), 8.0) * 2.0, 0.0, 1.0),
+            np.clip(blur(hot.result(), 0.9) * 1.5, 0.0, 1.0))
 
 
 _TEMPLE_BASE = []
@@ -852,23 +911,20 @@ def temple_base():
     return _TEMPLE_BASE[0]
 
 
+# (length, branches) of the glowing cracks of every variant; variants 1 and 3 have none, so whole stretches of floor stay cold
+TEMPLE_CRACKS = (((350, 1), (190, 0)), (), ((310, 2),), ())
+
+
 def temple_field(variant=0):
-    """Dark basalt with a few clearly glowing ember cracks and joint sections (the glow is painted into the diffuse
-    texture: the room shader has no emissive term): a bright hot core, an ember body and a soft red falloff, the
-    rest of the joints stays dark. Per tile 2-3 glowing features, so the heart stays the focal point. Nothing glows
+    """Dark basalt with a few long glowing cracks that follow the slab joints (the glow is painted into the diffuse
+    texture: the room shader has no emissive term): a thin hot core, an ember body and a soft red falloff, the
+    rest of the joints stays dark. Per tile 0-2 cracks (variants 1 and 3 have none), so the heart stays the focal point and
+    parts of the floor stay cold. Nothing glows
     near the tile border, so the four variants (`DungeonTempleFloor`, `...B`, `...C`, `...D`, picked at random per
     tile through [oneOf] in config/tilesets.cfg) differ only in these features and still match at every border;
     there is no tile-shaped motif. The whole texture wraps, so it needs the same rotation on every tile."""
     col, hgt, dd = temple_base()
-    cm, hm, tm = ember_cracks(440 + variant, (2, 1, 2, 1)[variant], 66)
-    # glowing stretches of the slab joints: a few irregular sections of the dark joint net
-    window = smoothstep(62.0, 84.0, _LO.astype(float))
-    sec = smoothstep(1.2, 1.7, fbm(460 + variant, 3.0, 3.0, 2)) * window
-    jc = (1.0 - smoothstep(1.4, 4.2, dd)) * sec
-    jh = (1.0 - smoothstep(0.0, 1.8, dd)) * sec
-    cm = np.maximum(cm, jc * 0.95)
-    tm = np.maximum(tm, jh * 0.9)
-    hm = np.maximum(hm, np.clip(blur(jc, 9.0) * 2.2, 0.0, 1.0))
+    cm, hm, tm = joint_cracks(dd, 440 + variant, TEMPLE_CRACKS[variant], 70)
     col = col + hm[..., None] * np.array([0.11, 0.014, 0.006])[None, None, :]
     ramp = mix(np.broadcast_to(EMBER_DEEP * 1.6, col.shape), np.broadcast_to(EMBER, col.shape),
                smoothstep(0.2, 0.6, cm))
