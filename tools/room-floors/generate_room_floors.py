@@ -111,8 +111,9 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
-    'hatchery': (0.20, 0.72, (1.06, 1.00, 0.90)),
-    'dormitory': (0.20, 1.00, (1.10, 1.00, 0.90)),
+    'hatchery': (0.28, 0.88, (1.10, 1.00, 0.86)),
+    'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
+    'treasury': (1.00, 0.76, (0.90, 0.95, 1.12)),
     'trainingHall': (0.80, 0.85, (0.98, 1.00, 1.06)),
     'casino': (0.25, 1.05, (1.10, 0.97, 0.94)),
     'arena': (0.32, 0.85, (1.00, 1.00, 0.95)),
@@ -145,10 +146,10 @@ class Sprites(object):
         self.cdraw = ImageDraw.Draw(self.colour)
         self.hdraw = ImageDraw.Draw(self.height)
 
-    def line(self, p0, p1, width, rgb, lift):
+    def line(self, p0, p1, width, rgb, lift, alpha=255):
         for ox, oy in self.offsets:
             pts = [((p0[0] + ox) * SUPER, (p0[1] + oy) * SUPER), ((p1[0] + ox) * SUPER, (p1[1] + oy) * SUPER)]
-            self.cdraw.line(pts, fill=tuple(int(c * 255) for c in rgb) + (255,), width=max(1, int(width * SUPER)))
+            self.cdraw.line(pts, fill=tuple(int(c * 255) for c in rgb) + (alpha,), width=max(1, int(width * SUPER)))
             self.hdraw.line(pts, fill=int(lift * 255), width=max(1, int(width * SUPER)))
 
     def polygon(self, pts, rgb, lift):
@@ -205,92 +206,175 @@ def overlay(col, hgt, sprites, height_gain):
 
 
 # ---------------------------------------------------------------------------------------------------------------
-# dormitory: dark oak planks in a basket weave, straw and fur
+# straw bundles (hatchery, dormitory): thick, bright strands that stay readable at game camera height
 
-OAK = np.array([0.33, 0.245, 0.18])
-GAP = np.array([0.05, 0.035, 0.025])
-Q = N // 2
-PLANK = 64
-GW = 3
+def straw_bundle(sp, rng, cx, cy, ang, count, length, width, rgb, mapper=None, fan=0.0):
+    """A loose bundle (fan = 0, parallel strands) or a tuft (fan > 0, strands spreading from one point) of `count`
+    slightly bent straw strands around (cx, cy); every strand is a soft shadow, a body and a lighter highlight.
+    Widths are in texture pixels (one game tile is about 140 screen px for 512 texture px)."""
+    strands = []
+    for _ in range(count):
+        half = rng.uniform(length[0], length[1]) * 0.5
+        if fan > 0.0:
+            a = ang + rng.uniform(-fan, fan)
+            p0 = (cx + rng.uniform(-4.0, 4.0), cy + rng.uniform(-4.0, 4.0))
+            p1 = (p0[0] + np.cos(a) * half * 2.0, p0[1] + np.sin(a) * half * 2.0)
+        else:
+            off = rng.uniform(-8.0, 8.0)
+            shift = rng.uniform(-9.0, 9.0)
+            a = ang + rng.uniform(-0.22, 0.22)
+            mx = cx - np.sin(ang) * off + np.cos(ang) * shift
+            my = cy + np.cos(ang) * off + np.sin(ang) * shift
+            p0 = (mx - np.cos(a) * half, my - np.sin(a) * half)
+            p1 = (mx + np.cos(a) * half, my + np.sin(a) * half)
+        bend = rng.uniform(-4.5, 4.5)
+        pm = ((p0[0] + p1[0]) * 0.5 - np.sin(a) * bend, (p0[1] + p1[1]) * 0.5 + np.cos(a) * bend)
+        pts = [p0, pm, p1]
+        if mapper is not None:
+            pts = [mapper(*q) for q in pts]
+        strands.append((pts, rng.uniform(0.82, 1.15), rng.uniform(0.85, 1.2)))
+    shadow = (0.07, 0.05, 0.03)
+    for pts, tn, wd in strands:
+        for q0, q1 in ((pts[0], pts[1]), (pts[1], pts[2])):
+            sp.line((q0[0] + 2.0, q0[1] + 3.0), (q1[0] + 2.0, q1[1] + 3.0), width * wd + 3.0, shadow, 0.3, 150)
+    for pts, tn, wd in strands:
+        for q0, q1 in ((pts[0], pts[1]), (pts[1], pts[2])):
+            sp.line(q0, q1, width * wd, np.clip(np.array(rgb) * tn, 0, 1), 0.7)
+            sp.line(q0, q1, max(1.5, width * wd * 0.38), np.clip(np.array(rgb) * tn * 1.16, 0, 1), 0.95)
+
+
+def scatter_straw(sp, seed, bundles, loose, box, rgb, mapper=None, bundle_len=(54, 88), loose_len=(40, 72),
+                  width=5.0, angle=None, spread=0.6, fan=0.55):
+    rng = np.random.RandomState(seed)
+    total = bundles + loose
+    w, h = box[2] - box[0], box[3] - box[1]
+    ny = max(1, int(round(np.sqrt(total * h / float(w)))))
+    nx = int(np.ceil(total / float(ny)))
+    cells = rng.permutation(nx * ny)[:total]  # jittered grid: spread evenly, no empty areas and no heaps
+    for i in range(total):
+        cx = box[0] + (cells[i] % nx + 0.5 + rng.uniform(-0.45, 0.45)) * w / nx
+        cy = box[1] + (cells[i] // nx + 0.5 + rng.uniform(-0.45, 0.45)) * h / ny
+        ang = rng.uniform(0, np.pi) if angle is None else angle + rng.uniform(-spread, spread)
+        if i < bundles:
+            if i % 2 == 0:
+                straw_bundle(sp, rng, cx, cy, ang, rng.randint(6, 11), bundle_len, width, rgb, mapper, fan=fan)
+            else:
+                straw_bundle(sp, rng, cx, cy, ang, rng.randint(5, 9), bundle_len, width, rgb, mapper)
+        else:
+            straw_bundle(sp, rng, cx, cy, ang, 1, loose_len, width * 0.9, rgb, mapper)
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# dormitory: coarse, dark planks in long boards, staggered butt joints, knots, wear, some straw
+
+PLANK_COL = np.array([0.225, 0.158, 0.112])
+GAP = np.array([0.040, 0.029, 0.021])
+PLANK_GAP_W = 3.0
+
+
+def plank_layout(seed):
+    """Rows of boards running along x on the wrapping tile. Returns the board id map, the distance to the nearest
+    board edge (across the board or at a butt joint), the row index map, and the board list (row, start, length)."""
+    rng = np.random.RandomState(seed)
+    while True:
+        heights, total = [], 0
+        while total < N - 40:
+            heights.append(int(rng.randint(54, 112)))
+            total += heights[-1]
+        heights[-1] -= total - N
+        if 44 <= heights[-1] <= 120:
+            break
+    ys = np.concatenate([[0], np.cumsum(heights)])
+    row_of = np.zeros(N, dtype=int)
+    dy = np.zeros(N)
+    for r in range(len(heights)):
+        rows = np.arange(ys[r], ys[r + 1])
+        row_of[rows] = r
+        dy[rows] = np.minimum(rows - ys[r], ys[r + 1] - 1 - rows)
+    board_of = np.zeros((len(heights), N), dtype=int)
+    dj = np.zeros((len(heights), N))
+    boards = []
+    x = np.arange(N)
+    for r in range(len(heights)):
+        u = rng.uniform()
+        count = 1 if u < 0.42 else (2 if u < 0.85 else 3)
+        w = rng.uniform(0.55, 1.45, count)
+        lengths = w / w.sum() * N
+        start = rng.uniform(0, N)
+        edges = (start + np.concatenate([[0], np.cumsum(lengths)])) % N
+        bounds = np.cumsum(lengths)
+        rel = (x - start) % N
+        idx = np.searchsorted(bounds, rel, side='right')
+        idx = np.minimum(idx, count - 1)
+        base = len(boards)
+        board_of[r] = base + idx
+        for k in range(count):
+            boards.append((r, edges[k], lengths[k]))
+        d = np.full(N, 1e9)
+        for e in edges[:count]:
+            diff = np.abs(x - e)
+            d = np.minimum(d, np.minimum(diff, N - diff))
+        dj[r] = d
+    ids = board_of[row_of[:, None], _XX]
+    dd = np.minimum(dy[:, None] + 0.0 * _XX, dj[row_of])
+    return ids, dd, row_of, boards, ys
 
 
 def dormitory_field():
-    rng = np.random.RandomState(101)
-    qi, qj = _YY // Q, _XX // Q
-    ly, lx = _YY % Q, _XX % Q
-    horiz = (qi + qj) % 2 == 0
-    across = np.where(horiz, ly, lx)
-    along = np.where(horiz, lx, ly)
-    pidx = across // PLANK
-    acr = across % PLANK
-    plank_id = (qi * 2 + qj) * 4 + pidx
-    joint = rng.uniform(70, Q - 70, 32)
-    has_joint = rng.uniform(0, 1, 32) < 0.45
-    jpos = np.where(has_joint, joint, -1000.0)[plank_id]
-    half = (along > jpos).astype(int)
-    piece = plank_id * 2 + half
-    bright = rng.uniform(0.80, 1.18, 64)[piece]
-    warm = rng.uniform(-0.04, 0.04, 64)[piece]
-    dg = np.minimum(acr, PLANK - 1 - acr).astype(float)
-    de = np.minimum(along, Q - 1 - along).astype(float)
-    dj = np.abs(along - jpos).astype(float)
-    dd = np.minimum(np.minimum(dg, de), dj)
-    g_h = fbm(11, 3.0, 70.0, 2)
-    g_v = fbm(12, 70.0, 3.0, 2)
-    grain = np.where(horiz, g_h, g_v)
-    fine = nz(13, 150.0, 150.0, 2)
-    col = OAK[None, None, :] * bright[..., None]
-    col = col + warm[..., None] * np.array([0.6, 0.2, -0.3])[None, None, :]
-    col = col * (1.0 + 0.07 * grain[..., None] + 0.04 * fine[..., None])
-    streak = smoothstep(0.7, 1.9, grain)
-    col = col * (1.0 - 0.30 * streak[..., None])
-    hgt = 0.12 * grain + 0.05 * fine + 0.06 * (bright - 1.0)
+    ids, dd, row_of, boards, ys = plank_layout(601)
+    rng = np.random.RandomState(602)
+    nb = len(boards)
+    bright = rng.uniform(0.66, 1.26, nb)[ids]
+    warm = rng.uniform(-0.03, 0.03, nb)[ids]
+    lift = rng.uniform(-0.25, 0.25, nb)[ids]
+    oy = rng.randint(0, N, nb)[ids]
+    ox = rng.randint(0, N, nb)[ids]
+    ysh = (_YY + oy) % N
+    xsh = (_XX + ox) % N
+    grain_a = fbm(61, 2.2, 64.0, 3)
+    grain_b = fbm(62, 7.0, 22.0, 2)
+    grain = (grain_a[ysh, xsh] + 0.5 * grain_b[ysh, xsh]) / 1.12
+    dd = dd + 1.1 * fbm(63, 12.0, 12.0, 2)
+    col = PLANK_COL[None, None, :] * bright[..., None]
+    col = col + warm[..., None] * np.array([0.5, 0.15, -0.3])[None, None, :]
+    col = col * (1.0 + 0.11 * grain[..., None])
+    streak = smoothstep(0.6, 1.8, grain)
+    col = col * (1.0 - 0.34 * streak[..., None])
+    hgt = 0.14 * grain + 0.07 * (bright - 1.0) + 0.3 * lift
     # knots
-    kn = np.random.RandomState(102)
-    for pid in range(32):
-        if kn.uniform() < 0.4:
-            orient = None
-            qrow = pid // 8
-            q_i, q_j = qrow // 2, qrow % 2
-            is_h = (q_i + q_j) % 2 == 0
-            pi = pid % 4
-            a = kn.uniform(50, Q - 50)
-            c = pi * PLANK + PLANK / 2.0 + kn.uniform(-8, 8)
-            ox, oy = q_j * Q, q_i * Q
-            cx, cy = (ox + a, oy + c) if is_h else (ox + c, oy + a)
-            ra = kn.uniform(9, 16)
-            rc = ra * 0.65
-            dx, dy = (_XX - cx), (_YY - cy)
-            ux, uy = (dx / ra, dy / rc) if is_h else (dx / rc, dy / ra)
-            r = np.sqrt(ux ** 2 + uy ** 2)
-            ring = 0.5 + 0.5 * np.sin(r * 9.0)
-            area = 1.0 - smoothstep(0.7, 1.5, r)
-            col = col * (1.0 - area[..., None] * (0.25 + 0.25 * ring[..., None]))
-            hgt = hgt - 0.25 * area
-    # worn walkways: lighter and smoother
-    wear = smoothstep(0.55, 1.25, nz(14, 2.4, 2.4, 2))
-    col = mix(col, np.clip(col * 1.14 + 0.012, 0, 1), wear * 0.75)
-    # dirt in the gaps and bevels
-    t = smoothstep(GW - 1.0, GW + 1.5, dd)
+    kn = np.random.RandomState(603)
+    for b in range(nb):
+        if kn.uniform() < 0.38:
+            r, start, length = boards[b]
+            cy = (ys[r] + ys[r + 1]) / 2.0 + kn.uniform(-0.15, 0.15) * (ys[r + 1] - ys[r])
+            cx = start + kn.uniform(0.2, 0.8) * length
+            rc = min(kn.uniform(0.25, 0.4) * (ys[r + 1] - ys[r]), 15.0)
+            ra = rc * kn.uniform(1.3, 1.9)
+            ddx = (_XX - cx + N / 2.0) % N - N / 2.0
+            ddy = _YY - cy
+            rr = np.sqrt((ddx / ra) ** 2 + (ddy / rc) ** 2)
+            ring = 0.5 + 0.5 * np.sin(rr * 9.0)
+            area = 1.0 - smoothstep(0.75, 1.5, rr)
+            col = col * (1.0 - area[..., None] * (0.25 + 0.3 * ring[..., None]))
+            hgt = hgt - 0.3 * area
+    # worn walkways (lighter, smoother) and dark stains
+    wear = smoothstep(0.7, 1.5, fbm(64, 2.2, 2.2, 2))
+    col = mix(col, np.clip(col * 1.16 + 0.008, 0, 1), wear * 0.6)
+    stain = smoothstep(0.9, 1.9, fbm(65, 3.0, 3.0, 3))
+    col = col * (1.0 - 0.32 * stain)[..., None]
+    # splits along the grain
+    split = 1.0 - smoothstep(0.0, 0.05, np.abs(fbm(66, 4.0, 60.0, 2)))
+    split = split * smoothstep(1.0, 1.7, np.abs(fbm(67, 2.0, 2.0, 1))) * smoothstep(PLANK_GAP_W + 3.0, PLANK_GAP_W + 10.0, dd)
+    col = col * (1.0 - 0.55 * split)[..., None]
+    hgt = hgt - 0.7 * split
+    # gaps and bevels between the boards
+    t = smoothstep(PLANK_GAP_W - 1.0, PLANK_GAP_W + 1.2, dd)
     col = mix(np.broadcast_to(GAP, col.shape), col, t)
-    col = col * (0.78 + 0.22 * smoothstep(GW, GW + 9.0, dd))[..., None]
-    hgt = hgt * 0.6 + 1.6 * smoothstep(GW - 1.0, GW + 5.0, dd)
-    # fur patches
-    fr = np.random.RandomState(103)
-    fur_n = nz(15, 160.0, 25.0, 2)
-    for i in range(2):
-        cx, cy = fr.uniform(120, N - 120, 2)
-        rad = fr.uniform(45, 70)
-        wob = 14.0 * nz(40 + i, 6.0, 6.0, 2)
-        r = np.sqrt((_XX - cx) ** 2 + ((_YY - cy) * 1.3) ** 2) + wob
-        a = 1.0 - smoothstep(rad * 0.6, rad, r)
-        fur = np.array([0.135, 0.095, 0.065]) * (1.0 + 0.30 * fur_n[..., None])
-        col = mix(col, np.clip(fur, 0, 1), a * 0.88)
-        hgt = hgt + a * (0.8 + 0.25 * fur_n)
+    col = col * (0.78 + 0.22 * smoothstep(PLANK_GAP_W, PLANK_GAP_W + 8.0, dd))[..., None]
+    hgt = hgt * 0.6 + 1.8 * smoothstep(PLANK_GAP_W - 1.0, PLANK_GAP_W + 5.0, dd)
     # scattered straw
-    sp = Sprites()
-    segs = straw_segments(104, 70, (MARGIN + 6, MARGIN + 6, N - MARGIN - 6, N - MARGIN - 6), (22, 40))
-    draw_straws(sp, segs, (0.62, 0.50, 0.24))
+    sp = Sprites(wrap=True)
+    scatter_straw(sp, 604, 4, 9, (0, 0, N, N), (0.56, 0.44, 0.21), bundle_len=(50, 80), loose_len=(40, 64), width=4.6)
     col, hgt = overlay(col, hgt, sp, 0.8)
     return col, hgt
 
@@ -303,12 +387,12 @@ def dormitory_band(col, hgt, side):
     dark = 0.46 * (1.0 - smoothstep(2.0, 70.0, dw)) + 0.12 * (1.0 - smoothstep(0.0, 130.0, dw))
     col = col * (1.0 - dark)[..., None]
     dirt = (1.0 - smoothstep(10.0, 46.0, dw + 16.0 * nz(52, 14.0, 14.0, 2))) * 0.55
-    col = mix(col, np.array([0.14, 0.10, 0.07])[None, None, :] * (1.0 + 0.3 * nz(53, 90.0, 90.0, 2)[..., None]), dirt)
+    col = mix(col, np.array([0.11, 0.08, 0.055])[None, None, :] * (1.0 + 0.3 * nz(53, 90.0, 90.0, 2)[..., None]), dirt)
     hgt = hgt + 0.4 * dirt
-    # straw tufts gathered at the wall
+    # straw gathered at the wall
     sp = Sprites()
-    segs = straw_segments(60 + ord(side), 44, (MARGIN + 8, 10, N - MARGIN - 8, 92), (22, 44), 0.0, 0.9)
-    draw_straws(sp, segs, (0.64, 0.51, 0.25), side_mapper(side))
+    scatter_straw(sp, 60 + ord(side), 5, 8, (MARGIN + 34, 40, N - MARGIN - 34, 96), (0.60, 0.47, 0.22),
+                  side_mapper(side), bundle_len=(50, 78), loose_len=(40, 64), width=5.0, angle=0.0, spread=0.8)
     col, hgt = overlay(col, hgt, sp, 0.8)
     return col, hgt
 
@@ -317,6 +401,8 @@ def dormitory_band(col, hgt, side):
 # library: worn dark stone slabs, ink stains, burgundy dust next to the shelves
 
 STONE = np.array([0.245, 0.25, 0.285])
+Q = N // 2
+GW = 3
 
 
 def library_field():
@@ -394,25 +480,26 @@ def feather(sp, cx, cy, ang, length, rgb):
 
 
 def hatchery_field():
-    lump = fbm(31, 34.0, 34.0, 3)
-    grit = fbm(32, 170.0, 170.0, 2)
-    tone = fbm(33, 4.0, 4.0, 3)
-    col = EARTH[None, None, :] * (1.0 + 0.085 * tone[..., None] + 0.085 * lump[..., None] + 0.05 * grit[..., None])
-    hgt = 0.6 * lump + 0.25 * grit + 0.15 * tone
-    # dark mud patches, flat and damp
-    mud = smoothstep(0.55, 1.35, fbm(34, 4.4, 4.4, 3))
-    mudcol = MUD[None, None, :] * (1.0 + 0.10 * lump[..., None])
-    col = mix(col, mudcol, mud * 0.82)
-    hgt = mix(hgt, hgt * 0.35 - 0.5, mud)
+    # broad clods and soft mud patches, little fine grain (it reads as noise at game camera height)
+    lump = fbm(31, 9.0, 9.0, 3)
+    grit = fbm(32, 55.0, 55.0, 2)
+    tone = fbm(33, 3.0, 3.0, 3)
+    col = EARTH[None, None, :] * (1.0 + 0.10 * tone[..., None] + 0.06 * lump[..., None] + 0.018 * grit[..., None])
+    hgt = 0.6 * lump + 0.1 * grit + 0.15 * tone
+    # dark, damp mud patches with soft borders
+    mud = smoothstep(0.15, 1.7, fbm(34, 3.2, 3.2, 3))
+    mudcol = MUD[None, None, :] * (1.0 + 0.08 * lump[..., None])
+    col = mix(col, mudcol, mud * 0.72)
+    hgt = mix(hgt, hgt * 0.4 - 0.4, mud)
     # trodden, pale dust
-    dust = smoothstep(0.9, 1.8, fbm(35, 6.0, 6.0, 2))
-    col = mix(col, np.clip(col * 1.12 + 0.015, 0, 1), dust * 0.6)
+    dust = smoothstep(0.9, 1.8, fbm(35, 5.0, 5.0, 2))
+    col = mix(col, np.clip(col * 1.12 + 0.012, 0, 1), dust * 0.55)
     sp = Sprites(wrap=True)
-    box = (0, 0, N, N)
-    draw_straws(sp, straw_segments(301, 90, box, (22, 42)), (0.60, 0.48, 0.23))
+    scatter_straw(sp, 301, 11, 6, (0, 0, N, N), (0.72, 0.58, 0.33), bundle_len=(50, 84), loose_len=(44, 70),
+                  width=5.6)
     fr = np.random.RandomState(302)
-    for _ in range(4):
-        feather(sp, fr.uniform(0, N), fr.uniform(0, N), fr.uniform(0, np.pi), fr.uniform(22, 30),
+    for _ in range(3):
+        feather(sp, fr.uniform(0, N), fr.uniform(0, N), fr.uniform(0, np.pi), fr.uniform(26, 34),
                 (0.66, 0.63, 0.56))
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
@@ -421,13 +508,14 @@ def hatchery_field():
 def hatchery_band(col, hgt, side):
     d = depth_map(side)
     fringe = 1.0 - smoothstep(18.0, 84.0, d + 22.0 * fbm(71, 13.0, 13.0, 3))
-    dirt = np.array([0.205, 0.15, 0.10])[None, None, :] * (1.0 + 0.12 * fbm(72, 110.0, 110.0, 2)[..., None])
+    dirt = np.array([0.205, 0.15, 0.10])[None, None, :] * (1.0 + 0.08 * fbm(72, 40.0, 40.0, 2)[..., None])
     col = mix(col, dirt, fringe * 0.62)
     col = col * (1.0 - 0.22 * (1.0 - smoothstep(0.0, 40.0, d)))[..., None]
     hgt = hgt - 0.45 * fringe
     sp = Sprites(wrap=True)
-    segs = straw_segments(80 + ord(side), 34, (0, 8, N, 72), (26, 46), 0.0, 0.45)
-    draw_straws(sp, segs, (0.62, 0.49, 0.235), side_mapper(side))
+    # strands must not cross the wall line (the sprites wrap around the tile): depth >= 50, spread and length limited
+    scatter_straw(sp, 80 + ord(side), 5, 7, (0, 50, N, 88), (0.68, 0.54, 0.30), side_mapper(side),
+                  bundle_len=(44, 70), loose_len=(40, 64), width=5.4, angle=0.0, spread=0.3, fan=0.35)
     col, hgt = overlay(col, hgt, sp, 0.9)
     return col, hgt
 
@@ -435,90 +523,11 @@ def hatchery_band(col, hgt, side):
 # ---------------------------------------------------------------------------------------------------------------
 # dungeon temple and treasury: irregular slabs inside a gap along the tile border
 
-def bsp_rects(seed, min_size, max_size, p_split):
-    """Random rectangle subdivision of the whole tile; returns a list of (x0, y0, x1, y1)."""
-    rng = np.random.RandomState(seed)
-    rects = []
-
-    def split(x0, y0, x1, y1):
-        w, h = x1 - x0, y1 - y0
-        can_v, can_h = w >= 2 * min_size, h >= 2 * min_size
-        want = w > max_size or h > max_size or rng.uniform() < p_split
-        if not (can_v or can_h) or not want:
-            rects.append((x0, y0, x1, y1))
-            return
-        if can_v and (w >= h or not can_h):
-            cut = x0 + int(np.clip(rng.uniform(0.36, 0.64) * w, min_size, w - min_size))
-            split(x0, y0, cut, y1)
-            split(cut, y0, x1, y1)
-        else:
-            cut = y0 + int(np.clip(rng.uniform(0.36, 0.64) * h, min_size, h - min_size))
-            split(x0, y0, x1, cut)
-            split(x0, cut, x1, y1)
-
-    split(0, 0, N, N)
-    return rects
-
-
-def slab_maps(rects):
-    """Slab index and distance (pixels) to the nearest slab edge for every pixel."""
-    ids = np.zeros((N, N), dtype=int)
-    dd = np.zeros((N, N))
-    for i, (x0, y0, x1, y1) in enumerate(rects):
-        ly = (_YY[y0:y1, x0:x1] - y0)
-        lx = (_XX[y0:y1, x0:x1] - x0)
-        ids[y0:y1, x0:x1] = i
-        dd[y0:y1, x0:x1] = np.minimum(np.minimum(lx, x1 - x0 - 1 - lx), np.minimum(ly, y1 - y0 - 1 - ly))
-    return ids, dd
-
-
 BASALT = np.array([0.098, 0.090, 0.104])
 EMBER = np.array([0.80, 0.125, 0.05])
 EMBER_HOT = np.array([0.95, 0.30, 0.08])
 EMBER_DEEP = np.array([0.26, 0.035, 0.03])
-
-
-def temple_field():
-    """Near-black basalt slabs; the joints between the slabs glow like embers (hot core, soft red falloff onto the
-    slab edges). The room shader has no emissive term, so the glow is painted into the diffuse texture. Only the
-    joints (and a few hairline cracks) are red, the slab faces carry no bright speckles."""
-    rects = bsp_rects(401, 120, 300, 0.25)
-    ids, dd = slab_maps(rects)
-    rng = np.random.RandomState(402)
-    bright = rng.uniform(0.85, 1.15, len(rects))[ids]
-    tintb = rng.uniform(-0.02, 0.02, len(rects))[ids]
-    dd = dd + 3.0 * pn(41, 14.0, 14.0, 2) * smoothstep(4.0, 14.0, dd)
-    mott = fbm(42, 4.0, 4.0, 3)
-    grit = fbm(43, 90.0, 90.0, 2)
-    col = BASALT[None, None, :] * bright[..., None]
-    col = col + tintb[..., None] * np.array([0.5, 0.0, 0.6])[None, None, :]
-    col = col * (1.0 + 0.16 * mott[..., None] + 0.06 * np.clip(grit, -2.0, 2.0)[..., None])
-    hgt = 0.2 * mott + 0.1 * grit
-    # slightly polished worn centres (subtle)
-    wear = smoothstep(0.6, 1.5, fbm(44, 2.3, 2.3, 2))
-    col = mix(col, np.clip(col * 1.12 + 0.004, 0, 1), wear * 0.6)
-    # small dark pits, no bright chips
-    chip = smoothstep(2.3, 2.9, fbm(47, 70.0, 70.0, 1))
-    col = col * (1.0 - 0.35 * chip)[..., None]
-    hgt = hgt - 0.6 * chip
-    # glowing joints: intensity varies slowly along the joints (faded to the mean at the tile border)
-    flow = 0.80 + 0.22 * np.clip(pn(48, 7.0, 7.0, 2), -1.6, 1.6)
-    flow = flow + (1.0 - _FADE) * (0.80 - flow)
-    halo = np.exp(-(dd / 18.0) ** 2) * flow
-    col = col + halo[..., None] * np.array([0.165, 0.022, 0.012])[None, None, :]
-    core = (1.0 - smoothstep(2.5, 8.5, dd)) * flow
-    col = mix(col, np.broadcast_to(EMBER_DEEP, col.shape), np.clip(core * 1.4, 0.0, 1.0))
-    col = mix(col, np.broadcast_to(EMBER, col.shape), smoothstep(0.25, 0.9, core))
-    hot = (1.0 - smoothstep(0.0, 3.6, dd)) * flow
-    col = mix(col, np.broadcast_to(EMBER_HOT, col.shape), hot * 0.55)
-    # ember hairline cracks in the slabs (dim)
-    crack = 1.0 - smoothstep(0.0, 0.035, np.abs(fbm(45, 11.0, 11.0, 3)))
-    crack = crack * smoothstep(0.5, 1.2, np.abs(fbm(46, 3.0, 3.0, 1))) * smoothstep(9.0, 20.0, dd)
-    col = mix(col, np.broadcast_to(EMBER_DEEP * 1.15, col.shape), crack * 0.75)
-    hgt = hgt - 0.8 * crack
-    # grooves and bevels
-    hgt = hgt * 0.7 + 2.6 * smoothstep(3.0, 11.0, dd)
-    return col, hgt
+JOINT_COLD = np.array([0.030, 0.020, 0.022])
 
 
 SLATE = np.array([0.272, 0.280, 0.294])
@@ -566,6 +575,54 @@ def voronoi_slabs(seed, count, weight_amp, warp_amp, warp_seed):
                 off[..., 1] = np.where(closer, dy, off[..., 1])
                 d1 = np.where(closer, d, d1)
     return idx, (d2 - d1) * 0.5, off
+
+
+def temple_field():
+    """Cracked near-black basalt: a few large polygonal slabs of very different size, chipped along their rims; the
+    cracks between them glow like embers seeping through the stone: the joint width and the heat vary along each
+    joint (hot core, red ember, soft halo onto the stone, some stretches dim or cold), a few slabs carry faint
+    ember cracks of their own. The room shader has no emissive term, so the glow is painted into the diffuse
+    texture. The whole texture wraps, so it needs the same rotation on every tile: see [dungeonTempleRoom] in
+    config/tilesets.cfg."""
+    count = 8
+    idx, dd, off = voronoi_slabs(431, count, 34.0, 5.0, 433)
+    rng = np.random.RandomState(432)
+    bright = rng.uniform(0.80, 1.18, count)[idx]
+    tintb = rng.uniform(-0.02, 0.02, count)[idx]
+    tilt = rng.uniform(-0.10, 0.10, (count, 2))[idx]
+    crackslab = (rng.uniform(0, 1, count) < 0.45)[idx]
+    # chipped edges: small bites out of the slab rim
+    chip = smoothstep(0.9, 1.8, fbm(423, 38.0, 38.0, 2))
+    dd = np.maximum(dd - 6.0 * chip, 0.0)
+    mott = fbm(42, 4.0, 4.0, 3)
+    grit = fbm(43, 90.0, 90.0, 2)
+    col = BASALT[None, None, :] * (bright * (1.0 + (tilt * off).sum(-1) / 90.0))[..., None]
+    col = col + tintb[..., None] * np.array([0.5, 0.0, 0.6])[None, None, :]
+    col = col * (1.0 + 0.16 * mott[..., None] + 0.05 * np.clip(grit, -2.0, 2.0)[..., None])
+    hgt = 0.2 * mott + 0.1 * grit
+    wear = smoothstep(0.6, 1.5, fbm(44, 2.3, 2.3, 2))
+    col = mix(col, np.clip(col * 1.12 + 0.004, 0, 1), wear * 0.6)
+    pit = smoothstep(2.3, 2.9, fbm(47, 70.0, 70.0, 1))
+    col = col * (1.0 - 0.35 * pit)[..., None]
+    hgt = hgt - 0.6 * pit
+    # heat and width along the joints
+    heat = smoothstep(-0.85, 0.75, fbm(424, 4.2, 4.2, 2) + 0.35 * fbm(425, 11.0, 11.0, 1))
+    hw = 2.3 + 3.9 * smoothstep(-0.6, 1.0, fbm(426, 5.0, 5.0, 2))
+    halo = np.exp(-(dd / (hw * 3.6 + 5.0)) ** 2) * heat ** 1.4
+    col = col + halo[..., None] * np.array([0.150, 0.020, 0.010])[None, None, :]
+    core = 1.0 - smoothstep(hw * 0.55, hw * 1.7, dd)
+    jc = mix(np.broadcast_to(JOINT_COLD, col.shape), np.broadcast_to(EMBER_DEEP, col.shape), smoothstep(0.05, 0.4, heat))
+    jc = mix(jc, np.broadcast_to(EMBER, col.shape), smoothstep(0.35, 0.78, heat))
+    hot = (1.0 - smoothstep(0.0, hw * 0.8, dd)) * smoothstep(0.55, 1.0, heat)
+    jc = mix(jc, np.broadcast_to(EMBER_HOT, col.shape), hot * 0.8)
+    col = mix(col, jc, core)
+    # faint ember cracks inside some slabs
+    crack = 1.0 - smoothstep(0.0, 0.03, np.abs(fbm(45, 11.0, 11.0, 3)))
+    crack = crack * crackslab * smoothstep(0.4, 1.1, np.abs(fbm(46, 3.0, 3.0, 1))) * smoothstep(10.0, 22.0, dd)
+    col = mix(col, np.broadcast_to(EMBER_DEEP * 1.25, col.shape), crack * 0.8)
+    hgt = hgt - 0.8 * crack
+    hgt = hgt * 0.7 + 2.6 * smoothstep(1.5, 10.0, dd)
+    return col, hgt
 
 
 def treasury_field():
@@ -1272,10 +1329,14 @@ def bridge_atlas(mesh_path):
 
 ROOMS = {
     'dormitory': {
-        'field': dormitory_field, 'band': dormitory_band, 'strength': 1.4,
-        # file name -> (exposed sides, normal map name)
-        'pieces': {'Dormitory1111': ('', 'Dormitory1111Normal'), 'Dormitory1011': ('B', 'Dormitory1011Normal'),
-                   'Dormitory1100': ('TR', 'Dormitory1100Normal'), 'Dormitory': ('', 'DormitoryNormal')},
+        # the planks run along x on every piece and every tile uses rotation 0, so the boards continue across
+        # the pieces; one piece per exposed side set (image sides), named after its neighbour mask in tilesets.cfg
+        'field': dormitory_field, 'band': dormitory_band, 'strength': 1.4, 'rot_invariant': False,
+        'pieces': {'Dormitory1111': ('', 'Dormitory1111Normal'), 'Dormitory': ('', 'DormitoryNormal'),
+                   'Dormitory1011': ('B', 'Dormitory1011Normal'), 'Dormitory0111': ('R', 'Dormitory0111Normal'),
+                   'Dormitory1101': ('L', 'Dormitory1101Normal'), 'Dormitory1110': ('T', 'Dormitory1110Normal'),
+                   'Dormitory0110': ('RT', 'Dormitory0110Normal'), 'Dormitory1100': ('LT', 'Dormitory1100Normal'),
+                   'Dormitory0011': ('RB', 'Dormitory0011Normal'), 'Dormitory1001': ('BL', 'Dormitory1001Normal')},
     },
     'library': {
         'field': library_field, 'band': library_band, 'strength': 1.3,
@@ -1290,7 +1351,7 @@ ROOMS = {
                    'Farm1100': ('TL', 'Farm1100Normal'), 'Farm': ('', 'FarmNormal')},
     },
     'dungeonTemple': {
-        'field': temple_field, 'band': None, 'strength': 1.3, 'rot_invariant': True,
+        'field': temple_field, 'band': None, 'strength': 1.3,
         'pieces': {'DungeonTempleFloor': ('', 'DungeonTempleFloorNormal')},
     },
     'treasury': {
@@ -1408,13 +1469,13 @@ def main():
     for a in sys.argv[1:]:
         if a.startswith('--seamcheck='):
             seam_dir = a.split('=', 1)[1]
-    seam_rooms = ('hatchery', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop', 'portal',
+    seam_rooms = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop', 'portal',
                   'portalWave') if seam_dir else ()
     for room in ROOMS:
         result, strength = build(room)
-        if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('hatchery', 'dormitory', 'library')):
+        if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('library',)):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
-        if '--check' in sys.argv and room in ('hatchery', 'treasury', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop',
+        if '--check' in sys.argv and room in ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop',
                                                           'portal', 'portalWave'):
             print(room, 'wrap seam ratio (about 1 or less = no seam): %.2f' % wrap_check(result))
         if room in seam_rooms:
