@@ -98,6 +98,7 @@
 #include "utils/Random.h"
 
 #include <CEGUI/Event.h>
+#include <CEGUI/Image.h>
 #include <CEGUI/System.h>
 #include <CEGUI/UDim.h>
 #include <CEGUI/Vector.h>
