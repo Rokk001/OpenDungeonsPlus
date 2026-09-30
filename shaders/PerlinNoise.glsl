@@ -81,3 +81,16 @@ float perlin(float x, float y) {
 }
  
  
+
+/* Fades the tile noise displacement to zero on the tile borders (tiles are centred on integer
+ * coordinates, borders at n + 0.5). Border vertices therefore never move, so neighbouring tile
+ * meshes keep a watertight shared edge even when their vertex sets differ there.
+ * The transition band is TILE_BORDER_FADE world units wide. */
+#define TILE_BORDER_FADE 0.15
+
+float tileBorderFade(vec2 p) {
+    vec2 u = fract(p + 0.5);
+    vec2 d = min(u, 1.0 - u);
+    vec2 f = smoothstep(0.0, TILE_BORDER_FADE, d);
+    return f.x * f.y;
+}
