@@ -139,7 +139,11 @@ enum class ServerNotificationType
     // Sent to a human owner when the fraction changed by at least one percentage point, when the
     // heart is destroyed, and once when the game starts or is loaded.
     // Appended last so that no existing numeric value changes.
-    heartHealth
+    heartHealth,
+
+    //! \brief Answer to askCasinoPayout: tile and payout level of the casino on it
+    // Appended last so that no existing numeric value changes.
+    casinoPayout
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

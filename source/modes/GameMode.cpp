@@ -53,6 +53,7 @@
 #include "social/PostLog.h"
 #include "social/SocialProfileCache.h"
 #include "rooms/Room.h"
+#include "rooms/RoomCasino.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
 #include "sound/MusicPlayer.h"
@@ -190,6 +191,9 @@ GameMode::GameMode(ModeManager *modeManager):
     mMiddleDragDistance(0.0f),
     mMiddlePressX(0.0f),
     mMiddlePressY(0.0f),
+    mCasinoX(-1),
+    mCasinoY(-1),
+    mCasinoPayout(1),
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
@@ -314,6 +318,20 @@ GameMode::GameMode(ModeManager *modeManager):
         guiSheet->getChild("ObjectivesWindow")->subscribeEvent(
             CEGUI::FrameWindow::EventCloseClicked,
             CEGUI::Event::Subscriber(&GameMode::hideObjectivesWindow, this)
+        )
+    );
+
+    //Casino payout window
+    addEventConnection(
+        guiSheet->getChild("CasinoPayoutWindow")->subscribeEvent(
+            CEGUI::FrameWindow::EventCloseClicked,
+            CEGUI::Event::Subscriber(&GameMode::hideCasinoPayoutWindow, this)
+        )
+    );
+    addEventConnection(
+        guiSheet->getChild("CasinoPayoutWindow/CasinoPayoutButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::cycleCasinoPayout, this)
         )
     );
 
@@ -598,6 +616,7 @@ void GameMode::activate()
     CEGUI::Window* guiSheet = mRootWindow;
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
+    guiSheet->getChild("CasinoPayoutWindow")->hide();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
     guiSheet->getChild("ProductionWindow")->hide();
@@ -1131,6 +1150,18 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         }
     }
 
+
+    // Clicking on one of our casinos opens its payout control
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+    {
+        Room* room = tileClicked->getCoveringRoom();
+        if((room != nullptr) && (room->getType() == RoomType::casino) &&
+           (room->getSeat() == mGameMap->getLocalPlayer()->getSeat()))
+        {
+            showCasinoPayoutWindow(tileClicked);
+            return true;
+        }
+    }
 
     // If we are doing nothing and we click on a tile, it is a tile selection
     if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
@@ -2049,6 +2080,66 @@ void GameMode::showSocialWindow(const std::string& selectedCreature)
         return;
 
     mSocialWindow->showCreature(selectedCreature);
+}
+
+void GameMode::showCasinoPayoutWindow(Tile* tile)
+{
+    mCasinoX = tile->getX();
+    mCasinoY = tile->getY();
+    setCasinoPayoutShown(mCasinoX, mCasinoY, static_cast<uint32_t>(CasinoPayout::normal));
+    mRootWindow->getChild("CasinoPayoutWindow")->show();
+
+    // The payout is kept by the server, so we ask it what it currently is
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askCasinoPayout);
+    clientNotification->mPacket << mCasinoX << mCasinoY << static_cast<uint32_t>(CasinoPayout::normal) << false;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+bool GameMode::hideCasinoPayoutWindow(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("CasinoPayoutWindow")->hide();
+    return true;
+}
+
+bool GameMode::cycleCasinoPayout(const CEGUI::EventArgs&)
+{
+    uint32_t nextLevel = (mCasinoPayout + 1) % static_cast<uint32_t>(CasinoPayout::nbValues);
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askCasinoPayout);
+    clientNotification->mPacket << mCasinoX << mCasinoY << nextLevel << true;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+    return true;
+}
+
+void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
+{
+    if((tileX != mCasinoX) || (tileY != mCasinoY))
+        return;
+
+    if(level >= static_cast<uint32_t>(CasinoPayout::nbValues))
+        return;
+
+    mCasinoPayout = level;
+    std::string levelText;
+    std::string infoText;
+    switch(static_cast<CasinoPayout>(level))
+    {
+        case CasinoPayout::stingy:
+            levelText = "Payout: $ (low)";
+            infoText = "The casino keeps a large share of the bets. Creatures win less gold.";
+            break;
+        case CasinoPayout::generous:
+            levelText = "Payout: Smiley (high)";
+            infoText = "The casino keeps little of the bets. Creatures win more gold.";
+            break;
+        default:
+            levelText = "Payout: Normal";
+            infoText = "The casino keeps its usual share of the bets.";
+            break;
+    }
+    mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutButton")->setText(levelText);
+    mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutText")->setText(infoText);
 }
 
 bool GameMode::showPlayerSettingsWindow(const CEGUI::EventArgs&)
