@@ -26,6 +26,11 @@
 
 class GameMap;
 
+namespace social
+{
+struct Post;
+}
+
 namespace CEGUI
 {
 class Window;
@@ -58,6 +63,9 @@ public:
 
     //! \brief "Latest: <text> (2 min ago)" for the newest post of the creature, empty if it has none.
     static std::string describeLatestPost(const std::string& creatureName, int64_t turnNow);
+
+    //! \brief The text of a post, used by the post log to keep neighbouring posts different.
+    static std::string renderPostTextForLog(const social::Post& post);
 
 private:
     enum class CreatureFilter

@@ -87,6 +87,7 @@
 #include "social/PostLog.h"
 #include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
+#include "social/SocialRng.h"
 #include "rooms/RoomCrypt.h"
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomPrison.h"
@@ -201,6 +202,40 @@ std::string getProfileMoodState(uint32_t moodBits, CreatureMoodLevel moodLevel)
         default:
             return "Unknown";
     }
+}
+
+//! \brief A made-up handle derived from the profile name ("Mold the Damp" -> "@mold47"), so that the internal
+//! creature name never shows on the card
+std::string makeProfileHandle(const social::CreatureProfile& profile)
+{
+    std::string handle = "@";
+    for(char c : profile.mFirstName)
+    {
+        if(((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9')))
+            handle += c;
+        else if((c >= 'A') && (c <= 'Z'))
+            handle += static_cast<char>(c - 'A' + 'a');
+    }
+    handle += Helper::toString(10 + static_cast<int>(social::fnv1a64(profile.mCreatureName + "|handle") % 90));
+    return handle;
+}
+
+//! \brief Profile name of the creature with the given internal name, empty if there is no such creature
+std::string getProfileNameOfCreature(GameMap* gameMap, const std::string& creatureName)
+{
+    Creature* creature = gameMap->getCreature(creatureName);
+    if(creature == nullptr)
+        return std::string();
+
+    const CreatureDefinition* definition = creature->getDefinition();
+    return social::SocialProfileCache::getSingleton().getProfile(creatureName, definition->getClassName(),
+        definition->isWorker()).getFullName();
+}
+
+void setTabState(CEGUI::Window* tab, const std::string& label, bool active)
+{
+    tab->setText(active ? "[ " + label + " ]" : label);
+    tab->setProperty("NormalTextColour", active ? "FFF2C860" : "FFF0E2C0");
 }
 
 std::string joinProfileList(const std::vector<std::string>& values)
@@ -2357,9 +2392,6 @@ void Creature::createStatsWindow()
     mStatsWindow->getChild("BookTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&Creature::BookTabClicked, this));
 
-    // Set the window title
-    mStatsWindow->setText(getName() + " (" + getDefinition()->getClassName() + ")");
-
     mStatsWindow->getChild("ProfilePage/Portrait")->setProperty("Image",
         getCreaturePanelPortraitImage(getDefinition()->getMeshName()).getName());
 
@@ -2423,8 +2455,9 @@ void Creature::showStatsPage(bool stats)
 
     mStatsWindow->getChild("ProfilePage")->setVisible(!stats);
     mStatsWindow->getChild("StatsText")->setVisible(stats);
-    mStatsWindow->getChild("ProfileTab")->setDisabled(!stats);
-    mStatsWindow->getChild("StatsTab")->setDisabled(stats);
+    // The active tab stays enabled and is shown in gold between brackets
+    setTabState(mStatsWindow->getChild("ProfileTab"), "Profile", !stats);
+    setTabState(mStatsWindow->getChild("StatsTab"), "Stats", stats);
 }
 
 void Creature::refreshProfilePage()
@@ -2443,19 +2476,22 @@ void Creature::refreshProfilePage()
     bool isAllied = (localSeat != nullptr) &&
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
 
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    std::string classDisplayName = social::SocialGenerator::displayClassName(cache.getData(), definition->getClassName());
+    mStatsWindow->setText(profile.getFullName() + " (" + classDisplayName + ")");
+
     CEGUI::Window* page = mStatsWindow->getChild("ProfilePage");
     page->getChild("NameText")->setText(profile.getFullName());
 
-    std::string handle = "@" + getName() + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
+    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
         " - Level " + Helper::toString(getLevel());
-    if(isAllied && (mMoodValue != CreatureMoodLevel::Unknown))
-        handle += "   (mood: " + getProfileMoodState(0, mMoodValue) + ")";
     page->getChild("HandleText")->setText(handle);
 
-    std::string age = "Age " + profile.mAgeText;
-    if(profile.mAgeText != Helper::toString(profile.mAge))
-        age = profile.mAgeText;
-    page->getChild("AgeText")->setText(age + " - " + profile.mGender + " - " + profile.mRelationship);
+    std::string age = (profile.mAgeText == Helper::toString(profile.mAge)) ? "Age " + profile.mAgeText : profile.mAgeText;
+    if(!profile.mGender.empty())
+        age += " - " + profile.mGender;
+    page->getChild("AgeText")->setText(age);
+    page->getChild("RelationText")->setText("Relationship: " + profile.mRelationship);
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
@@ -2468,16 +2504,21 @@ void Creature::refreshProfilePage()
     CEGUI::ProgressBar* healthBar = static_cast<CEGUI::ProgressBar*>(page->getChild("HealthBar"));
     healthBar->setProgress(1.0f - static_cast<float>(mOverlayHealthValue) /
         static_cast<float>(NB_OVERLAY_HEALTH_VALUES - 1));
+    page->getChild("HealthLabel")->setText("Health");
     CEGUI::ProgressBar* experienceBar = static_cast<CEGUI::ProgressBar*>(page->getChild("ExperienceBar"));
     bool showExperience = isAllied && hasProgressInformation();
     experienceBar->setVisible(showExperience);
+    page->getChild("ExperienceLabel")->setVisible(showExperience);
+    page->getChild("ExperienceLabel")->setText("XP");
     if(showExperience)
         experienceBar->setProgress(static_cast<float>(getExperienceProgress()));
 
     CEGUI::Window* friendsText = page->getChild("FriendsText");
+    CEGUI::Window* foeText = page->getChild("FoeText");
     CEGUI::Window* statusText = page->getChild("StatusText");
     CEGUI::Window* latestText = page->getChild("LatestText");
     friendsText->setVisible(isAllied);
+    foeText->setVisible(isAllied);
     statusText->setVisible(isAllied);
     latestText->setVisible(isAllied);
     if(!isAllied)
@@ -2485,7 +2526,6 @@ void Creature::refreshProfilePage()
 
     // The friends only change when a creature is added, removed or changes seat, so they are
     // computed again only when the roster version of the post log changed
-    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
     uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
     const social::SocialProfileCache::FriendsAndFoe* cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
     if(cachedFriends == nullptr)
@@ -2496,16 +2536,22 @@ void Creature::refreshProfilePage()
         cache.storeFriendsAndFoe(getName(), computed);
         cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
     }
-    const std::vector<std::string>& friends = cachedFriends->mFriends;
-    const std::string& foe = cachedFriends->mFoe;
-    std::string friendsLine = "Friends: " + (friends.empty() ? std::string("none yet") : joinProfileList(friends));
-    friendsLine += "      Foe: " + (foe.empty() ? std::string("none") : foe);
-    friendsText->setText(friendsLine);
+    std::vector<std::string> friendNames;
+    for(const std::string& friendName : cachedFriends->mFriends)
+        friendNames.push_back(getProfileNameOfCreature(getGameMap(), friendName));
+    std::string foeName = cachedFriends->mFoe.empty() ? std::string() :
+        getProfileNameOfCreature(getGameMap(), cachedFriends->mFoe);
+    std::string friendList = joinProfileList(friendNames);
+    friendsText->setText("Friends: " + (friendList.empty() ? std::string("none yet") : friendList));
+    foeText->setText("Foe: " + (foeName.empty() ? std::string("none") : foeName));
 
-    std::string moodLine = social::SocialGenerator::moodLine(social::SocialProfileCache::getSingleton().getData(),
+    std::string moodLine = social::SocialGenerator::moodLine(cache.getData(),
         getName(), definition->getClassName(), definition->isWorker(),
         getProfileMoodState(getOverlayMoodValue(), mMoodValue));
-    statusText->setText(moodLine.empty() ? std::string("") : "Status: " + moodLine);
+    std::string status = "Status";
+    if(mMoodValue != CreatureMoodLevel::Unknown)
+        status += " (" + getProfileMoodState(0, mMoodValue) + ")";
+    statusText->setText(status + ": " + (moodLine.empty() ? std::string("...") : moodLine));
 
     std::string latestLine = SocialWindow::describeLatestPost(getName(), getGameMap()->getTurnNumber());
     latestText->setText(latestLine.empty() ? std::string("Latest: nothing posted yet") : latestLine);

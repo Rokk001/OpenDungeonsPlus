@@ -83,7 +83,7 @@ std::string buildDirectoryPath(const std::string& directory)
 bool isKnownTextKey(const std::string& key)
 {
     return (key == "Job") || (key == "Like") || (key == "Dislike") || (key == "Quirk") ||
-        (key == "Bio") || (key == "Relation");
+        (key == "Bio") || (key == "Relation") || (key == "ClassName");
 }
 
 }

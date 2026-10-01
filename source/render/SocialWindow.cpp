@@ -165,6 +165,12 @@ void SocialWindow::showCreature(const std::string& creatureName)
     show();
 }
 
+std::string SocialWindow::renderPostTextForLog(const social::Post& post)
+{
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    return renderPostText(post, cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker));
+}
+
 std::string SocialWindow::describeLatestPost(const std::string& creatureName, int64_t turnNow)
 {
     const social::Post* post = social::PostLog::getSingleton().findLatestPost(creatureName);
@@ -302,7 +308,8 @@ void SocialWindow::rebuildCreatureList()
             const std::string& className = creature->getDefinition()->getClassName();
             const social::CreatureProfile& profile = cache.getProfile(creature->getName(), className, isWorker);
             std::ostringstream text;
-            text << profile.getFullName() << " (" << className << ")  L" << creature->getLevel();
+            text << profile.getFullName() << " (" << social::SocialGenerator::displayClassName(cache.getData(), className) <<
+                ")  L" << creature->getLevel();
 
             CreatureListEntry entry;
             entry.mSortKey = className + "|" + profile.getFullName() + "|" + creature->getName();

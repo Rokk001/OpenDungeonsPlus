@@ -63,7 +63,7 @@ void checkNoEmptyField(const social::CreatureProfile& profile, bool distinctPair
 {
     BOOST_CHECK_MESSAGE(!profile.mFirstName.empty(), profile.mCreatureName);
     BOOST_CHECK_MESSAGE(!profile.mAgeText.empty(), profile.mCreatureName);
-    BOOST_CHECK_MESSAGE(!profile.mGender.empty(), profile.mCreatureName);
+    BOOST_CHECK_MESSAGE((profile.mGender == "Female") || (profile.mGender == "Male") || profile.mGender.empty(), profile.mCreatureName);
     BOOST_CHECK_MESSAGE(!profile.mRelationship.empty(), profile.mCreatureName);
     BOOST_CHECK_MESSAGE(!profile.mHometown.empty(), profile.mCreatureName);
     BOOST_CHECK_MESSAGE(!profile.mJob.empty(), profile.mCreatureName);
@@ -110,6 +110,8 @@ BOOST_AUTO_TEST_CASE(test_SocialDataLoads)
     BOOST_CHECK(data.hasGroupForClass("Kobold"));
     BOOST_CHECK(data.hasGroupForClass("Kreatur"));
     BOOST_CHECK(!data.hasGroupForClass("NoSuchClass"));
+    BOOST_CHECK_EQUAL(social::SocialGenerator::displayClassName(data, "CaveHornet"), "Cave Hornet");
+    BOOST_CHECK_EQUAL(social::SocialGenerator::displayClassName(data, "NoSuchClass"), "NoSuchClass");
 }
 
 BOOST_AUTO_TEST_CASE(test_SocialDeterminism)
