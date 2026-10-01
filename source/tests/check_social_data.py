@@ -120,12 +120,12 @@ for class_name in class_to_group:
 
 # ---- texts file ----
 SLOTS = set(['name', 'hometown', 'job', 'like', 'dislike', 'quirk', 'level', 'room', 'friend'])
-SIMPLE_KEYS = ('Job', 'Like', 'Dislike', 'Quirk', 'Bio', 'Relation')
+SIMPLE_KEYS = ('Job', 'Like', 'Dislike', 'Quirk', 'Bio', 'Relation', 'ClassName')
 MOOD_STATES = ['Hungry', 'Tired', 'GetFee', 'LeaveDungeon', 'KoTemp', 'InJail', 'Happy', 'Neutral', 'Upset',
                'Angry', 'Furious', 'Unknown']
 POST_CATEGORIES = ['eat', 'sleep', 'train', 'work', 'fight', 'hurt', 'levelup', 'payday', 'unhappy', 'ko', 'jail',
                    'pickedup', 'slapped', 'arrived', 'left', 'died', 'idle']
-MAX_LENGTH = {'Job': 40, 'Like': 40, 'Dislike': 40, 'Quirk': 40, 'Bio': 100, 'Relation': 40, 'MoodLine': 80,
+MAX_LENGTH = {'Job': 40, 'Like': 40, 'Dislike': 40, 'Quirk': 40, 'Bio': 100, 'Relation': 40, 'ClassName': 24, 'MoodLine': 80,
               'Post': 110}
 valid_scopes = set(['*', 'worker', 'fighter']) | set(groups) | set(classes)
 texts = {}
@@ -166,6 +166,11 @@ for store, entries in texts.items():
     check(len(set(entries)) == len(entries), 'duplicate entries for ' + store)
 for class_name in classes:
     check(any(scope == class_name for scope, _ in texts.get('Job', [])), 'no Job text for class ' + class_name)
+    check(sum(1 for scope, _ in texts.get('ClassName', []) if scope == class_name) == 1,
+          'class %s needs exactly one ClassName' % class_name)
+for scope, text in texts.get('Bio', []):
+    check(not re.search(r'\{(hometown|job|like|dislike|name)\}', text),
+          'bio repeats a field of the card: ' + text)
 for key in ('Like', 'Dislike', 'Quirk', 'Bio', 'Relation'):
     check(sum(1 for scope, _ in texts.get(key, []) if scope == '*') >= 10 or key == 'Relation',
           'too few generic %s texts' % key)
