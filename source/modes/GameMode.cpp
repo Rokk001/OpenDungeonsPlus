@@ -165,6 +165,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::casinoRoom;
         case RoomType::torture:
             return tile.getTileVisual() == TileVisual::tortureRoom;
+        case RoomType::guardRoom:
+            return tile.getTileVisual() == TileVisual::guardRoom;
         default:
             return false;
     }

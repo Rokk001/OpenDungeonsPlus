@@ -836,6 +836,7 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::trapDoorBraced: return "Door health: " + value(config.getTrapConfigDouble("BracedDoorHP")) + " before Wooden door upgrades.";
         case SkillType::trapDoorSteel: return "Door health: " + value(config.getTrapConfigDouble("SteelDoorHP")) + " before Wooden door upgrades.";
         case SkillType::trapDoorBarricade: return "Barricade health: " + value(config.getTrapConfigDouble("BarricadeDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::roomGuardRoom: return "Wakefulness cost per duty turn: " + room("GuardRoomWakefulnessPerDuty") + ".";
         case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
         default: return "";
     }

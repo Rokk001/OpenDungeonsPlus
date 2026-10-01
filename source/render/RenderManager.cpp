@@ -2305,7 +2305,9 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
                candidate->getEntityNode() == nullptr || !candidate->getLocalPlayerHasVision())
                 continue;
             TileVisual visual = candidate->getTileVisual();
-            if(visual < TileVisual::dungeonTempleRoom || visual >= TileVisual::countTileVisual)
+            // The mana vault ground is appended after the room visuals but is not a room
+            if(visual < TileVisual::dungeonTempleRoom || visual >= TileVisual::countTileVisual ||
+               visual == TileVisual::manaVaultGround)
                 continue;
             position += Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f);
             ++count;
