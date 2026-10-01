@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="GameOptionsWindow" >
-        <Property name="Area" value="{{0.5,-110},{0.5,-190},{0.5,110},{0.5,190}}" />
+        <Property name="Area" value="{{0.5,-110},{0.5,-212},{0.5,110},{0.5,212}}" />
         <Property name="Text" value="Options" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/IconButton" name="ObjectivesButton" >
@@ -35,14 +35,20 @@
             <Property name="Disabled" value="False" />
             <Property name="TooltipText" value="Open the game settings window." />
         </Window>
-        <Window type="OD/IconButton" name="QuitGameButton" >
+        <Window type="OD/IconButton" name="RestartLevelButton" >
             <Property name="Area" value="{{0.5,-80},{0,278},{0.5,80},{0,311}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/LoadIcon" />
+            <Property name="Text" value="Restart Level" />
+            <Property name="TooltipText" value="Restart this level from the beginning (single player only)." />
+        </Window>
+        <Window type="OD/IconButton" name="QuitGameButton" >
+            <Property name="Area" value="{{0.5,-80},{0,321},{0.5,80},{0,354}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="Text" value="Quit to Menu" />
             <Property name="TooltipText" value="Leave this game and return to the main menu..." />
         </Window>
         <Window type="OD/IconButton" name="ExitGameButton" >
-            <Property name="Area" value="{{0.5,-80},{0,321},{0.5,80},{0,354}}" />
+            <Property name="Area" value="{{0.5,-80},{0,364},{0.5,80},{0,397}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="IconImageColour" value="FFBB0000" />
             <Property name="Text" value="Exit to System" />

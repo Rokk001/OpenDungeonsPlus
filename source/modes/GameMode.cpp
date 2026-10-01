@@ -33,6 +33,7 @@
 #include "network/ChatEventMessage.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
+#include "network/ServerMode.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
@@ -216,6 +217,16 @@ GameMode::GameMode(ModeManager *modeManager):
             CEGUI::Event::Subscriber(&GameMode::showSettingsFromOptions, this)
         )
     );
+    CEGUI::Window* restartLevelButtonWindow = guiSheet->getChild("GameOptionsWindow/RestartLevelButton");
+    addEventConnection(
+        restartLevelButtonWindow->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::showRestartLevelFromOptions, this)
+        )
+    );
+    // Only a game started from a level file by this instance can be restarted
+    restartLevelButtonWindow->setEnabled(ODServer::getSingleton().isConnected() &&
+        ODServer::getSingleton().getServerMode() == ServerMode::ModeGameSinglePlayer);
     addEventConnection(
         guiSheet->getChild("GameOptionsWindow/QuitGameButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -937,6 +948,7 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
     // Quit the game
     case OIS::KC_ESCAPE:
         mExitToDesktop = false;
+        mRestartLevel = false;
         popupExit(!mGameMap->getGamePaused());
         break;
 
@@ -1180,13 +1192,19 @@ void GameMode::onFrameEnded(const Ogre::FrameEvent& evt)
 
 void GameMode::popupExit(bool pause)
 {
+    CEGUI::Window* popup = mRootWindow->getChild(Gui::EXIT_CONFIRMATION_POPUP);
     if(pause)
     {
-        mRootWindow->getChild(Gui::EXIT_CONFIRMATION_POPUP)->show();
+        if(mRestartLevel)
+            popup->setText("Do you really want to restart this level?");
+        else
+            popup->setText("Do you really want to leave the underworld?");
+        popup->show();
     }
     else
     {
-        mRootWindow->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
+        mRestartLevel = false;
+        popup->hide();
     }
     mGameMap->setGamePaused(pause);
 }
@@ -1222,7 +1240,15 @@ void GameMode::notifyGuiAction(GuiAction guiAction)
 
 bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 {
-    if(mExitToDesktop)
+    if(mRestartLevel)
+    {
+        // The main menu starts the level again once this mode has been left and the
+        // running server and client have been stopped
+        ODFrameListener::getSingleton().setPendingRestartLevel(ODServer::getSingleton().getLevelFilename());
+        mRestartLevel = false;
+        mModeManager->requestMode(AbstractModeManager::MENU_MAIN);
+    }
+    else if(mExitToDesktop)
         ODFrameListener::getSingleton().requestExit();
     else
         mModeManager->requestMode(AbstractModeManager::MENU_MAIN);
@@ -1374,9 +1400,19 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+bool GameMode::showRestartLevelFromOptions(const CEGUI::EventArgs& /*e*/)
+{
+    mExitToDesktop = false;
+    mRestartLevel = true;
+    mRootWindow->getChild("GameOptionsWindow")->hide();
+    popupExit(!mGameMap->getGamePaused());
+    return true;
+}
+
 bool GameMode::showQuitMenuFromOptions(const CEGUI::EventArgs& /*e*/)
 {
     mExitToDesktop = false;
+    mRestartLevel = false;
     mRootWindow->getChild("GameOptionsWindow")->hide();
     popupExit(!mGameMap->getGamePaused());
     return true;
@@ -1385,6 +1421,7 @@ bool GameMode::showQuitMenuFromOptions(const CEGUI::EventArgs& /*e*/)
 bool GameMode::showExitApplicationFromOptions(const CEGUI::EventArgs& /*e*/)
 {
     mExitToDesktop = true;
+    mRestartLevel = false;
     mRootWindow->getChild("GameOptionsWindow")->hide();
     popupExit(!mGameMap->getGamePaused());
     return true;

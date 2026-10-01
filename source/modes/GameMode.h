@@ -204,6 +204,7 @@ protected:
 
     //! \brief The different Game Options Menu handlers
     bool showQuitMenuFromOptions(const CEGUI::EventArgs& e = {});
+    bool showRestartLevelFromOptions(const CEGUI::EventArgs& e = {});
     bool showExitApplicationFromOptions(const CEGUI::EventArgs& e = {});
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
@@ -224,6 +225,10 @@ private:
     //! rather than back to the main menu. Set by the button that opened the
     //! confirmation popup.
     bool mExitToDesktop = false;
+
+    //! \brief Whether the pending confirmation popup restarts the level rather than
+    //! leaving the game. Set by the button that opened the confirmation popup.
+    bool mRestartLevel = false;
 
     //! \brief Sets whether a tile must marked or unmarked for digging.
     //! this value is based on the first marked flag tile selected.
