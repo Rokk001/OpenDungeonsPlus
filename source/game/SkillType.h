@@ -61,6 +61,9 @@ enum class SkillType
     spellSummonWorker,
     spellEyeEvil,
 
+    // Added later, appended so that existing saves stay valid
+    roomGuardRoom,
+
     // This should be the last
     countSkill
 };

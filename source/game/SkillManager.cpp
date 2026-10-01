@@ -391,6 +391,15 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl2depends.push_back(skill);
 
+    resType = SkillType::roomGuardRoom;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl1depends);
+    def = new SkillDefRoom("TacticSkills/", "GuardRoomButton", skill, RoomType::guardRoom);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl2depends.push_back(skill);
+
     resType = SkillType::trapDoorWooden;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
