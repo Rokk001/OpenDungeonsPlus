@@ -232,12 +232,6 @@ std::string getProfileNameOfCreature(GameMap* gameMap, const std::string& creatu
         definition->isWorker()).getFullName();
 }
 
-void setTabState(CEGUI::Window* tab, const std::string& label, bool active)
-{
-    tab->setText(active ? "[ " + label + " ]" : label);
-    tab->setProperty("NormalTextColour", active ? "FFF2C860" : "FFF0E2C0");
-}
-
 std::string joinProfileList(const std::vector<std::string>& values)
 {
     std::string result;
@@ -2379,8 +2373,9 @@ void Creature::createStatsWindow()
 
     CEGUI::Window* rootWindow = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
 
-    mStatsWindow = ODFrameListener::getSingleton().getModeManager()->getGui().createCreatureProfileWindow(
-        std::string("CreatureStatsWindows_") + getName());
+    Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
+    mStatsWindow = gui.createCreatureProfileWindow(std::string("CreatureStatsWindows_") + getName());
+    gui.createCreatureProfilePage(mStatsWindow->getChild("ProfilePage"));
 
     // We want to close the window when the cross is clicked
     mStatsWindow->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
@@ -2391,9 +2386,6 @@ void Creature::createStatsWindow()
         CEGUI::Event::Subscriber(&Creature::StatsTabClicked, this));
     mStatsWindow->getChild("BookTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&Creature::BookTabClicked, this));
-
-    mStatsWindow->getChild("ProfilePage/Portrait")->setProperty("Image",
-        getCreaturePanelPortraitImage(getDefinition()->getMeshName()).getName());
 
     rootWindow->addChild(mStatsWindow);
     mStatsWindow->show();
@@ -2456,8 +2448,8 @@ void Creature::showStatsPage(bool stats)
     mStatsWindow->getChild("ProfilePage")->setVisible(!stats);
     mStatsWindow->getChild("StatsText")->setVisible(stats);
     // The active tab stays enabled and is shown in gold between brackets
-    setTabState(mStatsWindow->getChild("ProfileTab"), "Profile", !stats);
-    setTabState(mStatsWindow->getChild("StatsTab"), "Stats", stats);
+    SocialWindow::setTabState(mStatsWindow->getChild("ProfileTab"), "Profile", !stats);
+    SocialWindow::setTabState(mStatsWindow->getChild("StatsTab"), "Stats", stats);
 }
 
 void Creature::refreshProfilePage()
@@ -2466,8 +2458,19 @@ void Creature::refreshProfilePage()
         return;
 
     const CreatureDefinition* definition = getDefinition();
-    const social::CreatureProfile& profile = social::SocialProfileCache::getSingleton().getProfile(
-        getName(), definition->getClassName(), definition->isWorker());
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const social::CreatureProfile& profile = cache.getProfile(getName(), definition->getClassName(), definition->isWorker());
+    std::string classDisplayName = social::SocialGenerator::displayClassName(cache.getData(), definition->getClassName());
+    mStatsWindow->setText(profile.getFullName() + " (" + classDisplayName + ")");
+
+    fillProfilePage(mStatsWindow->getChild("ProfilePage/Content"));
+}
+
+void Creature::fillProfilePage(CEGUI::Window* page)
+{
+    const CreatureDefinition* definition = getDefinition();
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const social::CreatureProfile& profile = cache.getProfile(getName(), definition->getClassName(), definition->isWorker());
 
     // Mood, friends and the like are only known for creatures of the local player and its allies
     Seat* localSeat = nullptr;
@@ -2476,11 +2479,8 @@ void Creature::refreshProfilePage()
     bool isAllied = (localSeat != nullptr) &&
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
 
-    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-    std::string classDisplayName = social::SocialGenerator::displayClassName(cache.getData(), definition->getClassName());
-    mStatsWindow->setText(profile.getFullName() + " (" + classDisplayName + ")");
-
-    CEGUI::Window* page = mStatsWindow->getChild("ProfilePage");
+    page->getChild("Portrait")->setProperty("Image",
+        getCreaturePanelPortraitImage(definition->getMeshName()).getName());
     page->getChild("NameText")->setText(profile.getFullName());
 
     std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +

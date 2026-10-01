@@ -497,14 +497,19 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&SocialWindow::onCloseClicked, mSocialWindow.get())));
     addEventConnection(mRootWindow->getChild("SocialWindow/FilterButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/FeedModeButton")->subscribeEvent(
+    addEventConnection(mRootWindow->getChild("SocialWindow/FeedPane/FeedModeButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedModeClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/OpenProfileButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onOpenProfileClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/FeedTab")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedTabClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/ProfileTab")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileTabClicked, mSocialWindow.get())));
+    for(int32_t i = 0; i < 3; ++i)
+    {
+        addEventConnection(mRootWindow->getChild("SocialWindow/ProfilePane/LinkButton" + Helper::toString(i))->subscribeEvent(
+            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, mSocialWindow.get())));
+    }
     addEventConnection(mRootWindow->getChild("SocialWindow/CreatureList")->subscribeEvent(
         CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&SocialWindow::onSelectionChanged, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/CreatureList")->subscribeEvent(
-        CEGUI::Window::EventMouseDoubleClick, CEGUI::Event::Subscriber(&SocialWindow::onOpenProfileClicked, mSocialWindow.get())));
 }
 
 GameMode::~GameMode()

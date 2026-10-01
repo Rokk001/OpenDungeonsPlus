@@ -152,6 +152,9 @@ public:
     bool ProfileTabClicked(const CEGUI::EventArgs& /*e*/);
     bool StatsTabClicked(const CEGUI::EventArgs& /*e*/);
     bool BookTabClicked(const CEGUI::EventArgs& /*e*/);
+    //! \brief Fills a profile page (gui/WindowCreatureProfilePage.layout) with the social profile of the
+    //! creature. Used by the creature card and by the Dungeonbook.
+    void fillProfilePage(CEGUI::Window* page);
     std::string getStatsText();
 
     //! \brief Get the level of the object

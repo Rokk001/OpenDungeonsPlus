@@ -30,9 +30,20 @@ check(m is not None, 'a fixed size centred area is expected')
 width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
-for name in ('CreaturesLabel', 'FilterButton', 'CreatureList', 'OpenProfileButton', 'FeedLabel', 'FeedModeButton',
-             'FeedText'):
+for name in ('CreaturesLabel', 'FilterButton', 'CreatureList', 'FeedTab', 'ProfileTab', 'FeedPane', 'FeedModeButton',
+             'FeedText', 'ProfilePane', 'ProfileHint', 'ProfileHolder', 'LinkButton0', 'LinkButton1', 'LinkButton2',
+             'OwnPostsText'):
     check('name="%s"' % name in layout, name)
+check('OpenProfileButton' not in layout, 'the profile opens in the right pane, not in a window')
+# the right part (feed or profile) starts right of the list and both panes use the same area
+list_block = layout[layout.index('name="CreatureList"'):]
+list_right = int(re.search(r'Area" value="\{\{0,\d+\},\{0,\d+\},\{0,(\d+)\}', list_block)[1])
+pane_lefts = [int(re.search(r'Area" value="\{\{0,(\d+)\}', layout[layout.index('name="%s"' % n):])[1])
+              for n in ('FeedTab', 'FeedPane', 'ProfilePane')]
+check(all(left > list_right for left in pane_lefts), 'the right part must not overlap the list')
+check(width - 16 - min(pane_lefts) >= 400, 'the profile needs about 400 design pixels')
+check('name="Visible" value="False"' in layout[layout.index('name="ProfilePane"'):layout.index('name="ProfileHint"')],
+      'the feed is shown first')
 check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
 
 hud = read('gui/ModeGame.layout')
@@ -62,6 +73,21 @@ frame = frame[:frame.index('\n}\n')]
 check('mSocialWindow->update(' in frame and 'PostLog' not in frame, 'the feed is not polled per frame')
 
 window = read('source/render/SocialWindow.cpp')
+header = read('source/render/SocialWindow.h')
+check('onOpenProfileClicked' not in window + gamemode + header and 'createStatsWindow' not in window,
+      'no window is opened from the Dungeonbook')
+for handler in ('onFeedTabClicked', 'onProfileTabClicked', 'onLinkClicked'):
+    check('SocialWindow::' + handler in window and '&SocialWindow::' + handler in gamemode, handler)
+check('EventMouseDoubleClick' not in gamemode[gamemode.index('SocialWindow/CreatureList'):gamemode.index('GameMode::~GameMode')],
+      'no double click window')
+selection = window[window.index('bool SocialWindow::onSelectionChanged'):]
+selection = selection[:selection.index('\n}\n')]
+check('showTab(true)' in selection, 'selecting a creature shows its profile')
+check('fillProfilePage(mProfilePage)' in window and 'createCreatureProfilePage(holder)' in window,
+      'the profile uses the shared fill function')
+check('setTabState' in window and 'setDisabled(' not in window and 'setEnabled(' not in window,
+      'the active tab stays enabled')
+check('log.getVersion() != mShownProfilePostVersion' in window, 'the profile redraws only when needed')
 check('if(!mWindow->isVisible())' in window, 'update does nothing while hidden')
 check('REFRESH_CHECK_INTERVAL = 0.25f' in window and 'MAX_FEED_ROWS = 25' in window, 'redraw throttle and row limit')
 check('getVersion() != mShownPostVersion' in window, 'redraw only when the feed changed')

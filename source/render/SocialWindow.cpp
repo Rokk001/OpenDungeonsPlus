@@ -23,6 +23,9 @@
 #include "entities/CreatureMoodValues.h"
 #include "game/Player.h"
 #include "gamemap/GameMap.h"
+#include "modes/ModeManager.h"
+#include "render/Gui.h"
+#include "render/ODFrameListener.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
 #include "social/SocialGenerator.h"
@@ -42,6 +45,10 @@ namespace
 {
 //! Number of posts shown in the feed at most
 const std::size_t MAX_FEED_ROWS = 25;
+//! Number of posts shown below the profile at most
+const std::size_t MAX_OWN_POSTS = 5;
+//! Number of friend and foe buttons in the profile pane (two friends and a foe)
+const std::size_t NB_LINK_BUTTONS = 3;
 //! The window checks for changes at most this often (real seconds), so at most 4 redraws per second
 const float REFRESH_CHECK_INTERVAL = 0.25f;
 //! The relative times of the feed are refreshed at least this often while the window is open
@@ -128,6 +135,24 @@ std::string renderFeedEntry(const social::Post& post, int64_t turnNow)
         "   " + formatAge(turnNow - post.mTurn) + "\n" + FEED_TEXT_COLOUR + escapeMarkup(text) + "\n\n";
     return entry;
 }
+
+//! One line of the recent posts of a creature: the text and its age
+std::string renderOwnPostLine(const social::Post& post, int64_t turnNow)
+{
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
+    std::string text = renderPostText(post, profile);
+    if(text.empty())
+        return text;
+
+    return std::string(FEED_TEXT_COLOUR) + escapeMarkup(text) + FEED_TIME_COLOUR + "  (" +
+        formatAge(turnNow - post.mTurn) + ")\n";
+}
+
+std::string getLinkButtonName(std::size_t index)
+{
+    return "LinkButton" + std::string(1, static_cast<char>('0' + index));
+}
 }
 
 SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
@@ -136,11 +161,23 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mFilter(CreatureFilter::All),
     mSelectedOnly(false),
     mRebuildingList(false),
+    mProfileTab(false),
+    mProfilePage(nullptr),
     mShownRosterVersion(0),
     mShownPostVersion(0),
     mSinceRefreshCheck(0.0f),
-    mSinceFeedRebuild(0.0f)
+    mSinceFeedRebuild(0.0f),
+    mShownProfilePostVersion(0),
+    mSinceProfileRefresh(0.0f)
 {
+    for(std::size_t i = 0; i < NB_LINK_BUTTONS; ++i)
+        mWindow->getChild("ProfilePane/" + getLinkButtonName(i))->setID(static_cast<CEGUI::uint>(i));
+}
+
+void SocialWindow::setTabState(CEGUI::Window* tab, const std::string& label, bool active)
+{
+    tab->setText(active ? "[ " + label + " ]" : label);
+    tab->setProperty("NormalTextColour", active ? "FFF2C860" : "FFF0E2C0");
 }
 
 bool SocialWindow::isVisible() const
@@ -154,6 +191,7 @@ void SocialWindow::show()
     mWindow->moveToFront();
     rebuildCreatureList();
     rebuildFeed();
+    showTab(mProfileTab);
     mSinceRefreshCheck = 0.0f;
 }
 
@@ -162,6 +200,7 @@ void SocialWindow::showCreature(const std::string& creatureName)
     mFilter = CreatureFilter::All;
     mWindow->getChild("FilterButton")->setText("Show: all creatures");
     mSelectedCreature = creatureName;
+    mProfileTab = true;
     show();
 }
 
@@ -197,6 +236,7 @@ void SocialWindow::update(float elapsed)
 
     mSinceRefreshCheck += elapsed;
     mSinceFeedRebuild += elapsed;
+    mSinceProfileRefresh += elapsed;
     if(mSinceRefreshCheck < REFRESH_CHECK_INTERVAL)
         return;
 
@@ -206,6 +246,8 @@ void SocialWindow::update(float elapsed)
         rebuildCreatureList();
     if((log.getVersion() != mShownPostVersion) || (mSinceFeedRebuild >= FEED_TIME_REFRESH_INTERVAL))
         rebuildFeed();
+    if(mProfileTab && ((log.getVersion() != mShownProfilePostVersion) || (mSinceProfileRefresh >= FEED_TIME_REFRESH_INTERVAL)))
+        refreshProfile();
 }
 
 bool SocialWindow::onCloseClicked(const CEGUI::EventArgs& /*e*/)
@@ -243,7 +285,7 @@ bool SocialWindow::onFilterClicked(const CEGUI::EventArgs& /*e*/)
 bool SocialWindow::onFeedModeClicked(const CEGUI::EventArgs& /*e*/)
 {
     mSelectedOnly = !mSelectedOnly;
-    mWindow->getChild("FeedModeButton")->setText(mSelectedOnly ? "Posts of: selected creature" : "Posts of: everyone");
+    mWindow->getChild("FeedPane/FeedModeButton")->setText(mSelectedOnly ? "Posts of: selected creature" : "Posts of: everyone");
     rebuildFeed();
     return true;
 }
@@ -260,26 +302,147 @@ bool SocialWindow::onSelectionChanged(const CEGUI::EventArgs& /*e*/)
     else
         mSelectedCreature.clear();
 
-    updateButtons();
+    // Selecting a creature shows its profile right away
+    if(!mSelectedCreature.empty())
+        showTab(true);
+    else if(mProfileTab)
+        refreshProfile();
     if(mSelectedOnly)
         rebuildFeed();
     return true;
 }
 
-bool SocialWindow::onOpenProfileClicked(const CEGUI::EventArgs& /*e*/)
+bool SocialWindow::onFeedTabClicked(const CEGUI::EventArgs& /*e*/)
 {
-    if(mSelectedCreature.empty())
-        return true;
-
-    Creature* creature = mGameMap.getCreature(mSelectedCreature);
-    if(creature != nullptr)
-        creature->createStatsWindow();
+    showTab(false);
     return true;
 }
 
-void SocialWindow::updateButtons()
+bool SocialWindow::onProfileTabClicked(const CEGUI::EventArgs& /*e*/)
 {
-    mWindow->getChild("OpenProfileButton")->setEnabled(!mSelectedCreature.empty());
+    showTab(true);
+    return true;
+}
+
+bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
+{
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
+    CEGUI::uint index = args.window->getID();
+    if((index < NB_LINK_BUTTONS) && !mLinkNames[index].empty())
+        selectCreature(mLinkNames[index]);
+    return true;
+}
+
+void SocialWindow::selectCreature(const std::string& creatureName)
+{
+    if((mFilter != CreatureFilter::All) &&
+       (std::find(mListedCreatures.begin(), mListedCreatures.end(), creatureName) == mListedCreatures.end()))
+    {
+        mFilter = CreatureFilter::All;
+        mWindow->getChild("FilterButton")->setText("Show: all creatures");
+    }
+    mSelectedCreature = creatureName;
+    rebuildCreatureList();
+    if(mSelectedOnly)
+        rebuildFeed();
+    showTab(true);
+}
+
+void SocialWindow::showTab(bool profile)
+{
+    mProfileTab = profile;
+    mWindow->getChild("FeedPane")->setVisible(!profile);
+    mWindow->getChild("ProfilePane")->setVisible(profile);
+    setTabState(mWindow->getChild("FeedTab"), "Feed", !profile);
+    setTabState(mWindow->getChild("ProfileTab"), "Profile", profile);
+    if(profile)
+        refreshProfile();
+}
+
+void SocialWindow::refreshProfile()
+{
+    social::PostLog& log = social::PostLog::getSingleton();
+    mShownProfilePostVersion = log.getVersion();
+    mSinceProfileRefresh = 0.0f;
+
+    CEGUI::Window* pane = mWindow->getChild("ProfilePane");
+    Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);
+    bool hasCreature = (creature != nullptr);
+    CEGUI::Window* holder = pane->getChild("ProfileHolder");
+    pane->getChild("ProfileHint")->setVisible(!hasCreature);
+    holder->setVisible(hasCreature);
+    pane->getChild("OwnPostsText")->setVisible(hasCreature);
+    for(std::size_t i = 0; i < NB_LINK_BUTTONS; ++i)
+        mLinkNames[i].clear();
+
+    if(hasCreature)
+    {
+        if(mProfilePage == nullptr)
+            mProfilePage = ODFrameListener::getSingleton().getModeManager()->getGui().createCreatureProfilePage(holder);
+
+        // The same code fills the creature card
+        creature->fillProfilePage(mProfilePage);
+
+        // Friends and foe are known once the page was filled, they become buttons to jump to their profiles
+        social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+        const social::SocialProfileCache::FriendsAndFoe* links =
+            cache.findFriendsAndFoe(mSelectedCreature, log.getRosterVersion());
+        if(links != nullptr)
+        {
+            std::vector<std::string> candidates = links->mFriends;
+            if(!links->mFoe.empty())
+                candidates.push_back(links->mFoe);
+            std::size_t nbFriends = 0;
+            for(std::size_t i = 0; i < candidates.size(); ++i)
+            {
+                Creature* other = mGameMap.getCreature(candidates[i]);
+                if(other == nullptr)
+                    continue;
+
+                bool isFoe = (!links->mFoe.empty() && (candidates[i] == links->mFoe));
+                if(!isFoe && (nbFriends >= NB_LINK_BUTTONS - 1))
+                    continue;
+
+                std::string name = cache.getProfile(candidates[i], other->getDefinition()->getClassName(),
+                    other->getDefinition()->isWorker()).getFullName();
+                // The foe always takes the last button
+                std::size_t slot = isFoe ? (NB_LINK_BUTTONS - 1) : nbFriends;
+                if(!isFoe)
+                    ++nbFriends;
+                mLinkNames[slot] = candidates[i];
+                CEGUI::Window* button = pane->getChild(getLinkButtonName(slot));
+                button->setText(name);
+                button->setTooltipText(std::string(isFoe ? "Foe: " : "Friend: ") + name + " - click to open the profile");
+            }
+        }
+    }
+    for(std::size_t i = 0; i < NB_LINK_BUTTONS; ++i)
+        pane->getChild(getLinkButtonName(i))->setVisible(!mLinkNames[i].empty());
+
+    std::string posts;
+    if(hasCreature)
+    {
+        int64_t turnNow = mGameMap.getTurnNumber();
+        std::size_t rows = 0;
+        const std::deque<social::Post>& allPosts = log.getPosts();
+        for(std::deque<social::Post>::const_reverse_iterator it = allPosts.rbegin();
+            (it != allPosts.rend()) && (rows < MAX_OWN_POSTS); ++it)
+        {
+            if(it->mCreature != mSelectedCreature)
+                continue;
+
+            std::string line = renderOwnPostLine(*it, turnNow);
+            if(line.empty())
+                continue;
+
+            posts += line;
+            ++rows;
+        }
+        if(posts.empty())
+            posts = std::string(FEED_TIME_COLOUR) + "Nothing posted yet.";
+        posts = std::string(FEED_NAME_COLOUR) + "Recent posts\n" + posts;
+    }
+    pane->getChild("OwnPostsText")->setText(posts);
 }
 
 void SocialWindow::rebuildCreatureList()
@@ -343,7 +506,8 @@ void SocialWindow::rebuildCreatureList()
 
     if(!selectionFound)
         mSelectedCreature.clear();
-    updateButtons();
+    if(mProfileTab)
+        refreshProfile();
 
     std::ostringstream label;
     label << "Creatures (" << entries.size();
@@ -385,5 +549,5 @@ void SocialWindow::rebuildFeed()
         if(text.empty())
             text = "Quiet in the dungeon. Somewhere, a kobold is shovelling.";
     }
-    mWindow->getChild("FeedText")->setText(text);
+    mWindow->getChild("FeedPane/FeedText")->setText(text);
 }

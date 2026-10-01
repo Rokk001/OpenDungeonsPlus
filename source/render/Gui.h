@@ -107,6 +107,9 @@ public:
     //! \brief Creates the fixed size creature profile window from WindowCreatureProfile.layout,
     //! registered for scaling. The caller adds it to the root window.
     CEGUI::Window* createCreatureProfileWindow(const std::string& name);
+    //! \brief Loads the profile page (portrait, texts, bars) as the child "Content" of the given holder window.
+    //! The page is shared by the creature card and the Dungeonbook, see Creature::fillProfilePage.
+    CEGUI::Window* createCreatureProfilePage(CEGUI::Window* holder);
 
     //! \brief Sets the user-selected UI scale and applies it immediately.
     void setUserScalePercent(float scalePercent);
