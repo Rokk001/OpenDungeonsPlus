@@ -36,26 +36,41 @@
 #include "utils/Random.h"
 #include "utils/LogManager.h"
 
-const std::string TrapDoorName = "DoorWooden";
-const std::string TrapDoorNameDisplay = "Wooden door";
-const TrapType TrapDoor::mTrapType = TrapType::doorWooden;
-
 namespace
 {
+//! \brief Factory shared by all door types. The doors only differ by name, price and health
 class TrapDoorFactory : public TrapFactory
 {
+public:
+    TrapDoorFactory(TrapType doorType, const std::string& name, const std::string& nameReadable,
+            const std::string& configPrefix) :
+        mDoorType(doorType),
+        mName(name),
+        mNameReadable(nameReadable),
+        mConfigPrefix(configPrefix)
+    {
+    }
+
+private:
+    TrapType mDoorType;
+    std::string mName;
+    std::string mNameReadable;
+    //! \brief Prefix of the doors parameters in traps.cfg
+    std::string mConfigPrefix;
+
     TrapType getTrapType() const override
-    { return TrapDoor::mTrapType; }
+    { return mDoorType; }
 
     const std::string& getName() const override
-    { return TrapDoorName; }
+    { return mName; }
 
     const std::string& getNameReadable() const override
-    { return TrapDoorNameDisplay; }
+    { return mNameReadable; }
 
     int getCostPerTile() const override
-    { return ConfigManager::getSingleton().getTrapConfigInt32("WoodenDoorCostPerTile"); }
+    { return ConfigManager::getSingleton().getTrapConfigInt32(mConfigPrefix + "DoorCostPerTile"); }
 
+    // No dedicated models exist yet for the stronger doors. They use the wooden door model
     const std::string& getMeshName() const override
     {
         static const std::string meshName = "WoodenDoor";
@@ -65,7 +80,7 @@ class TrapDoorFactory : public TrapFactory
     virtual void checkBuildTrap(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     {
         Player* player = gameMap->getLocalPlayer();
-        TrapType type = TrapType::doorWooden;
+        TrapType type = mDoorType;
         // We only allow 1 tile for door trap
         Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(tile == nullptr)
@@ -141,11 +156,11 @@ class TrapDoorFactory : public TrapFactory
             return false;
 
         // The door tile is ok
-        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::doorWooden);
+        int32_t pricePerTarget = TrapManager::costPerTile(mDoorType);
         if(!gameMap->withdrawFromTreasuries(pricePerTarget, player->getSeat()))
             return false;
 
-        TrapDoor* trap = new TrapDoor(gameMap);
+        TrapDoor* trap = new TrapDoor(gameMap, mDoorType);
         std::vector<Tile*> tiles;
         tiles.push_back(tile);
         return buildTrapDefault(gameMap, trap, player->getSeat(), tiles);
@@ -160,7 +175,7 @@ class TrapDoorFactory : public TrapFactory
             return;
         }
 
-        TrapType type = TrapType::doorWooden;
+        TrapType type = mDoorType;
         // We only allow 1 tile for door trap
         Tile* tile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(tile == nullptr)
@@ -249,13 +264,13 @@ class TrapDoorFactory : public TrapFactory
 
         std::vector<Tile*> tiles;
         tiles.push_back(tile);
-        TrapDoor* trap = new TrapDoor(gameMap);
+        TrapDoor* trap = new TrapDoor(gameMap, mDoorType);
         return buildTrapDefault(gameMap, trap, seatTrap, tiles);
     }
 
     Trap* getTrapFromStream(GameMap* gameMap, std::istream& is) const override
     {
-        TrapDoor* trap = new TrapDoor(gameMap);
+        TrapDoor* trap = new TrapDoor(gameMap, mDoorType);
         if(!Trap::importTrapFromStream(*trap, is))
         {
             OD_LOG_ERR("Error while building a trap from the stream");
@@ -274,26 +289,29 @@ class TrapDoorFactory : public TrapFactory
         if(tiles.size() != 1)
             return false;
 
-        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::spike);
+        int32_t pricePerTarget = TrapManager::costPerTile(mDoorType);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!noFee)
             if(!gameMap->withdrawFromTreasuries(price, seatPtr))
                 return false;
 
-        TrapDoor* trap = new TrapDoor(gameMap);
+        TrapDoor* trap = new TrapDoor(gameMap, mDoorType);
         return buildTrapDefault(gameMap, trap, seatPtr, tiles);
     }
 };
 
-// Register the factory
-static TrapRegister reg(new TrapDoorFactory);
+// Register the factories
+static TrapRegister regWooden(new TrapDoorFactory(TrapType::doorWooden, "DoorWooden", "Wooden door", "Wooden"));
+static TrapRegister regBraced(new TrapDoorFactory(TrapType::doorBraced, "DoorBraced", "Braced door", "Braced"));
+static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "Steel door", "Steel"));
 }
 
 const std::string TrapDoor::ANIMATION_OPEN = "Open";
 const std::string TrapDoor::ANIMATION_CLOSE = "Close";
 
-TrapDoor::TrapDoor(GameMap* gameMap) :
+TrapDoor::TrapDoor(GameMap* gameMap, TrapType doorType) :
     Trap(gameMap),
+    mDoorType(doorType),
     mIsLocked(false),
     mIsLockedState(false)
 {
@@ -317,8 +335,21 @@ TrapEntity* TrapDoor::getTrapEntity(Tile* tile)
     {
         rotation = 0.0;
     }
-    return new DoorEntity(getGameMap(), *this, reg.getTrapFactory()->getMeshName(), tile, rotation, false, isActivated(tile) ? 1.0f : 0.5f,
+    return new DoorEntity(getGameMap(), *this, TrapManager::getMeshFromTrapType(mDoorType), tile, rotation, false, isActivated(tile) ? 1.0f : 0.5f,
         ANIMATION_OPEN, false);
+}
+
+double TrapDoor::getDefaultTileHP() const
+{
+    switch(mDoorType)
+    {
+        case TrapType::doorBraced:
+            return ConfigManager::getSingleton().getTrapConfigDouble("BracedDoorHP");
+        case TrapType::doorSteel:
+            return ConfigManager::getSingleton().getTrapConfigDouble("SteelDoorHP");
+        default:
+            return ConfigManager::getSingleton().getTrapConfigDouble("WoodenDoorHP");
+    }
 }
 
 void TrapDoor::doUpkeep()
