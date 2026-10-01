@@ -227,11 +227,14 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     mCreatureTextOverlayDisplayed = false;
 
     // Cover tile and room seams with continuous earth below the dungeon.
+    // The plane lies below the deepest tile geometry (arena pit floor at z = -3.012,
+    // see ArenaLowered.mesh), otherwise it would hide the pit and the creatures in it.
+    const Ogre::Real groundUnderlayHeight = -4.0f;
     const Ogre::Real groundMargin = mViewport->getCamera()->getFarClipDistance();
     const Ogre::Real groundWidth = gameMap->getMapSizeX() + 2.0f * groundMargin;
     const Ogre::Real groundHeight = gameMap->getMapSizeY() + 2.0f * groundMargin;
     Ogre::MeshManager::getSingleton().createPlane("DungeonGroundUnderlayMesh", "Graphics",
-        Ogre::Plane(Ogre::Vector3::UNIT_Z, -1.0f), groundWidth, groundHeight,
+        Ogre::Plane(Ogre::Vector3::UNIT_Z, groundUnderlayHeight), groundWidth, groundHeight,
         1, 1, true, 1, groundWidth, groundHeight, Ogre::Vector3::UNIT_Y);
     Ogre::Entity* ground = mSceneManager->createEntity("DungeonGroundUnderlay", "DungeonGroundUnderlayMesh", "Graphics");
     ground->setMaterialName("DungeonGroundUnderlay", "Graphics");
