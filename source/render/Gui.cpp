@@ -1696,7 +1696,8 @@ void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 void Gui::arrangeTrapButtons(CEGUI::Window* traps)
 {
     traps->getChild("DestroyTrapButton")->hide();
-    arrangeActionButtons(traps, {"WoodenDoorTrapButton", "CannonButton", "SpikeTrapButton", "BoulderTrapButton"});
+    arrangeActionButtons(traps, {"WoodenDoorTrapButton", "BracedDoorTrapButton", "SteelDoorTrapButton",
+        "BarricadeTrapButton", "CannonButton", "SpikeTrapButton", "BoulderTrapButton", "AlarmTrapButton"});
 }
 
 void Gui::arrangeSpellButtons(CEGUI::Window* spells)

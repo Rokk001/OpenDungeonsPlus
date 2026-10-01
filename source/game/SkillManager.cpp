@@ -504,10 +504,12 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl3depends.push_back(skill);
 
+    // The tactic tree row after the wooden door has no room left for a fifth node
+    // (cannon, spike, braced door, barricade), so the alarm trap follows cannon and spike
     resType = SkillType::trapAlarm;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
+    skill = new Skill(resType, points, lvl3depends);
     def = new SkillDefTrap("TacticSkills/", "AlarmTrapButton", skill, TrapType::alarm);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
@@ -821,6 +823,11 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::spellCreatureWeak: return "Target strength: x" + spell("CreatureWeakValue") + ".";
         case SkillType::spellEyeEvil: return "Revealed-area lifetime: " + spell("EyeEvilNbTurns") + " turns.";
         case SkillType::spellCreateGold: return "Gold per cast: " + spell("CreateGoldValue") + ".";
+        // The health of every door type grows with the wooden door research level (TrapDoor::getHP)
+        case SkillType::trapDoorBraced: return "Door health: " + value(config.getTrapConfigDouble("BracedDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapDoorSteel: return "Door health: " + value(config.getTrapConfigDouble("SteelDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapDoorBarricade: return "Barricade health: " + value(config.getTrapConfigDouble("BarricadeDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
         default: return "";
     }
 }

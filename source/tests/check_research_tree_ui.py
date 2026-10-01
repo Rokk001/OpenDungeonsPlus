@@ -29,8 +29,9 @@ def function(signature):
 # Read the actual constructor's ordered dependency lists, not diagram row guesses.
 dependencies = {'emptyDepends': []}
 model = {}
+aliases = {}
 for line in manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')].splitlines():
-    if match := re.search(r'(lvl\ddepends)\.clear\(\)', line):
+    if match := re.search(r'(lvl\ddepends|\w+Depends)\.clear\(\)', line):
         dependencies[match[1]] = []
     if match := re.search(r'resType = SkillType::(\w+);', line):
         current = match[1]
@@ -38,9 +39,11 @@ for line in manager[manager.index('SkillManager::SkillManager()'):manager.index(
         parents = list(dependencies.get(match[1], []))
     if match := re.search(r'new SkillDef\w+\("([^"]+)", "([^"]+)"', line):
         model[current] = (match[1] + match[2], parents)
-    if match := re.search(r'(lvl\ddepends)\.push_back\(skill\)', line):
-        dependencies.setdefault(match[1], []).append(current)
-assert len(model) == 27
+    if match := re.search(r'const Skill\* (\w+) = skill;', line):
+        aliases[match[1]] = current
+    if match := re.search(r'(lvl\ddepends|\w+Depends)\.push_back\((\w+)\)', line):
+        dependencies.setdefault(match[1], []).append(current if match[2] == 'skill' else aliases[match[2]])
+assert len(model) == 32
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents))
     for key, (path, parents) in model.items())
