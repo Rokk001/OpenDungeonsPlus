@@ -49,5 +49,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="GasTrapButton" >
+            <Property name="Area" value="{{0,470},{0,25},{0,530},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/GasTrapButton" />
+            <Property name="TooltipText" value="Build a gas trap" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>
