@@ -152,9 +152,13 @@ public:
     bool ProfileTabClicked(const CEGUI::EventArgs& /*e*/);
     bool StatsTabClicked(const CEGUI::EventArgs& /*e*/);
     bool BookTabClicked(const CEGUI::EventArgs& /*e*/);
+    //! \brief A friend or foe name of the card was clicked: opens the Dungeonbook with that creature.
+    bool ProfileLinkClicked(const CEGUI::EventArgs& e);
     //! \brief Fills a profile page (gui/WindowCreatureProfilePage.layout) with the social profile of the
-    //! creature. Used by the creature card and by the Dungeonbook.
-    void fillProfilePage(CEGUI::Window* page);
+    //! creature. Used by the creature card and by the Dungeonbook. The names in the friends and foe rows are
+    //! buttons (FriendLink0, FriendLink1, FoeLink) carrying the creature name in the user string "Creature"; the
+    //! caller decides what a click does. Returns the bottom edge of the page content in design pixels.
+    float fillProfilePage(CEGUI::Window* page);
     std::string getStatsText();
 
     //! \brief Get the level of the object

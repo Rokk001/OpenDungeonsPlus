@@ -1568,6 +1568,134 @@ CEGUI::Window* Gui::createCreatureProfilePage(CEGUI::Window* holder)
     return page;
 }
 
+namespace
+{
+//! Top edge of the first flowing row of the profile page (design pixels, matches WindowCreatureProfilePage.layout)
+const float PROFILE_FLOW_TOP = 174.0f;
+//! Width of the "Friends:" and "Foe:" labels when links follow them, and where the links start
+const float PROFILE_LABEL_WIDTH = 88.0f;
+const float PROFILE_LINK_LEFT = 92.0f;
+const float PROFILE_ROW_GAP = 4.0f;
+const float PROFILE_LINE_PADDING = 4.0f;
+
+//! \brief Number of lines the text needs when it is wrapped at the given pixel width
+std::size_t countWrappedLines(const CEGUI::Font* font, const std::string& text, float width)
+{
+    std::size_t lines = 1;
+    float lineWidth = 0.0f;
+    const float spaceWidth = font->getTextExtent(" ");
+    std::string::size_type pos = 0;
+    while(pos <= text.size())
+    {
+        std::string::size_type end = text.find_first_of(" \n", pos);
+        if(end == std::string::npos)
+            end = text.size();
+
+        const float wordWidth = font->getTextExtent(text.substr(pos, end - pos));
+        if((lineWidth > 0.0f) && (lineWidth + spaceWidth + wordWidth > width))
+        {
+            ++lines;
+            lineWidth = wordWidth;
+        }
+        else
+        {
+            lineWidth += ((lineWidth > 0.0f) ? spaceWidth : 0.0f) + wordWidth;
+        }
+        if((end < text.size()) && (text[end] == '\n'))
+        {
+            ++lines;
+            lineWidth = 0.0f;
+        }
+        pos = end + 1;
+    }
+    return lines;
+}
+
+//! \brief Height in design pixels of the given number of text lines of the window
+float getProfileLinesHeight(const CEGUI::Window* window, std::size_t lines, float scale)
+{
+    const CEGUI::Font* font = window->getFont();
+    if(font == nullptr)
+        return PROFILE_LINE_PADDING + 16.0f * static_cast<float>(lines);
+
+    return font->getLineSpacing() * static_cast<float>(lines) / scale + PROFILE_LINE_PADDING;
+}
+}
+
+float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
+{
+    if(!window->isVisible(true))
+        return y;
+
+    const CEGUI::Font* font = window->getFont();
+    const float width = window->getPixelSize().d_width * 0.96f;
+    const std::size_t lines = (font == nullptr) ? 1 :
+        countWrappedLines(font, std::string(window->getText().c_str()), width);
+    const float height = getProfileLinesHeight(window, lines, scale);
+    setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, 16), CEGUI::UDim(0, y),
+        CEGUI::UDim(1, -16), CEGUI::UDim(0, y + height)));
+    return y + height + PROFILE_ROW_GAP;
+}
+
+float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
+{
+    const float scale = getLayoutScale();
+    float y = PROFILE_FLOW_TOP;
+
+    // Bio, likes and dislikes, then the rows with friends and foe, then status and latest post
+    const char* const textRowsBefore[] = {"BioText", "LikesText", "DislikesText"};
+    const char* const textRowsAfter[] = {"StatusText", "LatestText"};
+    const char* const linkRows[2][3] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
+
+    for(std::size_t i = 0; i < 3; ++i)
+        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
+
+    for(std::size_t row = 0; row < 2; ++row)
+    {
+        CEGUI::Window* label = page->getChild(linkRows[row][0]);
+        if(!label->isVisible(true))
+            continue;
+
+        // The label shares its line with the first link, further links follow below
+        const float lineHeight = getProfileLinesHeight(label, 1, scale);
+        float linkY = y;
+        for(std::size_t i = 1; (i < 3) && (linkRows[row][i] != nullptr); ++i)
+        {
+            CEGUI::Window* link = page->getChild(linkRows[row][i]);
+            if(!link->isVisible(true))
+                continue;
+
+            setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
+                CEGUI::UDim(1, -16), CEGUI::UDim(0, linkY + lineHeight)));
+            linkY += lineHeight;
+        }
+        const bool hasLinks = (linkY > y);
+        setScaledArea(label, CEGUI::URect(CEGUI::UDim(0, 16), CEGUI::UDim(0, y),
+            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -16), CEGUI::UDim(0, y + lineHeight)));
+        y = std::max(y + lineHeight, linkY) + PROFILE_ROW_GAP;
+    }
+
+    for(std::size_t i = 0; i < 2; ++i)
+        y = layoutProfileTextRow(page->getChild(textRowsAfter[i]), y, scale);
+
+    return y;
+}
+
+void Gui::setScaledArea(CEGUI::Window* window, const CEGUI::URect& designArea)
+{
+    std::map<CEGUI::Window*, WindowScaleData>::iterator it = mScaledWindows.find(window);
+    if(it != mScaledWindows.end())
+        it->second.area = designArea;
+
+    window->setArea(scaleRect(designArea, getLayoutScale()));
+}
+
+float Gui::getLayoutScale() const
+{
+    const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    return std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH, displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
+}
+
 void Gui::setUserScalePercent(float scalePercent)
 {
     if(scalePercent != scalePercent)

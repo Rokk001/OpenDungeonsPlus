@@ -68,7 +68,16 @@ const CreatureProfile& SocialProfileCache::getProfile(const std::string& creatur
         OD_LOG_WRN("Creature profile data: class " + className + " has no name group, using the default group");
     }
 
-    CreatureProfile profile = SocialGenerator::makeProfile(mData, creatureName, className, isWorker);
+    // Two creatures of a dungeon must not share a full name: the first one asking keeps the name the
+    // generator draws, a later one with the same name gets the next name variant (always the same one
+    // for the same sequence of requests, and the last variant is unique through the creature name)
+    CreatureProfile profile;
+    for(uint32_t variant = 0; variant <= SocialGenerator::MAX_NAME_VARIANT + 1; ++variant)
+    {
+        profile = SocialGenerator::makeProfile(mData, creatureName, className, isWorker, variant);
+        if(mUsedNames.insert(profile.getFullName()).second)
+            break;
+    }
     std::pair<std::map<std::string, CreatureProfile>::iterator, bool> inserted =
         mProfiles.insert(std::make_pair(creatureName, profile));
     return inserted.first->second;
@@ -92,6 +101,7 @@ void SocialProfileCache::storeFriendsAndFoe(const std::string& creatureName, con
 void SocialProfileCache::clear()
 {
     mProfiles.clear();
+    mUsedNames.clear();
     mFriends.clear();
 }
 

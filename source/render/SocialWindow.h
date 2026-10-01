@@ -18,6 +18,7 @@
 #ifndef SOCIALWINDOW_H
 #define SOCIALWINDOW_H
 
+#include <CEGUI/Event.h>
 #include <CEGUI/EventArgs.h>
 
 #include <stdint.h>
@@ -45,6 +46,7 @@ class SocialWindow
 {
 public:
     SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap);
+    ~SocialWindow();
 
     //! \brief Shows the window on top of the other ones and draws list and feed.
     void show();
@@ -62,7 +64,7 @@ public:
     bool onSelectionChanged(const CEGUI::EventArgs& e);
     bool onFeedTabClicked(const CEGUI::EventArgs& e);
     bool onProfileTabClicked(const CEGUI::EventArgs& e);
-    //! \brief A friend or foe button of the profile pane: selects that creature.
+    //! \brief A friend or foe name in the profile: selects that creature.
     bool onLinkClicked(const CEGUI::EventArgs& e);
 
     //! \brief Marks the tab button as the active one (gold, in brackets); the button stays enabled.
@@ -105,8 +107,8 @@ private:
     bool mProfileTab;
     //! The profile page inside the profile pane, created when it is needed the first time
     CEGUI::Window* mProfilePage;
-    //! Creature names behind the friend and foe buttons, empty if a button is hidden
-    std::string mLinkNames[3];
+    //! Click subscriptions of the friend and foe names of the profile page
+    std::vector<CEGUI::Event::Connection> mLinkConnections;
     uint32_t mShownRosterVersion;
     uint32_t mShownPostVersion;
     float mSinceRefreshCheck;

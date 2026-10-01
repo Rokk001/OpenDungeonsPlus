@@ -5,7 +5,7 @@
         <Property name="Area" value="{{0.5,-270},{0.5,-252},{0.5,270},{0.5,252}}" />
         <Property name="SizingEnabled" value="False" />
         <Window type="DefaultWindow" name="ProfilePage" >
-            <Property name="Area" value="{{0.0,0},{0.0,0},{1.0,0},{1.0,-56}}" />
+            <Property name="Area" value="{{0.0,0},{0.0,34},{1.0,0},{1.0,-56}}" />
         </Window>
         <Window type="OD/StaticText" name="StatsText" >
             <Property name="Area" value="{{0.0,20},{0.0,34},{1.0,-20},{1.0,-56}}" />

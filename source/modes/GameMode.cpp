@@ -503,11 +503,6 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedTabClicked, mSocialWindow.get())));
     addEventConnection(mRootWindow->getChild("SocialWindow/ProfileTab")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileTabClicked, mSocialWindow.get())));
-    for(int32_t i = 0; i < 3; ++i)
-    {
-        addEventConnection(mRootWindow->getChild("SocialWindow/ProfilePane/LinkButton" + Helper::toString(i))->subscribeEvent(
-            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, mSocialWindow.get())));
-    }
     addEventConnection(mRootWindow->getChild("SocialWindow/CreatureList")->subscribeEvent(
         CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&SocialWindow::onSelectionChanged, mSocialWindow.get())));
 }

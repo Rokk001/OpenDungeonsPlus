@@ -37,9 +37,15 @@ public:
     //! Maximum length of a bio after the slots are expanded
     static const std::size_t MAX_BIO_LENGTH = 160;
 
-    //! \brief Builds the profile of a creature from its name (for example "Orc17").
+    //! Highest name variant that is drawn from the name tables, see makeProfile
+    static const uint32_t MAX_NAME_VARIANT = 12;
+
+    //! \brief Builds the profile of a creature from its name (for example "Orc17"). Variant 0 is the
+    //! normal name; a higher variant draws another first name and surname or title (everything else stays
+    //! the same), so a caller can resolve two creatures of a dungeon with the same name. Variants above
+    //! MAX_NAME_VARIANT use the creature name as surname, which is unique in a game.
     static CreatureProfile makeProfile(const SocialData& data, const std::string& creatureName,
-        const std::string& className, bool isWorker);
+        const std::string& className, bool isWorker, uint32_t nameVariant = 0);
 
     //! \brief The readable name of a creature class ("CaveHornet" -> "Cave Hornet"), the class name
     //! itself if the data has no entry for it.

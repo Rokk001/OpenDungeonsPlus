@@ -20,8 +20,8 @@ width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 assert width >= 480 and height >= 440, (width, height)
 for name in ('ProfilePage', 'StatsText', 'ProfileTab', 'StatsTab', 'BookTab'):
     assert 'name="%s"' % name in layout, name
-for name in ('ProfilePage', 'Portrait', 'HealthBar', 'ExperienceBar', 'BioText', 'FriendsText', 'StatusText',
-             'LatestText'):
+for name in ('ProfilePage', 'Portrait', 'HealthBar', 'ExperienceBar', 'BioText', 'FriendsLabel', 'FriendLink0', 'FriendLink1', 'FoeLabel',
+             'FoeLink', 'StatusText', 'LatestText'):
     assert 'name="%s"' % name in page, name
 stats = layout[layout.index('name="StatsText"'):]
 stats = stats[:stats.index('</Window>')]
@@ -43,18 +43,18 @@ for handler in ('ProfileTabClicked', 'StatsTabClicked'):
 assert 'EventCloseClicked' in creature
 assert 'social/SocialProfileCache.h' in creature
 # one function fills the page for the card and for the Dungeonbook
-assert 'void Creature::fillProfilePage(CEGUI::Window* page)' in creature
+assert 'float Creature::fillProfilePage(CEGUI::Window* page)' in creature
 assert 'fillProfilePage(mStatsWindow->getChild("ProfilePage/Content"))' in creature
 assert 'createCreatureProfilePage(mStatsWindow->getChild("ProfilePage"))' in creature
 assert 'WindowCreatureProfilePage.layout' in gui and 'setName("Content")' in gui
 assert 'fillProfilePage(mProfilePage)' in (repo / 'source/render/SocialWindow.cpp').read_text()
 
 # ---- rows: visible labels for the bars, no overlap, nothing below the tab buttons ----
-for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeText'):
+for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeLabel'):
     assert 'name="%s"' % name in page, name
 rows = []
 for name in ('NameText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText', 'BioText', 'LikesText',
-             'DislikesText', 'FriendsText', 'FoeText', 'StatusText'):
+             'DislikesText', 'FriendsLabel', 'FoeLabel', 'StatusText'):
     block = page[page.index('name="%s"' % name):]
     area = re.search(r'name="Area" value="\{\{[^,]*,(-?\d+)\},\{0\.0,(\d+)\},\{[^,]*,(-?\d+)\},\{0\.0,(\d+)\}\}"', block)
     rows.append((name, int(area[2]), int(area[4])))
@@ -64,7 +64,7 @@ for (name, top, bottom), (nextName, nextTop, nextBottom) in zip(rows, rows[1:]):
     elif nextName not in ('NameText',):
         assert bottom <= nextTop, (name, nextName)
 lastBottom = max(bottom for _, _, bottom in rows)
-assert lastBottom <= height - 56, 'a row reaches into the tab buttons'
+assert lastBottom + 34 <= height - 56, 'a row reaches into the tab buttons'
 assert 'setDisabled(' not in creature[creature.index('void Creature::showStatsPage'):creature.index('void Creature::refreshProfilePage')],     'the active tab must not be shown disabled'
 assert 'Unspecified' not in (repo / 'source/social/SocialGenerator.cpp').read_text()
 assert '"@" + getName()' not in creature, 'the handle must not be the internal name'

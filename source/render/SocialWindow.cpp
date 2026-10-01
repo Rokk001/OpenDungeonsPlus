@@ -32,7 +32,9 @@
 #include "social/SocialProfileCache.h"
 #include "ODApplication.h"
 
+#include <CEGUI/Font.h>
 #include <CEGUI/widgets/Listbox.h>
+#include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/Window.h>
@@ -47,8 +49,10 @@ namespace
 const std::size_t MAX_FEED_ROWS = 25;
 //! Number of posts shown below the profile at most
 const std::size_t MAX_OWN_POSTS = 5;
-//! Number of friend and foe buttons in the profile pane (two friends and a foe)
-const std::size_t NB_LINK_BUTTONS = 3;
+//! Distance between the profile and the recent posts below it (design pixels)
+const float OWN_POSTS_GAP = 6.0f;
+//! Space the creature list keeps free right of its items (design pixels), so the horizontal scrollbar never appears
+const float LIST_TEXT_MARGIN = 34.0f;
 //! The window checks for changes at most this often (real seconds), so at most 4 redraws per second
 const float REFRESH_CHECK_INTERVAL = 0.25f;
 //! The relative times of the feed are refreshed at least this often while the window is open
@@ -149,9 +153,16 @@ std::string renderOwnPostLine(const social::Post& post, int64_t turnNow)
         formatAge(turnNow - post.mTurn) + ")\n";
 }
 
-std::string getLinkButtonName(std::size_t index)
+//! \brief The text shortened with "..." so it is not wider than the given pixel width
+std::string elideToWidth(const CEGUI::Font* font, const std::string& text, float maxWidth)
 {
-    return "LinkButton" + std::string(1, static_cast<char>('0' + index));
+    if((font == nullptr) || (font->getTextExtent(text) <= maxWidth))
+        return text;
+
+    std::string shortened = text;
+    while(!shortened.empty() && (font->getTextExtent(shortened + "...") > maxWidth))
+        shortened.erase(shortened.size() - 1);
+    return shortened + "...";
 }
 }
 
@@ -170,8 +181,12 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mShownProfilePostVersion(0),
     mSinceProfileRefresh(0.0f)
 {
-    for(std::size_t i = 0; i < NB_LINK_BUTTONS; ++i)
-        mWindow->getChild("ProfilePane/" + getLinkButtonName(i))->setID(static_cast<CEGUI::uint>(i));
+}
+
+SocialWindow::~SocialWindow()
+{
+    for(CEGUI::Event::Connection& connection : mLinkConnections)
+        connection->disconnect();
 }
 
 void SocialWindow::setTabState(CEGUI::Window* tab, const std::string& label, bool active)
@@ -327,9 +342,8 @@ bool SocialWindow::onProfileTabClicked(const CEGUI::EventArgs& /*e*/)
 bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
-    CEGUI::uint index = args.window->getID();
-    if((index < NB_LINK_BUTTONS) && !mLinkNames[index].empty())
-        selectCreature(mLinkNames[index]);
+    if(args.window->isUserStringDefined("Creature"))
+        selectCreature(std::string(args.window->getUserString("Creature").c_str()));
     return true;
 }
 
@@ -372,52 +386,26 @@ void SocialWindow::refreshProfile()
     pane->getChild("ProfileHint")->setVisible(!hasCreature);
     holder->setVisible(hasCreature);
     pane->getChild("OwnPostsText")->setVisible(hasCreature);
-    for(std::size_t i = 0; i < NB_LINK_BUTTONS; ++i)
-        mLinkNames[i].clear();
 
+    float profileBottom = 0.0f;
     if(hasCreature)
     {
+        Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
         if(mProfilePage == nullptr)
-            mProfilePage = ODFrameListener::getSingleton().getModeManager()->getGui().createCreatureProfilePage(holder);
-
-        // The same code fills the creature card
-        creature->fillProfilePage(mProfilePage);
-
-        // Friends and foe are known once the page was filled, they become buttons to jump to their profiles
-        social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-        const social::SocialProfileCache::FriendsAndFoe* links =
-            cache.findFriendsAndFoe(mSelectedCreature, log.getRosterVersion());
-        if(links != nullptr)
         {
-            std::vector<std::string> candidates = links->mFriends;
-            if(!links->mFoe.empty())
-                candidates.push_back(links->mFoe);
-            std::size_t nbFriends = 0;
-            for(std::size_t i = 0; i < candidates.size(); ++i)
+            mProfilePage = gui.createCreatureProfilePage(holder);
+            // The names in the friends and foe rows select that creature
+            const char* const linkNames[] = {"FriendLink0", "FriendLink1", "FoeLink"};
+            for(const char* linkName : linkNames)
             {
-                Creature* other = mGameMap.getCreature(candidates[i]);
-                if(other == nullptr)
-                    continue;
-
-                bool isFoe = (!links->mFoe.empty() && (candidates[i] == links->mFoe));
-                if(!isFoe && (nbFriends >= NB_LINK_BUTTONS - 1))
-                    continue;
-
-                std::string name = cache.getProfile(candidates[i], other->getDefinition()->getClassName(),
-                    other->getDefinition()->isWorker()).getFullName();
-                // The foe always takes the last button
-                std::size_t slot = isFoe ? (NB_LINK_BUTTONS - 1) : nbFriends;
-                if(!isFoe)
-                    ++nbFriends;
-                mLinkNames[slot] = candidates[i];
-                CEGUI::Window* button = pane->getChild(getLinkButtonName(slot));
-                button->setText(name);
-                button->setTooltipText(std::string(isFoe ? "Foe: " : "Friend: ") + name + " - click to open the profile");
+                mLinkConnections.push_back(mProfilePage->getChild(linkName)->subscribeEvent(
+                    CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this)));
             }
         }
+
+        // The same code fills the creature card
+        profileBottom = creature->fillProfilePage(mProfilePage);
     }
-    for(std::size_t i = 0; i < NB_LINK_BUTTONS; ++i)
-        pane->getChild(getLinkButtonName(i))->setVisible(!mLinkNames[i].empty());
 
     std::string posts;
     if(hasCreature)
@@ -438,11 +426,18 @@ void SocialWindow::refreshProfile()
             posts += line;
             ++rows;
         }
-        if(posts.empty())
-            posts = std::string(FEED_TIME_COLOUR) + "Nothing posted yet.";
-        posts = std::string(FEED_NAME_COLOUR) + "Recent posts\n" + posts;
+        // The profile already says "nothing posted yet", so the recent posts are left out when there are none
+        if(!posts.empty())
+            posts = std::string(FEED_NAME_COLOUR) + "Recent posts\n" + posts;
     }
-    pane->getChild("OwnPostsText")->setText(posts);
+    CEGUI::Window* ownPosts = pane->getChild("OwnPostsText");
+    ownPosts->setText(posts);
+    if(hasCreature)
+    {
+        // The recent posts follow directly below the profile, whatever its height
+        ODFrameListener::getSingleton().getModeManager()->getGui().setScaledArea(ownPosts,
+            CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, profileBottom + OWN_POSTS_GAP), CEGUI::UDim(1, 0), CEGUI::UDim(1, 0)));
+    }
 }
 
 void SocialWindow::rebuildCreatureList()
@@ -483,6 +478,10 @@ void SocialWindow::rebuildCreatureList()
     }
     std::sort(entries.begin(), entries.end(), isEntryBefore);
 
+    // Items wider than the list would bring up a horizontal scrollbar, so long texts are shortened
+    const float maxTextWidth = list->getPixelSize().d_width - list->getVertScrollbar()->getPixelSize().d_width -
+        LIST_TEXT_MARGIN * ODFrameListener::getSingleton().getModeManager()->getGui().getLayoutScale();
+
     mRebuildingList = true;
     float scroll = list->getVertScrollbar()->getScrollPosition();
     list->resetList();
@@ -491,7 +490,8 @@ void SocialWindow::rebuildCreatureList()
     for(std::size_t i = 0; i < entries.size(); ++i)
     {
         mListedCreatures.push_back(entries[i].mName);
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(entries[i].mText, static_cast<CEGUI::uint>(i));
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(elideToWidth(list->getFont(), entries[i].mText, maxTextWidth),
+            static_cast<CEGUI::uint>(i));
         item->setTextParsingEnabled(false);
         item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
         list->addItem(item);
