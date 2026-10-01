@@ -293,3 +293,26 @@ BOOST_AUTO_TEST_CASE(test_SocialFallbacks)
     BOOST_CHECK_EQUAL(broken.getTextCount("Like"), 1u);
     BOOST_CHECK_EQUAL(social::SocialGenerator::makeProfile(broken, "Test1", "TestClass", false).mLikes[0], "cake");
 }
+
+BOOST_AUTO_TEST_CASE(test_SocialNameVariants)
+{
+    social::SocialData data;
+    data.loadFromDirectory(getConfigDirectory());
+    social::CreatureProfile base = social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false);
+    social::CreatureProfile variantZero = social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false, 0);
+    BOOST_CHECK_EQUAL(social::SocialGenerator::serialize(base), social::SocialGenerator::serialize(variantZero));
+
+    // A variant is deterministic and keeps everything except the name
+    social::CreatureProfile variant = social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false, 3);
+    BOOST_CHECK_EQUAL(social::SocialGenerator::serialize(variant),
+        social::SocialGenerator::serialize(social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false, 3)));
+    BOOST_CHECK_EQUAL(variant.mGender, base.mGender);
+    BOOST_CHECK_EQUAL(variant.mAge, base.mAge);
+    BOOST_CHECK_EQUAL(variant.mHometown, base.mHometown);
+
+    // Beyond the table variants the creature name makes the full name unique
+    social::CreatureProfile fallback = social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false,
+        social::SocialGenerator::MAX_NAME_VARIANT + 1);
+    BOOST_CHECK_EQUAL(fallback.mSurname, "Orc17");
+    BOOST_CHECK(fallback.mTitle.empty());
+}
