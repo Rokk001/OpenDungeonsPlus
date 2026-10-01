@@ -34,6 +34,7 @@
     <Image height="128" name="LibraryButton" width="128" xPos="512" yPos="128" />
     <Image height="128" name="HatcheryButton" width="128" xPos="640" yPos="128" />
     <Image height="128" name="CryptButton" width="128" xPos="768" yPos="128" />
+    <Image height="128" name="PrayerTempleButton" width="128" xPos="768" yPos="128" />
     <Image height="128" name="DestroyRoomButton" width="128" xPos="896" yPos="128" />
     <Image height="128" name="WorkshopButton" width="128" xPos="0" yPos="256" />
     <Image height="128" name="PrisonButton" width="128" xPos="128" yPos="256" />

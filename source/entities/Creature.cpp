@@ -314,6 +314,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
+    mPrayerRelief            (0),
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (CreatureMoodValues::Nothing),
@@ -403,6 +404,7 @@ Creature::Creature(GameMap* gameMap) :
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
+    mPrayerRelief            (0),
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (0),
@@ -1202,6 +1204,14 @@ void Creature::doUpkeep()
     mVisibleEnemyObjects         = getVisibleEnemyObjects();
     mVisibleAlliedObjects        = getVisibleAlliedObjects();
     mReachableAlliedObjects      = getReachableAttackableObjects(mVisibleAlliedObjects);
+
+    // The relief from praying fades
+    if(mPrayerRelief > 0)
+    {
+        mPrayerRelief -= ConfigManager::getSingleton().getRoomConfigInt32("TemplePrayerReliefDecayPerTurn");
+        if(mPrayerRelief < 0)
+            mPrayerRelief = 0;
+    }
 
     // Check if we should compute mood
     if(mMoodCooldownTurns > 0)
@@ -3721,6 +3731,11 @@ void Creature::addCasinoMood(double points)
     mCasinoMood = std::max(-maxPoints, std::min(maxPoints, mCasinoMood + points));
 }
 
+void Creature::addPrayerRelief(int32_t relief, int32_t maxRelief)
+{
+    mPrayerRelief = std::min(mPrayerRelief + relief, maxRelief);
+}
+
 void Creature::computeMood()
 {
     mMoodPoints = CreatureMoodManager::computeCreatureMoodModifiers(*this);
@@ -4162,6 +4177,7 @@ void Creature::changeSeat(Seat* newSeat)
     setSeat(newSeat);
     mMoodValue = CreatureMoodLevel::Neutral;
     mMoodPoints = 0;
+    mPrayerRelief = 0;
     mWakefulness = 100;
     mHunger = 0;
     mNbTurnsTorture = 0;

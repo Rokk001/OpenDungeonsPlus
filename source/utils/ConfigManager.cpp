@@ -1213,6 +1213,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::manaVaultGround, tileSet->configureTileValues(TileVisual::manaVaultGround),*mHighMap))
             return false;
+        if(!loadTilesetValues(defFile, TileVisual::templeRoom, tileSet->configureTileValues(TileVisual::templeRoom),*mHighMap))
+            return false;
 
     }
 

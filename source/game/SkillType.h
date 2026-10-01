@@ -73,6 +73,9 @@ enum class SkillType
     // Added later, appended so that existing saves stay valid
     roomGuardRoom,
 
+    // Added later, appended so that existing saves stay valid
+    roomTemple,
+
     // This should be the last
     countSkill
 };

@@ -42,6 +42,7 @@ enum class RoomType
     casino,
     torture,
     guardRoom,
+    temple,
     nbRooms     // Must be the last in this enum
 };
 

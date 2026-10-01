@@ -65,6 +65,8 @@ std::string toString(SkillType type)
             return "roomPrison";
         case SkillType::roomGuardRoom:
             return "roomGuardRoom";
+        case SkillType::roomTemple:
+            return "roomTemple";
         case SkillType::roomTorture:
             return "roomTorture";
         case SkillType::roomTrainingHall:
@@ -146,6 +148,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Prison Room";
         case SkillType::roomGuardRoom:
             return "The Guard Room";
+        case SkillType::roomTemple:
+            return "The Temple";
         case SkillType::roomTorture:
             return "The Torture Room";
         case SkillType::spellCallToWar:

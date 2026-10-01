@@ -115,6 +115,7 @@ enum class TileVisual
     tortureRoom,
     guardRoom,
     manaVaultGround,
+    templeRoom,
     countTileVisual
 };
 
