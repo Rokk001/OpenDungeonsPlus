@@ -512,6 +512,7 @@ GameMode::~GameMode()
     // The feed and the profiles belong to this game only
     social::PostLog::getSingleton().stop();
     social::SocialProfileCache::getSingleton().clear();
+    clearCreatureProfilePortraits();
     resetIdleHand();
     if(mDefeatSequence.isStarted())
     {

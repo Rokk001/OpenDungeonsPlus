@@ -27,4 +27,13 @@ const CEGUI::Image& getCreaturePanelPortraitImage(const std::string& meshName);
 //! Return a square crop sharing the cached population-panel portrait texture.
 const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName);
 
+//! Portrait of one creature: the illustrated portrait of its class with the colour variation of
+//! config/portrait-tints.cfg (hair, beard, eyes, skin, teeth), chosen from the creature name.
+//! Falls back to getCreaturePanelPortraitImage() for classes without tint entries. The tinted
+//! image is created on first use and cached until clearCreatureProfilePortraits().
+const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureName, const std::string& meshName);
+
+//! Destroy the tinted portraits of all creatures (end of a game).
+void clearCreatureProfilePortraits();
+
 #endif
