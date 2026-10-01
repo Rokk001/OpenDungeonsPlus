@@ -2470,7 +2470,7 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
 
     page->getChild("Portrait")->setProperty("Image",
-        getCreaturePanelPortraitImage(definition->getMeshName()).getName());
+        getCreatureProfilePortraitImage(getName(), definition->getMeshName()).getName());
     page->getChild("NameText")->setText(profile.getFullName());
 
     std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +

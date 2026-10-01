@@ -410,6 +410,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/DebugDrawer.cpp    
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
+    ${SRC}/render/PortraitTint.cpp
     ${SRC}/render/CreaturePanel.cpp
     ${SRC}/render/SocialWindow.cpp
     ${SRC}/render/MovableTextOverlay.cpp

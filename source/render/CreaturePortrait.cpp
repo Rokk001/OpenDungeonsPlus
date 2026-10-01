@@ -5,6 +5,10 @@
 
 #include "render/CreaturePortrait.h"
 
+#include "render/PortraitTint.h"
+#include "utils/ConfigManager.h"
+#include "utils/LogManager.h"
+
 #include <Ogre.h>
 #include <OgreBone.h>
 #include <OgreHardwarePixelBuffer.h>
@@ -16,8 +20,49 @@
 #include <CEGUI/System.h>
 #include <CEGUI/Texture.h>
 
+#include <set>
+#include <stdexcept>
+#include <vector>
+
 namespace
 {
+//! Illustrated portraits are shrunk by this factor before they are tinted: they are shown small
+//! and every creature gets an own texture
+const uint32_t TINT_DOWNSCALE = 4;
+const std::string TINTED_PREFIX = "TintedCreaturePortrait/";
+
+PortraitTint& getPortraitTint()
+{
+    static PortraitTint tint;
+    static bool loaded = false;
+    if(!loaded)
+    {
+        loaded = true;
+        std::string path = ConfigManager::getSingleton().getConfigPath();
+        if(!path.empty() && (path[path.size() - 1] != '/') && (path[path.size() - 1] != '\\'))
+            path += "/";
+        tint.loadFromFile(path + "portrait-tints.cfg");
+        const std::vector<std::string>& errors = tint.getErrors();
+        for(std::vector<std::string>::const_iterator it = errors.begin(); it != errors.end(); ++it)
+        {
+            OD_LOG_ERR("Portrait tints: " + *it);
+        }
+    }
+    return tint;
+}
+
+std::set<std::string>& getTintedPortraitNames()
+{
+    static std::set<std::string> names;
+    return names;
+}
+
+std::set<std::string>& getFailedTintedPortraitNames()
+{
+    static std::set<std::string> names;
+    return names;
+}
+
 struct PortraitScene
 {
     Ogre::SceneManager* scene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager");
@@ -224,4 +269,115 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName)
     image.setArea(CEGUI::Rectf(left, top, left + side, top + side));
     image.setAutoScaled(CEGUI::ASM_Disabled);
     return image;
+}
+
+const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureName, const std::string& meshName)
+{
+    const std::string name = TINTED_PREFIX + creatureName;
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    if(images.isDefined(name))
+        return images.get(name);
+
+    const std::string filename = "portrait-" + meshName + ".png";
+    PortraitTint& tint = getPortraitTint();
+    if(!tint.hasMesh(meshName) || (getFailedTintedPortraitNames().count(name) != 0) ||
+        !Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", filename))
+        return getCreaturePanelPortraitImage(meshName);
+
+    CEGUI::OgreRenderer& renderer = static_cast<CEGUI::OgreRenderer&>(
+        *CEGUI::System::getSingleton().getRenderer());
+    Ogre::TexturePtr texture;
+    try
+    {
+        Ogre::Image source;
+        source.load(filename, "Graphics");
+        const uint32_t sourceWidth = static_cast<uint32_t>(source.getWidth());
+        const uint32_t sourceHeight = static_cast<uint32_t>(source.getHeight());
+        const uint32_t width = sourceWidth / TINT_DOWNSCALE;
+        const uint32_t height = sourceHeight / TINT_DOWNSCALE;
+        if((width == 0) || (height == 0))
+            throw std::runtime_error("portrait image too small");
+
+        std::vector<uint8_t> full(static_cast<size_t>(sourceWidth) * sourceHeight * 4);
+        Ogre::PixelBox fullBox(sourceWidth, sourceHeight, 1, Ogre::PF_BYTE_RGBA, &full[0]);
+        Ogre::PixelUtil::bulkPixelConversion(source.getPixelBox(), fullBox);
+
+        // Average each block of TINT_DOWNSCALE x TINT_DOWNSCALE pixels
+        std::vector<float> rgb(static_cast<size_t>(width) * height * 3);
+        const float blockSize = static_cast<float>(TINT_DOWNSCALE * TINT_DOWNSCALE) * 255.0f;
+        for(uint32_t y = 0; y < height; ++y)
+        {
+            for(uint32_t x = 0; x < width; ++x)
+            {
+                float sum[3] = {0.0f, 0.0f, 0.0f};
+                for(uint32_t dy = 0; dy < TINT_DOWNSCALE; ++dy)
+                {
+                    for(uint32_t dx = 0; dx < TINT_DOWNSCALE; ++dx)
+                    {
+                        const uint8_t* pixel = &full[(static_cast<size_t>(y * TINT_DOWNSCALE + dy) * sourceWidth +
+                            x * TINT_DOWNSCALE + dx) * 4];
+                        sum[0] += pixel[0];
+                        sum[1] += pixel[1];
+                        sum[2] += pixel[2];
+                    }
+                }
+                size_t index = (static_cast<size_t>(y) * width + x) * 3;
+                rgb[index] = sum[0] / blockSize;
+                rgb[index + 1] = sum[1] / blockSize;
+                rgb[index + 2] = sum[2] / blockSize;
+            }
+        }
+        std::vector<uint8_t>().swap(full);
+
+        tint.apply(meshName, creatureName, rgb, width, height);
+
+        std::vector<uint8_t> data(static_cast<size_t>(width) * height * 4);
+        for(size_t i = 0; i < static_cast<size_t>(width) * height; ++i)
+        {
+            data[i * 4] = static_cast<uint8_t>(rgb[i * 3] * 255.0f + 0.5f);
+            data[i * 4 + 1] = static_cast<uint8_t>(rgb[i * 3 + 1] * 255.0f + 0.5f);
+            data[i * 4 + 2] = static_cast<uint8_t>(rgb[i * 3 + 2] * 255.0f + 0.5f);
+            data[i * 4 + 3] = 255;
+        }
+
+        texture = Ogre::TextureManager::getSingleton().createManual(name, "General", Ogre::TEX_TYPE_2D,
+            width, height, 0, Ogre::PF_BYTE_RGBA, Ogre::TU_DEFAULT);
+        texture->getBuffer()->blitFromMemory(Ogre::PixelBox(width, height, 1, Ogre::PF_BYTE_RGBA, &data[0]));
+
+        CEGUI::Texture& guiTexture = renderer.createTexture(name, texture, true);
+        CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
+        image.setTexture(&guiTexture);
+        image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)));
+        image.setAutoScaled(CEGUI::ASM_Disabled);
+        getTintedPortraitNames().insert(name);
+        return image;
+    }
+    catch(const std::exception& e)
+    {
+        OD_LOG_ERR("Portrait tint for " + creatureName + " failed: " + e.what());
+    }
+    getFailedTintedPortraitNames().insert(name);
+    if(images.isDefined(name))
+        images.destroy(name);
+    if(renderer.isTextureDefined(name))
+        renderer.destroyTexture(name);
+    else if(texture)
+        Ogre::TextureManager::getSingleton().remove(texture->getHandle());
+    return getCreaturePanelPortraitImage(meshName);
+}
+
+void clearCreatureProfilePortraits()
+{
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    CEGUI::Renderer& renderer = *CEGUI::System::getSingleton().getRenderer();
+    std::set<std::string>& names = getTintedPortraitNames();
+    for(std::set<std::string>::const_iterator it = names.begin(); it != names.end(); ++it)
+    {
+        if(images.isDefined(*it))
+            images.destroy(*it);
+        if(renderer.isTextureDefined(*it))
+            renderer.destroyTexture(*it);
+    }
+    names.clear();
+    getFailedTintedPortraitNames().clear();
 }

@@ -36,6 +36,7 @@
 #include "network/ODServer.h"
 #include "render/Gui.h"
 #include "render/CreaturePanel.h"
+#include "render/CreaturePortrait.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
@@ -329,6 +330,7 @@ GameMode::~GameMode()
     // The feed and the profiles belong to this game only
     social::PostLog::getSingleton().stop();
     social::SocialProfileCache::getSingleton().clear();
+    clearCreatureProfilePortraits();
     CEGUI::ToggleButton* checkBox =
         dynamic_cast<CEGUI::ToggleButton*>(
             mRootWindow->getChild(
