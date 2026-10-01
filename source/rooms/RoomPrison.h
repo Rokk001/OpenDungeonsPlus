@@ -84,6 +84,11 @@ protected:
 
 private:
     
+    //! \brief Chickens dropped in the prison are eaten by the nearest prisoner
+    void feedPrisoners();
+    //! \brief An enemy creature standing in the prison frees the prisoners allied to it
+    void freePrisonersIfLiberated();
+
     void deleteFenceMeshes();
     void putFenceMeshes();
     BuildingObject* createFencingMesh(FencingDirection hd, Tile*  tt);

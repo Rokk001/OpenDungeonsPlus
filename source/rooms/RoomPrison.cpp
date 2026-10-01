@@ -21,6 +21,8 @@
 
 #include "creatureaction/CreatureActionUseRoom.h"
 #include "entities/BuildingObject.h"
+#include "entities/ChickenEntity.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/SmallSpiderEntity.h"
@@ -273,6 +275,9 @@ void RoomPrison::doUpkeep()
     if(mCoveredTiles.empty())
         return;
 
+    feedPrisoners();
+    freePrisonersIfLiberated();
+
     // We check if we have enough room for all prisoners
     uint32_t nbCreatures = 0;
     for(Tile* tile : mCoveredTiles)
@@ -353,6 +358,140 @@ void RoomPrison::doUpkeep()
             newCreature->setPosition(Ogre::Vector3(creatureTile->getX(), creatureTile->getY(), 0.0f));
             newCreature->createMesh();
         }
+    }
+}
+
+void RoomPrison::feedPrisoners()
+{
+    std::vector<Creature*> prisoners;
+    std::vector<ChickenEntity*> chickens;
+    for(Tile* tile : mCoveredTiles)
+    {
+        for(GameEntity* entity : tile->getEntitiesInTile())
+        {
+            if(entity->getObjectType() == GameEntityType::chickenEntity)
+            {
+                chickens.push_back(static_cast<ChickenEntity*>(entity));
+                continue;
+            }
+
+            if(entity->getObjectType() != GameEntityType::creature)
+                continue;
+
+            Creature* creature = static_cast<Creature*>(entity);
+            if((creature->getSeatPrison() != getSeat()) || !creature->isAlive())
+                continue;
+
+            prisoners.push_back(creature);
+        }
+    }
+
+    if(prisoners.empty())
+        return;
+
+    // A chicken dropped in the prison is eaten by the prisoner nearest to it. The
+    // meal gives back the health a hatchery chicken gives.
+    for(ChickenEntity* chicken : chickens)
+    {
+        Tile* chickenTile = chicken->getPositionTile();
+        if(chickenTile == nullptr)
+            continue;
+
+        Creature* nearest = nullptr;
+        int32_t nearestDist = 0;
+        for(Creature* prisoner : prisoners)
+        {
+            Tile* prisonerTile = prisoner->getPositionTile();
+            if(prisonerTile == nullptr)
+                continue;
+
+            int32_t dx = prisonerTile->getX() - chickenTile->getX();
+            int32_t dy = prisonerTile->getY() - chickenTile->getY();
+            int32_t dist = dx * dx + dy * dy;
+            if((nearest == nullptr) || (dist < nearestDist))
+            {
+                nearest = prisoner;
+                nearestDist = dist;
+            }
+        }
+
+        if(nearest == nullptr)
+            continue;
+
+        if(!chicken->eatChicken(nearest))
+            continue;
+
+        nearest->foodEaten(ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHungerPerChicken"));
+        nearest->setHP(nearest->getHP() + ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHpRecoveredPerChicken"));
+        nearest->computeCreatureOverlayHealthValue();
+    }
+}
+
+void RoomPrison::freePrisonersIfLiberated()
+{
+    std::vector<Creature*> prisoners;
+    std::vector<Creature*> liberators;
+    for(Tile* tile : mCoveredTiles)
+    {
+        for(GameEntity* entity : tile->getEntitiesInTile())
+        {
+            if(entity->getObjectType() != GameEntityType::creature)
+                continue;
+
+            Creature* creature = static_cast<Creature*>(entity);
+            if(creature->getSeatPrison() == getSeat())
+            {
+                prisoners.push_back(creature);
+                continue;
+            }
+
+            // An enemy creature that stands in the prison frees its comrades
+            if((creature->getSeatPrison() == nullptr) &&
+               creature->isAlive() &&
+               !creature->isKo() &&
+               !creature->getDefinition()->isWorker() &&
+               !getSeat()->isAlliedSeat(creature->getSeat()))
+            {
+                liberators.push_back(creature);
+            }
+        }
+    }
+
+    if(prisoners.empty() || liberators.empty())
+        return;
+
+    uint32_t nbFreed = 0;
+    for(Creature* prisoner : prisoners)
+    {
+        bool freed = false;
+        for(Creature* liberator : liberators)
+        {
+            if(liberator->getSeat()->isAlliedSeat(prisoner->getSeat()))
+            {
+                freed = true;
+                break;
+            }
+        }
+
+        if(!freed)
+            continue;
+
+        OD_LOG_INF("creature=" + prisoner->getName() + " freed from prison=" + getName());
+        // Ending the use of the room ends the imprisonment
+        prisoner->clearActionQueue();
+        ++nbFreed;
+    }
+
+    if((nbFreed > 0) &&
+       (getSeat()->getPlayer() != nullptr) &&
+       getSeat()->getPlayer()->getIsHuman() &&
+       !getSeat()->getPlayer()->getHasLost())
+    {
+        ServerNotification *serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, getSeat()->getPlayer());
+        std::string msg = "Jailbreak! Enemy creatures freed prisoners from your prison";
+        serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
 
@@ -711,7 +850,9 @@ bool RoomPrison::useRoom(Creature& creature, bool forced)
 
 double RoomPrison::getCreatureSpeed(const Creature* creature, Tile* tile) const
 {
-    if( std::find(mActualTiles.begin(),mActualTiles.end(), tile ) != mActualTiles.end())
+    // Only prisoners are held back. A freed prisoner has to be able to leave
+    if((creature->getSeatPrison() == getSeat()) &&
+       (std::find(mActualTiles.begin(),mActualTiles.end(), tile ) != mActualTiles.end()))
         return 0.0;
     else
         return creature->getMoveSpeedGround();
