@@ -101,7 +101,7 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
         else if(roll < group.mGenderWeights[0] + group.mGenderWeights[1])
             genderIndex = 1;
     }
-    const char* genderNames[3] = {"Female", "Male", "Unspecified"};
+    const char* genderNames[3] = {"Female", "Male", ""};
     profile.mGender = genderNames[genderIndex];
 
     // First name: the pool of the gender, or the first non-empty pool
@@ -208,6 +208,16 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     profile.mBio = bio;
 
     return profile;
+}
+
+std::string SocialGenerator::displayClassName(const SocialData& data, const std::string& className)
+{
+    std::vector<std::string> scope(1, className);
+    std::vector<std::string> texts;
+    data.getTexts("ClassName", scope, texts);
+    if(texts.empty())
+        return className;
+    return texts[0];
 }
 
 std::string SocialGenerator::renderText(const std::string& text, const std::map<std::string, std::string>& slots)

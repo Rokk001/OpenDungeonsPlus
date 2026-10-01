@@ -41,6 +41,10 @@ public:
     static CreatureProfile makeProfile(const SocialData& data, const std::string& creatureName,
         const std::string& className, bool isWorker);
 
+    //! \brief The readable name of a creature class ("CaveHornet" -> "Cave Hornet"), the class name
+    //! itself if the data has no entry for it.
+    static std::string displayClassName(const SocialData& data, const std::string& className);
+
     //! \brief Replaces {slot} entries of the template with the given values. Unknown or empty
     //! slots are removed, then double spaces and spaces before punctuation are cleaned up.
     static std::string renderText(const std::string& text, const std::map<std::string, std::string>& slots);

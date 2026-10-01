@@ -44,7 +44,7 @@ struct CreatureProfile
     int32_t mAge;
     //! Number as text, or a joke for some creatures ("older than the bricks")
     std::string mAgeText;
-    //! "Female", "Male" or "Unspecified"
+    //! "Female", "Male" or empty (creatures without a gender label)
     std::string mGender;
     std::string mRelationship;
     std::string mHometown;
