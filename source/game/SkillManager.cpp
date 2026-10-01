@@ -452,6 +452,27 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl2depends.push_back(skill);
 
+    // Stronger doors. Each one requires the previous door
+    std::vector<const Skill*> doorDepends;
+    doorDepends.push_back(skill);
+    resType = SkillType::trapDoorBraced;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "BracedDoorTrapButton", skill, TrapType::doorBraced);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    doorDepends.clear();
+    doorDepends.push_back(skill);
+    resType = SkillType::trapDoorSteel;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "SteelDoorTrapButton", skill, TrapType::doorSteel);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     // Lvl 3 skills
     resType = SkillType::trapCannon;
     index = static_cast<uint32_t>(resType);

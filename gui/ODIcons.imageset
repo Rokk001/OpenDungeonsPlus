@@ -49,6 +49,8 @@
     <Image height="128" name="BoulderTrapButton" width="128" xPos="384" yPos="384" />
     <Image height="128" name="WavePortalButton" width="128" xPos="512" yPos="384" />
     <Image height="128" name="WoodenDoorTrapButton" width="128" xPos="640" yPos="384" />
+    <Image height="128" name="BracedDoorTrapButton" width="128" xPos="640" yPos="384" />
+    <Image height="128" name="SteelDoorTrapButton" width="128" xPos="640" yPos="384" />
     <Image height="128" name="DestroyTrapButton" width="128" xPos="768" yPos="384" />
     <Image height="128" name="SummonWorkerButton" width="128" xPos="896" yPos="384" />
     <Image height="128" name="CallToWarButton" width="128" xPos="0" yPos="512" />

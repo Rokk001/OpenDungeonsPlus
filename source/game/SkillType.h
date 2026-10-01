@@ -62,6 +62,10 @@ enum class SkillType
     spellEyeEvil,
     spellCreateGold,
 
+    // Stronger doors. Added after the other entries to keep saved skill ids valid
+    trapDoorBraced,
+    trapDoorSteel,
+
     // This should be the last
     countSkill
 };

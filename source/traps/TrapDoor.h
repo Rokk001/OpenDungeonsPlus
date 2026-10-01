@@ -26,13 +26,15 @@ class DoorEntity;
 class TrapDoor : public Trap
 {
 public:
-    TrapDoor(GameMap* gameMap);
+    TrapDoor(GameMap* gameMap, TrapType doorType);
 
     static const std::string ANIMATION_OPEN;
     static const std::string ANIMATION_CLOSE;
 
     const TrapType getType() const override
-    { return TrapType::doorWooden; }
+    { return mDoorType; }
+
+    double getDefaultTileHP() const override;
 
     bool isDoor() const override
     { return true; }
@@ -69,13 +71,13 @@ public:
 
     static bool buildTrapOnTile(GameMap* gameMap, Player* player, Tile* tile);
 
-    static const TrapType mTrapType;
-
 protected:
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 
 private:
+    //! \brief Wooden, braced or steel door
+    TrapType mDoorType;
     //! \brief Wanted state for the door (changes when the player slaps the door)
     bool mIsLocked;
     //! \brief Current state of the door

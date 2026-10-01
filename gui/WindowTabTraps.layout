@@ -44,5 +44,19 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="BracedDoorTrapButton" >
+            <Property name="Area" value="{{0,340},{0,25},{0,400},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/BracedDoorTrapButton" />
+            <Property name="TooltipText" value="Build a braced door" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
+        <Window type="OD/GameTabButton" name="SteelDoorTrapButton" >
+            <Property name="Area" value="{{0,400},{0,25},{0,460},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/SteelDoorTrapButton" />
+            <Property name="TooltipText" value="Build a steel door" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>
