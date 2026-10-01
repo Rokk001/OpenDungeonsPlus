@@ -20,8 +20,13 @@ namespace
 {
 struct PortraitScene
 {
-    Ogre::SceneManager* scene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager");
+    Ogre::SceneManager* scene;
     std::vector<Ogre::MaterialPtr> materials;
+
+    PortraitScene() :
+        scene(Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager"))
+    {
+    }
 
     ~PortraitScene()
     {
