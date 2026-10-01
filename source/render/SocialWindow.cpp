@@ -191,7 +191,8 @@ SocialWindow::~SocialWindow()
 
 void SocialWindow::setTabState(CEGUI::Window* tab, const std::string& label, bool active)
 {
-    tab->setText(active ? "[ " + label + " ]" : label);
+    // A bare '[' starts a CEGUI markup tag and would swallow the caption
+    tab->setText(active ? "\\[ " + label + " ]" : label);
     tab->setProperty("NormalTextColour", active ? "FFF2C860" : "FFF0E2C0");
 }
 
