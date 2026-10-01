@@ -139,7 +139,7 @@ MenuModeConfigureSeats::~MenuModeConfigureSeats()
 void MenuModeConfigureSeats::initSettingCombos()
 {
     CEGUI::Window* playersWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
-    uint32_t percents[] = {50, 75, 100, 150, 200};
+    uint32_t percents[] = {50, 100, 400};
     const std::string percentCombos[] = {COMBOBOX_GOLD_DENSITY, COMBOBOX_MANA_REGENERATION};
     for(const std::string& comboName : percentCombos)
     {
