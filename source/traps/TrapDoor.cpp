@@ -52,6 +52,15 @@ public:
     }
 
 private:
+    //! \brief Doors need walls on both sides. The barricade can be placed anywhere
+    bool canBuildOn(GameMap* gameMap, Tile* tile) const
+    {
+        if(mDoorType == TrapType::doorBarricade)
+            return true;
+
+        return TrapDoor::canDoorBeOnTile(gameMap, tile);
+    }
+
     TrapType mDoorType;
     std::string mName;
     std::string mNameReadable;
@@ -114,7 +123,7 @@ private:
             tiles.push_back(tile);
             inputCommand.selectTiles(tiles);
             if(!tile->isBuildableUpon(player->getSeat()) ||
-               !TrapDoor::canDoorBeOnTile(gameMap, tile))
+               !canBuildOn(gameMap, tile))
             {
                 inputCommand.displayText(Ogre::ColourValue::Red, "Cannot place door on this tile");
             }
@@ -132,7 +141,7 @@ private:
         }
 
         if(!tile->isBuildableUpon(player->getSeat()) ||
-           !TrapDoor::canDoorBeOnTile(gameMap, tile))
+           !canBuildOn(gameMap, tile))
         {
             return;
         }
@@ -152,7 +161,7 @@ private:
         if(!tile->isBuildableUpon(player->getSeat()))
             return false;
 
-        if(!TrapDoor::canDoorBeOnTile(gameMap, tile))
+        if(!canBuildOn(gameMap, tile))
             return false;
 
         // The door tile is ok
@@ -200,7 +209,7 @@ private:
             inputCommand.selectTiles(tiles);
             // We accept any tile if there is no building and there are 2 full surrounding tiles
             if(tile->getIsBuilding() ||
-               !TrapDoor::canDoorBeOnTile(gameMap, tile))
+               !canBuildOn(gameMap, tile))
             {
                 inputCommand.displayText(Ogre::ColourValue::Red, "Cannot place door on this tile");
             }
@@ -212,7 +221,7 @@ private:
             return;
         }
 
-        if(!TrapDoor::canDoorBeOnTile(gameMap, tile))
+        if(!canBuildOn(gameMap, tile))
             return;
 
         ClientNotification *clientNotification = TrapManager::createTrapClientNotificationEditor(type);
@@ -250,7 +259,7 @@ private:
             return false;
         }
 
-        if(!TrapDoor::canDoorBeOnTile(gameMap, tile))
+        if(!canBuildOn(gameMap, tile))
             return false;
 
         if((tile->getType() != TileType::gold) &&
@@ -304,6 +313,7 @@ private:
 static TrapRegister regWooden(new TrapDoorFactory(TrapType::doorWooden, "DoorWooden", "Wooden door", "Wooden"));
 static TrapRegister regBraced(new TrapDoorFactory(TrapType::doorBraced, "DoorBraced", "Braced door", "Braced"));
 static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "Steel door", "Steel"));
+static TrapRegister regBarricade(new TrapDoorFactory(TrapType::doorBarricade, "DoorBarricade", "Barricade", "Barricade"));
 }
 
 const std::string TrapDoor::ANIMATION_OPEN = "Open";
@@ -312,7 +322,7 @@ const std::string TrapDoor::ANIMATION_CLOSE = "Close";
 TrapDoor::TrapDoor(GameMap* gameMap, TrapType doorType) :
     Trap(gameMap),
     mDoorType(doorType),
-    mIsLocked(false),
+    mIsLocked(doorType == TrapType::doorBarricade),
     mIsLockedState(false)
 {
     mReloadTime = 0;
@@ -347,6 +357,8 @@ double TrapDoor::getDefaultTileHP() const
             return ConfigManager::getSingleton().getTrapConfigDouble("BracedDoorHP");
         case TrapType::doorSteel:
             return ConfigManager::getSingleton().getTrapConfigDouble("SteelDoorHP");
+        case TrapType::doorBarricade:
+            return ConfigManager::getSingleton().getTrapConfigDouble("BarricadeDoorHP");
         default:
             return ConfigManager::getSingleton().getTrapConfigDouble("WoodenDoorHP");
     }
@@ -356,7 +368,8 @@ void TrapDoor::doUpkeep()
 {
     for(Tile* tile : mCoveredTiles)
     {
-        if(!canDoorBeOnTile(getGameMap(), tile))
+        if((mDoorType != TrapType::doorBarricade) &&
+           !canDoorBeOnTile(getGameMap(), tile))
         {
             auto it = mTileData.find(tile);
             if(it == mTileData.end())
@@ -406,6 +419,10 @@ void TrapDoor::doUpkeep()
 
 void TrapDoor::notifyDoorSlapped(DoorEntity* doorEntity, Tile* tile)
 {
+    // A barricade cannot be opened
+    if(mDoorType == TrapType::doorBarricade)
+        return;
+
     mIsLocked = !mIsLocked;
     changeDoorState(doorEntity, tile, mIsLocked);
 
@@ -460,6 +477,10 @@ bool TrapDoor::permitsVision(Tile* tile)
     if (!trapTileData->isActivated())
         return true;
 
+    // A barricade does not hide what is behind it
+    if(mDoorType == TrapType::doorBarricade)
+        return true;
+
     return !mIsLockedState;
 }
 
@@ -471,6 +492,18 @@ double TrapDoor::getCreatureSpeed(const Creature* creature, Tile* tile) const
 
     if(!mIsLocked)
         return tile->getCreatureSpeedDefault(creature);
+
+    // Flying creatures pass over a barricade. They are the ones that cross both water and lava
+    if((mDoorType == TrapType::doorBarricade) &&
+       (creature->getMoveSpeedWater() > 0.0) &&
+       (creature->getMoveSpeedLava() > 0.0))
+    {
+        return tile->getCreatureSpeedDefault(creature);
+    }
+
+    // Walking creatures cannot pass a barricade, enemies have to destroy it
+    if(mDoorType == TrapType::doorBarricade)
+        return 0.0;
 
     // Enemy units can go through doors. We need that otherwise, they won't be able to
     // get to the door. But in any case, if they are not fighting, we let them go. If
