@@ -491,15 +491,7 @@ double TrapDoor::getCreatureSpeed(const Creature* creature, Tile* tile) const
     if(!mIsLocked)
         return tile->getCreatureSpeedDefault(creature);
 
-    // Flying creatures pass over a barricade. They are the ones that cross both water and lava
-    if((mDoorType == TrapType::doorBarricade) &&
-       (creature->getMoveSpeedWater() > 0.0) &&
-       (creature->getMoveSpeedLava() > 0.0))
-    {
-        return tile->getCreatureSpeedDefault(creature);
-    }
-
-    // Walking creatures cannot pass a barricade, enemies have to destroy it
+    // No creature can pass a barricade, not even the flying ones. Enemies have to destroy it
     if(mDoorType == TrapType::doorBarricade)
         return 0.0;
 
