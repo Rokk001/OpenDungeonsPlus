@@ -25,6 +25,7 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "gamemap/GameMap.h"
+#include "ODApplication.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -121,7 +122,8 @@ static RoomRegister reg(new RoomTempleFactory);
 
 RoomTemple::RoomTemple(GameMap* gameMap) :
     Room(gameMap),
-    mTurnsSinceSacrifice(0)
+    mTurnsSinceSacrifice(0),
+    mPrayerManaPending(0.0)
 {
     // Placeholder: the crypt look is used until the temple has its own
     setMeshName("Crypt");
@@ -205,10 +207,14 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     // The creature prays. Its keeper gets mana and the creature feels better
     creature.setAnimationState(EntityAnimation::idle_anim);
     creature.jobDone(configManager.getRoomConfigDouble("TemplePrayerWakefulnessPerTurn"));
-    // Each creature type has its own prayer mana (TemplePrayerMana<ClassName>), the generic value is the fallback
-    double defaultMana = configManager.getRoomConfigDouble("TemplePrayerManaPerTurn");
-    int32_t mana = static_cast<int32_t>(configManager.getRoomConfigDoubleOrDefault(
-        "TemplePrayerMana" + creature.getDefinition()->getClassName(), defaultMana));
+    // Each creature type has its own prayer mana per second (TemplePrayerMana<ClassName>), the generic value is the fallback.
+    // The creature prays once per turn, so the rate is converted to turns. Fractions are kept for the next prayer.
+    double defaultManaPerSecond = configManager.getRoomConfigDouble("TemplePrayerManaPerSecond");
+    double manaPerSecond = configManager.getRoomConfigDoubleOrDefault(
+        "TemplePrayerMana" + creature.getDefinition()->getClassName(), defaultManaPerSecond);
+    mPrayerManaPending += manaPerSecond / ODApplication::turnsPerSecond;
+    int32_t mana = static_cast<int32_t>(mPrayerManaPending);
+    mPrayerManaPending -= mana;
     getGameMap()->addManaToSeat(mana, getSeat()->getId());
     creature.addPrayerRelief(configManager.getRoomConfigInt32("TemplePrayerReliefPerTurn"),
         configManager.getRoomConfigInt32("TemplePrayerReliefMax"));

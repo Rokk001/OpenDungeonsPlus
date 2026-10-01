@@ -78,6 +78,9 @@ private:
     //! This is not saved: after loading a game the pool is empty.
     std::vector<std::pair<std::string, uint32_t> > mSacrificed;
     int32_t mTurnsSinceSacrifice;
+
+    //! \brief Prayer mana below one point, kept for the next prayer turn. Not saved.
+    double mPrayerManaPending;
 };
 
 #endif // ROOMTEMPLE_H
