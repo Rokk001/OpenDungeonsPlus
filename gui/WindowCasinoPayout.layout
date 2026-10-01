@@ -16,8 +16,8 @@
         </Window>
         <Window type="OD/Button" name="CasinoPayoutButton" >
             <Property name="Area" value="{{0.5,-100},{0,70},{0.5,100},{0,100}}" />
-            <Property name="Text" value="Payout: Normal" />
-            <Property name="TooltipText" value="Click to cycle the payout level. The dollar sign keeps more of the bets for you, the smiley pays more to your creatures." />
+            <Property name="Text" value="Payout: Smiles" />
+            <Property name="TooltipText" value="Click to switch the payout. Money keeps more of the bets for you and annoys your creatures, Smiles pays more to them and cheers them up." />
         </Window>
     </Window>
 </GUILayout>
