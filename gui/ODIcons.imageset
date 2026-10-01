@@ -38,6 +38,7 @@
     <Image height="128" name="WorkshopButton" width="128" xPos="0" yPos="256" />
     <Image height="128" name="PrisonButton" width="128" xPos="128" yPos="256" />
     <Image height="128" name="TortureButton" width="128" xPos="256" yPos="256" />
+    <Image height="128" name="GuardRoomButton" width="128" xPos="128" yPos="256" />
     <Image height="128" name="ArenaButton" width="128" xPos="384" yPos="256" />
     <Image height="128" name="CasinoButton" width="128" xPos="512" yPos="256" />
     <Image height="128" name="TempleButton" width="128" xPos="640" yPos="256" />
