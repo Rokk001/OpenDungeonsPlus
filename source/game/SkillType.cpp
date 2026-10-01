@@ -93,6 +93,8 @@ std::string toString(SkillType type)
             return "trapCannon";
         case SkillType::trapSpike:
             return "trapSpike";
+        case SkillType::trapAlarm:
+            return "trapAlarm";
         case SkillType::trapDoorWooden:
             return "trapDoorWooden";
         case SkillType::spellEyeEvil:
@@ -158,6 +160,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Cannon Trap";
         case SkillType::trapSpike:
             return "The Spike Trap";
+        case SkillType::trapAlarm:
+            return "The Alarm Trap";
         case SkillType::trapDoorWooden:
             return "The Wooden Door";
         case SkillType::spellEyeEvil:

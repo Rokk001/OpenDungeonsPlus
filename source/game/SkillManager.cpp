@@ -419,6 +419,14 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl3depends.push_back(skill);
 
+    resType = SkillType::trapAlarm;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl2depends);
+    def = new SkillDefTrap("TacticSkills/", "AlarmTrapButton", skill, TrapType::alarm);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     // Lvl 4 research
     resType = SkillType::trapBoulder;
     index = static_cast<uint32_t>(resType);
