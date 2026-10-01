@@ -1624,7 +1624,7 @@ float getProfileLinesHeight(const CEGUI::Window* window, std::size_t lines, floa
 
 float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
 {
-    if(!window->isVisible(true))
+    if(!window->isVisible())
         return y;
 
     const CEGUI::Font* font = window->getFont();
@@ -1653,7 +1653,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     for(std::size_t row = 0; row < 2; ++row)
     {
         CEGUI::Window* label = page->getChild(linkRows[row][0]);
-        if(!label->isVisible(true))
+        if(!label->isVisible())
             continue;
 
         // The label shares its line with the first link, further links follow below
@@ -1662,7 +1662,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
         for(std::size_t i = 1; (i < 3) && (linkRows[row][i] != nullptr); ++i)
         {
             CEGUI::Window* link = page->getChild(linkRows[row][i]);
-            if(!link->isVisible(true))
+            if(!link->isVisible())
                 continue;
 
             setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
