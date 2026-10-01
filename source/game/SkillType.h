@@ -67,6 +67,9 @@ enum class SkillType
     trapDoorSteel,
     trapDoorBarricade,
 
+    // Added later, kept after the older entries so existing values do not change
+    trapAlarm,
+
     // This should be the last
     countSkill
 };
