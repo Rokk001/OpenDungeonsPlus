@@ -162,6 +162,9 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         everVisitedFlagPool(nullptr),
         mIsServerGameMap(isServerGameMap),
         mNodeType(nt),
+        mGoldDensityPercent(100),
+        mManaRegenerationPercent(100),
+        mMaxCreaturesSetting(0),
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
@@ -1284,7 +1287,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         }
         else
         {
-            seat->mManaDelta = 50 + seat->getNumClaimedTiles();
+            seat->mManaDelta = (50 + seat->getNumClaimedTiles()) * mManaRegenerationPercent / 100;
             seat->mMana += seat->mManaDelta;
             double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
             if (seat->mMana > maxMana)
@@ -3069,6 +3072,8 @@ const TileSetValue& GameMap::getMeshForTile(const Tile* tile)
 uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
 {
     uint32_t nbCreatures = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
+    if(mMaxCreaturesSetting > 0)
+        nbCreatures = mMaxCreaturesSetting;
 
     std::vector<const Room*> portals = getRoomsByTypeAndSeat(RoomType::portal, seat);
     for(const Room* room : portals)
@@ -3078,6 +3083,14 @@ uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
     }
 
     return std::min(nbCreatures, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
+}
+
+void GameMap::setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
+    uint32_t maxCreaturesSetting)
+{
+    mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, 10), 500);
+    mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, 10), 500);
+    mMaxCreaturesSetting = std::min<uint32_t>(maxCreaturesSetting, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
 }
 
 void GameMap::playerSelects(std::vector<GameEntity*>& entities, int tileX1, int tileY1, int tileX2,
