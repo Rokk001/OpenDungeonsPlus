@@ -22,9 +22,12 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "network/ODServer.h"
+#include "network/ServerNotification.h"
 #include "gamemap/GameMap.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
@@ -117,7 +120,8 @@ static RoomRegister reg(new RoomTempleFactory);
 
 
 RoomTemple::RoomTemple(GameMap* gameMap) :
-    Room(gameMap)
+    Room(gameMap),
+    mTurnsSinceSacrifice(0)
 {
     // Placeholder: the crypt look is used until the temple has its own
     setMeshName("Crypt");
@@ -208,4 +212,247 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
         configManager.getRoomConfigInt32("TemplePrayerReliefMax"));
 
     return false;
+}
+
+namespace
+{
+//! \brief Splits a recipe like "Troll+Troll=Cultist" into its inputs and its result
+bool parseRecipe(const std::string& text, std::vector<std::string>& inputs, std::string& result)
+{
+    std::string::size_type equalPos = text.find('=');
+    if(equalPos == std::string::npos)
+        return false;
+
+    result = text.substr(equalPos + 1);
+    std::string left = text.substr(0, equalPos);
+    inputs.clear();
+    std::string::size_type start = 0;
+    while(true)
+    {
+        std::string::size_type plusPos = left.find('+', start);
+        if(plusPos == std::string::npos)
+        {
+            inputs.push_back(left.substr(start));
+            break;
+        }
+        inputs.push_back(left.substr(start, plusPos - start));
+        start = plusPos + 1;
+    }
+    return !result.empty();
+}
+
+//! \brief Returns true if all the sacrificed creatures can still be part of the recipe. The
+//! recipe is complete if nothing is missing anymore.
+bool matchesRecipe(const std::vector<std::pair<std::string, uint32_t> >& sacrificed,
+    const std::vector<std::string>& inputs, bool& complete)
+{
+    std::vector<std::string> missing = inputs;
+    for(const std::pair<std::string, uint32_t>& creature : sacrificed)
+    {
+        std::vector<std::string>::iterator it = std::find(missing.begin(), missing.end(), creature.first);
+        if(it == missing.end())
+            return false;
+
+        missing.erase(it);
+    }
+    complete = missing.empty();
+    return true;
+}
+}
+
+bool RoomTemple::isPoolTile(const Tile& tile) const
+{
+    if(tile.getCoveringRoom() != this)
+        return false;
+
+    for(int dx = -1; dx <= 1; ++dx)
+    {
+        for(int dy = -1; dy <= 1; ++dy)
+        {
+            Tile* neighbour = getGameMap()->getTile(tile.getX() + dx, tile.getY() + dy);
+            if((neighbour == nullptr) || (neighbour->getCoveringRoom() != this))
+                return false;
+        }
+    }
+    return true;
+}
+
+void RoomTemple::creatureDropped(Creature& creature)
+{
+    Tile* tile = creature.getPositionTile();
+    if((tile != nullptr) && creature.getDefinition()->isWorker() == false &&
+       isPoolTile(*tile))
+    {
+        // The creature is sacrificed during the next upkeep
+        mCreaturesToSacrifice.push_back(creature.getName());
+        return;
+    }
+
+    Room::creatureDropped(creature);
+}
+
+void RoomTemple::absorbRoom(Room* r)
+{
+    Room::absorbRoom(r);
+
+    if(r->getType() != getType())
+        return;
+
+    RoomTemple* roomAbs = static_cast<RoomTemple*>(r);
+    mSacrificed.insert(mSacrificed.end(), roomAbs->mSacrificed.begin(), roomAbs->mSacrificed.end());
+    roomAbs->mSacrificed.clear();
+    mCreaturesToSacrifice.insert(mCreaturesToSacrifice.end(), roomAbs->mCreaturesToSacrifice.begin(),
+        roomAbs->mCreaturesToSacrifice.end());
+    roomAbs->mCreaturesToSacrifice.clear();
+}
+
+void RoomTemple::doUpkeep()
+{
+    Room::doUpkeep();
+
+    std::vector<std::string> creaturesToSacrifice;
+    creaturesToSacrifice.swap(mCreaturesToSacrifice);
+    for(const std::string& name : creaturesToSacrifice)
+    {
+        Creature* creature = getGameMap()->getCreature(name);
+        if((creature == nullptr) || !creature->isAlive() || (creature->getSeat() != getSeat()))
+            continue;
+
+        // The creature may have been picked up again
+        Tile* tile = creature->getPositionTile();
+        if((tile == nullptr) || !isPoolTile(*tile))
+            continue;
+
+        sacrificeCreature(*creature);
+    }
+
+    // Sacrifices that wait for the rest of their recipe are lost after a while
+    if(mSacrificed.empty())
+    {
+        mTurnsSinceSacrifice = 0;
+        return;
+    }
+
+    ++mTurnsSinceSacrifice;
+    if(mTurnsSinceSacrifice >= ConfigManager::getSingleton().getRoomConfigInt32("TempleSacrificeWaitTurns"))
+    {
+        mSacrificed.clear();
+        mTurnsSinceSacrifice = 0;
+    }
+}
+
+void RoomTemple::sacrificeCreature(Creature& creature)
+{
+    ConfigManager& configManager = ConfigManager::getSingleton();
+    Tile* tile = creature.getPositionTile();
+    std::string className = creature.getDefinition()->getClassName();
+    uint32_t level = creature.getLevel();
+
+    OD_LOG_INF("creature=" + creature.getName() + " is sacrificed in room=" + getName());
+    creature.clearActionQueue();
+    creature.removeFromGameMap();
+    creature.deleteYourself();
+
+    // Every sacrifice gives mana
+    getGameMap()->addManaToSeat(static_cast<int32_t>(level) * configManager.getRoomConfigInt32("TempleSacrificeManaPerLevel"),
+        getSeat()->getId());
+
+    mSacrificed.push_back(std::pair<std::string, uint32_t>(className, level));
+    mTurnsSinceSacrifice = 0;
+
+    // We check the recipes
+    int32_t nbRecipes = configManager.getRoomConfigInt32("TempleRecipeCount");
+    for(int32_t i = 1; i <= nbRecipes; ++i)
+    {
+        std::vector<std::string> inputs;
+        std::string result;
+        if(!parseRecipe(configManager.getRoomConfigString("TempleRecipe" + Helper::toString(i)), inputs, result))
+        {
+            OD_LOG_ERR("room=" + getName() + ", wrong recipe number=" + Helper::toString(i));
+            continue;
+        }
+
+        bool complete = false;
+        if(!matchesRecipe(mSacrificed, inputs, complete) || !complete)
+            continue;
+
+        uint32_t totalLevel = 0;
+        for(const std::pair<std::string, uint32_t>& sacrificed : mSacrificed)
+            totalLevel += sacrificed.second;
+
+        uint32_t averageLevel = totalLevel / mSacrificed.size();
+        mSacrificed.clear();
+        giveSacrificeResult(result, averageLevel, *tile);
+        return;
+    }
+
+    // The sacrifices that cannot be part of any recipe are lost
+    for(int32_t i = 1; i <= nbRecipes; ++i)
+    {
+        std::vector<std::string> inputs;
+        std::string result;
+        bool complete = false;
+        if(parseRecipe(configManager.getRoomConfigString("TempleRecipe" + Helper::toString(i)), inputs, result) &&
+           matchesRecipe(mSacrificed, inputs, complete))
+            return;
+    }
+    mSacrificed.clear();
+}
+
+void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t averageLevel, Tile& tile)
+{
+    ConfigManager& configManager = ConfigManager::getSingleton();
+    std::string message;
+    if(result == "ManaBoost")
+    {
+        getGameMap()->addManaToSeat(configManager.getRoomConfigInt32("TempleManaBoost"), getSeat()->getId());
+        message = "The gods accepted your sacrifice and fill your dungeon with mana";
+    }
+    else
+    {
+        // The result is a creature. The special name Workers gives the workers of the keeper
+        int32_t nbCreatures = 1;
+        const CreatureDefinition* classToSpawn = nullptr;
+        if(result == "Workers")
+        {
+            nbCreatures = configManager.getRoomConfigInt32("TempleWorkersGiven");
+            classToSpawn = getSeat()->getWorkerClassToSpawn();
+        }
+        else
+            classToSpawn = getGameMap()->getClassDescription(result);
+
+        if(classToSpawn == nullptr)
+        {
+            OD_LOG_ERR("room=" + getName() + ", unknown recipe result=" + result);
+            return;
+        }
+
+        int32_t maxCreatures = configManager.getMaxCreaturesPerSeatAbsolute();
+        for(int32_t i = 0; i < nbCreatures; ++i)
+        {
+            int32_t numCreatures = getGameMap()->getCreaturesBySeat(getSeat()).size();
+            if(numCreatures >= maxCreatures)
+                break;
+
+            Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
+            if(averageLevel > 1 && !classToSpawn->isWorker())
+                newCreature->setLevel(averageLevel);
+
+            newCreature->addToGameMap();
+            newCreature->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()),
+                static_cast<Ogre::Real>(tile.getY()), 0.0f));
+            newCreature->createMesh();
+        }
+        message = "The gods accepted your sacrifice and send you a new creature";
+    }
+
+    if((getSeat()->getPlayer() != nullptr) &&
+       getSeat()->getPlayer()->getIsHuman() &&
+       !getSeat()->getPlayer()->getHasLost())
+    {
+        ServerNotification *serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, getSeat()->getPlayer());
+        serverNotification->mPacket << message << EventShortNoticeType::aboutCreatures;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
 }
