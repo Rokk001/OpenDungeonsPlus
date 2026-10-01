@@ -36,9 +36,10 @@ namespace CEGUI
 class Window;
 }
 
-//! \brief The Dungeonbook: a window with the list of the creatures of the local player and the
-//! feed of their posts (see social/PostLog.h). The window itself comes from
-//! gui/WindowSocial.layout, the event handlers are connected by the game mode. The window only
+//! \brief The Dungeonbook: a window with the list of the creatures of the local player on the left and,
+//! on the right, either the feed of their posts (see social/PostLog.h) or the profile of the selected
+//! creature (switched by two tab buttons, selecting a creature shows its profile). The window itself comes
+//! from gui/WindowSocial.layout, the event handlers are connected by the game mode. The window only
 //! redraws while it is visible and only when the post log or the roster changed.
 class SocialWindow
 {
@@ -59,7 +60,13 @@ public:
     bool onFilterClicked(const CEGUI::EventArgs& e);
     bool onFeedModeClicked(const CEGUI::EventArgs& e);
     bool onSelectionChanged(const CEGUI::EventArgs& e);
-    bool onOpenProfileClicked(const CEGUI::EventArgs& e);
+    bool onFeedTabClicked(const CEGUI::EventArgs& e);
+    bool onProfileTabClicked(const CEGUI::EventArgs& e);
+    //! \brief A friend or foe button of the profile pane: selects that creature.
+    bool onLinkClicked(const CEGUI::EventArgs& e);
+
+    //! \brief Marks the tab button as the active one (gold, in brackets); the button stays enabled.
+    static void setTabState(CEGUI::Window* tab, const std::string& label, bool active);
 
     //! \brief "Latest: <text> (2 min ago)" for the newest post of the creature, empty if it has none.
     static std::string describeLatestPost(const std::string& creatureName, int64_t turnNow);
@@ -78,7 +85,12 @@ private:
 
     void rebuildCreatureList();
     void rebuildFeed();
-    void updateButtons();
+    //! \brief Shows the feed (false) or the profile (true) in the right part of the window.
+    void showTab(bool profile);
+    //! \brief Selects the creature in the list (resetting the filter if it hides the creature) and shows its profile.
+    void selectCreature(const std::string& creatureName);
+    //! \brief Fills the profile pane with the profile of the selected creature.
+    void refreshProfile();
 
     GameMap& mGameMap;
     CEGUI::Window* mWindow;
@@ -89,10 +101,18 @@ private:
     std::string mSelectedCreature;
     //! Creature names of the list items, indexed by the item id
     std::vector<std::string> mListedCreatures;
+    //! True while the profile (and not the feed) is shown
+    bool mProfileTab;
+    //! The profile page inside the profile pane, created when it is needed the first time
+    CEGUI::Window* mProfilePage;
+    //! Creature names behind the friend and foe buttons, empty if a button is hidden
+    std::string mLinkNames[3];
     uint32_t mShownRosterVersion;
     uint32_t mShownPostVersion;
     float mSinceRefreshCheck;
     float mSinceFeedRebuild;
+    uint32_t mShownProfilePostVersion;
+    float mSinceProfileRefresh;
 };
 
 #endif // SOCIALWINDOW_H
