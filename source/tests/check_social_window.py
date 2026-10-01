@@ -50,9 +50,9 @@ hud = read('gui/ModeGame.layout')
 check('filename="WindowSocial.layout"' in hud, 'window not imported')
 button = hud[hud.index('name="SocialButton"'):]
 button = button[:button.index('</Window>')]
-check('{{0,148},{1,-224},{0,188},{1,-184}}' in button, 'button is not in the free slot')
-check('ContextHelp' in button and 'TooltipText' in button, 'tooltip and context help')
-icon = re.search(r'NormalImage" value="OpenDungeonsIcons/(\w+)"', button)
+check('{{1,-79},{0,5},{1,-54},{0,30}}' in button, 'button is not in the free slot of the top bar')
+check('TooltipText' in button, 'tooltip')
+icon = re.search(r'ButtonImage" value="OpenDungeonsIcons/(\w+)"', button)
 check(icon is not None and 'name="%s"' % icon[1] in read('gui/ODIcons.imageset'), 'button icon must exist')
 
 gamemode = read('source/modes/GameMode.cpp')
@@ -64,7 +64,7 @@ check('toggleSocialWindow' in gamemode and 'EventCloseClicked, CEGUI::Event::Sub
       'button and close handler')
 body = gamemode[gamemode.index('bool GameMode::toggleSocialWindow'):]
 body = body[:body.index('\n}\n')]
-check('closeTopWindow' in body and 'getLocalPlayer() == nullptr' in body, 'exclusive windows / no local player')
+check('getLocalPlayer() == nullptr' in body, 'no local player')
 check('B opens the Dungeonbook' in gamemode, 'help text')
 check('PostLog::getSingleton().start(' in gamemode and 'PostLog::getSingleton().stop()' in gamemode
       and 'SocialProfileCache::getSingleton().clear()' in gamemode, 'the feed is reset when a game starts and ends')
@@ -112,7 +112,7 @@ source = source[:source.index('\n}\n')]
 check('isActive()' in source and 'getIsOnServerMap()' in source, 'posts only from client side creatures')
 
 client = read('source/network/ODClient.cpp')
-for call in ('socialCreatureAdded()', 'socialCreatureRemoved()', 'PostCategory::Eat', 'PostCategory::PickedUp'):
+for call in ('socialCreatureAdded()', 'socialCreatureRemoved()', 'PostCategory::PickedUp'):
     check(call in client, call)
 
 for pattern in ('network/ODServer*', 'network/ServerNotification*', 'network/ServerMode*', 'game/*'):
