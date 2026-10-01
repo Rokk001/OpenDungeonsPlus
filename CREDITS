@@ -189,6 +189,7 @@ textures/
 -> Podium*.png
 -> Portal{,Normal}.png                 Yughues                 CC0                     http://opengameart.org/users/yughues
 -> PortalVortex.png
+-> portrait-*.mesh-{female,male}.png   Image generator         GPLv3+                  Generated from the project's own model exports and existing portraits, prompts in materials/portraits/
 -> RangerBed*.png                      PantherOne              CC0                     http://opengameart.org/content/tent-pack
 -> Rat*.png                            CDmir                   CC0                     http://opengameart.org/content/evil-giant-rat
 -> Roach*.png                          Danimal, Atmostatic     CC-BY-SA 3.0            http://opengameart.org/content/roach-game-ready-and-animated
