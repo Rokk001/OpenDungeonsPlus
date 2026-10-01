@@ -28,8 +28,8 @@
 #include <iostream>
 
 // Proposed values, they need to be approved
-static const uint32_t DEFAULT_AMOUNT_MANA = 2000;
-static const uint32_t DEFAULT_AMOUNT_GOLD = 1000;
+static const uint32_t DEFAULT_AMOUNT_MANA = 50000;
+static const uint32_t DEFAULT_AMOUNT_GOLD = 10000;
 static const uint32_t DEFAULT_AMOUNT_REVEAL_TURNS = 90;
 static const uint32_t DEFAULT_AMOUNT_LEVELS = 1;
 
