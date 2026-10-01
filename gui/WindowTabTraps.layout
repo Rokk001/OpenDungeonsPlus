@@ -56,5 +56,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="BarricadeTrapButton" >
+            <Property name="Area" value="{{0,460},{0,25},{0,520},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/BarricadeTrapButton" />
+            <Property name="TooltipText" value="Build a barricade" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>
