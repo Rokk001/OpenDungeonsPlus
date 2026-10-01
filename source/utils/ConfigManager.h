@@ -148,6 +148,9 @@ public:
     inline double getMaxManaPerSeat() const
     { return mMaxManaPerSeat; }
 
+    inline double getManaVaultBonusPerTile() const
+    { return mManaVaultBonusPerTile; }
+
     inline double getClaimingWallPenalty() const
     { return mClaimingWallPenalty; }
 
@@ -331,6 +334,7 @@ private:
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
+    double mManaVaultBonusPerTile;
     double mClaimingWallPenalty;
     double mDigCoefGold;
     double mDigCoefGem;

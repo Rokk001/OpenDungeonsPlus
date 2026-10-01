@@ -192,6 +192,10 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
                     drawPixel(ii, jj, 0xB2, 0x22, 0x22);
                     break;
 
+                case TileVisual::manaVaultGround:
+                    drawPixel(ii, jj, 0x2E, 0x5F, 0xC8);
+                    break;
+
                 case TileVisual::dirtGround:
                     drawPixel(ii, jj, 0x3B, 0x1D, 0x08);
                     break;

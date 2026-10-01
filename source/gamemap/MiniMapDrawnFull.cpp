@@ -172,6 +172,7 @@ MiniMapDrawnFullPixel getPixelValueFromTile(Seat& playerSeat, Tile& tile)
             value = MiniMapDrawnFullPixel::claimedFull;
             break;
         case TileVisual::dirtGround:
+        case TileVisual::manaVaultGround:
             value = MiniMapDrawnFullPixel::dirtGround;
             break;
         case TileVisual::dirtFull:

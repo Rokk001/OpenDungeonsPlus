@@ -1267,6 +1267,20 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     for(GameEntity* ge : activeObjects)
         ge->doUpkeep();
 
+    // Count the mana vault tiles owned by each seat. They give extra mana each turn
+    std::map<Seat*, uint32_t> nbManaVaultTilesPerSeat;
+    for (int jj = 0; jj < getMapSizeY(); ++jj)
+    {
+        for (int ii = 0; ii < getMapSizeX(); ++ii)
+        {
+            Tile* vaultTile = getTile(ii,jj);
+            if((vaultTile->getType() != TileType::manaVault) || !vaultTile->isClaimed())
+                continue;
+
+            ++nbManaVaultTilesPerSeat[vaultTile->getSeat()];
+        }
+    }
+
     // Carry out the upkeep round for each seat. This means recomputing how much gold is
     // available in their treasuries, how much mana they gain/lose during this turn, etc.
     for (Seat* seat : mSeats)
@@ -1285,6 +1299,9 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         else
         {
             seat->mManaDelta = 50 + seat->getNumClaimedTiles();
+            std::map<Seat*, uint32_t>::const_iterator itVault = nbManaVaultTilesPerSeat.find(seat);
+            if(itVault != nbManaVaultTilesPerSeat.end())
+                seat->mManaDelta += itVault->second * ConfigManager::getSingleton().getManaVaultBonusPerTile();
             seat->mMana += seat->mManaDelta;
             double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
             if (seat->mMana > maxMana)
@@ -2225,6 +2242,7 @@ bool GameMap::doFloodFill(Seat* seat, Tile* tile)
             case TileType::dirt:
             case TileType::gold:
             case TileType::rock:           
+            case TileType::manaVault:
             {
                 hasChanged |= tile->updateFloodFillFromTile(seat, FloodFillType::ground, neigh);
                 hasChanged |= tile->updateFloodFillFromTile(seat, FloodFillType::groundWater, neigh);
@@ -2421,6 +2439,7 @@ void GameMap::enableFloodFill()
                 {
                     if(((tile->getType() == TileType::dirt) ||
                         (tile->getType() == TileType::gold) ||
+                        (tile->getType() == TileType::manaVault) ||
                         (tile->getType() == TileType::rock)) &&
                        (tile->getFloodFillValue(rogueSeat, FloodFillType::ground) == Tile::NO_FLOODFILL))
                     {
