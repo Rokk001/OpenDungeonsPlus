@@ -543,6 +543,10 @@ public:
 
     void resetKoTurns();
 
+    //! \brief Knocks the creature out so that it can be carried away (used when
+    //! the last enemy standing in a combat pit has won its fights)
+    void knockOutToDeath();
+
     //! \brief Called when the creature is set in jail by dropping or brought by
     //! a worker. if prison is nullptr, the creature is freed
     void setInJail(Room* prison);
