@@ -308,8 +308,60 @@ void RoomTorture::doUpkeep()
         }
         creature->increaseTurnsTorture();
         double damage = config.getRoomConfigDouble("TortureDamagePerTurn");
+        if(creature->getHP() <= damage)
+            revealEnemyInformation(*creature);
+
         creature->takeDamage(this, damage, 0.0, 0.0, 0.0, tileCreature, false);
         break;
+    }
+}
+
+void RoomTorture::revealEnemyInformation(Creature& creature)
+{
+    if(creature.getSeat() == getSeat())
+        return;
+
+    // Creatures without a dungeon heart (like heroes) have nothing to give away
+    std::vector<Room*> temples = getGameMap()->getRoomsByTypeAndSeat(RoomType::dungeonTemple, creature.getSeat());
+    if(temples.empty())
+        return;
+
+    Tile* centerTile = temples.front()->getCentralTile();
+    if(centerTile == nullptr)
+        return;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    int32_t radius = static_cast<int32_t>(config.getRoomConfigUInt32("TortureRevealRadius"));
+    uint32_t turns = config.getRoomConfigUInt32("TortureRevealTurns");
+    std::vector<Tile*> tiles;
+    for(int32_t yy = centerTile->getY() - radius; yy <= centerTile->getY() + radius; ++yy)
+    {
+        for(int32_t xx = centerTile->getX() - radius; xx <= centerTile->getX() + radius; ++xx)
+        {
+            if((xx < 0) || (yy < 0) || (xx >= getGameMap()->getMapSizeX()) || (yy >= getGameMap()->getMapSizeY()))
+                continue;
+
+            int32_t dx = xx - centerTile->getX();
+            int32_t dy = yy - centerTile->getY();
+            if((dx * dx + dy * dy) > (radius * radius))
+                continue;
+
+            Tile* tile = getGameMap()->getTile(xx, yy);
+            if(tile != nullptr)
+                tiles.push_back(tile);
+        }
+    }
+    getSeat()->revealTiles(tiles, turns);
+
+    if((getSeat()->getPlayer() != nullptr) &&
+       getSeat()->getPlayer()->getIsHuman() &&
+       !getSeat()->getPlayer()->getHasLost())
+    {
+        ServerNotification *serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, getSeat()->getPlayer());
+        std::string msg = "A tortured prisoner has given away the location of an enemy dungeon";
+        serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
 
