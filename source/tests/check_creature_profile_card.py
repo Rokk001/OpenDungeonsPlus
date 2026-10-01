@@ -38,4 +38,29 @@ for handler in ('ProfileTabClicked', 'StatsTabClicked'):
     assert 'Creature::' + handler in creature, handler
 assert 'EventCloseClicked' in creature
 assert 'social/SocialProfileCache.h' in creature
+
+# ---- rows: visible labels for the bars, no overlap, nothing below the tab buttons ----
+for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeText'):
+    assert 'name="%s"' % name in layout, name
+rows = []
+for name in ('NameText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText', 'BioText', 'LikesText',
+             'DislikesText', 'FriendsText', 'FoeText', 'StatusText'):
+    block = layout[layout.index('name="%s"' % name):]
+    area = re.search(r'name="Area" value="\{\{[^,]*,(-?\d+)\},\{0\.0,(\d+)\},\{[^,]*,(-?\d+)\},\{0\.0,(\d+)\}\}"', block)
+    rows.append((name, int(area[2]), int(area[4])))
+for (name, top, bottom), (nextName, nextTop, nextBottom) in zip(rows, rows[1:]):
+    if name in ('NameText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText') and             nextName in ('HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText', 'BioText'):
+        assert bottom <= nextTop, (name, nextName)
+    elif nextName not in ('NameText',):
+        assert bottom <= nextTop, (name, nextName)
+lastBottom = max(bottom for _, _, bottom in rows)
+assert lastBottom <= height - 56, 'a row reaches into the tab buttons'
+assert 'setDisabled(' not in creature[creature.index('void Creature::showStatsPage'):creature.index('void Creature::refreshProfilePage')],     'the active tab must not be shown disabled'
+assert 'Unspecified' not in (repo / 'source/social/SocialGenerator.cpp').read_text()
+assert '"@" + getName()' not in creature, 'the handle must not be the internal name'
+assert 'setText(getName() + " (" + getDefinition()->getClassName() + ")")' not in creature
+game = (repo / 'source/modes/GameMode.cpp').read_text()
+pick = game[game.index('void GameMode::openStatsWindowUnderPointer'):game.index('bool GameMode::mousePressed')]
+assert 'findWorldPositionFromMouse' not in pick, 'the middle click must pick along the pointer ray'
+assert 'getCameraToViewportRay' in pick
 print('ok')

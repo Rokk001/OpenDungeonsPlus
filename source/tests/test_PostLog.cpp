@@ -36,6 +36,30 @@ bool add(PostLog& log, int64_t turn, const std::string& creature, PostCategory c
 }
 }
 
+namespace
+{
+std::string threeTexts(const social::Post& post)
+{
+    std::ostringstream stream;
+    stream << "text " << (post.mVariant % 3);
+    return stream.str();
+}
+}
+
+BOOST_AUTO_TEST_CASE(test_neighbouring_posts_differ)
+{
+    PostLog log;
+    log.start(0, TURNS_PER_SECOND);
+    log.setTextFunction(&threeTexts);
+    BOOST_CHECK(add(log, 10, "Orc1", PostCategory::Eat));
+    BOOST_CHECK(add(log, 10, "Orc2", PostCategory::Eat));
+    BOOST_CHECK(add(log, 10, "Orc3", PostCategory::Eat));
+    BOOST_REQUIRE_EQUAL(static_cast<int>(log.getPosts().size()), 3);
+    BOOST_CHECK(threeTexts(log.getPosts()[0]) != threeTexts(log.getPosts()[1]));
+    BOOST_CHECK(threeTexts(log.getPosts()[0]) != threeTexts(log.getPosts()[2]));
+    BOOST_CHECK(threeTexts(log.getPosts()[1]) != threeTexts(log.getPosts()[2]));
+}
+
 BOOST_AUTO_TEST_CASE(test_inactive_log_ignores_posts)
 {
     PostLog log;

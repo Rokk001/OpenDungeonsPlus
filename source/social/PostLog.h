@@ -91,8 +91,18 @@ public:
     static const uint32_t MAX_POSTS_PER_SECOND = 4;
     //! Events of the first turns after start() only update state and never post
     static const int64_t BURST_TURNS = 3;
+    //! A new post does not repeat the text of one of this many posts before it
+    static const std::size_t RECENT_TEXTS = 8;
+
+    //! Renders the text of a post (empty if it has none), used to keep neighbouring posts different
+    typedef std::string (*PostTextFunction)(const Post& post);
 
     PostLog();
+
+    //! \brief Sets the function that renders the text of a post. A post whose text equals the text of one of
+    //! the last RECENT_TEXTS posts gets another variant, so two creatures never post the same sentence in a row.
+    inline void setTextFunction(PostTextFunction function)
+    { mTextFunction = function; }
 
     static PostLog& getSingleton();
 
@@ -142,6 +152,9 @@ private:
     std::map<std::string, std::deque<int64_t> > mCreaturePostTurns;
     //! Turns of the recent posts of all creatures
     std::deque<int64_t> mGlobalPostTurns;
+    PostTextFunction mTextFunction;
+    //! Texts of the last posts
+    std::deque<std::string> mRecentTexts;
 };
 
 }

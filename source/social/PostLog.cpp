@@ -19,6 +19,7 @@
 
 #include "social/SocialRng.h"
 
+#include <algorithm>
 #include <sstream>
 
 namespace social
@@ -68,7 +69,8 @@ PostLog::PostLog() :
     mEnabledFromTurn(0),
     mTurnsPerSecond(1.0),
     mVersion(0),
-    mRosterVersion(0)
+    mRosterVersion(0),
+    mTextFunction(nullptr)
 {
 }
 
@@ -99,6 +101,7 @@ void PostLog::stop()
     mLastPostTurns.clear();
     mCreaturePostTurns.clear();
     mGlobalPostTurns.clear();
+    mRecentTexts.clear();
     ++mVersion;
     ++mRosterVersion;
 }
@@ -160,6 +163,20 @@ bool PostLog::addPost(int64_t turn, const std::string& creature, const std::stri
     post.mCreature = creature;
     post.mClassName = className;
     post.mIsWorker = isWorker;
+    if(mTextFunction != nullptr)
+    {
+        // Another variant if the text was posted a moment ago (a few tries, then it is accepted)
+        std::string text = mTextFunction(post);
+        for(uint32_t tries = 0; (tries < 16) && !text.empty() &&
+            (std::find(mRecentTexts.begin(), mRecentTexts.end(), text) != mRecentTexts.end()); ++tries)
+        {
+            ++post.mVariant;
+            text = mTextFunction(post);
+        }
+        mRecentTexts.push_back(text);
+        while(mRecentTexts.size() > RECENT_TEXTS)
+            mRecentTexts.pop_front();
+    }
     mPosts.push_back(post);
     while(mPosts.size() > MAX_POSTS)
         mPosts.pop_front();
