@@ -333,6 +333,10 @@ void GameMode::activate()
     // Loads the corresponding Gui sheet.
     Gui& gui = getModeManager().getGui();
     gui.loadGuiSheet(Gui::inGameMenu);
+    mIndicatorLeftAltDown = getKeyboard()->isKeyDown(OIS::KC_LMENU);
+    mIndicatorRightAltDown = getKeyboard()->isKeyDown(OIS::KC_RMENU);
+    RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap,
+        mCreatureIndicatorsVisible);
 
     // We free the menu scene as it is not required anymore
     ODFrameListener::getSingleton().freeMainMenuScene();
@@ -399,11 +403,12 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 
     if (!directionKeyPressed && config.getInputValue(Config::AUTOSCROLL, "No", false) == "Yes")
     {
+        // The bottom edge is always covered by the game UI, so it is not blocked by it
         const bool mouseOverGui = isMouseWheelOnCEGUIWindow();
         const double leftIntensity = mouseOverGui ? 0.0 : getAutoscrollIntensity(arg.state.X.abs, arg.state.width, true);
         const double rightIntensity = mouseOverGui ? 0.0 : getAutoscrollIntensity(arg.state.X.abs, arg.state.width, false);
         const double topIntensity = mouseOverGui ? 0.0 : getAutoscrollIntensity(arg.state.Y.abs, arg.state.height, true);
-        const double bottomIntensity = mouseOverGui ? 0.0 : getAutoscrollIntensity(arg.state.Y.abs, arg.state.height, false);
+        const double bottomIntensity = getAutoscrollIntensity(arg.state.Y.abs, arg.state.height, false);
 
         if (leftIntensity > 0.0)
             ODFrameListener::getSingleton().moveCamera(CameraManager::moveLeft, leftIntensity);
@@ -848,6 +853,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 
 bool GameMode::keyPressed(const OIS::KeyEvent& arg)
 {
+    updateCreatureIndicatorAlt(arg.key, true);
     // Inject key to Gui
     CEGUI::System::getSingleton().getDefaultGUIContext().injectKeyDown(static_cast<CEGUI::Key::Scan>(arg.key));
     if (arg.text != 0 && !getConsole()->isFreshlyEnabled())
@@ -968,11 +974,6 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 
     case OIS::KC_V:
         ODFrameListener::getSingleton().getCameraManager()->setNextDefaultView();
-        break;
-
-    case OIS::KC_LMENU:
-        RenderManager::getSingleton().
-        RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap, true);
         break;
 
     // Zooms to the next event
@@ -1117,6 +1118,7 @@ void GameMode::refreshPlayerGoals(const std::string& goalsDisplayString)
 
 bool GameMode::keyReleased(const OIS::KeyEvent &arg)
 {
+    updateCreatureIndicatorAlt(arg.key, false);
     CEGUI::System::getSingleton().getDefaultGUIContext().injectKeyUp(static_cast<CEGUI::Key::Scan>(arg.key));
 
     if (mCurrentInputMode == InputModeChat || mCurrentInputMode == InputModeConsole)
@@ -1179,10 +1181,6 @@ bool GameMode::keyReleasedNormal(const OIS::KeyEvent &arg)
         frameListener.moveCamera(CameraManager::Direction::stopRotDown);
         break;
 
-    case OIS::KC_LMENU:
-        RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap, false);
-        break;
-
     default:
         break;
     }
@@ -1213,8 +1211,28 @@ void GameMode::handleHotkeys(OIS::KeyCode keycode)
     }
 }
 
+void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
+{
+    if(key != OIS::KC_LMENU && key != OIS::KC_RMENU)
+        return;
+    const bool wasDown = mIndicatorLeftAltDown || mIndicatorRightAltDown;
+    (key == OIS::KC_LMENU ? mIndicatorLeftAltDown : mIndicatorRightAltDown) = pressed;
+    if(pressed && !wasDown)
+    {
+        mCreatureIndicatorsVisible = !mCreatureIndicatorsVisible;
+        RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap,
+            mCreatureIndicatorsVisible);
+    }
+}
+
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    // Recover releases missed while focus was elsewhere without changing the toggle.
+    if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))
+        updateCreatureIndicatorAlt(OIS::KC_LMENU, false);
+    if(!getKeyboard()->isKeyDown(OIS::KC_RMENU))
+        updateCreatureIndicatorAlt(OIS::KC_RMENU, false);
+
     GameEditorModeBase::onFrameStarted(evt);
 
     refreshGuiSkill();
@@ -2129,4 +2147,3 @@ void GameMode::buildPlayerSettingsWindow()
 
     getModeManager().getGui().registerWindowHierarchy(tmpWin);
 }
-
