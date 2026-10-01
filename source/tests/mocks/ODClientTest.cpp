@@ -217,6 +217,14 @@ bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetRe
                 }
             }
 
+            // Skirmish game settings follow the seats
+            uint32_t goldDensityPercent;
+            uint32_t manaRegenerationPercent;
+            uint32_t maxCreaturesSetting;
+            BOOST_CHECK(packetReceived >> goldDensityPercent);
+            BOOST_CHECK(packetReceived >> manaRegenerationPercent);
+            BOOST_CHECK(packetReceived >> maxCreaturesSetting);
+
             if(isConfigured)
             {
                 // If we are configured, we can launch the game
@@ -239,6 +247,7 @@ bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetRe
                 packSend << true << player.mPlayerId;
                 packSend << true << player.mWantedTeamId;
             }
+            packSend << static_cast<uint32_t>(100) << static_cast<uint32_t>(100) << static_cast<uint32_t>(0);
             send(packSend);
             return true;
         }

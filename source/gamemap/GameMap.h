@@ -459,6 +459,21 @@ public:
 
     uint32_t getMaxNumberCreatures(Seat* seat) const;
 
+    //! \brief Skirmish game settings, chosen by the host in the seat configuration. They are
+    //! only used on the server game map. The percentages scale the base value (100 = unchanged).
+    inline uint32_t getGoldDensityPercent() const
+    { return mGoldDensityPercent; }
+
+    inline uint32_t getManaRegenerationPercent() const
+    { return mManaRegenerationPercent; }
+
+    //! \brief 0 means that the default from the configuration is used
+    inline uint32_t getMaxCreaturesSetting() const
+    { return mMaxCreaturesSetting; }
+
+    void setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
+        uint32_t maxCreaturesSetting);
+
     void logFloodFileTiles();
     void consoleSetCreatureDestination(const std::string& creatureName, int x, int y);
     void consoleToggleCreatureVisualDebug(const std::string& creatureName);
@@ -605,6 +620,10 @@ private:
     
     
     NodeType mNodeType;
+
+    uint32_t mGoldDensityPercent;
+    uint32_t mManaRegenerationPercent;
+    uint32_t mMaxCreaturesSetting;
 
     //! \brief the Local player reference. The local player will also be in the player list so this pointer
     //! should not be deleted as it will be handled like every other in the list.
