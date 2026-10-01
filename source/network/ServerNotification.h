@@ -102,6 +102,9 @@ enum class ServerNotificationType
     //! \brief Answer to the editor asking what the waves of a wave portal are
     editorPortalWaveData,
 
+    //! \brief Answer to askCasinoPayout: tile and payout level of the casino on it
+    casinoPayout,
+
     exit
 };
 
