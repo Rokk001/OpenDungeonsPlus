@@ -1,0 +1,14 @@
+# Directly generated portrait feature assets
+
+These isolated features were generated directly on transparent backgrounds.
+The saved PNGs are byte-identical copies of generator outputs: no cutting, resizing or pixel editing.
+Original portraits and the earlier cropped-patch folder remain unchanged.
+Native generator canvas sizes are preserved; these files are not registered game-composition patches.
+Exact prompts and source-file provenance are recorded per portrait.
+
+Generation and copy validation: 1 of 34 creature/gender combinations completed.
+
+Completed combinations:
+- Orc female: 21 assets
+
+No runtime code changed, so application version and runtime changelog updates are not required.
