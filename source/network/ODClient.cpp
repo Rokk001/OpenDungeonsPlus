@@ -46,6 +46,7 @@
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "rooms/RoomPortalWave.h"
+#include "social/PostLog.h"
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/SpellType.h"
@@ -554,7 +555,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             entity->createMesh(nt);
             entity->restoreEntityState();
             entity->setPosition( entity->getPosition(), gameMapPointer);
-            
+
+            if(entity->getObjectType() == GameEntityType::creature)
+                static_cast<Creature*>(entity)->socialCreatureAdded();
+
             break;
         }
 
@@ -577,6 +581,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_LOG_ERR("entityType=" + Helper::toString(static_cast<int32_t>(entityType)) + ", entityName=" + entityName);
                 break;
             }
+
+            if(entity->getObjectType() == GameEntityType::creature)
+                static_cast<Creature*>(entity)->socialCreatureRemoved();
 
             entity->removeEntityFromPositionTile(gameMapPointer);
             entity->removeFromGameMap(gameMapPointer);
@@ -664,6 +671,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             }
 
             tempPlayer->pickUpEntity(entity);
+            if(entity->getObjectType() == GameEntityType::creature)
+                static_cast<Creature*>(entity)->socialEvent(social::PostCategory::PickedUp);
             break;
         }
 

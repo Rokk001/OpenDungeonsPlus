@@ -38,7 +38,10 @@
 #include "render/CreaturePanel.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/SocialWindow.h"
 #include "render/TextRenderer.h"
+#include "social/PostLog.h"
+#include "social/SocialProfileCache.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
 #include "sound/MusicPlayer.h"
@@ -302,10 +305,30 @@ GameMode::GameMode(ModeManager *modeManager):
     syncTabButtonTooltips(Gui::MAIN_TABCONTROL);
     mCreaturePanel.reset(new CreaturePanel(*mGameMap, modeManager->getGui(),
         mRootWindow->getChild(Gui::TAB_CREATURES)));
+
+    // Dungeonbook: creature list and post feed
+    mSocialWindow.reset(new SocialWindow(mRootWindow, *mGameMap));
+    addEventConnection(mRootWindow->getChild("SocialButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSocialWindow, this)));
+    addEventConnection(mRootWindow->getChild("SocialWindow")->subscribeEvent(
+        CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&SocialWindow::onCloseClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/FilterButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/FeedPane/FeedModeButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedModeClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/FeedTab")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedTabClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/ProfileTab")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileTabClicked, mSocialWindow.get())));
+    addEventConnection(mRootWindow->getChild("SocialWindow/CreatureList")->subscribeEvent(
+        CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&SocialWindow::onSelectionChanged, mSocialWindow.get())));
 }
 
 GameMode::~GameMode()
 {
+    // The feed and the profiles belong to this game only
+    social::PostLog::getSingleton().stop();
+    social::SocialProfileCache::getSingleton().clear();
     CEGUI::ToggleButton* checkBox =
         dynamic_cast<CEGUI::ToggleButton*>(
             mRootWindow->getChild(
@@ -357,6 +380,9 @@ void GameMode::activate()
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
+    mSocialWindow->hide();
+    social::PostLog::getSingleton().start(mGameMap->getTurnNumber(), ODApplication::turnsPerSecond);
+    social::PostLog::getSingleton().setTextFunction(&SocialWindow::renderPostTextForLog);
     guiSheet->getChild("SettingsWindow")->hide();
     guiSheet->getChild("GameOptionsWindow")->hide();
     guiSheet->getChild("GameChatWindow/GameChatEditBox")->hide();
@@ -938,6 +964,10 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
         enterConsole();
         break;
 
+    case OIS::KC_B:
+        toggleSocialWindow();
+        break;
+
     case OIS::KC_LEFT:
     case OIS::KC_A:
         frameListener.moveCamera(CameraManager::Direction::moveLeft);
@@ -1268,6 +1298,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     }
     player->frameStarted(evt.timeSinceLastFrame);
     mCreaturePanel->update();
+    mSocialWindow->update(evt.timeSinceLastFrame);
 
     // After frameStarted, so that the countdown shown is the one just computed.
     refreshSpellCooldownText();
@@ -1365,6 +1396,32 @@ bool GameMode::toggleObjectivesWindow(const CEGUI::EventArgs& e)
     else
         showObjectivesWindow(e);
     return true;
+}
+
+bool GameMode::toggleSocialWindow(const CEGUI::EventArgs&)
+{
+    if(mGameMap->getLocalPlayer() == nullptr)
+        return true;
+
+    if(mSocialWindow->isVisible())
+    {
+        mSocialWindow->hide();
+        return true;
+    }
+
+    while(closeTopWindow())
+    {
+    }
+    mSocialWindow->show();
+    return true;
+}
+
+void GameMode::showSocialWindow(const std::string& selectedCreature)
+{
+    if(mGameMap->getLocalPlayer() == nullptr)
+        return;
+
+    mSocialWindow->showCreature(selectedCreature);
 }
 
 bool GameMode::showPlayerSettingsWindow(const CEGUI::EventArgs&)
@@ -1583,7 +1640,8 @@ void GameMode::setHelpWindowText()
         << "  - Camera rotation: A (left) or E (right)." << std::endl
         << "  - Camera zooming: Mouse wheel, Home (zoom out) or End (zoom in)." << std::endl
         << "  - Camera tilting: Page Up (look up), Page Down (look down)." << std::endl
-        << "  - Cycle through camera modes: V." << std::endl << std::endl;
+        << "  - Cycle through camera modes: V." << std::endl
+        << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl << std::endl;
     txt << formatTitleOn << "Keeper hand controls" << formatTitleOff << std::endl
         << "Use your hand wisely to keep all minions under control and let your dungeon thrive!" << std::endl
         << "  - Mouse left click: Select an action, Confirm an action." << std::endl

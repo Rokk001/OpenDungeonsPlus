@@ -320,6 +320,30 @@ std::string SocialGenerator::postTemplate(const SocialData& data, const std::str
     return pickFrom(rng, candidates, emptyText);
 }
 
+std::string SocialGenerator::renderPost(const SocialData& data, const CreatureProfile& profile, bool isWorker,
+    const std::string& category, uint32_t variant, int32_t level, const std::string& room)
+{
+    std::string text = postTemplate(data, profile.mCreatureName, profile.mClassName, isWorker, category, variant);
+    if(text.empty())
+        return text;
+
+    std::map<std::string, std::string> slots;
+    slots["name"] = profile.getFullName();
+    slots["hometown"] = profile.mHometown;
+    slots["job"] = profile.mJob;
+    slots["like"] = profile.mLikes[0];
+    slots["dislike"] = profile.mDislikes[0];
+    slots["quirk"] = profile.mQuirk;
+    if(level > 0)
+    {
+        std::ostringstream levelStream;
+        levelStream << level;
+        slots["level"] = levelStream.str();
+    }
+    slots["room"] = room;
+    return renderText(text, slots);
+}
+
 std::string SocialGenerator::serialize(const CreatureProfile& profile)
 {
     std::ostringstream stream;

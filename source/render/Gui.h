@@ -106,6 +106,17 @@ public:
     //! \brief Creates the fixed size creature profile window from WindowCreatureProfile.layout,
     //! registered for scaling. The caller adds it to the root window.
     CEGUI::Window* createCreatureProfileWindow(const std::string& name);
+    //! \brief Loads the profile page (portrait, texts, bars) as the child "Content" of the given holder window.
+    //! The page is shared by the creature card and the Dungeonbook, see Creature::fillProfilePage.
+    CEGUI::Window* createCreatureProfilePage(CEGUI::Window* holder);
+    //! \brief Stacks the text rows of the profile page (bio to latest post) one below the other, each as
+    //! high as its wrapped text, so no gap is left between short rows. Returns the bottom edge of the
+    //! last visible row in design pixels, relative to the page.
+    float layoutCreatureProfilePage(CEGUI::Window* page);
+    //! \brief Sets the area of a registered window given in design pixels (the scale is applied here).
+    void setScaledArea(CEGUI::Window* window, const CEGUI::URect& designArea);
+    //! \brief Factor from design pixels to screen pixels (display size and user scale).
+    float getLayoutScale() const;
 
     //! \brief Sets the user-selected UI scale and applies it immediately.
     void setUserScalePercent(float scalePercent);
@@ -177,6 +188,8 @@ public:
     bool playButtonClickSound(const CEGUI::EventArgs& e = {});
 
 private:
+    //! \brief Places one text row of the profile page at y (design pixels) as high as its text, returns the y of the next row.
+    float layoutProfileTextRow(CEGUI::Window* window, float y, float scale);
     //! \brief Layout values of a window as loaded, used to re-apply the UI scale from the original values.
     struct WindowScaleData
     {
