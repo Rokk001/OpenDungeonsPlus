@@ -3936,6 +3936,18 @@ void Creature::resetKoTurns()
     mNeedFireRefresh = true;
 }
 
+void Creature::knockOutToDeath()
+{
+    if(mKoTurnCounter < 0)
+        return;
+
+    mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
+    OD_LOG_INF("creature=" + getName() + " has been knocked out");
+    dropCarriedEquipment();
+    computeCreatureOverlayMoodValue();
+    mNeedFireRefresh = true;
+}
+
 void Creature::setInJail(Room* prison)
 {
     if(prison == nullptr)

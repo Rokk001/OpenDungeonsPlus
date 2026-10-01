@@ -26,6 +26,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
+#include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "rooms/RoomManager.h"
@@ -148,6 +149,10 @@ bool RoomArena::hasOpenCreatureSpot(Creature* c)
     if(mCreaturesFighting.size() >= mActualTiles.size())
         return false;
 
+    // Enemy creatures (prisoners) can be dropped whatever their level
+    if(!getSeat()->isAlliedSeat(c->getSeat()))
+        return true;
+
     // We allow using arena only if level is not too high
     if (c->getLevel() >= std::min(static_cast<double>(MAX_LEVEL), std::round(SkillManager::getResearchValue(
         getSeat(), SkillType::roomArena, ConfigManager::getSingleton().getRoomConfigUInt32("ArenaMaxTrainingLevel")))))
@@ -209,6 +214,29 @@ void RoomArena::doUpkeep()
     if(mCreaturesFighting.size() < 2)
         return;
 
+    // The last enemy standing is knocked out so that the imps can carry it to a prison
+    for(Creature* creature : mCreaturesFighting)
+    {
+        if(getSeat()->isAlliedSeat(creature->getSeat()))
+            continue;
+
+        if(creature->getKoTurnCounter() != 0)
+            continue;
+
+        bool alone = true;
+        for(Creature* other : mCreaturesFighting)
+        {
+            if((other != creature) && (other->getKoTurnCounter() >= 0))
+            {
+                alone = false;
+                break;
+            }
+        }
+
+        if(alone)
+            creature->knockOutToDeath();
+    }
+
     // Each creature not already fighting should look for the closest one and fight it
     for(Creature* creature : mCreaturesFighting)
     {
@@ -253,8 +281,11 @@ void RoomArena::doUpkeep()
             continue;
         }
 
+        // Allies try to knock each other out. A fight against an enemy is to the death
+        bool koOpponent = creature->getSeat()->isAlliedSeat(closestOpponent->getSeat());
+
         // We don't notify player fight when in the arena
-        creature->pushAction(Utils::make_unique<CreatureActionFightFriendly>(*creature, closestOpponent, true, getCoveredTiles(), false));
+        creature->pushAction(Utils::make_unique<CreatureActionFightFriendly>(*creature, closestOpponent, koOpponent, getCoveredTiles(), false));
     }
 }
 

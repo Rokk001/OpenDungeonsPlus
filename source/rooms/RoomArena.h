@@ -43,6 +43,8 @@ public:
     virtual void updateActiveSpots(GameMap* gameMap = nullptr) override;    
     bool useRoom(Creature& creature, bool forced) override;
     bool shouldStopUseIfHungrySleepy(Creature& creature, bool forced) override;
+    bool shouldNotUseIfBadMood(Creature& creature, bool forced) override
+    { return false; }
 
     std::string getListenerName() const override;
     bool notifyDead(GameEntity* entity) override;
