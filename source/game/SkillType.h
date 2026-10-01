@@ -60,6 +60,7 @@ enum class SkillType
     spellCreatureWeak,
     spellSummonWorker,
     spellEyeEvil,
+    spellCreateGold,
 
     // This should be the last
     countSkill
