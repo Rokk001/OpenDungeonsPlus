@@ -29,6 +29,7 @@ class Seat;
 
 namespace CEGUI
 {
+class Combobox;
 class EventArgs;
 }
 
@@ -62,6 +63,9 @@ private:
     std::vector<std::pair<std::string, int32_t> > mPlayers;
 
     void fireSeatConfigurationToServer();
+
+    //! \brief Fills the skirmish setting combos with their choices
+    void initSettingCombos();
 };
 
 #endif // MENUMODECONFIGURESEATS_H

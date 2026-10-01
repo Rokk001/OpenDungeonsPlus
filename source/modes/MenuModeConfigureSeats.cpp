@@ -39,6 +39,50 @@ const std::string TEXT_SEAT_ID_PREFIX = "TextSeat";
 const std::string COMBOBOX_TEAM_ID_PREFIX = "ComboTeam";
 const std::string COMBOBOX_PLAYER_FACTION_PREFIX = "ComboPlayerFactionSeat";
 const std::string COMBOBOX_PLAYER_PREFIX = "ComboPlayerSeat";
+const std::string COMBOBOX_GOLD_DENSITY = "ComboGoldDensity";
+const std::string COMBOBOX_MANA_REGENERATION = "ComboManaRegeneration";
+const std::string COMBOBOX_MAX_CREATURES = "ComboMaxCreatures";
+
+namespace
+{
+void addSettingItem(CEGUI::Combobox* combo, const std::string& text, uint32_t value)
+{
+    const CEGUI::Image* selImg = &CEGUI::ImageManager::getSingleton().get("OpenDungeonsSkin/SelectionBrush");
+    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text, value);
+    item->setSelectionBrushImage(selImg);
+    combo->addItem(item);
+}
+
+//! \brief Returns the id of the selected item or defaultValue if nothing is selected
+uint32_t getSettingValue(CEGUI::Window* playersWin, const std::string& comboName, uint32_t defaultValue)
+{
+    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(comboName));
+    CEGUI::ListboxItem* selItem = combo->getSelectedItem();
+    if(selItem == nullptr)
+        return defaultValue;
+
+    return selItem->getID();
+}
+
+void selectSettingValue(CEGUI::Window* playersWin, const std::string& comboName, uint32_t value)
+{
+    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(comboName));
+    CEGUI::ListboxItem* selItem = nullptr;
+    for(uint32_t i = 0; i < combo->getItemCount(); ++i)
+    {
+        CEGUI::ListboxItem* item = combo->getListboxItemFromIndex(i);
+        if(item->getID() == value)
+            selItem = item;
+
+        combo->setItemSelectState(item, false);
+    }
+    if(selItem != nullptr)
+    {
+        combo->setText(selItem->getText());
+        combo->setItemSelectState(selItem, true);
+    }
+}
+}
 
 MenuModeConfigureSeats::MenuModeConfigureSeats(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_CONFIGURE_SEATS),
@@ -65,6 +109,8 @@ MenuModeConfigureSeats::MenuModeConfigureSeats(ModeManager* modeManager):
         )
     );
 
+    initSettingCombos();
+
     addEventConnection(
         window->getChild("ListPlayers/GameChatEditBox")->subscribeEvent(
             CEGUI::Editbox::EventTextAccepted,
@@ -88,6 +134,46 @@ MenuModeConfigureSeats::~MenuModeConfigureSeats()
         name = COMBOBOX_TEAM_ID_PREFIX + Helper::toString(seatId);
         tmpWin->destroyChild(name);
     }
+}
+
+void MenuModeConfigureSeats::initSettingCombos()
+{
+    CEGUI::Window* playersWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
+    uint32_t percents[] = {50, 75, 100, 150, 200};
+    const std::string percentCombos[] = {COMBOBOX_GOLD_DENSITY, COMBOBOX_MANA_REGENERATION};
+    for(const std::string& comboName : percentCombos)
+    {
+        CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(comboName));
+        combo->resetList();
+        combo->setReadOnly(true);
+        combo->setEnabled(false);
+        for(uint32_t percent : percents)
+            addSettingItem(combo, Helper::toString(percent) + "%", percent);
+
+        selectSettingValue(playersWin, comboName, 100);
+        addEventConnection(
+            combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
+                CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
+        );
+    }
+
+    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(COMBOBOX_MAX_CREATURES));
+    combo->resetList();
+    combo->setReadOnly(true);
+    combo->setEnabled(false);
+    uint32_t defaultMax = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
+    addSettingItem(combo, "Default (" + Helper::toString(defaultMax) + ")", 0);
+    uint32_t maxChoices[] = {5, 15, 20, 30};
+    for(uint32_t maxChoice : maxChoices)
+    {
+        if(maxChoice <= ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute())
+            addSettingItem(combo, Helper::toString(maxChoice), maxChoice);
+    }
+    selectSettingValue(playersWin, COMBOBOX_MAX_CREATURES, 0);
+    addEventConnection(
+        combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
+            CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
+    );
 }
 
 void MenuModeConfigureSeats::activate()
@@ -440,6 +526,10 @@ void MenuModeConfigureSeats::fireSeatConfigurationToServer()
             notif->mPacket << false;
         }
     }
+
+    notif->mPacket << getSettingValue(playersWin, COMBOBOX_GOLD_DENSITY, 100);
+    notif->mPacket << getSettingValue(playersWin, COMBOBOX_MANA_REGENERATION, 100);
+    notif->mPacket << getSettingValue(playersWin, COMBOBOX_MAX_CREATURES, 0);
     ODClient::getSingleton().queueClientNotification(notif);
 }
 
@@ -478,6 +568,10 @@ void MenuModeConfigureSeats::activatePlayerConfig()
         if(combo->getItemCount() > 1)
             combo->setEnabled(enabled);
     }
+
+    listPlayersWindow->getChild(COMBOBOX_GOLD_DENSITY)->setEnabled(enabled);
+    listPlayersWindow->getChild(COMBOBOX_MANA_REGENERATION)->setEnabled(enabled);
+    listPlayersWindow->getChild(COMBOBOX_MAX_CREATURES)->setEnabled(enabled);
 
     CEGUI::Window* startButton = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers/LaunchGameButton");
     startButton->setEnabled(enabled);
@@ -570,6 +664,16 @@ void MenuModeConfigureSeats::refreshSeatConfiguration(ODPacket& packet)
             combo->setItemSelectState(selItem, true);
         }
     }
+
+    uint32_t goldDensityPercent;
+    uint32_t manaRegenerationPercent;
+    uint32_t maxCreaturesSetting;
+    OD_ASSERT_TRUE(packet >> goldDensityPercent);
+    OD_ASSERT_TRUE(packet >> manaRegenerationPercent);
+    OD_ASSERT_TRUE(packet >> maxCreaturesSetting);
+    selectSettingValue(playersWin, COMBOBOX_GOLD_DENSITY, goldDensityPercent);
+    selectSettingValue(playersWin, COMBOBOX_MANA_REGENERATION, manaRegenerationPercent);
+    selectSettingValue(playersWin, COMBOBOX_MAX_CREATURES, maxCreaturesSetting);
 }
 
 void MenuModeConfigureSeats::receiveChat(const ChatMessage& chat)

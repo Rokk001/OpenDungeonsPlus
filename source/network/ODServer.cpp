@@ -1085,6 +1085,15 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 }
                 seat->setConfigTeamId(teamId);
             }
+
+            // The skirmish game settings follow the seats
+            uint32_t goldDensityPercent;
+            uint32_t manaRegenerationPercent;
+            uint32_t maxCreaturesSetting;
+            OD_ASSERT_TRUE(packetReceived >> goldDensityPercent);
+            OD_ASSERT_TRUE(packetReceived >> manaRegenerationPercent);
+            OD_ASSERT_TRUE(packetReceived >> maxCreaturesSetting);
+            gameMap->setSkirmishSettings(goldDensityPercent, manaRegenerationPercent, maxCreaturesSetting);
             fireSeatConfigurationRefresh();
             break;
         }
@@ -2756,6 +2765,8 @@ void ODServer::fireSeatConfigurationRefresh()
             packetSend << teamId;
         }
     }
+    packetSend << mGameMap->getGoldDensityPercent() << mGameMap->getManaRegenerationPercent()
+        << mGameMap->getMaxCreaturesSetting();
     sendMsg(nullptr, packetSend);
 }
 
