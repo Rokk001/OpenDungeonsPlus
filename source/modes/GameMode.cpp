@@ -1287,13 +1287,13 @@ void GameMode::showCasinoPayoutWindow(Tile* tile)
 {
     mCasinoX = tile->getX();
     mCasinoY = tile->getY();
-    setCasinoPayoutShown(mCasinoX, mCasinoY, static_cast<uint32_t>(CasinoPayout::normal));
+    setCasinoPayoutShown(mCasinoX, mCasinoY, static_cast<uint32_t>(CasinoPayout::smiles));
     mRootWindow->getChild("CasinoPayoutWindow")->show();
 
     // The payout is kept by the server, so we ask it what it currently is
     ClientNotification* clientNotification = new ClientNotification(
         ClientNotificationType::askCasinoPayout);
-    clientNotification->mPacket << mCasinoX << mCasinoY << static_cast<uint32_t>(CasinoPayout::normal) << false;
+    clientNotification->mPacket << mCasinoX << mCasinoY << static_cast<uint32_t>(CasinoPayout::smiles) << false;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
@@ -1326,17 +1326,13 @@ void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
     std::string infoText;
     switch(static_cast<CasinoPayout>(level))
     {
-        case CasinoPayout::stingy:
-            levelText = "Payout: $ (low)";
-            infoText = "The casino keeps a large share of the bets. Creatures win less gold.";
-            break;
-        case CasinoPayout::generous:
-            levelText = "Payout: Smiley (high)";
-            infoText = "The casino keeps little of the bets. Creatures win more gold.";
+        case CasinoPayout::money:
+            levelText = "Payout: Money";
+            infoText = "The casino keeps a large share of the bets. Creatures get annoyed.";
             break;
         default:
-            levelText = "Payout: Normal";
-            infoText = "The casino keeps its usual share of the bets.";
+            levelText = "Payout: Smiles";
+            infoText = "The casino keeps little of the bets. Creatures get cheered up.";
             break;
     }
     mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutButton")->setText(levelText);

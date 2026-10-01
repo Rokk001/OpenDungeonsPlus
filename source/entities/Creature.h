@@ -473,6 +473,13 @@ public:
     inline void setNbTurnsWithoutBattle(int32_t nbTurnsWithoutBattle)
     { mNbTurnsWithoutBattle = nbTurnsWithoutBattle; }
 
+    //! \brief Mood points the casino gave to the creature (positive) or took from it (negative). Fades over time
+    inline double getCasinoMood() const
+    { return mCasinoMood; }
+
+    //! \brief Changes the casino mood points. They are limited by the CasinoMoodMax room setting
+    void addCasinoMood(double points);
+
     inline GameEntity* getCarriedEntity() const
     { return mCarriedEntity; }
 
@@ -706,6 +713,9 @@ private:
 
     CEGUI::Window*  mStatsWindow;
     int32_t         mNbTurnsWithoutBattle;
+
+    //! \brief Used on server side for the mood. Set by the casino, fades by CasinoMoodDecay per second
+    double          mCasinoMood;
 
     //! \brief Every tiles within the creature sight radius, used for common actions.
     std::vector<Tile*>              mTilesWithinSightRadius;

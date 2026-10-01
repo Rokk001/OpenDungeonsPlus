@@ -17,6 +17,7 @@
 
 #include "entities/Creature.h"
 
+#include "ODApplication.h"
 #include "creatureaction/CreatureAction.h"
 #include "creatureaction/CreatureActionClaimGroundTile.h"
 #include "creatureaction/CreatureActionClaimWallTile.h"
@@ -170,6 +171,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
+    mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mMoodCooldownTurns       (0),
     mMoodValue               (CreatureMoodLevel::Neutral),
@@ -255,6 +257,7 @@ Creature::Creature(GameMap* gameMap) :
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
+    mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mMoodCooldownTurns       (0),
     mMoodValue               (CreatureMoodLevel::Neutral),
@@ -1069,6 +1072,17 @@ void Creature::doUpkeep()
     }
 
     ++mNbTurnsWithoutBattle;
+
+    // The casino mood fades towards 0
+    if(mCasinoMood != 0.0)
+    {
+        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodDecay", 3.0)
+            / ODApplication::turnsPerSecond;
+        if(mCasinoMood > 0.0)
+            mCasinoMood = std::max(0.0, mCasinoMood - decay);
+        else
+            mCasinoMood = std::min(0.0, mCasinoMood + decay);
+    }
 
     bool isWarmUp = false;
     // We use creature skills if we can
@@ -3015,6 +3029,12 @@ void Creature::decreaseWakefulness(double value)
     mWakefulness = std::max(0.0, mWakefulness - value);
 }
 
+void Creature::addCasinoMood(double points)
+{
+    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1500.0);
+    mCasinoMood = std::max(-maxPoints, std::min(maxPoints, mCasinoMood + points));
+}
+
 void Creature::computeMood()
 {
     mMoodPoints = CreatureMoodManager::computeCreatureMoodModifiers(*this);
@@ -3428,6 +3448,7 @@ void Creature::changeSeat(Seat* newSeat)
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;
     mActiveSlapsCount = 0;
+    mCasinoMood = 0.0;
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     mNeedFireRefresh = true;
