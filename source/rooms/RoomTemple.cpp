@@ -201,12 +201,14 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     }
 
     ConfigManager& configManager = ConfigManager::getSingleton();
-    const CreatureRoomAffinity& creatureRoomAffinity = creature.getDefinition()->getRoomAffinity(getType());
 
     // The creature prays. Its keeper gets mana and the creature feels better
     creature.setAnimationState(EntityAnimation::idle_anim);
     creature.jobDone(configManager.getRoomConfigDouble("TemplePrayerWakefulnessPerTurn"));
-    int32_t mana = static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * configManager.getRoomConfigDouble("TemplePrayerManaPerTurn"));
+    // Each creature type has its own prayer mana (TemplePrayerMana<ClassName>), the generic value is the fallback
+    double defaultMana = configManager.getRoomConfigDouble("TemplePrayerManaPerTurn");
+    int32_t mana = static_cast<int32_t>(configManager.getRoomConfigDoubleOrDefault(
+        "TemplePrayerMana" + creature.getDefinition()->getClassName(), defaultMana));
     getGameMap()->addManaToSeat(mana, getSeat()->getId());
     creature.addPrayerRelief(configManager.getRoomConfigInt32("TemplePrayerReliefPerTurn"),
         configManager.getRoomConfigInt32("TemplePrayerReliefMax"));
