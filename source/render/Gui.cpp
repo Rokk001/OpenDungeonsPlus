@@ -1943,6 +1943,7 @@ const std::string Gui::EDITOR_WATER_BUTTON = "MainTabControl/Tiles/WaterButton";
 const std::string Gui::EDITOR_ROCK_BUTTON = "MainTabControl/Tiles/RockButton";
 const std::string Gui::EDITOR_CLAIMED_BUTTON = "MainTabControl/Tiles/ClaimedButton";
 const std::string Gui::EDITOR_GEM_BUTTON = "MainTabControl/Tiles/GemButton";
+const std::string Gui::EDITOR_MANAVAULT_BUTTON = "MainTabControl/Tiles/ManaVaultButton";
 const std::string Gui::EDITOR_FULLNESS = "HorizontalPipe/FullnessDisplay";
 const std::string Gui::EDITOR_CURSOR_POS = "HorizontalPipe/PositionDisplay";
 const std::string Gui::EDITOR_SEAT_ID = "HorizontalPipe/SeatIdDisplay";

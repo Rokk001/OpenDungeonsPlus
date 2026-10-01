@@ -711,7 +711,8 @@ private:
 
     //! \brief Applies the per-second mana income and worker upkeep of one seat for the current
     //! turn. A seat without a living dungeon heart gains and spends nothing.
-    void updateSeatMana(Seat* seat);
+    //! \param nbManaVaultTiles Number of mana vault tiles the seat has claimed.
+    void updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles);
 
     //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
     //! until the seat has four workers. A seat without a living dungeon heart creates none.
