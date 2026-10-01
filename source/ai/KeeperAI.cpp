@@ -1019,8 +1019,11 @@ void KeeperAI::handleTraps()
         for(uint32_t i = 1; i < static_cast<uint32_t>(TrapType::nbTraps); ++i)
         {
             TrapType type = static_cast<TrapType>(i);
-            if(type == TrapType::doorWooden)
+            if((type == TrapType::doorWooden) || (type == TrapType::doorBraced) ||
+               (type == TrapType::doorSteel) || (type == TrapType::doorBarricade))
+            {
                 continue;
+            }
             if(!SkillManager::isTrapAvailable(type, seat))
                 continue;
             if(gold < (TrapManager::costPerTile(type) + goldReserve))
