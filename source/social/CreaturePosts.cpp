@@ -109,6 +109,8 @@ std::string CreaturePosts::getRoomName(int32_t roomType)
             return "torture chamber";
         case RoomType::guardRoom:
             return "guard room";
+        case RoomType::temple:
+            return "temple";
         default:
             return "dungeon";
     }
