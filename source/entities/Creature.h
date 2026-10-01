@@ -237,9 +237,6 @@ public:
     //! the creature job and drops what it is carrying
     void dropCarriedEquipment();
 
-    //! brief Gives the seat of the attacker gold if this creature is a hero that just died
-    void payHeroBounty(GameEntity* attacker);
-
     /*! \brief The main AI routine which decides what the creature will do and carries out that action.
      *
      * The doUpkeep routine is the heart of the Creature AI subsystem.  The other,

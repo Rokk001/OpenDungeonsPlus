@@ -106,7 +106,6 @@
 
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
-static const int HERO_BOUNTY_PER_LEVEL = 50;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
@@ -786,26 +785,6 @@ void Creature::setLevel(unsigned int level)
     buildStats();
 
     mNeedFireRefresh = true;
-}
-
-void Creature::payHeroBounty(GameEntity* attacker)
-{
-    if((attacker == nullptr) || (attacker->getSeat() == nullptr))
-        return;
-
-    if(getDefinition()->isWorker())
-        return;
-
-    if(getSeat()->getFaction().compare("Hero") != 0)
-        return;
-
-    Seat* killerSeat = attacker->getSeat();
-    if(killerSeat->isRogueSeat() || (killerSeat->getFaction().compare("Hero") == 0))
-        return;
-
-    int bounty = static_cast<int>(getLevel()) * HERO_BOUNTY_PER_LEVEL;
-    OD_LOG_INF("creature=" + getName() + " hero bounty " + Helper::toString(bounty) + " for seatId=" + Helper::toString(killerSeat->getId()));
-    getGameMap()->addGoldToSeat(bounty, killerSeat->getId());
 }
 
 void Creature::dropCarriedEquipment()
@@ -2121,7 +2100,6 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
     elementDamage = std::max(elementDamage - getElementDefense(), 0.0);
     double damageDone = std::min(mHp, absoluteDamage + physicalDamage + magicalDamage + elementDamage);
-    bool wasAlive = (mHp > 0.0);
     mHp -= damageDone;
     if(mHp <= 0)
     {
@@ -2144,10 +2122,6 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 
     if(!getIsOnServerMap())
         return damageDone;
-
-    // Slaying a hero pays a bounty to the seat that killed it
-    if(wasAlive && !isAlive())
-        payHeroBounty(attacker);
 
     Player* player = getGameMap()->getPlayerBySeat(getSeat());
     if (player == nullptr)
