@@ -1409,9 +1409,6 @@ bool GameMode::toggleSocialWindow(const CEGUI::EventArgs&)
         return true;
     }
 
-    while(closeTopWindow())
-    {
-    }
     mSocialWindow->show();
     return true;
 }
