@@ -804,6 +804,8 @@ int32_t TrapManager::getNeededWorkshopPointsPerTrap(TrapType trapType)
             return ConfigManager::getSingleton().getTrapConfigInt32("SpikeWorkshopPointsPerTile");
         case TrapType::boulder:
             return ConfigManager::getSingleton().getTrapConfigInt32("BoulderWorkshopPointsPerTile");
+        case TrapType::fear:
+            return ConfigManager::getSingleton().getTrapConfigInt32("FearWorkshopPointsPerTile");
         case TrapType::doorWooden:
             return ConfigManager::getSingleton().getTrapConfigInt32("WoodenDoorPointsPerTile");
         default:

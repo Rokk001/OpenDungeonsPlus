@@ -61,6 +61,9 @@ enum class SkillType
     spellSummonWorker,
     spellEyeEvil,
 
+    // Added later, kept after the older entries so existing values do not change
+    trapFear,
+
     // This should be the last
     countSkill
 };
