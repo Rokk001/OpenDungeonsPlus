@@ -81,7 +81,7 @@ std::string numberToString(int32_t value)
 }
 
 CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::string& creatureName,
-    const std::string& className, bool isWorker)
+    const std::string& className, bool isWorker, uint32_t nameVariant)
 {
     const NameGroup& group = data.getGroupForClass(className);
     CreatureProfile profile;
@@ -106,26 +106,34 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
 
     // First name: the pool of the gender, or the first non-empty pool
     static const std::string nameFallback = "Nameless";
-    Rng givenRng = makeFieldRng(creatureName, "given");
+    std::string variantSuffix;
+    if(nameVariant > 0)
+        variantSuffix = "#" + numberToString(static_cast<int32_t>(nameVariant));
+    Rng givenRng = makeFieldRng(creatureName, "given" + variantSuffix);
     const std::vector<std::string>* givenPool = &group.mGiven[genderIndex];
     for(uint32_t i = 0; (givenPool->empty()) && (i < 3); ++i)
         givenPool = &group.mGiven[(genderIndex + 1 + i) % 3];
     profile.mFirstName = pickFrom(givenRng, *givenPool, nameFallback);
 
     // Surname or title
-    Rng suffixRng = makeFieldRng(creatureName, "suffix");
+    Rng suffixRng = makeFieldRng(creatureName, "suffix" + variantSuffix);
     uint32_t suffixRoll = suffixRng.below(100);
     static const std::string emptyText;
     if((suffixRoll < SURNAME_PERCENT) && (!group.mSurnames.empty()))
     {
-        Rng surnameRng = makeFieldRng(creatureName, "surname");
+        Rng surnameRng = makeFieldRng(creatureName, "surname" + variantSuffix);
         profile.mSurname = pickFrom(surnameRng, group.mSurnames, emptyText);
     }
     else if((suffixRoll >= SURNAME_PERCENT) && (suffixRoll < SURNAME_PERCENT + TITLE_PERCENT) &&
             (!group.mTitles.empty()))
     {
-        Rng titleRng = makeFieldRng(creatureName, "title");
+        Rng titleRng = makeFieldRng(creatureName, "title" + variantSuffix);
         profile.mTitle = pickFrom(titleRng, group.mTitles, emptyText);
+    }
+    if(nameVariant > MAX_NAME_VARIANT)
+    {
+        profile.mTitle.clear();
+        profile.mSurname = creatureName;
     }
 
     // Age
