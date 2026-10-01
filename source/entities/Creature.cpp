@@ -2699,7 +2699,6 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
     elementDamage = std::max(elementDamage - getElementDefense(), 0.0);
     double damageDone = std::min(mHp, absoluteDamage + physicalDamage + magicalDamage + elementDamage);
-    bool wasAlive = (mHp > 0.0);
     mHp -= damageDone;
     if(mHp <= 0)
     {
