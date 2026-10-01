@@ -15,36 +15,27 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SPELLTYPE_H
-#define SPELLTYPE_H
+#ifndef SPELLCREATEGOLD_H
+#define SPELLCREATEGOLD_H
 
-#include <iosfwd>
-#include <string>
+#include "spells/Spell.h"
 
-class ODPacket;
+class GameMap;
+class InputCommand;
+class InputManager;
 
-enum class SpellType
+//! \brief Turns mana into a pile of gold on a claimed tile of the caster.
+//! The pile can then be picked up and brought to a treasury.
+class SpellCreateGold : public Spell
 {
-    nullSpellType = 0,
-    summonWorker,
-    callToWar,
-    creatureHeal,
-    creatureExplosion,
-    creatureHaste,
-    creatureDefense,
-    creatureSlow,
-    creatureStrength,
-    creatureWeak,
-    eyeEvil,
-    createGold,
-    nbSpells     // Must be the last in this enum
+public:
+    static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
+
+    static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+    static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
+
+    static const SpellType mSpellType;
 };
 
-std::istream& operator>>(std::istream& is, SpellType& tt);
-std::ostream& operator<<(std::ostream& os, const SpellType& tt);
-
-ODPacket& operator>>(ODPacket& is, SpellType& tt);
-ODPacket& operator<<(ODPacket& os, const SpellType& tt);
-
-
-#endif // SPELLTYPE_H
+#endif // SPELLCREATEGOLD_H
