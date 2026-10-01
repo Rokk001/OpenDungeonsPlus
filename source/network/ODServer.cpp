@@ -24,6 +24,7 @@
 #include "entities/MapLight.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillManager.h"
@@ -2556,6 +2557,44 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 mapLight->addSeatWithVision(seat, true);
             }
             player->pickUpEntity(mapLight);
+            break;
+        }
+
+        case ClientNotificationType::editorCreateGiftBox:
+        {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode=" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
+            Player* player = clientSocket->getPlayer();
+            int32_t giftBoxTypeInt;
+            OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
+            GiftBoxType giftBoxType = static_cast<GiftBoxType>(giftBoxTypeInt);
+            if((giftBoxType != GiftBoxType::mana) &&
+               (giftBoxType != GiftBoxType::gold) &&
+               (giftBoxType != GiftBoxType::revealMap) &&
+               (giftBoxType != GiftBoxType::levelUp))
+            {
+                OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(static_cast<int>(giftBoxType)));
+                break;
+            }
+
+            GiftBoxBonus* giftBox = new GiftBoxBonus(gameMap, "EditorGiftBox", giftBoxType,
+                GiftBoxBonus::getDefaultAmount(giftBoxType));
+            giftBox->addToGameMap();
+            giftBox->setPosition(Ogre::Vector3(0.0, 0.0, 0.0));
+            // In editor mode, every player has vision
+            for(Seat* seat : gameMap->getSeats())
+            {
+                if(seat->getPlayer() == nullptr)
+                    continue;
+                if(!seat->getPlayer()->getIsHuman())
+                    continue;
+
+                giftBox->addSeatWithVision(seat, true);
+            }
+            player->pickUpEntity(giftBox);
             break;
         }
 

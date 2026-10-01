@@ -77,6 +77,7 @@ enum class ClientNotificationType
     editorCreateWorker,
     editorCreateFighter,
     editorAskCreateMapLight,
+    editorCreateGiftBox,
     editorSetCreatureLevel,
     editorAskPortalWaveData,
     editorSetPortalWaveData
