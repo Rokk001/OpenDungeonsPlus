@@ -65,6 +65,7 @@ enum class SkillType
     // Stronger doors. Added after the other entries to keep saved skill ids valid
     trapDoorBraced,
     trapDoorSteel,
+    trapDoorBarricade,
 
     // This should be the last
     countSkill

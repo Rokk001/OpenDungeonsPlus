@@ -788,6 +788,8 @@ int32_t TrapManager::getNeededWorkshopPointsPerTrap(TrapType trapType)
             return ConfigManager::getSingleton().getTrapConfigInt32("BracedDoorPointsPerTile");
         case TrapType::doorSteel:
             return ConfigManager::getSingleton().getTrapConfigInt32("SteelDoorPointsPerTile");
+        case TrapType::doorBarricade:
+            return ConfigManager::getSingleton().getTrapConfigInt32("BarricadeDoorPointsPerTile");
         default:
             OD_LOG_ERR("Asked for wrong trap type=" + getTrapNameFromTrapType(trapType));
             break;
