@@ -31,7 +31,7 @@ width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
 for name in ('CreaturesLabel', 'FilterButton', 'CreatureList', 'FeedTab', 'ProfileTab', 'FeedPane', 'FeedModeButton',
-             'FeedText', 'ProfilePane', 'ProfileHint', 'ProfileHolder', 'LinkButton0', 'LinkButton1', 'LinkButton2',
+             'FeedText', 'ProfilePane', 'ProfileHint', 'ProfileHolder',
              'OwnPostsText'):
     check('name="%s"' % name in layout, name)
 check('OpenProfileButton' not in layout, 'the profile opens in the right pane, not in a window')
@@ -76,8 +76,16 @@ window = read('source/render/SocialWindow.cpp')
 header = read('source/render/SocialWindow.h')
 check('onOpenProfileClicked' not in window + gamemode + header and 'createStatsWindow' not in window,
       'no window is opened from the Dungeonbook')
-for handler in ('onFeedTabClicked', 'onProfileTabClicked', 'onLinkClicked'):
+for handler in ('onFeedTabClicked', 'onProfileTabClicked'):
     check('SocialWindow::' + handler in window and '&SocialWindow::' + handler in gamemode, handler)
+check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked' in window,
+      'the names in the friends and foe rows select a creature')
+page = read('gui/WindowCreatureProfilePage.layout')
+for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
+    check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
+check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
+check('getHorzScrollbar' not in window and 'elideToWidth' in window,
+      'long list entries are shortened, no horizontal scrollbar')
 check('EventMouseDoubleClick' not in gamemode[gamemode.index('SocialWindow/CreatureList'):gamemode.index('GameMode::~GameMode')],
       'no double click window')
 selection = window[window.index('bool SocialWindow::onSelectionChanged'):]

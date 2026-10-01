@@ -2386,6 +2386,12 @@ void Creature::createStatsWindow()
         CEGUI::Event::Subscriber(&Creature::StatsTabClicked, this));
     mStatsWindow->getChild("BookTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&Creature::BookTabClicked, this));
+    const char* const linkNames[] = {"FriendLink0", "FriendLink1", "FoeLink"};
+    for(const char* linkName : linkNames)
+    {
+        mStatsWindow->getChild(std::string("ProfilePage/Content/") + linkName)->subscribeEvent(
+            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&Creature::ProfileLinkClicked, this));
+    }
 
     rootWindow->addChild(mStatsWindow);
     mStatsWindow->show();
@@ -2440,6 +2446,18 @@ bool Creature::BookTabClicked(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
+bool Creature::ProfileLinkClicked(const CEGUI::EventArgs& e)
+{
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
+    if(!args.window->isUserStringDefined("Creature"))
+        return true;
+
+    GameMode* gameMode = dynamic_cast<GameMode*>(ODFrameListener::getSingleton().getModeManager()->getCurrentMode());
+    if(gameMode != nullptr)
+        gameMode->showSocialWindow(std::string(args.window->getUserString("Creature").c_str()));
+    return true;
+}
+
 void Creature::showStatsPage(bool stats)
 {
     if (mStatsWindow == nullptr)
@@ -2466,7 +2484,7 @@ void Creature::refreshProfilePage()
     fillProfilePage(mStatsWindow->getChild("ProfilePage/Content"));
 }
 
-void Creature::fillProfilePage(CEGUI::Window* page)
+float Creature::fillProfilePage(CEGUI::Window* page)
 {
     const CreatureDefinition* definition = getDefinition();
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
@@ -2513,16 +2531,22 @@ void Creature::fillProfilePage(CEGUI::Window* page)
     if(showExperience)
         experienceBar->setProgress(static_cast<float>(getExperienceProgress()));
 
-    CEGUI::Window* friendsText = page->getChild("FriendsText");
-    CEGUI::Window* foeText = page->getChild("FoeText");
+    Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
+    CEGUI::Window* friendsLabel = page->getChild("FriendsLabel");
+    CEGUI::Window* foeLabel = page->getChild("FoeLabel");
+    CEGUI::Window* friendLinks[PROFILE_MAX_FRIENDS] = {page->getChild("FriendLink0"), page->getChild("FriendLink1")};
+    CEGUI::Window* foeLink = page->getChild("FoeLink");
     CEGUI::Window* statusText = page->getChild("StatusText");
     CEGUI::Window* latestText = page->getChild("LatestText");
-    friendsText->setVisible(isAllied);
-    foeText->setVisible(isAllied);
+    friendsLabel->setVisible(isAllied);
+    foeLabel->setVisible(isAllied);
+    for(CEGUI::Window* friendLink : friendLinks)
+        friendLink->setVisible(false);
+    foeLink->setVisible(false);
     statusText->setVisible(isAllied);
     latestText->setVisible(isAllied);
     if(!isAllied)
-        return;
+        return gui.layoutCreatureProfilePage(page);
 
     // The friends only change when a creature is added, removed or changes seat, so they are
     // computed again only when the roster version of the post log changed
@@ -2536,14 +2560,34 @@ void Creature::fillProfilePage(CEGUI::Window* page)
         cache.storeFriendsAndFoe(getName(), computed);
         cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
     }
-    std::vector<std::string> friendNames;
-    for(const std::string& friendName : cachedFriends->mFriends)
-        friendNames.push_back(getProfileNameOfCreature(getGameMap(), friendName));
+    // Each name is a button of its own, so no name is cut off; the label shares the first line with the first name
+    std::size_t nbFriendLinks = 0;
+    for(std::size_t i = 0; (i < cachedFriends->mFriends.size()) && (nbFriendLinks < PROFILE_MAX_FRIENDS); ++i)
+    {
+        std::string friendName = getProfileNameOfCreature(getGameMap(), cachedFriends->mFriends[i]);
+        if(friendName.empty())
+            continue;
+
+        friendLinks[nbFriendLinks]->setText(friendName);
+        friendLinks[nbFriendLinks]->setUserString("Creature", cachedFriends->mFriends[i]);
+        friendLinks[nbFriendLinks]->setVisible(true);
+        ++nbFriendLinks;
+    }
+    friendsLabel->setText(nbFriendLinks > 0 ? "Friends:" : "Friends: none yet");
+
     std::string foeName = cachedFriends->mFoe.empty() ? std::string() :
         getProfileNameOfCreature(getGameMap(), cachedFriends->mFoe);
-    std::string friendList = joinProfileList(friendNames);
-    friendsText->setText("Friends: " + (friendList.empty() ? std::string("none yet") : friendList));
-    foeText->setText("Foe: " + (foeName.empty() ? std::string("none") : foeName));
+    if(foeName.empty())
+    {
+        foeLabel->setText("Foe: none");
+    }
+    else
+    {
+        foeLabel->setText("Foe:");
+        foeLink->setText(foeName);
+        foeLink->setUserString("Creature", cachedFriends->mFoe);
+        foeLink->setVisible(true);
+    }
 
     std::string moodLine = social::SocialGenerator::moodLine(cache.getData(),
         getName(), definition->getClassName(), definition->isWorker(),
@@ -2555,6 +2599,7 @@ void Creature::fillProfilePage(CEGUI::Window* page)
 
     std::string latestLine = SocialWindow::describeLatestPost(getName(), getGameMap()->getTurnNumber());
     latestText->setText(latestLine.empty() ? std::string("Latest: nothing posted yet") : latestLine);
+    return gui.layoutCreatureProfilePage(page);
 }
 
 std::string Creature::getStatsText()

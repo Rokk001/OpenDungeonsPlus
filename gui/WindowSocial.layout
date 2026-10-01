@@ -59,25 +59,10 @@
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
             </Window>
             <Window type="DefaultWindow" name="ProfileHolder">
-                <Property name="Area" value="{{0,0},{0,-30},{1,0},{0,410}}" />
-            </Window>
-            <Window type="OD/Button" name="LinkButton0">
-                <Property name="Area" value="{{0,0},{0,414},{0.333,-3},{0,440}}" />
-                <Property name="Font" value="MedievalSharp-8" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/Button" name="LinkButton1">
-                <Property name="Area" value="{{0.333,3},{0,414},{0.667,-3},{0,440}}" />
-                <Property name="Font" value="MedievalSharp-8" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/Button" name="LinkButton2">
-                <Property name="Area" value="{{0.667,3},{0,414},{1,0},{0,440}}" />
-                <Property name="Font" value="MedievalSharp-8" />
-                <Property name="Visible" value="False" />
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             </Window>
             <Window type="OD/StaticText" name="OwnPostsText">
-                <Property name="Area" value="{{0,0},{0,446},{1,0},{1,0}}" />
+                <Property name="Area" value="{{0,0},{0,420},{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="Font" value="MedievalSharp-8" />
