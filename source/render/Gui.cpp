@@ -1950,6 +1950,10 @@ const std::string Gui::EDITOR_SEAT_ID = "HorizontalPipe/SeatIdDisplay";
 const std::string Gui::EDITOR_CREATURE_SPAWN = "HorizontalPipe/CreatureSpawnDisplay";
 const std::string Gui::EDITOR_LEVEL_NAME = "LevelNameDisplay";
 const std::string Gui::EDITOR_MAPLIGHT_BUTTON = "MainTabControl/Lights/MapLightButton";
+const std::string Gui::EDITOR_BOX_MANA_BUTTON = "MainTabControl/Boxes/ManaBoxButton";
+const std::string Gui::EDITOR_BOX_GOLD_BUTTON = "MainTabControl/Boxes/GoldBoxButton";
+const std::string Gui::EDITOR_BOX_REVEAL_MAP_BUTTON = "MainTabControl/Boxes/RevealMapBoxButton";
+const std::string Gui::EDITOR_BOX_LEVEL_UP_BUTTON = "MainTabControl/Boxes/LevelUpBoxButton";
 
 const std::string Gui::REM_TEXT_LOADING = "LoadingText";
 const std::string Gui::REM_BUTTON_LAUNCH = "LevelWindowFrame/LaunchReplayButton";

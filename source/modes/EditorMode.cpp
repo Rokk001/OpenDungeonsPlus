@@ -24,6 +24,7 @@
 #include "entities/GameEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
+#include "entities/GiftBoxEntity.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "game/SkillManager.h"
@@ -397,6 +398,16 @@ EditorMode::EditorMode(ModeManager* modeManager):
     //Map light
     connectGuiAction(Gui::EDITOR_MAPLIGHT_BUTTON,
                      AbstractApplicationMode::GuiAction::ButtonPressedMapLight);
+
+    //Special boxes
+    connectGuiAction(Gui::EDITOR_BOX_MANA_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxMana);
+    connectGuiAction(Gui::EDITOR_BOX_GOLD_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxGold);
+    connectGuiAction(Gui::EDITOR_BOX_REVEAL_MAP_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxRevealMap);
+    connectGuiAction(Gui::EDITOR_BOX_LEVEL_UP_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxLevelUp);
 
     //Tile selection
     connectTileSelect(Gui::EDITOR_CLAIMED_BUTTON,TileVisual::claimedGround);
@@ -1911,9 +1922,40 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
                 }
                 break;
             }
+            case GuiAction::ButtonPressedBoxMana:
+            {
+                askCreateGiftBox(GiftBoxType::mana);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxGold:
+            {
+                askCreateGiftBox(GiftBoxType::gold);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxRevealMap:
+            {
+                askCreateGiftBox(GiftBoxType::revealMap);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxLevelUp:
+            {
+                askCreateGiftBox(GiftBoxType::levelUp);
+                break;
+            }
             default:
                 break;
     }
+}
+
+void EditorMode::askCreateGiftBox(GiftBoxType type)
+{
+    if(!ODClient::getSingleton().isConnected())
+        return;
+
+    ClientNotification *clientNotification = new ClientNotification(
+        ClientNotificationType::editorCreateGiftBox);
+    clientNotification->mPacket << static_cast<int32_t>(type);
+    ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
 bool EditorMode::showNewLevelDialog(const CEGUI::EventArgs& /*arg*/)

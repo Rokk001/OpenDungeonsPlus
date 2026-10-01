@@ -123,6 +123,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "editorCreateFighter";
         case ClientNotificationType::editorAskCreateMapLight:
             return "editorAskCreateMapLight";
+        case ClientNotificationType::editorCreateGiftBox:
+            return "editorCreateGiftBox";
         case ClientNotificationType::editorSetCreatureLevel:
             return "editorSetCreatureLevel";
         case ClientNotificationType::editorAskPortalWaveData:

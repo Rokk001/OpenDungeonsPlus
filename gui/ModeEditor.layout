@@ -274,6 +274,38 @@
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
             </Window>
+            <Window type="DefaultWindow" name="Boxes" >
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                <Property name="Text" value="[image-size='w:28 h:28'][image='OpenDungeonsIcons/ObjectivesIcon']" />
+                <Property name="TooltipText" value="Special boxes" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                <Property name="Visible" value="False" />
+                <Property name="RiseOnClickEnabled" value="False" />
+                <Window type="OD/GameTabButton" name="ManaBoxButton" >
+                    <Property name="Area" value="{{0,20},{0,25},{0,80},{0,85}}" />
+                    <Property name="NormalImage" value="OpenDungeonsIcons/ManaIcon" />
+                    <Property name="TooltipText" value="Adds a box giving extra mana" />
+                    <Property name="InheritsAlpha" value="False" />
+                </Window>
+                <Window type="OD/GameTabButton" name="GoldBoxButton" >
+                    <Property name="Area" value="{{0,80},{0,25},{0,140},{0,85}}" />
+                    <Property name="NormalImage" value="OpenDungeonsIcons/GoldCoin" />
+                    <Property name="TooltipText" value="Adds a box giving gold" />
+                    <Property name="InheritsAlpha" value="False" />
+                </Window>
+                <Window type="OD/GameTabButton" name="RevealMapBoxButton" >
+                    <Property name="Area" value="{{0,140},{0,25},{0,200},{0,85}}" />
+                    <Property name="NormalImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
+                    <Property name="TooltipText" value="Adds a box revealing the map for a while" />
+                    <Property name="InheritsAlpha" value="False" />
+                </Window>
+                <Window type="OD/GameTabButton" name="LevelUpBoxButton" >
+                    <Property name="Area" value="{{0,200},{0,25},{0,260},{0,85}}" />
+                    <Property name="NormalImage" value="OpenDungeonsIcons/CreaturesIcon" />
+                    <Property name="TooltipText" value="Adds a box raising the level of the creatures" />
+                    <Property name="InheritsAlpha" value="False" />
+                </Window>
+            </Window>
         </Window>
         <LayoutImport type="DefaultWindow" filename="WindowEditorOptions.layout" name="EditorOptionsMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowEditorHelp.layout" name="EditorHelpImport" />

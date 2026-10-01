@@ -35,6 +35,7 @@
 class DraggableTileContainer;
 class GameMap;
 class Gui; // Used to change the Current tile type
+enum class GiftBoxType;
 
 enum class TileVisual;
 
@@ -78,6 +79,9 @@ public:
     { return mGameMap; }
 
     virtual void notifyGuiAction(GuiAction guiAction) override;
+
+    //! \brief Asks the server to create a gift box of the given type and put it in the hand
+    void askCreateGiftBox(GiftBoxType type);
 
     //! \brief Options window functions
     bool toggleOptionsWindow(const CEGUI::EventArgs& arg = {});

@@ -169,6 +169,10 @@ public:
     static const std::string EDITOR_CREATURE_SPAWN;
     static const std::string EDITOR_LEVEL_NAME;
     static const std::string EDITOR_MAPLIGHT_BUTTON;
+    static const std::string EDITOR_BOX_MANA_BUTTON;
+    static const std::string EDITOR_BOX_GOLD_BUTTON;
+    static const std::string EDITOR_BOX_REVEAL_MAP_BUTTON;
+    static const std::string EDITOR_BOX_LEVEL_UP_BUTTON;
     static const std::string EXIT_CONFIRMATION_POPUP;
     static const std::string EXIT_CONFIRMATION_POPUP_YES_BUTTON;
     static const std::string EXIT_CONFIRMATION_POPUP_NO_BUTTON;

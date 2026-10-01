@@ -89,7 +89,10 @@ enum class ClientNotificationType
     askMoveTrapProductionOrder,
 
     //! \brief Asks for the payout level of the casino on a tile and optionally sets it
-    askCasinoPayout
+    askCasinoPayout,
+
+    //! \brief Editor: creates a special gift box on a tile
+    editorCreateGiftBox
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

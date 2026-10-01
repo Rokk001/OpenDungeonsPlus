@@ -78,6 +78,7 @@ Seat::Seat(GameMap* gameMap) :
     mDefaultWorkerClass(nullptr),
     mTeamIndex(0),
     mIsDebuggingVision(false),
+    mRevealMapTurns(0),
     mSkillPoints(0),
     mCurrentSkill(nullptr),
     mGuiSkillNeedsRefresh(false),
