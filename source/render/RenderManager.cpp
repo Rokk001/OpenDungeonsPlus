@@ -94,6 +94,10 @@ const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f)
 
 const Ogre::Real RenderManager::DRAGGABLE_NODE_HEIGHT = 3.0f;
 
+// The room patch lights only use this light mask bit. Plain claimed ground tiles leave it out,
+// so the floor next to a room doorway is not lit brighter than claimed ground elsewhere.
+const uint32_t ROOM_LIGHT_MASK = 0x2;
+
 const int PERLIN_NOISE_TEXTURE_SIZE =  4096;
 
 
@@ -1017,6 +1021,7 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
         // A local room fill complements the existing cursor and authored lights.
         light->setAttenuation(6.0f, 1.0f, 0.09f, 0.032f);
         light->setSpecularColour(Ogre::ColourValue::Black);
+        light->setLightMask(ROOM_LIGHT_MASK);
         Ogre::SceneNode* node = mLightSceneNode->createChildSceneNode(name + "_node");
         node->attachObject(light);
     }
@@ -1186,6 +1191,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     if(tileMeshEnt != nullptr)
     {
         tileMeshEnt->setCastShadows(false);
+        if(tile.getTileVisual() == TileVisual::claimedGround)
+            tileMeshEnt->setLightMask(~ROOM_LIGHT_MASK);
+        else
+            tileMeshEnt->setLightMask(0xFFFFFFFF);
         // We replace the material if required by the tileset
         if(!tileSetValue.getMaterialName().empty() )
             tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
