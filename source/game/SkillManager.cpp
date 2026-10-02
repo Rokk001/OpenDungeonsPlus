@@ -239,10 +239,13 @@ public:
             case SpellType::creatureWeak: key = "CreatureWeakPrice"; break;
             case SpellType::eyeEvil: key = "EyeEvilPrice"; break;
             case SpellType::createGold: key = "CreateGoldPrice"; break;
+            case SpellType::lightning: key = "LightningPrice"; break;
+            case SpellType::tremor: key = "TremorPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
-            mSpellType == SpellType::createGold) ?
+            mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
+            mSpellType == SpellType::tremor) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -907,6 +910,14 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             " tiles run away for " + value(config.getTrapConfigDouble("FearDurationTurns")) + " turns.";
         case SkillType::trapGas: return "Damage: " + value(config.getTrapConfigDouble("GasDamagePerHitMin")) +
             " to every creature nearby (radius " + value(config.getTrapConfigDouble("GasRadius")) + ").";
+        case SkillType::trapLightning: return "Damage: " + value(config.getTrapConfigDouble("LightningDamagePerHitMin")) +
+            " to one enemy within " + value(config.getTrapConfigDouble("LightningRange")) + " tiles, stunned for " +
+            value(config.getTrapConfigDouble("LightningStunTurns")) + " turns.";
+        case SkillType::trapFireburst: return "Damage: " + value(config.getTrapConfigDouble("FireburstDamagePerHitMin")) +
+            " to every creature nearby (radius " + value(config.getTrapConfigDouble("FireburstRadius")) + ").";
+        case SkillType::spellLightning: return "Damage: " + spell("LightningDamage") + " to one enemy creature, which is stunned.";
+        case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
+            " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";
         default: return "";
     }
 }

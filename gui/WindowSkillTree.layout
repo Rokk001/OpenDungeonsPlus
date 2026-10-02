@@ -147,7 +147,7 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="LightningButton" >
+                <Window type="OD/ResearchButton" name="LightningButton" >
                     <Property name="Area" value="{{0.2,-25},{0,195},{0.2,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/LightningButton" />
                     <Property name="TooltipText" value="Spell: Lightning" />
@@ -160,11 +160,11 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="TremorButton" >
+                <Window type="OD/ResearchButton" name="TremorButton" >
                     <Property name="Area" value="{{0.8,-25},{0,195},{0.8,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/TremorButton" />
                     <Property name="TooltipText" value="Spell: Tremor" />
@@ -177,7 +177,7 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
@@ -457,7 +457,7 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="LightningTrapButton" >
+                <Window type="OD/ResearchButton" name="LightningTrapButton" >
                     <Property name="Area" value="{{0.5,-25},{0,255},{0.5,25},{0,305}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/LightningTrapButton" />
                     <Property name="TooltipText" value="Trap: Lightning trap" />
@@ -470,11 +470,11 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="FireburstTrapButton" >
+                <Window type="OD/ResearchButton" name="FireburstTrapButton" >
                     <Property name="Area" value="{{0.8,-25},{0,255},{0.8,25},{0,305}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/FireburstTrapButton" />
                     <Property name="TooltipText" value="Trap: Fireburst trap" />
@@ -487,7 +487,7 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>

@@ -3398,15 +3398,18 @@ void GameMode::refreshSkillConnections()
             for(const Skill* dependency : SkillManager::getSkill(entry.first)->getDependencies())
                 depths[entry.first] = std::max(depths[entry.first], depths[dependency->getType()] + 1);
 
-    // A row fits four nodes at the default size; a column with a longer row uses smaller nodes
+    // A row fits four nodes at the default size; a column with a longer row uses smaller nodes.
+    // A column fits four rows at the default spacing; a deeper column puts its rows closer together.
     std::map<std::pair<CEGUI::Window*, unsigned>, unsigned> rowSizes;
     std::map<CEGUI::Window*, unsigned> widestRows;
+    std::map<CEGUI::Window*, unsigned> deepestRows;
     for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
     {
         CEGUI::Window* parent = entry.second->getParent();
         unsigned& rowSize = rowSizes[std::make_pair(parent, depths[entry.first])];
         ++rowSize;
         widestRows[parent] = std::max(widestRows[parent], rowSize);
+        deepestRows[parent] = std::max(deepestRows[parent], depths[entry.first]);
     }
 
     for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
@@ -3418,8 +3421,9 @@ void GameMode::refreshSkillConnections()
         const float centre = CEGUI::PropertyHelper<float>::fromString(button->getUserString("ResearchCentre"));
         const float width = std::min(.22f, .9f / static_cast<float>(widestRows[parent]));
         const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
+        const float rowStep = deepestRows[parent] > 3 ? .795f / static_cast<float>(deepestRows[parent]) : .265f;
         button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
-            CEGUI::UDim(.055f + depths[entry.first] * .265f, 0)),
+            CEGUI::UDim(.055f + depths[entry.first] * rowStep, 0)),
             CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
         if(button->isChild("ResearchLevel"))
         {
