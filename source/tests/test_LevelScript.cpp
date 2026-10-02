@@ -64,6 +64,12 @@ static const std::string sample =
     "Action\treveal\t1\tGate\n"
     "Action\taddflag\tvisits\t-2\n"
     "[/Trigger]\n"
+    "[Trigger]\n"
+    "Name\tunlock\n"
+    "Mode\tonce\n"
+    "Cond\tflag\tvisits\t-2\n"
+    "Action\tmake\t1\troomHatchery\n"
+    "[/Trigger]\n"
     "[/Triggers]\n";
 
 BOOST_AUTO_TEST_CASE(test_parse)
@@ -71,7 +77,7 @@ BOOST_AUTO_TEST_CASE(test_parse)
     LevelScript script;
     std::istringstream is(sample);
     BOOST_REQUIRE(script.importFromStream(is));
-    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 3u);
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 4u);
     BOOST_CHECK_EQUAL(script.getFlag("gateOpen"), 1);
     BOOST_CHECK_EQUAL(script.getFlag("unknown"), 0);
 
@@ -118,6 +124,12 @@ BOOST_AUTO_TEST_CASE(test_parse)
     BOOST_REQUIRE_EQUAL(watch.mActions.size(), 2u);
     BOOST_CHECK(watch.mActions[1].mType == LevelScriptActionType::addFlag);
     BOOST_CHECK_EQUAL(watch.mActions[1].mNumber, -2);
+
+    const LevelScriptTrigger& unlock = script.getTriggers()[3];
+    BOOST_REQUIRE_EQUAL(unlock.mActions.size(), 1u);
+    BOOST_CHECK(unlock.mActions[0].mType == LevelScriptActionType::make);
+    BOOST_CHECK_EQUAL(unlock.mActions[0].mSeatId, 1);
+    BOOST_CHECK_EQUAL(unlock.mActions[0].mText, "roomHatchery");
 }
 
 BOOST_AUTO_TEST_CASE(test_regions)
@@ -202,7 +214,9 @@ BOOST_AUTO_TEST_CASE(test_invalid)
         // Region inside a trigger
         "[Trigger]\nName\tx\nRegion\tA\t1\t2\t3\t4\nCond\ttime\t1\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
         // reveal without a region name
-        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\treveal\t1\n[/Trigger]\n[/Triggers]\n"
+        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\treveal\t1\n[/Trigger]\n[/Triggers]\n",
+        // make without a skill name
+        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\tmake\t1\n[/Trigger]\n[/Triggers]\n"
     };
 
     for(const char* text : invalid)

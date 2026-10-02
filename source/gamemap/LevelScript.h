@@ -58,6 +58,7 @@
 //!   Action  win <seatId>                      # seat -1: every human player
 //!   Action  lose <seatId>
 //!   Action  reveal <seatId> <regionName>      # the tiles of the region stay visible to the seat
+//!   Action  make <seatId> <skillName>         # room, trap, door or spell becomes available (skill type name such as roomHatchery); seat -1: every human player
 //!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
@@ -93,7 +94,8 @@ enum class LevelScriptActionType
     win,
     lose,
     reveal,
-    discoverLevel
+    discoverLevel,
+    make
 };
 
 struct LevelScriptCondition
@@ -144,8 +146,8 @@ struct LevelScriptAction
     int32_t mTargetSeatId;
     //! \brief Gold amount (gold), flag value (setflag) or amount added to a flag (addflag)
     int64_t mNumber;
-    //! \brief Message text (message, objective), flag name (setflag), region name (reveal)
-    //! or level file (discoverLevel)
+    //! \brief Message text (message, objective), flag name (setflag), region name (reveal),
+    //! level file (discoverLevel) or skill type name (make)
     std::string mText;
     //! \brief spawn: creature class name and level
     std::vector<std::pair<std::string, uint32_t> > mCreatures;

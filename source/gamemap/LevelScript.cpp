@@ -276,6 +276,15 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mText = t[3];
         return parseInt32(t[2], action.mSeatId);
     }
+    if(type == "make")
+    {
+        action.mType = LevelScriptActionType::make;
+        if(t.size() != 4)
+            return false;
+
+        action.mText = t[3];
+        return parseInt32(t[2], action.mSeatId);
+    }
     if(type == "discover")
     {
         action.mType = LevelScriptActionType::discoverLevel;
@@ -370,6 +379,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::reveal:
             os << "reveal\t" << a.mSeatId << "\t" << a.mText;
+            break;
+        case LevelScriptActionType::make:
+            os << "make\t" << a.mSeatId << "\t" << a.mText;
             break;
         case LevelScriptActionType::discoverLevel:
             os << "discover\t" << a.mText;
