@@ -26,31 +26,10 @@ void main (void)
 	    texelColor = texture(decalmap, out_UV0.st).rgb;
     else
     	texelColor = outputColor.rgb;
-    // compute Normal
-    vec3 Normal = texture(normalmap, out_UV0.st).rgb;
-    Normal.xyz = 2 * Normal.xyz - (1.0,1.0,1.0);
-    Normal =  normalize(TBN * Normal); 
-    
-    vec4 shadow = vec4(1.0, 1.0, 1.0,1.0);
-    vec4 tmpVertexPos = VertexPos;
-    
-    // compute shadowmap
-    if(shadowingEnabled){
-		if(tmpVertexPos.z > 0 ){
-		    tmpVertexPos /= tmpVertexPos.w;
-		    shadow = texture(shadowmap, tmpVertexPos.xy); 
-		}
-    }
-        
-    vec3 result;
-        
-    // precompute the lighting term
-    vec3 lightingTerm = getLocalLighting(FragPos, Normal, cameraPosition.xyz, shadow.r) + ambientLightColour.rgb/2.0;
-    if(diffuseSurface  != vec4(1.0,1.0,1.0,1.0))
-        result =  lightingTerm * mix(texelColor, diffuseSurface.rgb,0.5);
-    else
-        result =  lightingTerm * texelColor;
-    color = vec4(enhanceDungeonColour(result),  1.0);
-       
+    // The fog is flat and unlit on purpose: shading it would show the relief of the unexplored
+    // tiles below it. A digging mark (alpha 1.0) is set by the player and keeps its full colour.
+    if(outputColor.a == 0.0)
+        texelColor *= 0.3;
+    color = vec4(texelColor, 1.0);
 }    
 
