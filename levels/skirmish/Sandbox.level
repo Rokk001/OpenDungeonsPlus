@@ -19,7 +19,7 @@ startingY	9
 colorId	1
 gold	5000
 goldMined	100
-mana	1000
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
