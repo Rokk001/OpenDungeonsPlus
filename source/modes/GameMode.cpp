@@ -3535,8 +3535,9 @@ void GameMode::refreshSkillConnections()
 {
     std::map<SkillType, CEGUI::Window*> buttons;
     CEGUI::Window* skills = mRootWindow->getChild("SkillTreeWindow/Skills");
+    // The reward skills have no node in the tree
     SkillManager::listAllSkills([&](const std::string& name, const std::string&,
-        const std::string&, SkillType type) { buttons[type] = skills->getChild(name); });
+        const std::string&, SkillType type) { if(!Skills::isRewardSkill(type)) buttons[type] = skills->getChild(name); });
     Seat* seat = mGameMap->getLocalPlayer()->getSeat();
     std::map<SkillType, unsigned> depths;
     for(size_t pass = 0; pass < buttons.size(); ++pass)

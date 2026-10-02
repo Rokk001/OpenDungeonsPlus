@@ -43,6 +43,7 @@ enum class SpellType
     chicken,
     inferno,
     possess,
+    summonChampion,
     nbSpells     // Must be the last in this enum
 };
 

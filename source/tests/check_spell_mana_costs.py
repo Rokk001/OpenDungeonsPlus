@@ -3,7 +3,7 @@
 The costs follow the reference scale (mana cap 200,000): Summon worker 1,500 per
 step, Call to war 10,000, Heal 5,000, Eye of evil 5,000, Lightning 6,000,
 Tremor 30,000, Turncoat 20,000, Chicken 10,000, Inferno 50,000, Create gold
-15,000, Possess 500. The worker price grows by one base price per worker above
+15,000, Possess 500, Summon champion 100,000 plus 2,000 per second. The worker price grows by one base price per worker above
 the four the heart supplies."""
 from pathlib import Path
 import re
@@ -28,6 +28,7 @@ expected = {
     "InfernoPrice": "50000", "InfernoCooldown": "84",
     "CreateGoldPrice": "15000", "CreateGoldCooldown": "0",
     "PossessPrice": "500", "PossessFreeSeconds": "20",
+    "SummonChampionPrice": "100000", "SummonChampionDrainPerSecond": "2000", "SummonChampionCooldown": "0",
 }
 for key, value in expected.items():
     assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"

@@ -92,6 +92,7 @@ enum class SkillType
     spellPossess,
     trapTrigger,
     trapFreeze,
+    spellSummonChampion,
 
     // This should be the last
     countSkill
@@ -112,6 +113,10 @@ namespace Skills
 
     //! \brief The skill name as seen in game events.
     std::string skillTypeToPlayerVisibleString(SkillType type);
+
+    //! \brief True for the skills that cannot be researched. A seat only gets them as a reward
+    //! (the Summon champion spell comes with the completed campaign talisman).
+    bool isRewardSkill(SkillType type);
 }
 
 #endif // SKILLTYPE_H

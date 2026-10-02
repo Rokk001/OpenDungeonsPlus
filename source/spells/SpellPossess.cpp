@@ -18,6 +18,7 @@
 #include "spells/SpellPossess.h"
 
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -111,7 +112,7 @@ void SpellPossess::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
             continue;
 
         Creature* creature = static_cast<Creature*>(entity);
-        if(creature->isKo())
+        if(creature->isKo() || creature->getDefinition()->isChampion())
             continue;
 
         const Ogre::Vector3& pos = creature->getPosition();
@@ -164,7 +165,7 @@ bool SpellPossess::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
     // That can happen if the creature is not in perfect synchronization between client and server
     if(!creature->isAlive() || creature->isKo() || !creature->getIsOnMap() || creature->isInPrison() ||
-       creature->isPossessed() || (creature->getSeat() != player->getSeat()))
+       creature->isPossessed() || creature->getDefinition()->isChampion() || (creature->getSeat() != player->getSeat()))
     {
         OD_LOG_INF("WARNING : " + creatureName + " cannot be possessed by " + player->getNick());
         return false;

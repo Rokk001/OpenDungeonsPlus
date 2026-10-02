@@ -1469,6 +1469,19 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             // The Game Settings page can change what each seat may build, cast or research
             gameMap->applySkirmishSkillStates();
+
+            // The complete campaign talisman gives the keepers the Summon champion spell
+            if(Campaign::getSingleton().isActive() && Campaign::getSingleton().isTalismanComplete())
+            {
+                for(Seat* seat : gameMap->getSeats())
+                {
+                    if(seat->isRogueSeat() || (seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+                        continue;
+
+                    seat->setSkillAvailability(SkillType::spellSummonChampion, true, true);
+                }
+            }
+
             for(Seat* seat : gameMap->getSeats())
             {
                 // We initialize the seats

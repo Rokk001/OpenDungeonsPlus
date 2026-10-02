@@ -38,7 +38,8 @@ for line in manager[manager.index('SkillManager::SkillManager()'):manager.index(
     if match := re.search(r'new Skill\(resType, .*, (\w+)\)', line):
         parents = list(dependencies.get(match[1], []))
     if match := re.search(r'new SkillDef\w+\("([^"]+)", "([^"]+)"', line):
-        model[current] = (match[1] + match[2], parents)
+        if current != 'spellSummonChampion':  # the reward skill has no node in the tree
+            model[current] = (match[1] + match[2], parents)
     if match := re.search(r'const Skill\* (\w+) = skill;', line):
         aliases[match[1]] = current
     if match := re.search(r'(lvl\ddepends|\w+Depends)\.push_back\((\w+)\)', line):
