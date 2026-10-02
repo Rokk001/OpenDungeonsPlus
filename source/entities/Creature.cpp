@@ -359,6 +359,10 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mNbTurnsInHand           (0),
     mIsInHand                (false),
     mNbTurnsOutOfWork        (0),
+    mNbTurnsTortureMood      (0),
+    mNbTurnsRested           (0),
+    mTorturedThisTurn        (false),
+    mRestedThisTurn          (false),
     mIsChicken               (false),
     mChickenMeshShown        (false)
 {
@@ -451,6 +455,10 @@ Creature::Creature(GameMap* gameMap) :
     mNbTurnsInHand           (0),
     mIsInHand                (false),
     mNbTurnsOutOfWork        (0),
+    mNbTurnsTortureMood      (0),
+    mNbTurnsRested           (0),
+    mTorturedThisTurn        (false),
+    mRestedThisTurn          (false),
     mIsChicken               (false),
     mChickenMeshShown        (false)
 {
@@ -1112,6 +1120,20 @@ void Creature::doUpkeep()
         ++mNbTurnsInHand;
     else if(mNbTurnsInHand > 0)
         --mNbTurnsInHand;
+
+    // Torture weighs on the mood while it lasts, sleeping in the lair relieves it. Both fade afterwards
+    if(mTorturedThisTurn)
+        ++mNbTurnsTortureMood;
+    else if(mNbTurnsTortureMood > 0)
+        --mNbTurnsTortureMood;
+
+    if(mRestedThisTurn)
+        ++mNbTurnsRested;
+    else if(mNbTurnsRested > 0)
+        --mNbTurnsRested;
+
+    mTorturedThisTurn = false;
+    mRestedThisTurn = false;
 
     // if creature is not on map (picked up or being carried), we do nothing
     if(!getIsOnMap())
@@ -4527,6 +4549,10 @@ void Creature::changeSeat(Seat* newSeat)
     mNbTurnsInHand = 0;
     mIsInHand = false;
     mNbTurnsOutOfWork = 0;
+    mNbTurnsTortureMood = 0;
+    mNbTurnsRested = 0;
+    mTorturedThisTurn = false;
+    mRestedThisTurn = false;
     mSlapTurns.clear();
     mCasinoMood = 0.0;
     clearDestinations(EntityAnimation::idle_anim, true, true);
