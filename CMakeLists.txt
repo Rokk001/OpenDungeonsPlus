@@ -327,6 +327,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillStrengthSelf.cpp
     ${SRC}/creatureskill/CreatureSkillWeak.cpp
     ${SRC}/creatureskill/CreatureSkillWhirlwind.cpp
+    ${SRC}/creatureskill/CreatureSkillTeleport.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
