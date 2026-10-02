@@ -286,6 +286,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectSlap.cpp
     ${SRC}/creatureeffect/CreatureEffectSpeedChange.cpp
     ${SRC}/creatureeffect/CreatureEffectTurncoat.cpp
+    ${SRC}/creatureeffect/CreatureEffectChicken.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
@@ -477,6 +478,7 @@ set(OD_SOURCEFILES
     ${SRC}/spells/SpellLightning.cpp
     ${SRC}/spells/SpellTremor.cpp
     ${SRC}/spells/SpellTurncoat.cpp
+    ${SRC}/spells/SpellChicken.cpp
     ${SRC}/spells/SpellManager.cpp
     ${SRC}/spells/SpellSummonWorker.cpp
     ${SRC}/spells/SpellType.cpp
