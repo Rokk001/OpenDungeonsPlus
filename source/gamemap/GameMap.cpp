@@ -3655,6 +3655,15 @@ void GameMap::checkGameDuration()
             + " minutes has run out." << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
+
+    // When the time runs out every keeper loses, there is no winner
+    for(Seat* seat : mSeats)
+    {
+        if(seat->getPlayer() == nullptr)
+            continue;
+
+        seat->getPlayer()->notifyTimeUp();
+    }
 }
 
 void GameMap::playerSelects(std::vector<GameEntity*>& entities, int tileX1, int tileY1, int tileX2,

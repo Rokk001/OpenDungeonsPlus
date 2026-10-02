@@ -519,6 +519,23 @@ void Player::notifyNoMoreDungeonTemple()
         }
     }
 
+    notifyDefeat(hasTeamLost);
+}
+
+void Player::notifyTimeUp()
+{
+    if(mHasLost)
+        return;
+
+    mHasLost = true;
+    OD_LOG_INF("Player seatId=" + Helper::toString(getSeat()->getId()) + " lost: game time is up");
+
+    // No heart was destroyed: no conqueror, no mana transfer, and the whole team loses with the player
+    notifyDefeat(true);
+}
+
+void Player::notifyDefeat(bool hasTeamLost)
+{
     if(hasTeamLost)
     {
         // This message will be sent in 1v1 or multiplayer so it should not talk about team. If we want to be

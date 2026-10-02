@@ -176,6 +176,10 @@ public:
     //! \brief Clears all creatures that a player might have in his hand
     void notifyNoMoreDungeonTemple();
 
+    //! \brief Called on the server when the game duration of a skirmish has run out: this player loses
+    //! without a destroyed heart (no conqueror, heart position unknown).
+    void notifyTimeUp();
+
     inline bool getIsHuman() const
     { return mIsHuman; }
 
@@ -288,6 +292,9 @@ public:
     std::vector<CreatureActionType> getWorkerPreferredActions(Creature& worker) const;
 
 private:
+    //! \brief Shared part of the defeat: chat messages, sounds, defeat sequence and statistics
+    void notifyDefeat(bool hasTeamLost);
+
     //! \brief Player ID is only used during seat configuration phase
     //! During the game, one should use the seat ID to identify a player because
     //! every AI player has an id = 0.

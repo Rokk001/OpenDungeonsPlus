@@ -299,6 +299,7 @@ kills_probe = (kills_probe.replace('KILL_METHOD', kill_method)
 # Probe 2: the real Player::notifyNoMoreDungeonTemple packet content and order.
 # ---------------------------------------------------------------------------
 notify_method = function(player_source, 'void Player::notifyNoMoreDungeonTemple(')
+notify_method += function(player_source, 'void Player::notifyDefeat(')
 
 notify_probe = r'''
 #include <cstdint>
@@ -360,6 +361,7 @@ struct Player
     Seat* getSeat() { return mSeat; }
     bool getIsHuman() const { return mIsHuman; }
     void notifyNoMoreDungeonTemple();
+    void notifyDefeat(bool hasTeamLost);
     Seat* mSeat;
     bool mIsHuman;
     bool mHasLost;
