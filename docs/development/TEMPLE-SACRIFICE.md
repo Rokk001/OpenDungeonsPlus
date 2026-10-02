@@ -27,7 +27,8 @@ creatures still give mana; that part is separate (see `TemplePrayerMana*` in `co
 
 `TempleRecipeCount` and `TempleRecipeN` in `config/rooms.cfg`. A recipe line is
 `Input+Input[+Input]=Result` with creature definition names from `config/creatures.cfg`.
-The result is a creature definition name or `ManaBoost`.
+The result is a creature definition name, `ManaBoost` or the fork specific `Workers`
+(`TempleWorkersGiven` workers of the keeper, default 10).
 
 ## Check
 

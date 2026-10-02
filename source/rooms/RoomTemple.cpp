@@ -412,8 +412,16 @@ void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t average
     }
     else
     {
-        // The result is a creature
-        const CreatureDefinition* classToSpawn = getGameMap()->getClassDescription(result);
+        // The result is a creature. The fork specific name Workers gives the workers of the keeper
+        int32_t nbCreatures = 1;
+        const CreatureDefinition* classToSpawn = nullptr;
+        if(result == "Workers")
+        {
+            nbCreatures = configManager.getRoomConfigInt32("TempleWorkersGiven");
+            classToSpawn = getSeat()->getWorkerClassToSpawn();
+        }
+        else
+            classToSpawn = getGameMap()->getClassDescription(result);
 
         if(classToSpawn == nullptr)
         {
@@ -422,18 +430,21 @@ void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t average
         }
 
         int32_t maxCreatures = configManager.getMaxCreaturesPerSeatAbsolute();
-        int32_t numCreatures = getGameMap()->getCreaturesBySeat(getSeat()).size();
-        if(numCreatures >= maxCreatures)
-            return;
+        for(int32_t i = 0; i < nbCreatures; ++i)
+        {
+            int32_t numCreatures = getGameMap()->getCreaturesBySeat(getSeat()).size();
+            if(numCreatures >= maxCreatures)
+                break;
 
-        Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
-        if(averageLevel > 1)
-            newCreature->setLevel(averageLevel);
+            Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
+            if(averageLevel > 1 && !classToSpawn->isWorker())
+                newCreature->setLevel(averageLevel);
 
-        newCreature->addToGameMap();
-        newCreature->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()),
-            static_cast<Ogre::Real>(tile.getY()), 0.0f));
-        newCreature->createMesh();
+            newCreature->addToGameMap();
+            newCreature->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()),
+                static_cast<Ogre::Real>(tile.getY()), 0.0f));
+            newCreature->createMesh();
+        }
         message = "The gods accepted your sacrifice and send you a new creature";
     }
 
