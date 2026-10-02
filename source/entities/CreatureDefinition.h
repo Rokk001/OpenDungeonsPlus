@@ -259,7 +259,7 @@ private:
 
     //! \brief The role in group fights (default blocker)
     CombatClass mCombatClass;
-    //! \brief Gold taken from one free gold pile by a thief, 0 for creatures that do not steal
+    //! brief Gold taken from one free gold pile by a thief, 0 for creatures that do not steal
     int32_t mStealGold;
     //! \brief True for creatures that are never scared by a Fear trap
     bool mFearless;
