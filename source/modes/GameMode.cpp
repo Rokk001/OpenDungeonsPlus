@@ -25,6 +25,7 @@
 #include "entities/GameEntityType.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
+#include "game/Campaign.h"
 #include "game/HeartHealthRing.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -2027,6 +2028,8 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
     }
     else if(mExitToDesktop)
         ODFrameListener::getSingleton().requestExit();
+    else if(Campaign::getSingleton().isActive())
+        mModeManager->requestMode(AbstractModeManager::MENU_CAMPAIGN);
     else
         mModeManager->requestMode(AbstractModeManager::MENU_MAIN);
     return true;

@@ -349,6 +349,7 @@ set(OD_SOURCEFILES
 	${SRC}/eventsystem/EventHandler.cpp		
 	${SRC}/eventsystem/Subject.cpp		
 	
+    ${SRC}/game/Campaign.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
     ${SRC}/game/TrapProductionData.cpp
@@ -396,6 +397,7 @@ set(OD_SOURCEFILES
     ${SRC}/modes/InputBridge.cpp
     ${SRC}/modes/InputManager.cpp
     ${SRC}/modes/Keyboard.cpp
+    ${SRC}/modes/MenuModeCampaign.cpp
     ${SRC}/modes/MenuModeMain.cpp
     ${SRC}/modes/MenuModeConfigureSeats.cpp
     ${SRC}/modes/MenuModeEditorLoad.cpp

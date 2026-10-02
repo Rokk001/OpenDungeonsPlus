@@ -62,6 +62,8 @@ private:
     bool toggleSubMenu(const std::string& name);
 
     //! \brief Sub menu button triggers
+    bool toggleCampaignSubMenu(const CEGUI::EventArgs&);
+    bool newCampaignPressed(const CEGUI::EventArgs&);
     bool toggleSkirmishSubMenu(const CEGUI::EventArgs&);
     bool toggleMultiplayerSubMenu(const CEGUI::EventArgs&);
     bool toggleEditorSubMenu(const CEGUI::EventArgs&);
