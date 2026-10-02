@@ -4315,7 +4315,7 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, creature != nullptr ?
                         creature->getDefinition()->getClassName() : closest->getName());
             }
-            else if(tile->isDiggable(player->getSeat()))
+            else if(tile->getEverVisible() && tile->isDiggable(player->getSeat()))
             {
                 displayText(Ogre::ColourValue::White, tile->getMarkedForDigging(player) ?
                     "Marked wall. Click or drag to remove digging marks." : "Wall. Click or drag to mark for digging.");
@@ -4384,6 +4384,8 @@ void GameMode::handlePlayerActionSelectTile()
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(!mDigSetBool)
             displayText(Ogre::ColourValue::Red, "No marked walls in this selection.");
+        else if(tile != nullptr && !tile->getEverVisible())
+            displayText(Ogre::ColourValue::Red, "This wall cannot be dug out.");
         else if(tile != nullptr && !tile->isFullTile())
             displayText(Ogre::ColourValue::Red, "This ground is already dug out.");
         else if(tile != nullptr && tile->isClaimed() && !tile->isClaimedForSeat(player->getSeat()))
