@@ -66,7 +66,8 @@ private:
     //! \brief The room tiles that are not part of the pool
     std::vector<Tile*> getOuterTiles() const;
 
-    //! \brief Sacrifices the creature: it is removed, gives mana and may complete a recipe
+    //! \brief Sacrifices the creature: it is removed and put in the queue of the last
+    //! sacrifices. The first recipe that matches the end of the queue gives its result
     void sacrificeCreature(Creature& creature);
 
     //! \brief Gives the result of a recipe to the owner of the room
@@ -77,10 +78,9 @@ private:
     //! \brief Names of the creatures dropped in the pool. They are sacrificed during the next upkeep
     std::vector<std::string> mCreaturesToSacrifice;
 
-    //! \brief Creatures already sacrificed that wait for the rest of a recipe: definition name and level.
-    //! This is not saved: after loading a game the pool is empty.
+    //! \brief The last sacrificed creatures (at most three, oldest first): definition name and level.
+    //! This is not saved: after loading a game the queue is empty.
     std::vector<std::pair<std::string, uint32_t> > mSacrificed;
-    int32_t mTurnsSinceSacrifice;
 
     //! \brief Prayer mana below one point, kept for the next prayer turn. Not saved.
     double mPrayerManaPending;
