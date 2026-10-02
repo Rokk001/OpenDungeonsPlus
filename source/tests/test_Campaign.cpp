@@ -125,3 +125,29 @@ BOOST_AUTO_TEST_CASE(test_bonus_levels_and_talisman)
     campaign.onLevelWon();
     BOOST_CHECK(campaign.isFinished());
 }
+
+BOOST_AUTO_TEST_CASE(test_difficulty_is_saved)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream is(sample);
+    BOOST_REQUIRE(campaign.importDefinition(is));
+    campaign.resetProgress();
+    BOOST_CHECK_EQUAL(campaign.getDifficulty(), Campaign::getDefaultDifficulty());
+
+    campaign.setDifficulty(0);
+    BOOST_CHECK_EQUAL(campaign.getDifficulty(), 0u);
+    // Values beyond the highest AI level are ignored
+    campaign.setDifficulty(99);
+    BOOST_CHECK_EQUAL(campaign.getDifficulty(), 0u);
+
+    std::ostringstream os;
+    campaign.exportProgress(os);
+    campaign.setDifficulty(Campaign::getDefaultDifficulty());
+    std::istringstream progress(os.str());
+    BOOST_REQUIRE(campaign.importProgress(progress));
+    BOOST_CHECK_EQUAL(campaign.getDifficulty(), 0u);
+
+    // A new campaign returns to the default
+    campaign.resetProgress();
+    BOOST_CHECK_EQUAL(campaign.getDifficulty(), Campaign::getDefaultDifficulty());
+}

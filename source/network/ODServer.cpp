@@ -24,6 +24,7 @@
 #include "entities/MapLight.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillManager.h"
@@ -228,7 +229,13 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_INACTIVE) == 0)
             seat->setConfigPlayerId(Seat::PLAYER_TYPE_INACTIVE_ID);
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_AI) == 0)
-            seat->setConfigPlayerId(Seat::aITypeToPlayerId(KeeperAIType::normal));
+        {
+            // In the campaign the AI level is the difficulty chosen for the campaign
+            KeeperAIType aiType = KeeperAIType::normal;
+            if(Campaign::getSingleton().isActive())
+                aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getDifficulty());
+            seat->setConfigPlayerId(Seat::aITypeToPlayerId(aiType));
+        }
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_HUMAN) == 0)
             ++nbSeatsHuman;
 

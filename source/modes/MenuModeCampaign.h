@@ -47,6 +47,8 @@ private:
     void selectLevel(size_t index);
 
     bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
+    bool difficultyButtonPressed(const CEGUI::EventArgs&);
+    void updateDifficultyButton();
     bool backButtonPressed(const CEGUI::EventArgs&);
     bool updateDescription(const CEGUI::EventArgs& e = {});
 };
