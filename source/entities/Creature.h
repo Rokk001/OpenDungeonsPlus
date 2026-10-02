@@ -604,6 +604,10 @@ public:
     //! can neither move nor fight
     bool isFrozen() const;
 
+    //! \brief Returns true (server side) if the creature is made invisible by the Invisible skill.
+    //! Enemy creatures do not target an invisible creature
+    bool isInvisible() const;
+
     //! \brief Name of the mesh to display (the chicken mesh while the creature is a chicken)
     const std::string& getCurrentMeshName() const;
 

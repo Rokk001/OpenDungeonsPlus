@@ -293,6 +293,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectTurncoat.cpp
     ${SRC}/creatureeffect/CreatureEffectChicken.cpp
     ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
+    ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
@@ -318,6 +319,9 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillMeleeFight.cpp
     ${SRC}/creatureskill/CreatureSkillMissileLaunch.cpp
     ${SRC}/creatureskill/CreatureSkillSlow.cpp
+    ${SRC}/creatureskill/CreatureSkillFreeze.cpp
+    ${SRC}/creatureskill/CreatureSkillDrain.cpp
+    ${SRC}/creatureskill/CreatureSkillInvisible.cpp
     ${SRC}/creatureskill/CreatureSkillStrengthSelf.cpp
     ${SRC}/creatureskill/CreatureSkillWeak.cpp
 
