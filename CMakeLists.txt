@@ -485,6 +485,7 @@ set(OD_SOURCEFILES
     ${SRC}/traps/TrapFear.cpp
     ${SRC}/traps/TrapFireburst.cpp
     ${SRC}/traps/TrapGas.cpp
+    ${SRC}/traps/TrapGuardPost.cpp
     ${SRC}/traps/TrapLightning.cpp
     ${SRC}/traps/TrapManager.cpp
     ${SRC}/traps/TrapSpike.cpp
