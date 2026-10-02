@@ -28,6 +28,7 @@
     <Image height="64" name="BoulderTrapButton" width="64" xPos="128" yPos="448" />
     <Image height="64" name="FearTrapButton" width="64" xPos="128" yPos="448" />
     <Image height="64" name="GasTrapButton" width="64" xPos="128" yPos="448" />
+    <Image height="64" name="LightningTrapButton" width="64" xPos="128" yPos="448" />
     <Image height="64" name="WavePortalButton" width="64" xPos="192" yPos="448" />
     <Image height="64" name="WoodenDoorTrapButton" width="64" xPos="192" yPos="194" />
     <Image height="64" name="PrisonButton" width="64" xPos="256" yPos="194" />

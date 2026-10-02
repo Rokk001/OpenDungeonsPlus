@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="SkillTreeWindow" >
-        <Property name="Area" value="{{0.5,-305},{0.5,-196},{0.5,305},{0.5,196}}" />
+        <Property name="Area" value="{{0.5,-305},{0.5,-226},{0.5,305},{0.5,226}}" />
         <Property name="Text" value="Skill Tree" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticImage" name="Skills" >
@@ -327,6 +327,23 @@
                     <Property name="ButtonImage" value="OpenDungeonsIcons/GasTrapButton" />
                     <Property name="TooltipText" value="Trap: Gas trap" />
                     <Window type="OD/ProgressBar" name="GasTrapButtonProgressBar" >
+                        <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                        <Property name="InheritsTooltipText" value="True" />
+                        <Property name="CurrentProgress" value="0.0" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                        <Property name="StepSize" value="0.1" />
+                        <Property name="Visible" value="False" />
+                        <Property name="VerticalProgress" value="True" />
+                        <Property name="Alpha" value="0.2" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ReversedProgress" value="True" />
+                    </Window>
+                </Window>
+                <Window type="OD/ImageButton" name="LightningTrapButton" >
+                    <Property name="Area" value="{{0.5,-25},{0,255},{0.5,25},{0,305}}" />
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/LightningTrapButton" />
+                    <Property name="TooltipText" value="Trap: Lightning trap" />
+                    <Window type="OD/ProgressBar" name="LightningTrapButtonProgressBar" >
                         <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                         <Property name="InheritsTooltipText" value="True" />
                         <Property name="CurrentProgress" value="0.0" />

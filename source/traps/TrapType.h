@@ -32,6 +32,7 @@ enum class TrapType
     doorWooden,
     fear,
     gas,
+    lightning,
     nbTraps     // Must be the last in this enum
 };
 

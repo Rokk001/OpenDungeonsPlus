@@ -64,6 +64,7 @@ enum class SkillType
     // Added later, kept after the older entries so existing values do not change
     trapFear,
     trapGas,
+    trapLightning,
 
     // This should be the last
     countSkill

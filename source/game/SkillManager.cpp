@@ -427,6 +427,7 @@ SkillManager::SkillManager() :
     def = new SkillDefTrap("TacticSkills/", "BoulderTrapButton", skill, TrapType::boulder);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
+    lvl4depends.push_back(skill);
 
     resType = SkillType::trapFear;
     index = static_cast<uint32_t>(resType);
@@ -441,6 +442,15 @@ SkillManager::SkillManager() :
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
     skill = new Skill(resType, points, lvl3depends);
     def = new SkillDefTrap("TacticSkills/", "GasTrapButton", skill, TrapType::gas);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // Lvl 5 research
+    resType = SkillType::trapLightning;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl4depends);
+    def = new SkillDefTrap("TacticSkills/", "LightningTrapButton", skill, TrapType::lightning);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
