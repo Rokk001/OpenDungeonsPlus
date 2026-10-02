@@ -43,7 +43,7 @@ int errorsLogged = 0;
 namespace Helper {template<typename T> std::string toString(T v){return std::to_string(v);}}
 enum class ServerNotificationType {chatServer, playerDefeated, levelStatistics};
 enum class EventShortNoticeType {majorGameEvent};
-enum class RoomType {dungeonTemple, other, nbRooms};
+enum class RoomType {dungeonTemple, other, library, nbRooms};
 enum class SoundRelativeKeeperStatements {Lost, Defeat, AllyDefeated};
 enum class NodeType {MTILES_NODE};
 enum class GameEntityType {creature, other};
@@ -74,7 +74,7 @@ struct Seat {
  std::vector<uint32_t> mNbRooms=std::vector<uint32_t>(static_cast<uint32_t>(RoomType::nbRooms),0);
  double mMana=0.0,mManaDelta=0.0,mManaIncomePerSecond=0.0,mManaUpkeepPerSecond=0.0;
  double mManaShortageSeconds=0.0,mWorkerPopCountdown=-1.0;
- unsigned int mNumClaimedTiles=0;int mNumCreaturesWorkers=0;
+ unsigned int mNumClaimedTiles=0;int mNumCreaturesWorkers=0;bool mHadLibrary=false;
  Seat(int t,int i):team(t),id(i){}
  void addSkillPoints(int){}
  SeatStatistics& getStatistics(){return stats;}Player* getPlayer(){return mPlayer;}int getId()const{return id;}

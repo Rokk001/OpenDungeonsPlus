@@ -48,7 +48,9 @@ int errorsLogged = 0;
 namespace Helper {template<typename T> std::string toString(T v){return std::to_string(v);}}
 enum class ServerNotificationType {chatServer, playerDefeated, levelStatistics};
 enum class EventShortNoticeType {majorGameEvent};
-enum class RoomType {dungeonTemple, other, nbRooms};
+enum class RoomType {dungeonTemple, other, library, nbRooms};
+enum class HeartHealthTier {healthy, damaged, critical};
+TIER_FUNCTION
 enum class SoundRelativeKeeperStatements {Lost, Defeat, AllyDefeated};
 struct ODPacket {std::vector<std::string> texts;std::vector<int32_t> ints;
  ODPacket& operator<<(const char* t){texts.push_back(t);return *this;}
@@ -78,7 +80,7 @@ struct ConfigManager {static double maxManaPerSeat;
 double ConfigManager::maxManaPerSeat=200000.0;
 struct Seat {
  int team;int id;Player* mPlayer=nullptr;GameMap* mGameMap=nullptr;void* mCurrentSkill=nullptr;SeatStatistics stats;
- double mMana=0.0;double getMana()const{return mMana;}void addMana(double mana);
+ double mMana=0.0;bool mHadLibrary=false;double getMana()const{return mMana;}void addMana(double mana);
  std::vector<uint32_t> mNbRooms=std::vector<uint32_t>(static_cast<uint32_t>(RoomType::nbRooms),0);
  Seat(int t,int i):team(t),id(i){}
  void addSkillPoints(int){}
@@ -138,6 +140,8 @@ struct GameMap {bool editor=false;int fights=0,sounds=0;std::vector<Room*> mRoom
  std::vector<Room*> getRoomsByType(RoomType type) const;unsigned int numRoomsByTypeAndSeat(RoomType type, const Seat* seat) const;};
 int Room::roomSounds=0;
 bool g_removeAllowed=true;int g_removeAsked=0;
+int g_rewards=0;
+void giveDestroyedHeartReward(GameMap*,Seat*,Seat*,Tile*){++g_rewards;}
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):GameEntity(nullptr),tile(t){}
  BuildingObject(GameMap*,Room&,const std::string&,Tile* t,double,double,double,double,bool):GameEntity(nullptr),tile(t){}
  Tile* getPositionTile(){return tile;}
@@ -149,10 +153,12 @@ struct TreasuryObject:GameEntity {int mGoldValue=0;static std::vector<TreasuryOb
  static const char* getMeshNameForGold(int gold);};
 std::vector<TreasuryObject*> TreasuryObject::spawned;
 struct PersistentObject:BuildingObject {
- PersistentObject(GameMap*,Room&,const char*,Tile* t,double,bool):BuildingObject(t){}
+ PersistentObject(GameMap*,Room&,const std::string&,Tile* t,double,bool,float,const char*,bool):BuildingObject(t){}
 };
 struct RoomDungeonTemple:Room {
  BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;bool mGoldChanged=false;
+ HeartHealthTier mCurrentHeartTier=HeartHealthTier::healthy;double getHeartHealthFraction()const;HeartHealthTier computeHeartHealthTier()const;
+ static const std::string& getMeshNameForHeartTier(HeartHealthTier tier);void checkHeartHealthTier();
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  RoomType getType() const override{return RoomType::dungeonTemple;}
  INLINE_METHODS
@@ -203,6 +209,7 @@ int main(){
  GameEntity attacker(&enemy);
  check(heart.takeHeartDamage(&attacker,99999,0,0,0,&centre)==10000,"lethal blow clamped to the heart health (10000, whatever the number of tiles)");
  check(heart.dead==1&&heart.getHP(nullptr)==0,"heart death fires once");
+ check(g_rewards==1,"the destroying keeper gets the heart reward once");
  owner.computeSeatBeginTurn();
  check(owner.getNbRooms(RoomType::dungeonTemple)==0,"seat has no temple as soon as the heart is dead");
  check(map.getRoomsByType(RoomType::dungeonTemple).empty()&&map.numRoomsByTypeAndSeat(RoomType::dungeonTemple,&owner)==0,"dead heart is invisible to temple queries");
@@ -289,7 +296,10 @@ int main(){
 inline = '\n'.join(function(temple_header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
 methods = temple[temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
+methods += temple[temple.index('const std::string HeartMeshNameHealthy'):temple.index('class DungeonHeartObject :')]
 methods += '\n'.join(function(temple, sig) for sig in (
+    'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
+    'const std::string& RoomDungeonTemple::getMeshNameForHeartTier(', 'void RoomDungeonTemple::checkHeartHealthTier(',
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'Tile* RoomDungeonTemple::getHeartTile(',
@@ -310,6 +320,8 @@ methods += '\n' + '\n'.join([
 ])
 probe = probe.replace('INLINE_METHODS', inline).replace('RECORD', function(player_header, 'inline void recordHeartDestroyed('))
 probe = probe.replace('HEART_OBJECT', function(temple, 'class DungeonHeartObject :'))
+tier_source = read('source/rooms/HeartHealthTier.cpp')
+probe = probe.replace('TIER_FUNCTION', tier_source[tier_source.index('namespace'):])
 probe = probe.replace('METHODS', methods)
 
 # Static wiring checks on the production sources the fixture does not execute.

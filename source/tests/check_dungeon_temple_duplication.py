@@ -72,18 +72,22 @@ struct Room {
  void addBuildingObject(Tile* t,BuildingObject* b){mBuildingObjects[t]=b;}
 };
 struct PersistentObject:BuildingObject {
- PersistentObject(GameMap* m,Room&,const char*,Tile* t,double,bool){tile=t;++m->created;}
+ PersistentObject(GameMap* m,Room&,const std::string&,Tile* t,double,bool,float,const char*,bool){tile=t;++m->created;}
 };
+enum class HeartHealthTier {healthy,damaged,critical};
 struct RoomDungeonTemple:Room {
- BuildingObject* mTempleObject=nullptr;
+ BuildingObject* mTempleObject=nullptr;HeartHealthTier mCurrentHeartTier=HeartHealthTier::healthy;
+ // The health tier is not what this fixture is about: the heart always counts as healthy here
+ HeartHealthTier computeHeartHealthTier()const{return HeartHealthTier::healthy;}
+ static const std::string& getMeshNameForHeartTier(HeartHealthTier){static const std::string name="DungeonTempleObject";return name;}
  double getHP(Tile*)const{return 10000.0;}
  RoomDungeonTemple(GameMap* m):Room(m){temple=true;}
  void updateActiveSpots(GameMap* =nullptr) override;void updateTemplePosition();
  TEMPLE_OVERRIDE
 };
 struct DungeonHeartObject:PersistentObject {
- DungeonHeartObject(GameMap* m,RoomDungeonTemple& r,Tile* t):
-  PersistentObject(m,r,"DungeonTempleObject",t,0.0,false){}
+ DungeonHeartObject(GameMap* m,RoomDungeonTemple& r,Tile* t,const std::string& meshName):
+  PersistentObject(m,r,meshName,t,0.0,false,1.0f,"Pulse",true){}
 };
 struct RoomManager {static Room* createRoom(GameMap* m,int type){
  return type?static_cast<Room*>(new RoomDungeonTemple(m)):new Room(m);}};

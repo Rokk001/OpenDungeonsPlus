@@ -38,15 +38,18 @@ def constant(name):
 
 def handler_guard(signature):
     """The defeat guard of an input handler (right after the idle-hand reset), ending in a sentinel return."""
-    start = game_mode.index(signature)
-    body = game_mode.index('{\n', start) + 2
+    # The screenshot and desktop key shortcuts of the base mode work before and after the idle-hand
+    # reset and are not part of the defeat guard (the probe has no such helpers)
+    source = re.sub(r'    if\(handle(?:Screenshot|Desktop)Key\(arg\)\)\n        return true;\n\n?', '', game_mode)
+    start = source.index(signature)
+    body = source.index('{\n', start) + 2
     first = '    resetIdleHand();\n'
-    assert game_mode.startswith(first, body), signature
+    assert source.startswith(first, body), signature
     guard = body + len(first)
-    end = game_mode.index('        return true;\n', guard) + len('        return true;\n')
-    if game_mode.startswith('    }\n', end):
+    end = source.index('        return true;\n', guard) + len('        return true;\n')
+    if source.startswith('    }\n', end):
         end += len('    }\n')
-    return (game_mode[start:body] + game_mode[guard:end]).replace('GameMode::', 'Probe::') + '    return false;\n}\n'
+    return (source[start:body] + source[guard:end]).replace('GameMode::', 'Probe::') + '    return false;\n}\n'
 
 
 def layout_windows():
@@ -220,14 +223,21 @@ struct GameMap
     }
     int64_t getTurnNumber() const {return turn;}
 };
+struct Campaign
+{
+    bool active = false;
+    static Campaign& getSingleton() {static Campaign campaign;return campaign;}
+    bool isActive() const {return active;}
+};
 struct ModeManager
 {
-    enum ModeType {NONE = 0, ADVERTISMENT = 1, MENU_MAIN};
+    enum ModeType {NONE = 0, ADVERTISMENT = 1, MENU_MAIN, MENU_CAMPAIGN};
     bool mOpenSkirmishSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
 @@REQUESTMAINMENU@@
 @@CONSUMEREQUEST@@
 };
+typedef ModeManager AbstractModeManager;
 @@CONSTANTS@@
 
 class GameMode
@@ -402,6 +412,19 @@ int main()
         early.onDefeatSequenceFinished();
         check(early.mDefeatDebriefing == nullptr && gLayoutLoads == 1, "the hook without a finished sequence opens nothing");
     }
+    // In a campaign the way out of a lost level is the campaign menu, without the skirmish hand-over
+    {
+        GameMode mode;
+        mode.mMap.player.nick = "Keeper";
+        finish(mode.mDefeatSequence);
+        mode.onDefeatSequenceFinished();
+        gModeRequests = 0;
+        Campaign::getSingleton().active = true;
+        mode.mDefeatDebriefing->byPath["Panel/ConfirmButton"]->onClick();
+        Campaign::getSingleton().active = false;
+        check(gModeRequests == 1 && gLastMode == ModeManager::MENU_CAMPAIGN && !mode.mManager.mOpenSkirmishSubMenu,
+            "in a campaign the confirm button leads to the campaign menu");
+    }
     // The statistics table: pure rows
     {
         LevelStatistics empty;
@@ -539,6 +562,7 @@ for marker, text in (
 # Static wiring checks on the production sources.
 for signature in ('bool GameMode::keyPressed(', 'bool GameMode::keyReleased('):
     body = function(game_mode, signature)
+    body = re.sub(r'\n    if\(handle(?:Screenshot|Desktop)Key\(arg\)\)\n        return true;\n\n?', '\n', body)
     assert body[body.index('{'):].startswith('{\n    resetIdleHand();\n    if(mDefeatSequence.blocksInput())\n        return true;\n'), signature
 for signature in ('bool GameMode::mouseMoved(', 'bool GameMode::mousePressed(', 'bool GameMode::mouseReleased('):
     body = function(game_mode, signature)

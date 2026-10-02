@@ -86,8 +86,12 @@ struct Room:Building {
  virtual void exportToStream(std::ostream& os)const{os<<floorHP<<'\n';}
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}
 };
+enum class HeartHealthTier {healthy,damaged,critical};
 struct RoomDungeonTemple:Room {
  BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;bool mGoldChanged=false;
+ HeartHealthTier mCurrentHeartTier=HeartHealthTier::healthy;int templeRebuilds=0;
+ bool getIsOnServerMap()const{return true;}void updateTemplePosition(){++templeRebuilds;}
+ double getHeartHealthFraction()const;HeartHealthTier computeHeartHealthTier()const;void checkHeartHealthTier();
  bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
@@ -98,7 +102,7 @@ struct RoomDungeonTemple:Room {
  void exportToStream(std::ostream&)const override;bool importFromStream(std::istream&)override;
 };
 struct PersistentObject:BuildingObject {
- PersistentObject(GameMap*,Room&,const char*,Tile* t,double,bool):BuildingObject(t){}
+ PersistentObject(GameMap*,Room&,const std::string&,Tile* t,double,bool,float,const char*,bool):BuildingObject(t){}
 };
 HEART_REWARD
 METHODS
@@ -108,7 +112,7 @@ void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*)
 int main(){int checks=0,failures=0;
  auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};
- GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre);
+ GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre,"DungeonHeartObjectHealthy");
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
  check(core.getSeat()==&owner,"heart entity carries room ownership");
  check(RoomDungeonTemple::HEART_MAX_HP==10000&&RoomDungeonTemple(&map,&owner).getHeartMaxHP()==10000&&heart.getHeartMaxHP()==10000,"the maximum is a fixed 10000, whatever the number of tiles");
@@ -176,6 +180,11 @@ int main(){int checks=0,failures=0;
   h.mHeartHP=1;h.doUpkeep();h.doUpkeep();check(std::abs(h.getHP(nullptr)-(1+2*2.5/1.4))<1e-9,"healing adds up turn by turn");
   h.mCriticalWarningSent=true;h.mHeartHP=1097;h.doUpkeep();check(h.mCriticalWarningSent,"healing inside the critical range keeps the warning spent");
   h.mHeartHP=1100;h.doUpkeep();check(!h.mCriticalWarningSent,"healing above 11 % re-arms the critical warning");}
+ // The heart object follows the health tier, but a destroyed heart is only released (never rebuilt)
+ {BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.doUpkeep();
+  check(h.templeRebuilds==0,"a healthy heart keeps its object");
+  h.mHeartHP=5000;h.doUpkeep();check(h.templeRebuilds==1,"a heart that fell to a lower tier is rebuilt with the matching object");
+  h.mHeartHP=0;h.doUpkeep();check(h.templeRebuilds==1,"a destroyed heart is not rebuilt as a critical one");}
  // Critical-health warning (threshold 11 % of 10000 = 1100)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
  const char* warning="Your dungeon heart is in critical condition!";
@@ -222,6 +231,8 @@ int main(){int checks=0,failures=0;
 inline = '\n'.join(function(header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
 methods = '\n'.join(function(source, sig) for sig in (
+    'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
+    'void RoomDungeonTemple::checkHeartHealthTier(',
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
@@ -233,7 +244,9 @@ probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject
 # (the special objects and the room hand over are checked in check_skirmish_settings.py)
 reward = ('void placeHeartRewardSpecials(GameMap*, Seat*, Tile*) {}\n'
           'void giveHeartRewardRoomsAndLand(GameMap*, Seat*, Seat*) {}\n')
-probe = probe.replace('HEART_REWARD', reward + function(source, 'void giveDestroyedHeartReward('))
+tier_source = (repo / 'source/rooms/HeartHealthTier.cpp').read_text()
+tier = tier_source[tier_source.index('namespace'):] + '\n'
+probe = probe.replace('HEART_REWARD', tier + reward + function(source, 'void giveDestroyedHeartReward('))
 with tempfile.TemporaryDirectory(prefix='odp-heart-combat-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
