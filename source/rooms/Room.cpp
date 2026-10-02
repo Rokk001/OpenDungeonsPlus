@@ -30,6 +30,8 @@
 #include "network/ODClient.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
+#include "ODApplication.h"
+#include "rooms/RoomClaim.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
@@ -42,6 +44,7 @@
 
 Room::Room(GameMap* gameMap):
     Building(gameMap),
+    mClaimHealth(1.0),
     mNumActiveSpots(0)
 {
 }
@@ -56,7 +59,7 @@ const double CLAIMED_VALUE_PER_TILE = 1.0;
 Room::ClaimMode Room::getClaimMode()
 {
     ConfigManager& config = ConfigManager::getSingleton();
-    double mode = config.getRoomConfigDoubleOrDefault("RoomsClaimableByEnemies", 0.0);
+    double mode = config.getRoomConfigDoubleOrDefault("RoomsClaimableByEnemies", 1.0);
     if(mode == 1.0)
         return ClaimMode::claimableAndDestructible;
     if(mode == 2.0)
@@ -67,35 +70,83 @@ Room::ClaimMode Room::getClaimMode()
 
 bool Room::isClaimable(Seat* seat) const
 {
-    if(getClaimMode() == ClaimMode::destructibleOnly)
-        return false;
-
-    if(getSeat()->isAlliedSeat(seat))
-        return false;
-
-    if(getType() == RoomType::dungeonTemple)
-        return false;
-
-    return true;
+    // The dungeon heart is the one room with an exception, the same as in the
+    // game this one follows: it can only be destroyed. Its rubble could be claimed
+    // there for mana; that is not done here.
+    return RoomClaim::isClaimableBy(getClaimMode() != ClaimMode::destructibleOnly,
+        getSeat()->isAlliedSeat(seat), getType() == RoomType::dungeonTemple);
 }
 
 void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)
 {
-    std::map<Tile*, TileData*>::iterator it = mTileData.find(tile);
-    if(it == mTileData.end())
+    ConfigManager& config = ConfigManager::getSingleton();
+    // A room nobody owns is taken five times faster than an enemy one
+    double secondsPerTile;
+    if(getSeat()->isRogueSeat())
+        secondsPerTile = config.getRoomConfigDoubleOrDefault("RoomConvertNeutralSecondsPerTile", 0.5);
+    else
+        secondsPerTile = config.getRoomConfigDoubleOrDefault("RoomConvertSecondsPerTile", 2.5);
+    double referenceClaimRate = config.getRoomConfigDoubleOrDefault("RoomConvertReferenceClaimRate", 0.42);
+
+    mClaimHealth -= RoomClaim::healthLostPerDance(danceRate, referenceClaimRate, secondsPerTile,
+        ODApplication::turnsPerSecond, static_cast<uint32_t>(numCoveredTiles()));
+
+    if(getType() == RoomType::portal)
     {
-        OD_LOG_ERR("room=" + getName() + ", tile=" + Tile::displayAsString(tile));
+        OD_LOG_DBG("room=" + getName() + ", tile=" + Tile::displayAsString(tile) + ", seat id="
+            + Helper::toString(seat->getId()) + ", danceRate=" + Helper::toString(danceRate)
+            + ", claimHealth=" + Helper::toString(mClaimHealth));
+    }
+
+    if(mClaimHealth > 0.0)
+        return;
+
+    changeOwner(seat);
+}
+
+void Room::changeOwner(Seat* seat)
+{
+    Seat* oldSeat = getSeat();
+    std::vector<Tile*> tiles = mCoveredTiles;
+    Room* newRoom = handTilesOverToSeat(seat, tiles);
+    if(newRoom == nullptr)
+    {
+        // Nothing could be created, so the room stays as it is and can be tried again
+        mClaimHealth = 1.0;
         return;
     }
 
-    TileData* tileData = it->second;
-    if(tileData->mClaimedValue > danceRate)
-    {
-        tileData->mClaimedValue -= danceRate;
+    notifyOwnerChanged(oldSeat, seat);
+}
+
+void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
+{
+    if(!getGameMap()->isServerGameMap())
         return;
+
+    Player* newPlayer = newSeat->getPlayer();
+    if((newPlayer != nullptr) && newPlayer->getIsHuman())
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, newPlayer);
+        if((oldSeat != nullptr) && oldSeat->isRogueSeat())
+            serverNotification->mPacket << "You have claimed a room" << EventShortNoticeType::majorGameEvent;
+        else
+            serverNotification->mPacket << "You have captured a room" << EventShortNoticeType::majorGameEvent;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 
-    handTileOverToSeat(seat, tile);
+    if((oldSeat == nullptr) || oldSeat->isRogueSeat())
+        return;
+
+    Player* oldPlayer = oldSeat->getPlayer();
+    if((oldPlayer != nullptr) && oldPlayer->getIsHuman() && !oldPlayer->getHasLost())
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, oldPlayer);
+        serverNotification->mPacket << "A room has been lost" << EventShortNoticeType::majorGameEvent;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
 }
 
 bool Room::isDestructible() const
@@ -130,10 +181,15 @@ double Room::takeDamage(GameEntity* attacker, double absoluteDamage, double phys
 
 Room* Room::handTileOverToSeat(Seat* seat, Tile* tile)
 {
+    return handTilesOverToSeat(seat, std::vector<Tile*>(1, tile));
+}
+
+Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
+{
     GameMap* gameMap = getGameMap();
 
-    OD_LOG_INF("Room=" + getName() + " tile=" + Tile::displayAsString(tile)
-        + " claimed by seat id=" + Helper::toString(seat->getId()));
+    OD_LOG_INF("Room=" + getName() + " " + Helper::toString(static_cast<int32_t>(tiles.size()))
+        + " tile(s) claimed by seat id=" + Helper::toString(seat->getId()));
 
     Room* newRoom = RoomManager::createRoom(gameMap, getType());
     if(newRoom == nullptr)
@@ -143,50 +199,60 @@ Room* Room::handTileOverToSeat(Seat* seat, Tile* tile)
     newRoom->setName(gameMap->nextUniqueNameRoom(newRoom->getType()));
     newRoom->setSeat(seat);
 
-    // The tile changes hands the way checkForSplit() hands tiles over: the new
+    // The tiles change hands the way checkForSplit() hands tiles over: the new
     // room gets a copy of the tile data, this one keeps the original marked
     // destroyed so seats that still think this room covers the tile can keep
     // asking it.
-    std::map<Tile*, TileData*>::iterator itData = mTileData.find(tile);
-    if(itData != mTileData.end())
+    for(Tile* tile : tiles)
     {
-        TileData* newData = itData->second->cloneTileData();
-        // The new owner starts with the tile fully claimed, so it can be danced
-        // back just as it was danced away.
-        newData->mClaimedValue = CLAIMED_VALUE_PER_TILE;
-        newRoom->mTileData[tile] = newData;
-        itData->second->mHP = 0.0;
-    }
+        std::map<Tile*, TileData*>::iterator itData = mTileData.find(tile);
+        if(itData != mTileData.end())
+        {
+            TileData* newData = itData->second->cloneTileData();
+            // The new owner starts with the tile fully claimed, so it can be danced
+            // back just as it was danced away.
+            newData->mClaimedValue = CLAIMED_VALUE_PER_TILE;
+            newRoom->mTileData[tile] = newData;
+            itData->second->mHP = 0.0;
+        }
 
-    std::vector<Tile*>::iterator itTile = std::find(mCoveredTiles.begin(), mCoveredTiles.end(), tile);
-    if(itTile != mCoveredTiles.end())
-        mCoveredTiles.erase(itTile);
+        std::vector<Tile*>::iterator itTile = std::find(mCoveredTiles.begin(), mCoveredTiles.end(), tile);
+        if(itTile != mCoveredTiles.end())
+            mCoveredTiles.erase(itTile);
 
-    std::map<Tile*, BuildingObject*>::iterator itObject = mBuildingObjects.find(tile);
-    if(itObject != mBuildingObjects.end())
-    {
-        newRoom->mBuildingObjects[tile] = itObject->second;
-        mBuildingObjects.erase(itObject);
+        std::map<Tile*, BuildingObject*>::iterator itObject = mBuildingObjects.find(tile);
+        if(itObject != mBuildingObjects.end())
+        {
+            newRoom->mBuildingObjects[tile] = itObject->second;
+            mBuildingObjects.erase(itObject);
+        }
     }
 
     // Counts as captured when the claimer takes the last tile of a room of an enemy seat
     if(mCoveredTiles.empty() && (getSeat() != nullptr) && !getSeat()->isAlliedSeat(seat))
         seat->getStatistics().mRoomsCaptured++;
 
-    mCoveredTilesDestroyed.push_back(tile);
-    newRoom->mCoveredTiles.push_back(tile);
-    tile->setCoveringBuilding(newRoom);
-    tile->claimTile(seat);
+    for(Tile* tile : tiles)
+    {
+        mCoveredTilesDestroyed.push_back(tile);
+        newRoom->mCoveredTiles.push_back(tile);
+        tile->setCoveringBuilding(newRoom);
+    }
+    reorderRoomTiles(newRoom->mCoveredTiles);
 
     // Anything this room keeps for the room as a whole rather than per tile,
-    // the gold in a treasury among it, goes over with the tile's share.
-    std::vector<Tile*> group(1, tile);
-    splitRoom(*newRoom, group);
+    // the gold in a treasury among it, goes over with the tiles' share.
+    splitRoom(*newRoom, tiles);
 
     newRoom->addToGameMap(gameMap);
     newRoom->createMesh();
 
-    // Whoever was working on that tile is working for the other room now. It
+    // The tiles are claimed once the new room is on the map, because claiming a
+    // tile updates the rooms next to it, and those can be the new room itself.
+    for(Tile* tile : tiles)
+        tile->claimTile(seat);
+
+    // Whoever was working on those tiles is working for the other room now. It
     // may have no room for them, so they are sent to look for a job as if the
     // room had gone.
     std::vector<Creature*> creatures = mCreaturesUsingRoom;
@@ -200,12 +266,12 @@ Room* Room::handTileOverToSeat(Seat* seat, Tile* tile)
         handleCreatureUsingAbsorbedRoom(*creature);
     }
 
-    // The tile taken may sit next to another room of the claimer of the same
+    // The tiles taken may sit next to another room of the claimer of the same
     // type (the previous tiles they danced down, or a room of their own): merge.
     newRoom->checkForRoomAbsorbtion();
     newRoom->updateActiveSpots(gameMap);
 
-    // And losing the tile may have cut this room in two.
+    // And losing the tiles may have cut this room in two.
     checkForSplit();
     updateActiveSpots(gameMap);
 
@@ -253,6 +319,13 @@ void Room::removeFromGameMap(GameMap* gameMap)
 void Room::absorbRoom(Room *r)
 {
     OD_LOG_INF(getGameMap()->serverStr() + "Room=" + getName() + " is absorbing room=" + r->getName());
+
+    // The merged room keeps the share of health its tiles had, so a half taken
+    // room merged with a full one does not become full
+    double nbTilesThis = static_cast<double>(mCoveredTiles.size());
+    double nbTilesAbsorbed = static_cast<double>(r->mCoveredTiles.size());
+    if(nbTilesThis + nbTilesAbsorbed > 0.0)
+        mClaimHealth = (mClaimHealth * nbTilesThis + r->mClaimHealth * nbTilesAbsorbed) / (nbTilesThis + nbTilesAbsorbed);
 
     mCentralActiveSpotTiles.insert(mCentralActiveSpotTiles.end(), r->mCentralActiveSpotTiles.begin(), r->mCentralActiveSpotTiles.end());
     r->mCentralActiveSpotTiles.clear();
