@@ -19,6 +19,7 @@
 #define GAMEMAP_H
 
 #include "entities/GameEntity.h"
+#include "gamemap/LevelScript.h"
 #include "gamemap/SelectionEntityWanted.h"
 #include "gamemap/TileContainer.h"
 #include "ai/AIManager.h"
@@ -300,6 +301,10 @@ public:
     inline const std::vector<std::unique_ptr<Goal>>& getGoalsForAllSeats() const
     { return mGoalsForAllSeats; }
     void clearGoalsForAllSeats();
+
+    //! \brief The triggers and actions of the level ([Triggers] section of the level file)
+    inline LevelScript& getLevelScript()
+    { return mLevelScript; }
 
     bool withdrawFromTreasuries(int gold, Seat* seat);
 
@@ -653,6 +658,9 @@ private:
 
     //! \brief Common player goals
     std::vector<std::unique_ptr<Goal>> mGoalsForAllSeats;
+
+    //! \brief Level triggers and their state (flags, triggers already fired)
+    LevelScript mLevelScript;
 
     //! \brief Tells whether the map color flood filling is enabled.
     bool mFloodFillEnabled;
