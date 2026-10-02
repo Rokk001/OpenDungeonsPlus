@@ -149,8 +149,10 @@ int main(int argc,char** argv){try {
     while(std::getline(config,line)){std::istringstream row(line);std::string key;int points;
         if(row>>key>>points && key[0]!='#')ConfigManager::getSingleton().points[key]=points;}
     std::vector<SkillType> all;
-    for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)all.push_back(static_cast<SkillType>(i));
+    for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
+        if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
     check(all.size()==49,"all 49 current research entries");
+    {Seat reward;reward.setSkillTree({SkillType::spellSummonChampion});check(reward.mSkillPending.empty(),"the reward skill cannot be researched");}
     for(SkillType type:all){
         const Skill* skill=SkillManager::getSkill(type);check(skill!=nullptr,"catalog completeness");
         const int base=skill->getNeededSkillPoints();

@@ -245,13 +245,14 @@ public:
             case SpellType::chicken: key = "ChickenPrice"; break;
             case SpellType::inferno: key = "InfernoPrice"; break;
             case SpellType::possess: key = "PossessPrice"; break;
+            case SpellType::summonChampion: key = "SummonChampionPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
             mSpellType == SpellType::tremor || mSpellType == SpellType::turncoat ||
             mSpellType == SpellType::chicken || mSpellType == SpellType::inferno ||
-            mSpellType == SpellType::possess) ?
+            mSpellType == SpellType::possess || mSpellType == SpellType::summonChampion) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -802,6 +803,15 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
     lvl4depends.push_back(skill);
+
+    // Not researchable: the campaign talisman unlocks it. It has no dependency and no node in the skill tree window
+    resType = SkillType::spellSummonChampion;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, emptyDepends);
+    def = new SkillDefSpell("MagicSkills/", "SummonChampionButton", skill, SpellType::summonChampion);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
 }
 
 SkillManager::~SkillManager()
@@ -886,6 +896,8 @@ bool SkillManager::isAllSkillsDoneForSeat(const Seat* seat)
     for(const SkillDef* skill : getSkillManager().mSkills)
     {
         if(skill == nullptr)
+            continue;
+        if(Skills::isRewardSkill(skill->mSkill->getType()))
             continue;
         if(seat->getSkillLevel(skill->mSkill->getType()) >= 3)
             continue;
@@ -1050,6 +1062,10 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             spell("ChickenNbTurns") + " turns.";
         case SkillType::spellInferno: return "Damage: " + spell("InfernoDamagePerTurn") + " per turn to enemy creatures within " +
             spell("InfernoRadiusTiles") + " tiles, which burn for " + spell("InfernoNbTurns") + " turns.";
+        case SkillType::spellSummonChampion: return "Summons one champion that cannot be hurt and charges at the enemies. Costs " +
+            spell("SummonChampionPrice") + " mana, free for " + Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
+            config.getSpellConfigDouble("SummonChampionDrainPerSecond")) + " seconds, then " + spell("SummonChampionDrainPerSecond") +
+            " mana per second. Unlocked by the complete talisman.";
         case SkillType::spellPossess: return "Control one of your creatures in first person; free for " +
             spell("PossessFreeSeconds") + " seconds after the cast, then a mana drain per second that depends on the creature.";
         default: return "";
@@ -1073,6 +1089,8 @@ void SkillManager::buildRandomPendingSkillsForSeat(std::vector<SkillType>& skill
             continue;
 
         SkillType resType = skill->mSkill->getType();
+        if(Skills::isRewardSkill(resType))
+            continue;
         // We do not consider skills already pending or done
         if(seat->getSkillLevel(resType) >= 3 || std::find(skills.begin(), skills.end(), resType) != skills.end())
             continue;

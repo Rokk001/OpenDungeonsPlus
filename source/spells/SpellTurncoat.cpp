@@ -19,6 +19,7 @@
 
 #include "creatureeffect/CreatureEffectTurncoat.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -117,7 +118,7 @@ void SpellTurncoat::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
         return;
     }
 
-    if(closestCreature->isInPrison())
+    if(closestCreature->isInPrison() || closestCreature->getDefinition()->isChampion())
     {
         std::string txt = formatCastSpell(SpellType::turncoat, 0);
         inputCommand.displayText(Ogre::ColourValue::White, txt);
@@ -177,9 +178,9 @@ bool SpellTurncoat::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
         return false;
     }
 
-    if(creature->isInPrison())
+    if(creature->isInPrison() || creature->getDefinition()->isChampion())
     {
-        OD_LOG_WRN("Creature=" + creatureName + " is in prison");
+        OD_LOG_WRN("Creature=" + creatureName + " is in prison or a champion");
         return false;
     }
 

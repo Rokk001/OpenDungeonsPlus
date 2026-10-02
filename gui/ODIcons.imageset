@@ -66,6 +66,7 @@
     <Image height="128" name="AlarmTrapButton" width="128" xPos="256" yPos="384" />
     <Image height="128" name="DestroyTrapButton" width="128" xPos="768" yPos="384" />
     <Image height="128" name="SummonWorkerButton" width="128" xPos="896" yPos="384" />
+    <Image height="128" name="SummonChampionButton" width="128" xPos="896" yPos="384" />
     <Image height="128" name="CallToWarButton" width="128" xPos="0" yPos="512" />
     <Image height="128" name="CreatureHealButton" width="128" xPos="128" yPos="512" />
     <Image height="128" name="CreatureExplosionButton" width="128" xPos="256" yPos="512" />

@@ -523,6 +523,7 @@ set(OD_SOURCEFILES
     ${SRC}/spells/SpellInferno.cpp
     ${SRC}/spells/SpellPossess.cpp
     ${SRC}/spells/SpellManager.cpp
+    ${SRC}/spells/SpellSummonChampion.cpp
     ${SRC}/spells/SpellSummonWorker.cpp
     ${SRC}/spells/SpellType.cpp
 

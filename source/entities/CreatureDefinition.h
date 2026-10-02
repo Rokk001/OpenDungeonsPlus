@@ -166,6 +166,7 @@ public:
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
     inline bool                 isFearless      () const    { return mFearless; }
+    inline bool                 isChampion      () const    { return mChampion; }
     inline double               getPossessManaCost () const { return mPossessManaCost; }
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
     inline const std::string&   getClassName    () const    { return mClassName; }
@@ -263,6 +264,8 @@ private:
     int32_t mStealGold;
     //! \brief True for creatures that are never scared by a Fear trap
     bool mFearless;
+    //! \brief True for the summoned champion: it cannot be hurt, possessed or turned, needs no fee and charges at enemies
+    bool mChampion;
     //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period)
     double mPossessManaCost;
     //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side

@@ -330,6 +330,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
@@ -426,6 +427,7 @@ Creature::Creature(GameMap* gameMap) :
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
@@ -1138,6 +1140,10 @@ void Creature::doUpkeep()
     if(!getIsOnMap())
         return;
 
+    // The champion costs mana and leaves when the owner cannot pay it
+    if(getDefinition()->isChampion() && handleChampionUpkeep())
+        return;
+
     // A creature that is working is not frustrated anymore
     if(isActionInList(CreatureActionType::useRoom))
         mNbTurnsOutOfWork = 0;
@@ -1516,6 +1522,13 @@ bool Creature::handleIdleAction()
                     break;
             }
         }
+    }
+
+    // The champion has no needs. It charges at the enemies and waits when there is none
+    if(mDefinition->isChampion())
+    {
+        handleChampionIdle();
+        return false;
     }
 
     // A creature in the group of a possessed creature follows it. Fights are handled by the
@@ -2897,6 +2910,9 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 {
     bool wasAlive = isAlive();
     mNbTurnsWithoutBattle = 0;
+    // The champion cannot be hurt
+    if(getDefinition()->isChampion())
+        return 0.0;
     physicalDamage = std::max(physicalDamage - getPhysicalDefense(), 0.0);
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
     elementDamage = std::max(elementDamage - getElementDefense(), 0.0);
@@ -3097,6 +3113,10 @@ bool Creature::tryPickup(Seat* seat)
 
     // A creature controlled by a player cannot be picked up
     if(isPossessed())
+        return false;
+
+    // The champion cannot be held in the hand
+    if(getDefinition()->isChampion())
         return false;
 
     return true;
@@ -3558,6 +3578,13 @@ void Creature::slap()
     {
         removeFromGameMap();
         deleteYourself();
+        return;
+    }
+
+    // A slap sends the champion away
+    if(getDefinition()->isChampion())
+    {
+        dismissChampion();
         return;
     }
 
@@ -4664,6 +4691,114 @@ void Creature::startPossession(Player& player)
     const std::string& name = getName();
     serverNotification->mPacket << name;
     ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+bool Creature::handleChampionUpkeep()
+{
+    ++mChampionTurns;
+
+    // The cast price covers the first seconds (price divided by the drain per second). After that
+    // the owner pays each turn the share of the drain per second and the champion leaves when the
+    // mana cannot pay one second of it
+    double price = ConfigManager::getSingleton().getSpellConfigDouble("SummonChampionPrice");
+    double drainPerSecond = ConfigManager::getSingleton().getSpellConfigDouble("SummonChampionDrainPerSecond");
+    if(drainPerSecond <= 0.0)
+        return false;
+
+    double freeSeconds = price / drainPerSecond;
+    if(static_cast<double>(mChampionTurns) <= (freeSeconds * ODApplication::turnsPerSecond))
+        return false;
+
+    double drainPerTurn = drainPerSecond / ODApplication::turnsPerSecond;
+    if((getSeat()->getMana() < drainPerSecond) || !getSeat()->takeMana(drainPerTurn))
+    {
+        dismissChampion();
+        return true;
+    }
+
+    return false;
+}
+
+bool Creature::handleChampionIdle()
+{
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    // Enemy creatures first, the nearest reachable one. The dungeon hearts of the enemies come after
+    std::vector<std::pair<int, Tile*>> targets;
+    for(Creature* creature : getGameMap()->getCreatures())
+    {
+        if(creature->getSeat()->isAlliedSeat(getSeat()) || !creature->isAlive() || !creature->getIsOnMap() ||
+           creature->isInPrison())
+        {
+            continue;
+        }
+
+        Tile* tile = creature->getPositionTile();
+        if(tile == nullptr)
+            continue;
+
+        int distX = tile->getX() - myTile->getX();
+        int distY = tile->getY() - myTile->getY();
+        targets.push_back(std::make_pair(distX * distX + distY * distY, tile));
+    }
+    std::sort(targets.begin(), targets.end());
+
+    std::vector<std::pair<int, Tile*>> heartTargets;
+    for(Room* heart : getGameMap()->getRoomsByType(RoomType::dungeonTemple))
+    {
+        if(heart->getSeat()->isAlliedSeat(getSeat()))
+            continue;
+
+        std::vector<Tile*> heartTiles = heart->getCoveredTiles();
+        if(heartTiles.empty())
+            continue;
+
+        int distX = heartTiles.front()->getX() - myTile->getX();
+        int distY = heartTiles.front()->getY() - myTile->getY();
+        heartTargets.push_back(std::make_pair(distX * distX + distY * distY, heartTiles.front()));
+    }
+    std::sort(heartTargets.begin(), heartTargets.end());
+    targets.insert(targets.end(), heartTargets.begin(), heartTargets.end());
+
+    // The path check is costly, so only the closest few targets are tried
+    uint32_t nbTries = 0;
+    for(const std::pair<int, Tile*>& target : targets)
+    {
+        if(nbTries >= 5)
+            break;
+        ++nbTries;
+
+        if(!getGameMap()->pathExists(this, myTile, target.second))
+            continue;
+
+        if(setDestination(target.second))
+            return true;
+    }
+
+    return false;
+}
+
+void Creature::dismissChampion()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    OD_LOG_INF("The champion " + getName() + " leaves");
+    if((getSeat()->getPlayer() != nullptr) && getSeat()->getPlayer()->getIsHuman() &&
+       !getSeat()->getPlayer()->getHasLost())
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, getSeat()->getPlayer());
+        std::string msg = "The champion leaves your dungeon";
+        serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    removeFromGameMap();
+    deleteYourself();
 }
 
 void Creature::endPossession()

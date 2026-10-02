@@ -74,6 +74,7 @@ CreatureDefinition::CreatureDefinition(
         mCombatClass (CombatBlocker),
         mStealGold (0),
         mFearless (false),
+        mChampion (false),
         mPossessManaCost (0.0),
         mTortureTimeToConvert (120.0),
         mClassName   (className),
@@ -129,6 +130,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mCombatClass(def.mCombatClass),
         mStealGold(def.mStealGold),
         mFearless(def.mFearless),
+        mChampion(def.mChampion),
         mPossessManaCost(def.mPossessManaCost),
         mTortureTimeToConvert(def.mTortureTimeToConvert),
         mClassName(def.mClassName),
@@ -343,6 +345,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << CreatureDefinition::combatClassToString(c->mCombatClass);
     os << c->mStealGold;
     os << c->mFearless;
+    os << c->mChampion;
     os << c->mPossessManaCost;
     os << c->mTortureTimeToConvert;
 
@@ -387,6 +390,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     c->mCombatClass = CreatureDefinition::combatClassFromString(tempString);
     is >> c->mStealGold;
     is >> c->mFearless;
+    is >> c->mChampion;
     is >> c->mPossessManaCost;
     is >> c->mTortureTimeToConvert;
 
@@ -531,6 +535,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mFearless = Helper::toBool(nextParam);
+                continue;
+            }
+            else if (nextParam == "Champion")
+            {
+                defFile >> nextParam;
+                creatureDef->mChampion = Helper::toBool(nextParam);
                 continue;
             }
             else if (nextParam == "PossessManaCost")
@@ -832,6 +842,9 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if(def1 == nullptr || (def1->mFearless != def2->mFearless))
         file << "    Fearless\t" << (def2->mFearless ? 1 : 0) << std::endl;
+
+    if(def1 == nullptr || (def1->mChampion != def2->mChampion))
+        file << "    Champion\t" << (def2->mChampion ? 1 : 0) << std::endl;
 
     if(def1 == nullptr || (def1->mPossessManaCost != def2->mPossessManaCost))
         file << "    PossessManaCost	" << def2->mPossessManaCost << std::endl;

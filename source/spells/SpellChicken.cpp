@@ -19,6 +19,7 @@
 
 #include "creatureeffect/CreatureEffectChicken.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -108,7 +109,7 @@ void SpellChicken::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
         return;
     }
 
-    if(closestCreature->isChicken() || closestCreature->isInPrison())
+    if(closestCreature->isChicken() || closestCreature->isInPrison() || closestCreature->getDefinition()->isChampion())
     {
         std::string txt = formatCastSpell(SpellType::chicken, 0);
         inputCommand.displayText(Ogre::ColourValue::White, txt);
@@ -170,6 +171,12 @@ bool SpellChicken::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     if(creature->isChicken())
     {
         OD_LOG_WRN("Creature=" + creatureName + " is already a chicken");
+        return false;
+    }
+
+    if(creature->getDefinition()->isChampion())
+    {
+        OD_LOG_WRN("Creature=" + creatureName + " is a champion");
         return false;
     }
 

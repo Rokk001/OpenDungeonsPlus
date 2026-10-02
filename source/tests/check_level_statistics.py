@@ -111,6 +111,7 @@ struct GameEntity
 struct CreatureDefinition
 {
     bool isWorker() const { return mWorker; }
+    bool isChampion() const { return false; }
     bool mWorker = false;
 };
 struct ConfigManager
