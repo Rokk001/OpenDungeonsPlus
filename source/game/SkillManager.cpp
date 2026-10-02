@@ -244,12 +244,14 @@ public:
             case SpellType::turncoat: key = "TurncoatPrice"; break;
             case SpellType::chicken: key = "ChickenPrice"; break;
             case SpellType::inferno: key = "InfernoPrice"; break;
+            case SpellType::possess: key = "PossessPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
             mSpellType == SpellType::tremor || mSpellType == SpellType::turncoat ||
-            mSpellType == SpellType::chicken || mSpellType == SpellType::inferno) ?
+            mSpellType == SpellType::chicken || mSpellType == SpellType::inferno ||
+            mSpellType == SpellType::possess) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -1004,6 +1006,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             spell("ChickenNbTurns") + " turns.";
         case SkillType::spellInferno: return "Damage: " + spell("InfernoDamagePerTurn") + " per turn to enemy creatures within " +
             spell("InfernoRadiusTiles") + " tiles, which burn for " + spell("InfernoNbTurns") + " turns.";
+        case SkillType::spellPossess: return "Control one of your creatures in first person; costs " +
+            spell("PossessDrainPerSecond") + " mana per second while possessed.";
         default: return "";
     }
 }
