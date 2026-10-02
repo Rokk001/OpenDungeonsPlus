@@ -243,6 +243,23 @@ public:
     inline int32_t getNbTurnsRested() const
     { return mNbTurnsRested; }
 
+    //! \brief Number of turns spent near a creature of the opposite alignment, fading after leaving it
+    inline int32_t getNbTurnsHatedCompany() const
+    { return mNbTurnsHatedCompany; }
+
+    //! \brief Good creatures are the ones of the hero faction, all others are evil
+    bool isGoodAligned() const;
+
+    //! \brief True if a creature of the opposite alignment of an allied seat is close
+    bool isHatedCompanyNear() const;
+
+    //! \brief Mood points the combat pit gave to the creature (positive) or took from it (negative). Fades over time
+    inline double getPitMood() const
+    { return mPitMood; }
+
+    //! \brief Changes the pit mood points. They are limited by the PitMoodMax room setting
+    void addPitMood(double points);
+
     //! \brief Called on server side each turn the creature sleeps in its lair
     inline void markRested()
     { mRestedThisTurn = true; }
@@ -1011,6 +1028,12 @@ private:
     int32_t                         mNbTurnsRested;
     bool                            mTorturedThisTurn;
     bool                            mRestedThisTurn;
+
+    //! \brief Used on server side for the mood. Turns spent near a creature of the opposite alignment
+    int32_t                         mNbTurnsHatedCompany;
+
+    //! \brief Used on server side for the mood. Set by the combat pit, fades by PitMoodDecay per second
+    double                          mPitMood;
 
     //! \brief Used on server side for the mood. Turn numbers of the latest slaps
     std::vector<int64_t>            mSlapTurns;

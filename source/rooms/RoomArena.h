@@ -63,7 +63,13 @@ protected:
 
     
 private:
+    //! \brief Mood points of the victor, the spectators and a creature alone in the pit
+    void updatePitMood();
+
     std::vector<Creature*> mCreaturesFighting;
+
+    //! \brief True while at least 2 creatures able to fight are in the pit. The last one standing is the victor
+    bool mFightOngoing;
 };
 
 #endif // ROOMARENA_H
