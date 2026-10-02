@@ -421,6 +421,7 @@ SkillManager::SkillManager() :
     def = new SkillDefTrap("TacticSkills/", "SteelDoorTrapButton", skill, TrapType::doorSteel);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
+    const Skill* steelDoorSkill = skill;
 
     // The barricade only requires the wooden door
     doorDepends.clear();
@@ -430,6 +431,17 @@ SkillManager::SkillManager() :
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
     skill = new Skill(resType, points, doorDepends);
     def = new SkillDefTrap("TacticSkills/", "BarricadeTrapButton", skill, TrapType::doorBarricade);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // The magic door requires the steel door
+    doorDepends.clear();
+    doorDepends.push_back(steelDoorSkill);
+    resType = SkillType::trapDoorMagic;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "MagicDoorTrapButton", skill, TrapType::doorMagic);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 

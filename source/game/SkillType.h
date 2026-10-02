@@ -65,6 +65,7 @@ enum class SkillType
     trapDoorBraced,
     trapDoorSteel,
     trapDoorBarricade,
+    trapDoorMagic,
 
     // This should be the last
     countSkill
