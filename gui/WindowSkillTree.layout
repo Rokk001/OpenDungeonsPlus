@@ -249,7 +249,7 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
