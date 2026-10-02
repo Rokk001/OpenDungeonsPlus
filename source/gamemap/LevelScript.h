@@ -33,13 +33,18 @@
 //!
 //!   [Triggers]
 //!   Flag    <name>  <value>                   # initial value of a flag (unset flags are 0)
+//!   Region  <name> <x1> <y1> <x2> <y2>        # a named rectangle of tiles (placed in the level editor)
 //!   [Trigger]
 //!   Name    <name>
 //!   Mode    once | repeat <cooldownSeconds>
 //!   Cond    time <seconds>                    # at least that many seconds since the level start
 //!   Cond    region <seatId> <x1> <y1> <x2> <y2>   # a creature of the seat (-1: any) is in the rectangle
+//!   Cond    region <seatId> <regionName>          # the same, with the rectangle of a named region
 //!   Cond    creatures <seatId> >= | <= <count>
 //!   Cond    room <seatId> <roomName> <count>  # seat owns at least count rooms of that type
+//!   Cond    gold <seatId> >= | <= <amount>    # gold of the seat
+//!   Cond    mana <seatId> >= | <= <amount>    # mana of the seat
+//!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
 //!   Cond    flag <name> <value>               # flag has exactly that value
 //!   Action  message <seatId> <text>           # seat -1: every human player
@@ -47,8 +52,10 @@
 //!   Action  spawn <seatId> <x> <y> <targetSeatId> <class:level> [<class:level> ...]
 //!   Action  gold <seatId> <amount>
 //!   Action  setflag <name> <value>
+//!   Action  addflag <name> <delta>            # adds to the flag (a negative value subtracts)
 //!   Action  win <seatId>                      # seat -1: every human player
 //!   Action  lose <seatId>
+//!   Action  reveal <seatId> <regionName>      # the tiles of the region stay visible to the seat
 //!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
@@ -65,7 +72,10 @@ enum class LevelScriptConditionType
     creatures,
     room,
     goal,
-    flag
+    flag,
+    gold,
+    mana,
+    claimed
 };
 
 enum class LevelScriptActionType
@@ -75,8 +85,10 @@ enum class LevelScriptActionType
     spawn,
     gold,
     setFlag,
+    addFlag,
     win,
     lose,
+    reveal,
     discoverLevel
 };
 
@@ -99,11 +111,13 @@ struct LevelScriptCondition
     int32_t mY1;
     int32_t mX2;
     int32_t mY2;
-    //! \brief For creatures: true for >=, false for <=
+    //! \brief For creatures, gold and mana: true for >=, false for <=
     bool mAtLeast;
-    //! \brief Seconds (time), count (creatures, room) or value (flag)
+    //! \brief Seconds (time), count (creatures, room, claimed, -1 for all of the region),
+    //! amount (gold, mana) or value (flag)
     int64_t mNumber;
-    //! \brief Room name (room), goal name (goal) or flag name (flag)
+    //! \brief Room name (room), goal name (goal), flag name (flag) or, for region, the
+    //! name of a region of the script (empty when the rectangle is given by mX1 to mY2)
     std::string mName;
 };
 
@@ -124,12 +138,42 @@ struct LevelScriptAction
     int32_t mY;
     //! \brief spawn: seat whose dungeon the spawned group attacks (-1: none)
     int32_t mTargetSeatId;
-    //! \brief Gold amount (gold) or flag value (setflag)
+    //! \brief Gold amount (gold), flag value (setflag) or amount added to a flag (addflag)
     int64_t mNumber;
-    //! \brief Message text (message, objective) or flag name (setflag)
+    //! \brief Message text (message, objective), flag name (setflag), region name (reveal)
+    //! or level file (discoverLevel)
     std::string mText;
     //! \brief spawn: creature class name and level
     std::vector<std::pair<std::string, uint32_t> > mCreatures;
+};
+
+//! \brief A named rectangle of tiles, both corners included. The level editor places them
+//! and the conditions and actions of the triggers refer to them by name.
+struct LevelScriptRegion
+{
+    LevelScriptRegion() :
+        mX1(0),
+        mY1(0),
+        mX2(0),
+        mY2(0)
+    {}
+
+    LevelScriptRegion(const std::string& name, int32_t x1, int32_t y1, int32_t x2, int32_t y2) :
+        mName(name),
+        mX1(x1),
+        mY1(y1),
+        mX2(x2),
+        mY2(y2)
+    {}
+
+    //! \brief True if the tile is inside the rectangle, whatever the order of the corners
+    bool contains(int32_t x, int32_t y) const;
+
+    std::string mName;
+    int32_t mX1;
+    int32_t mY1;
+    int32_t mX2;
+    int32_t mY2;
 };
 
 struct LevelScriptTrigger
@@ -164,7 +208,7 @@ public:
     void clear();
 
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mRegions.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     { return mTriggers; }
@@ -178,9 +222,31 @@ public:
     inline const std::map<std::string, int64_t>& getFlags() const
     { return mFlags; }
 
+    inline const std::vector<LevelScriptRegion>& getRegions() const
+    { return mRegions; }
+
+    //! \brief Returns the region with that name, nullptr if there is none
+    const LevelScriptRegion* getRegion(const std::string& name) const;
+
+    //! \brief Adds the region or, if the name is already used, moves that region
+    void setRegion(const LevelScriptRegion& region);
+
+    //! \brief Returns false if there was no region with that name
+    bool removeRegion(const std::string& name);
+
+    //! \brief The name of the first region that holds the tile, empty if there is none
+    std::string getRegionNameAt(int32_t x, int32_t y) const;
+
+    //! \brief A name of the form Region<number> that no region uses yet
+    std::string getFreeRegionName() const;
+
+    //! \brief Replaces all the regions, used by the editor when the server sends them
+    void setRegions(const std::vector<LevelScriptRegion>& regions);
+
 private:
     std::vector<LevelScriptTrigger> mTriggers;
     std::map<std::string, int64_t> mFlags;
+    std::vector<LevelScriptRegion> mRegions;
 };
 
 #endif // LEVELSCRIPT_H

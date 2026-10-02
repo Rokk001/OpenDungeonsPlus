@@ -17,6 +17,7 @@
 
 #include "gamemap/LevelScript.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <istream>
 #include <ostream>
@@ -102,6 +103,11 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     if(type == "region")
     {
         cond.mType = LevelScriptConditionType::region;
+        if(t.size() == 4)
+        {
+            cond.mName = t[3];
+            return parseInt32(t[2], cond.mSeatId);
+        }
         return (t.size() == 7) &&
             parseInt32(t[2], cond.mSeatId) &&
             parseInt32(t[3], cond.mX1) &&
@@ -122,6 +128,34 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
             return false;
 
         return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
+    }
+    if((type == "gold") || (type == "mana"))
+    {
+        cond.mType = (type == "gold") ? LevelScriptConditionType::gold : LevelScriptConditionType::mana;
+        if(t.size() != 5)
+            return false;
+        if(t[3] == ">=")
+            cond.mAtLeast = true;
+        else if(t[3] == "<=")
+            cond.mAtLeast = false;
+        else
+            return false;
+
+        return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
+    }
+    if(type == "claimed")
+    {
+        cond.mType = LevelScriptConditionType::claimed;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[3];
+        if(t[4] == "all")
+        {
+            cond.mNumber = -1;
+            return parseInt32(t[2], cond.mSeatId);
+        }
+        return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber) && (cond.mNumber > 0);
     }
     if(type == "room")
     {
@@ -211,10 +245,28 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mText = t[2];
         return parseInt(t[3], action.mNumber);
     }
+    if(type == "addflag")
+    {
+        action.mType = LevelScriptActionType::addFlag;
+        if(t.size() != 4)
+            return false;
+
+        action.mText = t[2];
+        return parseInt(t[3], action.mNumber);
+    }
     if((type == "win") || (type == "lose"))
     {
         action.mType = (type == "win") ? LevelScriptActionType::win : LevelScriptActionType::lose;
         return (t.size() == 3) && parseInt32(t[2], action.mSeatId);
+    }
+    if(type == "reveal")
+    {
+        action.mType = LevelScriptActionType::reveal;
+        if(t.size() != 4)
+            return false;
+
+        action.mText = t[3];
+        return parseInt32(t[2], action.mSeatId);
     }
     if(type == "discover")
     {
@@ -237,7 +289,10 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             os << "time\t" << c.mNumber;
             break;
         case LevelScriptConditionType::region:
-            os << "region\t" << c.mSeatId << "\t" << c.mX1 << "\t" << c.mY1 << "\t" << c.mX2 << "\t" << c.mY2;
+            if(!c.mName.empty())
+                os << "region\t" << c.mSeatId << "\t" << c.mName;
+            else
+                os << "region\t" << c.mSeatId << "\t" << c.mX1 << "\t" << c.mY1 << "\t" << c.mX2 << "\t" << c.mY2;
             break;
         case LevelScriptConditionType::creatures:
             os << "creatures\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
@@ -250,6 +305,19 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::flag:
             os << "flag\t" << c.mName << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::gold:
+            os << "gold\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::mana:
+            os << "mana\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::claimed:
+            os << "claimed\t" << c.mSeatId << "\t" << c.mName << "\t";
+            if(c.mNumber < 0)
+                os << "all";
+            else
+                os << c.mNumber;
             break;
     }
     os << "\n";
@@ -277,11 +345,17 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
         case LevelScriptActionType::setFlag:
             os << "setflag\t" << a.mText << "\t" << a.mNumber;
             break;
+        case LevelScriptActionType::addFlag:
+            os << "addflag\t" << a.mText << "\t" << a.mNumber;
+            break;
         case LevelScriptActionType::win:
             os << "win\t" << a.mSeatId;
             break;
         case LevelScriptActionType::lose:
             os << "lose\t" << a.mSeatId;
+            break;
+        case LevelScriptActionType::reveal:
+            os << "reveal\t" << a.mSeatId << "\t" << a.mText;
             break;
         case LevelScriptActionType::discoverLevel:
             os << "discover\t" << a.mText;
@@ -337,6 +411,19 @@ bool LevelScript::importFromStream(std::istream& is)
                 return false;
 
             mFlags[t[1]] = value;
+        }
+        else if(key == "Region")
+        {
+            LevelScriptRegion region;
+            if(inTrigger || (t.size() != 6) ||
+               !parseInt32(t[2], region.mX1) || !parseInt32(t[3], region.mY1) ||
+               !parseInt32(t[4], region.mX2) || !parseInt32(t[5], region.mY2))
+            {
+                return false;
+            }
+
+            region.mName = t[1];
+            setRegion(region);
         }
         else if(!inTrigger)
         {
@@ -404,6 +491,12 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
         os << "Flag\t" << flag.first << "\t" << flag.second << "\n";
 
+    for(const LevelScriptRegion& region : mRegions)
+    {
+        os << "Region\t" << region.mName << "\t" << region.mX1 << "\t" << region.mY1
+           << "\t" << region.mX2 << "\t" << region.mY2 << "\n";
+    }
+
     for(const LevelScriptTrigger& trigger : mTriggers)
     {
         os << "[Trigger]\n";
@@ -431,6 +524,75 @@ void LevelScript::clear()
 {
     mTriggers.clear();
     mFlags.clear();
+    mRegions.clear();
+}
+
+bool LevelScriptRegion::contains(int32_t x, int32_t y) const
+{
+    return (x >= std::min(mX1, mX2)) && (x <= std::max(mX1, mX2)) &&
+           (y >= std::min(mY1, mY2)) && (y <= std::max(mY1, mY2));
+}
+
+const LevelScriptRegion* LevelScript::getRegion(const std::string& name) const
+{
+    for(const LevelScriptRegion& region : mRegions)
+    {
+        if(region.mName == name)
+            return &region;
+    }
+    return nullptr;
+}
+
+void LevelScript::setRegion(const LevelScriptRegion& region)
+{
+    for(LevelScriptRegion& other : mRegions)
+    {
+        if(other.mName == region.mName)
+        {
+            other = region;
+            return;
+        }
+    }
+    mRegions.push_back(region);
+}
+
+bool LevelScript::removeRegion(const std::string& name)
+{
+    for(std::vector<LevelScriptRegion>::iterator it = mRegions.begin(); it != mRegions.end(); ++it)
+    {
+        if(it->mName == name)
+        {
+            mRegions.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string LevelScript::getRegionNameAt(int32_t x, int32_t y) const
+{
+    for(const LevelScriptRegion& region : mRegions)
+    {
+        if(region.contains(x, y))
+            return region.mName;
+    }
+    return std::string();
+}
+
+std::string LevelScript::getFreeRegionName() const
+{
+    for(uint32_t number = 1; ; ++number)
+    {
+        std::ostringstream name;
+        name << "Region" << number;
+        if(getRegion(name.str()) == nullptr)
+            return name.str();
+    }
+}
+
+void LevelScript::setRegions(const std::vector<LevelScriptRegion>& regions)
+{
+    mRegions = regions;
 }
 
 int64_t LevelScript::getFlag(const std::string& name) const

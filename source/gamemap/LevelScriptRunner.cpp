@@ -66,10 +66,17 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return gameMap.getTurnNumber() >= secondsToTurns(cond.mNumber);
         case LevelScriptConditionType::region:
         {
-            int32_t xMin = std::min(cond.mX1, cond.mX2);
-            int32_t xMax = std::max(cond.mX1, cond.mX2);
-            int32_t yMin = std::min(cond.mY1, cond.mY2);
-            int32_t yMax = std::max(cond.mY1, cond.mY2);
+            LevelScriptRegion area(cond.mName, cond.mX1, cond.mY1, cond.mX2, cond.mY2);
+            if(!cond.mName.empty())
+            {
+                const LevelScriptRegion* region = script.getRegion(cond.mName);
+                if(region == nullptr)
+                {
+                    OD_LOG_ERR("Level script: unknown region name=" + cond.mName);
+                    return false;
+                }
+                area = *region;
+            }
             for(Creature* creature : gameMap.getCreatures())
             {
                 if(!creature->isAlive())
@@ -82,11 +89,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
                 if(tile == nullptr)
                     continue;
 
-                if((tile->getX() >= xMin) && (tile->getX() <= xMax) &&
-                   (tile->getY() >= yMin) && (tile->getY() <= yMax))
-                {
+                if(area.contains(tile->getX(), tile->getY()))
                     return true;
-                }
             }
             return false;
         }
@@ -135,6 +139,53 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
         }
         case LevelScriptConditionType::flag:
             return script.getFlag(cond.mName) == cond.mNumber;
+        case LevelScriptConditionType::gold:
+        case LevelScriptConditionType::mana:
+        {
+            Seat* seat = gameMap.getSeatById(cond.mSeatId);
+            if(seat == nullptr)
+                return false;
+
+            int64_t amount = (cond.mType == LevelScriptConditionType::gold) ?
+                static_cast<int64_t>(seat->getGold()) : static_cast<int64_t>(seat->getMana());
+            if(cond.mAtLeast)
+                return amount >= cond.mNumber;
+
+            return amount <= cond.mNumber;
+        }
+        case LevelScriptConditionType::claimed:
+        {
+            Seat* seat = gameMap.getSeatById(cond.mSeatId);
+            const LevelScriptRegion* region = script.getRegion(cond.mName);
+            if(seat == nullptr)
+                return false;
+
+            if(region == nullptr)
+            {
+                OD_LOG_ERR("Level script: unknown region name=" + cond.mName);
+                return false;
+            }
+
+            int64_t numTiles = 0;
+            int64_t numClaimed = 0;
+            for(int32_t x = std::min(region->mX1, region->mX2); x <= std::max(region->mX1, region->mX2); ++x)
+            {
+                for(int32_t y = std::min(region->mY1, region->mY2); y <= std::max(region->mY1, region->mY2); ++y)
+                {
+                    Tile* tile = gameMap.getTile(x, y);
+                    if(tile == nullptr)
+                        continue;
+
+                    ++numTiles;
+                    if(tile->isClaimedForSeat(seat))
+                        ++numClaimed;
+                }
+            }
+            if(cond.mNumber < 0)
+                return (numTiles > 0) && (numClaimed == numTiles);
+
+            return numClaimed >= cond.mNumber;
+        }
     }
     return false;
 }
@@ -249,6 +300,32 @@ void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action)
     }
 }
 
+//! \brief The tiles of the region stay visible to the seat, as the tiles revealed by a
+//! tortured creature do: they are shown once and then count as seen.
+void revealRegion(GameMap& gameMap, const LevelScript& script, const LevelScriptAction& action)
+{
+    const LevelScriptRegion* region = script.getRegion(action.mText);
+    if(region == nullptr)
+    {
+        OD_LOG_ERR("Level script: reveal of unknown region name=" + action.mText);
+        return;
+    }
+
+    std::vector<Tile*> tiles;
+    for(int32_t x = std::min(region->mX1, region->mX2); x <= std::max(region->mX1, region->mX2); ++x)
+    {
+        for(int32_t y = std::min(region->mY1, region->mY2); y <= std::max(region->mY1, region->mY2); ++y)
+        {
+            Tile* tile = gameMap.getTile(x, y);
+            if(tile != nullptr)
+                tiles.push_back(tile);
+        }
+    }
+
+    for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
+        player->getSeat()->revealTiles(tiles, 1);
+}
+
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action)
 {
     switch(action.mType)
@@ -272,6 +349,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::setFlag:
             script.setFlag(action.mText, action.mNumber);
             break;
+        case LevelScriptActionType::addFlag:
+            script.setFlag(action.mText, script.getFlag(action.mText) + action.mNumber);
+            break;
         case LevelScriptActionType::win:
         {
             for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
@@ -286,6 +366,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
 
             break;
         }
+        case LevelScriptActionType::reveal:
+            revealRegion(gameMap, script, action);
+            break;
         case LevelScriptActionType::discoverLevel:
         {
             if(Campaign::getSingleton().discoverBonusLevel(action.mText))
