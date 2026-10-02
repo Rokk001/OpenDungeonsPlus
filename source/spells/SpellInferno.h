@@ -15,41 +15,27 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SPELLTYPE_H
-#define SPELLTYPE_H
+#ifndef SPELLINFERNO_H
+#define SPELLINFERNO_H
 
-#include <iosfwd>
-#include <string>
+#include "spells/Spell.h"
+#include "spells/SpellType.h"
 
-class ODPacket;
+class GameMap;
+class InputCommand;
+class InputManager;
 
-enum class SpellType
+//! \brief Sets the enemy creatures around the target tile on fire. They burn for a few seconds.
+class SpellInferno : public Spell
 {
-    nullSpellType = 0,
-    summonWorker,
-    callToWar,
-    creatureHeal,
-    creatureExplosion,
-    creatureHaste,
-    creatureDefense,
-    creatureSlow,
-    creatureStrength,
-    creatureWeak,
-    eyeEvil,
-    createGold,
-    lightning,
-    tremor,
-    turncoat,
-    chicken,
-    inferno,
-    nbSpells     // Must be the last in this enum
+public:
+    static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
+
+    static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+    static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
+
+    static const SpellType mSpellType;
 };
 
-std::istream& operator>>(std::istream& is, SpellType& tt);
-std::ostream& operator<<(std::ostream& os, const SpellType& tt);
-
-ODPacket& operator>>(ODPacket& is, SpellType& tt);
-ODPacket& operator<<(ODPacket& os, const SpellType& tt);
-
-
-#endif // SPELLTYPE_H
+#endif // SPELLINFERNO_H
