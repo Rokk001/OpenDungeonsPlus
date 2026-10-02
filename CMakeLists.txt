@@ -295,6 +295,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
     ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
+    ${SRC}/creatureeffect/CreatureEffectTemporary.cpp
     ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
@@ -332,6 +333,8 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillAreaDamage.cpp
     ${SRC}/creatureskill/CreatureSkillGuidedBolt.cpp
     ${SRC}/creatureskill/CreatureSkillGrenade.cpp
+    ${SRC}/creatureskill/CreatureSkillSummon.cpp
+    ${SRC}/creatureskill/CreatureSkillRaiseDead.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
