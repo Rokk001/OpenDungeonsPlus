@@ -864,6 +864,10 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::roomGuardRoom: return "Wakefulness cost per duty turn: " + room("GuardRoomWakefulnessPerDuty") + ".";
         case SkillType::roomTemple: return "Default prayer mana per second: " + room("TemplePrayerManaPerSecond") + "; most creature types have their own value.";
         case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
+        case SkillType::trapFear: return "Enemies within " + value(config.getTrapConfigDouble("FearRadius")) +
+            " tiles run away for " + value(config.getTrapConfigDouble("FearDurationTurns")) + " turns.";
+        case SkillType::trapGas: return "Damage: " + value(config.getTrapConfigDouble("GasDamagePerHitMin")) +
+            " to every creature nearby (radius " + value(config.getTrapConfigDouble("GasRadius")) + ").";
         default: return "";
     }
 }

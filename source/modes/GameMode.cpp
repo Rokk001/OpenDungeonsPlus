@@ -3398,6 +3398,17 @@ void GameMode::refreshSkillConnections()
             for(const Skill* dependency : SkillManager::getSkill(entry.first)->getDependencies())
                 depths[entry.first] = std::max(depths[entry.first], depths[dependency->getType()] + 1);
 
+    // A row fits four nodes at the default size; a column with a longer row uses smaller nodes
+    std::map<std::pair<CEGUI::Window*, unsigned>, unsigned> rowSizes;
+    std::map<CEGUI::Window*, unsigned> widestRows;
+    for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
+    {
+        CEGUI::Window* parent = entry.second->getParent();
+        unsigned& rowSize = rowSizes[std::make_pair(parent, depths[entry.first])];
+        ++rowSize;
+        widestRows[parent] = std::max(widestRows[parent], rowSize);
+    }
+
     for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
     {
         CEGUI::Window* button = entry.second;
@@ -3405,7 +3416,7 @@ void GameMode::refreshSkillConnections()
         if(!button->isUserStringDefined("ResearchCentre"))
             button->setUserString("ResearchCentre", Helper::toString(button->getXPosition().d_scale));
         const float centre = CEGUI::PropertyHelper<float>::fromString(button->getUserString("ResearchCentre"));
-        const float width = .22f;
+        const float width = std::min(.22f, .9f / static_cast<float>(widestRows[parent]));
         const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
         button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
             CEGUI::UDim(.055f + depths[entry.first] * .265f, 0)),
