@@ -1217,6 +1217,11 @@ bool Creature::handleIdleAction()
         }
     }
 
+    // A creature in the group of a possessed creature follows it. Fights are handled by the
+    // prioritary actions as usual
+    if(isInPossessionGroup() && followPossessionLeader())
+        return false;
+
     // We check if we are looking for our fee
     if(!mDefinition->isWorker() &&
        !hasActionBeenTried(CreatureActionType::getFee) &&
@@ -3545,6 +3550,9 @@ void Creature::startPossession(Player& player)
     clearDestinations(EntityAnimation::idle_anim, true, true);
     pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
 
+    // Nearby fighting creatures of the player follow the possessed one
+    formPossessionGroup();
+
     if(!player.getIsHuman())
         return;
 
@@ -3564,6 +3572,15 @@ void Creature::endPossession()
     mPossessor = nullptr;
     player->setPossessedCreatureName(std::string());
 
+    // The group does not follow anymore and goes back to its normal behaviour
+    for(const std::string& memberName : mGroupMemberNames)
+    {
+        Creature* member = getGameMap()->getCreature(memberName);
+        if((member != nullptr) && (member->mGroupLeaderName == getName()))
+            member->leavePossessionGroup();
+    }
+    mGroupMemberNames.clear();
+
     for(std::vector<std::unique_ptr<CreatureAction>>::iterator it = mActions.begin(); it != mActions.end();)
     {
         if((*it)->getType() == CreatureActionType::possessed)
@@ -3581,6 +3598,96 @@ void Creature::endPossession()
     ServerNotification* serverNotification = new ServerNotification(
         ServerNotificationType::possessionEnd, player);
     ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Creature::formPossessionGroup()
+{
+    mGroupMemberNames.clear();
+
+    uint32_t maxSize = ConfigManager::getSingleton().getSpellConfigUInt32("PossessGroupSize");
+    int32_t radius = ConfigManager::getSingleton().getSpellConfigInt32("PossessGroupRadiusTiles");
+    int32_t radiusSquared = radius * radius;
+    Tile* myTile = getPositionTile();
+    if((maxSize == 0) || (myTile == nullptr))
+        return;
+
+    std::vector<std::pair<int, Creature*>> candidates;
+    for(Creature* creature : getGameMap()->getCreaturesBySeat(getSeat()))
+    {
+        if((creature == this) || creature->getDefinition()->isWorker() || !creature->isAlive() ||
+           creature->isKo() || !creature->getIsOnMap() || creature->isInPrison() ||
+           creature->isPossessed() || creature->isInPossessionGroup())
+        {
+            continue;
+        }
+
+        Tile* tile = creature->getPositionTile();
+        if(tile == nullptr)
+            continue;
+
+        int distance = Pathfinding::squaredDistanceTile(*tile, *myTile);
+        if(distance > radiusSquared)
+            continue;
+
+        candidates.push_back(std::make_pair(distance, creature));
+    }
+
+    std::sort(candidates.begin(), candidates.end());
+    for(const std::pair<int, Creature*>& candidate : candidates)
+    {
+        if(mGroupMemberNames.size() >= maxSize)
+            break;
+
+        candidate.second->joinPossessionGroup(getName());
+        mGroupMemberNames.push_back(candidate.second->getName());
+    }
+}
+
+void Creature::joinPossessionGroup(const std::string& leaderName)
+{
+    mGroupLeaderName = leaderName;
+
+    // The creature leaves what it was doing. The group behaviour is handled when it is idle
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    clearActionQueue();
+}
+
+void Creature::leavePossessionGroup()
+{
+    mGroupLeaderName.clear();
+}
+
+bool Creature::followPossessionLeader()
+{
+    Creature* leader = getGameMap()->getCreature(mGroupLeaderName);
+    if((leader == nullptr) || !leader->isPossessed() || !leader->getIsOnMap())
+    {
+        leavePossessionGroup();
+        return false;
+    }
+
+    Tile* myTile = getPositionTile();
+    Tile* leaderTile = leader->getPositionTile();
+    if((myTile == nullptr) || (leaderTile == nullptr))
+        return true;
+
+    // The creature stays around the leader. If it is further than 3 tiles, it walks to him
+    if(Pathfinding::squaredDistanceTile(*myTile, *leaderTile) <= 9)
+        return true;
+
+    if(!getGameMap()->pathExists(this, myTile, leaderTile))
+        return true;
+
+    std::list<Tile*> tempPath = getGameMap()->path(this, leaderTile);
+    // The group does not stand on the leader
+    for(int i = 0; (i < 2) && (tempPath.size() > 1); ++i)
+        tempPath.pop_back();
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(tempPath, path, true, 0.0);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+    pushAction(Utils::make_unique<CreatureActionGoCallToWar>(*this));
+    return true;
 }
 
 void Creature::possessedMove(const Ogre::Vector2& direction)
