@@ -543,6 +543,13 @@ public:
     //! \brief Called on the server each turn: announces the end of the game time once
     void checkGameDuration();
 
+    //! \brief Level script action: the time runs out after that many seconds from now, for every
+    //! keeper (0 removes any time limit, also the one of the game settings). Server only.
+    void setScriptTimeLimit(int64_t seconds);
+
+    //! \brief Tells the human players how many seconds are left (-1: there is no time limit)
+    void sendTimeLimit(int32_t remainingSeconds);
+
     void logFloodFileTiles();
     void consoleSetCreatureDestination(const std::string& creatureName, int x, int y);
     void consoleToggleCreatureVisualDebug(const std::string& creatureName);
@@ -697,6 +704,8 @@ private:
     uint32_t mGameDurationMinutes;
     uint32_t mHeartDestroyedReward;
     bool mGameDurationAnnounced;
+    //! \brief Last remaining time sent to the players, -1 when none was sent or there is no limit
+    int32_t mTimeLimitSentSeconds;
     std::map<std::string, uint32_t> mCreatureClassLimits;
     std::vector<SkirmishItemState> mSkirmishSkillStates;
     std::vector<SkirmishItemState> mSkirmishSkillStatesLevel;

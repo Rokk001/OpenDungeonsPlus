@@ -2022,6 +2022,26 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
             heartIcon->setUserString("ContextHelp", heartText.str());
     }
 
+    // The countdown of a level with a time limit (the server sends -1 when there is none)
+    CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
+    const int32_t timeLimitSeconds = ODClient::getSingleton().getTimeLimitSeconds();
+    if(timeLimitSeconds < 0)
+    {
+        if(mTimeLimitShown >= 0)
+        {
+            timeLimitDisplay->hide();
+            mTimeLimitShown = -1;
+        }
+    }
+    else if(timeLimitSeconds != mTimeLimitShown)
+    {
+        mTimeLimitShown = timeLimitSeconds;
+        timeLimitDisplay->setText(formatDebriefingTime(timeLimitSeconds));
+        // The last minute is shown in red
+        timeLimitDisplay->setProperty("TextColours", timeLimitSeconds <= 60 ? "FFE05A4A" : "FFF6CB62");
+        timeLimitDisplay->show();
+    }
+
     updatePossessionInput(evt.timeSinceLastFrame);
 
     // After frameStarted, so that the countdown shown is the one just computed.

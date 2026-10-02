@@ -96,6 +96,10 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline const LevelStatistics& getLevelStatistics() const
     { return mLevelStatistics; }
 
+    //! \brief Seconds left until the level is lost, -1 if there is no time limit
+    inline int32_t getTimeLimitSeconds() const
+    { return mTimeLimitSeconds; }
+
     //! \brief What the heart health ring of the top-left badge has to show
     inline HeartHealthRing::BadgeState& getHeartBadge()
     { return mHeartBadge; }
@@ -130,6 +134,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
     // Debriefing counters sent by the server after playerDefeated
     bool mHasLevelStatistics;
     LevelStatistics mLevelStatistics;
+    int32_t mTimeLimitSeconds;
 
     // Heart health received with heartHealth
     HeartHealthRing::BadgeState mHeartBadge;

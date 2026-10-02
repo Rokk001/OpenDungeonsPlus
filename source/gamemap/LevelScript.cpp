@@ -285,6 +285,11 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mText = t[3];
         return parseInt32(t[2], action.mSeatId);
     }
+    if(type == "timelimit")
+    {
+        action.mType = LevelScriptActionType::timeLimit;
+        return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
+    }
     if(type == "discover")
     {
         action.mType = LevelScriptActionType::discoverLevel;
@@ -383,6 +388,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
         case LevelScriptActionType::make:
             os << "make\t" << a.mSeatId << "\t" << a.mText;
             break;
+        case LevelScriptActionType::timeLimit:
+            os << "timelimit\t" << a.mNumber;
+            break;
         case LevelScriptActionType::discoverLevel:
             os << "discover\t" << a.mText;
             break;
@@ -391,6 +399,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
 }
 
 } // namespace
+
+const int64_t LevelScript::TIME_LIMIT_NOT_SET;
+const int64_t LevelScript::TIME_LIMIT_REMOVED;
 
 bool LevelScript::importFromStream(std::istream& is)
 {
@@ -437,6 +448,11 @@ bool LevelScript::importFromStream(std::istream& is)
                 return false;
 
             mFlags[t[1]] = value;
+        }
+        else if(key == "TimeLimit")
+        {
+            if(inTrigger || (t.size() != 2) || !parseInt(t[1], mTimeLimitSeconds))
+                return false;
         }
         else if(key == "Region")
         {
@@ -517,6 +533,9 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
         os << "Flag\t" << flag.first << "\t" << flag.second << "\n";
 
+    if(mTimeLimitSeconds != TIME_LIMIT_NOT_SET)
+        os << "TimeLimit\t" << mTimeLimitSeconds << "\n";
+
     for(const LevelScriptRegion& region : mRegions)
     {
         os << "Region\t" << region.mName << "\t" << region.mX1 << "\t" << region.mY1
@@ -551,6 +570,15 @@ void LevelScript::clear()
     mTriggers.clear();
     mFlags.clear();
     mRegions.clear();
+    mTimeLimitSeconds = TIME_LIMIT_NOT_SET;
+}
+
+void LevelScript::rebaseTimeLimit(int64_t elapsedSeconds)
+{
+    if(mTimeLimitSeconds < 0)
+        return;
+
+    mTimeLimitSeconds = std::max<int64_t>(0, mTimeLimitSeconds - elapsedSeconds);
 }
 
 bool LevelScriptRegion::contains(int32_t x, int32_t y) const

@@ -69,7 +69,8 @@ template<> ODClient* Ogre::Singleton<ODClient>::msSingleton = nullptr;
 ODClient::ODClient() :
     ODSocketClient(),
     mIsPlayerConfig(false),
-    mHasLevelStatistics(false)
+    mHasLevelStatistics(false),
+    mTimeLimitSeconds(-1)
 {
 }
 
@@ -423,6 +424,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> ODApplication::turnsPerSecond);
             mHasLevelStatistics = false;
             mLevelStatistics = LevelStatistics();
+            mTimeLimitSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
 
             OD_ASSERT_TRUE(packetReceived >> nbPlayers);
@@ -879,6 +881,12 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 mLevelStatistics = statistics;
                 mHasLevelStatistics = true;
             }
+            break;
+        }
+
+        case ServerNotificationType::timeLimit:
+        {
+            OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
             break;
         }
 

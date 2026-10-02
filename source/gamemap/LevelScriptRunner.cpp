@@ -409,6 +409,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::make:
             makeSkillAvailable(gameMap, action);
             break;
+        case LevelScriptActionType::timeLimit:
+            gameMap.setScriptTimeLimit(action.mNumber);
+            break;
         case LevelScriptActionType::discoverLevel:
         {
             if(Campaign::getSingleton().discoverBonusLevel(action.mText))
