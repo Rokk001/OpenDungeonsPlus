@@ -79,7 +79,12 @@ enum class ClientNotificationType
     editorAskCreateMapLight,
     editorSetCreatureLevel,
     editorAskPortalWaveData,
-    editorSetPortalWaveData
+    editorSetPortalWaveData,
+
+    //! Possession: the direction the possessed creature should walk (Vector2, zero to stop)
+    askPossessMove,
+    //! Possession: the player wants to leave the possessed creature
+    askPossessExit
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

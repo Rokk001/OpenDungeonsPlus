@@ -52,7 +52,8 @@ enum class CreatureActionType
     leaveDungeon, // (fighter only) Try to go to the portal to leave the dungeon
     stealFreeGold, // (fighters only) check in the visible tiles if there is gold not protected by a treasury
     goCallToWar, // (fighters only) When a creature goes to a call to war spell
-    nb // Must be the last value of this enum
+    possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
+    nb// Must be the last value of this enum
 };
 
 class CreatureAction

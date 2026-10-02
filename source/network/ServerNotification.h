@@ -102,7 +102,12 @@ enum class ServerNotificationType
     //! \brief Answer to the editor asking what the waves of a wave portal are
     editorPortalWaveData,
 
-    exit
+    exit,
+
+    //! The player now possesses the creature: + string creatureName
+    possessionStart,
+    //! The player no longer possesses a creature
+    possessionEnd
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
