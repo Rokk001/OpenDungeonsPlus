@@ -76,6 +76,24 @@ check("SKIRMISH_CREATURE_LIMIT_NONE = 32" in header, "creature limit range is 0 
 gamemap = (root / "source/gamemap/GameMap.cpp").read_text(encoding="utf-8")
 check("std::max<uint32_t>(gameSpeedPercent, 25), 400" in gamemap, "game speed range is 25 to 400 percent")
 
+# When the game time runs out every seat with a player loses (no winner), through the shared defeat path
+duration = gamemap[gamemap.index("void GameMap::checkGameDuration"):]
+duration = duration[:duration.index("\nvoid GameMap::")]
+check('"Time is up!' in duration, "the time-out message is gone")
+check("getPlayer()->notifyTimeUp()" in duration, "checkGameDuration does not defeat the seats")
+check(duration.index("Time is up!") < duration.index("notifyTimeUp"), "the message must come before the defeat")
+player = (root / "source/game/Player.cpp").read_text(encoding="utf-8")
+time_up = player[player.index("void Player::notifyTimeUp"):]
+time_up = time_up[:time_up.index("\nvoid Player::")]
+check("if(mHasLost)" in time_up and "mHasLost = true" in time_up, "notifyTimeUp must lose only once")
+check("notifyDefeat(true)" in time_up, "notifyTimeUp must use the shared defeat part")
+check("mConquerorSeatId" not in time_up and "addMana" not in time_up, "notifyTimeUp must not touch the conqueror mana")
+check("notifyDefeat(hasTeamLost)" in player, "the heart loss must use the shared defeat part")
+# The unknown heart position (-1) is the default and the client defeat sequence handles it
+check("mDefeatHeartTileX(-1)" in player and "mDefeatHeartTileY(-1)" in player, "heart tile default is not -1")
+check("isHeartKnown()" in (root / "source/modes/GameMode.cpp").read_text(encoding="utf-8"),
+      "the defeat sequence must handle an unknown heart")
+
 if failures:
     print("\n".join(failures))
     sys.exit(1)
