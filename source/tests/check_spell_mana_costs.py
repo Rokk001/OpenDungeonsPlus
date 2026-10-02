@@ -46,7 +46,8 @@ for block in blocks:
     costs[name] = int(match.group(1))
 for name in ("Kobold", "DwarfWorker"):
     assert costs[name] == 0, f"{name} (worker) possesses for free"
-for name, value in {"Skeleton": 50, "Goblin": 150, "Troll": 150, "Knight": 500}.items():
+for name, value in {"Skeleton": 50, "Dwarf1": 50, "Dwarf2": 50, "Goblin": 150, "Troll": 150, "Monk": 150,
+                    "Wizard": 150, "DarkElf": 150, "Elf": 150, "Knight": 500}.items():
     assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
 action = (repo / "source/creatureaction/CreatureActionPossessed.cpp").read_text()
 assert "PossessFreeSeconds" in action and "getPossessManaCost" in action,     "the possession action uses the free period and the creature drain"
