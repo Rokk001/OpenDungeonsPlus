@@ -20,17 +20,21 @@
 
 #include "creatureaction/CreatureAction.h"
 
+#include <cstdint>
+
 class Tile;
 
-//! \brief The creature mans a guard post: it stands on the post tile until it has to eat, sleep
-//! or get its fee, or until the post is gone. Enemies in sight are fought by the usual behaviour,
-//! then the creature returns to the post.
+//! \brief A guard of a guard room patrols to a guard post: it walks to the post tile and stays there
+//! for a while (or less if it has to eat, sleep or get its fee, or if the post is gone). Enemies in sight
+//! are fought by the usual behaviour, then the creature returns to the post.
 class CreatureActionGuardPost : public CreatureAction
 {
 public:
-    CreatureActionGuardPost(Creature& creature, Tile& postTile) :
+    CreatureActionGuardPost(Creature& creature, Tile& postTile, int64_t stayTurns) :
         CreatureAction(creature),
-        mPostTile(&postTile)
+        mPostTile(&postTile),
+        mStayTurns(stayTurns),
+        mArrivalTurn(-1)
     {}
 
     virtual ~CreatureActionGuardPost()
@@ -44,17 +48,22 @@ public:
     inline Tile* getPostTile() const
     { return mPostTile; }
 
-    static bool handleGuardPost(Creature& creature, Tile* postTile);
+    static bool handleGuardPost(Creature& creature, Tile* postTile, CreatureActionGuardPost* guardPostAction);
 
     //! \brief Tells whether another creature of the same seat already mans (or walks to) the given post tile
     static bool isPostTaken(const Creature& creature, Tile* postTile);
 
-    //! \brief Looks for a free reachable guard post of the creature seat and pushes the action to man it.
+    //! \brief Looks for a free reachable guard post of the creature seat and pushes the action to patrol there.
     //! Returns true if the action has been pushed.
-    static bool tryManPost(Creature& creature);
+    static bool tryPatrol(Creature& creature, int64_t stayTurns);
+
+    //! \brief Sends the creature to the given tile where an intruder has been seen. Returns true if it goes.
+    static bool goToIntruder(Creature& creature, Tile* intruderTile);
 
 private:
     Tile* mPostTile;
+    int64_t mStayTurns;
+    int64_t mArrivalTurn;
 };
 
 #endif // CREATUREACTIONGUARDPOST_H

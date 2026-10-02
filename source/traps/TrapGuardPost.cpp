@@ -24,10 +24,13 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/Pathfinding.h"
+#include "ODApplication.h"
+#include "rooms/Room.h"
+#include "rooms/RoomType.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
-#include "utils/MakeUnique.h"
 
 const std::string TrapGuardPostName = "GuardPost";
 const std::string TrapGuardPostNameDisplay = "Guard post";
@@ -119,28 +122,69 @@ static TrapRegister reg(new TrapGuardPostFactory);
 }
 
 TrapGuardPost::TrapGuardPost(GameMap* gameMap) :
-    Trap(gameMap)
+    Trap(gameMap),
+    mNextDistressTurn(0)
 {
     setMeshName("");
 }
 
-void TrapGuardPost::creatureDropped(Creature& creature)
+void TrapGuardPost::doUpkeep()
 {
-    // A fighter dropped on an activated post of its keeper mans it
-    Tile* tile = creature.getPositionTile();
-    if(tile == nullptr)
+    Trap::doUpkeep();
+
+    int64_t turn = getGameMap()->getTurnNumber();
+    if(turn < mNextDistressTurn)
         return;
 
-    if(creature.getSeat() != getSeat())
+    // The post notices enemies within its aura and calls the guards of the guard rooms
+    int32_t aura = ConfigManager::getSingleton().getTrapConfigInt32("GuardPostAuraTiles");
+    Tile* intruderTile = nullptr;
+    for(Tile* postTile : mCoveredTiles)
+    {
+        if(!isActivated(postTile))
+            continue;
+
+        for(Creature* creature : getGameMap()->getCreatures())
+        {
+            if(!creature->isAlive() || !creature->getIsOnMap() || creature->isInvisible())
+                continue;
+
+            if((creature->getSeat() == nullptr) || getSeat()->isAlliedSeat(creature->getSeat()))
+                continue;
+
+            Tile* creatureTile = creature->getPositionTile();
+            if(creatureTile == nullptr)
+                continue;
+
+            if(Pathfinding::squaredDistanceTile(*postTile, *creatureTile) > (aura * aura))
+                continue;
+
+            intruderTile = creatureTile;
+            break;
+        }
+
+        if(intruderTile != nullptr)
+            break;
+    }
+
+    if(intruderTile == nullptr)
         return;
 
-    if(!isActivated(tile))
-        return;
+    mNextDistressTurn = turn + static_cast<int64_t>(
+        ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomDistressSeconds") * ODApplication::turnsPerSecond);
 
-    if(CreatureActionGuardPost::isPostTaken(creature, tile))
-        return;
+    std::vector<Room*> guardRooms = getGameMap()->getRoomsByTypeAndSeat(RoomType::guardRoom, getSeat());
+    for(Room* room : guardRooms)
+    {
+        for(unsigned int i = 0; ; ++i)
+        {
+            Creature* guard = room->getCreatureUsingRoom(i);
+            if(guard == nullptr)
+                break;
 
-    creature.pushAction(Utils::make_unique<CreatureActionGuardPost>(creature, *tile));
+            CreatureActionGuardPost::goToIntruder(*guard, intruderTile);
+        }
+    }
 }
 
 TrapEntity* TrapGuardPost::getTrapEntity(Tile* tile)
