@@ -50,11 +50,12 @@ const std::string CMP_BUTTON_BACK = "CampaignWindowFrame/BackButton";
 const std::string CMP_MAP = "CampaignWindowFrame/CampaignMap";
 const std::string CMP_TEXT_DESCRIPTION = "CampaignWindowFrame/DescriptionText";
 
-// Territory colours on the campaign map (ARGB)
-const std::string COLOUR_LOCKED = "FF2A2622";
-const std::string COLOUR_AVAILABLE = "FF8A5A22";
-const std::string COLOUR_COMPLETED = "FF38502C";
-const std::string COLOUR_HOVER = "FFE0A83C";
+// Territory tints on the campaign map (ARGB). They are multiplied with a white
+// image and are translucent, so the map image stays visible below them
+const std::string COLOUR_LOCKED = "A0100C08";
+const std::string COLOUR_AVAILABLE = "A0B07A2A";
+const std::string COLOUR_COMPLETED = "A038603C";
+const std::string COLOUR_HOVER = "D8F0B848";
 } // namespace
 
 MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
@@ -214,17 +215,28 @@ void MenuModeCampaign::fillMap()
             const CampaignMapBlock& block = blocks[j];
             std::string name = "Territory_" + Helper::toString(static_cast<int>(i)) + "_"
                 + Helper::toString(static_cast<int>(j));
-            CEGUI::Window* territory = windowManager.createWindow("OD/StaticText", name);
+            CEGUI::Window* territory = windowManager.createWindow("OD/StaticImage", name);
             territory->setProperty("FrameEnabled", "True");
-            territory->setProperty("BackgroundEnabled", "True");
-            territory->setProperty("HorzFormatting", "WordWrapCentred");
-            territory->setProperty("VertFormatting", "CentreAligned");
-            territory->setProperty("Font", "MedievalSharp-12");
+            territory->setProperty("BackgroundEnabled", "False");
+            territory->setProperty("Image", "OpenDungeonsIcons/CampaignSolid");
+            // The area is position and size, the block holds the size and not the far corner
             territory->setArea(CEGUI::UDim(block.mX / 100.0f, 0), CEGUI::UDim(block.mY / 100.0f, 0),
-                CEGUI::UDim((block.mX + block.mWidth) / 100.0f, 0), CEGUI::UDim((block.mY + block.mHeight) / 100.0f, 0));
+                CEGUI::UDim(block.mWidth / 100.0f, 0), CEGUI::UDim(block.mHeight / 100.0f, 0));
             territory->setID(static_cast<CEGUI::uint>(i));
             if(j == 0)
-                territory->setText(reinterpret_cast<const CEGUI::utf8*>(level.mTitle.c_str()));
+            {
+                // A static image cannot show text: the title is a child that lets the mouse through
+                CEGUI::Window* label = windowManager.createWindow("OD/StaticText", name + "_Label");
+                label->setProperty("FrameEnabled", "False");
+                label->setProperty("BackgroundEnabled", "False");
+                label->setProperty("HorzFormatting", "WordWrapCentred");
+                label->setProperty("VertFormatting", "CentreAligned");
+                label->setProperty("Font", "MedievalSharp-12");
+                label->setArea(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0), CEGUI::UDim(1, 0));
+                label->setMousePassThroughEnabled(true);
+                label->setText(reinterpret_cast<const CEGUI::utf8*>(level.mTitle.c_str()));
+                territory->addChild(label);
+            }
 
             // Levels that cannot be started do not react to the mouse
             if(startable)
@@ -271,7 +283,7 @@ void MenuModeCampaign::updateTerritoryColour(CEGUI::Window* block)
         colour = &COLOUR_HOVER;
     else if(campaign.isCompleted(index))
         colour = &COLOUR_COMPLETED;
-    block->setProperty("BackgroundColours", *colour);
+    block->setProperty("ImageColours", *colour);
 }
 
 bool MenuModeCampaign::territoryEntered(const CEGUI::EventArgs& e)

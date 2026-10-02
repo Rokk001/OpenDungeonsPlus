@@ -40,12 +40,12 @@
                 <Property name="Text" value="Campaign" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
-            <Window type="OD/StaticText" name="CampaignMap" >
+            <Window type="OD/StaticImage" name="CampaignMap" >
                 <Property name="Area" value="{{0.11,0},{0.5,16},{0.6,0},{1,-132}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="FF14100C" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="OpenDungeonsIcons/CampaignMap" />
             </Window>
             <Window type="OD/StaticText" name="DescriptionText" >
                 <Property name="Area" value="{{0.63,0},{0.5,16},{0.92,0},{1,-132}}" />
