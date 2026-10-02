@@ -22,6 +22,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureMoodValues.h"
 #include "game/Seat.h"
+#include "gamemap/GameMap.h"
 #include "render/MovableTextOverlay.h"
 #include "render/RenderManager.h"
 #include "utils/Helper.h"
@@ -148,7 +149,8 @@ void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
     else
         mRecoveryElapsed += timeSincelastFrame;
     // Smooth only within the reported turn; never announce readiness before the server.
-    const double fraction = std::min(0.999, mRecoveryElapsed * ODApplication::turnsPerSecond);
+    const double fraction = std::min(0.999, mRecoveryElapsed * ODApplication::turnsPerSecond
+        * mCreature->getGameMap()->getGameSpeedFactor());
     const uint32_t frame = known && duration > 0 && remaining > 0 ?
         1 + static_cast<uint32_t>(62.0 * (duration - remaining + fraction) / duration) : 0;
     mMovableTextOverlay->setAtlasFrame(recoveryId, frame, 8);

@@ -54,7 +54,9 @@ struct Seat {Player player; Player* getPlayer() const {return const_cast<Player*
 struct ODServer {bool enabled=true;static ODServer& getSingleton(){static ODServer s;return s;}bool supportsCreatureProgress(Player*){return enabled;}};
 struct ODClient {bool enabled=true;static ODClient& getSingleton(){static ODClient s;return s;}bool supportsCreatureProgress(){return enabled;}};
 struct Definition {double needed=100;double getXPNeededWhenLevel(unsigned)const{return needed;}};
+struct GameMap {double getGameSpeedFactor()const{return 1.0;}};
 struct Creature {
+ GameMap map;GameMap* getGameMap()const{return const_cast<GameMap*>(&map);}
  bool server=true,mHasProgressInformation=false,mNeedFireRefresh=false;unsigned mLevel=1;
  double mExp=0,mExperienceProgress=0;Definition def;Definition* mDefinition=&def;
  uint32_t mAttackRecoveryTurns=0,mAttackRecoveryDuration=0,mAttackRecoverySerial=0;

@@ -217,6 +217,10 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mGoldDensityPercent(100),
         mManaRegenerationPercent(100),
         mMaxCreaturesSetting(0),
+        mGameSpeedPercent(100),
+        mGameDurationMinutes(0),
+        mHeartDestroyedReward(0),
+        mGameDurationAnnounced(false),
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
@@ -370,6 +374,16 @@ void GameMap::clearAll()
         mTurnNumber = -1;
         resetUniqueNumbers();
         mIsFOWActivated = true;
+        mGoldDensityPercent = 100;
+        mManaRegenerationPercent = 100;
+        mMaxCreaturesSetting = 0;
+        mGameSpeedPercent = 100;
+        mGameDurationMinutes = 0;
+        mHeartDestroyedReward = 0;
+        mGameDurationAnnounced = false;
+        mCreatureClassLimits.clear();
+        mSkirmishSkillStates.clear();
+        mSkirmishSkillStatesLevel.clear();
         mTimePayDay = 0;
         mIsSandbox = false;
         mSandboxMode.reset();
@@ -1172,7 +1186,10 @@ void GameMap::doTurn(double timeSinceLastTurn)
     uint32_t miscUpkeepTime = doMiscUpkeep(timeSinceLastTurn);
 
     if(isServerGameMap())
+    {
         LevelScriptRunner::doTurn(*this);
+        checkGameDuration();
+    }
 
     for (Seat* seat : mSeats)
     {
@@ -3530,6 +3547,114 @@ void GameMap::setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRege
     mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, 10), 500);
     mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, 10), 500);
     mMaxCreaturesSetting = std::min<uint32_t>(maxCreaturesSetting, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
+}
+
+void GameMap::setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinutes, bool fogOfWar,
+    uint32_t heartDestroyedReward)
+{
+    // The game turn ranges from 25 % to 400 % of its default rate
+    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, 25), 400);
+    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, 9999);
+    mIsFOWActivated = fogOfWar;
+    mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, 2);
+}
+
+uint32_t GameMap::getCreatureClassLimit(const std::string& className) const
+{
+    std::map<std::string, uint32_t>::const_iterator it = mCreatureClassLimits.find(className);
+    if(it == mCreatureClassLimits.end())
+        return SKIRMISH_CREATURE_LIMIT_NONE;
+
+    return it->second;
+}
+
+void GameMap::setCreatureClassLimit(const std::string& className, uint32_t limit)
+{
+    if(limit >= SKIRMISH_CREATURE_LIMIT_NONE)
+        mCreatureClassLimits.erase(className);
+    else
+        mCreatureClassLimits[className] = limit;
+}
+
+const std::vector<GameMap::SkirmishItemState>& GameMap::getSkirmishSkillStates()
+{
+    if(!mSkirmishSkillStates.empty())
+        return mSkirmishSkillStates;
+
+    mSkirmishSkillStates.assign(static_cast<uint32_t>(SkillType::countSkill), SkirmishItemState::needsResearch);
+    // The level gives the choices shown first. They are read from the first seat that is configured
+    for(Seat* seat : mSeats)
+    {
+        if(seat->isRogueSeat())
+            continue;
+
+        for(SkillType skillType : seat->getSkillNotAllowed())
+            mSkirmishSkillStates[static_cast<uint32_t>(skillType)] = SkirmishItemState::notAvailable;
+        for(SkillType skillType : seat->getSkillDone())
+            mSkirmishSkillStates[static_cast<uint32_t>(skillType)] = SkirmishItemState::availableAtStart;
+
+        break;
+    }
+    mSkirmishSkillStatesLevel = mSkirmishSkillStates;
+    return mSkirmishSkillStates;
+}
+
+void GameMap::setSkirmishSkillState(SkillType type, SkirmishItemState state)
+{
+    if(type == SkillType::nullSkillType || type >= SkillType::countSkill)
+        return;
+    if(state == SkirmishItemState::unchosen)
+        return;
+
+    getSkirmishSkillStates();
+    mSkirmishSkillStates[static_cast<uint32_t>(type)] = state;
+}
+
+void GameMap::applySkirmishSkillStates()
+{
+    if(mSkirmishSkillStates.empty())
+        return;
+
+    for(Seat* seat : mSeats)
+    {
+        if(seat->isRogueSeat())
+            continue;
+
+        for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
+        {
+            // What the host did not change stays as the level defines it for each seat
+            if(mSkirmishSkillStates[i] == mSkirmishSkillStatesLevel[i])
+                continue;
+
+            seat->setSkillAvailability(static_cast<SkillType>(i),
+                mSkirmishSkillStates[i] != SkirmishItemState::notAvailable,
+                mSkirmishSkillStates[i] == SkirmishItemState::availableAtStart);
+        }
+    }
+}
+
+void GameMap::checkGameDuration()
+{
+    if(mGameDurationMinutes == 0 || mGameDurationAnnounced)
+        return;
+
+    // The duration counts game time, not real time, so the game speed does not change it
+    const double endTurn = static_cast<double>(mGameDurationMinutes) * 60.0 * ODApplication::turnsPerSecond;
+    if(static_cast<double>(mTurnNumber) < endTurn)
+        return;
+
+    mGameDurationAnnounced = true;
+    for(Player* player : getPlayers())
+    {
+        if(!player->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, player);
+        serverNotification->mPacket << "Time is up! The game time of " + Helper::toString(mGameDurationMinutes)
+            + " minutes has run out." << EventShortNoticeType::majorGameEvent;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
 }
 
 void GameMap::playerSelects(std::vector<GameEntity*>& entities, int tileX1, int tileY1, int tileX2,

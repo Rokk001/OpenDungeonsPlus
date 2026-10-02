@@ -18,7 +18,9 @@
 #include "gamemap/GameMap.h"
 
 #include "ai/KeeperAIType.h"
+#include "entities/CreatureDefinition.h"
 #include "game/Seat.h"
+#include "game/SkillType.h"
 #include "modes/MenuModeConfigureSeats.h"
 #include "modes/ModeManager.h"
 #include "network/ChatEventMessage.h"
@@ -41,10 +43,66 @@ const std::string COMBOBOX_PLAYER_FACTION_PREFIX = "ComboPlayerFactionSeat";
 const std::string COMBOBOX_PLAYER_PREFIX = "ComboPlayerSeat";
 const std::string COMBOBOX_GOLD_DENSITY = "ComboGoldDensity";
 const std::string COMBOBOX_MANA_REGENERATION = "ComboManaRegeneration";
-const std::string COMBOBOX_MAX_CREATURES = "ComboMaxCreatures";
+const std::string COMBOBOX_HEART_DESTROYED = "ComboHeartDestroyed";
+const std::string COMBOBOX_FOG_OF_WAR = "ComboFogOfWar";
+const std::string SPINNER_MAX_CREATURES = "SpinMaxCreatures";
+const std::string SPINNER_GAME_SPEED = "SpinGameSpeed";
+const std::string SPINNER_GAME_DURATION = "SpinGameDuration";
 
 namespace
 {
+const std::string SETTINGS_WINDOW = "GameSettingsWindow";
+const std::string SETTINGS_TABS = "SettingsTabs";
+
+//! \brief Height of one line on the creature, room, spell, trap and door pages, in layout pixels
+const float SETTING_LINE_HEIGHT = 34.0f;
+
+//! \brief The text on the button of a room, spell, trap or door
+std::string itemStateText(uint32_t state)
+{
+    switch(static_cast<GameMap::SkirmishItemState>(state))
+    {
+        case GameMap::SkirmishItemState::notAvailable:
+            return "Not available";
+        case GameMap::SkirmishItemState::availableAtStart:
+            return "Available at start";
+        default:
+            return "Needs research";
+    }
+}
+
+//! \brief The name of the page where the skill is shown or an empty string if it has none
+std::string itemPageName(SkillType type)
+{
+    const std::string name = Skills::toString(type);
+    if(name.compare(0, 4, "room") == 0)
+        return "Rooms";
+    if(name.compare(0, 5, "spell") == 0)
+        return "Spells";
+    if(name.compare(0, 8, "trapDoor") == 0)
+        return "Doors";
+    if(name.compare(0, 4, "trap") == 0)
+        return "Traps";
+
+    return "";
+}
+
+uint32_t getSpinnerValue(CEGUI::Window* page, const std::string& spinnerName)
+{
+    return static_cast<uint32_t>(static_cast<CEGUI::Spinner*>(page->getChild(spinnerName))->getCurrentValue());
+}
+
+CEGUI::Window* getSettingsWindow(CEGUI::Window* sheet)
+{
+    return sheet->getChild(SETTINGS_WINDOW);
+}
+
+//! \brief The page "General" of the Game settings window
+CEGUI::Window* getGeneralPage(CEGUI::Window* sheet)
+{
+    return getSettingsWindow(sheet)->getChild(SETTINGS_TABS + "/General");
+}
+
 void addSettingItem(CEGUI::Combobox* combo, const std::string& text, uint32_t value)
 {
     const CEGUI::Image* selImg = &CEGUI::ImageManager::getSingleton().get("OpenDungeonsSkin/SelectionBrush");
@@ -86,7 +144,9 @@ void selectSettingValue(CEGUI::Window* playersWin, const std::string& comboName,
 
 MenuModeConfigureSeats::MenuModeConfigureSeats(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_CONFIGURE_SEATS),
-    mIsActivePlayerConfig(false)
+    mIsActivePlayerConfig(false),
+    mSettingsReceived(false),
+    mIsRefreshing(false)
 {
     CEGUI::Window* window = modeManager->getGui().getGuiSheet(Gui::guiSheet::configureSeats);
     addEventConnection(
@@ -109,7 +169,27 @@ MenuModeConfigureSeats::MenuModeConfigureSeats(ModeManager* modeManager):
         )
     );
 
+    addEventConnection(
+        window->getChild("ListPlayers/GameSettingsButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&MenuModeConfigureSeats::openGameSettings, this)
+        )
+    );
+    addEventConnection(
+        getSettingsWindow(window)->getChild("CloseSettingsButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&MenuModeConfigureSeats::closeGameSettings, this)
+        )
+    );
+    addEventConnection(
+        getSettingsWindow(window)->subscribeEvent(
+            CEGUI::FrameWindow::EventCloseClicked,
+            CEGUI::Event::Subscriber(&MenuModeConfigureSeats::closeGameSettings, this)
+        )
+    );
+
     initSettingCombos();
+    initSettingPages();
 
     addEventConnection(
         window->getChild("ListPlayers/GameChatEditBox")->subscribeEvent(
@@ -138,42 +218,200 @@ MenuModeConfigureSeats::~MenuModeConfigureSeats()
 
 void MenuModeConfigureSeats::initSettingCombos()
 {
-    CEGUI::Window* playersWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
+    CEGUI::Window* generalPage = getGeneralPage(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
     uint32_t percents[] = {50, 100, 400};
     const std::string percentCombos[] = {COMBOBOX_GOLD_DENSITY, COMBOBOX_MANA_REGENERATION};
     for(const std::string& comboName : percentCombos)
     {
-        CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(comboName));
+        CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(generalPage->getChild(comboName));
         combo->resetList();
         combo->setReadOnly(true);
         combo->setEnabled(false);
+        mHostSettingWindows.push_back(combo);
         for(uint32_t percent : percents)
             addSettingItem(combo, Helper::toString(percent) + "%", percent);
 
-        selectSettingValue(playersWin, comboName, 100);
+        selectSettingValue(generalPage, comboName, 100);
         addEventConnection(
             combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
                 CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
         );
     }
 
-    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(COMBOBOX_MAX_CREATURES));
+    // What the keeper that destroys a dungeon heart receives
+    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(generalPage->getChild(COMBOBOX_HEART_DESTROYED));
     combo->resetList();
     combo->setReadOnly(true);
     combo->setEnabled(false);
-    uint32_t defaultMax = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
-    addSettingItem(combo, "Default (" + Helper::toString(defaultMax) + ")", 0);
-    uint32_t maxChoices[] = {5, 15, 20, 30};
-    for(uint32_t maxChoice : maxChoices)
-    {
-        if(maxChoice <= ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute())
-            addSettingItem(combo, Helper::toString(maxChoice), maxChoice);
-    }
-    selectSettingValue(playersWin, COMBOBOX_MAX_CREATURES, 0);
+    mHostSettingWindows.push_back(combo);
+    addSettingItem(combo, "Gain mana", 0);
+    addSettingItem(combo, "Gain mana and a special", 1);
+    addSettingItem(combo, "Gain mana, rooms and land", 2);
+    selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, 0);
     addEventConnection(
         combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
             CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
     );
+
+    combo = static_cast<CEGUI::Combobox*>(generalPage->getChild(COMBOBOX_FOG_OF_WAR));
+    combo->resetList();
+    combo->setReadOnly(true);
+    combo->setEnabled(false);
+    mHostSettingWindows.push_back(combo);
+    addSettingItem(combo, "On", 1);
+    addSettingItem(combo, "Off", 0);
+    selectSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, 1);
+    addEventConnection(
+        combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
+            CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
+    );
+
+    // The spinners: maximum number of creatures, game speed and game duration
+    struct SpinnerSetting
+    {
+        const std::string* name;
+        double minimum;
+        double maximum;
+        double step;
+        double initial;
+    };
+    const double maxCreaturesAbsolute = ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute();
+    const double maxCreaturesDefault = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
+    const SpinnerSetting spinners[] = {
+        {&SPINNER_MAX_CREATURES, 1.0, maxCreaturesAbsolute, 1.0, maxCreaturesDefault},
+        {&SPINNER_GAME_SPEED, 25.0, 400.0, 25.0, 100.0},
+        {&SPINNER_GAME_DURATION, 0.0, 9999.0, 1.0, 0.0}
+    };
+    for(const SpinnerSetting& setting : spinners)
+    {
+        CEGUI::Spinner* spinner = static_cast<CEGUI::Spinner*>(generalPage->getChild(*setting.name));
+        spinner->setTextInputMode(CEGUI::Spinner::Integer);
+        spinner->setMinimumValue(setting.minimum);
+        spinner->setMaximumValue(setting.maximum);
+        spinner->setStepSize(setting.step);
+        spinner->setCurrentValue(setting.initial);
+        spinner->setEnabled(false);
+        mHostSettingWindows.push_back(spinner);
+        addEventConnection(
+            spinner->subscribeEvent(CEGUI::Spinner::EventValueChanged,
+                CEGUI::Event::Subscriber(&MenuModeConfigureSeats::settingChanged, this))
+        );
+    }
+}
+
+void MenuModeConfigureSeats::initSettingPages()
+{
+    CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* settingsWin = getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
+
+    // One line per fighter creature class, with the maximum number a keeper may have
+    float lineY = 10.0f;
+    for(const std::pair<const std::string, CreatureDefinition*>& def : ConfigManager::getSingleton().getCreatureDefinitions())
+    {
+        if(def.second->isWorker())
+            continue;
+
+        CEGUI::Window* pane = settingsWin->getChild(SETTINGS_TABS + "/Creatures/CreaturesSP");
+        CEGUI::Window* label = winMgr.createWindow("OD/StaticText", "Label" + def.first);
+        label->setArea(CEGUI::UDim(0, 16), CEGUI::UDim(0, lineY), CEGUI::UDim(0, 330), CEGUI::UDim(0, lineY + 28));
+        label->setText(def.first);
+        label->setProperty("FrameEnabled", "False");
+        label->setProperty("BackgroundEnabled", "False");
+        pane->addChild(label);
+
+        CEGUI::Spinner* spinner = static_cast<CEGUI::Spinner*>(winMgr.createWindow("OD/Spinner", "Limit" + def.first));
+        spinner->setArea(CEGUI::UDim(0, 350), CEGUI::UDim(0, lineY), CEGUI::UDim(0, 470), CEGUI::UDim(0, lineY + 28));
+        spinner->setTooltipText("Most creatures of this type a keeper may have. 32 means no limit.");
+        pane->addChild(spinner);
+        spinner->setTextInputMode(CEGUI::Spinner::Integer);
+        spinner->setMinimumValue(0.0);
+        spinner->setMaximumValue(static_cast<double>(GameMap::SKIRMISH_CREATURE_LIMIT_NONE));
+        spinner->setStepSize(1.0);
+        spinner->setCurrentValue(static_cast<double>(GameMap::SKIRMISH_CREATURE_LIMIT_NONE));
+        spinner->setEnabled(false);
+        mHostSettingWindows.push_back(spinner);
+        mLimitSpinners[def.first] = spinner;
+        addEventConnection(
+            spinner->subscribeEvent(CEGUI::Spinner::EventValueChanged,
+                CEGUI::Event::Subscriber(&MenuModeConfigureSeats::settingChanged, this))
+        );
+        lineY += SETTING_LINE_HEIGHT;
+    }
+
+    // One line per room, spell, trap and door, with a button that cycles its availability
+    mItemStates.assign(static_cast<uint32_t>(SkillType::countSkill),
+        static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch));
+    std::map<std::string, float> pageLineY;
+    for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
+    {
+        SkillType skillType = static_cast<SkillType>(i);
+        const std::string pageName = itemPageName(skillType);
+        if(pageName.empty())
+            continue;
+
+        CEGUI::Window* pane = settingsWin->getChild(SETTINGS_TABS + "/" + pageName + "/" + pageName + "SP");
+        std::map<std::string, float>::iterator itY = pageLineY.find(pageName);
+        if(itY == pageLineY.end())
+            itY = pageLineY.insert(std::pair<std::string, float>(pageName, 10.0f)).first;
+
+        const float y = itY->second;
+        CEGUI::Window* label = winMgr.createWindow("OD/StaticText", "ItemLabel" + Helper::toString(i));
+        label->setArea(CEGUI::UDim(0, 16), CEGUI::UDim(0, y), CEGUI::UDim(0, 330), CEGUI::UDim(0, y + 28));
+        label->setText(Skills::skillTypeToPlayerVisibleString(skillType));
+        label->setProperty("FrameEnabled", "False");
+        label->setProperty("BackgroundEnabled", "False");
+        pane->addChild(label);
+
+        CEGUI::Window* button = winMgr.createWindow("OD/Button", "ItemButton" + Helper::toString(i));
+        button->setArea(CEGUI::UDim(0, 350), CEGUI::UDim(0, y), CEGUI::UDim(0, 540), CEGUI::UDim(0, y + 28));
+        button->setText(itemStateText(mItemStates[i]));
+        button->setID(i);
+        button->setEnabled(false);
+        pane->addChild(button);
+        mHostSettingWindows.push_back(button);
+        mItemButtons[i] = button;
+        addEventConnection(
+            button->subscribeEvent(CEGUI::PushButton::EventClicked,
+                CEGUI::Event::Subscriber(&MenuModeConfigureSeats::itemStateClicked, this))
+        );
+        itY->second += SETTING_LINE_HEIGHT;
+    }
+}
+
+bool MenuModeConfigureSeats::openGameSettings(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* settingsWin = getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
+    settingsWin->setVisible(true);
+    settingsWin->moveToFront();
+    return true;
+}
+
+bool MenuModeConfigureSeats::closeGameSettings(const CEGUI::EventArgs&)
+{
+    getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats))->setVisible(false);
+    return true;
+}
+
+bool MenuModeConfigureSeats::settingChanged(const CEGUI::EventArgs&)
+{
+    if(!mIsRefreshing)
+        fireSeatConfigurationToServer();
+
+    return true;
+}
+
+bool MenuModeConfigureSeats::itemStateClicked(const CEGUI::EventArgs& ea)
+{
+    CEGUI::Window* button = static_cast<const CEGUI::WindowEventArgs&>(ea).window;
+    const uint32_t skill = button->getID();
+    if(skill >= mItemStates.size())
+        return true;
+
+    // Not available, available at start, needs research, then it starts again
+    mItemStates[skill] = (mItemStates[skill] + 1) % (static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch) + 1);
+    button->setText(itemStateText(mItemStates[skill]));
+    fireSeatConfigurationToServer();
+    return true;
 }
 
 void MenuModeConfigureSeats::activate()
@@ -189,6 +427,12 @@ void MenuModeConfigureSeats::activate()
     // We use the client game map to allow everybody to see how the server is configuring seats
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     gameMap->setGamePaused(true);
+
+    // The Game settings window is closed and only the host may change it. It shows the values from the server
+    mSettingsReceived = false;
+    getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats))->setVisible(false);
+    for(CEGUI::Window* settingWindow : mHostSettingWindows)
+        settingWindow->setEnabled(false);
 
     CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
     CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
@@ -234,7 +478,7 @@ void MenuModeConfigureSeats::activate()
         name = COMBOBOX_PLAYER_FACTION_PREFIX + Helper::toString(seat->getId());
         combo = static_cast<CEGUI::Combobox*>(winMgr.createWindow("OD/Combobox", name));
         tmpWin->addChild(combo);
-        combo->setArea(CEGUI::UDim(0.3,80), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0.2,0), CEGUI::UDim(0,200));
+        combo->setArea(CEGUI::UDim(0.3,80), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0.2,0), CEGUI::UDim(0,150));
         combo->setReadOnly(true);
         combo->setEnabled(enabled);
         combo->setSortingEnabled(true);
@@ -275,7 +519,7 @@ void MenuModeConfigureSeats::activate()
         name = COMBOBOX_PLAYER_PREFIX + Helper::toString(seat->getId());
         combo = static_cast<CEGUI::Combobox*>(winMgr.createWindow("OD/Combobox", name));
         tmpWin->addChild(combo);
-        combo->setArea(CEGUI::UDim(0.7,-90), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0.3,0), CEGUI::UDim(0,200));
+        combo->setArea(CEGUI::UDim(0.7,-90), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0.3,0), CEGUI::UDim(0,150));
         combo->setReadOnly(true);
         combo->setEnabled(enabled);
         combo->setSortingEnabled(true);
@@ -314,7 +558,7 @@ void MenuModeConfigureSeats::activate()
         name = COMBOBOX_TEAM_ID_PREFIX + Helper::toString(seat->getId());
         combo = static_cast<CEGUI::Combobox*>(winMgr.createWindow("OD/Combobox", name));
         tmpWin->addChild(combo);
-        combo->setArea(CEGUI::UDim(1,-80), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0,60), CEGUI::UDim(0,200));
+        combo->setArea(CEGUI::UDim(1,-80), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0,60), CEGUI::UDim(0,150));
         combo->setReadOnly(true);
         combo->setEnabled(enabled);
         combo->setSortingEnabled(true);
@@ -346,6 +590,8 @@ void MenuModeConfigureSeats::activate()
     }
 
     getModeManager().getGui().registerWindowHierarchy(tmpWin);
+    getModeManager().getGui().registerWindowHierarchy(
+        getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)));
 
     tmpWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers/LaunchGameButton");
     tmpWin->setEnabled(enabled);
@@ -529,9 +775,32 @@ void MenuModeConfigureSeats::fireSeatConfigurationToServer()
         }
     }
 
-    notif->mPacket << getSettingValue(playersWin, COMBOBOX_GOLD_DENSITY, 100);
-    notif->mPacket << getSettingValue(playersWin, COMBOBOX_MANA_REGENERATION, 100);
-    notif->mPacket << getSettingValue(playersWin, COMBOBOX_MAX_CREATURES, 0);
+    // Until the server has sent its values, the window shows the defaults and none of its values is chosen
+    CEGUI::Window* generalPage = getGeneralPage(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
+    const uint32_t notChosen = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+    notif->mPacket << getSettingValue(generalPage, COMBOBOX_GOLD_DENSITY, notChosen);
+    notif->mPacket << getSettingValue(generalPage, COMBOBOX_MANA_REGENERATION, notChosen);
+    notif->mPacket << (mSettingsReceived ? getSpinnerValue(generalPage, SPINNER_MAX_CREATURES) : notChosen);
+    notif->mPacket << (mSettingsReceived ? getSpinnerValue(generalPage, SPINNER_GAME_SPEED) : notChosen);
+    notif->mPacket << (mSettingsReceived ? getSpinnerValue(generalPage, SPINNER_GAME_DURATION) : notChosen);
+    notif->mPacket << getSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, notChosen);
+    notif->mPacket << getSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, notChosen);
+
+    uint32_t nbCreatureLimits = mSettingsReceived ? static_cast<uint32_t>(mLimitSpinners.size()) : 0;
+    notif->mPacket << nbCreatureLimits;
+    if(mSettingsReceived)
+    {
+        for(const std::pair<const std::string, CEGUI::Spinner*>& limit : mLimitSpinners)
+            notif->mPacket << limit.first << static_cast<uint32_t>(limit.second->getCurrentValue());
+    }
+
+    uint32_t nbSkillStates = mSettingsReceived ? static_cast<uint32_t>(mItemButtons.size()) : 0;
+    notif->mPacket << nbSkillStates;
+    if(mSettingsReceived)
+    {
+        for(const std::pair<const uint32_t, CEGUI::Window*>& item : mItemButtons)
+            notif->mPacket << item.first << mItemStates[item.first];
+    }
     ODClient::getSingleton().queueClientNotification(notif);
 }
 
@@ -571,9 +840,8 @@ void MenuModeConfigureSeats::activatePlayerConfig()
             combo->setEnabled(enabled);
     }
 
-    listPlayersWindow->getChild(COMBOBOX_GOLD_DENSITY)->setEnabled(enabled);
-    listPlayersWindow->getChild(COMBOBOX_MANA_REGENERATION)->setEnabled(enabled);
-    listPlayersWindow->getChild(COMBOBOX_MAX_CREATURES)->setEnabled(enabled);
+    for(CEGUI::Window* settingWindow : mHostSettingWindows)
+        settingWindow->setEnabled(enabled);
 
     CEGUI::Window* startButton = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers/LaunchGameButton");
     startButton->setEnabled(enabled);
@@ -673,9 +941,61 @@ void MenuModeConfigureSeats::refreshSeatConfiguration(ODPacket& packet)
     OD_ASSERT_TRUE(packet >> goldDensityPercent);
     OD_ASSERT_TRUE(packet >> manaRegenerationPercent);
     OD_ASSERT_TRUE(packet >> maxCreaturesSetting);
-    selectSettingValue(playersWin, COMBOBOX_GOLD_DENSITY, goldDensityPercent);
-    selectSettingValue(playersWin, COMBOBOX_MANA_REGENERATION, manaRegenerationPercent);
-    selectSettingValue(playersWin, COMBOBOX_MAX_CREATURES, maxCreaturesSetting);
+    uint32_t gameSpeedPercent;
+    uint32_t gameDurationMinutes;
+    uint32_t fogOfWar;
+    uint32_t heartDestroyedReward;
+    OD_ASSERT_TRUE(packet >> gameSpeedPercent);
+    OD_ASSERT_TRUE(packet >> gameDurationMinutes);
+    OD_ASSERT_TRUE(packet >> fogOfWar);
+    OD_ASSERT_TRUE(packet >> heartDestroyedReward);
+
+    // The window is changed to what the server says. This must not be sent back
+    mIsRefreshing = true;
+    CEGUI::Window* generalPage = getGeneralPage(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
+    selectSettingValue(generalPage, COMBOBOX_GOLD_DENSITY, goldDensityPercent);
+    selectSettingValue(generalPage, COMBOBOX_MANA_REGENERATION, manaRegenerationPercent);
+    selectSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, fogOfWar);
+    selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, heartDestroyedReward);
+    // 0 means that the default number of creatures is used
+    if(maxCreaturesSetting == 0)
+        maxCreaturesSetting = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
+    static_cast<CEGUI::Spinner*>(generalPage->getChild(SPINNER_MAX_CREATURES))->setCurrentValue(maxCreaturesSetting);
+    static_cast<CEGUI::Spinner*>(generalPage->getChild(SPINNER_GAME_SPEED))->setCurrentValue(gameSpeedPercent);
+    static_cast<CEGUI::Spinner*>(generalPage->getChild(SPINNER_GAME_DURATION))->setCurrentValue(gameDurationMinutes);
+
+    uint32_t nbCreatureLimits;
+    OD_ASSERT_TRUE(packet >> nbCreatureLimits);
+    for(uint32_t i = 0; i < nbCreatureLimits; ++i)
+    {
+        std::string className;
+        uint32_t limit;
+        OD_ASSERT_TRUE(packet >> className >> limit);
+        std::map<std::string, CEGUI::Spinner*>::iterator itLimit = mLimitSpinners.find(className);
+        if(itLimit != mLimitSpinners.end())
+            itLimit->second->setCurrentValue(limit);
+    }
+
+    uint32_t nbSkillStates;
+    OD_ASSERT_TRUE(packet >> nbSkillStates);
+    for(uint32_t i = 0; i < nbSkillStates; ++i)
+    {
+        uint32_t skillType;
+        uint32_t skillState;
+        OD_ASSERT_TRUE(packet >> skillType >> skillState);
+        std::map<uint32_t, CEGUI::Window*>::iterator itItem = mItemButtons.find(skillType);
+        if(itItem == mItemButtons.end() || skillState > static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch))
+            continue;
+
+        mItemStates[skillType] = skillState;
+        itItem->second->setText(itemStateText(skillState));
+    }
+    mIsRefreshing = false;
+    mSettingsReceived = true;
+
+    // The speed of the game is also needed to animate the game when it starts
+    ODFrameListener::getSingleton().getClientGameMap()->setGameRules(gameSpeedPercent, gameDurationMinutes,
+        fogOfWar != 0, heartDestroyedReward);
 }
 
 void MenuModeConfigureSeats::receiveChat(const ChatMessage& chat)
