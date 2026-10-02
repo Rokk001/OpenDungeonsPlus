@@ -404,6 +404,11 @@ bool TrapDoor::shoot(Tile* tile)
     if(enemyCreatures.empty())
         return true;
 
+    // The magic door does not fire if its owner cannot pay the mana
+    double manaToFire = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorManaToFire");
+    if(!getSeat()->takeMana(manaToFire))
+        return true;
+
     double damage = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorDamage");
     for(GameEntity* target : enemyCreatures)
     {
