@@ -17,6 +17,8 @@
 
 #include "game/Campaign.h"
 
+#include "ai/KeeperAIType.h"
+
 #include <fstream>
 #include <istream>
 #include <ostream>
@@ -39,7 +41,8 @@ std::string trim(const std::string& text)
 Campaign::Campaign():
     mActive(false),
     mPlayedLevel(0),
-    mPlayedLevelWon(false)
+    mPlayedLevelWon(false),
+    mDifficulty(getDefaultDifficulty())
 {
 }
 
@@ -122,6 +125,7 @@ bool Campaign::importProgress(std::istream& is)
     std::lock_guard<std::mutex> lock(mMutex);
     mCompleted.assign(mLevels.size(), false);
     mDiscovered.assign(mLevels.size(), false);
+    mDifficulty = getDefaultDifficulty();
 
     std::string line;
     while(std::getline(is, line))
@@ -129,6 +133,13 @@ bool Campaign::importProgress(std::istream& is)
         std::istringstream ss(trim(line));
         std::string keyword;
         ss >> keyword;
+        if(keyword == "Difficulty")
+        {
+            uint32_t difficulty;
+            if((ss >> difficulty) && (difficulty < static_cast<uint32_t>(KeeperAIType::nbAI)))
+                mDifficulty = difficulty;
+            continue;
+        }
         if((keyword != "Completed") && (keyword != "Discovered"))
             continue;
 
@@ -161,6 +172,7 @@ void Campaign::exportProgress(std::ostream& os) const
             os << " " << i;
     }
     os << "\n";
+    os << "Difficulty " << mDifficulty << "\n";
 }
 
 void Campaign::setProgressPath(const std::string& path)
@@ -325,8 +337,32 @@ void Campaign::resetProgress()
         mDiscovered.assign(mLevels.size(), false);
         mPlayedLevel = mLevels.size();
         mPlayedLevelWon = false;
+        mDifficulty = getDefaultDifficulty();
     }
     saveProgress();
+}
+
+uint32_t Campaign::getDifficulty() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mDifficulty;
+}
+
+void Campaign::setDifficulty(uint32_t difficulty)
+{
+    if(difficulty >= static_cast<uint32_t>(KeeperAIType::nbAI))
+        return;
+
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mDifficulty = difficulty;
+    }
+    saveProgress();
+}
+
+uint32_t Campaign::getDefaultDifficulty()
+{
+    return static_cast<uint32_t>(KeeperAIType::normal);
 }
 
 void Campaign::startLevel(size_t index)

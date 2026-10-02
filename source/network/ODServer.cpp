@@ -24,6 +24,7 @@
 #include "entities/MapLight.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
 #include "game/HeartHealthRing.h"
 #include "giftboxes/GiftBoxBonus.h"
 #include "game/Player.h"
@@ -68,6 +69,8 @@
 #include <boost/lexical_cast.hpp>
 
 
+//! \brief Number of tiles of a 5x5 dungeon heart (3x3 core and treasury ring)
+const uint32_t HEART_TILES_PER_LEVEL = 25;
 const std::string SAVEGAME_SKIRMISH_PREFIX = "SK-";
 const std::string SAVEGAME_MULTIPLAYER_PREFIX = "MP-";
 static const double MASTER_SERVER_UPDATE_PERIOD_MS = 30000.0;
@@ -210,6 +213,25 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         return false;
     }
 
+    // Level files must carry 5x5 hearts. Only savegames (and the editor, to fix old maps) may still
+    // contain an older 3x3 heart.
+    if((mode != ServerMode::ModeGameLoaded) && (mode != ServerMode::ModeEditor))
+    {
+        for(Room* room : gameMap->getRoomsByType(RoomType::dungeonTemple))
+        {
+            if(room->numCoveredTiles() == HEART_TILES_PER_LEVEL)
+                continue;
+
+            OD_LOG_ERR("Level " + levelFilename + " rejected: heart " + room->getName() + " covers "
+                + Helper::toString(room->numCoveredTiles()) + " tiles, a level heart must be 5x5 ("
+                + Helper::toString(HEART_TILES_PER_LEVEL) + " tiles)");
+            mServerMode = ServerMode::ModeNone;
+            mServerState = ServerState::StateNone;
+            stopServer();
+            return false;
+        }
+    }
+
     // Set up the socket to listen on the specified port
     int32_t port = getNetworkPort();
     if (!createServer(port))
@@ -279,7 +301,13 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_INACTIVE) == 0)
             seat->setConfigPlayerId(Seat::PLAYER_TYPE_INACTIVE_ID);
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_AI) == 0)
-            seat->setConfigPlayerId(Seat::aITypeToPlayerId(KeeperAIType::normal));
+        {
+            // In the campaign the AI level is the difficulty chosen for the campaign
+            KeeperAIType aiType = KeeperAIType::normal;
+            if(Campaign::getSingleton().isActive())
+                aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getDifficulty());
+            seat->setConfigPlayerId(Seat::aITypeToPlayerId(aiType));
+        }
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_HUMAN) == 0)
             ++nbSeatsHuman;
 

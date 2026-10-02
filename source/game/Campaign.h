@@ -19,6 +19,7 @@
 #define CAMPAIGN_H
 
 #include <cstddef>
+#include <cstdint>
 #include <iosfwd>
 #include <mutex>
 #include <string>
@@ -60,6 +61,7 @@ struct CampaignLevel
 //! Progress file (written by the game):
 //!   Completed <index> [<index> ...]
 //!   Discovered <index> [<index> ...]
+//!   Difficulty <n>   (index of the AI level for the whole campaign, 0 = easy)
 //! A level is unlocked when all main levels before it are completed; a bonus
 //! level is unlocked when it was discovered. The current
 //! level is the first level that is not completed yet.
@@ -106,6 +108,15 @@ public:
     //! \brief Forgets all progress (New Campaign).
     void resetProgress();
 
+    //! \brief AI difficulty of the whole campaign, chosen when a new campaign
+    //! is begun. The value is an index into KeeperAIType.
+    uint32_t getDifficulty() const;
+    //! \brief Sets the difficulty and saves the progress. Values above the
+    //! highest AI level are ignored.
+    void setDifficulty(uint32_t difficulty);
+    //! \brief Default difficulty (normal).
+    static uint32_t getDefaultDifficulty();
+
     //! \brief A campaign level was started from the campaign menu.
     void startLevel(size_t index);
     //! \brief Leaving the campaign (the main menu is shown).
@@ -136,6 +147,7 @@ private:
     bool mActive;
     size_t mPlayedLevel;
     bool mPlayedLevelWon;
+    uint32_t mDifficulty;
 
     size_t getCurrentLevelNoLock() const;
     bool isUnlockedNoLock(size_t index) const;

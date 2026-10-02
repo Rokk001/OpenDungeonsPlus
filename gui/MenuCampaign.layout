@@ -52,6 +52,11 @@
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
+            <Window type="OD/MenuTextButton" name="DifficultyButton" >
+                <Property name="Area" value="{{0.11,0},{1,-80},{0.45,0},{1,-40}}" />
+                <Property name="Text" value="Difficulty" />
+                <Property name="Font" value="MedievalSharp-12" />
+            </Window>
             <Window type="OD/MenuSymbolButton" name="BackButton" >
                 <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
                 <Property name="Text" value="" />

@@ -17,6 +17,7 @@
 
 #include "modes/MenuModeCampaign.h"
 
+#include "ai/KeeperAIType.h"
 #include "game/Campaign.h"
 #include "gamemap/GameMap.h"
 #include "modes/ModeManager.h"
@@ -34,6 +35,7 @@
 #include <CEGUI/CEGUI.h>
 #include "boost/filesystem.hpp"
 
+#include <cctype>
 #include <fstream>
 
 namespace
@@ -44,6 +46,7 @@ const std::string CAMPAIGN_PROGRESS_FILE = "campaign.progress";
 const std::string CMP_FRAME = "CampaignWindowFrame";
 const std::string CMP_TEXT_LOADING = "LoadingText";
 const std::string CMP_BUTTON_LAUNCH = "CampaignWindowFrame/LaunchGameButton";
+const std::string CMP_BUTTON_DIFFICULTY = "CampaignWindowFrame/DifficultyButton";
 const std::string CMP_BUTTON_BACK = "CampaignWindowFrame/BackButton";
 const std::string CMP_LIST_LEVELS = "CampaignWindowFrame/LevelSelect";
 const std::string CMP_TEXT_DESCRIPTION = "CampaignWindowFrame/DescriptionText";
@@ -71,6 +74,12 @@ MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
         window->getChild(CMP_LIST_LEVELS)->subscribeEvent(
             CEGUI::Listbox::EventMouseClick,
             CEGUI::Event::Subscriber(&MenuModeCampaign::updateDescription, this)
+        )
+    );
+    addEventConnection(
+        window->getChild(CMP_BUTTON_DIFFICULTY)->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&MenuModeCampaign::difficultyButtonPressed, this)
         )
     );
     addEventConnection(
@@ -171,6 +180,32 @@ void MenuModeCampaign::activate()
 
     fillLevelList();
     selectLevel(selected);
+    updateDifficultyButton();
+}
+
+void MenuModeCampaign::updateDifficultyButton()
+{
+    Campaign& campaign = Campaign::getSingleton();
+    CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
+    CEGUI::Window* button = window->getChild(CMP_BUTTON_DIFFICULTY);
+    KeeperAIType type = static_cast<KeeperAIType>(campaign.getDifficulty());
+    std::string name = KeeperAITypes::toString(type);
+    name[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(name[0])));
+    button->setText("Difficulty: " + name);
+    // The difficulty is chosen when a new campaign is begun and then stays
+    button->setEnabled(!campaign.hasProgress());
+}
+
+bool MenuModeCampaign::difficultyButtonPressed(const CEGUI::EventArgs&)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    if(campaign.hasProgress())
+        return true;
+
+    uint32_t next = (campaign.getDifficulty() + 1) % static_cast<uint32_t>(KeeperAIType::nbAI);
+    campaign.setDifficulty(next);
+    updateDifficultyButton();
+    return true;
 }
 
 void MenuModeCampaign::fillLevelList()
