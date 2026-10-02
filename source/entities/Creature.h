@@ -592,6 +592,20 @@ public:
     //! \brief Returns true (server side) if the creature is temporarily converted by the Turncoat spell
     bool isTurncoat() const;
 
+    //! \brief Returns true if the creature is temporarily turned into a chicken by the Chicken spell. On server
+    //! side, it is deduced from the active effect. On client side, from the state sent by the server
+    bool isChicken() const;
+
+    //! \brief Name of the mesh to display (the chicken mesh while the creature is a chicken)
+    const std::string& getCurrentMeshName() const;
+
+    //! \brief Called on server side to tell that something changed that needs to be sent to the clients
+    void requestRefresh()
+    { mNeedFireRefresh = true; }
+
+    //! \brief Called on client side. Replaces the displayed mesh if the chicken state changed
+    void updateChickenMesh();
+
     //!\brief Returns true if the creature has an active slap effect
     bool hasSlapEffect() const
     { return mActiveSlapsCount > 0; }
@@ -920,6 +934,12 @@ private:
     //! \brief Used on server side for the mood. Turn numbers of the latest slaps
     std::vector<int64_t>            mSlapTurns;
 
+    //! \brief Used on client side. True if the server told us that the creature is a chicken
+    bool                            mIsChicken;
+
+    //! \brief Used on client side. True if the mesh currently displayed is the chicken one
+    bool                            mChickenMeshShown;
+
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
 
@@ -960,6 +980,9 @@ private:
     void importProgressFromPacket(ODPacket& is);
 
     void computeCreatureOverlayMoodValue();
+
+    //! \brief Called on server side each turn when the creature is a chicken. It only wanders around
+    void handleChickenUpkeep();
 };
 
 #endif // CREATURE_H

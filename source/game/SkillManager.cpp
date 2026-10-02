@@ -631,6 +631,14 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
+    resType = SkillType::spellChicken;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("TacticSkills/", "ChickenButton", skill, SpellType::chicken);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     // Magic Skills
     lvl1depends.clear();
     lvl2depends.clear();

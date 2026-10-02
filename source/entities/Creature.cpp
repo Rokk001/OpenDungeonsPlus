@@ -355,7 +355,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
-    mNbTurnsOutOfWork        (0)
+    mNbTurnsOutOfWork        (0),
+    mIsChicken               (false),
+    mChickenMeshShown        (false)
 {
     //TODO: This should be set in initialiser list in parent classes
     setSeat(seat);
@@ -445,7 +447,9 @@ Creature::Creature(GameMap* gameMap) :
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
-    mNbTurnsOutOfWork        (0)
+    mNbTurnsOutOfWork        (0),
+    mIsChicken               (false),
+    mChickenMeshShown        (false)
 {
     if(!getIsOnServerMap())
     {
@@ -473,6 +477,7 @@ void Creature::createMeshLocal(NodeType nt)
     MovableGameEntity::createMeshLocal(nt);
     if(!getIsOnServerMap())
     {
+        mChickenMeshShown = isChicken();
         RenderManager::getSingleton().rrCreateCreature(this);
 
         // By default, we set the creature in idle state
@@ -498,6 +503,9 @@ void Creature::createMeshWeapons()
     if(getIsOnServerMap())
         return;
 
+    if(mChickenMeshShown)
+        return;
+
     if(mWeaponL != nullptr)
         RenderManager::getSingleton().rrCreateWeapon(this, mWeaponL, "L");
 
@@ -508,6 +516,9 @@ void Creature::createMeshWeapons()
 void Creature::destroyMeshWeapons()
 {
     if(getIsOnServerMap())
+        return;
+
+    if(mChickenMeshShown)
         return;
 
     if(mWeaponL != nullptr)
@@ -784,6 +795,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     else
         os << "none";
 
+    os << isChicken();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -839,6 +851,7 @@ void Creature::importFromPacket(ODPacket& is)
         }
     }
 
+    OD_ASSERT_TRUE(is >> mIsChicken);
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
@@ -1288,6 +1301,13 @@ void Creature::doUpkeep()
             mCasinoMood = std::max(0.0, mCasinoMood - decay);
         else
             mCasinoMood = std::min(0.0, mCasinoMood + decay);
+    }
+
+    // A chicken cannot fight, use skills or work. It only wanders around
+    if(isChicken())
+    {
+        handleChickenUpkeep();
+        return;
     }
 
     bool isWarmUp = false;
@@ -2002,6 +2022,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         seatPrisonId = mSeatPrison->getId();
 
     os << seatPrisonId;
+    os << isChicken();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -2058,6 +2079,9 @@ void Creature::updateFromPacket(ODPacket& is)
             OD_LOG_ERR("Creature " + getName() + ", wrong seatId=" + Helper::toString(seatId));
         }
     }
+
+    OD_ASSERT_TRUE(is >> mIsChicken);
+    updateChickenMesh();
 
     importMoodFromPacket(is);
     importActivityFromPacket(is);
@@ -3036,6 +3060,7 @@ void Creature::drop(const Ogre::Vector3& v)
     if(!getIsOnServerMap())
     {
         mDropCooldown = 2;
+        updateChickenMesh();
         return;
     }
 
@@ -3950,6 +3975,82 @@ bool Creature::isTurncoat() const
     return false;
 }
 
+bool Creature::isChicken() const
+{
+    if(!getIsOnServerMap())
+        return mIsChicken;
+
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "Chicken") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const std::string& Creature::getCurrentMeshName() const
+{
+    static const std::string chickenMeshName = "Chicken.mesh";
+    if(isChicken())
+        return chickenMeshName;
+
+    return getDefinition()->getMeshName();
+}
+
+void Creature::updateChickenMesh()
+{
+    if(getIsOnServerMap() || !isMeshExisting() || !getIsOnMap())
+        return;
+
+    if(mChickenMeshShown == mIsChicken)
+        return;
+
+    destroyMeshWeapons();
+    mChickenMeshShown = mIsChicken;
+    RenderManager::getSingleton().rrChangeCreatureMesh(this);
+    createMeshWeapons();
+    RenderManager::getSingleton().rrScaleCreature(*this);
+}
+
+void Creature::handleChickenUpkeep()
+{
+    if(!mActions.empty())
+    {
+        clearActionQueue();
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+    }
+
+    if(isMoving())
+        return;
+
+    if(Random::Int(0, 3) != 0)
+        return;
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    Tile* destTile = getGameMap()->getTile(myTile->getX() + Random::Int(-2, 2), myTile->getY() + Random::Int(-2, 2));
+    if((destTile == nullptr) || (destTile == myTile) || !canGoThroughTile(destTile))
+        return;
+
+    std::list<Tile*> tempPath = getGameMap()->path(this, destTile);
+    if(tempPath.empty())
+        return;
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(tempPath, path, true, 0.0);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+}
+
 bool Creature::isHurt() const
 {
     //On server side, we test HP
@@ -4127,6 +4228,9 @@ double Creature::getThreat() const
 bool Creature::isDangerous(const Creature* creature, int distance) const
 {
     if(getDefinition()->isWorker())
+        return false;
+
+    if(isChicken())
         return false;
 
     return true;

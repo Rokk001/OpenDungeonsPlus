@@ -67,6 +67,7 @@ void PlayerSelection::setNewSpellType(SpellType newSpellType)
     case SpellType::creatureSlow:
     case SpellType::lightning:
     case SpellType::turncoat:
+    case SpellType::chicken:
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::creatureAliveEnemy;
         break;
     case SpellType::creatureStrength:

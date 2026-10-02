@@ -70,6 +70,7 @@
     <Image height="128" name="LightningButton" width="128" xPos="256" yPos="512" />
     <Image height="64" name="TremorButton" width="64" xPos="448" yPos="64" />
     <Image height="128" name="TurncoatButton" width="128" xPos="256" yPos="256" />
+    <Image height="128" name="ChickenButton" width="128" xPos="640" yPos="128" />
     <Image height="128" name="CreatureHasteButton" width="128" xPos="384" yPos="512" />
     <Image height="128" name="CreatureDefenseButton" width="128" xPos="512" yPos="512" />
     <Image height="128" name="CreatureSlowButton" width="128" xPos="640" yPos="512" />
