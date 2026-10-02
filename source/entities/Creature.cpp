@@ -3156,6 +3156,23 @@ bool Creature::removeCreatureEffect(CreatureEffect* effectForDeletion)
     return false;
 }
 
+bool Creature::isTurncoat() const
+{
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "Turncoat") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 bool Creature::isHurt() const
 {

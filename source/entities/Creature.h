@@ -509,6 +509,9 @@ public:
 
     bool removeCreatureEffect(CreatureEffect* effectForDeletion);
 
+    //! \brief Returns true (server side) if the creature is temporarily converted by the Turncoat spell
+    bool isTurncoat() const;
+
     //!\brief Returns true if the creature has an active slap effect
     bool hasSlapEffect() const
     { return mActiveSlapsCount > 0; }
