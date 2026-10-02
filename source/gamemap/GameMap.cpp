@@ -2620,6 +2620,9 @@ void GameMap::addWinningSeat(Seat *s)
         serverNotification->mPacket << "You Won" << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
 
+        // The numbers of the level at the moment of the victory (the campaign menu shows them)
+        player->sendLevelStatistics(true);
+
         // In a campaign, the progress is saved and the player is told how to go on
         if(Campaign::getSingleton().onLevelWon())
         {

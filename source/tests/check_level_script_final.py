@@ -91,4 +91,24 @@ for kind in ('happyCreatures', 'angryCreatures', 'creaturesAtLevel', 'creaturesL
     assert 'case LevelScriptConditionType::%s:' % kind in runner, kind
     assert 'case LevelScriptConditionType::%s:' % kind in script_cpp, kind
 
+# victory statistics: sent at the win, carried to the campaign menu
+player = read('source/game/Player.cpp')
+send = function(player, 'void Player::sendLevelStatistics(')
+assert 'ServerNotificationType::levelStatistics' in send and 'levelWon' in send
+assert 'sendLevelStatistics(false)' in function(player, 'void Player::notifyDefeat(')
+won = function(gamemap, 'void GameMap::addWinningSeat(')
+assert 'player->sendLevelStatistics(true)' in won
+assert won.index('sendLevelStatistics(true)') < won.index('Campaign::getSingleton().onLevelWon()')
+levels_handler = client[client.index('case ServerNotificationType::levelStatistics:'):]
+levels_handler = levels_handler[:levels_handler.index('break;')]
+assert 'Campaign::getSingleton().setLevelSummary(' in levels_handler and 'debriefingSeatSummary(' in levels_handler
+campaign_h = read('source/game/Campaign.h')
+campaign_cpp = read('source/game/Campaign.cpp')
+assert 'setLevelSummary' in campaign_h and 'getLevelSummary' in campaign_h
+assert 'mLevelSummary.clear()' in function(campaign_cpp, 'void Campaign::startLevel(')
+assert 'mLevelSummary.clear()' in function(campaign_cpp, 'void Campaign::clearPlayedLevel(')
+menu = read('source/modes/MenuModeCampaign.cpp')
+assert 'campaign.getLevelSummary()' in menu
+assert menu.index('campaign.getLevelSummary()') < menu.index('campaign.clearPlayedLevel()')
+
 print('level script final wiring: ok')

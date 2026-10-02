@@ -27,6 +27,7 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
 #include "game/Player.h"
 #include "game/CreaturePanelData.h"
 #include "game/Seat.h"
@@ -880,6 +881,12 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 mLevelStatistics = statistics;
                 mHasLevelStatistics = true;
+                // A won campaign level shows its numbers in the campaign menu
+                if(statistics.mLevelWon && (gameMap->getLocalPlayer() != nullptr))
+                {
+                    Campaign::getSingleton().setLevelSummary(
+                        debriefingSeatSummary(statistics, gameMap->getLocalPlayer()->getSeat()->getId()));
+                }
             }
             break;
         }

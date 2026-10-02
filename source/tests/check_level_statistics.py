@@ -84,6 +84,7 @@ struct SeatStatistics
     uint32_t mRoomsCaptured = 0;
     uint32_t mItemsMade = 0;
     uint32_t mCreaturesConverted = 0;
+    uint32_t mCreaturesLost = 0;
 };
 struct Seat
 {
@@ -301,6 +302,7 @@ kills_probe = (kills_probe.replace('KILL_METHOD', kill_method)
 # ---------------------------------------------------------------------------
 notify_method = function(player_source, 'void Player::notifyNoMoreDungeonTemple(')
 notify_method += function(player_source, 'void Player::notifyDefeat(')
+notify_method += function(player_source, 'void Player::sendLevelStatistics(')
 
 notify_probe = r'''
 #include <cstdint>
@@ -363,6 +365,7 @@ struct Player
     bool getIsHuman() const { return mIsHuman; }
     void notifyNoMoreDungeonTemple();
     void notifyDefeat(bool hasTeamLost);
+    void sendLevelStatistics(bool levelWon);
     Seat* mSeat;
     bool mIsHuman;
     bool mHasLost;
@@ -530,7 +533,7 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and enum_body.rstrip().endswith('possessionEnd')
+assert 'levelStatistics,' in enum_body and 'possessionEnd' in enum_body
 assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')
 assert 'return "levelStatistics";' in notification_source

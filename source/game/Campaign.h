@@ -147,6 +147,11 @@ public:
     //! \brief Clears the "last played" result once the menu has shown it.
     void clearPlayedLevel();
 
+    //! \brief The statistics of the level that was just won, as text lines. Set by the client when the
+    //! server sends them at the victory, shown by the campaign menu. Empty if there are none.
+    void setLevelSummary(const std::string& summary);
+    std::string getLevelSummary() const;
+
     //! \brief Called by the server when a human seat completed all its goals.
     //! Marks the played level as completed and saves the progress.
     //! Returns true if a campaign level was won.
@@ -168,6 +173,7 @@ private:
     bool mActive;
     size_t mPlayedLevel;
     bool mPlayedLevelWon;
+    std::string mLevelSummary;
     uint32_t mDifficulty;
 
     size_t getCurrentLevelNoLock() const;
