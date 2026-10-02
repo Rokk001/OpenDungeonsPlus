@@ -289,6 +289,9 @@ private:
     std::unique_ptr<SocialWindow> mSocialWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
     void refreshHeldCreatureIcons();
+    //! \brief Label next to the hand showing the width x height of the area being dragged
+    CEGUI::Window* mSelectionSizeLabel = nullptr;
+    void refreshSelectionSizeLabel();
     bool shouldExpireEventMessages() const override { return false; }
     void showEventMessages();
     void showEventMessage(EventMessage* message, bool raiseWindow);
