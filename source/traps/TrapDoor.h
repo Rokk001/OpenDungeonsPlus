@@ -84,6 +84,8 @@ private:
     bool mIsLocked;
     //! \brief Current state of the door
     bool mIsLockedState;
+    //! brief Turns left before a magic door can fire again
+    uint32_t mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);
 };

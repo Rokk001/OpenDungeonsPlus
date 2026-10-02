@@ -301,6 +301,7 @@ static TrapRegister regBraced(new TrapDoorFactory(TrapType::doorBraced, "DoorBra
 static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "Steel door", "Steel"));
 static TrapRegister regBarricade(new TrapDoorFactory(TrapType::doorBarricade, "DoorBarricade", "Barricade", "Barricade"));
 static TrapRegister regSecret(new TrapDoorFactory(TrapType::doorSecret, "DoorSecret", "Secret door", "Secret"));
+static TrapRegister regMagic(new TrapDoorFactory(TrapType::doorMagic, "DoorMagic", "Magic door", "Magic"));
 }
 
 const std::string TrapDoor::ANIMATION_OPEN = "Open";
@@ -324,7 +325,8 @@ TrapDoor::TrapDoor(GameMap* gameMap, TrapType doorType) :
     Trap(gameMap),
     mDoorType(doorType),
     mIsLocked(doorType == TrapType::doorBarricade),
-    mIsLockedState(false)
+    mIsLockedState(false),
+    mFireCooldownTurns(0)
 {
     mReloadTime = 0;
     mMinDamage = 0;
@@ -362,13 +364,62 @@ double TrapDoor::getDefaultTileHP() const
             return ConfigManager::getSingleton().getTrapConfigDouble("BarricadeDoorHP");
         case TrapType::doorSecret:
             return ConfigManager::getSingleton().getTrapConfigDouble("SecretDoorHP");
+        case TrapType::doorMagic:
+            return ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorHP");
         default:
             return ConfigManager::getSingleton().getTrapConfigDouble("WoodenDoorHP");
     }
 }
 
+bool TrapDoor::shoot(Tile* tile)
+{
+    if(mDoorType == TrapType::doorSecret)
+    {
+        // Enemies discover the secret door when they see a creature of the owner (or of
+        // an ally) pass through it. The seats with vision on the tile are then notified
+        for(GameEntity* entity : tile->getEntitiesInTile())
+        {
+            if(entity->getObjectType() != GameEntityType::creature)
+                continue;
+
+            const Creature* creature = static_cast<const Creature*>(entity);
+            if(getSeat()->isAlliedSeat(creature->getSeat()))
+                return true;
+        }
+
+        return false;
+    }
+
+    // The doors return true to make sure every creature with vision on the door tile can see it.
+    // The magic door also fires a fireball at the enemies standing on it, then has to recharge
+    if(mDoorType != TrapType::doorMagic)
+        return true;
+
+    if(mFireCooldownTurns > 0)
+        return true;
+
+    std::vector<Tile*> doorTiles;
+    doorTiles.push_back(tile);
+    std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(doorTiles, getSeat(), true);
+    if(enemyCreatures.empty())
+        return true;
+
+    double damage = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorDamage");
+    for(GameEntity* target : enemyCreatures)
+    {
+        Tile* targetTile = target->getCoveredTile(0);
+        target->takeDamage(this, 0.0, 0.0, 0.0, damage, targetTile, false);
+        target->notifyFightPlayer(targetTile);
+    }
+    mFireCooldownTurns = ConfigManager::getSingleton().getTrapConfigUInt32("MagicDoorReloadTurns");
+    return true;
+}
+
 void TrapDoor::doUpkeep()
 {
+    if(mFireCooldownTurns > 0)
+        --mFireCooldownTurns;
+
     for(Tile* tile : mCoveredTiles)
     {
         if((mDoorType != TrapType::doorBarricade) &&
@@ -383,6 +434,14 @@ void TrapDoor::doUpkeep()
 
             TrapTileData* trapTileData = static_cast<TrapTileData*>(it->second);
             trapTileData->mHP = 0.0;
+        }
+
+        // The magic door slowly repairs itself
+        if((mDoorType == TrapType::doorMagic) &&
+           (mTileData[tile]->mHP > 0.0))
+        {
+            double regen = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorRegenPerTurn");
+            mTileData[tile]->mHP = std::min(getDefaultTileHP(), mTileData[tile]->mHP + regen);
         }
 
         // We need to look for destroyed door before calling Trap::doUpkeep otherwise, they will be removed
@@ -441,26 +500,6 @@ void TrapDoor::doUpkeep()
             secretTile->setDirtyForAllSeats();
         }
     }
-}
-
-bool TrapDoor::shoot(Tile* tile)
-{
-    if(mDoorType != TrapType::doorSecret)
-        return true;
-
-    // Enemies discover the secret door when they see a creature of the owner (or of
-    // an ally) pass through it. The seats with vision on the tile are then notified
-    for(GameEntity* entity : tile->getEntitiesInTile())
-    {
-        if(entity->getObjectType() != GameEntityType::creature)
-            continue;
-
-        const Creature* creature = static_cast<const Creature*>(entity);
-        if(getSeat()->isAlliedSeat(creature->getSeat()))
-            return true;
-    }
-
-    return false;
 }
 
 bool TrapDoor::appearsAsWallForSeat(Tile* tile, Seat* seat) const

@@ -60,6 +60,7 @@
     <Image height="128" name="SteelDoorTrapButton" width="128" xPos="640" yPos="384" />
     <Image height="128" name="BarricadeTrapButton" width="128" xPos="640" yPos="384" />
     <Image height="128" name="SecretDoorTrapButton" width="128" xPos="640" yPos="384" />
+    <Image height="128" name="MagicDoorTrapButton" width="128" xPos="640" yPos="384" />
     <Image height="128" name="AlarmTrapButton" width="128" xPos="256" yPos="384" />
     <Image height="128" name="DestroyTrapButton" width="128" xPos="768" yPos="384" />
     <Image height="128" name="SummonWorkerButton" width="128" xPos="896" yPos="384" />

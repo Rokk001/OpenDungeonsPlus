@@ -114,5 +114,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="MagicDoorTrapButton" >
+            <Property name="Area" value="{{0,940},{0,25},{0,1000},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/MagicDoorTrapButton" />
+            <Property name="TooltipText" value="Build a magic door" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>

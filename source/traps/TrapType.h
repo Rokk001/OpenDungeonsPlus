@@ -40,6 +40,7 @@ enum class TrapType
     fireburst,
     guardPost,
     doorSecret,
+    doorMagic,
     nbTraps     // Must be the last in this enum
 };
 
