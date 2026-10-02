@@ -104,7 +104,11 @@ enum class ClientNotificationType
     //! Possession: left click attack, the direction the creature looks at (Vector2)
     askPossessAttack,
     //! Possession: use the creature skill of the given slot (uint32_t, 0 to 3) in the given direction (Vector2)
-    askPossessSkill
+    askPossessSkill,
+    //! Editor: change or list the region markers of the level script:
+    //! + int32_t operation (0 list, 1 set, 2 remove), string name, 4 int32_t (corners, set only).
+    //! The server always answers with editorRegionData.
+    editorRegionEdit
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

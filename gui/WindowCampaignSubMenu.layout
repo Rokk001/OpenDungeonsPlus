@@ -23,6 +23,23 @@
             <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
             <Property name="Text" value="Continue Campaign" />
         </Window>
+        <Window type="OD/StaticText" name="NewCampaignConfirmText" >
+            <Property name="Area" value="{{0.5,-300},{0.5,32},{0.5,300},{0.5,104}}" />
+            <Property name="Text" value="Begin a new campaign? Your saved campaign progress will be lost." />
+            <Property name="Visible" value="False" />
+            <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="BackgroundEnabled" value="False" />
+        </Window>
+        <Window type="OD/MenuSymbolButton" name="NewCampaignConfirmButton" >
+            <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
+            <Property name="Visible" value="False" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
+            <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
+            <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />
+            <Property name="TooltipText" value="Begin a new campaign" />
+        </Window>
         <Window type="OD/MenuSymbolButton" name="BackButton" >
             <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />

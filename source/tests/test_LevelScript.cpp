@@ -26,6 +26,7 @@
 static const std::string sample =
     "# comment\n"
     "Flag\tgateOpen\t1\n"
+    "Region\tGate\t30\t12\t28\t10\n"
     "[Trigger]\n"
     "Name\tambush\n"
     "Mode\trepeat\t30\n"
@@ -50,6 +51,19 @@ static const std::string sample =
     "Cond\tflag\tambushDone\t1\n"
     "Action\tmessage\t1\tDone\n"
     "[/Trigger]\n"
+    "[Trigger]\n"
+    "Name\tgateWatch\n"
+    "Mode\tonce\n"
+    "Cond\tregion\t1\tGate\n"
+    "Cond\tgold\t1\t>=\t500\n"
+    "Cond\tmana\t1\t<=\t100\n"
+    "Cond\tkills\t1\t>=\t7\n"
+    "Cond\tmined\t1\t>=\t900\n"
+    "Cond\tclaimed\t1\tGate\t4\n"
+    "Cond\tclaimed\t2\tGate\tall\n"
+    "Action\treveal\t1\tGate\n"
+    "Action\taddflag\tvisits\t-2\n"
+    "[/Trigger]\n"
     "[/Triggers]\n";
 
 BOOST_AUTO_TEST_CASE(test_parse)
@@ -57,7 +71,7 @@ BOOST_AUTO_TEST_CASE(test_parse)
     LevelScript script;
     std::istringstream is(sample);
     BOOST_REQUIRE(script.importFromStream(is));
-    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 2u);
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 3u);
     BOOST_CHECK_EQUAL(script.getFlag("gateOpen"), 1);
     BOOST_CHECK_EQUAL(script.getFlag("unknown"), 0);
 
@@ -83,6 +97,63 @@ BOOST_AUTO_TEST_CASE(test_parse)
     BOOST_CHECK_EQUAL(t.mActions[2].mCreatures[0].second, 2u);
     BOOST_CHECK_EQUAL(t.mActions[2].mTargetSeatId, 1);
     BOOST_CHECK_EQUAL(script.getTriggers()[1].mTimesFired, 0u);
+
+    BOOST_REQUIRE_EQUAL(script.getRegions().size(), 1u);
+    const LevelScriptTrigger& watch = script.getTriggers()[2];
+    BOOST_CHECK_EQUAL(watch.mConditions[0].mName, "Gate");
+    BOOST_CHECK(watch.mActions[0].mType == LevelScriptActionType::reveal);
+    BOOST_CHECK_EQUAL(watch.mActions[0].mText, "Gate");
+
+    BOOST_REQUIRE_EQUAL(watch.mConditions.size(), 7u);
+    BOOST_CHECK(watch.mConditions[1].mType == LevelScriptConditionType::gold);
+    BOOST_CHECK(watch.mConditions[1].mAtLeast);
+    BOOST_CHECK_EQUAL(watch.mConditions[1].mNumber, 500);
+    BOOST_CHECK(watch.mConditions[2].mType == LevelScriptConditionType::mana);
+    BOOST_CHECK(!watch.mConditions[2].mAtLeast);
+    BOOST_CHECK(watch.mConditions[3].mType == LevelScriptConditionType::kills);
+    BOOST_CHECK_EQUAL(watch.mConditions[3].mNumber, 7);
+    BOOST_CHECK(watch.mConditions[4].mType == LevelScriptConditionType::goldMined);
+    BOOST_CHECK_EQUAL(watch.mConditions[5].mNumber, 4);
+    BOOST_CHECK_EQUAL(watch.mConditions[6].mNumber, -1);
+    BOOST_REQUIRE_EQUAL(watch.mActions.size(), 2u);
+    BOOST_CHECK(watch.mActions[1].mType == LevelScriptActionType::addFlag);
+    BOOST_CHECK_EQUAL(watch.mActions[1].mNumber, -2);
+}
+
+BOOST_AUTO_TEST_CASE(test_regions)
+{
+    LevelScript script;
+    std::istringstream is(sample);
+    BOOST_REQUIRE(script.importFromStream(is));
+
+    // The corners may be given in any order
+    const LevelScriptRegion* gate = script.getRegion("Gate");
+    BOOST_REQUIRE(gate != nullptr);
+    BOOST_CHECK(gate->contains(29, 11));
+    BOOST_CHECK(gate->contains(28, 10));
+    BOOST_CHECK(gate->contains(30, 12));
+    BOOST_CHECK(!gate->contains(31, 11));
+    BOOST_CHECK_EQUAL(script.getRegionNameAt(29, 11), "Gate");
+    BOOST_CHECK_EQUAL(script.getRegionNameAt(0, 0), "");
+    BOOST_CHECK(script.getRegion("Missing") == nullptr);
+
+    BOOST_CHECK_EQUAL(script.getFreeRegionName(), "Region1");
+    script.setRegion(LevelScriptRegion("Region1", 1, 2, 3, 4));
+    BOOST_CHECK_EQUAL(script.getFreeRegionName(), "Region2");
+
+    // Same name: the region is moved, not duplicated
+    script.setRegion(LevelScriptRegion("Gate", 5, 5, 6, 6));
+    BOOST_CHECK_EQUAL(script.getRegions().size(), 2u);
+    BOOST_CHECK(!script.getRegion("Gate")->contains(29, 11));
+
+    BOOST_CHECK(script.removeRegion("Region1"));
+    BOOST_CHECK(!script.removeRegion("Region1"));
+    BOOST_CHECK_EQUAL(script.getRegions().size(), 1u);
+
+    // A level with markers and no triggers must still be written
+    LevelScript onlyRegion;
+    onlyRegion.setRegion(LevelScriptRegion("A", 0, 0, 1, 1));
+    BOOST_CHECK(!onlyRegion.isEmpty());
 }
 
 BOOST_AUTO_TEST_CASE(test_roundtrip)
@@ -121,7 +192,17 @@ BOOST_AUTO_TEST_CASE(test_invalid)
         // Missing end tag
         "[Trigger]\nName\tx\nCond\ttime\t1\nAction\twin\t1\n[/Trigger]\n",
         // Not a number
-        "[Trigger]\nName\tx\nCond\ttime\tsoon\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n"
+        "[Trigger]\nName\tx\nCond\ttime\tsoon\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // Nothing to claim
+        "[Trigger]\nName\tx\nCond\tclaimed\t1\tGate\t0\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // Wrong comparison
+        "[Trigger]\nName\tx\nCond\tgold\t1\t==\t5\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // Region with a missing corner value
+        "Region\tA\t1\t2\t3\n[/Triggers]\n",
+        // Region inside a trigger
+        "[Trigger]\nName\tx\nRegion\tA\t1\t2\t3\t4\nCond\ttime\t1\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // reveal without a region name
+        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\treveal\t1\n[/Trigger]\n[/Triggers]\n"
     };
 
     for(const char* text : invalid)
