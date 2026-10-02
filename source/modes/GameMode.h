@@ -161,6 +161,14 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
     //! creature card (the card stays open)
     void showSocialWindow(const std::string& selectedCreature);
+    //! \brief Sandbox panel: toggles the window, changes the level of the heroes (left click up,
+    //! right click down), takes a hero in the hand and starts hero invasions
+    bool toggleSandboxWindow(const CEGUI::EventArgs& = {});
+    bool hideSandboxWindow(const CEGUI::EventArgs& = {});
+    bool onSandboxHeroLevelClicked(const CEGUI::EventArgs& e);
+    bool takeSandboxHero(const CEGUI::EventArgs& = {});
+    bool startSandboxSingleInvasion(const CEGUI::EventArgs& = {});
+    bool startSandboxContinualInvasion(const CEGUI::EventArgs& = {});
 
     //! \brief Shows/hides/toggles the player settings window
     //! \brief Casino payout control, opened by clicking on one of the player's casinos
@@ -317,6 +325,9 @@ private:
     //! \brief The settings window.
     SettingsWindow mSettings;
     bool mReturningToSettingsNavigation = false;
+
+    //! \brief The level of the heroes taken from the sandbox hero toolbox
+    uint32_t mSandboxHeroLevel;
 
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window

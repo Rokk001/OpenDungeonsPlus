@@ -92,7 +92,11 @@ enum class ClientNotificationType
     askCasinoPayout,
 
     //! \brief Editor: creates a special gift box on a tile
-    editorCreateGiftBox
+    editorCreateGiftBox,
+
+    // Sandbox mode
+    askSandboxTakeHero,
+    askSandboxInvasion
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

@@ -20,6 +20,7 @@
 
 #include "entities/GameEntity.h"
 #include "gamemap/LevelScript.h"
+#include "gamemap/SandboxMode.h"
 #include "gamemap/SelectionEntityWanted.h"
 #include "gamemap/TileContainer.h"
 #include "ai/AIManager.h"
@@ -338,6 +339,17 @@ public:
 
     inline void setLevelFightMusicFile(const std::string& levelFightMusicFile)
     { mMapInfoFightMusicFile = levelFightMusicFile; }
+
+    //! \brief A sandbox level has no goals to win or lose. The player builds freely and uses the
+    //! sandbox panel to call heroes.
+    inline bool isSandbox() const
+    { return mIsSandbox; }
+
+    inline void setSandbox(bool isSandbox)
+    { mIsSandbox = isSandbox; }
+
+    inline SandboxMode& getSandboxMode()
+    { return mSandboxMode; }
 
     std::string getGoalsStringForPlayer(Player* player);
 
@@ -661,6 +673,8 @@ private:
     std::string mMapInfoDescription;
     std::string mMapInfoMusicFile;
     std::string mMapInfoFightMusicFile;
+    bool mIsSandbox;
+    SandboxMode mSandboxMode;
 
     std::vector<Creature*> mCreatures;
 
