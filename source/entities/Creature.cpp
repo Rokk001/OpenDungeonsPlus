@@ -107,6 +107,31 @@
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 
+// Target selection by combat class: the distance to an enemy support creature is multiplied by this
+// factor for blitzers and flankers, so they prefer it over closer enemies
+static const double COMBAT_CLASS_SUPPORT_TARGET_FACTOR = 0.5;
+
+//! \brief Returns the factor applied to the squared distance of a potential target. Lower means preferred.
+//! Blockers and support creatures attack the nearest enemy. Blitzers and flankers prefer enemy support creatures.
+static double getTargetDistanceFactor(const Creature& attacker, const GameEntity& target)
+{
+    if(target.getObjectType() != GameEntityType::creature)
+        return 1.0;
+
+    const CreatureDefinition::CombatClass attackerClass = attacker.getDefinition()->getCombatClass();
+    if((attackerClass != CreatureDefinition::CombatBlitzer) && (attackerClass != CreatureDefinition::CombatFlanker))
+        return 1.0;
+
+    const Creature& targetCreature = static_cast<const Creature&>(target);
+    if(targetCreature.getDefinition()->isWorker())
+        return 1.0;
+
+    if(targetCreature.getDefinition()->getCombatClass() == CreatureDefinition::CombatSupport)
+        return COMBAT_CLASS_SUPPORT_TARGET_FACTOR;
+
+    return 1.0;
+}
+
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
 
@@ -1395,15 +1420,16 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
     Tile* tileAttack = nullptr;
     CreatureSkillData* skillData = nullptr;
     Tile* tilePosition = nullptr;
-    int closestDist = -1;
+    // Closest distance weighted by the combat class of the target (see getTargetDistanceFactor)
+    double closestDistWeighted = -1.0;
     // We try to attack creatures first
     for(GameEntity* entity : listObjects)
     {
         GameEntity* entityAttackCheck = nullptr;
         Tile* tileAttackCheck = nullptr;
         CreatureSkillData* skillDataCheck = nullptr;
-        int closestDistCheck = closestDist;
-        // We check if this creature is closer than the other one (if any)
+        int closestDistCheck = -1;
+        // We check the closest tile of this entity
         std::vector<Tile*> coveredTiles = entity->getCoveredTiles();
         for(Tile* tile : coveredTiles)
         {
@@ -1423,6 +1449,11 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
         }
 
         if((entityAttackCheck == nullptr) || (tileAttackCheck == nullptr))
+            continue;
+
+        // We check if this entity is closer than the other one (if any), weighted by the combat class
+        double closestDistCheckWeighted = static_cast<double>(closestDistCheck) * getTargetDistanceFactor(*this, *entityAttackCheck);
+        if((closestDistWeighted >= 0.0) && (closestDistCheckWeighted >= closestDistWeighted))
             continue;
 
         // We check if we are supposed to flee from this entity
@@ -1456,14 +1487,11 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
         if(rangeTarget <= (skillRangeMax * skillRangeMax))
         {
              // We can attack
-             if((closestDist == -1) || (rangeTarget < closestDist))
-             {
-                tilePosition = myTile;
-                entityAttack = entityAttackCheck;
-                tileAttack = tileAttackCheck;
-                skillData = skillDataCheck;
-                closestDist = rangeTarget;
-             }
+             tilePosition = myTile;
+             entityAttack = entityAttackCheck;
+             tileAttack = tileAttackCheck;
+             skillData = skillDataCheck;
+             closestDistWeighted = closestDistCheckWeighted;
              continue;
         }
 
@@ -1500,6 +1528,17 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             // We compute a score for each tile. We will choose the best one. Note that we try to be as close as possible
             // from the fightIdleDist but by walking the less possible. We need to find a compromise
             int scoreAttack = std::abs(skillRangeMaxIntSquared - distFoeTmp) * 2 + distAttackTmp;
+            // Support creatures keep their distance, flankers prefer to get behind the target
+            CreatureDefinition::CombatClass combatClass = getDefinition()->getCombatClass();
+            if((combatClass == CreatureDefinition::CombatSupport) && (distFoeTmp < skillRangeMaxIntSquared))
+                scoreAttack += (skillRangeMaxIntSquared - distFoeTmp) * 2;
+            else if(combatClass == CreatureDefinition::CombatFlanker)
+            {
+                int behindTarget = (tile->getX() - tileAttackCheck->getX()) * (myTile->getX() - tileAttackCheck->getX()) +
+                    (tile->getY() - tileAttackCheck->getY()) * (myTile->getY() - tileAttackCheck->getY());
+                if(behindTarget < 0)
+                    scoreAttack /= 2;
+            }
             if((bestScoreAttack != -1) && (bestScoreAttack <= scoreAttack))
                 continue;
 
@@ -1509,7 +1548,7 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             entityAttack = entityAttackCheck;
             tileAttack = tileAttackCheck;
             skillData = skillDataCheck;
-            closestDist = closestDistCheck;
+            closestDistWeighted = closestDistCheckWeighted;
             // We don't break because there might be a better spot
         }
     }
