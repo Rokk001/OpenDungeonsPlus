@@ -22,6 +22,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "entities/TreasuryObject.h"
 #include "game/SkillManager.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -354,6 +355,9 @@ void Player::dropHand(Tile *t, unsigned int index)
         // half of its summoning price is paid back
         if(redemWorkerInHeart(entity, t))
             return;
+
+        if(entity->getObjectType() == GameEntityType::treasuryObject)
+            static_cast<TreasuryObject*>(entity)->setDropSeat(getSeat());
 
         entity->drop(pos);
         entity->fireDropEntity(this, t);
