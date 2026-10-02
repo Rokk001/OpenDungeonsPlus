@@ -57,6 +57,12 @@ check("void updateRoomUnlocks();" in header, "SandboxMode.h does not declare upd
 check("seat->addSkill(ROOM_UNLOCK_ORDER[" in code, "the unlock must use Seat::addSkill")
 check("updateRoomUnlocks();" in code[code.index("void SandboxMode::doTurn()"):], "doTurn must call updateRoomUnlocks")
 
+# One message per invasion: the hero portal stays silent when the sandbox spawns a wave (it names the spawned heroes)
+portal = (root / "source/rooms/RoomPortalWave.cpp").read_text(encoding="utf-8")
+spawn = portal[portal.index("void RoomPortalWave::spawnWave("):portal.index("void RoomPortalWave::warnHeroesComing")]
+check("(spawnedNames == nullptr)" in spawn[spawn.index("warnHeroesComing();") - 120:], "the sandbox wave must not also trigger the gate warning")
+
+
 if failures:
     print("\n".join(failures))
     sys.exit(1)
