@@ -543,6 +543,9 @@ public:
 
     void resetKoTurns();
 
+    //! \brief Knocks the creature down for the given number of turns (server side). Does nothing if dead or KO.
+    void stun(int32_t nbTurns);
+
     //! \brief Called when the creature is set in jail by dropping or brought by
     //! a worker. if prison is nullptr, the creature is freed
     void setInJail(Room* prison);
