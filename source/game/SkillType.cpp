@@ -115,6 +115,8 @@ std::string toString(SkillType type)
             return "trapLightning";
         case SkillType::trapFireburst:
             return "trapFireburst";
+        case SkillType::trapGuardPost:
+            return "trapGuardPost";
         case SkillType::spellEyeEvil:
             return "spellEyeEvil";
         case SkillType::spellCreateGold:
@@ -206,6 +208,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Lightning Trap";
         case SkillType::trapFireburst:
             return "The Fireburst Trap";
+        case SkillType::trapGuardPost:
+            return "The Guard Post";
         case SkillType::spellEyeEvil:
             return "The 'Eye of evil' spell";
         case SkillType::spellCreateGold:

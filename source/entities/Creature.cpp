@@ -29,6 +29,7 @@
 #include "creatureaction/CreatureActionGetFee.h"
 #include "creatureaction/CreatureActionGoCallToWar.h"
 #include "creatureaction/CreatureActionGoDefendHeart.h"
+#include "creatureaction/CreatureActionGuardPost.h"
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
@@ -1503,6 +1504,18 @@ bool Creature::handleIdleAction()
     {
         pushAction(Utils::make_unique<CreatureActionSearchJob>(*this, false));
         return true;
+    }
+
+    // Fighters without a task man a free guard post
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::guardPost) &&
+        !isTired() &&
+        !isHungry() &&
+        !((mGoldFee > 0) && (getSeat()->getGold() > 0)) &&
+        (Random::Double(0.0, 1.0) < 0.5))
+    {
+        if(CreatureActionGuardPost::tryManPost(*this))
+            return true;
     }
 
     // Any creature.

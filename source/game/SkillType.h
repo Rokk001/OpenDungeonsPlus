@@ -83,6 +83,7 @@ enum class SkillType
     trapFireburst,
     spellLightning,
     spellTremor,
+    trapGuardPost,
 
     // This should be the last
     countSkill

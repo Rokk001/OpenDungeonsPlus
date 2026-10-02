@@ -590,6 +590,14 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
+    resType = SkillType::trapGuardPost;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefTrap("TacticSkills/", "GuardPostTrapButton", skill, TrapType::guardPost);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     // Magic Skills
     lvl1depends.clear();
     lvl2depends.clear();

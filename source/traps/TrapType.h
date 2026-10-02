@@ -38,6 +38,7 @@ enum class TrapType
     gas,
     lightning,
     fireburst,
+    guardPost,
     nbTraps     // Must be the last in this enum
 };
 

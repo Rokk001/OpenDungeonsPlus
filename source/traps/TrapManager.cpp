@@ -790,6 +790,8 @@ int32_t TrapManager::getNeededWorkshopPointsPerTrap(TrapType trapType)
             return ConfigManager::getSingleton().getTrapConfigInt32("LightningWorkshopPointsPerTile");
         case TrapType::fireburst:
             return ConfigManager::getSingleton().getTrapConfigInt32("FireburstWorkshopPointsPerTile");
+        case TrapType::guardPost:
+            return ConfigManager::getSingleton().getTrapConfigInt32("GuardPostWorkshopPointsPerTile");
         case TrapType::doorWooden:
             return ConfigManager::getSingleton().getTrapConfigInt32("WoodenDoorPointsPerTile");
         case TrapType::doorBraced:
