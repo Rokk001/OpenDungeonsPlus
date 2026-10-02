@@ -581,7 +581,19 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             }
            
             GameEditorModeConsole::scriptRegister[actionName].insert(make_pair(auxVector, script_body.str())); // std::make_pair(auxF,  script_body.str()));
-            
+
+        }
+
+        levelFile >> nextParam;
+    }
+
+    // Optional level triggers and their state. Older levels do not have this section.
+    if(nextParam == "[Triggers]")
+    {
+        if(!gameMap.getLevelScript().importFromStream(levelFile))
+        {
+            OD_LOG_WRN("Invalid Triggers section");
+            return false;
         }
     }
 
@@ -857,6 +869,12 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << std::endl;
     }
     levelFile << "[/Chickens]" << std::endl;
+
+    if(!gameMap.getLevelScript().isEmpty())
+    {
+        levelFile << "\n";
+        gameMap.getLevelScript().exportToStream(levelFile);
+    }
 
     if (!levelFile.good()) {
         OD_LOG_WRN("Unexpected failure on file: " + fileName);
