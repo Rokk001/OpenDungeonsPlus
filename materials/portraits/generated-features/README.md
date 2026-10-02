@@ -6,7 +6,7 @@ Original portraits and the earlier cropped-patch folder remain unchanged.
 Native generator canvas sizes are preserved; these files are not registered game-composition patches.
 Exact prompts and source-file provenance are recorded per portrait.
 
-Generation and copy validation: 14 of 34 creature/gender combinations completed.
+Generation and copy validation: 15 of 34 creature/gender combinations completed.
 
 Completed combinations:
 - Kobold male: 19 assets
@@ -23,5 +23,6 @@ Completed combinations:
 - RunelordDwarf female: 19 assets
 - Gnome male: 17 assets
 - Gnome female: 19 assets
+- Adventurer male: 21 assets
 
 No runtime code changed, so application version and runtime changelog updates are not required.
