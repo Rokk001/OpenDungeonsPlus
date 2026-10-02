@@ -59,6 +59,7 @@ creatures_cfg = read('config/creatures.cfg')
 imp_claim = re.search(r'^\s+ClaimRate\s+([0-9.]+)\s*$', creatures_cfg, re.M).group(1)
 check(config_value('RoomConvertReferenceClaimRate') == imp_claim,
       'RoomConvertReferenceClaimRate must be the claim rate of the imp (' + imp_claim + ')')
+check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
 check(config_value('PortalFirstSpawnSeconds') == '25', 'the first creature of a taken over portal comes after 25 seconds')
 check('"RoomsClaimableByEnemies", 1.0)' in room_source, 'without the setting the reference behaviour applies')
 turns_per_second = re.search(r'double ODApplication::turnsPerSecond = ([0-9.]+);', read('source/ODApplication.cpp')).group(1)
@@ -112,6 +113,21 @@ check('mClaimHealth = (mClaimHealth * nbTilesThis' in function(room_source, 'voi
 check('logPortalCandidate(creature, myTile, "standing")' in search_source and '"neighbor"' in search_source
       and '"sight"' in search_source, 'the claim search logs portal tiles')
 check('RoomType::portal' in function(search_source, 'static void logPortalCandidate('), 'only portal tiles are logged')
+# Repair of a worn down room by the own workers
+repair = function(room_source, 'void Room::repairClaimHealth(')
+check('RoomRepairFactor' in repair and 'RoomClaim::healthRepairedPerDance(' in repair, 'repairing uses RoomRepairFactor')
+check('mClaimHealth > 1.0' in repair, 'the pool of a room never goes above full')
+check('bool needsClaimRepair() const' in room_header and 'mClaimHealth < 1.0' in room_header, 'Room.h tells when a room needs repair')
+claim_source = read('source/creatureaction/CreatureActionClaimGroundTile.cpp')
+claim_action = function(claim_source, 'bool CreatureActionClaimGroundTile::handleCreatureActionClaimGroundTile(')
+check('needsClaimRepair()' in claim_action and 'repairClaimHealth(creature.getClaimRate())' in claim_action
+      and 'room->getSeat() == creature.getSeat()' in claim_action, 'a worker repairs a worn down room of its own seat')
+check(claim_action.index('repairClaimHealth') < claim_action.index('isGroundClaimable'), 'repair is tried before claiming ground')
+search_action = function(search_source, 'bool CreatureActionSearchGroundTileToClaim::handleSearchGroundTileToClaim(')
+check('needsClaimRepair()' in search_action and 'room->getSeat() != creature.getSeat()' in search_action,
+      'the claim search looks for own worn down rooms')
+check(search_action.index('needsClaimRepair()') < search_action.index('logPortalCandidate(creature, myTile, "standing")'),
+      'repairing own rooms comes before claiming ground')
 check(room_header.count('dungeonTemple') <= 1, 'the heart exception must stay in one place')
 
 # Probe: the pool maths and the claim rule, compiled from the real header
@@ -163,6 +179,17 @@ int main()
     check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25) > 0.0, "a dance lowers the pool");
     check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 0) >= 1.0, "a room without tiles is taken at once");
 
+    // Repair: one imp repairs five times faster than one imp wears down, so one repairing imp
+    // outweighs four enemy imps and the room refills from empty in a fifth of the time
+    double lost = RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25);
+    double repaired = RoomClaim::healthRepairedPerDance(impRate, REFERENCE, ENEMY, TPS, 25, REPAIR);
+    check(std::fabs(repaired - 5.0 * lost) < 1e-12, "repairing is 5 times the wearing down");
+    check(repaired > 4.0 * lost, "one repairing imp outweighs four enemy imps");
+    check(repaired < 5.5 * lost, "but not much more");
+    seconds = 1.0 / (repaired * TPS);
+    check(std::fabs(seconds - 12.5) < 0.1, "a 25 tile room is repaired from empty by one imp in 12.5 seconds");
+    check(RoomClaim::healthRepairedPerDance(impRate, REFERENCE, ENEMY, TPS, 0, REPAIR) >= 1.0, "a room without tiles is repaired at once");
+
     check(RoomClaim::isClaimableBy(true, false, false), "an enemy room is claimable");
     check(!RoomClaim::isClaimableBy(true, true, false), "an allied room is not claimable");
     check(!RoomClaim::isClaimableBy(true, false, true), "the enemy dungeon heart is never claimable");
@@ -176,6 +203,7 @@ int main()
 probe = (probe.replace('REFERENCE', config_value('RoomConvertReferenceClaimRate'))
          .replace('NEUTRAL', config_value('RoomConvertNeutralSecondsPerTile'))
          .replace('ENEMY', config_value('RoomConvertSecondsPerTile'))
+         .replace('REPAIR', config_value('RoomRepairFactor'))
          .replace('TPS', turns_per_second))
 
 

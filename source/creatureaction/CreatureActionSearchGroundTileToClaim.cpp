@@ -86,6 +86,37 @@ bool CreatureActionSearchGroundTileToClaim::handleSearchGroundTileToClaim(Creatu
         }
     }
 
+    // Our own rooms that an enemy has worn down come first: repairing is much faster
+    // than the wearing down, so it pays off at once
+    float distRepair = -1;
+    Tile* tileToRepair = nullptr;
+    for(Tile* tile : creature.getTilesWithinSightRadius())
+    {
+        if(tile == nullptr)
+            continue;
+
+        Room* room = tile->getCoveringRoom();
+        if((room == nullptr) || (room->getSeat() != creature.getSeat()) || !room->needsClaimRepair())
+            continue;
+        if(!tile->canWorkerClaim(creature))
+            continue;
+        if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
+            continue;
+
+        float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
+        if((distRepair != -1) && (distRepair <= dist))
+            continue;
+
+        distRepair = dist;
+        tileToRepair = tile;
+    }
+
+    if(tileToRepair != nullptr)
+    {
+        creature.pushAction(Utils::make_unique<CreatureActionClaimGroundTile>(creature, *tileToRepair));
+        return true;
+    }
+
     logPortalCandidate(creature, myTile, "standing");
 
     // See if the tile we are standing on can be claimed

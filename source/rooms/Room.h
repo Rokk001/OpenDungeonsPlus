@@ -96,6 +96,15 @@ public:
     inline double getClaimHealth() const
     { return mClaimHealth; }
 
+    //! \brief True when an enemy has worn the room down and its own workers can
+    //! still repair it.
+    inline bool needsClaimRepair() const
+    { return mClaimHealth < 1.0; }
+
+    //! \brief A worker of the owner dancing on the room gives claim health back,
+    //! faster than an enemy worker takes it away (RoomRepairFactor).
+    void repairClaimHealth(double danceRate);
+
     //! \brief False in the claimableOnly mode, where a room changes hands by being
     //! danced away and fighters have nothing to do with it. The dungeon temple
     //! cannot be claimed, so it stays destructible in every mode: destroying it is
