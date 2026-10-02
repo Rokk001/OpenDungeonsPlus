@@ -27,6 +27,7 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
 #include "game/Player.h"
 #include "game/CreaturePanelData.h"
 #include "game/Seat.h"
@@ -69,7 +70,8 @@ template<> ODClient* Ogre::Singleton<ODClient>::msSingleton = nullptr;
 ODClient::ODClient() :
     ODSocketClient(),
     mIsPlayerConfig(false),
-    mHasLevelStatistics(false)
+    mHasLevelStatistics(false),
+    mTimeLimitSeconds(-1)
 {
 }
 
@@ -423,6 +425,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> ODApplication::turnsPerSecond);
             mHasLevelStatistics = false;
             mLevelStatistics = LevelStatistics();
+            mTimeLimitSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
 
             OD_ASSERT_TRUE(packetReceived >> nbPlayers);
@@ -878,7 +881,19 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 mLevelStatistics = statistics;
                 mHasLevelStatistics = true;
+                // A won campaign level shows its numbers in the campaign menu
+                if(statistics.mLevelWon && (gameMap->getLocalPlayer() != nullptr))
+                {
+                    Campaign::getSingleton().setLevelSummary(
+                        debriefingSeatSummary(statistics, gameMap->getLocalPlayer()->getSeat()->getId()));
+                }
             }
+            break;
+        }
+
+        case ServerNotificationType::timeLimit:
+        {
+            OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
             break;
         }
 

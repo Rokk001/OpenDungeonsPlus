@@ -20,12 +20,16 @@
 
 #include "gamemap/LevelScript.h"
 
+#include <cstdlib>
+#include <fstream>
+#include <set>
 #include <sstream>
 #include <string>
 
 static const std::string sample =
     "# comment\n"
     "Flag\tgateOpen\t1\n"
+    "TimeLimit\t300\n"
     "Region\tGate\t30\t12\t28\t10\n"
     "[Trigger]\n"
     "Name\tambush\n"
@@ -64,6 +68,25 @@ static const std::string sample =
     "Action\treveal\t1\tGate\n"
     "Action\taddflag\tvisits\t-2\n"
     "[/Trigger]\n"
+    "[Trigger]\n"
+    "Name\tunlock\n"
+    "Mode\tonce\n"
+    "Cond\tflag\tvisits\t-2\n"
+    "Action\tmake\t1\troomHatchery\n"
+    "Action\ttimelimit\t120\n"
+    "[/Trigger]\n"
+    "[Trigger]\n"
+    "Name\tcreatureEvents\n"
+    "Mode\tonce\n"
+    "Cond\thappy\t1\t>=\t2\n"
+    "Cond\tangry\t1\t<=\t0\n"
+    "Cond\tatlevel\t1\t3\t>=\t2\n"
+    "Cond\tlost\t1\t>=\t1\n"
+    "Cond\tpickedup\t1\t>=\t4\n"
+    "Cond\tdropped\t1\t>=\t3\n"
+    "Cond\tslapped\t1\t<=\t5\n"
+    "Action\tmessage\t1\tEvents\n"
+    "[/Trigger]\n"
     "[/Triggers]\n";
 
 BOOST_AUTO_TEST_CASE(test_parse)
@@ -71,7 +94,7 @@ BOOST_AUTO_TEST_CASE(test_parse)
     LevelScript script;
     std::istringstream is(sample);
     BOOST_REQUIRE(script.importFromStream(is));
-    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 3u);
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 5u);
     BOOST_CHECK_EQUAL(script.getFlag("gateOpen"), 1);
     BOOST_CHECK_EQUAL(script.getFlag("unknown"), 0);
 
@@ -118,6 +141,75 @@ BOOST_AUTO_TEST_CASE(test_parse)
     BOOST_REQUIRE_EQUAL(watch.mActions.size(), 2u);
     BOOST_CHECK(watch.mActions[1].mType == LevelScriptActionType::addFlag);
     BOOST_CHECK_EQUAL(watch.mActions[1].mNumber, -2);
+
+    const LevelScriptTrigger& unlock = script.getTriggers()[3];
+    BOOST_REQUIRE_EQUAL(unlock.mActions.size(), 2u);
+    BOOST_CHECK(unlock.mActions[0].mType == LevelScriptActionType::make);
+    BOOST_CHECK_EQUAL(unlock.mActions[0].mSeatId, 1);
+    BOOST_CHECK_EQUAL(unlock.mActions[0].mText, "roomHatchery");
+    BOOST_REQUIRE_EQUAL(unlock.mActions.size(), 2u);
+    BOOST_CHECK(unlock.mActions[1].mType == LevelScriptActionType::timeLimit);
+    BOOST_CHECK_EQUAL(unlock.mActions[1].mNumber, 120);
+
+    const LevelScriptTrigger& events = script.getTriggers()[4];
+    BOOST_REQUIRE_EQUAL(events.mConditions.size(), 7u);
+    BOOST_CHECK(events.mConditions[0].mType == LevelScriptConditionType::happyCreatures);
+    BOOST_CHECK(events.mConditions[0].mAtLeast);
+    BOOST_CHECK_EQUAL(events.mConditions[0].mNumber, 2);
+    BOOST_CHECK(events.mConditions[1].mType == LevelScriptConditionType::angryCreatures);
+    BOOST_CHECK(!events.mConditions[1].mAtLeast);
+    BOOST_CHECK(events.mConditions[2].mType == LevelScriptConditionType::creaturesAtLevel);
+    BOOST_CHECK_EQUAL(events.mConditions[2].mSeatId, 1);
+    BOOST_CHECK_EQUAL(events.mConditions[2].mX1, 3);
+    BOOST_CHECK(events.mConditions[2].mAtLeast);
+    BOOST_CHECK_EQUAL(events.mConditions[2].mNumber, 2);
+    BOOST_CHECK(events.mConditions[3].mType == LevelScriptConditionType::creaturesLost);
+    BOOST_CHECK(events.mConditions[4].mType == LevelScriptConditionType::creaturesPickedUp);
+    BOOST_CHECK_EQUAL(events.mConditions[4].mNumber, 4);
+    BOOST_CHECK(events.mConditions[5].mType == LevelScriptConditionType::creaturesDropped);
+    BOOST_CHECK(events.mConditions[6].mType == LevelScriptConditionType::creaturesSlapped);
+    BOOST_CHECK(!events.mConditions[6].mAtLeast);
+}
+
+BOOST_AUTO_TEST_CASE(test_time_limit)
+{
+    LevelScript script;
+    BOOST_CHECK_EQUAL(script.getTimeLimitSeconds(), LevelScript::TIME_LIMIT_NOT_SET);
+    BOOST_CHECK(script.isEmpty());
+
+    std::istringstream is(sample);
+    BOOST_REQUIRE(script.importFromStream(is));
+    BOOST_CHECK_EQUAL(script.getTimeLimitSeconds(), 300);
+
+    // A saved game counts the limit from its new start, which is later than the old one
+    script.rebaseTimeLimit(100);
+    BOOST_CHECK_EQUAL(script.getTimeLimitSeconds(), 200);
+    script.rebaseTimeLimit(500);
+    BOOST_CHECK_EQUAL(script.getTimeLimitSeconds(), 0);
+
+    // No limit and a removed limit stay what they are
+    script.setTimeLimitSeconds(LevelScript::TIME_LIMIT_REMOVED);
+    script.rebaseTimeLimit(10);
+    BOOST_CHECK_EQUAL(script.getTimeLimitSeconds(), LevelScript::TIME_LIMIT_REMOVED);
+    script.setTimeLimitSeconds(LevelScript::TIME_LIMIT_NOT_SET);
+    script.rebaseTimeLimit(10);
+    BOOST_CHECK_EQUAL(script.getTimeLimitSeconds(), LevelScript::TIME_LIMIT_NOT_SET);
+
+    // The limit alone is a script worth writing, and it survives the round trip
+    LevelScript onlyLimit;
+    onlyLimit.setTimeLimitSeconds(42);
+    BOOST_CHECK(!onlyLimit.isEmpty());
+    std::ostringstream os;
+    onlyLimit.exportToStream(os);
+    std::string written = os.str();
+    BOOST_REQUIRE_EQUAL(written.compare(0, 11, "[Triggers]\n"), 0);
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    BOOST_CHECK_EQUAL(again.getTimeLimitSeconds(), 42);
+
+    again.clear();
+    BOOST_CHECK_EQUAL(again.getTimeLimitSeconds(), LevelScript::TIME_LIMIT_NOT_SET);
 }
 
 BOOST_AUTO_TEST_CASE(test_regions)
@@ -202,7 +294,19 @@ BOOST_AUTO_TEST_CASE(test_invalid)
         // Region inside a trigger
         "[Trigger]\nName\tx\nRegion\tA\t1\t2\t3\t4\nCond\ttime\t1\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
         // reveal without a region name
-        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\treveal\t1\n[/Trigger]\n[/Triggers]\n"
+        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\treveal\t1\n[/Trigger]\n[/Triggers]\n",
+        // atlevel without a level
+        "[Trigger]\nName\tx\nCond\tatlevel\t1\t>=\t2\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // atlevel with level 0
+        "[Trigger]\nName\tx\nCond\tatlevel\t1\t0\t>=\t2\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // A creature event with a wrong comparison
+        "[Trigger]\nName\tx\nCond\tslapped\t1\t=\t2\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // A negative time limit
+        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\ttimelimit\t-5\n[/Trigger]\n[/Triggers]\n",
+        // TimeLimit inside a trigger
+        "[Trigger]\nName\tx\nTimeLimit\t5\nCond\ttime\t1\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        // make without a skill name
+        "[Trigger]\nName\tx\nCond\ttime\t1\nAction\tmake\t1\n[/Trigger]\n[/Triggers]\n"
     };
 
     for(const char* text : invalid)
@@ -211,6 +315,66 @@ BOOST_AUTO_TEST_CASE(test_invalid)
         std::istringstream is(text);
         BOOST_CHECK_MESSAGE(!script.importFromStream(is), text);
     }
+}
+
+//! \brief Reads the [Triggers] section of the level file named by the environment variable
+//! OD_TEST_LEVEL_FILE (the region test level). Does nothing when the variable is not set.
+BOOST_AUTO_TEST_CASE(test_region_level)
+{
+    const char* path = std::getenv("OD_TEST_LEVEL_FILE");
+    if(path == nullptr)
+        return;
+
+    std::ifstream file(path);
+    BOOST_REQUIRE(file.good());
+    std::string line;
+    bool found = false;
+    while(std::getline(file, line))
+    {
+        if(line.compare(0, 10, "[Triggers]") == 0)
+        {
+            found = true;
+            break;
+        }
+    }
+    BOOST_REQUIRE(found);
+
+    LevelScript script;
+    BOOST_REQUIRE(script.importFromStream(file));
+    BOOST_CHECK(script.getRegion("Gate") != nullptr);
+    BOOST_CHECK(script.getRegion("Home") != nullptr);
+    BOOST_CHECK(script.getRegion("Far") != nullptr);
+
+    // Every condition and action kind that the level is meant to exercise is used
+    std::set<int> conditions;
+    std::set<int> actions;
+    for(const LevelScriptTrigger& trigger : script.getTriggers())
+    {
+        for(const LevelScriptCondition& cond : trigger.mConditions)
+        {
+            conditions.insert(static_cast<int>(cond.mType));
+            // A named region has to exist
+            if(!cond.mName.empty() && ((cond.mType == LevelScriptConditionType::region) ||
+               (cond.mType == LevelScriptConditionType::claimed)))
+            {
+                BOOST_CHECK_MESSAGE(script.getRegion(cond.mName) != nullptr, cond.mName);
+            }
+        }
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            actions.insert(static_cast<int>(action.mType));
+            if(action.mType == LevelScriptActionType::reveal)
+                BOOST_CHECK_MESSAGE(script.getRegion(action.mText) != nullptr, action.mText);
+        }
+    }
+    BOOST_CHECK(conditions.count(static_cast<int>(LevelScriptConditionType::region)) == 1);
+    BOOST_CHECK(conditions.count(static_cast<int>(LevelScriptConditionType::claimed)) == 1);
+    BOOST_CHECK(conditions.count(static_cast<int>(LevelScriptConditionType::gold)) == 1);
+    BOOST_CHECK(conditions.count(static_cast<int>(LevelScriptConditionType::kills)) == 1);
+    BOOST_CHECK(actions.count(static_cast<int>(LevelScriptActionType::reveal)) == 1);
+    BOOST_CHECK(actions.count(static_cast<int>(LevelScriptActionType::make)) == 1);
+    BOOST_CHECK(actions.count(static_cast<int>(LevelScriptActionType::timeLimit)) == 1);
+    BOOST_CHECK(actions.count(static_cast<int>(LevelScriptActionType::win)) == 1);
 }
 
 BOOST_AUTO_TEST_CASE(test_empty)

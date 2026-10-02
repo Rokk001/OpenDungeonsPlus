@@ -420,6 +420,7 @@ void Campaign::startLevel(size_t index)
     mActive = true;
     mPlayedLevel = index;
     mPlayedLevelWon = false;
+    mLevelSummary.clear();
 }
 
 void Campaign::stopCampaign()
@@ -428,6 +429,7 @@ void Campaign::stopCampaign()
     mActive = false;
     mPlayedLevel = mLevels.size();
     mPlayedLevelWon = false;
+    mLevelSummary.clear();
 }
 
 bool Campaign::isActive() const
@@ -453,6 +455,21 @@ void Campaign::clearPlayedLevel()
     std::lock_guard<std::mutex> lock(mMutex);
     mPlayedLevel = mLevels.size();
     mPlayedLevelWon = false;
+    mLevelSummary.clear();
+}
+
+void Campaign::setLevelSummary(const std::string& summary)
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    // Only a campaign level that is played keeps the numbers
+    if(mActive)
+        mLevelSummary = summary;
+}
+
+std::string Campaign::getLevelSummary() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mLevelSummary;
 }
 
 bool Campaign::onLevelWon()

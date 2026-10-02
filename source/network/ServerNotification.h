@@ -150,7 +150,9 @@ enum class ServerNotificationType
     possessionEnd,
     //! Answer to editorRegionEdit, all the region markers of the level script:
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
-    editorRegionData
+    editorRegionData,
+    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
+    timeLimit
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

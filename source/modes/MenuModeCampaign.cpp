@@ -143,6 +143,11 @@ void MenuModeCampaign::activate()
                 mResultText += "You have completed the campaign.";
             else
                 mResultText += "The next level is unlocked.";
+
+            // The numbers of the level, as sent by the server when it was won
+            std::string summary = campaign.getLevelSummary();
+            if(!summary.empty())
+                mResultText += "\n\n" + summary;
         }
         else
         {

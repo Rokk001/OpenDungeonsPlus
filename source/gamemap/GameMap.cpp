@@ -221,6 +221,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mGameDurationMinutes(0),
         mHeartDestroyedReward(0),
         mGameDurationAnnounced(false),
+        mTimeLimitSentSeconds(-1),
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
@@ -381,6 +382,7 @@ void GameMap::clearAll()
         mGameDurationMinutes = 0;
         mHeartDestroyedReward = 0;
         mGameDurationAnnounced = false;
+        mTimeLimitSentSeconds = -1;
         mCreatureClassLimits.clear();
         mSkirmishSkillStates.clear();
         mSkirmishSkillStatesLevel.clear();
@@ -2618,6 +2620,9 @@ void GameMap::addWinningSeat(Seat *s)
         serverNotification->mPacket << "You Won" << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
 
+        // The numbers of the level at the moment of the victory (the campaign menu shows them)
+        player->sendLevelStatistics(true);
+
         // In a campaign, the progress is saved and the player is told how to go on
         if(Campaign::getSingleton().onLevelWon())
         {
@@ -3633,13 +3638,61 @@ void GameMap::applySkirmishSkillStates()
     }
 }
 
-void GameMap::checkGameDuration()
+void GameMap::setScriptTimeLimit(int64_t seconds)
 {
-    if(mGameDurationMinutes == 0 || mGameDurationAnnounced)
+    if(seconds <= 0)
+    {
+        mLevelScript.setTimeLimitSeconds(LevelScript::TIME_LIMIT_REMOVED);
+        return;
+    }
+
+    int64_t elapsedSeconds = static_cast<int64_t>(static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond);
+    mLevelScript.setTimeLimitSeconds(elapsedSeconds + seconds);
+    // A new limit can run out again, even after an earlier one did
+    mGameDurationAnnounced = false;
+}
+
+void GameMap::sendTimeLimit(int32_t remainingSeconds)
+{
+    if(remainingSeconds == mTimeLimitSentSeconds)
         return;
 
-    // The duration counts game time, not real time, so the game speed does not change it
-    const double endTurn = static_cast<double>(mGameDurationMinutes) * 60.0 * ODApplication::turnsPerSecond;
+    mTimeLimitSentSeconds = remainingSeconds;
+    for(Player* player : getPlayers())
+    {
+        if(!player->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::timeLimit, player);
+        serverNotification->mPacket << remainingSeconds;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+void GameMap::checkGameDuration()
+{
+    // The limit of a script action wins over the game duration of the game settings.
+    // Both count game time, not real time, so the game speed does not change them.
+    const int64_t scriptLimit = mLevelScript.getTimeLimitSeconds();
+    double endTurn = -1.0;
+    if(scriptLimit >= 0)
+        endTurn = static_cast<double>(scriptLimit) * ODApplication::turnsPerSecond;
+    else if((scriptLimit == LevelScript::TIME_LIMIT_NOT_SET) && (mGameDurationMinutes > 0))
+        endTurn = static_cast<double>(mGameDurationMinutes) * 60.0 * ODApplication::turnsPerSecond;
+
+    if(endTurn < 0.0)
+    {
+        sendTimeLimit(-1);
+        return;
+    }
+
+    double secondsLeft = (endTurn - static_cast<double>(mTurnNumber)) / ODApplication::turnsPerSecond;
+    sendTimeLimit(secondsLeft > 0.0 ? static_cast<int32_t>(std::ceil(secondsLeft)) : 0);
+
+    if(mGameDurationAnnounced)
+        return;
+
     if(static_cast<double>(mTurnNumber) < endTurn)
         return;
 
@@ -3651,8 +3704,16 @@ void GameMap::checkGameDuration()
 
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, player);
-        serverNotification->mPacket << "Time is up! The game time of " + Helper::toString(mGameDurationMinutes)
-            + " minutes has run out." << EventShortNoticeType::majorGameEvent;
+        if(scriptLimit >= 0)
+        {
+            serverNotification->mPacket << "Time is up! The time limit of this level has run out."
+                << EventShortNoticeType::majorGameEvent;
+        }
+        else
+        {
+            serverNotification->mPacket << "Time is up! The game time of " + Helper::toString(mGameDurationMinutes)
+                + " minutes has run out." << EventShortNoticeType::majorGameEvent;
+        }
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 

@@ -33,6 +33,7 @@
 //!
 //!   [Triggers]
 //!   Flag    <name>  <value>                   # initial value of a flag (unset flags are 0)
+//!   TimeLimit <seconds>                       # written by the game: the time limit set by an action, in level seconds (-2: removed)
 //!   Region  <name> <x1> <y1> <x2> <y2>        # a named rectangle of tiles (placed in the level editor)
 //!   [Trigger]
 //!   Name    <name>
@@ -46,6 +47,13 @@
 //!   Cond    mana <seatId> >= | <= <amount>    # mana of the seat
 //!   Cond    kills <seatId> >= | <= <count>    # creatures the seat has killed
 //!   Cond    mined <seatId> >= | <= <amount>   # gold the seat has mined
+//!   Cond    happy <seatId> >= | <= <count>   # creatures of the seat that are happy
+//!   Cond    angry <seatId> >= | <= <count>   # creatures of the seat that are angry or furious
+//!   Cond    atlevel <seatId> <level> >= | <= <count>   # creatures of the seat of that level or higher
+//!   Cond    lost <seatId> >= | <= <count>    # creatures of the seat that died
+//!   Cond    pickedup <seatId> >= | <= <count>   # times a creature of the seat was picked up with the hand
+//!   Cond    dropped <seatId> >= | <= <count>    # times a creature of the seat was dropped from the hand
+//!   Cond    slapped <seatId> >= | <= <count>    # times a creature of the seat was slapped
 //!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
 //!   Cond    flag <name> <value>               # flag has exactly that value
@@ -58,6 +66,8 @@
 //!   Action  win <seatId>                      # seat -1: every human player
 //!   Action  lose <seatId>
 //!   Action  reveal <seatId> <regionName>      # the tiles of the region stay visible to the seat
+//!   Action  make <seatId> <skillName>         # room, trap, door or spell becomes available (skill type name such as roomHatchery); seat -1: every human player
+//!   Action  timelimit <seconds>               # the level is lost for every keeper when that many seconds have passed from now (0: removes any time limit); the remaining time is shown on the HUD
 //!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
@@ -79,7 +89,14 @@ enum class LevelScriptConditionType
     mana,
     kills,
     goldMined,
-    claimed
+    claimed,
+    happyCreatures,
+    angryCreatures,
+    creaturesAtLevel,
+    creaturesLost,
+    creaturesPickedUp,
+    creaturesDropped,
+    creaturesSlapped
 };
 
 enum class LevelScriptActionType
@@ -93,7 +110,9 @@ enum class LevelScriptActionType
     win,
     lose,
     reveal,
-    discoverLevel
+    discoverLevel,
+    make,
+    timeLimit
 };
 
 struct LevelScriptCondition
@@ -115,10 +134,10 @@ struct LevelScriptCondition
     int32_t mY1;
     int32_t mX2;
     int32_t mY2;
-    //! \brief For creatures, gold, mana, kills and goldMined: true for >=, false for <=
+    //! \brief For the conditions that compare a number: true for >=, false for <=
     bool mAtLeast;
     //! \brief Seconds (time), count (creatures, room, claimed, -1 for all of the region),
-    //! amount (gold, mana, goldMined), count (kills) or value (flag)
+    //! amount (gold, mana, goldMined), count (kills and the creature conditions) or value (flag)
     int64_t mNumber;
     //! \brief Room name (room), goal name (goal), flag name (flag) or, for region, the
     //! name of a region of the script (empty when the rectangle is given by mX1 to mY2)
@@ -142,10 +161,11 @@ struct LevelScriptAction
     int32_t mY;
     //! \brief spawn: seat whose dungeon the spawned group attacks (-1: none)
     int32_t mTargetSeatId;
-    //! \brief Gold amount (gold), flag value (setflag) or amount added to a flag (addflag)
+    //! \brief Gold amount (gold), flag value (setflag), amount added to a flag (addflag) or
+    //! seconds (timeLimit)
     int64_t mNumber;
-    //! \brief Message text (message, objective), flag name (setflag), region name (reveal)
-    //! or level file (discoverLevel)
+    //! \brief Message text (message, objective), flag name (setflag), region name (reveal),
+    //! level file (discoverLevel) or skill type name (make)
     std::string mText;
     //! \brief spawn: creature class name and level
     std::vector<std::pair<std::string, uint32_t> > mCreatures;
@@ -202,6 +222,10 @@ struct LevelScriptTrigger
 class LevelScript
 {
 public:
+    LevelScript() :
+        mTimeLimitSeconds(TIME_LIMIT_NOT_SET)
+    {}
+
     //! \brief Reads the lines after the [Triggers] tag, up to and including [/Triggers].
     //! Returns false on a malformed section. Existing content is replaced.
     bool importFromStream(std::istream& is);
@@ -212,7 +236,7 @@ public:
     void clear();
 
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mRegions.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     { return mTriggers; }
@@ -247,10 +271,28 @@ public:
     //! \brief Replaces all the regions, used by the editor when the server sends them
     void setRegions(const std::vector<LevelScriptRegion>& regions);
 
+    static const int64_t TIME_LIMIT_NOT_SET = -1;
+    static const int64_t TIME_LIMIT_REMOVED = -2;
+
+    //! \brief The time limit set by a script action, as the level second at which it runs out.
+    //! TIME_LIMIT_NOT_SET if no action set one (the game duration setting applies),
+    //! TIME_LIMIT_REMOVED if an action removed the limit.
+    inline int64_t getTimeLimitSeconds() const
+    { return mTimeLimitSeconds; }
+
+    inline void setTimeLimitSeconds(int64_t seconds)
+    { mTimeLimitSeconds = seconds; }
+
+    //! \brief Moves a time limit that is set so that it counts from a new level start, which is
+    //! elapsedSeconds later than the current one. Used when a game is saved: the turn counter
+    //! starts at 0 again when it is loaded.
+    void rebaseTimeLimit(int64_t elapsedSeconds);
+
 private:
     std::vector<LevelScriptTrigger> mTriggers;
     std::map<std::string, int64_t> mFlags;
     std::vector<LevelScriptRegion> mRegions;
+    int64_t mTimeLimitSeconds;
 };
 
 #endif // LEVELSCRIPT_H
