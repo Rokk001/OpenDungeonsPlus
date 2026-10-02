@@ -1,5 +1,5 @@
 {
-  "completed": 13,
+  "completed": 14,
   "total": 34,
   "combinations": [
     "Kobold.mesh",
@@ -14,6 +14,7 @@
     "Dwarf2.mesh-female",
     "RunelordDwarf.mesh",
     "RunelordDwarf.mesh-female",
-    "Gnome.mesh"
+    "Gnome.mesh",
+    "Gnome.mesh-female"
   ]
 }
