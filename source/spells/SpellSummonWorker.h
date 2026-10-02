@@ -31,6 +31,7 @@ public:
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
     static bool summonWorkersOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles);
     static int32_t getNextWorkerPriceForPlayer(GameMap* gameMap, Player* player);
+    static int32_t getWorkerPrice(int32_t basePrice, int32_t nbWorkers);
 
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
     static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
