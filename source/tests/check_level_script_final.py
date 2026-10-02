@@ -111,4 +111,14 @@ menu = read('source/modes/MenuModeCampaign.cpp')
 assert 'campaign.getLevelSummary()' in menu
 assert menu.index('campaign.getLevelSummary()') < menu.index('campaign.clearPlayedLevel()')
 
+# the region test level: a skirmish with 100 start mana, found by the level list
+level = read('levels/skirmish/TestRegionScripting.level')
+assert 'Region scripting' in level
+assert re.search(r'^mana	100$', level, re.M), 'start mana must be 100'
+section = level[level.index('[Triggers]'):level.index('[/Triggers]')]
+for word in ('Cond	pickedup', 'Cond	dropped', 'Cond	slapped', 'Cond	happy', 'Cond	lost', 'Cond	kills',
+             'Cond	claimed', 'Cond	region', 'Cond	gold', 'Action	make', 'Action	reveal',
+             'Action	timelimit', 'Action	win'):
+    assert word in section, word
+
 print('level script final wiring: ok')
