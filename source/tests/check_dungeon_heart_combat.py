@@ -230,7 +230,9 @@ methods = source[source.index('const double RoomDungeonTemple::HEART_MAX_HP'):so
 probe = probe.replace('INLINE_METHODS', inline).replace('METHODS', methods)
 probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject :'))
 # The reward for destroying a heart is a file-local helper called by takeHeartDamage
-reward = source[source.index('const uint32_t HEART_REWARD_REVEAL_TURNS'):source.index('void giveDestroyedHeartReward(')]
+# (the special objects and the room hand over are checked in check_skirmish_settings.py)
+reward = ('void placeHeartRewardSpecials(GameMap*, Seat*, Tile*) {}\n'
+          'void giveHeartRewardRoomsAndLand(GameMap*, Seat*, Seat*) {}\n')
 probe = probe.replace('HEART_REWARD', reward + function(source, 'void giveDestroyedHeartReward('))
 with tempfile.TemporaryDirectory(prefix='odp-heart-combat-') as directory:
     work = Path(directory)

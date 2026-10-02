@@ -520,7 +520,7 @@ public:
     { return mGameDurationMinutes; }
 
     //! \brief What the keeper that destroys a dungeon heart receives from the owner of the heart:
-    //! 0 = mana, 1 = mana and a special, 2 = mana, rooms and land
+    //! 0 = mana, 1 = mana and specials, 2 = mana, rooms and land
     inline uint32_t getHeartDestroyedReward() const
     { return mHeartDestroyedReward; }
 

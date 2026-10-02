@@ -246,7 +246,7 @@ void MenuModeConfigureSeats::initSettingCombos()
     combo->setEnabled(false);
     mHostSettingWindows.push_back(combo);
     addSettingItem(combo, "Gain mana", 0);
-    addSettingItem(combo, "Gain mana and a special", 1);
+    addSettingItem(combo, "Gain mana and specials", 1);
     addSettingItem(combo, "Gain mana, rooms and land", 2);
     selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, 0);
     addEventConnection(
