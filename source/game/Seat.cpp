@@ -304,6 +304,11 @@ void Seat::applyRevealedTiles()
     }
 }
 
+bool Seat::hasSeenTile(Tile* tile)
+{
+    return getTileStateNotified(tile) != nullptr;
+}
+
 void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 {
     if(mPlayer == nullptr)

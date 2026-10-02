@@ -339,37 +339,38 @@ void RoomTorture::revealEnemyInformation(Creature& creature)
     if(creature.getSeat() == getSeat())
         return;
 
-    // Creatures without a dungeon heart (like heroes) have nothing to give away
-    std::vector<Room*> temples = getGameMap()->getRoomsByTypeAndSeat(RoomType::dungeonTemple, creature.getSeat());
-    if(temples.empty())
+    // AI seats see every tile anyway
+    if((getSeat()->getPlayer() == nullptr) || !getSeat()->getPlayer()->getIsHuman())
         return;
 
-    Tile* centerTile = temples.front()->getCentralTile();
-    if(centerTile == nullptr)
-        return;
-
-    ConfigManager& config = ConfigManager::getSingleton();
-    int32_t radius = static_cast<int32_t>(config.getRoomConfigUInt32("TortureRevealRadius"));
-    uint32_t turns = config.getRoomConfigUInt32("TortureRevealTurns");
-    std::vector<Tile*> tiles;
-    for(int32_t yy = centerTile->getY() - radius; yy <= centerTile->getY() + radius; ++yy)
+    // The first room of the victim's owner whose first tile this seat has not seen yet is
+    // revealed completely and for good (it stays known like any explored tile)
+    Room* roomToReveal = nullptr;
+    const std::vector<Room*>& rooms = getGameMap()->getRooms();
+    for(Room* room : rooms)
     {
-        for(int32_t xx = centerTile->getX() - radius; xx <= centerTile->getX() + radius; ++xx)
-        {
-            if((xx < 0) || (yy < 0) || (xx >= getGameMap()->getMapSizeX()) || (yy >= getGameMap()->getMapSizeY()))
-                continue;
+        if(room->getSeat() != creature.getSeat())
+            continue;
 
-            int32_t dx = xx - centerTile->getX();
-            int32_t dy = yy - centerTile->getY();
-            if((dx * dx + dy * dy) > (radius * radius))
-                continue;
+        if(room->getHP(nullptr) <= 0.0)
+            continue;
 
-            Tile* tile = getGameMap()->getTile(xx, yy);
-            if(tile != nullptr)
-                tiles.push_back(tile);
-        }
+        Tile* firstTile = room->getCoveredTile(0);
+        if(firstTile == nullptr)
+            continue;
+
+        if(getSeat()->hasSeenTile(firstTile))
+            continue;
+
+        roomToReveal = room;
+        break;
     }
-    getSeat()->revealTiles(tiles, turns);
+    if(roomToReveal == nullptr)
+        return;
+
+    OD_LOG_INF("Torture information: seat " + Helper::toString(getSeat()->getId()) + " reveals room "
+        + roomToReveal->getName() + " of seat " + Helper::toString(creature.getSeat()->getId()));
+    getSeat()->revealTiles(roomToReveal->getCoveredTiles(), 1);
 
     if((getSeat()->getPlayer() != nullptr) &&
        getSeat()->getPlayer()->getIsHuman() &&
@@ -377,7 +378,7 @@ void RoomTorture::revealEnemyInformation(Creature& creature)
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "A tortured prisoner has given away the location of an enemy dungeon";
+        std::string msg = "A tortured prisoner has given away an enemy room";
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
