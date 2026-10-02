@@ -1736,6 +1736,13 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
     // We try to attack creatures first
     for(GameEntity* entity : listObjects)
     {
+        // Invisible creatures cannot be seen by the enemy and are not targeted
+        if((entity->getObjectType() == GameEntityType::creature) &&
+           static_cast<Creature*>(entity)->isInvisible())
+        {
+            continue;
+        }
+
         // Strong enemy creatures are targeted first: the more threatening a creature is compared to us,
         // the closer it appears to be. Other entities are not weighted.
         double threatFactor = 1.0;
@@ -4096,6 +4103,27 @@ bool Creature::isFrozen() const
 
         const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
         if((creatureEffect->mEffect->getEffectName() == "Frozen") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Creature::isInvisible() const
+{
+    if(!getIsOnServerMap())
+        return false;
+
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "Invisible") &&
            (creatureEffect->mEffect->getNbTurnsEffect() > 0))
         {
             return true;
