@@ -4646,6 +4646,7 @@ bool computePossessedDestination(const Creature& creature, const Ogre::Vector2& 
 void Creature::startPossession(Player& player)
 {
     mPossessor = &player;
+    mPossessionTurns = 0;
     player.setPossessedCreatureName(getName());
 
     // The creature stops what it is doing. Its actions are kept and will go on after the possession

@@ -1031,8 +1031,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             spell("ChickenNbTurns") + " turns.";
         case SkillType::spellInferno: return "Damage: " + spell("InfernoDamagePerTurn") + " per turn to enemy creatures within " +
             spell("InfernoRadiusTiles") + " tiles, which burn for " + spell("InfernoNbTurns") + " turns.";
-        case SkillType::spellPossess: return "Control one of your creatures in first person; costs " +
-            spell("PossessDrainPerSecond") + " mana per second while possessed.";
+        case SkillType::spellPossess: return "Control one of your creatures in first person; free for " +
+            spell("PossessFreeSeconds") + " seconds after the cast, then a mana drain per second that depends on the creature.";
         default: return "";
     }
 }

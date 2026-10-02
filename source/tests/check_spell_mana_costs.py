@@ -27,11 +27,30 @@ expected = {
     "ChickenPrice": "10000", "ChickenCooldown": "84",
     "InfernoPrice": "50000", "InfernoCooldown": "84",
     "CreateGoldPrice": "15000", "CreateGoldCooldown": "0",
-    "PossessPrice": "500", "PossessDrainPerSecond": "25",
+    "PossessPrice": "500", "PossessFreeSeconds": "20",
 }
 for key, value in expected.items():
     assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"
 assert "SummonWorkerNbFree" not in config, "the free-worker key is gone"
+assert "PossessDrainPerSecond" not in config, "the flat drain key is gone"
+
+# Possession: free for PossessFreeSeconds, then the drain per second of the creature type
+creatures = (repo / "config/creatures.cfg").read_text()
+blocks = re.findall(r"^\[Creature\]\n(.*?)^\[/Creature\]", creatures, re.M | re.S)
+assert blocks, "creature blocks found"
+costs = {}
+for block in blocks:
+    name = re.search(r"^\s+Name\s+(\w+)", block, re.M).group(1)
+    match = re.search(r"^\s+PossessManaCost\s+(\d+)\s*$", block, re.M)
+    assert match, f"{name} has no PossessManaCost"
+    costs[name] = int(match.group(1))
+for name in ("Kobold", "DwarfWorker"):
+    assert costs[name] == 0, f"{name} (worker) possesses for free"
+for name, value in {"Skeleton": 50, "Goblin": 150, "Troll": 150, "Knight": 500}.items():
+    assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
+action = (repo / "source/creatureaction/CreatureActionPossessed.cpp").read_text()
+assert "PossessFreeSeconds" in action and "getPossessManaCost" in action,     "the possession action uses the free period and the creature drain"
+assert "PossessDrainPerSecond" not in action
 
 spell = (repo / "source/spells/SpellSummonWorker.cpp").read_text()
 assert "std::pow" not in spell, "the worker price no longer doubles"

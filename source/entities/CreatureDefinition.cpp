@@ -74,6 +74,7 @@ CreatureDefinition::CreatureDefinition(
         mCombatClass (CombatBlocker),
         mStealGold (0),
         mFearless (false),
+        mPossessManaCost (0.0),
         mTortureTimeToConvert (120.0),
         mClassName   (className),
         mMeshName    (meshName),
@@ -128,6 +129,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mCombatClass(def.mCombatClass),
         mStealGold(def.mStealGold),
         mFearless(def.mFearless),
+        mPossessManaCost(def.mPossessManaCost),
         mTortureTimeToConvert(def.mTortureTimeToConvert),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
@@ -341,6 +343,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << CreatureDefinition::combatClassToString(c->mCombatClass);
     os << c->mStealGold;
     os << c->mFearless;
+    os << c->mPossessManaCost;
     os << c->mTortureTimeToConvert;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
@@ -384,6 +387,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     c->mCombatClass = CreatureDefinition::combatClassFromString(tempString);
     is >> c->mStealGold;
     is >> c->mFearless;
+    is >> c->mPossessManaCost;
     is >> c->mTortureTimeToConvert;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
@@ -527,6 +531,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mFearless = Helper::toBool(nextParam);
+                continue;
+            }
+            else if (nextParam == "PossessManaCost")
+            {
+                defFile >> nextParam;
+                creatureDef->mPossessManaCost = Helper::toDouble(nextParam);
                 continue;
             }
             else if (nextParam == "TortureTimeToConvert")
@@ -822,6 +832,9 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if(def1 == nullptr || (def1->mFearless != def2->mFearless))
         file << "    Fearless\t" << (def2->mFearless ? 1 : 0) << std::endl;
+
+    if(def1 == nullptr || (def1->mPossessManaCost != def2->mPossessManaCost))
+        file << "    PossessManaCost	" << def2->mPossessManaCost << std::endl;
 
     if(def1 == nullptr || (def1->mTortureTimeToConvert != def2->mTortureTimeToConvert))
         file << "    TortureTimeToConvert\t" << def2->mTortureTimeToConvert << std::endl;
