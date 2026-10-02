@@ -49,6 +49,7 @@
 //!   Action  setflag <name> <value>
 //!   Action  win <seatId>                      # seat -1: every human player
 //!   Action  lose <seatId>
+//!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
 //!   [/Triggers]
@@ -75,7 +76,8 @@ enum class LevelScriptActionType
     gold,
     setFlag,
     win,
-    lose
+    lose,
+    discoverLevel
 };
 
 struct LevelScriptCondition

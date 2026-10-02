@@ -140,7 +140,12 @@ void MenuModeCampaign::activate()
         if(campaign.getPlayedLevelWon())
         {
             mResultText = "Debriefing - " + level.mTitle + "\n\n" + level.mDebriefing + "\n\n";
-            if(campaign.isFinished())
+            if(level.mBonus)
+            {
+                mResultText += "You have cleared the hidden land.";
+                selected = campaign.getCurrentLevel();
+            }
+            else if(campaign.isFinished())
                 mResultText += "You have completed the campaign.";
             else
             {
@@ -177,10 +182,15 @@ void MenuModeCampaign::fillLevelList()
 
     for(size_t i = 0; i < campaign.getNumLevels(); ++i)
     {
-        std::string text = Helper::toString(static_cast<int>(i + 1)) + ". " + campaign.getLevel(i).mTitle;
+        const CampaignLevel& level = campaign.getLevel(i);
+        std::string text = Helper::toString(static_cast<int>(i + 1)) + ". ";
+        if(level.mBonus && !campaign.isUnlocked(i))
+            text += "(secret level)";
+        else
+            text += level.mTitle + (level.mBonus ? " (bonus)" : "");
         if(campaign.isCompleted(i))
             text += " (completed)";
-        else if(!campaign.isUnlocked(i))
+        else if(!campaign.isUnlocked(i) && !level.mBonus)
             text += " (locked)";
 
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text);
@@ -285,7 +295,17 @@ bool MenuModeCampaign::updateDescription(const CEGUI::EventArgs&)
     if(!mResultText.empty() && (index == mResultLevel))
         description = mResultText + "\n\n";
 
-    description += "Briefing - " + level.mTitle + "\n\n" + level.mBriefing;
+    if(level.mBonus && !campaign.isUnlocked(index))
+        description += "This level is still hidden. Find it in the campaign levels.";
+    else
+        description += "Briefing - " + level.mTitle + "\n\n" + level.mBriefing;
+
+    size_t talismanTotal = campaign.getTalismanTotal();
+    if(talismanTotal > 0)
+    {
+        description += "\n\nTalisman: " + Helper::toString(static_cast<int>(campaign.getTalismanPieces()))
+            + " of " + Helper::toString(static_cast<int>(talismanTotal)) + " pieces found.";
+    }
     descTxt->setText(reinterpret_cast<const CEGUI::utf8*>(description.c_str()));
     return true;
 }

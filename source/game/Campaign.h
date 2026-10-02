@@ -28,10 +28,18 @@
 //! The level file name is relative to the "levels" directory.
 struct CampaignLevel
 {
+    CampaignLevel():
+        mBonus(false)
+    {
+    }
+
     std::string mFile;
     std::string mTitle;
     std::string mBriefing;
     std::string mDebriefing;
+    //! A bonus (secret) level does not block the main sequence. Finding one
+    //! gives a piece of the talisman.
+    bool mBonus;
 };
 
 //! \brief The campaign: an ordered list of levels plus the saved progress.
@@ -43,10 +51,17 @@ struct CampaignLevel
 //!   Title=Some title
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
+//!   Bonus=1 (optional) marks a bonus level.
+//!
+//! A bonus level is hidden until a level script finds it (action "discover",
+//! the level file name as argument). It is not needed to finish the campaign,
+//! and each discovered bonus level is one piece of the talisman.
 //!
 //! Progress file (written by the game):
 //!   Completed <index> [<index> ...]
-//! A level is unlocked when all levels before it are completed. The current
+//!   Discovered <index> [<index> ...]
+//! A level is unlocked when all main levels before it are completed; a bonus
+//! level is unlocked when it was discovered. The current
 //! level is the first level that is not completed yet.
 //!
 //! The campaign is a process wide singleton because the single player server
@@ -72,9 +87,20 @@ public:
     const CampaignLevel& getLevel(size_t index) const;
     bool isCompleted(size_t index) const;
     bool isUnlocked(size_t index) const;
-    //! \brief First level not completed. Equals the number of levels if all are done.
+    //! \brief First main (non bonus) level not completed. Equals the number of levels if all are done.
     size_t getCurrentLevel() const;
     bool isFinished() const;
+    //! \brief A level script found the bonus level with that file name. Only
+    //! counts while a campaign level is played. Returns true if it is newly
+    //! discovered (progress is saved).
+    bool discoverBonusLevel(const std::string& file);
+    bool isDiscovered(size_t index) const;
+    //! \brief Number of discovered bonus levels (found talisman pieces).
+    size_t getTalismanPieces() const;
+    //! \brief Number of bonus levels (talisman pieces to find).
+    size_t getTalismanTotal() const;
+    //! \brief True if the campaign has bonus levels and all were discovered.
+    bool isTalismanComplete() const;
     //! \brief True if any level was completed (a campaign can be continued).
     bool hasProgress() const;
     //! \brief Forgets all progress (New Campaign).
@@ -105,12 +131,14 @@ private:
     mutable std::mutex mMutex;
     std::vector<CampaignLevel> mLevels;
     std::vector<bool> mCompleted;
+    std::vector<bool> mDiscovered;
     std::string mProgressPath;
     bool mActive;
     size_t mPlayedLevel;
     bool mPlayedLevelWon;
 
     size_t getCurrentLevelNoLock() const;
+    bool isUnlockedNoLock(size_t index) const;
 };
 
 #endif // CAMPAIGN_H

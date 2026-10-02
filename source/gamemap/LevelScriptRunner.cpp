@@ -20,6 +20,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "game/Campaign.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -282,6 +283,13 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         {
             for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
                 player->notifyNoMoreDungeonTemple();
+
+            break;
+        }
+        case LevelScriptActionType::discoverLevel:
+        {
+            if(Campaign::getSingleton().discoverBonusLevel(action.mText))
+                sendMessage(gameMap, -1, "You have found a hidden land. Go there when you have conquered this land.");
 
             break;
         }
