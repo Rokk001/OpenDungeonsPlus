@@ -305,7 +305,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="CannonButton" >
-                    <Property name="Area" value="{{0.125,-25},{0,135},{0.125,25},{0,185}}" />
+                    <Property name="Area" value="{{0.11,-25},{0,135},{0.11,25},{0,185}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/CannonButton" />
                     <Property name="TooltipText" value="Trap: Cannon" />
                     <Window type="OD/ProgressBar" name="CannonButtonProgressBar" >
@@ -322,7 +322,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="SpikeTrapButton" >
-                    <Property name="Area" value="{{0.375,-25},{0,135},{0.375,25},{0,185}}" />
+                    <Property name="Area" value="{{0.305,-25},{0,135},{0.305,25},{0,185}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/SpikeTrapButton" />
                     <Property name="TooltipText" value="Trap: Spike trap" />
                     <Window type="OD/ProgressBar" name="SpikeTrapButtonProgressBar" >
@@ -339,7 +339,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="BoulderTrapButton" >
-                    <Property name="Area" value="{{0.3,-25},{0,195},{0.3,25},{0,245}}" />
+                    <Property name="Area" value="{{0.266,-25},{0,195},{0.266,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/BoulderTrapButton" />
                     <Property name="TooltipText" value="Trap: Boulder trap" />
                     <Window type="OD/ProgressBar" name="BoulderTrapButtonProgressBar" >
@@ -356,7 +356,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="BracedDoorTrapButton" >
-                    <Property name="Area" value="{{0.625,-25},{0,135},{0.625,25},{0,185}}" />
+                    <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/BracedDoorTrapButton" />
                     <Property name="TooltipText" value="Trap: Braced door" />
                     <Window type="OD/ProgressBar" name="BracedDoorTrapButtonProgressBar" >
@@ -373,7 +373,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="SteelDoorTrapButton" >
-                    <Property name="Area" value="{{0.7,-25},{0,195},{0.7,25},{0,245}}" />
+                    <Property name="Area" value="{{0.578,-25},{0,195},{0.578,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/SteelDoorTrapButton" />
                     <Property name="TooltipText" value="Trap: Steel door" />
                     <Window type="OD/ProgressBar" name="SteelDoorTrapButtonProgressBar" >
@@ -390,7 +390,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="BarricadeTrapButton" >
-                    <Property name="Area" value="{{0.875,-25},{0,135},{0.875,25},{0,185}}" />
+                    <Property name="Area" value="{{0.695,-25},{0,135},{0.695,25},{0,185}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/BarricadeTrapButton" />
                     <Property name="TooltipText" value="Trap: Barricade" />
                     <Window type="OD/ProgressBar" name="BarricadeTrapButtonProgressBar" >
@@ -406,8 +406,8 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="SecretDoorTrapButton" >
-                    <Property name="Area" value="{{0.1,-25},{0,135},{0.1,25},{0,185}}" />
+                <Window type="OD/ResearchButton" name="SecretDoorTrapButton" >
+                    <Property name="Area" value="{{0.89,-25},{0,135},{0.89,25},{0,185}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/SecretDoorTrapButton" />
                     <Property name="TooltipText" value="Trap: Secret door" />
                     <Window type="OD/ProgressBar" name="SecretDoorTrapButtonProgressBar" >
@@ -419,12 +419,12 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="AlarmTrapButton" >
-                    <Property name="Area" value="{{0.1,-25},{0,195},{0.1,25},{0,245}}" />
+                    <Property name="Area" value="{{0.11,-25},{0,195},{0.11,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/AlarmTrapButton" />
                     <Property name="TooltipText" value="Trap: Alarm trap" />
                     <Window type="OD/ProgressBar" name="AlarmTrapButtonProgressBar" >
@@ -441,7 +441,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="FearTrapButton" >
-                    <Property name="Area" value="{{0.5,-25},{0,195},{0.5,25},{0,245}}" />
+                    <Property name="Area" value="{{0.422,-25},{0,195},{0.422,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/FearTrapButton" />
                     <Property name="TooltipText" value="Trap: Fear trap" />
                     <Window type="OD/ProgressBar" name="FearTrapButtonProgressBar" >
@@ -458,7 +458,7 @@
                     </Window>
                 </Window>
                 <Window type="OD/ResearchButton" name="GasTrapButton" >
-                    <Property name="Area" value="{{0.9,-25},{0,195},{0.9,25},{0,245}}" />
+                    <Property name="Area" value="{{0.734,-25},{0,195},{0.734,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/GasTrapButton" />
                     <Property name="TooltipText" value="Trap: Gas trap" />
                     <Window type="OD/ProgressBar" name="GasTrapButtonProgressBar" >
@@ -508,8 +508,8 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="GuardPostTrapButton" >
-                    <Property name="Area" value="{{0.2,-25},{0,255},{0.2,25},{0,305}}" />
+                <Window type="OD/ResearchButton" name="GuardPostTrapButton" >
+                    <Property name="Area" value="{{0.89,-25},{0,195},{0.89,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/GuardPostTrapButton" />
                     <Property name="TooltipText" value="Trap: Guard post" />
                     <Window type="OD/ProgressBar" name="GuardPostTrapButtonProgressBar" >
@@ -521,7 +521,7 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>

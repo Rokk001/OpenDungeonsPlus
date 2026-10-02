@@ -922,6 +922,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::trapDoorBraced: return "Door health: " + value(config.getTrapConfigDouble("BracedDoorHP")) + " before Wooden door upgrades.";
         case SkillType::trapDoorSteel: return "Door health: " + value(config.getTrapConfigDouble("SteelDoorHP")) + " before Wooden door upgrades.";
         case SkillType::trapDoorBarricade: return "Barricade health: " + value(config.getTrapConfigDouble("BarricadeDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapDoorSecret: return "Door health: " + value(config.getTrapConfigDouble("SecretDoorHP")) +
+            " before Wooden door upgrades; enemies see a wall until they see one of your creatures pass.";
         case SkillType::roomGuardRoom: return "Wakefulness cost per duty turn: " + room("GuardRoomWakefulnessPerDuty") + ".";
         case SkillType::roomTemple: return "Default prayer mana per second: " + room("TemplePrayerManaPerSecond") + "; most creature types have their own value.";
         case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
@@ -937,6 +939,7 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::spellLightning: return "Damage: " + spell("LightningDamage") + " to one enemy creature, which is stunned.";
         case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
             " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";
+        case SkillType::trapGuardPost: return "One idle fighter stands guard on each post and returns to it after a fight.";
         default: return "";
     }
 }
