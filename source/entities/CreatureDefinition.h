@@ -165,6 +165,7 @@ public:
     inline CreatureJob          getCreatureJob  () const    { return mCreatureJob; }
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
+    inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -258,6 +259,8 @@ private:
     CombatClass mCombatClass;
     //! brief Gold taken from one free gold pile by a thief, 0 for creatures that do not steal
     int32_t mStealGold;
+    //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side
+    double mTortureTimeToConvert;
 
     //! \brief The name of the creatures class
     std::string mClassName;
