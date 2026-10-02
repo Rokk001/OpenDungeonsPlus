@@ -55,6 +55,8 @@ const std::string WINDOW_SETTINGS = "SettingsSubMenuWindow";
 
 const std::string BUTTON_NEW_CAMPAIGN = "NewCampaignButton";
 const std::string BUTTON_CONTINUE_CAMPAIGN = "ContinueCampaignButton";
+const std::string BUTTON_NEW_CAMPAIGN_CONFIRM = "NewCampaignConfirmButton";
+const std::string TEXT_NEW_CAMPAIGN_CONFIRM = "NewCampaignConfirmText";
 const std::string BUTTON_START_SKIRMISH = "StartSkirmishButton";
 const std::string BUTTON_LOAD_SKIRMISH = "LoadSkirmishButton";
 const std::string BUTTON_START_SANDBOX = "StartSandboxButton";
@@ -113,6 +115,12 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
         campaignWin->getChild(BUTTON_NEW_CAMPAIGN)->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&MenuModeMain::newCampaignPressed, this)
+        )
+    );
+    addEventConnection(
+        campaignWin->getChild(BUTTON_NEW_CAMPAIGN_CONFIRM)->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&MenuModeMain::newCampaignConfirmed, this)
         )
     );
     connectModeChangeEvent(campaignWin->getChild(BUTTON_CONTINUE_CAMPAIGN),
@@ -195,6 +203,7 @@ void MenuModeMain::activate()
     OD_ASSERT_TRUE(window != nullptr);
 
     window->getChild(WINDOW_CAMPAIGN)->hide();
+    showNewCampaignConfirm(false);
     window->getChild(WINDOW_SKIRMISH)->hide();
     window->getChild(WINDOW_MULTIPLAYER)->hide();
     window->getChild(WINDOW_EDITOR)->hide();
@@ -334,6 +343,7 @@ bool MenuModeMain::goBack(const CEGUI::EventArgs&)
         if(window->isVisible())
         {
             window->hide();
+            showNewCampaignConfirm(false);
             showMainMenuButtons(true);
             break;
         }
@@ -356,10 +366,32 @@ bool MenuModeMain::toggleCampaignSubMenu(const CEGUI::EventArgs&)
 
 bool MenuModeMain::newCampaignPressed(const CEGUI::EventArgs& e)
 {
+    // As in the original, a new campaign has to be confirmed: the cross (back) returns
+    // to the previous screen and the tick starts it. Without saved progress there is
+    // nothing to lose, so it starts at once.
+    if(Campaign::getSingleton().hasProgress())
+    {
+        showNewCampaignConfirm(true);
+        return true;
+    }
+    return newCampaignConfirmed(e);
+}
+
+bool MenuModeMain::newCampaignConfirmed(const CEGUI::EventArgs& e)
+{
     // A new campaign forgets the saved progress
     Campaign::getSingleton().resetProgress();
     changeModeEvent(AbstractModeManager::ModeType::MENU_CAMPAIGN, e);
     return true;
+}
+
+void MenuModeMain::showNewCampaignConfirm(bool visible)
+{
+    CEGUI::Window* campaignWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu)->getChild(WINDOW_CAMPAIGN);
+    campaignWin->getChild(BUTTON_NEW_CAMPAIGN)->setVisible(!visible);
+    campaignWin->getChild(BUTTON_CONTINUE_CAMPAIGN)->setVisible(!visible);
+    campaignWin->getChild(TEXT_NEW_CAMPAIGN_CONFIRM)->setVisible(visible);
+    campaignWin->getChild(BUTTON_NEW_CAMPAIGN_CONFIRM)->setVisible(visible);
 }
 
 bool MenuModeMain::toggleSkirmishSubMenu(const CEGUI::EventArgs&)
