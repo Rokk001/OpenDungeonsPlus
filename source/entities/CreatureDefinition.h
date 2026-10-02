@@ -259,11 +259,11 @@ private:
 
     //! \brief The role in group fights (default blocker)
     CombatClass mCombatClass;
-    //! brief Gold taken from one free gold pile by a thief, 0 for creatures that do not steal
+    //! \brief Gold taken from one free gold pile by a thief, 0 for creatures that do not steal
     int32_t mStealGold;
     //! \brief True for creatures that are never scared by a Fear trap
     bool mFearless;
-    //! brief Mana taken per second while a player possesses a creature of this definition (after the free period)
+    //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period)
     double mPossessManaCost;
     //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side
     double mTortureTimeToConvert;

@@ -1032,7 +1032,7 @@ private:
     //! \brief Used on server side. The player controlling the creature (possession), nullptr if none
     Player*                         mPossessor = nullptr;
 
-    //! brief Used on server side. Turns the current possession has lasted (the first seconds are free)
+    //! \brief Used on server side. Turns the current possession has lasted (the first seconds are free)
     uint32_t                        mPossessionTurns = 0;
 
     //! \brief Used on server side. The names of the creatures following this possessed creature
