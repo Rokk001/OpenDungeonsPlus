@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "traps/TrapGas.h"
+#include "traps/TrapTrigger.h"
 
 #include "entities/Creature.h"
 #include "entities/Tile.h"
@@ -26,27 +26,34 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
-#include "utils/Random.h"
 
-const std::string TrapGasName = "Gas";
-const std::string TrapGasNameDisplay = "Gas trap";
-const TrapType TrapGas::mTrapType = TrapType::gas;
+#include <set>
 
 namespace
 {
-class TrapGasFactory : public TrapFactory
+//! Tiles whose trap has been set off by the trigger chain currently running
+std::set<Tile*> triggerChainTiles;
+}
+
+const std::string TrapTriggerName = "Trigger";
+const std::string TrapTriggerNameDisplay = "Trigger trap";
+const TrapType TrapTrigger::mTrapType = TrapType::trigger;
+
+namespace
+{
+class TrapTriggerFactory : public TrapFactory
 {
     TrapType getTrapType() const override
-    { return TrapGas::mTrapType; }
+    { return TrapTrigger::mTrapType; }
 
     const std::string& getName() const override
-    { return TrapGasName; }
+    { return TrapTriggerName; }
 
     const std::string& getNameReadable() const override
-    { return TrapGasNameDisplay; }
+    { return TrapTriggerNameDisplay; }
 
     int getCostPerTile() const override
-    { return ConfigManager::getSingleton().getTrapConfigInt32("GasCostPerTile"); }
+    { return ConfigManager::getSingleton().getTrapConfigInt32("TriggerCostPerTile"); }
 
     const std::string& getMeshName() const override
     {
@@ -56,7 +63,7 @@ class TrapGasFactory : public TrapFactory
 
     void checkBuildTrap(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     {
-        checkBuildTrapDefault(gameMap, TrapType::gas, inputManager, inputCommand);
+        checkBuildTrapDefault(gameMap, TrapType::trigger, inputManager, inputCommand);
     }
 
     bool buildTrap(GameMap* gameMap, Player* player, ODPacket& packet) const override
@@ -65,29 +72,29 @@ class TrapGasFactory : public TrapFactory
         if(!getTrapTilesDefault(tiles, gameMap, player, packet))
             return false;
 
-        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::gas);
+        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::trigger);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!gameMap->withdrawFromTreasuries(price, player->getSeat()))
             return false;
 
-        TrapGas* trap = new TrapGas(gameMap);
+        TrapTrigger* trap = new TrapTrigger(gameMap);
         return buildTrapDefault(gameMap, trap, player->getSeat(), tiles);
     }
 
     void checkBuildTrapEditor(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     {
-        checkBuildTrapDefaultEditor(gameMap, TrapType::gas, inputManager, inputCommand);
+        checkBuildTrapDefaultEditor(gameMap, TrapType::trigger, inputManager, inputCommand);
     }
 
     bool buildTrapEditor(GameMap* gameMap, ODPacket& packet) const override
     {
-        TrapGas* trap = new TrapGas(gameMap);
+        TrapTrigger* trap = new TrapTrigger(gameMap);
         return buildTrapDefaultEditor(gameMap, trap, packet);
     }
 
     Trap* getTrapFromStream(GameMap* gameMap, std::istream& is) const override
     {
-        TrapGas* trap = new TrapGas(gameMap);
+        TrapTrigger* trap = new TrapTrigger(gameMap);
         if(!Trap::importTrapFromStream(*trap, is))
         {
             OD_LOG_ERR("Error while building a trap from the stream");
@@ -102,60 +109,79 @@ class TrapGasFactory : public TrapFactory
 
     bool buildTrapOnTiles(GameMap* gameMap, Seat* seatPtr, const std::vector<Tile*>& tiles, bool noFee = false) const
     {
-        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::gas);
+        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::trigger);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!noFee)
             if(!gameMap->withdrawFromTreasuries(price, seatPtr))
                 return false;
 
-        TrapGas* trap = new TrapGas(gameMap);
+        TrapTrigger* trap = new TrapTrigger(gameMap);
         return buildTrapDefault(gameMap, trap, seatPtr, tiles);
     }
 };
 
 // Register the factory
-static TrapRegister reg(new TrapGasFactory);
+static TrapRegister reg(new TrapTriggerFactory);
 }
 
-TrapGas::TrapGas(GameMap* gameMap) :
+TrapTrigger::TrapTrigger(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("GasReloadTurns");
-    mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("GasDamagePerHitMin");
-    mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("GasDamagePerHitMax");
-    mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("GasNbShootsBeforeDeactivation");
-    mRadius = ConfigManager::getSingleton().getTrapConfigUInt32("GasRadius");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("TriggerReloadTurns");
+    mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("TriggerNbShootsBeforeDeactivation");
     setMeshName("");
 }
 
-bool TrapGas::shoot(Tile* tile)
+bool TrapTrigger::shoot(Tile* tile)
 {
-    // Pressure trigger: the trap only fires when an enemy creature stands on its tile
-    std::vector<Tile*> triggerTiles;
-    triggerTiles.push_back(tile);
-    std::vector<GameEntity*> triggerCreatures = getGameMap()->getVisibleCreatures(triggerTiles, getSeat(), true);
-    if(triggerCreatures.empty() && !mForcedTrigger)
-        return false;
-
-    // The cloud hurts every creature in the area, enemies and allies
-    std::vector<Tile*> cloudTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRadius));
-    std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(cloudTiles, getSeat(), true);
-    std::vector<GameEntity*> alliedCreatures = getGameMap()->getVisibleCreatures(cloudTiles, getSeat(), false);
-    std::vector<GameEntity*> victims;
-    victims.insert(victims.end(), enemyCreatures.begin(), enemyCreatures.end());
-    victims.insert(victims.end(), alliedCreatures.begin(), alliedCreatures.end());
-
-    for(GameEntity* target : victims)
+    // Pressure trigger: the trap only fires when an enemy creature stands on its tile,
+    // unless another trigger trap sets it off
+    if(!mForcedTrigger)
     {
-        Tile* targetTile = target->getCoveredTile(0);
-        target->takeDamage(this, 0.0, 0.0, 0.0, Random::Double(mMinDamage, mMaxDamage), targetTile, false);
-        target->notifyFightPlayer(targetTile);
+        std::vector<Tile*> triggerTiles;
+        triggerTiles.push_back(tile);
+        std::vector<GameEntity*> triggerCreatures = getGameMap()->getVisibleCreatures(triggerTiles, getSeat(), true);
+        if(triggerCreatures.empty())
+            return false;
+
+        // A new chain starts with this trap
+        triggerChainTiles.clear();
+        triggerChainTiles.insert(tile);
     }
 
-    return true;
+    bool fired = false;
+    for(int dx = -1; dx <= 1; ++dx)
+    {
+        for(int dy = -1; dy <= 1; ++dy)
+        {
+            if((dx == 0) && (dy == 0))
+                continue;
+
+            Tile* neighbor = getGameMap()->getTile(tile->getX() + dx, tile->getY() + dy);
+            if(neighbor == nullptr)
+                continue;
+
+            Trap* trap = neighbor->getCoveringTrap();
+            if((trap == nullptr) || (trap->getSeat() != getSeat()))
+                continue;
+
+            // Doors only fire their weapon, if they have one
+            if(trap->isDoor() && (trap->getType() != TrapType::doorMagic))
+                continue;
+
+            // Every trap is set off only once per chain, so trigger traps cannot loop
+            if(!triggerChainTiles.insert(neighbor).second)
+                continue;
+
+            if(trap->forceTrigger(neighbor))
+                fired = true;
+        }
+    }
+
+    return fired;
 }
 
-TrapEntity* TrapGas::getTrapEntity(Tile* tile)
+TrapEntity* TrapTrigger::getTrapEntity(Tile* tile)
 {
     return new TrapEntity(getGameMap(), *this, reg.getTrapFactory()->getMeshName(), tile, 0.0, true, isActivated(tile) ? 1.0f : 0.7f);
 }

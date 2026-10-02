@@ -131,7 +131,7 @@ bool TrapAlarm::shoot(Tile* tile)
     std::vector<Tile*> visibleTiles;
     visibleTiles.push_back(tile);
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), true);
-    if(enemyCreatures.empty())
+    if(enemyCreatures.empty() && !mForcedTrigger)
         return false;
 
     // The alarm calls the owner's fighters with a call to war banner on the trap tile.
