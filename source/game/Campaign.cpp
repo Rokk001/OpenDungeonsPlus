@@ -19,6 +19,8 @@
 
 #include "ai/KeeperAIType.h"
 
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <istream>
 #include <ostream>
@@ -68,6 +70,29 @@ std::string Campaign::unescapeText(const std::string& text)
     return result;
 }
 
+std::vector<CampaignMapBlock> Campaign::parseMapBlocks(const std::string& text)
+{
+    std::vector<CampaignMapBlock> blocks;
+    std::istringstream blockStream(text);
+    std::string blockText;
+    while(std::getline(blockStream, blockText, ';'))
+    {
+        std::replace(blockText.begin(), blockText.end(), ',', ' ');
+        std::istringstream values(blockText);
+        CampaignMapBlock block;
+        if(!(values >> block.mX >> block.mY >> block.mWidth >> block.mHeight))
+            continue;
+
+        // Blocks outside of the map area are ignored
+        if((block.mX < 0.0f) || (block.mY < 0.0f) || (block.mWidth <= 0.0f) || (block.mHeight <= 0.0f)
+            || (block.mX + block.mWidth > 100.0f) || (block.mY + block.mHeight > 100.0f))
+            continue;
+
+        blocks.push_back(block);
+    }
+    return blocks;
+}
+
 bool Campaign::importDefinition(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -110,6 +135,8 @@ bool Campaign::importDefinition(std::istream& is)
             level.mDebriefing = unescapeText(value);
         else if(key == "Bonus")
             level.mBonus = (value == "1");
+        else if(key == "Map")
+            level.mMapBlocks = parseMapBlocks(value);
     }
 
     if(inLevel && !level.mFile.empty())
@@ -209,6 +236,28 @@ const CampaignLevel& Campaign::getLevel(size_t index) const
 {
     std::lock_guard<std::mutex> lock(mMutex);
     return mLevels.at(index);
+}
+
+std::vector<CampaignMapBlock> Campaign::getMapBlocks(size_t index) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    if(index >= mLevels.size())
+        return std::vector<CampaignMapBlock>();
+
+    if(!mLevels[index].mMapBlocks.empty())
+        return mLevels[index].mMapBlocks;
+
+    // Automatic grid, left to right and top to bottom
+    size_t columns = static_cast<size_t>(std::ceil(std::sqrt(static_cast<double>(mLevels.size()))));
+    size_t rows = (mLevels.size() + columns - 1) / columns;
+    float cellWidth = 100.0f / static_cast<float>(columns);
+    float cellHeight = 100.0f / static_cast<float>(rows);
+    CampaignMapBlock block;
+    block.mX = static_cast<float>(index % columns) * cellWidth + 2.0f;
+    block.mY = static_cast<float>(index / columns) * cellHeight + 2.0f;
+    block.mWidth = cellWidth - 4.0f;
+    block.mHeight = cellHeight - 4.0f;
+    return std::vector<CampaignMapBlock>(1, block);
 }
 
 bool Campaign::isCompleted(size_t index) const
