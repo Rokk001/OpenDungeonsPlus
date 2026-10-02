@@ -1021,7 +1021,7 @@ void KeeperAI::handleTraps()
             TrapType type = static_cast<TrapType>(i);
             if((type == TrapType::doorWooden) || (type == TrapType::doorBraced) ||
                (type == TrapType::doorSteel) || (type == TrapType::doorBarricade) ||
-               (type == TrapType::doorSecret))
+               (type == TrapType::doorSecret) || (type == TrapType::doorMagic))
             {
                 continue;
             }

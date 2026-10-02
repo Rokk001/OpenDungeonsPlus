@@ -1697,9 +1697,9 @@ void Gui::arrangeTrapButtons(CEGUI::Window* traps)
 {
     traps->getChild("DestroyTrapButton")->hide();
     arrangeActionButtons(traps, {"WoodenDoorTrapButton", "BracedDoorTrapButton", "SteelDoorTrapButton",
-        "BarricadeTrapButton", "SecretDoorTrapButton", "CannonButton", "SpikeTrapButton", "BoulderTrapButton",
-        "AlarmTrapButton", "FearTrapButton", "GasTrapButton", "LightningTrapButton", "FireburstTrapButton",
-        "GuardPostTrapButton"});
+        "BarricadeTrapButton", "SecretDoorTrapButton", "MagicDoorTrapButton", "CannonButton", "SpikeTrapButton",
+        "BoulderTrapButton", "AlarmTrapButton", "FearTrapButton", "GasTrapButton", "LightningTrapButton",
+        "FireburstTrapButton", "GuardPostTrapButton"});
 }
 
 void Gui::arrangeSpellButtons(CEGUI::Window* spells)
@@ -1707,7 +1707,7 @@ void Gui::arrangeSpellButtons(CEGUI::Window* spells)
     arrangeActionButtons(spells, {"SummonWorkerButton", "CallToWarButton", "CreatureHealButton",
         "CreatureExplosionButton", "CreatureHasteButton", "CreatureDefenseButton", "CreatureSlowButton",
         "CreatureStrengthButton", "CreatureWeakButton", "SpellEyeEvilButton", "CreateGoldButton",
-        "LightningButton", "TremorButton"});
+        "LightningButton", "TremorButton", "TurncoatButton"});
 }
 
 void Gui::arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names)

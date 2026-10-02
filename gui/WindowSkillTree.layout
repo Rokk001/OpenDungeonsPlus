@@ -542,8 +542,8 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ImageButton" name="TurncoatButton" >
-                    <Property name="Area" value="{{0.2,-25},{0,195},{0.2,25},{0,245}}" />
+                <Window type="OD/ResearchButton" name="TurncoatButton" >
+                    <Property name="Area" value="{{0.2,-25},{0,255},{0.2,25},{0,305}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/TurncoatButton" />
                     <Property name="TooltipText" value="Spell: Turncoat" />
                     <Window type="OD/ProgressBar" name="TurncoatButtonProgressBar" >
@@ -555,7 +555,7 @@
                         <Property name="Visible" value="False" />
                         <Property name="VerticalProgress" value="True" />
                         <Property name="Alpha" value="0.2" />
-                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>

@@ -241,11 +241,12 @@ public:
             case SpellType::createGold: key = "CreateGoldPrice"; break;
             case SpellType::lightning: key = "LightningPrice"; break;
             case SpellType::tremor: key = "TremorPrice"; break;
+            case SpellType::turncoat: key = "TurncoatPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
-            mSpellType == SpellType::tremor) ?
+            mSpellType == SpellType::tremor || mSpellType == SpellType::turncoat) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -624,7 +625,8 @@ SkillManager::SkillManager() :
     resType = SkillType::spellTurncoat;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
+    // The tactic row after cannon and spike trap is full, so Turncoat follows the boulder trap
+    skill = new Skill(resType, points, lvl4depends);
     def = new SkillDefSpell("TacticSkills/", "TurncoatButton", skill, SpellType::turncoat);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
@@ -944,6 +946,9 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::trapDoorBarricade: return "Barricade health: " + value(config.getTrapConfigDouble("BarricadeDoorHP")) + " before Wooden door upgrades.";
         case SkillType::trapDoorSecret: return "Door health: " + value(config.getTrapConfigDouble("SecretDoorHP")) +
             " before Wooden door upgrades; enemies see a wall until they see one of your creatures pass.";
+        case SkillType::trapDoorMagic: return "Door health: " + value(config.getTrapConfigDouble("MagicDoorHP")) +
+            " before Wooden door upgrades; deals " + value(config.getTrapConfigDouble("MagicDoorDamage")) +
+            " fire damage to enemies on the door every " + value(config.getTrapConfigDouble("MagicDoorReloadTurns")) + " turns.";
         case SkillType::roomGuardRoom: return "Wakefulness cost per duty turn: " + room("GuardRoomWakefulnessPerDuty") + ".";
         case SkillType::roomTemple: return "Default prayer mana per second: " + room("TemplePrayerManaPerSecond") + "; most creature types have their own value.";
         case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
@@ -960,6 +965,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
             " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";
         case SkillType::trapGuardPost: return "One idle fighter stands guard on each post and returns to it after a fight.";
+        case SkillType::spellTurncoat: return "One enemy creature on your claimed land fights for you for " +
+            spell("TurncoatNbTurns") + " turns.";
         default: return "";
     }
 }
