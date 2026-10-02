@@ -41,6 +41,7 @@
 #include "creatureaction/CreatureActionSearchWallTileToClaim.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionStealFreeGold.h"
+#include "creatureaction/CreatureActionTunnel.h"
 #include "creatureaction/CreatureActionUseRoom.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturebehaviour/CreatureBehaviour.h"
@@ -1532,14 +1533,24 @@ bool Creature::handleIdleAction()
         return true;
     }
 
-    // We try to steal some gold if there is some on the ground
-    // Later, we might want to add a creature definition parameter to make some
-    // creatures more likely to steal gold than others
+    // We try to steal some gold if there is some on the ground. Only creatures
+    // with a StealGold amount in their definition (thieves) do that
     if (!mDefinition->isWorker() &&
+        (mDefinition->getStealGold() > 0) &&
         !hasActionBeenTried(CreatureActionType::stealFreeGold) &&
         (Random::Uint(0, 10) > 8))
     {
         pushAction(Utils::make_unique<CreatureActionStealFreeGold>(*this));
+        return true;
+    }
+
+    // Creatures with a dig rate (tunnellers) dig their way to an enemy heart they cannot reach on foot
+    if (!mDefinition->isWorker() &&
+        (getDigRate() > 0.0) &&
+        !hasActionBeenTried(CreatureActionType::tunnel) &&
+        (Random::Uint(0, 10) > 6))
+    {
+        pushAction(Utils::make_unique<CreatureActionTunnel>(*this));
         return true;
     }
 

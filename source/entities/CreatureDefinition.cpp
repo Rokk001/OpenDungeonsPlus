@@ -72,6 +72,7 @@ CreatureDefinition::CreatureDefinition(
             int32_t                 turnsStunDropped) :
         mCreatureJob (job),
         mCombatClass (CombatBlocker),
+        mStealGold (0),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -123,6 +124,7 @@ CreatureDefinition::CreatureDefinition(
 CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mCreatureJob(def.mCreatureJob),
         mCombatClass(def.mCombatClass),
+        mStealGold(def.mStealGold),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -333,6 +335,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mSoundFamilyDie;
     os << c->mSoundFamilySlap;
     os << CreatureDefinition::combatClassToString(c->mCombatClass);
+    os << c->mStealGold;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -373,6 +376,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mSoundFamilySlap;
     is >> tempString;
     c->mCombatClass = CreatureDefinition::combatClassFromString(tempString);
+    is >> c->mStealGold;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -503,6 +507,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mCombatClass = CreatureDefinition::combatClassFromString(nextParam);
+                continue;
+            }
+            else if (nextParam == "StealGold")
+            {
+                defFile >> nextParam;
+                creatureDef->mStealGold = Helper::toInt(nextParam);
                 continue;
             }
             else if (nextParam == "MeshName")
@@ -786,6 +796,9 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if(def1 == nullptr || (def1->mCombatClass != def2->mCombatClass))
         file << "    CombatClass\t" << combatClassToString(def2->mCombatClass) << std::endl;
+
+    if(def1 == nullptr || (def1->mStealGold != def2->mStealGold))
+        file << "    StealGold\t" << def2->mStealGold << std::endl;
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))
         file << "    MeshName\t" << def2->mMeshName << std::endl;
