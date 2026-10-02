@@ -41,6 +41,12 @@ add_boost_test(00-LevelScript
         ${SRC}/gamemap/LevelScript.h
         ${SRC}/gamemap/LevelScript.cpp)
 
+add_boost_test(00-Campaign
+        SOURCES
+        test_Campaign.cpp
+        ${SRC}/game/Campaign.h
+        ${SRC}/game/Campaign.cpp)
+
 add_boost_test(00-Pathfinding
         SOURCES
         test_Pathfinding.cpp)
