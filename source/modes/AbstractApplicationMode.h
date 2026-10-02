@@ -64,7 +64,15 @@ public:
         ButtonPressedBoxMana,
         ButtonPressedBoxGold,
         ButtonPressedBoxRevealMap,
-        ButtonPressedBoxLevelUp
+        ButtonPressedBoxLevelUp,
+        ButtonPressedBoxHealAll,
+        ButtonPressedBoxMakeSafe,
+        ButtonPressedBoxWeakenWalls,
+        ButtonPressedBoxStunImps,
+        ButtonPressedBoxReceiveImps,
+        ButtonPressedBoxMakeHappy,
+        ButtonPressedBoxMakeUnhappy,
+        ButtonPressedBoxKillCreatures
     };
 
     virtual void notifyGuiAction(GuiAction guiAction)

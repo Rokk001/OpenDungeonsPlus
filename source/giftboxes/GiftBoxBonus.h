@@ -23,6 +23,8 @@
 #include <string>
 #include <iosfwd>
 
+class Seat;
+
 //! \brief A gift box giving one of the one-shot bonuses: extra mana, extra gold, a
 //! view of the whole map for the rest of the game or a level for the creatures of the seat that brings
 //! the box to its dungeon temple. The type is one of GiftBoxType::mana, gold, revealMap
@@ -38,6 +40,19 @@ public:
     GiftBoxBonus(GameMap* gameMap, GiftBoxType type);
 
     virtual void applyEffect() override;
+
+    inline uint32_t getAmount() const
+    { return mAmount; }
+
+    //! \brief Applies the bonus to the seat. The tile is where imps or left over gold appear.
+    //! Used when the box is delivered and when a stored special is used.
+    static void applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, uint32_t amount, Tile* positionTile);
+
+    //! \brief The name of the special, used for the button and the message
+    static std::string getDisplayName(GiftBoxType type);
+
+    //! \brief What the special does, used as the tooltip of its button
+    static std::string getDescription(GiftBoxType type);
 
     //! \brief The amount used when a box is placed in the editor
     static uint32_t getDefaultAmount(GiftBoxType type);

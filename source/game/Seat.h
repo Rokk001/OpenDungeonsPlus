@@ -44,6 +44,7 @@ class Seat;
 class Tile;
 
 
+enum class GiftBoxType;
 enum class KeeperAIType;
 enum class RoomType;
 enum class SkillType;
@@ -243,6 +244,14 @@ public:
     //! \brief Server side. Returns true if the map is revealed to this seat. Called once per turn
     inline bool isMapRevealed() const
     { return mIsMapRevealed; }
+
+    //! \brief Server side. Keeps a special box an imp delivered to the dungeon heart. The player
+    //! uses it later with the button of the special. The boxes are saved with the seat.
+    void addStoredSpecial(GiftBoxType type, uint32_t amount);
+
+    //! \brief Server side. Applies one stored special of the given type and removes it.
+    //! Returns false if the seat has none of that type.
+    bool useStoredSpecial(GiftBoxType type);
 
     void clearTilesWithVision();
     //! \brief Gives this seat vision on the given tiles for the given number of turns (server side).
@@ -470,6 +479,10 @@ private:
     //! \brief True if the whole map is visible for the rest of the game. Only used on server
     //! side and not saved: a reveal is lost when the game is saved and loaded
     bool mIsMapRevealed;
+
+    //! \brief Server side. The stored special boxes (gift box type and amount), in the order received.
+    //! The counts per type are mirrored in SeatData::mStoredSpecials for the clients.
+    std::vector<std::pair<int32_t, uint32_t> > mStoredSpecialBoxes;
 
     //! \brief Counter for skill points
     int32_t mSkillPoints;

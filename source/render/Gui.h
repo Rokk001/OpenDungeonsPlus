@@ -174,6 +174,14 @@ public:
     static const std::string EDITOR_BOX_GOLD_BUTTON;
     static const std::string EDITOR_BOX_REVEAL_MAP_BUTTON;
     static const std::string EDITOR_BOX_LEVEL_UP_BUTTON;
+    static const std::string EDITOR_BOX_HEAL_ALL_BUTTON;
+    static const std::string EDITOR_BOX_MAKE_SAFE_BUTTON;
+    static const std::string EDITOR_BOX_WEAKEN_WALLS_BUTTON;
+    static const std::string EDITOR_BOX_STUN_IMPS_BUTTON;
+    static const std::string EDITOR_BOX_RECEIVE_IMPS_BUTTON;
+    static const std::string EDITOR_BOX_MAKE_HAPPY_BUTTON;
+    static const std::string EDITOR_BOX_MAKE_UNHAPPY_BUTTON;
+    static const std::string EDITOR_BOX_KILL_CREATURES_BUTTON;
     static const std::string EXIT_CONFIRMATION_POPUP;
     static const std::string EXIT_CONFIRMATION_POPUP_YES_BUTTON;
     static const std::string EXIT_CONFIRMATION_POPUP_NO_BUTTON;

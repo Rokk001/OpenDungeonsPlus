@@ -23,8 +23,10 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/GiftBoxEntity.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "game/Campaign.h"
 #include "game/HeartHealthRing.h"
 #include "game/Player.h"
@@ -259,6 +261,14 @@ GameMode::GameMode(ModeManager *modeManager):
         button->setID(slot);
         addEventConnection(button->subscribeEvent(CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::selectUserCamera, this)));
+    }
+    for(uint32_t special = static_cast<uint32_t>(GiftBoxType::skill) + 1;
+        special < static_cast<uint32_t>(GiftBoxType::nbTypes); ++special)
+    {
+        CEGUI::Window* button = mRootWindow->getChild("SpecialsPanel/Special" + Helper::toString(special));
+        button->setID(special);
+        addEventConnection(button->subscribeEvent(CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::useSpecial, this)));
     }
     addEventConnection(mRootWindow->getChild("UserCamerasWindow/Store")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::storeUserCamera, this)));
@@ -1929,6 +1939,46 @@ bool GameMode::selectUserCamera(const CEGUI::EventArgs& args)
     return true;
 }
 
+bool GameMode::useSpecial(const CEGUI::EventArgs& args)
+{
+    uint32_t special = static_cast<const CEGUI::WindowEventArgs&>(args).window->getID();
+    if(!ODClient::getSingleton().isConnected())
+        return true;
+
+    ClientNotification* clientNotification = new ClientNotification(ClientNotificationType::askUseSpecial);
+    clientNotification->mPacket << static_cast<int32_t>(special);
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+    return true;
+}
+
+void GameMode::refreshSpecialButtons()
+{
+    Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
+    if(localPlayerSeat == nullptr)
+        return;
+
+    mSpecialCountsShown.resize(static_cast<uint32_t>(GiftBoxType::nbTypes), 0);
+    for(uint32_t special = static_cast<uint32_t>(GiftBoxType::skill) + 1;
+        special < static_cast<uint32_t>(GiftBoxType::nbTypes); ++special)
+    {
+        uint32_t count = localPlayerSeat->getNbStoredSpecials(special);
+        CEGUI::Window* button = mRootWindow->getChild("SpecialsPanel/Special" + Helper::toString(special));
+        // The button is compared too, because the GUI can be rebuilt while the count stays
+        if((count == mSpecialCountsShown[special]) && (button->isVisible() == (count > 0)))
+            continue;
+
+        mSpecialCountsShown[special] = count;
+        button->setVisible(count > 0);
+        GiftBoxType type = static_cast<GiftBoxType>(special);
+        std::string tooltip = GiftBoxBonus::getDisplayName(type);
+        if(count > 1)
+            tooltip += " (x" + Helper::toString(count) + ")";
+
+        tooltip += ". " + GiftBoxBonus::getDescription(type) + " Click to use.";
+        button->setTooltipText(tooltip);
+    }
+}
+
 bool GameMode::storeUserCamera(const CEGUI::EventArgs&)
 {
     if(ODFrameListener::getSingleton().getCameraManager()->storeUserView(mUserCameraSlot))
@@ -1996,6 +2046,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 
     refreshGuiSkill();
     refreshSpellButtonCoolDowns();
+    refreshSpecialButtons();
 
     Player* player = mGameMap->getLocalPlayer();
     if (player == nullptr)

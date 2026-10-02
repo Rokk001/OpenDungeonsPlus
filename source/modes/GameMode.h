@@ -389,6 +389,12 @@ private:
     bool closeUserCameras(const CEGUI::EventArgs& = {});
     bool selectUserCamera(const CEGUI::EventArgs&);
     bool storeUserCamera(const CEGUI::EventArgs&);
+    //! \brief The player pressed the button of a stored special: asks the server to use it
+    bool useSpecial(const CEGUI::EventArgs& args);
+    //! \brief Shows the buttons of the specials the local player has stored
+    void refreshSpecialButtons();
+    //! \brief The number of stored specials the buttons show, indexed by gift box type
+    std::vector<uint32_t> mSpecialCountsShown;
     unsigned int mUserCameraSlot = 0;
 
     void resetIdleHand();

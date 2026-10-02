@@ -945,9 +945,24 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
     {
         case GameEntityType::giftBoxEntity:
         {
-            // We apply the gift box effect
             GiftBoxEntity* giftBox = static_cast<GiftBoxEntity*>(carriedEntity);
-            giftBox->applyEffect();
+            Player* owner = getSeat()->getPlayer();
+            if((giftBox->getGiftBoxType() != GiftBoxType::skill) && (owner != nullptr) && owner->getIsHuman())
+            {
+                // The special is kept as a button, the player decides when to use it
+                GiftBoxBonus* bonus = static_cast<GiftBoxBonus*>(giftBox);
+                getSeat()->addStoredSpecial(bonus->getGiftBoxType(), bonus->getAmount());
+                ServerNotification* serverNotification = new ServerNotification(
+                    ServerNotificationType::chatServer, owner);
+                std::string msg = "You received the special: " + GiftBoxBonus::getDisplayName(bonus->getGiftBoxType()) + ".";
+                serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
+                ODServer::getSingleton().queueServerNotification(serverNotification);
+            }
+            else
+            {
+                // We apply the gift box effect
+                giftBox->applyEffect();
+            }
             giftBox->removeEntityFromPositionTile();
             giftBox->removeFromGameMap();
             giftBox->deleteYourself();
