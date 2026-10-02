@@ -27,19 +27,20 @@ BaseAI* createAI(GameMap& gameMap, Player& player, KeeperAIType type)
 {
     // Attack threshold (minFightersToAttack) and retreat health (minHpPercentToFight) follow the
     // reference AI table: hard = Master Keeper, normal = Greyman, easy = Idiot.
-    //   attack at 15 creatures: 15 / 15 / 15; retreat at health percent: 10 / 20 / 20.
+    //   attack with more than 15 creatures: 15 / 15 / 15 (the same for all three rows);
+    //   minimum creature level for an attack: 2 / 5 / 8; retreat at health percent: 10 / 20 / 20.
     // The reaction scale, the cooldowns and the trap and door counts are our own values.
-    // Reference fields that are not built: minimum creature level, threat superiority, share of
-    // creatures in the first fight, call to arms threshold, trap and door usage chance, room
-    // placement delay, imp count, imprison percentage, openness, wait after an attack.
+    // Reference fields that are not built: threat superiority, share of creatures in the first
+    // fight, call to arms threshold, trap and door usage chance, room placement delay, imp count,
+    // imprison percentage, openness, wait after an attack.
     switch(type)
     {
         case KeeperAIType::easy:
-            return new KeeperAI(gameMap, player, 30, 50, 30, 50, 60, 80, 150, 20, 15, 2, 1);
+            return new KeeperAI(gameMap, player, 30, 50, 30, 50, 60, 80, 150, 20, 15, 2, 2, 1);
         case KeeperAIType::normal:
-            return new KeeperAI(gameMap, player, 0, 5, 0, 5, 30, 50, 100, 20, 15, 5, 3);
+            return new KeeperAI(gameMap, player, 0, 5, 0, 5, 30, 50, 100, 20, 15, 5, 5, 3);
         case KeeperAIType::hard:
-            return new KeeperAI(gameMap, player, 0, 3, 0, 3, 20, 35, 60, 10, 15, 8, 5);
+            return new KeeperAI(gameMap, player, 0, 3, 0, 3, 20, 35, 60, 10, 15, 8, 8, 5);
         default:
             break;
     }

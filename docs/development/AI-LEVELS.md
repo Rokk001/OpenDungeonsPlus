@@ -9,8 +9,17 @@ easy = Idiot (5).
 
 | Parameter (`KeeperAI`)                         | easy (Idiot) | normal (Greyman) | hard (Master Keeper) |
 |------------------------------------------------|--------------|------------------|----------------------|
-| `minFightersToAttack` (attack at N creatures)  | 15           | 15               | 15                   |
+| `minFightersToAttack` (attack with more than N creatures) | 15 | 15            | 15                   |
+| `minCreatureLevel` (minimum level for an attack) | 2          | 5                | 8                    |
 | `minHpPercentToFight` (retreat at health, %)   | 20           | 20               | 10                   |
+
+The reference table really has the same attack count (15) for the three rows; it is the minimum
+creature level (2 / 5 / 8) that separates them. The reference starts an attack when the AI has more
+non-worker creatures than the count, and it does not attack while more creatures than the minimum
+level number are below that level. The fork does the same: `KeeperAI::handleAttack` needs more
+healthy fighters than `minFightersToAttack` and waits while more than `minCreatureLevel` healthy
+fighters are below level `minCreatureLevel`. The reference also sends the weak creatures home; the
+fork does not, they join the call to war.
 
 Before this change the values were 12/8/5 attackers and 70/50/30 percent.
 
@@ -24,7 +33,7 @@ Before this change the values were 12/8/5 attackers and 70/50/30 percent.
 
 ## Reference fields that are not built
 
-Minimum creature level for an attack, threat superiority needed over the enemy, share of the
+Threat superiority needed over the enemy, share of the
 creatures used in the first fight, call to arms threshold and removal rules, trap and door usage
 chance, delay before placing a researched room, maximum imps, imprison percentage, openness,
 wait after an attack, the "only attack attackers" and "never attack" flags, and the other economy
