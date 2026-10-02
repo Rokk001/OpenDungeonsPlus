@@ -63,6 +63,7 @@ enum class GameEntityType;
 enum class FloodFillType;
 enum class KeeperAIType;
 enum class RoomType;
+enum class SkillType;
 enum class SpellType;
 enum class TrapType;
 enum class TileVisual;
@@ -491,6 +492,57 @@ public:
     void setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
         uint32_t maxCreaturesSetting);
 
+    //! \brief Availability of a room, spell, trap or door in a skirmish game (Game Settings page)
+    enum class SkirmishItemState : uint32_t
+    {
+        notAvailable,
+        availableAtStart,
+        needsResearch,
+        //! Only used in the packets: the page has not chosen a value, the server value is kept
+        unchosen
+    };
+
+    //! \brief Highest limit that can be set for one creature type. It means no limit
+    static const uint32_t SKIRMISH_CREATURE_LIMIT_NONE = 32;
+
+    //! \brief Sent instead of a setting that the Game Settings page has not shown yet
+    static const uint32_t SKIRMISH_SETTING_UNCHOSEN = 0xFFFFFFFF;
+
+    //! \brief Game speed is a percentage of the default turn rate, duration is in minutes (0 = no limit)
+    inline uint32_t getGameSpeedPercent() const
+    { return mGameSpeedPercent; }
+
+    //! \brief The factor applied to the real time speed of the game (1.0 = default speed)
+    inline double getGameSpeedFactor() const
+    { return static_cast<double>(mGameSpeedPercent) / 100.0; }
+
+    inline uint32_t getGameDurationMinutes() const
+    { return mGameDurationMinutes; }
+
+    //! \brief What the keeper that destroys a dungeon heart receives from the owner of the heart:
+    //! 0 = mana, 1 = mana and a special, 2 = mana, rooms and land
+    inline uint32_t getHeartDestroyedReward() const
+    { return mHeartDestroyedReward; }
+
+    void setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinutes, bool fogOfWar,
+        uint32_t heartDestroyedReward);
+
+    //! \brief Maximum number of creatures of the given class a seat may own.
+    //! SKIRMISH_CREATURE_LIMIT_NONE if unlimited
+    uint32_t getCreatureClassLimit(const std::string& className) const;
+    void setCreatureClassLimit(const std::string& className, uint32_t limit);
+
+    //! \brief The state of every skill chosen on the Game Settings page. The index is the SkillType. It is
+    //! filled from the level the first time it is needed.
+    const std::vector<SkirmishItemState>& getSkirmishSkillStates();
+    void setSkirmishSkillState(SkillType type, SkirmishItemState state);
+
+    //! \brief Applies the states that differ from the level to every seat. To be called before the seats are initialized.
+    void applySkirmishSkillStates();
+
+    //! \brief Called on the server each turn: announces the end of the game time once
+    void checkGameDuration();
+
     void logFloodFileTiles();
     void consoleSetCreatureDestination(const std::string& creatureName, int x, int y);
     void consoleToggleCreatureVisualDebug(const std::string& creatureName);
@@ -641,6 +693,13 @@ private:
     uint32_t mGoldDensityPercent;
     uint32_t mManaRegenerationPercent;
     uint32_t mMaxCreaturesSetting;
+    uint32_t mGameSpeedPercent;
+    uint32_t mGameDurationMinutes;
+    uint32_t mHeartDestroyedReward;
+    bool mGameDurationAnnounced;
+    std::map<std::string, uint32_t> mCreatureClassLimits;
+    std::vector<SkirmishItemState> mSkirmishSkillStates;
+    std::vector<SkirmishItemState> mSkirmishSkillStatesLevel;
 
     //! \brief the Local player reference. The local player will also be in the player list so this pointer
     //! should not be deleted as it will be handled like every other in the list.

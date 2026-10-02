@@ -29,6 +29,7 @@
 #include "ODApplication.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -54,6 +55,48 @@ const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
 namespace
 {
+//! \brief Number of turns the whole map stays revealed after a destroyed heart gave a special
+const uint32_t HEART_REWARD_REVEAL_TURNS = 90;
+
+//! \brief The keeper that destroys a dungeon heart receives all the mana stored by the owner of
+//! the heart. The skirmish setting can add a special and the rooms the owner had researched.
+void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSeat)
+{
+    if(winnerSeat == nullptr || winnerSeat == loserSeat || winnerSeat->isRogueSeat())
+        return;
+
+    const int mana = static_cast<int>(loserSeat->getMana());
+    if(mana > 0)
+    {
+        gameMap->addManaToSeat(mana, winnerSeat->getId());
+        gameMap->addManaToSeat(-mana, loserSeat->getId());
+    }
+
+    const uint32_t reward = gameMap->getHeartDestroyedReward();
+    if(reward >= 1)
+        winnerSeat->addRevealMapTurns(HEART_REWARD_REVEAL_TURNS);
+
+    if(reward >= 2)
+    {
+        const std::vector<SkillType> loserSkills = loserSeat->getSkillDone();
+        for(SkillType skillType : loserSkills)
+        {
+            if(Skills::toString(skillType).compare(0, 4, "room") == 0)
+                winnerSeat->addSkill(skillType);
+        }
+    }
+
+    Player* winner = winnerSeat->getPlayer();
+    if(winner != nullptr && winner->getIsHuman())
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, winner);
+        serverNotification->mPacket << "The enemy dungeon heart is destroyed, you gain " + Helper::toString(mana)
+            + " mana" << EventShortNoticeType::majorGameEvent;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
 //! \brief The heart's three health-tier mesh variants. Each has its own rig and
 //! a baked "Pulse" animation running at a tier-specific speed (see assets-src/DungeonHeartObject.blend).
 //! Every mesh also holds the temple's pedestal the heart stands on (see tools/heart-on-temple).
@@ -291,6 +334,8 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
                 heartTile != nullptr ? heartTile->getX() : -1,
                 heartTile != nullptr ? heartTile->getY() : -1);
         }
+        if(!getGameMap()->isInEditorMode())
+            giveDestroyedHeartReward(getGameMap(), getSeat(), attacker->getSeat());
         fireEntityDead();
     }
     else if(!mCriticalWarningSent && !getGameMap()->isInEditorMode()
