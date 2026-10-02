@@ -27,7 +27,8 @@
 //! temporary view of the whole map or a level for the creatures of the seat that brings
 //! the box to its dungeon temple. The type is one of GiftBoxType::mana, gold, revealMap
 //! and levelUp. The meaning of the amount depends on the type: mana points, gold coins,
-//! number of turns the map stays revealed, number of levels given.
+//! number of turns the map stays revealed, number of levels given. The type healAll heals
+//! every creature of the seat completely (the amount is not used).
 class GiftBoxBonus: public GiftBoxEntity
 {
 public:

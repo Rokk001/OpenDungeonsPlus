@@ -36,6 +36,7 @@ enum class GiftBoxType
     gold,
     revealMap,
     levelUp,
+    healAll,
     nbTypes
 };
 std::ostream& operator<<(std::ostream& os, const GiftBoxType& type);

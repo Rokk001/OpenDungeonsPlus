@@ -59,6 +59,8 @@ uint32_t GiftBoxBonus::getDefaultAmount(GiftBoxType type)
             return DEFAULT_AMOUNT_REVEAL_TURNS;
         case GiftBoxType::levelUp:
             return DEFAULT_AMOUNT_LEVELS;
+        case GiftBoxType::healAll:
+            return 0;
         default:
             OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(static_cast<uint32_t>(type)));
             return 0;
@@ -127,6 +129,18 @@ void GiftBoxBonus::applyEffect()
                     continue;
 
                 creature->setLevel(creature->getLevel() + mAmount);
+            }
+            break;
+        }
+        case GiftBoxType::healAll:
+        {
+            std::vector<Creature*> creatures = getGameMap()->getCreaturesBySeat(seat);
+            for(Creature* creature : creatures)
+            {
+                if(!creature->isAlive())
+                    continue;
+
+                creature->heal(creature->getMaxHp());
             }
             break;
         }
