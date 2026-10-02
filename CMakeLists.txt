@@ -509,6 +509,7 @@ set(OD_SOURCEFILES
     ${SRC}/traps/TrapDoor.cpp
     ${SRC}/traps/TrapFear.cpp
     ${SRC}/traps/TrapGas.cpp
+    ${SRC}/traps/TrapLightning.cpp
     ${SRC}/traps/TrapManager.cpp
     ${SRC}/traps/TrapSpike.cpp
     ${SRC}/traps/TrapType.cpp

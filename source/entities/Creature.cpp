@@ -4166,6 +4166,18 @@ void Creature::fleeFromTile(Tile* fearTile, int32_t nbTurns)
     pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
 }
 
+void Creature::stunForTurns(int32_t nbTurns)
+{
+    // Only living creatures that are not already KO can be stunned
+    if(!isAlive() || (mKoTurnCounter != 0))
+        return;
+
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    clearActionQueue();
+    mKoTurnCounter = nbTurns;
+    computeCreatureOverlayMoodValue();
+}
+
 void Creature::sleep()
 {
     clearDestinations(EntityAnimation::idle_anim, true, true);

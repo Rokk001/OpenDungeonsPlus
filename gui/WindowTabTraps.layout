@@ -86,5 +86,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="LightningTrapButton" >
+            <Property name="Area" value="{{0,540},{0,25},{0,600},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/LightningTrapButton" />
+            <Property name="TooltipText" value="Build a lightning trap" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>
