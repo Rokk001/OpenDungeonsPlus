@@ -52,6 +52,7 @@
     <Image height="128" name="FearTrapButton" width="128" xPos="384" yPos="384" />
     <Image height="128" name="GasTrapButton" width="128" xPos="384" yPos="384" />
     <Image height="128" name="LightningTrapButton" width="128" xPos="384" yPos="384" />
+    <Image height="128" name="FireburstTrapButton" width="128" xPos="384" yPos="384" />
     <Image height="128" name="WavePortalButton" width="128" xPos="512" yPos="384" />
     <Image height="128" name="WoodenDoorTrapButton" width="128" xPos="640" yPos="384" />
     <Image height="128" name="BracedDoorTrapButton" width="128" xPos="640" yPos="384" />

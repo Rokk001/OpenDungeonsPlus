@@ -93,5 +93,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="FireburstTrapButton" >
+            <Property name="Area" value="{{0,610},{0,25},{0,670},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/FireburstTrapButton" />
+            <Property name="TooltipText" value="Build a fireburst trap" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>
