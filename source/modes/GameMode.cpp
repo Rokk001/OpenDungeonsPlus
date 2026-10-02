@@ -192,6 +192,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mSettings(mRootWindow, modeManager->getGui(), false, true),
     mSandboxHeroLevel(1),
     mIsSkillWindowOpen(false),
+    mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
     mCurrentSkillProgress(0.0),
     mPreviousMousePosition(MouseMoveEvent{0, 0}),
@@ -3407,6 +3408,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillProgressBar->hide();
     }
     guiSheet->getChild(castButtonName)->setVisible(level > 0 || !isAllowed);
+    const bool isLockedByLibrary = SkillManager::isLockedByLostLibrary(resType, localPlayerSeat);
+    guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     skillButton->setText("");
     skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
     skillButton->setProperty("ResearchLevelColour", level >= 3 ? "FFFFC947" :
@@ -3433,6 +3436,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         Helper::toString(level) + "/3";
     if(!isAllowed)
         description += "\nUnavailable on this map.";
+    else if(isLockedByLibrary)
+        description += "\nCannot be cast: the library was lost.";
     else if(level >= 3)
         description += "\nMaximum level. " + SkillManager::getResearchDescription(resType, level);
     else
@@ -3493,6 +3498,13 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
        ((mCurrentSkillType != curResType) ||
         (mCurrentSkillProgress != curSkillProgress)))
     {
+        forceRefresh = true;
+    }
+
+    // Losing or regaining the library locks or unlocks the spells
+    if(mIsLibraryLostShown != localPlayerSeat->isLibraryLost())
+    {
+        mIsLibraryLostShown = localPlayerSeat->isLibraryLost();
         forceRefresh = true;
     }
 

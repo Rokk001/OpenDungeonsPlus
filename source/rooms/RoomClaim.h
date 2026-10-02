@@ -51,6 +51,18 @@ namespace RoomClaim
 
         return (danceRate / referenceClaimRate) / (secondsPerTile * turnsPerSecond * static_cast<double>(numTiles));
     }
+
+    //! \brief The part of the health of a whole room (1.0 = full) one dance of an own
+    //! worker gives back. It is repairFactor times what the same dance takes away from
+    //! an enemy room, so a single worker out-repairs several enemy workers.
+    inline double healthRepairedPerDance(double danceRate, double referenceClaimRate, double secondsPerTile,
+        double turnsPerSecond, uint32_t numTiles, double repairFactor)
+    {
+        if((referenceClaimRate <= 0.0) || (secondsPerTile <= 0.0) || (turnsPerSecond <= 0.0) || (numTiles == 0))
+            return 1.0;
+
+        return repairFactor * (danceRate / referenceClaimRate) / (secondsPerTile * turnsPerSecond * static_cast<double>(numTiles));
+    }
 }
 
 #endif // ROOMCLAIM_H

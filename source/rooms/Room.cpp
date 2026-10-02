@@ -104,6 +104,19 @@ void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)
     changeOwner(seat);
 }
 
+void Room::repairClaimHealth(double danceRate)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    double secondsPerTile = config.getRoomConfigDoubleOrDefault("RoomConvertSecondsPerTile", 2.5);
+    double referenceClaimRate = config.getRoomConfigDoubleOrDefault("RoomConvertReferenceClaimRate", 0.42);
+    double repairFactor = config.getRoomConfigDoubleOrDefault("RoomRepairFactor", 5.0);
+
+    mClaimHealth += RoomClaim::healthRepairedPerDance(danceRate, referenceClaimRate, secondsPerTile,
+        ODApplication::turnsPerSecond, static_cast<uint32_t>(numCoveredTiles()), repairFactor);
+    if(mClaimHealth > 1.0)
+        mClaimHealth = 1.0;
+}
+
 void Room::changeOwner(Seat* seat)
 {
     Seat* oldSeat = getSeat();
