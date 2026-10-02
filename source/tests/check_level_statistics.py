@@ -523,8 +523,8 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and enum_body.rstrip().endswith('casinoPayout')
-assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout')
+assert 'levelStatistics,' in enum_body and enum_body.rstrip().endswith('possessionEnd')
+assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')
 assert 'return "levelStatistics";' in notification_source
 wiring_checks += 3

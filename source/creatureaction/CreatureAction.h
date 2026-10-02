@@ -56,7 +56,7 @@ enum class CreatureActionType
     guardPost, // (fighters only) Stand guard on a guard post
     tunnel, // (fighters with a dig rate) Dig through walls towards an enemy dungeon heart that cannot be reached on foot
     possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
-    nb// Must be the last value of this enum
+    nb // Must be the last value of this enum
 };
 
 class CreatureAction
