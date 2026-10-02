@@ -865,6 +865,11 @@ void RoomDungeonTemple::checkHeartHealthTier()
     if(mTempleObject == nullptr)
         return;
 
+    // A destroyed heart is only waiting for its object to be released (see doUpkeep): do not
+    // swap it for the critical-tier object in the meantime
+    if(getHP(nullptr) <= 0.0)
+        return;
+
     HeartHealthTier tier = computeHeartHealthTier();
     if(tier == mCurrentHeartTier)
         return;
