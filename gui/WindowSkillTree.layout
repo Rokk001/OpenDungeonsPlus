@@ -406,6 +406,23 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
+                <Window type="OD/ImageButton" name="SecretDoorTrapButton" >
+                    <Property name="Area" value="{{0.1,-25},{0,135},{0.1,25},{0,185}}" />
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/SecretDoorTrapButton" />
+                    <Property name="TooltipText" value="Trap: Secret door" />
+                    <Window type="OD/ProgressBar" name="SecretDoorTrapButtonProgressBar" >
+                        <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                        <Property name="InheritsTooltipText" value="True" />
+                        <Property name="CurrentProgress" value="0.0" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                        <Property name="StepSize" value="0.1" />
+                        <Property name="Visible" value="False" />
+                        <Property name="VerticalProgress" value="True" />
+                        <Property name="Alpha" value="0.2" />
+                        <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
+                        <Property name="ReversedProgress" value="True" />
+                    </Window>
+                </Window>
                 <Window type="OD/ResearchButton" name="AlarmTrapButton" >
                     <Property name="Area" value="{{0.1,-25},{0,195},{0.1,25},{0,245}}" />
                     <Property name="ButtonImage" value="OpenDungeonsIcons/AlarmTrapButton" />

@@ -515,6 +515,17 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
+    // The secret door only requires the wooden door
+    doorDepends.clear();
+    doorDepends.push_back(woodenDoorSkill);
+    resType = SkillType::trapDoorSecret;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "SecretDoorTrapButton", skill, TrapType::doorSecret);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     // Lvl 3 skills
     resType = SkillType::trapCannon;
     index = static_cast<uint32_t>(resType);
