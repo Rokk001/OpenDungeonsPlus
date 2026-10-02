@@ -131,7 +131,18 @@ RoomTemple::RoomTemple(GameMap* gameMap) :
 
 bool RoomTemple::hasOpenCreatureSpot(Creature* c)
 {
-    return mCreaturesUsingRoom.size() < mCoveredTiles.size();
+    return mCreaturesUsingRoom.size() < getOuterTiles().size();
+}
+
+std::vector<Tile*> RoomTemple::getOuterTiles() const
+{
+    std::vector<Tile*> outerTiles;
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(!isPoolTile(*tile))
+            outerTiles.push_back(tile);
+    }
+    return outerTiles;
 }
 
 void RoomTemple::removeCreatureUsingRoom(Creature* c)
@@ -152,12 +163,14 @@ Tile* RoomTemple::getPrayerSpotForCreature(Creature& creature)
         mPrayerSpots.erase(it);
     }
 
-    if(mCoveredTiles.empty())
+    // Creatures pray on the outer tiles, the pool is only for sacrifices
+    std::vector<Tile*> outerTiles = getOuterTiles();
+    if(outerTiles.empty())
         return nullptr;
 
     // We prefer a tile where nobody prays yet
     std::vector<Tile*> freeTiles;
-    for(Tile* tile : mCoveredTiles)
+    for(Tile* tile : outerTiles)
     {
         bool isTaken = false;
         for(const std::pair<Creature* const, Tile*>& spot : mPrayerSpots)
@@ -176,7 +189,7 @@ Tile* RoomTemple::getPrayerSpotForCreature(Creature& creature)
     if(!freeTiles.empty())
         spot = freeTiles[Random::Uint(0, freeTiles.size() - 1)];
     else
-        spot = mCoveredTiles[Random::Uint(0, mCoveredTiles.size() - 1)];
+        spot = outerTiles[Random::Uint(0, outerTiles.size() - 1)];
 
     mPrayerSpots[&creature] = spot;
     return spot;
