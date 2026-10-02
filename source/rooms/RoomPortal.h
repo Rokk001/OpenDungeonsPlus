@@ -66,6 +66,9 @@ public:
 
     virtual void restoreInitialEntityState() override;
 
+    //! \brief An own creature dropped into its portal is sacked: it leaves the dungeon
+    void creatureDropped(Creature& creature) override;
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
 
