@@ -101,6 +101,8 @@ std::string toString(SkillType type)
             return "trapDoorSteel";
         case SkillType::trapDoorBarricade:
             return "trapDoorBarricade";
+        case SkillType::trapDoorSecret:
+            return "trapDoorSecret";
         case SkillType::spellEyeEvil:
             return "spellEyeEvil";
         default:
@@ -172,6 +174,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Steel Door";
         case SkillType::trapDoorBarricade:
             return "The Barricade";
+        case SkillType::trapDoorSecret:
+            return "The Secret Door";
         case SkillType::spellEyeEvil:
             return "The 'Eye of evil' spell";
         default:

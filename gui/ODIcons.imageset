@@ -31,6 +31,7 @@
     <Image height="64" name="BracedDoorTrapButton" width="64" xPos="192" yPos="194" />
     <Image height="64" name="SteelDoorTrapButton" width="64" xPos="192" yPos="194" />
     <Image height="64" name="BarricadeTrapButton" width="64" xPos="192" yPos="194" />
+    <Image height="64" name="SecretDoorTrapButton" width="64" xPos="192" yPos="194" />
     <Image height="64" name="PrisonButton" width="64" xPos="256" yPos="194" />
     <Image height="64" name="DestroyTrapButton" width="64" xPos="448" yPos="128" />
     <Image height="64" name="WorkerButton" width="64" xPos="0" yPos="384" />
