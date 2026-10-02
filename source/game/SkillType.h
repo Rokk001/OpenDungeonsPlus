@@ -86,6 +86,7 @@ enum class SkillType
     trapGuardPost,
     trapDoorSecret,
     trapDoorMagic,
+    spellTurncoat,
 
     // This should be the last
     countSkill
