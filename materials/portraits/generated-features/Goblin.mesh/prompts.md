@@ -64,7 +64,7 @@ Generate a NEW standalone customization asset for an adult male Goblin. Image is
 
 ## scar - 2 - scratches
 
-Generate a NEW standalone customization asset for an adult male Goblin. Image is anatomy, palette, clothing and brushwork reference only. Variation: three small parallel healed scratches. Output ONLY requested scar or paint marks; no face or skin silhouette. Hand-painted late-1990s dark fantasy strategy game style matching reference. Species anatomy unchanged, do not add tusks or fangs absent from reference.  Complete contour centered with transparent padding, genuine alpha background, no glow, fog, shadows, scenery, text, symbols or complete portrait. Reference clothing coverage preserved. Direct isolated-feature generation, never full-image cropping.
+Generate ONLY THREE separate small healed scratch scars as a standalone transparent game customization overlay. Exactly three parallel diagonal scars, evenly spaced, similar length. Count clearly: scar one, scar two, scar three. Pale pink and muted beige healed scar tissue in hand-painted dark fantasy game style, each narrow and subtle, NO fresh wound or blood. Complete contours with transparent gaps between all THREE marks and transparent padding. Genuine alpha background. No face, head, body, skin rectangle, scenery or text. Direct isolated asset generation, no full portrait or cropping.
 
 ## scar - 3 - warpaint
 

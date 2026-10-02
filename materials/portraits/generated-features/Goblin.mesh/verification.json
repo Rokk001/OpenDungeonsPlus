@@ -212,15 +212,15 @@
   {
     "file": "scar-2-scratches.png",
     "size": [
-      1230,
-      1278
+      1536,
+      1024
     ],
     "mode": "RGBA",
     "alpha_range": [
       0,
-      255
+      254
     ],
-    "sha256": "b5fb810be87817cdafc2c4684bdf7ff2cad28babc99e08e7b1c2f209c5759392",
+    "sha256": "b8f42d8ebe43289e4b33418bf8ced88efda16c61208acc137c2ba7cbb599ef72",
     "exact_generator_copy": true
   },
   {
