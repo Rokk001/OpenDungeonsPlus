@@ -47,6 +47,13 @@
 //!   Cond    mana <seatId> >= | <= <amount>    # mana of the seat
 //!   Cond    kills <seatId> >= | <= <count>    # creatures the seat has killed
 //!   Cond    mined <seatId> >= | <= <amount>   # gold the seat has mined
+//!   Cond    happy <seatId> >= | <= <count>   # creatures of the seat that are happy
+//!   Cond    angry <seatId> >= | <= <count>   # creatures of the seat that are angry or furious
+//!   Cond    atlevel <seatId> <level> >= | <= <count>   # creatures of the seat of that level or higher
+//!   Cond    lost <seatId> >= | <= <count>    # creatures of the seat that died
+//!   Cond    pickedup <seatId> >= | <= <count>   # times a creature of the seat was picked up with the hand
+//!   Cond    dropped <seatId> >= | <= <count>    # times a creature of the seat was dropped from the hand
+//!   Cond    slapped <seatId> >= | <= <count>    # times a creature of the seat was slapped
 //!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
 //!   Cond    flag <name> <value>               # flag has exactly that value
@@ -82,7 +89,14 @@ enum class LevelScriptConditionType
     mana,
     kills,
     goldMined,
-    claimed
+    claimed,
+    happyCreatures,
+    angryCreatures,
+    creaturesAtLevel,
+    creaturesLost,
+    creaturesPickedUp,
+    creaturesDropped,
+    creaturesSlapped
 };
 
 enum class LevelScriptActionType
@@ -120,10 +134,10 @@ struct LevelScriptCondition
     int32_t mY1;
     int32_t mX2;
     int32_t mY2;
-    //! \brief For creatures, gold, mana, kills and goldMined: true for >=, false for <=
+    //! \brief For the conditions that compare a number: true for >=, false for <=
     bool mAtLeast;
     //! \brief Seconds (time), count (creatures, room, claimed, -1 for all of the region),
-    //! amount (gold, mana, goldMined), count (kills) or value (flag)
+    //! amount (gold, mana, goldMined), count (kills and the creature conditions) or value (flag)
     int64_t mNumber;
     //! \brief Room name (room), goal name (goal), flag name (flag) or, for region, the
     //! name of a region of the script (empty when the rectangle is given by mX1 to mY2)

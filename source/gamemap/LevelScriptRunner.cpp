@@ -19,6 +19,7 @@
 
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "creaturemood/CreatureMood.h"
 #include "entities/Tile.h"
 #include "game/Campaign.h"
 #include "game/Player.h"
@@ -158,6 +159,65 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
                 amount = static_cast<int64_t>(seat->getStatistics().mCreaturesKilled);
             else
                 amount = static_cast<int64_t>(seat->getGoldMined());
+
+            if(cond.mAtLeast)
+                return amount >= cond.mNumber;
+
+            return amount <= cond.mNumber;
+        }
+        case LevelScriptConditionType::happyCreatures:
+        case LevelScriptConditionType::angryCreatures:
+        case LevelScriptConditionType::creaturesAtLevel:
+        {
+            int64_t count = 0;
+            for(Creature* creature : gameMap.getCreatures())
+            {
+                if(!creature->isAlive())
+                    continue;
+
+                if(!isSeatMatching(creature, cond.mSeatId))
+                    continue;
+
+                CreatureMoodLevel mood = creature->getMoodValue();
+                if(cond.mType == LevelScriptConditionType::happyCreatures)
+                {
+                    if(mood == CreatureMoodLevel::Happy)
+                        ++count;
+                }
+                else if(cond.mType == LevelScriptConditionType::angryCreatures)
+                {
+                    if((mood == CreatureMoodLevel::Angry) || (mood == CreatureMoodLevel::Furious))
+                        ++count;
+                }
+                else if(static_cast<int32_t>(creature->getLevel()) >= cond.mX1)
+                {
+                    ++count;
+                }
+            }
+            if(cond.mAtLeast)
+                return count >= cond.mNumber;
+
+            return count <= cond.mNumber;
+        }
+        case LevelScriptConditionType::creaturesLost:
+        case LevelScriptConditionType::creaturesPickedUp:
+        case LevelScriptConditionType::creaturesDropped:
+        case LevelScriptConditionType::creaturesSlapped:
+        {
+            Seat* seat = gameMap.getSeatById(cond.mSeatId);
+            if(seat == nullptr)
+                return false;
+
+            const SeatStatistics& statistics = seat->getStatistics();
+            int64_t amount = 0;
+            if(cond.mType == LevelScriptConditionType::creaturesLost)
+                amount = static_cast<int64_t>(statistics.mCreaturesLost);
+            else if(cond.mType == LevelScriptConditionType::creaturesPickedUp)
+                amount = static_cast<int64_t>(statistics.mCreaturesPickedUp);
+            else if(cond.mType == LevelScriptConditionType::creaturesDropped)
+                amount = static_cast<int64_t>(statistics.mCreaturesDropped);
+            else
+                amount = static_cast<int64_t>(statistics.mCreaturesSlapped);
 
             if(cond.mAtLeast)
                 return amount >= cond.mNumber;

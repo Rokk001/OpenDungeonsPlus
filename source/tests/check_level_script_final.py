@@ -75,4 +75,20 @@ assert 'mTimeLimitSeconds = -1;' in function(client, 'case ServerNotificationTyp
 assert 'getTimeLimitSeconds()' in game_mode and 'HorizontalPipe/TimeLimitDisplay' in game_mode
 assert 'name="TimeLimitDisplay"' in game_layout
 
+# creature event conditions: the counters are filled where the event happens
+creature = read('source/entities/Creature.cpp')
+stats_h = read('source/game/SeatStatistics.h')
+for counter in ('mCreaturesLost', 'mCreaturesPickedUp', 'mCreaturesDropped', 'mCreaturesSlapped'):
+    assert counter in stats_h and counter + ' = 0;' in stats_h, counter
+assert '++getSeat()->getStatistics().mCreaturesPickedUp' in function(creature, 'void Creature::pickup()')
+assert '++getSeat()->getStatistics().mCreaturesDropped' in function(creature, 'void Creature::drop(')
+assert '++getSeat()->getStatistics().mCreaturesSlapped' in function(creature, 'void Creature::slap()')
+assert '++getSeat()->getStatistics().mCreaturesLost' in function(creature, 'double Creature::takeDamage(') or     '++getSeat()->getStatistics().mCreaturesLost' in creature
+for name in ('happy', 'angry', 'atlevel', 'lost', 'pickedup', 'dropped', 'slapped'):
+    assert 'type == "%s"' % name in script_cpp, name
+for kind in ('happyCreatures', 'angryCreatures', 'creaturesAtLevel', 'creaturesLost', 'creaturesPickedUp',
+             'creaturesDropped', 'creaturesSlapped'):
+    assert 'case LevelScriptConditionType::%s:' % kind in runner, kind
+    assert 'case LevelScriptConditionType::%s:' % kind in script_cpp, kind
+
 print('level script final wiring: ok')
