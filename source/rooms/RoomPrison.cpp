@@ -305,7 +305,7 @@ void RoomPrison::doUpkeep()
                 continue;
             }
 
-            if(nbCreatures >= mCentralActiveSpotTiles.size())
+            if(nbCreatures >= getCapacity())
             {
                 // We have more prisoner than room. Each of them breaks out with
                 // the configured chance per second
@@ -749,10 +749,20 @@ bool RoomPrison::hasOpenCreatureSpot(Creature* creature)
     // We count current prisoners + prisoners on their way
     uint32_t nbCreatures = countPrisoners();
     nbCreatures += mPendingPrisoners.size();
-    if(nbCreatures >= mCentralActiveSpotTiles.size())
+    if(nbCreatures >= getCapacity())
         return false;
 
     return true;
+}
+
+uint32_t RoomPrison::getCapacity() const
+{
+    // The first inner tile holds two prisoners, every other inner tile one more.
+    // A prison without any inner tile is not functional
+    if(mActualTiles.empty())
+        return 0;
+
+    return static_cast<uint32_t>(mActualTiles.size()) + 1;
 }
 
 bool RoomPrison::addCreatureUsingRoom(Creature* creature)

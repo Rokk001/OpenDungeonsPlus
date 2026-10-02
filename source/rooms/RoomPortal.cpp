@@ -315,6 +315,15 @@ bool RoomPortal::importFromStream(std::istream& is)
     return true;
 }
 
+void RoomPortal::creatureDropped(Creature& creature)
+{
+    // Only the owner can send away its creatures. Workers are never dropped here
+    if(creature.getSeat() != getSeat())
+        return;
+
+    creature.leaveDungeon();
+}
+
 void RoomPortal::restoreInitialEntityState()
 {
     // We need to use seats with vision before calling Room::restoreInitialEntityState

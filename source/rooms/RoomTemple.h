@@ -40,7 +40,7 @@ public:
     RoomType getType() const override
     { return mRoomType; }
 
-    //! \brief One praying creature per room tile
+    //! \brief One praying creature per outer tile, the pool is not used for praying
     bool hasOpenCreatureSpot(Creature* c) override;
     void removeCreatureUsingRoom(Creature* c) override;
     bool useRoom(Creature& creature, bool forced) override;
@@ -62,6 +62,9 @@ private:
 
     //! \brief True if the tile is part of the pool (needs the room on all eight sides)
     bool isPoolTile(const Tile& tile) const;
+
+    //! \brief The room tiles that are not part of the pool
+    std::vector<Tile*> getOuterTiles() const;
 
     //! \brief Sacrifices the creature: it is removed, gives mana and may complete a recipe
     void sacrificeCreature(Creature& creature);

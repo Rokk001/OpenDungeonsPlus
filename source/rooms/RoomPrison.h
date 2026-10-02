@@ -59,6 +59,8 @@ public:
     void removeCreatureUsingRoom(Creature* creature) override;
 
     uint32_t countPrisoners();
+    //! \brief Number of prisoners the prison can hold
+    uint32_t getCapacity() const;
 
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
