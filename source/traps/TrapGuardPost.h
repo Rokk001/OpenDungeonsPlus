@@ -21,7 +21,8 @@
 #include "Trap.h"
 #include "traps/TrapType.h"
 
-//! \brief A post that never fires. An idle fighter of the owner (or one dropped on it) mans it and guards the spot.
+//! \brief A post that never fires. Guards of the owner's guard rooms patrol to it, and it calls them
+//! when it notices an enemy within its aura.
 class TrapGuardPost : public Trap
 {
 public:
@@ -46,11 +47,15 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
-    virtual void creatureDropped(Creature& creature) override;
+    virtual void doUpkeep() override;
 
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
     static const TrapType mTrapType;
+
+private:
+    //! \brief Turn from which the post may call the guards again
+    int64_t mNextDistressTurn;
 };
 
 #endif // TRAPGUARDPOST_H

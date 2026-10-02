@@ -17,6 +17,7 @@
 
 #include "creatureaction/CreatureActionGuardPost.h"
 
+#include "creatureaction/CreatureActionGoCallToWar.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "game/Seat.h"
@@ -24,6 +25,7 @@
 #include "traps/Trap.h"
 #include "traps/TrapType.h"
 #include "utils/MakeUnique.h"
+#include "utils/Random.h"
 
 #include <list>
 #include <memory>
@@ -32,10 +34,10 @@
 std::function<bool()> CreatureActionGuardPost::action()
 {
     return std::bind(&CreatureActionGuardPost::handleGuardPost,
-        std::ref(mCreature), mPostTile);
+        std::ref(mCreature), mPostTile, this);
 }
 
-bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile)
+bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile, CreatureActionGuardPost* guardPostAction)
 {
     Tile* myTile = creature.getPositionTile();
     if((myTile == nullptr) || (postTile == nullptr))
@@ -75,7 +77,17 @@ bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile
         return false;
     }
 
-    // We stand on the post
+    // We stand on the post until the stay is over, then we go back to our room
+    int64_t turn = creature.getGameMap()->getTurnNumber();
+    if(guardPostAction->mArrivalTurn < 0)
+        guardPostAction->mArrivalTurn = turn;
+
+    if(turn - guardPostAction->mArrivalTurn >= guardPostAction->mStayTurns)
+    {
+        creature.popAction();
+        return true;
+    }
+
     creature.setAnimationState(EntityAnimation::idle_anim);
     return false;
 }
@@ -101,7 +113,7 @@ bool CreatureActionGuardPost::isPostTaken(const Creature& creature, Tile* postTi
     return false;
 }
 
-bool CreatureActionGuardPost::tryManPost(Creature& creature)
+bool CreatureActionGuardPost::tryPatrol(Creature& creature, int64_t stayTurns)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -135,11 +147,31 @@ bool CreatureActionGuardPost::tryManPost(Creature& creature)
     if(posts.empty())
         return false;
 
-    Tile* chosenTile = nullptr;
-    std::list<Tile*> path = creature.getGameMap()->findBestPath(&creature, myTile, posts, chosenTile);
-    if(chosenTile == nullptr)
+    // The guards visit the posts in turn, so we do not always take the nearest one
+    Tile* chosenTile = posts[Random::Uint(0, posts.size() - 1)];
+    creature.pushAction(Utils::make_unique<CreatureActionGuardPost>(creature, *chosenTile, stayTurns));
+    return true;
+}
+
+bool CreatureActionGuardPost::goToIntruder(Creature& creature, Tile* intruderTile)
+{
+    Tile* myTile = creature.getPositionTile();
+    if((myTile == nullptr) || (intruderTile == nullptr))
         return false;
 
-    creature.pushAction(Utils::make_unique<CreatureActionGuardPost>(creature, *chosenTile));
+    if(creature.isActionInList(CreatureActionType::goCallToWar))
+        return false;
+
+    if(!creature.getGameMap()->pathExists(&creature, myTile, intruderTile))
+        return false;
+
+    std::list<Tile*> tempPath = creature.getGameMap()->path(&creature, intruderTile);
+    if(tempPath.empty())
+        return false;
+
+    std::vector<Ogre::Vector2> path;
+    Creature::tileToVector2(tempPath, path, true, 0.0);
+    creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+    creature.pushAction(Utils::make_unique<CreatureActionGoCallToWar>(creature));
     return true;
 }
