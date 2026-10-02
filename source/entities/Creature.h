@@ -768,6 +768,18 @@ public:
     //! use the enemy in front of the creature.
     void possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim);
 
+    //! Called on server side. True if the creature follows a possessed leader (possession group)
+    inline bool isInPossessionGroup() const
+    { return !mGroupLeaderName.empty(); }
+
+    //! Called on server side. Puts the creature in the possession group of the given leader.
+    //! It leaves what it was doing and follows the leader until the group is released.
+    void joinPossessionGroup(const std::string& leaderName);
+
+    //! Called on server side. The creature leaves the possession group and goes back to its
+    //! normal behaviour.
+    void leavePossessionGroup();
+
 protected:
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
     virtual void importFromPacket(ODPacket& is) override;
@@ -983,6 +995,20 @@ private:
     bool mHasProgressInformation = false;
     //! \brief Used on server side. The player controlling the creature (possession), nullptr if none
     Player*                         mPossessor = nullptr;
+
+    //! \brief Used on server side. The names of the creatures following this possessed creature
+    std::vector<std::string>        mGroupMemberNames;
+
+    //! \brief Used on server side. The name of the possessed creature this creature follows, empty if none
+    std::string                     mGroupLeaderName;
+
+    //! \brief Used on server side by the possession. Picks the nearby fighting creatures of the
+    //! possessor and makes them follow this creature
+    void formPossessionGroup();
+
+    //! \brief Used on server side by the possession group. Makes the creature walk to the leader if
+    //! it is too far away. Returns true if the creature has to wait for the leader (nothing else to do)
+    bool followPossessionLeader();
 
     //! \brief Used on server side by the possession. Searches the enemy in front of the creature
     //! (view direction aim) the given skill can reach. Returns true if one is found.
