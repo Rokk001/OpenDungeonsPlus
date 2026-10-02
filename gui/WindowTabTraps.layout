@@ -100,6 +100,13 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="FreezeTrapButton" >
+            <Property name="Area" value="{{0,1000},{0,25},{0,1060},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/FreezeTrapButton" />
+            <Property name="TooltipText" value="Build a freeze trap" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
         <Window type="OD/GameTabButton" name="GuardPostTrapButton" >
             <Property name="Area" value="{{0,820},{0,25},{0,880},{0,85}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/GuardPostTrapButton" />

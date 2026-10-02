@@ -1701,7 +1701,7 @@ void Gui::arrangeTrapButtons(CEGUI::Window* traps)
     arrangeActionButtons(traps, {"WoodenDoorTrapButton", "BracedDoorTrapButton", "SteelDoorTrapButton",
         "BarricadeTrapButton", "SecretDoorTrapButton", "MagicDoorTrapButton", "CannonButton", "SpikeTrapButton",
         "BoulderTrapButton", "AlarmTrapButton", "FearTrapButton", "GasTrapButton", "LightningTrapButton",
-        "FireburstTrapButton", "GuardPostTrapButton"});
+        "FireburstTrapButton", "FreezeTrapButton", "GuardPostTrapButton"});
 }
 
 void Gui::arrangeSpellButtons(CEGUI::Window* spells)

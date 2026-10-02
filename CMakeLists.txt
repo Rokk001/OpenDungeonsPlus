@@ -290,6 +290,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectSpeedChange.cpp
     ${SRC}/creatureeffect/CreatureEffectTurncoat.cpp
     ${SRC}/creatureeffect/CreatureEffectChicken.cpp
+    ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
@@ -522,6 +523,7 @@ set(OD_SOURCEFILES
     ${SRC}/traps/TrapDoor.cpp
     ${SRC}/traps/TrapFear.cpp
     ${SRC}/traps/TrapFireburst.cpp
+    ${SRC}/traps/TrapFreeze.cpp
     ${SRC}/traps/TrapGas.cpp
     ${SRC}/traps/TrapGuardPost.cpp
     ${SRC}/traps/TrapLightning.cpp
