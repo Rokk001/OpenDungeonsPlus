@@ -326,6 +326,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillInvisible.cpp
     ${SRC}/creatureskill/CreatureSkillStrengthSelf.cpp
     ${SRC}/creatureskill/CreatureSkillWeak.cpp
+    ${SRC}/creatureskill/CreatureSkillWhirlwind.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
