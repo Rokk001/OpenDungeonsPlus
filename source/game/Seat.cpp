@@ -2160,6 +2160,8 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
             std::vector<Seat*> seats;
             seats.push_back(this);
             mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNew);
+            if(getPlayer() != nullptr)
+                getPlayer()->notifyNewCreatureType(def.first->getClassName());
             return def.first;
         }
         nbPointsConditions += configManager.getBaseSpawnPoint();

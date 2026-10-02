@@ -67,6 +67,12 @@ const float CREATURE_CANNOT_FIND_BED_TIME_COUNT = 30.0f;
 //! \brief The number of seconds the local player will not be notified again if a creature cannot find place in a dormitory
 const float CREATURE_CANNOT_FIND_FOOD_TIME_COUNT = 30.0f;
 
+//! \brief The number of seconds the local player will not be told again that gold is missing
+const float NOT_ENOUGH_GOLD_TIME_COUNT = 10.0f;
+
+//! \brief The number of seconds the local player will not be told again that a creature has died
+const float CREATURE_KILLED_TIME_COUNT = 15.0f;
+
 Player::Player(GameMap* gameMap, int32_t id) :
     mId(id),
     mGameMap(gameMap),
@@ -77,6 +83,8 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mNoTreasuryAvailableTime(0.0f),
     mCreatureCannotFindBed(0.0f),
     mCreatureCannotFindFood(0.0f),
+    mNotEnoughGoldTime(0.0f),
+    mCreatureKilledTime(0.0f),
     mHasLost(false),
     mConquerorSeatId(-1),
     mDefeatHeartTileX(-1),
@@ -736,6 +744,61 @@ void Player::notifyCreatureCannotFindFood(Creature& creature)
     }
 }
 
+void Player::notifyNotEnoughGold()
+{
+    if(mHasLost)
+        return;
+
+    if(!getIsHuman())
+        return;
+
+    if(mNotEnoughGoldTime > 0.0f)
+        return;
+
+    mNotEnoughGoldTime = NOT_ENOUGH_GOLD_TIME_COUNT;
+
+    std::string chatMsg = "You do not have enough gold for that.";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Player::notifyCreatureKilled(Creature& creature)
+{
+    if(mHasLost)
+        return;
+
+    if(!getIsHuman())
+        return;
+
+    if(mCreatureKilledTime > 0.0f)
+        return;
+
+    mCreatureKilledTime = CREATURE_KILLED_TIME_COUNT;
+
+    std::string chatMsg = creature.getName() + " has been killed";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Player::notifyNewCreatureType(const std::string& creatureClassName)
+{
+    if(mHasLost)
+        return;
+
+    if(!getIsHuman())
+        return;
+
+    std::string chatMsg = "A new kind of creature is attracted to your dungeon: " + creatureClassName;
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
 void Player::fireEvents()
 {
     // On server side, we update the client
@@ -939,6 +1002,22 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
             mCreatureCannotFindFood -= timeSinceLastUpkeep;
         else
             mCreatureCannotFindFood = 0.0f;
+    }
+
+    if(mNotEnoughGoldTime > 0.0f)
+    {
+        if(mNotEnoughGoldTime > timeSinceLastUpkeep)
+            mNotEnoughGoldTime -= timeSinceLastUpkeep;
+        else
+            mNotEnoughGoldTime = 0.0f;
+    }
+
+    if(mCreatureKilledTime > 0.0f)
+    {
+        if(mCreatureKilledTime > timeSinceLastUpkeep)
+            mCreatureKilledTime -= timeSinceLastUpkeep;
+        else
+            mCreatureKilledTime = 0.0f;
     }
 
     if(isEventListUpdated)
