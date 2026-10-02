@@ -596,7 +596,7 @@ public:
     //! side, it is deduced from the active effect. On client side, from the state sent by the server
     bool isChicken() const;
 
-    //! rief Returns true (server side) if the creature is paralysed by the Freeze trap. A frozen creature
+    //! \brief Returns true (server side) if the creature is paralysed by the Freeze trap. A frozen creature
     //! can neither move nor fight
     bool isFrozen() const;
 
