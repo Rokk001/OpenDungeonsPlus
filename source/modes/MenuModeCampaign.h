@@ -21,9 +21,12 @@
 #include "AbstractApplicationMode.h"
 
 #include <string>
+#include <vector>
 
-//! \brief The campaign menu: list of the campaign levels with briefing, and
-//! the debriefing of the level that was played last.
+//! \brief The campaign menu: a map where each level is a territory. Levels that
+//! can be started highlight under the mouse and start on a click. The briefing
+//! of the territory under the mouse and the debriefing of the level that was
+//! played last are shown beside the map.
 class MenuModeCampaign: public AbstractApplicationMode
 {
 public:
@@ -40,17 +43,23 @@ public:
 private:
     //! \brief Debriefing text of the level that was played last (empty if none)
     std::string mResultText;
-    //! \brief Level index the debriefing text belongs to
-    size_t mResultLevel;
+    //! Windows of the territory blocks currently on the map
+    std::vector<CEGUI::Window*> mTerritoryWindows;
+    //! Level index under the mouse, or the number of levels if none
+    size_t mHoveredLevel;
 
-    void fillLevelList();
-    void selectLevel(size_t index);
+    void fillMap();
+    void clearMap();
+    void updateTerritoryColour(CEGUI::Window* block);
+    void showDescription(size_t index);
+    void startLevel(size_t index);
 
-    bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
+    bool territoryEntered(const CEGUI::EventArgs& e);
+    bool territoryLeft(const CEGUI::EventArgs& e);
+    bool territoryClicked(const CEGUI::EventArgs& e);
     bool difficultyButtonPressed(const CEGUI::EventArgs&);
     void updateDifficultyButton();
     bool backButtonPressed(const CEGUI::EventArgs&);
-    bool updateDescription(const CEGUI::EventArgs& e = {});
 };
 
 #endif // MENUMODECAMPAIGN_H

@@ -25,6 +25,16 @@
 #include <string>
 #include <vector>
 
+//! \brief One block of the territory a level has on the campaign map.
+//! Coordinates are percent (0 to 100) of the map area.
+struct CampaignMapBlock
+{
+    float mX;
+    float mY;
+    float mWidth;
+    float mHeight;
+};
+
 //! \brief One level of the campaign sequence.
 //! The level file name is relative to the "levels" directory.
 struct CampaignLevel
@@ -41,6 +51,9 @@ struct CampaignLevel
     //! A bonus (secret) level does not block the main sequence. Finding one
     //! gives a piece of the talisman.
     bool mBonus;
+    //! Blocks that together form the territory of the level on the campaign
+    //! map. Empty if the definition has no "Map" setting.
+    std::vector<CampaignMapBlock> mMapBlocks;
 };
 
 //! \brief The campaign: an ordered list of levels plus the saved progress.
@@ -53,6 +66,9 @@ struct CampaignLevel
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
 //!   Bonus=1 (optional) marks a bonus level.
+//!   Map=x,y,width,height[;x,y,width,height...] (optional) the territory of the
+//!   level on the campaign map as blocks, in percent of the map area. Levels
+//!   without it are placed on an automatic grid.
 //!
 //! A bonus level is hidden until a level script finds it (action "discover",
 //! the level file name as argument). It is not needed to finish the campaign,
@@ -87,6 +103,9 @@ public:
 
     size_t getNumLevels() const;
     const CampaignLevel& getLevel(size_t index) const;
+    //! \brief Territory of the level on the campaign map: the blocks of the
+    //! definition, or one block of an automatic grid if it has none.
+    std::vector<CampaignMapBlock> getMapBlocks(size_t index) const;
     bool isCompleted(size_t index) const;
     bool isUnlocked(size_t index) const;
     //! \brief First main (non bonus) level not completed. Equals the number of levels if all are done.
@@ -135,6 +154,8 @@ public:
 
     //! \brief Replaces "\n" (backslash, n) by a line feed.
     static std::string unescapeText(const std::string& text);
+    //! \brief Reads the value of a "Map" setting. Invalid blocks are skipped.
+    static std::vector<CampaignMapBlock> parseMapBlocks(const std::string& text);
 
 private:
     Campaign();

@@ -40,12 +40,15 @@
                 <Property name="Text" value="Campaign" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
-            <Window type="OD/MenuListbox" name="LevelSelect" >
-                <Property name="Area" value="{{0.11,0},{0.5,16},{0.45,0},{1,-132}}" />
-                <Property name="ForceVertScrollbar" value="False" />
+            <Window type="OD/StaticText" name="CampaignMap" >
+                <Property name="Area" value="{{0.11,0},{0.5,16},{0.6,0},{1,-132}}" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="BackgroundColours" value="FF14100C" />
             </Window>
             <Window type="OD/StaticText" name="DescriptionText" >
-                <Property name="Area" value="{{0.48,0},{0.5,16},{0.92,0},{1,-132}}" />
+                <Property name="Area" value="{{0.63,0},{0.5,16},{0.92,0},{1,-132}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
@@ -64,14 +67,6 @@
                 <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
                 <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
                 <Property name="TooltipText" value="Back" />
-            </Window>
-            <Window type="OD/MenuSymbolButton" name="LaunchGameButton" >
-                <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="TooltipText" value="Start level" />
             </Window>
         </Window>
     </Window>

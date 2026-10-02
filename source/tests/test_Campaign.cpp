@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <string>
+#include <vector>
 
 static const std::string sample =
     "# comment\n"
@@ -150,4 +151,32 @@ BOOST_AUTO_TEST_CASE(test_difficulty_is_saved)
     // A new campaign returns to the default
     campaign.resetProgress();
     BOOST_CHECK_EQUAL(campaign.getDifficulty(), Campaign::getDefaultDifficulty());
+}
+
+BOOST_AUTO_TEST_CASE(test_map_blocks)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream is(
+        "[Level]
+File=a.level
+Map=10,20,30,40;50,50,20,20;90,90,20,5
+"
+        "[Level]
+File=b.level
+");
+    BOOST_REQUIRE(campaign.importDefinition(is));
+
+    // The block that leaves the map area is skipped
+    std::vector<CampaignMapBlock> blocks = campaign.getMapBlocks(0);
+    BOOST_REQUIRE_EQUAL(blocks.size(), 2u);
+    BOOST_CHECK_EQUAL(blocks[0].mX, 10.0f);
+    BOOST_CHECK_EQUAL(blocks[1].mWidth, 20.0f);
+
+    // A level without a Map setting gets one block of the automatic grid inside the map
+    blocks = campaign.getMapBlocks(1);
+    BOOST_REQUIRE_EQUAL(blocks.size(), 1u);
+    BOOST_CHECK(blocks[0].mX >= 0.0f);
+    BOOST_CHECK(blocks[0].mX + blocks[0].mWidth <= 100.0f);
+    BOOST_CHECK(blocks[0].mY + blocks[0].mHeight <= 100.0f);
+    BOOST_CHECK(campaign.getMapBlocks(5).empty());
 }
