@@ -15,46 +15,53 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MISSILEONEHIT_H
-#define MISSILEONEHIT_H
+#ifndef MISSILEBLAST_H
+#define MISSILEBLAST_H
 
-#include "entities/MissileObject.h"
+#include "entities/MissileOneHit.h"
 
 #include <string>
 #include <iosfwd>
 
-class Creature;
-class Room;
 class GameMap;
 class Tile;
 class ODPacket;
 
-class MissileOneHit: public MissileObject
+//! \brief A missile that can follow its target (guided bolt) and/or explode when it hits something, hurting every
+//! enemy creature within the blast radius (grenade). With a blast radius of 0 it behaves like a MissileOneHit.
+class MissileBlast: public MissileOneHit
 {
 public:
-    MissileOneHit(GameMap* gameMap, Seat* seat, const std::string& senderName, const std::string& meshName,
+    MissileBlast(GameMap* gameMap, Seat* seat, const std::string& senderName, const std::string& meshName,
         const std::string& particleScript, const Ogre::Vector3& direction, double speed, double physicalDamage, double magicalDamage,
-        double elementDamage, GameEntity* entityTarget, bool damageAllies, bool koEnemyCreature, bool notifyPlayerIfHit);
-    MissileOneHit(GameMap* gameMap);
+        double elementDamage, GameEntity* entityTarget, bool damageAllies, bool koEnemyCreature, bool notifyPlayerIfHit,
+        double blastRadius, bool homing);
+    MissileBlast(GameMap* gameMap);
 
     virtual MissileObjectType getMissileType() const override
-    { return MissileObjectType::oneHit; }
+    { return MissileObjectType::blast; }
+
+    virtual bool wallHitNextDirection(const Ogre::Vector3& actDirection, Tile* tile, Ogre::Vector3& nextDirection) override;
 
     virtual bool hitCreature(Tile* tile, GameEntity* entity) override;
 
     virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget) override;
 
-    static MissileOneHit* getMissileOneHitFromStream(GameMap* gameMap, std::istream& is);
-    static MissileOneHit* getMissileOneHitFromPacket(GameMap* gameMap, ODPacket& is);
+    static MissileBlast* getMissileBlastFromStream(GameMap* gameMap, std::istream& is);
+    static MissileBlast* getMissileBlastFromPacket(GameMap* gameMap, ODPacket& is);
+
 protected:
+    virtual void updateDirection() override;
+
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 
-protected:
-    double mPhysicalDamage;
-    double mMagicalDamage;
-    double mElementDamage;
-    bool mNotifyPlayerIfHit;
+private:
+    //! \brief Hurts every enemy creature within the blast radius around the given tile
+    void explode(Tile* tile);
+
+    double mBlastRadius;
+    bool mHoming;
 };
 
-#endif // MISSILEONEHIT_H
+#endif // MISSILEBLAST_H
