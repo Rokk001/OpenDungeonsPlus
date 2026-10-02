@@ -295,6 +295,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
     ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
+    ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
@@ -328,6 +329,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillWeak.cpp
     ${SRC}/creatureskill/CreatureSkillWhirlwind.cpp
     ${SRC}/creatureskill/CreatureSkillTeleport.cpp
+    ${SRC}/creatureskill/CreatureSkillAreaDamage.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
