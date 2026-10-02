@@ -170,7 +170,7 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
         CEGUI::Window::EventHidden,
         CEGUI::Event::Subscriber(&MenuModeMain::settingsPageClosed, this)));
 
-    for(const std::string& name : {WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
+    for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
         addEventConnection(
             rootWin->getChild(name + "/BackButton")->subscribeEvent(
                 CEGUI::PushButton::EventClicked,

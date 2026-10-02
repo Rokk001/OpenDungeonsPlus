@@ -242,11 +242,13 @@ public:
             case SpellType::lightning: key = "LightningPrice"; break;
             case SpellType::tremor: key = "TremorPrice"; break;
             case SpellType::turncoat: key = "TurncoatPrice"; break;
+            case SpellType::chicken: key = "ChickenPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
-            mSpellType == SpellType::tremor || mSpellType == SpellType::turncoat) ?
+            mSpellType == SpellType::tremor || mSpellType == SpellType::turncoat ||
+            mSpellType == SpellType::chicken) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -631,10 +633,14 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
+    // The tactic rows after cannon and spike trap and after the boulder trap are full,
+    // so Chicken follows Turncoat
+    std::vector<const Skill*> turncoatDepends;
+    turncoatDepends.push_back(skill);
     resType = SkillType::spellChicken;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
+    skill = new Skill(resType, points, turncoatDepends);
     def = new SkillDefSpell("TacticSkills/", "ChickenButton", skill, SpellType::chicken);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
@@ -975,6 +981,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::trapGuardPost: return "One idle fighter stands guard on each post and returns to it after a fight.";
         case SkillType::spellTurncoat: return "One enemy creature on your claimed land fights for you for " +
             spell("TurncoatNbTurns") + " turns.";
+        case SkillType::spellChicken: return "One enemy creature becomes a harmless chicken for " +
+            spell("ChickenNbTurns") + " turns.";
         default: return "";
     }
 }
