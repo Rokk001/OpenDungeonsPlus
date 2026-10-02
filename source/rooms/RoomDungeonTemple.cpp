@@ -63,14 +63,20 @@ const int HEART_REWARD_SPECIAL_DISTANCE = 2;
 //! \brief A dance rate large enough to hand a room tile over at once
 const double HEART_REWARD_TAKE_AT_ONCE = 1000000.0;
 
-//! \brief The specials of the reference that exist as gift boxes here. Not built: Make Safe, Weaken Walls,
-//! Stun Imps, Receive Imps, Make Happy, Make Unhappy and Kill Creatures.
+//! \brief The twelve specials the reference picks from when a heart is destroyed
 const GiftBoxType HEART_REWARD_SPECIALS[] =
 {
     GiftBoxType::levelUp,
     GiftBoxType::revealMap,
+    GiftBoxType::makeSafe,
+    GiftBoxType::weakenWalls,
     GiftBoxType::gold,
     GiftBoxType::mana,
+    GiftBoxType::stunImps,
+    GiftBoxType::receiveImps,
+    GiftBoxType::makeHappy,
+    GiftBoxType::makeUnhappy,
+    GiftBoxType::killCreatures,
     GiftBoxType::healAll
 };
 const int NB_HEART_REWARD_SPECIALS = sizeof(HEART_REWARD_SPECIALS) / sizeof(HEART_REWARD_SPECIALS[0]);

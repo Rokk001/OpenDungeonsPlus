@@ -133,6 +133,13 @@ GiftBoxEntity* GiftBoxEntity::getGiftBoxEntityFromStream(GameMap* gameMap, std::
         case GiftBoxType::revealMap:
         case GiftBoxType::levelUp:
         case GiftBoxType::healAll:
+        case GiftBoxType::makeSafe:
+        case GiftBoxType::weakenWalls:
+        case GiftBoxType::stunImps:
+        case GiftBoxType::receiveImps:
+        case GiftBoxType::makeHappy:
+        case GiftBoxType::makeUnhappy:
+        case GiftBoxType::killCreatures:
             entity = new GiftBoxBonus(gameMap, type);
             break;
 
