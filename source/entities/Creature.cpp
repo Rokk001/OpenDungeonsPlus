@@ -1082,6 +1082,16 @@ void Creature::doUpkeep()
         if(mActions.empty() || (mActions.back()->getType() != CreatureActionType::possessed))
             pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
 
+        // The creature skills keep recovering while the player controls the creature
+        for(CreatureSkillData& skillData : mSkillData)
+        {
+            if(skillData.mWarmup > 0)
+                --skillData.mWarmup;
+
+            if(skillData.mCooldown > 0)
+                --skillData.mCooldown;
+        }
+
         std::function<bool()> possessedFunc = mActions.back()->action();
         possessedFunc();
         return;
@@ -3604,4 +3614,179 @@ void Creature::possessedMove(const Ogre::Vector2& direction)
     std::vector<Ogre::Vector2> path;
     path.push_back(destination);
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+}
+
+namespace
+{
+//! \brief The attacks used with the left mouse button while possessing (melee and ranged).
+//! The other skills of the creature are used with the number keys.
+bool isPossessedBasicAttack(const CreatureSkill& skill)
+{
+    return (skill.getSkillName() == "Melee") || (skill.getSkillName() == "MissileLaunch");
+}
+
+bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
+{
+    return (skillData.mCooldown == 0) && (skillData.mWarmup == 0) &&
+        skillData.mSkill->canBeUsedBy(&creature);
+}
+}
+
+bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkillData& skillData,
+    GameEntity*& entityAttack, Tile*& tileAttack)
+{
+    entityAttack = nullptr;
+    tileAttack = nullptr;
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    if(aim.squaredLength() < 0.0001f)
+        return false;
+
+    Ogre::Vector2 aimDir = aim;
+    aimDir.normalise();
+
+    // The target has to be in front of the creature (45 degrees to each side)
+    const Ogre::Real minCos = 0.7f;
+    bool bestIsCreature = false;
+    Ogre::Real bestDist = 0.0f;
+    for(GameEntity* entity : mVisibleEnemyObjects)
+    {
+        bool isCreature = (entity->getObjectType() == GameEntityType::creature);
+        if(isCreature)
+        {
+            Creature* enemy = static_cast<Creature*>(entity);
+            if(!enemy->isAlive())
+                continue;
+
+            // Workers attack workers only
+            if(getDefinition()->isWorker() && !enemy->getDefinition()->isWorker())
+                continue;
+        }
+        else if(getDefinition()->isWorker())
+            continue;
+
+        if(entity->getHP(nullptr) <= 0)
+            continue;
+
+        double skillRange = skillData.mSkill->getRangeMax(this, entity);
+        if(skillRange <= 0.0)
+            continue;
+
+        for(Tile* tile : entity->getCoveredTiles())
+        {
+            if(!entity->isAttackable(tile, getSeat()))
+                continue;
+
+            // Same range check as in a normal fight
+            int squaredDist = Pathfinding::squaredDistanceTile(*tile, *myTile);
+            if(static_cast<double>(squaredDist) > (skillRange * skillRange))
+                continue;
+
+            Ogre::Vector2 toTile(tile->getX() - mPosition.x, tile->getY() - mPosition.y);
+            Ogre::Real dist = toTile.length();
+            if(dist > 0.5f)
+            {
+                toTile /= dist;
+                if(toTile.dotProduct(aimDir) < minCos)
+                    continue;
+            }
+
+            // Creatures are attacked before the other objects, then the closest one
+            if((entityAttack != nullptr) && ((bestIsCreature && !isCreature) ||
+               ((bestIsCreature == isCreature) && (dist >= bestDist))))
+                continue;
+
+            entityAttack = entity;
+            tileAttack = tile;
+            bestIsCreature = isCreature;
+            bestDist = dist;
+        }
+    }
+
+    return (entityAttack != nullptr);
+}
+
+void Creature::possessedAttack(const Ogre::Vector2& aim)
+{
+    if(!isPossessed() || !getIsOnMap() || !isAlive() || isKo())
+        return;
+
+    // The melee attack is preferred. The ranged attack is used if no enemy is within melee range
+    CreatureSkillData* bestSkill = nullptr;
+    GameEntity* bestEntity = nullptr;
+    Tile* bestTile = nullptr;
+    double bestRange = 0.0;
+    for(CreatureSkillData& skillData : mSkillData)
+    {
+        if(!isPossessedBasicAttack(*skillData.mSkill))
+            continue;
+
+        if(!isPossessedSkillReady(*this, skillData))
+            continue;
+
+        GameEntity* entity = nullptr;
+        Tile* tile = nullptr;
+        if(!possessedFindTarget(aim, skillData, entity, tile))
+            continue;
+
+        double range = skillData.mSkill->getRangeMax(this, entity);
+        if((bestSkill != nullptr) && (range >= bestRange))
+            continue;
+
+        bestSkill = &skillData;
+        bestEntity = entity;
+        bestTile = tile;
+        bestRange = range;
+    }
+
+    if(bestSkill == nullptr)
+        return;
+
+    useAttack(*bestSkill, *bestEntity, *bestTile, false, true);
+}
+
+void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
+{
+    if(!isPossessed() || !getIsOnMap() || !isAlive() || isKo())
+        return;
+
+    uint32_t index = 0;
+    for(CreatureSkillData& skillData : mSkillData)
+    {
+        if(isPossessedBasicAttack(*skillData.mSkill))
+            continue;
+
+        if(!skillData.mSkill->canBeUsedBy(this))
+            continue;
+
+        if(index != slot)
+        {
+            ++index;
+            continue;
+        }
+
+        if(!isPossessedSkillReady(*this, skillData))
+            return;
+
+        // Skills without range (haste, heal, ...) are used on the creature itself
+        if(skillData.mSkill->getRangeMax(this, this) <= 0.0)
+        {
+            if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
+                return;
+
+            skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
+            skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            return;
+        }
+
+        GameEntity* entity = nullptr;
+        Tile* tile = nullptr;
+        if(!possessedFindTarget(aim, skillData, entity, tile))
+            return;
+
+        useAttack(skillData, *entity, *tile, false, true);
+        return;
+    }
 }
