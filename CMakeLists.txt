@@ -335,6 +335,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillGrenade.cpp
     ${SRC}/creatureskill/CreatureSkillSummon.cpp
     ${SRC}/creatureskill/CreatureSkillRaiseDead.cpp
+    ${SRC}/creatureskill/CreatureSkillSkeletonArmy.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
