@@ -34,12 +34,16 @@
 #include "modes/InputManager.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
+#include "ODApplication.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+
+#include <algorithm>
+#include <cmath>
 
 const std::string RoomPrisonName = "Prison";
 const std::string RoomPrisonNameDisplay = "Prison room";
@@ -279,6 +283,9 @@ void RoomPrison::doUpkeep()
     freePrisonersIfLiberated();
 
     // We check if we have enough room for all prisoners
+    // The configured chance is per second, doUpkeep runs once per turn
+    double overstuffChancePerSecond = ConfigManager::getSingleton().getRoomConfigDouble("PrisonOverstuffBreakChance");
+    double overstuffChancePerTurn = 1.0 - std::pow(1.0 - overstuffChancePerSecond, 1.0 / ODApplication::turnsPerSecond);
     uint32_t nbCreatures = 0;
     for(Tile* tile : mCoveredTiles)
     {
@@ -300,8 +307,10 @@ void RoomPrison::doUpkeep()
 
             if(nbCreatures >= mCentralActiveSpotTiles.size())
             {
-                // We have more prisoner than room. We free them
-                creature->clearActionQueue();
+                // We have more prisoner than room. Each of them breaks out with
+                // the configured chance per second
+                if(Random::Double(0.0, 1.0) < overstuffChancePerTurn)
+                    creature->clearActionQueue();
                 continue;
             }
 
@@ -427,6 +436,15 @@ void RoomPrison::feedPrisoners()
     }
 }
 
+bool RoomPrison::isLiberator(Creature* creature) const
+{
+    return (creature->getSeatPrison() == nullptr) &&
+           creature->isAlive() &&
+           !creature->isKo() &&
+           !creature->getDefinition()->isWorker() &&
+           !getSeat()->isAlliedSeat(creature->getSeat());
+}
+
 void RoomPrison::freePrisonersIfLiberated()
 {
     std::vector<Creature*> prisoners;
@@ -446,18 +464,37 @@ void RoomPrison::freePrisonersIfLiberated()
             }
 
             // An enemy creature that stands in the prison frees its comrades
-            if((creature->getSeatPrison() == nullptr) &&
-               creature->isAlive() &&
-               !creature->isKo() &&
-               !creature->getDefinition()->isWorker() &&
-               !getSeat()->isAlliedSeat(creature->getSeat()))
-            {
+            if(isLiberator(creature))
                 liberators.push_back(creature);
+        }
+    }
+
+    // An enemy creature walking past the prison, next to its tiles, opens the
+    // door and frees the prisoners of its own type
+    std::vector<Creature*> passersBy;
+    for(Tile* tile : mCoveredTiles)
+    {
+        for(Tile* neighbor : tile->getAllNeighbors())
+        {
+            if(neighbor->getCoveringRoom() == this)
+                continue;
+
+            for(GameEntity* entity : neighbor->getEntitiesInTile())
+            {
+                if(entity->getObjectType() != GameEntityType::creature)
+                    continue;
+
+                Creature* creature = static_cast<Creature*>(entity);
+                if(!isLiberator(creature))
+                    continue;
+
+                if(std::find(passersBy.begin(), passersBy.end(), creature) == passersBy.end())
+                    passersBy.push_back(creature);
             }
         }
     }
 
-    if(prisoners.empty() || liberators.empty())
+    if(prisoners.empty() || (liberators.empty() && passersBy.empty()))
         return;
 
     uint32_t nbFreed = 0;
@@ -471,6 +508,16 @@ void RoomPrison::freePrisonersIfLiberated()
                 freed = true;
                 break;
             }
+        }
+
+        for(Creature* passerBy : passersBy)
+        {
+            if(freed)
+                break;
+
+            if((passerBy->getDefinition() == prisoner->getDefinition()) &&
+               passerBy->getSeat()->isAlliedSeat(prisoner->getSeat()))
+                freed = true;
         }
 
         if(!freed)

@@ -88,6 +88,8 @@ private:
     void feedPrisoners();
     //! \brief An enemy creature standing in the prison frees the prisoners allied to it
     void freePrisonersIfLiberated();
+    //! Enemy able to free prisoners (not a worker)
+    bool isLiberator(Creature* creature) const;
 
     void deleteFenceMeshes();
     void putFenceMeshes();
