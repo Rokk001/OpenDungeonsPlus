@@ -2267,4 +2267,10 @@ Mode	once
 Cond	time	180
 Action	message	-1	Keep building rooms and train your creatures. Gold and a strong army win the level.
 [/Trigger]
+[Trigger]
+Name	bonus1
+Mode	once
+Cond	time	60
+Action	discover	campaign/Bonus1.level
+[/Trigger]
 [/Triggers]

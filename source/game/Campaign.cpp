@@ -70,6 +70,7 @@ bool Campaign::importDefinition(std::istream& is)
     std::lock_guard<std::mutex> lock(mMutex);
     mLevels.clear();
     mCompleted.clear();
+    mDiscovered.clear();
 
     CampaignLevel level;
     bool inLevel = false;
@@ -104,12 +105,15 @@ bool Campaign::importDefinition(std::istream& is)
             level.mBriefing = unescapeText(value);
         else if(key == "Debriefing")
             level.mDebriefing = unescapeText(value);
+        else if(key == "Bonus")
+            level.mBonus = (value == "1");
     }
 
     if(inLevel && !level.mFile.empty())
         mLevels.push_back(level);
 
     mCompleted.assign(mLevels.size(), false);
+    mDiscovered.assign(mLevels.size(), false);
     return !mLevels.empty();
 }
 
@@ -117,6 +121,7 @@ bool Campaign::importProgress(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mCompleted.assign(mLevels.size(), false);
+    mDiscovered.assign(mLevels.size(), false);
 
     std::string line;
     while(std::getline(is, line))
@@ -124,14 +129,15 @@ bool Campaign::importProgress(std::istream& is)
         std::istringstream ss(trim(line));
         std::string keyword;
         ss >> keyword;
-        if(keyword != "Completed")
+        if((keyword != "Completed") && (keyword != "Discovered"))
             continue;
 
+        std::vector<bool>& target = (keyword == "Completed") ? mCompleted : mDiscovered;
         size_t index;
         while(ss >> index)
         {
-            if(index < mCompleted.size())
-                mCompleted[index] = true;
+            if(index < target.size())
+                target[index] = true;
         }
     }
     return true;
@@ -145,6 +151,13 @@ void Campaign::exportProgress(std::ostream& os) const
     for(size_t i = 0; i < mCompleted.size(); ++i)
     {
         if(mCompleted[i])
+            os << " " << i;
+    }
+    os << "\n";
+    os << "Discovered";
+    for(size_t i = 0; i < mDiscovered.size(); ++i)
+    {
+        if(mDiscovered[i])
             os << " " << i;
     }
     os << "\n";
@@ -196,7 +209,7 @@ size_t Campaign::getCurrentLevelNoLock() const
 {
     for(size_t i = 0; i < mCompleted.size(); ++i)
     {
-        if(!mCompleted[i])
+        if(!mCompleted[i] && !mLevels[i].mBonus)
             return i;
     }
     return mCompleted.size();
@@ -208,10 +221,83 @@ size_t Campaign::getCurrentLevel() const
     return getCurrentLevelNoLock();
 }
 
+bool Campaign::isUnlockedNoLock(size_t index) const
+{
+    if(index >= mLevels.size())
+        return false;
+
+    if(mLevels[index].mBonus)
+        return mDiscovered[index] || mCompleted[index];
+
+    // All main levels before the level must be completed
+    for(size_t i = 0; i < index; ++i)
+    {
+        if(!mCompleted[i] && !mLevels[i].mBonus)
+            return false;
+    }
+    return true;
+}
+
 bool Campaign::isUnlocked(size_t index) const
 {
     std::lock_guard<std::mutex> lock(mMutex);
-    return (index < mLevels.size()) && (index <= getCurrentLevelNoLock());
+    return isUnlockedNoLock(index);
+}
+
+bool Campaign::discoverBonusLevel(const std::string& file)
+{
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        if(!mActive)
+            return false;
+
+        size_t index = 0;
+        while((index < mLevels.size()) && (mLevels[index].mFile != file))
+            ++index;
+
+        if((index >= mLevels.size()) || !mLevels[index].mBonus || mDiscovered[index])
+            return false;
+
+        mDiscovered[index] = true;
+    }
+    saveProgress();
+    return true;
+}
+
+bool Campaign::isDiscovered(size_t index) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return (index < mDiscovered.size()) && mDiscovered[index];
+}
+
+size_t Campaign::getTalismanPieces() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    size_t count = 0;
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if(mLevels[i].mBonus && mDiscovered[i])
+            ++count;
+    }
+    return count;
+}
+
+size_t Campaign::getTalismanTotal() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    size_t count = 0;
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if(mLevels[i].mBonus)
+            ++count;
+    }
+    return count;
+}
+
+bool Campaign::isTalismanComplete() const
+{
+    size_t total = getTalismanTotal();
+    return (total > 0) && (getTalismanPieces() == total);
 }
 
 bool Campaign::isFinished() const
@@ -236,6 +322,7 @@ void Campaign::resetProgress()
     {
         std::lock_guard<std::mutex> lock(mMutex);
         mCompleted.assign(mLevels.size(), false);
+        mDiscovered.assign(mLevels.size(), false);
         mPlayedLevel = mLevels.size();
         mPlayedLevelWon = false;
     }

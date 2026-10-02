@@ -216,6 +216,15 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mType = (type == "win") ? LevelScriptActionType::win : LevelScriptActionType::lose;
         return (t.size() == 3) && parseInt32(t[2], action.mSeatId);
     }
+    if(type == "discover")
+    {
+        action.mType = LevelScriptActionType::discoverLevel;
+        if(t.size() != 3)
+            return false;
+
+        action.mText = t[2];
+        return true;
+    }
     return false;
 }
 
@@ -273,6 +282,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::lose:
             os << "lose\t" << a.mSeatId;
+            break;
+        case LevelScriptActionType::discoverLevel:
+            os << "discover\t" << a.mText;
             break;
     }
     os << "\n";
