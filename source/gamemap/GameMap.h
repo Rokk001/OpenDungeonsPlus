@@ -734,7 +734,13 @@ private:
     //! \brief Applies the per-second mana income and worker upkeep of one seat for the current
     //! turn. A seat without a living dungeon heart gains and spends nothing.
     //! \param nbManaVaultTiles Number of mana vault tiles the seat has claimed.
-    void updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles);
+    void updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles, double timeSinceLastTurn);
+
+    //! \brief Pops the workers above the free four when the seat's mana stays too low to
+    //! pay their upkeep: after a period of shortage a countdown starts, and when it ends
+    //! with the shortage still there, every worker above the free four is lost.
+    //! \param shortage True if the mana could not pay the upkeep this turn.
+    void updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLastTurn);
 
     //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
     //! until the seat has four workers. A seat without a living dungeon heart creates none.
