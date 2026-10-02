@@ -20,7 +20,7 @@ editor = read('source/modes/EditorMode.cpp')
 # New message ids are appended at the end of their enum so older ids keep their value.
 assert client_h.rstrip().split('};')[0].rstrip().endswith('editorRegionEdit'), 'client message not last'
 assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
-assert server_h.split('};')[0].rstrip().endswith('editorRegionData'), 'server message not last'
+assert server_h.split('};')[0].rstrip().endswith('timeLimit') and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp
 
 # The server only edits regions in editor mode and always answers with the full list.
