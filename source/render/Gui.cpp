@@ -91,6 +91,69 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
+float campaignMapNoise(int x, int y)
+{
+    unsigned int h = static_cast<unsigned int>(x) * 374761393u + static_cast<unsigned int>(y) * 668265263u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    h ^= h >> 16;
+    return static_cast<float>(h & 0xFFFFu) / 65535.0f;
+}
+
+float campaignMapValue(float x, float y)
+{
+    const int ix = static_cast<int>(std::floor(x));
+    const int iy = static_cast<int>(std::floor(y));
+    const float fx = x - ix;
+    const float fy = y - iy;
+    const float sx = fx * fx * (3.0f - 2.0f * fx);
+    const float sy = fy * fy * (3.0f - 2.0f * fy);
+    const float top = campaignMapNoise(ix, iy) * (1.0f - sx) + campaignMapNoise(ix + 1, iy) * sx;
+    const float bottom = campaignMapNoise(ix, iy + 1) * (1.0f - sx) + campaignMapNoise(ix + 1, iy + 1) * sx;
+    return top * (1.0f - sy) + bottom * sy;
+}
+
+void createCampaignMapImages()
+{
+    // Original project artwork: a dark, weathered underground map for the campaign screen
+    // and a white tile that the territories tint.
+    const int width = 256;
+    const int height = 128;
+    std::vector<unsigned char> pixels(width * height * 4, 255);
+    for(int y = 0; y < height; ++y)
+    {
+        for(int x = 0; x < width; ++x)
+        {
+            const float coarse = campaignMapValue(x / 24.0f, y / 24.0f);
+            const float fine = campaignMapValue(x / 5.0f + 31.0f, y / 5.0f + 17.0f);
+            const float shade = 0.55f + 0.30f * coarse + 0.15f * fine;
+            const float edgeX = std::min(x, width - 1 - x) / 40.0f;
+            const float edgeY = std::min(y, height - 1 - y) / 24.0f;
+            const float vignette = std::max(0.35f, std::min(1.0f, std::min(edgeX, edgeY) + 0.35f));
+            const float value = shade * vignette;
+            const int i = (y * width + x) * 4;
+            pixels[i] = static_cast<unsigned char>(86.0f * value + 18.0f);
+            pixels[i + 1] = static_cast<unsigned char>(64.0f * value + 14.0f);
+            pixels[i + 2] = static_cast<unsigned char>(44.0f * value + 10.0f);
+            pixels[i + 3] = 255;
+        }
+    }
+    CEGUI::Texture& mapTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("CampaignMap");
+    mapTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(width, height), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& mapImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", "OpenDungeonsIcons/CampaignMap"));
+    mapImage.setTexture(&mapTexture);
+    mapImage.setArea(CEGUI::Rectf(0, 0, width, height));
+
+    const int solidSize = 4;
+    std::vector<unsigned char> solid(solidSize * solidSize * 4, 255);
+    CEGUI::Texture& solidTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("CampaignSolid");
+    solidTexture.loadFromMemory(solid.data(), CEGUI::Sizef(solidSize, solidSize), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& solidImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", "OpenDungeonsIcons/CampaignSolid"));
+    solidImage.setTexture(&solidTexture);
+    solidImage.setArea(CEGUI::Rectf(0, 0, solidSize, solidSize));
+}
+
 class MiniMapCornerButton : public CEGUI::PushButton
 {
 public:
@@ -1337,6 +1400,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
     OD_LOG_INF("CEGUI::SchemeManager created");
     createHandFeedbackImage();
+    createCampaignMapImages();
     createNavigationImages();
 
     float configuredScalePercent = 100.0f;

@@ -63,6 +63,16 @@ for i, (name_a, blocks_a) in enumerate(levels):
                 overlap = ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
                 check(not overlap, name_a + " and " + name_b + " overlap on the map")
 
+# The map is an image, the territories are tinted images sized by width and height (not by their far corner)
+gui_cpp = (root / "source/render/Gui.cpp").read_text(encoding="utf-8")
+props = {p.get("name"): p.get("value") for p in windows["CampaignMap"].iter("Property")}
+check(windows["CampaignMap"].get("type") == "OD/StaticImage", "the map must be an image window")
+check(props.get("Image") == "OpenDungeonsIcons/CampaignMap", "the map window needs the map image")
+check('"OpenDungeonsIcons/CampaignMap"' in gui_cpp and '"OpenDungeonsIcons/CampaignSolid"' in gui_cpp,
+      "the map and tint images must be created in Gui.cpp")
+check("block.mX + block.mWidth" not in fill, "the territory area must use width and height, not the far corner")
+check('"ImageColours"' in colour, "territories are tinted through ImageColours")
+
 if failures:
     print("\n".join(failures))
     sys.exit(1)
