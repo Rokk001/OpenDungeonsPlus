@@ -15,11 +15,11 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CREATURESKILLMISSILELAUNCH_H
-#define CREATURESKILLMISSILELAUNCH_H
+
+#ifndef CREATURESKILLWHIRLWIND_H
+#define CREATURESKILLWHIRLWIND_H
 
 #include "creatureskill/CreatureSkill.h"
-#include "entities/MissileOneHit.h"
 
 #include <cstdint>
 #include <iosfwd>
@@ -28,24 +28,21 @@
 class Creature;
 class GameMap;
 
-class CreatureSkillMissileLaunch : public CreatureSkill
+//! \brief Whirlwind: blows the target creature away from the caster (the ability "Wind" of the Firefly).
+//! The target is moved up to PushTiles tiles in the direction away from the caster, it stops in front of
+//! walls and other impassable tiles, and it stays stunned for StunTurns turns.
+class CreatureSkillWhirlwind : public CreatureSkill
 {
 public:
     // Constructors
-    CreatureSkillMissileLaunch() :
-        mRangeMax(0.0),
-        mRangePerLvl(0.0),
+    CreatureSkillWhirlwind() :
+        mMaxRange(0.0),
         mCreatureLevelMin(0),
-        mMissileSpeed(0.0),
-        mPhyAtk(0.0),
-        mPhyAtkPerLvl(0.0),
-        mMagAtk(0.0),
-        mMagAtkPerLvl(0.0),
-        mEleAtk(0.0),
-        mEleAtkPerLvl(0.0)
+        mPushTiles(0),
+        mStunTurns(0)
     {}
 
-    virtual ~CreatureSkillMissileLaunch()
+    virtual ~CreatureSkillWhirlwind()
     {}
 
     virtual const std::string& getSkillName() const override;
@@ -60,7 +57,7 @@ public:
     virtual bool tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const override;
 
-    virtual CreatureSkillMissileLaunch* clone() const override;
+    virtual CreatureSkillWhirlwind* clone() const override;
 
     virtual bool isEqual(const CreatureSkill& creatureSkill) const override;
 
@@ -68,25 +65,11 @@ public:
     virtual void exportToStream(std::ostream& os) const override;
     virtual bool importFromStream(std::istream& is) override;
 
-protected:
-    //! \brief Creates the missile to launch. Skills based on MissileLaunch override it to launch another kind of missile
-    virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
-        double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,
-        bool notifyPlayerIfHit) const;
-
-    double mRangeMax;
-    double mRangePerLvl;
+private:
+    double mMaxRange;
     uint32_t mCreatureLevelMin;
-    std::string mMissileMesh;
-    std::string mMissilePartScript;
-    double mMissileSpeed;
-    double mPhyAtk;
-    double mPhyAtkPerLvl;
-    double mMagAtk;
-    double mMagAtkPerLvl;
-    double mEleAtk;
-    double mEleAtkPerLvl;
-
+    uint32_t mPushTiles;
+    uint32_t mStunTurns;
 };
 
-#endif // CREATURESKILLMISSILELAUNCH_H
+#endif // CREATURESKILLWHIRLWIND_H

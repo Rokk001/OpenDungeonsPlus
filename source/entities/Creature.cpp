@@ -4732,6 +4732,59 @@ void Creature::stopWalking()
     MovableGameEntity::stopWalking();
 }
 
+void Creature::teleportTo(Tile* tile)
+{
+    if((tile == nullptr) || !getIsOnServerMap() || !getIsOnMap())
+        return;
+
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+
+    Ogre::Vector3 dest = tile->getPosition();
+    setPosition(dest);
+
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr)
+            continue;
+        if(!seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::entityTeleported, seat->getPlayer());
+        serverNotification->mPacket << getName() << dest;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+
+    if(getHasVisualDebuggingEntities())
+        computeVisualDebugEntities();
+    mNeedFireRefresh = true;
+}
+
+Tile* Creature::getWalkDestinationTile() const
+{
+    if(mWalkQueue.empty())
+        return nullptr;
+
+    const Ogre::Vector2& destination = mWalkQueue.back();
+    return getGameMap()->getTile(Helper::round(destination.x), Helper::round(destination.y));
+}
+
+bool Creature::takeCorpse()
+{
+    if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker())
+        return false;
+
+    // The counter is 0 until the death was handled (items dropped, owner told). Once the body is gone
+    // (it is removed from the map when the counter is over), it cannot be raised
+    uint32_t deathCounterMax = ConfigManager::getSingleton().getCreatureDeathCounter();
+    if((mDeathCounter == 0) || (mDeathCounter >= deathCounterMax))
+        return false;
+
+    // The body is removed by the next upkeep
+    mDeathCounter = deathCounterMax;
+    return true;
+}
+
 
 void Creature::showOutliner()
 {

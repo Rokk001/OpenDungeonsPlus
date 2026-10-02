@@ -295,6 +295,8 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
     ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
+    ${SRC}/creatureeffect/CreatureEffectTemporary.cpp
+    ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
@@ -327,6 +329,14 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillInvisible.cpp
     ${SRC}/creatureskill/CreatureSkillStrengthSelf.cpp
     ${SRC}/creatureskill/CreatureSkillWeak.cpp
+    ${SRC}/creatureskill/CreatureSkillWhirlwind.cpp
+    ${SRC}/creatureskill/CreatureSkillTeleport.cpp
+    ${SRC}/creatureskill/CreatureSkillAreaDamage.cpp
+    ${SRC}/creatureskill/CreatureSkillGuidedBolt.cpp
+    ${SRC}/creatureskill/CreatureSkillGrenade.cpp
+    ${SRC}/creatureskill/CreatureSkillSummon.cpp
+    ${SRC}/creatureskill/CreatureSkillRaiseDead.cpp
+    ${SRC}/creatureskill/CreatureSkillSkeletonArmy.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
@@ -341,6 +351,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/GiftBoxEntity.cpp
     ${SRC}/entities/MapLight.cpp
     ${SRC}/entities/MissileBoulder.cpp
+    ${SRC}/entities/MissileBlast.cpp
     ${SRC}/entities/MissileObject.cpp
     ${SRC}/entities/MissileOneHit.cpp
     ${SRC}/entities/MovableGameEntity.cpp

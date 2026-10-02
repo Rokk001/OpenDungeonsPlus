@@ -15,11 +15,11 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CREATURESKILLMISSILELAUNCH_H
-#define CREATURESKILLMISSILELAUNCH_H
+
+#ifndef CREATURESKILLAREADAMAGE_H
+#define CREATURESKILLAREADAMAGE_H
 
 #include "creatureskill/CreatureSkill.h"
-#include "entities/MissileOneHit.h"
 
 #include <cstdint>
 #include <iosfwd>
@@ -28,27 +28,27 @@
 class Creature;
 class GameMap;
 
-class CreatureSkillMissileLaunch : public CreatureSkill
+//! \brief Skill that puts a zone of damage around the tile of the target creature (see CreatureEffectAreaDamage).
+//! It is registered under the names "GasCloud" and "HailStorm", which only differ by their values in the
+//! creature definition: the radius, how many turns the zone lasts and the damage per turn.
+class CreatureSkillAreaDamage : public CreatureSkill
 {
 public:
     // Constructors
-    CreatureSkillMissileLaunch() :
-        mRangeMax(0.0),
-        mRangePerLvl(0.0),
+    CreatureSkillAreaDamage(const std::string& skillName) :
+        mSkillName(skillName),
+        mMaxRange(0.0),
         mCreatureLevelMin(0),
-        mMissileSpeed(0.0),
-        mPhyAtk(0.0),
-        mPhyAtkPerLvl(0.0),
-        mMagAtk(0.0),
-        mMagAtkPerLvl(0.0),
-        mEleAtk(0.0),
-        mEleAtkPerLvl(0.0)
+        mRadius(0.0),
+        mNbTurns(0),
+        mDamagePerTurn(0.0)
     {}
 
-    virtual ~CreatureSkillMissileLaunch()
+    virtual ~CreatureSkillAreaDamage()
     {}
 
-    virtual const std::string& getSkillName() const override;
+    virtual const std::string& getSkillName() const override
+    { return mSkillName; }
 
     virtual double getRangeMax(const Creature* creature, GameEntity* entityAttack) const override;
 
@@ -60,7 +60,7 @@ public:
     virtual bool tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const override;
 
-    virtual CreatureSkillMissileLaunch* clone() const override;
+    virtual CreatureSkillAreaDamage* clone() const override;
 
     virtual bool isEqual(const CreatureSkill& creatureSkill) const override;
 
@@ -68,25 +68,14 @@ public:
     virtual void exportToStream(std::ostream& os) const override;
     virtual bool importFromStream(std::istream& is) override;
 
-protected:
-    //! \brief Creates the missile to launch. Skills based on MissileLaunch override it to launch another kind of missile
-    virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
-        double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,
-        bool notifyPlayerIfHit) const;
-
-    double mRangeMax;
-    double mRangePerLvl;
+private:
+    std::string mSkillName;
+    double mMaxRange;
     uint32_t mCreatureLevelMin;
-    std::string mMissileMesh;
-    std::string mMissilePartScript;
-    double mMissileSpeed;
-    double mPhyAtk;
-    double mPhyAtkPerLvl;
-    double mMagAtk;
-    double mMagAtkPerLvl;
-    double mEleAtk;
-    double mEleAtkPerLvl;
-
+    double mRadius;
+    uint32_t mNbTurns;
+    double mDamagePerTurn;
+    std::string mParticleScript;
 };
 
-#endif // CREATURESKILLMISSILELAUNCH_H
+#endif // CREATURESKILLAREADAMAGE_H
