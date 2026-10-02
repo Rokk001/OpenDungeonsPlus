@@ -121,6 +121,7 @@ EditorMode::EditorMode(ModeManager* modeManager):
     mPortalWaveTileY(-1),
     mPortalWaveSelectedWave(-1),
     mPortalWaveRefreshing(false),
+    mRegionsRequested(false),
     mMouseX(0),
     mMouseY(0),
     mSettings(mRootWindow, modeManager->getGui()),
@@ -521,6 +522,7 @@ void EditorMode::activate()
     guiSheet->getChild("EditorOptionsWindow")->hide();
     guiSheet->getChild("EditorHelpWindow")->hide();
     guiSheet->getChild("EditorPortalWavesWindow")->hide();
+    mRegionsRequested = false;
     fillControlsWindow();
     updateLevelNameText();
     guiSheet->getChild("ConfirmExit")->hide();
@@ -1011,6 +1013,9 @@ void EditorMode::updateCursorText()
     posWin = mRootWindow->getChild(Gui::EDITOR_CURSOR_POS);
     textSS.str("");
     textSS << "Cursor: x: " << mMouseX << ", y: " << mMouseY;
+    std::string regionName = mGameMap->getLevelScript().getRegionNameAt(mMouseX, mMouseY);
+    if(!regionName.empty())
+        textSS << " (" << regionName << ")";
     posWin->setText(textSS.str());
 
     // Update the seat id
@@ -1076,6 +1081,14 @@ void EditorMode::fillControlsWindow()
     txt << "    P - edit the waves of the wave portal under the mouse" << std::endl;
     txt << "    The waves are what the portal sends against the players, and" << std::endl;
     txt << "    they are only kept once the level is saved." << std::endl;
+    txt << std::endl;
+
+    txt << "Regions" << std::endl;
+    txt << "    R - make the marked tiles a region (shown as a green frame)" << std::endl;
+    txt << "    Shift + R - remove the region under the mouse" << std::endl;
+    txt << "    Triggers in the level file refer to a region by its name, for" << std::endl;
+    txt << "    example: Cond region 1 Region1. The name is shown next to the" << std::endl;
+    txt << "    cursor position. Regions are kept once the level is saved." << std::endl;
     txt << std::endl;
 
     txt << "Editing" << std::endl;
@@ -1674,6 +1687,15 @@ bool EditorMode::keyPressed(const OIS::KeyEvent &arg)
         break;
     }
 
+    // Mark the selected tiles as a region of the level script, Shift + R removes the
+    // region under the mouse
+    case OIS::KC_R:
+        if(getKeyboard()->isModifierDown(OIS::Keyboard::Shift))
+            unmarkRegion();
+        else
+            markRegion();
+        break;
+
     case OIS::KC_DELETE:
         onEditDelete();
         break;
@@ -1847,6 +1869,57 @@ void EditorMode::onEditDelete()
     ODClient::getSingleton().queueClientNotification(notif1);
 }
 
+void EditorMode::askRegionEdit(int32_t operation, const std::string& name,
+    int32_t x1, int32_t y1, int32_t x2, int32_t y2)
+{
+    ClientNotification *clientNotification = new ClientNotification(
+        ClientNotificationType::editorRegionEdit);
+    clientNotification->mPacket << operation << name << x1 << y1 << x2 << y2;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+void EditorMode::setRegions(const std::vector<LevelScriptRegion>& regions)
+{
+    mGameMap->getLevelScript().setRegions(regions);
+}
+
+void EditorMode::markRegion()
+{
+    if(!mTileMarker.isVisible)
+    {
+        displayText(Ogre::ColourValue::White, "Mark some tiles first, then press R");
+        return;
+    }
+
+    int32_t x1 = static_cast<int32_t>(mTileMarker.getMinX());
+    int32_t y1 = static_cast<int32_t>(mTileMarker.getMinY());
+    int32_t x2 = static_cast<int32_t>(mTileMarker.getMaxX());
+    int32_t y2 = static_cast<int32_t>(mTileMarker.getMaxY());
+    std::string name = mGameMap->getLevelScript().getFreeRegionName();
+    askRegionEdit(1, name, x1, y1, x2, y2);
+
+    mModifiedMapBit = true;
+    std::stringstream message;
+    message << name << " set from " << x1 << "," << y1 << " to " << x2 << "," << y2
+        << ". Save the level to keep it.";
+    displayText(Ogre::ColourValue::White, message.str());
+}
+
+void EditorMode::unmarkRegion()
+{
+    InputManager& inputManager = getModeManager().getInputManager();
+    std::string name = mGameMap->getLevelScript().getRegionNameAt(inputManager.mXPos, inputManager.mYPos);
+    if(name.empty())
+    {
+        displayText(Ogre::ColourValue::White, "Point at a region to remove it");
+        return;
+    }
+
+    askRegionEdit(2, name, 0, 0, 0, 0);
+    mModifiedMapBit = true;
+    displayText(Ogre::ColourValue::White, name + " removed. Save the level to keep the change.");
+}
+
 void EditorMode::onEditMirrorX()
 {
 
@@ -1858,7 +1931,25 @@ void EditorMode::onEditMirrorX()
 //! Rendering methods
 void EditorMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
-    
+    // The markers live on the server with the level script, so the editor asks for them once
+    // the level has arrived.
+    if(!mRegionsRequested && ODClient::getSingleton().isConnected() && (mGameMap->getMapSizeX() > 0))
+    {
+        mRegionsRequested = true;
+        askRegionEdit(0, std::string(), 0, 0, 0, 0);
+    }
+
+    for(const LevelScriptRegion& region : mGameMap->getLevelScript().getRegions())
+    {
+        Ogre::AxisAlignedBox box(
+            Ogre::Vector3(static_cast<Ogre::Real>(std::min(region.mX1, region.mX2)) - 0.5,
+                          static_cast<Ogre::Real>(std::min(region.mY1, region.mY2)) - 0.5, 0.0),
+            Ogre::Vector3(static_cast<Ogre::Real>(std::max(region.mX1, region.mX2)) + 0.5,
+                          static_cast<Ogre::Real>(std::max(region.mY1, region.mY2)) + 0.5, 1.0));
+        Ogre::ColourValue regionColour;
+        regionColour.setAsRGBA(0x00FF99FF);
+        DebugDrawer::getSingleton().drawCuboid(box.getAllCorners().data(), regionColour, false);
+    }
     if( mTileMarker.isVisible )
     {
         Ogre::ColourValue cv;

@@ -147,7 +147,10 @@ enum class ServerNotificationType
     //! The player now possesses the creature: + string creatureName
     possessionStart,
     //! The player no longer possesses a creature
-    possessionEnd
+    possessionEnd,
+    //! Answer to editorRegionEdit, all the region markers of the level script:
+    //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
+    editorRegionData
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

@@ -2891,6 +2891,38 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             break;
         }
 
+        case ClientNotificationType::editorRegionEdit:
+        {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode=" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
+            Player* player = clientSocket->getPlayer();
+            int32_t operation;
+            std::string regionName;
+            int32_t x1;
+            int32_t y1;
+            int32_t x2;
+            int32_t y2;
+            OD_ASSERT_TRUE(packetReceived >> operation >> regionName >> x1 >> y1 >> x2 >> y2);
+
+            // The markers belong to the level script, which is saved from the server side
+            LevelScript& levelScript = gameMap->getLevelScript();
+            if(operation == 1)
+                levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
+            else if(operation == 2)
+                levelScript.removeRegion(regionName);
+
+            ServerNotification notif(ServerNotificationType::editorRegionData, player);
+            notif.mPacket << static_cast<uint32_t>(levelScript.getRegions().size());
+            for(const LevelScriptRegion& region : levelScript.getRegions())
+                notif.mPacket << region.mName << region.mX1 << region.mY1 << region.mX2 << region.mY2;
+
+            sendAsyncMsg(notif);
+            break;
+        }
+
         case ClientNotificationType::askSetSkillTree:
         {
             Player* player = clientSocket->getPlayer();

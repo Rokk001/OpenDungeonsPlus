@@ -1680,6 +1680,28 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::editorRegionData:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::EDITOR)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            uint32_t nbRegions;
+            OD_ASSERT_TRUE(packetReceived >> nbRegions);
+            std::vector<LevelScriptRegion> regions;
+            for(uint32_t i = 0; i < nbRegions; ++i)
+            {
+                LevelScriptRegion region;
+                OD_ASSERT_TRUE(packetReceived >> region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2);
+                regions.push_back(region);
+            }
+
+            EditorMode* editorMode = static_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode());
+            editorMode->setRegions(regions);
+            break;
+        }
+
         case ServerNotificationType::possessionEnd:
         {
             getPlayer()->setPossessedCreatureName(std::string());

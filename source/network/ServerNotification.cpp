@@ -164,6 +164,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "possessionStart";
         case ServerNotificationType::possessionEnd:
             return "possessionEnd";
+        case ServerNotificationType::editorRegionData:
+            return "editorRegionData";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));
