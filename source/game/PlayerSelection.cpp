@@ -56,11 +56,13 @@ void PlayerSelection::setNewSpellType(SpellType newSpellType)
     case SpellType::eyeEvil:
     case SpellType::callToWar:
     case SpellType::creatureExplosion:
+    case SpellType::tremor:
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::none;
         break;
     case SpellType::creatureWeak:
     case SpellType::creatureSlow:
     case SpellType::lightning:
+    case SpellType::turncoat:
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::creatureAliveEnemy;
         break;
     case SpellType::creatureStrength:
