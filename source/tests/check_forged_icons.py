@@ -25,10 +25,23 @@ for name in ('NavigationCreatures', 'NavigationRooms', 'NavigationSpells', 'Navi
              'NavigationObjectives', 'NavigationMessages', 'NavigationMessagesRead', 'MenuReturn',
              'HourglassIcon', 'CogIcon', 'HammerAnvilIcon', 'PlayIcon', 'CameraIcon'):
     assert name in rects, name
+# Every name has an emblem of its own: no two names may share a cell, and no two cells may hold the same pixels
+# (the research tree and the HUD show one emblem per trap, door, spell and room).
+cells = {}
+for name, rect in rects.items():
+    assert rect not in cells, '%s and %s share one cell of the atlas' % (name, cells[rect])
+    cells[rect] = name
+names = sorted(rects)
+for i, first in enumerate(names):
+    x, y, w, h = rects[first]
+    for second in names[i + 1:]:
+        x2, y2, w2, h2 = rects[second]
+        if (w, h) == (w2, h2):
+            assert np.abs(atlas[y:y + h, x:x + w] - atlas[y2:y2 + h, x2:x2 + w]).max() > 0, '%s and %s show the same picture' % (first, second)
 terrain = {'GoldButton', 'LavaButton', 'RockButton', 'WaterButton', 'DirtButton', 'ClaimedButton', 'GemButton'}
 checked = 0
 for name, (x, y, w, h) in rects.items():
-    assert x + w <= 1024 and y + h <= 1024, name
+    assert x + w <= atlas.shape[1] and y + h <= atlas.shape[0], name
     if name in terrain:
         continue
     tile = atlas[y:y + h, x:x + w]
