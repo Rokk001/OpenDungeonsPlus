@@ -24,11 +24,11 @@
 #include <iosfwd>
 
 //! \brief A gift box giving one of the one-shot bonuses: extra mana, extra gold, a
-//! temporary view of the whole map or a level for the creatures of the seat that brings
+//! view of the whole map for the rest of the game or a level for the creatures of the seat that brings
 //! the box to its dungeon temple. The type is one of GiftBoxType::mana, gold, revealMap
 //! and levelUp. The meaning of the amount depends on the type: mana points, gold coins,
-//! number of turns the map stays revealed, number of levels given. The type healAll heals
-//! every creature of the seat completely (the amount is not used). The types makeSafe, weakenWalls,
+//! number of levels given. The types revealMap and healAll do not use it; healAll heals
+//! every creature of the seat completely. The types makeSafe, weakenWalls,
 //! stunImps, makeHappy, makeUnhappy and killCreatures do not use the amount either, receiveImps uses it
 //! as the number of imps.
 class GiftBoxBonus: public GiftBoxEntity

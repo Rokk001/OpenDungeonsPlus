@@ -35,7 +35,6 @@
 // Proposed values, they need to be approved
 static const uint32_t DEFAULT_AMOUNT_MANA = 50000;
 static const uint32_t DEFAULT_AMOUNT_GOLD = 10000;
-static const uint32_t DEFAULT_AMOUNT_REVEAL_TURNS = 90;
 static const uint32_t DEFAULT_AMOUNT_LEVELS = 1;
 static const uint32_t DEFAULT_AMOUNT_IMPS = 10;
 //! Imps received with the upgraded Create Imp spell start at this level
@@ -67,12 +66,11 @@ uint32_t GiftBoxBonus::getDefaultAmount(GiftBoxType type)
             return DEFAULT_AMOUNT_MANA;
         case GiftBoxType::gold:
             return DEFAULT_AMOUNT_GOLD;
-        case GiftBoxType::revealMap:
-            return DEFAULT_AMOUNT_REVEAL_TURNS;
         case GiftBoxType::levelUp:
             return DEFAULT_AMOUNT_LEVELS;
         case GiftBoxType::receiveImps:
             return DEFAULT_AMOUNT_IMPS;
+        case GiftBoxType::revealMap:
         case GiftBoxType::healAll:
         case GiftBoxType::makeSafe:
         case GiftBoxType::weakenWalls:
