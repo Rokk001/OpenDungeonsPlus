@@ -40,8 +40,7 @@ public:
     { return true; }
 
     // We return true to make sure every creature with vision on the door tile can see it
-    bool shoot(Tile* tile) override
-    { return true; }
+    bool shoot(Tile* tile) override;
 
     void doUpkeep() override;
 
@@ -78,6 +77,8 @@ private:
     bool mIsLocked;
     //! \brief Current state of the door
     bool mIsLockedState;
+    //! brief Turns left before a magic door can fire again
+    uint32_t mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);
 };
