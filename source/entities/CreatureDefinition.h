@@ -165,6 +165,7 @@ public:
     inline CreatureJob          getCreatureJob  () const    { return mCreatureJob; }
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
+    inline bool                 isFearless      () const    { return mFearless; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -258,6 +259,8 @@ private:
     CombatClass mCombatClass;
     //! brief Gold taken from one free gold pile by a thief, 0 for creatures that do not steal
     int32_t mStealGold;
+    //! \brief True for creatures that are never scared by a Fear trap
+    bool mFearless;
 
     //! \brief The name of the creatures class
     std::string mClassName;

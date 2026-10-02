@@ -22,9 +22,6 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
-#include "spells/Spell.h"
-#include "spells/SpellCallToWar.h"
-#include "spells/SpellType.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -128,29 +125,15 @@ TrapAlarm::TrapAlarm(GameMap* gameMap) :
 
 bool TrapAlarm::shoot(Tile* tile)
 {
-    std::vector<Tile*> visibleTiles;
-    visibleTiles.push_back(tile);
+    uint32_t radius = ConfigManager::getSingleton().getTrapConfigUInt32("AlarmRadius");
+    std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(radius));
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), true);
     if(enemyCreatures.empty() && !mForcedTrigger)
         return false;
 
-    // The alarm calls the owner's fighters with a call to war banner on the trap tile.
-    // If the owner already has a banner there, we do not add another one.
-    std::vector<Spell*> callToWars = getGameMap()->getSpellsBySeatAndType(getSeat(), SpellType::callToWar);
-    for(Spell* callToWar : callToWars)
-    {
-        if(callToWar->getPositionTile() == tile)
-            return false;
-    }
-
-    SpellCallToWar* spell = new SpellCallToWar(getGameMap());
-    spell->setSeat(getSeat());
-    spell->addToGameMap();
-    Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
-                                static_cast<Ogre::Real>(tile->getY()),
-                                static_cast<Ogre::Real>(0.0));
-    spell->createMesh();
-    spell->setPosition(spawnPosition);
+    // The alarm only warns the owner: the "we are under attack" voice line and the zoomable fight event
+    // at the trap tile. The owner's creatures are not called.
+    getGameMap()->playerIsFighting(getSeat()->getPlayer(), tile);
     return true;
 }
 

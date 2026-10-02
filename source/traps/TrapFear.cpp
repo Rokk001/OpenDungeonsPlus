@@ -19,6 +19,7 @@
 
 #include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
@@ -138,6 +139,9 @@ bool TrapFear::shoot(Tile* tile)
     {
         Creature* creature = dynamic_cast<Creature*>(entity);
         if(creature == nullptr)
+            continue;
+
+        if(creature->getDefinition()->isFearless())
             continue;
 
         if(creature->isActionInList(CreatureActionType::flee))

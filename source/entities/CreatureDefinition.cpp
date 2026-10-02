@@ -73,6 +73,7 @@ CreatureDefinition::CreatureDefinition(
         mCreatureJob (job),
         mCombatClass (CombatBlocker),
         mStealGold (0),
+        mFearless (false),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -125,6 +126,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mCreatureJob(def.mCreatureJob),
         mCombatClass(def.mCombatClass),
         mStealGold(def.mStealGold),
+        mFearless(def.mFearless),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -336,6 +338,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mSoundFamilySlap;
     os << CreatureDefinition::combatClassToString(c->mCombatClass);
     os << c->mStealGold;
+    os << c->mFearless;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -377,6 +380,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> tempString;
     c->mCombatClass = CreatureDefinition::combatClassFromString(tempString);
     is >> c->mStealGold;
+    is >> c->mFearless;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -513,6 +517,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mStealGold = Helper::toInt(nextParam);
+                continue;
+            }
+            else if (nextParam == "Fearless")
+            {
+                defFile >> nextParam;
+                creatureDef->mFearless = Helper::toBool(nextParam);
                 continue;
             }
             else if (nextParam == "MeshName")
@@ -799,6 +809,9 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if(def1 == nullptr || (def1->mStealGold != def2->mStealGold))
         file << "    StealGold\t" << def2->mStealGold << std::endl;
+
+    if(def1 == nullptr || (def1->mFearless != def2->mFearless))
+        file << "    Fearless\t" << (def2->mFearless ? 1 : 0) << std::endl;
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))
         file << "    MeshName\t" << def2->mMeshName << std::endl;
