@@ -72,5 +72,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="FearTrapButton" >
+            <Property name="Area" value="{{0,580},{0,25},{0,640},{0,85}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/FearTrapButton" />
+            <Property name="TooltipText" value="Build a fear trap" />
+            <Property name="InheritsAlpha" value="False" />
+            <Property name="Visible" value="False" />
+        </Window>
     </Window>
 </GUILayout>

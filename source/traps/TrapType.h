@@ -34,6 +34,7 @@ enum class TrapType
     doorSteel,
     doorBarricade,
     alarm,
+    fear,
     nbTraps     // Must be the last in this enum
 };
 
