@@ -264,6 +264,9 @@ public:
     //! \brief Returns true if this seat can see the given tile and false otherwise
     bool hasVisionOnTile(Tile* tile);
 
+    //! \brief Returns true if this seat has been notified about the given tile at least once (server side)
+    bool hasSeenTile(Tile* tile);
+
     //! \brief Checks if the visible tiles seen by this seat have changed and notify
     //! the players if yes
     void notifyChangedVisibleTiles();
