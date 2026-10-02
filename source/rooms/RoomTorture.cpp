@@ -23,12 +23,14 @@
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/RoomObjectNavigation.h"
+#include "ODApplication.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
@@ -288,6 +290,19 @@ void RoomTorture::removeCreatureUsingRoom(Creature* creature)
     infoToUse->mState = 0;
 }
 
+//! \brief Torture time multipliers in percent for the creature levels 1 to 10 (higher levels use the last one)
+static const double TORTURE_LEVEL_PERCENT[] = {100.0, 105.0, 110.0, 115.0, 120.0, 130.0, 140.0, 150.0, 200.0, 300.0};
+
+static double tortureTurnsToConvert(const Creature& creature, const Seat* torturingSeat)
+{
+    uint32_t nbLevels = sizeof(TORTURE_LEVEL_PERCENT) / sizeof(TORTURE_LEVEL_PERCENT[0]);
+    uint32_t index = std::min(std::max(creature.getLevel(), 1u), nbLevels) - 1;
+    double seconds = creature.getDefinition()->getTortureTimeToConvert() * TORTURE_LEVEL_PERCENT[index] / 100.0;
+    // The torture research makes the conversion faster
+    double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0);
+    return seconds * ODApplication::turnsPerSecond / speed;
+}
+
 void RoomTorture::doUpkeep()
 {
     Room::doUpkeep();
@@ -311,12 +326,11 @@ void RoomTorture::doUpkeep()
             break;
         }
         creature->increaseTurnsTorture();
-        double damage = config.getRoomConfigDouble("TortureDamagePerTurn");
+        double damage = creature->getMaxHp() * config.getRoomConfigDouble("TortureDamagePercentPerSecond") / ODApplication::turnsPerSecond;
         if(creature->getHP() <= damage)
             revealEnemyInformation(*creature);
 
         creature->takeDamage(this, damage, 0.0, 0.0, 0.0, tileCreature, false);
-        break;
     }
 }
 
@@ -408,9 +422,9 @@ bool RoomTorture::useRoom(Creature& creature, bool forced)
         direction.z = 0;
         direction.normalise();
 
+        // An enemy changes side once it has been tortured long enough for its kind and level
         if((getSeat() != creature.getSeat()) &&
-           (Random::Double(0.0, 1.0) <= std::min(1.0, SkillManager::getResearchValue(
-               getSeat(), SkillType::roomTorture, config.getRoomConfigDouble("TortureRallyPercent")))))
+           (static_cast<double>(creature.getNbTurnsTorture()) >= tortureTurnsToConvert(creature, getSeat())))
         {
             // The creature changes side
             creature.changeSeat(getSeat());

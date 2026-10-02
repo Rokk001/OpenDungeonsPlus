@@ -360,6 +360,8 @@ public:
     uint32_t numCoveredTiles() const override;
 
     //! \brief Conform: AttackableObject - Deducts a given amount of HP from this creature.
+    //! \brief Share of the damage taken from the attacker: reduced when both fight inside a combat pit
+    double getPitDamageFactor(GameEntity* attacker);
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 

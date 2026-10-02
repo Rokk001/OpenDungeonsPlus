@@ -166,6 +166,7 @@ public:
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
     inline bool                 isFearless      () const    { return mFearless; }
+    inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -261,6 +262,8 @@ private:
     int32_t mStealGold;
     //! \brief True for creatures that are never scared by a Fear trap
     bool mFearless;
+    //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side
+    double mTortureTimeToConvert;
 
     //! \brief The name of the creatures class
     std::string mClassName;
