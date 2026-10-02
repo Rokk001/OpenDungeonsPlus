@@ -99,7 +99,7 @@ check('"Gain mana", 0' in mode and '"Gain mana and specials", 1' in mode and '"G
       "the heart reward captions are not the reference ones")
 temple = (root / "source/rooms/RoomDungeonTemple.cpp").read_text(encoding="utf-8")
 reward_code = temple[temple.index("void placeHeartRewardSpecials"):temple.index("class DungeonHeartObject")]
-check("addRevealMapTurns" not in reward_code and "addSkill" not in reward_code,
+check("revealMapPermanently" not in reward_code and "addSkill" not in reward_code,
       "the reward must not reveal the map or give researched rooms")
 check("HEART_REWARD_SPECIAL_DISTANCE = 2" in temple, "the specials lie 2 tiles from the heart centre")
 offsets = re.search(r"offsetX\[4\] = \{([^}]*)\}.*?offsetY\[4\] = \{([^}]*)\}", reward_code, re.S)

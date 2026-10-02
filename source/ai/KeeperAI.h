@@ -33,7 +33,7 @@ public:
              int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
              int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
              int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
-             int maxTrapTiles, int maxDoors);
+             int minCreatureLevel, int maxTrapTiles, int maxDoors);
     virtual bool doTurn(double timeSinceLastTurn);
 
 protected:
@@ -105,6 +105,9 @@ private:
     //! \brief Returns the number of non-worker creatures with enough HP to be sent to fight
     int countHealthyFighters() const;
 
+    //! \brief Returns the number of healthy non-worker creatures below the minimum attack level
+    int countWeakFighters() const;
+
     //! \brief Returns the central tile of the closest enemy dungeon temple or nullptr if there is none
     Tile* findEnemyTempleTile();
 
@@ -122,8 +125,10 @@ private:
     int mReactionPercent;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
-    //! \brief Number of healthy fighters needed to start an attack (0 = never attacks)
+    //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)
     int mMinFightersToAttack;
+    //! \brief Fighters below this level are too weak for an attack; the AI waits while more of them exist than this value
+    int mMinCreatureLevel;
     //! \brief Maximum number of trap tiles (without doors) the AI owns
     int mMaxTrapTiles;
     //! \brief Maximum number of doors the AI owns

@@ -1332,10 +1332,10 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         spell->computeVisibleTiles();
     }
 
-    // Seats that got the whole map revealed (gift box) see every tile for a few turns
+    // Seats that got the whole map revealed (gift box) see every tile
     for (Seat* seat : mSeats)
     {
-        if(!seat->consumeRevealMapTurn())
+        if(!seat->isMapRevealed())
             continue;
 
         for (int jj = 0; jj < getMapSizeY(); ++jj)
