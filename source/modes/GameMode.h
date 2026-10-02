@@ -433,6 +433,15 @@ private:
     //! when it changed.
     void updatePossessionInput(float timeSinceLastFrame);
 
+    //! \brief The direction the possessed creature looks at (unit vector on the ground plane)
+    Ogre::Vector2 getPossessionAim();
+
+    //! \brief Sends the possession attack request (left mouse button) to the server
+    void sendPossessionAttack();
+
+    //! \brief Sends the request to use the creature skill of the given slot (keys 1 to 4)
+    void sendPossessionSkill(uint32_t slot);
+
     //! \brief Sends the possession exit request to the server
     void sendPossessionExit();
 

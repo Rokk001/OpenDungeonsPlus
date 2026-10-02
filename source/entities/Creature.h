@@ -758,6 +758,16 @@ public:
     //! x/y, does not need to be normalized). A zero vector makes it stop.
     void possessedMove(const Ogre::Vector2& direction);
 
+    //! Called on server side. The left mouse button attack of the possessed creature: it uses
+    //! its melee or ranged attack on the enemy in front of it (aim is the view direction on
+    //! the ground plane). Same range, damage and cooldown as in a normal fight.
+    void possessedAttack(const Ogre::Vector2& aim);
+
+    //! Called on server side. Uses the creature skill (other than melee and ranged attack) of
+    //! the given slot (0 is the first one the creature can use). Skills that need a target
+    //! use the enemy in front of the creature.
+    void possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim);
+
 protected:
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
     virtual void importFromPacket(ODPacket& is) override;
@@ -973,6 +983,11 @@ private:
     bool mHasProgressInformation = false;
     //! \brief Used on server side. The player controlling the creature (possession), nullptr if none
     Player*                         mPossessor = nullptr;
+
+    //! \brief Used on server side by the possession. Searches the enemy in front of the creature
+    //! (view direction aim) the given skill can reach. Returns true if one is found.
+    bool possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkillData& skillData,
+        GameEntity*& entityAttack, Tile*& tileAttack);
 
     //! \brief A sub-function called by doTurn()
     //! This one checks if there is something prioritary to do (like fighting). If it is the case,

@@ -1035,6 +1035,8 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     {
         if (id == OIS::MB_Right)
             sendPossessionExit();
+        else if (id == OIS::MB_Left)
+            sendPossessionAttack();
 
         return true;
     }
@@ -1295,6 +1297,10 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
         }
         return true;
     }
+
+    // While the player controls a creature, the left button is used for its attack only
+    if (isLocalPlayerPossessing())
+        return true;
 
     if (id != OIS::MB_Left)
         return true;
@@ -3988,6 +3994,27 @@ bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
             sendPossessionExit();
         return true;
 
+    // The creature skills (other than its attack, which is on the left mouse button)
+    case OIS::KC_1:
+        if (pressed)
+            sendPossessionSkill(0);
+        return true;
+
+    case OIS::KC_2:
+        if (pressed)
+            sendPossessionSkill(1);
+        return true;
+
+    case OIS::KC_3:
+        if (pressed)
+            sendPossessionSkill(2);
+        return true;
+
+    case OIS::KC_4:
+        if (pressed)
+            sendPossessionSkill(3);
+        return true;
+
     // These keys move the RTS camera, which is not used while possessing
     case OIS::KC_Q:
     case OIS::KC_E:
@@ -3998,10 +4025,6 @@ bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
     case OIS::KC_T:
     case OIS::KC_V:
     case OIS::KC_SPACE:
-    case OIS::KC_1:
-    case OIS::KC_2:
-    case OIS::KC_3:
-    case OIS::KC_4:
     case OIS::KC_5:
     case OIS::KC_6:
     case OIS::KC_7:
@@ -4022,7 +4045,7 @@ void GameMode::updatePossessionInput(float timeSinceLastFrame)
 
     // The movement keys are relative to where the player looks
     Ogre::Real yaw = ODFrameListener::getSingleton().getCameraManager()->getPossessionYaw();
-    Ogre::Vector2 forward(-Ogre::Math::Sin(yaw), Ogre::Math::Cos(yaw));
+    Ogre::Vector2 forward = getPossessionAim();
     Ogre::Vector2 right(Ogre::Math::Cos(yaw), Ogre::Math::Sin(yaw));
     Ogre::Vector2 direction = Ogre::Vector2::ZERO;
     if (mPossessKeyForward)
@@ -4057,6 +4080,26 @@ void GameMode::updatePossessionInput(float timeSinceLastFrame)
     mPossessTimeSinceSent = 0.0f;
     ClientNotification* clientNotification = new ClientNotification(ClientNotificationType::askPossessMove);
     clientNotification->mPacket << direction;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+Ogre::Vector2 GameMode::getPossessionAim()
+{
+    Ogre::Real yaw = ODFrameListener::getSingleton().getCameraManager()->getPossessionYaw();
+    return Ogre::Vector2(-Ogre::Math::Sin(yaw), Ogre::Math::Cos(yaw));
+}
+
+void GameMode::sendPossessionAttack()
+{
+    ClientNotification* clientNotification = new ClientNotification(ClientNotificationType::askPossessAttack);
+    clientNotification->mPacket << getPossessionAim();
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+void GameMode::sendPossessionSkill(uint32_t slot)
+{
+    ClientNotification* clientNotification = new ClientNotification(ClientNotificationType::askPossessSkill);
+    clientNotification->mPacket << slot << getPossessionAim();
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
