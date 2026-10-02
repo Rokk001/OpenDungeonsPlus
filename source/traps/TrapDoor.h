@@ -43,6 +43,10 @@ public:
     // A secret door is only seen when a creature of its owner stands on it
     bool shoot(Tile* tile) override;
 
+    // The magic door pays its mana itself when it fires (see shoot), not on every upkeep
+    double getManaToFire() const override
+    { return 0.0; }
+
     void doUpkeep() override;
 
     double getHP(Tile* tile) const override;

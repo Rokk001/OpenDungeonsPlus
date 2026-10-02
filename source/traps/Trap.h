@@ -185,6 +185,10 @@ public:
     virtual bool shoot(Tile* tile)
     { return true; }
 
+    //! brief Mana taken from the owner each time the trap fires. The trap does not
+    //! fire while the owner has less mana than that. 0 for traps that cost no mana.
+    virtual double getManaToFire() const;
+
     virtual bool isDoor() const
     { return false; }
 
