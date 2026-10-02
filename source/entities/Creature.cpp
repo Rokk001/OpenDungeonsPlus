@@ -2881,7 +2881,22 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     physicalDamage = std::max(physicalDamage - getPhysicalDefense(), 0.0);
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
     elementDamage = std::max(elementDamage - getElementDefense(), 0.0);
-    double damageDone = std::min(mHp, absoluteDamage + physicalDamage + magicalDamage + elementDamage);
+    double totalDamage = absoluteDamage + physicalDamage + magicalDamage + elementDamage;
+    // Fights between creatures inside a combat pit only hurt a fraction of normal combat
+    if((attacker != nullptr) && (attacker->getObjectType() == GameEntityType::creature))
+    {
+        Tile* tileVictim = getPositionTile();
+        Tile* tileAttacker = attacker->getPositionTile();
+        if((tileVictim != nullptr) && (tileAttacker != nullptr) &&
+           (tileVictim->getCoveringRoom() != nullptr) &&
+           (tileVictim->getCoveringRoom()->getType() == RoomType::arena) &&
+           (tileAttacker->getCoveringRoom() != nullptr) &&
+           (tileAttacker->getCoveringRoom()->getType() == RoomType::arena))
+        {
+            totalDamage *= ConfigManager::getSingleton().getRoomConfigDouble("ArenaDamageTakenPercent");
+        }
+    }
+    double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
     if(mHp <= 0)
     {
