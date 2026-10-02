@@ -83,13 +83,18 @@ public:
     //! Anything unknown counts as destructibleOnly.
     static ClaimMode getClaimMode();
 
-    //! \brief Rooms can be danced away tile by tile by enemy workers, the way
-    //! bridges and traps already can, when the RoomsClaimableByEnemies switch is
-    //! set in the room configuration file. The dungeon temple is never claimable:
-    //! losing it means defeat and that path expects destruction. Bridges and
-    //! portals override this pair with their own claiming rules.
+    //! \brief Rooms can be taken over by enemy workers when the RoomsClaimableByEnemies
+    //! switch is set in the room configuration file. The whole room has one health
+    //! pool (mClaimHealth) that every dance on any of its tiles lowers; when it is
+    //! empty all the tiles change hands at once (changeOwner). The dungeon temple is
+    //! never claimable: it can only be destroyed. Bridges override this pair with
+    //! their own claiming rules (square by square).
     virtual bool isClaimable(Seat* seat) const override;
     virtual void claimForSeat(Seat* seat, Tile* tile, double danceRate) override;
+
+    //! \brief The health of the room against being taken over, 1.0 when full.
+    inline double getClaimHealth() const
+    { return mClaimHealth; }
 
     //! \brief False in the claimableOnly mode, where a room changes hands by being
     //! danced away and fighters have nothing to do with it. The dungeon temple
@@ -203,6 +208,24 @@ protected:
     //! tile takes its share of the stored gold with it. Returns the room the
     //! tile ended up in, or nullptr if no room could be created.
     Room* handTileOverToSeat(Seat* seat, Tile* tile);
+
+    //! \brief Same as handTileOverToSeat for several tiles at once. Counts as a
+    //! captured room for the claimer when this room is left without a tile.
+    Room* handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles);
+
+    //! \brief Called when the claim health of the room is used up. By default every
+    //! tile goes to a new room of the claiming seat, merged with the rooms of the
+    //! same type it already has next to it. A room that has to stay the same object
+    //! (the portal) overrides this.
+    virtual void changeOwner(Seat* seat);
+
+    //! \brief Tells the seat losing the room and the one getting it. The old seat is
+    //! nullptr when the room was nobody's.
+    void notifyOwnerChanged(Seat* oldSeat, Seat* newSeat);
+
+    //! \brief 1.0 when full. Not saved (a room loaded from a file starts full), except
+    //! for the portal, which keeps the value its files always had.
+    double mClaimHealth;
 
     /*! \brief Exports the headers needed to recreate the Room. It allows to extend Room as much as wanted.
      * The content of the Room will be exported by exportToPacket.
