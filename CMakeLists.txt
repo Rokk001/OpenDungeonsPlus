@@ -331,6 +331,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillTeleport.cpp
     ${SRC}/creatureskill/CreatureSkillAreaDamage.cpp
     ${SRC}/creatureskill/CreatureSkillGuidedBolt.cpp
+    ${SRC}/creatureskill/CreatureSkillGrenade.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
