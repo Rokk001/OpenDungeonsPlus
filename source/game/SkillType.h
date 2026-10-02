@@ -65,6 +65,7 @@ enum class SkillType
     trapFear,
     trapGas,
     trapLightning,
+    trapFireburst,
 
     // This should be the last
     countSkill

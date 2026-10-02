@@ -453,6 +453,17 @@ SkillManager::SkillManager() :
     def = new SkillDefTrap("TacticSkills/", "LightningTrapButton", skill, TrapType::lightning);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
+    std::vector<const Skill*> lvl5depends;
+    lvl5depends.push_back(skill);
+
+    // Lvl 6 research
+    resType = SkillType::trapFireburst;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl5depends);
+    def = new SkillDefTrap("TacticSkills/", "FireburstTrapButton", skill, TrapType::fireburst);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
 
     // Magic Skills
     lvl1depends.clear();
