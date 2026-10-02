@@ -25,7 +25,7 @@ class GameMap;
 class InputCommand;
 class InputManager;
 
-//! brief Shakes the ground around the target tile. Enemy creatures in the area take damage and are knocked down,
+//! \brief Shakes the ground around the target tile. Enemy creatures in the area take damage and are knocked down,
 //! claimed enemy tiles (not rooms, traps, doors or bridges) turn back to dirt.
 class SpellTremor : public Spell
 {
