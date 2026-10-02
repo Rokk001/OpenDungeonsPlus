@@ -23,7 +23,6 @@
         <Window type="OD/MainMenuButton" name="StartCampaignButton" >
             <Property name="Area" value="{{0.0,20},{0.5,-240},{0.0,200},{0.5,-160}}" />
             <Property name="Text" value="[image='OpenDungeonsIcons/LibraryButton'][vert-alignment='centre']Campaign" />
-            <Property name="Disabled" value="True" />
         </Window>
         <Window type="OD/MainMenuButton" name="StartSkirmishButton" >
             <Property name="Area" value="{{0.0,20},{0.5,-160},{0.0,200},{0.5,-80}}" />
@@ -50,6 +49,7 @@
             <Property name="Area" value="{{0.0,20},{0.5,240},{0.0,200},{0.5,320}}" />
             <Property name="Text" value="[image='OpenDungeonsIcons/CryptButton'][vert-alignment='centre']Quit" />
         </Window>
+        <LayoutImport type="DefaultWindow" filename="WindowCampaignSubMenu.layout" name="CampaignSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSkirmishSubMenu.layout" name="SkirmishSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMultiplayerSubMenu.layout" name="MultiplayerSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowEditorSubMenu.layout" name="EditorSubMenuMenuImport" />

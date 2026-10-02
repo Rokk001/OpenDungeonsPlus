@@ -21,6 +21,7 @@
 #include "modes/AdvertMode.h"
 #include "modes/MenuModeMain.h"
 #include "modes/MenuModeConfigureSeats.h"
+#include "modes/MenuModeCampaign.h"
 #include "modes/MenuModeSkirmish.h"
 #include "modes/MenuModeMasterServerJoin.h"
 #include "modes/MenuModeMultiplayerClient.h"
@@ -129,6 +130,9 @@ void ModeManager::checkModeChange()
         break;
     case MENU_LOAD_SAVEDGAME:
         mCurrentApplicationMode = Utils::make_unique<MenuModeLoad>(this);
+        break;
+    case MENU_CAMPAIGN:
+        mCurrentApplicationMode = Utils::make_unique<MenuModeCampaign>(this);
         break;
     case MENU_MASTERSERVER_HOST:
         mCurrentApplicationMode = Utils::make_unique<MenuModeMultiplayerServer>(this, true);

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<GUILayout version="4" >
+    <Window type="OD/StaticText" name="CampaignSubMenuWindow" >
+        <Property name="Area" value="{{0.0,200},{0.5,-320},{0.0,400},{0.5,-80}}" />
+        <Property name="Text" value="" />
+        <Property name="FrameEnabled" value="False" />
+        <Property name="BackgroundEnabled" value="False" />
+        <Window type="OD/MainMenuButton" name="NewCampaignButton" >
+            <Property name="Area" value="{{0.5,-80},{0,20},{0.5,100},{0,100}}" />
+            <Property name="Text" value="[image-size='w:32 h:32'][image='OpenDungeonsIcons/LibraryButton'][vert-alignment='centre']New Campaign" />
+        </Window>
+        <Window type="OD/MainMenuButton" name="ContinueCampaignButton" >
+            <Property name="Area" value="{{0.5,-80},{0,90},{0.5,100},{0,170}}" />
+            <Property name="Text" value="[image-size='w:32 h:32'][image='OpenDungeonsIcons/LoadIcon'][vert-alignment='centre']Continue Campaign" />
+        </Window>
+    </Window>
+</GUILayout>

@@ -54,6 +54,7 @@ public:
         advertisment,
         mainMenu,
         skirmishMenu,
+        campaignMenu,
         multiplayerClientMenu,
         multiplayerServerMenu,
         multiMasterServerJoinMenu,

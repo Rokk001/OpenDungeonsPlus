@@ -21,6 +21,7 @@
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/Campaign.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillManager.h"
@@ -1224,6 +1225,8 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 {
     if(mExitToDesktop)
         ODFrameListener::getSingleton().requestExit();
+    else if(Campaign::getSingleton().isActive())
+        mModeManager->requestMode(AbstractModeManager::MENU_CAMPAIGN);
     else
         mModeManager->requestMode(AbstractModeManager::MENU_MAIN);
     return true;
