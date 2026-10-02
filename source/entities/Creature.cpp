@@ -33,6 +33,7 @@
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
+#include "creatureaction/CreatureActionPossessed.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -1029,6 +1030,10 @@ void Creature::dropCarriedEquipment()
 
 void Creature::doUpkeep()
 {
+    // A creature that cannot be controlled anymore is given back to the AI
+    if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))
+        endPossession();
+
     // If the creature is in jail, we check if it is still standing on it (if not picked up). If
     // not, it is free
     if((mSeatPrison != nullptr) &&
@@ -1309,6 +1314,18 @@ void Creature::doUpkeep()
     if(isChicken())
     {
         handleChickenUpkeep();
+        return;
+    }
+
+    // If a player controls the creature, its other actions are paused. Only the possessed
+    // action runs and the movement comes from the player input
+    if(isPossessed())
+    {
+        if(mActions.empty() || (mActions.back()->getType() != CreatureActionType::possessed))
+            pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
+
+        std::function<bool()> possessedFunc = mActions.back()->action();
+        possessedFunc();
         return;
     }
 
@@ -3003,6 +3020,10 @@ bool Creature::tryPickup(Seat* seat)
     if(isKo())
         return false;
 
+    // A creature controlled by a player cannot be picked up
+    if(isPossessed())
+        return false;
+
     return true;
 }
 
@@ -3433,6 +3454,10 @@ bool Creature::canSlap(Seat* seat)
         return true;
 
     if(getHP() <= 0.0)
+        return false;
+
+    // A creature controlled by a player cannot be slapped
+    if(isPossessed())
         return false;
 
     // If the creature is in prison, it can be slapped by the jail owner only
@@ -4467,4 +4492,108 @@ void Creature::normalizeAmbient()
 
     RenderManager::getSingleton().rrNormalizeAmbient(this);
 
+}
+
+namespace
+{
+//! \brief Computes where the possessed creature can walk from the given position in the given
+//! direction (unit vector). Returns false if it cannot move at all in this direction.
+bool computePossessedDestination(const Creature& creature, const Ogre::Vector2& position,
+    const Ogre::Vector2& direction, Ogre::Vector2& destination)
+{
+    const Ogre::Real stepLength = 0.25f;
+    const Ogre::Real maxLength = 2.0f;
+    destination = position;
+    for(Ogre::Real length = stepLength; length <= maxLength; length += stepLength)
+    {
+        Ogre::Vector2 next = position + direction * length;
+        Tile* nextTile = creature.getGameMap()->getTile(Helper::round(next.x), Helper::round(next.y));
+        if(!creature.canGoThroughTile(nextTile))
+            break;
+
+        destination = next;
+    }
+
+    return (destination != position);
+}
+}
+
+void Creature::startPossession(Player& player)
+{
+    mPossessor = &player;
+    player.setPossessedCreatureName(getName());
+
+    // The creature stops what it is doing. Its actions are kept and will go on after the possession
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
+
+    if(!player.getIsHuman())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::possessionStart, &player);
+    const std::string& name = getName();
+    serverNotification->mPacket << name;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Creature::endPossession()
+{
+    if(mPossessor == nullptr)
+        return;
+
+    Player* player = mPossessor;
+    mPossessor = nullptr;
+    player->setPossessedCreatureName(std::string());
+
+    for(std::vector<std::unique_ptr<CreatureAction>>::iterator it = mActions.begin(); it != mActions.end();)
+    {
+        if((*it)->getType() == CreatureActionType::possessed)
+            it = mActions.erase(it);
+        else
+            ++it;
+    }
+
+    if(isAlive() && getIsOnMap())
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+
+    if(!player->getIsHuman())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::possessionEnd, player);
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Creature::possessedMove(const Ogre::Vector2& direction)
+{
+    if(!isPossessed() || !getIsOnMap())
+        return;
+
+    Ogre::Vector2 position(mPosition.x, mPosition.y);
+    Ogre::Vector2 destination = position;
+    bool canMove = false;
+    if(direction.squaredLength() > 0.0001f)
+    {
+        Ogre::Vector2 dir = direction;
+        dir.normalise();
+        // If the creature is blocked, it tries to slide along the obstacle
+        canMove = computePossessedDestination(*this, position, dir, destination);
+        if(!canMove)
+            canMove = computePossessedDestination(*this, position, Ogre::Vector2(dir.x, 0.0f), destination);
+        if(!canMove)
+            canMove = computePossessedDestination(*this, position, Ogre::Vector2(0.0f, dir.y), destination);
+    }
+
+    if(!canMove)
+    {
+        if(isMoving())
+            clearDestinations(EntityAnimation::idle_anim, true, true);
+
+        return;
+    }
+
+    std::vector<Ogre::Vector2> path;
+    path.push_back(destination);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
 }

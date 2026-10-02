@@ -45,6 +45,7 @@ class CreatureSkill;
 class DraggableTileContainer;
 class GameMap;
 class ODPacket;
+class Player;
 class Room;
 class Weapon;
 
@@ -737,7 +738,26 @@ public:
     void maxAmbient();
 
     void normalizeAmbient();
-    
+
+    //! Called on server side. True if a player controls this creature (possession)
+    inline bool isPossessed() const
+    { return mPossessor != nullptr; }
+
+    inline Player* getPossessor() const
+    { return mPossessor; }
+
+    //! Called on server side. Puts the creature under the control of the given player. Its
+    //! current actions are paused and replaced by the possessed action.
+    void startPossession(Player& player);
+
+    //! Called on server side. Gives the creature back to the AI and tells the player
+    //! the possession is over.
+    void endPossession();
+
+    //! Called on server side. Makes the possessed creature walk in the given direction (world
+    //! x/y, does not need to be normalized). A zero vector makes it stop.
+    void possessedMove(const Ogre::Vector2& direction);
+
 protected:
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
     virtual void importFromPacket(ODPacket& is) override;
@@ -951,6 +971,8 @@ private:
     uint32_t mAttackRecoverySerial = 0;
     double mExperienceProgress = 0.0;
     bool mHasProgressInformation = false;
+    //! \brief Used on server side. The player controlling the creature (possession), nullptr if none
+    Player*                         mPossessor = nullptr;
 
     //! \brief A sub-function called by doTurn()
     //! This one checks if there is something prioritary to do (like fighting). If it is the case,

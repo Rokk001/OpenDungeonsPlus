@@ -96,7 +96,11 @@ enum class ClientNotificationType
 
     // Sandbox mode
     askSandboxTakeHero,
-    askSandboxInvasion
+    askSandboxInvasion,
+    //! Possession: the direction the possessed creature should walk (Vector2, zero to stop)
+    askPossessMove,
+    //! Possession: the player wants to leave the possessed creature
+    askPossessExit
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

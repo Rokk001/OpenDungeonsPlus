@@ -143,6 +143,10 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askSandboxTakeHero";
         case ClientNotificationType::askSandboxInvasion:
             return "askSandboxInvasion";
+        case ClientNotificationType::askPossessMove:
+            return "askPossessMove";
+        case ClientNotificationType::askPossessExit:
+            return "askPossessExit";
         default:
             OD_LOG_ERR("Unknown enum for ClientNotificationType="
                 + Helper::toString(static_cast<int>(type)));

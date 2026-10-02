@@ -43,7 +43,7 @@ for line in manager[manager.index('SkillManager::SkillManager()'):manager.index(
         aliases[match[1]] = current
     if match := re.search(r'(lvl\ddepends|\w+Depends)\.push_back\((\w+)\)', line):
         dependencies.setdefault(match[1], []).append(current if match[2] == 'skill' else aliases[match[2]])
-assert len(model) == 46
+assert len(model) == 47
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents))
     for key, (path, parents) in model.items())

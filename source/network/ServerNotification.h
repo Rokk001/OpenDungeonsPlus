@@ -143,7 +143,11 @@ enum class ServerNotificationType
 
     //! \brief Answer to askCasinoPayout: tile and payout level of the casino on it
     // Appended last so that no existing numeric value changes.
-    casinoPayout
+    casinoPayout,
+    //! The player now possesses the creature: + string creatureName
+    possessionStart,
+    //! The player no longer possesses a creature
+    possessionEnd
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

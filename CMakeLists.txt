@@ -272,6 +272,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
+    ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
     ${SRC}/creaturebehaviour/CreatureBehaviour.cpp
     ${SRC}/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp
@@ -513,6 +514,7 @@ set(OD_SOURCEFILES
     ${SRC}/spells/SpellTurncoat.cpp
     ${SRC}/spells/SpellChicken.cpp
     ${SRC}/spells/SpellInferno.cpp
+    ${SRC}/spells/SpellPossess.cpp
     ${SRC}/spells/SpellManager.cpp
     ${SRC}/spells/SpellSummonWorker.cpp
     ${SRC}/spells/SpellType.cpp

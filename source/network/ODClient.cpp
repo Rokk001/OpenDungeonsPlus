@@ -1666,6 +1666,32 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::possessionStart:
+        {
+            std::string creatureName;
+            OD_ASSERT_TRUE(packetReceived >> creatureName);
+            getPlayer()->setPossessedCreatureName(creatureName);
+            frameListener->getCameraManager()->startPossession(creatureName);
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+            {
+                GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+                gm->notifyPossessionStarted();
+            }
+            break;
+        }
+
+        case ServerNotificationType::possessionEnd:
+        {
+            getPlayer()->setPossessedCreatureName(std::string());
+            frameListener->getCameraManager()->stopPossession();
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+            {
+                GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+                gm->notifyPossessionEnded();
+            }
+            break;
+        }
+
         default:
         {
             OD_LOG_ERR("Unknown server command:"

@@ -55,7 +55,8 @@ enum class CreatureActionType
     goDefendHeart, // (workers and scouts) While the heart defence is on, run to the seat's fighters, or to the heart while it is damaged
     guardPost, // (fighters only) Stand guard on a guard post
     tunnel, // (fighters with a dig rate) Dig through walls towards an enemy dungeon heart that cannot be reached on foot
-    nb // Must be the last value of this enum
+    possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
+    nb// Must be the last value of this enum
 };
 
 class CreatureAction

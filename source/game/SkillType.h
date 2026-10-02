@@ -89,6 +89,7 @@ enum class SkillType
     spellTurncoat,
     spellChicken,
     spellInferno,
+    spellPossess,
 
     // This should be the last
     countSkill

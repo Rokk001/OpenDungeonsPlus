@@ -254,7 +254,13 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void refreshActionFeedback(float elapsed);
 
     Creature* getClosestCreature(Tile*);
-    
+
+    //! \brief Called on client side when the local player takes control of a creature (possession)
+    void notifyPossessionStarted();
+
+    //! \brief Called on client side when the local player is no longer in control of a creature
+    void notifyPossessionEnded();
+
 protected:
     bool onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/);
 
@@ -416,6 +422,30 @@ private:
     
     const ConfigManager &config;
     
+    //! \brief Whether the local player controls a creature (possession)
+    bool isLocalPlayerPossessing();
+
+    //! \brief Handles a key press or release while the player controls a creature. Returns
+    //! true if the key was used and should not be handled as a normal game key.
+    bool handlePossessionKey(OIS::KeyCode key, bool pressed);
+
+    //! \brief Called at each frame while possessing. Sends the walk direction to the server
+    //! when it changed.
+    void updatePossessionInput(float timeSinceLastFrame);
+
+    //! \brief Sends the possession exit request to the server
+    void sendPossessionExit();
+
+    //! \brief The movement keys held down while possessing
+    bool mPossessKeyForward = false;
+    bool mPossessKeyBackward = false;
+    bool mPossessKeyLeft = false;
+    bool mPossessKeyRight = false;
+
+    //! \brief The last walk direction sent to the server while possessing and the time since it was sent
+    Ogre::Vector2 mPossessLastDirection = Ogre::Vector2::ZERO;
+    float mPossessTimeSinceSent = 0.0f;
+
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
     void handlePlayerActionNone();

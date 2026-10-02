@@ -42,6 +42,7 @@ enum class SpellType
     turncoat,
     chicken,
     inferno,
+    possess,
     nbSpells     // Must be the last in this enum
 };
 
