@@ -70,12 +70,19 @@ private:
     //! \brief Turns before the next wave of a continual invasion is launched
     int32_t mTurnsBeforeNextWave;
     int32_t mTurnsBeforeCheck;
+    //! \brief Turns before the next room of the unlock order becomes available, -1 until the first turn
+    int32_t mTurnsBeforeRoomUnlock;
+    //! \brief Number of rooms of the unlock order already available
+    uint32_t mNbRoomsUnlocked;
     //! \brief Names of the heroes of the current wave that are still alive
     std::vector<std::string> mWaveHeroes;
     //! \brief Name of the living toolbox hero for each class
     std::map<std::string, std::string> mToolboxHeroes;
 
     Seat* getHeroSeat() const;
+    //! \brief Makes the next room of the unlock order available once the delay is over. A level that
+    //! already has every room available at the start has nothing to unlock.
+    void updateRoomUnlocks();
     //! \brief Launches the given wave. Returns false if it could not be launched.
     bool launchWave(uint32_t waveNumber);
     //! \brief Sends a message to every human player
