@@ -559,6 +559,15 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
     lvl4depends.push_back(skill);
+
+    resType = SkillType::spellInferno;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("MagicSkills/", "InfernoButton", skill, SpellType::inferno);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
 }
 
 SkillManager::~SkillManager()
