@@ -41,6 +41,7 @@ enum class TrapType
     guardPost,
     doorSecret,
     doorMagic,
+    trigger,
     nbTraps     // Must be the last in this enum
 };
 

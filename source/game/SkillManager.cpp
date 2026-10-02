@@ -616,6 +616,18 @@ SkillManager::SkillManager() :
     def = new SkillDefTrap("TacticSkills/", "FireburstTrapButton", skill, TrapType::fireburst);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
+    std::vector<const Skill*> lvl6depends;
+    lvl6depends.push_back(skill);
+
+    // Lvl 7 research: the trigger trap only makes sense with other traps to set off,
+    // provisional position below the fireburst trap (research tree is full)
+    resType = SkillType::trapTrigger;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl6depends);
+    def = new SkillDefTrap("TacticSkills/", "TriggerTrapButton", skill, TrapType::trigger);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
 
     resType = SkillType::trapGuardPost;
     index = static_cast<uint32_t>(resType);
@@ -998,6 +1010,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
             " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";
         case SkillType::trapGuardPost: return "One idle fighter stands guard on each post and returns to it after a fight.";
+        case SkillType::trapTrigger: return "Sets off every trap and door weapon of yours on the eight surrounding tiles, "
+            "and any trigger trap next to it, when an enemy steps on it. No damage.";
         case SkillType::spellTurncoat: return "One enemy creature on your claimed land fights for you for " +
             spell("TurncoatNbTurns") + " turns.";
         case SkillType::spellChicken: return "One enemy creature becomes a harmless chicken for " +

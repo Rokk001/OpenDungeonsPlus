@@ -531,6 +531,7 @@ set(OD_SOURCEFILES
     ${SRC}/traps/TrapLightning.cpp
     ${SRC}/traps/TrapManager.cpp
     ${SRC}/traps/TrapSpike.cpp
+    ${SRC}/traps/TrapTrigger.cpp
     ${SRC}/traps/TrapType.cpp
 
     ${SRC}/utils/ConfigManager.cpp
