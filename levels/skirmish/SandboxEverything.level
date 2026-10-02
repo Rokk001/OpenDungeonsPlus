@@ -1,8 +1,8 @@
 OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this file (for compatibility reasons).
 
 [Info]
-Name	Sandbox
-Description	Build your dungeon without a rival keeper. You start with a Dormitory and a Hatchery; the other rooms become available over time and spells are researched in the library. Open the sandbox panel to take heroes of any level in your hand or to call single and continual hero invasions. Nothing to win or lose.
+Name	Sandbox Everything Available
+Description	All base rooms and spells are available from the start, there is no room timer. Build your dungeon without a rival keeper. Open the sandbox panel to take heroes of any level in your hand or to call single and continual hero invasions. Nothing to win or lose.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
@@ -24,7 +24,32 @@ mana	1000
 roomTreasury
 roomDormitory
 roomHatchery
+roomLibrary
 spellSummonWorker
+roomArena
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
+roomPrison
+roomTorture
+roomTrainingHall
+roomWorkshop
+roomGuardRoom
+roomTemple
+trapCannon
+trapBoulder
+trapSpike
+trapDoorWooden
+spellCallToWar
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureHeal
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
 [/SkillDone]
 [SkillNotAllowed]
 [/SkillNotAllowed]
