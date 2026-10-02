@@ -193,6 +193,12 @@ public:
     //! fire while the owner has less mana than that. 0 for traps that cost no mana.
     virtual double getManaToFire() const;
 
+    //! \brief Mana per second the owner pays for each armed tile of this trap. 0 for traps that cost nothing to hold.
+    double getManaUpkeepPerSecond() const;
+
+    //! \brief Number of tiles of this trap that are armed.
+    uint32_t getNbActivatedTiles() const;
+
     virtual bool isDoor() const
     { return false; }
 
