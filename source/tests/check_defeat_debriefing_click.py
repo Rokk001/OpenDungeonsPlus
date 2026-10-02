@@ -135,12 +135,15 @@ struct GameMap
 };
 struct ModeManager
 {
-    enum ModeType {NONE = 0, MENU_MAIN = 1};
+    enum ModeType {NONE = 0, MENU_MAIN = 1, MENU_CAMPAIGN = 2};
     bool mOpenSkirmishSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
 @@REQUESTMAINMENU@@
 @@CONSUMEREQUEST@@
 };
+typedef ModeManager AbstractModeManager;
+// A skirmish level: no campaign is running
+struct Campaign {static Campaign& getSingleton() {static Campaign campaign;return campaign;} bool isActive() const {return false;}};
 @@CONSTANTS@@
 
 class GameMode : public AbstractApplicationMode
