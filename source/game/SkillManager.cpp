@@ -631,6 +631,15 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
+    // The freeze trap follows the lightning trap, in the free slot of the lightning row
+    resType = SkillType::trapFreeze;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl5depends);
+    def = new SkillDefTrap("TacticSkills/", "FreezeTrapButton", skill, TrapType::freeze);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     resType = SkillType::trapGuardPost;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
@@ -1008,6 +1017,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             value(config.getTrapConfigDouble("LightningStunTurns")) + " turns.";
         case SkillType::trapFireburst: return "Damage: " + value(config.getTrapConfigDouble("FireburstDamagePerHitMin")) +
             " to every creature nearby (radius " + value(config.getTrapConfigDouble("FireburstRadius")) + ").";
+        case SkillType::trapFreeze: return "Enemies on the tile are paralysed for " + value(config.getTrapConfigDouble("FreezeDurationTurns")) +
+            " turns; those below " + value(config.getTrapConfigDouble("FreezeShatterHpPercent")) + "% health shatter.";
         case SkillType::spellLightning: return "Damage: " + spell("LightningDamage") + " to one enemy creature, which is stunned.";
         case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
             " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";

@@ -91,6 +91,7 @@ enum class SkillType
     spellInferno,
     spellPossess,
     trapTrigger,
+    trapFreeze,
 
     // This should be the last
     countSkill

@@ -139,6 +139,8 @@ std::string toString(SkillType type)
             return "spellPossess";
         case SkillType::trapTrigger:
             return "trapTrigger";
+        case SkillType::trapFreeze:
+            return "trapFreeze";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
@@ -246,6 +248,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The 'Possess' spell";
         case SkillType::trapTrigger:
             return "The Trigger Trap";
+        case SkillType::trapFreeze:
+            return "The Freeze Trap";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }

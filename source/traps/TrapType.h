@@ -42,6 +42,7 @@ enum class TrapType
     doorSecret,
     doorMagic,
     trigger,
+    freeze,
     nbTraps     // Must be the last in this enum
 };
 
