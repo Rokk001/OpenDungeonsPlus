@@ -78,6 +78,7 @@ struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;
 struct SkillManager {static std::map<SkillType,Skill> data;
  static const Skill* getSkill(SkillType t){return &data.at(t);}
  static std::string getResearchDescription(SkillType,uint32_t){return "Test research description";}
+ static bool isLockedByLostLibrary(SkillType,const Seat*){return false;}
  template<class F>static void listAllSkills(F f){for(auto& p:data)f(p.second.path,"cast"+std::to_string(int(p.first)),p.second.path+"/"+p.second.path.substr(p.second.path.find('/')+1)+"ProgressBar",p.first);}};
 std::map<SkillType,Skill> SkillManager::data;
 namespace Skills {NAMES}

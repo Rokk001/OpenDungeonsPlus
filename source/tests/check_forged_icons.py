@@ -17,7 +17,7 @@ atlas = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.
 used = set()
 for layout in (repo / 'gui').glob('*.layout'):
     used |= set(re.findall(r'OpenDungeonsIcons/([A-Za-z0-9_]+)', layout.read_text()))
-runtime = {'GoldBadge', 'ManaBadge', 'NavHelp', 'NavSell', 'NavOptions', 'MapZoom', 'MiniMapRim', 'MiniMapNorth'}
+runtime = {'GoldBadge', 'ManaBadge', 'NavHelp', 'NavSell', 'NavOptions', 'MapZoom', 'MiniMapRim', 'MiniMapNorth', 'CampaignMap'}
 runtime |= {n for n in used if n.startswith('MiniMapCorner')}
 for name in sorted(used - runtime):
     assert name in rects, 'missing in imageset: ' + name
