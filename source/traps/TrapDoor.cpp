@@ -36,6 +36,8 @@
 #include "utils/Random.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
+
 namespace
 {
 //! \brief Factory shared by all door types. The doors only differ by name, price and health
@@ -314,6 +316,7 @@ static TrapRegister regWooden(new TrapDoorFactory(TrapType::doorWooden, "DoorWoo
 static TrapRegister regBraced(new TrapDoorFactory(TrapType::doorBraced, "DoorBraced", "Braced door", "Braced"));
 static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "Steel door", "Steel"));
 static TrapRegister regBarricade(new TrapDoorFactory(TrapType::doorBarricade, "DoorBarricade", "Barricade", "Barricade"));
+static TrapRegister regSecret(new TrapDoorFactory(TrapType::doorSecret, "DoorSecret", "Secret door", "Secret"));
 }
 
 const std::string TrapDoor::ANIMATION_OPEN = "Open";
@@ -359,6 +362,8 @@ double TrapDoor::getDefaultTileHP() const
             return ConfigManager::getSingleton().getTrapConfigDouble("SteelDoorHP");
         case TrapType::doorBarricade:
             return ConfigManager::getSingleton().getTrapConfigDouble("BarricadeDoorHP");
+        case TrapType::doorSecret:
+            return ConfigManager::getSingleton().getTrapConfigDouble("SecretDoorHP");
         default:
             return ConfigManager::getSingleton().getTrapConfigDouble("WoodenDoorHP");
     }
@@ -414,7 +419,69 @@ void TrapDoor::doUpkeep()
     }
     mIsLockedState = mIsLocked;
 
+    // When a seat discovers a secret door, the tile has to be sent again to the seats
+    // that saw it as a wall
+    Tile* secretTile = nullptr;
+    uint32_t nbSeatsVisionBefore = 0;
+    if((mDoorType == TrapType::doorSecret) &&
+       !mCoveredTiles.empty())
+    {
+        secretTile = mCoveredTiles.front();
+        std::map<Tile*, TileData*>::iterator itBefore = mTileData.find(secretTile);
+        if(itBefore != mTileData.end())
+            nbSeatsVisionBefore = itBefore->second->mSeatsVision.size();
+    }
+
     Trap::doUpkeep();
+
+    if(secretTile != nullptr)
+    {
+        std::map<Tile*, TileData*>::iterator itAfter = mTileData.find(secretTile);
+        if((itAfter != mTileData.end()) &&
+           (itAfter->second->mSeatsVision.size() != nbSeatsVisionBefore))
+        {
+            secretTile->setDirtyForAllSeats();
+        }
+    }
+}
+
+bool TrapDoor::shoot(Tile* tile)
+{
+    if(mDoorType != TrapType::doorSecret)
+        return true;
+
+    // Enemies discover the secret door when they see a creature of the owner (or of
+    // an ally) pass through it. The seats with vision on the tile are then notified
+    for(GameEntity* entity : tile->getEntitiesInTile())
+    {
+        if(entity->getObjectType() != GameEntityType::creature)
+            continue;
+
+        const Creature* creature = static_cast<const Creature*>(entity);
+        if(getSeat()->isAlliedSeat(creature->getSeat()))
+            return true;
+    }
+
+    return false;
+}
+
+bool TrapDoor::appearsAsWallForSeat(Tile* tile, Seat* seat) const
+{
+    if(mDoorType != TrapType::doorSecret)
+        return false;
+
+    if(getGameMap()->isInEditorMode())
+        return false;
+
+    if(getSeat()->isAlliedSeat(seat))
+        return false;
+
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return false;
+
+    const std::vector<Seat*>& seatsVision = it->second->mSeatsVision;
+    return std::find(seatsVision.begin(), seatsVision.end(), seat) == seatsVision.end();
 }
 
 void TrapDoor::notifyDoorSlapped(DoorEntity* doorEntity, Tile* tile)
@@ -473,6 +540,10 @@ bool TrapDoor::canDoorBeOnTile(GameMap* gameMap, Tile* tile)
 
 bool TrapDoor::permitsVision(Tile* tile)
 {
+    // A secret door blocks the sight like a wall, otherwise it would give itself away
+    if(mDoorType == TrapType::doorSecret)
+        return false;
+
     TrapTileData* trapTileData = static_cast<TrapTileData*>(mTileData.at(tile));
     if (!trapTileData->isActivated())
         return true;
@@ -486,6 +557,10 @@ bool TrapDoor::permitsVision(Tile* tile)
 
 double TrapDoor::getCreatureSpeed(const Creature* creature, Tile* tile) const
 {
+    // Seats that did not discover a secret door see a wall and cannot walk through it
+    if(appearsAsWallForSeat(tile, creature->getSeat()))
+        return 0.0;
+
     const TrapTileData* trapTileData = static_cast<const TrapTileData*>(mTileData.at(tile));
     if (!trapTileData->isActivated())
         return tile->getCreatureSpeedDefault(creature);

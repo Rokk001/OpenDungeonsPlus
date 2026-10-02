@@ -39,9 +39,9 @@ public:
     bool isDoor() const override
     { return true; }
 
-    // We return true to make sure every creature with vision on the door tile can see it
-    bool shoot(Tile* tile) override
-    { return true; }
+    // We return true to make sure every creature with vision on the door tile can see it.
+    // A secret door is only seen when a creature of its owner stands on it
+    bool shoot(Tile* tile) override;
 
     void doUpkeep() override;
 
@@ -60,6 +60,8 @@ public:
     double getCreatureSpeed(const Creature* creature, Tile* tile) const override;
 
     bool permitsVision(Tile* tile) override;
+
+    bool appearsAsWallForSeat(Tile* tile, Seat* seat) const override;
 
     //! Returns true if tiles North and South (or east and west) are suitable to have a door on the
     //! given tile
