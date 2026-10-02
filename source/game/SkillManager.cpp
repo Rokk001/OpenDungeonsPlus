@@ -243,12 +243,13 @@ public:
             case SpellType::tremor: key = "TremorPrice"; break;
             case SpellType::turncoat: key = "TurncoatPrice"; break;
             case SpellType::chicken: key = "ChickenPrice"; break;
+            case SpellType::inferno: key = "InfernoPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
             mSpellType == SpellType::tremor || mSpellType == SpellType::turncoat ||
-            mSpellType == SpellType::chicken) ?
+            mSpellType == SpellType::chicken || mSpellType == SpellType::inferno) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -992,6 +993,8 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             spell("TurncoatNbTurns") + " turns.";
         case SkillType::spellChicken: return "One enemy creature becomes a harmless chicken for " +
             spell("ChickenNbTurns") + " turns.";
+        case SkillType::spellInferno: return "Damage: " + spell("InfernoDamagePerTurn") + " per turn to enemy creatures within " +
+            spell("InfernoRadiusTiles") + " tiles, which burn for " + spell("InfernoNbTurns") + " turns.";
         default: return "";
     }
 }
