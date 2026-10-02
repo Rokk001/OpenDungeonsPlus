@@ -99,6 +99,8 @@ std::string toString(SkillType type)
             return "spellEyeEvil";
         case SkillType::spellLightning:
             return "spellLightning";
+        case SkillType::spellTremor:
+            return "spellTremor";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
@@ -166,6 +168,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The 'Eye of evil' spell";
         case SkillType::spellLightning:
             return "The 'Lightning' Spell";
+        case SkillType::spellTremor:
+            return "The 'Tremor' Spell";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
