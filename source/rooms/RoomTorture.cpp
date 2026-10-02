@@ -325,7 +325,7 @@ void RoomTorture::doUpkeep()
             break;
         }
         creature->increaseTurnsTorture();
-        double damage = config.getRoomConfigDouble("TortureDamagePerTurn");
+        double damage = creature->getMaxHp() * config.getRoomConfigDouble("TortureDamagePercentPerSecond") / ODApplication::turnsPerSecond;
         if(creature->getHP() <= damage)
             revealEnemyInformation(*creature);
 
