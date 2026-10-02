@@ -129,9 +129,17 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
 
         return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
     }
-    if((type == "gold") || (type == "mana"))
+    if((type == "gold") || (type == "mana") || (type == "kills") || (type == "mined"))
     {
-        cond.mType = (type == "gold") ? LevelScriptConditionType::gold : LevelScriptConditionType::mana;
+        if(type == "gold")
+            cond.mType = LevelScriptConditionType::gold;
+        else if(type == "mana")
+            cond.mType = LevelScriptConditionType::mana;
+        else if(type == "kills")
+            cond.mType = LevelScriptConditionType::kills;
+        else
+            cond.mType = LevelScriptConditionType::goldMined;
+
         if(t.size() != 5)
             return false;
         if(t[3] == ">=")
@@ -311,6 +319,12 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::mana:
             os << "mana\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::kills:
+            os << "kills\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::goldMined:
+            os << "mined\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::claimed:
             os << "claimed\t" << c.mSeatId << "\t" << c.mName << "\t";

@@ -44,6 +44,8 @@
 //!   Cond    room <seatId> <roomName> <count>  # seat owns at least count rooms of that type
 //!   Cond    gold <seatId> >= | <= <amount>    # gold of the seat
 //!   Cond    mana <seatId> >= | <= <amount>    # mana of the seat
+//!   Cond    kills <seatId> >= | <= <count>    # creatures the seat has killed
+//!   Cond    mined <seatId> >= | <= <amount>   # gold the seat has mined
 //!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
 //!   Cond    flag <name> <value>               # flag has exactly that value
@@ -75,6 +77,8 @@ enum class LevelScriptConditionType
     flag,
     gold,
     mana,
+    kills,
+    goldMined,
     claimed
 };
 
@@ -111,10 +115,10 @@ struct LevelScriptCondition
     int32_t mY1;
     int32_t mX2;
     int32_t mY2;
-    //! \brief For creatures, gold and mana: true for >=, false for <=
+    //! \brief For creatures, gold, mana, kills and goldMined: true for >=, false for <=
     bool mAtLeast;
     //! \brief Seconds (time), count (creatures, room, claimed, -1 for all of the region),
-    //! amount (gold, mana) or value (flag)
+    //! amount (gold, mana, goldMined), count (kills) or value (flag)
     int64_t mNumber;
     //! \brief Room name (room), goal name (goal), flag name (flag) or, for region, the
     //! name of a region of the script (empty when the rectangle is given by mX1 to mY2)

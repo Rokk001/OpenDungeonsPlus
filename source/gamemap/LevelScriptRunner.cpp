@@ -141,13 +141,23 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return script.getFlag(cond.mName) == cond.mNumber;
         case LevelScriptConditionType::gold:
         case LevelScriptConditionType::mana:
+        case LevelScriptConditionType::kills:
+        case LevelScriptConditionType::goldMined:
         {
             Seat* seat = gameMap.getSeatById(cond.mSeatId);
             if(seat == nullptr)
                 return false;
 
-            int64_t amount = (cond.mType == LevelScriptConditionType::gold) ?
-                static_cast<int64_t>(seat->getGold()) : static_cast<int64_t>(seat->getMana());
+            int64_t amount = 0;
+            if(cond.mType == LevelScriptConditionType::gold)
+                amount = static_cast<int64_t>(seat->getGold());
+            else if(cond.mType == LevelScriptConditionType::mana)
+                amount = static_cast<int64_t>(seat->getMana());
+            else if(cond.mType == LevelScriptConditionType::kills)
+                amount = static_cast<int64_t>(seat->getStatistics().mCreaturesKilled);
+            else
+                amount = static_cast<int64_t>(seat->getGoldMined());
+
             if(cond.mAtLeast)
                 return amount >= cond.mNumber;
 
