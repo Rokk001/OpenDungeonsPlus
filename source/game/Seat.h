@@ -235,21 +235,14 @@ public:
     bool canOwnedCreatureUseRoomFrom(const Seat* seat) const;
     bool canBuildingBeDestroyedBy(const Seat* seat) const;
 
-    //! \brief Server side. Gives this seat vision on the whole map for the given number
-    //! of turns (added to what is already running), as done by a reveal map gift box
-    inline void addRevealMapTurns(uint32_t turns)
-    { mRevealMapTurns += turns; }
+    //! \brief Server side. Gives this seat vision on the whole map for the rest of the game,
+    //! as done by a reveal map gift box
+    inline void revealMapPermanently()
+    { mIsMapRevealed = true; }
 
-    //! \brief Server side. Returns true and uses one turn if the map is currently revealed
-    //! to this seat. Called once per turn
-    inline bool consumeRevealMapTurn()
-    {
-        if(mRevealMapTurns == 0)
-            return false;
-
-        --mRevealMapTurns;
-        return true;
-    }
+    //! \brief Server side. Returns true if the map is revealed to this seat. Called once per turn
+    inline bool isMapRevealed() const
+    { return mIsMapRevealed; }
 
     void clearTilesWithVision();
     //! \brief Gives this seat vision on the given tiles for the given number of turns (server side).
@@ -474,9 +467,9 @@ private:
 
     bool mIsDebuggingVision;
 
-    //! \brief Number of turns left during which the whole map is visible. Only used on server
-    //! side and not saved: a reveal that is still running when the game is saved is lost
-    uint32_t mRevealMapTurns;
+    //! \brief True if the whole map is visible for the rest of the game. Only used on server
+    //! side and not saved: a reveal is lost when the game is saved and loaded
+    bool mIsMapRevealed;
 
     //! \brief Counter for skill points
     int32_t mSkillPoints;

@@ -117,7 +117,7 @@ void GiftBoxBonus::applyEffect()
         }
         case GiftBoxType::revealMap:
         {
-            seat->addRevealMapTurns(mAmount);
+            seat->revealMapPermanently();
             break;
         }
         case GiftBoxType::levelUp:

@@ -40,7 +40,7 @@ enum class SkillType {nullSkillType};
 namespace Skills {std::string toString(SkillType){return "";}}
 namespace Helper {std::string toString(int value){return std::to_string(value);}}
 struct Seat {int team;Player* player=nullptr;int id=0;SeatStatistics stats;SeatStatistics& getStatistics(){return stats;}Player* getPlayer(){return player;}int getId()const{return id;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}
- bool isRogueSeat()const{return false;}double getMana()const{return 0;}void addRevealMapTurns(uint32_t){}std::vector<SkillType> getSkillDone()const{return {};}bool addSkill(SkillType){return true;}};
+ bool isRogueSeat()const{return false;}double getMana()const{return 0;}void revealMapPermanently(){}std::vector<SkillType> getSkillDone()const{return {};}bool addSkill(SkillType){return true;}};
 enum class ServerNotificationType {chatServer};
 enum class EventShortNoticeType {majorGameEvent};
 struct ODPacket {std::vector<std::string> texts;int majorEvents=0;
