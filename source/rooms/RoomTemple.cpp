@@ -22,6 +22,7 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "gamemap/GameMap.h"
@@ -122,7 +123,6 @@ static RoomRegister reg(new RoomTempleFactory);
 
 RoomTemple::RoomTemple(GameMap* gameMap) :
     Room(gameMap),
-    mTurnsSinceSacrifice(0),
     mPrayerManaPending(0.0)
 {
     // Placeholder: the crypt look is used until the temple has its own
@@ -262,23 +262,25 @@ bool parseRecipe(const std::string& text, std::vector<std::string>& inputs, std:
     return !result.empty();
 }
 
-//! \brief Returns true if all the sacrificed creatures can still be part of the recipe. The
-//! recipe is complete if nothing is missing anymore.
+//! \brief The queue holds the last sacrifices. A recipe matches when its inputs, in the order they were
+//! sacrificed, are the newest entries of the queue.
 bool matchesRecipe(const std::vector<std::pair<std::string, uint32_t> >& sacrificed,
-    const std::vector<std::string>& inputs, bool& complete)
+    const std::vector<std::string>& inputs)
 {
-    std::vector<std::string> missing = inputs;
-    for(const std::pair<std::string, uint32_t>& creature : sacrificed)
-    {
-        std::vector<std::string>::iterator it = std::find(missing.begin(), missing.end(), creature.first);
-        if(it == missing.end())
-            return false;
+    if(inputs.size() > sacrificed.size())
+        return false;
 
-        missing.erase(it);
+    size_t offset = sacrificed.size() - inputs.size();
+    for(size_t i = 0; i < inputs.size(); ++i)
+    {
+        if(sacrificed[offset + i].first != inputs[i])
+            return false;
     }
-    complete = missing.empty();
     return true;
 }
+
+//! \brief How many sacrifices the pool remembers
+const size_t TEMPLE_SACRIFICE_QUEUE_SIZE = 3;
 }
 
 bool RoomTemple::isPoolTile(const Tile& tile) const
@@ -346,20 +348,6 @@ void RoomTemple::doUpkeep()
 
         sacrificeCreature(*creature);
     }
-
-    // Sacrifices that wait for the rest of their recipe are lost after a while
-    if(mSacrificed.empty())
-    {
-        mTurnsSinceSacrifice = 0;
-        return;
-    }
-
-    ++mTurnsSinceSacrifice;
-    if(mTurnsSinceSacrifice >= ConfigManager::getSingleton().getRoomConfigInt32("TempleSacrificeWaitTurns"))
-    {
-        mSacrificed.clear();
-        mTurnsSinceSacrifice = 0;
-    }
 }
 
 void RoomTemple::sacrificeCreature(Creature& creature)
@@ -374,14 +362,12 @@ void RoomTemple::sacrificeCreature(Creature& creature)
     creature.removeFromGameMap();
     creature.deleteYourself();
 
-    // Every sacrifice gives mana
-    getGameMap()->addManaToSeat(static_cast<int32_t>(level) * configManager.getRoomConfigInt32("TempleSacrificeManaPerLevel"),
-        getSeat()->getId());
-
+    // The pool remembers the last sacrifices only
     mSacrificed.push_back(std::pair<std::string, uint32_t>(className, level));
-    mTurnsSinceSacrifice = 0;
+    if(mSacrificed.size() > TEMPLE_SACRIFICE_QUEUE_SIZE)
+        mSacrificed.erase(mSacrificed.begin());
 
-    // We check the recipes
+    // The first recipe that matches the newest sacrifices wins
     int32_t nbRecipes = configManager.getRoomConfigInt32("TempleRecipeCount");
     for(int32_t i = 1; i <= nbRecipes; ++i)
     {
@@ -393,31 +379,19 @@ void RoomTemple::sacrificeCreature(Creature& creature)
             continue;
         }
 
-        bool complete = false;
-        if(!matchesRecipe(mSacrificed, inputs, complete) || !complete)
+        if(!matchesRecipe(mSacrificed, inputs))
             continue;
 
+        // The level of the new creature is the average level of the sacrificed creatures, rounded down
         uint32_t totalLevel = 0;
-        for(const std::pair<std::string, uint32_t>& sacrificed : mSacrificed)
-            totalLevel += sacrificed.second;
+        for(size_t k = mSacrificed.size() - inputs.size(); k < mSacrificed.size(); ++k)
+            totalLevel += mSacrificed[k].second;
 
-        uint32_t averageLevel = totalLevel / mSacrificed.size();
+        uint32_t averageLevel = totalLevel / static_cast<uint32_t>(inputs.size());
         mSacrificed.clear();
         giveSacrificeResult(result, averageLevel, *tile);
         return;
     }
-
-    // The sacrifices that cannot be part of any recipe are lost
-    for(int32_t i = 1; i <= nbRecipes; ++i)
-    {
-        std::vector<std::string> inputs;
-        std::string result;
-        bool complete = false;
-        if(parseRecipe(configManager.getRoomConfigString("TempleRecipe" + Helper::toString(i)), inputs, result) &&
-           matchesRecipe(mSacrificed, inputs, complete))
-            return;
-    }
-    mSacrificed.clear();
 }
 
 void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t averageLevel, Tile& tile)
@@ -426,12 +400,19 @@ void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t average
     std::string message;
     if(result == "ManaBoost")
     {
-        getGameMap()->addManaToSeat(configManager.getRoomConfigInt32("TempleManaBoost"), getSeat()->getId());
-        message = "The gods accepted your sacrifice and fill your dungeon with mana";
+        // The special is a gift box that has to be brought to the dungeon temple
+        GiftBoxBonus* giftBox = new GiftBoxBonus(getGameMap(), "TempleSpecial", GiftBoxType::mana,
+            GiftBoxBonus::getDefaultAmount(GiftBoxType::mana));
+        giftBox->setSeat(getSeat());
+        giftBox->addToGameMap();
+        giftBox->createMesh();
+        giftBox->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()),
+            static_cast<Ogre::Real>(tile.getY()), 0.0f));
+        message = "The gods accepted your sacrifice and send you a special";
     }
     else
     {
-        // The result is a creature. The special name Workers gives the workers of the keeper
+        // The result is a creature. The fork specific name Workers gives the workers of the keeper
         int32_t nbCreatures = 1;
         const CreatureDefinition* classToSpawn = nullptr;
         if(result == "Workers")
