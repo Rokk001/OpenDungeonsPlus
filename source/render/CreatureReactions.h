@@ -110,6 +110,10 @@ public:
     //! creature stands on its tile, the creature reacts.
     void noteEntityRemoved(GameEntity* entity);
 
+    //! Client hook: the creature starts to eat the chicken. If the keeper dropped that
+    //! chicken a moment ago, the creature shows what it thinks of the gift.
+    void noteChickenFeeding(Creature* creature, const std::string& chickenName);
+
     //! \brief Stops all the running and waiting reactions
     void stopAll();
 
