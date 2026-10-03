@@ -20,31 +20,59 @@ gold	0
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeWooden
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
+roomPrison
 roomTorture
 roomTrainingHall
+roomTreasury
 roomWorkshop
-roomGuardRoom
-trapCannon
-trapDoorWooden
-spellSummonWorker
 spellCreatureHeal
+spellLightning
+spellPossess
+spellSummonWorker
+trapAlarm
+trapCannon
+trapDoorBarricade
+trapDoorWooden
+trapFear
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomBridgeStone
+roomCasino
+roomCrypt
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellTremor
+spellDefector
+trapBoulder
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
 [/SkillNotAllowed]
 [SkillPending]
-roomPrison
-roomBridgeWooden
-roomCrypt
-trapSpike
-trapFear
-trapBoulder
 spellCallToWar
-spellCreatureHaste
-spellCreatureStrength
+spellEyeEvil
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3019,8 +3047,6 @@ Mode	once
 Cond	mined	1	>=	600
 Action	message	1	That is a start. Two goblins heard the clink and want to join you. A bridge crossing is open south of the dungeon.
 Action	spawn	1	15	74	1	Goblin:1	Goblin:1	Spider:1
-Action	make	1	spellCallToWar
-Action	make	1	roomBridgeWooden
 Action	reveal	1	SouthLanding
 [/Trigger]
 [Trigger]
@@ -3028,8 +3054,6 @@ Name	quarryClaimed
 Mode	once
 Cond	claimed	1	Quarry	120
 Action	message	1	The quarry is yours. Prisoners can be put to better use than idling in cells.
-Action	make	1	roomPrison
-Action	make	1	trapSpike
 [/Trigger]
 [Trigger]
 Name	southBankReached
@@ -3045,7 +3069,6 @@ Name	siegeSeen
 Mode	once
 Cond	region	1	Siege
 Action	message	1	The besiegers are thin. Strike them from behind and the rival will have to deal with you, not them.
-Action	make	1	trapFear
 Action	spawn	3	36	30	2	Knight:2	Adventurer:2	Adventurer:2
 [/Trigger]
 [Trigger]
@@ -3053,8 +3076,6 @@ Name	midBankHeld
 Mode	once
 Cond	claimed	1	MidBank	60
 Action	message	1	The middle bank is held. Heavier creatures are ready to serve.
-Action	make	1	spellCreatureHaste
-Action	make	1	trapBoulder
 Action	spawn	1	16	75	1	Orc:2	Goblin:2
 Action	reveal	1	NorthBank
 [/Trigger]

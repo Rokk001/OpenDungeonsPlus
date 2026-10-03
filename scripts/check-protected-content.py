@@ -54,6 +54,20 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Dunmarrow.level",
     "levels/campaign/Ironbridge.level",
     "levels/campaign/Wolfscar.level",
+    "levels/campaign/Lanternhill.level",
+    "levels/campaign/Cinderhollow.level",
+    "levels/campaign/Thornreach.level",
+    "levels/campaign/Bellwick.level",
+    "levels/campaign/Highcairn.level",
+    "levels/campaign/Stormhaven.level",
+    "levels/campaign/Mirewatch.level",
+    "levels/campaign/Goldspire.level",
+    "levels/campaign/Ebonrook.level",
+    "levels/campaign/VarnsCrossing.level",
+    "levels/campaign/Silverdeep.level",
+    "levels/campaign/Wraithwood.level",
+    "levels/campaign/Kingsfall.level",
+    "levels/campaign/HollowmarkCitadel.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
@@ -70,6 +84,7 @@ CREDITS_NAMES = ["CREDITS", "CREDITS.md", "CREDITS.txt"]
 LEVEL_PREFIX = "levels/"
 LEVEL_SUFFIXES = (".level", ".cfg")
 SIMILARITY_SCRIPT = "check-level-similarity.py"
+PROGRESSION_SCRIPT = "check-campaign-progression.py"
 
 
 def run_git(args, cwd):
@@ -377,6 +392,44 @@ def check_level_similarity(ref_lines, remote_name, cwd, problems):
             shutil.rmtree(work, ignore_errors=True)
 
 
+def check_campaign_progression(ref_lines, remote_name, cwd, problems):
+    """Runs the unlock check on new or changed campaign levels; it skips itself when the
+    local folder with the other levels does not exist."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), PROGRESSION_SCRIPT)
+    if not os.path.isfile(script):
+        return
+    for ref_line in ref_lines:
+        fields = ref_line.split()
+        if len(fields) != 4 or fields[1] == ZERO_SHA:
+            continue
+        code, tip = run_git(["rev-parse", "%s^{commit}" % fields[1]], cwd)
+        if code != 0:
+            continue
+        tip = tip.strip()
+        paths = [path for path in changed_level_files(
+                     tip, commits_to_check(tip, fields[3], remote_name, cwd), cwd)
+                 if (path.startswith(CAMPAIGN_PREFIX) or path.startswith("levels/skirmish/"))
+                 and path.endswith(".level")]
+        if not paths:
+            continue
+        work = tempfile.mkdtemp(prefix="campaign-progression-")
+        try:
+            for path in paths:
+                proc = subprocess.run(["git", "show", "%s:%s" % (tip, path)], cwd=cwd,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                target = os.path.join(work, path)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "wb") as handle:
+                    handle.write(proc.stdout)
+            proc = subprocess.run([sys.executable, script] + paths, cwd=work,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for line in proc.stdout.decode("utf-8", errors="replace").split("\n"):
+                if line.startswith("FAIL"):
+                    problems.append("progression: %s" % line.strip())
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+
+
 def report_and_exit(problems):
     sys.stderr.write("Push blocked by check-protected-content:\n")
     for problem in problems:
@@ -552,6 +605,7 @@ def main(argv):
     ref_lines = [line for line in sys.stdin.read().split("\n") if line.strip() != ""]
     problems = check_push(ref_lines, terms, remote_name, cwd)
     check_level_similarity(ref_lines, remote_name, cwd, problems)
+    check_campaign_progression(ref_lines, remote_name, cwd, problems)
     if problems:
         return report_and_exit(problems)
     return 0

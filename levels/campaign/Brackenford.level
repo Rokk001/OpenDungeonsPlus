@@ -20,17 +20,59 @@ gold	2500
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
 roomDormitory
-[/SkillDone]
-[SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
 roomHatchery
 roomLibrary
 roomTrainingHall
-trapDoorWooden
+[/SkillDone]
+[SkillNotAllowed]
+roomArena
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
+roomGuardRoom
+roomPrison
+roomTemple
+roomTorture
+roomTreasury
+roomWorkshop
+spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureHeal
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellPossess
+spellTremor
+spellDefector
+trapAlarm
+trapBoulder
 trapCannon
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapDoorWooden
+trapFear
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
+[/SkillNotAllowed]
+[SkillPending]
+spellLightning
+spellSummonWorker
+trapDoorBarricade
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -1470,7 +1512,6 @@ Name	bedsReady
 Mode	once
 Cond	room	1	Dormitory	1
 Action	message	1	Beds at last. The creatures from the old portal will want food as well.
-Action	make	1	roomHatchery
 Action	objective	1	Build a hatchery.
 [/Trigger]
 [Trigger]
@@ -1478,7 +1519,6 @@ Name	larderReady
 Mode	once
 Cond	room	1	Hatchery	1
 Action	message	1	The larder is stocked. Now take the fern grove east of here and make it yours.
-Action	make	1	roomLibrary
 Action	gold	1	400
 Action	objective	1	Claim the fern grove.
 [/Trigger]
@@ -1507,7 +1547,6 @@ Cond	kills	1	>=	4
 Action	message	1	The landing is clear. The village and the keep lie behind it.
 Action	reveal	1	Village
 Action	reveal	1	Keep
-Action	make	1	roomTrainingHall
 Action	objective	1	Fight your way to the keep and slay the warden.
 [/Trigger]
 [Trigger]

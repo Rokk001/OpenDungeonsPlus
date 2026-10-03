@@ -20,22 +20,59 @@ gold	2500
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
 roomDormitory
 roomHatchery
 roomLibrary
 roomTrainingHall
-spellSummonWorker
-spellCreatureHeal
-[/SkillDone]
-[SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
+roomTreasury
 roomWorkshop
+spellLightning
+spellSummonWorker
 trapCannon
 trapDoorWooden
-spellCallToWar
+[/SkillDone]
+[SkillNotAllowed]
+roomArena
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
 roomGuardRoom
+roomPrison
+roomTemple
+roomTorture
+spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureHeal
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellPossess
+spellTremor
+spellDefector
+trapAlarm
+trapBoulder
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFear
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
+[/SkillNotAllowed]
+[SkillPending]
+trapDoorBarricade
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -1530,9 +1567,7 @@ Action	objective	1	Dig out 600 gold from the block under the plaza.
 Name	wellEmptied
 Mode	once
 Cond	mined	1	>=	600
-Action	message	1	The block is yours. Now you can afford a proper army, and I have found you a spell to rally it.
-Action	make	1	spellCallToWar
-Action	make	1	trapDoorWooden
+Action	message	1	The block is yours. Now you can afford a proper army.
 Action	reveal	1	Court
 Action	objective	1	Break the north gate of the keep.
 [/Trigger]
@@ -1541,7 +1576,6 @@ Name	townHeld
 Mode	once
 Cond	claimed	1	Plaza	45
 Action	message	1	The plaza is claimed. His watch is thin now.
-Action	make	1	roomWorkshop
 Action	reveal	1	EastRoad
 Action	setflag	townHeld	1
 [/Trigger]
