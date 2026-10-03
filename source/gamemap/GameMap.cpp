@@ -33,6 +33,7 @@
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
 #include "game/Campaign.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillType.h"
@@ -233,6 +234,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mIsFOWActivated(true),
         mNumCallsTo_path(0),
         mAiManager(*this),
+        mCreatureRelationships(nullptr),
         mTileSet(nullptr),
         mHighMap(nullptr),
         generator(42)
@@ -370,6 +372,7 @@ void GameMap::clearAll()
         clearPlayers();
 
         clearAiManager();
+        setRelationshipsEnabled(false);
 
         mLocalPlayerNick = DEFAULT_NICK;
         mTurnNumber = -1;
@@ -1180,6 +1183,70 @@ Creature* GameMap::getCreature(const std::string& cName) const
     return nullptr;
 }
 
+void GameMap::setRelationshipsEnabled(bool enabled)
+{
+    if(!enabled)
+    {
+        delete mCreatureRelationships;
+        mCreatureRelationships = nullptr;
+        return;
+    }
+
+    if(mCreatureRelationships != nullptr)
+        return;
+
+    mCreatureRelationships = new CreatureRelationships(
+        RelationshipSettings::fromConfig(ConfigManager::getSingleton().getRelationshipsConfig()));
+}
+
+void GameMap::sendRelationshipTierChanges()
+{
+    if(mCreatureRelationships == nullptr)
+        return;
+
+    std::vector<RelationshipTierChange> changes;
+    mCreatureRelationships->takeTierChanges(changes);
+    for(const RelationshipTierChange& change : changes)
+    {
+        // Both creatures belong to the same keeper. If one is already gone, the client drops
+        // its pairs together with the creature.
+        Creature* creature = getCreature(change.mCreatureA);
+        if(creature == nullptr)
+            continue;
+
+        Seat* seat = creature->getSeat();
+        if((seat == nullptr) || (seat->getPlayer() == nullptr))
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::relationshipTier, seat->getPlayer());
+        serverNotification->mPacket << change.mCreatureA << change.mCreatureB
+            << static_cast<int32_t>(change.mNewTier);
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+void GameMap::sendRelationshipTiers(Seat* seat)
+{
+    if((mCreatureRelationships == nullptr) || (seat == nullptr) || (seat->getPlayer() == nullptr))
+        return;
+
+    std::vector<RelationshipTierChange> tiers;
+    mCreatureRelationships->getTiers(tiers);
+    for(const RelationshipTierChange& tier : tiers)
+    {
+        Creature* creature = getCreature(tier.mCreatureA);
+        if((creature == nullptr) || (creature->getSeat() != seat))
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::relationshipTier, seat->getPlayer());
+        serverNotification->mPacket << tier.mCreatureA << tier.mCreatureB
+            << static_cast<int32_t>(tier.mNewTier);
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
 void GameMap::doTurn(double timeSinceLastTurn)
 {
     OD_LOG_INF("Computing turn " + Helper::toString(mTurnNumber) + ", timeSinceLastTurn=" + Helper::toString(timeSinceLastTurn));
@@ -1191,6 +1258,11 @@ void GameMap::doTurn(double timeSinceLastTurn)
     {
         LevelScriptRunner::doTurn(*this);
         checkGameDuration();
+        if(mCreatureRelationships != nullptr)
+        {
+            mCreatureRelationships->doTurn(mTurnNumber);
+            sendRelationshipTierChanges();
+        }
     }
 
     for (Seat* seat : mSeats)

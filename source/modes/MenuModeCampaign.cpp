@@ -46,6 +46,7 @@ const std::string CAMPAIGN_PROGRESS_FILE = "campaign.progress";
 const std::string CMP_FRAME = "CampaignWindowFrame";
 const std::string CMP_TEXT_LOADING = "LoadingText";
 const std::string CMP_BUTTON_DIFFICULTY = "CampaignWindowFrame/DifficultyButton";
+const std::string CMP_CHECK_RELATIONSHIPS = "CampaignWindowFrame/RelationshipsCheckbox";
 const std::string CMP_BUTTON_BACK = "CampaignWindowFrame/BackButton";
 const std::string CMP_MAP = "CampaignWindowFrame/CampaignMap";
 const std::string CMP_TEXT_DESCRIPTION = "CampaignWindowFrame/DescriptionText";
@@ -347,7 +348,10 @@ void MenuModeCampaign::startLevel(size_t index)
     // In single player mode, we act as a server
     campaign.startLevel(index);
     const std::string& nickname = ODFrameListener::getSingleton().getClientGameMap()->getLocalPlayerNick();
-    if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeGameSinglePlayer, false))
+    CEGUI::ToggleButton* relationshipsCheckbox = static_cast<CEGUI::ToggleButton*>(
+        mainWin->getChild(CMP_CHECK_RELATIONSHIPS));
+    if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeGameSinglePlayer, false,
+        relationshipsCheckbox->isSelected()))
     {
         OD_LOG_ERR("Could not start server for campaign game !!!");
         statusText->setText("ERROR: Could not start server for campaign game !!!");

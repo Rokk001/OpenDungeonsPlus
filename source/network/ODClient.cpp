@@ -28,6 +28,7 @@
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
 #include "game/Campaign.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/CreaturePanelData.h"
 #include "game/Seat.h"
@@ -505,6 +506,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_ASSERT_TRUE(packetReceived >> creatureProgress);
             setSupportsCreatureProgress(creatureProgress);
 
+            bool relationships = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> relationships);
+            gameMap->setRelationshipsEnabled(relationships);
+
             // Now that the we have received all needed information, we can launch the requested mode
             OD_LOG_INF("Starting game map");
             resetGameClock();
@@ -894,6 +900,21 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::timeLimit:
         {
             OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
+            break;
+        }
+
+        case ServerNotificationType::relationshipTier:
+        {
+            std::string creatureA;
+            std::string creatureB;
+            int32_t tier;
+            OD_ASSERT_TRUE(packetReceived >> creatureA >> creatureB >> tier);
+            CreatureRelationships* relationships = gameMap->getCreatureRelationships();
+            if((relationships != nullptr) && (tier >= static_cast<int32_t>(RelationshipTier::nemesis))
+                && (tier <= static_cast<int32_t>(RelationshipTier::lovers)))
+            {
+                relationships->setTier(creatureA, creatureB, static_cast<RelationshipTier>(tier));
+            }
             break;
         }
 

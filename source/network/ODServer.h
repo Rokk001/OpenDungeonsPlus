@@ -76,7 +76,10 @@ class ODServer: public Ogre::Singleton<ODServer>,
     inline ServerMode getServerMode() const
     { return mServerMode; }
 
-    bool startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer);
+    //! \brief relationships is the game setup option "Creature relationships". It is ignored in editor
+    //! mode and when a saved game is loaded (the save knows its own setting).
+    bool startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
+        bool relationships = true);
     void stopServer() override;
 
     //! \brief Returns the file the running game was loaded from. Empty if no game is loaded.
