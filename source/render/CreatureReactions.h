@@ -35,6 +35,7 @@ class Creature;
 class GameEntity;
 class GameMap;
 class MovableGameEntity;
+class Seat;
 class Tile;
 enum class GameEntityType;
 
@@ -99,9 +100,10 @@ public:
     //! goes down, which lets the winners of a fight cheer.
     void noteAnimation(MovableGameEntity* entity, const std::string& clip);
 
-    //! \brief Client hook: a creature was updated by the server. oldLevel and oldMood are the
-    //! values before the update. Shows the level up and the payday reactions.
-    void noteCreatureUpdate(Creature* creature, uint32_t oldLevel, uint32_t oldMood);
+    //! \brief Client hook: a creature was updated by the server. oldLevel, oldMood, oldSeat and oldSeatPrison
+    //! are the values before the update. Shows the level up, the payday and the freed prisoner reactions.
+    void noteCreatureUpdate(Creature* creature, uint32_t oldLevel, uint32_t oldMood, Seat* oldSeat,
+        Seat* oldSeatPrison);
 
     //! \brief Client hook: the keeper put the entity on the tile. Remembered for a while so that
     //! a creature taking it can show that it got a gift.
@@ -119,6 +121,13 @@ public:
     //! crafted item of the workshop lets the creature that just worked there show its success and
     //! the others in the room react.
     void noteEntityAdded(GameEntity* entity);
+
+    //! \brief Client hook: the creature picks up the entity to carry it. Carrying gold is shown.
+    void noteCarry(Creature* carrier, GameEntity* carried);
+
+    //! \brief Client hook: the creature puts down the entity it carried. Gold put down in a treasury is
+    //! a delivery.
+    void noteRelease(Creature* carrier, GameEntity* carried);
 
     //! \brief Stops all the running and waiting reactions
     void stopAll();
@@ -153,7 +162,8 @@ private:
             mMotionLastPosition(Ogre::Vector3::ZERO),
             mMotionLastScale(Ogre::Vector3::UNIT_SCALE),
             mMotionTurnAngle(0.0),
-            mMotionTurnComputed(false)
+            mMotionTurnComputed(false),
+            mWhileWorking(false)
         {}
 
         std::string mCreatureName;
@@ -184,6 +194,8 @@ private:
         //! For the motion 'turn': the angle to the camera
         double mMotionTurnAngle;
         bool mMotionTurnComputed;
+        //! The event decorates the work animation of the creature (see ReactionEvent::mWhileWorking)
+        bool mWhileWorking;
     };
 
     struct PendingReaction
@@ -193,6 +205,8 @@ private:
         double mDelay;
         //! Time the reaction already waited for the creature to be free
         double mWaited;
+        //! Seconds it waits at most
+        double mWaitMax;
         bool mForced;
     };
 
@@ -213,6 +227,29 @@ private:
         double mTime;
     };
 
+    //! Work that goes on for a while with one animation (a prisoner in its cell, a spectator in the arena):
+    //! now and then a reaction of the event is tried on the creature
+    struct OngoingWork
+    {
+        std::string mEventName;
+        //! Time the creature started to do it
+        double mSince;
+        //! Time of the next try
+        double mNext;
+    };
+
+    //! The gold deliveries of a creature to the treasury within a short time
+    struct Delivery
+    {
+        Delivery() :
+            mCount(0),
+            mSince(0.0)
+        {}
+
+        uint32_t mCount;
+        double mSince;
+    };
+
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -223,8 +260,26 @@ private:
     //! \brief The creature works in the library or workshop (its attack animation was just received):
     //! remembers it and shows another way of working after the movement.
     void noteRoomWork(Creature* creature);
+    //! \brief The creature starts to dig: if it digs into a gold vein or gems it is pleased
+    void noteDigging(Creature* creature);
     //! \brief Lets the creature show the event once it has finished what it does
-    void queueReaction(Creature* creature, const std::string& eventName);
+    //! waitMax is the time the reaction waits at most for the creature to be free (negative: the usual time)
+    //! The reaction starts after delay seconds (negative: a short time).
+    void queueReaction(Creature* creature, const std::string& eventName, double waitMax = -1.0,
+        double delay = -1.0);
+    //! \brief The bout in the arena is over because the creature was knocked out: the one that fought it
+    //! cheers as the winner and the others in the arena cheer as spectators
+    void celebrateBout(Creature* loser);
+    //! \brief Name of the room the creature stands in ("Arena", "Dormitory", ...), empty if in none
+    std::string getRoomName(const Creature* creature) const;
+    //! \brief The event that is shown now and then while the creature goes on with what the animation
+    //! shows (empty if the creature does not do such a thing)
+    std::string getOngoingEvent(const Creature* creature, const std::string& clip) const;
+    void startOngoing(Creature* creature, const std::string& eventName);
+    //! \brief The creature starts to do something else than before (newEvent is empty or the event of the
+    //! new ongoing work): the work it was doing ends and may have a done moment
+    void finishOngoing(Creature* creature, const std::string& newEvent);
+    void updateOngoing();
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
@@ -235,7 +290,8 @@ private:
     void endReaction(RunningReaction& reaction, Creature* creature);
 
     //! \brief What the creature currently does, deduced from the animation it plays on this client
-    ReactionPriority getCreaturePriority(const Creature* creature) const;
+    //! If the event is given and decorates the work animation, that animation does not count as busy.
+    ReactionPriority getCreaturePriority(const Creature* creature, const ReactionEvent* event = nullptr) const;
 
     bool startClip(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
     void stopClip(RunningReaction& reaction, Creature* creature);
@@ -275,6 +331,10 @@ private:
     std::map<std::string, HandDrop> mHandDrops;
     //! Last work of each creature in the library or workshop ("creature" -> work)
     std::map<std::string, RoomWork> mLastRoomWork;
+    //! What the creatures do that goes on for a while ("creature" -> work)
+    std::map<std::string, OngoingWork> mOngoing;
+    //! The gold the creatures delivered lately ("creature" -> deliveries)
+    std::map<std::string, Delivery> mDeliveries;
 };
 
 #endif // CREATUREREACTIONS_H

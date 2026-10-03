@@ -1525,6 +1525,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             carried->removeEntityFromPositionTile();
 
             RenderManager::getSingleton().rrCarryEntity(carrier, carried);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteCarry(carrier, carried);
             break;
         }
 
@@ -1551,6 +1554,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             RenderManager::getSingleton().rrReleaseCarriedEntity(carrier, carried);
             carried->setPosition(pos);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteRelease(carrier, carried);
             break;
         }
 
