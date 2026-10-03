@@ -68,6 +68,7 @@ const std::string NICKNAME = "Nickname";
 const std::string KEEPERVOICE = "KeeperVoice";
 const std::string MINIMAP_TYPE = "MinimapType";
 const std::string LIGHT_FACTOR = "LightFactor";
+const std::string ROOM_AMBIENCE = "RoomAmbience";
 }
 
 typedef std::map<TileVisual,std::map<int,float>> HighMap;
@@ -92,6 +93,10 @@ public:
     static const std::string DEFAULT_KEEPER_VOICE;
 
     const Ogre::ColourValue& getColorFromId(const std::string& id) const;
+    //! The system configuration path, with the trailing separator
+    inline const std::string& getConfigPath() const
+    { return mConfigPath; }
+
     inline const std::map<std::string, CreatureDefinition*>& getCreatureDefinitions() const
     { return mCreatureDefs; }
     const CreatureDefinition* getCreatureDefinition(const std::string& name) const;

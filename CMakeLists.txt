@@ -409,6 +409,8 @@ set(OD_SOURCEFILES
     ${SRC}/render/DebugDrawer.cpp    
     ${SRC}/render/Gui.cpp
     ${SRC}/render/MovableTextOverlay.cpp
+    ${SRC}/render/RoomAmbience.cpp
+    ${SRC}/render/RoomAmbienceConfig.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/TextRenderer.cpp
