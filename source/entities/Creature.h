@@ -410,6 +410,10 @@ public:
     //! the side of the killer (may be nullptr).
     void reportDeathToFriends(GameEntity* killer);
 
+    //! Server side. Called when this creature starts to leave the dungeon unhappy: its best friend
+    //! may leave with it (chance from the settings).
+    void reportLeavingToBestFriend();
+
     //! Server side. Factor for the damage this creature deals to a creature of victimSeat: more
     //! than 1.0 while it is enraged about the death of a friend killed by that side.
     double getRelationshipRageFactor(const Seat* victimSeat) const;

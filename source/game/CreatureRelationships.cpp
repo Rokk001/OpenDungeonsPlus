@@ -118,7 +118,8 @@ RelationshipSettings::RelationshipSettings() :
     mGriefMoodPenalty(400),
     mGriefRageTurns(300),
     mGriefRageBonusPercent(30),
-    mJealousyValueLoss(3)
+    mJealousyValueLoss(3),
+    mLeaveTogetherChancePercent(30)
 {
 }
 
@@ -176,7 +177,8 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"TempMoodDecayPerTurn", &settings.mTempMoodDecayPerTurn},
         {"GriefMoodPenalty", &settings.mGriefMoodPenalty},
         {"GriefRageBonusPercent", &settings.mGriefRageBonusPercent},
-        {"JealousyValueLoss", &settings.mJealousyValueLoss}
+        {"JealousyValueLoss", &settings.mJealousyValueLoss},
+        {"LeaveTogetherChancePercent", &settings.mLeaveTogetherChancePercent}
     };
     struct DoubleEntry
     {
@@ -587,6 +589,24 @@ int32_t CreatureRelationships::moodModifier(const std::string& creature) const
     }
 
     return modifier;
+}
+
+std::string CreatureRelationships::getBestFriend(const std::string& creature) const
+{
+    std::vector<std::pair<std::string, int32_t> > partners;
+    getPartners(creature, partners);
+    std::string best;
+    int32_t bestValue = mSettings.mThresholdBestFriends - 1;
+    for(size_t i = 0; i < partners.size(); ++i)
+    {
+        if(partners[i].second > bestValue)
+        {
+            best = partners[i].first;
+            bestValue = partners[i].second;
+        }
+    }
+
+    return best;
 }
 
 void CreatureRelationships::getFriends(const std::string& creature, std::vector<std::string>& friends) const
