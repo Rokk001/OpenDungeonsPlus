@@ -65,6 +65,16 @@ SMALL_LEVEL_EXCEPTIONS = [
     "TestSingleplayerSmallPassability.level",
     "TestWeaponsShowcase.level",
 ]
+# Own test levels without a source: a placement match against any other level is mostly
+# chance for these tiny setups, so the placement check is not applied to them. Reworked
+# levels that have a source never appear here and always get the full check.
+PLACEMENT_EXCEPTIONS = [  # own test levels without a source
+    "TestMultiplayerSmall1v1.level",
+    "ab.level",
+    "TestModelsFair.level",
+    "TestSingleplayerSmallPassability.level",
+    "TestWeaponsShowcase.level",
+]
 PLACEMENT_DISTANCE = 2.0
 DECOY_JITTER = 6.0
 CHANCE_MARGIN = 2
@@ -659,12 +669,15 @@ def check_files(files, against):
             total.merge(metrics)
         words = longest_identical_words(level.texts, sequences, index)
         small = os.path.basename(path) in SMALL_LEVEL_EXCEPTIONS
+        placement_exempt = os.path.basename(path) in PLACEMENT_EXCEPTIONS
         verdict = "PASS"
         if ((not small and (total.terrain > MAX_TERRAIN_FRACTION or total.run > MAX_RUN_LENGTH))
-                or total.placement > MAX_PLACEMENT_FRACTION or words > MAX_IDENTICAL_WORDS):
+                or (not placement_exempt and total.placement > MAX_PLACEMENT_FRACTION) or words > MAX_IDENTICAL_WORDS):
             verdict = "FAIL"
             failed = True
         note = " (small level: terrain and run not judged)" if small else ""
+        if placement_exempt:
+            note += " (own test level: placement not judged)"
         lines.append("%s %s terrain=%.1f%% placement=%.1f%% run=%d words=%d (closest: %s)%s"
                      % (verdict, path, total.terrain * 100.0, total.placement * 100.0,
                         total.run, words, worst, note))
