@@ -41,3 +41,28 @@ These instructions apply to every change made to this repository with an AI assi
 - `scripts/check-protected-content.py` checks pushes against these rules. Install it once
   per clone as the `pre-push` hook (a small wrapper in the shared hooks directory that
   calls the script); it needs a local term list and blocks the push if that list is missing.
+
+## Integration
+
+- Only the campaign session merges into `integration/all` and only the campaign session
+  starts integration subagents. No other session (animation, relationship or any other
+  feature session) merges into `integration/all`, pushes it, or starts an integration
+  agent.
+- Every other session finishes its work on its own branch and only registers it as
+  "ready for integration/all" in its own state file (`docs/internal/ANIMATION-STATE.md`,
+  `docs/internal/RELATIONSHIP-STATE.md`). It does not merge, rebase onto or push
+  `integration/all` itself, and it keeps commits that were never meant for the remote on
+  its own branch.
+- The campaign session starts a fresh integration subagent (`pr-fixer`, no model override,
+  never resume an old one) after every finished batch and otherwise at the latest every
+  30 minutes. The subagent does only this:
+  1. Find what is ready: finished campaign branches and every branch that
+     `docs/internal/ANIMATION-STATE.md` or `docs/internal/RELATIONSHIP-STATE.md` lists as
+     "ready for integration/all". Branches not listed as ready are not merged.
+  2. Merge them into `integration/all`, then run the release build, all check scripts and,
+     for new levels, the load test.
+  3. If everything is green, push `integration/all` normally (no force push, no PRs) and
+     set the merged entries in the state files to "integrated".
+  4. If anything fails: push nothing, record the reason in `CAMPAIGN-STATE.md` or the
+     state file of the affected branch and report briefly to the campaign session.
+  If there is nothing to integrate, it ends immediately.
