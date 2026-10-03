@@ -110,7 +110,9 @@ RelationshipSettings::RelationshipSettings() :
     mBrawlMaxDistanceTiles(6),
     mBrawlStopHealthPercent(25),
     mBrawlMaxTurns(150),
-    mBrawlValueChange(-6)
+    mBrawlValueChange(-6),
+    mMentorMinLevelDiff(2),
+    mMentorXpBonusPercent(50)
 {
 }
 
@@ -161,7 +163,9 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"BrawlChancePercent", &settings.mBrawlChancePercent},
         {"BrawlMaxDistanceTiles", &settings.mBrawlMaxDistanceTiles},
         {"BrawlStopHealthPercent", &settings.mBrawlStopHealthPercent},
-        {"BrawlValueChange", &settings.mBrawlValueChange}
+        {"BrawlValueChange", &settings.mBrawlValueChange},
+        {"MentorMinLevelDiff", &settings.mMentorMinLevelDiff},
+        {"MentorXpBonusPercent", &settings.mMentorXpBonusPercent}
     };
     struct DoubleEntry
     {
@@ -506,6 +510,24 @@ double CreatureRelationships::combatModifier(const std::string& creature,
         bonus -= mSettings.mCombatPenaltyNemesis;
 
     return bonus;
+}
+
+double CreatureRelationships::mentoringFactor(const std::string& creature, uint32_t level,
+    const std::vector<std::pair<std::string, uint32_t> >& trainees) const
+{
+    for(size_t i = 0; i < trainees.size(); ++i)
+    {
+        if(trainees[i].first == creature)
+            continue;
+
+        if((trainees[i].second >= level + static_cast<uint32_t>(std::max<int32_t>(0, mSettings.mMentorMinLevelDiff)))
+           && isFriend(creature, trainees[i].first))
+        {
+            return 1.0 + static_cast<double>(std::max<int32_t>(0, mSettings.mMentorXpBonusPercent)) / 100.0;
+        }
+    }
+
+    return 1.0;
 }
 
 int32_t CreatureRelationships::moodModifier(const std::string& creature) const

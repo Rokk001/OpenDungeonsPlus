@@ -116,6 +116,11 @@ struct RelationshipSettings
     int64_t mBrawlMaxTurns;
     int32_t mBrawlValueChange;
 
+    //! Mentoring: a friend training in the same room that is at least this many levels higher
+    //! speeds up the training of the creature by this many percent
+    int32_t mMentorMinLevelDiff;
+    int32_t mMentorXpBonusPercent;
+
     //! Start value of a pair of creature classes (sorted pair of class names), see config
     //! entries "Racial_<ClassA>_<ClassB>".
     std::map<std::pair<std::string, std::string>, int32_t> mRacialStart;
@@ -182,6 +187,12 @@ public:
 
     //! Mood points (zero or negative) the creature gets from the creatures it hates.
     int32_t moodModifier(const std::string& creature) const;
+
+    //! Factor (1.0 or more) for the experience a creature gets while training: a friend among the
+    //! trainees (name and level, the caller selects them: same keeper, same room) that is at least
+    //! mMentorMinLevelDiff levels higher raises it by mMentorXpBonusPercent percent.
+    double mentoringFactor(const std::string& creature, uint32_t level,
+        const std::vector<std::pair<std::string, uint32_t> >& trainees) const;
 
     //! Lists the creatures that have a value with the creature, with the value.
     void getPartners(const std::string& creature, std::vector<std::pair<std::string, int32_t> >& partners) const;
