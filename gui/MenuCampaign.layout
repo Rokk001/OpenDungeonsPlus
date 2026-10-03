@@ -4,14 +4,6 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-        <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.11,0},{1,-125},{0.92,0},{1,-98}}" />
-            <Property name="Text" value="" />
-            <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="CentreAligned" />
-            <Property name="BackgroundEnabled" value="False" />
-        </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
             <Property name="Visible" value="False" />
             <Property name="Area" value="{{0.5,-320},{0,52},{0.5,320},{0,191}}" />
@@ -34,29 +26,47 @@
             <Property name="SizingEnabled" value="False" />
             <Property name="DragMovingEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <Window type="OD/MenuTitle" name="PageTitle">
-                <Property name="Font" value="MedievalSharp-20" />
-                <Property name="Area" value="{{0.1,0},{0.5,-60},{0.9,0},{0.5,0}}" />
-                <Property name="Text" value="Campaign" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
             <Window type="OD/StaticImage" name="CampaignMap" >
-                <Property name="Area" value="{{0.11,0},{0.5,16},{0.6,0},{1,-132}}" />
-                <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                <Property name="FrameEnabled" value="True" />
-                <Property name="BackgroundEnabled" value="False" />
-                <Property name="Image" value="OpenDungeonsIcons/CampaignMap" />
-            </Window>
-            <Window type="OD/StaticText" name="DescriptionText" >
-                <Property name="Area" value="{{0.63,0},{0.5,16},{0.92,0},{1,-132}}" />
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-                <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
+            <Window type="OD/StaticText" name="LoadingText" >
+                <Property name="Area" value="{{0.3,0},{1,-36},{0.7,0},{1,-8}}" />
+                <Property name="Text" value="" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="TextColours" value="FF3A0A0A" />
+            </Window>
+            <Window type="OD/StaticText" name="BriefingPanel" >
+                <Property name="Area" value="{{0.5,-300},{0.5,-210},{0.5,300},{0.5,210}}" />
+                <Property name="Visible" value="False" />
+                <Property name="AlwaysOnTop" value="True" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Window type="OD/StaticText" name="BriefingText" >
+                    <Property name="Area" value="{{0,16},{0,16},{1,-16},{1,-72}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="TopAligned" />
+                </Window>
+                <Window type="OD/MenuTextButton" name="BriefingStartButton" >
+                    <Property name="Area" value="{{0,16},{1,-56},{0.5,-8},{1,-16}}" />
+                    <Property name="Text" value="Start" />
+                    <Property name="Font" value="MedievalSharp-12" />
+                </Window>
+                <Window type="OD/MenuTextButton" name="BriefingCloseButton" >
+                    <Property name="Area" value="{{0.5,8},{1,-56},{1,-16},{1,-16}}" />
+                    <Property name="Text" value="Close" />
+                    <Property name="Font" value="MedievalSharp-12" />
+                </Window>
+            </Window>
             <Window type="OD/MenuTextButton" name="DifficultyButton" >
-                <Property name="Area" value="{{0.11,0},{1,-80},{0.45,0},{1,-40}}" />
+                <Property name="Area" value="{{0.35,0},{1,-80},{0.62,0},{1,-40}}" />
                 <Property name="Text" value="Difficulty" />
                 <Property name="Font" value="MedievalSharp-12" />
             </Window>

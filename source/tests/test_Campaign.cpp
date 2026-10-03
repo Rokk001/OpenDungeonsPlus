@@ -19,6 +19,7 @@
 #include "BoostTestTargetConfig.h"
 
 #include "game/Campaign.h"
+#include "game/CampaignWorld.h"
 
 #include <sstream>
 #include <string>
@@ -153,30 +154,65 @@ BOOST_AUTO_TEST_CASE(test_difficulty_is_saved)
     BOOST_CHECK_EQUAL(campaign.getDifficulty(), Campaign::getDefaultDifficulty());
 }
 
-BOOST_AUTO_TEST_CASE(test_map_blocks)
+BOOST_AUTO_TEST_CASE(test_province_keys)
 {
     Campaign& campaign = Campaign::getSingleton();
     std::istringstream is(
-        "[Level]
-File=a.level
-Map=10,20,30,40;50,50,20,20;90,90,20,5
-"
-        "[Level]
-File=b.level
-");
+        "[Level]\n"
+        "File=a.level\n"
+        "Province=T01\n"
+        "Warden=Reeve Test\n"
+        "Difficulty=9\n"
+        "[Level]\n"
+        "File=b.level\n"
+        "Province=B01\n"
+        "[Level]\n"
+        "File=c.level\n");
     BOOST_REQUIRE(campaign.importDefinition(is));
 
-    // The block that leaves the map area is skipped
-    std::vector<CampaignMapBlock> blocks = campaign.getMapBlocks(0);
-    BOOST_REQUIRE_EQUAL(blocks.size(), 2u);
-    BOOST_CHECK_EQUAL(blocks[0].mX, 10.0f);
-    BOOST_CHECK_EQUAL(blocks[1].mWidth, 20.0f);
+    BOOST_CHECK_EQUAL(campaign.getLevel(0).mProvince, "T01");
+    BOOST_CHECK_EQUAL(campaign.getLevel(0).mWarden, "Reeve Test");
+    // The difficulty is limited to 1..5, without the setting it is 1
+    BOOST_CHECK_EQUAL(campaign.getLevel(0).mDifficulty, 5u);
+    BOOST_CHECK_EQUAL(campaign.getLevel(1).mDifficulty, 1u);
+    BOOST_CHECK_EQUAL(campaign.findLevelByProvince("B01"), 1u);
+    // Levels without a province are not on the map
+    BOOST_CHECK_EQUAL(campaign.findLevelByProvince("T09"), campaign.getNumLevels());
+    BOOST_CHECK_EQUAL(campaign.findLevelByProvince(""), campaign.getNumLevels());
+}
 
-    // A level without a Map setting gets one block of the automatic grid inside the map
-    blocks = campaign.getMapBlocks(1);
-    BOOST_REQUIRE_EQUAL(blocks.size(), 1u);
-    BOOST_CHECK(blocks[0].mX >= 0.0f);
-    BOOST_CHECK(blocks[0].mX + blocks[0].mWidth <= 100.0f);
-    BOOST_CHECK(blocks[0].mY + blocks[0].mHeight <= 100.0f);
-    BOOST_CHECK(campaign.getMapBlocks(5).empty());
+BOOST_AUTO_TEST_CASE(test_world_map)
+{
+    CampaignWorld world;
+    std::istringstream is(
+        "{\"version\":1,\"size\":[4,2],\"provinces\":["
+        "{\"id\":\"T01\",\"name\":\"One\",\"mask_rgb\":[10,20,30],\"layer_origin\":[1,2],\"lift_origin\":[0,1],"
+        "\"layers\":{\"locked\":\"l.png\",\"available\":\"a.png\",\"conquered\":\"c.png\",\"lift\":\"f.png\"}},"
+        "{\"id\":\"T02\",\"name\":\"Two\",\"mask_rgb\":[40,50,60],\"layer_origin\":[3,4],\"lift_origin\":[2,3],"
+        "\"layers\":{\"locked\":\"l.png\",\"available\":\"a.png\",\"conquered\":\"c.png\",\"lift\":\"f.png\"}}],"
+        "\"sites\":[{\"id\":\"B01\",\"name\":\"Cave\",\"host\":\"T01\",\"pos\":[5,6],"
+        "\"icons\":{\"hidden\":\"h.png\",\"found\":\"f.png\",\"done\":\"d.png\"}}],"
+        "\"progress_panel\":[1,2,3,4],\"title_cartouche\":[5,6,7,8]}");
+    BOOST_REQUIRE(world.importDefinition(is));
+    BOOST_CHECK_EQUAL(world.getProvinces().size(), 2u);
+    BOOST_CHECK_EQUAL(world.getWidth(), 4);
+    BOOST_CHECK_EQUAL(world.getProvinces()[1].mLayerY, 4);
+    BOOST_CHECK_EQUAL(world.getSites()[0].mX, 5);
+    BOOST_CHECK_EQUAL(world.getProgressPanel().mHeight, 4);
+    BOOST_CHECK_EQUAL(world.findProvince("T02"), 1u);
+    BOOST_CHECK_EQUAL(world.findProvince("T99"), 2u);
+
+    // Id map 4x2: pixel 0 is province one, pixel 5 province two, the rest is outside of all provinces
+    std::vector<uint8_t> rgb(4 * 2 * 3, 0);
+    rgb[0] = 10; rgb[1] = 20; rgb[2] = 30;
+    rgb[15] = 40; rgb[16] = 50; rgb[17] = 60;
+    world.setIdMap(4, 2, rgb);
+    BOOST_CHECK_EQUAL(world.getProvinceAt(0, 0), 0u);
+    BOOST_CHECK_EQUAL(world.getProvinceAt(1, 1), 1u);
+    BOOST_CHECK_EQUAL(world.getProvinceAt(2, 0), 2u);
+    BOOST_CHECK_EQUAL(world.getProvinceAt(-1, 0), 2u);
+    BOOST_CHECK_EQUAL(world.getProvinceAt(4, 0), 2u);
+
+    std::istringstream broken("{\"size\":[4,2]}");
+    BOOST_CHECK(!world.importDefinition(broken));
 }
