@@ -38,3 +38,27 @@ These instructions apply to every change made to this repository with an AI assi
 - `scripts/check-protected-content.py` checks pushes against these rules. Install it once
   per clone as the `pre-push` hook (a small wrapper in the shared hooks directory that
   calls the script); it needs a local term list and blocks the push if that list is missing.
+
+## Integration
+
+- Only the campaign/integration session merges into `integration/all`; no other session
+  (for example the animation session) merges there.
+- Before every release pass, read `docs/internal/ANIMATION-STATE.md` and
+  `docs/internal/RELATIONSHIP-STATE.md` and merge every branch
+  it lists as "ready for integration/all" into `integration/all`, after the release build
+  and the checks, the same way as the own branches. Branches not listed as ready are not
+  merged, and commits that were never meant for the remote stay local.
+- Integration runs through a fresh integration subagent (`pr-fixer`, no model override,
+  never resume an old one). The main session starts one after every finished batch and
+  otherwise at the latest every 30 minutes. It does only this:
+  1. Find what is ready: finished campaign branches and every branch that
+     `docs/internal/ANIMATION-STATE.md` or `docs/internal/RELATIONSHIP-STATE.md` lists as
+     "ready for integration/all".
+  2. Merge them into `integration/all`, then run the release build, all check scripts and,
+     for new levels, the load test.
+  3. If everything is green, push `integration/all` normally (no force push, no PRs) and
+     set the merged entries in `ANIMATION-STATE.md` and `RELATIONSHIP-STATE.md` to
+     "integrated".
+  4. If anything fails: push nothing, record the reason in `CAMPAIGN-STATE.md` or
+     `ANIMATION-STATE.md`, `RELATIONSHIP-STATE.md` and report briefly to the main session.
+  If there is nothing to integrate, it ends immediately.
