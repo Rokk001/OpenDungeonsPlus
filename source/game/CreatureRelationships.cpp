@@ -117,7 +117,8 @@ RelationshipSettings::RelationshipSettings() :
     mTempMoodDecayPerTurn(3),
     mGriefMoodPenalty(400),
     mGriefRageTurns(300),
-    mGriefRageBonusPercent(30)
+    mGriefRageBonusPercent(30),
+    mJealousyValueLoss(3)
 {
 }
 
@@ -174,7 +175,8 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"TempMoodMax", &settings.mTempMoodMax},
         {"TempMoodDecayPerTurn", &settings.mTempMoodDecayPerTurn},
         {"GriefMoodPenalty", &settings.mGriefMoodPenalty},
-        {"GriefRageBonusPercent", &settings.mGriefRageBonusPercent}
+        {"GriefRageBonusPercent", &settings.mGriefRageBonusPercent},
+        {"JealousyValueLoss", &settings.mJealousyValueLoss}
     };
     struct DoubleEntry
     {
@@ -343,13 +345,36 @@ void CreatureRelationships::changeValue(const std::string& creatureA, const std:
 
     Pair pair = makePair(creatureA, creatureB);
     int32_t value = amount;
+    int32_t oldValue = 0;
     std::map<Pair, PairData>::const_iterator it = mPairs.find(pair);
     if(it != mPairs.end())
-        value += it->second.mValue;
+    {
+        oldValue = it->second.mValue;
+        value += oldValue;
+    }
 
     setValue(pair, value, turn, true);
     enforceLimits(creatureA, turn);
     enforceLimits(creatureB, turn);
+
+    // Becoming friends makes the friends of both creatures jealous
+    if((mSettings.mJealousyValueLoss > 0) && (oldValue < mSettings.mThresholdFriends)
+       && isFriend(creatureA, creatureB))
+    {
+        applyJealousy(creatureA, creatureB, turn);
+        applyJealousy(creatureB, creatureA, turn);
+    }
+}
+
+void CreatureRelationships::applyJealousy(const std::string& creature, const std::string& newFriend, int64_t turn)
+{
+    std::vector<std::string> friends;
+    getFriends(creature, friends);
+    for(size_t i = 0; i < friends.size(); ++i)
+    {
+        if(friends[i] != newFriend)
+            changeValue(friends[i], newFriend, -mSettings.mJealousyValueLoss, turn);
+    }
 }
 
 void CreatureRelationships::enforceLimits(const std::string& creature, int64_t turn)
