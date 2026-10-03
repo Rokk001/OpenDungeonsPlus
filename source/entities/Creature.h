@@ -398,8 +398,21 @@ public:
     //! one, 0 if the option is off. Added to all three defense values.
     double getRelationshipCombatModifier() const;
 
-    //! Server side. Mood points from the hated creatures of the same keeper, 0 if the option is off.
+    //! Server side. Mood points from the hated creatures of the same keeper and from relationship
+    //! events (grief, ...), 0 if the option is off.
     int32_t getRelationshipMood() const;
+
+    //! Server side. Adds mood points (negative or positive) that fade again, does nothing if the
+    //! creature cannot have relationships.
+    void addRelationshipMood(int32_t points);
+
+    //! Server side. Called when this creature died: its friends grieve, and get a rage against
+    //! the side of the killer (may be nullptr).
+    void reportDeathToFriends(GameEntity* killer);
+
+    //! Server side. Factor for the damage this creature deals to a creature of victimSeat: more
+    //! than 1.0 while it is enraged about the death of a friend killed by that side.
+    double getRelationshipRageFactor(const Seat* victimSeat) const;
 
     //! Server side. True if the creature is part of a nemesis brawl.
     inline bool isBrawling() const
@@ -1078,6 +1091,12 @@ private:
     //! Combat modifier of the relationships, computed at most once per turn
     mutable int64_t                 mCombatModifierTurn = -1;
     mutable double                  mCombatModifier = 0.0;
+
+    //! Mood points from relationship events that fade each turn (relationships)
+    int32_t                         mRelationshipTempMood = 0;
+    //! Rage after the death of a friend: until which turn it lasts and the id of the seat it is against
+    int64_t                         mRageUntilTurn = 0;
+    int32_t                         mRageSeatId = -1;
 
     //! \brief If nullptr, the creature is not in prison. If not, it is in the prison of
     //! the given seat

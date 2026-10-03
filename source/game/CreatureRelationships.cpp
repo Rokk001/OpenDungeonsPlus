@@ -112,7 +112,12 @@ RelationshipSettings::RelationshipSettings() :
     mBrawlMaxTurns(150),
     mBrawlValueChange(-6),
     mMentorMinLevelDiff(2),
-    mMentorXpBonusPercent(50)
+    mMentorXpBonusPercent(50),
+    mTempMoodMax(1000),
+    mTempMoodDecayPerTurn(3),
+    mGriefMoodPenalty(400),
+    mGriefRageTurns(300),
+    mGriefRageBonusPercent(30)
 {
 }
 
@@ -165,7 +170,11 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"BrawlStopHealthPercent", &settings.mBrawlStopHealthPercent},
         {"BrawlValueChange", &settings.mBrawlValueChange},
         {"MentorMinLevelDiff", &settings.mMentorMinLevelDiff},
-        {"MentorXpBonusPercent", &settings.mMentorXpBonusPercent}
+        {"MentorXpBonusPercent", &settings.mMentorXpBonusPercent},
+        {"TempMoodMax", &settings.mTempMoodMax},
+        {"TempMoodDecayPerTurn", &settings.mTempMoodDecayPerTurn},
+        {"GriefMoodPenalty", &settings.mGriefMoodPenalty},
+        {"GriefRageBonusPercent", &settings.mGriefRageBonusPercent}
     };
     struct DoubleEntry
     {
@@ -186,7 +195,8 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"TrainingTogetherCooldownTurns", &settings.mTrainingTogetherCooldownTurns},
         {"FightParticipantTurns", &settings.mFightParticipantTurns},
         {"BrawlCheckIntervalTurns", &settings.mBrawlCheckIntervalTurns},
-        {"BrawlMaxTurns", &settings.mBrawlMaxTurns}
+        {"BrawlMaxTurns", &settings.mBrawlMaxTurns},
+        {"GriefRageTurns", &settings.mGriefRageTurns}
     };
 
     std::string missing;
@@ -552,6 +562,18 @@ int32_t CreatureRelationships::moodModifier(const std::string& creature) const
     }
 
     return modifier;
+}
+
+void CreatureRelationships::getFriends(const std::string& creature, std::vector<std::string>& friends) const
+{
+    friends.clear();
+    std::vector<std::pair<std::string, int32_t> > partners;
+    getPartners(creature, partners);
+    for(size_t i = 0; i < partners.size(); ++i)
+    {
+        if(partners[i].second >= mSettings.mThresholdFriends)
+            friends.push_back(partners[i].first);
+    }
 }
 
 void CreatureRelationships::getPartners(const std::string& creature,
