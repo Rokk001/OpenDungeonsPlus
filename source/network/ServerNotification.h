@@ -152,7 +152,11 @@ enum class ServerNotificationType
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
     editorRegionData,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
-    timeLimit
+    timeLimit,
+    //! Owner-only tier of a creature pair that changed (or the current tier, sent once when a
+    //! client joins or a game is loaded): + string creatureA, string creatureB, int32_t tier
+    //! (RelationshipTier). Only sent when the creature relationships option is on.
+    relationshipTier
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

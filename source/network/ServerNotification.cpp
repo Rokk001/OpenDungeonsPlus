@@ -168,6 +168,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "editorRegionData";
         case ServerNotificationType::timeLimit:
             return "timeLimit";
+        case ServerNotificationType::relationshipTier:
+            return "relationshipTier";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));

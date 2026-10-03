@@ -19,6 +19,7 @@
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
+#include "game/CreatureRelationships.h"
 #include "gamemap/GameMap.h"
 #include "game/Seat.h"
 #include "goals/Goal.h"
@@ -99,6 +100,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     // By default, we use the default tileSet
     gameMap.setTileSetName("");
 
+    // Files without a Relationships line (levels, saves of older versions) get the relationships
+    // option switched on with an empty table. The server overrides this for levels and the editor.
+    gameMap.setRelationshipsEnabled(true);
+
     // Read in the seats from the level file
     while (true)
     {
@@ -157,6 +162,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         if (nextParam.compare(0, param.size(), param) == 0)
         {
             gameMap.setSandbox(nextParam.substr(param.size()) == "1");
+            continue;
+        }
+
+        param = "Relationships\t";
+        if (nextParam.compare(0, param.size(), param) == 0)
+        {
+            gameMap.setRelationshipsEnabled(nextParam.substr(param.size()) != "Off");
             continue;
         }
     }
@@ -603,6 +615,25 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             OD_LOG_WRN("Invalid Triggers section");
             return false;
         }
+
+        if(!(levelFile >> nextParam))
+            nextParam.clear();
+    }
+
+    // Optional creature relationships of a saved game. Only written when the option is on.
+    if(nextParam == "[Relationships]")
+    {
+        // When the option is off the section is read and dropped
+        CreatureRelationships dropped;
+        CreatureRelationships* relationships = gameMap.getCreatureRelationships();
+        if(relationships == nullptr)
+            relationships = &dropped;
+
+        if(!relationships->readFromStream(levelFile, gameMap.getTurnNumber()))
+        {
+            OD_LOG_WRN("Invalid Relationships section");
+            return false;
+        }
     }
 
 
@@ -674,6 +705,11 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << "TileSet\t" << gameMap.getTileSetName() << std::endl;
     if(gameMap.isSandbox())
         levelFile << "Sandbox\t1" << std::endl;
+
+    // Only saved games record the option, levels written by the editor do not
+    bool isGameSave = gameMap.isServerGameMap() && !gameMap.isInEditorMode();
+    if(isGameSave)
+        levelFile << "Relationships\t" << (gameMap.isRelationshipsEnabled() ? "On" : "Off") << std::endl;
 
     levelFile << "[/Info]" << std::endl;
 
@@ -890,6 +926,13 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
             / ODApplication::turnsPerSecond);
         script.rebaseTimeLimit(elapsedSeconds);
         script.exportToStream(levelFile);
+    }
+
+    if(isGameSave && gameMap.isRelationshipsEnabled())
+    {
+        levelFile << "\n[Relationships]\n";
+        gameMap.getCreatureRelationships()->writeToStream(levelFile, gameMap.getTurnNumber());
+        levelFile << "[/Relationships]" << std::endl;
     }
 
     if (!levelFile.good()) {

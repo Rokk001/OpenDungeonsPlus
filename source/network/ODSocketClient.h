@@ -53,6 +53,7 @@ class ODSocketClient
             mHeartHealthSent(-1.0f),
             mHeartHPSent(-1.0),
             mHeartMessageTurn(-1),
+            mRelationshipsSynced(false),
             mPendingTimestamp(-1),
             mSupportsLiveNickname(false),
             mSupportsCreatureMood(false),
@@ -91,6 +92,8 @@ class ODSocketClient
         //! \brief Heart health fraction of the last heartHealth message sent, negative if none
         float getHeartHealthSent() const { return mHeartHealthSent; }
         void setHeartHealthSent(float fraction) { mHeartHealthSent = fraction; }
+        bool getRelationshipsSynced() const { return mRelationshipsSynced; }
+        void setRelationshipsSynced(bool synced) { mRelationshipsSynced = synced; }
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
         double getHeartHPSent() const { return mHeartHPSent; }
         void setHeartHPSent(double hp) { mHeartHPSent = hp; }
@@ -153,6 +156,8 @@ class ODSocketClient
         float mHeartHealthSent;
         double mHeartHPSent;
         int64_t mHeartMessageTurn;
+        //! True once the client got the current relationship tiers
+        bool mRelationshipsSynced;
         std::string mState;
 
 

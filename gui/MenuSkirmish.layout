@@ -44,6 +44,13 @@
                 <Property name="Area" value="{{0.11,0},{0.5,16},{0.55,0},{0.5,140}}" />
                 <Property name="ReadOnly" value="True" />
             </Window>
+            <Window type="OD/Checkbox" name="RelationshipsCheckbox" >
+                <Property name="Area" value="{{0.57,0},{0.5,16},{0.70,0},{0.5,40}}" />
+                <Property name="Text" value="Creature relationships" />
+                <Property name="TooltipText" value="Creatures of the same keeper form friendships and rivalries" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                <Property name="Selected" value="True" />
+            </Window>
             <Window type="OD/MenuListbox" name="LevelSelect" >
                 <Property name="Area" value="{{0.11,0},{0.5,72},{0.70,0},{1,-132}}" />
                 <Property name="ForceVertScrollbar" value="False" />

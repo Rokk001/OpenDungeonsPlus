@@ -376,6 +376,7 @@ set(OD_SOURCEFILES
     ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
+    ${SRC}/game/CreatureRelationships.cpp
     ${SRC}/game/TrapProductionData.cpp
     ${SRC}/game/PlayerSelection.cpp
     ${SRC}/game/Skill.cpp
