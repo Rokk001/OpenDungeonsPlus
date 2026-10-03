@@ -182,7 +182,8 @@ def parse_level(path):
                 in_info = True
             elif stripped == "[/Info]":
                 in_info = False
-            elif stripped.startswith("[/"):
+            elif stripped in ("[/Tiles]", "[/Rooms]", "[/Traps]", "[/Creatures]",
+                              "[/TreasuryObject]", "[/Triggers]", "[/Seat]"):
                 section = ""
             elif stripped in ("[Tiles]", "[Rooms]", "[Traps]", "[Creatures]",
                               "[TreasuryObject]", "[Triggers]", "[Seat]"):
