@@ -81,6 +81,11 @@ const double SLEEP_DONE_MIN = 6.0;
 const double PRAYER_DONE_MIN = 8.0;
 //! Seconds between a prisoner breaking under torture and the first sign of its new loyalty
 const double CONVERTED_DELAY = 2.8;
+//! A creature that delivers gold this many times within the window is out of breath
+const double DELIVERY_WINDOW = 90.0;
+const uint32_t DELIVERY_TIRED_COUNT = 3;
+//! The treasury work follows the done moment of a delivery after this time
+const double TREASURY_WORK_DELAY = 2.6;
 //! Seconds after its last work a creature counts as the one that finished the result of the room
 const double ROOM_WORK_MEMORY = 20.0;
 //! The other creatures in the room react to the result after this time
@@ -954,6 +959,14 @@ void CreatureReactions::pruneCooldowns()
             ++it;
     }
 
+    for(std::map<std::string, Delivery>::iterator it = mDeliveries.begin(); it != mDeliveries.end();)
+    {
+        if((mTime - it->second.mSince) > DELIVERY_WINDOW)
+            mDeliveries.erase(it++);
+        else
+            ++it;
+    }
+
     for(std::map<std::string, HandDrop>::iterator it = mHandDrops.begin(); it != mHandDrops.end();)
     {
         if((mTime - it->second.mTime) > HAND_DROP_MEMORY)
@@ -984,6 +997,11 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         celebrateVictory(creature, true);
     }
+    else if((clip == "EatChicken") && (getRoomName(creature) == "Hatchery"))
+    {
+        // The meal in the hatchery is over when the animation is: then the creature shows how it liked it
+        queueReaction(creature, "HatcheryMealDone", DONE_WAIT_MAX, 0.5);
+    }
     else if(startsWith(clip, "Attack") || (clip == "CombatAttack") || (clip == "RangedAttack") ||
             startsWith(clip, "Cast"))
     {
@@ -1009,6 +1027,8 @@ void CreatureReactions::noteRoomWork(Creature* creature)
         eventName = "WorkshopWork";
     else if(room->getType() == RoomType::trainingHall)
         eventName = "TrainingWork";
+    else if(room->getType() == RoomType::hatchery)
+        eventName = "HatcheryWork";
     else
         return;
 
@@ -1383,6 +1403,43 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
         bool paid = (room != nullptr) && (room->getType() == RoomType::treasury);
         trigger(creature, paid ? "PaydayPaid" : "PaydayUnpaid");
     }
+}
+
+void CreatureReactions::noteCarry(Creature* carrier, GameEntity* carried)
+{
+    if((mMode == Mode::off) || !mConfigLoaded || (carried->getObjectType() != GameEntityType::treasuryObject))
+        return;
+
+    trigger(carrier, "CarryGold");
+}
+
+void CreatureReactions::noteRelease(Creature* carrier, GameEntity* carried)
+{
+    if((mMode == Mode::off) || !mConfigLoaded || (carried->getObjectType() != GameEntityType::treasuryObject))
+        return;
+
+    if(getRoomName(carrier) != "Treasury")
+        return;
+
+    // Delivering again and again is tiring: after some deliveries the creature is out of breath
+    Delivery& delivery = mDeliveries[carrier->getName()];
+    if((delivery.mCount == 0) || ((mTime - delivery.mSince) > DELIVERY_WINDOW))
+    {
+        delivery.mCount = 0;
+        delivery.mSince = mTime;
+    }
+
+    ++delivery.mCount;
+    if(delivery.mCount >= DELIVERY_TIRED_COUNT)
+    {
+        delivery.mCount = 0;
+        trigger(carrier, "TreasuryFull");
+        return;
+    }
+
+    // The work with the gold follows the done moment (it is queued first, the running reaction would refuse it)
+    queueReaction(carrier, "TreasuryWork", -1.0, TREASURY_WORK_DELAY);
+    trigger(carrier, "GoldDelivered");
 }
 
 void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)

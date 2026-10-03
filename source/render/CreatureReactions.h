@@ -118,6 +118,13 @@ public:
     //! the others in the room react.
     void noteEntityAdded(GameEntity* entity);
 
+    //! \brief Client hook: the creature picks up the entity to carry it. Carrying gold is shown.
+    void noteCarry(Creature* carrier, GameEntity* carried);
+
+    //! \brief Client hook: the creature puts down the entity it carried. Gold put down in a treasury is
+    //! a delivery.
+    void noteRelease(Creature* carrier, GameEntity* carried);
+
     //! \brief Stops all the running and waiting reactions
     void stopAll();
 
@@ -227,6 +234,18 @@ private:
         double mNext;
     };
 
+    //! The gold deliveries of a creature to the treasury within a short time
+    struct Delivery
+    {
+        Delivery() :
+            mCount(0),
+            mSince(0.0)
+        {}
+
+        uint32_t mCount;
+        double mSince;
+    };
+
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -308,6 +327,8 @@ private:
     std::map<std::string, RoomWork> mLastRoomWork;
     //! What the creatures do that goes on for a while ("creature" -> work)
     std::map<std::string, OngoingWork> mOngoing;
+    //! The gold the creatures delivered lately ("creature" -> deliveries)
+    std::map<std::string, Delivery> mDeliveries;
 };
 
 #endif // CREATUREREACTIONS_H
