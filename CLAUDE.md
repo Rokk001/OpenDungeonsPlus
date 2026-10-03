@@ -33,6 +33,9 @@ These instructions apply to every change made to this repository with an AI assi
   in code, comments, docs, commits, branch names or PR texts.
 - Data from commercial games used for local testing stays outside the repository
   (`..\OpenDungeonsPlus-private`) and is never committed.
+- Files in `docs/internal/` are local only: never commit them, never add them with
+  `git add -f` and never push them. The pre-push check blocks every push in which a commit
+  adds or changes a file under `docs/internal/`.
 - Every new asset needs a `CREDITS` entry with source and licence in the same commit;
   AI-generated assets are marked as such.
 - `scripts/check-protected-content.py` checks pushes against these rules. Install it once

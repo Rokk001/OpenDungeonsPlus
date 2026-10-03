@@ -12,7 +12,8 @@ name and url as arguments. The push is blocked (exit 1) if
     files are checked by name only), has files under levels/campaign/ that are not in
     CAMPAIGN_ALLOW_LIST, or has anything under tools/level-convert/,
   * a commit with new content (its patch is not part of the history already on the
-    remote) has a term in a file name or an added line, or adds media files that are
+    remote) has a term in a file name or an added line, adds or changes a file under
+    docs/internal/ (files already on the branch before are not checked), or adds media files that are
     not covered by the CREDITS file at the pushed tip. Commits that were only rewritten
     from history already on the remote are not diffed again.
 
@@ -46,6 +47,7 @@ CAMPAIGN_ALLOW_LIST = [
 
 CAMPAIGN_PREFIX = "levels/campaign/"
 CONVERTER_PREFIX = "tools/level-convert/"
+INTERNAL_DOCS_PREFIX = "docs/internal/"
 
 MEDIA_EXTENSIONS = set([
     "png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "tif", "tiff", "svg",
@@ -211,6 +213,9 @@ def check_commit_content(commit, terms, cwd, added_files, problems):
         term = find_term(path, terms)
         if term is not None:
             problems.append("commit %s: term '%s' in file name %s" % (short, term, path))
+        if path.startswith(INTERNAL_DOCS_PREFIX):
+            problems.append("commit %s: %s is under %s (internal documents are never "
+                            "pushed)" % (short, path, INTERNAL_DOCS_PREFIX))
         extension = path.rsplit(".", 1)[-1].lower() if "." in os.path.basename(path) else ""
         if status in ("A", "C", "R") and extension in MEDIA_EXTENSIONS:
             added_files.setdefault(path, short)
@@ -382,6 +387,18 @@ def self_test():
                             "other level", terms, True, "allow list")
         one_commit_scenario("converter", {"tools/level-convert/run.py": "x\n"},
                             "converter", terms, True, "tools/level-convert/")
+        one_commit_scenario("internal document added", {"docs/internal/PLAN.md": "x\n"},
+                            "internal document", terms, True, "docs/internal/")
+        work, git, commit_files, base = new_repo()
+        earlier = commit_files({"docs/internal/PLAN.md": "x\n"}, "internal document")
+        changed = commit_files({"docs/internal/PLAN.md": "y\n"}, "internal document changed")
+        expect("internal document changed", work,
+               ["refs/heads/topic %s refs/heads/topic %s" % (changed, earlier)], terms,
+               True, "docs/internal/")
+        unrelated = commit_files({"d.txt": "fine\n"}, "unrelated change")
+        expect("internal document already on branch", work,
+               ["refs/heads/topic %s refs/heads/topic %s" % (unrelated, changed)], terms,
+               False)
         one_commit_scenario("media without credits", {"gfx/pic.png": b"\x89PNG"},
                             "add picture", terms, True, "CREDITS")
         one_commit_scenario("media with glob",
