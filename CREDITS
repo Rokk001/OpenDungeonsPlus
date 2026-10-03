@@ -567,6 +567,20 @@ Relative/Old/Keeper/{AllyDefeated,CreatureNew,CreatureNoBed,CreatureNoFood,Defea
 Relative/KeeperGroan/Keeper/Lost
 -> OD_voice_keeper(groan)_defeat*.ogg            eugeneloza    CC-BY-SA 3.0            http://opengameart.org/content/voice-acting-sketch-open-dungeons
 
+=======================================================
+==  Creature reactions: icons, particles, tools      ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+config/creatureReactions.cfg           OD Team                 GPLv3+
+materials/scripts/CreatureReactions.material   OD Team        GPLv3+
+particles/CreatureReactions.particle   OD Team                 GPLv3+
+materials/textures/CreatureEmote*.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/ReactionParticle*.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+tools/gen_creature_reaction_art.py     OD Team                 GPLv3+
+tools/check_creature_reactions.py      OD Team                 GPLv3+
+
 ================================
 ==  Distribution data: dist/  ==
 ================================

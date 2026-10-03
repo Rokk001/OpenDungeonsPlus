@@ -41,6 +41,7 @@
 
 
 class ChatMessage;
+class CreatureReactions;
 class GameMap;
 class Gui;
 class MovableTextOverlay;
@@ -247,6 +248,7 @@ private:
     Gui*                 mGui;
 
     std::unique_ptr<GameMap>       mGameMap;
+    std::unique_ptr<CreatureReactions> mCreatureReactions;
     std::unique_ptr<ModeManager>   mModeManager;
     std::unique_ptr<RenderSceneMenu>   mMainScene;
 
