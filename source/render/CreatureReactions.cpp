@@ -33,6 +33,7 @@
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "rooms/Room.h"
+#include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -77,6 +78,9 @@ const double PENDING_WAIT_STEP = 0.25;
 const double ROOM_WORK_MEMORY = 20.0;
 //! The other creatures in the room react to the result after this time
 const double ROOM_RESULT_DELAY = 0.7;
+//! Seconds between two tries to show the work reaction of a creature that does something for a while
+const double ONGOING_MIN = 5.0;
+const double ONGOING_MAX = 9.0;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -210,7 +214,7 @@ bool CreatureReactions::isCreatureNearCamera(Creature* creature) const
     return distance <= static_cast<Ogre::Real>(mConfig.getMaxCameraDistance());
 }
 
-ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature) const
+ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature, const ReactionEvent* event) const
 {
     Ogre::AnimationState* animState = creature->getAnimationState();
     if(animState == nullptr)
@@ -219,6 +223,13 @@ ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature
     const std::string& clip = animState->getAnimationName();
     if((clip == "Die") || (clip == "die") || (clip == "Rot"))
         return ReactionPriority::death;
+
+    // The event decorates the work or sleep animation: that is what the creature is expected to do
+    if((event != nullptr) && event->mWhileWorking &&
+       (startsWith(clip, "Sleep") || (clip == "Dig") || (clip == "Claim")))
+    {
+        return ReactionPriority::none;
+    }
 
     // The work in some rooms is shown with the attack animation: that is not a fight
     if(startsWith(clip, "Attack") && isWorkingInRoom(creature))
@@ -382,7 +393,7 @@ bool CreatureReactions::trigger(Creature* creature, const std::string& eventName
         if((mRunning.size() >= mConfig.getMaxSimultaneous()) && (findRunning(creature->getName()) == nullptr))
             return false;
 
-        if(!(event->mPriority < getCreaturePriority(creature)))
+        if(!(event->mPriority < getCreaturePriority(creature, event)))
             return false;
 
         if(cosmeticRandom(0.0, 1.0) >= event->mProbability)
@@ -466,6 +477,7 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     reaction.mCreatureName = creature->getName();
     reaction.mEventName = event.mName;
     reaction.mPriority = event.mPriority;
+    reaction.mWhileWorking = event.mWhileWorking;
 
     bool shown = false;
 
@@ -490,7 +502,7 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     if(mMode == Mode::full)
     {
         // Tier C / B: a clip, only while the creature stands still (it must not slide while posing)
-        if(!creature->isMoving() && startClip(reaction, creature, variant))
+        if(!creature->isMoving() && !event.mWhileWorking && startClip(reaction, creature, variant))
             shown = true;
 
         for(const ReactionEffect& effect : variant.mEffects)
@@ -792,7 +804,8 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
         return false;
 
     // Something more important than the reaction now happens to the creature
-    if(!(reaction.mPriority < getCreaturePriority(creature)))
+    const ReactionEvent* runningEvent = reaction.mWhileWorking ? mConfig.getEvent(reaction.mEventName) : nullptr;
+    if(!(reaction.mPriority < getCreaturePriority(creature, runningEvent)))
         return false;
 
     if(!reaction.mClip.empty())
@@ -850,6 +863,8 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
 
     mTime += timeSinceLastFrame;
 
+    updateOngoing();
+
     for(std::vector<PendingReaction>::iterator it = mPending.begin(); it != mPending.end();)
     {
         it->mDelay -= timeSinceLastFrame;
@@ -863,7 +878,7 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
         Creature* creature = mGameMap->getCreature(pending.mCreatureName);
         const ReactionEvent* event = mConfig.getEvent(pending.mEventName);
         if((creature != nullptr) && (event != nullptr) && !pending.mForced &&
-           !(event->mPriority < getCreaturePriority(creature)) && (pending.mWaited < PENDING_WAIT_MAX))
+           !(event->mPriority < getCreaturePriority(creature, event)) && (pending.mWaited < PENDING_WAIT_MAX))
         {
             // Still busy (for example finishing the last blow): look again in a moment
             it->mDelay = PENDING_WAIT_STEP;
@@ -946,6 +961,14 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         return;
 
     Creature* creature = static_cast<Creature*>(entity);
+
+    // Something that goes on for a while is shown now and then, until the creature does something else
+    std::string ongoingEvent = getOngoingEvent(creature, clip);
+    if(ongoingEvent.empty())
+        stopOngoing(creature->getName());
+    else
+        startOngoing(creature, ongoingEvent);
+
     if((clip == "Die") || (clip == "die"))
     {
         celebrateVictory(creature, false);
@@ -977,6 +1000,8 @@ void CreatureReactions::noteRoomWork(Creature* creature)
         eventName = "LibraryWork";
     else if(room->getType() == RoomType::workshop)
         eventName = "WorkshopWork";
+    else if(room->getType() == RoomType::trainingHall)
+        eventName = "TrainingWork";
     else
         return;
 
@@ -1097,6 +1122,101 @@ void CreatureReactions::noteEntityAdded(GameEntity* entity)
         triggerGroup(othersEvent, others, false, ROOM_RESULT_DELAY);
 }
 
+std::string CreatureReactions::getRoomName(const Creature* creature) const
+{
+    Tile* tile = creature->getPositionTile();
+    Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
+    if(room == nullptr)
+        return std::string();
+
+    return RoomManager::getRoomNameFromRoomType(room->getType());
+}
+
+std::string CreatureReactions::getOngoingEvent(const Creature* creature, const std::string& clip) const
+{
+    // Creatures that wait in the arena while others fight watch the bouts
+    if((clip == "Idle") && (getRoomName(creature) == "Arena"))
+        return "ArenaWork";
+
+    return std::string();
+}
+
+void CreatureReactions::startOngoing(Creature* creature, const std::string& eventName)
+{
+    std::map<std::string, OngoingWork>::iterator it = mOngoing.find(creature->getName());
+    if((it != mOngoing.end()) && (it->second.mEventName == eventName))
+        return;
+
+    OngoingWork work;
+    work.mEventName = eventName;
+    work.mSince = mTime;
+    work.mNext = mTime + cosmeticRandom(2.0, ONGOING_MAX);
+    mOngoing[creature->getName()] = work;
+}
+
+void CreatureReactions::stopOngoing(const std::string& creatureName)
+{
+    mOngoing.erase(creatureName);
+}
+
+void CreatureReactions::updateOngoing()
+{
+    for(std::map<std::string, OngoingWork>::iterator it = mOngoing.begin(); it != mOngoing.end();)
+    {
+        if(mTime < it->second.mNext)
+        {
+            ++it;
+            continue;
+        }
+
+        it->second.mNext = mTime + cosmeticRandom(ONGOING_MIN, ONGOING_MAX);
+        Creature* creature = mGameMap->getCreature(it->first);
+        if((creature == nullptr) || !creature->getIsOnMap() || !creature->isAlive())
+        {
+            mOngoing.erase(it++);
+            continue;
+        }
+
+        queueReaction(creature, it->second.mEventName);
+        ++it;
+    }
+}
+
+void CreatureReactions::celebrateBout(Creature* loser)
+{
+    Tile* tile = loser->getPositionTile();
+    Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
+    if((room == nullptr) || (RoomManager::getRoomNameFromRoomType(room->getType()) != "Arena"))
+        return;
+
+    // The winners fought the loser a moment ago, the others in the arena watched
+    std::vector<Creature*> winners;
+    std::vector<Creature*> spectators;
+    for(Creature* creature : mGameMap->getCreatures())
+    {
+        if((creature == loser) || !creature->getIsOnMap() || !creature->isAlive())
+            continue;
+
+        Tile* creatureTile = creature->getPositionTile();
+        if((creatureTile == nullptr) || (creatureTile->getCoveringRoom() != room))
+            continue;
+
+        std::map<std::string, double>::const_iterator itAttack = mLastAttack.find(creature->getName());
+        bool fought = (itAttack != mLastAttack.end()) && ((mTime - itAttack->second) <= ATTACK_MEMORY) &&
+            ((creature->getPosition() - loser->getPosition()).length() <= WINNER_RADIUS);
+        if(fought)
+            winners.push_back(creature);
+        else
+            spectators.push_back(creature);
+    }
+
+    if(!winners.empty())
+        triggerGroup("Victory", winners, false, 0.8);
+
+    if(!spectators.empty())
+        triggerGroup("ArenaBoutOver", spectators, false, 1.6);
+}
+
 void CreatureReactions::celebrateVictory(Creature* loser, bool fled)
 {
     // The same creature going down or running away several times leads to one celebration
@@ -1176,7 +1296,17 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
         return;
 
     if(creature->getLevel() > oldLevel)
-        trigger(creature, "LevelUp");
+    {
+        // A trainee that reached a new level shows its success with a punch into the air
+        trigger(creature, (getRoomName(creature) == "TrainingHall") ? "TrainingDone" : "LevelUp");
+    }
+
+    // A creature knocked out in the arena ends the bout
+    if(((oldMood & CreatureMoodValues::KoTemp) == 0) &&
+       ((creature->getOverlayMoodValue() & CreatureMoodValues::KoTemp) != 0))
+    {
+        celebrateBout(creature);
+    }
 
     // The fee is collected while the mood shows it. When it is over the creature is paid if it
     // stands in a treasury (that is where the gold is taken), else there was nothing to take.
@@ -1244,6 +1374,7 @@ void CreatureReactions::noteEntityRemoved(GameEntity* entity)
 void CreatureReactions::stopAll()
 {
     mPending.clear();
+    mOngoing.clear();
     for(RunningReaction& reaction : mRunning)
         endReaction(reaction, mGameMap->getCreature(reaction.mCreatureName));
 

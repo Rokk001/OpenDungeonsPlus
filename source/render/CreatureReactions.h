@@ -149,7 +149,8 @@ private:
             mMotionLastPosition(Ogre::Vector3::ZERO),
             mMotionLastScale(Ogre::Vector3::UNIT_SCALE),
             mMotionTurnAngle(0.0),
-            mMotionTurnComputed(false)
+            mMotionTurnComputed(false),
+            mWhileWorking(false)
         {}
 
         std::string mCreatureName;
@@ -180,6 +181,8 @@ private:
         //! For the motion 'turn': the angle to the camera
         double mMotionTurnAngle;
         bool mMotionTurnComputed;
+        //! The event decorates the work animation of the creature (see ReactionEvent::mWhileWorking)
+        bool mWhileWorking;
     };
 
     struct PendingReaction
@@ -209,6 +212,17 @@ private:
         double mTime;
     };
 
+    //! Work that goes on for a while with one animation (a prisoner in its cell, a spectator in the arena):
+    //! now and then a reaction of the event is tried on the creature
+    struct OngoingWork
+    {
+        std::string mEventName;
+        //! Time the creature started to do it
+        double mSince;
+        //! Time of the next try
+        double mNext;
+    };
+
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -221,6 +235,17 @@ private:
     void noteRoomWork(Creature* creature);
     //! \brief Lets the creature show the event once it has finished what it does
     void queueReaction(Creature* creature, const std::string& eventName);
+    //! \brief The bout in the arena is over because the creature was knocked out: the one that fought it
+    //! cheers as the winner and the others in the arena cheer as spectators
+    void celebrateBout(Creature* loser);
+    //! \brief Name of the room the creature stands in ("Arena", "Dormitory", ...), empty if in none
+    std::string getRoomName(const Creature* creature) const;
+    //! \brief The event that is shown now and then while the creature goes on with what the animation
+    //! shows (empty if the creature does not do such a thing)
+    std::string getOngoingEvent(const Creature* creature, const std::string& clip) const;
+    void startOngoing(Creature* creature, const std::string& eventName);
+    void stopOngoing(const std::string& creatureName);
+    void updateOngoing();
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
@@ -231,7 +256,8 @@ private:
     void endReaction(RunningReaction& reaction, Creature* creature);
 
     //! \brief What the creature currently does, deduced from the animation it plays on this client
-    ReactionPriority getCreaturePriority(const Creature* creature) const;
+    //! If the event is given and decorates the work animation, that animation does not count as busy.
+    ReactionPriority getCreaturePriority(const Creature* creature, const ReactionEvent* event = nullptr) const;
 
     bool startClip(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
     void stopClip(RunningReaction& reaction, Creature* creature);
@@ -271,6 +297,8 @@ private:
     std::map<std::string, HandDrop> mHandDrops;
     //! Last work of each creature in the library or workshop ("creature" -> work)
     std::map<std::string, RoomWork> mLastRoomWork;
+    //! What the creatures do that goes on for a while ("creature" -> work)
+    std::map<std::string, OngoingWork> mOngoing;
 };
 
 #endif // CREATUREREACTIONS_H
