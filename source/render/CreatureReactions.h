@@ -256,6 +256,8 @@ private:
     //! \brief The creature works in the library or workshop (its attack animation was just received):
     //! remembers it and shows another way of working after the movement.
     void noteRoomWork(Creature* creature);
+    //! \brief The creature starts to dig: if it digs into a gold vein or gems it is pleased
+    void noteDigging(Creature* creature);
     //! \brief Lets the creature show the event once it has finished what it does
     //! waitMax is the time the reaction waits at most for the creature to be free (negative: the usual time)
     //! The reaction starts after delay seconds (negative: a short time).

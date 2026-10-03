@@ -79,6 +79,7 @@ const double DONE_WAIT_MAX = 8.0;
 //! Seconds a creature has to sleep or pray until the end of it is shown
 const double SLEEP_DONE_MIN = 6.0;
 const double PRAYER_DONE_MIN = 8.0;
+const double CLAIM_DONE_MIN = 2.5;
 //! Seconds between a prisoner breaking under torture and the first sign of its new loyalty
 const double CONVERTED_DELAY = 2.8;
 //! A creature that delivers gold this many times within the window is out of breath
@@ -997,6 +998,10 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         celebrateVictory(creature, true);
     }
+    else if(clip == "Dig")
+    {
+        noteDigging(creature);
+    }
     else if((clip == "EatChicken") && (getRoomName(creature) == "Hatchery"))
     {
         // The meal in the hatchery is over when the animation is: then the creature shows how it liked it
@@ -1163,6 +1168,13 @@ std::string CreatureReactions::getRoomName(const Creature* creature) const
 
 std::string CreatureReactions::getOngoingEvent(const Creature* creature, const std::string& clip) const
 {
+    // Digging and claiming are one animation for as long as the creature does it
+    if(clip == "Dig")
+        return "DigWork";
+
+    if(clip == "Claim")
+        return "ClaimWork";
+
     std::string roomName = getRoomName(creature);
 
     // Creatures that wait in the arena while others fight watch the bouts
@@ -1215,6 +1227,8 @@ void CreatureReactions::finishOngoing(Creature* creature, const std::string& new
         doneEvent = "WakeRested";
     else if((it->second.mEventName == "TempleWork") && (duration >= PRAYER_DONE_MIN))
         doneEvent = "TempleDone";
+    else if((it->second.mEventName == "ClaimWork") && (duration >= CLAIM_DONE_MIN))
+        doneEvent = "ClaimDone";
 
     mOngoing.erase(it);
     if(!doneEvent.empty())
@@ -1402,6 +1416,30 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
         Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
         bool paid = (room != nullptr) && (room->getType() == RoomType::treasury);
         trigger(creature, paid ? "PaydayPaid" : "PaydayUnpaid");
+    }
+}
+
+void CreatureReactions::noteDigging(Creature* creature)
+{
+    Tile* tile = creature->getPositionTile();
+    if(tile == nullptr)
+        return;
+
+    // The client knows what the tiles around the digger are made of
+    for(int dx = -1; dx <= 1; ++dx)
+    {
+        for(int dy = -1; dy <= 1; ++dy)
+        {
+            Tile* neighbour = mGameMap->getTile(tile->getX() + dx, tile->getY() + dy);
+            if((neighbour == nullptr) || (neighbour->getFullness() <= 0.0))
+                continue;
+
+            if((neighbour->getType() == TileType::gold) || (neighbour->getType() == TileType::gem))
+            {
+                trigger(creature, "DigGold");
+                return;
+            }
+        }
     }
 }
 
