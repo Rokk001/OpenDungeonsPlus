@@ -4454,8 +4454,14 @@ void GameMode::handlePlayerActionNone()
                 else if(closest->getObjectType() == GameEntityType::treasuryObject)
                     displayText(Ogre::ColourValue::White, "Gold");
                 else
-                    displayText(Ogre::ColourValue::White, creature != nullptr ?
-                        creature->getDefinition()->getClassName() : closest->getName());
+                {
+                    std::string text = creature != nullptr ? creature->getDefinition()->getClassName() : closest->getName();
+                    // Strongest friend and worst enemy of an own creature, one line (relationship option)
+                    std::string relations = creature != nullptr ? creature->getRelationshipTooltip() : std::string();
+                    if(!relations.empty())
+                        text += ". " + relations;
+                    displayText(Ogre::ColourValue::White, text);
+                }
             }
             else if(tile->getEverVisible() && tile->isDiggable(player->getSeat()))
             {
