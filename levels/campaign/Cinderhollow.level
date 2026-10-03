@@ -20,35 +20,59 @@ gold	600
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
+roomTreasury
 roomWorkshop
-roomGuardRoom
-roomBridgeWooden
-trapCannon
-trapSpike
-trapDoorWooden
-spellSummonWorker
+spellCallToWar
 spellCreatureHeal
-[/SkillDone]
-[SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
-roomBridgeStone
-roomCrypt
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+spellTremor
+trapAlarm
 trapBoulder
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorSteel
+trapDoorWooden
 trapFear
 trapGas
-trapAlarm
-trapDoorIronbound
-spellCallToWar
+trapWatchBanner
+trapSpike
+trapTrigger
+[/SkillDone]
+[SkillNotAllowed]
+roomArena
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
 spellCreatureHaste
+spellCreatureSlow
 spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellDefector
+trapDoorRuned
+trapDoorSecret
+trapFireburst
+trapFreeze
+trapLightning
+[/SkillNotAllowed]
+[SkillPending]
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -5060,8 +5084,6 @@ Name	westRoad
 Mode	once
 Cond	region	1	WestRoad
 Action	message	1	The west road is the way the first column will take. A crypt and an alarm would serve you well at the narrow places.
-Action	make	1	trapAlarm
-Action	make	1	roomCrypt
 Action	reveal	1	NorthWayGate
 [/Trigger]
 [Trigger]
@@ -5070,7 +5092,6 @@ Mode	once
 Cond	region	1	GoldHollow
 Action	message	1	The ash hollow holds a good purse of gold. Take it before the heroes come.
 Action	gold	1	300
-Action	make	1	trapFear
 [/Trigger]
 [Trigger]
 Name	southCave
@@ -5084,8 +5105,6 @@ Name	lakeShore
 Mode	once
 Cond	region	1	LakeLedge
 Action	message	1	You are on the shore of the lava lake. Heat rises from it and your creatures stand taller.
-Action	make	1	spellCallToWar
-Action	make	1	spellCreatureHaste
 Action	gold	1	400
 [/Trigger]
 [Trigger]
@@ -5093,17 +5112,12 @@ Name	mined1
 Mode	once
 Cond	mined	1	>=	700
 Action	message	1	The seams hold. You can afford stronger doors and heavier traps now.
-Action	make	1	trapDoorIronbound
-Action	make	1	trapBoulder
-Action	make	1	roomBridgeStone
 [/Trigger]
 [Trigger]
 Name	eastWatch
 Mode	once
 Cond	region	1	EastGateZone
 Action	message	1	The east cave is the second gate of the hollow. The soldiers will arrive here after the first column has fallen.
-Action	make	1	trapGas
-Action	make	1	spellCreatureStrength
 [/Trigger]
 [Trigger]
 Name	craterSeen

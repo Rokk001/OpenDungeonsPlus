@@ -20,36 +20,59 @@ gold	4000
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
-roomDormitory
-roomHatchery
-roomLibrary
-roomTrainingHall
-roomWorkshop
-roomGuardRoom
-trapCannon
-trapDoorWooden
-trapSpike
-trapFear
-trapGas
-spellSummonWorker
-spellCreatureHeal
-spellCallToWar
-[/SkillDone]
-[SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
-roomPrison
-roomTorture
 roomBridgeStone
 roomBridgeWooden
-roomCrypt
-trapBoulder
-trapAlarm
-trapDoorIronbound
-spellCreatureHaste
-spellCreatureStrength
+roomCasino
+roomDormitory
+roomGuardRoom
+roomHatchery
+roomLibrary
+roomPrison
+roomTorture
+roomTrainingHall
+roomTreasury
+roomWorkshop
+spellCallToWar
+spellCreatureHeal
+spellEyeEvil
 spellLightning
+spellPossess
+spellSummonWorker
+trapAlarm
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorWooden
+trapFear
+trapGas
+trapWatchBanner
+trapSpike
+[/SkillDone]
+[SkillNotAllowed]
+roomArena
+roomCrypt
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellDefector
+trapBoulder
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFireburst
+trapFreeze
+trapLightning
+trapTrigger
+[/SkillNotAllowed]
+[SkillPending]
+spellTremor
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -4207,8 +4230,6 @@ Name	westYard
 Mode	once
 Cond	region	1	WestYard
 Action	message	1	The west yard is a good place for a forge of your own. The first bridge lies just ahead.
-Action	make	1	roomBridgeStone
-Action	make	1	trapAlarm
 Action	reveal	1	Foundry
 [/Trigger]
 [Trigger]
@@ -4216,7 +4237,6 @@ Name	foundryReached
 Mode	once
 Cond	region	1	Foundry
 Action	message	1	The foundry still has its furnaces lit. A rival keeper holds the far bank of the second rift and he is building bridges, too.
-Action	make	1	roomPrison
 Action	reveal	1	CoalStore
 Action	reveal	1	RollingYard
 Action	objective	1	Cross the second rift.
@@ -4226,15 +4246,12 @@ Name	smithyReached
 Mode	once
 Cond	region	1	Smithy
 Action	message	1	The north smithy has a store of iron and heavy tools. Take it.
-Action	make	1	roomTorture
-Action	make	1	trapDoorIronbound
 [/Trigger]
 [Trigger]
 Name	depotReached
 Mode	once
 Cond	region	1	Depot
 Action	message	1	A heavy squad is marching out of the east to hold the depot bridge.
-Action	make	1	trapBoulder
 Action	spawn	3	70	56	1	Knight:2	Dwarf2:2	Monk:2
 [/Trigger]
 [Trigger]
@@ -4242,7 +4259,6 @@ Name	yardReached
 Mode	once
 Cond	region	1	RollingYard
 Action	message	1	The third rift is wide and its bridges are narrow. The rival keeper has put his best on the far side.
-Action	make	1	spellLightning
 Action	reveal	1	RivalGate
 Action	objective	1	Break through the gate of the rival hold.
 [/Trigger]
@@ -4259,7 +4275,6 @@ Name	keepReached
 Mode	once
 Cond	region	1	OreDock
 Action	message	1	The ore dock feeds the rival hold. Hold it and he will starve his own forges.
-Action	make	1	spellCreatureStrength
 [/Trigger]
 [Trigger]
 Name	forgewave1

@@ -20,35 +20,59 @@ gold	1500
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
+roomTreasury
 roomWorkshop
-roomGuardRoom
-roomBridgeWooden
-trapCannon
-trapSpike
-trapDoorWooden
-spellSummonWorker
+spellCallToWar
 spellCreatureHeal
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+spellTremor
+spellDefector
+trapAlarm
+trapBoulder
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorRuned
+trapDoorSteel
+trapDoorWooden
+trapFear
+trapFreeze
+trapGas
+trapWatchBanner
+trapSpike
+trapTrigger
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+trapDoorSecret
+trapFireburst
+trapLightning
 [/SkillNotAllowed]
 [SkillPending]
-roomBridgeStone
-roomCrypt
-trapBoulder
-trapFear
-trapAlarm
-trapDoorIronbound
-trapGas
-spellCallToWar
-spellCreatureHaste
-spellCreatureStrength
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -2818,9 +2842,6 @@ Name	firstSeams
 Mode	once
 Cond	mined	1	>=	400
 Action	message	1	The first seams are open. Gold buys you more than rooms: build a bridge and a door or two.
-Action	make	1	roomBridgeStone
-Action	make	1	trapDoorIronbound
-Action	make	1	trapAlarm
 [/Trigger]
 [Trigger]
 Name	terrace1
@@ -2829,7 +2850,6 @@ Cond	region	1	Terrace1
 Action	message	1	The first terrace. The lava seam across it can be crossed on the stone bridge in the middle.
 Action	reveal	1	LavaCross
 Action	reveal	1	Caldera
-Action	make	1	trapBoulder
 [/Trigger]
 [Trigger]
 Name	calderaSeen
@@ -2843,8 +2863,6 @@ Name	terrace2
 Mode	once
 Cond	region	1	Terrace2
 Action	message	1	The second terrace and the watch of the cairn patrols. A ramp at the east end leads up.
-Action	make	1	trapFear
-Action	make	1	spellCallToWar
 Action	reveal	1	Terrace3
 [/Trigger]
 [Trigger]
@@ -2852,8 +2870,6 @@ Name	terrace3
 Mode	once
 Cond	region	1	Terrace3
 Action	message	1	The third terrace. The mountain is quiet here, and the hold above is waking up.
-Action	make	1	trapGas
-Action	make	1	spellCreatureHaste
 Action	reveal	1	Terrace4
 Action	reveal	1	SealedCairn
 Action	spawn	3	62	21	1	Knight:3	Elf:2	Monk:2	Adventurer:2
@@ -2863,7 +2879,6 @@ Name	terrace4
 Mode	once
 Cond	region	1	Terrace4
 Action	message	1	The last terrace. The hold lies behind a stopped passage. The warden has seen you and sounds the alarm.
-Action	make	1	spellCreatureStrength
 Action	reveal	1	Hold
 Action	reveal	1	Basin
 Action	spawn	3	36	14	1	Knight:3	Dwarf2:3	Monk:3	Elf:3

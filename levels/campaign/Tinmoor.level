@@ -20,22 +20,59 @@ gold	300
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
 roomDormitory
 roomHatchery
 roomLibrary
 roomTrainingHall
-spellSummonWorker
-spellCreatureHeal
-[/SkillDone]
-[SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
-roomGuardRoom
+roomTreasury
 roomWorkshop
+spellLightning
+spellSummonWorker
 trapCannon
 trapDoorWooden
+[/SkillDone]
+[SkillNotAllowed]
+roomArena
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
+roomGuardRoom
+roomPrison
+roomTemple
+roomTorture
 spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureHeal
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellTremor
+spellDefector
+trapAlarm
+trapBoulder
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFear
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
+[/SkillNotAllowed]
+[SkillPending]
+spellPossess
+trapDoorBarricade
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -1810,8 +1847,6 @@ Name	seamsFilled
 Mode	once
 Cond	mined	1	>=	900
 Action	message	1	That is a good haul. Doors will keep the miners off your back.
-Action	make	1	trapDoorWooden
-Action	make	1	roomGuardRoom
 Action	reveal	1	PostA
 Action	objective	1	Break the lower watch post in the east gallery.
 [/Trigger]
@@ -1829,7 +1864,6 @@ Mode	once
 Cond	flag	postAAlarm	1
 Cond	kills	1	>=	7
 Action	message	1	The lower post is silent. A lift shaft leads up to the second one.
-Action	make	1	trapCannon
 Action	reveal	1	PostB
 Action	objective	1	Break the upper watch post below the warden.
 [/Trigger]

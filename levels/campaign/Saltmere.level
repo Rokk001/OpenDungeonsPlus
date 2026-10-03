@@ -20,35 +20,59 @@ gold	0
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
-roomGuardRoom
-roomCasino
-trapDoorWooden
-trapAlarm
-trapFear
-spellSummonWorker
-spellCreatureHeal
+roomTreasury
+roomWorkshop
 spellCallToWar
-spellCreatureHaste
+spellCreatureHeal
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+trapAlarm
+trapCannon
+trapDoorBarricade
+trapDoorWooden
+trapFear
+trapGas
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomCrypt
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellTremor
+spellDefector
+trapBoulder
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFireburst
+trapFreeze
+trapLightning
+trapSpike
+trapTrigger
 [/SkillNotAllowed]
 [SkillPending]
-roomWorkshop
-roomBridgeWooden
-roomCrypt
-trapSpike
-trapGas
-trapBoulder
-trapCannon
-trapDoorIronbound
-spellCreatureStrength
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3189,15 +3213,12 @@ Mode	once
 Cond	mined	1	>=	800
 Action	message	1	The salt walls pay well. Orcs from the dry caves have heard of it.
 Action	spawn	1	16	13	1	Orc:2	Goblin:2
-Action	make	1	roomBridgeWooden
-Action	make	1	trapSpike
 [/Trigger]
 [Trigger]
 Name	ventsReached
 Mode	once
 Cond	region	1	VentField
 Action	message	1	Steam vents split the ground here. Hot ground is no place for a slow creature.
-Action	make	1	trapBoulder
 Action	reveal	1	Lagoon
 [/Trigger]
 [Trigger]
@@ -3205,7 +3226,6 @@ Name	lagoonReached
 Mode	once
 Cond	region	1	Lagoon
 Action	message	1	An odd keeper sleeps in the east cave. He has no army to speak of, and the heroes will turn their eyes on his heart.
-Action	make	1	trapGas
 Action	reveal	1	SleeperHold
 Action	reveal	1	SouthFlat
 [/Trigger]
@@ -3221,8 +3241,6 @@ Name	flatHeld
 Mode	once
 Cond	claimed	1	SouthFlat	50
 Action	message	1	The south flat is yours and the port gates are in range. Seward knows it.
-Action	make	1	trapCannon
-Action	make	1	trapDoorIronbound
 Action	reveal	1	Port
 Action	objective	1	Break open the gates of the port.
 [/Trigger]
@@ -3240,7 +3258,6 @@ Mode	once
 Cond	region	1	WreckCove
 Action	message	1	A dry store of the old harbour lies among the wrecks. Take what you can.
 Action	spawn	1	10	84	1	Spider:2	Orc:2
-Action	make	1	spellCreatureStrength
 [/Trigger]
 [Trigger]
 Name	landing1

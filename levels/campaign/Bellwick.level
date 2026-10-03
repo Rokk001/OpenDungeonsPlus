@@ -20,35 +20,59 @@ gold	2000
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
+roomTreasury
 roomWorkshop
-roomGuardRoom
-roomBridgeWooden
-trapCannon
-trapSpike
-trapDoorWooden
-trapGas
-spellSummonWorker
+spellCallToWar
 spellCreatureHeal
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+spellTremor
+trapAlarm
+trapBoulder
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorSteel
+trapDoorWooden
+trapFear
+trapFreeze
+trapGas
+trapWatchBanner
+trapSpike
+trapTrigger
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+trapDoorRuned
+trapDoorSecret
+trapFireburst
+trapLightning
 [/SkillNotAllowed]
 [SkillPending]
-roomBridgeStone
-roomCrypt
-trapBoulder
-trapFear
-trapAlarm
-trapDoorIronbound
-spellCallToWar
-spellCreatureHaste
-spellCreatureStrength
+spellDefector
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3687,8 +3711,6 @@ Name	yardHeld
 Mode	once
 Cond	claimed	1	SouthYard	40
 Action	message	1	The south yard is held. The long nave begins here and the abbey knows you are at the door.
-Action	make	1	trapAlarm
-Action	make	1	trapFear
 Action	reveal	1	Nave
 Action	reveal	1	Refectory
 Action	objective	1	Walk the nave to the transept.
@@ -3698,7 +3720,6 @@ Name	naveEntered
 Mode	once
 Cond	region	1	Nave
 Action	message	1	Candles still burn along the nave. A row of crypt cells lies behind iron-banded doors.
-Action	make	1	roomCrypt
 Action	reveal	1	CryptRow
 Action	reveal	1	WestCloister
 [/Trigger]
@@ -3714,8 +3735,6 @@ Name	transept
 Mode	once
 Cond	region	1	Transept
 Action	message	1	The bells are tolling at both gates of the transept. The faithful are answering.
-Action	make	1	trapBoulder
-Action	make	1	spellCallToWar
 Action	reveal	1	EastCloister
 Action	reveal	1	Scriptorium
 Action	spawn	3	7	62	1	Knight:3	Monk:3	Elf:2	Adventurer:2
@@ -3726,17 +3745,13 @@ Name	kills1
 Mode	once
 Cond	kills	1	>=	12
 Action	message	1	The sextons are dying faster than the abbot can send them. Strengthen your creatures while the nave is quiet.
-Action	make	1	spellCreatureHaste
-Action	make	1	spellCreatureStrength
 Action	gold	1	800
 [/Trigger]
 [Trigger]
 Name	mined1
 Mode	once
 Cond	mined	1	>=	1500
-Action	message	1	The seams below the abbey pay well. Iron doors and a stone bridge are now yours.
-Action	make	1	trapDoorIronbound
-Action	make	1	roomBridgeStone
+Action	message	1	The seams below the abbey pay well. Iron doors and a stone bridge are worth the gold now.
 [/Trigger]
 [Trigger]
 Name	bellTower

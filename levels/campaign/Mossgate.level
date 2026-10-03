@@ -20,17 +20,59 @@ gold	0
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
 roomDormitory
+roomHatchery
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
+roomGuardRoom
+roomLibrary
+roomPrison
+roomTemple
+roomTorture
+roomTrainingHall
+roomTreasury
+roomWorkshop
+spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureHeal
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellLightning
+spellPossess
+spellSummonWorker
+spellTremor
+spellDefector
+trapAlarm
+trapBoulder
+trapCannon
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapDoorWooden
+trapFear
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
 [/SkillNotAllowed]
 [SkillPending]
-roomHatchery
-roomLibrary
-roomTrainingHall
-trapDoorWooden
-trapCannon
+trapDoorBarricade
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -813,7 +855,6 @@ Name	firstGold
 Mode	once
 Cond	mined	1	>=	60
 Action	message	1	The first coins are in. A hatchery will feed the creatures that come to serve you.
-Action	make	1	roomHatchery
 Action	objective	1	Claim the meadow cave west of the gate.
 [/Trigger]
 [Trigger]
@@ -821,7 +862,6 @@ Name	meadowOurs
 Mode	once
 Cond	claimed	1	Meadow	18
 Action	message	1	The meadow cave is ours. Two cave roads lead to the village now, one over the moss and one past the old portal.
-Action	make	1	roomLibrary
 Action	reveal	1	Yard
 Action	objective	1	Defeat the watch post in the village yard.
 [/Trigger]

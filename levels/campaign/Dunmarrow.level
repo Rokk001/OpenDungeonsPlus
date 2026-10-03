@@ -20,31 +20,59 @@ gold	500
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
 roomDormitory
-roomHatchery
-roomTorture
-roomWorkshop
 roomGuardRoom
-trapCannon
-trapDoorWooden
-spellSummonWorker
+roomHatchery
+roomLibrary
+roomPrison
+roomTorture
+roomTrainingHall
+roomTreasury
+roomWorkshop
+spellCallToWar
 spellCreatureHeal
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+trapAlarm
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorWooden
+trapFear
+trapGas
+trapWatchBanner
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomCrypt
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellTremor
+spellDefector
+trapBoulder
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFireburst
+trapFreeze
+trapLightning
+trapSpike
+trapTrigger
 [/SkillNotAllowed]
 [SkillPending]
-roomLibrary
-roomTrainingHall
-roomPrison
-roomBridgeWooden
-trapWatchBanner
-trapSpike
-trapFear
-trapDoorIronbound
-spellCallToWar
-spellCreatureHaste
-spellCreatureStrength
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3849,7 +3877,6 @@ Name	southCrossed
 Mode	once
 Cond	region	1	SouthDunes
 Action	message	1	The old tunnels run under these dunes. They are narrow and straight, a good place for traps.
-Action	make	1	trapWatchBanner
 Action	reveal	1	Oasis
 [/Trigger]
 [Trigger]
@@ -3857,8 +3884,6 @@ Name	oasisFound
 Mode	once
 Cond	region	1	Oasis
 Action	message	1	Fresh water. A tomb door in the east has stood open for a long time, and the hall behind it looks cut for a creature, not a corpse.
-Action	make	1	roomLibrary
-Action	make	1	trapSpike
 Action	spawn	1	66	112	1	Orc:2	Goblin:2
 Action	reveal	1	Barrows
 [/Trigger]
@@ -3867,8 +3892,6 @@ Name	barrowsEntered
 Mode	once
 Cond	region	1	Barrows
 Action	message	1	The central barrows are wide open under the sand. Her scouts have been through here.
-Action	make	1	roomTrainingHall
-Action	make	1	spellCallToWar
 Action	reveal	1	Tomb
 Action	reveal	1	HighDunes
 [/Trigger]
@@ -3877,8 +3900,6 @@ Name	tombOpened
 Mode	once
 Cond	region	1	Tomb
 Action	message	1	The tomb is empty but for the old dead. Their keepers left a store of gold behind.
-Action	make	1	trapFear
-Action	make	1	roomPrison
 [/Trigger]
 [Trigger]
 Name	highDunes
@@ -3909,7 +3930,6 @@ Name	shaftFound
 Mode	once
 Cond	region	1	ShaftHead
 Action	message	1	An old shaft head leans out of the sand. It leads to the camp by a shorter way than the road.
-Action	make	1	spellCreatureHaste
 [/Trigger]
 [Trigger]
 Name	sandwave1

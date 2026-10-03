@@ -23,7 +23,6 @@ mana	100
 roomBridgeStone
 roomBridgeWooden
 roomCasino
-roomCrypt
 roomDormitory
 roomGuardRoom
 roomHatchery
@@ -40,17 +39,14 @@ spellLightning
 spellPossess
 spellSummonWorker
 spellTremor
-spellDefector
 trapAlarm
 trapBoulder
 trapCannon
 trapDoorBarricade
 trapDoorIronbound
-trapDoorRuned
 trapDoorSteel
 trapDoorWooden
 trapFear
-trapFreeze
 trapGas
 trapWatchBanner
 trapSpike
@@ -58,6 +54,7 @@ trapTrigger
 [/SkillDone]
 [SkillNotAllowed]
 roomArena
+roomCrypt
 roomTemple
 spellHexenHen
 spellCreateGold
@@ -68,8 +65,11 @@ spellCreatureSlow
 spellCreatureStrength
 spellCreatureWeak
 spellInferno
+spellDefector
+trapDoorRuned
 trapDoorSecret
 trapFireburst
+trapFreeze
 trapLightning
 [/SkillNotAllowed]
 [SkillPending]

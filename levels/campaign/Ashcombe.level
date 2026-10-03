@@ -20,33 +20,59 @@ gold	1500
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeWooden
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
-roomGuardRoom
-trapCannon
-trapDoorWooden
-trapSpike
+roomTreasury
+roomWorkshop
+spellLightning
+spellPossess
 spellSummonWorker
-spellCreatureHeal
-spellCallToWar
+trapAlarm
+trapCannon
+trapDoorBarricade
+trapDoorWooden
+trapFear
 [/SkillDone]
 [SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
-roomWorkshop
+roomArena
+roomBridgeStone
+roomCasino
 roomCrypt
-roomBridgeWooden
-trapFear
+roomTemple
+spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellTremor
+spellDefector
 trapBoulder
 trapDoorIronbound
-spellCreatureHaste
-spellCreatureStrength
-spellLightning
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
+[/SkillNotAllowed]
+[SkillPending]
+spellCreatureHeal
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3391,7 +3417,6 @@ Name	basinEntered
 Mode	once
 Cond	region	1	Basin
 Action	message	1	The ash is deep here and the lava cracks run in all directions. Her sentries watch the dunes, so keep your creatures close together.
-Action	make	1	trapFear
 Action	reveal	1	Trail
 [/Trigger]
 [Trigger]
@@ -3400,15 +3425,12 @@ Mode	once
 Cond	region	1	RuinYard
 Action	message	1	These ruins were a mill once. Their stores are intact, and there is a way north behind them.
 Action	reveal	1	NorthHall
-Action	make	1	roomWorkshop
-Action	make	1	spellCreatureHaste
 [/Trigger]
 [Trigger]
 Name	hollowFound
 Mode	once
 Cond	region	1	EastHollow
 Action	message	1	The east hollow joins the warden road from below. Gold lies in its walls, if you can hold it.
-Action	make	1	trapBoulder
 Action	reveal	1	Approach
 [/Trigger]
 [Trigger]

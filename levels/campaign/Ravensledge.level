@@ -20,25 +20,59 @@ gold	400
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeWooden
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
-roomPrison
-trapCannon
+roomTrainingHall
+roomTreasury
+roomWorkshop
+spellLightning
+spellPossess
 spellSummonWorker
+trapCannon
+trapDoorWooden
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomBridgeStone
+roomCasino
+roomCrypt
+roomPrison
+roomTemple
+roomTorture
+spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureHeal
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellTremor
+spellDefector
+trapAlarm
+trapBoulder
+trapDoorIronbound
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFear
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
 [/SkillNotAllowed]
 [SkillPending]
-roomTrainingHall
-roomGuardRoom
-roomWorkshop
-roomBridgeWooden
-trapDoorWooden
-trapFear
-spellCreatureHeal
-spellCallToWar
+trapDoorBarricade
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -2268,10 +2302,7 @@ Action	objective	1	Cross the lower chasm and take the middle shelf.
 Name	purseFilled
 Mode	once
 Cond	mined	1	>=	700
-Action	message	1	The cliff gold is paying off. Doors and fear traps will cover your bridgeheads.
-Action	make	1	trapDoorWooden
-Action	make	1	trapFear
-Action	make	1	roomGuardRoom
+Action	message	1	The cliff gold is paying off. Doors and cannons will cover your bridgeheads.
 [/Trigger]
 [Trigger]
 Name	shelfReached
@@ -2287,8 +2318,6 @@ Name	shelfHeld
 Mode	once
 Cond	claimed	1	Shelf	80
 Action	message	1	The shelf is yours. Now bring something sturdy across the upper bridge.
-Action	make	1	roomTrainingHall
-Action	make	1	spellCallToWar
 Action	reveal	1	Yard
 Action	objective	1	Cross the upper chasm and break into the yard.
 [/Trigger]

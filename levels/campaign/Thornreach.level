@@ -20,35 +20,59 @@ gold	5000
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
+roomTreasury
 roomWorkshop
-roomGuardRoom
-roomBridgeWooden
-trapCannon
-trapSpike
-trapDoorWooden
-trapGas
-spellSummonWorker
+spellCallToWar
 spellCreatureHeal
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+spellTremor
+trapAlarm
+trapBoulder
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorSteel
+trapDoorWooden
+trapFear
+trapGas
+trapWatchBanner
+trapSpike
+trapTrigger
 [/SkillDone]
 [SkillNotAllowed]
+roomArena
+roomCrypt
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellDefector
+trapDoorRuned
+trapDoorSecret
+trapFireburst
+trapFreeze
+trapLightning
 [/SkillNotAllowed]
 [SkillPending]
-roomBridgeStone
-roomCrypt
-trapBoulder
-trapFear
-trapAlarm
-trapDoorIronbound
-spellCallToWar
-spellCreatureHaste
-spellCreatureStrength
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -5873,8 +5897,6 @@ Name	hedgeA
 Mode	once
 Cond	region	1	Hedge1
 Action	message	1	Thorns grow thick on both sides. Dirt walls give way to the pick, but the black hedges do not.
-Action	make	1	trapAlarm
-Action	make	1	roomCrypt
 Action	reveal	1	NorthWest
 [/Trigger]
 [Trigger]
@@ -5882,7 +5904,6 @@ Name	hedgeB
 Mode	once
 Cond	region	1	Hedge2
 Action	message	1	The south hedge hides a pit of molten rock. Mind your step.
-Action	make	1	trapFear
 Action	reveal	1	SouthWest
 [/Trigger]
 [Trigger]
@@ -5890,8 +5911,6 @@ Name	clearingSeen
 Mode	once
 Cond	region	1	Clearing
 Action	message	1	The middle clearing is the crossing of every road. The keepers have seen you and will start to move against each other too.
-Action	make	1	trapBoulder
-Action	make	1	roomBridgeStone
 Action	reveal	1	Hedge3
 Action	reveal	1	Hedge4
 Action	spawn	1	52	33	1	Orc:3	Goblin:3	Spider:3
@@ -5901,9 +5920,6 @@ Name	wellFound
 Mode	once
 Cond	region	1	WellCave
 Action	message	1	The east well cave brims with mana and gold. A cache of creatures was left behind, so use them.
-Action	make	1	spellCallToWar
-Action	make	1	spellCreatureHaste
-Action	make	1	spellCreatureStrength
 Action	gold	1	1000
 [/Trigger]
 [Trigger]
@@ -5911,7 +5927,6 @@ Name	mined1
 Mode	once
 Cond	mined	1	>=	2000
 Action	message	1	The seams are paying. Iron doors will keep the keepers out of your halls.
-Action	make	1	trapDoorIronbound
 [/Trigger]
 [Trigger]
 Name	allianceNorth

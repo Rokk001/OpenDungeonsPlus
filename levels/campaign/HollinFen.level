@@ -20,32 +20,59 @@ gold	1800
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeWooden
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
-roomGuardRoom
-trapCannon
-trapDoorWooden
+roomTreasury
+roomWorkshop
+spellLightning
+spellPossess
 spellSummonWorker
-spellCreatureHeal
+trapCannon
+trapDoorBarricade
+trapDoorWooden
+trapFear
 [/SkillDone]
 [SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
-roomWorkshop
-roomBridgeWooden
+roomArena
+roomBridgeStone
+roomCasino
 roomCrypt
-trapSpike
-trapFear
+roomTemple
+spellCallToWar
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
+spellCreatureHaste
+spellCreatureSlow
+spellCreatureStrength
+spellCreatureWeak
+spellEyeEvil
+spellInferno
+spellTremor
+spellDefector
+trapAlarm
 trapBoulder
 trapDoorIronbound
-spellCallToWar
-spellCreatureHaste
-spellCreatureStrength
+trapDoorRuned
+trapDoorSecret
+trapDoorSteel
+trapFireburst
+trapFreeze
+trapGas
+trapLightning
+trapSpike
+trapTrigger
+[/SkillNotAllowed]
+[SkillPending]
+spellCreatureHeal
+trapWatchBanner
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3550,8 +3577,6 @@ Name	fenEntered
 Mode	once
 Cond	region	1	Fen
 Action	message	1	The bog swallows heavy boots. Keep your creatures on the dry ground between the thickets.
-Action	make	1	trapFear
-Action	make	1	roomWorkshop
 Action	reveal	1	EastBank
 [/Trigger]
 [Trigger]
@@ -3559,24 +3584,18 @@ Name	gold1
 Mode	once
 Cond	mined	1	>=	1200
 Action	message	1	With this gold you can afford stronger doors and a few bridges over the soft ground.
-Action	make	1	trapDoorIronbound
-Action	make	1	roomBridgeWooden
-Action	make	1	trapSpike
 [/Trigger]
 [Trigger]
 Name	cairnSeen
 Mode	once
 Cond	region	1	Cairn
 Action	message	1	These cairns mark an old burial ground. Prisoners taken here can be put to work.
-Action	make	1	spellCallToWar
-Action	make	1	spellCreatureHaste
 [/Trigger]
 [Trigger]
 Name	causewayHeld
 Mode	once
 Cond	claimed	1	Causeway	40
 Action	message	1	The causeway cave is yours and the convent west gate is within reach.
-Action	make	1	trapBoulder
 Action	reveal	1	Ward
 Action	objective	1	Break through the west gate of the convent ward.
 [/Trigger]

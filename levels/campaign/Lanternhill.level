@@ -20,35 +20,59 @@ gold	500
 goldMined	0
 mana	100
 [SkillDone]
-roomTreasury
+roomBridgeStone
+roomBridgeWooden
+roomCasino
+roomCrypt
 roomDormitory
+roomGuardRoom
 roomHatchery
 roomLibrary
 roomPrison
 roomTorture
 roomTrainingHall
+roomTreasury
 roomWorkshop
-roomGuardRoom
-roomBridgeWooden
-trapCannon
-trapSpike
-trapDoorWooden
-spellSummonWorker
+spellCallToWar
 spellCreatureHeal
-[/SkillDone]
-[SkillNotAllowed]
-[/SkillNotAllowed]
-[SkillPending]
-roomBridgeStone
-roomCrypt
+spellEyeEvil
+spellLightning
+spellPossess
+spellSummonWorker
+spellTremor
+trapAlarm
 trapBoulder
+trapCannon
+trapDoorBarricade
+trapDoorIronbound
+trapDoorSteel
+trapDoorWooden
 trapFear
 trapGas
-trapAlarm
-trapDoorIronbound
-spellCallToWar
+trapWatchBanner
+trapSpike
+trapTrigger
+[/SkillDone]
+[SkillNotAllowed]
+roomArena
+roomTemple
+spellHexenHen
+spellCreateGold
+spellCreatureDefense
+spellCreatureExplosion
 spellCreatureHaste
+spellCreatureSlow
 spellCreatureStrength
+spellCreatureWeak
+spellInferno
+spellDefector
+trapDoorRuned
+trapDoorSecret
+trapFireburst
+trapFreeze
+trapLightning
+[/SkillNotAllowed]
+[SkillPending]
 [/SkillPending]
 [/Seat]
 [Seat]
@@ -3053,8 +3077,6 @@ Name	ringEntered
 Mode	once
 Cond	region	1	Ring
 Action	message	1	You are on the ring road. The lamp chamber lies sealed in the middle of the hill, and the north road is stopped with earth.
-Action	make	1	trapAlarm
-Action	make	1	roomCrypt
 Action	reveal	1	LampRoom
 Action	reveal	1	RivalGate
 [/Trigger]
@@ -3063,7 +3085,6 @@ Name	northwest
 Mode	once
 Cond	region	1	NorthWest
 Action	message	1	These halls belong to nobody. A small crypt and a reading room stand empty. Claim them before the patrols do.
-Action	make	1	trapFear
 Action	gold	1	300
 [/Trigger]
 [Trigger]
@@ -3078,8 +3099,6 @@ Name	lampSeen
 Mode	once
 Cond	region	1	LampRoom
 Action	message	1	The lamp chamber holds the great lantern, and a strong brew of mana comes off it. Your creatures feel bolder.
-Action	make	1	spellCallToWar
-Action	make	1	spellCreatureHaste
 Action	gold	1	500
 [/Trigger]
 [Trigger]
@@ -3087,9 +3106,6 @@ Name	mined1
 Mode	once
 Cond	mined	1	>=	700
 Action	message	1	The seams hold. You can afford stronger doors and heavier traps now.
-Action	make	1	trapDoorIronbound
-Action	make	1	trapBoulder
-Action	make	1	roomBridgeStone
 [/Trigger]
 [Trigger]
 Name	rivalGate
@@ -3097,8 +3113,6 @@ Mode	once
 Cond	region	1	RivalGate
 Action	message	1	The rival keeper has seen you and calls out his pack.
 Action	spawn	2	40	16	1	Troll:3	Orc:3	Spider:3	Goblin:3
-Action	make	1	spellCreatureStrength
-Action	make	1	trapGas
 [/Trigger]
 [Trigger]
 Name	eastGate
