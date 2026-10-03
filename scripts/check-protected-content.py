@@ -3,13 +3,18 @@
 
 Installed as the git pre-push hook (see docs/internal/GIT-WORKFLOW.md). Git passes
 "<local ref> <local sha> <remote ref> <remote sha>" lines on stdin and the remote
-name and url as arguments. The push is blocked (exit 1) if the pushed commits contain:
+name and url as arguments. The push is blocked (exit 1) if
 
-  * a term from protected-terms.txt in a commit message, an added diff line,
-    a ref name or a file name (binary files: names only),
-  * files under levels/campaign/ that are not in CAMPAIGN_ALLOW_LIST,
-  * anything under tools/level-convert/,
-  * new media files that are not covered by the CREDITS file at the pushed tip.
+  * a term from protected-terms.txt is in a commit message or a ref name (all commits
+    of the pushed range, new or rewritten),
+  * the file tree at the pushed tip contains a term in a file name or in a line of a
+    text file (lines that also exist in the baseline <remote>/main are ignored, binary
+    files are checked by name only), has files under levels/campaign/ that are not in
+    CAMPAIGN_ALLOW_LIST, or has anything under tools/level-convert/,
+  * a commit with new content (its patch is not part of the history already on the
+    remote) has a term in a file name or an added line, or adds media files that are
+    not covered by the CREDITS file at the pushed tip. Commits that were only rewritten
+    from history already on the remote are not diffed again.
 
 If the term list is missing or empty the push is blocked as well (fail safe).
 
@@ -136,6 +141,15 @@ def is_covered_by_credits(path, credits):
     return False
 
 
+def find_baseline(remote_name, cwd):
+    """The mirror of the project the fork was made from: <remote>/main, or None."""
+    ref = "refs/remotes/%s/main" % remote_name
+    code, out = run_git(["rev-parse", "--verify", "-q", ref + "^{commit}"], cwd)
+    if code != 0:
+        return None
+    return out.strip()
+
+
 def commits_to_check(local_sha, remote_sha, remote_name, cwd):
     if remote_sha != ZERO_SHA:
         code, out = run_git(["rev-list", "%s..%s" % (remote_sha, local_sha)], cwd)
@@ -147,13 +161,41 @@ def commits_to_check(local_sha, remote_sha, remote_name, cwd):
     return split_lines(out)
 
 
-def check_commit(commit, terms, cwd, added_files, problems):
-    short = commit[:10]
+def patch_ids(revisions, cwd):
+    """Maps commit -> patch id for the non-merge commits of the given rev-list args."""
+    proc = subprocess.run(["git", "log", "-p", "--no-color", "--no-merges"] + revisions,
+                          cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        return {}
+    ids = subprocess.run(["git", "patch-id", "--stable"], cwd=cwd, input=proc.stdout,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = {}
+    for line in ids.stdout.decode("utf-8", errors="replace").split("\n"):
+        fields = line.split()
+        if len(fields) == 2:
+            result[fields[1]] = fields[0]
+    return result
+
+
+def known_patch_ids(remote_sha, baseline, cwd):
+    """Patch ids of the history that is already on the remote (without the baseline)."""
+    if remote_sha == ZERO_SHA:
+        return set()
+    revisions = [remote_sha]
+    if baseline is not None:
+        revisions += ["--not", baseline]
+    return set(patch_ids(revisions, cwd).values())
+
+
+def check_commit_message(commit, terms, cwd, problems):
     code, message = run_git(["log", "-1", "--format=%B", commit], cwd)
     term = find_term(message, terms)
     if term is not None:
-        problems.append("commit %s: term '%s' in the commit message" % (short, term))
+        problems.append("commit %s: term '%s' in the commit message" % (commit[:10], term))
 
+
+def check_commit_content(commit, terms, cwd, added_files, problems):
+    short = commit[:10]
     code, parents = run_git(["rev-list", "--parents", "-n", "1", commit], cwd)
     if len(parents.split()) > 2:
         return  # merge commit: the merged commits are checked on their own
@@ -169,11 +211,6 @@ def check_commit(commit, terms, cwd, added_files, problems):
         term = find_term(path, terms)
         if term is not None:
             problems.append("commit %s: term '%s' in file name %s" % (short, term, path))
-        if path.startswith(CAMPAIGN_PREFIX) and path not in CAMPAIGN_ALLOW_LIST:
-            problems.append("commit %s: %s is not in the campaign allow list"
-                            % (short, path))
-        if path.startswith(CONVERTER_PREFIX):
-            problems.append("commit %s: %s is under %s" % (short, path, CONVERTER_PREFIX))
         extension = path.rsplit(".", 1)[-1].lower() if "." in os.path.basename(path) else ""
         if status in ("A", "C", "R") and extension in MEDIA_EXTENSIONS:
             added_files.setdefault(path, short)
@@ -187,8 +224,49 @@ def check_commit(commit, terms, cwd, added_files, problems):
                                 % (short, term, line[:80]))
 
 
+def baseline_lines(baseline, path, cache, cwd):
+    if baseline is None:
+        return set()
+    if path not in cache:
+        code, out = run_git(["show", "%s:%s" % (baseline, path)], cwd)
+        cache[path] = set(out.split("\n")) if code == 0 else set()
+    return cache[path]
+
+
+def check_tree(tip, baseline, terms, cwd, problems):
+    code, names = run_git(["ls-tree", "-r", "--name-only", tip], cwd)
+    for path in split_lines(names):
+        term = find_term(path, terms)
+        if term is not None:
+            problems.append("tree: term '%s' in file name %s" % (term, path))
+        if path.startswith(CAMPAIGN_PREFIX) and path not in CAMPAIGN_ALLOW_LIST:
+            problems.append("tree: %s is not in the campaign allow list" % path)
+        if path.startswith(CONVERTER_PREFIX):
+            problems.append("tree: %s is under %s" % (path, CONVERTER_PREFIX))
+
+    arguments = ["grep", "-I", "-i", "-n", "-F", "--no-color"]
+    for term in terms:
+        arguments += ["-e", term]
+    code, hits = run_git(arguments + [tip], cwd)
+    cache = {}
+    prefix = tip + ":"
+    for hit in split_lines(hits):
+        if hit.startswith(prefix):
+            hit = hit[len(prefix):]
+        fields = hit.split(":", 2)
+        if len(fields) != 3:
+            continue
+        path, number, text = fields
+        if text in baseline_lines(baseline, path, cache, cwd):
+            continue
+        term = find_term(text, terms)
+        if term is not None:
+            problems.append("tree: term '%s' in %s:%s: %s" % (term, path, number, text[:80]))
+
+
 def check_push(ref_lines, terms, remote_name, cwd):
     problems = []
+    baseline = find_baseline(remote_name, cwd)
     for ref_line in ref_lines:
         fields = ref_line.split()
         if len(fields) != 4:
@@ -204,9 +282,18 @@ def check_push(ref_lines, terms, remote_name, cwd):
         if code != 0:
             continue  # tag pointing to a non-commit
         tip = tip.strip()
+        commits = commits_to_check(tip, remote_sha, remote_name, cwd)
+        known = known_patch_ids(remote_sha, baseline, cwd)
+        own_ids = {}
+        if len(commits) > 0:
+            own_ids = patch_ids(["--no-walk"] + commits, cwd)
         added_files = {}
-        for commit in commits_to_check(tip, remote_sha, remote_name, cwd):
-            check_commit(commit, terms, cwd, added_files, problems)
+        for commit in commits:
+            check_commit_message(commit, terms, cwd, problems)
+            if commit in own_ids and own_ids[commit] in known:
+                continue  # rewritten history that is already on the remote
+            check_commit_content(commit, terms, cwd, added_files, problems)
+        check_tree(tip, baseline, terms, cwd, problems)
         if added_files:
             credits = credits_text(tip, cwd)
             for path in sorted(added_files):
@@ -230,90 +317,123 @@ def report_and_exit(problems):
 
 def self_test():
     failures = []
-    work = tempfile.mkdtemp(prefix="protected-selftest-")
+    works = []
 
-    def git(*args):
-        proc = subprocess.run(["git"] + list(args), cwd=work, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-        if proc.returncode != 0:
-            raise RuntimeError("git %s failed: %s" % (args, proc.stderr.decode()))
-        return proc.stdout.decode().strip()
+    def new_repo():
+        work = tempfile.mkdtemp(prefix="protected-selftest-")
+        works.append(work)
 
-    def commit_files(files, message, delete=()):
-        for name, content in files.items():
-            full = os.path.join(work, name)
-            os.makedirs(os.path.dirname(full) or work, exist_ok=True)
-            mode = "wb" if isinstance(content, bytes) else "w"
-            with open(full, mode) as handle:
-                handle.write(content)
-            git("add", name)
-        git("commit", "-q", "-m", message)
-        return git("rev-parse", "HEAD")
+        def git(*args):
+            proc = subprocess.run(["git"] + list(args), cwd=work, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+            if proc.returncode != 0:
+                raise RuntimeError("git %s failed: %s" % (args, proc.stderr.decode()))
+            return proc.stdout.decode().strip()
 
-    def expect(name, lines, terms, should_block, needle=None):
-        problems = check_push(lines, terms, "origin", work)
-        blocked = len(problems) > 0
-        if blocked != should_block or (needle and not any(needle in p for p in problems)):
-            failures.append("%s: blocked=%s problems=%s" % (name, blocked, problems))
+        def commit_files(files, message):
+            for name, content in files.items():
+                full = os.path.join(work, name)
+                os.makedirs(os.path.dirname(full) or work, exist_ok=True)
+                mode = "wb" if isinstance(content, bytes) else "w"
+                with open(full, mode) as handle:
+                    handle.write(content)
+                git("add", name)
+            git("commit", "-q", "-m", message)
+            return git("rev-parse", "HEAD")
 
-    try:
         git("init", "-q")
         git("config", "user.email", "test@example.invalid")
         git("config", "user.name", "Test")
         base = commit_files({"readme.txt": "hello\n"}, "base")
+        git("update-ref", "refs/remotes/origin/main", base)
+        return work, git, commit_files, base
+
+    def expect(name, work, lines, terms, should_block, needle=None, absent=None):
+        problems = check_push(lines, terms, "origin", work)
+        blocked = len(problems) > 0
+        if blocked != should_block or (needle and not any(needle in p for p in problems)):
+            failures.append("%s: blocked=%s problems=%s" % (name, blocked, problems))
+        if absent and any(absent in p for p in problems):
+            failures.append("%s: unexpected '%s' in %s" % (name, absent, problems))
+
+    def one_commit_scenario(name, files, message, terms, should_block, needle=None,
+                            ref="refs/heads/topic"):
+        work, git, commit_files, base = new_repo()
+        sha = commit_files(files, message)
+        expect(name, work, ["%s %s %s %s" % (ref, sha, ref, base)], terms, should_block,
+               needle)
+
+    try:
         terms = ["zzterm"]
+        one_commit_scenario("clean", {"a.txt": "fine\n"}, "clean change", terms, False)
+        one_commit_scenario("message", {"b.txt": "x\n"}, "mentions ZZTerm here", terms,
+                            True, "commit message")
+        one_commit_scenario("added line", {"c.txt": "line with zzterm inside\n"}, "add c",
+                            terms, True, "added line")
+        one_commit_scenario("file name", {"zzterm-file.txt": "x\n"}, "add file", terms,
+                            True, "file name")
+        one_commit_scenario("binary content ignored", {"bin.dat": b"\x00zzterm\x00"},
+                            "binary content", terms, False)
+        one_commit_scenario("ref name", {"a.txt": "fine\n"}, "clean change", terms, True,
+                            "ref name", "refs/heads/feature/zzterm-x")
+        one_commit_scenario("allowed level", {"levels/campaign/Campaign1.level": "ok\n"},
+                            "allowed level", terms, False)
+        one_commit_scenario("campaign", {"levels/campaign/Other.level": "x\n"},
+                            "other level", terms, True, "allow list")
+        one_commit_scenario("converter", {"tools/level-convert/run.py": "x\n"},
+                            "converter", terms, True, "tools/level-convert/")
+        one_commit_scenario("media without credits", {"gfx/pic.png": b"\x89PNG"},
+                            "add picture", terms, True, "CREDITS")
+        one_commit_scenario("media with glob",
+                            {"gfx/pic.png": b"\x89PNG", "CREDITS": "gfx/*.png - own, CC0\n"},
+                            "add picture", terms, False)
+        one_commit_scenario("media with directory",
+                            {"snd/a.ogg": b"OggS", "CREDITS": "snd/ - own, CC0\n"},
+                            "add sound", terms, False)
 
-        def push_lines(sha, ref="refs/heads/topic"):
-            return ["%s %s %s %s" % (ref, sha, ref, git("rev-parse", sha + "~1"))]
-
-        sha = commit_files({"a.txt": "fine\n"}, "clean change")
-        expect("clean", push_lines(sha), terms, False)
-
-        sha = commit_files({"b.txt": "x\n"}, "mentions ZZTerm here")
-        expect("message", push_lines(sha), terms, True, "commit message")
-
-        sha = commit_files({"c.txt": "line with zzterm inside\n"}, "add c")
-        expect("added line", push_lines(sha), terms, True, "added line")
-
-        sha = commit_files({"zzterm-file.txt": "x\n"}, "add file")
-        expect("file name", push_lines(sha), terms, True, "file name")
-
-        sha = commit_files({"bin.dat": b"\x00zzterm\x00"}, "binary content")
-        expect("binary content ignored", [l for l in push_lines(sha)], terms, False)
-
-        expect("ref name", push_lines(sha, "refs/heads/feature/zzterm-x"), terms, True,
-               "ref name")
-
-        expect("deleted ref", ["(delete) %s refs/heads/old %s" % (ZERO_SHA, base)],
-               terms, False)
-        expect("deleted ref name", ["(delete) %s refs/heads/zzterm %s" % (ZERO_SHA, base)],
-               terms, True, "ref name")
-
-        sha = commit_files({"levels/campaign/Campaign1.level": "ok\n"}, "allowed level")
-        expect("allowed level", push_lines(sha), terms, False)
-
-        sha = commit_files({"levels/campaign/Other.level": "x\n"}, "other level")
-        expect("campaign", push_lines(sha), terms, True, "allow list")
-
-        sha = commit_files({"tools/level-convert/run.py": "x\n"}, "converter")
-        expect("converter", push_lines(sha), terms, True, "tools/level-convert/")
-
-        sha = commit_files({"gfx/pic.png": b"\x89PNG"}, "add picture")
-        expect("media without credits", push_lines(sha), terms, True, "CREDITS")
-
-        sha = commit_files({"CREDITS": "gfx/*.png - own work, CC0\n"}, "credits")
-        expect("media with glob", push_lines(sha), terms, False)
-
-        sha = commit_files({"snd/a.ogg": b"OggS"}, "add sound")
-        expect("media new uncovered", push_lines(sha), terms, True, "snd/a.ogg")
-
-        sha = commit_files({"CREDITS": "gfx/*.png - own work, CC0\nsnd/ - own, CC0\n"},
-                           "credits dir")
-        expect("media with directory", push_lines(sha), terms, False)
-
+        work, git, commit_files, base = new_repo()
         git("branch", "-q", "newbranch")
-        expect("new branch", ["refs/heads/newbranch %s refs/heads/newbranch %s"
-                              % (sha, ZERO_SHA)], terms, True)
+        sha = commit_files({"c.txt": "zzterm\n"}, "add c")
+        expect("new branch", work, ["refs/heads/newbranch %s refs/heads/newbranch %s"
+                                    % (sha, ZERO_SHA)], terms, True)
+
+        work, git, commit_files, base = new_repo()
+        expect("deleted ref", work, ["(delete) %s refs/heads/old %s" % (ZERO_SHA, base)],
+               terms, False)
+        expect("deleted ref name", work, ["(delete) %s refs/heads/zzterm %s"
+                                          % (ZERO_SHA, base)], terms, True, "ref name")
+
+        # the tree at the tip is checked, lines that exist in the baseline are not
+        work, git, commit_files, base = new_repo()
+        mirror = commit_files({"up.txt": "an upstream zzterm line\n"}, "upstream")
+        git("update-ref", "refs/remotes/origin/main", mirror)
+        sha = commit_files({"own.txt": "fine\n"}, "own change")
+        expect("baseline line ignored", work, ["refs/heads/t %s refs/heads/t %s"
+                                               % (sha, mirror)], terms, False)
+        sha = commit_files({"up.txt": "an upstream zzterm line\nnew zzterm line\n"},
+                           "edit upstream file")
+        expect("new line in upstream file", work, ["refs/heads/t %s refs/heads/t %s"
+                                                   % (sha, mirror)], terms, True, "tree")
+
+        # a rewritten commit is not diffed again, but the tree still counts
+        work, git, commit_files, base = new_repo()
+        old = commit_files({"c.txt": "line with zzterm inside\n"}, "add c")
+        git("commit", "-q", "--amend", "-m", "add c, neutral wording")
+        rewritten = git("rev-parse", "HEAD")
+        expect("rewritten commit", work, ["refs/heads/t %s refs/heads/t %s"
+                                          % (rewritten, old)], terms, True, "tree",
+               "added line")
+        git("rm", "-q", "c.txt")
+        git("commit", "-q", "-m", "remove c")
+        cleaned = git("rev-parse", "HEAD")
+        expect("rewritten commit, tip clean", work, ["refs/heads/t %s refs/heads/t %s"
+                                                     % (cleaned, old)], terms, False,
+               None, "added line")
+        # the message of a rewritten commit is still checked
+        git("commit", "-q", "--allow-empty", "-m", "zzterm in a message")
+        dirty = git("rev-parse", "HEAD")
+        expect("rewritten message", work, ["refs/heads/t %s refs/heads/t %s"
+                                           % (dirty, old)], terms, True, "commit message")
 
         # fail safe on the term list
         empty = os.path.join(work, "empty-terms.txt")
@@ -326,7 +446,8 @@ def self_test():
         if found is not None or error is None:
             failures.append("missing term list must block")
     finally:
-        shutil.rmtree(work, ignore_errors=True)
+        for work in works:
+            shutil.rmtree(work, ignore_errors=True)
 
     if failures:
         for failure in failures:
