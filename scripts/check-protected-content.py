@@ -52,6 +52,7 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/HollinFen.level",
     "levels/campaign/Saltmere.level",
     "levels/campaign/Dunmarrow.level",
+    "levels/campaign/Ironbridge.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
