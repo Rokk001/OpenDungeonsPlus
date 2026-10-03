@@ -33,6 +33,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
+#include "utils/RunLevelTest.h"
 
 #include <CEGUI/CEGUI.h>
 
@@ -445,7 +446,7 @@ void MenuModeConfigureSeats::activate()
 
     // A campaign level is fully predefined: the page is not shown, the game starts
     // as soon as the server is ready (see activatePlayerConfig)
-    if(Campaign::getSingleton().isActive())
+    if(Campaign::getSingleton().isActive() || RunLevelTest::isActive())
     {
         tmpWin->setVisible(false);
         msgWin->setVisible(true);
@@ -855,8 +856,8 @@ void MenuModeConfigureSeats::activatePlayerConfig()
     CEGUI::Window* startButton = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers/LaunchGameButton");
     startButton->setEnabled(enabled);
 
-    // The seats of a campaign level are predefined, so the game is started without asking
-    if(Campaign::getSingleton().isActive())
+    // The seats of a campaign level (and of a --run-level test) are predefined, so the game is started without asking
+    if(Campaign::getSingleton().isActive() || RunLevelTest::isActive())
     {
         CEGUI::EventArgs args;
         launchSelectedButtonPressed(args);
