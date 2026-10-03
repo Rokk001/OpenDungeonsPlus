@@ -839,7 +839,7 @@ void KeeperAI::handleAttack()
         return;
     }
 
-    // The reference attacks with more creatures than the threshold, and waits while more
+    // The AI attacks with more creatures than the threshold, and waits while more
     // creatures than the minimum level number are below that level
     if((nbFighters <= mMinFightersToAttack) || (enemyTile == nullptr))
         return;
@@ -1044,9 +1044,9 @@ void KeeperAI::handleTraps()
         for(uint32_t i = 1; i < static_cast<uint32_t>(TrapType::nbTraps); ++i)
         {
             TrapType type = static_cast<TrapType>(i);
-            if((type == TrapType::doorWooden) || (type == TrapType::doorBraced) ||
+            if((type == TrapType::doorWooden) || (type == TrapType::doorIronbound) ||
                (type == TrapType::doorSteel) || (type == TrapType::doorBarricade) ||
-               (type == TrapType::doorSecret) || (type == TrapType::doorMagic))
+               (type == TrapType::doorSecret) || (type == TrapType::doorRuned))
             {
                 continue;
             }

@@ -366,8 +366,8 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mRestedThisTurn          (false),
     mNbTurnsHatedCompany     (0),
     mPitMood                 (0.0),
-    mIsChicken               (false),
-    mChickenMeshShown        (false)
+    mIsHexenHen               (false),
+    mHexenHenMeshShown        (false)
 {
     //TODO: This should be set in initialiser list in parent classes
     setSeat(seat);
@@ -466,8 +466,8 @@ Creature::Creature(GameMap* gameMap) :
     mRestedThisTurn          (false),
     mNbTurnsHatedCompany     (0),
     mPitMood                 (0.0),
-    mIsChicken               (false),
-    mChickenMeshShown        (false)
+    mIsHexenHen               (false),
+    mHexenHenMeshShown        (false)
 {
     if(!getIsOnServerMap())
     {
@@ -495,7 +495,7 @@ void Creature::createMeshLocal(NodeType nt)
     MovableGameEntity::createMeshLocal(nt);
     if(!getIsOnServerMap())
     {
-        mChickenMeshShown = isChicken();
+        mHexenHenMeshShown = isHexenHen();
         RenderManager::getSingleton().rrCreateCreature(this);
 
         // By default, we set the creature in idle state
@@ -521,7 +521,7 @@ void Creature::createMeshWeapons()
     if(getIsOnServerMap())
         return;
 
-    if(mChickenMeshShown)
+    if(mHexenHenMeshShown)
         return;
 
     if(mWeaponL != nullptr)
@@ -536,7 +536,7 @@ void Creature::destroyMeshWeapons()
     if(getIsOnServerMap())
         return;
 
-    if(mChickenMeshShown)
+    if(mHexenHenMeshShown)
         return;
 
     if(mWeaponL != nullptr)
@@ -813,7 +813,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     else
         os << "none";
 
-    os << isChicken();
+    os << isHexenHen();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -869,7 +869,7 @@ void Creature::importFromPacket(ODPacket& is)
         }
     }
 
-    OD_ASSERT_TRUE(is >> mIsChicken);
+    OD_ASSERT_TRUE(is >> mIsHexenHen);
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
@@ -1386,9 +1386,9 @@ void Creature::doUpkeep()
     }
 
     // A chicken cannot fight, use skills or work. It only wanders around
-    if(isChicken())
+    if(isHexenHen())
     {
-        handleChickenUpkeep();
+        handleHexenHenUpkeep();
         return;
     }
 
@@ -2143,7 +2143,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         seatPrisonId = mSeatPrison->getId();
 
     os << seatPrisonId;
-    os << isChicken();
+    os << isHexenHen();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -2201,8 +2201,8 @@ void Creature::updateFromPacket(ODPacket& is)
         }
     }
 
-    OD_ASSERT_TRUE(is >> mIsChicken);
-    updateChickenMesh();
+    OD_ASSERT_TRUE(is >> mIsHexenHen);
+    updateHexenHenMesh();
 
     importMoodFromPacket(is);
     importActivityFromPacket(is);
@@ -2921,7 +2921,7 @@ std::string Creature::getStatsText()
 
 double Creature::getPitDamageFactor(GameEntity* attacker)
 {
-    // Fights between creatures inside a combat pit only hurt a fraction of normal combat
+    // Fights between creatures inside an arena only hurt a fraction of normal combat
     if((attacker == nullptr) || (attacker->getObjectType() != GameEntityType::creature))
         return 1.0;
 
@@ -3246,7 +3246,7 @@ void Creature::drop(const Ogre::Vector3& v)
     if(!getIsOnServerMap())
     {
         mDropCooldown = 2;
-        updateChickenMesh();
+        updateHexenHenMesh();
         return;
     }
 
@@ -4236,7 +4236,7 @@ bool Creature::removeCreatureEffect(CreatureEffect* effectForDeletion)
     return false;
 }
 
-bool Creature::isTurncoat() const
+bool Creature::isDefector() const
 {
     for(const EntityParticleEffect* effect : mEntityParticleEffects)
     {
@@ -4244,7 +4244,7 @@ bool Creature::isTurncoat() const
             continue;
 
         const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
-        if((creatureEffect->mEffect->getEffectName() == "Turncoat") &&
+        if((creatureEffect->mEffect->getEffectName() == "Defector") &&
            (creatureEffect->mEffect->getNbTurnsEffect() > 0))
         {
             return true;
@@ -4254,10 +4254,10 @@ bool Creature::isTurncoat() const
     return false;
 }
 
-bool Creature::isChicken() const
+bool Creature::isHexenHen() const
 {
     if(!getIsOnServerMap())
-        return mIsChicken;
+        return mIsHexenHen;
 
     for(const EntityParticleEffect* effect : mEntityParticleEffects)
     {
@@ -4265,7 +4265,7 @@ bool Creature::isChicken() const
             continue;
 
         const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
-        if((creatureEffect->mEffect->getEffectName() == "Chicken") &&
+        if((creatureEffect->mEffect->getEffectName() == "HexenHen") &&
            (creatureEffect->mEffect->getNbTurnsEffect() > 0))
         {
             return true;
@@ -4320,28 +4320,28 @@ bool Creature::isInvisible() const
 const std::string& Creature::getCurrentMeshName() const
 {
     static const std::string chickenMeshName = "Chicken.mesh";
-    if(isChicken())
+    if(isHexenHen())
         return chickenMeshName;
 
     return getDefinition()->getMeshName();
 }
 
-void Creature::updateChickenMesh()
+void Creature::updateHexenHenMesh()
 {
     if(getIsOnServerMap() || !isMeshExisting() || !getIsOnMap())
         return;
 
-    if(mChickenMeshShown == mIsChicken)
+    if(mHexenHenMeshShown == mIsHexenHen)
         return;
 
     destroyMeshWeapons();
-    mChickenMeshShown = mIsChicken;
+    mHexenHenMeshShown = mIsHexenHen;
     RenderManager::getSingleton().rrChangeCreatureMesh(this);
     createMeshWeapons();
     RenderManager::getSingleton().rrScaleCreature(*this);
 }
 
-void Creature::handleChickenUpkeep()
+void Creature::handleHexenHenUpkeep()
 {
     if(!mActions.empty())
     {
@@ -4551,7 +4551,7 @@ bool Creature::isDangerous(const Creature* creature, int distance) const
     if(getDefinition()->isWorker())
         return false;
 
-    if(isChicken())
+    if(isHexenHen())
         return false;
 
     return true;

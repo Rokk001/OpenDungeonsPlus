@@ -63,7 +63,7 @@ enum class SkillType
     spellCreateGold,
 
     // Stronger doors. Added after the other entries to keep saved skill ids valid
-    trapDoorBraced,
+    trapDoorIronbound,
     trapDoorSteel,
     trapDoorBarricade,
 
@@ -83,11 +83,11 @@ enum class SkillType
     trapFireburst,
     spellLightning,
     spellTremor,
-    trapGuardPost,
+    trapWatchBanner,
     trapDoorSecret,
-    trapDoorMagic,
-    spellTurncoat,
-    spellChicken,
+    trapDoorRuned,
+    spellDefector,
+    spellHexenHen,
     spellInferno,
     spellPossess,
     trapTrigger,

@@ -44,10 +44,10 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
-        <Window type="OD/GameTabButton" name="BracedDoorTrapButton" >
+        <Window type="OD/GameTabButton" name="IronboundDoorTrapButton" >
             <Property name="Area" value="{{0,340},{0,25},{0,400},{0,85}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/BracedDoorTrapButton" />
-            <Property name="TooltipText" value="Build a braced door" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/IronboundDoorTrapButton" />
+            <Property name="TooltipText" value="Build a ironbound door" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
@@ -107,10 +107,10 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
-        <Window type="OD/GameTabButton" name="GuardPostTrapButton" >
+        <Window type="OD/GameTabButton" name="WatchBannerTrapButton" >
             <Property name="Area" value="{{0,820},{0,25},{0,880},{0,85}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/GuardPostTrapButton" />
-            <Property name="TooltipText" value="Build a guard post" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/WatchBannerTrapButton" />
+            <Property name="TooltipText" value="Build a watch banner" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
@@ -121,10 +121,10 @@
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>
-        <Window type="OD/GameTabButton" name="MagicDoorTrapButton" >
+        <Window type="OD/GameTabButton" name="RunedDoorTrapButton" >
             <Property name="Area" value="{{0,940},{0,25},{0,1000},{0,85}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/MagicDoorTrapButton" />
-            <Property name="TooltipText" value="Build a magic door" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/RunedDoorTrapButton" />
+            <Property name="TooltipText" value="Build a runed door" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
         </Window>

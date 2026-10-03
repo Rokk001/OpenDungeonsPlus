@@ -123,7 +123,7 @@ static RoomRegister reg(new RoomHatcheryFactory);
 
 RoomHatchery::RoomHatchery(GameMap* gameMap) :
     Room(gameMap),
-    mSpawnChickenCooldown(0)
+    mSpawnHexenHenCooldown(0)
 {
     setMeshName("Farm");
 }
@@ -167,8 +167,8 @@ void RoomHatchery::doUpkeep()
         return;
 
     // Chickens have been eaten. We check when we will spawn another one
-    ++mSpawnChickenCooldown;
-    if(mSpawnChickenCooldown < std::max(1.0, std::round(SkillManager::getResearchValue(
+    ++mSpawnHexenHenCooldown;
+    if(mSpawnHexenHenCooldown < std::max(1.0, std::round(SkillManager::getResearchValue(
         getSeat(), SkillType::roomHatchery, ConfigManager::getSingleton().getRoomConfigUInt32("HatcheryChickenSpawnRate")))))
         return;
 
@@ -190,7 +190,7 @@ void RoomHatchery::doUpkeep()
             break;
     }
 
-    mSpawnChickenCooldown = 0;
+    mSpawnHexenHenCooldown = 0;
 }
 
 bool RoomHatchery::hasOpenCreatureSpot(Creature* c)

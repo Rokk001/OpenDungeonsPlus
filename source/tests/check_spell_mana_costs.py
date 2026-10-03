@@ -1,8 +1,8 @@
 """Check the spell mana costs, cooldowns and the worker price rule.
 
-The costs follow the reference scale (mana cap 200,000): Summon worker 1,500 per
+The costs use one scale (mana cap 200,000): Summon worker 1,500 per
 step, Call to war 10,000, Heal 5,000, Eye of evil 5,000, Lightning 6,000,
-Tremor 30,000, Turncoat 20,000, Chicken 10,000, Inferno 50,000, Create gold
+Tremor 30,000, Defector 20,000, Chicken 10,000, Inferno 50,000, Create gold
 15,000, Possess 500, Summon champion 100,000 plus 2,000 per second. The worker price grows by one base price per worker above
 the four the heart supplies."""
 from pathlib import Path
@@ -23,8 +23,8 @@ expected = {
     "EyeEvilPrice": "5000", "EyeEvilCooldown": "0",
     "LightningPrice": "6000", "LightningCooldown": "0",
     "TremorPrice": "30000", "TremorCooldown": "0",
-    "TurncoatPrice": "20000", "TurncoatCooldown": "84",
-    "ChickenPrice": "10000", "ChickenCooldown": "84",
+    "DefectorPrice": "20000", "DefectorCooldown": "84",
+    "HexenHenPrice": "10000", "HexenHenCooldown": "84",
     "InfernoPrice": "50000", "InfernoCooldown": "84",
     "CreateGoldPrice": "15000", "CreateGoldCooldown": "0",
     "PossessPrice": "500", "PossessFreeSeconds": "20",
@@ -47,8 +47,8 @@ for block in blocks:
     costs[name] = int(match.group(1))
 for name in ("Kobold", "DwarfWorker"):
     assert costs[name] == 0, f"{name} (worker) possesses for free"
-for name, value in {"Skeleton": 50, "Dwarf1": 50, "Dwarf2": 50, "Goblin": 150, "Troll": 150, "Monk": 150,
-                    "Wizard": 150, "DarkElf": 150, "Elf": 150, "Knight": 500}.items():
+for name, value in {"Skeleton": 40, "Dwarf1": 40, "Dwarf2": 40, "Goblin": 120, "Troll": 120, "Monk": 120,
+                    "Wizard": 120, "DarkElf": 120, "Elf": 120, "Orc": 240, "Knight": 400, "Dragon": 600}.items():
     assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
 action = (repo / "source/creatureaction/CreatureActionPossessed.cpp").read_text()
 assert "PossessFreeSeconds" in action and "getPossessManaCost" in action,     "the possession action uses the free period and the creature drain"

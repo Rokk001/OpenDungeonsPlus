@@ -101,8 +101,8 @@ std::string CreatureAction::toString(CreatureActionType actionType)
 
     case CreatureActionType::goDefendHeart:
         return "goDefendHeart";
-    case CreatureActionType::guardPost:
-        return "guardPost";
+    case CreatureActionType::watchBanner:
+        return "watchBanner";
 
     case CreatureActionType::tunnel:
         return "tunnel";

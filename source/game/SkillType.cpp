@@ -19,12 +19,14 @@
 
 #include "network/ODPacket.h"
 #include "utils/Helper.h"
+#include "utils/NameAliases.h"
 
 namespace Skills
 {
 
-SkillType fromString(const std::string& type)
+SkillType fromString(const std::string& typeName)
 {
+    const std::string type = NameAliases::resolve(typeName);
     for(uint32_t i = 0; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
     {
         SkillType skillType = static_cast<SkillType>(i);
@@ -101,8 +103,8 @@ std::string toString(SkillType type)
             return "trapAlarm";
         case SkillType::trapDoorWooden:
             return "trapDoorWooden";
-        case SkillType::trapDoorBraced:
-            return "trapDoorBraced";
+        case SkillType::trapDoorIronbound:
+            return "trapDoorIronbound";
         case SkillType::trapDoorSteel:
             return "trapDoorSteel";
         case SkillType::trapDoorBarricade:
@@ -115,12 +117,12 @@ std::string toString(SkillType type)
             return "trapLightning";
         case SkillType::trapFireburst:
             return "trapFireburst";
-        case SkillType::trapGuardPost:
-            return "trapGuardPost";
+        case SkillType::trapWatchBanner:
+            return "trapWatchBanner";
         case SkillType::trapDoorSecret:
             return "trapDoorSecret";
-        case SkillType::trapDoorMagic:
-            return "trapDoorMagic";
+        case SkillType::trapDoorRuned:
+            return "trapDoorRuned";
         case SkillType::spellEyeEvil:
             return "spellEyeEvil";
         case SkillType::spellCreateGold:
@@ -129,10 +131,10 @@ std::string toString(SkillType type)
             return "spellLightning";
         case SkillType::spellTremor:
             return "spellTremor";
-        case SkillType::spellTurncoat:
-            return "spellTurncoat";
-        case SkillType::spellChicken:
-            return "spellChicken";
+        case SkillType::spellDefector:
+            return "spellDefector";
+        case SkillType::spellHexenHen:
+            return "spellHexenHen";
         case SkillType::spellInferno:
             return "spellInferno";
         case SkillType::spellSummonChampion:
@@ -212,8 +214,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Alarm Trap";
         case SkillType::trapDoorWooden:
             return "The Wooden Door";
-        case SkillType::trapDoorBraced:
-            return "The Braced Door";
+        case SkillType::trapDoorIronbound:
+            return "The Ironbound Door";
         case SkillType::trapDoorSteel:
             return "The Steel Door";
         case SkillType::trapDoorBarricade:
@@ -226,12 +228,12 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Lightning Trap";
         case SkillType::trapFireburst:
             return "The Fireburst Trap";
-        case SkillType::trapGuardPost:
-            return "The Guard Post";
+        case SkillType::trapWatchBanner:
+            return "The Watch Banner";
         case SkillType::trapDoorSecret:
             return "The Secret Door";
-        case SkillType::trapDoorMagic:
-            return "The Magic Door";
+        case SkillType::trapDoorRuned:
+            return "The Runed Door";
         case SkillType::spellEyeEvil:
             return "The 'Eye of evil' spell";
         case SkillType::spellCreateGold:
@@ -240,10 +242,10 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The 'Lightning' Spell";
         case SkillType::spellTremor:
             return "The 'Tremor' Spell";
-        case SkillType::spellTurncoat:
-            return "The 'Turncoat' Spell";
-        case SkillType::spellChicken:
-            return "The 'Chicken' Spell";
+        case SkillType::spellDefector:
+            return "The 'Defector' Spell";
+        case SkillType::spellHexenHen:
+            return "The 'Hexen Hen' Spell";
         case SkillType::spellInferno:
             return "The 'Inferno' Spell";
         case SkillType::spellPossess:

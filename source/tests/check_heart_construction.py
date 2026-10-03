@@ -20,7 +20,7 @@ struct Player { Seat seat; Seat* getSeat(){return &seat;} };
 namespace Ogre {struct Vector3 {float x,y,z;};}
 struct Object {std::string mesh;Ogre::Vector3 position;const std::string& getMeshName(){return mesh;}Ogre::Vector3 getPosition(){return position;}};
 typedef Object RenderedMovableEntity;
-enum class TileType {dirt,manaVault};
+enum class TileType {dirt,manaWell};
 struct GameMap;
 struct Tile {
  GameMap* map;TileType mType=TileType::dirt;int x=0,y=0;bool full=false,building=false,claimed=true;
@@ -62,7 +62,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
  Object portal{"PortalObject",{58,102}};map.objects={&portal};check(tile.isBuildableUpon(&seat));
  tile.building=true;check(!tile.isBuildableUpon(&seat));tile.building=false;
  tile.full=true;check(!tile.isBuildableUpon(&seat));tile.full=false;
- tile.mType=TileType::manaVault;check(!tile.isBuildableUpon(&seat));tile.mType=TileType::dirt;
+ tile.mType=TileType::manaWell;check(!tile.isBuildableUpon(&seat));tile.mType=TileType::dirt;
  tile.claimed=false;check(!tile.isBuildableUpon(&seat));
  map.hovered=nullptr;InputCommand outside;hover(&map,InputManager{},outside);check(outside.selected==0&&outside.failures==1);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;

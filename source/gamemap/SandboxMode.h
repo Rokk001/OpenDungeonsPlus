@@ -29,7 +29,7 @@ class Seat;
 
 //! \brief Server side logic of the sandbox mode: a level without a rival keeper where the
 //! player builds freely, takes heroes of a chosen level in the hand (hero toolbox) and calls
-//! hero invasions on demand through the hero gate of the map (the wave portal).
+//! hero invasions on demand through the hero portal of the map (the wave portal).
 //! Nothing here is saved: a loaded game starts again with wave 1.
 class SandboxMode
 {

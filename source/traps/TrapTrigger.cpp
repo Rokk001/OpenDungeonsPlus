@@ -166,7 +166,7 @@ bool TrapTrigger::shoot(Tile* tile)
                 continue;
 
             // Doors only fire their weapon, if they have one
-            if(trap->isDoor() && (trap->getType() != TrapType::doorMagic))
+            if(trap->isDoor() && (trap->getType() != TrapType::doorRuned))
                 continue;
 
             // Every trap is set off only once per chain, so trigger traps cannot loop

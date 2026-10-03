@@ -15,9 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "spells/SpellChicken.h"
+#include "spells/SpellDefector.h"
 
-#include "creatureeffect/CreatureEffectChicken.h"
+#include "creatureeffect/CreatureEffectDefector.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -34,52 +34,52 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
-const std::string SpellChickenName = "chicken";
-const std::string SpellChickenNameDisplay = "Chicken";
-const std::string SpellChickenCooldownKey = "ChickenCooldown";
-const SpellType SpellChicken::mSpellType = SpellType::chicken;
+const std::string SpellDefectorName = "defector";
+const std::string SpellDefectorNameDisplay = "Defector";
+const std::string SpellDefectorCooldownKey = "DefectorCooldown";
+const SpellType SpellDefector::mSpellType = SpellType::defector;
 
 namespace
 {
-class SpellChickenFactory : public SpellFactory
+class SpellDefectorFactory : public SpellFactory
 {
     SpellType getSpellType() const override
-    { return SpellChicken::mSpellType; }
+    { return SpellDefector::mSpellType; }
 
     const std::string& getName() const override
-    { return SpellChickenName; }
+    { return SpellDefectorName; }
 
     const std::string& getCooldownKey() const override
-    { return SpellChickenCooldownKey; }
+    { return SpellDefectorCooldownKey; }
 
     const std::string& getNameReadable() const override
-    { return SpellChickenNameDisplay; }
+    { return SpellDefectorNameDisplay; }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
-    { SpellChicken::checkSpellCast(gameMap, inputManager, inputCommand); }
+    { SpellDefector::checkSpellCast(gameMap, inputManager, inputCommand); }
 
     virtual bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet) const override
-    { return SpellChicken::castSpell(gameMap, player, packet); }
+    { return SpellDefector::castSpell(gameMap, player, packet); }
 
     Spell* getSpellFromStream(GameMap* gameMap, std::istream &is) const override
-    { return SpellChicken::getSpellFromStream(gameMap, is); }
+    { return SpellDefector::getSpellFromStream(gameMap, is); }
 
     Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is) const override
-    { return SpellChicken::getSpellFromPacket(gameMap, is); }
+    { return SpellDefector::getSpellFromPacket(gameMap, is); }
 };
 
 // Register the factory
-static SpellRegister reg(new SpellChickenFactory);
+static SpellRegister reg(new SpellDefectorFactory);
 }
 
-void SpellChicken::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
+void SpellDefector::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
 {
     Player* player = gameMap->getLocalPlayer();
-    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("ChickenPrice");
+    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("DefectorPrice");
     int32_t playerMana = static_cast<int32_t>(player->getSeat()->getMana());
     if(inputManager.mCommandState == InputCommandState::infoOnly)
     {
-        std::string txt = formatCastSpell(SpellType::chicken, price);
+        std::string txt = formatCastSpell(SpellType::defector, price);
         if(playerMana < price)
             inputCommand.displayText(Ogre::ColourValue::Red, txt);
         else
@@ -104,19 +104,28 @@ void SpellChicken::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
     Creature* closestCreature = tileSelected->getClosestCreature(SelectionEntityWanted::creatureAliveEnemy);
     if(closestCreature == nullptr)
     {
-        std::string txt = formatCastSpell(SpellType::chicken, 0);
+        std::string txt = formatCastSpell(SpellType::defector, 0);
         inputCommand.displayText(Ogre::ColourValue::White, txt);
         return;
     }
 
-    if(closestCreature->isChicken() || closestCreature->isInPrison() || closestCreature->getDefinition()->isChampion())
+    // The target has to be on land claimed by the caster
+    Tile* creatureTile = closestCreature->getPositionTile();
+    if((creatureTile == nullptr) || !creatureTile->isClaimedForSeat(player->getSeat()))
     {
-        std::string txt = formatCastSpell(SpellType::chicken, 0);
+        std::string txt = formatCastSpell(SpellType::defector, 0);
         inputCommand.displayText(Ogre::ColourValue::White, txt);
         return;
     }
 
-    std::string txt = formatCastSpell(SpellType::chicken, price);
+    if(closestCreature->isInPrison() || closestCreature->getDefinition()->isChampion())
+    {
+        std::string txt = formatCastSpell(SpellType::defector, 0);
+        inputCommand.displayText(Ogre::ColourValue::White, txt);
+        return;
+    }
+
+    std::string txt = formatCastSpell(SpellType::defector, price);
     inputCommand.displayText(Ogre::ColourValue::White, txt);
 
     if(inputManager.mCommandState != InputCommandState::validated)
@@ -124,12 +133,12 @@ void SpellChicken::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
 
     inputCommand.unselectAllTiles();
 
-    ClientNotification *clientNotification = SpellManager::createSpellClientNotification(SpellType::chicken);
+    ClientNotification *clientNotification = SpellManager::createSpellClientNotification(SpellType::defector);
     clientNotification->mPacket << closestCreature->getName();
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
-bool SpellChicken::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
+bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
     OD_ASSERT_TRUE(packet >> creatureName);
@@ -162,42 +171,50 @@ bool SpellChicken::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         return false;
     }
 
-    if(creature->isInPrison())
+    // That can happen if the creature is not in perfect synchronization and is not on a claimed tile on the server gamemap
+    if(!pos->isClaimedForSeat(player->getSeat()))
     {
-        OD_LOG_WRN("Creature=" + creatureName + " is in prison");
+        OD_LOG_WRN("Creature=" + creatureName + ", tile=" + Tile::displayAsString(pos));
         return false;
     }
 
-    if(creature->isChicken())
+    if(creature->isInPrison() || creature->getDefinition()->isChampion())
     {
-        OD_LOG_WRN("Creature=" + creatureName + " is already a chicken");
+        OD_LOG_WRN("Creature=" + creatureName + " is in prison or a champion");
         return false;
     }
 
-    if(creature->getDefinition()->isChampion())
+    // Only one creature can be converted at a time
+    for(Creature* ownedCreature : gameMap->getCreatures())
     {
-        OD_LOG_WRN("Creature=" + creatureName + " is a champion");
-        return false;
+        if((ownedCreature->getSeat() == player->getSeat()) && ownedCreature->isDefector())
+        {
+            OD_LOG_WRN("Seat=" + Helper::toString(player->getSeat()->getId()) + " already has a converted creature");
+            return false;
+        }
     }
 
-    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("ChickenPrice");
+    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("DefectorPrice");
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("ChickenNbTurns"));
-    creature->addCreatureEffect(new CreatureEffectChicken(nbTurns));
+    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("DefectorNbTurns"));
+    int originalSeatId = creature->getSeat()->getId();
+    int newSeatId = player->getSeat()->getId();
+    creature->changeSeat(player->getSeat());
+    creature->addCreatureEffect(new CreatureEffectDefector(nbTurns, originalSeatId, newSeatId));
 
     return true;
 }
 
-Spell* SpellChicken::getSpellFromStream(GameMap* gameMap, std::istream &is)
+Spell* SpellDefector::getSpellFromStream(GameMap* gameMap, std::istream &is)
 {
-    OD_LOG_ERR("SpellChicken cannot be read from stream");
+    OD_LOG_ERR("SpellDefector cannot be read from stream");
     return nullptr;
 }
 
-Spell* SpellChicken::getSpellFromPacket(GameMap* gameMap, ODPacket &is)
+Spell* SpellDefector::getSpellFromPacket(GameMap* gameMap, ODPacket &is)
 {
-    OD_LOG_ERR("SpellChicken cannot be read from packet");
+    OD_LOG_ERR("SpellDefector cannot be read from packet");
     return nullptr;
 }

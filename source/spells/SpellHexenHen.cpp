@@ -15,9 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "spells/SpellTurncoat.h"
+#include "spells/SpellHexenHen.h"
 
-#include "creatureeffect/CreatureEffectTurncoat.h"
+#include "creatureeffect/CreatureEffectHexenHen.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -34,52 +34,52 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
-const std::string SpellTurncoatName = "turncoat";
-const std::string SpellTurncoatNameDisplay = "Turncoat";
-const std::string SpellTurncoatCooldownKey = "TurncoatCooldown";
-const SpellType SpellTurncoat::mSpellType = SpellType::turncoat;
+const std::string SpellHexenHenName = "hexenhen";
+const std::string SpellHexenHenNameDisplay = "Hexen Hen";
+const std::string SpellHexenHenCooldownKey = "HexenHenCooldown";
+const SpellType SpellHexenHen::mSpellType = SpellType::hexenHen;
 
 namespace
 {
-class SpellTurncoatFactory : public SpellFactory
+class SpellHexenHenFactory : public SpellFactory
 {
     SpellType getSpellType() const override
-    { return SpellTurncoat::mSpellType; }
+    { return SpellHexenHen::mSpellType; }
 
     const std::string& getName() const override
-    { return SpellTurncoatName; }
+    { return SpellHexenHenName; }
 
     const std::string& getCooldownKey() const override
-    { return SpellTurncoatCooldownKey; }
+    { return SpellHexenHenCooldownKey; }
 
     const std::string& getNameReadable() const override
-    { return SpellTurncoatNameDisplay; }
+    { return SpellHexenHenNameDisplay; }
 
     virtual void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
-    { SpellTurncoat::checkSpellCast(gameMap, inputManager, inputCommand); }
+    { SpellHexenHen::checkSpellCast(gameMap, inputManager, inputCommand); }
 
     virtual bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet) const override
-    { return SpellTurncoat::castSpell(gameMap, player, packet); }
+    { return SpellHexenHen::castSpell(gameMap, player, packet); }
 
     Spell* getSpellFromStream(GameMap* gameMap, std::istream &is) const override
-    { return SpellTurncoat::getSpellFromStream(gameMap, is); }
+    { return SpellHexenHen::getSpellFromStream(gameMap, is); }
 
     Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is) const override
-    { return SpellTurncoat::getSpellFromPacket(gameMap, is); }
+    { return SpellHexenHen::getSpellFromPacket(gameMap, is); }
 };
 
 // Register the factory
-static SpellRegister reg(new SpellTurncoatFactory);
+static SpellRegister reg(new SpellHexenHenFactory);
 }
 
-void SpellTurncoat::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
+void SpellHexenHen::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
 {
     Player* player = gameMap->getLocalPlayer();
-    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("TurncoatPrice");
+    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("HexenHenPrice");
     int32_t playerMana = static_cast<int32_t>(player->getSeat()->getMana());
     if(inputManager.mCommandState == InputCommandState::infoOnly)
     {
-        std::string txt = formatCastSpell(SpellType::turncoat, price);
+        std::string txt = formatCastSpell(SpellType::hexenHen, price);
         if(playerMana < price)
             inputCommand.displayText(Ogre::ColourValue::Red, txt);
         else
@@ -104,28 +104,19 @@ void SpellTurncoat::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
     Creature* closestCreature = tileSelected->getClosestCreature(SelectionEntityWanted::creatureAliveEnemy);
     if(closestCreature == nullptr)
     {
-        std::string txt = formatCastSpell(SpellType::turncoat, 0);
+        std::string txt = formatCastSpell(SpellType::hexenHen, 0);
         inputCommand.displayText(Ogre::ColourValue::White, txt);
         return;
     }
 
-    // The target has to be on land claimed by the caster
-    Tile* creatureTile = closestCreature->getPositionTile();
-    if((creatureTile == nullptr) || !creatureTile->isClaimedForSeat(player->getSeat()))
+    if(closestCreature->isHexenHen() || closestCreature->isInPrison() || closestCreature->getDefinition()->isChampion())
     {
-        std::string txt = formatCastSpell(SpellType::turncoat, 0);
+        std::string txt = formatCastSpell(SpellType::hexenHen, 0);
         inputCommand.displayText(Ogre::ColourValue::White, txt);
         return;
     }
 
-    if(closestCreature->isInPrison() || closestCreature->getDefinition()->isChampion())
-    {
-        std::string txt = formatCastSpell(SpellType::turncoat, 0);
-        inputCommand.displayText(Ogre::ColourValue::White, txt);
-        return;
-    }
-
-    std::string txt = formatCastSpell(SpellType::turncoat, price);
+    std::string txt = formatCastSpell(SpellType::hexenHen, price);
     inputCommand.displayText(Ogre::ColourValue::White, txt);
 
     if(inputManager.mCommandState != InputCommandState::validated)
@@ -133,12 +124,12 @@ void SpellTurncoat::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
 
     inputCommand.unselectAllTiles();
 
-    ClientNotification *clientNotification = SpellManager::createSpellClientNotification(SpellType::turncoat);
+    ClientNotification *clientNotification = SpellManager::createSpellClientNotification(SpellType::hexenHen);
     clientNotification->mPacket << closestCreature->getName();
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
-bool SpellTurncoat::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
+bool SpellHexenHen::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
     OD_ASSERT_TRUE(packet >> creatureName);
@@ -171,50 +162,42 @@ bool SpellTurncoat::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
         return false;
     }
 
-    // That can happen if the creature is not in perfect synchronization and is not on a claimed tile on the server gamemap
-    if(!pos->isClaimedForSeat(player->getSeat()))
+    if(creature->isInPrison())
     {
-        OD_LOG_WRN("Creature=" + creatureName + ", tile=" + Tile::displayAsString(pos));
+        OD_LOG_WRN("Creature=" + creatureName + " is in prison");
         return false;
     }
 
-    if(creature->isInPrison() || creature->getDefinition()->isChampion())
+    if(creature->isHexenHen())
     {
-        OD_LOG_WRN("Creature=" + creatureName + " is in prison or a champion");
+        OD_LOG_WRN("Creature=" + creatureName + " is already a chicken");
         return false;
     }
 
-    // Only one creature can be converted at a time
-    for(Creature* ownedCreature : gameMap->getCreatures())
+    if(creature->getDefinition()->isChampion())
     {
-        if((ownedCreature->getSeat() == player->getSeat()) && ownedCreature->isTurncoat())
-        {
-            OD_LOG_WRN("Seat=" + Helper::toString(player->getSeat()->getId()) + " already has a converted creature");
-            return false;
-        }
+        OD_LOG_WRN("Creature=" + creatureName + " is a champion");
+        return false;
     }
 
-    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("TurncoatPrice");
+    int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("HexenHenPrice");
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("TurncoatNbTurns"));
-    int originalSeatId = creature->getSeat()->getId();
-    int newSeatId = player->getSeat()->getId();
-    creature->changeSeat(player->getSeat());
-    creature->addCreatureEffect(new CreatureEffectTurncoat(nbTurns, originalSeatId, newSeatId));
+    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("HexenHenNbTurns"));
+    creature->addCreatureEffect(new CreatureEffectHexenHen(nbTurns));
 
     return true;
 }
 
-Spell* SpellTurncoat::getSpellFromStream(GameMap* gameMap, std::istream &is)
+Spell* SpellHexenHen::getSpellFromStream(GameMap* gameMap, std::istream &is)
 {
-    OD_LOG_ERR("SpellTurncoat cannot be read from stream");
+    OD_LOG_ERR("SpellHexenHen cannot be read from stream");
     return nullptr;
 }
 
-Spell* SpellTurncoat::getSpellFromPacket(GameMap* gameMap, ODPacket &is)
+Spell* SpellHexenHen::getSpellFromPacket(GameMap* gameMap, ODPacket &is)
 {
-    OD_LOG_ERR("SpellTurncoat cannot be read from packet");
+    OD_LOG_ERR("SpellHexenHen cannot be read from packet");
     return nullptr;
 }

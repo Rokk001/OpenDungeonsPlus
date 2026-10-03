@@ -1007,7 +1007,7 @@ def m_freeze_trap(c):
         c.add(c.poly([(x - 0.06, 0.50), (x + 0.06, 0.50), (x, 0.50 - h)]), FROST, z=0.05, bevel=0.05, base=0.10)
 
 
-def m_guard_post_trap(c):
+def m_watch_banner_trap(c):
     c.glow(0.0, 0.0, 0.7, (130, 56, 14), 0.5)
     c.add(c.seg(0.50, 0.66, 0.50, -0.46, 0.028), WOOD, z=0.06, bevel=0.028, base=0.06, shadow=0.5)
     c.add(c.poly([(0.50, -0.78), (0.58, -0.46), (0.42, -0.46)]), STEEL, z=0.05, bevel=0.05, base=0.10, shadow=0.4)
@@ -1039,7 +1039,7 @@ def _door_body(c, mat):
     return door
 
 
-def m_door_braced(c):
+def m_door_ironbound(c):
     _door_body(c, WOOD)
     for x in (-0.15, 0.15):
         c.paint(c.seg(x, -0.6, x, 0.58, 0.008), (50, 30, 16), 0.9)
@@ -1128,7 +1128,7 @@ def m_tremor(c):
             c.add(c.arc(0.0, 0.34, 0.80 + 0.07 * k, 0.018, deg(-20) if sx > 0 else deg(160), deg(20) if sx > 0 else deg(200)), EMBER, z=0.03, bevel=0.018, base=0.08)
 
 
-def m_turncoat(c):
+def m_defector(c):
     c.glow(0.0, 0.0, 0.7, (170, 60, 20), 0.6)
     disc = c.circle(0.0, 0.0, 0.34)
     c.add(c.intersect(disc, c.box(-0.5, 0.0, 0.5, 1.0)), RUBY, z=0.14, bevel=0.25, base=0.10, shadow=0.5)
@@ -1269,15 +1269,15 @@ ICONS = {
     "LightningTrapButton": _slot(m_lightning_trap, "trap"),
     "FireburstTrapButton": _slot(m_fireburst_trap, "trap"),
     "FreezeTrapButton": _slot(m_freeze_trap, "trap"),
-    "GuardPostTrapButton": _slot(m_guard_post_trap, "trap"),
+    "WatchBannerTrapButton": _slot(m_watch_banner_trap, "trap"),
     "TriggerTrapButton": _slot(m_trigger_trap, "trap"),
     "WavePortalButton": _slot(m_wave_portal, "trap"),
     "WoodenDoorTrapButton": _slot(m_door, "trap"),
-    "BracedDoorTrapButton": _slot(m_door_braced, "trap"),
+    "IronboundDoorTrapButton": _slot(m_door_ironbound, "trap"),
     "SteelDoorTrapButton": _slot(m_door_steel, "trap"),
     "BarricadeTrapButton": _slot(m_barricade, "trap"),
     "SecretDoorTrapButton": _slot(m_door_secret, "trap"),
-    "MagicDoorTrapButton": _slot(m_door_magic, "trap"),
+    "RunedDoorTrapButton": _slot(m_door_magic, "trap"),
     "DestroyTrapButton": _slot(m_destroy_trap, "trap"),
     # spells
     "SummonWorkerButton": _slot(m_worker_imp, "spell"),
@@ -1286,11 +1286,11 @@ ICONS = {
     "CreatureExplosionButton": _slot(m_explosion, "spell"),
     "LightningButton": _slot(m_lightning_spell, "spell"),
     "TremorButton": _slot(m_tremor, "spell"),
-    "TurncoatButton": _slot(m_turncoat, "spell"),
+    "DefectorButton": _slot(m_defector, "spell"),
     "PossessButton": _slot(m_possess, "spell"),
     "CreateGoldButton": _slot(m_create_gold, "spell"),
     "InfernoButton": _slot(m_inferno, "spell"),
-    "ChickenButton": _slot(m_chicken, "spell"),
+    "HexenHenButton": _slot(m_chicken, "spell"),
     "CreatureHasteButton": _slot(m_haste, "spell"),
     "CreatureDefenseButton": _slot(m_defense, "spell"),
     "CreatureSlowButton": _slot(m_slow, "spell"),

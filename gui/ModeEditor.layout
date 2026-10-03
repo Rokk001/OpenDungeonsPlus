@@ -249,10 +249,10 @@
                     <Property name="TooltipText" value="Place gem tiles." />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
-                <Window type="OD/GameTabButton" name="ManaVaultButton" >
+                <Window type="OD/GameTabButton" name="ManaWellButton" >
                     <Property name="Area" value="{{0,440},{0,25},{0,500},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/GemButton" />
-                    <Property name="TooltipText" value="Place mana vault tiles." />
+                    <Property name="TooltipText" value="Place mana well tiles." />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
             </Window>
@@ -313,7 +313,7 @@
                 </Window>
                 <Window type="OD/GameTabButton" name="MakeSafeBoxButton" >
                     <Property name="Area" value="{{0,320},{0,25},{0,380},{0,85}}" />
-                    <Property name="NormalImage" value="OpenDungeonsIcons/BracedDoorTrapButton" />
+                    <Property name="NormalImage" value="OpenDungeonsIcons/IronboundDoorTrapButton" />
                     <Property name="TooltipText" value="Adds a box reinforcing the walls around the dungeon" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>

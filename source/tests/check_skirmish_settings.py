@@ -66,7 +66,7 @@ send_tokens = ["COMBOBOX_GOLD_DENSITY", "COMBOBOX_MANA_REGENERATION", "SPINNER_M
 sends = [send.index(token) for token in send_tokens]
 check(sends == sorted(sends), "the client sends the settings in another order")
 
-# The new availability state is appended after the existing ones, the limit and speed bounds are the reference ones
+# The new availability state is appended after the existing ones, the limit and speed bounds are unchanged
 header = (root / "source/gamemap/GameMap.h").read_text(encoding="utf-8")
 states = re.search(r"enum class SkirmishItemState[^{]*\{([^}]*)\}", header).group(1)
 names = [re.sub(r"//.*", "", n).strip() for n in states.split(",")]
@@ -96,7 +96,7 @@ check("isHeartKnown()" in (root / "source/modes/GameMode.cpp").read_text(encodin
 
 # The destroyed heart reward of the skirmish setting: captions, specials around the heart, rooms and land
 check('"Gain mana", 0' in mode and '"Gain mana and specials", 1' in mode and '"Gain mana, rooms and land", 2' in mode,
-      "the heart reward captions are not the reference ones")
+      "the heart reward captions changed")
 temple = (root / "source/rooms/RoomDungeonTemple.cpp").read_text(encoding="utf-8")
 reward_code = temple[temple.index("void placeHeartRewardSpecials"):temple.index("class DungeonHeartObject")]
 check("revealMapPermanently" not in reward_code and "addSkill" not in reward_code,
@@ -121,7 +121,7 @@ for entry in re.findall(r"GiftBoxType::(\w+)", pool):
     check("case GiftBoxType::" + entry + ":" in bonus, "no gift box effect for the special " + entry)
 
 check(len(re.findall(r"GiftBoxType::(\w+)", pool)) == 12 and len(set(re.findall(r"GiftBoxType::(\w+)", pool))) == 12,
-      "the reward pool must hold the twelve specials of the reference")
+      "the reward pool must hold the twelve specials")
 entity = (root / "source/entities/GiftBoxEntity.cpp").read_text(encoding="utf-8")
 for entry in re.findall(r"GiftBoxType::(\w+)", pool):
     check("case GiftBoxType::" + entry + ":" in entity, "a level cannot load the special " + entry)

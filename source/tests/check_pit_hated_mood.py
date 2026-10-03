@@ -1,6 +1,6 @@
-"""Check the combat pit mood factors (victor, spectator, alone) and the hated
-company factor: values from the reference data converted at 30 mood points per
-reference annoyance point and 1.4 turns per second."""
+"""Check the arena mood factors (victor, spectator, alone) and the hated
+company factor: raw values converted at 30 mood points per
+annoyance point and 1.4 turns per second."""
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
@@ -19,12 +19,12 @@ def cfg_value(text, key):
 
 
 rooms = read("config/rooms.cfg")
-# reference raw values 16400, 275, 275 over 328 raw units per point, times 30
+# raw values 16400, 275, 275 over 328 raw units per point, times 30
 assert abs(cfg_value(rooms, "PitMoodVictor") - 1500.0) < 1
 assert abs(cfg_value(rooms, "PitMoodSpectator") - 275 / 328 * 30) < 1
 assert abs(cfg_value(rooms, "PitMoodSolitary") + 275 / 328 * 30) < 1
 creatures = read("config/creatures.cfg")
-# reference raw 150 per second: 150 / 328 * 30 / 1.4 = 9.8 per turn
+# raw 150 per second: 150 / 328 * 30 / 1.4 = 9.8 per turn
 assert creatures.count("HatedCompany\t43\t-10") == creatures.count("Rested\t30\t43") > 0
 arena = read("source/rooms/RoomArena.cpp")
 for token in ("PitMoodVictor", "PitMoodSpectator", "PitMoodSolitary", "mFightOngoing"):

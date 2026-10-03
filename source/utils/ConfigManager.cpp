@@ -25,6 +25,7 @@
 #include "spawnconditions/SpawnCondition.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/NameAliases.h"
 
 #include <boost/dynamic_bitset.hpp>
 #include <OgreRoot.h>
@@ -61,7 +62,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
-    mManaVaultBonusPerTile(10.0),
+    mManaWellBonusPerTile(10.0),
     mClaimingWallPenalty(0.8),
     mDigCoefGold(5.0),
     mDigCoefGem(1.0),
@@ -458,6 +459,8 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         if(nextParam == "[/GameConfig]")
             break;
 
+        nextParam = NameAliases::resolve(nextParam);
+
         if(nextParam == "NetworkPort")
         {
             configFile >> nextParam;
@@ -528,10 +531,10 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
-        if(nextParam == "ManaVaultBonusPerTile")
+        if(nextParam == "ManaWellBonusPerTile")
         {
             configFile >> nextParam;
-            mManaVaultBonusPerTile = Helper::toDouble(nextParam);
+            mManaWellBonusPerTile = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -1005,7 +1008,7 @@ bool ConfigManager::loadTraps(const std::string& fileName)
         if (nextParam == "[/Traps]")
             break;
 
-        defFile >> mTrapsConfig[nextParam];
+        defFile >> mTrapsConfig[NameAliases::resolve(nextParam)];
     }
 
     return true;
@@ -1038,7 +1041,7 @@ bool ConfigManager::loadSpellConfig(const std::string& fileName)
         if (nextParam == "[/Spells]")
             break;
 
-        defFile >> mSpellConfig[nextParam];
+        defFile >> mSpellConfig[NameAliases::resolve(nextParam)];
     }
 
     return true;
@@ -1071,7 +1074,7 @@ bool ConfigManager::loadSkills(const std::string& fileName)
         if (nextParam == "[/Skills]")
             break;
 
-        defFile >> mSkillPoints[nextParam];
+        defFile >> mSkillPoints[NameAliases::resolve(nextParam)];
     }
     return true;
 }
@@ -1211,7 +1214,7 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::guardRoom, tileSet->configureTileValues(TileVisual::guardRoom),*mHighMap))
             return false;
-        if(!loadTilesetValues(defFile, TileVisual::manaVaultGround, tileSet->configureTileValues(TileVisual::manaVaultGround),*mHighMap))
+        if(!loadTilesetValues(defFile, TileVisual::manaWellGround, tileSet->configureTileValues(TileVisual::manaWellGround),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::templeRoom, tileSet->configureTileValues(TileVisual::templeRoom),*mHighMap))
             return false;

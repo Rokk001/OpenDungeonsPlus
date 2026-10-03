@@ -15,9 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "traps/TrapGuardPost.h"
+#include "traps/TrapWatchBanner.h"
 
-#include "creatureaction/CreatureActionGuardPost.h"
+#include "creatureaction/CreatureActionWatchBanner.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "entities/TrapEntity.h"
@@ -32,25 +32,25 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
-const std::string TrapGuardPostName = "GuardPost";
-const std::string TrapGuardPostNameDisplay = "Guard post";
-const TrapType TrapGuardPost::mTrapType = TrapType::guardPost;
+const std::string TrapWatchBannerName = "WatchBanner";
+const std::string TrapWatchBannerNameDisplay = "Watch banner";
+const TrapType TrapWatchBanner::mTrapType = TrapType::watchBanner;
 
 namespace
 {
-class TrapGuardPostFactory : public TrapFactory
+class TrapWatchBannerFactory : public TrapFactory
 {
     TrapType getTrapType() const override
-    { return TrapGuardPost::mTrapType; }
+    { return TrapWatchBanner::mTrapType; }
 
     const std::string& getName() const override
-    { return TrapGuardPostName; }
+    { return TrapWatchBannerName; }
 
     const std::string& getNameReadable() const override
-    { return TrapGuardPostNameDisplay; }
+    { return TrapWatchBannerNameDisplay; }
 
     int getCostPerTile() const override
-    { return ConfigManager::getSingleton().getTrapConfigInt32("GuardPostCostPerTile"); }
+    { return ConfigManager::getSingleton().getTrapConfigInt32("WatchBannerCostPerTile"); }
 
     const std::string& getMeshName() const override
     {
@@ -60,7 +60,7 @@ class TrapGuardPostFactory : public TrapFactory
 
     void checkBuildTrap(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     {
-        checkBuildTrapDefault(gameMap, TrapType::guardPost, inputManager, inputCommand);
+        checkBuildTrapDefault(gameMap, TrapType::watchBanner, inputManager, inputCommand);
     }
 
     bool buildTrap(GameMap* gameMap, Player* player, ODPacket& packet) const override
@@ -69,29 +69,29 @@ class TrapGuardPostFactory : public TrapFactory
         if(!getTrapTilesDefault(tiles, gameMap, player, packet))
             return false;
 
-        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::guardPost);
+        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::watchBanner);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!gameMap->withdrawFromTreasuries(price, player->getSeat()))
             return false;
 
-        TrapGuardPost* trap = new TrapGuardPost(gameMap);
+        TrapWatchBanner* trap = new TrapWatchBanner(gameMap);
         return buildTrapDefault(gameMap, trap, player->getSeat(), tiles);
     }
 
     void checkBuildTrapEditor(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
     {
-        checkBuildTrapDefaultEditor(gameMap, TrapType::guardPost, inputManager, inputCommand);
+        checkBuildTrapDefaultEditor(gameMap, TrapType::watchBanner, inputManager, inputCommand);
     }
 
     bool buildTrapEditor(GameMap* gameMap, ODPacket& packet) const override
     {
-        TrapGuardPost* trap = new TrapGuardPost(gameMap);
+        TrapWatchBanner* trap = new TrapWatchBanner(gameMap);
         return buildTrapDefaultEditor(gameMap, trap, packet);
     }
 
     Trap* getTrapFromStream(GameMap* gameMap, std::istream& is) const override
     {
-        TrapGuardPost* trap = new TrapGuardPost(gameMap);
+        TrapWatchBanner* trap = new TrapWatchBanner(gameMap);
         if(!Trap::importTrapFromStream(*trap, is))
         {
             OD_LOG_ERR("Error while building a trap from the stream");
@@ -106,29 +106,29 @@ class TrapGuardPostFactory : public TrapFactory
 
     bool buildTrapOnTiles(GameMap* gameMap, Seat* seatPtr, const std::vector<Tile*>& tiles, bool noFee = false) const
     {
-        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::guardPost);
+        int32_t pricePerTarget = TrapManager::costPerTile(TrapType::watchBanner);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!noFee)
             if(!gameMap->withdrawFromTreasuries(price, seatPtr))
                 return false;
 
-        TrapGuardPost* trap = new TrapGuardPost(gameMap);
+        TrapWatchBanner* trap = new TrapWatchBanner(gameMap);
         return buildTrapDefault(gameMap, trap, seatPtr, tiles);
     }
 };
 
 // Register the factory
-static TrapRegister reg(new TrapGuardPostFactory);
+static TrapRegister reg(new TrapWatchBannerFactory);
 }
 
-TrapGuardPost::TrapGuardPost(GameMap* gameMap) :
+TrapWatchBanner::TrapWatchBanner(GameMap* gameMap) :
     Trap(gameMap),
     mNextDistressTurn(0)
 {
     setMeshName("");
 }
 
-void TrapGuardPost::doUpkeep()
+void TrapWatchBanner::doUpkeep()
 {
     Trap::doUpkeep();
 
@@ -137,7 +137,7 @@ void TrapGuardPost::doUpkeep()
         return;
 
     // The post notices enemies within its aura and calls the guards of the guard rooms
-    int32_t aura = ConfigManager::getSingleton().getTrapConfigInt32("GuardPostAuraTiles");
+    int32_t aura = ConfigManager::getSingleton().getTrapConfigInt32("WatchBannerAuraTiles");
     Tile* intruderTile = nullptr;
     for(Tile* postTile : mCoveredTiles)
     {
@@ -182,12 +182,12 @@ void TrapGuardPost::doUpkeep()
             if(guard == nullptr)
                 break;
 
-            CreatureActionGuardPost::goToIntruder(*guard, intruderTile);
+            CreatureActionWatchBanner::goToIntruder(*guard, intruderTile);
         }
     }
 }
 
-TrapEntity* TrapGuardPost::getTrapEntity(Tile* tile)
+TrapEntity* TrapWatchBanner::getTrapEntity(Tile* tile)
 {
     return new TrapEntity(getGameMap(), *this, reg.getTrapFactory()->getMeshName(), tile, 0.0, true, isActivated(tile) ? 1.0f : 0.7f);
 }

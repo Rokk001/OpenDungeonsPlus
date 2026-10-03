@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SPELLCHICKEN_H
-#define SPELLCHICKEN_H
+#ifndef SPELLHEXENHEN_H
+#define SPELLHEXENHEN_H
 
 #include "spells/Spell.h"
 #include "spells/SpellType.h"
@@ -26,7 +26,7 @@ class InputCommand;
 class InputManager;
 
 //! \brief Turns an enemy creature into a chicken for a while. A chicken cannot fight, use skills or work.
-class SpellChicken : public Spell
+class SpellHexenHen : public Spell
 {
 public:
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
@@ -38,4 +38,4 @@ public:
     static const SpellType mSpellType;
 };
 
-#endif // SPELLCHICKEN_H
+#endif // SPELLHEXENHEN_H

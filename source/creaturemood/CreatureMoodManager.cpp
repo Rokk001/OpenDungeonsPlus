@@ -86,7 +86,7 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += creature.getPrayerRelief();
     // Make Happy and Make Unhappy specials
     moodValue += creature.getSpecialMood();
-    // Fights in the combat pit
+    // Fights in the arena
     moodValue += Helper::round(creature.getPitMood());
 
     return moodValue;

@@ -233,7 +233,7 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
 
 bool SandboxMode::launchWave(uint32_t waveNumber)
 {
-    // The hero gate of the map is the wave portal
+    // The hero portal of the map is the wave portal
     RoomPortalWave* portal = nullptr;
     std::vector<Room*> portals = mGameMap.getRoomsByType(RoomType::portalWave);
     for(Room* room : portals)
@@ -247,7 +247,7 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
 
     if(portal == nullptr)
     {
-        sendMessage("This level has no hero gate.");
+        sendMessage("This level has no hero portal.");
         return false;
     }
 

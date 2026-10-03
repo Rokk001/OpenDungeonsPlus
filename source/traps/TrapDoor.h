@@ -43,7 +43,7 @@ public:
     // A secret door is only seen when a creature of its owner stands on it
     bool shoot(Tile* tile) override;
 
-    // The magic door pays its mana itself when it fires (see shoot), not on every upkeep
+    // The runed door pays its mana itself when it fires (see shoot), not on every upkeep
     double getManaToFire() const override
     { return 0.0; }
 
@@ -82,13 +82,13 @@ protected:
     bool importFromStream(std::istream& is) override;
 
 private:
-    //! \brief Wooden, braced or steel door
+    //! \brief Wooden, ironbound or steel door
     TrapType mDoorType;
     //! \brief Wanted state for the door (changes when the player slaps the door)
     bool mIsLocked;
     //! \brief Current state of the door
     bool mIsLockedState;
-    //! brief Turns left before a magic door can fire again
+    //! brief Turns left before a runed door can fire again
     uint32_t mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);
