@@ -6,7 +6,8 @@ part of the repository. If it does not exist the check is skipped and the exit c
 so clones without it stay green. This script contains no level data: the assignment of
 a campaign level to the level it was derived from is read from
 <folder>\\rework\\progression-map.json at run time, a JSON object that maps the file name of
-a campaign level (without ".level") to {"source": "<name of the source level>"} or, for a
+a campaign level (without ".level") to {"source": "<name of the source level>"}, to
+{"source_file": "<path of the source level relative to the folder>"} (skirmish maps) or, for a
 level that continues the one before it, to {"previous": "<file name of our level>"}. The
 entry "source_dir" holds the folder with the source levels, relative to <folder>.
 
@@ -150,6 +151,9 @@ def parse_level(path):
                     availability.append((int(fields[2]), fields[3], fields[4]))
     humans = [s for s in seats if s["player"] == "Human"]
     if not humans:
+        # skirmish maps leave the seats open ("Choice"): the first seat stands for the player
+        humans = [s for s in seats if s["player"] == "Choice"][:1]
+    if not humans:
         return result
     human = humans[0]
     result.has_human = True
@@ -216,7 +220,10 @@ def check_file(path, against, mapping, levels_dir):
     entry = mapping.get(base)
     if entry is None or not isinstance(entry, dict):
         return "SKIP %s (not part of the rebuilt campaign)" % name, False
-    if "source" in entry:
+    if "source_file" in entry:
+        source_path = os.path.join(against, entry["source_file"])
+        creatures = True
+    elif "source" in entry:
         source_dir = os.path.join(against, mapping.get("source_dir", ""))
         source_path = os.path.join(source_dir, entry["source"] + ".level")
         creatures = True

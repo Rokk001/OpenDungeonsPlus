@@ -408,7 +408,8 @@ def check_campaign_progression(ref_lines, remote_name, cwd, problems):
         tip = tip.strip()
         paths = [path for path in changed_level_files(
                      tip, commits_to_check(tip, fields[3], remote_name, cwd), cwd)
-                 if path.startswith(CAMPAIGN_PREFIX) and path.endswith(".level")]
+                 if (path.startswith(CAMPAIGN_PREFIX) or path.startswith("levels/skirmish/"))
+                 and path.endswith(".level")]
         if not paths:
             continue
         work = tempfile.mkdtemp(prefix="campaign-progression-")
