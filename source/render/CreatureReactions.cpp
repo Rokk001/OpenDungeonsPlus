@@ -19,6 +19,7 @@
 
 #include "ODApplication.h"
 #include "camera/CameraManager.h"
+#include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/CreatureMoodValues.h"
@@ -39,6 +40,8 @@
 #include "utils/LogManager.h"
 
 #include <OgreAnimationState.h>
+#include <OgreBillboard.h>
+#include <OgreBillboardSet.h>
 #include <OgreCamera.h>
 #include <OgreEntity.h>
 #include <OgreMaterialManager.h>
@@ -94,6 +97,18 @@ const double ROOM_RESULT_DELAY = 0.7;
 //! Seconds between two tries to show the work reaction of a creature that does something for a while
 const double ONGOING_MIN = 5.0;
 const double ONGOING_MAX = 9.0;
+const std::string PROP_MATERIAL_PREFIX = "CreatureProp_";
+const std::string PROP_NAME_PREFIX = "CreatureReactionProp_";
+//! The reactions of the moods and the habits leave this many places of the simultaneous ones to the events
+const uint32_t MOOD_RESERVED_SLOTS = 2;
+//! Health stage (0 is unhurt, 7 is dead) from which a creature counts as hurt
+const uint32_t HURT_STAGE = 4;
+//! A hurt creature is scared by an enemy this close (world units)
+const double SCARE_RADIUS = 9.0;
+//! Another creature this close can be looked at or catch a yawn
+const double NEIGHBOUR_RADIUS = 6.0;
+//! The creatures that catch a yawn show it after this much time
+const double YAWN_CATCH_DELAY = 1.1;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -118,6 +133,34 @@ bool contains(const std::vector<std::string>& list, const std::string& value)
     return std::find(list.begin(), list.end(), value) != list.end();
 }
 
+//! 0 at the start and the end of the reaction, 1 in between. The ramps take the share ramp of the time.
+double plateau(double progress, double ramp)
+{
+    double envelope = 1.0;
+    if(progress < ramp)
+        envelope = progress / ramp;
+    else if(progress > (1.0 - ramp))
+        envelope = (1.0 - progress) / ramp;
+
+    envelope = std::max(0.0, std::min(1.0, envelope));
+    return envelope * envelope * (3.0 - 2.0 * envelope);
+}
+
+//! Where the sprites of a prop are: in shares of the height of the creature, seen from the creature
+struct PropFrame
+{
+    Ogre::Vector3 mRight;
+    Ogre::Vector3 mForward;
+    double mHeight;
+
+    Ogre::Vector3 at(double sideways, double ahead, double up) const
+    {
+        return mRight * static_cast<Ogre::Real>(sideways * mHeight) +
+            mForward * static_cast<Ogre::Real>(ahead * mHeight) +
+            Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(up * mHeight));
+    }
+};
+
 } // namespace
 
 CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& configPath) :
@@ -127,7 +170,12 @@ CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& config
     mMode(Mode::full),
     mTime(0.0),
     mTimeLastPrune(0.0),
-    mNextParticleId(0)
+    mNextParticleId(0),
+    mNextPropId(0),
+    mMoodTimer(0.0),
+    mMoodIndex(0),
+    mNextLookTarget(Ogre::Vector3::ZERO),
+    mHasNextLookTarget(false)
 {
     mConfigLoaded = mConfig.load(mConfigFileName);
     if(!mConfigLoaded)
@@ -313,7 +361,126 @@ bool CreatureReactions::isVariantAllowed(const Creature* creature, const Reactio
     if(variant.mRequiresSleepNeed && !creatureNeedsSleep(creature))
         return false;
 
+    // Turning to a wall, a neighbour or a room only makes sense when there is one
+    if((variant.mRequiresWall || variant.mRequiresNeighbour || !variant.mLookAtRoom.empty()))
+    {
+        Ogre::Vector3 point = Ogre::Vector3::ZERO;
+        if(!findLookTarget(creature, variant, point))
+            return false;
+    }
+
     return true;
+}
+
+bool CreatureReactions::findWall(const Creature* creature, Ogre::Vector3& point) const
+{
+    Tile* tile = creature->getPositionTile();
+    if(tile == nullptr)
+        return false;
+
+    static const int offsets[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    // Start at another side each time, so that the creature does not always pick the same wall
+    uint32_t start = static_cast<uint32_t>(cosmeticRandom(0.0, 3.999));
+    for(uint32_t i = 0; i < 4; ++i)
+    {
+        uint32_t index = (start + i) % 4;
+        Tile* neighbour = mGameMap->getTile(tile->getX() + offsets[index][0], tile->getY() + offsets[index][1]);
+        if((neighbour == nullptr) || (neighbour->getFullness() <= 0.0))
+            continue;
+
+        // The face of the wall is half a tile away from the middle of the tile the creature stands on
+        point = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + 0.5f * static_cast<Ogre::Real>(offsets[index][0]),
+            static_cast<Ogre::Real>(tile->getY()) + 0.5f * static_cast<Ogre::Real>(offsets[index][1]), 0.0f);
+        return true;
+    }
+
+    return false;
+}
+
+bool CreatureReactions::findNeighbour(const Creature* creature, Ogre::Vector3& point) const
+{
+    double best = NEIGHBOUR_RADIUS;
+    bool found = false;
+    for(Creature* other : mGameMap->getCreatures())
+    {
+        if((other == creature) || !other->getIsOnMap() || !other->isAlive())
+            continue;
+
+        Ogre::Vector3 difference = other->getPosition() - creature->getPosition();
+        difference.z = 0.0f;
+        double distance = difference.length();
+        if(distance >= best)
+            continue;
+
+        best = distance;
+        point = other->getPosition();
+        found = true;
+    }
+
+    return found;
+}
+
+bool CreatureReactions::findRoomTile(const Creature* creature, const std::string& roomName, Ogre::Vector3& point) const
+{
+    RoomType type = RoomManager::getRoomTypeFromRoomName(roomName);
+    if(type == RoomType::nbRooms)
+        return false;
+
+    double best = 0.0;
+    bool found = false;
+    for(Room* room : mGameMap->getRoomsByTypeAndSeat(type, creature->getSeat()))
+    {
+        for(uint32_t i = 0; i < room->numCoveredTiles(); ++i)
+        {
+            Tile* tile = room->getCoveredTile(static_cast<int>(i));
+            if(tile == nullptr)
+                continue;
+
+            Ogre::Vector3 tilePosition(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()), 0.0f);
+            Ogre::Vector3 difference = tilePosition - creature->getPosition();
+            difference.z = 0.0f;
+            double distance = difference.length();
+            if(found && (distance >= best))
+                continue;
+
+            best = distance;
+            point = tilePosition;
+            found = true;
+        }
+    }
+
+    return found;
+}
+
+bool CreatureReactions::findLookTarget(const Creature* creature, const ReactionVariant& variant,
+        Ogre::Vector3& point) const
+{
+    if(variant.mRequiresWall)
+        return findWall(creature, point);
+
+    if(variant.mRequiresNeighbour)
+        return findNeighbour(creature, point);
+
+    if(!variant.mLookAtRoom.empty())
+        return findRoomTile(creature, variant.mLookAtRoom, point);
+
+    return false;
+}
+
+bool CreatureReactions::isStandingMotion(ReactionMotion::Type type)
+{
+    return (type == ReactionMotion::Type::spin) || (type == ReactionMotion::Type::turn) ||
+        (type == ReactionMotion::Type::squash) || (type == ReactionMotion::Type::look) ||
+        (type == ReactionMotion::Type::lookat) || (type == ReactionMotion::Type::sit) ||
+        (type == ReactionMotion::Type::lie) ||
+        (type == ReactionMotion::Type::startle);
+}
+
+bool CreatureReactions::isProudEvent(const std::string& eventName)
+{
+    return (eventName == "Victory") || (eventName == "VictoryFled") || (eventName == "GroupVictory") ||
+        (eventName == "LevelUp") || (eventName == "TrainingDone");
 }
 
 const ReactionVariant* CreatureReactions::chooseVariant(const Creature* creature, const ReactionEvent& event,
@@ -403,7 +570,8 @@ bool CreatureReactions::trigger(Creature* creature, const std::string& eventName
         if((itCooldown != mCooldownEnd.end()) && (itCooldown->second > mTime))
             return false;
 
-        if((mRunning.size() >= mConfig.getMaxSimultaneous()) && (findRunning(creature->getName()) == nullptr))
+        uint32_t reserved = (event->mPriority >= ReactionPriority::mood) ? MOOD_RESERVED_SLOTS : 0;
+        if(((mRunning.size() + reserved) >= mConfig.getMaxSimultaneous()) && (findRunning(creature->getName()) == nullptr))
             return false;
 
         if(!(event->mPriority < getCreaturePriority(creature, event)))
@@ -493,6 +661,17 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     reaction.mPriority = event.mPriority;
     reaction.mWhileWorking = event.mWhileWorking;
 
+    // The place the creature turns its head to: the place of an event, or the wall, neighbour or room of the variant
+    if(mHasNextLookTarget)
+    {
+        reaction.mLookTarget = mNextLookTarget;
+        reaction.mHasLookTarget = true;
+    }
+    else
+    {
+        reaction.mHasLookTarget = findLookTarget(creature, variant, reaction.mLookTarget);
+    }
+
     bool shown = false;
 
     // Tier A: emote above the head. It is the only thing shown in the reduced mode.
@@ -513,6 +692,15 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
         }
     }
 
+    // A second icon some time later (nodding off, then startled)
+    if(!variant.mLateEmote.empty())
+    {
+        reaction.mLateEmote = variant.mLateEmote;
+        reaction.mLateEmoteDelay = variant.mLateEmoteDelay;
+        reaction.mLateEmoteTime = variant.mLateEmoteTime;
+        reaction.mDuration = std::max(reaction.mDuration, variant.mLateEmoteDelay + variant.mLateEmoteTime);
+    }
+
     if(mMode == Mode::full)
     {
         // Tier C / B: a clip, only while the creature stands still (it must not slide while posing)
@@ -528,11 +716,17 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
             }
         }
 
+        if(!variant.mLateEffect.empty())
+        {
+            reaction.mLateEffect = variant.mLateEffect;
+            reaction.mLateEffectDelay = variant.mLateEffectDelay;
+            reaction.mLateEffectTime = variant.mLateEffectTime;
+            reaction.mDuration = std::max(reaction.mDuration, variant.mLateEffectDelay + variant.mLateEffectTime);
+        }
+
         Ogre::SceneNode* node = creature->getEntityNode();
         // Turning and squashing look wrong on a creature that walks
-        bool standingMotion = (variant.mMotion.mType == ReactionMotion::Type::spin) ||
-            (variant.mMotion.mType == ReactionMotion::Type::turn) ||
-            (variant.mMotion.mType == ReactionMotion::Type::squash);
+        bool standingMotion = isStandingMotion(variant.mMotion.mType);
         if((variant.mMotion.mType != ReactionMotion::Type::none) && (variant.mMotion.mDuration > 0.0) &&
            (node != nullptr) && !(standingMotion && creature->isMoving()))
         {
@@ -540,6 +734,22 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
             reaction.mMotionLastPosition = node->getPosition();
             reaction.mMotionLastScale = node->getScale();
             reaction.mDuration = std::max(reaction.mDuration, variant.mMotion.mDuration);
+            shown = true;
+
+            // The newer motions end with the creature standing still
+            reaction.mEndsWhenMoving = (variant.mMotion.mType == ReactionMotion::Type::look) ||
+                (variant.mMotion.mType == ReactionMotion::Type::lookat) ||
+                (variant.mMotion.mType == ReactionMotion::Type::sit) ||
+                (variant.mMotion.mType == ReactionMotion::Type::lie) ||
+                (variant.mMotion.mType == ReactionMotion::Type::startle);
+        }
+
+        // A sprite prop, only while the creature stands still
+        if((variant.mProp.mPath != ReactionProp::Path::none) && !creature->isMoving() &&
+           createProps(reaction, creature, variant))
+        {
+            reaction.mDuration = std::max(reaction.mDuration, variant.mProp.mSeconds);
+            reaction.mEndsWhenMoving = true;
             shown = true;
         }
     }
@@ -551,6 +761,14 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     mCooldownEnd[creature->getName() + "|" + event.mName] = mTime + cooldown;
 
     mRunning.push_back(reaction);
+
+    // A creature that won or reached a new level is proud for a while
+    if(isProudEvent(event.mName))
+        mProudUntil[creature->getName()] = mTime + mConfig.getProudSeconds();
+
+    if(!variant.mSpreads.empty())
+        spreadTo(creature, variant.mSpreads);
+
     return true;
 }
 
@@ -743,18 +961,87 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                 angle = 2.0 * PI_VALUE * motion.mCount * eased;
                 break;
             }
+            case ReactionMotion::Type::look:
+            {
+                // Looks left and right a few times, calming down at both ends
+                double swing = std::sin(2.0 * PI_VALUE * motion.mCount * progress) * std::sin(PI_VALUE * progress);
+                angle = motion.mAmount * PI_VALUE / 180.0 * swing;
+                break;
+            }
+            case ReactionMotion::Type::sit:
+            {
+                double share = motion.mAmount * plateau(progress, 0.12);
+                addedScale.x = static_cast<Ogre::Real>(1.0 + 0.4 * share);
+                addedScale.y = static_cast<Ogre::Real>(1.0 + 0.4 * share);
+                addedScale.z = static_cast<Ogre::Real>(1.0 - share);
+                break;
+            }
+            case ReactionMotion::Type::lie:
+            {
+                if(!reaction.mMotionAxisComputed)
+                {
+                    reaction.mMotionAxisComputed = true;
+                    Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+                    forward.z = 0.0f;
+                    if(forward.length() > 0.01f)
+                        reaction.mMotionAxis = forward.normalisedCopy();
+                }
+
+                angle = motion.mAmount * PI_VALUE / 180.0 * plateau(progress, 0.15);
+                break;
+            }
+            case ReactionMotion::Type::startle:
+            {
+                // Nods off a few times, then jumps up
+                const double nodShare = 0.7;
+                if(progress < nodShare)
+                {
+                    double share = motion.mAmount * std::fabs(std::sin(PI_VALUE * motion.mCount * progress / nodShare));
+                    addedScale.x = static_cast<Ogre::Real>(1.0 + 0.5 * share);
+                    addedScale.y = static_cast<Ogre::Real>(1.0 + 0.5 * share);
+                    addedScale.z = static_cast<Ogre::Real>(1.0 - share);
+                }
+                else
+                {
+                    double jump = (progress - nodShare) / (1.0 - nodShare);
+                    addedPosition.z = static_cast<Ogre::Real>(0.15 * std::sin(PI_VALUE * jump));
+                }
+                break;
+            }
             case ReactionMotion::Type::turn:
+            case ReactionMotion::Type::lookat:
             {
                 if(!reaction.mMotionTurnComputed)
                 {
                     reaction.mMotionTurnComputed = true;
                     reaction.mMotionTurnAngle = 0.0;
-                    ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
-                    Ogre::Camera* camera = (frameListener != nullptr) ?
-                        frameListener->getCameraManager()->getActiveCamera() : nullptr;
-                    if(camera != nullptr)
+
+                    // The camera for 'turn', the point of the reaction for 'lookat'
+                    bool hasTarget = false;
+                    Ogre::Vector3 toTarget = Ogre::Vector3::ZERO;
+                    if(motion.mType == ReactionMotion::Type::lookat)
                     {
-                        Ogre::Vector3 toCamera = camera->getDerivedPosition() - node->getPosition();
+                        if(reaction.mHasLookTarget)
+                        {
+                            toTarget = reaction.mLookTarget - node->getPosition();
+                            hasTarget = true;
+                        }
+                    }
+                    else
+                    {
+                        ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
+                        Ogre::Camera* camera = (frameListener != nullptr) ?
+                            frameListener->getCameraManager()->getActiveCamera() : nullptr;
+                        if(camera != nullptr)
+                        {
+                            toTarget = camera->getDerivedPosition() - node->getPosition();
+                            hasTarget = true;
+                        }
+                    }
+
+                    if(hasTarget)
+                    {
+                        Ogre::Vector3 toCamera = toTarget;
                         Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
                         toCamera.z = 0.0f;
                         forward.z = 0.0f;
@@ -792,8 +1079,12 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
 
     double deltaAngle = angle - reaction.mMotionAngle;
     if(std::fabs(deltaAngle) > 0.00001)
-        node->rotate(Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(deltaAngle)), Ogre::Vector3::UNIT_Z),
+    {
+        // The creature tips over onto its side around the axis it looks along, everything else turns around the vertical
+        Ogre::Vector3 axis = (motion.mType == ReactionMotion::Type::lie) ? reaction.mMotionAxis : Ogre::Vector3::UNIT_Z;
+        node->rotate(Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(deltaAngle)), axis),
             Ogre::Node::TS_PARENT);
+    }
 
     reaction.mMotionAngle = angle;
 }
@@ -821,6 +1112,12 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
     const ReactionEvent* runningEvent = reaction.mWhileWorking ? mConfig.getEvent(reaction.mEventName) : nullptr;
     if(!(reaction.mPriority < getCreaturePriority(creature, runningEvent)))
         return false;
+
+    // Poses and props need a creature that stands: when it sets off the reaction is over
+    if(reaction.mEndsWhenMoving && creature->isMoving())
+        return false;
+
+    updateLate(reaction, creature);
 
     if(!reaction.mClip.empty())
     {
@@ -855,7 +1152,34 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
     }
 
     applyMotion(reaction, creature);
+    updateProps(reaction, creature);
     return true;
+}
+
+void CreatureReactions::updateLate(RunningReaction& reaction, Creature* creature)
+{
+    if(!reaction.mLateEmote.empty() && (reaction.mElapsed >= reaction.mLateEmoteDelay))
+    {
+        std::string material = EMOTE_MATERIAL_PREFIX + reaction.mLateEmote;
+        CreatureOverlayStatus* overlay = creature->getOverlayStatus();
+        if(!Ogre::MaterialManager::getSingleton().resourceExists(material))
+        {
+            logMissingOnce("emote", reaction.mLateEmote);
+        }
+        else if(overlay != nullptr)
+        {
+            overlay->showEmote(material, static_cast<Ogre::Real>(reaction.mLateEmoteTime));
+            reaction.mEmoteShown = true;
+        }
+        reaction.mLateEmote.clear();
+    }
+
+    if(!reaction.mLateEffect.empty() && (reaction.mElapsed >= reaction.mLateEffectDelay))
+    {
+        std::string effect = reaction.mLateEffect;
+        reaction.mLateEffect.clear();
+        addParticles(reaction, creature, effect);
+    }
 }
 
 void CreatureReactions::endReaction(RunningReaction& reaction, Creature* creature)
@@ -863,6 +1187,7 @@ void CreatureReactions::endReaction(RunningReaction& reaction, Creature* creatur
     stopClip(reaction, creature);
     clearMotion(reaction, creature);
     removeParticles(reaction);
+    removeProps(reaction);
 
     if(reaction.mEmoteShown && (creature != nullptr) && (creature->getOverlayStatus() != nullptr))
         creature->getOverlayStatus()->hideEmote();
@@ -878,6 +1203,7 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
     mTime += timeSinceLastFrame;
 
     updateOngoing();
+    updateMoods(timeSinceLastFrame);
 
     for(std::vector<PendingReaction>::iterator it = mPending.begin(); it != mPending.end();)
     {
@@ -960,6 +1286,31 @@ void CreatureReactions::pruneCooldowns()
             ++it;
     }
 
+    for(std::map<std::string, double>::iterator it = mProudUntil.begin(); it != mProudUntil.end();)
+    {
+        if(it->second <= mTime)
+            mProudUntil.erase(it++);
+        else
+            ++it;
+    }
+
+    for(std::map<std::string, double>::iterator it = mNextLook.begin(); it != mNextLook.end();)
+    {
+        if(it->second <= mTime)
+            mNextLook.erase(it++);
+        else
+            ++it;
+    }
+
+    // A creature that is gone is no longer seen standing idle
+    for(std::map<std::string, double>::iterator it = mIdleSince.begin(); it != mIdleSince.end();)
+    {
+        if(mGameMap->getCreature(it->first) == nullptr)
+            mIdleSince.erase(it++);
+        else
+            ++it;
+    }
+
     for(std::map<std::string, Delivery>::iterator it = mDeliveries.begin(); it != mDeliveries.end();)
     {
         if((mTime - it->second.mSince) > DELIVERY_WINDOW)
@@ -983,6 +1334,10 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         return;
 
     Creature* creature = static_cast<Creature*>(entity);
+
+    // A creature that does anything but stand is no longer idle
+    if(!mIdleSince.empty() && (clip != "Idle"))
+        mIdleSince.erase(creature->getName());
 
     // Something that goes on for a while is shown now and then, until the creature does something else
     std::string ongoingEvent = getOngoingEvent(creature, clip);
@@ -1012,9 +1367,16 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         // The work in some rooms is shown with the attack animation too, that is no fight
         if(!isWorkingInRoom(creature))
+        {
             mLastAttack[creature->getName()] = mTime;
+
+            // The creatures that stand around look at the fight
+            noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, 4.0);
+        }
         else
+        {
             noteRoomWork(creature);
+        }
     }
 }
 
@@ -1495,6 +1857,13 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     drop.mTileY = tile->getY();
     drop.mTime = mTime;
     mHandDrops[entity->getName()] = drop;
+
+    // The creatures that stand around look at the gold that falls
+    if(type == GameEntityType::treasuryObject)
+    {
+        noteNearbyEvent("AmbientLookGold", Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+            static_cast<Ogre::Real>(tile->getY()), 0.0f), nullptr, 1.0);
+    }
 }
 
 void CreatureReactions::noteChickenFeeding(Creature* creature, const std::string& chickenName)
@@ -1547,6 +1916,538 @@ void CreatureReactions::noteEntityRemoved(GameEntity* entity)
 
         trigger(creature, "GoldGift");
     }
+}
+
+bool CreatureReactions::triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target)
+{
+    mNextLookTarget = target;
+    mHasNextLookTarget = true;
+    bool started = trigger(creature, eventName);
+    mHasNextLookTarget = false;
+    return started;
+}
+
+void CreatureReactions::noteNearbyEvent(const std::string& eventName, const Ogre::Vector3& position,
+        const Creature* exclude, double minInterval)
+{
+    if((mMode == Mode::off) || !mConfigLoaded)
+        return;
+
+    // Looking is not needed for every blow of a fight: one look in a while is enough
+    std::map<std::string, double>::iterator itNext = mNextLook.find(eventName);
+    if((itNext != mNextLook.end()) && (itNext->second > mTime))
+        return;
+
+    mNextLook[eventName] = mTime + minInterval;
+
+    // Creatures standing still close by, a few of them, in no special order
+    std::vector<Creature*> candidates;
+    for(Creature* creature : mGameMap->getCreatures())
+    {
+        if((creature == exclude) || !creature->getIsOnMap() || !creature->isAlive() || creature->isMoving())
+            continue;
+
+        Ogre::Vector3 difference = creature->getPosition() - position;
+        difference.z = 0.0f;
+        if(difference.length() > mConfig.getLookRadius())
+            continue;
+
+        candidates.push_back(creature);
+    }
+
+    std::shuffle(candidates.begin(), candidates.end(), cosmeticRng());
+
+    uint32_t nbLooking = 0;
+    for(Creature* creature : candidates)
+    {
+        if(nbLooking >= 3)
+            break;
+
+        if(triggerLook(creature, eventName, position))
+            ++nbLooking;
+    }
+}
+
+void CreatureReactions::spreadTo(Creature* creature, const std::string& eventName)
+{
+    // The closest creature that stands still, gets tired, and is not busy catches it
+    Creature* closest = nullptr;
+    double best = NEIGHBOUR_RADIUS;
+    for(Creature* other : mGameMap->getCreatures())
+    {
+        if((other == creature) || !other->getIsOnMap() || !other->isAlive() || other->isMoving() ||
+           !creatureNeedsSleep(other))
+        {
+            continue;
+        }
+
+        Ogre::Vector3 difference = other->getPosition() - creature->getPosition();
+        difference.z = 0.0f;
+        double distance = difference.length();
+        if(distance >= best)
+            continue;
+
+        best = distance;
+        closest = other;
+    }
+
+    if(closest != nullptr)
+        queueReaction(closest, eventName, -1.0, YAWN_CATCH_DELAY + cosmeticRandom(0.0, 0.6));
+}
+
+bool CreatureReactions::isHurtAndThreatened(const Creature* creature) const
+{
+    if(creature->getOverlayHealthValue() < HURT_STAGE)
+        return false;
+
+    for(Creature* other : mGameMap->getCreatures())
+    {
+        if((other == creature) || !other->getIsOnMap() || !other->isAlive() || other->getDefinition()->isWorker())
+            continue;
+
+        if(other->getSeat()->isAlliedSeat(creature->getSeat()))
+            continue;
+
+        if((other->getPosition() - creature->getPosition()).length() <= SCARE_RADIUS)
+            return true;
+    }
+
+    return false;
+}
+
+void CreatureReactions::updateMoods(Ogre::Real timeSinceLastFrame)
+{
+    if((mMode == Mode::off) || !mConfigLoaded || (mConfig.getMoodPerTick() == 0))
+        return;
+
+    mMoodTimer -= timeSinceLastFrame;
+    if(mMoodTimer > 0.0)
+        return;
+
+    mMoodTimer = mConfig.getMoodInterval();
+
+    // A few creatures at a time, one after the other: every creature is looked at now and then, not every frame
+    const std::vector<Creature*>& creatures = mGameMap->getCreatures();
+    if(creatures.empty())
+        return;
+
+    size_t nbLooks = std::min(static_cast<size_t>(mConfig.getMoodPerTick()), creatures.size());
+    for(size_t i = 0; i < nbLooks; ++i)
+    {
+        ++mMoodIndex;
+        if(mMoodIndex >= creatures.size())
+            mMoodIndex = 0;
+
+        examineMood(creatures[mMoodIndex]);
+    }
+}
+
+void CreatureReactions::examineMood(Creature* creature)
+{
+    if(!creature->getIsOnMap() || !creature->isAlive() || creature->isInContainment())
+        return;
+
+    Ogre::AnimationState* animState = creature->getAnimationState();
+    if(animState == nullptr)
+        return;
+
+    // Feelings are shown while the creature stands, less often while it walks, never while it does something
+    bool moving = creature->isMoving();
+    bool idle = !moving && (animState->getAnimationName() == "Idle");
+    if(!moving && !idle)
+        return;
+
+    if(moving && (cosmeticRandom(0.0, 1.0) >= mConfig.getMoodWalkingChance()))
+        return;
+
+    if(findRunning(creature->getName()) != nullptr)
+        return;
+
+    if(!isCreatureNearCamera(creature))
+    {
+        mIdleSince.erase(creature->getName());
+        return;
+    }
+
+    // Waiting in a room where idling means something else (praying, watching a bout, being held) is not boredom
+    if(idle && !getOngoingEvent(creature, "Idle").empty())
+        idle = false;
+
+    // How long the creature has been seen standing idle
+    double idleFor = 0.0;
+    if(idle)
+    {
+        std::map<std::string, double>::const_iterator itIdle = mIdleSince.find(creature->getName());
+        if(itIdle == mIdleSince.end())
+            mIdleSince[creature->getName()] = mTime;
+        else
+            idleFor = mTime - itIdle->second;
+    }
+    else
+    {
+        mIdleSince.erase(creature->getName());
+    }
+
+    // The mood is only known for the creatures of the local keeper
+    Player* localPlayer = mGameMap->getLocalPlayer();
+    bool own = (localPlayer != nullptr) && (creature->getSeat() == localPlayer->getSeat());
+    uint32_t bits = own ? creature->getOverlayMoodValue() : CreatureMoodValues::Nothing;
+    if((bits & CreatureMoodValues::KoDeathOrTemp) != 0)
+        return;
+
+    CreatureMoodLevel level = creature->getMoodValue();
+
+    // The most pressing feelings first, then the pleasant ones, then what a creature does when it has nothing to do
+    std::vector<std::string> events;
+    if((bits & CreatureMoodValues::LeaveDungeon) != 0)
+        events.push_back("MoodLeaving");
+    if((bits & (CreatureMoodValues::Angry | CreatureMoodValues::Furious)) != 0)
+        events.push_back("MoodAngry");
+    if(own && (level == CreatureMoodLevel::Upset))
+        events.push_back("MoodUpset");
+    if(idle && isHurtAndThreatened(creature))
+        events.push_back("MoodScared");
+    if((bits & CreatureMoodValues::Hungry) != 0)
+        events.push_back("MoodHungry");
+    if((bits & CreatureMoodValues::Tired) != 0)
+        events.push_back("MoodTired");
+    if((bits & CreatureMoodValues::GetFee) != 0)
+        events.push_back("MoodGreedy");
+
+    std::map<std::string, double>::const_iterator itProud = mProudUntil.find(creature->getName());
+    if((itProud != mProudUntil.end()) && (mTime < itProud->second))
+        events.push_back("MoodProud");
+
+    if(idle && (idleFor >= mConfig.getBoredAfter()))
+        events.push_back("MoodBored");
+    else if(idle && (idleFor >= mConfig.getImpatientAfter()))
+        events.push_back("MoodImpatient");
+
+    if(own && (level == CreatureMoodLevel::Happy))
+        events.push_back("MoodHappy");
+    else if(own && (level == CreatureMoodLevel::Neutral) &&
+            ((bits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired | CreatureMoodValues::GetFee)) == 0))
+    {
+        events.push_back("MoodContent");
+    }
+
+    // A long rest: sits down, and lies down if it goes on, in the open
+    if(idle && (idleFor >= mConfig.getLieAfter()) && (getRoomName(creature) != "Dormitory"))
+        events.push_back("AmbientLieDown");
+    else if(idle && (idleFor >= mConfig.getSitAfter()))
+        events.push_back("AmbientSitDown");
+
+    // Small habits of the kind of creature and small changes of the idle pose, in a changing order
+    if(idle && (idleFor >= mConfig.getAmbientAfter()))
+    {
+        if(cosmeticRandom(0.0, 1.0) < 0.5)
+        {
+            events.push_back("AmbientHabit");
+            events.push_back("AmbientIdle");
+        }
+        else
+        {
+            events.push_back("AmbientIdle");
+            events.push_back("AmbientHabit");
+        }
+    }
+
+    for(const std::string& eventName : events)
+    {
+        if(trigger(creature, eventName))
+            return;
+    }
+}
+
+bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant)
+{
+    const ReactionProp& prop = variant.mProp;
+    std::string material = PROP_MATERIAL_PREFIX + prop.mSprite;
+    if(!Ogre::MaterialManager::getSingleton().resourceExists(material))
+    {
+        logMissingOnce("prop sprite", prop.mSprite);
+        return false;
+    }
+
+    Ogre::Entity* entity = getCreatureEntity(creature);
+    Ogre::SceneNode* creatureNode = creature->getEntityNode();
+    if((entity == nullptr) || (creatureNode == nullptr) || (creatureNode->getParentSceneNode() == nullptr))
+        return false;
+
+    // The size of the sprites follows the size of the creature
+    double height = static_cast<double>(entity->getWorldBoundingBox(true).getSize().z);
+    height = std::max(0.3, std::min(6.0, height));
+
+    // Without a wall to turn to, the props use a point in front of the creature
+    if(!reaction.mHasLookTarget)
+    {
+        Ogre::Vector3 forward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+        forward.z = 0.0f;
+        if(forward.length() > 0.01f)
+            forward.normalise();
+        reaction.mLookTarget = creature->getPosition() + forward * 0.9f;
+        reaction.mHasLookTarget = true;
+    }
+
+    uint32_t nbSprites = std::max<uint32_t>(1, prop.mCount);
+    if((prop.mPath == ReactionProp::Path::yoyo) || (prop.mPath == ReactionProp::Path::flip) ||
+       (prop.mPath == ReactionProp::Path::toss) || (prop.mPath == ReactionProp::Path::critter) ||
+       (prop.mPath == ReactionProp::Path::balance) || (prop.mPath == ReactionProp::Path::shadow) ||
+       (prop.mPath == ReactionProp::Path::kick))
+    {
+        nbSprites = 1;
+    }
+
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    std::string id = Helper::toString(mNextPropId);
+    ++mNextPropId;
+    std::string setName = PROP_NAME_PREFIX + id;
+    std::string nodeName = setName + "_node";
+
+    Ogre::BillboardSet* set = sceneManager->createBillboardSet(setName, nbSprites);
+    set->setMaterialName(material);
+    Ogre::Real size = static_cast<Ogre::Real>(prop.mSize * height);
+    set->setDefaultDimensions(size, size);
+    set->setCastShadows(false);
+    if(prop.mPath == ReactionProp::Path::doodle)
+    {
+        // The marks lie flat on the ground
+        set->setBillboardType(Ogre::BBT_PERPENDICULAR_COMMON);
+        set->setCommonDirection(Ogre::Vector3::UNIT_Z);
+        set->setCommonUpVector(Ogre::Vector3::UNIT_Y);
+    }
+
+    // The balls of the juggler have colours of their own
+    const Ogre::ColourValue ballColours[3] = {Ogre::ColourValue(1.0f, 0.45f, 0.4f), Ogre::ColourValue(0.5f, 0.9f, 0.5f),
+        Ogre::ColourValue(0.5f, 0.65f, 1.0f)};
+    for(uint32_t i = 0; i < nbSprites; ++i)
+    {
+        Ogre::ColourValue colour = Ogre::ColourValue::White;
+        if(prop.mPath == ReactionProp::Path::juggle)
+            colour = ballColours[i % 3];
+
+        set->createBillboard(Ogre::Vector3::ZERO, colour);
+    }
+
+    Ogre::SceneNode* node = creatureNode->getParentSceneNode()->createChildSceneNode(nodeName);
+    node->attachObject(set);
+    node->setPosition(creature->getPosition());
+
+    reaction.mProp = prop;
+    reaction.mPropSetName = setName;
+    reaction.mPropNodeName = nodeName;
+    reaction.mPropHeight = height;
+
+    updateProps(reaction, creature);
+    return true;
+}
+
+void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creature)
+{
+    if(reaction.mPropSetName.empty())
+        return;
+
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    Ogre::SceneNode* creatureNode = creature->getEntityNode();
+    if((creatureNode == nullptr) || !sceneManager->hasBillboardSet(reaction.mPropSetName) ||
+       !sceneManager->hasSceneNode(reaction.mPropNodeName))
+    {
+        return;
+    }
+
+    Ogre::BillboardSet* set = sceneManager->getBillboardSet(reaction.mPropSetName);
+    Ogre::SceneNode* node = sceneManager->getSceneNode(reaction.mPropNodeName);
+    node->setPosition(creature->getPosition());
+
+    PropFrame frame;
+    frame.mHeight = reaction.mPropHeight;
+    frame.mForward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+    frame.mForward.z = 0.0f;
+    if(frame.mForward.length() > 0.01f)
+        frame.mForward.normalise();
+    frame.mRight = frame.mForward.crossProduct(Ogre::Vector3::UNIT_Z);
+
+    const ReactionProp& prop = reaction.mProp;
+    double time = reaction.mElapsed;
+    double seconds = std::max(0.1, prop.mSeconds);
+    double progress = std::min(1.0, time / seconds);
+    Ogre::Real size = static_cast<Ogre::Real>(prop.mSize * reaction.mPropHeight);
+    const Ogre::Real hidden = 0.0001f;
+
+    // Where the wall or the point the prop turns to is, seen from the creature
+    Ogre::Vector3 target = reaction.mLookTarget - node->getPosition();
+    target.z = 0.0f;
+
+    int nbBillboards = set->getNumBillboards();
+    for(int i = 0; i < nbBillboards; ++i)
+    {
+        Ogre::Billboard* billboard = set->getBillboard(static_cast<unsigned short>(i));
+        Ogre::Vector3 offset = Ogre::Vector3::ZERO;
+        Ogre::Real width = size;
+        Ogre::Real length = size;
+        Ogre::ColourValue colour = billboard->getColour();
+        double index = static_cast<double>(i);
+        double count = static_cast<double>(nbBillboards);
+
+        switch(prop.mPath)
+        {
+            case ReactionProp::Path::juggle:
+            {
+                // Balls go round from hand to hand; in the end the first one is dropped
+                double angle = 2.0 * PI_VALUE * (0.75 * time + index / count);
+                double sideways = 0.2 * std::cos(angle);
+                double up = 0.5 + 0.3 * std::fabs(std::sin(angle));
+                if((i == 0) && (progress > 0.78))
+                {
+                    double dropAngle = 2.0 * PI_VALUE * 0.75 * 0.78 * seconds;
+                    double fall = (progress - 0.78) * seconds;
+                    sideways = 0.2 * std::cos(dropAngle) + 0.15 * fall;
+                    up = std::max(0.03, 0.5 + 0.3 * std::fabs(std::sin(dropAngle)) - 2.5 * fall * fall);
+                }
+                offset = frame.at(sideways, 0.3, up);
+                break;
+            }
+            case ReactionProp::Path::yoyo:
+            {
+                double up = 0.72 - 0.4 * std::fabs(std::sin(PI_VALUE * 1.4 * time));
+                offset = frame.at(0.22, 0.28, up);
+                break;
+            }
+            case ReactionProp::Path::flip:
+            {
+                // The coin goes up and comes down turning, so it is seen from the side now and then
+                double phase = std::fmod(time, 0.9) / 0.9;
+                double up = 0.55 + 1.6 * phase * (1.0 - phase);
+                offset = frame.at(0.1, 0.28, up);
+                length = size * static_cast<Ogre::Real>(std::max(0.15, std::fabs(std::cos(2.0 * PI_VALUE * 3.0 * phase))));
+                break;
+            }
+            case ReactionProp::Path::stack:
+            {
+                // One pebble after the other is put on the pile; at the end the pile falls apart
+                double appears = seconds * 0.12 * (index + 1.0);
+                double collapse = seconds * 0.72;
+                double side = ((i % 2) == 0) ? 1.0 : -1.0;
+                double sideways = 0.02 * side;
+                double ahead = 0.3;
+                double up = 0.03 + 0.075 * index;
+                if(time >= collapse)
+                {
+                    double fall = time - collapse;
+                    sideways += side * (0.4 + 0.2 * index) * std::min(fall, 0.8) * 0.35;
+                    ahead += 0.1 * index * std::min(fall, 0.8);
+                    up = std::max(0.025, up - 2.5 * fall * fall);
+                }
+                offset = frame.at(sideways, ahead, up);
+                if(time < appears)
+                {
+                    width = hidden;
+                    length = hidden;
+                }
+                break;
+            }
+            case ReactionProp::Path::toss:
+            {
+                // From the hand to the wall and back
+                double phase = std::fmod(time, 1.0);
+                double way = (phase < 0.5) ? (phase * 2.0) : ((1.0 - phase) * 2.0);
+                way = way * way * (3.0 - 2.0 * way);
+                Ogre::Vector3 hand = frame.at(0.15, 0.25, 0.62);
+                Ogre::Vector3 wall = target + Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(0.62 * reaction.mPropHeight));
+                offset = hand + (wall - hand) * static_cast<Ogre::Real>(way);
+                break;
+            }
+            case ReactionProp::Path::critter:
+            {
+                // Runs around the feet, and in the end away
+                double radius = 0.28;
+                if(progress > 0.7)
+                    radius += (progress - 0.7) * seconds * 0.5;
+                double angle = 2.0 * PI_VALUE * 0.5 * time;
+                offset = frame.at(radius * std::cos(angle), radius * std::sin(angle), 0.03);
+                break;
+            }
+            case ReactionProp::Path::balance:
+            {
+                // The tool wobbles on the fingertip, in the end it falls
+                double wobble = 0.35 * std::sin(2.0 * PI_VALUE * 1.3 * time) + 0.2 * std::sin(2.0 * PI_VALUE * 2.9 * time);
+                double up = 0.84;
+                if(progress > 0.85)
+                {
+                    double fall = (progress - 0.85) * seconds;
+                    up = std::max(0.04, up - 3.0 * fall * fall);
+                    wobble += fall * 3.0;
+                }
+                offset = frame.at(0.2 + 0.03 * wobble, 0.28, up);
+                billboard->setRotation(Ogre::Radian(static_cast<Ogre::Real>(wobble)));
+                break;
+            }
+            case ReactionProp::Path::doodle:
+            {
+                // The marks of a squiggle appear one after the other and fade out in the end
+                double along = (count > 1.0) ? (index / (count - 1.0)) : 0.0;
+                double appears = seconds * (0.1 + 0.5 * along);
+                offset = frame.at(0.15 + 0.22 * along + 0.05 * std::sin(along * 9.0),
+                    0.22 + 0.12 * std::sin(along * 6.0), 0.01);
+                double alpha = (time < appears) ? 0.0 : 1.0;
+                if(progress > 0.75)
+                    alpha *= std::max(0.0, 1.0 - (progress - 0.75) / 0.25);
+                colour.a = static_cast<Ogre::Real>(alpha);
+                break;
+            }
+            case ReactionProp::Path::shadow:
+            {
+                // The shadow on the wall flaps and fades in and out
+                Ogre::Vector3 towards = target;
+                if(towards.length() > 0.01f)
+                    towards = towards - towards.normalisedCopy() * 0.08f;
+                offset = towards + Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(0.62 * reaction.mPropHeight));
+                width = size * static_cast<Ogre::Real>(1.0 + 0.15 * std::sin(2.0 * PI_VALUE * 2.0 * time));
+                colour.a = static_cast<Ogre::Real>(plateau(progress, 0.15));
+                break;
+            }
+            case ReactionProp::Path::kick:
+            {
+                // Each kick sends the pebble forward over the floor
+                double cycle = seconds / std::max<uint32_t>(1, prop.mCount);
+                double phase = std::fmod(time, cycle) / cycle;
+                double distance = 0.28 + 0.9 * (1.0 - (1.0 - phase) * (1.0 - phase));
+                offset = frame.at(0.03, distance, 0.03);
+                if(phase > 0.9)
+                {
+                    width = hidden;
+                    length = hidden;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        billboard->setPosition(offset);
+        billboard->setDimensions(width, length);
+        billboard->setColour(colour);
+    }
+}
+
+void CreatureReactions::removeProps(RunningReaction& reaction)
+{
+    if(reaction.mPropSetName.empty())
+        return;
+
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    if(sceneManager->hasSceneNode(reaction.mPropNodeName))
+    {
+        Ogre::SceneNode* node = sceneManager->getSceneNode(reaction.mPropNodeName);
+        node->detachAllObjects();
+        sceneManager->destroySceneNode(node);
+    }
+
+    if(sceneManager->hasBillboardSet(reaction.mPropSetName))
+        sceneManager->destroyBillboardSet(reaction.mPropSetName);
+
+    reaction.mPropSetName.clear();
+    reaction.mPropNodeName.clear();
 }
 
 void CreatureReactions::stopAll()

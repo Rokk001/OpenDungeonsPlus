@@ -122,6 +122,12 @@ public:
     //! the others in the room react.
     void noteEntityAdded(GameEntity* entity);
 
+    //! \brief Client hook: something happened at the position (a fight, a slap, gold falling). Creatures that
+    //! stand still close by turn their head to it and show the event. Not more often than every minInterval
+    //! seconds for the same kind of event. The creature exclude (if any) is not asked.
+    void noteNearbyEvent(const std::string& eventName, const Ogre::Vector3& position, const Creature* exclude,
+        double minInterval);
+
     //! \brief Client hook: the creature picks up the entity to carry it. Carrying gold is shown.
     void noteCarry(Creature* carrier, GameEntity* carried);
 
@@ -163,7 +169,17 @@ private:
             mMotionLastScale(Ogre::Vector3::UNIT_SCALE),
             mMotionTurnAngle(0.0),
             mMotionTurnComputed(false),
-            mWhileWorking(false)
+            mWhileWorking(false),
+            mLookTarget(Ogre::Vector3::ZERO),
+            mHasLookTarget(false),
+            mMotionAxis(Ogre::Vector3::UNIT_Z),
+            mMotionAxisComputed(false),
+            mPropHeight(1.0),
+            mLateEmoteDelay(0.0),
+            mLateEmoteTime(2.0),
+            mLateEffectDelay(0.0),
+            mLateEffectTime(1.0),
+            mEndsWhenMoving(false)
         {}
 
         std::string mCreatureName;
@@ -196,6 +212,31 @@ private:
         bool mMotionTurnComputed;
         //! The event decorates the work animation of the creature (see ReactionEvent::mWhileWorking)
         bool mWhileWorking;
+
+        //! The point the motion 'lookat' and some props turn to (a wall, a room, a neighbour, the place of an event)
+        Ogre::Vector3 mLookTarget;
+        bool mHasLookTarget;
+        //! For the motion 'lie': the axis the creature tips over
+        Ogre::Vector3 mMotionAxis;
+        bool mMotionAxisComputed;
+
+        //! Sprite prop: the billboards live in a scene node of their own, found by name
+        ReactionProp mProp;
+        std::string mPropSetName;
+        std::string mPropNodeName;
+        double mPropHeight;
+
+        //! Icon that starts later in the reaction. Empty once it is shown.
+        std::string mLateEmote;
+        double mLateEmoteDelay;
+        double mLateEmoteTime;
+        //! Particle effect that starts later in the reaction. Empty once it is shown.
+        std::string mLateEffect;
+        double mLateEffectDelay;
+        double mLateEffectTime;
+
+        //! The reaction needs the creature to stand and ends when it sets off
+        bool mEndsWhenMoving;
     };
 
     struct PendingReaction
@@ -284,6 +325,35 @@ private:
     bool isWorkingInRoom(const Creature* creature) const;
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
 
+    //! \brief Looks at the moods of a few creatures at a time (round robin) and lets them show a feeling now and
+    //! then. Not every creature every frame.
+    void updateMoods(Ogre::Real timeSinceLastFrame);
+    void examineMood(Creature* creature);
+    //! \brief True if the creature is hurt and an enemy fighter is close
+    bool isHurtAndThreatened(const Creature* creature) const;
+    //! \brief The point on the wall next to the creature, false if no wall tile is next to it
+    bool findWall(const Creature* creature, Ogre::Vector3& point) const;
+    //! \brief The position of the closest other creature, false if none is close
+    bool findNeighbour(const Creature* creature, Ogre::Vector3& point) const;
+    //! \brief The closest tile of a room of the creature's seat, false if it has none
+    bool findRoomTile(const Creature* creature, const std::string& roomName, Ogre::Vector3& point) const;
+    //! \brief The point the variant turns to (wall, neighbour or room), false if the variant has none or it is not there
+    bool findLookTarget(const Creature* creature, const ReactionVariant& variant, Ogre::Vector3& point) const;
+    //! \brief Another idle creature close by shows the event a moment later (the yawn that spreads)
+    void spreadTo(Creature* creature, const std::string& eventName);
+    //! \brief Shows the event on the creature and lets it turn its head to the point
+    bool triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target);
+    static bool isProudEvent(const std::string& eventName);
+    static bool isStandingMotion(ReactionMotion::Type type);
+
+    //! \brief Sprite props (balls, a coin, pebbles, ...) of the bored creatures
+    bool createProps(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
+    void updateProps(RunningReaction& reaction, Creature* creature);
+    void removeProps(RunningReaction& reaction);
+
+    //! \brief Shows the second icon (and the second effect) of the reaction when it is time
+    void updateLate(RunningReaction& reaction, Creature* creature);
+
     //! \brief Updates a running reaction. Returns false if it is over
     bool updateReaction(RunningReaction& reaction, Creature* creature, Ogre::Real timeSinceLastFrame);
     //! \brief Cleans everything a reaction has put on the creature
@@ -316,6 +386,20 @@ private:
     double mTime;
     double mTimeLastPrune;
     uint32_t mNextParticleId;
+    uint32_t mNextPropId;
+
+    //! Time before the next look at the moods of a few creatures, and the creature it goes on with
+    double mMoodTimer;
+    size_t mMoodIndex;
+    //! Time a creature was first seen standing idle ("creature" -> mTime)
+    std::map<std::string, double> mIdleSince;
+    //! Time until a creature is proud of its victory or level up ("creature" -> mTime)
+    std::map<std::string, double> mProudUntil;
+    //! Time before which no creature looks at an event of this kind again (event -> mTime)
+    std::map<std::string, double> mNextLook;
+    //! Where the creature that is triggered now has to look (set around one trigger call only)
+    Ogre::Vector3 mNextLookTarget;
+    bool mHasNextLookTarget;
 
     //! Time before which a creature may not show a reaction of a kind again ("creature|event")
     std::map<std::string, double> mCooldownEnd;

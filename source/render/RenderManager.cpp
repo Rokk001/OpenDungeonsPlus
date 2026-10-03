@@ -42,6 +42,7 @@
 #include "gamemap/TileSet.h"
 #include "modes/ModeManager.h"
 #include "render/CreatureOverlayStatus.h"
+#include "render/CreatureReactions.h"
 #include "render/DebugDrawer.h"
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
@@ -5362,6 +5363,10 @@ void RenderManager::entitySlapped()
     Ogre::Entity* ent = mSceneManager->getEntity("keeperHandEnt");
     if(ent->hasAnimationState("Slap"))
         mHandAnimationState = setEntityAnimation(ent, "Slap", false);
+
+    // The creatures that stand around look at the hand that slaps
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+        CreatureReactions::getSingleton().noteNearbyEvent("AmbientLookSlap", mHandLightNode->getPosition(), nullptr, 1.0);
 }
 
 std::string RenderManager::rrBuildSkullFlagMaterial(const std::string& materialNameBase,

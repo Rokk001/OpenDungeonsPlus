@@ -54,6 +54,16 @@ CreatureReactionConfig::CreatureReactionConfig() :
     mMaxCameraDistance(45.0),
     mGroupStaggerMin(0.12),
     mGroupStaggerMax(0.45),
+    mMoodInterval(0.5),
+    mMoodPerTick(4),
+    mMoodWalkingChance(0.3),
+    mImpatientAfter(6.0),
+    mProudSeconds(25.0),
+    mBoredAfter(20.0),
+    mAmbientAfter(3.0),
+    mSitAfter(45.0),
+    mLieAfter(100.0),
+    mLookRadius(12.0),
     mDefaultGroup("Fighters")
 {
 }
@@ -190,6 +200,26 @@ bool CreatureReactionConfig::loadSettings(std::istream& file)
             mGroupStaggerMin = Helper::toDouble(words[1]);
         else if(words[0] == "GroupStaggerMax")
             mGroupStaggerMax = Helper::toDouble(words[1]);
+        else if(words[0] == "MoodInterval")
+            mMoodInterval = Helper::toDouble(words[1]);
+        else if(words[0] == "MoodPerTick")
+            mMoodPerTick = Helper::toUInt32(words[1]);
+        else if(words[0] == "MoodWalkingChance")
+            mMoodWalkingChance = Helper::toDouble(words[1]);
+        else if(words[0] == "ImpatientAfter")
+            mImpatientAfter = Helper::toDouble(words[1]);
+        else if(words[0] == "ProudSeconds")
+            mProudSeconds = Helper::toDouble(words[1]);
+        else if(words[0] == "BoredAfter")
+            mBoredAfter = Helper::toDouble(words[1]);
+        else if(words[0] == "AmbientAfter")
+            mAmbientAfter = Helper::toDouble(words[1]);
+        else if(words[0] == "SitAfter")
+            mSitAfter = Helper::toDouble(words[1]);
+        else if(words[0] == "LieAfter")
+            mLieAfter = Helper::toDouble(words[1]);
+        else if(words[0] == "LookRadius")
+            mLookRadius = Helper::toDouble(words[1]);
         else if(words[0] == "DefaultGroup")
             mDefaultGroup = words[1];
         else
@@ -397,7 +427,7 @@ bool CreatureReactionConfig::loadVariant(std::istream& file, ReactionVariant& va
         }
         else if(words[0] == "Motion")
         {
-            // Motion <hop|shake|squash|spin|turn> <count> <amount> <seconds>
+            // Motion <hop|shake|squash|spin|turn|look|lookat|sit|lie|startle> <count> <amount> <seconds>
             ReactionMotion::Type type = ReactionMotion::Type::none;
             if(words[1] == "hop")
                 type = ReactionMotion::Type::hop;
@@ -409,6 +439,16 @@ bool CreatureReactionConfig::loadVariant(std::istream& file, ReactionVariant& va
                 type = ReactionMotion::Type::spin;
             else if(words[1] == "turn")
                 type = ReactionMotion::Type::turn;
+            else if(words[1] == "look")
+                type = ReactionMotion::Type::look;
+            else if(words[1] == "lookat")
+                type = ReactionMotion::Type::lookat;
+            else if(words[1] == "sit")
+                type = ReactionMotion::Type::sit;
+            else if(words[1] == "lie")
+                type = ReactionMotion::Type::lie;
+            else if(words[1] == "startle")
+                type = ReactionMotion::Type::startle;
 
             if((type == ReactionMotion::Type::none) || (words.size() < 5))
             {
@@ -443,6 +483,76 @@ bool CreatureReactionConfig::loadVariant(std::istream& file, ReactionVariant& va
         else if(words[0] == "RequiresSleepNeed")
         {
             variant.mRequiresSleepNeed = toBool(words[1]);
+        }
+        else if(words[0] == "RequiresWall")
+        {
+            variant.mRequiresWall = toBool(words[1]);
+        }
+        else if(words[0] == "RequiresNeighbour")
+        {
+            variant.mRequiresNeighbour = toBool(words[1]);
+        }
+        else if(words[0] == "LookAtRoom")
+        {
+            variant.mLookAtRoom = words[1];
+        }
+        else if(words[0] == "LateEmote")
+        {
+            // LateEmote <name> <delay> <seconds>
+            variant.mLateEmote = words[1];
+            if(words.size() >= 3)
+                variant.mLateEmoteDelay = Helper::toDouble(words[2]);
+            if(words.size() >= 4)
+                variant.mLateEmoteTime = Helper::toDouble(words[3]);
+        }
+        else if(words[0] == "Prop")
+        {
+            // Prop <juggle|yoyo|flip|stack|toss|critter|balance|doodle|shadow|kick> <sprite> <count> <size> <seconds>
+            ReactionProp::Path path = ReactionProp::Path::none;
+            if(words[1] == "juggle")
+                path = ReactionProp::Path::juggle;
+            else if(words[1] == "yoyo")
+                path = ReactionProp::Path::yoyo;
+            else if(words[1] == "flip")
+                path = ReactionProp::Path::flip;
+            else if(words[1] == "stack")
+                path = ReactionProp::Path::stack;
+            else if(words[1] == "toss")
+                path = ReactionProp::Path::toss;
+            else if(words[1] == "critter")
+                path = ReactionProp::Path::critter;
+            else if(words[1] == "balance")
+                path = ReactionProp::Path::balance;
+            else if(words[1] == "doodle")
+                path = ReactionProp::Path::doodle;
+            else if(words[1] == "shadow")
+                path = ReactionProp::Path::shadow;
+            else if(words[1] == "kick")
+                path = ReactionProp::Path::kick;
+
+            if((path == ReactionProp::Path::none) || (words.size() < 6))
+            {
+                OD_LOG_ERR("Invalid creature reaction prop: " + words[1]);
+                return false;
+            }
+            variant.mProp.mPath = path;
+            variant.mProp.mSprite = words[2];
+            variant.mProp.mCount = Helper::toUInt32(words[3]);
+            variant.mProp.mSize = Helper::toDouble(words[4]);
+            variant.mProp.mSeconds = Helper::toDouble(words[5]);
+        }
+        else if(words[0] == "LateEffect")
+        {
+            // LateEffect <name> <delay> <seconds>
+            variant.mLateEffect = words[1];
+            if(words.size() >= 3)
+                variant.mLateEffectDelay = Helper::toDouble(words[2]);
+            if(words.size() >= 4)
+                variant.mLateEffectTime = Helper::toDouble(words[3]);
+        }
+        else if(words[0] == "Spreads")
+        {
+            variant.mSpreads = words[1];
         }
         else
         {

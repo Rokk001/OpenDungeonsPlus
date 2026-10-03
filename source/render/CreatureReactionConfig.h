@@ -54,7 +54,17 @@ struct ReactionMotion
         //! Turns around its vertical axis
         spin,
         //! Turns towards the camera, stays for a moment and turns back
-        turn
+        turn,
+        //! Looks left and right (amount is the angle in degrees)
+        look,
+        //! Turns towards a point (a wall, a room, a neighbour, the place of an event), stays and turns back
+        lookat,
+        //! Sinks down (amount is the share of the height), stays and gets up again
+        sit,
+        //! Tips over onto the side (amount is the angle in degrees), stays and gets up again
+        lie,
+        //! Nods off (count nods, amount is their depth) and jumps up in the end
+        startle
     };
 
     ReactionMotion() :
@@ -71,6 +81,53 @@ struct ReactionMotion
     double mAmount;
     //! Time to do the whole motion, in seconds
     double mDuration;
+};
+
+//! \brief A small sprite prop shown while the reaction plays (balls, a coin, pebbles, ...). It is a few
+//! billboards that move on a path computed from the size of the creature, and is removed when the reaction ends.
+struct ReactionProp
+{
+    enum class Path
+    {
+        none,
+        //! Balls thrown from hand to hand, now and then one falls
+        juggle,
+        //! A small toy that runs up and down
+        yoyo,
+        //! A coin thrown up and caught
+        flip,
+        //! Pebbles stacked one by one, then the tower falls
+        stack,
+        //! A pebble thrown against the wall and caught
+        toss,
+        //! A tiny critter that runs around the feet and away
+        critter,
+        //! A tool balanced on a finger
+        balance,
+        //! Marks drawn on the ground that fade out
+        doodle,
+        //! The shadow of a hand on the wall
+        shadow,
+        //! Pebbles pushed along the floor
+        kick
+    };
+
+    ReactionProp() :
+        mPath(Path::none),
+        mCount(1),
+        mSize(0.1),
+        mSeconds(0.0)
+    {}
+
+    Path mPath;
+    //! Name of the sprite: the material is CreatureProp_<name>
+    std::string mSprite;
+    //! Number of balls, pebbles, marks or kicks
+    uint32_t mCount;
+    //! Size of one sprite as a share of the height of the creature
+    double mSize;
+    //! Time the prop is shown, in seconds
+    double mSeconds;
 };
 
 //! \brief A particle effect put on the creature
@@ -98,7 +155,13 @@ struct ReactionVariant
         mEmoteTime(2.0),
         mCooldown(-1.0),
         mProbability(-1.0),
-        mRequiresSleepNeed(false)
+        mRequiresSleepNeed(false),
+        mRequiresWall(false),
+        mRequiresNeighbour(false),
+        mLateEmoteDelay(0.0),
+        mLateEmoteTime(2.0),
+        mLateEffectDelay(0.0),
+        mLateEffectTime(1.0)
     {}
 
     std::string mName;
@@ -133,6 +196,30 @@ struct ReactionVariant
 
     //! Only for creature types that need to sleep (see CreatureReactions::creatureNeedsSleep)
     bool mRequiresSleepNeed;
+
+    //! Only when a wall tile is next to the creature (the wall is where the motion 'lookat' and the props turn to)
+    bool mRequiresWall;
+    //! Only when another creature is close (the motion 'lookat' turns to it)
+    bool mRequiresNeighbour;
+    //! Name of a room type (for example Hatchery): only when the creature's seat has such a room, the
+    //! motion 'lookat' turns to the closest tile of it. Empty if not used.
+    std::string mLookAtRoom;
+
+    //! Sprite prop shown while the reaction plays
+    ReactionProp mProp;
+
+    //! A second icon that starts later in the reaction (nodding off, then startled). Empty if none.
+    std::string mLateEmote;
+    double mLateEmoteDelay;
+    double mLateEmoteTime;
+    //! A second particle effect that starts later (the tower falls, then the dust). Empty if none.
+    std::string mLateEffect;
+    double mLateEffectDelay;
+    double mLateEffectTime;
+
+    //! Name of an event another creature close by can show after this one starts (the yawn that spreads).
+    //! Empty if none.
+    std::string mSpreads;
 };
 
 //! \brief A kind of reaction (what happened to the creature) with its variants
@@ -201,6 +288,42 @@ public:
     inline double getGroupStaggerMax() const
     { return mGroupStaggerMax; }
 
+    //! Seconds between two looks at the moods of a few creatures
+    inline double getMoodInterval() const
+    { return mMoodInterval; }
+
+    //! Number of creatures looked at in each of these looks
+    inline uint32_t getMoodPerTick() const
+    { return mMoodPerTick; }
+
+    //! Chance (0 to 1) that a mood is shown on a creature that walks instead of standing
+    inline double getMoodWalkingChance() const
+    { return mMoodWalkingChance; }
+
+    //! Seconds a creature has to stand idle until it is impatient
+    inline double getImpatientAfter() const
+    { return mImpatientAfter; }
+
+    //! Seconds a creature stays proud after a victory or a level up
+    inline double getProudSeconds() const
+    { return mProudSeconds; }
+
+    //! Seconds a creature has to stand idle until it is bored
+    inline double getBoredAfter() const
+    { return mBoredAfter; }
+
+    //! Seconds a creature has to stand idle until it shows small habits, sits down or lies down
+    inline double getAmbientAfter() const
+    { return mAmbientAfter; }
+    inline double getSitAfter() const
+    { return mSitAfter; }
+    inline double getLieAfter() const
+    { return mLieAfter; }
+
+    //! Creatures closer than this to an event (world units) turn their head to it
+    inline double getLookRadius() const
+    { return mLookRadius; }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -212,6 +335,16 @@ private:
     double mMaxCameraDistance;
     double mGroupStaggerMin;
     double mGroupStaggerMax;
+    double mMoodInterval;
+    uint32_t mMoodPerTick;
+    double mMoodWalkingChance;
+    double mImpatientAfter;
+    double mProudSeconds;
+    double mBoredAfter;
+    double mAmbientAfter;
+    double mSitAfter;
+    double mLieAfter;
+    double mLookRadius;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;
