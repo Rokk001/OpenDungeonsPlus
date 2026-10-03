@@ -1243,6 +1243,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 RenderManager::getSingleton().rrSetFeedingChicken(creature,
                     gameMap->getAnimatedObject(chickenName), chickenPosition);
+                if(CreatureReactions::getSingletonPtr() != nullptr)
+                    CreatureReactions::getSingleton().noteChickenFeeding(creature, chickenName);
             }
             break;
         }

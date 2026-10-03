@@ -71,7 +71,7 @@ const double CELEBRATION_PAUSE = 10.0;
 //! Seconds a gift of the keeper is remembered
 const double HAND_DROP_MEMORY = 120.0;
 //! Seconds a reaction waits at most for the creature to finish what it is doing
-const double PENDING_WAIT_MAX = 3.0;
+const double PENDING_WAIT_MAX = 5.0;
 const double PENDING_WAIT_STEP = 0.25;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
@@ -1058,6 +1058,23 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     drop.mTileY = tile->getY();
     drop.mTime = mTime;
     mHandDrops[entity->getName()] = drop;
+}
+
+void CreatureReactions::noteChickenFeeding(Creature* creature, const std::string& chickenName)
+{
+    std::map<std::string, HandDrop>::iterator it = mHandDrops.find(chickenName);
+    if((it == mHandDrops.end()) || (it->second.mType != GameEntityType::chickenEntity))
+        return;
+
+    HandDrop drop = it->second;
+    mHandDrops.erase(it);
+    if((mMode == Mode::off) || !mConfigLoaded || ((mTime - drop.mTime) > HAND_DROP_MEMORY))
+        return;
+
+    // The meal itself is running, so the reaction waits until the creature is done with it
+    std::vector<Creature*> creatures;
+    creatures.push_back(creature);
+    triggerGroup("ChickenGift", creatures, false, 0.5);
 }
 
 void CreatureReactions::noteEntityRemoved(GameEntity* entity)
