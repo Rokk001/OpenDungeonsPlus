@@ -366,7 +366,7 @@ bool MenuModeMain::toggleCampaignSubMenu(const CEGUI::EventArgs&)
 
 bool MenuModeMain::newCampaignPressed(const CEGUI::EventArgs& e)
 {
-    // As in the original, a new campaign has to be confirmed: the cross (back) returns
+    // A new campaign has to be confirmed: the cross (back) returns
     // to the previous screen and the tick starts it. Without saved progress there is
     // nothing to lose, so it starts at once.
     if(Campaign::getSingleton().hasProgress())

@@ -78,7 +78,7 @@ for creature, skills in expected.items():
             assert len(comment.lstrip("# ").split()) == len(line.split()), f"{creature} {skill} column count"
         assert found, f"{creature} has {skill}"
 
-# Spot values taken from the reference tables (fork scale where the values are gameplay numbers)
+# Spot values (fork scale where the values are gameplay numbers)
 dragon = blocks["Dragon"]
 assert re.search(r"^\s+HailStorm\t21\t2\t4\t8\t2\t11\t1\.5\t", dragon, re.M), "hail storm: 8 s of 1.4 turns, radius 2"
 assert re.search(r"^\s+SkeletonArmy\t21\t2\t10\t3\t42\tSkeleton$", dragon, re.M), "three skeletons for 30 s"

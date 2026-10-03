@@ -28,7 +28,7 @@
 class Creature;
 class GameMap;
 
-//! \brief Whirlwind: blows the target creature away from the caster (the ability "Wind" of the Firefly).
+//! \brief Whirlwind: blows the target creature away from the caster.
 //! The target is moved up to PushTiles tiles in the direction away from the caster, it stops in front of
 //! walls and other impassable tiles, and it stays stunned for StunTurns turns.
 class CreatureSkillWhirlwind : public CreatureSkill

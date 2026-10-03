@@ -1,4 +1,4 @@
-"""Check the room values that follow the reference: prices, prison and torture
+"""Check the room values: prices, prison and torture
 damage, combat pit damage, torture conversion times, library storage and the
 room based creature attraction."""
 from pathlib import Path

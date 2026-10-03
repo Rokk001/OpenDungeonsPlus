@@ -341,7 +341,7 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
         }
         case GiftBoxType::killCreatures:
         {
-            // The reference lets the keeper pick the victim, here one visible enemy creature is chosen at random
+            // One visible enemy creature is chosen at random
             std::vector<Creature*> victims;
             std::vector<Creature*> creatures = gameMap->getCreatures();
             for(Creature* creature : creatures)

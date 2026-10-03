@@ -63,7 +63,7 @@ const int HEART_REWARD_SPECIAL_DISTANCE = 2;
 //! \brief A dance rate large enough to hand a room tile over at once
 const double HEART_REWARD_TAKE_AT_ONCE = 1000000.0;
 
-//! \brief The twelve specials the reference picks from when a heart is destroyed
+//! \brief The twelve specials picked from when a heart is destroyed
 const GiftBoxType HEART_REWARD_SPECIALS[] =
 {
     GiftBoxType::levelUp,

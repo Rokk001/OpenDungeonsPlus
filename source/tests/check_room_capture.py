@@ -51,7 +51,7 @@ def config_value(key):
     return match.group(1) if match else '0'
 
 
-# Configuration: the reference behaviour is the default
+# Configuration: the default behaviour
 check(config_value('RoomsClaimableByEnemies') == '1', 'RoomsClaimableByEnemies must be 1 (claimable and destructible)')
 check(config_value('RoomConvertSecondsPerTile') == '2.5', 'an enemy room takes 2.5 seconds per tile')
 check(config_value('RoomConvertNeutralSecondsPerTile') == '0.5', 'a neutral room takes 0.5 seconds per tile')
@@ -61,7 +61,7 @@ check(config_value('RoomConvertReferenceClaimRate') == imp_claim,
       'RoomConvertReferenceClaimRate must be the claim rate of the imp (' + imp_claim + ')')
 check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
 check(config_value('PortalFirstSpawnSeconds') == '25', 'the first creature of a taken over portal comes after 25 seconds')
-check('"RoomsClaimableByEnemies", 1.0)' in room_source, 'without the setting the reference behaviour applies')
+check('"RoomsClaimableByEnemies", 1.0)' in room_source, 'without the setting the default behaviour applies')
 turns_per_second = re.search(r'double ODApplication::turnsPerSecond = ([0-9.]+);', read('source/ODApplication.cpp')).group(1)
 
 # Wiring
