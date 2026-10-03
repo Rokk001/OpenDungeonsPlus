@@ -61,6 +61,8 @@ struct ReactionMotion
         lookat,
         //! Sinks down (amount is the share of the height), stays and gets up again
         sit,
+        //! Tips over onto the side (amount is the angle in degrees), stays and gets up again
+        lie,
         //! Nods off (count nods, amount is their depth) and jumps up in the end
         startle
     };
@@ -310,6 +312,18 @@ public:
     inline double getBoredAfter() const
     { return mBoredAfter; }
 
+    //! Seconds a creature has to stand idle until it shows small habits, sits down or lies down
+    inline double getAmbientAfter() const
+    { return mAmbientAfter; }
+    inline double getSitAfter() const
+    { return mSitAfter; }
+    inline double getLieAfter() const
+    { return mLieAfter; }
+
+    //! Creatures closer than this to an event (world units) turn their head to it
+    inline double getLookRadius() const
+    { return mLookRadius; }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -327,6 +341,10 @@ private:
     double mImpatientAfter;
     double mProudSeconds;
     double mBoredAfter;
+    double mAmbientAfter;
+    double mSitAfter;
+    double mLieAfter;
+    double mLookRadius;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;

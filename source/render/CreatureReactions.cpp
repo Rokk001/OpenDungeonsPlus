@@ -173,7 +173,9 @@ CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& config
     mNextParticleId(0),
     mNextPropId(0),
     mMoodTimer(0.0),
-    mMoodIndex(0)
+    mMoodIndex(0),
+    mNextLookTarget(Ogre::Vector3::ZERO),
+    mHasNextLookTarget(false)
 {
     mConfigLoaded = mConfig.load(mConfigFileName);
     if(!mConfigLoaded)
@@ -471,6 +473,7 @@ bool CreatureReactions::isStandingMotion(ReactionMotion::Type type)
     return (type == ReactionMotion::Type::spin) || (type == ReactionMotion::Type::turn) ||
         (type == ReactionMotion::Type::squash) || (type == ReactionMotion::Type::look) ||
         (type == ReactionMotion::Type::lookat) || (type == ReactionMotion::Type::sit) ||
+        (type == ReactionMotion::Type::lie) ||
         (type == ReactionMotion::Type::startle);
 }
 
@@ -658,8 +661,16 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     reaction.mPriority = event.mPriority;
     reaction.mWhileWorking = event.mWhileWorking;
 
-    // The place the creature turns its head to: the wall, neighbour or room of the variant
-    reaction.mHasLookTarget = findLookTarget(creature, variant, reaction.mLookTarget);
+    // The place the creature turns its head to: the place of an event, or the wall, neighbour or room of the variant
+    if(mHasNextLookTarget)
+    {
+        reaction.mLookTarget = mNextLookTarget;
+        reaction.mHasLookTarget = true;
+    }
+    else
+    {
+        reaction.mHasLookTarget = findLookTarget(creature, variant, reaction.mLookTarget);
+    }
 
     bool shown = false;
 
@@ -729,6 +740,7 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
             reaction.mEndsWhenMoving = (variant.mMotion.mType == ReactionMotion::Type::look) ||
                 (variant.mMotion.mType == ReactionMotion::Type::lookat) ||
                 (variant.mMotion.mType == ReactionMotion::Type::sit) ||
+                (variant.mMotion.mType == ReactionMotion::Type::lie) ||
                 (variant.mMotion.mType == ReactionMotion::Type::startle);
         }
 
@@ -964,6 +976,20 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                 addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 break;
             }
+            case ReactionMotion::Type::lie:
+            {
+                if(!reaction.mMotionAxisComputed)
+                {
+                    reaction.mMotionAxisComputed = true;
+                    Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+                    forward.z = 0.0f;
+                    if(forward.length() > 0.01f)
+                        reaction.mMotionAxis = forward.normalisedCopy();
+                }
+
+                angle = motion.mAmount * PI_VALUE / 180.0 * plateau(progress, 0.15);
+                break;
+            }
             case ReactionMotion::Type::startle:
             {
                 // Nods off a few times, then jumps up
@@ -1054,7 +1080,9 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     double deltaAngle = angle - reaction.mMotionAngle;
     if(std::fabs(deltaAngle) > 0.00001)
     {
-        node->rotate(Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(deltaAngle)), Ogre::Vector3::UNIT_Z),
+        // The creature tips over onto its side around the axis it looks along, everything else turns around the vertical
+        Ogre::Vector3 axis = (motion.mType == ReactionMotion::Type::lie) ? reaction.mMotionAxis : Ogre::Vector3::UNIT_Z;
+        node->rotate(Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(deltaAngle)), axis),
             Ogre::Node::TS_PARENT);
     }
 
@@ -1266,6 +1294,14 @@ void CreatureReactions::pruneCooldowns()
             ++it;
     }
 
+    for(std::map<std::string, double>::iterator it = mNextLook.begin(); it != mNextLook.end();)
+    {
+        if(it->second <= mTime)
+            mNextLook.erase(it++);
+        else
+            ++it;
+    }
+
     // A creature that is gone is no longer seen standing idle
     for(std::map<std::string, double>::iterator it = mIdleSince.begin(); it != mIdleSince.end();)
     {
@@ -1333,6 +1369,9 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         if(!isWorkingInRoom(creature))
         {
             mLastAttack[creature->getName()] = mTime;
+
+            // The creatures that stand around look at the fight
+            noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, 4.0);
         }
         else
         {
@@ -1818,6 +1857,13 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     drop.mTileY = tile->getY();
     drop.mTime = mTime;
     mHandDrops[entity->getName()] = drop;
+
+    // The creatures that stand around look at the gold that falls
+    if(type == GameEntityType::treasuryObject)
+    {
+        noteNearbyEvent("AmbientLookGold", Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+            static_cast<Ogre::Real>(tile->getY()), 0.0f), nullptr, 1.0);
+    }
 }
 
 void CreatureReactions::noteEntityRemoved(GameEntity* entity)
@@ -1852,6 +1898,56 @@ void CreatureReactions::noteEntityRemoved(GameEntity* entity)
             continue;
 
         trigger(creature, "GoldGift");
+    }
+}
+
+bool CreatureReactions::triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target)
+{
+    mNextLookTarget = target;
+    mHasNextLookTarget = true;
+    bool started = trigger(creature, eventName);
+    mHasNextLookTarget = false;
+    return started;
+}
+
+void CreatureReactions::noteNearbyEvent(const std::string& eventName, const Ogre::Vector3& position,
+        const Creature* exclude, double minInterval)
+{
+    if((mMode == Mode::off) || !mConfigLoaded)
+        return;
+
+    // Looking is not needed for every blow of a fight: one look in a while is enough
+    std::map<std::string, double>::iterator itNext = mNextLook.find(eventName);
+    if((itNext != mNextLook.end()) && (itNext->second > mTime))
+        return;
+
+    mNextLook[eventName] = mTime + minInterval;
+
+    // Creatures standing still close by, a few of them, in no special order
+    std::vector<Creature*> candidates;
+    for(Creature* creature : mGameMap->getCreatures())
+    {
+        if((creature == exclude) || !creature->getIsOnMap() || !creature->isAlive() || creature->isMoving())
+            continue;
+
+        Ogre::Vector3 difference = creature->getPosition() - position;
+        difference.z = 0.0f;
+        if(difference.length() > mConfig.getLookRadius())
+            continue;
+
+        candidates.push_back(creature);
+    }
+
+    std::shuffle(candidates.begin(), candidates.end(), cosmeticRng());
+
+    uint32_t nbLooking = 0;
+    for(Creature* creature : candidates)
+    {
+        if(nbLooking >= 3)
+            break;
+
+        if(triggerLook(creature, eventName, position))
+            ++nbLooking;
     }
 }
 
@@ -2016,6 +2112,27 @@ void CreatureReactions::examineMood(Creature* creature)
             ((bits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired | CreatureMoodValues::GetFee)) == 0))
     {
         events.push_back("MoodContent");
+    }
+
+    // A long rest: sits down, and lies down if it goes on, in the open
+    if(idle && (idleFor >= mConfig.getLieAfter()) && (getRoomName(creature) != "Dormitory"))
+        events.push_back("AmbientLieDown");
+    else if(idle && (idleFor >= mConfig.getSitAfter()))
+        events.push_back("AmbientSitDown");
+
+    // Small habits of the kind of creature and small changes of the idle pose, in a changing order
+    if(idle && (idleFor >= mConfig.getAmbientAfter()))
+    {
+        if(cosmeticRandom(0.0, 1.0) < 0.5)
+        {
+            events.push_back("AmbientHabit");
+            events.push_back("AmbientIdle");
+        }
+        else
+        {
+            events.push_back("AmbientIdle");
+            events.push_back("AmbientHabit");
+        }
     }
 
     for(const std::string& eventName : events)

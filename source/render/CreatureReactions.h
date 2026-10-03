@@ -118,6 +118,12 @@ public:
     //! the others in the room react.
     void noteEntityAdded(GameEntity* entity);
 
+    //! \brief Client hook: something happened at the position (a fight, a slap, gold falling). Creatures that
+    //! stand still close by turn their head to it and show the event. Not more often than every minInterval
+    //! seconds for the same kind of event. The creature exclude (if any) is not asked.
+    void noteNearbyEvent(const std::string& eventName, const Ogre::Vector3& position, const Creature* exclude,
+        double minInterval);
+
     //! \brief Client hook: the creature picks up the entity to carry it. Carrying gold is shown.
     void noteCarry(Creature* carrier, GameEntity* carried);
 
@@ -162,6 +168,8 @@ private:
             mWhileWorking(false),
             mLookTarget(Ogre::Vector3::ZERO),
             mHasLookTarget(false),
+            mMotionAxis(Ogre::Vector3::UNIT_Z),
+            mMotionAxisComputed(false),
             mPropHeight(1.0),
             mLateEmoteDelay(0.0),
             mLateEmoteTime(2.0),
@@ -204,6 +212,9 @@ private:
         //! The point the motion 'lookat' and some props turn to (a wall, a room, a neighbour, the place of an event)
         Ogre::Vector3 mLookTarget;
         bool mHasLookTarget;
+        //! For the motion 'lie': the axis the creature tips over
+        Ogre::Vector3 mMotionAxis;
+        bool mMotionAxisComputed;
 
         //! Sprite prop: the billboards live in a scene node of their own, found by name
         ReactionProp mProp;
@@ -326,6 +337,8 @@ private:
     bool findLookTarget(const Creature* creature, const ReactionVariant& variant, Ogre::Vector3& point) const;
     //! \brief Another idle creature close by shows the event a moment later (the yawn that spreads)
     void spreadTo(Creature* creature, const std::string& eventName);
+    //! \brief Shows the event on the creature and lets it turn its head to the point
+    bool triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target);
     static bool isProudEvent(const std::string& eventName);
     static bool isStandingMotion(ReactionMotion::Type type);
 
@@ -378,6 +391,11 @@ private:
     std::map<std::string, double> mIdleSince;
     //! Time until a creature is proud of its victory or level up ("creature" -> mTime)
     std::map<std::string, double> mProudUntil;
+    //! Time before which no creature looks at an event of this kind again (event -> mTime)
+    std::map<std::string, double> mNextLook;
+    //! Where the creature that is triggered now has to look (set around one trigger call only)
+    Ogre::Vector3 mNextLookTarget;
+    bool mHasNextLookTarget;
 
     //! Time before which a creature may not show a reaction of a kind again ("creature|event")
     std::map<std::string, double> mCooldownEnd;
