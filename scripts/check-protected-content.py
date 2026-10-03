@@ -55,6 +55,7 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Ironbridge.level",
     "levels/campaign/Wolfscar.level",
     "levels/campaign/Lanternhill.level",
+    "levels/campaign/Thornreach.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
