@@ -40,6 +40,8 @@
 #include "utils/LogManager.h"
 
 #include <OgreAnimationState.h>
+#include <OgreBillboard.h>
+#include <OgreBillboardSet.h>
 #include <OgreCamera.h>
 #include <OgreEntity.h>
 #include <OgreMaterialManager.h>
@@ -95,14 +97,18 @@ const double ROOM_RESULT_DELAY = 0.7;
 //! Seconds between two tries to show the work reaction of a creature that does something for a while
 const double ONGOING_MIN = 5.0;
 const double ONGOING_MAX = 9.0;
+const std::string PROP_MATERIAL_PREFIX = "CreatureProp_";
+const std::string PROP_NAME_PREFIX = "CreatureReactionProp_";
 //! The reactions of the moods and the habits leave this many places of the simultaneous ones to the events
 const uint32_t MOOD_RESERVED_SLOTS = 2;
 //! Health stage (0 is unhurt, 7 is dead) from which a creature counts as hurt
 const uint32_t HURT_STAGE = 4;
 //! A hurt creature is scared by an enemy this close (world units)
 const double SCARE_RADIUS = 9.0;
-//! Another creature this close can be looked at
+//! Another creature this close can be looked at or catch a yawn
 const double NEIGHBOUR_RADIUS = 6.0;
+//! The creatures that catch a yawn show it after this much time
+const double YAWN_CATCH_DELAY = 1.1;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -140,6 +146,21 @@ double plateau(double progress, double ramp)
     return envelope * envelope * (3.0 - 2.0 * envelope);
 }
 
+//! Where the sprites of a prop are: in shares of the height of the creature, seen from the creature
+struct PropFrame
+{
+    Ogre::Vector3 mRight;
+    Ogre::Vector3 mForward;
+    double mHeight;
+
+    Ogre::Vector3 at(double sideways, double ahead, double up) const
+    {
+        return mRight * static_cast<Ogre::Real>(sideways * mHeight) +
+            mForward * static_cast<Ogre::Real>(ahead * mHeight) +
+            Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(up * mHeight));
+    }
+};
+
 } // namespace
 
 CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& configPath) :
@@ -150,6 +171,7 @@ CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& config
     mTime(0.0),
     mTimeLastPrune(0.0),
     mNextParticleId(0),
+    mNextPropId(0),
     mMoodTimer(0.0),
     mMoodIndex(0)
 {
@@ -683,6 +705,14 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
             }
         }
 
+        if(!variant.mLateEffect.empty())
+        {
+            reaction.mLateEffect = variant.mLateEffect;
+            reaction.mLateEffectDelay = variant.mLateEffectDelay;
+            reaction.mLateEffectTime = variant.mLateEffectTime;
+            reaction.mDuration = std::max(reaction.mDuration, variant.mLateEffectDelay + variant.mLateEffectTime);
+        }
+
         Ogre::SceneNode* node = creature->getEntityNode();
         // Turning and squashing look wrong on a creature that walks
         bool standingMotion = isStandingMotion(variant.mMotion.mType);
@@ -701,6 +731,15 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
                 (variant.mMotion.mType == ReactionMotion::Type::sit) ||
                 (variant.mMotion.mType == ReactionMotion::Type::startle);
         }
+
+        // A sprite prop, only while the creature stands still
+        if((variant.mProp.mPath != ReactionProp::Path::none) && !creature->isMoving() &&
+           createProps(reaction, creature, variant))
+        {
+            reaction.mDuration = std::max(reaction.mDuration, variant.mProp.mSeconds);
+            reaction.mEndsWhenMoving = true;
+            shown = true;
+        }
     }
 
     if(!shown)
@@ -714,6 +753,9 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     // A creature that won or reached a new level is proud for a while
     if(isProudEvent(event.mName))
         mProudUntil[creature->getName()] = mTime + mConfig.getProudSeconds();
+
+    if(!variant.mSpreads.empty())
+        spreadTo(creature, variant.mSpreads);
 
     return true;
 }
@@ -1082,6 +1124,7 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
     }
 
     applyMotion(reaction, creature);
+    updateProps(reaction, creature);
     return true;
 }
 
@@ -1102,6 +1145,13 @@ void CreatureReactions::updateLate(RunningReaction& reaction, Creature* creature
         }
         reaction.mLateEmote.clear();
     }
+
+    if(!reaction.mLateEffect.empty() && (reaction.mElapsed >= reaction.mLateEffectDelay))
+    {
+        std::string effect = reaction.mLateEffect;
+        reaction.mLateEffect.clear();
+        addParticles(reaction, creature, effect);
+    }
 }
 
 void CreatureReactions::endReaction(RunningReaction& reaction, Creature* creature)
@@ -1109,6 +1159,7 @@ void CreatureReactions::endReaction(RunningReaction& reaction, Creature* creatur
     stopClip(reaction, creature);
     clearMotion(reaction, creature);
     removeParticles(reaction);
+    removeProps(reaction);
 
     if(reaction.mEmoteShown && (creature != nullptr) && (creature->getOverlayStatus() != nullptr))
         creature->getOverlayStatus()->hideEmote();
@@ -1804,6 +1855,33 @@ void CreatureReactions::noteEntityRemoved(GameEntity* entity)
     }
 }
 
+void CreatureReactions::spreadTo(Creature* creature, const std::string& eventName)
+{
+    // The closest creature that stands still, gets tired, and is not busy catches it
+    Creature* closest = nullptr;
+    double best = NEIGHBOUR_RADIUS;
+    for(Creature* other : mGameMap->getCreatures())
+    {
+        if((other == creature) || !other->getIsOnMap() || !other->isAlive() || other->isMoving() ||
+           !creatureNeedsSleep(other))
+        {
+            continue;
+        }
+
+        Ogre::Vector3 difference = other->getPosition() - creature->getPosition();
+        difference.z = 0.0f;
+        double distance = difference.length();
+        if(distance >= best)
+            continue;
+
+        best = distance;
+        closest = other;
+    }
+
+    if(closest != nullptr)
+        queueReaction(closest, eventName, -1.0, YAWN_CATCH_DELAY + cosmeticRandom(0.0, 0.6));
+}
+
 bool CreatureReactions::isHurtAndThreatened(const Creature* creature) const
 {
     if(creature->getOverlayHealthValue() < HURT_STAGE)
@@ -1927,7 +2005,9 @@ void CreatureReactions::examineMood(Creature* creature)
     if((itProud != mProudUntil.end()) && (mTime < itProud->second))
         events.push_back("MoodProud");
 
-    if(idle && (idleFor >= mConfig.getImpatientAfter()))
+    if(idle && (idleFor >= mConfig.getBoredAfter()))
+        events.push_back("MoodBored");
+    else if(idle && (idleFor >= mConfig.getImpatientAfter()))
         events.push_back("MoodImpatient");
 
     if(own && (level == CreatureMoodLevel::Happy))
@@ -1943,6 +2023,297 @@ void CreatureReactions::examineMood(Creature* creature)
         if(trigger(creature, eventName))
             return;
     }
+}
+
+bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant)
+{
+    const ReactionProp& prop = variant.mProp;
+    std::string material = PROP_MATERIAL_PREFIX + prop.mSprite;
+    if(!Ogre::MaterialManager::getSingleton().resourceExists(material))
+    {
+        logMissingOnce("prop sprite", prop.mSprite);
+        return false;
+    }
+
+    Ogre::Entity* entity = getCreatureEntity(creature);
+    Ogre::SceneNode* creatureNode = creature->getEntityNode();
+    if((entity == nullptr) || (creatureNode == nullptr) || (creatureNode->getParentSceneNode() == nullptr))
+        return false;
+
+    // The size of the sprites follows the size of the creature
+    double height = static_cast<double>(entity->getWorldBoundingBox(true).getSize().z);
+    height = std::max(0.3, std::min(6.0, height));
+
+    // Without a wall to turn to, the props use a point in front of the creature
+    if(!reaction.mHasLookTarget)
+    {
+        Ogre::Vector3 forward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+        forward.z = 0.0f;
+        if(forward.length() > 0.01f)
+            forward.normalise();
+        reaction.mLookTarget = creature->getPosition() + forward * 0.9f;
+        reaction.mHasLookTarget = true;
+    }
+
+    uint32_t nbSprites = std::max<uint32_t>(1, prop.mCount);
+    if((prop.mPath == ReactionProp::Path::yoyo) || (prop.mPath == ReactionProp::Path::flip) ||
+       (prop.mPath == ReactionProp::Path::toss) || (prop.mPath == ReactionProp::Path::critter) ||
+       (prop.mPath == ReactionProp::Path::balance) || (prop.mPath == ReactionProp::Path::shadow) ||
+       (prop.mPath == ReactionProp::Path::kick))
+    {
+        nbSprites = 1;
+    }
+
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    std::string id = Helper::toString(mNextPropId);
+    ++mNextPropId;
+    std::string setName = PROP_NAME_PREFIX + id;
+    std::string nodeName = setName + "_node";
+
+    Ogre::BillboardSet* set = sceneManager->createBillboardSet(setName, nbSprites);
+    set->setMaterialName(material);
+    Ogre::Real size = static_cast<Ogre::Real>(prop.mSize * height);
+    set->setDefaultDimensions(size, size);
+    set->setCastShadows(false);
+    if(prop.mPath == ReactionProp::Path::doodle)
+    {
+        // The marks lie flat on the ground
+        set->setBillboardType(Ogre::BBT_PERPENDICULAR_COMMON);
+        set->setCommonDirection(Ogre::Vector3::UNIT_Z);
+        set->setCommonUpVector(Ogre::Vector3::UNIT_Y);
+    }
+
+    // The balls of the juggler have colours of their own
+    const Ogre::ColourValue ballColours[3] = {Ogre::ColourValue(1.0f, 0.45f, 0.4f), Ogre::ColourValue(0.5f, 0.9f, 0.5f),
+        Ogre::ColourValue(0.5f, 0.65f, 1.0f)};
+    for(uint32_t i = 0; i < nbSprites; ++i)
+    {
+        Ogre::ColourValue colour = Ogre::ColourValue::White;
+        if(prop.mPath == ReactionProp::Path::juggle)
+            colour = ballColours[i % 3];
+
+        set->createBillboard(Ogre::Vector3::ZERO, colour);
+    }
+
+    Ogre::SceneNode* node = creatureNode->getParentSceneNode()->createChildSceneNode(nodeName);
+    node->attachObject(set);
+    node->setPosition(creature->getPosition());
+
+    reaction.mProp = prop;
+    reaction.mPropSetName = setName;
+    reaction.mPropNodeName = nodeName;
+    reaction.mPropHeight = height;
+
+    updateProps(reaction, creature);
+    return true;
+}
+
+void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creature)
+{
+    if(reaction.mPropSetName.empty())
+        return;
+
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    Ogre::SceneNode* creatureNode = creature->getEntityNode();
+    if((creatureNode == nullptr) || !sceneManager->hasBillboardSet(reaction.mPropSetName) ||
+       !sceneManager->hasSceneNode(reaction.mPropNodeName))
+    {
+        return;
+    }
+
+    Ogre::BillboardSet* set = sceneManager->getBillboardSet(reaction.mPropSetName);
+    Ogre::SceneNode* node = sceneManager->getSceneNode(reaction.mPropNodeName);
+    node->setPosition(creature->getPosition());
+
+    PropFrame frame;
+    frame.mHeight = reaction.mPropHeight;
+    frame.mForward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+    frame.mForward.z = 0.0f;
+    if(frame.mForward.length() > 0.01f)
+        frame.mForward.normalise();
+    frame.mRight = frame.mForward.crossProduct(Ogre::Vector3::UNIT_Z);
+
+    const ReactionProp& prop = reaction.mProp;
+    double time = reaction.mElapsed;
+    double seconds = std::max(0.1, prop.mSeconds);
+    double progress = std::min(1.0, time / seconds);
+    Ogre::Real size = static_cast<Ogre::Real>(prop.mSize * reaction.mPropHeight);
+    const Ogre::Real hidden = 0.0001f;
+
+    // Where the wall or the point the prop turns to is, seen from the creature
+    Ogre::Vector3 target = reaction.mLookTarget - node->getPosition();
+    target.z = 0.0f;
+
+    int nbBillboards = set->getNumBillboards();
+    for(int i = 0; i < nbBillboards; ++i)
+    {
+        Ogre::Billboard* billboard = set->getBillboard(static_cast<unsigned short>(i));
+        Ogre::Vector3 offset = Ogre::Vector3::ZERO;
+        Ogre::Real width = size;
+        Ogre::Real length = size;
+        Ogre::ColourValue colour = billboard->getColour();
+        double index = static_cast<double>(i);
+        double count = static_cast<double>(nbBillboards);
+
+        switch(prop.mPath)
+        {
+            case ReactionProp::Path::juggle:
+            {
+                // Balls go round from hand to hand; in the end the first one is dropped
+                double angle = 2.0 * PI_VALUE * (0.75 * time + index / count);
+                double sideways = 0.2 * std::cos(angle);
+                double up = 0.5 + 0.3 * std::fabs(std::sin(angle));
+                if((i == 0) && (progress > 0.78))
+                {
+                    double dropAngle = 2.0 * PI_VALUE * 0.75 * 0.78 * seconds;
+                    double fall = (progress - 0.78) * seconds;
+                    sideways = 0.2 * std::cos(dropAngle) + 0.15 * fall;
+                    up = std::max(0.03, 0.5 + 0.3 * std::fabs(std::sin(dropAngle)) - 2.5 * fall * fall);
+                }
+                offset = frame.at(sideways, 0.3, up);
+                break;
+            }
+            case ReactionProp::Path::yoyo:
+            {
+                double up = 0.72 - 0.4 * std::fabs(std::sin(PI_VALUE * 1.4 * time));
+                offset = frame.at(0.22, 0.28, up);
+                break;
+            }
+            case ReactionProp::Path::flip:
+            {
+                // The coin goes up and comes down turning, so it is seen from the side now and then
+                double phase = std::fmod(time, 0.9) / 0.9;
+                double up = 0.55 + 1.6 * phase * (1.0 - phase);
+                offset = frame.at(0.1, 0.28, up);
+                length = size * static_cast<Ogre::Real>(std::max(0.15, std::fabs(std::cos(2.0 * PI_VALUE * 3.0 * phase))));
+                break;
+            }
+            case ReactionProp::Path::stack:
+            {
+                // One pebble after the other is put on the pile; at the end the pile falls apart
+                double appears = seconds * 0.12 * (index + 1.0);
+                double collapse = seconds * 0.72;
+                double side = ((i % 2) == 0) ? 1.0 : -1.0;
+                double sideways = 0.02 * side;
+                double ahead = 0.3;
+                double up = 0.03 + 0.075 * index;
+                if(time >= collapse)
+                {
+                    double fall = time - collapse;
+                    sideways += side * (0.4 + 0.2 * index) * std::min(fall, 0.8) * 0.35;
+                    ahead += 0.1 * index * std::min(fall, 0.8);
+                    up = std::max(0.025, up - 2.5 * fall * fall);
+                }
+                offset = frame.at(sideways, ahead, up);
+                if(time < appears)
+                {
+                    width = hidden;
+                    length = hidden;
+                }
+                break;
+            }
+            case ReactionProp::Path::toss:
+            {
+                // From the hand to the wall and back
+                double phase = std::fmod(time, 1.0);
+                double way = (phase < 0.5) ? (phase * 2.0) : ((1.0 - phase) * 2.0);
+                way = way * way * (3.0 - 2.0 * way);
+                Ogre::Vector3 hand = frame.at(0.15, 0.25, 0.62);
+                Ogre::Vector3 wall = target + Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(0.62 * reaction.mPropHeight));
+                offset = hand + (wall - hand) * static_cast<Ogre::Real>(way);
+                break;
+            }
+            case ReactionProp::Path::critter:
+            {
+                // Runs around the feet, and in the end away
+                double radius = 0.28;
+                if(progress > 0.7)
+                    radius += (progress - 0.7) * seconds * 0.5;
+                double angle = 2.0 * PI_VALUE * 0.5 * time;
+                offset = frame.at(radius * std::cos(angle), radius * std::sin(angle), 0.03);
+                break;
+            }
+            case ReactionProp::Path::balance:
+            {
+                // The tool wobbles on the fingertip, in the end it falls
+                double wobble = 0.35 * std::sin(2.0 * PI_VALUE * 1.3 * time) + 0.2 * std::sin(2.0 * PI_VALUE * 2.9 * time);
+                double up = 0.84;
+                if(progress > 0.85)
+                {
+                    double fall = (progress - 0.85) * seconds;
+                    up = std::max(0.04, up - 3.0 * fall * fall);
+                    wobble += fall * 3.0;
+                }
+                offset = frame.at(0.2 + 0.03 * wobble, 0.28, up);
+                billboard->setRotation(Ogre::Radian(static_cast<Ogre::Real>(wobble)));
+                break;
+            }
+            case ReactionProp::Path::doodle:
+            {
+                // The marks of a squiggle appear one after the other and fade out in the end
+                double along = (count > 1.0) ? (index / (count - 1.0)) : 0.0;
+                double appears = seconds * (0.1 + 0.5 * along);
+                offset = frame.at(0.15 + 0.22 * along + 0.05 * std::sin(along * 9.0),
+                    0.22 + 0.12 * std::sin(along * 6.0), 0.01);
+                double alpha = (time < appears) ? 0.0 : 1.0;
+                if(progress > 0.75)
+                    alpha *= std::max(0.0, 1.0 - (progress - 0.75) / 0.25);
+                colour.a = static_cast<Ogre::Real>(alpha);
+                break;
+            }
+            case ReactionProp::Path::shadow:
+            {
+                // The shadow on the wall flaps and fades in and out
+                Ogre::Vector3 towards = target;
+                if(towards.length() > 0.01f)
+                    towards = towards - towards.normalisedCopy() * 0.08f;
+                offset = towards + Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(0.62 * reaction.mPropHeight));
+                width = size * static_cast<Ogre::Real>(1.0 + 0.15 * std::sin(2.0 * PI_VALUE * 2.0 * time));
+                colour.a = static_cast<Ogre::Real>(plateau(progress, 0.15));
+                break;
+            }
+            case ReactionProp::Path::kick:
+            {
+                // Each kick sends the pebble forward over the floor
+                double cycle = seconds / std::max<uint32_t>(1, prop.mCount);
+                double phase = std::fmod(time, cycle) / cycle;
+                double distance = 0.28 + 0.9 * (1.0 - (1.0 - phase) * (1.0 - phase));
+                offset = frame.at(0.03, distance, 0.03);
+                if(phase > 0.9)
+                {
+                    width = hidden;
+                    length = hidden;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        billboard->setPosition(offset);
+        billboard->setDimensions(width, length);
+        billboard->setColour(colour);
+    }
+}
+
+void CreatureReactions::removeProps(RunningReaction& reaction)
+{
+    if(reaction.mPropSetName.empty())
+        return;
+
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    if(sceneManager->hasSceneNode(reaction.mPropNodeName))
+    {
+        Ogre::SceneNode* node = sceneManager->getSceneNode(reaction.mPropNodeName);
+        node->detachAllObjects();
+        sceneManager->destroySceneNode(node);
+    }
+
+    if(sceneManager->hasBillboardSet(reaction.mPropSetName))
+        sceneManager->destroyBillboardSet(reaction.mPropSetName);
+
+    reaction.mPropSetName.clear();
+    reaction.mPropNodeName.clear();
 }
 
 void CreatureReactions::stopAll()
