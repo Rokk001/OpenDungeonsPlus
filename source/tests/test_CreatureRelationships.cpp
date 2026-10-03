@@ -519,6 +519,51 @@ BOOST_AUTO_TEST_CASE(test_BestFriend)
     BOOST_CHECK(relationships.getBestFriend("Nobody").empty());
 }
 
+BOOST_AUTO_TEST_CASE(test_ConvertedPrisoner)
+{
+    CreatureRelationships relationships;
+    std::vector<std::string> captors;
+    captors.push_back("Captor1");
+    captors.push_back("Captor2");
+    captors.push_back("Convert");
+    relationships.changeValue("Convert", "Captor2", 10, 0);
+    relationships.startConverted("Convert", captors, 0);
+    const int32_t captorValue = relationships.getSettings().mConvertedCaptorValue;
+    BOOST_CHECK(captorValue < 0);
+    BOOST_CHECK_EQUAL(relationships.getValue("Convert", "Captor1"), captorValue);
+    // An existing value stays, others get none
+    BOOST_CHECK_EQUAL(relationships.getValue("Convert", "Captor2"), 10);
+    BOOST_CHECK_EQUAL(relationships.getValue("Convert", "Other"), 0);
+    BOOST_CHECK_EQUAL(relationships.getNbPairs(), 2u);
+}
+
+BOOST_AUTO_TEST_CASE(test_PrayedTogether)
+{
+    CreatureRelationships relationships;
+    const RelationshipSettings& settings = relationships.getSettings();
+    // Pairs that are not hated do not change
+    relationships.changeValue("A", "B", -10, 0);
+    relationships.onRelationshipEvent(RelationshipEvent::prayedTogether, "A", "B", 100);
+    relationships.onRelationshipEvent(RelationshipEvent::prayedTogether, "A", "Nobody", 100);
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "B"), -10);
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "Nobody"), 0);
+
+    relationships.changeValue("C", "D", -60, 0);
+    relationships.onRelationshipEvent(RelationshipEvent::prayedTogether, "C", "D", 100);
+    BOOST_CHECK_EQUAL(relationships.getValue("C", "D"), -60 + settings.mEventPrayedTogether);
+    // The cooldown keeps it slow
+    relationships.onRelationshipEvent(RelationshipEvent::prayedTogether, "C", "D", 101);
+    BOOST_CHECK_EQUAL(relationships.getValue("C", "D"), -60 + settings.mEventPrayedTogether);
+    relationships.onRelationshipEvent(RelationshipEvent::prayedTogether, "D", "C", 100 + settings.mPrayerTogetherCooldownTurns);
+    BOOST_CHECK_EQUAL(relationships.getValue("C", "D"), -60 + 2 * settings.mEventPrayedTogether);
+
+    // Once the pair is no longer hated, praying changes nothing
+    relationships.changeValue("C", "D", 100, 200);
+    int32_t value = relationships.getValue("C", "D");
+    relationships.onRelationshipEvent(RelationshipEvent::prayedTogether, "C", "D", 1000);
+    BOOST_CHECK_EQUAL(relationships.getValue("C", "D"), value);
+}
+
 BOOST_AUTO_TEST_CASE(test_ConfigValues)
 {
     std::map<std::string, std::string> config;

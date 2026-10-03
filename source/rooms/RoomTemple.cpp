@@ -20,6 +20,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "giftboxes/GiftBoxBonus.h"
@@ -231,6 +232,20 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     getGameMap()->addManaToSeat(mana, getSeat()->getId());
     creature.addPrayerRelief(configManager.getRoomConfigInt32("TemplePrayerReliefPerTurn"),
         configManager.getRoomConfigInt32("TemplePrayerReliefMax"));
+
+    // Creatures of the same keeper that pray in this temple at the same time may reconcile
+    if(getGameMap()->isRelationshipsEnabled())
+    {
+        for(Creature* other : mCreaturesUsingRoom)
+        {
+            if(other == &creature)
+                continue;
+
+            Tile* tileOther = other->getPositionTile();
+            if((tileOther != nullptr) && (tileOther->getCoveringRoom() == this))
+                Creature::reportRelationshipEvent(RelationshipEvent::prayedTogether, creature, *other);
+        }
+    }
 
     return false;
 }

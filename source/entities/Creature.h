@@ -164,6 +164,11 @@ public:
     float fillProfilePage(CEGUI::Window* page);
     std::string getStatsText();
 
+    //! \brief Client side. One line with the strongest friend and the worst enemy of a creature of the
+    //! local player or its allies, e.g. "Closest: Name (friend) - Against: Name (nemesis)". Empty if the
+    //! option is off, the creature belongs to somebody else or it has no relationships.
+    std::string getRelationshipTooltip();
+
     //! \brief Get the level of the object
     inline unsigned int getLevel() const
     { return mLevel; }
@@ -389,6 +394,10 @@ public:
     //! brief Server side. Reports a relationship event between two creatures of the same keeper. Does
     //! nothing if the option is off or one of them cannot have relationships.
     static void reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB);
+
+    //! brief Server side. Called right after a prisoner was converted to a new keeper: the creatures
+    //! of that keeper that captured it become its first (negative) relationships.
+    void startConvertedRelationships();
 
     //! brief Server side. Called when this creature was defeated: every pair of creatures of the
     //! killer's keeper that hit it recently (and the killer itself) fought together.
@@ -1098,6 +1107,10 @@ private:
     //! brief Creatures that recently hurt this creature (name and turn), used to find who took part
     //! in defeating it for the relationships. Only filled when the option is on.
     std::map<std::string, int64_t>  mRecentAttackers;
+
+    //! Names of enemy creatures that knocked this creature out (captors for a later conversion), at most
+    //! MAX_CAPTORS. Only filled when the option is on.
+    std::vector<std::string>        mCaptors;
 
     //! Name of the creature this one brawls with (relationships), empty if there is no brawl
     std::string                     mBrawlOpponent;

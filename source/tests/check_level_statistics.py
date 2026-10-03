@@ -173,6 +173,7 @@ struct Creature : public GameEntity
     void reportDeathToFriends(GameEntity*) {}
     double getRelationshipRageFactor(const Seat*) const { return 1.0; }
     std::map<std::string, int64_t> mRecentAttackers;
+    std::vector<std::string> mCaptors;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,
         double elementDamage, Tile* tileTakingDamage, bool ko);
     double mHp;

@@ -67,6 +67,8 @@ std::string getPostCategoryName(PostCategory category)
             return "nemesis";
         case PostCategory::Breakup:
             return "breakup";
+        case PostCategory::Converted:
+            return "converted";
         default:
             return "";
     }
