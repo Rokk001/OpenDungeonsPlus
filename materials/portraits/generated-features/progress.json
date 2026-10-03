@@ -1,5 +1,5 @@
 {
-  "completed": 33,
+  "completed": 34,
   "total": 34,
   "combinations": [
     "Kobold.mesh",
@@ -34,6 +34,7 @@
     "Lizardman.mesh-female",
     "Knight.mesh",
     "Knight.mesh-female",
-    "Cultist.mesh"
+    "Cultist.mesh",
+    "Cultist.mesh-female"
   ]
 }
