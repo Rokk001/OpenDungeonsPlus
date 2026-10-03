@@ -124,7 +124,8 @@ RelationshipSettings::RelationshipSettings() :
     mNeighbourBedTiles(3),
     mEatTogetherMood(100),
     mEatTogetherTiles(6),
-    mSlapFriendsMoodPenalty(150)
+    mSlapFriendsMoodPenalty(150),
+    mConvertedCaptorValue(-20)
 {
 }
 
@@ -188,7 +189,8 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"NeighbourBedTiles", &settings.mNeighbourBedTiles},
         {"EatTogetherMood", &settings.mEatTogetherMood},
         {"EatTogetherTiles", &settings.mEatTogetherTiles},
-        {"SlapFriendsMoodPenalty", &settings.mSlapFriendsMoodPenalty}
+        {"SlapFriendsMoodPenalty", &settings.mSlapFriendsMoodPenalty},
+        {"ConvertedCaptorValue", &settings.mConvertedCaptorValue}
     };
     struct DoubleEntry
     {
@@ -298,6 +300,18 @@ CreatureRelationships::Pair CreatureRelationships::makePair(const std::string& c
         return Pair(creatureA, creatureB);
 
     return Pair(creatureB, creatureA);
+}
+
+void CreatureRelationships::startConverted(const std::string& creature, const std::vector<std::string>& captors,
+    int64_t turn)
+{
+    for(size_t i = 0; i < captors.size(); ++i)
+    {
+        if((captors[i] == creature) || (getValue(creature, captors[i]) != 0))
+            continue;
+
+        changeValue(creature, captors[i], mSettings.mConvertedCaptorValue, turn);
+    }
 }
 
 void CreatureRelationships::onRelationshipEvent(RelationshipEvent event, const std::string& creatureA,

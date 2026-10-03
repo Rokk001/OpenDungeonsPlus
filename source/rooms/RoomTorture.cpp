@@ -429,6 +429,7 @@ bool RoomTorture::useRoom(Creature& creature, bool forced)
         {
             // The creature changes side
             creature.changeSeat(getSeat());
+            creature.startConvertedRelationships();
             getSeat()->getStatistics().mCreaturesConverted++;
             creature.clearActionQueue();
 
