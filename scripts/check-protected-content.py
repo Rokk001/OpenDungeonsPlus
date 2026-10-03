@@ -63,6 +63,7 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Mirewatch.level",
     "levels/campaign/Goldspire.level",
     "levels/campaign/Ebonrook.level",
+    "levels/campaign/VarnsCrossing.level",
     "levels/campaign/Wraithwood.level",
 ]
 
