@@ -6,7 +6,7 @@ Original portraits and the earlier cropped-patch folder remain unchanged.
 Native generator canvas sizes are preserved; these files are not registered game-composition patches.
 Exact prompts and source-file provenance are recorded per portrait.
 
-Generation and copy validation: 23 of 34 creature/gender combinations completed.
+Generation and copy validation: 24 of 34 creature/gender combinations completed.
 
 Completed combinations:
 - Kobold male: 19 assets
@@ -32,5 +32,6 @@ Completed combinations:
 - Wizard male: 21 assets
 - Wizard female: 21 assets
 - Elf male: 21 assets
+- Elf female: 21 assets
 
 No runtime code changed, so application version and runtime changelog updates are not required.
