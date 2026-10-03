@@ -5,6 +5,7 @@ Name	Quietcrag
 Description	A hushed crag with a small cave to call home. Dig out the dormitory and hatchery, find the old watch hall and the workshop, and learn the craft before the first travellers arrive. Build as you like; nothing here ends the game.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
+Sandbox	1
 [/Info]
 
 [Seats]

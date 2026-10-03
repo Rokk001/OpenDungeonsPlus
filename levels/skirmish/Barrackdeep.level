@@ -5,6 +5,7 @@ Name	Barrackdeep
 Description	Wild beasts of every kind roam the deep caves of Barrackdeep, one kennel after another. Win them over, house them well and raise a great army. Heroes keep a small outpost in the north-east. Build as you like; nothing here ends the game.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
+Sandbox	1
 [/Info]
 
 [Seats]
@@ -2102,7 +2103,7 @@ mana	0
 60	20	1
 [/Trap]
 [Trap]
-8	Fear1	0	1
+9	Fear1	0	1
 24	20	1
 [/Trap]
 [/Traps]

@@ -5,6 +5,7 @@ Name	Splitstone
 Description	A great stone ridge splits this land in two. Your cave lies on the quiet side, the rich seams lie on the other, and a single narrow passage winds between them. Hold it and you hold everything. Build as you like; nothing here ends the game.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
+Sandbox	1
 [/Info]
 
 [Seats]
