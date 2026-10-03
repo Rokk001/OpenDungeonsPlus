@@ -115,7 +115,10 @@ check("getCoveringBuilding() != nullptr" in reward_code and "claimTile(winnerSea
 check("loserSeat->getMana()" in reward_code and "addManaToSeat(-mana, loserSeat->getId())" in reward_code,
       "the winner takes all mana of the loser")
 # The random pool holds only types the gift box code can apply
-pool = re.search(r"HEART_REWARD_SPECIALS\[\] =\s*\{([^}]*)\}", temple).group(1)
+pool = re.search(r"HEART_REWARD_SPECIALS\[\] =\s*\{(.*?)\n\};", temple, re.S).group(1)
+weights = [int(w) for w in re.findall(r"GiftBoxType::\w+, (\d+) \}", pool)]
+check(len(weights) == 12 and sum(weights) == 100 and min(weights) >= 1, "the reward weights must add up to 100")
+check("pickHeartRewardSpecial()" in temple, "the specials are drawn by weight")
 bonus = (root / "source/giftboxes/GiftBoxBonus.cpp").read_text(encoding="utf-8")
 for entry in re.findall(r"GiftBoxType::(\w+)", pool):
     check("case GiftBoxType::" + entry + ":" in bonus, "no gift box effect for the special " + entry)

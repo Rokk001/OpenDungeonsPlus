@@ -57,8 +57,8 @@ check(config_value('RoomConvertSecondsPerTile') == '2.5', 'an enemy room takes 2
 check(config_value('RoomConvertNeutralSecondsPerTile') == '0.5', 'a neutral room takes 0.5 seconds per tile')
 creatures_cfg = read('config/creatures.cfg')
 imp_claim = re.search(r'^\s+ClaimRate\s+([0-9.]+)\s*$', creatures_cfg, re.M).group(1)
-check(config_value('RoomConvertReferenceClaimRate') == imp_claim,
-      'RoomConvertReferenceClaimRate must be the claim rate of the imp (' + imp_claim + ')')
+check(config_value('RoomConvertClaimRate') == imp_claim,
+      'RoomConvertClaimRate must be the claim rate of the imp (' + imp_claim + ')')
 check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
 check(config_value('PortalFirstSpawnSeconds') == '25', 'the first creature of a taken over portal comes after 25 seconds')
 check('"RoomsClaimableByEnemies", 1.0)' in room_source, 'without the setting the default behaviour applies')
@@ -200,7 +200,7 @@ int main()
     return gFailures ? 1 : 0;
 }
 '''
-probe = (probe.replace('REFERENCE', config_value('RoomConvertReferenceClaimRate'))
+probe = (probe.replace('REFERENCE', config_value('RoomConvertClaimRate'))
          .replace('NEUTRAL', config_value('RoomConvertNeutralSecondsPerTile'))
          .replace('ENEMY', config_value('RoomConvertSecondsPerTile'))
          .replace('REPAIR', config_value('RoomRepairFactor'))

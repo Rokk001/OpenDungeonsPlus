@@ -538,25 +538,25 @@ Relative/Default/Interface/Click/
 Relative/Default/Interface/PickSelector/
 -> PickSelector.ogg                    cameronmusic            CC0                     https://www.freesound.org/people/cameronmusic/sounds/138412/
 Relative/Default/Keeper/AllyDefeated/
--> OD_voice_keeper(neutral)_allydefeated*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_allydefeated*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/CreatureNew/
--> OD_voice_keeper(neutral)_creaturenew*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_creaturenew*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/CreatureNoBed/
--> OD_voice_keeper(neutral)_creaturebed*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_creaturebed*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/CreatureNoFood/
--> OD_voice_keeper(neutral)_creaturehungry*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_creaturehungry*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/Defeat/
--> OD_voice_keeper(neutral)_defeat*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_defeat*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/GoalFailed/
--> OD_voice_keeper(neutral)_objectivefailed*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_objectivefailed*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/GoalMet/
--> OD_voice_keeper(neutral)_objectivemet*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_objectivemet*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/Lost/
--> OD_voice_keeper(neutral)_defeat*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_defeat*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/Victory/
--> OD_voice_keeper(neutral)_victory*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_victory*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 Relative/Default/Keeper/WeAreUnderAttack/
--> OD_voice_keeper(neutral)_weareunderattack*.oggTomasz Luchowski        GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2); voice actor and recording source not recorded
+-> OD_voice_keeper(neutral)_weareunderattack*.oggCommunity voice actor   GPLv3+                  New keeper voice added 2026 (first commit 3dea011d2), spoken by a member of the project community
 
 Relative/Old/Interface/
 -> Click/click.ogg                     Allacrost               GPL 2.0+

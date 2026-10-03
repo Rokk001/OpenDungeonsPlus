@@ -1,7 +1,7 @@
 """Check the Summon champion spell and the champion creature.
 
-The spell costs 100,000 mana and the champion then costs 2,000 mana per second after a free period of
-price / drain = 50 seconds. The champion is the only creature that cannot be hurt. The spell is not
+The spell costs 108,000 mana and the champion then costs 2,250 mana per second after a free period of
+price / drain = 48 seconds. The champion is the only creature that cannot be hurt. The spell is not
 researchable, the complete campaign talisman unlocks it."""
 from pathlib import Path
 import re
@@ -20,8 +20,8 @@ section = spells[spells.rindex("[Spells]"):spells.rindex("[/Spells]")]
 values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
 price = float(values["SummonChampionPrice"])
 drain = float(values["SummonChampionDrainPerSecond"])
-assert (price, drain) == (100000.0, 2000.0), "price and drain per second"
-assert price / drain == 50.0, "free period of 50 seconds"
+assert (price, drain) == (108000.0, 2250.0), "price and drain per second"
+assert price / drain == 48.0, "free period of 48 seconds"
 assert values["SummonChampionCooldown"] == "0"
 
 # The creature definition

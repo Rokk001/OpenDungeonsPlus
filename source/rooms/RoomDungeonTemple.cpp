@@ -63,23 +63,50 @@ const int HEART_REWARD_SPECIAL_DISTANCE = 2;
 //! \brief A dance rate large enough to hand a room tile over at once
 const double HEART_REWARD_TAKE_AT_ONCE = 1000000.0;
 
-//! \brief The twelve specials picked from when a heart is destroyed
-const GiftBoxType HEART_REWARD_SPECIALS[] =
+//! \brief A special that can drop when a heart is destroyed, with its weight in the draw
+struct HeartRewardSpecial
 {
-    GiftBoxType::levelUp,
-    GiftBoxType::revealMap,
-    GiftBoxType::makeSafe,
-    GiftBoxType::weakenWalls,
-    GiftBoxType::gold,
-    GiftBoxType::mana,
-    GiftBoxType::stunImps,
-    GiftBoxType::receiveImps,
-    GiftBoxType::makeHappy,
-    GiftBoxType::makeUnhappy,
-    GiftBoxType::killCreatures,
-    GiftBoxType::healAll
+    GiftBoxType mType;
+    int mWeight;
+};
+
+//! \brief The twelve specials picked from when a heart is destroyed. The chance of a special is its weight
+//! divided by the sum of all weights (100): plain supplies (gold, mana, map view) are the most common,
+//! effects that change the whole dungeon at once (level up, kill creatures, stun workers) are rare.
+const HeartRewardSpecial HEART_REWARD_SPECIALS[] =
+{
+    { GiftBoxType::gold, 15 },
+    { GiftBoxType::mana, 14 },
+    { GiftBoxType::revealMap, 12 },
+    { GiftBoxType::receiveImps, 10 },
+    { GiftBoxType::makeHappy, 9 },
+    { GiftBoxType::healAll, 8 },
+    { GiftBoxType::makeSafe, 7 },
+    { GiftBoxType::weakenWalls, 7 },
+    { GiftBoxType::levelUp, 6 },
+    { GiftBoxType::stunImps, 6 },
+    { GiftBoxType::makeUnhappy, 4 },
+    { GiftBoxType::killCreatures, 2 }
 };
 const int NB_HEART_REWARD_SPECIALS = sizeof(HEART_REWARD_SPECIALS) / sizeof(HEART_REWARD_SPECIALS[0]);
+
+//! \brief Draws one special of the reward pool by its weight
+GiftBoxType pickHeartRewardSpecial()
+{
+    int totalWeight = 0;
+    for(int i = 0; i < NB_HEART_REWARD_SPECIALS; ++i)
+        totalWeight += HEART_REWARD_SPECIALS[i].mWeight;
+
+    int roll = Random::Int(0, totalWeight - 1);
+    for(int i = 0; i < NB_HEART_REWARD_SPECIALS; ++i)
+    {
+        if(roll < HEART_REWARD_SPECIALS[i].mWeight)
+            return HEART_REWARD_SPECIALS[i].mType;
+
+        roll -= HEART_REWARD_SPECIALS[i].mWeight;
+    }
+    return HEART_REWARD_SPECIALS[NB_HEART_REWARD_SPECIALS - 1].mType;
+}
 
 //! \brief Puts four gift boxes of a random type 2 tiles north, east, south and west of the heart
 void placeHeartRewardSpecials(GameMap* gameMap, Seat* winnerSeat, Tile* heartTile)
@@ -95,7 +122,7 @@ void placeHeartRewardSpecials(GameMap* gameMap, Seat* winnerSeat, Tile* heartTil
         if(tile == nullptr || tile->isFullTile())
             continue;
 
-        GiftBoxType type = HEART_REWARD_SPECIALS[Random::Int(0, NB_HEART_REWARD_SPECIALS - 1)];
+        GiftBoxType type = pickHeartRewardSpecial();
         GiftBoxBonus* giftBox = new GiftBoxBonus(gameMap, "HeartSpecial", type, GiftBoxBonus::getDefaultAmount(type));
         giftBox->setSeat(winnerSeat);
         giftBox->addToGameMap();
