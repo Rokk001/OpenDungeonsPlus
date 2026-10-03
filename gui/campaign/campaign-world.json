@@ -1,0 +1,1055 @@
+{
+  "version": 1,
+  "size": [
+    2560,
+    1600
+  ],
+  "provinces": [
+    {
+      "id": "T01",
+      "name": "Mossgate",
+      "mask_rgb": [
+        12,
+        34,
+        56
+      ],
+      "bbox": [
+        137,
+        1130,
+        306,
+        295
+      ],
+      "label_anchor": [
+        339,
+        1218
+      ],
+      "banner_anchor": [
+        287,
+        1278
+      ],
+      "layers": {
+        "locked": "provinces/T01_locked.png",
+        "available": "provinces/T01_available.png",
+        "conquered": "provinces/T01_conquered.png",
+        "lift": "provinces/T01_lift.png"
+      },
+      "layer_origin": [
+        121,
+        1114
+      ],
+      "lift_origin": [
+        96,
+        1089
+      ]
+    },
+    {
+      "id": "T02",
+      "name": "Brackenford",
+      "mask_rgb": [
+        90,
+        65,
+        80
+      ],
+      "bbox": [
+        416,
+        1099,
+        352,
+        323
+      ],
+      "label_anchor": [
+        613,
+        1226
+      ],
+      "banner_anchor": [
+        561,
+        1286
+      ],
+      "layers": {
+        "locked": "provinces/T02_locked.png",
+        "available": "provinces/T02_available.png",
+        "conquered": "provinces/T02_conquered.png",
+        "lift": "provinces/T02_lift.png"
+      },
+      "layer_origin": [
+        400,
+        1083
+      ],
+      "lift_origin": [
+        373,
+        1057
+      ]
+    },
+    {
+      "id": "T03",
+      "name": "Coldwell",
+      "mask_rgb": [
+        140,
+        65,
+        80
+      ],
+      "bbox": [
+        502,
+        401,
+        490,
+        255
+      ],
+      "label_anchor": [
+        751,
+        537
+      ],
+      "banner_anchor": [
+        699,
+        597
+      ],
+      "layers": {
+        "locked": "provinces/T03_locked.png",
+        "available": "provinces/T03_available.png",
+        "conquered": "provinces/T03_conquered.png",
+        "lift": "provinces/T03_lift.png"
+      },
+      "layer_origin": [
+        486,
+        385
+      ],
+      "lift_origin": [
+        455,
+        361
+      ]
+    },
+    {
+      "id": "T04",
+      "name": "Tinmoor",
+      "mask_rgb": [
+        190,
+        65,
+        80
+      ],
+      "bbox": [
+        396,
+        951,
+        399,
+        251
+      ],
+      "label_anchor": [
+        646,
+        1027
+      ],
+      "banner_anchor": [
+        594,
+        1087
+      ],
+      "layers": {
+        "locked": "provinces/T04_locked.png",
+        "available": "provinces/T04_available.png",
+        "conquered": "provinces/T04_conquered.png",
+        "lift": "provinces/T04_lift.png"
+      },
+      "layer_origin": [
+        380,
+        935
+      ],
+      "lift_origin": [
+        352,
+        911
+      ]
+    },
+    {
+      "id": "T05",
+      "name": "Ravensledge",
+      "mask_rgb": [
+        40,
+        115,
+        80
+      ],
+      "bbox": [
+        727,
+        1097,
+        338,
+        338
+      ],
+      "label_anchor": [
+        896,
+        1258
+      ],
+      "banner_anchor": [
+        844,
+        1318
+      ],
+      "layers": {
+        "locked": "provinces/T05_locked.png",
+        "available": "provinces/T05_available.png",
+        "conquered": "provinces/T05_conquered.png",
+        "lift": "provinces/T05_lift.png"
+      },
+      "layer_origin": [
+        711,
+        1081
+      ],
+      "lift_origin": [
+        685,
+        1055
+      ]
+    },
+    {
+      "id": "T06",
+      "name": "Ashcombe",
+      "mask_rgb": [
+        90,
+        115,
+        80
+      ],
+      "bbox": [
+        768,
+        902,
+        573,
+        217
+      ],
+      "label_anchor": [
+        1090,
+        1039
+      ],
+      "banner_anchor": [
+        1038,
+        1099
+      ],
+      "layers": {
+        "locked": "provinces/T06_locked.png",
+        "available": "provinces/T06_available.png",
+        "conquered": "provinces/T06_conquered.png",
+        "lift": "provinces/T06_lift.png"
+      },
+      "layer_origin": [
+        752,
+        886
+      ],
+      "lift_origin": [
+        719,
+        863
+      ]
+    },
+    {
+      "id": "T07",
+      "name": "Greywater",
+      "mask_rgb": [
+        140,
+        115,
+        80
+      ],
+      "bbox": [
+        129,
+        573,
+        377,
+        580
+      ],
+      "label_anchor": [
+        347,
+        774
+      ],
+      "banner_anchor": [
+        295,
+        834
+      ],
+      "layers": {
+        "locked": "provinces/T07_locked.png",
+        "available": "provinces/T07_available.png",
+        "conquered": "provinces/T07_conquered.png",
+        "lift": "provinces/T07_lift.png"
+      },
+      "layer_origin": [
+        113,
+        557
+      ],
+      "lift_origin": [
+        86,
+        524
+      ]
+    },
+    {
+      "id": "T08",
+      "name": "Hollin Fen",
+      "mask_rgb": [
+        190,
+        115,
+        80
+      ],
+      "bbox": [
+        396,
+        628,
+        453,
+        525
+      ],
+      "label_anchor": [
+        662,
+        769
+      ],
+      "banner_anchor": [
+        610,
+        829
+      ],
+      "layers": {
+        "locked": "provinces/T08_locked.png",
+        "available": "provinces/T08_available.png",
+        "conquered": "provinces/T08_conquered.png",
+        "lift": "provinces/T08_lift.png"
+      },
+      "layer_origin": [
+        380,
+        612
+      ],
+      "lift_origin": [
+        350,
+        580
+      ]
+    },
+    {
+      "id": "T09A",
+      "name": "Saltmere",
+      "mask_rgb": [
+        40,
+        165,
+        80
+      ],
+      "bbox": [
+        1026,
+        1104,
+        450,
+        324
+      ],
+      "label_anchor": [
+        1265,
+        1261
+      ],
+      "banner_anchor": [
+        1213,
+        1321
+      ],
+      "layers": {
+        "locked": "provinces/T09A_locked.png",
+        "available": "provinces/T09A_available.png",
+        "conquered": "provinces/T09A_conquered.png",
+        "lift": "provinces/T09A_lift.png"
+      },
+      "layer_origin": [
+        1010,
+        1088
+      ],
+      "lift_origin": [
+        981,
+        1062
+      ]
+    },
+    {
+      "id": "T09B",
+      "name": "Dunmarrow",
+      "mask_rgb": [
+        90,
+        165,
+        80
+      ],
+      "bbox": [
+        1288,
+        934,
+        584,
+        454
+      ],
+      "label_anchor": [
+        1606,
+        1177
+      ],
+      "banner_anchor": [
+        1554,
+        1237
+      ],
+      "layers": {
+        "locked": "provinces/T09B_locked.png",
+        "available": "provinces/T09B_available.png",
+        "conquered": "provinces/T09B_conquered.png",
+        "lift": "provinces/T09B_lift.png"
+      },
+      "layer_origin": [
+        1272,
+        918
+      ],
+      "lift_origin": [
+        1238,
+        888
+      ]
+    },
+    {
+      "id": "T10",
+      "name": "Ironbridge",
+      "mask_rgb": [
+        140,
+        165,
+        80
+      ],
+      "bbox": [
+        1092,
+        643,
+        280,
+        295
+      ],
+      "label_anchor": [
+        1220,
+        800
+      ],
+      "banner_anchor": [
+        1168,
+        860
+      ],
+      "layers": {
+        "locked": "provinces/T10_locked.png",
+        "available": "provinces/T10_available.png",
+        "conquered": "provinces/T10_conquered.png",
+        "lift": "provinces/T10_lift.png"
+      },
+      "layer_origin": [
+        1076,
+        627
+      ],
+      "lift_origin": [
+        1052,
+        602
+      ]
+    },
+    {
+      "id": "T11",
+      "name": "Wolfscar",
+      "mask_rgb": [
+        190,
+        165,
+        80
+      ],
+      "bbox": [
+        955,
+        401,
+        425,
+        249
+      ],
+      "label_anchor": [
+        1151,
+        553
+      ],
+      "banner_anchor": [
+        1099,
+        613
+      ],
+      "layers": {
+        "locked": "provinces/T11_locked.png",
+        "available": "provinces/T11_available.png",
+        "conquered": "provinces/T11_conquered.png",
+        "lift": "provinces/T11_lift.png"
+      },
+      "layer_origin": [
+        939,
+        385
+      ],
+      "lift_origin": [
+        910,
+        362
+      ]
+    },
+    {
+      "id": "T12",
+      "name": "Lanternhill",
+      "mask_rgb": [
+        40,
+        215,
+        80
+      ],
+      "bbox": [
+        795,
+        588,
+        319,
+        362
+      ],
+      "label_anchor": [
+        965,
+        752
+      ],
+      "banner_anchor": [
+        913,
+        812
+      ],
+      "layers": {
+        "locked": "provinces/T12_locked.png",
+        "available": "provinces/T12_available.png",
+        "conquered": "provinces/T12_conquered.png",
+        "lift": "provinces/T12_lift.png"
+      },
+      "layer_origin": [
+        779,
+        572
+      ],
+      "lift_origin": [
+        753,
+        545
+      ]
+    },
+    {
+      "id": "T13",
+      "name": "Cinderhollow",
+      "mask_rgb": [
+        90,
+        215,
+        80
+      ],
+      "bbox": [
+        929,
+        137,
+        507,
+        346
+      ],
+      "label_anchor": [
+        1196,
+        297
+      ],
+      "banner_anchor": [
+        1144,
+        357
+      ],
+      "layers": {
+        "locked": "provinces/T13_locked.png",
+        "available": "provinces/T13_available.png",
+        "conquered": "provinces/T13_conquered.png",
+        "lift": "provinces/T13_lift.png"
+      },
+      "layer_origin": [
+        913,
+        121
+      ],
+      "lift_origin": [
+        882,
+        95
+      ]
+    },
+    {
+      "id": "T14",
+      "name": "Thornreach",
+      "mask_rgb": [
+        140,
+        215,
+        80
+      ],
+      "bbox": [
+        1339,
+        607,
+        288,
+        363
+      ],
+      "label_anchor": [
+        1516,
+        787
+      ],
+      "banner_anchor": [
+        1464,
+        847
+      ],
+      "layers": {
+        "locked": "provinces/T14_locked.png",
+        "available": "provinces/T14_available.png",
+        "conquered": "provinces/T14_conquered.png",
+        "lift": "provinces/T14_lift.png"
+      },
+      "layer_origin": [
+        1323,
+        591
+      ],
+      "lift_origin": [
+        1298,
+        564
+      ]
+    },
+    {
+      "id": "T15",
+      "name": "Bellwick",
+      "mask_rgb": [
+        190,
+        215,
+        80
+      ],
+      "bbox": [
+        1609,
+        681,
+        311,
+        399
+      ],
+      "label_anchor": [
+        1743,
+        879
+      ],
+      "banner_anchor": [
+        1691,
+        939
+      ],
+      "layers": {
+        "locked": "provinces/T15_locked.png",
+        "available": "provinces/T15_available.png",
+        "conquered": "provinces/T15_conquered.png",
+        "lift": "provinces/T15_lift.png"
+      },
+      "layer_origin": [
+        1593,
+        665
+      ],
+      "lift_origin": [
+        1568,
+        637
+      ]
+    },
+    {
+      "id": "T16",
+      "name": "Highcairn",
+      "mask_rgb": [
+        40,
+        65,
+        135
+      ],
+      "bbox": [
+        209,
+        169,
+        481,
+        488
+      ],
+      "label_anchor": [
+        462,
+        368
+      ],
+      "banner_anchor": [
+        410,
+        428
+      ],
+      "layers": {
+        "locked": "provinces/T16_locked.png",
+        "available": "provinces/T16_available.png",
+        "conquered": "provinces/T16_conquered.png",
+        "lift": "provinces/T16_lift.png"
+      },
+      "layer_origin": [
+        193,
+        153
+      ],
+      "lift_origin": [
+        163,
+        122
+      ]
+    },
+    {
+      "id": "T17",
+      "name": "Stormhaven",
+      "mask_rgb": [
+        90,
+        65,
+        135
+      ],
+      "bbox": [
+        1743,
+        920,
+        598,
+        371
+      ],
+      "label_anchor": [
+        2098,
+        1073
+      ],
+      "banner_anchor": [
+        2046,
+        1133
+      ],
+      "layers": {
+        "locked": "provinces/T17_locked.png",
+        "available": "provinces/T17_available.png",
+        "conquered": "provinces/T17_conquered.png",
+        "lift": "provinces/T17_lift.png"
+      },
+      "layer_origin": [
+        1727,
+        904
+      ],
+      "lift_origin": [
+        1693,
+        877
+      ]
+    },
+    {
+      "id": "T18A",
+      "name": "Mirewatch",
+      "mask_rgb": [
+        140,
+        65,
+        135
+      ],
+      "bbox": [
+        1744,
+        638,
+        662,
+        395
+      ],
+      "label_anchor": [
+        2066,
+        827
+      ],
+      "banner_anchor": [
+        2014,
+        887
+      ],
+      "layers": {
+        "locked": "provinces/T18A_locked.png",
+        "available": "provinces/T18A_available.png",
+        "conquered": "provinces/T18A_conquered.png",
+        "lift": "provinces/T18A_lift.png"
+      },
+      "layer_origin": [
+        1728,
+        622
+      ],
+      "lift_origin": [
+        1692,
+        594
+      ]
+    },
+    {
+      "id": "T18B",
+      "name": "Goldspire",
+      "mask_rgb": [
+        190,
+        65,
+        135
+      ],
+      "bbox": [
+        1525,
+        437,
+        266,
+        273
+      ],
+      "label_anchor": [
+        1663,
+        573
+      ],
+      "banner_anchor": [
+        1611,
+        633
+      ],
+      "layers": {
+        "locked": "provinces/T18B_locked.png",
+        "available": "provinces/T18B_available.png",
+        "conquered": "provinces/T18B_conquered.png",
+        "lift": "provinces/T18B_lift.png"
+      },
+      "layer_origin": [
+        1509,
+        421
+      ],
+      "lift_origin": [
+        1485,
+        397
+      ]
+    },
+    {
+      "id": "T19",
+      "name": "Ebonrook",
+      "mask_rgb": [
+        40,
+        115,
+        135
+      ],
+      "bbox": [
+        1372,
+        137,
+        293,
+        491
+      ],
+      "label_anchor": [
+        1535,
+        374
+      ],
+      "banner_anchor": [
+        1483,
+        434
+      ],
+      "layers": {
+        "locked": "provinces/T19_locked.png",
+        "available": "provinces/T19_available.png",
+        "conquered": "provinces/T19_conquered.png",
+        "lift": "provinces/T19_lift.png"
+      },
+      "layer_origin": [
+        1356,
+        121
+      ],
+      "lift_origin": [
+        1331,
+        90
+      ]
+    },
+    {
+      "id": "T20",
+      "name": "Varn's Crossing",
+      "mask_rgb": [
+        90,
+        115,
+        135
+      ],
+      "bbox": [
+        1662,
+        436,
+        323,
+        274
+      ],
+      "label_anchor": [
+        1864,
+        589
+      ],
+      "banner_anchor": [
+        1812,
+        649
+      ],
+      "layers": {
+        "locked": "provinces/T20_locked.png",
+        "available": "provinces/T20_available.png",
+        "conquered": "provinces/T20_conquered.png",
+        "lift": "provinces/T20_lift.png"
+      },
+      "layer_origin": [
+        1646,
+        420
+      ],
+      "lift_origin": [
+        1620,
+        396
+      ]
+    },
+    {
+      "id": "T21",
+      "name": "Silverdeep",
+      "mask_rgb": [
+        140,
+        115,
+        135
+      ],
+      "bbox": [
+        652,
+        161,
+        323,
+        294
+      ],
+      "label_anchor": [
+        810,
+        331
+      ],
+      "banner_anchor": [
+        758,
+        391
+      ],
+      "layers": {
+        "locked": "provinces/T21_locked.png",
+        "available": "provinces/T21_available.png",
+        "conquered": "provinces/T21_conquered.png",
+        "lift": "provinces/T21_lift.png"
+      },
+      "layer_origin": [
+        636,
+        145
+      ],
+      "lift_origin": [
+        610,
+        120
+      ]
+    },
+    {
+      "id": "T22",
+      "name": "Wraithwood",
+      "mask_rgb": [
+        190,
+        115,
+        135
+      ],
+      "bbox": [
+        1659,
+        174,
+        199,
+        309
+      ],
+      "label_anchor": [
+        1759,
+        323
+      ],
+      "banner_anchor": [
+        1707,
+        383
+      ],
+      "layers": {
+        "locked": "provinces/T22_locked.png",
+        "available": "provinces/T22_available.png",
+        "conquered": "provinces/T22_conquered.png",
+        "lift": "provinces/T22_lift.png"
+      },
+      "layer_origin": [
+        1643,
+        158
+      ],
+      "lift_origin": [
+        1621,
+        133
+      ]
+    },
+    {
+      "id": "T23",
+      "name": "Kingsfall",
+      "mask_rgb": [
+        40,
+        165,
+        135
+      ],
+      "bbox": [
+        1858,
+        485,
+        548,
+        224
+      ],
+      "label_anchor": [
+        2155,
+        624
+      ],
+      "banner_anchor": [
+        2103,
+        684
+      ],
+      "layers": {
+        "locked": "provinces/T23_locked.png",
+        "available": "provinces/T23_available.png",
+        "conquered": "provinces/T23_conquered.png",
+        "lift": "provinces/T23_lift.png"
+      },
+      "layer_origin": [
+        1842,
+        469
+      ],
+      "lift_origin": [
+        1810,
+        446
+      ]
+    },
+    {
+      "id": "T24",
+      "name": "Hollowmark Citadel",
+      "mask_rgb": [
+        90,
+        165,
+        135
+      ],
+      "bbox": [
+        1853,
+        137,
+        585,
+        452
+      ],
+      "label_anchor": [
+        2158,
+        334
+      ],
+      "banner_anchor": [
+        2106,
+        394
+      ],
+      "layers": {
+        "locked": "provinces/T24_locked.png",
+        "available": "provinces/T24_available.png",
+        "conquered": "provinces/T24_conquered.png",
+        "lift": "provinces/T24_lift.png"
+      },
+      "layer_origin": [
+        1837,
+        121
+      ],
+      "lift_origin": [
+        1803,
+        91
+      ]
+    }
+  ],
+  "sites": [
+    {
+      "id": "B01",
+      "name": "The Boulder Course",
+      "host": "T04",
+      "pos": [
+        694,
+        1032
+      ],
+      "icons": {
+        "hidden": "sites/B01_hidden.png",
+        "found": "sites/B01_found.png",
+        "done": "sites/B01_done.png"
+      }
+    },
+    {
+      "id": "B02",
+      "name": "The Crowshot Gallery",
+      "host": "T08",
+      "pos": [
+        710,
+        774
+      ],
+      "icons": {
+        "hidden": "sites/B02_hidden.png",
+        "found": "sites/B02_found.png",
+        "done": "sites/B02_done.png"
+      }
+    },
+    {
+      "id": "B03",
+      "name": "The Twisting Halls",
+      "host": "T12",
+      "pos": [
+        1013,
+        757
+      ],
+      "icons": {
+        "hidden": "sites/B03_hidden.png",
+        "found": "sites/B03_found.png",
+        "done": "sites/B03_done.png"
+      }
+    },
+    {
+      "id": "B04",
+      "name": "The Skittle Cavern",
+      "host": "T16",
+      "pos": [
+        510,
+        373
+      ],
+      "icons": {
+        "hidden": "sites/B04_hidden.png",
+        "found": "sites/B04_found.png",
+        "done": "sites/B04_done.png"
+      }
+    },
+    {
+      "id": "B05",
+      "name": "The Swarm Night",
+      "host": "T20",
+      "pos": [
+        1912,
+        594
+      ],
+      "icons": {
+        "hidden": "sites/B05_hidden.png",
+        "found": "sites/B05_found.png",
+        "done": "sites/B05_done.png"
+      }
+    }
+  ],
+  "progress_panel": [
+    188,
+    1469,
+    515,
+    59
+  ],
+  "title_cartouche": [
+    244,
+    46,
+    513,
+    57
+  ]
+}
