@@ -19,6 +19,7 @@
 #define CREATUREREACTIONS_H
 
 #include "render/CreatureReactionConfig.h"
+#include "rooms/RoomType.h"
 
 #include <OgrePrerequisites.h>
 #include <OgreSingleton.h>
@@ -114,6 +115,11 @@ public:
     //! chicken a moment ago, the creature shows what it thinks of the gift.
     void noteChickenFeeding(Creature* creature, const std::string& chickenName);
 
+    //! \brief Client hook: the entity was added to the map. A research result of the library or a
+    //! crafted item of the workshop lets the creature that just worked there show its success and
+    //! the others in the room react.
+    void noteEntityAdded(GameEntity* entity);
+
     //! \brief Stops all the running and waiting reactions
     void stopAll();
 
@@ -199,6 +205,14 @@ private:
         double mTime;
     };
 
+    //! The last work of a creature in the library or workshop
+    struct RoomWork
+    {
+        RoomType mRoomType;
+        std::string mRoomName;
+        double mTime;
+    };
+
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -206,6 +220,11 @@ private:
         const std::string& variantName) const;
     //! \brief The winners cheer after the loser went down or fled
     void celebrateVictory(Creature* loser, bool fled);
+    //! \brief The creature works in the library or workshop (its attack animation was just received):
+    //! remembers it and shows another way of working after the movement.
+    void noteRoomWork(Creature* creature);
+    //! \brief Lets the creature show the event once it has finished what it does
+    void queueReaction(Creature* creature, const std::string& eventName);
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
@@ -254,6 +273,8 @@ private:
     std::map<std::string, double> mLastCelebration;
     //! Entities the keeper dropped, by name
     std::map<std::string, HandDrop> mHandDrops;
+    //! Last work of each creature in the library or workshop ("creature" -> work)
+    std::map<std::string, RoomWork> mLastRoomWork;
 };
 
 #endif // CREATUREREACTIONS_H

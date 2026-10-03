@@ -614,6 +614,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(entity->getObjectType() == GameEntityType::creature)
                 static_cast<Creature*>(entity)->socialCreatureAdded();
 
+            if((nt == NodeType::MTILES_NODE) && (CreatureReactions::getSingletonPtr() != nullptr))
+                CreatureReactions::getSingleton().noteEntityAdded(entity);
+
             break;
         }
 
