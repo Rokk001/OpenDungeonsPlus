@@ -95,9 +95,6 @@ public:
     static const std::string DEFAULT_KEEPER_VOICE;
 
     const Ogre::ColourValue& getColorFromId(const std::string& id) const;
-    //! \brief The system configuration path, with the trailing separator
-    inline const std::string& getConfigPath() const
-    { return mConfigPath; }
 
     inline const std::map<std::string, CreatureDefinition*>& getCreatureDefinitions() const
     { return mCreatureDefs; }
