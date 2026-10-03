@@ -839,7 +839,7 @@ void KeeperAI::handleAttack()
         return;
     }
 
-    // The reference attacks with more creatures than the threshold, and waits while more
+    // The AI attacks with more creatures than the threshold, and waits while more
     // creatures than the minimum level number are below that level
     if((nbFighters <= mMinFightersToAttack) || (enemyTile == nullptr))
         return;
