@@ -60,9 +60,21 @@ These instructions apply to every change made to this repository with an AI assi
      `docs/internal/ANIMATION-STATE.md` or `docs/internal/RELATIONSHIP-STATE.md` lists as
      "ready for integration/all". Branches not listed as ready are not merged.
   2. Merge them into `integration/all`, then run the release build, all check scripts and,
-     for new levels, the load test.
+     for new levels, the load test (short test, see below).
   3. If everything is green, push `integration/all` normally (no force push, no PRs) and
      set the merged entries in the state files to "integrated".
   4. If anything fails: push nothing, record the reason in `CAMPAIGN-STATE.md` or the
      state file of the affected branch and report briefly to the campaign session.
   If there is nothing to integrate, it ends immediately.
+
+## Load tests
+
+- Every integration runs only a short load test: the changed level files plus three fixed
+  sample levels (Mossgate, Ironbridge, Hollowmark Citadel). If the short test passes,
+  `integration/all` is pushed.
+- The full load test of all levels runs only when the owner explicitly asks for it. If an
+  integration changes code or shared files (loaders, configs, seat or room logic, other
+  branches' code), the integration agent only proposes the full run to the main session
+  and does not start it itself.
+- Load tests, check scripts and the pre-push hook are never removed, weakened or bypassed.
+  If a check measures wrongly, correct the check openly and report it to the owner first.
