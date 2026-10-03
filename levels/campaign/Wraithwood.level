@@ -4258,14 +4258,6 @@ ProtectDungeonTemple	NULL
 1
 [/Room]
 [Room]
-12	WoodenBridge4	0	4
-65	40
-65	41
-66	40
-66	41
-1
-[/Room]
-[Room]
 1	DungeonTemple1	1	25
 12	80
 12	81

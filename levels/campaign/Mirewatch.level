@@ -5140,14 +5140,13 @@ ProtectDungeonTemple	NULL
 [Rooms]
 # typeRoom	name	seatId	numTiles		Subsequent Lines: tileX	tileY
 [Room]
-12	WoodenBridge1	0	26
+12	WoodenBridge1	0	25
 29	112
 29	113
 30	112
 30	113
 31	112
 31	113
-32	112
 32	113
 33	112
 33	113
@@ -5170,7 +5169,7 @@ ProtectDungeonTemple	NULL
 1
 [/Room]
 [Room]
-12	WoodenBridge2	0	34
+12	WoodenBridge2	0	32
 59	104
 59	105
 60	104
@@ -5203,8 +5202,6 @@ ProtectDungeonTemple	NULL
 73	105
 74	104
 74	105
-75	104
-75	105
 1
 [/Room]
 [Room]
