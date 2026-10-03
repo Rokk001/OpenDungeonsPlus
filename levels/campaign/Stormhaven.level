@@ -3457,6 +3457,7 @@ ProtectDungeonTemple	NULL
 45	86
 46	85
 46	86
+0
 [/Room]
 [Room]
 8	Hatchery1	1	6
@@ -3475,6 +3476,7 @@ ProtectDungeonTemple	NULL
 48	96
 49	95
 49	96
+0
 [/Room]
 [Room]
 11	Prison1	1	6
@@ -3484,6 +3486,7 @@ ProtectDungeonTemple	NULL
 44	89
 44	90
 44	91
+0
 [/Room]
 [Room]
 16	Torture1	1	6
@@ -3493,6 +3496,7 @@ ProtectDungeonTemple	NULL
 59	92
 59	93
 59	94
+0
 [/Room]
 [Room]
 6	TrainingHall1	1	8
@@ -3513,6 +3517,7 @@ ProtectDungeonTemple	NULL
 57	83
 58	82
 58	83
+0	0
 [/Room]
 [Room]
 1	DungeonTemple2	2	25
@@ -3572,6 +3577,7 @@ ProtectDungeonTemple	NULL
 11	22
 12	21
 12	22
+0
 [/Room]
 [Room]
 8	Hatchery2	2	6
@@ -3651,6 +3657,7 @@ ProtectDungeonTemple	NULL
 56	10
 57	9
 57	10
+0
 [/Room]
 [Room]
 8	Hatchery3	3	6
@@ -3669,6 +3676,7 @@ ProtectDungeonTemple	NULL
 54	21
 55	20
 55	21
+0
 [/Room]
 [Room]
 1	DungeonTemple4	4	25
@@ -3728,6 +3736,7 @@ ProtectDungeonTemple	NULL
 9	65
 10	64
 10	65
+0
 [/Room]
 [Room]
 11	Prison2	4	6
@@ -3737,6 +3746,7 @@ ProtectDungeonTemple	NULL
 20	62
 20	63
 20	64
+0
 [/Room]
 [Room]
 16	Torture2	4	4
@@ -3744,6 +3754,7 @@ ProtectDungeonTemple	NULL
 6	56
 7	55
 7	56
+0
 [/Room]
 [Room]
 1	DungeonTemple5	5	25
@@ -3803,6 +3814,7 @@ ProtectDungeonTemple	NULL
 59	61
 60	60
 60	61
+0
 [/Room]
 [Room]
 8	Hatchery4	5	6

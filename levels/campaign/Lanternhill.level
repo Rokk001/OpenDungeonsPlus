@@ -2714,6 +2714,7 @@ ProtectDungeonTemple	NULL
 16	54
 17	53
 17	54
+0
 [/Room]
 [Room]
 8	Hatchery1	1	6
@@ -2732,6 +2733,7 @@ ProtectDungeonTemple	NULL
 18	61
 19	60
 19	61
+0
 [/Room]
 [Room]
 17	GuardRoom1	1	6
@@ -2809,6 +2811,7 @@ ProtectDungeonTemple	NULL
 35	13
 36	12
 36	13
+0
 [/Room]
 [Room]
 8	Hatchery2	2	6
@@ -2838,6 +2841,7 @@ ProtectDungeonTemple	NULL
 42	12
 42	13
 42	14
+0
 [/Room]
 [Room]
 9	Crypt1	2	6
@@ -2847,6 +2851,7 @@ ProtectDungeonTemple	NULL
 44	5
 45	4
 45	5
+0
 [/Room]
 [Room]
 17	GuardRoom2	2	3
@@ -2874,6 +2879,7 @@ ProtectDungeonTemple	NULL
 11	17
 12	16
 12	17
+0
 [/Room]
 [Room]
 7	Library2	0	6
@@ -2883,6 +2889,7 @@ ProtectDungeonTemple	NULL
 14	21
 15	20
 15	21
+0
 [/Room]
 [Room]
 3	Treasury4	0	6
@@ -2901,6 +2908,7 @@ ProtectDungeonTemple	NULL
 8	34
 8	35
 8	36
+0
 [/Room]
 [Room]
 17	GuardRoom3	3	6

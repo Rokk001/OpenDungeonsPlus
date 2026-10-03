@@ -4840,6 +4840,7 @@ ProtectDungeonTemple	NULL
 10	57
 11	56
 11	57
+0
 [/Room]
 [Room]
 8	Hatchery1	1	6
@@ -4904,6 +4905,7 @@ ProtectDungeonTemple	NULL
 50	27
 51	26
 51	27
+0
 [/Room]
 [Room]
 8	Hatchery2	2	6
@@ -4933,6 +4935,7 @@ ProtectDungeonTemple	NULL
 54	27
 55	26
 55	27
+0
 [/Room]
 [Room]
 17	GuardRoom1	2	6
@@ -4951,6 +4954,7 @@ ProtectDungeonTemple	NULL
 60	22
 61	21
 61	22
+0
 [/Room]
 [/Rooms]
 

@@ -3614,6 +3614,7 @@ ProtectDungeonTemple	NULL
 43	73
 43	74
 43	75
+0
 [/Room]
 [Room]
 16	Torture1	1	6
@@ -3623,6 +3624,7 @@ ProtectDungeonTemple	NULL
 47	84
 48	83
 48	84
+0
 [/Room]
 [/Rooms]
 

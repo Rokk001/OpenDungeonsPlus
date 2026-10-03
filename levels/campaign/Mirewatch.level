@@ -5339,6 +5339,7 @@ ProtectDungeonTemple	NULL
 25	79
 26	78
 26	79
+0
 [/Room]
 [Room]
 14	Arena1	3	15
@@ -5366,6 +5367,7 @@ ProtectDungeonTemple	NULL
 69	50
 69	51
 69	52
+0
 [/Room]
 [Room]
 5	Workshop1	3	8
@@ -5377,6 +5379,7 @@ ProtectDungeonTemple	NULL
 46	25
 47	24
 47	25
+0	0
 [/Room]
 [Room]
 7	Library2	3	6
@@ -5386,6 +5389,7 @@ ProtectDungeonTemple	NULL
 21	45
 22	44
 22	45
+0
 [/Room]
 [Room]
 17	GuardRoom2	3	6
@@ -5415,6 +5419,7 @@ ProtectDungeonTemple	NULL
 100	19
 101	18
 101	19
+0	0
 [/Room]
 [/Rooms]
 

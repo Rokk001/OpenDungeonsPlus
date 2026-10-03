@@ -4323,6 +4323,7 @@ ProtectDungeonTemple	NULL
 21	78
 22	77
 22	78
+0
 [/Room]
 [Room]
 8	Hatchery1	1	6
@@ -4391,6 +4392,7 @@ ProtectDungeonTemple	NULL
 11	24
 12	23
 12	24
+0
 [/Room]
 [Room]
 7	Library1	3	6
@@ -4400,6 +4402,7 @@ ProtectDungeonTemple	NULL
 23	23
 24	22
 24	23
+0
 [/Room]
 [Room]
 16	Torture1	3	6
@@ -4409,6 +4412,7 @@ ProtectDungeonTemple	NULL
 25	18
 25	19
 25	20
+0
 [/Room]
 [Room]
 9	Crypt1	3	6
@@ -4418,6 +4422,7 @@ ProtectDungeonTemple	NULL
 10	18
 11	17
 11	18
+0
 [/Room]
 [Room]
 8	Hatchery2	3	6
@@ -4486,6 +4491,7 @@ ProtectDungeonTemple	NULL
 75	22
 76	21
 76	22
+0
 [/Room]
 [Room]
 8	Hatchery3	2	6
