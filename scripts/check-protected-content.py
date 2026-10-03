@@ -59,6 +59,7 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Thornreach.level",
     "levels/campaign/Bellwick.level",
     "levels/campaign/Highcairn.level",
+    "levels/campaign/Stormhaven.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
