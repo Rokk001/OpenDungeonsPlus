@@ -121,6 +121,7 @@ struct Creature {
  void setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>&,bool,bool=false);
  template<typename T>void pushAction(std::unique_ptr<T>){++walkActions;}
  static void reportRelationshipEvent(RelationshipEvent,Creature&,Creature&){}
+ void reportEatingWithFriends(){}
 };
 std::list<Tile*> GameMap::path(Creature* creature,Tile* target){
  auto* start=creature->getPositionTile();if(!start||!target)return {};
