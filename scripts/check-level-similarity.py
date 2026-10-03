@@ -55,8 +55,16 @@ MAX_TERRAIN_FRACTION = 0.25
 MAX_PLACEMENT_FRACTION = 0.10
 MAX_RUN_LENGTH = 8
 MAX_IDENTICAL_WORDS = 3
-# Below this many contour tiles a match of the terrain is mostly chance.
-MIN_TERRAIN_TILES = 200
+# Own test levels without a source that have too few contour tiles to judge the terrain
+# (a match is mostly chance). Every other level always gets the full terrain and run check.
+SMALL_LEVEL_EXCEPTIONS = [
+    "aa.level",
+    "ab.level",
+    "Sandbox.level",
+    "SandboxEverything.level",
+    "TestSingleplayerSmallPassability.level",
+    "TestWeaponsShowcase.level",
+]
 PLACEMENT_DISTANCE = 2.0
 DECOY_JITTER = 6.0
 CHANCE_MARGIN = 2
@@ -650,7 +658,7 @@ def check_files(files, against):
                 worst = other.name
             total.merge(metrics)
         words = longest_identical_words(level.texts, sequences, index)
-        small = nonfiller < MIN_TERRAIN_TILES
+        small = os.path.basename(path) in SMALL_LEVEL_EXCEPTIONS
         verdict = "PASS"
         if ((not small and (total.terrain > MAX_TERRAIN_FRACTION or total.run > MAX_RUN_LENGTH))
                 or total.placement > MAX_PLACEMENT_FRACTION or words > MAX_IDENTICAL_WORDS):
