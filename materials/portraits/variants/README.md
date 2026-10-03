@@ -667,4 +667,3 @@ The project version remains 0.7.3 because this is asset preparation, without a r
 | [build-2-sturdy.png](Cultist.mesh-female/build-2-sturdy.png) | The isolated torso leaves the original shoulders/outline visible and introduces a second neck or collar; the head/body join and garment continuity do not match. |
 | [neck-1-teeth.png](Cultist.mesh-female/neck-1-teeth.png) | The complete accessory loop floats in front of the collar, beard or neck instead of wrapping behind it; perspective/occlusion needs correction. |
 | [neck-2-torque.png](Cultist.mesh-female/neck-2-torque.png) | The complete accessory loop floats in front of the collar, beard or neck instead of wrapping behind it; perspective/occlusion needs correction. |
-
