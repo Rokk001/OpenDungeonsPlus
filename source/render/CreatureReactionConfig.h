@@ -54,7 +54,15 @@ struct ReactionMotion
         //! Turns around its vertical axis
         spin,
         //! Turns towards the camera, stays for a moment and turns back
-        turn
+        turn,
+        //! Looks left and right (amount is the angle in degrees)
+        look,
+        //! Turns towards a point (a wall, a room, a neighbour, the place of an event), stays and turns back
+        lookat,
+        //! Sinks down (amount is the share of the height), stays and gets up again
+        sit,
+        //! Nods off (count nods, amount is their depth) and jumps up in the end
+        startle
     };
 
     ReactionMotion() :
@@ -98,7 +106,11 @@ struct ReactionVariant
         mEmoteTime(2.0),
         mCooldown(-1.0),
         mProbability(-1.0),
-        mRequiresSleepNeed(false)
+        mRequiresSleepNeed(false),
+        mRequiresWall(false),
+        mRequiresNeighbour(false),
+        mLateEmoteDelay(0.0),
+        mLateEmoteTime(2.0)
     {}
 
     std::string mName;
@@ -133,6 +145,19 @@ struct ReactionVariant
 
     //! Only for creature types that need to sleep (see CreatureReactions::creatureNeedsSleep)
     bool mRequiresSleepNeed;
+
+    //! Only when a wall tile is next to the creature (the wall is where the motion 'lookat' and the props turn to)
+    bool mRequiresWall;
+    //! Only when another creature is close (the motion 'lookat' turns to it)
+    bool mRequiresNeighbour;
+    //! Name of a room type (for example Hatchery): only when the creature's seat has such a room, the
+    //! motion 'lookat' turns to the closest tile of it. Empty if not used.
+    std::string mLookAtRoom;
+
+    //! A second icon that starts later in the reaction (nodding off, then startled). Empty if none.
+    std::string mLateEmote;
+    double mLateEmoteDelay;
+    double mLateEmoteTime;
 };
 
 //! \brief A kind of reaction (what happened to the creature) with its variants
@@ -201,6 +226,26 @@ public:
     inline double getGroupStaggerMax() const
     { return mGroupStaggerMax; }
 
+    //! Seconds between two looks at the moods of a few creatures
+    inline double getMoodInterval() const
+    { return mMoodInterval; }
+
+    //! Number of creatures looked at in each of these looks
+    inline uint32_t getMoodPerTick() const
+    { return mMoodPerTick; }
+
+    //! Chance (0 to 1) that a mood is shown on a creature that walks instead of standing
+    inline double getMoodWalkingChance() const
+    { return mMoodWalkingChance; }
+
+    //! Seconds a creature has to stand idle until it is impatient
+    inline double getImpatientAfter() const
+    { return mImpatientAfter; }
+
+    //! Seconds a creature stays proud after a victory or a level up
+    inline double getProudSeconds() const
+    { return mProudSeconds; }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -212,6 +257,11 @@ private:
     double mMaxCameraDistance;
     double mGroupStaggerMin;
     double mGroupStaggerMax;
+    double mMoodInterval;
+    uint32_t mMoodPerTick;
+    double mMoodWalkingChance;
+    double mImpatientAfter;
+    double mProudSeconds;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;
