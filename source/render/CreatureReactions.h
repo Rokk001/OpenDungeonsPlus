@@ -35,6 +35,7 @@ class Creature;
 class GameEntity;
 class GameMap;
 class MovableGameEntity;
+class Seat;
 class Tile;
 enum class GameEntityType;
 
@@ -99,9 +100,10 @@ public:
     //! goes down, which lets the winners of a fight cheer.
     void noteAnimation(MovableGameEntity* entity, const std::string& clip);
 
-    //! \brief Client hook: a creature was updated by the server. oldLevel and oldMood are the
-    //! values before the update. Shows the level up and the payday reactions.
-    void noteCreatureUpdate(Creature* creature, uint32_t oldLevel, uint32_t oldMood);
+    //! \brief Client hook: a creature was updated by the server. oldLevel, oldMood, oldSeat and oldSeatPrison
+    //! are the values before the update. Shows the level up, the payday and the freed prisoner reactions.
+    void noteCreatureUpdate(Creature* creature, uint32_t oldLevel, uint32_t oldMood, Seat* oldSeat,
+        Seat* oldSeatPrison);
 
     //! \brief Client hook: the keeper put the entity on the tile. Remembered for a while so that
     //! a creature taking it can show that it got a gift.
@@ -237,7 +239,9 @@ private:
     void noteRoomWork(Creature* creature);
     //! \brief Lets the creature show the event once it has finished what it does
     //! waitMax is the time the reaction waits at most for the creature to be free (negative: the usual time)
-    void queueReaction(Creature* creature, const std::string& eventName, double waitMax = -1.0);
+    //! The reaction starts after delay seconds (negative: a short time).
+    void queueReaction(Creature* creature, const std::string& eventName, double waitMax = -1.0,
+        double delay = -1.0);
     //! \brief The bout in the arena is over because the creature was knocked out: the one that fought it
     //! cheers as the winner and the others in the arena cheer as spectators
     void celebrateBout(Creature* loser);

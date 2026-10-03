@@ -79,6 +79,8 @@ const double DONE_WAIT_MAX = 8.0;
 //! Seconds a creature has to sleep or pray until the end of it is shown
 const double SLEEP_DONE_MIN = 6.0;
 const double PRAYER_DONE_MIN = 8.0;
+//! Seconds between a prisoner breaking under torture and the first sign of its new loyalty
+const double CONVERTED_DELAY = 2.8;
 //! Seconds after its last work a creature counts as the one that finished the result of the room
 const double ROOM_WORK_MEMORY = 20.0;
 //! The other creatures in the room react to the result after this time
@@ -231,7 +233,7 @@ ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature
 
     // The event decorates the work or sleep animation: that is what the creature is expected to do
     if((event != nullptr) && event->mWhileWorking &&
-       (startsWith(clip, "Sleep") || (clip == "Dig") || (clip == "Claim")))
+       (startsWith(clip, "Sleep") || (clip == "Dig") || (clip == "Claim") || (clip == "Flee")))
     {
         return ReactionPriority::none;
     }
@@ -1019,7 +1021,8 @@ void CreatureReactions::noteRoomWork(Creature* creature)
     queueReaction(creature, eventName);
 }
 
-void CreatureReactions::queueReaction(Creature* creature, const std::string& eventName, double waitMax)
+void CreatureReactions::queueReaction(Creature* creature, const std::string& eventName, double waitMax,
+        double delay)
 {
     const ReactionEvent* event = mConfig.getEvent(eventName);
     if(event == nullptr)
@@ -1049,7 +1052,7 @@ void CreatureReactions::queueReaction(Creature* creature, const std::string& eve
     PendingReaction pending;
     pending.mCreatureName = creature->getName();
     pending.mEventName = eventName;
-    pending.mDelay = PENDING_WAIT_STEP;
+    pending.mDelay = (delay >= 0.0) ? delay : PENDING_WAIT_STEP;
     pending.mWaited = 0.0;
     pending.mWaitMax = (waitMax > 0.0) ? waitMax : PENDING_WAIT_MAX;
     pending.mForced = false;
@@ -1152,6 +1155,16 @@ std::string CreatureReactions::getOngoingEvent(const Creature* creature, const s
 
     if((clip == "Idle") && (roomName == "Temple"))
         return "TempleWork";
+
+    // Prisoners wait in their cell, and struggle or glare while they are tortured
+    if(creature->isInContainment())
+    {
+        if((clip == "Idle") && (roomName == "Prison"))
+            return "PrisonWork";
+
+        if(((clip == "Idle") || (clip == "Flee")) && (roomName == "Torture"))
+            return "TortureWork";
+    }
 
     return std::string();
 }
@@ -1319,7 +1332,8 @@ void CreatureReactions::celebrateVictory(Creature* loser, bool fled)
     }
 }
 
-void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel, uint32_t oldMood)
+void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel, uint32_t oldMood, Seat* oldSeat,
+        Seat* oldSeatPrison)
 {
     if((mMode == Mode::off) || !mConfigLoaded || !creature->getIsOnMap())
         return;
@@ -1328,6 +1342,29 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
     {
         // A trainee that reached a new level shows its success with a punch into the air
         trigger(creature, (getRoomName(creature) == "TrainingHall") ? "TrainingDone" : "LevelUp");
+    }
+
+    // A prisoner that now serves another keeper was converted (after a torture it shows that it broke)
+    if((oldSeatPrison != nullptr) && (creature->getSeatPrison() == nullptr) && (creature->getSeat() != oldSeat))
+    {
+        std::map<std::string, OngoingWork>::const_iterator itOngoing = mOngoing.find(creature->getName());
+        if((itOngoing != mOngoing.end()) && (itOngoing->second.mEventName == "TortureWork"))
+        {
+            queueReaction(creature, "PrisonConverted", DONE_WAIT_MAX, CONVERTED_DELAY);
+            trigger(creature, "TortureBroken");
+        }
+        else
+        {
+            trigger(creature, "PrisonConverted");
+        }
+    }
+
+    // A prisoner that was just put into a cell waits there. The animation that tells so may have come first.
+    if((creature->getSeatPrison() != nullptr) && (oldSeatPrison == nullptr))
+    {
+        std::string ongoingEvent = getOngoingEvent(creature, "Idle");
+        if(!ongoingEvent.empty())
+            startOngoing(creature, ongoingEvent);
     }
 
     // A creature knocked out in the arena ends the bout
