@@ -32,6 +32,7 @@
 #include <vector>
 
 class Creature;
+class CreatureCombatReactions;
 class GameEntity;
 class GameMap;
 class MovableGameEntity;
@@ -178,6 +179,9 @@ public:
     static bool creatureNeedsSleep(const Creature* creature);
 
 private:
+    //! Weapon and fight reactions (draw, stance, attack styles, hits, dropped weapons) use the internals
+    friend class CreatureCombatReactions;
+
     struct RunningReaction
     {
         RunningReaction() :

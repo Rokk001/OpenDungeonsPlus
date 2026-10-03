@@ -30,6 +30,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "render/CreatureCombatReactions.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
@@ -513,7 +514,7 @@ bool CreatureReactions::isStandingMotion(ReactionMotion::Type type)
         (type == ReactionMotion::Type::squash) || (type == ReactionMotion::Type::look) ||
         (type == ReactionMotion::Type::lookat) || (type == ReactionMotion::Type::sit) ||
         (type == ReactionMotion::Type::lie) ||
-        (type == ReactionMotion::Type::startle);
+        (type == ReactionMotion::Type::startle) || (type == ReactionMotion::Type::lunge);
 }
 
 bool CreatureReactions::isProudEvent(const std::string& eventName)
@@ -1065,6 +1066,15 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                 }
                 break;
             }
+            case ReactionMotion::Type::lunge:
+            {
+                // Forward is where the creature looks (backward for a negative amount)
+                Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+                forward.z = 0.0f;
+                if(forward.length() > 0.01f)
+                    addedPosition = forward.normalisedCopy() * static_cast<Ogre::Real>(motion.mAmount * wave);
+                break;
+            }
             case ReactionMotion::Type::turn:
             case ReactionMotion::Type::lookat:
             {
@@ -1262,6 +1272,7 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
 
     updateOngoing();
     updateMoods(timeSinceLastFrame);
+    CreatureCombatReactions::update(*this, timeSinceLastFrame);
 
     for(std::vector<PendingReaction>::iterator it = mPending.begin(); it != mPending.end();)
     {
@@ -1430,6 +1441,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
 
         // Small touches on the death animation, nothing that changes how long it takes
         trigger(creature, "Death");
+        CreatureCombatReactions::noteDeath(*this, creature);
     }
     else if(clip == "Flee")
     {
@@ -1438,6 +1450,8 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         // A prisoner that struggles is not fleeing
         if(!creature->isInContainment())
             queueReaction(creature, "FleePanic", -1.0, 0.4);
+
+        CreatureCombatReactions::noteAlarm(*this, creature);
     }
     else if(clip == "Dig")
     {
@@ -1455,6 +1469,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         if(!isWorkingInRoom(creature))
         {
             mLastAttack[creature->getName()] = mTime;
+            CreatureCombatReactions::noteAttack(*this, creature, clip);
 
             // The creatures that stand around look at the fight
             noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, 4.0);
@@ -1831,6 +1846,8 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
 {
     if((mMode == Mode::off) || !mConfigLoaded || !creature->getIsOnMap())
         return;
+
+    CreatureCombatReactions::noteHealth(*this, creature, oldHealth);
 
     if(creature->getLevel() > oldLevel)
     {
@@ -2917,6 +2934,7 @@ void CreatureReactions::removeProps(RunningReaction& reaction)
 
 void CreatureReactions::stopAll()
 {
+    CreatureCombatReactions::stopAll(*this);
     mPending.clear();
     mOngoing.clear();
     for(RunningReaction& reaction : mRunning)
