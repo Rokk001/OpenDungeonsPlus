@@ -123,7 +123,8 @@ RelationshipSettings::RelationshipSettings() :
     mSleepNextToFriendMood(150),
     mNeighbourBedTiles(3),
     mEatTogetherMood(100),
-    mEatTogetherTiles(6)
+    mEatTogetherTiles(6),
+    mSlapFriendsMoodPenalty(150)
 {
 }
 
@@ -186,7 +187,8 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"SleepNextToFriendMood", &settings.mSleepNextToFriendMood},
         {"NeighbourBedTiles", &settings.mNeighbourBedTiles},
         {"EatTogetherMood", &settings.mEatTogetherMood},
-        {"EatTogetherTiles", &settings.mEatTogetherTiles}
+        {"EatTogetherTiles", &settings.mEatTogetherTiles},
+        {"SlapFriendsMoodPenalty", &settings.mSlapFriendsMoodPenalty}
     };
     struct DoubleEntry
     {

@@ -146,6 +146,9 @@ struct RelationshipSettings
     int32_t mEatTogetherMood;
     int32_t mEatTogetherTiles;
 
+    //! Mood points the friends that see a slap lose
+    int32_t mSlapFriendsMoodPenalty;
+
     //! Start value of a pair of creature classes (sorted pair of class names), see config
     //! entries "Racial_<ClassA>_<ClassB>".
     std::map<std::pair<std::string, std::string>, int32_t> mRacialStart;

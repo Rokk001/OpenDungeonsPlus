@@ -410,6 +410,9 @@ public:
     //! the side of the killer (may be nullptr).
     void reportDeathToFriends(GameEntity* killer);
 
+    //! Server side. Called when this creature was slapped: its friends that see it lose mood.
+    void reportSlapToFriends();
+
     //! Server side. Called while this creature sleeps in its bed: a friend sleeping in a bed close by
     //! raises its mood a little.
     void reportSleepingNextToFriends();
