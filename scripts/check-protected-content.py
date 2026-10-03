@@ -55,6 +55,10 @@ MEDIA_EXTENSIONS = set([
 
 CREDITS_NAMES = ["CREDITS", "CREDITS.md", "CREDITS.txt"]
 
+LEVEL_PREFIX = "levels/"
+LEVEL_SUFFIXES = (".level", ".cfg")
+SIMILARITY_SCRIPT = "check-level-similarity.py"
+
 
 def run_git(args, cwd):
     proc = subprocess.run(["git"] + args, cwd=cwd, stdout=subprocess.PIPE,
@@ -306,6 +310,61 @@ def check_push(ref_lines, terms, remote_name, cwd):
     return problems
 
 
+def changed_level_files(tip, commits, cwd):
+    """Level files under levels/ that the given commits add or change and that exist at tip."""
+    paths = set()
+    for commit in commits:
+        code, parents = run_git(["rev-list", "--parents", "-n", "1", commit], cwd)
+        if len(parents.split()) > 2:
+            continue
+        code, names = run_git(["diff-tree", "--root", "--no-commit-id", "-r", "-M",
+                               "--name-status", commit], cwd)
+        for line in split_lines(names):
+            fields = line.split("\t")
+            path = fields[-1]
+            if (fields[0][0] != "D" and path.startswith(LEVEL_PREFIX)
+                    and path.endswith(LEVEL_SUFFIXES)):
+                paths.add(path)
+    return sorted(path for path in paths
+                  if run_git(["cat-file", "-e", "%s:%s" % (tip, path)], cwd)[0] == 0)
+
+
+def check_level_similarity(ref_lines, remote_name, cwd, problems):
+    """Runs the level similarity check on new or changed levels; it skips itself when the
+    local folder with the other levels does not exist."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), SIMILARITY_SCRIPT)
+    if not os.path.isfile(script):
+        return
+    for ref_line in ref_lines:
+        fields = ref_line.split()
+        if len(fields) != 4 or fields[1] == ZERO_SHA:
+            continue
+        code, tip = run_git(["rev-parse", "%s^{commit}" % fields[1]], cwd)
+        if code != 0:
+            continue
+        tip = tip.strip()
+        paths = changed_level_files(tip, commits_to_check(tip, fields[3], remote_name, cwd),
+                                    cwd)
+        if not paths:
+            continue
+        work = tempfile.mkdtemp(prefix="level-similarity-")
+        try:
+            for path in paths:
+                proc = subprocess.run(["git", "show", "%s:%s" % (tip, path)], cwd=cwd,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                target = os.path.join(work, path)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "wb") as handle:
+                    handle.write(proc.stdout)
+            proc = subprocess.run([sys.executable, script] + paths, cwd=work,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for line in proc.stdout.decode("utf-8", errors="replace").split("\n"):
+                if line.startswith("FAIL"):
+                    problems.append("similarity: %s" % line.strip())
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+
+
 def report_and_exit(problems):
     sys.stderr.write("Push blocked by check-protected-content:\n")
     for problem in problems:
@@ -480,6 +539,7 @@ def main(argv):
 
     ref_lines = [line for line in sys.stdin.read().split("\n") if line.strip() != ""]
     problems = check_push(ref_lines, terms, remote_name, cwd)
+    check_level_similarity(ref_lines, remote_name, cwd, problems)
     if problems:
         return report_and_exit(problems)
     return 0
