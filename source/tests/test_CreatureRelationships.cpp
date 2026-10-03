@@ -303,4 +303,235 @@ BOOST_AUTO_TEST_CASE(test_ClientTiers)
     BOOST_CHECK_EQUAL(client.getNbPairs(), 1u);
 }
 
+BOOST_AUTO_TEST_CASE(test_TrainingTogetherCountsOncePerCycle)
+{
+    CreatureRelationships relationships;
+    int32_t amount = relationships.getSettings().mEventTrainingTogether;
+    int64_t cooldown = relationships.getSettings().mTrainingTogetherCooldownTurns;
+
+    relationships.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Orc2", 100);
+    relationships.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc2", "Orc1", 101);
+    BOOST_CHECK_EQUAL(relationships.getValue("Orc1", "Orc2"), amount);
+
+    relationships.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Orc2", 100 + cooldown);
+    BOOST_CHECK_EQUAL(relationships.getValue("Orc1", "Orc2"), 2 * amount);
+}
+
+BOOST_AUTO_TEST_CASE(test_RacialStartValue)
+{
+    std::map<std::string, std::string> config;
+    config["Racial_Elf_Orc"] = "-15";
+    config["Racial_Bad"] = "5";
+    RelationshipSettings settings = RelationshipSettings::fromConfig(config);
+    BOOST_CHECK_EQUAL(settings.getRacialStart("Orc", "Elf"), -15);
+    BOOST_CHECK_EQUAL(settings.getRacialStart("Elf", "Orc"), -15);
+    BOOST_CHECK_EQUAL(settings.getRacialStart("Orc", "Troll"), 0);
+
+    CreatureRelationships withTable(settings);
+    int32_t amount = withTable.getSettings().mEventTrainingTogether;
+
+    // Applied once, when the pair first gets a value
+    withTable.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Elf1", 0, "Orc", "Elf");
+    BOOST_CHECK_EQUAL(withTable.getValue("Orc1", "Elf1"), -15 + amount);
+    withTable.onRelationshipEvent(RelationshipEvent::arenaLoss, "Orc1", "Elf1", 1000, "Orc", "Elf");
+    BOOST_CHECK_EQUAL(withTable.getValue("Orc1", "Elf1"), -15 + amount + withTable.getSettings().mEventArenaLoss);
+
+    // A creature has no relationship with itself
+    withTable.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Orc1", 0, "Orc", "Orc");
+    BOOST_CHECK_EQUAL(withTable.getValue("Orc1", "Orc1"), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_CombatModifier)
+{
+    CreatureRelationships relationships;
+    const RelationshipSettings& settings = relationships.getSettings();
+    relationships.changeValue("A", "Friend", 60, 0);
+    relationships.changeValue("A", "Best", 85, 0);
+    relationships.changeValue("A", "Foe", -90, 0);
+    relationships.changeValue("A", "Stranger", 10, 0);
+
+    std::vector<std::string> nearby;
+    BOOST_CHECK_EQUAL(relationships.combatModifier("A", nearby), 0.0);
+
+    nearby.push_back("Stranger");
+    BOOST_CHECK_EQUAL(relationships.combatModifier("A", nearby), 0.0);
+
+    nearby.push_back("Friend");
+    BOOST_CHECK_EQUAL(relationships.combatModifier("A", nearby), settings.mCombatBonusFriends);
+
+    // Only the best bonus counts, it is not added up
+    nearby.push_back("Best");
+    BOOST_CHECK_EQUAL(relationships.combatModifier("A", nearby), settings.mCombatBonusBestFriends);
+
+    // A nemesis next to the creature takes the bonus (partly) away
+    nearby.push_back("Foe");
+    BOOST_CHECK_EQUAL(relationships.combatModifier("A", nearby),
+        settings.mCombatBonusBestFriends - settings.mCombatPenaltyNemesis);
+
+    std::vector<std::string> onlyFoe(1, "Foe");
+    BOOST_CHECK_EQUAL(relationships.combatModifier("A", onlyFoe), -settings.mCombatPenaltyNemesis);
+}
+
+BOOST_AUTO_TEST_CASE(test_MoodModifier)
+{
+    CreatureRelationships relationships;
+    const RelationshipSettings& settings = relationships.getSettings();
+    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), 0);
+
+    relationships.changeValue("A", "Friend", 70, 0);
+    relationships.changeValue("A", "Annoying", -40, 0);
+    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), 0);
+
+    relationships.changeValue("A", "Hated", -60, 0);
+    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), -settings.mMoodPenaltyHated);
+    BOOST_CHECK_EQUAL(relationships.moodModifier("Hated"), -settings.mMoodPenaltyHated);
+
+    relationships.changeValue("A", "Foe", -90, 0);
+    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), -settings.mMoodPenaltyHated - settings.mMoodPenaltyNemesis);
+
+    // At most MoodMaxPairs hated creatures count
+    relationships.changeValue("A", "Hated2", -60, 0);
+    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), -settings.mMoodPenaltyHated - settings.mMoodPenaltyNemesis);
+
+    BOOST_CHECK(relationships.isHated("A", "Hated"));
+    BOOST_CHECK(relationships.isHated("A", "Foe"));
+    BOOST_CHECK(!relationships.isHated("A", "Annoying"));
+    BOOST_CHECK(relationships.isNemesis("A", "Foe"));
+    BOOST_CHECK(!relationships.isNemesis("A", "Hated"));
+}
+
+BOOST_AUTO_TEST_CASE(test_LimitsPerCreature)
+{
+    CreatureRelationships relationships;
+    const RelationshipSettings& settings = relationships.getSettings();
+    BOOST_REQUIRE_EQUAL(settings.mMaxFriends, 3);
+    BOOST_REQUIRE_EQUAL(settings.mMaxNemeses, 2);
+
+    relationships.changeValue("A", "F1", 55, 0);
+    relationships.changeValue("A", "F2", 65, 0);
+    relationships.changeValue("A", "F3", 75, 0);
+    BOOST_CHECK(relationships.isFriend("A", "F1"));
+
+    // A fourth friend: the weakest friend falls back, the new one stays
+    relationships.changeValue("A", "F4", 85, 0);
+    BOOST_CHECK(!relationships.isFriend("A", "F1"));
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "F1"), settings.mThresholdFriends - 1);
+    BOOST_CHECK(relationships.isFriend("A", "F2"));
+    BOOST_CHECK(relationships.isFriend("A", "F3"));
+    BOOST_CHECK(relationships.isFriend("A", "F4"));
+
+    // A new friend that is weaker than all others cannot get in
+    relationships.changeValue("A", "F5", 50, 0);
+    BOOST_CHECK(!relationships.isFriend("A", "F5"));
+    BOOST_CHECK(relationships.isFriend("A", "F2"));
+
+    // The limit counts for the other creature, too
+    relationships.changeValue("B", "F2", 90, 0);
+    relationships.changeValue("C", "F2", 91, 0);
+    relationships.changeValue("D", "F2", 92, 0);
+    relationships.changeValue("E", "F2", 93, 0);
+    BOOST_CHECK(!relationships.isFriend("B", "F2"));
+    BOOST_CHECK(!relationships.isFriend("A", "F2"));
+
+    // Nemeses
+    relationships.changeValue("X", "N1", -81, 0);
+    relationships.changeValue("X", "N2", -95, 0);
+    relationships.changeValue("X", "N3", -100, 0);
+    BOOST_CHECK(!relationships.isNemesis("X", "N1"));
+    BOOST_CHECK_EQUAL(relationships.getValue("X", "N1"), settings.mThresholdNemesis + 1);
+    BOOST_CHECK(relationships.isHated("X", "N1"));
+    BOOST_CHECK(relationships.isNemesis("X", "N2"));
+    BOOST_CHECK(relationships.isNemesis("X", "N3"));
+
+    std::vector<CreatureRelationships::Pair> pairs;
+    relationships.getNemesisPairs(pairs);
+    BOOST_CHECK_EQUAL(pairs.size(), 2u);
+}
+
+BOOST_AUTO_TEST_CASE(test_Mentoring)
+{
+    CreatureRelationships relationships;
+    std::vector<std::pair<std::string, uint32_t> > trainees;
+    trainees.push_back(std::pair<std::string, uint32_t>("Pupil", 2));
+    trainees.push_back(std::pair<std::string, uint32_t>("Master", 5));
+    BOOST_CHECK_EQUAL(relationships.mentoringFactor("Pupil", 2, trainees), 1.0);
+
+    // Only a friend teaches
+    relationships.changeValue("Pupil", "Master", 60, 0);
+    BOOST_CHECK_EQUAL(relationships.mentoringFactor("Pupil", 2, trainees), 1.5);
+    // The master does not learn from the pupil
+    BOOST_CHECK_EQUAL(relationships.mentoringFactor("Master", 5, trainees), 1.0);
+    // The level difference must be large enough
+    BOOST_CHECK_EQUAL(relationships.mentoringFactor("Pupil", 4, trainees), 1.0);
+}
+
+BOOST_AUTO_TEST_CASE(test_Friends)
+{
+    CreatureRelationships relationships;
+    relationships.changeValue("A", "Friend", 60, 0);
+    relationships.changeValue("A", "Acquaintance", 20, 0);
+    relationships.changeValue("A", "Foe", -90, 0);
+    std::vector<std::string> friends;
+    relationships.getFriends("A", friends);
+    BOOST_REQUIRE_EQUAL(friends.size(), 1u);
+    BOOST_CHECK_EQUAL(friends[0], "Friend");
+    relationships.getFriends("Friend", friends);
+    BOOST_REQUIRE_EQUAL(friends.size(), 1u);
+    BOOST_CHECK_EQUAL(friends[0], "A");
+    relationships.getFriends("Nobody", friends);
+    BOOST_CHECK(friends.empty());
+}
+
+BOOST_AUTO_TEST_CASE(test_Jealousy)
+{
+    CreatureRelationships relationships;
+    const RelationshipSettings& settings = relationships.getSettings();
+    relationships.changeValue("A", "B", 60, 0);
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "C"), 0);
+
+    // B becomes friends with C: A, the friend of B, gets jealous of C
+    relationships.changeValue("B", "C", 55, 0);
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "C"), -settings.mJealousyValueLoss);
+    BOOST_CHECK_EQUAL(relationships.getValue("B", "C"), 55);
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "B"), 60);
+
+    // Strengthening an existing friendship does not count again
+    relationships.changeValue("B", "C", 10, 0);
+    BOOST_CHECK_EQUAL(relationships.getValue("A", "C"), -settings.mJealousyValueLoss);
+
+    // Without friends nobody is jealous
+    relationships.changeValue("X", "Y", 60, 0);
+    BOOST_CHECK_EQUAL(relationships.getNbPairs(), 4u);
+}
+
+BOOST_AUTO_TEST_CASE(test_BestFriend)
+{
+    CreatureRelationships relationships;
+    relationships.changeValue("A", "Friend", 60, 0);
+    BOOST_CHECK(relationships.getBestFriend("A").empty());
+
+    relationships.changeValue("A", "Buddy", 85, 0);
+    BOOST_CHECK_EQUAL(relationships.getBestFriend("A"), "Buddy");
+    BOOST_CHECK_EQUAL(relationships.getBestFriend("Buddy"), "A");
+
+    relationships.changeValue("A", "Soulmate", 95, 0);
+    BOOST_CHECK_EQUAL(relationships.getBestFriend("A"), "Soulmate");
+    BOOST_CHECK(relationships.getBestFriend("Nobody").empty());
+}
+
+BOOST_AUTO_TEST_CASE(test_ConfigValues)
+{
+    std::map<std::string, std::string> config;
+    config["CombatRadiusTiles"] = "4.5";
+    config["CombatBonusFriends"] = "abc";
+    config["MaxFriends"] = "5";
+    config["BrawlStopHealthPercent"] = "30";
+    RelationshipSettings settings = RelationshipSettings::fromConfig(config);
+    BOOST_CHECK_EQUAL(settings.mCombatRadiusTiles, 4.5);
+    BOOST_CHECK_EQUAL(settings.mCombatBonusFriends, 0.75);
+    BOOST_CHECK_EQUAL(settings.mMaxFriends, 5);
+    BOOST_CHECK_EQUAL(settings.mBrawlStopHealthPercent, 30);
+    BOOST_CHECK_EQUAL(settings.mMaxNemeses, 2);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

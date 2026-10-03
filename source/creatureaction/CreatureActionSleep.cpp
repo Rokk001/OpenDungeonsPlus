@@ -76,6 +76,10 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
         // Sleeping in the lair relieves the mood
         creature.markRested();
 
+        // A friend in a bed close by makes the sleep more pleasant (checked now and then)
+        if((nbTurnsActive % 20) == 0)
+            creature.reportSleepingNextToFriends();
+
         // Improve wakefulness
         Room* sleepingRoom = creature.getHomeTile()->getCoveringRoom();
         const Seat* sleepingSeat = sleepingRoom == nullptr ? nullptr : sleepingRoom->getSeat();

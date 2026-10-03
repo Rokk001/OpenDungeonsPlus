@@ -24,6 +24,7 @@
 #include "creatureaction/CreatureActionClaimWallTile.h"
 #include "creatureaction/CreatureActionDigTile.h"
 #include "creatureaction/CreatureActionFight.h"
+#include "creatureaction/CreatureActionFightFriendly.h"
 #include "creatureaction/CreatureActionFindHome.h"
 #include "creatureaction/CreatureActionFlee.h"
 #include "creatureaction/CreatureActionGetFee.h"
@@ -261,6 +262,83 @@ std::string getProfileNameOfCreature(GameMap* gameMap, const std::string& creatu
     const CreatureDefinition* definition = creature->getDefinition();
     return social::SocialProfileCache::getSingleton().getProfile(creatureName, definition->getClassName(),
         definition->isWorker()).getFullName();
+}
+
+//! \brief The relationships of a creature as the client knows them (tiers sent by the server).
+struct ProfileRelations
+{
+    ProfileRelations() :
+        mHasPartner(false),
+        mHasHated(false),
+        mHasNemesis(false)
+    {
+    }
+
+    //! Friends, best friends and partners, the strongest first
+    std::vector<std::string> mClose;
+    //! Hated creatures and nemeses, the worst first
+    std::vector<std::string> mAgainst;
+    //! Shown text per creature name, e.g. "Name (best friend)"
+    std::map<std::string, std::string> mTierText;
+    bool mHasPartner;
+    bool mHasHated;
+    bool mHasNemesis;
+};
+
+bool isStrongerRelationship(const std::pair<std::string, int32_t>& a, const std::pair<std::string, int32_t>& b)
+{
+    if(a.second != b.second)
+        return a.second > b.second;
+
+    return a.first < b.first;
+}
+
+void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationships, const std::string& name,
+    ProfileRelations& result)
+{
+    std::vector<std::pair<std::string, int32_t> > partners;
+    relationships.getPartners(name, partners);
+    std::sort(partners.begin(), partners.end(), isStrongerRelationship);
+
+    for(const std::pair<std::string, int32_t>& partner : partners)
+    {
+        std::string partnerName = getProfileNameOfCreature(gameMap, partner.first);
+        if(partnerName.empty())
+            continue;
+
+        RelationshipTier tier = relationships.tierOfValue(partner.second, true);
+        const char* label = nullptr;
+        switch(tier)
+        {
+            case RelationshipTier::lovers:
+                label = "partner";
+                result.mHasPartner = true;
+                result.mClose.push_back(partner.first);
+                break;
+            case RelationshipTier::bestFriends:
+                label = "best friend";
+                result.mClose.push_back(partner.first);
+                break;
+            case RelationshipTier::friends:
+                label = "friend";
+                result.mClose.push_back(partner.first);
+                break;
+            case RelationshipTier::hated:
+                label = "dislikes";
+                result.mHasHated = true;
+                result.mAgainst.insert(result.mAgainst.begin(), partner.first);
+                break;
+            case RelationshipTier::nemesis:
+                label = "nemesis";
+                result.mHasNemesis = true;
+                result.mAgainst.insert(result.mAgainst.begin(), partner.first);
+                break;
+            default:
+                break;
+        }
+        if(label != nullptr)
+            result.mTierText[partner.first] = partnerName + " (" + label + ")";
+    }
 }
 
 std::string joinProfileList(const std::vector<std::string>& values)
@@ -1311,6 +1389,22 @@ void Creature::doUpkeep()
             mPrayerRelief = 0;
     }
 
+    // A nemesis brawl may end
+    if(!mBrawlOpponent.empty())
+        updateBrawl();
+
+    // The mood from relationship events fades
+    if(mRelationshipTempMood != 0)
+    {
+        CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+        int32_t decay = (relationships == nullptr) ? std::abs(mRelationshipTempMood) :
+            relationships->getSettings().mTempMoodDecayPerTurn;
+        if(mRelationshipTempMood > 0)
+            mRelationshipTempMood = std::max(0, mRelationshipTempMood - decay);
+        else
+            mRelationshipTempMood = std::min(0, mRelationshipTempMood + decay);
+    }
+
     // The mood set by the specials fades
     if(mSpecialMood != 0)
     {
@@ -2076,7 +2170,7 @@ double Creature::getPhysicalDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getPhysicalDefense();
 
-    return defense;
+    return std::max(0.0, defense + getRelationshipCombatModifier());
 }
 
 double Creature::getMagicalDefense() const
@@ -2087,7 +2181,7 @@ double Creature::getMagicalDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getMagicalDefense();
 
-    return defense;
+    return std::max(0.0, defense + getRelationshipCombatModifier());
 }
 
 double Creature::getElementDefense() const
@@ -2098,7 +2192,7 @@ double Creature::getElementDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getElementDefense();
 
-    return defense;
+    return std::max(0.0, defense + getRelationshipCombatModifier());
 }
 
 void Creature::checkLevelUp()
@@ -2778,7 +2872,22 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     if(!profile.mGender.empty())
         age += " - " + profile.mGender;
     page->getChild("AgeText")->setText(age);
-    page->getChild("RelationText")->setText("Relationship: " + profile.mRelationship);
+    // With the relationship option the status of the own creatures comes from the real relationships
+    // and nothing changes for other creatures or with the option off
+    ProfileRelations relations;
+    bool showRelations = isAllied && getGameMap()->isRelationshipsEnabled() &&
+        (getGameMap()->getCreatureRelationships() != nullptr);
+    if(showRelations)
+        collectProfileRelations(getGameMap(), *getGameMap()->getCreatureRelationships(), getName(), relations);
+    if(showRelations)
+    {
+        page->getChild("RelationText")->setText("Relationship: " + social::CreaturePosts::getRelationshipStatus(
+            relations.mHasPartner, !relations.mClose.empty(), relations.mHasHated, relations.mHasNemesis));
+    }
+    else
+    {
+        page->getChild("RelationText")->setText("Relationship: " + profile.mRelationship);
+    }
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
@@ -2807,6 +2916,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     CEGUI::Window* foeLink = page->getChild("FoeLink");
     CEGUI::Window* statusText = page->getChild("StatusText");
     CEGUI::Window* latestText = page->getChild("LatestText");
+    CEGUI::Window* relationsText = page->getChild("RelationsText");
+    relationsText->setVisible(showRelations);
     friendsLabel->setVisible(isAllied);
     foeLabel->setVisible(isAllied);
     for(CEGUI::Window* friendLink : friendLinks)
@@ -2819,15 +2930,41 @@ float Creature::fillProfilePage(CEGUI::Window* page)
 
     // The friends only change when a creature is added, removed or changes seat, so they are
     // computed again only when the roster version of the post log changed
-    uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
-    const social::SocialProfileCache::FriendsAndFoe* cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
-    if(cachedFriends == nullptr)
+    social::SocialProfileCache::FriendsAndFoe relationFriends;
+    const social::SocialProfileCache::FriendsAndFoe* cachedFriends = nullptr;
+    if(showRelations)
     {
-        social::SocialProfileCache::FriendsAndFoe computed;
-        computed.mRosterVersion = rosterVersion;
-        findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), computed.mFriends, computed.mFoe);
-        cache.storeFriendsAndFoe(getName(), computed);
+        // The real friends and the worst enemy replace the ones derived from the names
+        relationFriends.mFriends = relations.mClose;
+        if(!relations.mAgainst.empty())
+            relationFriends.mFoe = relations.mAgainst[0];
+        cachedFriends = &relationFriends;
+
+        // The web: everybody the creature has a friendship or a grudge with
+        std::string web = "Close: ";
+        for(std::size_t i = 0; i < relations.mClose.size(); ++i)
+            web += (i > 0 ? ", " : "") + relations.mTierText[relations.mClose[i]];
+        if(relations.mClose.empty())
+            web += "nobody yet";
+        web += "\nAgainst: ";
+        for(std::size_t i = 0; i < relations.mAgainst.size(); ++i)
+            web += (i > 0 ? ", " : "") + relations.mTierText[relations.mAgainst[i]];
+        if(relations.mAgainst.empty())
+            web += "nobody";
+        relationsText->setText(web);
+    }
+    else
+    {
+        uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
         cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+        if(cachedFriends == nullptr)
+        {
+            social::SocialProfileCache::FriendsAndFoe computed;
+            computed.mRosterVersion = rosterVersion;
+            findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), computed.mFriends, computed.mFoe);
+            cache.storeFriendsAndFoe(getName(), computed);
+            cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+        }
     }
     // Each name is a button of its own, so no name is cut off; the label shares the first line with the first name
     std::size_t nbFriendLinks = 0;
@@ -2957,18 +3094,419 @@ double Creature::getPitDamageFactor(GameEntity* attacker)
     return ConfigManager::getSingleton().getRoomConfigDouble("ArenaDamageTakenPercent");
 }
 
+bool Creature::canHaveRelationships() const
+{
+    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled())
+        return false;
+
+    if((getSeat() == nullptr) || getSeat()->isRogueSeat() || (getSeat()->getFaction() == "Hero"))
+        return false;
+
+    return !getDefinition()->isWorker() && !isInPrison();
+}
+
+double Creature::getRelationshipCombatModifier() const
+{
+    if(!canHaveRelationships())
+        return 0.0;
+
+    GameMap* gameMap = getGameMap();
+    int64_t turn = gameMap->getTurnNumber();
+    if(mCombatModifierTurn == turn)
+        return mCombatModifier;
+
+    mCombatModifierTurn = turn;
+    mCombatModifier = 0.0;
+    // Only creatures that fight get a bonus or a penalty
+    Tile* myTile = getPositionTile();
+    if((myTile == nullptr) || !isAlive() || !isActionInList(CreatureActionType::fight))
+        return 0.0;
+
+    CreatureRelationships* relationships = gameMap->getCreatureRelationships();
+    double radius = relationships->getSettings().mCombatRadiusTiles;
+    std::vector<std::pair<std::string, int32_t> > partners;
+    relationships->getPartners(getName(), partners);
+    std::vector<std::string> nearbyFighters;
+    for(size_t i = 0; i < partners.size(); ++i)
+    {
+        Creature* partner = gameMap->getCreature(partners[i].first);
+        if((partner == nullptr) || (partner->getSeat() != getSeat()) || !partner->isAlive() || partner->isKo()
+           || !partner->getIsOnMap() || !partner->isActionInList(CreatureActionType::fight))
+        {
+            continue;
+        }
+
+        Tile* partnerTile = partner->getPositionTile();
+        if(partnerTile == nullptr)
+            continue;
+
+        double dx = static_cast<double>(partnerTile->getX() - myTile->getX());
+        double dy = static_cast<double>(partnerTile->getY() - myTile->getY());
+        if((dx * dx + dy * dy) > (radius * radius))
+            continue;
+
+        nearbyFighters.push_back(partner->getName());
+    }
+
+    mCombatModifier = relationships->combatModifier(getName(), nearbyFighters);
+    return mCombatModifier;
+}
+
+int32_t Creature::getRelationshipMood() const
+{
+    if(!canHaveRelationships())
+        return 0;
+
+    return getGameMap()->getCreatureRelationships()->moodModifier(getName()) + mRelationshipTempMood;
+}
+
+void Creature::addRelationshipMood(int32_t points)
+{
+    if(!canHaveRelationships() || (points == 0))
+        return;
+
+    int32_t maxMood = getGameMap()->getCreatureRelationships()->getSettings().mTempMoodMax;
+    mRelationshipTempMood = std::max(-maxMood, std::min(maxMood, mRelationshipTempMood + points));
+    // The mood is computed again soon
+    mMoodCooldownTurns = 0;
+}
+
+void Creature::reportDeathToFriends(GameEntity* killer)
+{
+    if(!canHaveRelationships())
+        return;
+
+    GameMap* gameMap = getGameMap();
+    CreatureRelationships* relationships = gameMap->getCreatureRelationships();
+    const RelationshipSettings& settings = relationships->getSettings();
+    int64_t turn = gameMap->getTurnNumber();
+    std::vector<std::string> friends;
+    relationships->getFriends(getName(), friends);
+    for(size_t i = 0; i < friends.size(); ++i)
+    {
+        Creature* mourner = gameMap->getCreature(friends[i]);
+        if((mourner == nullptr) || (mourner == this) || (mourner->getSeat() != getSeat()) || !mourner->isAlive()
+           || !mourner->canHaveRelationships())
+        {
+            continue;
+        }
+
+        mourner->addRelationshipMood(-settings.mGriefMoodPenalty);
+        if((killer != nullptr) && (killer->getSeat() != nullptr) && (killer->getSeat() != getSeat()))
+        {
+            mourner->mRageUntilTurn = turn + settings.mGriefRageTurns;
+            mourner->mRageSeatId = killer->getSeat()->getId();
+        }
+    }
+}
+
+bool Creature::hasFriendDoing(CreatureActionType action, double maxTiles, bool useHomeTile) const
+{
+    Tile* myTile = useHomeTile ? getHomeTile() : getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    std::vector<std::string> friends;
+    getGameMap()->getCreatureRelationships()->getFriends(getName(), friends);
+    for(size_t i = 0; i < friends.size(); ++i)
+    {
+        Creature* friendCreature = getGameMap()->getCreature(friends[i]);
+        if((friendCreature == nullptr) || (friendCreature->getSeat() != getSeat()) || !friendCreature->isAlive()
+           || friendCreature->isKo() || !friendCreature->getIsOnMap() || !friendCreature->canHaveRelationships()
+           || !friendCreature->isActionInList(action))
+        {
+            continue;
+        }
+
+        Tile* friendTile = useHomeTile ? friendCreature->getHomeTile() : friendCreature->getPositionTile();
+        // A sleeping friend lies in its bed
+        if((friendTile == nullptr) || (useHomeTile && (friendCreature->getPositionTile() != friendTile)))
+            continue;
+
+        double dx = static_cast<double>(friendTile->getX() - myTile->getX());
+        double dy = static_cast<double>(friendTile->getY() - myTile->getY());
+        if((dx * dx + dy * dy) <= (maxTiles * maxTiles))
+            return true;
+    }
+
+    return false;
+}
+
+void Creature::reportSlapToFriends()
+{
+    if(!canHaveRelationships())
+        return;
+
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    int32_t penalty = relationships->getSettings().mSlapFriendsMoodPenalty;
+    // Only the friends that can see the slapped creature care
+    std::vector<GameEntity*> seers = getGameMap()->getVisibleCreatures(getVisibleTiles(), getSeat(), false);
+    for(GameEntity* seer : seers)
+    {
+        if((seer == this) || (seer->getObjectType() != GameEntityType::creature))
+            continue;
+
+        Creature* friendCreature = static_cast<Creature*>(seer);
+        if((friendCreature->getSeat() == getSeat()) && friendCreature->isAlive()
+           && relationships->isFriend(getName(), friendCreature->getName()))
+        {
+            friendCreature->addRelationshipMood(-penalty);
+        }
+    }
+}
+
+void Creature::reportSleepingNextToFriends()
+{
+    if(!canHaveRelationships())
+        return;
+
+    const RelationshipSettings& settings = getGameMap()->getCreatureRelationships()->getSettings();
+    if(hasFriendDoing(CreatureActionType::sleep, static_cast<double>(settings.mNeighbourBedTiles), true))
+        addRelationshipMood(settings.mSleepNextToFriendMood);
+}
+
+void Creature::reportEatingWithFriends()
+{
+    if(!canHaveRelationships())
+        return;
+
+    const RelationshipSettings& settings = getGameMap()->getCreatureRelationships()->getSettings();
+    if(hasFriendDoing(CreatureActionType::eatChicken, static_cast<double>(settings.mEatTogetherTiles), false))
+        addRelationshipMood(settings.mEatTogetherMood);
+}
+
+void Creature::reportLeavingToBestFriend()
+{
+    if(!canHaveRelationships())
+        return;
+
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    std::string bestFriend = relationships->getBestFriend(getName());
+    if(bestFriend.empty())
+        return;
+
+    Creature* friendCreature = getGameMap()->getCreature(bestFriend);
+    if((friendCreature == nullptr) || (friendCreature->getSeat() != getSeat()) || !friendCreature->isAlive()
+       || friendCreature->isKo() || !friendCreature->getIsOnMap() || friendCreature->isPossessed()
+       || !friendCreature->canHaveRelationships()
+       || friendCreature->isActionInList(CreatureActionType::leaveDungeon))
+    {
+        return;
+    }
+
+    if(Random::Int(0, 99) >= relationships->getSettings().mLeaveTogetherChancePercent)
+        return;
+
+    OD_LOG_INF("creature=" + friendCreature->getName() + " leaves its dungeon together with its best friend " + getName());
+    friendCreature->leaveDungeon();
+}
+
+double Creature::getRelationshipRageFactor(const Seat* victimSeat) const
+{
+    if((mRageUntilTurn <= 0) || (victimSeat == nullptr) || (victimSeat->getId() != mRageSeatId)
+       || !canHaveRelationships())
+    {
+        return 1.0;
+    }
+
+    if(getGameMap()->getTurnNumber() >= mRageUntilTurn)
+        return 1.0;
+
+    return 1.0 + static_cast<double>(getGameMap()->getCreatureRelationships()->getSettings().mGriefRageBonusPercent) / 100.0;
+}
+
+bool Creature::canStartBrawl() const
+{
+    if(!canHaveRelationships() || !getIsOnMap() || !isAlive() || isKo() || isPossessed() || isBrawling())
+        return false;
+
+    if(getPositionTile() == nullptr)
+        return false;
+
+    // Not while fighting, in the arena or the casino, and not when badly hurt
+    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly))
+        return false;
+
+    Room* room = getPositionTile()->getCoveringRoom();
+    if((room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino)))
+        return false;
+
+    int32_t stopPercent = getGameMap()->getCreatureRelationships()->getSettings().mBrawlStopHealthPercent;
+    return (getHP() * 100.0) > (mMaxHP * static_cast<double>(stopPercent + 25));
+}
+
+void Creature::startBrawl(Creature& opponent)
+{
+    if(!canStartBrawl() || !opponent.canStartBrawl())
+        return;
+
+    int64_t turn = getGameMap()->getTurnNumber();
+    mBrawlOpponent = opponent.getName();
+    mBrawlStartTurn = turn;
+    opponent.mBrawlOpponent = getName();
+    opponent.mBrawlStartTurn = turn;
+
+    // Both fight to knock the other one out, the fight never kills
+    Creature* creatures[2] = {this, &opponent};
+    Creature* targets[2] = {&opponent, this};
+    for(int i = 0; i < 2; ++i)
+    {
+        creatures[i]->clearDestinations(EntityAnimation::idle_anim, true, true);
+        creatures[i]->clearActionQueue();
+        creatures[i]->pushAction(Utils::make_unique<CreatureActionFightFriendly>(*creatures[i], targets[i], true,
+            std::vector<Tile*>(), false));
+    }
+}
+
+void Creature::updateBrawl()
+{
+    if(mBrawlOpponent.empty())
+        return;
+
+    Creature* opponent = getGameMap()->getCreature(mBrawlOpponent);
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    if((opponent == nullptr) || (relationships == nullptr) || (opponent->mBrawlOpponent != getName()))
+    {
+        // The opponent is gone (or has already stopped): nothing to end for it
+        mBrawlOpponent.clear();
+        return;
+    }
+
+    const RelationshipSettings& settings = relationships->getSettings();
+    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
+    bool stop = !isAlive() || !opponent->isAlive() || isKo() || opponent->isKo()
+        || isPossessed() || opponent->isPossessed()
+        || (getHP() <= (mMaxHP * stopRatio)) || (opponent->getHP() <= (opponent->mMaxHP * stopRatio))
+        || ((getGameMap()->getTurnNumber() - mBrawlStartTurn) >= settings.mBrawlMaxTurns)
+        || !isActionInList(CreatureActionType::fightFriendly);
+    if(stop)
+        endBrawl();
+}
+
+void Creature::endBrawl()
+{
+    if(mBrawlOpponent.empty())
+        return;
+
+    std::string opponentName = mBrawlOpponent;
+    mBrawlOpponent.clear();
+    Creature* opponent = getGameMap()->getCreature(opponentName);
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+
+    Creature* creatures[2] = {this, nullptr};
+    if((opponent != nullptr) && (opponent->mBrawlOpponent == getName()))
+    {
+        opponent->mBrawlOpponent.clear();
+        creatures[1] = opponent;
+    }
+
+    for(int i = 0; i < 2; ++i)
+    {
+        Creature* creature = creatures[i];
+        if((creature == nullptr) || !creature->isAlive())
+            continue;
+
+        // The fight stops (unless the creature already got something else to do), both stay angry
+        if(creature->isActionInList(CreatureActionType::fightFriendly))
+        {
+            creature->clearDestinations(EntityAnimation::idle_anim, true, true);
+            creature->clearActionQueue();
+        }
+        creature->makeUnhappy();
+    }
+
+    if(relationships != nullptr)
+    {
+        relationships->changeValue(getName(), opponentName, relationships->getSettings().mBrawlValueChange,
+            getGameMap()->getTurnNumber());
+    }
+}
+
+void Creature::reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB)
+{
+    if(!creatureA.canHaveRelationships() || !creatureB.canHaveRelationships())
+        return;
+
+    if(creatureA.getSeat() != creatureB.getSeat())
+        return;
+
+    GameMap* gameMap = creatureA.getGameMap();
+    gameMap->getCreatureRelationships()->onRelationshipEvent(event, creatureA.getName(), creatureB.getName(),
+        gameMap->getTurnNumber(), creatureA.getDefinition()->getClassName(), creatureB.getDefinition()->getClassName());
+}
+
+void Creature::reportFightParticipants(Creature& killer)
+{
+    if(getDefinition()->isWorker() || !killer.canHaveRelationships() || (killer.getSeat() == getSeat()) || killer.getSeat()->isAlliedSeat(getSeat()))
+        return;
+
+    static const size_t MAX_PARTICIPANTS = 8;
+    int64_t turn = getGameMap()->getTurnNumber();
+    int64_t window = getGameMap()->getCreatureRelationships()->getSettings().mFightParticipantTurns;
+    std::vector<Creature*> participants;
+    participants.push_back(&killer);
+    for(std::map<std::string, int64_t>::const_iterator it = mRecentAttackers.begin(); it != mRecentAttackers.end(); ++it)
+    {
+        if(participants.size() >= MAX_PARTICIPANTS)
+            break;
+
+        if((turn - it->second) > window)
+            continue;
+
+        Creature* participant = getGameMap()->getCreature(it->first);
+        if((participant == nullptr) || (participant == &killer) || !participant->isAlive()
+           || (participant->getSeat() != killer.getSeat()) || !participant->canHaveRelationships())
+        {
+            continue;
+        }
+
+        participants.push_back(participant);
+    }
+    mRecentAttackers.clear();
+
+    for(size_t i = 0; i < participants.size(); ++i)
+    {
+        for(size_t j = i + 1; j < participants.size(); ++j)
+            reportRelationshipEvent(RelationshipEvent::defeatedEnemiesTogether, *participants[i], *participants[j]);
+    }
+}
+
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
     bool wasAlive = isAlive();
+    bool wasKo = isKo();
     mNbTurnsWithoutBattle = 0;
     // The champion cannot be hurt
     if(getDefinition()->isChampion())
         return 0.0;
+
+    // Remember who hurt us, to know who took part in the fight if we are defeated
+    Creature* creatureAttacking = nullptr;
+    if((attacker != nullptr) && (attacker->getObjectType() == GameEntityType::creature))
+        creatureAttacking = static_cast<Creature*>(attacker);
+    if((creatureAttacking != nullptr) && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled()
+       && (creatureAttacking != this) && creatureAttacking->canHaveRelationships())
+    {
+        int64_t turn = getGameMap()->getTurnNumber();
+        int64_t window = getGameMap()->getCreatureRelationships()->getSettings().mFightParticipantTurns;
+        std::map<std::string, int64_t>::iterator itAttacker = mRecentAttackers.begin();
+        while(itAttacker != mRecentAttackers.end())
+        {
+            if((turn - itAttacker->second) > window)
+                itAttacker = mRecentAttackers.erase(itAttacker);
+            else
+                ++itAttacker;
+        }
+        mRecentAttackers[creatureAttacking->getName()] = turn;
+    }
     physicalDamage = std::max(physicalDamage - getPhysicalDefense(), 0.0);
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
     elementDamage = std::max(elementDamage - getElementDefense(), 0.0);
     double totalDamage = (absoluteDamage + physicalDamage + magicalDamage + elementDamage) * getPitDamageFactor(attacker);
+    // A creature that grieves for a friend hits harder against the side that killed it
+    if(creatureAttacking != nullptr)
+        totalDamage *= creatureAttacking->getRelationshipRageFactor(getSeat());
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
     if(mHp <= 0)
@@ -2990,6 +3528,17 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
             mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
             dropCarriedEquipment();
+
+            // The loser of a fight in the arena gets a worse relationship with the winner
+            if(!wasKo && (creatureAttacking != nullptr) && (getPositionTile() != nullptr)
+               && (creatureAttacking->getPositionTile() != nullptr)
+               && (getPositionTile()->getCoveringRoom() != nullptr)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom() != nullptr)
+               && (getPositionTile()->getCoveringRoom()->getType() == RoomType::arena)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom()->getType() == RoomType::arena))
+            {
+                reportRelationshipEvent(RelationshipEvent::arenaLoss, *this, *creatureAttacking);
+            }
         }
     }
 
@@ -3003,6 +3552,10 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
             attacker->getSeat()->recordCreatureKill(getSeat());
         if(wasAlive && (getSeat() != nullptr))
             ++getSeat()->getStatistics().mCreaturesLost;
+        if(wasAlive && (creatureAttacking != nullptr) && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled())
+            reportFightParticipants(*creatureAttacking);
+        if(wasAlive && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled())
+            reportDeathToFriends(attacker);
         fireEntityDead();
     }
 
@@ -3646,6 +4199,10 @@ void Creature::slap()
         return;
     }
 
+    // A slap stops a brawl
+    if(!mBrawlOpponent.empty())
+        endBrawl();
+
     if(getSeat() != nullptr)
         ++getSeat()->getStatistics().mCreaturesSlapped;
 
@@ -3657,6 +4214,9 @@ void Creature::slap()
     mSlapTurns.push_back(getGameMap()->getTurnNumber());
     if(mSlapTurns.size() > 10)
         mSlapTurns.erase(mSlapTurns.begin());
+
+    // The friends that see the slap are upset
+    reportSlapToFriends();
 
     mHp -= mMaxHP * ConfigManager::getSingleton().getSlapDamagePercent() / 100.0;
     computeCreatureOverlayHealthValue();
@@ -4729,6 +5289,8 @@ void Creature::changeSeat(Seat* newSeat)
     mMoodPoints = 0;
     mPrayerRelief = 0;
     mSpecialMood = 0;
+    mRelationshipTempMood = 0;
+    mRageUntilTurn = 0;
     mWakefulness = 100;
     mHunger = 0;
     mNbTurnsTorture = 0;

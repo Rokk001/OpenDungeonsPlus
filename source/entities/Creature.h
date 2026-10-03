@@ -31,9 +31,11 @@
 #include <Ogre.h>
 #include <CEGUI/EventArgs.h>
 
+#include <map>
 #include <memory>
 #include <string>
 
+enum class RelationshipEvent;
 class Building;
 class Creature;
 class CreatureAction;
@@ -379,6 +381,71 @@ public:
     //! \brief Conform: AttackableObject - Deducts a given amount of HP from this creature.
     //! \brief Share of the damage taken from the attacker: reduced when both fight inside an arena
     double getPitDamageFactor(GameEntity* attacker);
+
+    //! brief Server side. True if the creature can take part in relationships: the option is on,
+    //! it belongs to a keeper (no hero, no neutral creature), is not a worker and not a prisoner.
+    bool canHaveRelationships() const;
+
+    //! brief Server side. Reports a relationship event between two creatures of the same keeper. Does
+    //! nothing if the option is off or one of them cannot have relationships.
+    static void reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB);
+
+    //! brief Server side. Called when this creature was defeated: every pair of creatures of the
+    //! killer's keeper that hit it recently (and the killer itself) fought together.
+    void reportFightParticipants(Creature& killer);
+
+    //! Server side. Defense added (or taken away) because of the creatures that fight next to this
+    //! one, 0 if the option is off. Added to all three defense values.
+    double getRelationshipCombatModifier() const;
+
+    //! Server side. Mood points from the hated creatures of the same keeper and from relationship
+    //! events (grief, ...), 0 if the option is off.
+    int32_t getRelationshipMood() const;
+
+    //! Server side. Adds mood points (negative or positive) that fade again, does nothing if the
+    //! creature cannot have relationships.
+    void addRelationshipMood(int32_t points);
+
+    //! Server side. Called when this creature died: its friends grieve, and get a rage against
+    //! the side of the killer (may be nullptr).
+    void reportDeathToFriends(GameEntity* killer);
+
+    //! Server side. Called when this creature was slapped: its friends that see it lose mood.
+    void reportSlapToFriends();
+
+    //! Server side. Called while this creature sleeps in its bed: a friend sleeping in a bed close by
+    //! raises its mood a little.
+    void reportSleepingNextToFriends();
+
+    //! Server side. Called when this creature eats: a friend that eats at the same time close by
+    //! raises its mood a little.
+    void reportEatingWithFriends();
+
+    //! Server side. Called when this creature starts to leave the dungeon unhappy: its best friend
+    //! may leave with it (chance from the settings).
+    void reportLeavingToBestFriend();
+
+    //! Server side. Factor for the damage this creature deals to a creature of victimSeat: more
+    //! than 1.0 while it is enraged about the death of a friend killed by that side.
+    double getRelationshipRageFactor(const Seat* victimSeat) const;
+
+    //! Server side. True if the creature is part of a nemesis brawl.
+    inline bool isBrawling() const
+    { return !mBrawlOpponent.empty(); }
+
+    //! Server side. Starts a brawl with the opponent: both fight to knock the other one out
+    //! (never to kill) until updateBrawl ends it.
+    void startBrawl(Creature& opponent);
+
+    //! Server side. Checks the end conditions of the brawl (low health, interrupted, too long).
+    void updateBrawl();
+
+    //! Server side. Ends the brawl of this creature and of its opponent: both calm down but stay
+    //! angry, and the relationship gets worse.
+    void endBrawl();
+
+    //! Server side. True if the creature can start a brawl now (idle, not in a fight and not hurt).
+    bool canStartBrawl() const;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -1027,6 +1094,28 @@ private:
     //! While KO to death, if a kobold carries the creature to its bed, the counter will
     //! stop during the travel (and reset to 0 when the creature is dropped in its bed).
     int32_t                         mKoTurnCounter;
+
+    //! brief Creatures that recently hurt this creature (name and turn), used to find who took part
+    //! in defeating it for the relationships. Only filled when the option is on.
+    std::map<std::string, int64_t>  mRecentAttackers;
+
+    //! Name of the creature this one brawls with (relationships), empty if there is no brawl
+    std::string                     mBrawlOpponent;
+    int64_t                         mBrawlStartTurn = 0;
+
+    //! Combat modifier of the relationships, computed at most once per turn
+    mutable int64_t                 mCombatModifierTurn = -1;
+    mutable double                  mCombatModifier = 0.0;
+
+    //! Server side. True if a friend of the same keeper that is doing action is within maxTiles tiles,
+    //! measured between the home tiles (sleeping) or the positions.
+    bool hasFriendDoing(CreatureActionType action, double maxTiles, bool useHomeTile) const;
+
+    //! Mood points from relationship events that fade each turn (relationships)
+    int32_t                         mRelationshipTempMood = 0;
+    //! Rage after the death of a friend: until which turn it lasts and the id of the seat it is against
+    int64_t                         mRageUntilTurn = 0;
+    int32_t                         mRageSeatId = -1;
 
     //! \brief If nullptr, the creature is not in prison. If not, it is in the prison of
     //! the given seat

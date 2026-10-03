@@ -123,6 +123,10 @@ public:
     virtual Creature* getCreatureUsingRoom(unsigned index);
     virtual bool hasOpenCreatureSpot(Creature* c) { return false; }
 
+    //! True if a creature of the same keeper that the creature hates works in the room
+    //! (relationships option on only).
+    bool hasHatedCoworker(Creature* c) const;
+
     struct InteractionPosition
     {
         const BuildingObject* object;

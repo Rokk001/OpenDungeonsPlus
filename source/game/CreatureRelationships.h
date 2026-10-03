@@ -81,6 +81,80 @@ struct RelationshipSettings
     int32_t mEventDefeatedEnemiesTogether;
     int32_t mEventArenaLoss;
     int32_t mEventChickenSnatched;
+    //! Training together counts at most once per pair in this number of turns (one training cycle)
+    int64_t mTrainingTogetherCooldownTurns;
+    //! Creatures that hit the same enemy within this number of turns took part in defeating it
+    int64_t mFightParticipantTurns;
+
+    //! Two creatures fight side by side when both fight within this many tiles of each other
+    double mCombatRadiusTiles;
+    //! Defense added to every defense value of a creature that fights next to a friend / best friend
+    double mCombatBonusFriends;
+    double mCombatBonusBestFriends;
+    //! Defense taken away while a nemesis fights next to the creature
+    double mCombatPenaltyNemesis;
+
+    //! Mood points lost for each hated / nemesis creature of the same keeper
+    int32_t mMoodPenaltyHated;
+    int32_t mMoodPenaltyNemesis;
+    //! At most this many hated creatures count for the mood
+    int32_t mMoodMaxPairs;
+
+    //! Limits per creature, the weakest relationship of a tier falls back when it is exceeded.
+    //! Partners belong to the lovers tier, which is not active yet.
+    int32_t mMaxFriends;
+    int32_t mMaxPartners;
+    int32_t mMaxNemeses;
+
+    //! Nemesis brawls: how often a pair is checked, the chance for a brawl per check (percent),
+    //! the largest distance in tiles at which they notice each other, the health (percent of the
+    //! maximum) at which a brawl stops, the longest duration and the change of the value afterwards
+    int64_t mBrawlCheckIntervalTurns;
+    int32_t mBrawlChancePercent;
+    int32_t mBrawlMaxDistanceTiles;
+    int32_t mBrawlStopHealthPercent;
+    int64_t mBrawlMaxTurns;
+    int32_t mBrawlValueChange;
+
+    //! Mentoring: a friend training in the same room that is at least this many levels higher
+    //! speeds up the training of the creature by this many percent
+    int32_t mMentorMinLevelDiff;
+    int32_t mMentorXpBonusPercent;
+
+    //! Temporary mood points from relationship events (grief, ...) are capped at this size and
+    //! fade by mTempMoodDecayPerTurn points each turn
+    int32_t mTempMoodMax;
+    int32_t mTempMoodDecayPerTurn;
+    //! Grief: mood points a creature loses when a friend dies, and for how many turns it then
+    //! deals mGriefRageBonusPercent percent more damage to the side of the killer
+    int32_t mGriefMoodPenalty;
+    int64_t mGriefRageTurns;
+    int32_t mGriefRageBonusPercent;
+
+    //! Jealousy: when a creature becomes friends with another one, the friends of the first
+    //! creature lose this many points towards the newcomer (0 switches it off). The break-up of
+    //! partners needs the lovers tier and is not part of it yet.
+    int32_t mJealousyValueLoss;
+
+    //! Chance (percent) that the best friend of a creature that leaves the dungeon unhappy leaves with it
+    int32_t mLeaveTogetherChancePercent;
+
+    //! Mood points a creature gets while a friend sleeps in a bed at most mNeighbourBedTiles tiles
+    //! away, or eats at the same time at most mEatTogetherTiles tiles away
+    int32_t mSleepNextToFriendMood;
+    int32_t mNeighbourBedTiles;
+    int32_t mEatTogetherMood;
+    int32_t mEatTogetherTiles;
+
+    //! Mood points the friends that see a slap lose
+    int32_t mSlapFriendsMoodPenalty;
+
+    //! Start value of a pair of creature classes (sorted pair of class names), see config
+    //! entries "Racial_<ClassA>_<ClassB>".
+    std::map<std::pair<std::string, std::string>, int32_t> mRacialStart;
+
+    //! brief Start value for a pair of creature classes, 0 if the table has no entry.
+    int32_t getRacialStart(const std::string& classA, const std::string& classB) const;
 };
 
 //! \brief A change of the tier of a pair, to be sent to the clients.
@@ -111,8 +185,11 @@ public:
 
     //! \brief Single entry point for all gameplay hooks. Changes the value of the
     //! pair according to the amount configured for the event.
+    //! When the pair has no value yet, the racial start value of the two classes is applied first
+    //! (classes may be left empty to skip that).
     void onRelationshipEvent(RelationshipEvent event, const std::string& creatureA,
-        const std::string& creatureB, int64_t turn);
+        const std::string& creatureB, int64_t turn, const std::string& classA = std::string(),
+        const std::string& classB = std::string());
 
     //! \brief Adds amount to the pair (clamped to -100..100). A value of 0 removes the pair.
     void changeValue(const std::string& creatureA, const std::string& creatureB,
@@ -127,6 +204,36 @@ public:
     RelationshipTier tierOf(const std::string& creatureA, const std::string& creatureB,
         bool loversAllowed = false) const;
     bool isFriend(const std::string& creatureA, const std::string& creatureB) const;
+    bool isNemesis(const std::string& creatureA, const std::string& creatureB) const;
+    //! True for the tiers hated and nemesis.
+    bool isHated(const std::string& creatureA, const std::string& creatureB) const;
+
+    //! Defense modifier of a creature that fights next to the creatures in nearbyFighters
+    //! (the caller selects them: same keeper, fighting, within the combat radius). The best bonus
+    //! of a friend counts once, a nemesis nearby takes the penalty away again.
+    double combatModifier(const std::string& creature, const std::vector<std::string>& nearbyFighters) const;
+
+    //! Mood points (zero or negative) the creature gets from the creatures it hates.
+    int32_t moodModifier(const std::string& creature) const;
+
+    //! Factor (1.0 or more) for the experience a creature gets while training: a friend among the
+    //! trainees (name and level, the caller selects them: same keeper, same room) that is at least
+    //! mMentorMinLevelDiff levels higher raises it by mMentorXpBonusPercent percent.
+    double mentoringFactor(const std::string& creature, uint32_t level,
+        const std::vector<std::pair<std::string, uint32_t> >& trainees) const;
+
+    //! Returns the strongest best friend (value at least the best friends threshold) of the
+    //! creature, or an empty string if it has none.
+    std::string getBestFriend(const std::string& creature) const;
+
+    //! Lists the creatures that are friends (or better) of the creature.
+    void getFriends(const std::string& creature, std::vector<std::string>& friends) const;
+
+    //! Lists the creatures that have a value with the creature, with the value.
+    void getPartners(const std::string& creature, std::vector<std::pair<std::string, int32_t> >& partners) const;
+
+    //! Lists the pairs of nemeses.
+    void getNemesisPairs(std::vector<Pair>& pairs) const;
 
     //! \brief Removes every pair of the creature (death, leaving, conversion).
     void removeCreature(const std::string& creature);
@@ -165,11 +272,17 @@ private:
 
     static Pair makePair(const std::string& creatureA, const std::string& creatureB);
     void setValue(const Pair& pair, int32_t value, int64_t turn, bool isEvent);
+    //! Lets the weakest relationship of a tier fall back while the creature has too many of it
+    void enforceLimits(const std::string& creature, int64_t turn);
+    //! Friends of creature get jealous of newFriend, which just became its friend
+    void applyJealousy(const std::string& creature, const std::string& newFriend, int64_t turn);
     void recordTierChange(const Pair& pair, int32_t oldValue, int32_t newValue);
     int32_t representativeValue(RelationshipTier tier) const;
 
     RelationshipSettings mSettings;
     std::map<Pair, PairData> mPairs;
+    //! Turn of the last counted training event per pair
+    std::map<Pair, int64_t> mLastTrainingTurn;
     std::vector<RelationshipTierChange> mTierChanges;
     int64_t mLastDriftTurn;
 };

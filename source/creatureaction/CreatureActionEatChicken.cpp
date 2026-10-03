@@ -21,6 +21,7 @@
 #include "entities/ChickenEntity.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
+#include "game/CreatureRelationships.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
@@ -137,7 +138,17 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
         creature.popAction();
         return false;
     }
+
+    // The creature that wanted this chicken saw it being taken away
+    if(!chicken->getSnatchedFrom().empty())
+    {
+        Creature* victim = creature.getGameMap()->getCreature(chicken->getSnatchedFrom());
+        if(victim != nullptr)
+            Creature::reportRelationshipEvent(RelationshipEvent::chickenSnatched, *victim, creature);
+    }
     creature.foodEaten(ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHungerPerChicken"));
+    // Eating together with a friend is more pleasant
+    creature.reportEatingWithFriends();
     creature.setJobCooldown(Random::Int(ConfigManager::getSingleton().getRoomConfigUInt32("HatcheryCooldownChickenMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("HatcheryCooldownChickenMax")));
     creature.setHP(creature.getHP() + ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHpRecoveredPerChicken"));
