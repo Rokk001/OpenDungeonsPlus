@@ -570,6 +570,7 @@ set(OD_SOURCEFILES
     ${SRC}/utils/NameAliases.cpp
     ${SRC}/utils/Random.cpp
     ${SRC}/utils/ResourceManager.cpp
+    ${SRC}/utils/RunLevelTest.cpp
     ${SRC}/utils/VectorInt64.cpp
 
     ${SRC}/ODApplication.cpp

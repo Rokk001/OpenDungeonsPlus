@@ -34,6 +34,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 
 #include <CEGUI/widgets/PushButton.h>
 
@@ -274,6 +275,8 @@ void MenuModeMain::restartPendingLevel()
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeGameSinglePlayer, false))
     {
         OD_LOG_ERR("Could not restart the level " + level);
+        if(RunLevelTest::isActive())
+            RunLevelTest::fail(RunLevelTest::codeLoadError, "load error: the level could not be started");
         return;
     }
 
@@ -284,6 +287,8 @@ void MenuModeMain::restartPendingLevel()
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to the server to restart the level " + level);
+        if(RunLevelTest::isActive())
+            RunLevelTest::fail(RunLevelTest::codeLoadError, "load error: could not connect to the local server");
         ODServer::getSingleton().stopServer();
     }
 }
