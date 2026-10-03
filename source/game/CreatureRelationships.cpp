@@ -93,6 +93,8 @@ RelationshipSettings::RelationshipSettings() :
     mEventDefeatedEnemiesTogether(8),
     mEventArenaLoss(-10),
     mEventChickenSnatched(-12),
+    mEventPrayedTogether(2),
+    mPrayerTogetherCooldownTurns(30),
     mTrainingTogetherCooldownTurns(40),
     mFightParticipantTurns(100),
     mCombatRadiusTiles(3.0),
@@ -167,6 +169,7 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"EventDefeatedEnemiesTogether", &settings.mEventDefeatedEnemiesTogether},
         {"EventArenaLoss", &settings.mEventArenaLoss},
         {"EventChickenSnatched", &settings.mEventChickenSnatched},
+        {"EventPrayedTogether", &settings.mEventPrayedTogether},
         {"MoodPenaltyHated", &settings.mMoodPenaltyHated},
         {"MoodPenaltyNemesis", &settings.mMoodPenaltyNemesis},
         {"MoodMaxPairs", &settings.mMoodMaxPairs},
@@ -209,6 +212,7 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"DriftIntervalTurns", &settings.mDriftIntervalTurns},
         {"DriftIdleTurns", &settings.mDriftIdleTurns},
         {"TrainingTogetherCooldownTurns", &settings.mTrainingTogetherCooldownTurns},
+        {"PrayerTogetherCooldownTurns", &settings.mPrayerTogetherCooldownTurns},
         {"FightParticipantTurns", &settings.mFightParticipantTurns},
         {"BrawlCheckIntervalTurns", &settings.mBrawlCheckIntervalTurns},
         {"BrawlMaxTurns", &settings.mBrawlMaxTurns},
@@ -334,6 +338,20 @@ void CreatureRelationships::onRelationshipEvent(RelationshipEvent event, const s
         mLastTrainingTurn[pair] = turn;
     }
 
+    if(event == RelationshipEvent::prayedTogether)
+    {
+        // Only hated pairs reconcile, slowly: once per cooldown
+        std::map<Pair, PairData>::const_iterator itPair = mPairs.find(pair);
+        if((itPair == mPairs.end()) || (itPair->second.mValue > mSettings.mThresholdHated))
+            return;
+
+        std::map<Pair, int64_t>::iterator itPrayer = mLastPrayerTurn.find(pair);
+        if((itPrayer != mLastPrayerTurn.end()) && ((turn - itPrayer->second) < mSettings.mPrayerTogetherCooldownTurns))
+            return;
+
+        mLastPrayerTurn[pair] = turn;
+    }
+
     // The racial start value is applied when the pair first gets a value
     if(!classA.empty() && !classB.empty() && (mPairs.find(pair) == mPairs.end()))
     {
@@ -356,6 +374,9 @@ void CreatureRelationships::onRelationshipEvent(RelationshipEvent event, const s
             break;
         case RelationshipEvent::chickenSnatched:
             amount = mSettings.mEventChickenSnatched;
+            break;
+        case RelationshipEvent::prayedTogether:
+            amount = mSettings.mEventPrayedTogether;
             break;
     }
 
@@ -670,6 +691,15 @@ void CreatureRelationships::getNemesisPairs(std::vector<Pair>& pairs) const
 
 void CreatureRelationships::removeCreature(const std::string& creature)
 {
+    std::map<Pair, int64_t>::iterator itPrayer = mLastPrayerTurn.begin();
+    while(itPrayer != mLastPrayerTurn.end())
+    {
+        if((itPrayer->first.first == creature) || (itPrayer->first.second == creature))
+            itPrayer = mLastPrayerTurn.erase(itPrayer);
+        else
+            ++itPrayer;
+    }
+
     std::map<Pair, int64_t>::iterator itTraining = mLastTrainingTurn.begin();
     while(itTraining != mLastTrainingTurn.end())
     {
@@ -695,6 +725,15 @@ void CreatureRelationships::doTurn(int64_t turn)
         return;
 
     mLastDriftTurn = turn;
+    std::map<Pair, int64_t>::iterator itPrayer = mLastPrayerTurn.begin();
+    while(itPrayer != mLastPrayerTurn.end())
+    {
+        if((turn - itPrayer->second) >= mSettings.mPrayerTogetherCooldownTurns)
+            itPrayer = mLastPrayerTurn.erase(itPrayer);
+        else
+            ++itPrayer;
+    }
+
     std::map<Pair, int64_t>::iterator itTraining = mLastTrainingTurn.begin();
     while(itTraining != mLastTrainingTurn.end())
     {
