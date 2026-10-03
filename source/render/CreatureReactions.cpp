@@ -124,6 +124,10 @@ const uint32_t HEAL_MIN_STEPS = 2;
 const double ALLY_DEATH_RADIUS = 8.0;
 //! The sight of an enemy lets the standing creatures of the keeper close by react at most this often
 const double ENEMY_SPOTTED_INTERVAL = 20.0;
+//! Creatures that walk towards each other and are this close (world units) bump into each other
+const double BUMP_RADIUS = 1.3;
+//! A worker waves at a fighter that passes within this share more than the meeting radius
+const double WAVE_RADIUS_FACTOR = 1.3;
 //! Creatures that are on the map when the game starts did not arrive: nothing is shown in this time
 const double ARRIVAL_QUIET_TIME = 3.0;
 
@@ -193,7 +197,8 @@ CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& config
     mMoodIndex(0),
     mNextLookTarget(Ogre::Vector3::ZERO),
     mHasNextLookTarget(false),
-    mSlapTime(0.0)
+    mSlapTime(0.0),
+    mNextInteraction(0.0)
 {
     mConfigLoaded = mConfig.load(mConfigFileName);
     if(!mConfigLoaded)
@@ -2154,6 +2159,9 @@ void CreatureReactions::noteSlapped(const Ogre::Vector3& handPosition)
 
     mSlappedAt[target->getName()] = mTime;
     trigger(target, "Slapped");
+
+    // Some of the creatures that stand around laugh at it
+    noteNearbyEvent("LaughAtSlapped", target->getPosition(), target, 3.0);
 }
 
 void CreatureReactions::noteHandPicked(Creature* creature)
@@ -2450,6 +2458,169 @@ void CreatureReactions::examineMood(Creature* creature)
     {
         if(trigger(creature, eventName))
             return;
+    }
+
+    examineInteraction(creature, idle, moving);
+}
+
+bool CreatureReactions::isInGroup(const Creature* creature, const std::string& group) const
+{
+    const CreatureDefinition* definition = creature->getDefinition();
+    if(definition == nullptr)
+        return false;
+
+    return contains(mConfig.getGroupsOf(definition->getClassName()), group);
+}
+
+bool CreatureReactions::isFreeAndIdle(Creature* creature)
+{
+    if(!creature->getIsOnMap() || !creature->isAlive() || creature->isMoving() || creature->isInContainment())
+        return false;
+
+    Ogre::AnimationState* animState = creature->getAnimationState();
+    if((animState == nullptr) || (animState->getAnimationName() != "Idle"))
+        return false;
+
+    // Waiting in a room where idling means something else (praying, watching a bout) is not free time
+    if(!getOngoingEvent(creature, "Idle").empty())
+        return false;
+
+    return findRunning(creature->getName()) == nullptr;
+}
+
+bool CreatureReactions::areFacingEachOther(const Creature* first, const Creature* second)
+{
+    Ogre::SceneNode* firstNode = first->getEntityNode();
+    Ogre::SceneNode* secondNode = second->getEntityNode();
+    if((firstNode == nullptr) || (secondNode == nullptr))
+        return false;
+
+    Ogre::Vector3 toSecond = second->getPosition() - first->getPosition();
+    toSecond.z = 0.0f;
+    if(toSecond.length() < 0.01f)
+        return false;
+
+    toSecond.normalise();
+    Ogre::Vector3 firstForward = firstNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+    Ogre::Vector3 secondForward = secondNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
+    firstForward.z = 0.0f;
+    secondForward.z = 0.0f;
+    if((firstForward.length() < 0.01f) || (secondForward.length() < 0.01f))
+        return false;
+
+    firstForward.normalise();
+    secondForward.normalise();
+    return (firstForward.dotProduct(toSecond) > 0.3f) && (secondForward.dotProduct(toSecond) < -0.3f);
+}
+
+bool CreatureReactions::startMeeting(Creature* first, const std::string& firstEvent, Creature* second,
+        const std::string& secondEvent, double secondDelay)
+{
+    if(!trigger(first, firstEvent))
+        return false;
+
+    mNextInteraction = mTime + mConfig.getInteractionPause();
+    queueReaction(second, secondEvent, -1.0, secondDelay);
+    return true;
+}
+
+void CreatureReactions::examineInteraction(Creature* creature, bool idle, bool moving)
+{
+    // A short meeting is a dice throw now and then, and not more often than a pause over all the creatures
+    if((mTime < mNextInteraction) || (cosmeticRandom(0.0, 1.0) >= mConfig.getInteractionChance()))
+        return;
+
+    bool worker = creature->getDefinition()->isWorker();
+    bool fighterLike = !worker && (isInGroup(creature, "Fighters") || isInGroup(creature, "LargeBeasts"));
+    double radius = mConfig.getInteractionRadius();
+    double radiusWave = radius * WAVE_RADIUS_FACTOR;
+
+    Creature* chatPartner = nullptr;
+    Creature* sparPartner = nullptr;
+    Creature* passingFighter = nullptr;
+    Creature* bumpPartner = nullptr;
+    double bestChat = radius;
+    double bestSpar = radius;
+    double bestPassing = radiusWave;
+    double bestBump = BUMP_RADIUS;
+    for(Creature* other : mGameMap->getCreatures())
+    {
+        if((other == creature) || !other->getIsOnMap() || !other->isAlive() || other->isInContainment())
+            continue;
+
+        if(!other->getSeat()->isAlliedSeat(creature->getSeat()))
+            continue;
+
+        Ogre::Vector3 difference = other->getPosition() - creature->getPosition();
+        difference.z = 0.0f;
+        double distance = difference.length();
+        if(distance > radiusWave)
+            continue;
+
+        if(other->isMoving())
+        {
+            if(worker && !other->getDefinition()->isWorker() && (distance < bestPassing) &&
+               (findRunning(other->getName()) == nullptr))
+            {
+                bestPassing = distance;
+                passingFighter = other;
+            }
+
+            if(moving && (distance < bestBump) && areFacingEachOther(creature, other) &&
+               (findRunning(other->getName()) == nullptr))
+            {
+                bestBump = distance;
+                bumpPartner = other;
+            }
+            continue;
+        }
+
+        if(!idle || (distance >= radius) || !isFreeAndIdle(other))
+            continue;
+
+        if(distance < bestChat)
+        {
+            bestChat = distance;
+            chatPartner = other;
+        }
+
+        if(fighterLike && (distance < bestSpar) && !other->getDefinition()->isWorker() &&
+           (isInGroup(other, "Fighters") || isInGroup(other, "LargeBeasts")))
+        {
+            bestSpar = distance;
+            sparPartner = other;
+        }
+    }
+
+    // One of the meetings that is possible now, chosen by chance
+    std::vector<uint32_t> options;
+    if(chatPartner != nullptr)
+        options.push_back(0);
+    if(sparPartner != nullptr)
+        options.push_back(1);
+    if(passingFighter != nullptr)
+        options.push_back(2);
+    if(bumpPartner != nullptr)
+        options.push_back(3);
+
+    if(options.empty())
+        return;
+
+    uint32_t choice = options[static_cast<size_t>(cosmeticRandom(0.0, static_cast<double>(options.size()) - 0.001))];
+    switch(choice)
+    {
+        case 0:
+            startMeeting(creature, "Chat", chatPartner, "ChatReply", 0.9 + cosmeticRandom(0.0, 0.6));
+            break;
+        case 1:
+            startMeeting(creature, "SparPush", sparPartner, "SparStumble", 0.5);
+            break;
+        case 2:
+            startMeeting(creature, "WaveAtFighter", passingFighter, "NodBack", 0.7);
+            break;
+        default:
+            startMeeting(creature, "Grumble", bumpPartner, "GrumbleBack", 0.4);
+            break;
     }
 }
 

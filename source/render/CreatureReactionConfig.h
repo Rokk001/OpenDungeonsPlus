@@ -331,6 +331,18 @@ public:
     inline double getLookRadius() const
     { return mLookRadius; }
 
+    //! Chance (0 to 1) that a creature that is looked at starts a short meeting with a creature close by
+    inline double getInteractionChance() const
+    { return mInteractionChance; }
+
+    //! Creatures closer than this (world units) can have a short meeting
+    inline double getInteractionRadius() const
+    { return mInteractionRadius; }
+
+    //! Seconds between the starts of two meetings, over all creatures
+    inline double getInteractionPause() const
+    { return mInteractionPause; }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -352,6 +364,9 @@ private:
     double mSitAfter;
     double mLieAfter;
     double mLookRadius;
+    double mInteractionChance;
+    double mInteractionRadius;
+    double mInteractionPause;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;
