@@ -5,6 +5,7 @@ Name	Lanternreach
 Description	A far reach of small lantern caves linked by narrow paths, a canyon creek and a few spans. Wander from hall to hall, claim what you find and make a home of it. Build as you like; nothing here ends the game.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
+Sandbox	1
 [/Info]
 
 [Seats]
