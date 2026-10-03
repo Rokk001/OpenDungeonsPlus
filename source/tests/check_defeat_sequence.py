@@ -429,6 +429,8 @@ guard = '{\n    resetIdleHand();\n    if(mDefeatSequence.blocksInput())\n'
 for signature in ('bool GameMode::mouseMoved(', 'bool GameMode::mousePressed(', 'bool GameMode::mouseReleased(',
                   'bool GameMode::keyPressed(', 'bool GameMode::keyReleased('):
     body = function(game_mode, signature)
+    # The screenshot and desktop key shortcuts of the base mode work during the sequence and are not part of the guard
+    body = re.sub(r'\n    if\(handle(?:Screenshot|Desktop)Key\(arg\)\)\n        return true;\n\n?', '\n', body)
     assert body[body.index('{'):].startswith(guard), signature
     lines = body[body.index('{') + len(guard):].split('\n')
     assert lines[0] == '        return true;' or (lines[0] == '    {' and '        return true;' in lines[1:4]

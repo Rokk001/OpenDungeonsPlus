@@ -141,6 +141,7 @@ struct Room:Building {
  Room(GameMap* m):map(m){}
  GameMap* getGameMap()const{return map;}
  Tile* getCentralTile()const{return central;}
+ uint32_t numCoveredTiles()const{return static_cast<uint32_t>(mCoveredTiles.size());}
  virtual void doUpkeep(){++doUpkeeps;}
  virtual bool removeCoveredTile(Tile* t){
   auto it=std::find(mCoveredTiles.begin(),mCoveredTiles.end(),t);
@@ -164,6 +165,8 @@ struct RoomDungeonTemple:Room {
  double mHeartHP=-1;
  bool mCriticalWarningSent=false;
  bool mGoldChanged=false;
+ int tierChecks=0;
+ void checkHeartHealthTier(){++tierChecks;}
  RoomDungeonTemple(GameMap* m):Room(m){}
  static const double HEART_MAX_HP;
  static const double HEART_HEAL_PER_SECOND;
@@ -314,6 +317,7 @@ probe += r"""
  // Gold stacks appear on ring tiles and follow their amount (doUpkeep refreshes them)
  heart.depositGold(250,ringA);
  heart.doUpkeep();
+ check(heart.tierChecks==1,"the upkeep checks the heart health tier while the room has tiles");
  BuildingObject* a1=heart.mBuildingObjects[ringA];
  check(goldIn(heart,ringA)==250,"250 gold sits on ringA");
  check(dataOf(heart,ringA)->mMeshOfTile=="GoldstackLv1","250 gold shows a level 1 stack");

@@ -22,9 +22,12 @@ methods = '\n'.join(function(name) for name in (
     'void GameMode::resetIdleHand(', 'void GameMode::updateIdleHand(', 'void GameMode::deactivate('))
 for name in ('mouseMoved', 'mousePressed', 'mouseReleased', 'keyPressed', 'keyReleased'):
     method = function(f'bool GameMode::{name}(')
+    # The screenshot and desktop key shortcuts of the base mode are no game activity and may come first
+    method = re.sub(r'\n    if\(handle(?:Screenshot|Desktop)Key\(arg\)\)\n        return true;\n', '\n', method)
     assert method.split('{', 1)[1].lstrip().startswith('resetIdleHand();'), name
-for signature in ('void GameMode::activate(', 'GameMode::~GameMode('):
-    assert function(signature).split('{', 1)[1].lstrip().startswith('resetIdleHand();')
+assert function('void GameMode::activate(').split('{', 1)[1].lstrip().startswith('resetIdleHand();')
+# The destructor first lets go of the social feed, then resets the idle hand
+assert 'resetIdleHand();' in function('GameMode::~GameMode(')
 assert 'mIdleHandKeys.insert(arg.key);' in function('bool GameMode::keyPressed(')
 assert 'mIdleHandKeys.erase(arg.key);' in function('bool GameMode::keyReleased(')
 assert 'getKeyboard()->isKeyDown(static_cast<OIS::KeyCode>(key))' in function('void GameMode::activate(')

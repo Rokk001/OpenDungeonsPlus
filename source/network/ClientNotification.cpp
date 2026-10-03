@@ -153,6 +153,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askPossessSkill";
         case ClientNotificationType::editorRegionEdit:
             return "editorRegionEdit";
+        case ClientNotificationType::askUseSpecial:
+            return "askUseSpecial";
         default:
             OD_LOG_ERR("Unknown enum for ClientNotificationType="
                 + Helper::toString(static_cast<int>(type)));

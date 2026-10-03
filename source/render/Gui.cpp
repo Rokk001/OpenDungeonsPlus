@@ -2024,6 +2024,14 @@ const std::string Gui::EDITOR_BOX_MANA_BUTTON = "MainTabControl/Boxes/ManaBoxBut
 const std::string Gui::EDITOR_BOX_GOLD_BUTTON = "MainTabControl/Boxes/GoldBoxButton";
 const std::string Gui::EDITOR_BOX_REVEAL_MAP_BUTTON = "MainTabControl/Boxes/RevealMapBoxButton";
 const std::string Gui::EDITOR_BOX_LEVEL_UP_BUTTON = "MainTabControl/Boxes/LevelUpBoxButton";
+const std::string Gui::EDITOR_BOX_HEAL_ALL_BUTTON = "MainTabControl/Boxes/HealAllBoxButton";
+const std::string Gui::EDITOR_BOX_MAKE_SAFE_BUTTON = "MainTabControl/Boxes/MakeSafeBoxButton";
+const std::string Gui::EDITOR_BOX_WEAKEN_WALLS_BUTTON = "MainTabControl/Boxes/WeakenWallsBoxButton";
+const std::string Gui::EDITOR_BOX_STUN_IMPS_BUTTON = "MainTabControl/Boxes/StunImpsBoxButton";
+const std::string Gui::EDITOR_BOX_RECEIVE_IMPS_BUTTON = "MainTabControl/Boxes/ReceiveImpsBoxButton";
+const std::string Gui::EDITOR_BOX_MAKE_HAPPY_BUTTON = "MainTabControl/Boxes/MakeHappyBoxButton";
+const std::string Gui::EDITOR_BOX_MAKE_UNHAPPY_BUTTON = "MainTabControl/Boxes/MakeUnhappyBoxButton";
+const std::string Gui::EDITOR_BOX_KILL_CREATURES_BUTTON = "MainTabControl/Boxes/KillCreaturesBoxButton";
 
 const std::string Gui::REM_TEXT_LOADING = "LoadingText";
 const std::string Gui::REM_BUTTON_LAUNCH = "LevelWindowFrame/LaunchReplayButton";

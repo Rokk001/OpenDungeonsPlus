@@ -1,5 +1,6 @@
 """Static check that the region marker messages of the level editor are wired end to end."""
 from pathlib import Path
+import re
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -18,7 +19,10 @@ editor_h = read('source/modes/EditorMode.h')
 editor = read('source/modes/EditorMode.cpp')
 
 # New message ids are appended at the end of their enum so older ids keep their value.
-assert client_h.rstrip().split('};')[0].rstrip().endswith('editorRegionEdit'), 'client message not last'
+client_ids = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', client_h.split('};')[0], re.M)
+# Later messages may be appended after it, but it must follow the previous last message directly
+assert client_ids.index('editorRegionEdit') == client_ids.index('askPossessSkill') + 1, 'client message moved'
+assert client_ids[-2:] == ['editorRegionEdit', 'askUseSpecial'], client_ids[-3:]
 assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
 assert server_h.split('};')[0].rstrip().endswith('timeLimit') and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp

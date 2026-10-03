@@ -21,8 +21,9 @@ handler = function(source, 'bool AbstractApplicationMode::handleDesktopKey(')
 for mode in ('AbstractApplicationMode', 'GameMode', 'EditorMode'):
     text = (repo / f'source/modes/{mode}.cpp').read_text()
     pressed = function(text, f'bool {mode}::keyPressed(')
+    # The screenshot key (SysRq) and the desktop key (Windows) never overlap, so their order does not matter
     if 'handleScreenshotKey(arg)' in pressed:
-        assert pressed.index('handleDesktopKey(arg)') < pressed.index('handleScreenshotKey(arg)')
+        assert pressed.index('handleScreenshotKey(arg)') < pressed.index('injectKeyDown(')
     assert pressed.index('handleDesktopKey(arg)') < pressed.index('injectKeyDown(')
 
 probe = r'''

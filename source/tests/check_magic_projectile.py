@@ -9,7 +9,9 @@ repo = Path(__file__).resolve().parents[2]
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 turn_rate = float(re.search(r'double ODApplication::turnsPerSecond = ([0-9.]+)', (repo / 'source/ODApplication.cpp').read_text())[1])
 missile_speeds = {float(value) for value in re.findall(r'MissileLaunch[^\n]*\bnone\s+MissileMagic\s+([0-9.]+)', (repo / 'config/creatures.cfg').read_text())}
-assert missile_speeds
+assert missile_speeds, 'no caster with a magic missile is configured'
+# Every configured caster speed is exercised, in world units per second
+flight_speeds = [speed * turn_rate for speed in sorted(missile_speeds)]
 probe = r'''
 #include <Ogre.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
@@ -60,10 +62,10 @@ with tempfile.TemporaryDirectory(prefix='odp-magic-projectile-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{prefix / "include/OGRE"}',
                     f'/I{prefix / "include/OGRE/RTShaderSystem"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
-    # Exercise each configured caster speed (Disruption flies slower than the other magic missiles)
-    for missile_speed in sorted(missile_speeds):
-        flight_speed = missile_speed * turn_rate
-        result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), str(flight_speed)], cwd=work, capture_output=True, text=True)
+    for flight_speed in flight_speeds:
+        print('flight speed %.3f' % flight_speed)
+        result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), str(flight_speed)],
+                                cwd=work, capture_output=True, text=True)
         print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
         if result.returncode:
             print(result.stderr)

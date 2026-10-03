@@ -381,7 +381,8 @@ void RoomPortalWave::spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t 
         ++nbSpawned;
     }
 
-    if(nbSpawned > 0)
+    // The sandbox (spawnedNames given) announces its own wave, one message is enough
+    if((nbSpawned > 0) && (spawnedNames == nullptr))
         warnHeroesComing();
 }
 

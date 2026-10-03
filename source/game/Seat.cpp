@@ -22,6 +22,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/GiftBoxEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -29,6 +30,7 @@
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/DraggableTileContainer.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "goals/Goal.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -1168,6 +1170,32 @@ bool Seat::importSeatFromStream(std::istream& is)
         if(!(is >> str) || str != "[/ResearchProgress]" || !(is >> str))
             return false;
     }
+    // Optional: the seat once owned a library (keeps the lost library rule after a load)
+    if(str == "[HadLibrary]")
+    {
+        if(!(is >> mHadLibrary) || !(is >> str))
+            return false;
+    }
+    // Optional: the special boxes the player stored, as "type amount" pairs
+    if(str == "[StoredSpecials]")
+    {
+        uint32_t count;
+        if(!(is >> count))
+            return false;
+        for(uint32_t index = 0; index < count; ++index)
+        {
+            int32_t type;
+            uint32_t amount;
+            if(!(is >> type >> amount) || (type <= static_cast<int32_t>(GiftBoxType::skill)) ||
+               (type >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+            {
+                return false;
+            }
+            addStoredSpecial(static_cast<GiftBoxType>(type), amount);
+        }
+        if(!(is >> str) || str != "[/StoredSpecials]" || !(is >> str))
+            return false;
+    }
     if(str != "[SkillNotAllowed]")
     {
         OD_LOG_INF("WARNING: expected [SkillNotAllowed] and read " + str);
@@ -1405,6 +1433,17 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         os << Skills::toString(type) << "\t" << getSkillLevel(type) << "\n";
     os << "[/ResearchProgress]\n";
 
+    if(mHadLibrary)
+        os << "[HadLibrary]\t1\n";
+
+    if(!mStoredSpecialBoxes.empty())
+    {
+        os << "[StoredSpecials]\n" << mStoredSpecialBoxes.size() << "\n";
+        for(const std::pair<int32_t, uint32_t>& special : mStoredSpecialBoxes)
+            os << special.first << "\t" << special.second << "\n";
+        os << "[/StoredSpecials]\n";
+    }
+
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)
     {
@@ -1607,6 +1646,39 @@ SkillType Seat::getFirstSkillPending() const
         return SkillType::nullSkillType;
 
     return mSkillPending.at(0);
+}
+
+void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
+{
+    uint32_t index = static_cast<uint32_t>(type);
+    mStoredSpecialBoxes.push_back(std::pair<int32_t, uint32_t>(static_cast<int32_t>(type), amount));
+    if(mStoredSpecials.size() <= index)
+        mStoredSpecials.resize(static_cast<uint32_t>(GiftBoxType::nbTypes), 0);
+
+    ++mStoredSpecials[index];
+}
+
+bool Seat::useStoredSpecial(GiftBoxType type)
+{
+    std::vector<std::pair<int32_t, uint32_t> >::iterator it = mStoredSpecialBoxes.begin();
+    while((it != mStoredSpecialBoxes.end()) && (it->first != static_cast<int32_t>(type)))
+        ++it;
+
+    if(it == mStoredSpecialBoxes.end())
+        return false;
+
+    uint32_t amount = it->second;
+    mStoredSpecialBoxes.erase(it);
+    --mStoredSpecials[static_cast<uint32_t>(type)];
+
+    // Imps and left over gold appear at the dungeon heart
+    Tile* tile = nullptr;
+    std::vector<Room*> hearts = mGameMap->getRoomsByTypeAndSeat(RoomType::dungeonTemple, this);
+    if(!hearts.empty())
+        tile = hearts[0]->getCentralTile();
+
+    GiftBoxBonus::applyBonus(mGameMap, this, type, amount, tile);
+    return true;
 }
 
 void Seat::addSkillPoints(int32_t points)

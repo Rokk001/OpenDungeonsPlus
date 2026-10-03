@@ -71,7 +71,8 @@ struct MissileObject {
     void setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& p,bool d){queued=p;distortion=d;}
     void hitTargetEntity(Tile*,GameEntity* e){++e->hits;}
     bool hitCreature(Tile*,GameEntity* e){++e->hits;return piercing;}
-    void updateDirection(){}
+    virtual void updateDirection() {}
+    virtual ~MissileObject() {}
     void doUpkeep();
     bool computeDestination(const Ogre::Vector3&,double,const Ogre::Vector3&,Ogre::Vector3&,std::list<Tile*>&);
     WALL

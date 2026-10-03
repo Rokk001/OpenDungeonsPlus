@@ -108,7 +108,9 @@ enum class ClientNotificationType
     //! Editor: change or list the region markers of the level script:
     //! + int32_t operation (0 list, 1 set, 2 remove), string name, 4 int32_t (corners, set only).
     //! The server always answers with editorRegionData.
-    editorRegionEdit
+    editorRegionEdit,
+    //! Use a stored special (the button of the special was pressed): + int32_t giftBoxType
+    askUseSpecial
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

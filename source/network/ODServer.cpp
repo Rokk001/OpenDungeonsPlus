@@ -2999,6 +2999,26 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         }
 
         
+        case ClientNotificationType::askUseSpecial:
+        {
+            Player* player = clientSocket->getPlayer();
+            int32_t giftBoxTypeInt;
+            OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
+            if((giftBoxTypeInt <= static_cast<int32_t>(GiftBoxType::skill)) ||
+               (giftBoxTypeInt >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+            {
+                OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(giftBoxTypeInt));
+                break;
+            }
+
+            // Only the owner of the special can use it, and not once defeated
+            if((player->getSeat() == nullptr) || player->getHasLost())
+                break;
+
+            player->getSeat()->useStoredSpecial(static_cast<GiftBoxType>(giftBoxTypeInt));
+            break;
+        }
+
         case ClientNotificationType::askCasinoPayout:
         {
             Player* player = clientSocket->getPlayer();
@@ -3078,10 +3098,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int32_t giftBoxTypeInt;
             OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
             GiftBoxType giftBoxType = static_cast<GiftBoxType>(giftBoxTypeInt);
-            if((giftBoxType != GiftBoxType::mana) &&
-               (giftBoxType != GiftBoxType::gold) &&
-               (giftBoxType != GiftBoxType::revealMap) &&
-               (giftBoxType != GiftBoxType::levelUp))
+            if((giftBoxType == GiftBoxType::skill) ||
+               (giftBoxType < GiftBoxType::skill) ||
+               (giftBoxType >= GiftBoxType::nbTypes))
             {
                 OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(static_cast<int>(giftBoxType)));
                 break;

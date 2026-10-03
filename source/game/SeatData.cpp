@@ -79,6 +79,14 @@ bool SeatData::isLibraryLost() const
     return mHadLibrary && (getNbRooms(RoomType::library) == 0);
 }
 
+uint32_t SeatData::getNbStoredSpecials(uint32_t giftBoxType) const
+{
+    if(giftBoxType >= mStoredSpecials.size())
+        return 0;
+
+    return mStoredSpecials[giftBoxType];
+}
+
 bool SeatData::importFromPacketForUpdate(ODPacket& is)
 {
     // We only refresh data that changes over time (gold, mana, ...)
@@ -106,6 +114,16 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCurrentSkillType);
     OD_ASSERT_TRUE(is >> mCurrentSkillProgress);
     OD_ASSERT_TRUE(is >> mHadLibrary);
+    mStoredSpecials.clear();
+    uint32_t nbSpecials;
+    OD_ASSERT_TRUE(is >> nbSpecials);
+    while(nbSpecials > 0)
+    {
+        --nbSpecials;
+        uint32_t nbSpecial;
+        OD_ASSERT_TRUE(is >> nbSpecial);
+        mStoredSpecials.push_back(nbSpecial);
+    }
     return true;
 }
 
@@ -130,6 +148,10 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     os << mCurrentSkillType;
     os << mCurrentSkillProgress;
     os << mHadLibrary;
+    uint32_t nbSpecials = mStoredSpecials.size();
+    os << nbSpecials;
+    for(uint32_t nbSpecial : mStoredSpecials)
+        os << nbSpecial;
 }
 
 void SeatData::exportToPacket(ODPacket& os) const

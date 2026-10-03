@@ -353,9 +353,11 @@ bool hasDefeatObjects(Ogre::SceneManager* scene)
 
 bool hasDefeatResources()
 {
-    const char* clones[3] = {"DefeatHeart_Stacheln", "DefeatHeart_Sphere", "DefeatHeart_Sphere2"};
-    for(int i = 0; i < 3; ++i)
-        if(Ogre::MaterialManager::getSingleton().resourceExists(clones[i], "Graphics"))
+    // The copy of the heart clones the materials of the mesh it shows (the critical tier mesh)
+    Ogre::MeshPtr heart = Ogre::MeshManager::getSingleton().load("DungeonHeartObjectCritical.mesh", "Graphics");
+    for(unsigned int i = 0; i < heart->getNumSubMeshes(); ++i)
+        if(Ogre::MaterialManager::getSingleton().resourceExists(
+            "DefeatHeart_" + heart->getSubMesh(i)->getMaterialName(), "Graphics"))
             return true;
     return Ogre::MeshManager::getSingleton().resourceExists("DefeatHeartShard", "Graphics");
 }

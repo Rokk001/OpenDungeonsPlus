@@ -107,6 +107,10 @@ public:
     //! until a library is owned again.
     bool isLibraryLost() const;
 
+    //! \brief Number of stored special boxes of the given gift box type (as an integer), the
+    //! boxes an imp carried to the dungeon heart. Each one is used with a button.
+    uint32_t getNbStoredSpecials(uint32_t giftBoxType) const;
+
     inline const std::string& getPlayerType() const
     { return mPlayerType; }
 
@@ -183,6 +187,10 @@ protected:
     //! \brief True once the seat has owned a library. Set on server side, sent to the clients
     //! with the other changing data.
     bool mHadLibrary;
+
+    //! \brief Stored special boxes, indexed by gift box type. Set on server side, sent to the
+    //! clients with the other changing data.
+    std::vector<uint32_t> mStoredSpecials;
 
     //! \brief Skills not allowed. Used on server side only
     std::vector<SkillType> mSkillNotAllowed;

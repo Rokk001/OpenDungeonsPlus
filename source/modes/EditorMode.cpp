@@ -409,6 +409,22 @@ EditorMode::EditorMode(ModeManager* modeManager):
                      AbstractApplicationMode::GuiAction::ButtonPressedBoxRevealMap);
     connectGuiAction(Gui::EDITOR_BOX_LEVEL_UP_BUTTON,
                      AbstractApplicationMode::GuiAction::ButtonPressedBoxLevelUp);
+    connectGuiAction(Gui::EDITOR_BOX_HEAL_ALL_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxHealAll);
+    connectGuiAction(Gui::EDITOR_BOX_MAKE_SAFE_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxMakeSafe);
+    connectGuiAction(Gui::EDITOR_BOX_WEAKEN_WALLS_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxWeakenWalls);
+    connectGuiAction(Gui::EDITOR_BOX_STUN_IMPS_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxStunImps);
+    connectGuiAction(Gui::EDITOR_BOX_RECEIVE_IMPS_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxReceiveImps);
+    connectGuiAction(Gui::EDITOR_BOX_MAKE_HAPPY_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxMakeHappy);
+    connectGuiAction(Gui::EDITOR_BOX_MAKE_UNHAPPY_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxMakeUnhappy);
+    connectGuiAction(Gui::EDITOR_BOX_KILL_CREATURES_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxKillCreatures);
 
     //Tile selection
     connectTileSelect(Gui::EDITOR_CLAIMED_BUTTON,TileVisual::claimedGround);
@@ -2031,6 +2047,46 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
             case GuiAction::ButtonPressedBoxLevelUp:
             {
                 askCreateGiftBox(GiftBoxType::levelUp);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxHealAll:
+            {
+                askCreateGiftBox(GiftBoxType::healAll);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxMakeSafe:
+            {
+                askCreateGiftBox(GiftBoxType::makeSafe);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxWeakenWalls:
+            {
+                askCreateGiftBox(GiftBoxType::weakenWalls);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxStunImps:
+            {
+                askCreateGiftBox(GiftBoxType::stunImps);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxReceiveImps:
+            {
+                askCreateGiftBox(GiftBoxType::receiveImps);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxMakeHappy:
+            {
+                askCreateGiftBox(GiftBoxType::makeHappy);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxMakeUnhappy:
+            {
+                askCreateGiftBox(GiftBoxType::makeUnhappy);
+                break;
+            }
+            case GuiAction::ButtonPressedBoxKillCreatures:
+            {
+                askCreateGiftBox(GiftBoxType::killCreatures);
                 break;
             }
             default:

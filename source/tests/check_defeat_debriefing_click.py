@@ -133,6 +133,12 @@ struct GameMap
     Seat* getSeatById(int id) {return id == 1 ? &red : nullptr;}
     int64_t getTurnNumber() const {return turn;}
 };
+struct Campaign
+{
+    bool active = false;
+    static Campaign& getSingleton() {static Campaign campaign;return campaign;}
+    bool isActive() const {return active;}
+};
 struct ModeManager
 {
     enum ModeType {NONE = 0, MENU_MAIN = 1, MENU_CAMPAIGN = 2};
@@ -142,8 +148,6 @@ struct ModeManager
 @@CONSUMEREQUEST@@
 };
 typedef ModeManager AbstractModeManager;
-// A skirmish level: no campaign is running
-struct Campaign {static Campaign& getSingleton() {static Campaign campaign;return campaign;} bool isActive() const {return false;}};
 @@CONSTANTS@@
 
 class GameMode : public AbstractApplicationMode
@@ -435,7 +439,7 @@ assert properties['Area'] == '{{0,0},{0,0},{1,0},{1,0}}' and properties.get('Ris
 print('LAYOUT OK: the full screen stone below the panel does not rise when clicked')
 # The confirm handler only requests; the mode is changed at the start of the next ModeManager::update
 confirm = function(game_mode, 'bool GameMode::onClickDefeatDebriefingConfirm(')
-assert 'requestMainMenuWithSkirmishSubMenu();' in confirm and 'destroy' not in confirm and 'delete' not in confirm
+assert 'requestMainMenuWithSkirmishSubMenu();' in confirm and 'MENU_CAMPAIGN' in confirm and 'destroy' not in confirm and 'delete' not in confirm
 assert function(mode_manager, 'void requestMode(').count(';') == 2
 assert mode_manager_source.count('checkModeChange()') == 2
 assert function(mode_manager_source, 'void ModeManager::update(').startswith('void ModeManager::update(const Ogre::FrameEvent& evt)\n{\n    checkModeChange();')
