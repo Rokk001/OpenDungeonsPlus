@@ -119,7 +119,11 @@ RelationshipSettings::RelationshipSettings() :
     mGriefRageTurns(300),
     mGriefRageBonusPercent(30),
     mJealousyValueLoss(3),
-    mLeaveTogetherChancePercent(30)
+    mLeaveTogetherChancePercent(30),
+    mSleepNextToFriendMood(150),
+    mNeighbourBedTiles(3),
+    mEatTogetherMood(100),
+    mEatTogetherTiles(6)
 {
 }
 
@@ -178,7 +182,11 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"GriefMoodPenalty", &settings.mGriefMoodPenalty},
         {"GriefRageBonusPercent", &settings.mGriefRageBonusPercent},
         {"JealousyValueLoss", &settings.mJealousyValueLoss},
-        {"LeaveTogetherChancePercent", &settings.mLeaveTogetherChancePercent}
+        {"LeaveTogetherChancePercent", &settings.mLeaveTogetherChancePercent},
+        {"SleepNextToFriendMood", &settings.mSleepNextToFriendMood},
+        {"NeighbourBedTiles", &settings.mNeighbourBedTiles},
+        {"EatTogetherMood", &settings.mEatTogetherMood},
+        {"EatTogetherTiles", &settings.mEatTogetherTiles}
     };
     struct DoubleEntry
     {
