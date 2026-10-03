@@ -67,6 +67,7 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Silverdeep.level",
     "levels/campaign/Wraithwood.level",
     "levels/campaign/Kingsfall.level",
+    "levels/campaign/HollowmarkCitadel.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
