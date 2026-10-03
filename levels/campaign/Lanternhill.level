@@ -2635,20 +2635,6 @@ ProtectDungeonTemple	NULL
 [Rooms]
 # typeRoom	name	seatId	numTiles		Subsequent Lines: tileX	tileY
 [Room]
-12	WoodenBridge2	0	2
-61	17
-62	17
-1
-[/Room]
-[Room]
-12	WoodenBridge3	0	4
-61	53
-61	54
-62	53
-62	54
-1
-[/Room]
-[Room]
 1	DungeonTemple1	1	25
 11	55
 11	56
