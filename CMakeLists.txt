@@ -373,6 +373,7 @@ set(OD_SOURCEFILES
 	${SRC}/eventsystem/Subject.cpp		
 	
     ${SRC}/game/Campaign.cpp
+    ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
     ${SRC}/game/TrapProductionData.cpp
