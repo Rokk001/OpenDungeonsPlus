@@ -44,6 +44,9 @@ struct CampaignLevel
     bool mBonus;
     //! Id of the province (or of the bonus site) of the level on the world map
     std::string mProvince;
+    //! Province id of the branch sister: of two sisters completing one unlocks
+    //! the levels after them, the other one stays playable. Empty if none.
+    std::string mBranch;
     //! Ruler of the province, shown in its tooltip. Empty if it has none.
     std::string mWarden;
     //! Difficulty of the level from 1 (easy) to 5, shown in the tooltip
@@ -63,6 +66,8 @@ struct CampaignLevel
 //!   Province=T01 (optional) the province or bonus site of the level on the
 //!   world map (gui/campaign/campaign-world.json). Levels without it are not
 //!   shown on the map.
+//!   Branch=T09B (optional) the province of the branch sister. Both sisters
+//!   follow each other in the file and name each other.
 //!   Warden=Name (optional) the ruler of the province.
 //!   Difficulty=1 to 5 (optional) the difficulty shown on the map.
 //!
@@ -74,7 +79,8 @@ struct CampaignLevel
 //!   Completed <index> [<index> ...]
 //!   Discovered <index> [<index> ...]
 //!   Difficulty <n>   (index of the AI level for the whole campaign, 0 = easy)
-//! A level is unlocked when all main levels before it are completed; a bonus
+//! A level is unlocked when all main levels before it are completed
+//! (of two branch sisters one is enough); a bonus
 //! level is unlocked when it was discovered. The current
 //! level is the first level that is not completed yet.
 //!
@@ -172,6 +178,7 @@ private:
 
     size_t getCurrentLevelNoLock() const;
     bool isUnlockedNoLock(size_t index) const;
+    size_t findBranchSisterNoLock(size_t index) const;
 };
 
 #endif // CAMPAIGN_H

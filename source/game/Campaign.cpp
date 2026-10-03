@@ -114,6 +114,8 @@ bool Campaign::importDefinition(std::istream& is)
             level.mBonus = (value == "1");
         else if(key == "Province")
             level.mProvince = value;
+        else if(key == "Branch")
+            level.mBranch = value;
         else if(key == "Warden")
             level.mWarden = value;
         else if(key == "Difficulty")
@@ -236,12 +238,31 @@ bool Campaign::isCompleted(size_t index) const
     return (index < mCompleted.size()) && mCompleted[index];
 }
 
+size_t Campaign::findBranchSisterNoLock(size_t index) const
+{
+    const std::string& branch = mLevels[index].mBranch;
+    if(branch.empty())
+        return mLevels.size();
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if((i != index) && (mLevels[i].mProvince == branch))
+            return i;
+    }
+    return mLevels.size();
+}
+
 size_t Campaign::getCurrentLevelNoLock() const
 {
     for(size_t i = 0; i < mCompleted.size(); ++i)
     {
         if(!mCompleted[i] && !mLevels[i].mBonus)
+        {
+            // The open sister of a finished branch is optional
+            size_t sister = findBranchSisterNoLock(i);
+            if((sister < mCompleted.size()) && mCompleted[sister])
+                continue;
             return i;
+        }
     }
     return mCompleted.size();
 }
@@ -260,11 +281,17 @@ bool Campaign::isUnlockedNoLock(size_t index) const
     if(mLevels[index].mBonus)
         return mDiscovered[index] || mCompleted[index];
 
-    // All main levels before the level must be completed
+    // All main levels before the level must be completed. Of two branch
+    // sisters one is enough, and a sister never blocks the other one.
+    size_t ownSister = findBranchSisterNoLock(index);
     for(size_t i = 0; i < index; ++i)
     {
-        if(!mCompleted[i] && !mLevels[i].mBonus)
-            return false;
+        if(mCompleted[i] || mLevels[i].mBonus || (i == ownSister))
+            continue;
+        size_t sister = findBranchSisterNoLock(i);
+        if((sister < mCompleted.size()) && mCompleted[sister])
+            continue;
+        return false;
     }
     return true;
 }

@@ -181,6 +181,53 @@ BOOST_AUTO_TEST_CASE(test_province_keys)
     BOOST_CHECK_EQUAL(campaign.findLevelByProvince(""), campaign.getNumLevels());
 }
 
+static const std::string sampleBranch =
+    "[Level]\nFile=p.level\nProvince=T08\n"
+    "[Level]\nFile=a.level\nProvince=T09A\nBranch=T09B\n"
+    "[Level]\nFile=b.level\nProvince=T09B\nBranch=T09A\n"
+    "[Level]\nFile=n.level\nProvince=T10\n";
+
+static void completeLevel(Campaign& campaign, size_t index)
+{
+    campaign.startLevel(index);
+    BOOST_REQUIRE(campaign.onLevelWon());
+}
+
+BOOST_AUTO_TEST_CASE(test_branch_levels)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream is(sampleBranch);
+    BOOST_REQUIRE(campaign.importDefinition(is));
+    BOOST_CHECK_EQUAL(campaign.getLevel(1).mBranch, "T09B");
+
+    // Neither sister completed: the level after them is locked, both are closed
+    BOOST_CHECK(!campaign.isUnlocked(1));
+    BOOST_CHECK(!campaign.isUnlocked(2));
+    BOOST_CHECK(!campaign.isUnlocked(3));
+    completeLevel(campaign, 0);
+    // Both sisters open once the level before is done
+    BOOST_CHECK(campaign.isUnlocked(1));
+    BOOST_CHECK(campaign.isUnlocked(2));
+    BOOST_CHECK(!campaign.isUnlocked(3));
+
+    // First sister done: the next level opens, the other stays playable
+    completeLevel(campaign, 1);
+    BOOST_CHECK(campaign.isUnlocked(3));
+    BOOST_CHECK(campaign.isUnlocked(2));
+    BOOST_CHECK_EQUAL(campaign.getCurrentLevel(), 3u);
+    completeLevel(campaign, 3);
+    BOOST_CHECK(campaign.isFinished());
+
+    // The second sister first gives the same result
+    std::istringstream is2(sampleBranch);
+    BOOST_REQUIRE(campaign.importDefinition(is2));
+    completeLevel(campaign, 0);
+    completeLevel(campaign, 2);
+    BOOST_CHECK(campaign.isUnlocked(3));
+    BOOST_CHECK(campaign.isUnlocked(1));
+    BOOST_CHECK_EQUAL(campaign.getCurrentLevel(), 3u);
+}
+
 BOOST_AUTO_TEST_CASE(test_world_map)
 {
     CampaignWorld world;
