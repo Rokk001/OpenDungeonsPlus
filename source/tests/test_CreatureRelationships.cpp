@@ -303,4 +303,42 @@ BOOST_AUTO_TEST_CASE(test_ClientTiers)
     BOOST_CHECK_EQUAL(client.getNbPairs(), 1u);
 }
 
+BOOST_AUTO_TEST_CASE(test_TrainingTogetherCountsOncePerCycle)
+{
+    CreatureRelationships relationships;
+    int32_t amount = relationships.getSettings().mEventTrainingTogether;
+    int64_t cooldown = relationships.getSettings().mTrainingTogetherCooldownTurns;
+
+    relationships.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Orc2", 100);
+    relationships.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc2", "Orc1", 101);
+    BOOST_CHECK_EQUAL(relationships.getValue("Orc1", "Orc2"), amount);
+
+    relationships.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Orc2", 100 + cooldown);
+    BOOST_CHECK_EQUAL(relationships.getValue("Orc1", "Orc2"), 2 * amount);
+}
+
+BOOST_AUTO_TEST_CASE(test_RacialStartValue)
+{
+    std::map<std::string, std::string> config;
+    config["Racial_Elf_Orc"] = "-15";
+    config["Racial_Bad"] = "5";
+    RelationshipSettings settings = RelationshipSettings::fromConfig(config);
+    BOOST_CHECK_EQUAL(settings.getRacialStart("Orc", "Elf"), -15);
+    BOOST_CHECK_EQUAL(settings.getRacialStart("Elf", "Orc"), -15);
+    BOOST_CHECK_EQUAL(settings.getRacialStart("Orc", "Troll"), 0);
+
+    CreatureRelationships withTable(settings);
+    int32_t amount = withTable.getSettings().mEventTrainingTogether;
+
+    // Applied once, when the pair first gets a value
+    withTable.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Elf1", 0, "Orc", "Elf");
+    BOOST_CHECK_EQUAL(withTable.getValue("Orc1", "Elf1"), -15 + amount);
+    withTable.onRelationshipEvent(RelationshipEvent::arenaLoss, "Orc1", "Elf1", 1000, "Orc", "Elf");
+    BOOST_CHECK_EQUAL(withTable.getValue("Orc1", "Elf1"), -15 + amount + withTable.getSettings().mEventArenaLoss);
+
+    // A creature has no relationship with itself
+    withTable.onRelationshipEvent(RelationshipEvent::trainingTogether, "Orc1", "Orc1", 0, "Orc", "Orc");
+    BOOST_CHECK_EQUAL(withTable.getValue("Orc1", "Orc1"), 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

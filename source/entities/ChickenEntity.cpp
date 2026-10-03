@@ -23,6 +23,7 @@
 #include "network/ODPacket.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
@@ -263,6 +264,46 @@ void ChickenEntity::correctEntityMovePosition(Ogre::Vector2& position)
 
     // if(position.z > 0)
     //     position.z += Random::Double(-offset, offset);
+}
+
+void ChickenEntity::setLockEat(const Creature& worker, bool lock)
+{
+    if(lock)
+    {
+        if(mLockedEat && (mLockOwner != worker.getName()))
+            mSnatchedFrom = mLockOwner;
+
+        mLockedEat = true;
+        mLockOwner = worker.getName();
+        return;
+    }
+
+    // Someone else took the chicken, it stays locked for that creature
+    if(mLockOwner != worker.getName())
+        return;
+
+    mLockedEat = false;
+    mLockOwner.clear();
+    mSnatchedFrom.clear();
+}
+
+bool ChickenEntity::canSnatch(const Creature& creature) const
+{
+    if(!mLockedEat || (mLockOwner == creature.getName()) || !getGameMap()->isRelationshipsEnabled())
+        return false;
+
+    Creature* owner = getGameMap()->getCreature(mLockOwner);
+    Tile* tileChicken = getPositionTile();
+    Tile* tileCreature = creature.getPositionTile();
+    if((owner == nullptr) || (tileChicken == nullptr) || (tileCreature == nullptr) || (owner->getPositionTile() == nullptr))
+        return false;
+
+    if(!creature.canHaveRelationships() || !owner->canHaveRelationships() || (owner->getSeat() != creature.getSeat()))
+        return false;
+
+    float distCreature = Pathfinding::squaredDistanceTile(*tileCreature, *tileChicken);
+    float distOwner = Pathfinding::squaredDistanceTile(*owner->getPositionTile(), *tileChicken);
+    return (distCreature <= 1) && (distCreature < distOwner);
 }
 
 bool ChickenEntity::eatChicken(Creature* creature)

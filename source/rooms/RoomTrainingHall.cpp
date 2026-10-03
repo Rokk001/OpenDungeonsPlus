@@ -27,6 +27,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -452,6 +453,16 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("TrainHallWakefulnessPerAttack"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMax")));
+
+    // Creatures of the same keeper training at the same time grow closer
+    if(getGameMap()->isRelationshipsEnabled())
+    {
+        for(Creature* other : mCreaturesUsingRoom)
+        {
+            if(other != &creature)
+                Creature::reportRelationshipEvent(RelationshipEvent::trainingTogether, creature, *other);
+        }
+    }
 
     return false;
 }

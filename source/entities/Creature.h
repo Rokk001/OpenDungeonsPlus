@@ -31,9 +31,11 @@
 #include <Ogre.h>
 #include <CEGUI/EventArgs.h>
 
+#include <map>
 #include <memory>
 #include <string>
 
+enum class RelationshipEvent;
 class Building;
 class Creature;
 class CreatureAction;
@@ -379,6 +381,18 @@ public:
     //! \brief Conform: AttackableObject - Deducts a given amount of HP from this creature.
     //! \brief Share of the damage taken from the attacker: reduced when both fight inside an arena
     double getPitDamageFactor(GameEntity* attacker);
+
+    //! brief Server side. True if the creature can take part in relationships: the option is on,
+    //! it belongs to a keeper (no hero, no neutral creature), is not a worker and not a prisoner.
+    bool canHaveRelationships() const;
+
+    //! brief Server side. Reports a relationship event between two creatures of the same keeper. Does
+    //! nothing if the option is off or one of them cannot have relationships.
+    static void reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB);
+
+    //! brief Server side. Called when this creature was defeated: every pair of creatures of the
+    //! killer's keeper that hit it recently (and the killer itself) fought together.
+    void reportFightParticipants(Creature& killer);
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -1027,6 +1041,10 @@ private:
     //! While KO to death, if a kobold carries the creature to its bed, the counter will
     //! stop during the travel (and reset to 0 when the creature is dropped in its bed).
     int32_t                         mKoTurnCounter;
+
+    //! brief Creatures that recently hurt this creature (name and turn), used to find who took part
+    //! in defeating it for the relationships. Only filled when the option is on.
+    std::map<std::string, int64_t>  mRecentAttackers;
 
     //! \brief If nullptr, the creature is not in prison. If not, it is in the prison of
     //! the given seat
