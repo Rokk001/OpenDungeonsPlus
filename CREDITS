@@ -603,6 +603,19 @@ materials/textures/CreaturePropShadow.png  OD Team                 GPLv3+       
 tools/gen_creature_reaction_art.py     OD Team                 GPLv3+
 tools/check_creature_reactions.py      OD Team                 GPLv3+
 
+=======================================================
+==  Room ambience: effects, sprites, tools           ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+config/roomAmbience*.cfg               OD Team                 GPLv3+
+materials/scripts/RoomAmbience*.material   OD Team            GPLv3+
+particles/RoomAmbience*.particle       OD Team                 GPLv3+
+materials/textures/RoomAmb*.png        OD Team                 GPLv3+                  Drawn from simple shapes and gradients by tools/gen_room_ambience_art.py (script generated, original work, not AI generated)
+tools/gen_room_ambience_art.py         OD Team                 GPLv3+
+tools/check_room_ambience.py           OD Team                 GPLv3+
+
 ================================
 ==  Distribution data: dist/  ==
 ================================
