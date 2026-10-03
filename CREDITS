@@ -6,7 +6,7 @@ This file is listing each files present in this repository, its author and its c
 Each corresponding license is fully described in the licenses/ folder.
 Other text files (.txt, .cpp, .h, .sh, ...), except licensing, are licensed using the GPLv3+ license.
 
-Latest update: 2015/07/24
+Latest update: 2026/10/03
 
 
 =============================
@@ -513,3 +513,13 @@ icon.rc                                OD Team                 GPLv3+
 logo.svg                               Svenskmand              CC-BY-SA 3.0
 OD-Logo.ico                            Svenskmand              CC-BY-SA 3.0
 opendungeons.appdata.xml               OD Team                 GPLv3+
+
+====================================================
+== Portrait feature assets: materials/portraits/  ==
+====================================================
+
+materials/portraits/generated-features/ Image generator         GPLv3+                  AI-generated isolated feature assets based on this project's portraits; exact prompts and source provenance are recorded in each portrait folder; original generator outputs preserved.
+materials/portraits/variants/Kobold.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/Goblin.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/Orc.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/Dwarf1.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
