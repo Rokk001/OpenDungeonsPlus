@@ -44,6 +44,7 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Campaign3.level",
     "levels/campaign/Mossgate.level",
     "levels/campaign/Brackenford.level",
+    "levels/campaign/Coldwell.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
