@@ -531,3 +531,7 @@ materials/portraits/variants/Monk.mesh*/*.png  Image generator, Mario  GPLv3+  A
 materials/portraits/variants/Defender.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
 materials/portraits/variants/Wizard.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
 materials/portraits/variants/Elf.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/DarkElf.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/Troll.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/Lizardman.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
+materials/portraits/variants/Knight.mesh*/*.png  Image generator, Mario  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
