@@ -192,6 +192,8 @@ private:
         double mDelay;
         //! Time the reaction already waited for the creature to be free
         double mWaited;
+        //! Seconds it waits at most
+        double mWaitMax;
         bool mForced;
     };
 
@@ -234,7 +236,8 @@ private:
     //! remembers it and shows another way of working after the movement.
     void noteRoomWork(Creature* creature);
     //! \brief Lets the creature show the event once it has finished what it does
-    void queueReaction(Creature* creature, const std::string& eventName);
+    //! waitMax is the time the reaction waits at most for the creature to be free (negative: the usual time)
+    void queueReaction(Creature* creature, const std::string& eventName, double waitMax = -1.0);
     //! \brief The bout in the arena is over because the creature was knocked out: the one that fought it
     //! cheers as the winner and the others in the arena cheer as spectators
     void celebrateBout(Creature* loser);
@@ -244,7 +247,9 @@ private:
     //! shows (empty if the creature does not do such a thing)
     std::string getOngoingEvent(const Creature* creature, const std::string& clip) const;
     void startOngoing(Creature* creature, const std::string& eventName);
-    void stopOngoing(const std::string& creatureName);
+    //! \brief The creature starts to do something else than before (newEvent is empty or the event of the
+    //! new ongoing work): the work it was doing ends and may have a done moment
+    void finishOngoing(Creature* creature, const std::string& newEvent);
     void updateOngoing();
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;

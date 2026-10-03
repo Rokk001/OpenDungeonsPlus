@@ -74,6 +74,11 @@ const double HAND_DROP_MEMORY = 120.0;
 //! Seconds a reaction waits at most for the creature to finish what it is doing
 const double PENDING_WAIT_MAX = 3.0;
 const double PENDING_WAIT_STEP = 0.25;
+//! Seconds a done moment waits at most for the creature to finish its get-up or meal
+const double DONE_WAIT_MAX = 8.0;
+//! Seconds a creature has to sleep or pray until the end of it is shown
+const double SLEEP_DONE_MIN = 6.0;
+const double PRAYER_DONE_MIN = 8.0;
 //! Seconds after its last work a creature counts as the one that finished the result of the room
 const double ROOM_WORK_MEMORY = 20.0;
 //! The other creatures in the room react to the result after this time
@@ -451,6 +456,7 @@ void CreatureReactions::triggerGroup(const std::string& eventName, const std::ve
         pending.mEventName = eventName;
         pending.mDelay = delay;
         pending.mWaited = 0.0;
+        pending.mWaitMax = PENDING_WAIT_MAX;
         pending.mForced = forced;
         mPending.push_back(pending);
 
@@ -878,7 +884,7 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
         Creature* creature = mGameMap->getCreature(pending.mCreatureName);
         const ReactionEvent* event = mConfig.getEvent(pending.mEventName);
         if((creature != nullptr) && (event != nullptr) && !pending.mForced &&
-           !(event->mPriority < getCreaturePriority(creature, event)) && (pending.mWaited < PENDING_WAIT_MAX))
+           !(event->mPriority < getCreaturePriority(creature, event)) && (pending.mWaited < pending.mWaitMax))
         {
             // Still busy (for example finishing the last blow): look again in a moment
             it->mDelay = PENDING_WAIT_STEP;
@@ -964,9 +970,8 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
 
     // Something that goes on for a while is shown now and then, until the creature does something else
     std::string ongoingEvent = getOngoingEvent(creature, clip);
-    if(ongoingEvent.empty())
-        stopOngoing(creature->getName());
-    else
+    finishOngoing(creature, ongoingEvent);
+    if(!ongoingEvent.empty())
         startOngoing(creature, ongoingEvent);
 
     if((clip == "Die") || (clip == "die"))
@@ -1014,7 +1019,7 @@ void CreatureReactions::noteRoomWork(Creature* creature)
     queueReaction(creature, eventName);
 }
 
-void CreatureReactions::queueReaction(Creature* creature, const std::string& eventName)
+void CreatureReactions::queueReaction(Creature* creature, const std::string& eventName, double waitMax)
 {
     const ReactionEvent* event = mConfig.getEvent(eventName);
     if(event == nullptr)
@@ -1046,6 +1051,7 @@ void CreatureReactions::queueReaction(Creature* creature, const std::string& eve
     pending.mEventName = eventName;
     pending.mDelay = PENDING_WAIT_STEP;
     pending.mWaited = 0.0;
+    pending.mWaitMax = (waitMax > 0.0) ? waitMax : PENDING_WAIT_MAX;
     pending.mForced = false;
     mPending.push_back(pending);
 }
@@ -1134,9 +1140,18 @@ std::string CreatureReactions::getRoomName(const Creature* creature) const
 
 std::string CreatureReactions::getOngoingEvent(const Creature* creature, const std::string& clip) const
 {
+    std::string roomName = getRoomName(creature);
+
     // Creatures that wait in the arena while others fight watch the bouts
-    if((clip == "Idle") && (getRoomName(creature) == "Arena"))
+    if((clip == "Idle") && (roomName == "Arena"))
         return "ArenaWork";
+
+    // Sleeping in a bed and praying (the prayer is the idle animation in the temple)
+    if(startsWith(clip, "Sleep") && (roomName == "Dormitory"))
+        return "DormitoryWork";
+
+    if((clip == "Idle") && (roomName == "Temple"))
+        return "TempleWork";
 
     return std::string();
 }
@@ -1154,9 +1169,23 @@ void CreatureReactions::startOngoing(Creature* creature, const std::string& even
     mOngoing[creature->getName()] = work;
 }
 
-void CreatureReactions::stopOngoing(const std::string& creatureName)
+void CreatureReactions::finishOngoing(Creature* creature, const std::string& newEvent)
 {
-    mOngoing.erase(creatureName);
+    std::map<std::string, OngoingWork>::iterator it = mOngoing.find(creature->getName());
+    if((it == mOngoing.end()) || (it->second.mEventName == newEvent))
+        return;
+
+    // The end of a long sleep or prayer is shown
+    std::string doneEvent;
+    double duration = mTime - it->second.mSince;
+    if((it->second.mEventName == "DormitoryWork") && (duration >= SLEEP_DONE_MIN))
+        doneEvent = "WakeRested";
+    else if((it->second.mEventName == "TempleWork") && (duration >= PRAYER_DONE_MIN))
+        doneEvent = "TempleDone";
+
+    mOngoing.erase(it);
+    if(!doneEvent.empty())
+        queueReaction(creature, doneEvent, DONE_WAIT_MAX);
 }
 
 void CreatureReactions::updateOngoing()
