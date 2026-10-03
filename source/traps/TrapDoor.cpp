@@ -297,11 +297,11 @@ private:
 
 // Register the factories
 static TrapRegister regWooden(new TrapDoorFactory(TrapType::doorWooden, "DoorWooden", "Wooden door", "Wooden"));
-static TrapRegister regBraced(new TrapDoorFactory(TrapType::doorBraced, "DoorBraced", "Braced door", "Braced"));
+static TrapRegister regIronbound(new TrapDoorFactory(TrapType::doorIronbound, "DoorIronbound", "Ironbound door", "Ironbound"));
 static TrapRegister regSteel(new TrapDoorFactory(TrapType::doorSteel, "DoorSteel", "Steel door", "Steel"));
 static TrapRegister regBarricade(new TrapDoorFactory(TrapType::doorBarricade, "DoorBarricade", "Barricade", "Barricade"));
 static TrapRegister regSecret(new TrapDoorFactory(TrapType::doorSecret, "DoorSecret", "Secret door", "Secret"));
-static TrapRegister regMagic(new TrapDoorFactory(TrapType::doorMagic, "DoorMagic", "Magic door", "Magic"));
+static TrapRegister regRuned(new TrapDoorFactory(TrapType::doorRuned, "DoorRuned", "Runed door", "Runed"));
 }
 
 const std::string TrapDoor::ANIMATION_OPEN = "Open";
@@ -356,16 +356,16 @@ double TrapDoor::getDefaultTileHP() const
 {
     switch(mDoorType)
     {
-        case TrapType::doorBraced:
-            return ConfigManager::getSingleton().getTrapConfigDouble("BracedDoorHP");
+        case TrapType::doorIronbound:
+            return ConfigManager::getSingleton().getTrapConfigDouble("IronboundDoorHP");
         case TrapType::doorSteel:
             return ConfigManager::getSingleton().getTrapConfigDouble("SteelDoorHP");
         case TrapType::doorBarricade:
             return ConfigManager::getSingleton().getTrapConfigDouble("BarricadeDoorHP");
         case TrapType::doorSecret:
             return ConfigManager::getSingleton().getTrapConfigDouble("SecretDoorHP");
-        case TrapType::doorMagic:
-            return ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorHP");
+        case TrapType::doorRuned:
+            return ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorHP");
         default:
             return ConfigManager::getSingleton().getTrapConfigDouble("WoodenDoorHP");
     }
@@ -391,8 +391,8 @@ bool TrapDoor::shoot(Tile* tile)
     }
 
     // The doors return true to make sure every creature with vision on the door tile can see it.
-    // The magic door also fires a fireball at the enemies standing on it, then has to recharge
-    if(mDoorType != TrapType::doorMagic)
+    // The runed door also fires a fireball at the enemies standing on it, then has to recharge
+    if(mDoorType != TrapType::doorRuned)
         return true;
 
     if(mFireCooldownTurns > 0)
@@ -404,19 +404,19 @@ bool TrapDoor::shoot(Tile* tile)
     if(enemyCreatures.empty())
         return true;
 
-    // The magic door does not fire if its owner cannot pay the mana
-    double manaToFire = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorManaToFire");
+    // The runed door does not fire if its owner cannot pay the mana
+    double manaToFire = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorManaToFire");
     if(!getSeat()->takeMana(manaToFire))
         return true;
 
-    double damage = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorDamage");
+    double damage = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamage");
     for(GameEntity* target : enemyCreatures)
     {
         Tile* targetTile = target->getCoveredTile(0);
         target->takeDamage(this, 0.0, 0.0, 0.0, damage, targetTile, false);
         target->notifyFightPlayer(targetTile);
     }
-    mFireCooldownTurns = ConfigManager::getSingleton().getTrapConfigUInt32("MagicDoorReloadTurns");
+    mFireCooldownTurns = ConfigManager::getSingleton().getTrapConfigUInt32("RunedDoorReloadTurns");
     return true;
 }
 
@@ -441,11 +441,11 @@ void TrapDoor::doUpkeep()
             trapTileData->mHP = 0.0;
         }
 
-        // The magic door slowly repairs itself
-        if((mDoorType == TrapType::doorMagic) &&
+        // The runed door slowly repairs itself
+        if((mDoorType == TrapType::doorRuned) &&
            (mTileData[tile]->mHP > 0.0))
         {
-            double regen = ConfigManager::getSingleton().getTrapConfigDouble("MagicDoorRegenPerTurn");
+            double regen = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorRegenPerTurn");
             mTileData[tile]->mHP = std::min(getDefaultTileHP(), mTileData[tile]->mHP + regen);
         }
 

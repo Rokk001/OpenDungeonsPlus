@@ -15,40 +15,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRAPTYPE_H
-#define TRAPTYPE_H
+#ifndef NAMEALIASES_H
+#define NAMEALIASES_H
 
-#include <iosfwd>
+#include <cstdint>
 #include <string>
 
-class ODPacket;
-
-enum class TrapType
+//! \brief Maps names that older savegames, levels and config files may still contain to the current names.
+//! The old names are stored only as hashes, see NameAliases.cpp and docs/development/NAME-ALIASES.md.
+namespace NameAliases
 {
-    nullTrapType = 0,
-    cannon,
-    spike,
-    boulder,
-    doorWooden,
-    doorIronbound,
-    doorSteel,
-    doorBarricade,
-    alarm,
-    fear,
-    gas,
-    lightning,
-    fireburst,
-    watchBanner,
-    doorSecret,
-    doorRuned,
-    trigger,
-    freeze,
-    nbTraps     // Must be the last in this enum
-};
+//! \brief 64-bit FNV-1a hash of the lowercase name
+uint64_t hashName(const std::string& name);
 
-std::istream& operator>>(std::istream& is, TrapType& tt);
-std::ostream& operator<<(std::ostream& os, const TrapType& tt);
-ODPacket& operator>>(ODPacket& is, TrapType& tt);
-ODPacket& operator<<(ODPacket& os, const TrapType& tt);
+//! \brief Returns the current name if name is an old name, name itself otherwise. Case-insensitive on the old name.
+std::string resolve(const std::string& name);
+}
 
-#endif // TRAPTYPE_H
+#endif // NAMEALIASES_H

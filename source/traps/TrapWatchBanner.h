@@ -15,21 +15,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRAPGUARDPOST_H
-#define TRAPGUARDPOST_H
+#ifndef TRAPWATCHBANNER_H
+#define TRAPWATCHBANNER_H
 
 #include "Trap.h"
 #include "traps/TrapType.h"
 
 //! \brief A post that never fires. Guards of the owner's guard rooms patrol to it, and it calls them
 //! when it notices an enemy within its aura.
-class TrapGuardPost : public Trap
+class TrapWatchBanner : public Trap
 {
 public:
-    TrapGuardPost(GameMap* gameMap);
+    TrapWatchBanner(GameMap* gameMap);
 
     virtual const TrapType getType() const override
-    { return TrapType::guardPost; }
+    { return TrapType::watchBanner; }
 
     virtual bool shoot(Tile* tile) override
     { return false; }
@@ -58,4 +58,4 @@ private:
     int64_t mNextDistressTurn;
 };
 
-#endif // TRAPGUARDPOST_H
+#endif // TRAPWATCHBANNER_H

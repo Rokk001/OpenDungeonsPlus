@@ -355,11 +355,11 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ResearchButton" name="BracedDoorTrapButton" >
+                <Window type="OD/ResearchButton" name="IronboundDoorTrapButton" >
                     <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
-                    <Property name="ButtonImage" value="OpenDungeonsIcons/BracedDoorTrapButton" />
-                    <Property name="TooltipText" value="Trap: Braced door" />
-                    <Window type="OD/ProgressBar" name="BracedDoorTrapButtonProgressBar" >
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/IronboundDoorTrapButton" />
+                    <Property name="TooltipText" value="Trap: Ironbound door" />
+                    <Window type="OD/ProgressBar" name="IronboundDoorTrapButtonProgressBar" >
                         <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                         <Property name="InheritsTooltipText" value="True" />
                         <Property name="CurrentProgress" value="0.0" />
@@ -525,11 +525,11 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ResearchButton" name="GuardPostTrapButton" >
+                <Window type="OD/ResearchButton" name="WatchBannerTrapButton" >
                     <Property name="Area" value="{{0.89,-25},{0,195},{0.89,25},{0,245}}" />
-                    <Property name="ButtonImage" value="OpenDungeonsIcons/GuardPostTrapButton" />
-                    <Property name="TooltipText" value="Trap: Guard post" />
-                    <Window type="OD/ProgressBar" name="GuardPostTrapButtonProgressBar" >
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/WatchBannerTrapButton" />
+                    <Property name="TooltipText" value="Trap: Watch banner" />
+                    <Window type="OD/ProgressBar" name="WatchBannerTrapButtonProgressBar" >
                         <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                         <Property name="InheritsTooltipText" value="True" />
                         <Property name="CurrentProgress" value="0.0" />
@@ -542,11 +542,11 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ResearchButton" name="MagicDoorTrapButton" >
+                <Window type="OD/ResearchButton" name="RunedDoorTrapButton" >
                     <Property name="Area" value="{{0.8,-25},{0,255},{0.8,25},{0,305}}" />
-                    <Property name="ButtonImage" value="OpenDungeonsIcons/MagicDoorTrapButton" />
-                    <Property name="TooltipText" value="Trap: Magic door" />
-                    <Window type="OD/ProgressBar" name="MagicDoorTrapButtonProgressBar" >
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/RunedDoorTrapButton" />
+                    <Property name="TooltipText" value="Trap: Runed door" />
+                    <Window type="OD/ProgressBar" name="RunedDoorTrapButtonProgressBar" >
                         <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                         <Property name="InheritsTooltipText" value="True" />
                         <Property name="CurrentProgress" value="0.0" />
@@ -576,11 +576,11 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ResearchButton" name="TurncoatButton" >
+                <Window type="OD/ResearchButton" name="DefectorButton" >
                     <Property name="Area" value="{{0.2,-25},{0,255},{0.2,25},{0,305}}" />
-                    <Property name="ButtonImage" value="OpenDungeonsIcons/TurncoatButton" />
-                    <Property name="TooltipText" value="Spell: Turncoat" />
-                    <Window type="OD/ProgressBar" name="TurncoatButtonProgressBar" >
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/DefectorButton" />
+                    <Property name="TooltipText" value="Spell: Defector" />
+                    <Window type="OD/ProgressBar" name="DefectorButtonProgressBar" >
                         <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                         <Property name="InheritsTooltipText" value="True" />
                         <Property name="CurrentProgress" value="0.0" />
@@ -593,11 +593,11 @@
                         <Property name="ReversedProgress" value="True" />
                     </Window>
                 </Window>
-                <Window type="OD/ResearchButton" name="ChickenButton" >
+                <Window type="OD/ResearchButton" name="HexenHenButton" >
                     <Property name="Area" value="{{0.2,-25},{0,315},{0.2,25},{0,365}}" />
-                    <Property name="ButtonImage" value="OpenDungeonsIcons/ChickenButton" />
-                    <Property name="TooltipText" value="Spell: Chicken" />
-                    <Window type="OD/ProgressBar" name="ChickenButtonProgressBar" >
+                    <Property name="ButtonImage" value="OpenDungeonsIcons/HexenHenButton" />
+                    <Property name="TooltipText" value="Spell: Hexen Hen" />
+                    <Window type="OD/ProgressBar" name="HexenHenButtonProgressBar" >
                         <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                         <Property name="InheritsTooltipText" value="True" />
                         <Property name="CurrentProgress" value="0.0" />

@@ -17,7 +17,7 @@
 
 #include "rooms/RoomGuardRoom.h"
 
-#include "creatureaction/CreatureActionGuardPost.h"
+#include "creatureaction/CreatureActionWatchBanner.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -131,20 +131,20 @@ bool RoomGuardRoom::hasOpenCreatureSpot(Creature* c)
 void RoomGuardRoom::removeCreatureUsingRoom(Creature* c)
 {
     Room::removeCreatureUsingRoom(c);
-    mGuardPosts.erase(c);
+    mWatchBanners.erase(c);
     mNextPatrolTurn.erase(c);
 }
 
 Tile* RoomGuardRoom::getPostForCreature(Creature& creature)
 {
-    std::map<Creature*, Tile*>::iterator it = mGuardPosts.find(&creature);
-    if(it != mGuardPosts.end())
+    std::map<Creature*, Tile*>::iterator it = mWatchBanners.find(&creature);
+    if(it != mWatchBanners.end())
     {
         // The post can be lost if the tile has been sold or taken
         if(it->second->getCoveringRoom() == this)
             return it->second;
 
-        mGuardPosts.erase(it);
+        mWatchBanners.erase(it);
     }
 
     if(mCoveredTiles.empty())
@@ -155,7 +155,7 @@ Tile* RoomGuardRoom::getPostForCreature(Creature& creature)
     for(Tile* tile : mCoveredTiles)
     {
         bool isTaken = false;
-        for(const std::pair<Creature* const, Tile*>& post : mGuardPosts)
+        for(const std::pair<Creature* const, Tile*>& post : mWatchBanners)
         {
             if(post.second != tile)
                 continue;
@@ -173,7 +173,7 @@ Tile* RoomGuardRoom::getPostForCreature(Creature& creature)
     else
         post = mCoveredTiles[Random::Uint(0, mCoveredTiles.size() - 1)];
 
-    mGuardPosts[&creature] = post;
+    mWatchBanners[&creature] = post;
     return post;
 }
 
@@ -199,7 +199,7 @@ bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
 
     // On duty: the guard stands still, watching. Enemies in sight are handled by the
     // creature behaviours that run before this action.
-    // After a while on duty the guard patrols to a guard post
+    // After a while on duty the guard patrols to a watch banner
     int64_t turn = getGameMap()->getTurnNumber();
     std::map<Creature*, int64_t>::iterator patrolIt = mNextPatrolTurn.find(&creature);
     if(patrolIt == mNextPatrolTurn.end())
@@ -214,7 +214,7 @@ bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
         // The next patrol starts a full duty period after the guard is back
         patrolIt->second = turn + stayTurns + static_cast<int64_t>(
             ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomPatrolSeconds") * ODApplication::turnsPerSecond);
-        if(CreatureActionGuardPost::tryPatrol(creature, stayTurns))
+        if(CreatureActionWatchBanner::tryPatrol(creature, stayTurns))
             return false;
     }
 

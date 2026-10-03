@@ -257,7 +257,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionGetFee.cpp
     ${SRC}/creatureaction/CreatureActionGoCallToWar.cpp
     ${SRC}/creatureaction/CreatureActionGoDefendHeart.cpp
-    ${SRC}/creatureaction/CreatureActionGuardPost.cpp
+    ${SRC}/creatureaction/CreatureActionWatchBanner.cpp
     ${SRC}/creatureaction/CreatureActionGrabEntity.cpp
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
@@ -290,8 +290,8 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectManager.cpp
     ${SRC}/creatureeffect/CreatureEffectSlap.cpp
     ${SRC}/creatureeffect/CreatureEffectSpeedChange.cpp
-    ${SRC}/creatureeffect/CreatureEffectTurncoat.cpp
-    ${SRC}/creatureeffect/CreatureEffectChicken.cpp
+    ${SRC}/creatureeffect/CreatureEffectDefector.cpp
+    ${SRC}/creatureeffect/CreatureEffectHexenHen.cpp
     ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
     ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
@@ -530,8 +530,8 @@ set(OD_SOURCEFILES
     ${SRC}/spells/SpellEyeEvil.cpp
     ${SRC}/spells/SpellLightning.cpp
     ${SRC}/spells/SpellTremor.cpp
-    ${SRC}/spells/SpellTurncoat.cpp
-    ${SRC}/spells/SpellChicken.cpp
+    ${SRC}/spells/SpellDefector.cpp
+    ${SRC}/spells/SpellHexenHen.cpp
     ${SRC}/spells/SpellInferno.cpp
     ${SRC}/spells/SpellPossess.cpp
     ${SRC}/spells/SpellManager.cpp
@@ -548,7 +548,7 @@ set(OD_SOURCEFILES
     ${SRC}/traps/TrapFireburst.cpp
     ${SRC}/traps/TrapFreeze.cpp
     ${SRC}/traps/TrapGas.cpp
-    ${SRC}/traps/TrapGuardPost.cpp
+    ${SRC}/traps/TrapWatchBanner.cpp
     ${SRC}/traps/TrapLightning.cpp
     ${SRC}/traps/TrapManager.cpp
     ${SRC}/traps/TrapSpike.cpp
@@ -563,6 +563,7 @@ set(OD_SOURCEFILES
     ${SRC}/utils/LogSinkFile.cpp
     ${SRC}/utils/LogSinkOgre.cpp
     ${SRC}/utils/MasterServer.cpp
+    ${SRC}/utils/NameAliases.cpp
     ${SRC}/utils/Random.cpp
     ${SRC}/utils/ResourceManager.cpp
     ${SRC}/utils/VectorInt64.cpp

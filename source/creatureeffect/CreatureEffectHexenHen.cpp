@@ -15,36 +15,36 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "creatureeffect/CreatureEffectChicken.h"
+#include "creatureeffect/CreatureEffectHexenHen.h"
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
 
-static const std::string CreatureEffectChickenName = "Chicken";
+static const std::string CreatureEffectHexenHenName = "HexenHen";
 
 namespace
 {
-class CreatureEffectChickenFactory : public CreatureEffectFactory
+class CreatureEffectHexenHenFactory : public CreatureEffectFactory
 {
     CreatureEffect* createCreatureEffect() const override
-    { return new CreatureEffectChicken; }
+    { return new CreatureEffectHexenHen; }
 
     const std::string& getCreatureEffectName() const override
     {
-        return CreatureEffectChickenName;
+        return CreatureEffectHexenHenName;
     }
 };
 
 // Register the factory
-static CreatureEffectRegister reg(new CreatureEffectChickenFactory);
+static CreatureEffectRegister reg(new CreatureEffectHexenHenFactory);
 }
 
-const std::string& CreatureEffectChicken::getEffectName() const
+const std::string& CreatureEffectHexenHen::getEffectName() const
 {
-    return CreatureEffectChickenName;
+    return CreatureEffectHexenHenName;
 }
 
-void CreatureEffectChicken::applyEffect(Creature& creature)
+void CreatureEffectHexenHen::applyEffect(Creature& creature)
 {
     // The creature gets its normal form back when the effect ends. The state is
     // deduced from the effect, we only have to tell the clients that it changed.
@@ -54,9 +54,9 @@ void CreatureEffectChicken::applyEffect(Creature& creature)
     creature.requestRefresh();
 }
 
-CreatureEffectChicken* CreatureEffectChicken::load(std::istream& is)
+CreatureEffectHexenHen* CreatureEffectHexenHen::load(std::istream& is)
 {
-    CreatureEffectChicken* effect = new CreatureEffectChicken;
+    CreatureEffectHexenHen* effect = new CreatureEffectHexenHen;
     effect->importFromStream(is);
     return effect;
 }

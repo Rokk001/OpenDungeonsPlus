@@ -925,7 +925,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             std::vector<Tile*> gemTiles;
             std::vector<Tile*> waterTiles;
             std::vector<Tile*> lavaTiles;
-            std::vector<Tile*> manaVaultTiles;
+            std::vector<Tile*> manaWellTiles;
             
             for (int xxx = 0; xxx < mapSizeX; ++xxx)
             {
@@ -949,8 +949,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                         case TileType::lava:
                             lavaTiles.push_back(tile);
                             break;
-                        case TileType::manaVault:
-                            manaVaultTiles.push_back(tile);
+                        case TileType::manaWell:
+                            manaWellTiles.push_back(tile);
                             break;
                             
                         default:
@@ -992,9 +992,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             {
                 gameMap->tileToPacket(packet, tile);
             }
-            nb = manaVaultTiles.size();
+            nb = manaWellTiles.size();
             packet << nb;
-            for(Tile* tile : manaVaultTiles)
+            for(Tile* tile : manaWellTiles)
             {
                 gameMap->tileToPacket(packet, tile);
             }

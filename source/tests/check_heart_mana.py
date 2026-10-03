@@ -54,10 +54,10 @@ struct ODPacket {std::vector<std::string> texts;std::vector<int32_t> ints;
  ODPacket& operator<<(int32_t v){ints.push_back(v);return *this;}
  ODPacket& operator<<(uint32_t){return *this;}ODPacket& operator<<(bool){return *this;}};
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=4.0;
-struct ConfigManager {double maxManaPerSeat=200000.0;double manaVaultBonusPerTile=100.0;
+struct ConfigManager {double maxManaPerSeat=200000.0;double manaWellBonusPerTile=100.0;
  static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}
  double getMaxManaPerSeat()const{return maxManaPerSeat;}
- double getManaVaultBonusPerTile()const{return manaVaultBonusPerTile;}};
+ double getManaWellBonusPerTile()const{return manaWellBonusPerTile;}};
 struct SeatStatistics {uint32_t mKeepersDefeated=0,mCreaturesKilled=0,mHeroesDestroyed=0,mRoomsCaptured=0,mItemsMade=0,mCreaturesConverted=0;};
 struct Player;
 struct GameMap;
@@ -136,7 +136,7 @@ struct GameMap {std::vector<Room*> mRooms;std::vector<Seat*> seats;uint32_t mMan
  std::vector<Room*>& getRooms(){return mRooms;}std::vector<Seat*>& getSeats(){return seats;}
  int64_t getTurnNumber()const{return 0;}NodeType getNodeType()const{return NodeType::MTILES_NODE;}
  void fireRelativeSound(std::vector<Seat*>&,SoundRelativeKeeperStatements){}
- std::vector<Room*> getRoomsByType(RoomType type) const;void updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles, double timeSinceLastTurn);
+ std::vector<Room*> getRoomsByType(RoomType type) const;void updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn);
  void updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLastTurn);};
 struct SpellSummonWorker {static int32_t nextPrice;
  static int32_t getNextWorkerPriceForPlayer(GameMap*,Player*){return nextPrice;}};
@@ -197,9 +197,9 @@ int main(){
  check(near(owner.mManaDelta,(130.0-28.0)/ODApplication::turnsPerSecond),"the delta converts the net of both to turns");
  check(near(owner.mMana,(130.0-28.0)/ODApplication::turnsPerSecond),"the accrued mana lands on the seat");
 
- // Mana vault tiles and the mana regeneration setting
+ // Mana well tiles and the mana regeneration setting
  map.updateSeatMana(&owner,2,0.0);
- check(near(owner.mManaIncomePerSecond,330.0),"each mana vault tile adds its bonus per second");
+ check(near(owner.mManaIncomePerSecond,330.0),"each mana well tile adds its bonus per second");
  map.mManaRegenerationPercent=50;
  map.updateSeatMana(&owner,0,0.0);
  check(near(owner.mManaIncomePerSecond,65.0),"the mana regeneration setting scales the income");
@@ -395,9 +395,9 @@ assert 'if(redemWorkerInHeart(entity, t))' in drop, 'the server drop must try th
 assert drop.index('redemWorkerInHeart(entity, t)') < drop.index('entity->drop(pos);'), 'redemption comes before the regular drop'
 assert 'mGameMap->isServerGameMap()' in drop, 'the redemption is a server side rule'
 misc = function(game_map, 'unsigned long int GameMap::doMiscUpkeep(')
-assert 'seat->computeSeatBeginTurn();' in misc and 'updateSeatMana(seat, nbManaVaultTiles, timeSinceLastTurn);' in misc, 'each seat gets its mana every turn'
+assert 'seat->computeSeatBeginTurn();' in misc and 'updateSeatMana(seat, nbManaWellTiles, timeSinceLastTurn);' in misc, 'each seat gets its mana every turn'
 assert 'seat->getPlayer()->notifyNoMoreDungeonTemple();' in misc, 'a lost temple still starts the defeat path'
-assert 'void updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles, double timeSinceLastTurn);' in read('source/gamemap/GameMap.h')
+assert 'void updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn);' in read('source/gamemap/GameMap.h')
 
 client = read('source/network/ODClient.cpp')
 assert '#include <OgreSceneNode.h>' in client, 'the scene node needs its full type'

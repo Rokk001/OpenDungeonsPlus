@@ -1044,9 +1044,9 @@ void KeeperAI::handleTraps()
         for(uint32_t i = 1; i < static_cast<uint32_t>(TrapType::nbTraps); ++i)
         {
             TrapType type = static_cast<TrapType>(i);
-            if((type == TrapType::doorWooden) || (type == TrapType::doorBraced) ||
+            if((type == TrapType::doorWooden) || (type == TrapType::doorIronbound) ||
                (type == TrapType::doorSteel) || (type == TrapType::doorBarricade) ||
-               (type == TrapType::doorSecret) || (type == TrapType::doorMagic))
+               (type == TrapType::doorSecret) || (type == TrapType::doorRuned))
             {
                 continue;
             }

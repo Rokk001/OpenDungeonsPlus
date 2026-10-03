@@ -56,7 +56,7 @@ slap = creature[creature.index("void Creature::slap()"):]
 assert "isChampion()" in slap[:slap.index("CreatureEffectSlap")], "a slap sends the champion away"
 pickup = creature[creature.index("A creature controlled by a player cannot be picked up"):]
 assert "isChampion()" in pickup[:200], "no pickup"
-for spell in ("SpellPossess", "SpellTurncoat", "SpellChicken"):
+for spell in ("SpellPossess", "SpellDefector", "SpellHexenHen"):
     assert "isChampion()" in read(f"source/spells/{spell}.cpp"), f"{spell} skips the champion"
 
 # The spell, the reward skill and the unlock

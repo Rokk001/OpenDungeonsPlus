@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "creatureeffect/CreatureEffectTurncoat.h"
+#include "creatureeffect/CreatureEffectDefector.h"
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
@@ -24,31 +24,31 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
-static const std::string CreatureEffectTurncoatName = "Turncoat";
+static const std::string CreatureEffectDefectorName = "Defector";
 
 namespace
 {
-class CreatureEffectTurncoatFactory : public CreatureEffectFactory
+class CreatureEffectDefectorFactory : public CreatureEffectFactory
 {
     CreatureEffect* createCreatureEffect() const override
-    { return new CreatureEffectTurncoat; }
+    { return new CreatureEffectDefector; }
 
     const std::string& getCreatureEffectName() const override
     {
-        return CreatureEffectTurncoatName;
+        return CreatureEffectDefectorName;
     }
 };
 
 // Register the factory
-static CreatureEffectRegister reg(new CreatureEffectTurncoatFactory);
+static CreatureEffectRegister reg(new CreatureEffectDefectorFactory);
 }
 
-const std::string& CreatureEffectTurncoat::getEffectName() const
+const std::string& CreatureEffectDefector::getEffectName() const
 {
-    return CreatureEffectTurncoatName;
+    return CreatureEffectDefectorName;
 }
 
-void CreatureEffectTurncoat::applyEffect(Creature& creature)
+void CreatureEffectDefector::applyEffect(Creature& creature)
 {
     // The creature only changes back when the effect ends
     if(mNbTurnsEffect > 0)
@@ -78,20 +78,20 @@ void CreatureEffectTurncoat::applyEffect(Creature& creature)
     creature.changeSeat(originalSeat);
 }
 
-CreatureEffectTurncoat* CreatureEffectTurncoat::load(std::istream& is)
+CreatureEffectDefector* CreatureEffectDefector::load(std::istream& is)
 {
-    CreatureEffectTurncoat* effect = new CreatureEffectTurncoat;
+    CreatureEffectDefector* effect = new CreatureEffectDefector;
     effect->importFromStream(is);
     return effect;
 }
 
-void CreatureEffectTurncoat::exportToStream(std::ostream& os) const
+void CreatureEffectDefector::exportToStream(std::ostream& os) const
 {
     CreatureEffect::exportToStream(os);
     os << "\t" << mOriginalSeatId << "\t" << mNewSeatId;
 }
 
-bool CreatureEffectTurncoat::importFromStream(std::istream& is)
+bool CreatureEffectDefector::importFromStream(std::istream& is)
 {
     if(!CreatureEffect::importFromStream(is))
         return false;

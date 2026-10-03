@@ -72,7 +72,7 @@ check('isClaimable' not in portal_header and 'isClaimable' not in portal_source,
       'the portal follows the rule of Room::isClaimable and has no override of its own')
 check('isAttackable' in portal_header and 'return false;' in portal_header[portal_header.index('isAttackable'):][:160],
       'the portal can still not be destroyed')
-check('return false' in function(wave_source, 'bool RoomPortalWave::isClaimable('), 'the hero gate is still not claimable')
+check('return false' in function(wave_source, 'bool RoomPortalWave::isClaimable('), 'the hero portal is still not claimable')
 
 claim = function(room_source, 'void Room::claimForSeat(')
 check('RoomConvertNeutralSecondsPerTile' in claim and 'RoomConvertSecondsPerTile' in claim and 'isRogueSeat()' in claim,

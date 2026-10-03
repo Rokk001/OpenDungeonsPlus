@@ -54,15 +54,15 @@
     <Image height="128" name="LightningTrapButton" width="128" xPos="128" yPos="512" />
     <Image height="128" name="FireburstTrapButton" width="128" xPos="256" yPos="512" />
     <Image height="128" name="FreezeTrapButton" width="128" xPos="384" yPos="512" />
-    <Image height="128" name="GuardPostTrapButton" width="128" xPos="512" yPos="512" />
+    <Image height="128" name="WatchBannerTrapButton" width="128" xPos="512" yPos="512" />
     <Image height="128" name="TriggerTrapButton" width="128" xPos="640" yPos="512" />
     <Image height="128" name="WavePortalButton" width="128" xPos="768" yPos="512" />
     <Image height="128" name="WoodenDoorTrapButton" width="128" xPos="896" yPos="512" />
-    <Image height="128" name="BracedDoorTrapButton" width="128" xPos="0" yPos="640" />
+    <Image height="128" name="IronboundDoorTrapButton" width="128" xPos="0" yPos="640" />
     <Image height="128" name="SteelDoorTrapButton" width="128" xPos="128" yPos="640" />
     <Image height="128" name="BarricadeTrapButton" width="128" xPos="256" yPos="640" />
     <Image height="128" name="SecretDoorTrapButton" width="128" xPos="384" yPos="640" />
-    <Image height="128" name="MagicDoorTrapButton" width="128" xPos="512" yPos="640" />
+    <Image height="128" name="RunedDoorTrapButton" width="128" xPos="512" yPos="640" />
     <Image height="128" name="DestroyTrapButton" width="128" xPos="640" yPos="640" />
     <Image height="128" name="SummonWorkerButton" width="128" xPos="768" yPos="640" />
     <Image height="128" name="CallToWarButton" width="128" xPos="896" yPos="640" />
@@ -70,11 +70,11 @@
     <Image height="128" name="CreatureExplosionButton" width="128" xPos="128" yPos="768" />
     <Image height="128" name="LightningButton" width="128" xPos="256" yPos="768" />
     <Image height="128" name="TremorButton" width="128" xPos="384" yPos="768" />
-    <Image height="128" name="TurncoatButton" width="128" xPos="512" yPos="768" />
+    <Image height="128" name="DefectorButton" width="128" xPos="512" yPos="768" />
     <Image height="128" name="PossessButton" width="128" xPos="640" yPos="768" />
     <Image height="128" name="CreateGoldButton" width="128" xPos="768" yPos="768" />
     <Image height="128" name="InfernoButton" width="128" xPos="896" yPos="768" />
-    <Image height="128" name="ChickenButton" width="128" xPos="0" yPos="896" />
+    <Image height="128" name="HexenHenButton" width="128" xPos="0" yPos="896" />
     <Image height="128" name="CreatureHasteButton" width="128" xPos="128" yPos="896" />
     <Image height="128" name="CreatureDefenseButton" width="128" xPos="256" yPos="896" />
     <Image height="128" name="CreatureSlowButton" width="128" xPos="384" yPos="896" />

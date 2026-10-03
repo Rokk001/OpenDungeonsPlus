@@ -15,34 +15,34 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CREATUREEFFECTCHICKEN_H
-#define CREATUREEFFECTCHICKEN_H
+#ifndef CREATUREEFFECTHEXENHEN_H
+#define CREATUREEFFECTHEXENHEN_H
 
 #include "creatureeffect/CreatureEffect.h"
 
-//! \brief Marks a creature that is temporarily turned into a chicken by the Chicken spell.
-//! While the effect is active, the creature is harmless (see Creature::isChicken). When it ends,
+//! \brief Marks a creature that is temporarily turned into a chicken by the Hexen Hen spell.
+//! While the effect is active, the creature is harmless (see Creature::isHexenHen). When it ends,
 //! the creature gets its normal form back.
-class CreatureEffectChicken : public CreatureEffect
+class CreatureEffectHexenHen : public CreatureEffect
 {
 public:
-    CreatureEffectChicken(int32_t nbTurnsEffect) :
+    CreatureEffectHexenHen(int32_t nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "")
     {}
 
-    CreatureEffectChicken() :
+    CreatureEffectHexenHen() :
         CreatureEffect()
     {}
 
-    virtual ~CreatureEffectChicken()
+    virtual ~CreatureEffectHexenHen()
     {}
 
     virtual const std::string& getEffectName() const override;
 
-    static CreatureEffectChicken* load(std::istream& is);
+    static CreatureEffectHexenHen* load(std::istream& is);
 
 protected:
     virtual void applyEffect(Creature& creature) override;
 };
 
-#endif // CREATUREEFFECTCHICKEN_H
+#endif // CREATUREEFFECTHEXENHEN_H

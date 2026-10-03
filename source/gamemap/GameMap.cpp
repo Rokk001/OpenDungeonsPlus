@@ -1371,17 +1371,17 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     for(GameEntity* ge : activeObjects)
         ge->doUpkeep();
 
-    // Count the mana vault tiles owned by each seat. They give extra mana each turn
-    std::map<Seat*, uint32_t> nbManaVaultTilesPerSeat;
+    // Count the mana well tiles owned by each seat. They give extra mana each turn
+    std::map<Seat*, uint32_t> nbManaWellTilesPerSeat;
     for (int jj = 0; jj < getMapSizeY(); ++jj)
     {
         for (int ii = 0; ii < getMapSizeX(); ++ii)
         {
             Tile* vaultTile = getTile(ii,jj);
-            if((vaultTile->getType() != TileType::manaVault) || !vaultTile->isClaimed())
+            if((vaultTile->getType() != TileType::manaWell) || !vaultTile->isClaimed())
                 continue;
 
-            ++nbManaVaultTilesPerSeat[vaultTile->getSeat()];
+            ++nbManaWellTilesPerSeat[vaultTile->getSeat()];
         }
     }
 
@@ -1399,11 +1399,11 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         {
             seat->getPlayer()->notifyNoMoreDungeonTemple();
         }
-        uint32_t nbManaVaultTiles = 0;
-        std::map<Seat*, uint32_t>::const_iterator itVault = nbManaVaultTilesPerSeat.find(seat);
-        if(itVault != nbManaVaultTilesPerSeat.end())
-            nbManaVaultTiles = itVault->second;
-        updateSeatMana(seat, nbManaVaultTiles, timeSinceLastTurn);
+        uint32_t nbManaWellTiles = 0;
+        std::map<Seat*, uint32_t>::const_iterator itVault = nbManaWellTilesPerSeat.find(seat);
+        if(itVault != nbManaWellTilesPerSeat.end())
+            nbManaWellTiles = itVault->second;
+        updateSeatMana(seat, nbManaWellTiles, timeSinceLastTurn);
         updateSeatAutoWorkers(seat, timeSinceLastTurn);
         updateSeatHeartDefense(seat);
 
@@ -1445,7 +1445,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     return timeTaken;
 }
 
-void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles, double timeSinceLastTurn)
+void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn)
 {
     if (seat->getNbRooms(RoomType::dungeonTemple) == 0)
     {
@@ -1469,9 +1469,9 @@ void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaVaultTiles, double timeS
     }
 
     // The skirmish mana regeneration setting scales the income, not the worker upkeep
-    // Each claimed mana vault tile adds its bonus on top of the claimed tile income
+    // Each claimed mana well tile adds its bonus on top of the claimed tile income
     seat->mManaIncomePerSecond = (manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles)
-        + nbManaVaultTiles * ConfigManager::getSingleton().getManaVaultBonusPerTile())
+        + nbManaWellTiles * ConfigManager::getSingleton().getManaWellBonusPerTile())
         * mManaRegenerationPercent / 100.0;
     // The armed traps keep draining mana as well
     double trapUpkeepPerSecond = 0.0;
@@ -2687,7 +2687,7 @@ bool GameMap::doFloodFill(Seat* seat, Tile* tile)
             case TileType::dirt:
             case TileType::gold:
             case TileType::rock:           
-            case TileType::manaVault:
+            case TileType::manaWell:
             {
                 hasChanged |= tile->updateFloodFillFromTile(seat, FloodFillType::ground, neigh);
                 hasChanged |= tile->updateFloodFillFromTile(seat, FloodFillType::groundWater, neigh);
@@ -2884,7 +2884,7 @@ void GameMap::enableFloodFill()
                 {
                     if(((tile->getType() == TileType::dirt) ||
                         (tile->getType() == TileType::gold) ||
-                        (tile->getType() == TileType::manaVault) ||
+                        (tile->getType() == TileType::manaWell) ||
                         (tile->getType() == TileType::rock)) &&
                        (tile->getFloodFillValue(rogueSeat, FloodFillType::ground) == Tile::NO_FLOODFILL))
                     {

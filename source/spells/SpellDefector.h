@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SPELLTURNCOAT_H
-#define SPELLTURNCOAT_H
+#ifndef SPELLDEFECTOR_H
+#define SPELLDEFECTOR_H
 
 #include "spells/Spell.h"
 #include "spells/SpellType.h"
@@ -27,7 +27,7 @@ class InputManager;
 
 //! \brief Hurls a lightning bolt on an enemy creature standing on the caster's claimed land.
 //! The target takes damage and is knocked down for a few turns.
-class SpellTurncoat : public Spell
+class SpellDefector : public Spell
 {
 public:
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
@@ -39,4 +39,4 @@ public:
     static const SpellType mSpellType;
 };
 
-#endif // SPELLTURNCOAT_H
+#endif // SPELLDEFECTOR_H

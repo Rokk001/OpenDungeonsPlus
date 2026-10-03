@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CREATUREACTIONGUARDPOST_H
-#define CREATUREACTIONGUARDPOST_H
+#ifndef CREATUREACTIONWATCHBANNER_H
+#define CREATUREACTIONWATCHBANNER_H
 
 #include "creatureaction/CreatureAction.h"
 
@@ -24,36 +24,36 @@
 
 class Tile;
 
-//! \brief A guard of a guard room patrols to a guard post: it walks to the post tile and stays there
+//! \brief A guard of a guard room patrols to a watch banner: it walks to the post tile and stays there
 //! for a while (or less if it has to eat, sleep or get its fee, or if the post is gone). Enemies in sight
 //! are fought by the usual behaviour, then the creature returns to the post.
-class CreatureActionGuardPost : public CreatureAction
+class CreatureActionWatchBanner : public CreatureAction
 {
 public:
-    CreatureActionGuardPost(Creature& creature, Tile& postTile, int64_t stayTurns) :
+    CreatureActionWatchBanner(Creature& creature, Tile& postTile, int64_t stayTurns) :
         CreatureAction(creature),
         mPostTile(&postTile),
         mStayTurns(stayTurns),
         mArrivalTurn(-1)
     {}
 
-    virtual ~CreatureActionGuardPost()
+    virtual ~CreatureActionWatchBanner()
     {}
 
     CreatureActionType getType() const override
-    { return CreatureActionType::guardPost; }
+    { return CreatureActionType::watchBanner; }
 
     std::function<bool()> action() override;
 
     inline Tile* getPostTile() const
     { return mPostTile; }
 
-    static bool handleGuardPost(Creature& creature, Tile* postTile, CreatureActionGuardPost* guardPostAction);
+    static bool handleWatchBanner(Creature& creature, Tile* postTile, CreatureActionWatchBanner* watchBannerAction);
 
     //! \brief Tells whether another creature of the same seat already mans (or walks to) the given post tile
     static bool isPostTaken(const Creature& creature, Tile* postTile);
 
-    //! \brief Looks for a free reachable guard post of the creature seat and pushes the action to patrol there.
+    //! \brief Looks for a free reachable watch banner of the creature seat and pushes the action to patrol there.
     //! Returns true if the action has been pushed.
     static bool tryPatrol(Creature& creature, int64_t stayTurns);
 
@@ -66,4 +66,4 @@ private:
     int64_t mArrivalTurn;
 };
 
-#endif // CREATUREACTIONGUARDPOST_H
+#endif // CREATUREACTIONWATCHBANNER_H

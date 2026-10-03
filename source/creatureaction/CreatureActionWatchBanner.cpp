@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "creatureaction/CreatureActionGuardPost.h"
+#include "creatureaction/CreatureActionWatchBanner.h"
 
 #include "creatureaction/CreatureActionGoCallToWar.h"
 #include "entities/Creature.h"
@@ -31,13 +31,13 @@
 #include <memory>
 #include <vector>
 
-std::function<bool()> CreatureActionGuardPost::action()
+std::function<bool()> CreatureActionWatchBanner::action()
 {
-    return std::bind(&CreatureActionGuardPost::handleGuardPost,
+    return std::bind(&CreatureActionWatchBanner::handleWatchBanner,
         std::ref(mCreature), mPostTile, this);
 }
 
-bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile, CreatureActionGuardPost* guardPostAction)
+bool CreatureActionWatchBanner::handleWatchBanner(Creature& creature, Tile* postTile, CreatureActionWatchBanner* watchBannerAction)
 {
     Tile* myTile = creature.getPositionTile();
     if((myTile == nullptr) || (postTile == nullptr))
@@ -49,7 +49,7 @@ bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile
     // The post must still be there, belong to our keeper and be installed
     Trap* trap = postTile->getCoveringTrap();
     if((trap == nullptr) ||
-       (trap->getType() != TrapType::guardPost) ||
+       (trap->getType() != TrapType::watchBanner) ||
        (trap->getSeat() != creature.getSeat()) ||
        !trap->isActivated(postTile))
     {
@@ -79,10 +79,10 @@ bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile
 
     // We stand on the post until the stay is over, then we go back to our room
     int64_t turn = creature.getGameMap()->getTurnNumber();
-    if(guardPostAction->mArrivalTurn < 0)
-        guardPostAction->mArrivalTurn = turn;
+    if(watchBannerAction->mArrivalTurn < 0)
+        watchBannerAction->mArrivalTurn = turn;
 
-    if(turn - guardPostAction->mArrivalTurn >= guardPostAction->mStayTurns)
+    if(turn - watchBannerAction->mArrivalTurn >= watchBannerAction->mStayTurns)
     {
         creature.popAction();
         return true;
@@ -92,7 +92,7 @@ bool CreatureActionGuardPost::handleGuardPost(Creature& creature, Tile* postTile
     return false;
 }
 
-bool CreatureActionGuardPost::isPostTaken(const Creature& creature, Tile* postTile)
+bool CreatureActionWatchBanner::isPostTaken(const Creature& creature, Tile* postTile)
 {
     std::vector<Creature*> creatures = creature.getGameMap()->getCreaturesBySeat(creature.getSeat());
     for(Creature* other : creatures)
@@ -102,10 +102,10 @@ bool CreatureActionGuardPost::isPostTaken(const Creature& creature, Tile* postTi
 
         for(const std::unique_ptr<CreatureAction>& act : other->getActions())
         {
-            if(act->getType() != CreatureActionType::guardPost)
+            if(act->getType() != CreatureActionType::watchBanner)
                 continue;
 
-            if(static_cast<CreatureActionGuardPost*>(act.get())->getPostTile() == postTile)
+            if(static_cast<CreatureActionWatchBanner*>(act.get())->getPostTile() == postTile)
                 return true;
         }
     }
@@ -113,7 +113,7 @@ bool CreatureActionGuardPost::isPostTaken(const Creature& creature, Tile* postTi
     return false;
 }
 
-bool CreatureActionGuardPost::tryPatrol(Creature& creature, int64_t stayTurns)
+bool CreatureActionWatchBanner::tryPatrol(Creature& creature, int64_t stayTurns)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -122,7 +122,7 @@ bool CreatureActionGuardPost::tryPatrol(Creature& creature, int64_t stayTurns)
     std::vector<Tile*> posts;
     for(Trap* trap : creature.getGameMap()->getTraps())
     {
-        if(trap->getType() != TrapType::guardPost)
+        if(trap->getType() != TrapType::watchBanner)
             continue;
 
         if(trap->getSeat() != creature.getSeat())
@@ -149,11 +149,11 @@ bool CreatureActionGuardPost::tryPatrol(Creature& creature, int64_t stayTurns)
 
     // The guards visit the posts in turn, so we do not always take the nearest one
     Tile* chosenTile = posts[Random::Uint(0, posts.size() - 1)];
-    creature.pushAction(Utils::make_unique<CreatureActionGuardPost>(creature, *chosenTile, stayTurns));
+    creature.pushAction(Utils::make_unique<CreatureActionWatchBanner>(creature, *chosenTile, stayTurns));
     return true;
 }
 
-bool CreatureActionGuardPost::goToIntruder(Creature& creature, Tile* intruderTile)
+bool CreatureActionWatchBanner::goToIntruder(Creature& creature, Tile* intruderTile)
 {
     Tile* myTile = creature.getPositionTile();
     if((myTile == nullptr) || (intruderTile == nullptr))

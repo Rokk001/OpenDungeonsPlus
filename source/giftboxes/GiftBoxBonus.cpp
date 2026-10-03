@@ -37,9 +37,9 @@ static const uint32_t DEFAULT_AMOUNT_MANA = 50000;
 static const uint32_t DEFAULT_AMOUNT_GOLD = 10000;
 static const uint32_t DEFAULT_AMOUNT_LEVELS = 1;
 static const uint32_t DEFAULT_AMOUNT_IMPS = 10;
-//! Imps received with the upgraded Create Imp spell start at this level
+//! Imps received with the upgraded Summon Worker spell start at this level
 static const uint32_t LEVEL_IMPS_UPGRADED = 4;
-//! Skill level of the Create Imp spell from which it counts as upgraded
+//! Skill level of the Summon Worker spell from which it counts as upgraded
 static const uint32_t SKILL_LEVEL_UPGRADED = 2;
 //! Stun Imps: the enemy imps stay down for this many seconds
 static const double STUN_IMPS_SECONDS = 5.0;

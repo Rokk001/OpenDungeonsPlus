@@ -15,30 +15,30 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CREATUREEFFECTTURNCOAT_H
-#define CREATUREEFFECTTURNCOAT_H
+#ifndef CREATUREEFFECTDEFECTOR_H
+#define CREATUREEFFECTDEFECTOR_H
 
 #include "creatureeffect/CreatureEffect.h"
 
-//! \brief Marks a creature that was temporarily converted to another seat by the Turncoat spell.
+//! \brief Marks a creature that was temporarily converted to another seat by the Defector spell.
 //! When the effect ends, the creature returns to its original seat (unless its seat was changed
 //! by something else in the meantime).
-class CreatureEffectTurncoat : public CreatureEffect
+class CreatureEffectDefector : public CreatureEffect
 {
 public:
-    CreatureEffectTurncoat(int32_t nbTurnsEffect, int originalSeatId, int newSeatId) :
+    CreatureEffectDefector(int32_t nbTurnsEffect, int originalSeatId, int newSeatId) :
         CreatureEffect(nbTurnsEffect, ""),
         mOriginalSeatId(originalSeatId),
         mNewSeatId(newSeatId)
     {}
 
-    CreatureEffectTurncoat() :
+    CreatureEffectDefector() :
         CreatureEffect(),
         mOriginalSeatId(-1),
         mNewSeatId(-1)
     {}
 
-    virtual ~CreatureEffectTurncoat()
+    virtual ~CreatureEffectDefector()
     {}
 
     virtual const std::string& getEffectName() const override;
@@ -46,7 +46,7 @@ public:
     virtual void exportToStream(std::ostream& os) const override;
     virtual bool importFromStream(std::istream& is) override;
 
-    static CreatureEffectTurncoat* load(std::istream& is);
+    static CreatureEffectDefector* load(std::istream& is);
 
 protected:
     virtual void applyEffect(Creature& creature) override;
@@ -56,4 +56,4 @@ private:
     int mNewSeatId;
 };
 
-#endif // CREATUREEFFECTTURNCOAT_H
+#endif // CREATUREEFFECTDEFECTOR_H

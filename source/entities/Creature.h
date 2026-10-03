@@ -253,7 +253,7 @@ public:
     //! \brief True if a creature of the opposite alignment of an allied seat is close
     bool isHatedCompanyNear() const;
 
-    //! \brief Mood points the combat pit gave to the creature (positive) or took from it (negative). Fades over time
+    //! \brief Mood points the arena gave to the creature (positive) or took from it (negative). Fades over time
     inline double getPitMood() const
     { return mPitMood; }
 
@@ -377,7 +377,7 @@ public:
     uint32_t numCoveredTiles() const override;
 
     //! \brief Conform: AttackableObject - Deducts a given amount of HP from this creature.
-    //! \brief Share of the damage taken from the attacker: reduced when both fight inside a combat pit
+    //! \brief Share of the damage taken from the attacker: reduced when both fight inside an arena
     double getPitDamageFactor(GameEntity* attacker);
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
@@ -624,12 +624,12 @@ public:
 
     bool removeCreatureEffect(CreatureEffect* effectForDeletion);
 
-    //! \brief Returns true (server side) if the creature is temporarily converted by the Turncoat spell
-    bool isTurncoat() const;
+    //! \brief Returns true (server side) if the creature is temporarily converted by the Defector spell
+    bool isDefector() const;
 
-    //! \brief Returns true if the creature is temporarily turned into a chicken by the Chicken spell. On server
+    //! \brief Returns true if the creature is temporarily turned into a chicken by the Hexen Hen spell. On server
     //! side, it is deduced from the active effect. On client side, from the state sent by the server
-    bool isChicken() const;
+    bool isHexenHen() const;
 
     //! \brief Returns true (server side) if the creature is paralysed by the Freeze trap. A frozen creature
     //! can neither move nor fight
@@ -647,7 +647,7 @@ public:
     { mNeedFireRefresh = true; }
 
     //! \brief Called on client side. Replaces the displayed mesh if the chicken state changed
-    void updateChickenMesh();
+    void updateHexenHenMesh();
 
     //!\brief Returns true if the creature has an active slap effect
     bool hasSlapEffect() const
@@ -684,7 +684,7 @@ public:
     void resetKoTurns();
 
     //! \brief Knocks the creature out so that it can be carried away (used when
-    //! the last enemy standing in a combat pit has won its fights)
+    //! the last enemy standing in an arena has won its fights)
     void knockOutToDeath();
 
     //! \brief Knocks the creature down for the given number of turns (server side). Does nothing if dead or KO.
@@ -1059,17 +1059,17 @@ private:
     //! \brief Used on server side for the mood. Turns spent near a creature of the opposite alignment
     int32_t                         mNbTurnsHatedCompany;
 
-    //! \brief Used on server side for the mood. Set by the combat pit, fades by PitMoodDecay per second
+    //! \brief Used on server side for the mood. Set by the arena, fades by PitMoodDecay per second
     double                          mPitMood;
 
     //! \brief Used on server side for the mood. Turn numbers of the latest slaps
     std::vector<int64_t>            mSlapTurns;
 
     //! \brief Used on client side. True if the server told us that the creature is a chicken
-    bool                            mIsChicken;
+    bool                            mIsHexenHen;
 
     //! \brief Used on client side. True if the mesh currently displayed is the chicken one
-    bool                            mChickenMeshShown;
+    bool                            mHexenHenMeshShown;
 
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
@@ -1137,7 +1137,7 @@ private:
     void computeCreatureOverlayMoodValue();
 
     //! \brief Called on server side each turn when the creature is a chicken. It only wanders around
-    void handleChickenUpkeep();
+    void handleHexenHenUpkeep();
 
     //! \brief Called on server side each turn for the champion. The cast price covers the first seconds, then the owner pays
     //! the mana drain per second. Returns true if the champion left because the mana cannot pay it

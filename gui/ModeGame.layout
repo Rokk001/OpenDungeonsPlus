@@ -169,7 +169,7 @@
             <Window type="OD/GameTabButton" name="Special6" >
                 <UserString name="AllowEdgeScrolling" value="true" />
                 <Property name="Area" value="{{0,220},{0,0},{0,260},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/BracedDoorTrapButton" />
+                <Property name="NormalImage" value="OpenDungeonsIcons/IronboundDoorTrapButton" />
                 <Property name="InheritsAlpha" value="False" />
                 <Property name="Visible" value="False" />
             </Window>

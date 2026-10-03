@@ -1,4 +1,4 @@
-"""Check the combat pit mood factors (victor, spectator, alone) and the hated
+"""Check the arena mood factors (victor, spectator, alone) and the hated
 company factor: raw values converted at 30 mood points per
 annoyance point and 1.4 turns per second."""
 from pathlib import Path

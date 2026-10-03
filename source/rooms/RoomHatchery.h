@@ -55,7 +55,7 @@ protected:
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
 private:
     uint32_t getNbChickens();
-    uint32_t mSpawnChickenCooldown;
+    uint32_t mSpawnHexenHenCooldown;
 };
 
 #endif // ROOMHATCHERY_H
