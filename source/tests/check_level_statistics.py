@@ -60,8 +60,10 @@ craft_line = line_with(workshop_source, 'mItemsMade++')
 heart_line = line_with(temple_source, 'mKeepersDefeated++')
 
 kills_probe = r'''
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 #define OD_LOG_INF(x)
@@ -101,10 +103,37 @@ struct Seat
     SeatStatistics mStatistics;
 };
 KILL_METHOD
-struct Tile {};
+enum class RoomType { arena, other };
+enum class RelationshipEvent { arenaLoss };
+enum class GameEntityType { creature, other };
+struct Room
+{
+    RoomType getType() const { return RoomType::other; }
+};
+struct Tile
+{
+    Room* getCoveringRoom() { return nullptr; }
+};
+struct RelationshipSettings
+{
+    int64_t mFightParticipantTurns = 0;
+};
+struct CreatureRelationships
+{
+    const RelationshipSettings& getSettings() const { return mSettings; }
+    RelationshipSettings mSettings;
+};
+struct GameMap
+{
+    bool isRelationshipsEnabled() const { return false; }
+    int64_t getTurnNumber() const { return 0; }
+    CreatureRelationships* getCreatureRelationships() { return nullptr; }
+};
 struct GameEntity
 {
     GameEntity(Seat* seat) : mSeat(seat) {}
+    GameEntityType getObjectType() const { return GameEntityType::other; }
+    GameMap* getGameMap() { return nullptr; }
     Seat* getSeat() { return mSeat; }
     std::string getName() { return "entity"; }
     Seat* mSeat;
@@ -135,6 +164,13 @@ struct Creature : public GameEntity
     void fireEntityDead() { ++mDeaths; }
     double getPitDamageFactor(GameEntity*) { return 1.0; }
     bool isPossessed() const { return false; }
+    bool isKo() const { return false; }
+    bool getIsOnServerMap() const { return false; }
+    bool canHaveRelationships() const { return false; }
+    Tile* getPositionTile() { return nullptr; }
+    void reportRelationshipEvent(RelationshipEvent, Creature&, Creature&) {}
+    void reportFightParticipants(Creature&) {}
+    std::map<std::string, int64_t> mRecentAttackers;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,
         double elementDamage, Tile* tileTakingDamage, bool ko);
     double mHp;

@@ -934,14 +934,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             std::string creatureA;
             std::string creatureB;
             int32_t tier;
-            OD_ASSERT_TRUE(packetReceived >> creatureA >> creatureB >> tier);
+            bool replay;
+            OD_ASSERT_TRUE(packetReceived >> creatureA >> creatureB >> tier >> replay);
             CreatureRelationships* relationships = gameMap->getCreatureRelationships();
             if((relationships != nullptr) && (tier >= static_cast<int32_t>(RelationshipTier::nemesis))
                 && (tier <= static_cast<int32_t>(RelationshipTier::lovers)))
             {
                 RelationshipTier oldTier = relationships->tierOf(creatureA, creatureB, true);
                 relationships->setTier(creatureA, creatureB, static_cast<RelationshipTier>(tier));
-                reportRelationshipPost(gameMap, creatureA, creatureB, oldTier, static_cast<RelationshipTier>(tier));
+                if(!replay)
+                    reportRelationshipPost(gameMap, creatureA, creatureB, oldTier, static_cast<RelationshipTier>(tier));
             }
             break;
         }

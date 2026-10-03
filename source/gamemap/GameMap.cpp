@@ -1261,7 +1261,7 @@ void GameMap::sendRelationshipTierChanges()
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::relationshipTier, seat->getPlayer());
         serverNotification->mPacket << change.mCreatureA << change.mCreatureB
-            << static_cast<int32_t>(change.mNewTier);
+            << static_cast<int32_t>(change.mNewTier) << false;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
@@ -1282,7 +1282,7 @@ void GameMap::sendRelationshipTiers(Seat* seat)
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::relationshipTier, seat->getPlayer());
         serverNotification->mPacket << tier.mCreatureA << tier.mCreatureB
-            << static_cast<int32_t>(tier.mNewTier);
+            << static_cast<int32_t>(tier.mNewTier) << true;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }

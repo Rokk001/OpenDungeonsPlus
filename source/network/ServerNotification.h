@@ -151,12 +151,13 @@ enum class ServerNotificationType
     //! Answer to editorRegionEdit, all the region markers of the level script:
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
     editorRegionData,
-    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
-    timeLimit,
     //! Owner-only tier of a creature pair that changed (or the current tier, sent once when a
     //! client joins or a game is loaded): + string creatureA, string creatureB, int32_t tier
-    //! (RelationshipTier). Only sent when the creature relationships option is on.
-    relationshipTier
+    //! (RelationshipTier), bool replay (true: replay of the current tier, no Dungeonbook post).
+    //! Only sent when the creature relationships option is on.
+    relationshipTier,
+    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
+    timeLimit
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

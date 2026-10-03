@@ -88,8 +88,10 @@ struct Room {
 struct RoomPrison : Room {
  std::map<Tile*,BuildingObject*> fences;const auto& getFencingObjects()const{return fences;}
 };
+enum class RelationshipEvent{chickenSnatched};
 struct GameMap {
  int sizeX,sizeY;
+ Creature* getCreature(const std::string&){return nullptr;}
  std::vector<Tile> tiles;std::vector<Room*> rooms;
  GameMap(int xCount=16,int yCount=16):sizeX(xCount),sizeY(yCount){for(int y=0;y<sizeY;++y)for(int x=0;x<sizeX;++x)tiles.push_back({x,y});}
  Tile* getTile(int x,int y){return x>=0&&x<sizeX&&y>=0&&y<sizeY?&tiles[y*sizeX+x]:nullptr;}
@@ -118,6 +120,7 @@ struct Creature {
  void setAnimationState(const std::string& state,bool,const Ogre::Vector3&,bool){animation=state;}
  void setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>&,bool,bool=false);
  template<typename T>void pushAction(std::unique_ptr<T>){++walkActions;}
+ static void reportRelationshipEvent(RelationshipEvent,Creature&,Creature&){}
 };
 std::list<Tile*> GameMap::path(Creature* creature,Tile* target){
  auto* start=creature->getPositionTile();if(!start||!target)return {};
@@ -140,6 +143,7 @@ struct ChickenEntity {
  Tile* getPositionTile(){return map->getTile(Helper::round(pos.x),Helper::round(pos.y));}
  const Ogre::Vector3& getPosition()const{return pos;}std::string getName()const{return "Chicken";}
  bool eatChicken(Creature*){if(consumed)return false;++consumed;return true;}
+ const std::string& getSnatchedFrom()const{static const std::string none;return none;}
 };
 struct CreatureActionWalkToTile {CreatureActionWalkToTile(Creature&){}};
 struct CreatureActionEatChicken {static bool handleEatChicken(Creature&,ChickenEntity*);};
