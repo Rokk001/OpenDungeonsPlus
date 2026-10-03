@@ -44,6 +44,7 @@
 #include "network/ODPacket.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
+#include "render/CreatureReactions.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "rooms/RoomPortalWave.h"
@@ -647,6 +648,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             Ogre::SceneNode* entityNode = entity->getEntityNode();
             if(entityNode != nullptr && entityNode->getParentSceneNode() != nullptr)
                 entityNode->getParentSceneNode()->removeChild(entityNode);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteEntityRemoved(entity);
 
             entity->removeEntityFromPositionTile(gameMapPointer);
             entity->removeFromGameMap(gameMapPointer);

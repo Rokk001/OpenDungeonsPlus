@@ -85,6 +85,7 @@
 #include "render/CreaturePortrait.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
+#include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -2161,6 +2162,8 @@ void Creature::updateFromPacket(ODPacket& is)
     MovableGameEntity::updateFromPacket(is);
 
     int seatId;
+    unsigned int oldLevel = mLevel;
+    uint32_t oldMoodValue = mOverlayMoodValue;
     OD_ASSERT_TRUE(is >> mLevel);
     OD_ASSERT_TRUE(is >> seatId);
     OD_ASSERT_TRUE(is >> mOverlayHealthValue);
@@ -2215,6 +2218,10 @@ void Creature::updateFromPacket(ODPacket& is)
         social::CreaturePosts::reportUpdate(getGameMap()->getTurnNumber(), getName(),
             getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
     }
+
+    // Level up and payday are shown as cosmetic reactions of the creature
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+        CreatureReactions::getSingleton().noteCreatureUpdate(this, oldLevel, oldMoodValue);
 }
 
 bool Creature::isSocialFeedSource() const
