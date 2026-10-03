@@ -14,8 +14,12 @@ def read(path):
 rooms = read("config/rooms.cfg")
 values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", rooms, re.M))
 expected = {
-    "TreasuryCostPerTile": "67", "DormitoryCostPerTile": "100", "WorkshopCostPerTile": "200",
-    "CryptCostPerTile": "667", "TortureCostPerTile": "500",
+    "TreasuryCostPerTile": "72", "DormitoryCostPerTile": "92", "WorkshopCostPerTile": "215",
+    "CryptCostPerTile": "620", "TortureCostPerTile": "470",
+    "HatcheryCostPerTile": "110", "TrainHallCostPerTile": "165", "TrainHallCostPerSecond": "1.55",
+    "LibraryCostPerTile": "190", "PrisonCostPerTile": "240", "WoodenBridgeCostPerTile": "180",
+    "StoneBridgeCostPerTile": "540", "ArenaCostPerTile": "230", "CasinoCostPerTile": "290",
+    "GuardRoomCostPerTile": "210", "TempleCostPerTile": "930",
     "PrisonDamagePerTurn": "0.06", "ArenaDamageTakenPercent": "0.2",
     "TortureDamagePercentPerSecond": "0.0067",
 }

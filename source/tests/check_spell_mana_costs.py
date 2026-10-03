@@ -1,9 +1,9 @@
 """Check the spell mana costs, cooldowns and the worker price rule.
 
-The costs use one scale (mana cap 200,000): Summon worker 1,500 per
-step, Call to war 10,000, Heal 5,000, Eye of evil 5,000, Lightning 6,000,
-Tremor 30,000, Defector 20,000, Chicken 10,000, Inferno 50,000, Create gold
-15,000, Possess 500, Summon champion 100,000 plus 2,000 per second. The worker price grows by one base price per worker above
+The costs use one own scale (mana cap 200,000, prices in 50 mana steps, see docs/development/VALUE-SCALES.md):
+Summon worker 1,400 per step, Call to war 9,200, Heal 5,400, Eye of evil 4,600, Lightning 6,600,
+Tremor 27,600, Defector 21,600, Hexen hen 10,600, Inferno 46,400, Create gold
+14,000, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above
 the four the heart supplies."""
 from pathlib import Path
 import re
@@ -17,19 +17,28 @@ section = config[config.rindex("[Spells]"):config.rindex("[/Spells]")]
 values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
 
 expected = {
-    "SummonWorkerNbHeart": "4", "SummonWorkerBasePrice": "1500", "SummonWorkerCooldown": "0",
-    "CallToWarPrice": "10000", "CallToWarCooldown": "0",
-    "CreatureHealPrice": "5000", "CreatureHealCooldown": "0",
-    "EyeEvilPrice": "5000", "EyeEvilCooldown": "0",
-    "LightningPrice": "6000", "LightningCooldown": "0",
-    "TremorPrice": "30000", "TremorCooldown": "0",
-    "DefectorPrice": "20000", "DefectorCooldown": "84",
-    "HexenHenPrice": "10000", "HexenHenCooldown": "84",
-    "InfernoPrice": "50000", "InfernoCooldown": "84",
-    "CreateGoldPrice": "15000", "CreateGoldCooldown": "0",
-    "PossessPrice": "500", "PossessFreeSeconds": "20",
-    "SummonChampionPrice": "100000", "SummonChampionDrainPerSecond": "2000", "SummonChampionCooldown": "0",
+    "SummonWorkerNbHeart": "4", "SummonWorkerBasePrice": "1400", "SummonWorkerCooldown": "0",
+    "CallToWarPrice": "9200", "CallToWarCooldown": "0",
+    "CreatureHealPrice": "5400", "CreatureHealCooldown": "0",
+    "EyeEvilPrice": "4600", "EyeEvilCooldown": "0",
+    "LightningPrice": "6600", "LightningCooldown": "0",
+    "TremorPrice": "27600", "TremorCooldown": "0",
+    "DefectorPrice": "21600", "DefectorCooldown": "76",
+    "HexenHenPrice": "10600", "HexenHenCooldown": "92",
+    "InfernoPrice": "46400", "InfernoCooldown": "78",
+    "CreateGoldPrice": "14000", "CreateGoldCooldown": "0",
+    "PossessPrice": "450", "PossessFreeSeconds": "20",
+    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "0",
+    "CreatureHastePrice": "2200", "CreatureHasteCooldown": "13",
+    "CreatureSlowPrice": "1800", "CreatureSlowCooldown": "11",
+    "CreatureDefensePrice": "2650", "CreatureDefenseCooldown": "17",
+    "CreatureStrengthPrice": "2300", "CreatureStrengthCooldown": "22",
+    "CreatureWeakPrice": "2150", "CreatureWeakCooldown": "18",
+    "CreatureExplosionPrice": "4600", "CreatureExplosionCooldown": "15",
 }
+for key, value in values.items():
+    if key.endswith("Price") or key == "SummonWorkerBasePrice":
+        assert int(value) % 50 == 0, f"{key} is not a multiple of the 50 mana step"
 for key, value in expected.items():
     assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"
 assert "SummonWorkerNbFree" not in config, "the free-worker key is gone"
@@ -70,9 +79,9 @@ int main()
 {
     int bad = 0;
     // the heart supplies four workers: the fifth costs the base price, then 2x, 3x ...
-    const int32_t expectedPrice[][2] = {{0, 1500}, {3, 1500}, {4, 1500}, {5, 3000}, {6, 4500}, {7, 6000}};
+    const int32_t expectedPrice[][2] = {{0, 1400}, {3, 1400}, {4, 1400}, {5, 2800}, {6, 4200}, {7, 5600}};
     for(const int32_t* row : expectedPrice)
-        if(price(1500, row[0], 4) != row[1]) { std::printf("workers %d gives %d\n", row[0], price(1500, row[0], 4)); bad = 1; }
+        if(price(1400, row[0], 4) != row[1]) { std::printf("workers %d gives %d\n", row[0], price(1400, row[0], 4)); bad = 1; }
     return bad;
 }
 """
