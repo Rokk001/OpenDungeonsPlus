@@ -45,6 +45,21 @@ namespace
         return true;
     }
 
+    bool parseDouble(const std::string& text, double& value)
+    {
+        std::istringstream ss(text);
+        double tmp;
+        if(!(ss >> tmp))
+            return false;
+
+        std::string rest;
+        if(ss >> rest)
+            return false;
+
+        value = tmp;
+        return true;
+    }
+
     //! Reads key from config. Returns false and leaves value untouched if it is missing or invalid.
     bool readSetting(const std::map<std::string, std::string>& config, const std::string& key, int64_t& value)
     {
@@ -53,6 +68,15 @@ namespace
             return false;
 
         return parseInt(it->second, value);
+    }
+
+    bool readSetting(const std::map<std::string, std::string>& config, const std::string& key, double& value)
+    {
+        std::map<std::string, std::string>::const_iterator it = config.find(key);
+        if(it == config.end())
+            return false;
+
+        return parseDouble(it->second, value);
     }
 }
 
@@ -70,7 +94,23 @@ RelationshipSettings::RelationshipSettings() :
     mEventArenaLoss(-10),
     mEventChickenSnatched(-12),
     mTrainingTogetherCooldownTurns(40),
-    mFightParticipantTurns(100)
+    mFightParticipantTurns(100),
+    mCombatRadiusTiles(3.0),
+    mCombatBonusFriends(0.75),
+    mCombatBonusBestFriends(1.5),
+    mCombatPenaltyNemesis(0.75),
+    mMoodPenaltyHated(250),
+    mMoodPenaltyNemesis(400),
+    mMoodMaxPairs(2),
+    mMaxFriends(3),
+    mMaxPartners(1),
+    mMaxNemeses(2),
+    mBrawlCheckIntervalTurns(20),
+    mBrawlChancePercent(20),
+    mBrawlMaxDistanceTiles(6),
+    mBrawlStopHealthPercent(25),
+    mBrawlMaxTurns(150),
+    mBrawlValueChange(-6)
 {
 }
 
@@ -111,14 +151,38 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"EventTrainingTogether", &settings.mEventTrainingTogether},
         {"EventDefeatedEnemiesTogether", &settings.mEventDefeatedEnemiesTogether},
         {"EventArenaLoss", &settings.mEventArenaLoss},
-        {"EventChickenSnatched", &settings.mEventChickenSnatched}
+        {"EventChickenSnatched", &settings.mEventChickenSnatched},
+        {"MoodPenaltyHated", &settings.mMoodPenaltyHated},
+        {"MoodPenaltyNemesis", &settings.mMoodPenaltyNemesis},
+        {"MoodMaxPairs", &settings.mMoodMaxPairs},
+        {"MaxFriends", &settings.mMaxFriends},
+        {"MaxPartners", &settings.mMaxPartners},
+        {"MaxNemeses", &settings.mMaxNemeses},
+        {"BrawlChancePercent", &settings.mBrawlChancePercent},
+        {"BrawlMaxDistanceTiles", &settings.mBrawlMaxDistanceTiles},
+        {"BrawlStopHealthPercent", &settings.mBrawlStopHealthPercent},
+        {"BrawlValueChange", &settings.mBrawlValueChange}
+    };
+    struct DoubleEntry
+    {
+        const char* mKey;
+        double* mTarget;
+    };
+    DoubleEntry doubleEntries[] =
+    {
+        {"CombatRadiusTiles", &settings.mCombatRadiusTiles},
+        {"CombatBonusFriends", &settings.mCombatBonusFriends},
+        {"CombatBonusBestFriends", &settings.mCombatBonusBestFriends},
+        {"CombatPenaltyNemesis", &settings.mCombatPenaltyNemesis}
     };
     TurnEntry turnEntries[] =
     {
         {"DriftIntervalTurns", &settings.mDriftIntervalTurns},
         {"DriftIdleTurns", &settings.mDriftIdleTurns},
         {"TrainingTogetherCooldownTurns", &settings.mTrainingTogetherCooldownTurns},
-        {"FightParticipantTurns", &settings.mFightParticipantTurns}
+        {"FightParticipantTurns", &settings.mFightParticipantTurns},
+        {"BrawlCheckIntervalTurns", &settings.mBrawlCheckIntervalTurns},
+        {"BrawlMaxTurns", &settings.mBrawlMaxTurns}
     };
 
     std::string missing;
@@ -131,6 +195,16 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
             continue;
         }
         *entry.mTarget = static_cast<int32_t>(std::max<int64_t>(-1000000, std::min<int64_t>(1000000, value)));
+    }
+    for(DoubleEntry& entry : doubleEntries)
+    {
+        double value;
+        if(!readSetting(config, entry.mKey, value))
+        {
+            missing += std::string(" ") + entry.mKey;
+            continue;
+        }
+        *entry.mTarget = std::max(0.0, std::min(1000.0, value));
     }
     for(TurnEntry& entry : turnEntries)
     {
@@ -260,6 +334,61 @@ void CreatureRelationships::changeValue(const std::string& creatureA, const std:
         value += it->second.mValue;
 
     setValue(pair, value, turn, true);
+    enforceLimits(creatureA, turn);
+    enforceLimits(creatureB, turn);
+}
+
+void CreatureRelationships::enforceLimits(const std::string& creature, int64_t turn)
+{
+    std::vector<std::pair<std::string, int32_t> > partners;
+    getPartners(creature, partners);
+    int32_t nbFriends = 0;
+    int32_t nbNemeses = 0;
+    for(size_t i = 0; i < partners.size(); ++i)
+    {
+        if(partners[i].second >= mSettings.mThresholdFriends)
+            ++nbFriends;
+        else if(partners[i].second <= mSettings.mThresholdNemesis)
+            ++nbNemeses;
+    }
+
+    while(nbFriends > mSettings.mMaxFriends)
+    {
+        // The weakest friend falls back to a good acquaintance
+        size_t weakest = partners.size();
+        for(size_t i = 0; i < partners.size(); ++i)
+        {
+            if(partners[i].second < mSettings.mThresholdFriends)
+                continue;
+            if((weakest == partners.size()) || (partners[i].second < partners[weakest].second))
+                weakest = i;
+        }
+        if(weakest == partners.size())
+            break;
+
+        setValue(makePair(creature, partners[weakest].first), mSettings.mThresholdFriends - 1, turn, false);
+        partners[weakest].second = mSettings.mThresholdFriends - 1;
+        --nbFriends;
+    }
+
+    while(nbNemeses > mSettings.mMaxNemeses)
+    {
+        // The weakest nemesis falls back to a hated creature
+        size_t weakest = partners.size();
+        for(size_t i = 0; i < partners.size(); ++i)
+        {
+            if(partners[i].second > mSettings.mThresholdNemesis)
+                continue;
+            if((weakest == partners.size()) || (partners[i].second > partners[weakest].second))
+                weakest = i;
+        }
+        if(weakest == partners.size())
+            break;
+
+        setValue(makePair(creature, partners[weakest].first), mSettings.mThresholdNemesis + 1, turn, false);
+        partners[weakest].second = mSettings.mThresholdNemesis + 1;
+        --nbNemeses;
+    }
 }
 
 void CreatureRelationships::setValue(const Pair& pair, int32_t value, int64_t turn, bool isEvent)
@@ -342,6 +471,88 @@ RelationshipTier CreatureRelationships::tierOf(const std::string& creatureA, con
 bool CreatureRelationships::isFriend(const std::string& creatureA, const std::string& creatureB) const
 {
     return getValue(creatureA, creatureB) >= mSettings.mThresholdFriends;
+}
+
+bool CreatureRelationships::isNemesis(const std::string& creatureA, const std::string& creatureB) const
+{
+    return getValue(creatureA, creatureB) <= mSettings.mThresholdNemesis;
+}
+
+bool CreatureRelationships::isHated(const std::string& creatureA, const std::string& creatureB) const
+{
+    return getValue(creatureA, creatureB) <= mSettings.mThresholdHated;
+}
+
+double CreatureRelationships::combatModifier(const std::string& creature,
+    const std::vector<std::string>& nearbyFighters) const
+{
+    double bonus = 0.0;
+    bool nemesisNearby = false;
+    for(size_t i = 0; i < nearbyFighters.size(); ++i)
+    {
+        if(nearbyFighters[i] == creature)
+            continue;
+
+        int32_t value = getValue(creature, nearbyFighters[i]);
+        if(value >= mSettings.mThresholdBestFriends)
+            bonus = std::max(bonus, mSettings.mCombatBonusBestFriends);
+        else if(value >= mSettings.mThresholdFriends)
+            bonus = std::max(bonus, mSettings.mCombatBonusFriends);
+        else if(value <= mSettings.mThresholdNemesis)
+            nemesisNearby = true;
+    }
+
+    if(nemesisNearby)
+        bonus -= mSettings.mCombatPenaltyNemesis;
+
+    return bonus;
+}
+
+int32_t CreatureRelationships::moodModifier(const std::string& creature) const
+{
+    std::vector<std::pair<std::string, int32_t> > partners;
+    getPartners(creature, partners);
+    int32_t nbHated = 0;
+    int32_t modifier = 0;
+    for(size_t i = 0; i < partners.size(); ++i)
+    {
+        if(nbHated >= mSettings.mMoodMaxPairs)
+            break;
+
+        if(partners[i].second <= mSettings.mThresholdNemesis)
+            modifier -= mSettings.mMoodPenaltyNemesis;
+        else if(partners[i].second <= mSettings.mThresholdHated)
+            modifier -= mSettings.mMoodPenaltyHated;
+        else
+            continue;
+
+        ++nbHated;
+    }
+
+    return modifier;
+}
+
+void CreatureRelationships::getPartners(const std::string& creature,
+    std::vector<std::pair<std::string, int32_t> >& partners) const
+{
+    partners.clear();
+    for(std::map<Pair, PairData>::const_iterator it = mPairs.begin(); it != mPairs.end(); ++it)
+    {
+        if(it->first.first == creature)
+            partners.push_back(std::pair<std::string, int32_t>(it->first.second, it->second.mValue));
+        else if(it->first.second == creature)
+            partners.push_back(std::pair<std::string, int32_t>(it->first.first, it->second.mValue));
+    }
+}
+
+void CreatureRelationships::getNemesisPairs(std::vector<Pair>& pairs) const
+{
+    pairs.clear();
+    for(std::map<Pair, PairData>::const_iterator it = mPairs.begin(); it != mPairs.end(); ++it)
+    {
+        if(it->second.mValue <= mSettings.mThresholdNemesis)
+            pairs.push_back(it->first);
+    }
 }
 
 void CreatureRelationships::removeCreature(const std::string& creature)

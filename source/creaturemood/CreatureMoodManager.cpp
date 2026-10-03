@@ -88,6 +88,8 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += creature.getSpecialMood();
     // Fights in the arena
     moodValue += Helper::round(creature.getPitMood());
+    // Creatures of the same keeper that it hates (only with relationships on)
+    moodValue += creature.getRelationshipMood();
 
     return moodValue;
 }
