@@ -1130,7 +1130,7 @@ def blob(layer, rng, cx, cy, radius, squash=0.7):
 
 
 def treasury_field(variant=0):
-    """Marble checkerboard modelled on the original treasury floor: 4x4 squares per tile, even brightness per
+    """Marble checkerboard: 4x4 squares per tile, even brightness per
     colour, dark grout. The grout and the square outlines are the same in all variants; veining, dirt, stains,
     scratches and chips are drawn inside the squares only, so a tile border is always just grout and the variants
     (picked at random per tile through [oneOf]) fit next to each other. Every tile has an even number of squares,
