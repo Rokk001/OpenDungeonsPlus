@@ -2173,6 +2173,7 @@ void Creature::updateFromPacket(ODPacket& is)
     int seatId;
     unsigned int oldLevel = mLevel;
     uint32_t oldMoodValue = mOverlayMoodValue;
+    uint32_t oldHealthValue = mOverlayHealthValue;
     Seat* oldSeat = getSeat();
     Seat* oldSeatPrison = mSeatPrison;
     OD_ASSERT_TRUE(is >> mLevel);
@@ -2232,7 +2233,7 @@ void Creature::updateFromPacket(ODPacket& is)
 
     // Level up and payday are shown as cosmetic reactions of the creature
     if(CreatureReactions::getSingletonPtr() != nullptr)
-        CreatureReactions::getSingleton().noteCreatureUpdate(this, oldLevel, oldMoodValue, oldSeat, oldSeatPrison);
+        CreatureReactions::getSingleton().noteCreatureUpdate(this, oldLevel, oldMoodValue, oldHealthValue, oldSeat, oldSeatPrison);
 }
 
 bool Creature::isSocialFeedSource() const
