@@ -2787,6 +2787,7 @@ ProtectDungeonTemple	NULL
 59	36
 59	37
 59	38
+0
 [/Room]
 [Room]
 2	Dormitory1	3	9
@@ -2799,6 +2800,7 @@ ProtectDungeonTemple	NULL
 40	36
 40	37
 40	38
+0
 [/Room]
 [Room]
 17	GuardRoom1	3	10
@@ -2821,6 +2823,7 @@ ProtectDungeonTemple	NULL
 11	15
 12	14
 12	15
+0
 [/Room]
 [Room]
 11	Prison1	3	6
@@ -2830,6 +2833,7 @@ ProtectDungeonTemple	NULL
 19	20
 19	21
 19	22
+0
 [/Room]
 [Room]
 16	Torture1	3	6
@@ -2839,6 +2843,7 @@ ProtectDungeonTemple	NULL
 81	13
 82	12
 82	13
+0
 [/Room]
 [Room]
 3	Treasury2	3	6

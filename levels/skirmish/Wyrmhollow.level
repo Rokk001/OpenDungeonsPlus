@@ -9359,6 +9359,7 @@ mana	0
 10	81
 10	82
 10	83
+0
 [/Room]
 [Room]
 8	Hatchery1	1	6
@@ -9430,27 +9431,27 @@ mana	0
 # typeTrap	name	seatId	numTiles		Subsequent Lines: tileX	tileY	isActivated(0/1)		Subsequent Lines: optional specific data
 [Trap]
 3	Boulder1	0	1
-24	48
+24	48	1
 [/Trap]
 [Trap]
 3	Boulder2	0	1
-72	49
+72	49	1
 [/Trap]
 [Trap]
 1	Cannon1	0	1
-48	24
+48	24	1
 [/Trap]
 [Trap]
 1	Cannon2	0	1
-46	72
+46	72	1
 [/Trap]
 [Trap]
 8	Fear1	0	1
-84	36
+84	36	1
 [/Trap]
 [Trap]
 8	Fear2	0	1
-60	12
+60	12	1
 [/Trap]
 [/Traps]
 

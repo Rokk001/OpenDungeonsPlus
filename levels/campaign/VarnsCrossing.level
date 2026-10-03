@@ -3828,13 +3828,10 @@ ProtectDungeonTemple	NULL
 [Rooms]
 # typeRoom	name	seatId	numTiles		Subsequent Lines: tileX	tileY
 [Room]
-13	StoneBridge1	0	10
-45	34
-45	35
+13	StoneBridge1	0	7
 45	36
 45	37
 45	38
-46	34
 46	35
 46	36
 46	37
@@ -3842,24 +3839,18 @@ ProtectDungeonTemple	NULL
 1
 [/Room]
 [Room]
-13	StoneBridge2	0	10
+13	StoneBridge2	0	7
 45	58
 45	59
 45	60
-45	61
-45	62
 46	58
 46	59
 46	60
 46	61
-46	62
 1
 [/Room]
 [Room]
-13	StoneBridge3	0	10
-32	47
-32	48
-33	47
+13	StoneBridge3	0	7
 33	48
 34	47
 34	48
@@ -3870,17 +3861,14 @@ ProtectDungeonTemple	NULL
 1
 [/Room]
 [Room]
-13	StoneBridge4	0	10
+13	StoneBridge4	0	7
 56	47
 56	48
 57	47
 57	48
 58	47
 58	48
-59	47
 59	48
-60	47
-60	48
 1
 [/Room]
 [Room]
@@ -3941,6 +3929,7 @@ ProtectDungeonTemple	NULL
 19	77
 20	76
 20	77
+0
 [/Room]
 [Room]
 8	Hatchery1	1	6
@@ -3959,6 +3948,7 @@ ProtectDungeonTemple	NULL
 19	86
 20	85
 20	86
+0
 [/Room]
 [Room]
 6	TrainingHall1	1	8
@@ -3979,6 +3969,7 @@ ProtectDungeonTemple	NULL
 21	72
 22	71
 22	72
+0	0
 [/Room]
 [Room]
 1	DungeonTemple2	2	25
@@ -4038,6 +4029,7 @@ ProtectDungeonTemple	NULL
 83	11
 84	10
 84	11
+0
 [/Room]
 [Room]
 8	Hatchery2	2	6
@@ -4117,6 +4109,7 @@ ProtectDungeonTemple	NULL
 83	87
 84	86
 84	87
+0
 [/Room]
 [Room]
 8	Hatchery3	3	6
@@ -4135,6 +4128,7 @@ ProtectDungeonTemple	NULL
 79	89
 80	88
 80	89
+0
 [/Room]
 [Room]
 17	GuardRoom1	0	8
@@ -4155,6 +4149,7 @@ ProtectDungeonTemple	NULL
 23	25
 24	24
 24	25
+0
 [/Room]
 [Room]
 11	Prison1	0	6
@@ -4164,6 +4159,7 @@ ProtectDungeonTemple	NULL
 13	24
 13	25
 13	26
+0
 [/Room]
 [Room]
 14	Arena1	0	18
