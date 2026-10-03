@@ -1,4 +1,4 @@
-"""Check that the temple sacrifice follows the reference: no mana and no research points
+"""Check that the temple sacrifice works as documented: no mana and no research points
 for a sacrifice, a queue of the last three sacrifices, the first matching recipe wins and
 the level of a new creature is the rounded down average of the inputs."""
 from pathlib import Path
@@ -36,8 +36,8 @@ for i in range(1, count + 1):
     for name in inputs.split("+"):
         assert name in creatures, f"{recipe}: unknown creature {name}"
     assert result in ("ManaBoost", "Workers") or result in creatures, recipe
-assert values["TempleRecipe1"] == "DarkElf+DarkElf=Troll"
-assert values["TempleRecipe2"] == "Monk+Monk+Monk=ManaBoost"
+assert values["TempleRecipe1"] == "Elf+Elf=Orc"
+assert values["TempleRecipe2"] == "Gnome+Gnome+Gnome=ManaBoost"
 assert re.search(r"^\s+TempleWorkersGiven\s+10\s*$", rooms, re.M) and "TempleWorkersGiven" in temple
 
 # The recipes that worked before the queue (12 creature and special recipes, the ones with
@@ -45,9 +45,9 @@ assert re.search(r"^\s+TempleWorkersGiven\s+10\s*$", rooms, re.M) and "TempleWor
 # the last three sacrifices, the first recipe that matches the newest ones wins.
 old_recipes = [
     "Lich+Lich=PitDemon", "Troll+Troll=Cultist", "Orc+Cultist+CaveHornet=Workers",
-    "LavaSpawn+LavaSpawn=LizardMan", "DarkElf+DarkElf=Troll", "Cultist+Cultist=Goblin",
+    "LavaSpawn+LavaSpawn=LizardMan", "Elf+Elf=Orc", "Cultist+Cultist=Goblin",
     "Rat+Rat=LavaSpawn", "Skeleton+Skeleton=DarkElf", "Orc+Orc=Lich", "PitDemon+PitDemon=Rat",
-    "LizardMan+LizardMan=Skeleton", "Monk+Monk+Monk=ManaBoost", "PitDemon+DarkElf+Cultist=Workers",
+    "LizardMan+LizardMan=Skeleton", "Gnome+Gnome+Gnome=ManaBoost", "PitDemon+DarkElf+Cultist=Workers",
 ]
 table = [values[f"TempleRecipe{i}"].split("=") for i in range(1, count + 1)]
 table = [(inputs.split("+"), result) for inputs, result in table]

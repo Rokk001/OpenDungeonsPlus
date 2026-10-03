@@ -30,6 +30,29 @@ creatures still give mana; that part is separate (see `TemplePrayerMana*` in `co
 The result is a creature definition name, `ManaBoost` or the fork specific `Workers`
 (`TempleWorkersGiven` workers of the keeper, default 10).
 
+## Recipes
+
+All recipes are fork recipes (23 rows).
+
+| Inputs | Result |
+|---|---|
+| Elf + Elf | Orc |
+| Gnome + Gnome + Gnome | Mana Boost |
+| Lich + Lich | Pit Demon |
+| Troll + Troll | Cultist |
+| Lava Spawn + Lava Spawn | Lizard Man |
+| Cultist + Cultist | Goblin |
+| Rat + Rat | Lava Spawn |
+| Skeleton + Skeleton | Dark Elf |
+| Orc + Orc | Lich |
+| Pit Demon + Pit Demon | Rat |
+| Lizard Man + Lizard Man | Skeleton |
+| Orc + Cultist + Cave Hornet, any order (6 rows) | Workers |
+| Pit Demon + Dark Elf + Cultist, any order (6 rows) | Workers |
+
+The queue matches in throw order, so the two three-input worker recipes are listed in all six
+orders. The two-creature rows are order free anyway.
+
 ## Check
 
 `source/tests/check_temple_sacrifice.py`
