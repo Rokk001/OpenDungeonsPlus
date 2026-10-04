@@ -108,7 +108,7 @@ public:
     bool isLibraryLost() const;
 
     //! \brief Number of stored special boxes of the given gift box type (as an integer), the
-    //! boxes an imp carried to the dungeon heart. Each one is used with a button.
+    //! boxes a worker carried to the dungeon heart. Each one is used with a button.
     uint32_t getNbStoredSpecials(uint32_t giftBoxType) const;
 
     inline const std::string& getPlayerType() const

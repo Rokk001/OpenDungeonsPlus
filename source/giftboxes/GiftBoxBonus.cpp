@@ -37,11 +37,11 @@ static const uint32_t DEFAULT_AMOUNT_MANA = 50000;
 static const uint32_t DEFAULT_AMOUNT_GOLD = 10000;
 static const uint32_t DEFAULT_AMOUNT_LEVELS = 1;
 static const uint32_t DEFAULT_AMOUNT_IMPS = 10;
-//! Imps received with the upgraded Summon Worker spell start at this level
+//! Workers received with the upgraded Summon Worker spell start at this level
 static const uint32_t LEVEL_IMPS_UPGRADED = 4;
 //! Skill level of the Summon Worker spell from which it counts as upgraded
 static const uint32_t SKILL_LEVEL_UPGRADED = 2;
-//! Stun Imps: the enemy imps stay down for this many seconds
+//! Stun Workers: the enemy workers stay down for this many seconds
 static const double STUN_IMPS_SECONDS = 5.0;
 
 GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, const std::string& baseName, GiftBoxType type, uint32_t amount) :
@@ -77,9 +77,9 @@ std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
         case GiftBoxType::weakenWalls:
             return "Weaken Walls";
         case GiftBoxType::stunImps:
-            return "Stun Imps";
+            return "Stun Workers";
         case GiftBoxType::receiveImps:
-            return "Receive Imps";
+            return "Receive Workers";
         case GiftBoxType::makeHappy:
             return "Make Happy";
         case GiftBoxType::makeUnhappy:
@@ -110,9 +110,9 @@ std::string GiftBoxBonus::getDescription(GiftBoxType type)
         case GiftBoxType::weakenWalls:
             return "Turns the reinforced walls of the enemy back to earth.";
         case GiftBoxType::stunImps:
-            return "Stuns all enemy imps for a few seconds.";
+            return "Stuns all enemy workers for a few seconds.";
         case GiftBoxType::receiveImps:
-            return "Gives you free imps.";
+            return "Gives you free workers.";
         case GiftBoxType::makeHappy:
             return "Removes all the annoyance of your creatures.";
         case GiftBoxType::makeUnhappy:
