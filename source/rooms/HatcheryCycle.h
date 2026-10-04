@@ -51,7 +51,7 @@ struct HatcheryCycleSettings
     uint32_t mCareLayPercent;
 };
 
-//! rief How well the keeper looks after a hatchery.
+//! \brief How well the keeper looks after a hatchery.
 struct HatcheryCare
 {
     HatcheryCare() :
