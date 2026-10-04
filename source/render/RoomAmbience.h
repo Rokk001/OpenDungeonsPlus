@@ -81,6 +81,12 @@ public:
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
         const std::string& visualName = std::string());
 
+    //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
+    //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
+    //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
+    //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
+    void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
+
     inline uint32_t getNbParticleSystems() const
     { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size()); }
     inline uint32_t getNbMovedObjects() const
@@ -228,6 +234,8 @@ private:
     std::map<std::string, MotionNode> mMotionNodes;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;
+    //! Time until which a door (key "x,y" of its tile) counts as hit, for the effects "When Hit"
+    std::map<std::string, double> mHitUntil;
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;

@@ -69,6 +69,8 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::occupied;
     else if(text == "Empty")
         when = AmbienceWhen::empty;
+    else if(text == "Hit")
+        when = AmbienceWhen::hit;
     else
         return false;
 

@@ -21,11 +21,15 @@ EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Mo
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
                "NeedWall", "Clips", "Every")
 TARGETS = ("Object", "Tile", "Event")
-WHENS = ("Always", "Occupied", "Empty")
+WHENS = ("Always", "Occupied", "Empty", "Hit")
 KINDS = ("Particle", "Motion", "Clip")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
+# Events of the trap and door messages of the server; their Match names a trap or door type
+TRAP_EVENTS = ("TrapFired", "TrapLinked", "DoorHit", "DoorHurt", "DoorWrecked")
+TRAP_TYPES = ("Spike", "Alarm", "Fear", "Gas", "Lightning", "Fireburst", "Freeze", "WatchBanner", "Trigger", "Cannon",
+              "Boulder", "DoorWooden", "DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRuned")
 # Tile visuals a bridge can lie over
 BRIDGE_VISUALS = ("lavaGround", "waterGround")
 
@@ -224,6 +228,9 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             name = match[len("bridge:"):]
             if name not in BRIDGE_VISUALS and not mesh_exists(name):
                 problems.append("%s: unknown bridge mesh or visual %s" % (where, name))
+        elif target == "Event" and effect.get("Event", [""])[0] in TRAP_EVENTS:
+            if match not in TRAP_TYPES:
+                problems.append("%s: unknown trap or door type %s" % (where, match))
         elif match not in visuals:
             problems.append("%s: unknown tile visual %s" % (where, match))
     counts["effects"] += 1

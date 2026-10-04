@@ -44,7 +44,9 @@ enum class AmbienceWhen
     //! A creature is close to the target
     occupied,
     //! No creature was close to the target for the time given in mAfter
-    empty
+    empty,
+    //! The target (a door) took a hit a moment ago
+    hit
 };
 
 enum class AmbienceKind
