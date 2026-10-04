@@ -6,8 +6,8 @@
 Same method as tools/gen_spell_sounds.py: sine waves, noise and simple envelopes only (no recordings, no
 samples), fixed random seeds, so the same files come out every time. ffmpeg (libvorbis) must be in the PATH.
 Files go to
-    sounds/Spatial/Traps/<Type>/<Role>/Fx<Type><Role>01.ogg   (Fire, Idle, Reload)
-    sounds/Spatial/Doors/<Type>/<Role>/Fx<Type><Role>01.ogg   (Open, Close, Hit, Break)
+    sounds/Spatial/Traps/<Type>/<Role>/Fx<Type><Role>01.ogg   (Fire, Idle, Reload, Sold)
+    sounds/Spatial/Doors/<Type>/<Role>/Fx<Type><Role>01.ogg   (Open, Close, Hit, Break, Sold)
 The cannon already has a firing sound, so it only gets Idle and Reload.
 """
 
@@ -618,6 +618,34 @@ def rune_break():
     return render(length, f)
 
 
+def door_sold():
+    """A door taken down: a dull knock, a creak and a short clatter of planks and fittings."""
+    length = 1.1
+    noise = Noise(160)
+    clatter = times(161, 6, 0.15, 0.7)
+
+    def f(t):
+        creak = math.sin(sweep_phase(260.0, 140.0, 0.4, min(t, 0.4))) * swell(t, 0.4) * 0.3 * (1.0 if t < 0.4 else 0.0)
+        wood = sum(thump(t, c, 210.0, 90.0, 22.0) for c in clatter) * 0.4
+        dust = noise.lowpass(0.9) * 2.0 * decay(t, 4.0) * min(1.0, t / 0.02)
+        return creak + wood + dust * 0.6 + thump(t, 0.0, 140.0, 55.0, 9.0) * 0.9 + ring(t, 0.5, 1200.0, 20.0, (1.0, 2.3)) * 0.12
+    return render(length, f)
+
+
+def trap_sold():
+    """A trap taken apart: a metallic clank, a spring release and a few loose parts falling."""
+    length = 0.9
+    noise = Noise(162)
+    parts = times(163, 5, 0.1, 0.6)
+
+    def f(t):
+        clank = ring(t, 0.0, 1100.0, 14.0, (1.0, 2.4, 4.1)) * 0.4 + ring(t, 0.12, 760.0, 16.0, (1.0, 2.6)) * 0.3
+        spring = math.sin(sweep_phase(900.0, 300.0, 0.25, min(t, 0.25))) * decay(t, 12.0) * 0.25
+        bits = sum(ring(t, c, 1800.0 + 250.0 * i, 30.0, (1.0, 2.2)) for i, c in enumerate(parts)) * 0.15
+        return clank + spring + bits + noise.white() * decay(t, 25.0) * 0.2 + thump(t, 0.0, 130.0, 60.0, 12.0) * 0.6
+    return render(length, f)
+
+
 TRAP_SOUNDS = (
     ("Spike", "Fire", spike_fire), ("Spike", "Idle", spike_idle), ("Spike", "Reload", spike_reload),
     ("Cannon", "Idle", cannon_idle), ("Cannon", "Reload", cannon_reload),
@@ -630,6 +658,7 @@ TRAP_SOUNDS = (
     ("Freeze", "Fire", freeze_fire), ("Freeze", "Idle", freeze_idle), ("Freeze", "Reload", freeze_reload),
     ("WatchBanner", "Fire", banner_fire), ("WatchBanner", "Idle", banner_idle),
     ("Trigger", "Fire", trigger_fire), ("Trigger", "Idle", trigger_idle), ("Trigger", "Reload", trigger_reload),
+    ("Trap", "Sold", trap_sold),
 )
 
 DOOR_SOUNDS = (
@@ -641,6 +670,7 @@ DOOR_SOUNDS = (
     ("Secret", "Open", secret_open), ("Secret", "Close", secret_close), ("Secret", "Hit", secret_hit),
     ("Secret", "Break", secret_break),
     ("Runed", "Open", rune_open), ("Runed", "Close", rune_close), ("Runed", "Hit", rune_hit), ("Runed", "Break", rune_break),
+    ("Door", "Sold", door_sold),
 )
 
 

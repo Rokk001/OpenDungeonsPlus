@@ -47,6 +47,7 @@ class GameEntity;
 class MovableGameEntity;
 class MapLight;
 class Creature;
+class DoorEntity;
 class Player;
 class RenderedMovableEntity;
 class RockLava;
@@ -149,6 +150,8 @@ public:
     void rrCreateRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
+    //! \brief Gives the secret door the look of the surrounding wall while it is closed and the local player is not an ally of its owner
+    void rrUpdateSecretDoorLook(DoorEntity* door);
     void rrCreateCreature(Creature* curCreature);
     void rrDestroyCreature(Creature* curCreature);
     //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)

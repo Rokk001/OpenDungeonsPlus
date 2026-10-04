@@ -1525,13 +1525,14 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY)
 
 void RoomAmbience::updateCollapses(double timeSinceLastFrame)
 {
-    // The clip lasts 0.7 s, the heap lies there for a moment and then sinks into the floor
-    const double clipLength = 0.7;
+    // The heap lies there for a moment after the clip and then sinks into the floor
     const double holdTime = 2.0;
     const double sinkTime = 1.0;
     const double sinkDepth = 0.3;
     for(std::vector<Collapse>::iterator it = mCollapses.begin(); it != mCollapses.end();)
     {
+        // The length of the clip of the barricade skeleton
+        const double clipLength = static_cast<double>(it->mEntity->getAnimationState("Collapse")->getLength());
         it->mAge += timeSinceLastFrame;
         if(it->mAge >= clipLength + holdTime + sinkTime)
         {

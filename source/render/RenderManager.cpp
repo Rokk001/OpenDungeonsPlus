@@ -31,6 +31,7 @@
 #include "entities/ChickenPose.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/DoorEntity.h"
 #include "entities/GameEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
@@ -2861,6 +2862,9 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
     renderedMovableEntity->setParentSceneNode(node->getParentSceneNode());
     renderedMovableEntity->setEntityNode(node);
+    if((meshName == "DoorSecret") && (renderedMovableEntity->getObjectType() == GameEntityType::trapEntity) &&
+       (static_cast<TrapEntity*>(renderedMovableEntity)->getTrapEntityType() == TrapEntityType::doorEntity))
+        rrUpdateSecretDoorLook(static_cast<DoorEntity*>(renderedMovableEntity));
     if(HatcheryCoopHouse::isCoopMesh(meshName))
         rrCreateCoopDecor(static_cast<BuildingObject*>(renderedMovableEntity));
 
@@ -2909,6 +2913,36 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         setEntityOpacity(ent, renderedMovableEntity->getOpacity());
 }
 
+
+void RenderManager::rrUpdateSecretDoorLook(DoorEntity* door)
+{
+    std::string entStr = door->getOgreNamePrefix() + door->getName();
+    if(!mSceneManager->hasEntity(entStr))
+        return;
+
+    Ogre::Entity* ogreEnt = mSceneManager->getEntity(entStr);
+    GameMap* gameMap = door->getGameMap();
+    const Player* localPlayer = gameMap->getLocalPlayer();
+
+    // A closed secret door looks like the wall around it for everyone who is not an ally of its owner.
+    // The owner (and the editor) see the door itself
+    bool wallLook = (localPlayer != nullptr) && !gameMap->isInEditorMode() &&
+        (door->getAnimationStateName() == "Close") && !door->getSeat()->isAlliedSeat(localPlayer->getSeat());
+
+    std::string materialName = "DoorSecret";
+    if(wallLook)
+    {
+        // The wall to the side of the door tells which wall material fits
+        Tile* posTile = door->getPositionTile();
+        Tile* sideTile = (posTile == nullptr) ? nullptr : gameMap->getTile(posTile->getX() - 1, posTile->getY());
+        if((sideTile == nullptr) || !sideTile->isFullTile())
+            sideTile = (posTile == nullptr) ? nullptr : gameMap->getTile(posTile->getX(), posTile->getY() - 1);
+        materialName = ((sideTile != nullptr) && sideTile->isClaimed()) ? "DoorSecretWallClaimed" : "DoorSecretWall";
+    }
+
+    for(unsigned int i = 0; i < ogreEnt->getNumSubEntities(); ++i)
+        ogreEnt->getSubEntity(i)->setMaterialName(setMaterialOpacity(materialName, door->getOpacity()));
+}
 
 void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt)
 {
