@@ -43,6 +43,7 @@
 #include <OgreParticleSystem.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
+#include <OgreSubEntity.h>
 #include <OgreSkeletonInstance.h>
 
 #include <algorithm>
@@ -243,6 +244,17 @@ float kindScale(ChickenKind kind)
     }
 }
 
+//! An egg in a nest of the coop mesh lies on the straw of the nest: the straw of the egg mesh is hidden
+void hideEggStraw(Ogre::Entity* entity)
+{
+    for(unsigned int i = 0; i < entity->getNumSubEntities(); ++i)
+    {
+        Ogre::SubEntity* part = entity->getSubEntity(i);
+        if(part->getMaterialName() == "ChickenStraw")
+            part->setVisible(false);
+    }
+}
+
 } // namespace
 
 void RenderManager::rrEnsureChickenMesh(const std::string& meshName)
@@ -277,6 +289,7 @@ void RenderManager::rrCreateChickenLook(ChickenEntity* chicken)
     look.mFightPartner = nullptr;
     look.mFightLeader = false;
     look.mFightTimer = 0.0f;
+    look.mNestEgg = false;
     mChickenLooks[chicken] = look;
     applyChickenKindLook(chicken);
 }
@@ -344,6 +357,13 @@ void RenderManager::rrUpdateChickenLook(ChickenEntity* chicken)
 void RenderManager::rrChickenHatched(ChickenEntity* chicken)
 {
     createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.05f), "ChickenEggShell");
+}
+
+void RenderManager::rrEggTrampled(const Ogre::Vector3& position)
+{
+    // Shell pieces and yolk (one system with two emitters), and the feathers of a hen that is startled by it
+    createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.04f), "ChickenEggTrample");
+    createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
 }
 
 void RenderManager::rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase)
@@ -516,6 +536,13 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
 
         if(kind == ChickenKind::egg)
         {
+            // An egg a little above the ground lies in a nest of a coop (the server puts it there)
+            if(!look.mNestEgg && (chicken->getPosition().z > 0.01f))
+            {
+                look.mNestEgg = true;
+                hideEggStraw(look.mEntity);
+            }
+
             // The egg rocks from side to side and gets more restless until it breaks
             if(pose == ChickenPose::wobble)
             {
@@ -525,6 +552,8 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                     Ogre::Entity* cracked = mSceneManager->createEntity(
                         look.mNode->getName() + "_" + MeshEggCracked, MeshEggCracked + ".mesh");
                     cracked->setQueryFlags(0);
+                    if(look.mNestEgg)
+                        hideEggStraw(cracked);
                     look.mNode->attachObject(cracked);
                     look.mAccessories.push_back(cracked);
                     look.mEntity->setVisible(false);
