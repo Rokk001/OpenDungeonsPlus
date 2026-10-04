@@ -1365,6 +1365,24 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::chickenFight:
+        {
+            std::string firstName;
+            std::string secondName;
+            uint32_t phase;
+            OD_ASSERT_TRUE(packetReceived >> firstName >> secondName >> phase);
+            GameEntity* first = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, firstName);
+            GameEntity* second = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, secondName);
+            if((first != nullptr) && (second != nullptr) &&
+               (first->getObjectType() == GameEntityType::chickenEntity) &&
+               (second->getObjectType() == GameEntityType::chickenEntity))
+            {
+                RenderManager::getSingleton().rrChickenFight(static_cast<ChickenEntity*>(first),
+                    static_cast<ChickenEntity*>(second), phase);
+            }
+            break;
+        }
+
         case ServerNotificationType::creatureCombatImpact:
         {
             std::string creatureName;

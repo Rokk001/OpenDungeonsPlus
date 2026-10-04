@@ -29,11 +29,12 @@ struct HatcheryCycleSettings
         mHatchTurns(2),
         mGrowTurns(4),
         mCoopWait(15),
-        mRoosterWait(15),
         mTilesPerChicken(1),
         mCareLayPercent(25),
         mTramplePercent(30),
-        mCoopBatch(0)
+        mCoopBatch(0),
+        mFightTurns(14),
+        mFightApproachTurns(40)
     {}
 
     //! Turns between two eggs of one hen (random value in [mLayMin, mLayMax]).
@@ -43,10 +44,9 @@ struct HatcheryCycleSettings
     uint32_t mHatchTurns;
     //! Turns a chick needs to grow into a hen.
     uint32_t mGrowTurns;
-    //! Turns an empty hatchery waits until a hen comes out of a coop.
+    //! Turns an empty hatchery waits until a hen comes out of a coop. A hatchery without rooster waits just as
+    //! long until a rooster comes out of a coop.
     uint32_t mCoopWait;
-    //! Turns a hatchery without rooster waits until a rooster comes out of a coop.
-    uint32_t mRoosterWait;
     //! Number of hatchery tiles needed for one hen, chick or egg.
     uint32_t mTilesPerChicken;
     //! Percent by which the laying times are shorter while the hatchery is well cared for.
@@ -55,6 +55,10 @@ struct HatcheryCycleSettings
     uint32_t mTramplePercent;
     //! Hens that come out of the coops together once the wait is over (0 = one hen per coop, as many as the capacity allows).
     uint32_t mCoopBatch;
+    //! Turns two roosters of one hatchery fight once they stand face to face.
+    uint32_t mFightTurns;
+    //! Turns two roosters get at most to walk up to each other before the fight starts where they stand.
+    uint32_t mFightApproachTurns;
 };
 
 //! \brief How well the keeper looks after a hatchery.
@@ -115,6 +119,16 @@ public:
 
     //! A rooster comes out of a coop only when the hatchery has a coop and no rooster.
     static bool needCoopRooster(const HatcheryCounts& counts, uint32_t nbCoops);
+
+    //! A hatchery has room for one rooster only: with two or more of them two fight each other.
+    static bool needFight(const HatcheryCounts& counts);
+
+    //! Which of the two fighters wins: 0 for the first, 1 for the second. random is any random number, the
+    //! server draws it so that the result is the same on every client.
+    static uint32_t fightWinner(uint32_t random);
+
+    //! A fight goes on while both fighters are still in the hatchery (not picked up, not gone).
+    static bool fightContinues(bool firstPresent, bool secondPresent);
 
     //! Eggs only hatch while the hatchery has a rooster and no enemy stands in it.
     static bool canHatch(const HatcheryCounts& counts, bool enemiesPresent);
