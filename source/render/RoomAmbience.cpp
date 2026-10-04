@@ -104,6 +104,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mSeenSizeX(0),
     mSeenSizeY(0),
     mEventsThisScan(0),
+    mRandom(12345),
     mGeneration(0),
     mEntitiesInitialized(false)
 {
@@ -316,9 +317,12 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
         return;
 
     Ogre::SceneNode* node = sceneManager->getSceneNode(motionNode.mNodeName);
-    node->setOrientation(motionNode.mBaseOrientation);
-    node->setPosition(motionNode.mBasePosition);
-    node->setScale(motionNode.mBaseScale);
+    if(motionNode.mMovesOrientation)
+        node->setOrientation(motionNode.mBaseOrientation);
+    if(motionNode.mMovesPosition)
+        node->setPosition(motionNode.mBasePosition);
+    if(motionNode.mMovesScale)
+        node->setScale(motionNode.mBaseScale);
 }
 
 void RoomAmbience::stopAll()
@@ -345,6 +349,8 @@ void RoomAmbience::stopAll()
     mMotionNodes.clear();
     mParticleCandidates.clear();
     mMotionCandidates.clear();
+    mClipCandidates.clear();
+    mClipTimers.clear();
     mSeenVisual.clear();
     mSeenSizeX = 0;
     mSeenSizeY = 0;
@@ -392,6 +398,7 @@ void RoomAmbience::scan()
     mEventsThisScan = 0;
     mParticleCandidates.clear();
     mMotionCandidates.clear();
+    mClipCandidates.clear();
 
     mCreaturePositions.clear();
     for(Creature* creature : mGameMap->getCreatures())
@@ -404,6 +411,7 @@ void RoomAmbience::scan()
     scanTiles(camera, cameraPosition, lookPoint);
     scanEntityEvents(camera, cameraPosition);
     reconcile();
+    playClips();
 
     mPruneTimer += mConfig.getScanInterval();
     if(mPruneTimer >= 30.0)
@@ -413,6 +421,14 @@ void RoomAmbience::scan()
         {
             if((mClock - it->second.mLastTouched) > 600.0)
                 mBusy.erase(it++);
+            else
+                ++it;
+        }
+
+        for(std::map<std::string, double>::iterator it = mClipTimers.begin(); it != mClipTimers.end();)
+        {
+            if(it->second < (mClock - 120.0))
+                mClipTimers.erase(it++);
             else
                 ++it;
         }
@@ -434,6 +450,8 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
 
         const Ogre::Vector3& position = entity->getPosition();
         double distance = (position - cameraPosition).length();
+        // Offsets are given for the object as it is modelled, so they turn with the object
+        Ogre::Quaternion turn(Ogre::Degree(entity->getRotationAngle()), Ogre::Vector3::UNIT_Z);
         int32_t visible = -1;
         int32_t busy = -1;
         for(uint32_t index : list)
@@ -455,7 +473,7 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             Candidate candidate;
             candidate.mEffect = index;
             candidate.mTarget = entity->getName();
-            candidate.mPosition = position + effect.mOffset;
+            candidate.mPosition = position + turn * effect.mOffset;
             candidate.mDistance = distance;
             candidate.mPriority = effect.mPriority;
             if(effect.mWhen == AmbienceWhen::always)
@@ -477,6 +495,11 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             {
                 if(candidate.mActive)
                     mParticleCandidates.push_back(candidate);
+            }
+            else if(effect.mKind == AmbienceKind::clip)
+            {
+                if(candidate.mActive)
+                    mClipCandidates.push_back(candidate);
             }
             else
             {
@@ -854,12 +877,59 @@ void RoomAmbience::reconcile()
             instance.mEffect = candidate.mEffect;
             instance.mPhase = hashPhase(candidate.mTarget + effects[candidate.mEffect].mName);
             motionNode.mMotions.push_back(instance);
+            switch(effects[candidate.mEffect].mMotion)
+            {
+                case AmbienceMotion::bob:
+                    motionNode.mMovesPosition = true;
+                    break;
+                case AmbienceMotion::pulse:
+                case AmbienceMotion::flicker:
+                    motionNode.mMovesScale = true;
+                    break;
+                default:
+                    motionNode.mMovesOrientation = true;
+                    break;
+            }
             found = &motionNode.mMotions.back();
         }
 
         found->mWanted = candidate.mActive;
     }
 
+}
+
+void RoomAmbience::playClips()
+{
+    const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
+    uint32_t nbPlayed = 0;
+    for(const Candidate& candidate : mClipCandidates)
+    {
+        const AmbienceEffect& effect = effects[candidate.mEffect];
+        if(effect.mClips.empty())
+            continue;
+
+        std::map<std::string, double>::iterator timerIt = mClipTimers.find(candidate.mTarget);
+        if(timerIt == mClipTimers.end())
+        {
+            // The first clip comes after a random part of the interval, so not all objects move together
+            std::uniform_real_distribution<double> first(0.0, effect.mEvery);
+            mClipTimers[candidate.mTarget] = mClock + first(mRandom);
+            continue;
+        }
+
+        if((mClock < timerIt->second) || (nbPlayed >= 3))
+            continue;
+
+        RenderedMovableEntity* entity = mGameMap->getRenderedMovableEntity(candidate.mTarget);
+        if((entity == nullptr) || entity->isMoving())
+            continue;
+
+        std::uniform_int_distribution<size_t> pick(0, effect.mClips.size() - 1);
+        entity->setAnimationState(effect.mClips[pick(mRandom)], false, Ogre::Vector3::ZERO, true);
+        std::uniform_real_distribution<double> next(0.6, 1.4);
+        timerIt->second = mClock + effect.mEvery * next(mRandom);
+        ++nbPlayed;
+    }
 }
 
 void RoomAmbience::updateEmitters(double timeSinceLastFrame)
@@ -990,19 +1060,21 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
             ++mit;
         }
 
-        Ogre::SceneNode* node = sceneManager->getSceneNode(motionNode.mNodeName);
         if(motionNode.mMotions.empty())
         {
-            node->setOrientation(motionNode.mBaseOrientation);
-            node->setPosition(motionNode.mBasePosition);
-            node->setScale(motionNode.mBaseScale);
+            restoreMotionNode(motionNode);
             mMotionNodes.erase(it++);
             continue;
         }
 
-        node->setOrientation(orientation);
-        node->setPosition(position);
-        node->setScale(scale);
+        // Only what the motions drive is written, so an object that is moved by something else keeps its place
+        Ogre::SceneNode* node = sceneManager->getSceneNode(motionNode.mNodeName);
+        if(motionNode.mMovesOrientation)
+            node->setOrientation(orientation);
+        if(motionNode.mMovesPosition)
+            node->setPosition(position);
+        if(motionNode.mMovesScale)
+            node->setScale(scale);
         ++it;
     }
 }
@@ -1038,7 +1110,6 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
             visual = Tile::tileVisualToString(tile->getTileVisual());
     }
 
-    static std::mt19937 generator(12345);
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
     uint32_t nbStarted = 0;
     for(uint32_t index : listIt->second)
@@ -1065,7 +1136,7 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
             if(effect.mChance < 1.0)
             {
                 std::uniform_real_distribution<double> dice(0.0, 1.0);
-                if(dice(generator) > effect.mChance)
+                if(dice(mRandom) > effect.mChance)
                     continue;
             }
 

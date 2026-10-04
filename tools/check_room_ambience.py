@@ -19,10 +19,10 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall")
+               "NeedWall", "Clips", "Every")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty")
-KINDS = ("Particle", "Motion")
+KINDS = ("Particle", "Motion", "Clip")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
@@ -128,7 +128,12 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         motion = effect.get("Motion", [None])[0]
         if motion not in MOTIONS:
             problems.append("%s: bad Motion %s" % (where, motion))
-    for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority"):
+    elif kind == "Clip":
+        if target != "Object":
+            problems.append("%s: clips only work on objects" % where)
+        if not effect.get("Clips"):
+            problems.append("%s: clip effect without Clips" % where)
+    for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
     for key in ("Offset", "Axis"):

@@ -109,12 +109,80 @@ def sprite_web(path):
     finish(image, path)
 
 
+def sprite_page(path):
+    """Loose page of parchment with a few lines of writing."""
+    image, draw = new_canvas()
+    draw.polygon([(70, 30), (190, 20), (200, 220), (60, 232)], fill=(232, 220, 180, 255), outline=(120, 96, 60, 255))
+    for i in range(6):
+        y = 60 + i * 26
+        draw.line((84, y + 2, 176 - (i % 3) * 14, y), fill=(110, 84, 60, 255), width=5)
+    finish(image, path)
+
+
+def sprite_rune(path):
+    """Glowing ring with an angular mark, white so the particle colour tints it."""
+    image, draw = new_canvas()
+    c = CANVAS // 2
+    draw.ellipse((c - 100, c - 100, c + 100, c + 100), outline=(255, 255, 255, 255), width=10)
+    draw.line((c - 40, c - 60, c + 40, c - 20), fill=(255, 255, 255, 255), width=12)
+    draw.line((c + 40, c - 20, c - 30, c + 10), fill=(255, 255, 255, 255), width=12)
+    draw.line((c - 30, c + 10, c + 36, c + 64), fill=(255, 255, 255, 255), width=12)
+    image = image.filter(ImageFilter.GaussianBlur(4))
+    radial(image, (255, 255, 255, 120), 126, 2.0)
+    finish(image, path)
+
+
+def sprite_coin(path):
+    """Gold coin seen from the front with a bright rim and a highlight."""
+    image, draw = new_canvas()
+    c = CANVAS // 2
+    draw.ellipse((c - 90, c - 90, c + 90, c + 90), fill=(150, 104, 24, 255))
+    draw.ellipse((c - 80, c - 80, c + 80, c + 80), fill=(236, 190, 52, 255))
+    draw.ellipse((c - 56, c - 56, c + 56, c + 56), outline=(184, 132, 30, 255), width=8)
+    draw.polygon([(c - 60, c - 30), (c - 24, c - 66), (c - 8, c - 56), (c - 50, c - 12)], fill=(255, 244, 170, 255))
+    finish(image, path)
+
+
+def sprite_drop(path):
+    """Water drop."""
+    image, draw = new_canvas()
+    c = CANVAS // 2
+    draw.polygon([(c, 30), (c - 56, 150), (c + 56, 150)], fill=(150, 200, 235, 230))
+    draw.ellipse((c - 60, 100, c + 60, 220), fill=(150, 200, 235, 230))
+    draw.ellipse((c - 34, 130, c - 12, 168), fill=(255, 255, 255, 220))
+    image = image.filter(ImageFilter.GaussianBlur(1.5))
+    finish(image, path)
+
+
+def sprite_feather(path):
+    """Small curved feather."""
+    image, draw = new_canvas()
+    draw.polygon([(60, 214), (80, 130), (130, 50), (196, 28), (180, 100), (140, 170), (84, 222)], fill=(240, 236, 226, 255),
+                 outline=(150, 140, 120, 255))
+    draw.line((62, 216, 190, 34), fill=(170, 156, 130, 255), width=5)
+    finish(image, path)
+
+
+def sprite_grain(path):
+    """A few grains of seed lying together."""
+    image, draw = new_canvas()
+    for x, y, a in ((90, 100, 20), (150, 80, -15), (120, 150, 35), (170, 150, -30), (80, 170, 10)):
+        draw.ellipse((x - 18, y - 9, x + 18, y + 9), fill=(214, 178, 96, 255), outline=(150, 118, 60, 255))
+    finish(image, path)
+
+
 SPRITES = {
     "RoomAmbSpark": sprite_spark,
     "RoomAmbGlow": sprite_glow,
     "RoomAmbSmoke": sprite_smoke,
     "RoomAmbDust": sprite_dust,
     "RoomAmbWeb": sprite_web,
+    "RoomAmbPage": sprite_page,
+    "RoomAmbRune": sprite_rune,
+    "RoomAmbCoin": sprite_coin,
+    "RoomAmbDrop": sprite_drop,
+    "RoomAmbFeather": sprite_feather,
+    "RoomAmbGrain": sprite_grain,
 }
 
 
