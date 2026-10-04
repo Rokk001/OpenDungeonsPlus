@@ -167,7 +167,12 @@ enum class ServerNotificationType
     //! Only sent when the creature relationships option is on.
     relationshipTier,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
-    timeLimit
+    timeLimit,
+    //! A short cosmetic note that something happened (a mood change, a full treasury, a blow, a missile
+    //! launch): + a CosmeticEvent (see network/CosmeticEvent.h). Only sent to clients that negotiated
+    //! cosmetic events; an older client never gets it. Appended last so that no existing numeric value
+    //! changes.
+    cosmeticEvent
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

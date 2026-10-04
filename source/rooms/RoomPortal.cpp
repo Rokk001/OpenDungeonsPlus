@@ -283,6 +283,7 @@ void RoomPortal::spawnCreature()
     newCreature->addToGameMap();
     newCreature->createMesh();
     newCreature->setPosition(newCreature->getPosition());
+    newCreature->fireArrivalEvent();
     ++getSeat()->getStatistics().mCreaturesEntered;
 }
 

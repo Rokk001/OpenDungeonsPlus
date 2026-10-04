@@ -37,6 +37,14 @@ public:
 
     virtual int32_t computeMood(const Creature& creature) const override;
 
+    //! \brief Turns without a job from which the mood starts to drop
+    inline int32_t getTurnsMin() const
+    { return mTurnsMin; }
+
+    //! \brief Number of further turns over which the mood keeps dropping
+    inline int32_t getTurnsMax() const
+    { return mTurnsMax; }
+
     inline CreatureMoodOutOfWork* clone() const override;
 
     virtual bool importFromStream(std::istream& is) override;
