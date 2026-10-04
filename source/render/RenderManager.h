@@ -33,6 +33,7 @@
 #include <cstdint>
 #include "entities/GameEntity.h"
 #include "render/TreasuryCreatureRules.h"
+#include "render/TreasuryGoldBatch.h"
 #include <OgreVector2.h>
 
 class DraggableTileContainer;
@@ -505,6 +506,8 @@ private:
         bool mTaken;
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
+    //! The settled piles of a treasury are drawn as one batch per room and patch of tiles
+    TreasuryGoldBatch mTreasuryBatch;
 
     //! An object standing in the gold of a treasury, drawn partly buried: only its node is lifted by mCurrent
     struct TreasuryBuriedObject
@@ -622,6 +625,7 @@ private:
         int newLevel);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPileSettle(const std::string& entityName);
+    bool isTreasuryPileSettling(const std::string& entityName) const;
     void registerBuriedObject(RenderedMovableEntity* entity, float objectHeight);
     void refreshBuriedObjectsOnTile(Tile* tile);
     void updateTreasuryBuriedObjects(Ogre::Real timeSinceLastFrame);

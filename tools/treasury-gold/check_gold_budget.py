@@ -20,6 +20,11 @@ MAX_TRIANGLES_PER_PILE = 150
 MAX_TRIANGLES_PER_HEAP = 150
 MAX_TRIANGLES_PER_SACK = 400
 MAX_TRIANGLES_100_TILE_ROOM = 15000
+# Draw calls: settled piles are drawn by one static batch per room and patch of tiles (two materials per batch)
+MAX_DRAW_CALLS_100_TILE_ROOM = 18
+MAX_DRAW_CALLS_400_TILE_ROOM = 40
+MATERIALS_FULL = 2
+MATERIALS_REDUCED = 1
 # Gold elsewhere adds no particle system and no per-frame work on the CPU
 MAX_NEW_PARTICLE_SYSTEMS = 0
 # Effects one room may show at once (splash + dust + sparkle/sliding/rolling coins), and glow lights per patch
@@ -36,6 +41,11 @@ def constant(text, name):
     if match is None:
         raise SystemExit('constant not found: ' + name)
     return int(match.group(1))
+
+
+def worst_patches(width, chunk):
+    """Patches a room of the given width can touch along one axis, worst case alignment."""
+    return (width - 1 + chunk - 1) // chunk + 1
 
 
 def main():
@@ -90,6 +100,7 @@ def main():
     limit(new_particles <= MAX_NEW_PARTICLE_SYSTEMS, 'gold elsewhere added %d particle systems' % new_particles)
 
     rules = read('source/render/TreasuryCreatureRules.h')
+    chunk = constant(rules, 'batchChunkSize')
     splash = int(re.search(r'splashBudget.*?Detail::full:\s*return (\d+);', rules, re.S).group(1))
     dust = int(re.search(r'dustBudget.*?Detail::full:\s*return (\d+);', rules, re.S).group(1))
     ambient = constant(rules, 'ambientBudgetFull')
@@ -104,11 +115,21 @@ def main():
     print('floor heap           %9d  %8d' % (heap_tris, heap_verts))
     print('carried sack         %9d  %8d' % (sack_tris, sack_verts))
     print()
-    print('room tiles   objects   triangles (full)   triangles (reduced)   new particle systems')
+    print('draw calls per room (a square room; before = one object per tile with a pile section and a coin/gem')
+    print('section, after = one static batch per room and %dx%d tile patch, worst case alignment)' % (chunk, chunk))
+    print('room tiles   draw calls before (full/reduced)   draw calls after (full/reduced)   triangles (full)   triangles (reduced)')
+    calls = {}
     for tiles in (10, 25, 50, 100, 400):
-        # One scene object per tile pile; every mesh is shared by name, so no per-tile mesh memory
-        print('%10d %9d %18d %21d %22d' % (tiles, tiles, tiles * pile_tris['full'],
-                                           tiles * pile_tris['reduced'], 0))
+        side = int(round(tiles ** 0.5))
+        patches = min(tiles, worst_patches(side, chunk) ** 2)
+        before = (tiles * MATERIALS_FULL, tiles * MATERIALS_REDUCED)
+        after = (patches * MATERIALS_FULL, patches * MATERIALS_REDUCED)
+        calls[tiles] = after
+        print('%10d %17d / %-17d %17d / %-14d %18d %21d' % (tiles, before[0], before[1], after[0], after[1],
+                                                           tiles * pile_tris['full'], tiles * pile_tris['reduced']))
+        limit(after[0] <= before[0] and after[1] <= before[1], 'batching adds draw calls for %d tiles' % tiles)
+    limit(calls[100][0] <= MAX_DRAW_CALLS_100_TILE_ROOM, 'a 100 tile treasury costs %d draw calls' % calls[100][0])
+    limit(calls[400][0] <= MAX_DRAW_CALLS_400_TILE_ROOM, 'a 400 tile treasury costs %d draw calls' % calls[400][0])
     print()
     print('effects per room at once (full): %d splash + %d dust + %d sparkle/slide/roll = %d (budget %d)' % (
         splash, dust, ambient, splash + dust + ambient, MAX_ROOM_EFFECTS))

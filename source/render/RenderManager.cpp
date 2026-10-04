@@ -1858,6 +1858,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryDust(timeSinceLastFrame);
     updateTreasuryAmbient(timeSinceLastFrame);
     updateTreasuryPileSettles(timeSinceLastFrame);
+    mTreasuryBatch.update(timeSinceLastFrame);
     updateTreasuryBuriedObjects(timeSinceLastFrame);
     rrUpdateHeldCreature();
 }
@@ -2869,6 +2870,17 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             previousPileLevel, pileLevel);
         refreshTreasuryGlow(static_cast<int>(renderedMovableEntity->getPosition().x + 0.5),
             static_cast<int>(renderedMovableEntity->getPosition().y + 0.5));
+        // The settled pile is drawn by the batch of its room (one draw batch per patch of tiles, not per tile)
+        if(ent != nullptr)
+        {
+            Tile* batchTile = renderedMovableEntity->getPositionTile();
+            mTreasuryBatch.addPile(mSceneManager, renderedMovableEntity->getName(),
+                (batchTile != nullptr && batchTile->getCoveringRoom() != nullptr) ?
+                static_cast<const void*>(batchTile->getCoveringRoom()) : static_cast<const void*>(batchTile),
+                static_cast<int>(renderedMovableEntity->getPosition().x + 0.5),
+                static_cast<int>(renderedMovableEntity->getPosition().y + 0.5), ent, node,
+                isTreasuryPileSettling(renderedMovableEntity->getName()));
+        }
     }
 
     // Objects and gold lying on a treasury stand partly buried in its gold
@@ -2903,6 +2915,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
                              + curRenderedMovableEntity->getName()+  (static_cast<bool>(nt) ?  "" : "_dtc" );
     Ogre::SceneNode* node = curRenderedMovableEntity->getEntityNode();
     cancelTreasuryPileSettle(curRenderedMovableEntity->getName());
+    mTreasuryBatch.removePile(curRenderedMovableEntity->getName());
     mTreasuryBuriedObjects.erase(curRenderedMovableEntity);
     if(curRenderedMovableEntity->getMeshName() == "ChickenCoop")
         rrDestroyCoopDecor(static_cast<BuildingObject*>(curRenderedMovableEntity));
@@ -4976,10 +4989,24 @@ void RenderManager::updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame)
         it->mElapsed += timeSinceLastFrame;
         it->mNode->setScale(1.0f, 1.0f, TreasuryCreatureRules::pileSettleScale(it->mFrom, it->mTaken, it->mElapsed));
         if(it->mElapsed >= TreasuryCreatureRules::pileSettleTime)
+        {
+            mTreasuryBatch.pileSettled(it->mEntityName);
             it = mTreasuryPileSettles.erase(it);
+        }
         else
             ++it;
     }
+}
+
+bool RenderManager::isTreasuryPileSettling(const std::string& entityName) const
+{
+    for(std::vector<TreasuryPileSettle>::const_iterator it = mTreasuryPileSettles.begin();
+        it != mTreasuryPileSettles.end(); ++it)
+    {
+        if(it->mEntityName == entityName)
+            return true;
+    }
+    return false;
 }
 
 void RenderManager::cancelTreasuryPileSettle(const std::string& entityName)
@@ -5197,6 +5224,7 @@ void RenderManager::clearTreasuryEffects()
     mTreasuryAmbientBudget.clear();
     mTreasuryLastSplash.clear();
     mTreasuryPileSettles.clear();
+    mTreasuryBatch.clear();
     mTreasuryBuriedObjects.clear();
     while(!mTreasuryThiefSacks.empty())
         removeTreasuryThiefSack(mTreasuryThiefSacks.back().mCreature);

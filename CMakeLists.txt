@@ -466,6 +466,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/RenderManagerChickens.cpp
+    ${SRC}/render/TreasuryGoldBatch.cpp
     ${SRC}/render/TreasuryGoldMesh.cpp
     ${SRC}/render/TextRenderer.cpp
 
