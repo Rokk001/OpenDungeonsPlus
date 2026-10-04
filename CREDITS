@@ -615,6 +615,14 @@ particles/RoomAmbience*.particle       OD Team                 GPLv3+
 materials/textures/RoomAmb*.png        OD Team                 GPLv3+                  Drawn from simple shapes and gradients by tools/gen_room_ambience_art.py (script generated, original work, not AI generated)
 tools/gen_room_ambience_art.py         OD Team                 GPLv3+
 tools/check_room_ambience.py           OD Team                 GPLv3+
+materials/textures/RoomAmbRing.png      OD Team                 GPLv3+                  Thin glowing ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbRingRunes.png  OD Team                 GPLv3+                  Double ring with tick marks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbRingDust.png  OD Team                 GPLv3+                  Wide uneven dust ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbMarkScorch.png  OD Team                 GPLv3+                  Scorched floor patch drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbMarkCracks.png  OD Team                 GPLv3+                  Floor cracks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbMarkBolt.png  OD Team                 GPLv3+                  Branching burn lines drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+tools/gen_spell_marks.py                OD Team                 GPLv3+
+source/tests/check_spell_tier_c.py      OD Team                 GPLv3+
 
 =======================================================
 ==  Spell effect sounds: sounds/Spatial/Spells/      ==

@@ -56,7 +56,13 @@ enum class AmbienceKind
     //! A procedural movement of the object node
     motion,
     //! Now and then a clip of the object's own mesh (a chicken scratching)
-    clip
+    clip,
+    //! A short shake of the view (events only): Amount = strength in world units, Speed = shakes per second,
+    //! Duration in seconds, MaxDistance = distance of the event from the middle of the view beyond which it is not felt
+    shake,
+    //! A particle system that stays on the floor for Duration seconds (events only); the oldest mark is removed
+    //! when there are more than MaxMarks
+    mark
 };
 
 enum class AmbienceMotion
@@ -163,6 +169,8 @@ public:
     { return mMaxMotions; }
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
+    uint32_t getMaxMarks() const
+    { return mMaxMarks; }
     double getOccupiedRadius() const
     { return mOccupiedRadius; }
     double getReducedDistanceFactor() const
@@ -183,6 +191,7 @@ private:
     uint32_t mMaxParticlesReduced;
     uint32_t mMaxMotions;
     uint32_t mMaxOneShots;
+    uint32_t mMaxMarks;
     double mOccupiedRadius;
     double mReducedDistanceFactor;
 };
