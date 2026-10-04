@@ -251,7 +251,7 @@ public:
     inline bool isMapRevealed() const
     { return mIsMapRevealed; }
 
-    //! \brief Server side. Keeps a special box an imp delivered to the dungeon heart. The player
+    //! \brief Server side. Keeps a special box a worker delivered to the dungeon heart. The player
     //! uses it later with the button of the special. The boxes are saved with the seat.
     void addStoredSpecial(GiftBoxType type, uint32_t amount);
 

@@ -21,6 +21,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include "rooms/HatcheryCycle.h"
+#include "rooms/HatcheryRooster.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -62,6 +63,17 @@ BOOST_AUTO_TEST_CASE(test_Rules)
     counts.mEggs = 1;
     BOOST_CHECK(!HatcheryCycle::canLay(counts, 3));
     BOOST_CHECK(HatcheryCycle::canLay(counts, 4));
+}
+
+BOOST_AUTO_TEST_CASE(test_CoopHenCount)
+{
+    HatcheryCycleSettings settings;
+    // By default one hen per coop comes out, at least one
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 3), 3u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 0), 1u);
+    settings.mCoopBatch = 2;
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 3), 2u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 1), 1u);
 }
 
 BOOST_AUTO_TEST_CASE(test_LayInterval)
@@ -210,7 +222,10 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
             ++coopWait;
             if(coopWait >= settings.mCoopWait)
             {
-                hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
+                // One hen per coop comes out
+                uint32_t nbFromCoops = HatcheryCycle::coopHenCount(settings, capacity);
+                for(uint32_t i = 0; i < nbFromCoops; ++i)
+                    hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
                 coopWait = 0;
             }
         }
@@ -250,7 +265,184 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
             double newPerMinute = newEaten / (nbTurns / 1.4 / 60.0);
             std::cout << "parity coops=" << coops[c] << " eatPercent/turn=" << demands[d]
                 << " old=" << oldPerMinute << " new=" << newPerMinute << " per minute" << std::endl;
-            BOOST_CHECK_CLOSE(newPerMinute, oldPerMinute, 15.0);
+            BOOST_CHECK_CLOSE(newPerMinute, oldPerMinute, 3.0);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(test_Care)
+{
+    HatcheryCare care;
+    BOOST_CHECK(!HatcheryCycle::wellCared(care));
+    care.mClaimed = true;
+    BOOST_CHECK(!HatcheryCycle::wellCared(care));
+    care.mLit = true;
+    BOOST_CHECK(HatcheryCycle::wellCared(care));
+    care.mEnemies = true;
+    BOOST_CHECK(!HatcheryCycle::wellCared(care));
+
+    // Without care the settings stay as they are, with care the laying times get shorter
+    HatcheryCycleSettings settings;
+    settings.mLayMin = 8;
+    settings.mLayMax = 12;
+    settings.mCareLayPercent = 25;
+    HatcheryCycleSettings plain = HatcheryCycle::withCare(settings, care);
+    BOOST_CHECK_EQUAL(plain.mLayMin, 8u);
+    BOOST_CHECK_EQUAL(plain.mLayMax, 12u);
+    care.mEnemies = false;
+    HatcheryCycleSettings cared = HatcheryCycle::withCare(settings, care);
+    BOOST_CHECK_EQUAL(cared.mLayMin, 6u);
+    BOOST_CHECK_EQUAL(cared.mLayMax, 9u);
+    BOOST_CHECK_EQUAL(cared.mHatchTurns, settings.mHatchTurns);
+    settings.mCareLayPercent = 0;
+    BOOST_CHECK_EQUAL(HatcheryCycle::withCare(settings, care).mLayMin, 8u);
+    settings.mCareLayPercent = 500;
+    BOOST_CHECK(HatcheryCycle::withCare(settings, care).mLayMin >= 1u);
+
+    // Eggs do not hatch while enemies stand in the hatchery
+    HatcheryCounts counts;
+    counts.mRoosters = 1;
+    BOOST_CHECK(HatcheryCycle::canHatch(counts, false));
+    BOOST_CHECK(!HatcheryCycle::canHatch(counts, true));
+    counts.mRoosters = 0;
+    BOOST_CHECK(!HatcheryCycle::canHatch(counts, false));
+}
+
+BOOST_AUTO_TEST_CASE(test_Trample)
+{
+    HatcheryCycleSettings settings;
+    settings.mTramplePercent = 30;
+    // Only enemies trample, only eggs get trampled, the dice decide
+    BOOST_CHECK(HatcheryCycle::tramples(settings, true, true, 0));
+    BOOST_CHECK(HatcheryCycle::tramples(settings, true, true, 29));
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, true, true, 30));
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, false, true, 0));
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, true, false, 0));
+    settings.mTramplePercent = 0;
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, true, true, 0));
+    settings.mTramplePercent = 1000;
+    BOOST_CHECK(HatcheryCycle::tramples(settings, true, true, 99));
+}
+
+BOOST_AUTO_TEST_CASE(test_RoosterDay)
+{
+    RoosterSettings settings;
+    settings.mDayTurns = 100;
+    settings.mNightPercent = 30;
+    BOOST_CHECK(!HatcheryRooster::isNight(0, settings));
+    BOOST_CHECK(!HatcheryRooster::isNight(69, settings));
+    BOOST_CHECK(HatcheryRooster::isNight(70, settings));
+    BOOST_CHECK(HatcheryRooster::isNight(99, settings));
+    BOOST_CHECK(!HatcheryRooster::isNight(100, settings));
+    BOOST_CHECK(HatcheryRooster::isNewDay(0, settings));
+    BOOST_CHECK(HatcheryRooster::isNewDay(300, settings));
+    BOOST_CHECK(!HatcheryRooster::isNewDay(301, settings));
+
+    // No night and no day length: never night
+    settings.mNightPercent = 0;
+    BOOST_CHECK(!HatcheryRooster::isNight(99, settings));
+    settings.mNightPercent = 30;
+    settings.mDayTurns = 0;
+    BOOST_CHECK(!HatcheryRooster::isNight(99, settings));
+    BOOST_CHECK(!HatcheryRooster::isNewDay(0, settings));
+}
+
+BOOST_AUTO_TEST_CASE(test_RoosterCrowInterval)
+{
+    RoosterSettings settings;
+    settings.mCrowMin = 40;
+    settings.mCrowMax = 90;
+    for(uint32_t random = 0; random < 500; ++random)
+    {
+        uint32_t interval = HatcheryRooster::crowInterval(settings, random);
+        BOOST_CHECK(interval >= 40u);
+        BOOST_CHECK(interval <= 90u);
+    }
+    settings.mCrowMax = 10;
+    BOOST_CHECK_EQUAL(HatcheryRooster::crowInterval(settings, 7), 40u);
+}
+
+BOOST_AUTO_TEST_CASE(test_RoosterDecide)
+{
+    RoosterSettings settings;
+    settings.mDayTurns = 1000;
+    settings.mNightPercent = 30;
+    RoosterContext context;
+    context.mTurn = 100;
+    context.mHasCoop = true;
+    context.mHasHen = true;
+    context.mHasChick = true;
+    context.mCrowInterval = 60;
+    context.mRoll = 99;
+
+    // Nothing special: he struts
+    RoosterPlan plan = HatcheryRooster::decide(context, settings);
+    BOOST_CHECK(plan.mMood == RoosterMood::strut);
+
+    // The dice decide what comes to his mind: chase, lead, perch
+    context.mRoll = 0;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::chase);
+    context.mRoll = settings.mChasePercent;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::lead);
+    context.mRoll = settings.mChasePercent + settings.mLeadPercent;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
+    // He calls the hens to food, only when there is a hen
+    context.mRoll = settings.mChasePercent + settings.mLeadPercent + settings.mPerchPercent;
+    plan = HatcheryRooster::decide(context, settings);
+    BOOST_CHECK(plan.mMood == RoosterMood::call);
+    BOOST_CHECK_EQUAL(plan.mTurns, settings.mCallTurns);
+    context.mHasHen = false;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+    context.mHasHen = true;
+    context.mRoll = settings.mChasePercent + settings.mLeadPercent + settings.mPerchPercent + settings.mCallPercent;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+
+    // Without a hen, chick or coop those moods are not chosen
+    context.mHasHen = false;
+    context.mRoll = 0;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+    context.mHasHen = true;
+
+    // A crow when the time is up, then he sits on the roof for a while
+    context.mRoll = 99;
+    context.mSinceCrow = 60;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
+    context.mSinceCrow = 0;
+    context.mMood = RoosterMood::crow;
+    context.mMoodTurns = 0;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
+    context.mHasCoop = false;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+    context.mHasCoop = true;
+
+    // A mood with turns left goes on
+    context.mMood = RoosterMood::perch;
+    context.mMoodTurns = 5;
+    context.mRoll = 0;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
+
+    // A threat always wins, also against the mood in progress
+    context.mThreat = true;
+    plan = HatcheryRooster::decide(context, settings);
+    BOOST_CHECK(plan.mMood == RoosterMood::guard);
+    BOOST_CHECK_EQUAL(plan.mTurns, settings.mGuardTurns);
+    context.mMood = RoosterMood::guard;
+    context.mMoodTurns = 3;
+    plan = HatcheryRooster::decide(context, settings);
+    BOOST_CHECK(plan.mMood == RoosterMood::guard);
+    BOOST_CHECK_EQUAL(plan.mTurns, 3u);
+    context.mThreat = false;
+
+    // Night: he sleeps, even in the middle of a chase. A new day starts with a crow.
+    context.mMood = RoosterMood::chase;
+    context.mMoodTurns = 5;
+    context.mTurn = 800;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::roost);
+    context.mMood = RoosterMood::roost;
+    context.mTurn = 2000;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
+    // After the night he gets up
+    context.mTurn = 2100;
+    context.mRoll = 99;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
 }

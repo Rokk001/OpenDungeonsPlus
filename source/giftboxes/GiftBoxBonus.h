@@ -32,7 +32,7 @@ class Seat;
 //! number of levels given. The types revealMap and healAll do not use it; healAll heals
 //! every creature of the seat completely. The types makeSafe, weakenWalls,
 //! stunImps, makeHappy, makeUnhappy and killCreatures do not use the amount either, receiveImps uses it
-//! as the number of imps.
+//! as the number of workers.
 class GiftBoxBonus: public GiftBoxEntity
 {
 public:
@@ -44,7 +44,7 @@ public:
     inline uint32_t getAmount() const
     { return mAmount; }
 
-    //! \brief Applies the bonus to the seat. The tile is where imps or left over gold appear.
+    //! \brief Applies the bonus to the seat. The tile is where workers or left over gold appear.
     //! Used when the box is delivered and when a stored special is used.
     static void applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, uint32_t amount, Tile* positionTile);
 

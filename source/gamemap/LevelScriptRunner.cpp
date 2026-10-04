@@ -355,6 +355,60 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             }
             return false;
         }
+        case LevelScriptConditionType::portalActive:
+            return script.isPortalOff(cond.mSeatId) == (cond.mNumber == 0);
+        case LevelScriptConditionType::creatureAlive:
+        {
+            Creature* creature = gameMap.getCreature(cond.mName);
+            bool isAlive = (creature != nullptr) && creature->isAlive();
+            return isAlive == (cond.mNumber != 0);
+        }
+        case LevelScriptConditionType::creatureReached:
+        {
+            Creature* creature = gameMap.getCreature(cond.mName);
+            if((creature == nullptr) || !creature->isAlive() || (creature->getPositionTile() == nullptr))
+                return false;
+
+            Tile* tile = creature->getPositionTile();
+            if(!cond.mName2.empty())
+            {
+                const LevelScriptRegion* region = script.getRegion(cond.mName2);
+                if(region == nullptr)
+                {
+                    OD_LOG_ERR("Level script: unknown region name=" + cond.mName2);
+                    return false;
+                }
+                return region->contains(tile->getX(), tile->getY());
+            }
+
+            Room* room = tile->getCoveringRoom();
+            return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) &&
+                (room->getSeat() != nullptr) && (room->getSeat()->getId() == cond.mSeatId);
+        }
+        case LevelScriptConditionType::stoneInRegion:
+        {
+            const LevelScriptRegion* region = script.getRegion(cond.mName);
+            if(region == nullptr)
+            {
+                OD_LOG_ERR("Level script: unknown region name=" + cond.mName);
+                return false;
+            }
+
+            int64_t numStones = 0;
+            for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
+            {
+                if(entity->getObjectType() != GameEntityType::missileObject)
+                    continue;
+
+                if(static_cast<MissileObject*>(entity)->getMissileType() != MissileObjectType::stone)
+                    continue;
+
+                Tile* tile = entity->getPositionTile();
+                if((tile != nullptr) && region->contains(tile->getX(), tile->getY()))
+                    ++numStones;
+            }
+            return levelScriptCompare(numStones, cond.mCompare, cond.mNumber);
+        }
         case LevelScriptConditionType::seatDefeated:
         {
             Player* player = gameMap.getPlayerBySeatId(cond.mSeatId);

@@ -823,3 +823,64 @@ BOOST_AUTO_TEST_CASE(test_orders_and_slaps)
         BOOST_CHECK_MESSAGE(!bad.importFromStream(isBad), entry);
     }
 }
+
+//! Story conditions: portal state, named creatures, reaching a place and portal stones on the ground
+BOOST_AUTO_TEST_CASE(test_story_conditions)
+{
+    const std::string text =
+        "Region\tExit\t5\t6\t7\t8\n"
+        "[Trigger]\n"
+        "Name\tt1\n"
+        "Mode\tonce\n"
+        "Cond\tportal\t2\toff\n"
+        "Cond\talive\tWarden\n"
+        "Cond\talive\tKing\t0\n"
+        "Cond\treached\tWarden\tregion\tExit\n"
+        "Cond\treached\tCarrier\theart\t1\n"
+        "Cond\tstone\tExit\t>=\t1\n"
+        "Action\tportal\t2\ton\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 1u);
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 6u);
+    BOOST_CHECK(trigger.mConditions[0].mType == LevelScriptConditionType::portalActive);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mSeatId, 2);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mNumber, 0);
+    BOOST_CHECK(trigger.mConditions[1].mType == LevelScriptConditionType::creatureAlive);
+    BOOST_CHECK_EQUAL(trigger.mConditions[1].mNumber, 1);
+    BOOST_CHECK_EQUAL(trigger.mConditions[2].mNumber, 0);
+    BOOST_CHECK(trigger.mConditions[3].mType == LevelScriptConditionType::creatureReached);
+    BOOST_CHECK(trigger.mConditions[3].mName == "Warden");
+    BOOST_CHECK(trigger.mConditions[3].mName2 == "Exit");
+    BOOST_CHECK(trigger.mConditions[4].mName2.empty());
+    BOOST_CHECK_EQUAL(trigger.mConditions[4].mSeatId, 1);
+    BOOST_CHECK(trigger.mConditions[5].mType == LevelScriptConditionType::stoneInRegion);
+    BOOST_CHECK(trigger.mConditions[5].mCompare == LevelScriptCompare::atLeast);
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream isAgain(written.substr(written.find('\n') + 1));
+    BOOST_REQUIRE(again.importFromStream(isAgain));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK(written == os2.str());
+
+    const char* invalid[] = {
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tportal\t2\tmaybe\nAction\tgold\t1\t1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\talive\tKing\t2\nAction\tgold\t1\t1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\treached\tKing\tcorner\tExit\nAction\tgold\t1\t1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tstone\tExit\t3\nAction\tgold\t1\t1\n[/Trigger]\n[/Triggers]\n"
+    };
+    for(const char* entry : invalid)
+    {
+        LevelScript bad;
+        std::istringstream isBad(entry);
+        BOOST_CHECK_MESSAGE(!bad.importFromStream(isBad), entry);
+    }
+}

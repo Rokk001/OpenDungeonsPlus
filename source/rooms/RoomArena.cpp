@@ -218,7 +218,7 @@ void RoomArena::doUpkeep()
     if(mCreaturesFighting.size() < 2)
         return;
 
-    // The last enemy standing is knocked out so that the imps can carry it to a prison
+    // The last enemy standing is knocked out so that the workers can carry it to a prison
     for(Creature* creature : mCreaturesFighting)
     {
         if(getSeat()->isAlliedSeat(creature->getSeat()))

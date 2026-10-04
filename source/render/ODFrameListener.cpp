@@ -37,6 +37,7 @@
 #include "render/DebugDrawer.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/CreatureReactions.h"
+#include "render/TreasuryGoldMesh.h"
 #include "render/MovableTextOverlay.h"
 #include "render/Gui.h"
 #include "render/RenderManager.h"
@@ -118,6 +119,8 @@ ODFrameListener::ODFrameListener(const std::string& mainSceneFileName, Ogre::Ren
         ConfigManager::getSingleton().getGameValue(Config::CREATURE_REACTIONS, "full", false)));
     mRoomAmbience->setMode(RoomAmbience::modeFromString(
         ConfigManager::getSingleton().getGameValue(Config::ROOM_AMBIENCE, "full", false)));
+    TreasuryGoldMesh::setDetail(TreasuryGoldMesh::detailFromString(
+        ConfigManager::getSingleton().getGameValue(Config::TREASURY_DETAIL, "full", false)));
 
     mRenderManager->createScene(mCameraManager.getViewport());
 

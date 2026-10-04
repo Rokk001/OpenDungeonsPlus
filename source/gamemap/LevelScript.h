@@ -67,6 +67,11 @@
 //!   Cond    furniture <seatId> <roomName> <op> <count>   # furniture objects (bookcases, beds, ...) in the rooms of that type of the seat
 //!   Cond    breached <seatId>                 # a creature of a seat that is not allied with the seat stands on tiles that the seat has claimed (inside the dungeon)
 //!   Cond    owns <seatId> <creatureName>      # the creature with that name is alive and belongs to the seat
+//!   Cond    portal <seatId> on | off          # the portals of the seat attract creatures (on) or are switched off (off) by an action portal
+//!   Cond    alive <creatureName> [1 | 0]      # the creature with that name is alive, whatever its seat (0: it is dead or not there)
+//!   Cond    reached <creatureName> region <regionName>   # the living creature with that name stands inside the region (also a creature that carries a portal stone)
+//!   Cond    reached <creatureName> heart <seatId>        # the living creature with that name stands on the dungeon heart room of the seat
+//!   Cond    stone <regionName> <op> <count>   # portal stones lying on the ground inside the region (see stonecreate, stoneattach)
 //!   Cond    health <creatureName> <op> <percent>   # health of that living creature in percent of its maximum
 //!   Cond    spell <seatId> <skillName>        # the seat has the spell (or any other skill) researched
 //!   Cond    built <seatId> <trapName> <op> <count>   # tiles of traps or doors of that type (Cannon, DoorSteel, ...) of the seat; trapName any counts all
@@ -124,6 +129,13 @@
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
 //!   [/Triggers]
+//!
+//! Story recipes made of the items above (no extra vocabulary needed):
+//!   escape / intercepted: Cond reached <name> region <exit> (escaped), Cond event <name> killed (intercepted), Cond alive <name> 0
+//!   portal stone brought home: Action stoneattach <name>, then Cond reached <name> heart <seatId>, then Action discover <levelFile>
+//!   open or close a passage: Action terrain <x1> <y1> <x2> <y2> path | rock | water | lava (a single tile: both corners equal)
+//!   win by destroying a heart: Cond defeated <seatId>, then Action win -1
+//!   change sides: Action alliance <seatA> <seatB> make | break (takes effect at once for the AI and for fights)
 //!
 //! All the conditions of a trigger must be true at the same time. A trigger that is
 //! not repeatable fires once. A repeatable one fires again once the cooldown elapsed
@@ -184,7 +196,11 @@ enum class LevelScriptConditionType
     boulderInRegion,
     playerSlaps,
     roomFurniture,
-    dungeonBreached
+    dungeonBreached,
+    portalActive,
+    creatureAlive,
+    creatureReached,
+    stoneInRegion
 };
 
 enum class LevelScriptActionType

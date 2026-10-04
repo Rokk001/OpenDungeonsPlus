@@ -41,9 +41,39 @@ bool HatcheryCycle::needCoopHen(const HatcheryCounts& counts, uint32_t nbCoops)
     return (nbCoops > 0) && (counts.population() == 0);
 }
 
+uint32_t HatcheryCycle::coopHenCount(const HatcheryCycleSettings& settings, uint32_t capacity)
+{
+    uint32_t count = (settings.mCoopBatch == 0) ? capacity : std::min(settings.mCoopBatch, capacity);
+    return std::max<uint32_t>(1, count);
+}
+
 bool HatcheryCycle::needCoopRooster(const HatcheryCounts& counts, uint32_t nbCoops)
 {
     return (nbCoops > 0) && (counts.mRoosters == 0);
+}
+
+bool HatcheryCycle::canHatch(const HatcheryCounts& counts, bool enemiesPresent)
+{
+    return eggsMayHatch(counts) && !enemiesPresent;
+}
+
+bool HatcheryCycle::wellCared(const HatcheryCare& care)
+{
+    return care.mClaimed && care.mLit && !care.mEnemies;
+}
+
+HatcheryCycleSettings HatcheryCycle::withCare(const HatcheryCycleSettings& settings, const HatcheryCare& care)
+{
+    if(!wellCared(care))
+        return settings;
+
+    uint32_t percent = std::min<uint32_t>(settings.mCareLayPercent, 90);
+    return scaled(settings, (100 - percent) / 100.0);
+}
+
+bool HatcheryCycle::tramples(const HatcheryCycleSettings& settings, bool enemyCreature, bool isEgg, uint32_t roll)
+{
+    return enemyCreature && isEgg && (roll < std::min<uint32_t>(settings.mTramplePercent, 100));
 }
 
 uint32_t HatcheryCycle::layInterval(const HatcheryCycleSettings& settings, uint32_t random)
