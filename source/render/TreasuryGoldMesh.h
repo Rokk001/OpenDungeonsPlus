@@ -47,6 +47,17 @@ Detail getDetail();
 //! pile names are returned unchanged. Pile meshes are built on demand, or replaced by the classic gold
 //! stacks when the detail is off.
 std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& meshName);
+
+//! \brief The piles drawn on this client, by tile, so creatures can be drawn on the gold surface.
+//! Names that are not pile names, and every pile while the detail is off, are ignored.
+void registerPile(const std::string& entityName, float x, float y, const std::string& meshName);
+//! Forgets the pile, if the tile still holds the pile of that entity (a newer pile stays)
+void unregisterPile(const std::string& entityName, float x, float y);
+void clearPiles();
+
+//! Height of the gold surface at the given map position, 0 when there is no pile. The level of the
+//! pile of that tile (0 when none) is returned in level.
+float surfaceHeight(float x, float y, int& level);
 }
 
 #endif // TREASURYGOLDMESH_H

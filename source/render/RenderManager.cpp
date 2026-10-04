@@ -48,6 +48,7 @@
 #include "render/ODFrameListener.h"
 #include "render/LooseGoldMesh.h"
 #include "render/TreasuryGoldMesh.h"
+#include "sound/SoundEffectsManager.h"
 #include "rooms/Room.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -933,6 +934,7 @@ RenderManager::~RenderManager()
     mCreatureGroundPoses.clear();
     mCreatureGetUpAnimations.clear();
     clearRoomConstructionEffects();
+    clearTreasuryEffects();
     delete DebugDrawer::getSingletonPtr();
     mSceneManager->destroyInstanceManager(mInstanceManagerDirt);
     // mSceneManager->destroyInstanceManager(mInstanceManagerCloud);
@@ -1232,6 +1234,7 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
     mCreatureGroundPoses.clear();
     mCreatureGetUpAnimations.clear();
     clearRoomConstructionEffects();
+    clearTreasuryEffects();
     rrEnableHeldCreatureDisplay(false, gameMap->getLocalPlayer());
     rrDrawTilePreview({}, Ogre::ColourValue::White);
     rrSetHandPose(false, false);
@@ -1838,6 +1841,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         it = mCreatureGetUpAnimations.erase(it);
         creature->setAnimationState(EntityAnimation::idle_anim, true);
     }
+    updateTreasuryEffects(timeSinceLastFrame);
     rrUpdateHeldCreature();
 }
 
@@ -2747,7 +2751,12 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     std::string meshName = renderedMovableEntity->getMeshName();
     // Treasury gold piles are built here from their name (or swapped for the classic stacks)
     if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
+    {
+        TreasuryGoldMesh::registerPile(renderedMovableEntity->getName(), renderedMovableEntity->getPosition().x,
+            renderedMovableEntity->getPosition().y, meshName);
         meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
+        refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
+    }
     // Gold on the floor is drawn as a small coin heap
     else if(renderedMovableEntity->getObjectType() == GameEntityType::treasuryObject)
         meshName = LooseGoldMesh::prepareHeap(mSceneManager, meshName);
@@ -2856,6 +2865,13 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     mSceneManager->destroySceneNode(node);
     curRenderedMovableEntity->setParentSceneNode(nullptr);
     curRenderedMovableEntity->setEntityNode(nullptr);
+
+    if(curRenderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
+    {
+        TreasuryGoldMesh::unregisterPile(curRenderedMovableEntity->getName(), curRenderedMovableEntity->getPosition().x,
+            curRenderedMovableEntity->getPosition().y);
+        refreshCreaturesOnTile(curRenderedMovableEntity->getPositionTile());
+    }
 
     // If it was hidden, we display the tile
     if(curRenderedMovableEntity->getHideCoveredTile())
@@ -4427,9 +4443,14 @@ void RenderManager::updateCreatureStep(Creature* creature)
         cancelCreatureStep(creature);
         return;
     }
-    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0)
-        return;
     const Ogre::Vector3 position = creature->getPosition();
+    // On a treasury the creature is drawn on top of the gold; only the node moves, the position of
+    // the creature (server and pathing) stays on the floor
+    int goldLevel = 0;
+    const float goldHeight = TreasuryCreatureRules::liftOnGold(
+        TreasuryGoldMesh::surfaceHeight(position.x, position.y, goldLevel), position.z);
+    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f)
+        return;
     const Ogre::Vector2 point(position.x, position.y);
     const Ogre::Vector2 direction(creature->getWalkDirection().x, creature->getWalkDirection().y);
     float lift = 0.0f;
@@ -4457,11 +4478,118 @@ void RenderManager::updateCreatureStep(Creature* creature)
             break;
         }
     }
+    lift += goldHeight;
     node->setPosition(position + Ogre::Vector3(0, 0, lift));
+    if(creature->isMoving())
+        treasuryCreatureStep(creature, position, goldHeight, goldLevel);
     if(lift > 0.0f)
         mSteppingCreatures.insert(creature);
     else
         mSteppingCreatures.erase(creature);
+}
+
+void RenderManager::refreshCreaturesOnTile(Tile* tile)
+{
+    if(tile == nullptr)
+        return;
+
+    // Copy: the step update must not work on a list that changes under it
+    const std::vector<GameEntity*> entities = tile->getEntitiesInTile();
+    for(GameEntity* entity : entities)
+    {
+        if(entity->getObjectType() != GameEntityType::creature)
+            continue;
+
+        updateCreatureStep(static_cast<Creature*>(entity));
+    }
+}
+
+void RenderManager::treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level)
+{
+    if(!TreasuryCreatureRules::isDeep(level))
+    {
+        mTreasuryLastSplash.erase(creature);
+        return;
+    }
+
+    const Ogre::Vector2 point(position.x, position.y);
+    std::map<Creature*, Ogre::Vector2>::iterator it = mTreasuryLastSplash.find(creature);
+    if(it == mTreasuryLastSplash.end())
+    {
+        mTreasuryLastSplash[creature] = point;
+        return;
+    }
+    if(!TreasuryCreatureRules::stepDue(point.x - it->second.x, point.y - it->second.y))
+        return;
+    it->second = point;
+
+    Tile* tile = creature->getPositionTile();
+    const void* roomKey = (tile != nullptr && tile->getCoveringRoom() != nullptr) ?
+        static_cast<const void*>(tile->getCoveringRoom()) : static_cast<const void*>(tile);
+    if(!createTreasuryEffect(roomKey, "TreasuryCoinSplash", Ogre::Vector3(position.x, position.y, surfaceHeight + 0.02f)))
+        return;
+
+    if(SoundEffectsManager::getSingletonPtr() != nullptr)
+        SoundEffectsManager::getSingleton().playSpatialSound("Rooms/Treasury/CoinStep", position.x, position.y);
+}
+
+void RenderManager::rrTreasuryDeposit(GameMap* gameMap, int x, int y)
+{
+    int level = 0;
+    const float height = TreasuryGoldMesh::surfaceHeight(static_cast<float>(x), static_cast<float>(y), level);
+    // Only treasuries drawn with a gold layer have a pile to pour onto
+    if(level <= 0)
+        return;
+
+    Tile* tile = gameMap != nullptr ? gameMap->getTile(x, y) : nullptr;
+    const void* roomKey = (tile != nullptr && tile->getCoveringRoom() != nullptr) ?
+        static_cast<const void*>(tile->getCoveringRoom()) : static_cast<const void*>(tile);
+    createTreasuryEffect(roomKey, "TreasuryCoinPour",
+        Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), height + 0.02f));
+}
+
+bool RenderManager::createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position)
+{
+    // Only what is in view is animated, and a room shows a limited number of effects at once
+    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+    if(camera != nullptr && !camera->isVisible(position))
+        return false;
+
+    if(!mTreasurySplashBudget.tryAcquire(roomKey,
+        TreasuryCreatureRules::splashBudget(TreasuryGoldMesh::getDetail())))
+        return false;
+
+    const std::string name = "TreasuryEffect_" + Helper::toString(++mTreasuryEffectNumber);
+    rrCreateFreeParticleEffect(name, script, position, nullptr);
+    mTreasuryEffects.push_back({name, TreasuryCreatureRules::splashLifetime, roomKey});
+    return true;
+}
+
+void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
+{
+    for(std::vector<TreasuryEffect>::iterator it = mTreasuryEffects.begin(); it != mTreasuryEffects.end();)
+    {
+        it->mRemaining -= timeSinceLastFrame;
+        if(it->mRemaining > 0.0f)
+        {
+            ++it;
+            continue;
+        }
+
+        rrDestroyFreeParticleEffect(it->mName);
+        mTreasurySplashBudget.release(it->mRoomKey);
+        it = mTreasuryEffects.erase(it);
+    }
+}
+
+void RenderManager::clearTreasuryEffects()
+{
+    for(const TreasuryEffect& effect : mTreasuryEffects)
+        rrDestroyFreeParticleEffect(effect.mName);
+    mTreasuryEffects.clear();
+    mTreasurySplashBudget.clear();
+    mTreasuryLastSplash.clear();
+    TreasuryGoldMesh::clearPiles();
 }
 
 void RenderManager::cancelCreatureStep(Creature* creature)
