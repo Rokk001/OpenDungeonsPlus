@@ -3,26 +3,22 @@
 
 For every level the state at the START of the game is checked (no trigger has fired yet):
 
-1. Enemy distance. The sources of the enemy team are the creatures of other teams, their
-   wave portals, their portals and their dungeon temples. For every source two path
-   lengths to the dungeon temple of the human seat are measured (4-neighbourhood, like
-   the game):
-     * walk path: only over tiles that can be walked right now (open dirt, claimed or
-       built tiles, rooms, bridges, doors; doors count as walkable). If a source reaches
-       the temple this way, nothing separates it from the player: FAIL.
-     * dig path: the shortest path that may also cross solid dirt, gold and gem tiles
-       (tiles that have to be dug out). Solid rock, water and lava never count. A tile
-       that is rock at the start and opened later by a trigger therefore separates, as
-       it should. The dig path must be at least MIN_ENEMY_PATH tiles.
-   MIN_ENEMY_PATH is 30 tiles for the first three campaign levels and 24 for all later
-   ones. The first levels teach the basics, so a hero that is not walking into the
-   first room needs a long road; 24 tiles is about the width of a half map and still
-   leaves the later levels room for compact maps. Levels outside the campaign
-   (skirmish, realms) are exempt from this part.
+1. Enemy walk path. The sources of the enemy team are the creatures of other teams, their
+   wave portals, their portals and their dungeon temples. For every source the walk path
+   to the dungeon temple of the human seat is measured (4-neighbourhood, like the game):
+   only over tiles that can be walked right now (open dirt, claimed or built tiles, rooms,
+   bridges, doors; doors count as walkable). Every such connection is a FAIL, whatever its
+   length: a source must always have to dig to reach the temple. Solid rock, water and lava
+   never count as passable. A tile that is rock at the start and opened later by a trigger
+   therefore separates, as it should. The shortest path that may also cross solid dirt,
+   gold and gem tiles is only reported (shortest_dig_path) and has no threshold. Levels
+   outside the campaign (skirmish, realms) are exempt from this part.
 
-2. Open areas around the temple. Within OPEN_RADIUS tiles of the temple, a square of at
-   least OPEN_SQUARE x OPEN_SQUARE walkable tiles that belong to no room is a large
-   empty hall: FAIL (the largest one is reported with its corner). Furthermore, rooms
+2. Open areas between the rooms of the human seat. Within OPEN_RADIUS tiles of the temple
+   and within the bounding box of all rooms of the human seat, a square of at least
+   OPEN_SQUARE x OPEN_SQUARE walkable (not dug) tiles that belong to no room, i.e. an open
+   area larger than 4x4, is a large empty hall: FAIL (the largest one is reported with
+   its corner). Furthermore, rooms
    placed for the human seat must be separated from each other by rock: two such rooms
    that touch each other, or a block of WIDE_PASSAGE x WIDE_PASSAGE open non-room tiles
    next to one of them (passage wider than MAX_PASSAGE_WIDTH), is a FAIL.
@@ -46,9 +42,6 @@ import tempfile
 from collections import deque
 
 # --- Constants ---------------------------------------------------------------------------
-MIN_ENEMY_PATH_EARLY = 30
-MIN_ENEMY_PATH_LATE = 24
-EARLY_LEVEL_COUNT = 3
 OPEN_RADIUS = 12
 OPEN_SQUARE = 5
 MAX_PASSAGE_WIDTH = 3
@@ -263,7 +256,7 @@ def enemy_sources(level, seat_id):
     return sources
 
 
-def check_enemy_distance(level, seat_id, minimum):
+def check_enemy_distance(level, seat_id):
     walkable, passable, _ = build_grids(level)
     hearts = heart_tiles(level, seat_id)
     walk = bfs(hearts, walkable, level.width, level.height)
@@ -271,7 +264,6 @@ def check_enemy_distance(level, seat_id, minimum):
     reasons = []
     shortest = None
     connected = []
-    too_close = []
     for name, pos in enemy_sources(level, seat_id):
         if pos in walk:
             connected.append((walk[pos], name))
@@ -279,16 +271,10 @@ def check_enemy_distance(level, seat_id, minimum):
         if d is not None:
             if shortest is None or d < shortest:
                 shortest = d
-            if d < minimum and pos not in walk:
-                too_close.append((d, name))
     if connected:
         connected.sort()
         reasons.append("%d enemy source(s) walk to the heart without digging, nearest: %s "
                        "in %d tiles" % (len(connected), connected[0][1], connected[0][0]))
-    if too_close:
-        too_close.sort()
-        reasons.append("%d enemy source(s) closer than %d tiles, nearest: %s in %d tiles"
-                       % (len(too_close), minimum, too_close[0][1], too_close[0][0]))
     return reasons, shortest
 
 
@@ -318,6 +304,17 @@ def check_open_areas(level, seat_id):
     x1 = min(level.width - 1, cx + OPEN_RADIUS)
     y0 = max(0, cy - OPEN_RADIUS)
     y1 = min(level.height - 1, cy + OPEN_RADIUS)
+    own_tiles = [pos for room_type, owner, tiles in level.rooms
+                 if owner == seat_id for pos in tiles]
+    if own_tiles:
+        x0 = min(x0, min(p[0] for p in own_tiles) - 1)
+        x1 = max(x1, max(p[0] for p in own_tiles) + 1)
+        y0 = min(y0, min(p[1] for p in own_tiles) - 1)
+        y1 = max(y1, max(p[1] for p in own_tiles) + 1)
+        x0 = max(0, x0)
+        y0 = max(0, y0)
+        x1 = min(level.width - 1, x1)
+        y1 = min(level.height - 1, y1)
     open_tiles = set(p for p in walkable if p not in room_tiles
                      and x0 <= p[0] <= x1 and y0 <= p[1] <= y1)
     size, sx, sy = largest_open_square(open_tiles, x0, y0, x1, y1)
@@ -372,9 +369,7 @@ def check_level(path, campaign_index):
     reasons = []
     shortest = None
     if campaign_index is not None:
-        minimum = MIN_ENEMY_PATH_EARLY if campaign_index < EARLY_LEVEL_COUNT \
-            else MIN_ENEMY_PATH_LATE
-        found, shortest = check_enemy_distance(level, seat_id, minimum)
+        found, shortest = check_enemy_distance(level, seat_id)
         reasons.extend(found)
     found, size, corner = check_open_areas(level, seat_id)
     reasons.extend(found)
