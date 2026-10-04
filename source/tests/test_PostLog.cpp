@@ -195,4 +195,6 @@ BOOST_AUTO_TEST_CASE(test_relationship_post_keeps_other_name)
     BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::Friendship), "friendship");
     BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::Breakup), "breakup");
     BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::Converted), "converted");
+    BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::Couple), "couple");
+    BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::SplitUp), "splitup");
 }

@@ -82,6 +82,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -1224,6 +1225,16 @@ void GameMap::setRelationshipsEnabled(bool enabled)
 
     mCreatureRelationships = new CreatureRelationships(
         RelationshipSettings::fromConfig(ConfigManager::getSingleton().getRelationshipsConfig()));
+    mCreatureRelationships->setGenderLookup(std::bind(&GameMap::getCreatureGender, this, std::placeholders::_1));
+}
+
+std::string GameMap::getCreatureGender(const std::string& creatureName) const
+{
+    Creature* creature = getCreature(creatureName);
+    if(creature == nullptr)
+        return std::string();
+
+    return creature->getGender();
 }
 
 void GameMap::checkRelationshipBrawls()

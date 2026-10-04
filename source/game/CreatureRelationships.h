@@ -19,6 +19,7 @@
 #define CREATURERELATIONSHIPS_H
 
 #include <cstdint>
+#include <functional>
 #include <iosfwd>
 #include <map>
 #include <string>
@@ -107,7 +108,7 @@ struct RelationshipSettings
     int32_t mMoodMaxPairs;
 
     //! Limits per creature, the weakest relationship of a tier falls back when it is exceeded.
-    //! Partners belong to the lovers tier, which is not active yet.
+    //! Partners (lovers) are counted separately from the friends.
     int32_t mMaxFriends;
     int32_t mMaxPartners;
     int32_t mMaxNemeses;
@@ -138,9 +139,22 @@ struct RelationshipSettings
     int32_t mGriefRageBonusPercent;
 
     //! Jealousy: when a creature becomes friends with another one, the friends of the first
-    //! creature lose this many points towards the newcomer (0 switches it off). The break-up of
-    //! partners needs the lovers tier and is not part of it yet.
+    //! creature lose this many points towards the newcomer (0 switches it off). A partner of
+    //! the first creature loses mLoversJealousyValueLoss points instead.
     int32_t mJealousyValueLoss;
+    int32_t mLoversJealousyValueLoss;
+
+    //! Lovers: a pair of lovers breaks up when its value falls below mLoversBreakValue (lower than
+    //! mThresholdLovers, so the pair stays lovers in between)
+    int32_t mLoversBreakValue;
+    //! Defense added to every defense value of a creature that fights next to its partner
+    double mCombatBonusLovers;
+    //! Mood points a creature gets while its partner is alive and in the dungeon
+    int32_t mMoodBonusLovers;
+    //! Mood points a creature loses when its partner dies (instead of mGriefMoodPenalty)
+    int32_t mPartnerGriefMoodPenalty;
+    //! Chance (percent) that the partner of a creature that leaves the dungeon unhappy leaves with it
+    int32_t mLeavePartnerChancePercent;
 
     //! Chance (percent) that the best friend of a creature that leaves the dungeon unhappy leaves with it
     int32_t mLeaveTogetherChancePercent;
@@ -185,12 +199,19 @@ class CreatureRelationships
 {
 public:
     typedef std::pair<std::string, std::string> Pair;
+    //! Returns the gender of the creature with the given name: "Male", "Female" or empty
+    typedef std::function<std::string(const std::string&)> GenderLookup;
 
     CreatureRelationships();
     explicit CreatureRelationships(const RelationshipSettings& settings);
 
     const RelationshipSettings& getSettings() const
     { return mSettings; }
+
+    //! \brief Server side: tells how to find the gender of a creature. Only a pair of one "Male"
+    //! and one "Female" creature can become lovers; without a lookup nobody does.
+    void setGenderLookup(const GenderLookup& lookup)
+    { mGenderLookup = lookup; }
 
     //! \brief A converted prisoner starts with mConvertedCaptorValue (negative) towards every creature
     //! in captors that captured it. Pairs that already have a value are left alone.
@@ -214,8 +235,14 @@ public:
     //! \brief Tier for a value. Lovers additionally need loversAllowed
     //! (one male and one female creature), otherwise they stay best friends.
     RelationshipTier tierOfValue(int32_t value, bool loversAllowed) const;
+    //! Tier of a pair. A pair is lovers when it carries the stored lovers flag and loversAllowed is
+    //! set; otherwise it is at best best friends.
     RelationshipTier tierOf(const std::string& creatureA, const std::string& creatureB,
         bool loversAllowed = false) const;
+    //! True if the pair is currently lovers (stored flag).
+    bool isLovers(const std::string& creatureA, const std::string& creatureB) const;
+    //! The lover of the creature or an empty string.
+    std::string getPartner(const std::string& creature) const;
     bool isFriend(const std::string& creatureA, const std::string& creatureB) const;
     bool isNemesis(const std::string& creatureA, const std::string& creatureB) const;
     //! True for the tiers hated and nemesis.
@@ -281,6 +308,8 @@ private:
     {
         int32_t mValue;
         int64_t mLastEventTurn;
+        //! The pair is lovers; stays set down to mLoversBreakValue
+        bool mLovers;
     };
 
     static Pair makePair(const std::string& creatureA, const std::string& creatureB);
@@ -289,7 +318,16 @@ private:
     void enforceLimits(const std::string& creature, int64_t turn);
     //! Friends of creature get jealous of newFriend, which just became its friend
     void applyJealousy(const std::string& creature, const std::string& newFriend, int64_t turn);
-    void recordTierChange(const Pair& pair, int32_t oldValue, int32_t newValue);
+    void recordTierChange(const Pair& pair, RelationshipTier oldTier, RelationshipTier newTier);
+    static RelationshipTier tierOfData(const CreatureRelationships& self, const PairData& data);
+    //! True if one creature is "Male" and the other "Female"
+    bool haveLoversGenders(const Pair& pair) const;
+    //! True if the creature can have another partner of the given value (free slot or weaker partner)
+    bool canTakeLover(const std::string& creature, int32_t value) const;
+    //! Pair becomes lovers when it qualifies
+    void updateLovers(const Pair& pair);
+    //! Ends the lovers state of the pair (sets the flag false, records the tier change)
+    void clearLovers(const Pair& pair, PairData& data);
     int32_t representativeValue(RelationshipTier tier) const;
 
     RelationshipSettings mSettings;
@@ -300,6 +338,7 @@ private:
     std::map<Pair, int64_t> mLastPrayerTurn;
     std::vector<RelationshipTierChange> mTierChanges;
     int64_t mLastDriftTurn;
+    GenderLookup mGenderLookup;
 };
 
 #endif // CREATURERELATIONSHIPS_H
