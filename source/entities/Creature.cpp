@@ -52,6 +52,7 @@
 #include "creatureeffect/CreatureEffectSlap.h"
 #include "creaturemood/CreatureMood.h"
 #include "creaturemood/CreatureMoodManager.h"
+#include "creaturemood/CreatureMoodOutOfWork.h"
 #include "creatureskill/CreatureSkill.h"
 
 
@@ -82,6 +83,7 @@
 #include "modes/GameMode.h"
 #include "modes/ModeManager.h"
 
+#include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -416,6 +418,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
+    mGoldCarriedNotified     (0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
@@ -516,6 +519,7 @@ Creature::Creature(GameMap* gameMap) :
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
+    mGoldCarriedNotified     (0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
@@ -1415,6 +1419,14 @@ void Creature::doUpkeep()
             mSpecialMood = std::max(0, mSpecialMood - decay);
         else
             mSpecialMood = std::min(0, mSpecialMood + decay);
+    }
+
+    // The clients show the gold on the body of the carrier. They are told when it changed (cosmetic only).
+    if(mGoldCarried != mGoldCarriedNotified)
+    {
+        mGoldCarriedNotified = mGoldCarried;
+        fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::carriedGold), mGoldCarried,
+            getDefinition()->getMaxGoldCarryable(), false);
     }
 
     // Check if we should compute mood
@@ -4665,6 +4677,70 @@ void Creature::fireChickenFeeding(const std::string& chickenName,
     }
 }
 
+void Creature::fireCosmeticEvent(const CosmeticEvent& event, bool alliedOnly)
+{
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        if(alliedOnly && !seat->isAlliedSeat(getSeat()))
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
+}
+
+void Creature::fireCosmeticEvent(int32_t type, int32_t value, int32_t value2, bool alliedOnly)
+{
+    CosmeticEvent event;
+    event.mType = type;
+    event.mSubject = getName();
+    event.mValue = value;
+    event.mValue2 = value2;
+    fireCosmeticEvent(event, alliedOnly);
+}
+
+void Creature::fireImpatientIfNeeded()
+{
+    // The game counts a creature as frustrated from the turns its OutOfWork mood starts at. It is told then,
+    // and again each time the mood has grown over its whole range.
+    int32_t turnsMin = 10;
+    int32_t repeat = 40;
+    for(const CreatureMood* mood : getDefinition()->getCreatureMoods())
+    {
+        const CreatureMoodOutOfWork* outOfWork = dynamic_cast<const CreatureMoodOutOfWork*>(mood);
+        if(outOfWork == nullptr)
+            continue;
+
+        turnsMin = outOfWork->getTurnsMin();
+        repeat = std::max(1, outOfWork->getTurnsMax());
+        break;
+    }
+
+    int32_t turns = getNbTurnsOutOfWork();
+    if(turns < turnsMin || ((turns - turnsMin) % repeat) != 0)
+        return;
+
+    fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::impatient), turns, 0, true);
+}
+
+void Creature::fireArrivalEvent()
+{
+    Player* player = getSeat()->getPlayer();
+    if(player == nullptr || !player->getIsHuman())
+        return;
+
+    // The creature has no vision yet and the portal belongs to the keeper, so the keeper is told directly.
+    // Reading the mood only adds up the modifiers, it does not change the creature.
+    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    CosmeticEvent event(CosmeticEventType::portalArrival);
+    event.mSubject = getName();
+    event.mValue = static_cast<int32_t>(CreatureMoodManager::getCreatureMoodLevel(points));
+    event.mValue2 = points;
+    ODServer::getSingleton().sendCosmeticEvent(player, event);
+}
+
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
@@ -4788,6 +4864,9 @@ void Creature::computeMood()
         return;
 
     mNeedFireRefresh = true;
+
+    fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::moodStage), static_cast<int32_t>(mMoodValue),
+        static_cast<int32_t>(oldMoodValue), true);
 
     if((mMoodValue >= CreatureMoodLevel::Furious) &&
        (oldMoodValue < CreatureMoodLevel::Furious))
@@ -5343,6 +5422,7 @@ void Creature::fightCreature(Creature& creature, bool ko, bool notifyPlayerIfHit
 void Creature::flee()
 {
     recordScriptEvent(*this, "afraid");
+    fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::scared), 0, 0, false);
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
@@ -5355,6 +5435,7 @@ void Creature::fleeFromTile(Tile* fearTile, int32_t nbTurns)
         endPossession();
 
     recordScriptEvent(*this, "afraid");
+    fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::scared), 1, 0, false);
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
