@@ -4748,6 +4748,7 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
 Action	message	1	Both keepers lie dead and the great roads are quiet. Varn has lost his crossing.
+Action	discover	campaign/SwarmNight.level
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -4755,6 +4756,7 @@ Name	crossingHeldGoal
 Mode	once
 Cond	goal	1	KillAllEnemies
 Action	message	1	Both keepers lie dead and the great roads are quiet. Varn has lost his crossing.
+Action	discover	campaign/SwarmNight.level
 Action	win	1
 [/Trigger]
 [/Triggers]
