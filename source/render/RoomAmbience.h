@@ -77,9 +77,11 @@ public:
 
     //! \brief Shows the one-shot effects of the given event at the given place.
     //! forced ignores the chance, the view test and the mode "reduced". visualName is the tile visual
-    //! (room) the event is about; empty = the one of the tile at the position. Returns the number of effects started
+    //! (room) the event is about; empty = the one of the tile at the position. noThrottle lets the same event
+    //! start again within a tenth of a second (a spell cast on several creatures at once).
+    //! Returns the number of effects started
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
-        const std::string& visualName = std::string());
+        const std::string& visualName = std::string(), bool noThrottle = false);
 
     //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.

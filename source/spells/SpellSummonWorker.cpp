@@ -214,8 +214,10 @@ bool SpellSummonWorker::summonWorkersOnTiles(GameMap* gameMap, Player* player, c
                                     static_cast<Ogre::Real>(tile->getY()),
                                     static_cast<Ogre::Real>(0.0));
         newCreature->addParticleEffect("SummonWorker", 3);
+        newCreature->addParticleEffect("SpellCreatureArrival", 5);
         newCreature->createMesh();
         newCreature->setPosition(spawnPosition);
+        fireSpellEffect(*tile, "Summon", "Summon");
     }
 
     return true;
