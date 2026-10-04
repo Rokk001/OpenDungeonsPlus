@@ -88,6 +88,8 @@ const double DONE_WAIT_MAX = 8.0;
 const double SLEEP_DONE_MIN = 6.0;
 const double PRAYER_DONE_MIN = 8.0;
 const double CLAIM_DONE_MIN = 2.5;
+//! Seconds after the message about a chicken meal at which the meal counts as over when no meal clip is played
+const double MEAL_FALLBACK_DELAY = 4.5;
 //! Seconds a creature has to run away until it sulks over the lost fight
 const double FLEE_DONE_MIN = 2.0;
 //! Seconds between a prisoner breaking under torture and the first sign of its new loyalty
@@ -1304,6 +1306,7 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
     mTime += timeSinceLastFrame;
 
     updateOngoing();
+    updateMealEnds();
     updateMoods(timeSinceLastFrame);
     CreatureCombatReactions::update(*this, timeSinceLastFrame);
     CreatureWeaponVisuals::update(*this, timeSinceLastFrame);
@@ -1501,6 +1504,10 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         celebrateVictory(creature, true);
 
+        // A fighter that runs from the arena ends the bout too
+        if(getRoomName(creature) == "Arena")
+            celebrateBout(creature);
+
         // A prisoner that struggles is not fleeing
         if(!creature->isInContainment())
             queueReaction(creature, "FleePanic", -1.0, 0.4);
@@ -1514,6 +1521,8 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     else if((clip == "EatChicken") && (getRoomName(creature) == "Hatchery"))
     {
         // The meal in the hatchery is over when the animation is: then the creature shows how it liked it
+        mMealClipSeen[creature->getName()] = mTime;
+        mMealEnds.erase(creature->getName());
         queueReaction(creature, "HatcheryMealDone", DONE_WAIT_MAX, 0.5);
     }
     else if(startsWith(clip, "Attack") || (clip == "CombatAttack") || (clip == "RangedAttack") ||
@@ -1787,12 +1796,41 @@ void CreatureReactions::updateOngoing()
     }
 }
 
+void CreatureReactions::updateMealEnds()
+{
+    for(std::map<std::string, double>::iterator it = mMealEnds.begin(); it != mMealEnds.end();)
+    {
+        if(mTime < it->second)
+        {
+            ++it;
+            continue;
+        }
+
+        Creature* creature = mGameMap->getCreature(it->first);
+        if((creature != nullptr) && creature->getIsOnMap() && creature->isAlive() &&
+           (getRoomName(creature) == "Hatchery"))
+        {
+            queueReaction(creature, "HatcheryMealDone", DONE_WAIT_MAX, 0.3);
+        }
+
+        mMealEnds.erase(it++);
+    }
+}
+
 void CreatureReactions::celebrateBout(Creature* loser)
 {
     Tile* tile = loser->getPositionTile();
     Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
     if((room == nullptr) || (RoomManager::getRoomNameFromRoomType(room->getType()) != "Arena"))
         return;
+
+    // One bout is cheered once, however it ended
+    std::string boutKey = "Bout:" + loser->getName();
+    std::map<std::string, double>::const_iterator itBout = mLastCelebration.find(boutKey);
+    if((itBout != mLastCelebration.end()) && ((mTime - itBout->second) < CELEBRATION_PAUSE))
+        return;
+
+    mLastCelebration[boutKey] = mTime;
 
     // The winners fought the loser a moment ago, the others in the arena watched
     std::vector<Creature*> winners;
@@ -1941,7 +1979,10 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
     if(health < oldHealth)
     {
         uint32_t steps = oldHealth - health;
-        if((steps >= HEAL_MIN_STEPS) || ((steps >= 1) && (oldHealth >= HURT_STAGE) && (getRoomName(creature) == "Temple")))
+        bool inTemple = (getRoomName(creature) == "Temple");
+        if(inTemple && (health == 0) && (oldHealth >= HURT_STAGE))
+            queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+        else if((steps >= HEAL_MIN_STEPS) || ((steps >= 1) && (oldHealth >= HURT_STAGE) && inTemple))
             trigger(creature, "Healed");
     }
 
@@ -2066,6 +2107,14 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
 
 void CreatureReactions::noteChickenFeeding(Creature* creature, const std::string& chickenName)
 {
+    // The meal is over after a while even if the creature has no meal clip (the clip, if played, shows it itself)
+    if((mMode != Mode::off) && mConfigLoaded)
+    {
+        std::map<std::string, double>::const_iterator itClip = mMealClipSeen.find(creature->getName());
+        if((itClip == mMealClipSeen.end()) || ((mTime - itClip->second) > MEAL_FALLBACK_DELAY))
+            mMealEnds[creature->getName()] = mTime + MEAL_FALLBACK_DELAY;
+    }
+
     std::map<std::string, HandDrop>::iterator it = mHandDrops.find(chickenName);
     if((it == mHandDrops.end()) || (it->second.mType != GameEntityType::chickenEntity))
         return;
