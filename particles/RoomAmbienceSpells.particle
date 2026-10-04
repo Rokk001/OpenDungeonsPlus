@@ -7,7 +7,7 @@
 // A ring of light that spreads over the floor at the arrival spot
 particle_system SpFxSummonRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRingRunes
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -157,7 +157,7 @@ particle_system SpellCreatureArrival
 // A wide ring of warm light that rolls out over the floor
 particle_system SpFxRallyRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.4
     particle_height 0.4
@@ -193,7 +193,7 @@ particle_system SpFxRallyRing
 // A second, smaller ring
 particle_system SpFxRallyRingSmall
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -415,7 +415,7 @@ particle_system SpFxBlastFlash
 // A shock ring over the floor
 particle_system SpFxBlastRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.4
     particle_height 0.4
@@ -570,7 +570,7 @@ particle_system SpFxBoostFlash
 // A ring of light under the creature
 particle_system SpFxBoostRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -676,7 +676,7 @@ particle_system SpFxCurseFlash
 // A dark ring on the floor
 particle_system SpFxCurseRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -782,7 +782,7 @@ particle_system SpFxEyeFlash
 // A ring on the floor below the eye
 particle_system SpFxEyeRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -1254,7 +1254,7 @@ particle_system SpFxBoltScorch
 // A dusty wave that rolls out over the whole area
 particle_system SpFxQuakeRing
 {
-    material        RoomAmbDust
+    material        RoomAmbRingDust
     point_rendering false
     particle_width  0.5
     particle_height 0.5
@@ -1290,7 +1290,7 @@ particle_system SpFxQuakeRing
 // A second, inner wave
 particle_system SpFxQuakeRingInner
 {
-    material        RoomAmbDust
+    material        RoomAmbRingDust
     point_rendering false
     particle_width  0.4
     particle_height 0.4
@@ -1539,7 +1539,7 @@ particle_system SpFxTurnSwirl
 // A ring on the floor
 particle_system SpFxTurnRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -1827,7 +1827,7 @@ particle_system SpFxFireFlash
 // A ring of fire that spreads over the floor
 particle_system SpFxFireRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.4
     particle_height 0.4
@@ -2148,7 +2148,7 @@ particle_system SpFxPossessSwirl
 // A dark ring on the floor
 particle_system SpFxPossessRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRingRunes
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -2234,7 +2234,7 @@ particle_system SpellCreaturePossess
 // A large golden ring that spreads over the floor
 particle_system SpFxChampionRing
 {
-    material        RoomAmbGlow
+    material        RoomAmbRing
     point_rendering false
     particle_width  0.4
     particle_height 0.4
@@ -2270,7 +2270,7 @@ particle_system SpFxChampionRing
 // A smaller ring inside
 particle_system SpFxChampionRingInner
 {
-    material        RoomAmbGlow
+    material        RoomAmbRingRunes
     point_rendering false
     particle_width  0.3
     particle_height 0.3
@@ -2458,3 +2458,182 @@ particle_system SpellCreatureChampion
         colour2             1 0.85 0.35 0
     }
 }
+
+// ---------------------------------------------------------------- Ground marks
+// Flat marks that stay on the floor for a while (kind Mark in config/roomAmbienceSpells.cfg, at most MaxMarks at once)
+particle_system SpFxMarkScorch
+{
+    material        RoomAmbMarkScorch
+    point_rendering false
+    particle_width  1.3
+    particle_height 1.3
+    cull_each       false
+    quota           1
+    billboard_type  perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+
+    emitter Point
+    {
+        angle               0
+        colour              1 1 1 0.9
+        emission_rate       30
+        time_to_live        22
+        direction           0 0 1
+        velocity            0
+        position            0 0 0.05
+        duration            0.15
+    }
+
+    // Stays at full strength, then fades out over the last third of its life
+    affector ColourInterpolator
+    {
+        time0   0
+        colour0 1 1 1 0.9
+        time1   0.65
+        colour1 1 1 1 0.9
+        time2   1
+        colour2 1 1 1 0
+    }
+
+    affector Rotator
+    {
+        rotation_range_start 0
+        rotation_range_end 360
+        rotation_speed_range_start 0
+        rotation_speed_range_end 0
+    }
+}
+
+particle_system SpFxMarkScorchWide
+{
+    material        RoomAmbMarkScorch
+    point_rendering false
+    particle_width  2.6
+    particle_height 2.6
+    cull_each       false
+    quota           1
+    billboard_type  perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+
+    emitter Point
+    {
+        angle               0
+        colour              1 1 1 0.8
+        emission_rate       30
+        time_to_live        22
+        direction           0 0 1
+        velocity            0
+        position            0 0 0.05
+        duration            0.15
+    }
+
+    // Stays at full strength, then fades out over the last third of its life
+    affector ColourInterpolator
+    {
+        time0   0
+        colour0 1 1 1 0.8
+        time1   0.65
+        colour1 1 1 1 0.8
+        time2   1
+        colour2 1 1 1 0
+    }
+
+    affector Rotator
+    {
+        rotation_range_start 0
+        rotation_range_end 360
+        rotation_speed_range_start 0
+        rotation_speed_range_end 0
+    }
+}
+
+particle_system SpFxMarkCracks
+{
+    material        RoomAmbMarkCracks
+    point_rendering false
+    particle_width  2.8
+    particle_height 2.8
+    cull_each       false
+    quota           1
+    billboard_type  perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+
+    emitter Point
+    {
+        angle               0
+        colour              1 1 1 0.85
+        emission_rate       30
+        time_to_live        22
+        direction           0 0 1
+        velocity            0
+        position            0 0 0.05
+        duration            0.15
+    }
+
+    // Stays at full strength, then fades out over the last third of its life
+    affector ColourInterpolator
+    {
+        time0   0
+        colour0 1 1 1 0.85
+        time1   0.65
+        colour1 1 1 1 0.85
+        time2   1
+        colour2 1 1 1 0
+    }
+
+    affector Rotator
+    {
+        rotation_range_start 0
+        rotation_range_end 360
+        rotation_speed_range_start 0
+        rotation_speed_range_end 0
+    }
+}
+
+particle_system SpFxMarkBolt
+{
+    material        RoomAmbMarkBolt
+    point_rendering false
+    particle_width  1.5
+    particle_height 1.5
+    cull_each       false
+    quota           1
+    billboard_type  perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+
+    emitter Point
+    {
+        angle               0
+        colour              1 1 1 0.9
+        emission_rate       30
+        time_to_live        22
+        direction           0 0 1
+        velocity            0
+        position            0 0 0.05
+        duration            0.15
+    }
+
+    // Stays at full strength, then fades out over the last third of its life
+    affector ColourInterpolator
+    {
+        time0   0
+        colour0 1 1 1 0.9
+        time1   0.65
+        colour1 1 1 1 0.9
+        time2   1
+        colour2 1 1 1 0
+    }
+
+    affector Rotator
+    {
+        rotation_range_start 0
+        rotation_range_end 360
+        rotation_speed_range_start 0
+        rotation_speed_range_end 0
+    }
+}
+

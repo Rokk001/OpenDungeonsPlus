@@ -1879,12 +1879,22 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::possessionEnd:
         {
+            // The creature the keeper returns from shows a short flash of light where it stands
+            Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
+            RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
+            if((possessed != nullptr) && possessed->getIsOnMap() && (ambience != nullptr))
+            {
+                Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),
+                    static_cast<Ogre::Real>(possessed->getPosition().y), 0.0f);
+                ambience->triggerEvent("SpellFxPossessEnd", position, false, std::string(), true);
+            }
             getPlayer()->setPossessedCreatureName(std::string());
             frameListener->getCameraManager()->stopPossession();
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
             {
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
                 gm->notifyPossessionEnded();
+                gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
             }
             break;
         }

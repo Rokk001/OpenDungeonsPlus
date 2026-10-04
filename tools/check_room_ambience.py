@@ -15,14 +15,14 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "OccupiedRadius",
+SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "OccupiedRadius",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
                "NeedWall", "Clips", "Every")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Hit")
-KINDS = ("Particle", "Motion", "Clip")
+KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
@@ -173,12 +173,22 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         counts["events"] += 1
         if "Event" not in effect:
             problems.append("%s: event effect without Event" % where)
-        if kind != "Particle":
-            problems.append("%s: event effects must be particles" % where)
+        if kind not in ("Particle", "Shake", "Mark"):
+            problems.append("%s: event effects must be particles, shakes or marks" % where)
     else:
         if "Match" not in effect:
             problems.append("%s: no Match" % where)
-    if kind == "Particle":
+    if kind in ("Shake", "Mark") and target != "Event":
+        problems.append("%s: shakes and marks only work as events" % where)
+    if kind == "Shake":
+        for key in ("Amount", "Duration", "Speed", "MaxDistance"):
+            if key not in effect:
+                problems.append("%s: shake without %s" % (where, key))
+        if "Amount" in effect and is_number(effect["Amount"][0]) and float(effect["Amount"][0]) > 0.5:
+            problems.append("%s: shake Amount above 0.5 is too strong" % where)
+        if "Duration" in effect and is_number(effect["Duration"][0]) and float(effect["Duration"][0]) > 2.0:
+            problems.append("%s: shake Duration above 2 seconds" % where)
+    if kind in ("Particle", "Mark"):
         system = effect.get("System", [None])[0]
         if system is None:
             problems.append("%s: particle without System" % where)

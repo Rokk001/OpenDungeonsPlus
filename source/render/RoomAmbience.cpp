@@ -119,6 +119,12 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mSeenSizeX(0),
     mSeenSizeY(0),
     mEventsThisScan(0),
+    mShakeTime(0.0),
+    mShakeTotal(1.0),
+    mShakeAmount(0.0),
+    mShakeSpeed(12.0),
+    mShakePhase(0.0),
+    mShakeApplied(Ogre::Vector3::ZERO),
     mRandom(12345),
     mGeneration(0),
     mEntitiesInitialized(false)
@@ -386,12 +392,23 @@ void RoomAmbience::stopAll()
             destroyEmitter(emitter);
         }
 
+        for(OneShot& mark : mMarks)
+        {
+            Emitter emitter;
+            emitter.mNode = mark.mNode;
+            emitter.mSystem = mark.mSystem;
+            destroyEmitter(emitter);
+        }
+
         for(std::map<std::string, MotionNode>::iterator it = mMotionNodes.begin(); it != mMotionNodes.end(); ++it)
             restoreMotionNode(it->second);
     }
 
     mEmitters.clear();
     mOneShots.clear();
+    mMarks.clear();
+    mShakeTime = 0.0;
+    clearShake();
     mMotionNodes.clear();
     mParticleCandidates.clear();
     mMotionCandidates.clear();
@@ -420,7 +437,9 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     }
 
     updateEmitters(dt);
-    updateOneShots(dt);
+    updateOneShots(mOneShots, dt);
+    updateOneShots(mMarks, dt);
+    updateShake(dt);
     updateMotions(dt);
 }
 
@@ -1061,9 +1080,9 @@ void RoomAmbience::updateEmitters(double timeSinceLastFrame)
     }
 }
 
-void RoomAmbience::updateOneShots(double timeSinceLastFrame)
+void RoomAmbience::updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame)
 {
-    for(std::vector<OneShot>::iterator it = mOneShots.begin(); it != mOneShots.end();)
+    for(std::vector<OneShot>::iterator it = oneShots.begin(); it != oneShots.end();)
     {
         it->mLife -= timeSinceLastFrame;
         if(it->mLife > 0.0)
@@ -1076,7 +1095,7 @@ void RoomAmbience::updateOneShots(double timeSinceLastFrame)
         emitter.mNode = it->mNode;
         emitter.mSystem = it->mSystem;
         destroyEmitter(emitter);
-        it = mOneShots.erase(it);
+        it = oneShots.erase(it);
     }
 }
 
@@ -1199,6 +1218,14 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
     Ogre::Camera* camera = (frameListener != nullptr) ? frameListener->getCameraManager()->getActiveCamera() : nullptr;
     Ogre::Vector3 cameraPosition = (camera != nullptr) ? camera->getDerivedPosition() : Ogre::Vector3::ZERO;
+    // The point on the floor the camera looks at, from which the strength of a shake is measured
+    Ogre::Vector3 lookPoint = cameraPosition;
+    if(camera != nullptr)
+    {
+        Ogre::Vector3 direction = camera->getDerivedDirection();
+        if(direction.z < -0.05f)
+            lookPoint = cameraPosition + direction * (cameraPosition.z / -direction.z);
+    }
 
     std::string visual = visualName;
     int32_t tileX = static_cast<int32_t>(std::floor(position.x + 0.5f));
@@ -1218,12 +1245,15 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
         if(!effect.mMatch.empty() && (std::find(effect.mMatch.begin(), effect.mMatch.end(), visual) == effect.mMatch.end()))
             continue;
 
+        bool isShake = (effect.mKind == AmbienceKind::shake);
+        bool isMark = (effect.mKind == AmbienceKind::mark);
         if(!forced)
         {
             if(!isEffectUsable(effect) || (camera == nullptr))
                 continue;
 
-            if(!isVisibleNear(camera, cameraPosition, position, 1.5, getDistanceLimit(effect)))
+            // A shake is felt wherever the event is; a mark must be there when the view comes by later
+            if(!isShake && !isMark && !isVisibleNear(camera, cameraPosition, position, 1.5, getDistanceLimit(effect)))
                 continue;
 
             if(effect.mSpacing > 1)
@@ -1240,8 +1270,18 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
                     continue;
             }
 
-            if(mOneShots.size() >= mConfig.getMaxOneShots())
+            if(!isShake && !isMark && (mOneShots.size() >= mConfig.getMaxOneShots()))
                 continue;
+        }
+
+        if(isShake)
+        {
+            if(mMode != Mode::off)
+            {
+                startShake(effect, position, lookPoint);
+                ++nbStarted;
+            }
+            continue;
         }
 
         OneShot oneShot;
@@ -1249,7 +1289,23 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
             continue;
 
         oneShot.mLife = effect.mDuration;
-        mOneShots.push_back(oneShot);
+        if(isMark)
+        {
+            // The oldest mark makes room for the new one
+            while(mMarks.size() >= std::max<uint32_t>(1, mConfig.getMaxMarks()))
+            {
+                Emitter oldest;
+                oldest.mNode = mMarks.front().mNode;
+                oldest.mSystem = mMarks.front().mSystem;
+                destroyEmitter(oldest);
+                mMarks.erase(mMarks.begin());
+            }
+            mMarks.push_back(oneShot);
+        }
+        else
+        {
+            mOneShots.push_back(oneShot);
+        }
         ++nbStarted;
     }
 
@@ -1257,6 +1313,79 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
         mLastEventTime[eventName] = mClock;
 
     return nbStarted;
+}
+
+void RoomAmbience::startShake(const AmbienceEffect& effect, const Ogre::Vector3& position,
+        const Ogre::Vector3& lookPoint)
+{
+    double distance = std::hypot(static_cast<double>(position.x - lookPoint.x),
+        static_cast<double>(position.y - lookPoint.y));
+    if((effect.mMaxDistance <= 0.0) || (distance >= effect.mMaxDistance))
+        return;
+
+    double strength = effect.mAmount * (1.0 - distance / effect.mMaxDistance);
+    // A shake that is still running is not made weaker by a new one
+    double running = (mShakeTotal > 0.0) ? (mShakeAmount * mShakeTime / mShakeTotal) : 0.0;
+    if((mShakeTime > 0.0) && (running > strength))
+        return;
+
+    mShakeAmount = strength;
+    mShakeTotal = std::max(0.05, effect.mDuration);
+    mShakeTime = mShakeTotal;
+    mShakeSpeed = std::max(0.5, effect.mSpeed);
+}
+
+void RoomAmbience::updateShake(double timeSinceLastFrame)
+{
+    if(mShakeTime <= 0.0)
+        return;
+
+    mShakeTime -= timeSinceLastFrame;
+    if(mShakeTime < 0.0)
+        mShakeTime = 0.0;
+    mShakePhase += timeSinceLastFrame * mShakeSpeed * 6.283185307179586;
+}
+
+void RoomAmbience::applyShake()
+{
+    if((mShakeTime <= 0.0) || (mMode == Mode::off) || (mGameMap == nullptr) || mGameMap->getGamePaused())
+        return;
+
+    ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
+    if(frameListener == nullptr)
+        return;
+
+    Ogre::SceneNode* cameraNode = frameListener->getCameraManager()->getActiveCameraNode();
+    if((cameraNode == nullptr) || (cameraNode->numChildren() == 0))
+        return;
+
+    // The camera hangs on the first child of the camera node; moving it by a small offset moves the picture
+    Ogre::Node* viewNode = cameraNode->getChild(0);
+    double strength = mShakeAmount * (mShakeTime / mShakeTotal);
+    Ogre::Vector3 offset(static_cast<Ogre::Real>(strength * std::sin(mShakePhase)),
+        static_cast<Ogre::Real>(strength * std::sin(mShakePhase * 1.31 + 1.7)),
+        static_cast<Ogre::Real>(strength * 0.5 * std::sin(mShakePhase * 0.83 + 0.4)));
+    viewNode->setPosition(viewNode->getPosition() + offset);
+    mShakeApplied = offset;
+}
+
+void RoomAmbience::clearShake()
+{
+    if(mShakeApplied == Ogre::Vector3::ZERO)
+        return;
+
+    ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
+    Ogre::Vector3 applied = mShakeApplied;
+    mShakeApplied = Ogre::Vector3::ZERO;
+    if(frameListener == nullptr)
+        return;
+
+    Ogre::SceneNode* cameraNode = frameListener->getCameraManager()->getActiveCameraNode();
+    if((cameraNode == nullptr) || (cameraNode->numChildren() == 0))
+        return;
+
+    Ogre::Node* viewNode = cameraNode->getChild(0);
+    viewNode->setPosition(viewNode->getPosition() - applied);
 }
 
 void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction)

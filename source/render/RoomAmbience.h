@@ -89,8 +89,13 @@ public:
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
 
+    //! \brief Moves the camera by the current shake. Called just before the frame is rendered; clearShake()
+    //! takes it away again after the frame, so nothing else ever sees the shaken camera.
+    void applyShake();
+    void clearShake();
+
     inline uint32_t getNbParticleSystems() const
-    { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size()); }
+    { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size() + mMarks.size()); }
     inline uint32_t getNbMovedObjects() const
     { return static_cast<uint32_t>(mMotionNodes.size()); }
 
@@ -193,7 +198,10 @@ private:
     void reconcile();
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
-    void updateOneShots(double timeSinceLastFrame);
+    void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
+    void updateShake(double timeSinceLastFrame);
+    //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
+    void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
     void updateMotions(double timeSinceLastFrame);
     void destroyEmitter(Emitter& emitter);
     void restoreMotionNode(MotionNode& motionNode);
@@ -233,9 +241,19 @@ private:
 
     std::map<std::string, Emitter> mEmitters;
     std::vector<OneShot> mOneShots;
+    //! Ground marks (kind mark), oldest first
+    std::vector<OneShot> mMarks;
     std::map<std::string, MotionNode> mMotionNodes;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;
+    //! View shake: seconds left and in total, strength in world units at the start, shakes per second, phase
+    double mShakeTime;
+    double mShakeTotal;
+    double mShakeAmount;
+    double mShakeSpeed;
+    double mShakePhase;
+    //! Offset the camera node was moved by in applyShake (zero when not applied)
+    Ogre::Vector3 mShakeApplied;
     //! Time until which a door (key "x,y" of its tile) counts as hit, for the effects "When Hit"
     std::map<std::string, double> mHitUntil;
 
