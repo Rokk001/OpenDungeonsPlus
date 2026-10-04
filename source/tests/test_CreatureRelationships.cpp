@@ -210,8 +210,8 @@ BOOST_AUTO_TEST_CASE(test_SaveLoadRoundTrip)
     BOOST_CHECK(changes.empty());
 
     // The idle time of a pair survives the round trip: this pair had its last event 100
-    // turns before saving, so it drifts right at the first drift step after loading.
-    loaded.doTurn(10);
+    // turns before saving, so it drifts as soon as the idle time of the settings is reached.
+    loaded.doTurn(loaded.getSettings().mDriftIdleTurns - 100);
     BOOST_CHECK_EQUAL(loaded.getValue("Orc1", "Troll1"), 84);
 }
 
@@ -458,7 +458,8 @@ BOOST_AUTO_TEST_CASE(test_Mentoring)
 
     // Only a friend teaches
     relationships.changeValue("Pupil", "Master", 60, 0);
-    BOOST_CHECK_EQUAL(relationships.mentoringFactor("Pupil", 2, trainees), 1.5);
+    BOOST_CHECK_EQUAL(relationships.mentoringFactor("Pupil", 2, trainees),
+        1.0 + relationships.getSettings().mMentorXpBonusPercent / 100.0);
     // The master does not learn from the pupil
     BOOST_CHECK_EQUAL(relationships.mentoringFactor("Master", 5, trainees), 1.0);
     // The level difference must be large enough
