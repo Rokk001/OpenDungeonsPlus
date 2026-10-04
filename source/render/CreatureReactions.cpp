@@ -30,6 +30,8 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "network/CosmeticEvent.h"
+#include "network/ODClient.h"
 #include "render/CreatureCombatReactions.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/ODFrameListener.h"
@@ -131,6 +133,11 @@ const double BUMP_RADIUS = 1.3;
 const double WAVE_RADIUS_FACTOR = 1.3;
 //! Creatures that are on the map when the game starts did not arrive: nothing is shown in this time
 const double ARRIVAL_QUIET_TIME = 3.0;
+//! Seconds the mood told for an arrival counts, how recent a delivery has to be to belong to a full treasury,
+//! and how close to the last deposit the worker has to stand
+const double ARRIVAL_MOOD_MEMORY = 30.0;
+const double FULL_DELIVERY_MEMORY = 6.0;
+const double FULL_TREASURY_RADIUS = 3.0;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -367,6 +374,27 @@ bool CreatureReactions::isInHand(const Creature* creature) const
     return std::find(hand.begin(), hand.end(), creature) != hand.end();
 }
 
+bool CreatureReactions::hasServerEvents()
+{
+    return (ODClient::getSingletonPtr() != nullptr) && ODClient::getSingleton().supportsCosmeticEvents();
+}
+
+std::string CreatureReactions::getMoodClass(const Creature* creature) const
+{
+    int32_t level = static_cast<int32_t>(creature->getMoodValue());
+    std::map<std::string, std::pair<int32_t, double> >::const_iterator it = mArrivalMoods.find(creature->getName());
+    if((it != mArrivalMoods.end()) && ((mTime - it->second.second) <= ARRIVAL_MOOD_MEMORY))
+        level = it->second.first;
+
+    if(level == static_cast<int32_t>(CreatureMoodLevel::Happy))
+        return "happy";
+
+    if(level >= static_cast<int32_t>(CreatureMoodLevel::Upset))
+        return "unhappy";
+
+    return "neutral";
+}
+
 bool CreatureReactions::isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const
 {
     const CreatureDefinition* definition = creature->getDefinition();
@@ -397,6 +425,9 @@ bool CreatureReactions::isVariantAllowed(const Creature* creature, const Reactio
         if(!inGroup)
             return false;
     }
+
+    if(!variant.mMoods.empty() && !contains(variant.mMoods, getMoodClass(creature)))
+        return false;
 
     if(variant.mRequiresSleepNeed && !creatureNeedsSleep(creature))
         return false;
@@ -1400,6 +1431,23 @@ void CreatureReactions::pruneCooldowns()
             ++it;
     }
 
+    for(std::map<std::string, double>::iterator it = mLastDelivery.begin(); it != mLastDelivery.end();)
+    {
+        if((mTime - it->second) > FULL_DELIVERY_MEMORY)
+            mLastDelivery.erase(it++);
+        else
+            ++it;
+    }
+
+    for(std::map<std::string, std::pair<int32_t, double> >::iterator it = mArrivalMoods.begin();
+        it != mArrivalMoods.end();)
+    {
+        if((mTime - it->second.second) > ARRIVAL_MOOD_MEMORY)
+            mArrivalMoods.erase(it++);
+        else
+            ++it;
+    }
+
     for(std::map<std::string, double>::iterator it = mSlappedAt.begin(); it != mSlappedAt.end();)
     {
         if((mTime - it->second) > SLAP_DUCK_MEMORY)
@@ -1957,6 +2005,8 @@ void CreatureReactions::noteRelease(Creature* carrier, GameEntity* carried)
     if(getRoomName(carrier) != "Treasury")
         return;
 
+    mLastDelivery[carrier->getName()] = mTime;
+
     // Delivering again and again is tiring: after some deliveries the creature is out of breath
     Delivery& delivery = mDeliveries[carrier->getName()];
     if((delivery.mCount == 0) || ((mTime - delivery.mSince) > DELIVERY_WINDOW))
@@ -1966,7 +2016,9 @@ void CreatureReactions::noteRelease(Creature* carrier, GameEntity* carried)
     }
 
     ++delivery.mCount;
-    if(delivery.mCount >= DELIVERY_TIRED_COUNT)
+    // When the server tells that the treasury is full (noteCosmeticEvent) that is the trigger; counting deliveries
+    // is only the substitute for a server without cosmetic events
+    if(!hasServerEvents() && (delivery.mCount >= DELIVERY_TIRED_COUNT))
     {
         delivery.mCount = 0;
         trigger(carrier, "TreasuryFull");
@@ -2248,6 +2300,76 @@ void CreatureReactions::noteHandHover(Creature* creature)
     trigger(creature, ducks ? "HandHoverDuck" : "HandHover");
 }
 
+void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
+{
+    if((mMode == Mode::off) || !mConfigLoaded)
+        return;
+
+    Player* localPlayer = mGameMap->getLocalPlayer();
+    if(localPlayer == nullptr)
+        return;
+
+    if(event.is(CosmeticEventType::portalArrival))
+    {
+        // Can arrive before the creature does: the mood is remembered by name
+        mArrivalMoods[event.mSubject] = std::make_pair(event.mValue, mTime);
+        return;
+    }
+
+    if(event.is(CosmeticEventType::treasuryFull))
+    {
+        // The worker that delivered last is the one out of breath
+        Creature* best = nullptr;
+        double bestDistance = FULL_TREASURY_RADIUS;
+        for(std::map<std::string, double>::const_iterator it = mLastDelivery.begin(); it != mLastDelivery.end(); ++it)
+        {
+            if((mTime - it->second) > FULL_DELIVERY_MEMORY)
+                continue;
+
+            Creature* worker = mGameMap->getCreature(it->first);
+            if((worker == nullptr) || !worker->getIsOnMap() || !worker->isAlive())
+                continue;
+
+            Ogre::Vector3 difference = worker->getPosition() - event.mPosition;
+            difference.z = 0.0f;
+            if(difference.length() >= bestDistance)
+                continue;
+
+            bestDistance = difference.length();
+            best = worker;
+        }
+
+        if(best != nullptr)
+            queueReaction(best, "TreasuryFull", DONE_WAIT_MAX, 0.3);
+
+        return;
+    }
+
+    // The rest is about the creatures of the local keeper
+    Creature* creature = mGameMap->getCreature(event.mSubject);
+    if((creature == nullptr) || (creature->getSeat() != localPlayer->getSeat()))
+        return;
+
+    if(event.is(CosmeticEventType::moodStage))
+    {
+        int32_t newLevel = event.mValue;
+        int32_t oldLevel = event.mValue2;
+        if((newLevel == static_cast<int32_t>(CreatureMoodLevel::Happy)) && (oldLevel != newLevel))
+            queueReaction(creature, "MoodHappy", DONE_WAIT_MAX, 1.0);
+        else if((newLevel == static_cast<int32_t>(CreatureMoodLevel::Upset)) && (oldLevel < newLevel))
+            queueReaction(creature, "MoodUpset", DONE_WAIT_MAX, 1.0);
+    }
+    else if(event.is(CosmeticEventType::scared))
+    {
+        // It runs first, the cowering follows when it stands again
+        queueReaction(creature, "MoodScared", DONE_WAIT_MAX, 0.8);
+    }
+    else if(event.is(CosmeticEventType::impatient))
+    {
+        queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, 0.3);
+    }
+}
+
 void CreatureReactions::endForCreature(Creature* creature)
 {
     for(std::vector<PendingReaction>::iterator it = mPending.begin(); it != mPending.end();)
@@ -2456,7 +2578,10 @@ void CreatureReactions::examineMood(Creature* creature)
         events.push_back("MoodAngry");
     if(own && (level == CreatureMoodLevel::Upset))
         events.push_back("MoodUpset");
-    if(idle && isHurtAndThreatened(creature))
+    // With cosmetic events from the server, fear and waiting for work are told by the server (noteCosmeticEvent)
+    // and not guessed from the health and the idle time
+    bool serverEvents = hasServerEvents();
+    if(!serverEvents && idle && isHurtAndThreatened(creature))
         events.push_back("MoodScared");
     if(creature->getOverlayHealthValue() >= HURT_STAGE)
         events.push_back(moving ? "HurtWalk" : "HurtIdle");
@@ -2473,7 +2598,7 @@ void CreatureReactions::examineMood(Creature* creature)
 
     if(idle && (idleFor >= mConfig.getBoredAfter()))
         events.push_back("MoodBored");
-    else if(idle && (idleFor >= mConfig.getImpatientAfter()))
+    else if(!serverEvents && idle && (idleFor >= mConfig.getImpatientAfter()))
         events.push_back("MoodImpatient");
 
     if(own && (level == CreatureMoodLevel::Happy))

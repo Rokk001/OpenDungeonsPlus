@@ -550,6 +550,8 @@ enum_body = notification_header[notification_header.index('enum class ServerNoti
 enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name != 'relationshipTier']
+assert enumerators[-1] == 'cosmeticEvent', enumerators[-4:]
+enumerators = enumerators[:-1]
 assert enumerators[-1] == 'chickenKindChanged' and enumerators[-2] == 'timeLimit', enumerators[-4:]
 assert enumerators[-3] == 'editorRegionData' and enumerators[-4] == 'possessionEnd', enumerators[-6:]
 assert enumerators[-5] == 'possessionStart' and enumerators[-6] == 'casinoPayout', enumerators[-8:]

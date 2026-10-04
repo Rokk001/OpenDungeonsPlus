@@ -172,6 +172,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "timeLimit";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
+        case ServerNotificationType::cosmeticEvent:
+            return "cosmeticEvent";
 
         case ServerNotificationType::seatTeam:
             return "seatTeam";

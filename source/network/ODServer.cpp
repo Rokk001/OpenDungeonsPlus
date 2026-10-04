@@ -42,6 +42,7 @@
 #include "gamemap/DraggableTileContainer.h"
 #include "gamemap/MapHandler.h"
 #include "modes/ConsoleCommands.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
@@ -1036,7 +1037,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             clientSocket->setState("nick");
             // Tell the client to give us their nickname
             ODPacket packetSend;
-            packetSend << ServerNotificationType::pickNick << mServerMode << true << true << true << true << true;
+            packetSend << ServerNotificationType::pickNick << mServerMode << true << true << true << true << true << true;
             clientSocket->send(packetSend);
             break;
         }
@@ -1073,6 +1074,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> creatureProgress);
             clientSocket->setSupportsCreatureProgress(creatureProgress);
+
+            bool cosmeticEvents = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
+            clientSocket->setSupportsCosmeticEvents(cosmeticEvents);
 
             // NOTE : playerId 0 is reserved for inactive players and 1 is reserved for AI
             int32_t playerId = mUniqueNumberPlayer + Seat::PLAYER_ID_HUMAN_MIN;
@@ -1129,6 +1135,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             packetSend << clientSocket->supportsCreaturePanel();
             packetSend << clientSocket->supportsCreatureProgress();
             packetSend << gameMap->isRelationshipsEnabled();
+            packetSend << clientSocket->supportsCosmeticEvents();
             clientSocket->send(packetSend);
             mSeatsConfigured = true;
             break;
@@ -1490,6 +1497,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 packetSend << client->supportsCreaturePanel();
                 packetSend << client->supportsCreatureProgress();
                 packetSend << gameMap->isRelationshipsEnabled();
+                packetSend << client->supportsCosmeticEvents();
                 client->send(packetSend);
             }
 
@@ -3301,6 +3309,23 @@ bool ODServer::supportsCreatureProgress(Player* player)
 {
     ODSocketClient* client = getClientFromPlayer(player);
     return client != nullptr && client->supportsCreatureProgress();
+}
+
+bool ODServer::supportsCosmeticEvents(Player* player)
+{
+    ODSocketClient* client = getClientFromPlayer(player);
+    return client != nullptr && client->supportsCosmeticEvents();
+}
+
+void ODServer::sendCosmeticEvent(Player* player, const CosmeticEvent& event)
+{
+    if(player == nullptr || !player->getIsHuman() || !supportsCosmeticEvents(player))
+        return;
+
+    ServerNotification* notification = new ServerNotification(
+        ServerNotificationType::cosmeticEvent, player);
+    notification->mPacket << event;
+    queueServerNotification(notification);
 }
 
 ODSocketClient* ODServer::getClientFromPlayer(Player* player)

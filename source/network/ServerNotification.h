@@ -171,7 +171,12 @@ enum class ServerNotificationType
     //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
     //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
     //! Appended last so that no existing numeric value changes.
-    chickenKindChanged
+    chickenKindChanged,
+    //! A short cosmetic note that something happened (a mood change, a full treasury, a blow, a missile
+    //! launch): + a CosmeticEvent (see network/CosmeticEvent.h). Only sent to clients that negotiated
+    //! cosmetic events; an older client never gets it. Appended last so that no existing numeric value
+    //! changes.
+    cosmeticEvent
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

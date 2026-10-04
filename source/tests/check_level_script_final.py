@@ -65,7 +65,7 @@ send = function(gamemap, 'void GameMap::sendTimeLimit(')
 assert 'ServerNotificationType::timeLimit' in send and 'getIsHuman()' in send
 assert 'rebaseTimeLimit(' in map_handler
 enum_body = server_h.split('enum class ServerNotificationType')[1].split('};')[0]
-assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*$', enum_body, re.M)[-2:] == ['timeLimit', 'chickenKindChanged'], 'timeLimit and then chickenKindChanged must be the last server notifications'
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*$', enum_body, re.M)[-3:] == ['timeLimit', 'chickenKindChanged', 'cosmeticEvent'], 'timeLimit, chickenKindChanged and then cosmeticEvent must be the last server notifications'
 assert 'case ServerNotificationType::timeLimit:' in server_cpp
 handler = client[client.index('case ServerNotificationType::timeLimit:'):]
 handler = handler[:handler.index('break;')]
