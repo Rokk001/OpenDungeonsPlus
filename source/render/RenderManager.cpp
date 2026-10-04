@@ -48,6 +48,7 @@
 #include "render/DebugDrawer.h"
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
+#include "render/LooseGoldMesh.h"
 #include "render/TreasuryGoldMesh.h"
 #include "sound/SoundEffectsManager.h"
 #include "rooms/Room.h"
@@ -2763,6 +2764,9 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
         refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
     }
+    // Gold on the floor is drawn as a small coin heap
+    else if(renderedMovableEntity->getObjectType() == GameEntityType::treasuryObject)
+        meshName = LooseGoldMesh::prepareHeap(mSceneManager, meshName);
     
     std::string tempString = renderedMovableEntity->getOgreNamePrefix() + renderedMovableEntity->getName() + (static_cast<bool>(nt) ?  "" : "_dtc" );
 
@@ -2861,6 +2865,13 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
         Ogre::Entity* ent = mSceneManager->getEntity(tempString);
         node->detachObject(ent);
         mSceneManager->destroyEntity(ent);
+    }
+    // The sack shown while a worker carries gold
+    if(mSceneManager->hasEntity(tempString + "_sack"))
+    {
+        Ogre::Entity* sack = mSceneManager->getEntity(tempString + "_sack");
+        node->detachObject(sack);
+        mSceneManager->destroyEntity(sack);
     }
     mSceneManager->destroySceneNode(node);
     curRenderedMovableEntity->setParentSceneNode(nullptr);
@@ -5071,6 +5082,19 @@ void RenderManager::rrCarryEntity(Creature* carrier, GameEntity* carried)
             carriedEnt->getBoundingBox().getMinimum().z * carriedScale) / carrierScale;
     }
     carriedNode->setPosition(Ogre::Vector3(0, 0, carrySpotZ));
+
+    // Carried gold is shown as a sack with coins, its size follows the amount
+    if(carried->getObjectType() == GameEntityType::treasuryObject)
+    {
+        const std::string sackMesh = LooseGoldMesh::prepareSack(mSceneManager, carried->getMeshName());
+        const std::string sackName = carriedEnt->getName() + "_sack";
+        if(!sackMesh.empty() && !mSceneManager->hasEntity(sackName))
+        {
+            Ogre::Entity* sack = mSceneManager->createEntity(sackName, sackMesh + ".mesh");
+            carriedNode->attachObject(sack);
+            carriedEnt->setVisible(false);
+        }
+    }
 }
 
 void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carried)
@@ -5083,6 +5107,15 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
     carried->setParentNodeDetachFlags(
         EntityParentNodeAttach::DETACH_CARRIED, false);
     carriedNode->setInheritScale(true);
+
+    const std::string sackName = carriedEnt->getName() + "_sack";
+    if(mSceneManager->hasEntity(sackName))
+    {
+        Ogre::Entity* sack = mSceneManager->getEntity(sackName);
+        carriedNode->detachObject(sack);
+        mSceneManager->destroyEntity(sack);
+        carriedEnt->setVisible(true);
+    }
 }
 
 void RenderManager::clearCreatureDecay(Creature* creature)
