@@ -34,9 +34,11 @@
 #include "render/CreatureOverlayStatus.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "rooms/Room.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -199,7 +201,8 @@ CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& config
     mNextLookTarget(Ogre::Vector3::ZERO),
     mHasNextLookTarget(false),
     mSlapTime(0.0),
-    mNextInteraction(0.0)
+    mNextInteraction(0.0),
+    mNextSpectatorScan(0.0)
 {
     mConfigLoaded = mConfig.load(mConfigFileName);
     if(!mConfigLoaded)
@@ -1271,6 +1274,8 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
     mTime += timeSinceLastFrame;
 
     updateOngoing();
+    if(mTime >= mNextSpectatorScan)
+        scanArenaSpectators();
     updateMoods(timeSinceLastFrame);
     CreatureCombatReactions::update(*this, timeSinceLastFrame);
 
@@ -1730,6 +1735,92 @@ void CreatureReactions::updateOngoing()
 
         queueReaction(creature, it->second.mEventName);
         ++it;
+    }
+}
+
+void CreatureReactions::scanArenaSpectators()
+{
+    mNextSpectatorScan = mTime + mConfig.getArenaSpectatorInterval();
+    if((mMode == Mode::off) || !mConfigLoaded)
+        return;
+
+    std::vector<Room*> arenas = mGameMap->getRoomsByType(RoomType::arena);
+    if(arenas.empty())
+        return;
+
+    // The same distance the server uses for the mood of the spectators
+    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitSpectatorRadius", 4.0);
+    double squaredRadius = radius * radius;
+    for(Room* arena : arenas)
+    {
+        if(arena->getSeat() == nullptr)
+            continue;
+
+        // A bout goes on when at least two creatures in the arena attacked a moment ago
+        uint32_t nbFighting = 0;
+        std::vector<Creature*> others;
+        for(Creature* creature : mGameMap->getCreatures())
+        {
+            if(!creature->getIsOnMap() || !creature->isAlive())
+                continue;
+
+            Tile* creatureTile = creature->getPositionTile();
+            if(creatureTile == nullptr)
+                continue;
+
+            std::map<std::string, double>::const_iterator itAttack = mLastAttack.find(creature->getName());
+            bool fought = (itAttack != mLastAttack.end()) && ((mTime - itAttack->second) <= ATTACK_MEMORY);
+            if(fought && (creatureTile->getCoveringRoom() == arena))
+                ++nbFighting;
+            else if(!fought)
+                others.push_back(creature);
+        }
+
+        if(nbFighting < 2)
+            continue;
+
+        // The creatures of the keeper that are not fighting but close to the arena watch the bout
+        std::vector<Creature*> spectators;
+        std::vector<Tile*> arenaTiles = arena->getCoveredTiles();
+        for(Creature* creature : others)
+        {
+            if(creature->isKo() || creature->getDefinition()->isWorker() ||
+               !arena->getSeat()->isAlliedSeat(creature->getSeat()))
+            {
+                continue;
+            }
+
+            Tile* creatureTile = creature->getPositionTile();
+            for(Tile* arenaTile : arenaTiles)
+            {
+                double dx = static_cast<double>(creatureTile->getX() - arenaTile->getX());
+                double dy = static_cast<double>(creatureTile->getY() - arenaTile->getY());
+                if((dx * dx + dy * dy) <= squaredRadius)
+                {
+                    spectators.push_back(creature);
+                    break;
+                }
+            }
+        }
+
+        if(spectators.empty())
+            continue;
+
+        triggerGroup("ArenaSpectator", spectators, false, 0.0);
+
+        // The crowd shouts and throws confetti now and then, at the middle of the arena
+        std::map<std::string, double>::iterator itCheer = mNextArenaCheer.find(arena->getName());
+        if(((itCheer == mNextArenaCheer.end()) || (mTime >= itCheer->second)) && (arena->numCoveredTiles() > 0) &&
+           (RoomAmbience::getSingletonPtr() != nullptr))
+        {
+            mNextArenaCheer[arena->getName()] = mTime + mConfig.getArenaCheerPause();
+            Tile* middle = arena->getCoveredTile(static_cast<int>(arena->numCoveredTiles() / 2));
+            if(middle != nullptr)
+            {
+                RoomAmbience::getSingleton().triggerEvent("ArenaCheer", middle->getPosition(), false,
+                    Tile::tileVisualToString(TileVisual::arenaRoom));
+            }
+        }
     }
 }
 
@@ -2971,6 +3062,7 @@ void CreatureReactions::stopAll()
     CreatureCombatReactions::stopAll(*this);
     mPending.clear();
     mOngoing.clear();
+    mNextArenaCheer.clear();
     for(RunningReaction& reaction : mRunning)
         endReaction(reaction, mGameMap->getCreature(reaction.mCreatureName));
 
