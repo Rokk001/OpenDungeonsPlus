@@ -32,6 +32,8 @@
 #include <OgreDefaultDebugDrawer.h>
 #include <cstdint>
 #include "entities/GameEntity.h"
+#include "render/TreasuryCreatureRules.h"
+#include <OgreVector2.h>
 
 class DraggableTileContainer;
 class GameMap;
@@ -172,6 +174,8 @@ public:
     void rrDestroySeatVisionVisualDebug(int seatId, Tile* tile);
     void rrSetObjectAnimationState(MovableGameEntity* curAnimatedObject, const std::string& animation, bool loop);
     void rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position);
+    //! A worker poured gold onto the treasury tile (x, y): coins fall onto the top of the pile
+    void rrTreasuryDeposit(GameMap* gameMap, int x, int y);
     void rrMoveMapLightFlicker(MapLight* mapLight, const Ogre::Vector3& position);
     void rrCarryEntity(Creature* carrier, GameEntity* carried);
     void rrReleaseCarriedEntity(Creature* carrier, GameEntity* carried);
@@ -454,6 +458,18 @@ private:
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
     std::set<Creature*> mSteppingCreatures;
 
+    struct TreasuryEffect
+    {
+        std::string mName;
+        Ogre::Real mRemaining;
+        const void* mRoomKey;
+    };
+    std::vector<TreasuryEffect> mTreasuryEffects;
+    TreasuryCreatureRules::SplashBudget mTreasurySplashBudget;
+    //! Where a creature last splashed coins, to space the splashes along its way
+    std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
+    int mTreasuryEffectNumber = 0;
+
     struct CreatureDropAnimation
     {
         Creature* mCreature;
@@ -520,6 +536,11 @@ private:
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
     void updateCreatureStep(Creature* creature);
+    void refreshCreaturesOnTile(Tile* tile);
+    void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
+    bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position);
+    void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
+    void clearTreasuryEffects();
     void cancelCreatureStep(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
     void clearCreatureDecay(Creature* creature);

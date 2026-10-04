@@ -1111,6 +1111,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             int yPos;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
             SoundEffectsManager::getSingleton().playSpatialSound(family, xPos, yPos);
+            if(family == "Rooms/Treasury/DepositGold")
+                RenderManager::getSingleton().rrTreasuryDeposit(gameMap, xPos, yPos);
             break;
         }
 

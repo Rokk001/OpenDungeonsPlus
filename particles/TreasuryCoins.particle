@@ -1,0 +1,90 @@
+// Coins thrown up by feet in deep treasury gold, and coins poured onto a pile by a worker.
+
+particle_system TreasuryCoinSplash
+{
+    material        ReactionParticleCoin
+    point_rendering false
+    particle_width  0.07
+    particle_height 0.07
+    cull_each       false
+    quota           10
+    billboard_type  point
+
+    emitter Point
+    {
+        angle               50
+        colour_range_start  1.0 0.9 0.5 1.0
+        colour_range_end    1.0 0.75 0.25 1.0
+        emission_rate       60
+        time_to_live_min    0.4
+        time_to_live_max    0.7
+        direction           0 0 1
+        velocity_min        0.7
+        velocity_max        1.4
+        duration            0.12
+    }
+
+    affector LinearForce
+    {
+        force_vector      0 0 -4.5
+        force_application add
+    }
+
+    affector Rotator
+    {
+        rotation_speed_range_start  -300
+        rotation_speed_range_end    300
+        rotation_range_start        0
+        rotation_range_end          360
+    }
+
+    affector ColourFader
+    {
+        alpha -1.0
+    }
+}
+
+particle_system TreasuryCoinPour
+{
+    material        ReactionParticleCoin
+    point_rendering false
+    particle_width  0.07
+    particle_height 0.07
+    cull_each       false
+    quota           24
+    billboard_type  point
+
+    emitter Point
+    {
+        angle               25
+        colour_range_start  1.0 0.9 0.5 1.0
+        colour_range_end    1.0 0.75 0.25 1.0
+        emission_rate       50
+        time_to_live_min    0.5
+        time_to_live_max    0.8
+        direction           0 0 -1
+        velocity_min        0.3
+        velocity_max        0.9
+        position            0 0 0.4
+        duration            0.5
+    }
+
+    affector LinearForce
+    {
+        force_vector      0 0 -2.5
+        force_application add
+    }
+
+    affector Rotator
+    {
+        rotation_speed_range_start  -200
+        rotation_speed_range_end    200
+        rotation_range_start        0
+        rotation_range_end          360
+    }
+
+    affector ColourFader
+    {
+        alpha -1.0
+    }
+}
