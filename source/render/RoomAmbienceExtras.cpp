@@ -172,6 +172,10 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
             if(!mInitialized || mHungryPositions.empty())
                 continue;
 
+            // With cosmetic events the server tells when a chicken really hops (ChickenFlee event)
+            if((ODClient::getSingletonPtr() != nullptr) && ODClient::getSingleton().supportsCosmeticEvents())
+                continue;
+
             for(const Ogre::Vector3& hungry : mHungryPositions)
             {
                 double dx = hungry.x - position.x;

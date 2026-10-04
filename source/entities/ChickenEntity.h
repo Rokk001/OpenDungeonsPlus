@@ -18,11 +18,13 @@
 #ifndef CHICKENENTITY_H
 #define CHICKENENTITY_H
 
+#include "entities/ChickenFlight.h"
 #include "entities/RenderedMovableEntity.h"
 
 #include <cstdint>
 #include <string>
 #include <iosfwd>
+#include <vector>
 
 class Creature;
 class Room;
@@ -139,7 +141,13 @@ private:
     bool mLockedEat;
     std::string mLockOwner;
     std::string mSnatchedFrom;
+    ChickenFlight::State mFlight;
 
+    //! Places (inside the room) the chicken could walk to from the given tile in one step
+    void collectMovePositions(Tile* tile, Room* currentHatchery, std::vector<Ogre::Vector2>& positions);
+    //! A hungry creature that locked this chicken comes close: hop away from it (see ChickenFlight.h).
+    //! Returns true if the chicken started to hop.
+    bool tryFlee(Tile* tile, Room* currentHatchery);
     void addTileToListIfPossible(int x, int y, Room* currentHatchery, std::vector<Tile*>& possibleTileMove);
 };
 

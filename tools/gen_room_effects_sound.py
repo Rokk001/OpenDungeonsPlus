@@ -98,12 +98,42 @@ def crow():
     return out
 
 
+def cluck():
+    # a startled burst: short, sharp syllables that fall in pitch, a little faster at the end
+    syllables = ((0.00, 0.075, 980.0, 620.0), (0.13, 0.07, 1020.0, 640.0), (0.25, 0.07, 1000.0, 600.0),
+                 (0.36, 0.065, 1060.0, 640.0), (0.46, 0.14, 900.0, 520.0))
+    length = 0.8
+    t = np.arange(int(RATE * length)) / RATE
+    out = np.zeros_like(t)
+    rng = np.random.RandomState(13)
+    for start, duration, f_start, f_end in syllables:
+        count = int(duration * RATE)
+        offset = int(start * RATE)
+        local = np.arange(count) / RATE
+        progress = local / duration
+        pitch = f_start + (f_end - f_start) * progress
+        pitch = pitch * (1.0 + 0.01 * rng.uniform(-1, 1, count))
+        phase = 2 * math.pi * np.cumsum(pitch) / RATE
+        tone = np.zeros(count)
+        for harmonic in range(1, 14):
+            frequency = pitch * harmonic
+            shape = math.exp(-((harmonic * f_start - 1500.0) / 1000.0) ** 2)
+            shape = np.where(frequency < 5500.0, shape, 0.0)
+            tone += shape * np.sin(harmonic * phase) / math.sqrt(harmonic)
+        fade_in = np.minimum(1.0, local / 0.006)
+        fade_out = np.clip((duration - local) / 0.03, 0.0, 1.0)
+        out[offset:offset + count] += tone * fade_in * fade_out * (1.0 + 0.2 * rng.uniform(-1, 1))
+    return out
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     write_ogg(gong(), os.path.join(root, "sounds", "Spatial", "Rooms", "Temple", "Gong", "Gong01.ogg"))
     print("wrote Gong01.ogg")
     write_ogg(crow(), os.path.join(root, "sounds", "Spatial", "Rooms", "Hatchery", "RoosterCrow", "RoosterCrow01.ogg"))
     print("wrote RoosterCrow01.ogg")
+    write_ogg(cluck(), os.path.join(root, "sounds", "Spatial", "Rooms", "Hatchery", "Cluck", "Cluck01.ogg"))
+    print("wrote Cluck01.ogg")
 
 
 if __name__ == "__main__":

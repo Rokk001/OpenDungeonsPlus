@@ -48,6 +48,7 @@
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "render/CreatureReactions.h"
+#include "render/RoomAmbience.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "rooms/RoomPortalWave.h"
@@ -993,6 +994,13 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             // kind has the same layout, so nothing is lost in the packet.
             if(!supportsCosmeticEvents() || !event.isKnownType())
                 break;
+
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+               event.is(CosmeticEventType::chickenFlee) && (RoomAmbience::getSingletonPtr() != nullptr))
+            {
+                // The chicken really hops: feathers, dust and a cluck where it was
+                RoomAmbience::getSingleton().triggerEvent("ChickenFlee", event.mPosition, false);
+            }
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
                CreatureReactions::getSingletonPtr() != nullptr)
