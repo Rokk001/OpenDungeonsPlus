@@ -149,7 +149,7 @@ public:
     void rrCreateRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
-    //! rief Gives the secret door the look of the surrounding wall while it is closed and the local player is not an ally of its owner
+    //! \brief Gives the secret door the look of the surrounding wall while it is closed and the local player is not an ally of its owner
     void rrUpdateSecretDoorLook(DoorEntity* door);
     void rrCreateCreature(Creature* curCreature);
     void rrDestroyCreature(Creature* curCreature);
