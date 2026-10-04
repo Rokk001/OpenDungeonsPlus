@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Pre-push check for protected content.
 
-Installed as the git pre-push hook (see docs/internal/GIT-WORKFLOW.md). Git passes
+Installed as the git pre-push hook. Git passes
 "<local ref> <local sha> <remote ref> <remote sha>" lines on stdin and the remote
 name and url as arguments. The push is blocked (exit 1) if
 
-  * a term from protected-terms.txt is in a commit message or a ref name (all commits
+  * a term from the local term list is in a commit message or a ref name (all commits
     of the pushed range, new or rewritten),
   * the file tree at the pushed tip contains a term in a file name or in a line of a
     text file (lines that also exist in the baseline <remote>/main are ignored, binary
@@ -13,11 +13,14 @@ name and url as arguments. The push is blocked (exit 1) if
     CAMPAIGN_ALLOW_LIST, or has anything under tools/level-convert/,
   * a commit with new content (its patch is not part of the history already on the
     remote) has a term in a file name or an added line, adds or changes a file under
-    docs/internal/ (files already on the branch before are not checked), or adds media files that are
+    a blocked path (files already on the branch before are not checked), or adds media files that are
     not covered by the CREDITS file at the pushed tip. Commits that were only rewritten
     from history already on the remote are not diffed again.
 
-If the term list is missing or empty the push is blocked as well (fail safe).
+The term list is a local file outside version control. Its repo-relative path is read
+from the git config key protectedcontent.terms. Besides terms (one per line, "#" comments)
+it may contain lines "path: <prefix>" that name blocked path prefixes. If the term list is
+not configured, missing or empty the push is blocked as well (fail safe).
 
 Usage:
   check-protected-content.py [--terms <file>] [<remote> [<url>]] < ref-lines
@@ -34,7 +37,11 @@ import tempfile
 
 ZERO_SHA = "0" * 40
 
-TERMS_RELATIVE_PATH = "docs/internal/protected-terms.txt"
+TERMS_CONFIG_KEY = "protectedcontent.terms"
+PATH_DIRECTIVE = "path:"
+
+# Blocked path prefixes, filled from the "path:" lines of the term list.
+BLOCKED_PREFIXES = []
 
 # Placeholder campaign files that exist in origin/integration/all.
 CAMPAIGN_ALLOW_LIST = [
@@ -78,7 +85,6 @@ CAMPAIGN_ALLOW_LIST = [
 
 CAMPAIGN_PREFIX = "levels/campaign/"
 CONVERTER_PREFIX = "tools/level-convert/"
-INTERNAL_DOCS_PREFIX = "docs/internal/"
 
 MEDIA_EXTENSIONS = set([
     "png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "tif", "tiff", "svg",
@@ -107,19 +113,28 @@ def read_terms_file(path):
             line = line.strip()
             if line == "" or line.startswith("#"):
                 continue
+            if line.lower().startswith(PATH_DIRECTIVE):
+                prefix = line[len(PATH_DIRECTIVE):].strip()
+                if prefix != "" and prefix not in BLOCKED_PREFIXES:
+                    BLOCKED_PREFIXES.append(prefix)
+                continue
             terms.append(line.lower())
     return terms
 
 
 def find_terms_file(cwd):
+    code, relative = run_git(["config", "--get", TERMS_CONFIG_KEY], cwd)
+    relative = relative.strip()
+    if code != 0 or relative == "":
+        return None
     candidates = []
     code, out = run_git(["rev-parse", "--git-common-dir"], cwd)
     if code == 0:
         common = os.path.abspath(os.path.join(cwd, out.strip()))
-        candidates.append(os.path.join(os.path.dirname(common), TERMS_RELATIVE_PATH))
+        candidates.append(os.path.join(os.path.dirname(common), relative))
     code, out = run_git(["rev-parse", "--show-toplevel"], cwd)
     if code == 0:
-        candidates.append(os.path.join(out.strip(), TERMS_RELATIVE_PATH))
+        candidates.append(os.path.join(out.strip(), relative))
     for candidate in candidates:
         if os.path.isfile(candidate):
             return candidate
@@ -132,8 +147,9 @@ def find_terms(cwd, explicit_path):
     if path is None:
         path = find_terms_file(cwd)
     if path is None or not os.path.isfile(path):
-        return None, ("The protected term list is missing (expected %s in the main "
-                      "working tree). Push blocked." % TERMS_RELATIVE_PATH)
+        return None, ("The protected term list is missing (set the git config key %s to "
+                      "its path relative to the main working tree). Push blocked."
+                      % TERMS_CONFIG_KEY)
     terms = read_terms_file(path)
     if len(terms) == 0:
         return None, "The protected term list %s is empty. Push blocked." % path
@@ -200,9 +216,12 @@ def commits_to_check(local_sha, remote_sha, remote_name, cwd):
 
 
 def patch_ids(revisions, cwd):
-    """Maps commit -> patch id for the non-merge commits of the given rev-list args."""
-    proc = subprocess.run(["git", "log", "-p", "--no-color", "--no-merges"] + revisions,
-                          cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    """Maps commit -> patch id for the non-merge commits of the given rev-list args. The
+    revisions go through stdin: a rebase can list thousands of them, more than a Windows
+    command line holds (WinError 206)."""
+    data = ("\n".join(revisions) + "\n").encode("utf-8")
+    proc = subprocess.run(["git", "log", "-p", "--no-color", "--no-merges", "--stdin"],
+                          cwd=cwd, input=data, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if proc.returncode != 0:
         return {}
     ids = subprocess.run(["git", "patch-id", "--stable"], cwd=cwd, input=proc.stdout,
@@ -249,9 +268,10 @@ def check_commit_content(commit, terms, cwd, added_files, problems):
         term = find_term(path, terms)
         if term is not None:
             problems.append("commit %s: term '%s' in file name %s" % (short, term, path))
-        if path.startswith(INTERNAL_DOCS_PREFIX):
-            problems.append("commit %s: %s is under %s (internal documents are never "
-                            "pushed)" % (short, path, INTERNAL_DOCS_PREFIX))
+        for prefix in BLOCKED_PREFIXES:
+            if path.startswith(prefix):
+                problems.append("commit %s: %s is under the blocked path %s (never "
+                                "pushed)" % (short, path, prefix))
         extension = path.rsplit(".", 1)[-1].lower() if "." in os.path.basename(path) else ""
         if status in ("A", "C", "R") and extension in MEDIA_EXTENSIONS:
             added_files.setdefault(path, short)
@@ -499,6 +519,8 @@ def self_test():
 
     try:
         terms = ["zzterm"]
+        del BLOCKED_PREFIXES[:]
+        BLOCKED_PREFIXES.append("blocked-area/")
         one_commit_scenario("clean", {"a.txt": "fine\n"}, "clean change", terms, False)
         one_commit_scenario("message", {"b.txt": "x\n"}, "mentions ZZTerm here", terms,
                             True, "commit message")
@@ -516,16 +538,16 @@ def self_test():
                             "other level", terms, True, "allow list")
         one_commit_scenario("converter", {"tools/level-convert/run.py": "x\n"},
                             "converter", terms, True, "tools/level-convert/")
-        one_commit_scenario("internal document added", {"docs/internal/PLAN.md": "x\n"},
-                            "internal document", terms, True, "docs/internal/")
+        one_commit_scenario("blocked path added", {"blocked-area/PLAN.md": "x\n"},
+                            "blocked path file", terms, True, "blocked-area/")
         work, git, commit_files, base = new_repo()
-        earlier = commit_files({"docs/internal/PLAN.md": "x\n"}, "internal document")
-        changed = commit_files({"docs/internal/PLAN.md": "y\n"}, "internal document changed")
-        expect("internal document changed", work,
+        earlier = commit_files({"blocked-area/PLAN.md": "x\n"}, "blocked path file")
+        changed = commit_files({"blocked-area/PLAN.md": "y\n"}, "blocked path changed")
+        expect("blocked path changed", work,
                ["refs/heads/topic %s refs/heads/topic %s" % (changed, earlier)], terms,
-               True, "docs/internal/")
+               True, "blocked-area/")
         unrelated = commit_files({"d.txt": "fine\n"}, "unrelated change")
-        expect("internal document already on branch", work,
+        expect("blocked path already on branch", work,
                ["refs/heads/topic %s refs/heads/topic %s" % (unrelated, changed)], terms,
                False)
         one_commit_scenario("media without credits", {"gfx/pic.png": b"\x89PNG"},
@@ -580,6 +602,35 @@ def self_test():
         dirty = git("rev-parse", "HEAD")
         expect("rewritten message", work, ["refs/heads/t %s refs/heads/t %s"
                                            % (dirty, old)], terms, True, "commit message")
+
+        # a rebase lists the whole new history: far more revisions than one command line
+        # holds on Windows (WinError 206 before the revisions went through stdin)
+        work, git, commit_files, base = new_repo()
+        second = commit_files({"second.txt": "second\n"}, "second base")
+
+        def fast_import_chain(ref, parent, count):
+            stream = []
+            for number in range(count):
+                text = "line %d" % number
+                message = "change %d" % number
+                stream += ["commit %s" % ref,
+                           "committer T <t@example.invalid> %d +0000" % (number + 1),
+                           "data %d" % len(message), message]
+                if number == 0:
+                    stream += ["from %s" % parent]
+                stream += ["M 100644 inline f%d.txt" % number, "data %d" % len(text), text, ""]
+            proc = subprocess.run(["git", "fast-import", "--quiet"], cwd=work,
+                                  input=("\n".join(stream) + "\n").encode("utf-8"),
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if proc.returncode != 0:
+                raise RuntimeError("fast-import failed: %s" % proc.stderr.decode())
+            return git("rev-parse", ref)
+
+        # the same changes on two bases: the pushed tip is the rebased copy of the old one
+        old = fast_import_chain("refs/heads/old", base, 900)
+        rebased = fast_import_chain("refs/heads/rebased", second, 900)
+        expect("rebase with many commits", work, ["refs/heads/rebased %s refs/heads/rebased %s"
+                                                  % (rebased, old)], terms, False)
 
         # fail safe on the term list
         empty = os.path.join(work, "empty-terms.txt")
