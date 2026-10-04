@@ -46,7 +46,7 @@ const Ogre::Real MAX_CAMERA_Z = 16.0;
 //! the levels in between are evenly spaced.
 const unsigned int CAMERA_ZOOM_LEVELS = 5;
 
-//! rief The camera height of a zoom level (0 .. CAMERA_ZOOM_LEVELS - 1)
+//! \brief The camera height of a zoom level (0 .. CAMERA_ZOOM_LEVELS - 1)
 inline Ogre::Real getCameraZoomLevelHeight(unsigned int level)
 {
     return MIN_CAMERA_Z + (MAX_CAMERA_Z - MIN_CAMERA_Z) * static_cast<Ogre::Real>(level)
@@ -335,7 +335,7 @@ private:
     //! (1.0 keeps the historic speed). Set from the settings window.
     Ogre::Real mPanSpeedFactor;
     Ogre::Real mFastPanFactor = 1.0f;
-    //! rief Zoom key state of the previous frame, a key press is one zoom level
+    //! \brief Zoom key state of the previous frame, a key press is one zoom level
     Ogre::Real mControlZoom = 0.0f;
     Ogre::Real mControlSwivel = 0.0f;
 
