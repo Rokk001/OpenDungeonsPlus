@@ -66,13 +66,19 @@
                     <Property name="Font" value="MedievalSharp-12" />
                 </Window>
             </Window>
+            <Window type="OD/StaticText" name="ControlBackdrop" >
+                <Property name="Area" value="{{0.28,0},{1,-112},{0.72,0},{1,-8}}" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+            </Window>
             <Window type="OD/MenuTextButton" name="DifficultyButton" >
-                <Property name="Area" value="{{0.35,0},{1,-80},{0.62,0},{1,-40}}" />
+                <Property name="Area" value="{{0.30,0},{1,-106},{0.70,0},{1,-62}}" />
                 <Property name="Text" value="Difficulty" />
-                <Property name="Font" value="MedievalSharp-12" />
+                <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/Checkbox" name="RelationshipsCheckbox" >
-                <Property name="Area" value="{{0.47,0},{1,-70},{0.75,0},{1,-50}}" />
+                <Property name="Area" value="{{0.36,0},{1,-56},{0.70,0},{1,-14}}" />
                 <Property name="Text" value="Creature relationships" />
                 <Property name="TooltipText" value="Creatures of the same keeper form friendships and rivalries" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />

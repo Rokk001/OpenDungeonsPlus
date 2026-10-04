@@ -76,9 +76,9 @@ const float LIFT_SCALE = 1.04f;
 //! Distance in map pixels from the centre of a bonus site marker that still hits it
 const float SITE_HIT_RADIUS = 40.0f;
 //! Size of the tooltip window and its distance from the mouse, in screen pixels
-const float TOOLTIP_WIDTH = 420.0f;
-const float TOOLTIP_HEIGHT = 120.0f;
-const float TOOLTIP_OFFSET = 18.0f;
+const float TOOLTIP_WIDTH = 400.0f;
+const float TOOLTIP_HEIGHT = 140.0f;
+const float TOOLTIP_OFFSET = 96.0f;
 
 //! Reads and decodes a PNG file into RGBA bytes. Returns false if it cannot be read.
 bool decodeImage(const std::string& path, int& width, int& height, std::vector<uint8_t>& rgba)
@@ -491,7 +491,7 @@ void MenuModeCampaign::fillMap()
         static_cast<float>(cartouche.mY), static_cast<float>(cartouche.mWidth), static_cast<float>(cartouche.mHeight));
     title->setProperty("FrameEnabled", "False");
     title->setProperty("BackgroundEnabled", "False");
-    title->setProperty("Font", "MedievalSharp-12");
+    title->setProperty("Font", "MedievalSharp-10");
     title->setProperty("HorzFormatting", "CentreAligned");
     title->setProperty("VertFormatting", "CentreAligned");
     title->setProperty("TextColours", "FF2A1A0C");
@@ -517,7 +517,7 @@ void MenuModeCampaign::fillMap()
         panelY, panelWidth * 0.92f, panelHeight * 0.70f);
     progress->setProperty("FrameEnabled", "False");
     progress->setProperty("BackgroundEnabled", "False");
-    progress->setProperty("Font", "MedievalSharp-8");
+    progress->setProperty("Font", "MedievalSharp-6");
     progress->setProperty("HorzFormatting", "LeftAligned");
     progress->setProperty("VertFormatting", "CentreAligned");
     progress->setProperty("TextColours", "FF2A1A0C");
@@ -533,7 +533,7 @@ void MenuModeCampaign::fillMap()
         panelY + panelHeight * 0.68f, panelWidth * 0.16f, panelHeight * 0.32f);
     percentText->setProperty("FrameEnabled", "False");
     percentText->setProperty("BackgroundEnabled", "False");
-    percentText->setProperty("Font", "MedievalSharp-8");
+    percentText->setProperty("Font", "MedievalSharp-6");
     percentText->setProperty("HorzFormatting", "RightAligned");
     percentText->setProperty("VertFormatting", "CentreAligned");
     percentText->setProperty("TextColours", "FF2A1A0C");
@@ -541,7 +541,7 @@ void MenuModeCampaign::fillMap()
 
     // The tooltip is the topmost window of the map
     mTooltip = createMapWindow("OD/StaticText", "Tooltip", 0, 0, 1, 1);
-    mTooltip->setProperty("Font", "MedievalSharp-10");
+    mTooltip->setProperty("Font", "MedievalSharp-8");
     mTooltip->setProperty("HorzFormatting", "LeftAligned");
     mTooltip->setProperty("VertFormatting", "CentreAligned");
     mTooltip->setVisible(false);
