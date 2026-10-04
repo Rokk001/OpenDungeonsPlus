@@ -35,6 +35,7 @@
 #include "render/CreatureCombatReactions.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/ODFrameListener.h"
+#include "render/WorkerReactions.h"
 #include "render/RenderManager.h"
 #include "rooms/Room.h"
 #include "rooms/RoomManager.h"
@@ -1304,6 +1305,7 @@ void CreatureReactions::update(Ogre::Real timeSinceLastFrame)
     updateOngoing();
     updateMoods(timeSinceLastFrame);
     CreatureCombatReactions::update(*this, timeSinceLastFrame);
+    WorkerReactions::update(*this, timeSinceLastFrame);
 
     for(std::vector<PendingReaction>::iterator it = mPending.begin(); it != mPending.end();)
     {
@@ -1471,6 +1473,8 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         return;
 
     Creature* creature = static_cast<Creature*>(entity);
+
+    WorkerReactions::noteAnimation(*this, creature, clip);
 
     // A creature that does anything but stand is no longer idle
     if(!mIdleSince.empty() && (clip != "Idle"))
@@ -1991,6 +1995,8 @@ void CreatureReactions::noteDigging(Creature* creature)
 
 void CreatureReactions::noteCarry(Creature* carrier, GameEntity* carried)
 {
+    WorkerReactions::noteCarry(*this, carrier, carried);
+
     if((mMode == Mode::off) || !mConfigLoaded || (carried->getObjectType() != GameEntityType::treasuryObject))
         return;
 
@@ -1999,6 +2005,8 @@ void CreatureReactions::noteCarry(Creature* carrier, GameEntity* carried)
 
 void CreatureReactions::noteRelease(Creature* carrier, GameEntity* carried)
 {
+    WorkerReactions::noteRelease(*this, carrier, carried);
+
     if((mMode == Mode::off) || !mConfigLoaded || (carried->getObjectType() != GameEntityType::treasuryObject))
         return;
 
@@ -2136,6 +2144,8 @@ void CreatureReactions::noteParticleEffect(GameEntity* entity, const std::string
     if((mMode == Mode::off) || !mConfigLoaded || (entity->getObjectType() != GameEntityType::creature))
         return;
 
+    WorkerReactions::noteParticleEffect(*this, static_cast<Creature*>(entity), script);
+
     std::string eventName;
     if(script == "SpellCreatureHeal")
         eventName = "Healed";
@@ -2228,6 +2238,7 @@ void CreatureReactions::noteSlapped(const Ogre::Vector3& handPosition)
 
     mSlappedAt[target->getName()] = mTime;
     trigger(target, "Slapped");
+    WorkerReactions::noteHandled(*this, target);
 
     // Some of the creatures that stand around laugh at it
     noteNearbyEvent("LaughAtSlapped", target->getPosition(), target, 3.0);
@@ -2240,6 +2251,7 @@ void CreatureReactions::noteHandPicked(Creature* creature)
 
     // The creature is in the hand after a moment, the reaction waits for the hand to be ready
     queueReaction(creature, "PickedUp", DONE_WAIT_MAX, 0.4);
+    WorkerReactions::noteHandled(*this, creature);
 }
 
 void CreatureReactions::noteHandDropped(Creature* creature)
@@ -2308,6 +2320,8 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
     Player* localPlayer = mGameMap->getLocalPlayer();
     if(localPlayer == nullptr)
         return;
+
+    WorkerReactions::noteCosmeticEvent(*this, event);
 
     if(event.is(CosmeticEventType::portalArrival))
     {
@@ -3094,6 +3108,7 @@ void CreatureReactions::removeProps(RunningReaction& reaction)
 void CreatureReactions::stopAll()
 {
     CreatureCombatReactions::stopAll(*this);
+    WorkerReactions::stopAll(*this);
     mPending.clear();
     mOngoing.clear();
     for(RunningReaction& reaction : mRunning)

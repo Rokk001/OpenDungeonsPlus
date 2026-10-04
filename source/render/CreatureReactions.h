@@ -192,6 +192,8 @@ public:
 private:
     //! Weapon and fight reactions (draw, stance, attack styles, hits, dropped weapons) use the internals
     friend class CreatureCombatReactions;
+    //! Worker reactions (dig hits, claiming, carrying, danger, idling) use the internals too
+    friend class WorkerReactions;
 
     struct RunningReaction
     {
