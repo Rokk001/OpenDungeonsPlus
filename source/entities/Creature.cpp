@@ -1391,9 +1391,11 @@ void Creature::doUpkeep()
             mPrayerRelief = 0;
     }
 
-    // A nemesis brawl may end
+    // A nemesis brawl may end, a brawl restored from a saved game may start
     if(!mBrawlOpponent.empty())
         updateBrawl();
+    else if(!mBrawlResumeOpponent.empty())
+        resumeBrawl();
 
     // The mood from relationship events fades
     if(mRelationshipTempMood != 0)
@@ -3473,6 +3475,99 @@ void Creature::endBrawl()
     }
 }
 
+bool Creature::getRelationshipState(RelationshipCreatureState& state) const
+{
+    state = RelationshipCreatureState();
+    if(!canHaveRelationships())
+        return false;
+
+    GameMap* gameMap = getGameMap();
+    int64_t turn = gameMap->getTurnNumber();
+    state.mName = getName();
+    state.mGriefMood = mRelationshipTempMood;
+    if(mRageUntilTurn > turn)
+    {
+        state.mRageTurnsLeft = mRageUntilTurn - turn;
+        state.mRageSeatId = mRageSeatId;
+    }
+
+    if(!mBrawlOpponent.empty())
+    {
+        int64_t maxTurns = gameMap->getCreatureRelationships()->getSettings().mBrawlMaxTurns;
+        state.mBrawlOpponent = mBrawlOpponent;
+        state.mBrawlTurnsLeft = std::max<int64_t>(1, maxTurns - (turn - mBrawlStartTurn));
+    }
+    else if(!mBrawlResumeOpponent.empty())
+    {
+        // Saved again before the restored brawl could start
+        state.mBrawlOpponent = mBrawlResumeOpponent;
+        state.mBrawlTurnsLeft = std::max<int64_t>(1, mBrawlResumeTurnsLeft);
+    }
+
+    return !state.isEmpty();
+}
+
+void Creature::setRelationshipState(const RelationshipCreatureState& state)
+{
+    if(!canHaveRelationships())
+        return;
+
+    GameMap* gameMap = getGameMap();
+    const RelationshipSettings& settings = gameMap->getCreatureRelationships()->getSettings();
+    int64_t turn = gameMap->getTurnNumber();
+    mRelationshipTempMood = std::max(-settings.mTempMoodMax, std::min(settings.mTempMoodMax, state.mGriefMood));
+    if((state.mRageTurnsLeft > 0) && (state.mRageSeatId >= 0))
+    {
+        mRageUntilTurn = turn + state.mRageTurnsLeft;
+        mRageSeatId = state.mRageSeatId;
+    }
+
+    // The fight itself is not saved: the brawl starts again once both creatures are able to fight
+    if(!state.mBrawlOpponent.empty() && (state.mBrawlTurnsLeft > 0) && (state.mBrawlOpponent != getName()))
+    {
+        static const int64_t RESUME_WAIT_TURNS = 100;
+        mBrawlResumeOpponent = state.mBrawlOpponent;
+        mBrawlResumeTurnsLeft = std::min(state.mBrawlTurnsLeft, settings.mBrawlMaxTurns);
+        mBrawlResumeGiveUpTurn = turn + RESUME_WAIT_TURNS;
+    }
+}
+
+void Creature::resumeBrawl()
+{
+    if(mBrawlResumeOpponent.empty())
+        return;
+
+    GameMap* gameMap = getGameMap();
+    int64_t turn = gameMap->getTurnNumber();
+    Creature* opponent = gameMap->getCreature(mBrawlResumeOpponent);
+    bool valid = (opponent != nullptr) && (opponent->mBrawlResumeOpponent == getName()) && canHaveRelationships()
+        && opponent->canHaveRelationships() && (turn < mBrawlResumeGiveUpTurn);
+    if(!valid)
+    {
+        // The opponent is gone, was not restored as well, or the creatures did not get ready in time
+        mBrawlResumeOpponent.clear();
+        return;
+    }
+
+    // Only one of the two starts the brawl
+    if(getName() > opponent->getName())
+        return;
+
+    if(!canStartBrawl() || !opponent->canStartBrawl())
+        return;
+
+    int64_t turnsLeft = std::min(mBrawlResumeTurnsLeft, opponent->mBrawlResumeTurnsLeft);
+    mBrawlResumeOpponent.clear();
+    opponent->mBrawlResumeOpponent.clear();
+    startBrawl(*opponent);
+    if(isBrawling())
+    {
+        int64_t maxTurns = gameMap->getCreatureRelationships()->getSettings().mBrawlMaxTurns;
+        mBrawlStartTurn = turn - std::max<int64_t>(0, maxTurns - turnsLeft);
+        opponent->mBrawlStartTurn = mBrawlStartTurn;
+    }
+}
+
 void Creature::reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB)
 {
     if(!creatureA.canHaveRelationships() || !creatureB.canHaveRelationships())
@@ -4306,6 +4401,7 @@ void Creature::slap()
     // A slap stops a brawl
     if(!mBrawlOpponent.empty())
         endBrawl();
+    mBrawlResumeOpponent.clear();
 
     if(getSeat() != nullptr)
         ++getSeat()->getStatistics().mCreaturesSlapped;
@@ -5403,6 +5499,7 @@ void Creature::changeSeat(Seat* newSeat)
     mSpecialMood = 0;
     mRelationshipTempMood = 0;
     mRageUntilTurn = 0;
+    mBrawlResumeOpponent.clear();
     mWakefulness = 100;
     mHunger = 0;
     mNbTurnsTorture = 0;
