@@ -284,6 +284,8 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::motion;
             else if(words[1] == "Clip")
                 effect.mKind = AmbienceKind::clip;
+            else if(words[1] == "Model")
+                effect.mKind = AmbienceKind::model;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);
@@ -293,6 +295,10 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "System")
         {
             effect.mSystem = words[1];
+        }
+        else if(key == "Mesh")
+        {
+            effect.mMesh = words[1];
         }
         else if(key == "Clips")
         {

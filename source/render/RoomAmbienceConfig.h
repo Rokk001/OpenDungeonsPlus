@@ -56,7 +56,9 @@ enum class AmbienceKind
     //! A procedural movement of the object node
     motion,
     //! Now and then a clip of the object's own mesh (a chicken scratching)
-    clip
+    clip,
+    //! A small static decoration mesh placed on a tile (a weapon rack, a banner), with an optional motion
+    model
 };
 
 enum class AmbienceMotion
@@ -111,6 +113,8 @@ struct AmbienceEffect
     AmbienceKind mKind;
     //! Particle system template (kind particle)
     std::string mSystem;
+    //! Mesh file of the decoration (kind model), looking along the Y axis; it is turned away from the wall
+    std::string mMesh;
     //! Clips to choose from (kind clip)
     std::vector<std::string> mClips;
     AmbienceMotion mMotion;

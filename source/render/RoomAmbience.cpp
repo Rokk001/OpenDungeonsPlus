@@ -31,6 +31,7 @@
 
 #include <OgreAxisAlignedBox.h>
 #include <OgreCamera.h>
+#include <OgreEntity.h>
 #include <OgreMath.h>
 #include <OgreParticleSystem.h>
 #include <OgreParticleSystemManager.h>
@@ -358,6 +359,82 @@ bool RoomAmbience::createParticleSystem(const std::string& system, const Ogre::V
     return true;
 }
 
+bool RoomAmbience::createModel(const std::string& mesh, const Ogre::Vector3& position, double yaw,
+        const std::string& baseName, Ogre::SceneNode*& node, Ogre::Entity*& entity)
+{
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    std::string name = "RoomAmbience_" + baseName + "_" + Helper::toString(++mUniqueNumber);
+    try
+    {
+        entity = sceneManager->createEntity(name, mesh);
+    }
+    catch(const Ogre::Exception&)
+    {
+        entity = nullptr;
+        if(mMissingSystems.insert(mesh).second)
+            OD_LOG_WRN("Room ambience: unknown mesh " + mesh);
+        return false;
+    }
+
+    entity->setCastShadows(false);
+    node = sceneManager->getRootSceneNode()->createChildSceneNode(name + "_node", position);
+    node->setOrientation(Ogre::Quaternion(Ogre::Degree(static_cast<Ogre::Real>(yaw)), Ogre::Vector3::UNIT_Z));
+    node->attachObject(entity);
+    return true;
+}
+
+void RoomAmbience::moveModel(Emitter& emitter, const AmbienceEffect& effect, double timeSinceLastFrame)
+{
+    // The decoration is moved around its own base pose
+    double wave = std::sin(TWO_PI * effect.mSpeed * mClock + emitter.mPhase);
+    Ogre::Quaternion orientation = emitter.mBaseOrientation;
+    Ogre::Vector3 position = emitter.mBasePosition;
+    Ogre::Vector3 scale = Ogre::Vector3::UNIT_SCALE;
+    switch(effect.mMotion)
+    {
+        case AmbienceMotion::sway:
+        {
+            orientation = orientation * Ogre::Quaternion(Ogre::Degree(static_cast<Ogre::Real>(effect.mAmount * wave)), effect.mAxis);
+            break;
+        }
+        case AmbienceMotion::wobble:
+        {
+            double envelope = std::sin(TWO_PI * 0.11 * mClock + emitter.mPhase);
+            envelope = (envelope > 0.0) ? envelope * envelope : 0.0;
+            orientation = orientation * Ogre::Quaternion(
+                Ogre::Degree(static_cast<Ogre::Real>(effect.mAmount * wave * envelope)), effect.mAxis);
+            break;
+        }
+        case AmbienceMotion::bob:
+        {
+            position.z += static_cast<Ogre::Real>(effect.mAmount * wave);
+            break;
+        }
+        case AmbienceMotion::pulse:
+        {
+            scale = scale * static_cast<Ogre::Real>(1.0 + effect.mAmount * wave);
+            break;
+        }
+        case AmbienceMotion::spin:
+        {
+            emitter.mCycle += effect.mSpeed * timeSinceLastFrame * 0.0174532925;
+            orientation = orientation * Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(emitter.mCycle)), effect.mAxis);
+            break;
+        }
+        case AmbienceMotion::flicker:
+        {
+            double noise = 0.5 * (std::sin(TWO_PI * effect.mSpeed * mClock + emitter.mPhase)
+                + std::sin(TWO_PI * effect.mSpeed * 1.7 * mClock + 2.0 * emitter.mPhase));
+            scale = scale * static_cast<Ogre::Real>(1.0 + effect.mAmount * noise);
+            break;
+        }
+    }
+
+    emitter.mNode->setOrientation(orientation);
+    emitter.mNode->setPosition(position);
+    emitter.mNode->setScale(scale);
+}
+
 void RoomAmbience::destroyEmitter(Emitter& emitter)
 {
     Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
@@ -365,11 +442,14 @@ void RoomAmbience::destroyEmitter(Emitter& emitter)
         emitter.mNode->detachAllObjects();
     if(emitter.mSystem != nullptr)
         sceneManager->destroyParticleSystem(emitter.mSystem);
+    if(emitter.mEntity != nullptr)
+        sceneManager->destroyEntity(emitter.mEntity);
     if(emitter.mNode != nullptr)
         sceneManager->destroySceneNode(emitter.mNode);
 
     emitter.mNode = nullptr;
     emitter.mSystem = nullptr;
+    emitter.mEntity = nullptr;
 }
 
 void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
@@ -722,6 +802,12 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 candidate.mPosition = position + effect.mOffset;
                 if(effect.mWallSide)
                     candidate.mPosition += wallShift;
+                if(effect.mKind == AmbienceKind::model)
+                {
+                    // The decoration looks away from the wall it hangs on (front along +Y when not turned)
+                    candidate.mYaw = ((wallShift.x != 0.0f) || (wallShift.y != 0.0f)) ?
+                        Ogre::Degree(Ogre::Math::ATan2(wallShift.x, -wallShift.y)).valueDegrees() : 0.0;
+                }
                 candidate.mDistance = distance;
                 candidate.mPriority = effect.mPriority;
                 if(effect.mWhen == AmbienceWhen::always)
@@ -753,7 +839,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 if(!candidate.mActive)
                     continue;
 
-                if(effect.mKind == AmbienceKind::particle)
+                if((effect.mKind == AmbienceKind::particle) || (effect.mKind == AmbienceKind::model))
                     mParticleCandidates.push_back(candidate);
             }
         }
@@ -895,7 +981,8 @@ void RoomAmbience::reconcile()
             if(it->second.mFade >= 0.0)
             {
                 it->second.mFade = -1.0;
-                it->second.mSystem->setEmitting(true);
+                if(it->second.mSystem != nullptr)
+                    it->second.mSystem->setEmitting(true);
             }
             ++used;
             continue;
@@ -905,12 +992,24 @@ void RoomAmbience::reconcile()
             continue;
 
         Emitter emitter;
-        if(!createParticleSystem(effect.mSystem, candidate.mPosition, effect.mName, emitter.mNode, emitter.mSystem))
-            continue;
+        if(effect.mKind == AmbienceKind::model)
+        {
+            if(!createModel(effect.mMesh, candidate.mPosition, candidate.mYaw, effect.mName, emitter.mNode, emitter.mEntity))
+                continue;
+
+            emitter.mBaseOrientation = emitter.mNode->getOrientation();
+            emitter.mBasePosition = emitter.mNode->getPosition();
+        }
+        else
+        {
+            if(!createParticleSystem(effect.mSystem, candidate.mPosition, effect.mName, emitter.mNode, emitter.mSystem))
+                continue;
+
+            emitter.mBaseWidth = emitter.mSystem->getDefaultWidth();
+            emitter.mBaseHeight = emitter.mSystem->getDefaultHeight();
+        }
 
         emitter.mEffect = candidate.mEffect;
-        emitter.mBaseWidth = emitter.mSystem->getDefaultWidth();
-        emitter.mBaseHeight = emitter.mSystem->getDefaultHeight();
         emitter.mPhase = hashPhase(key);
         emitter.mSeen = true;
         mEmitters.insert(std::make_pair(key, emitter));
@@ -922,8 +1021,10 @@ void RoomAmbience::reconcile()
         if(it->second.mSeen || (it->second.mFade >= 0.0))
             continue;
 
-        it->second.mFade = 0.0;
-        it->second.mSystem->setEmitting(false);
+        // A decoration has no particles to let run out
+        it->second.mFade = (it->second.mSystem != nullptr) ? 0.0 : EMITTER_FADE_SECONDS;
+        if(it->second.mSystem != nullptr)
+            it->second.mSystem->setEmitting(false);
     }
 
     // Moved objects
@@ -1069,6 +1170,12 @@ void RoomAmbience::updateEmitters(double timeSinceLastFrame)
                 mEmitters.erase(it++);
                 continue;
             }
+        }
+        else if(emitter.mEntity != nullptr)
+        {
+            // Amount 0 is a decoration that stands still
+            if(effects[emitter.mEffect].mAmount > 0.0)
+                moveModel(emitter, effects[emitter.mEffect], timeSinceLastFrame);
         }
         else if(effects[emitter.mEffect].mFlicker > 0.0)
         {

@@ -19,10 +19,10 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "WallSide", "HeartRate", "Sound")
+               "NeedWall", "Clips", "Every", "WallSide", "HeartRate", "Sound", "Mesh")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Vacated")
-KINDS = ("Particle", "Motion", "Clip")
+KINDS = ("Particle", "Motion", "Clip", "Model")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
@@ -190,6 +190,16 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 for texture in mats[material]:
                     if not os.path.exists(os.path.join(ROOT, "materials", "textures", texture)):
                         problems.append("%s: material %s uses missing texture %s" % (where, material, texture))
+    elif kind == "Model":
+        mesh = effect.get("Mesh", [None])[0]
+        if mesh is None:
+            problems.append("%s: model without Mesh" % where)
+        elif not os.path.exists(os.path.join(ROOT, "models", mesh)):
+            problems.append("%s: no mesh file %s" % (where, mesh))
+        if target != "Tile":
+            problems.append("%s: models only work on tiles" % where)
+        if "Motion" in effect and effect["Motion"][0] not in MOTIONS:
+            problems.append("%s: bad Motion %s" % (where, effect["Motion"][0]))
     elif kind == "Motion":
         bridges = target == "Tile" and all(m.startswith("bridge:") for m in effect.get("Match", []))
         if target != "Object" and not bridges:

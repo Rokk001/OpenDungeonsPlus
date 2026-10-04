@@ -95,13 +95,17 @@ private:
     struct Emitter
     {
         Emitter() :
-            mEffect(0), mNode(nullptr), mSystem(nullptr), mFade(-1.0), mBaseWidth(1.0), mBaseHeight(1.0),
-            mPhase(0.0), mCycle(0.0), mSeen(false)
+            mEffect(0), mNode(nullptr), mSystem(nullptr), mEntity(nullptr), mFade(-1.0), mBaseWidth(1.0),
+            mBaseHeight(1.0), mPhase(0.0), mCycle(0.0), mSeen(false)
         {}
 
         uint32_t mEffect;
         Ogre::SceneNode* mNode;
         Ogre::ParticleSystem* mSystem;
+        //! The decoration mesh of an effect of the kind model (no particle system then)
+        Ogre::Entity* mEntity;
+        Ogre::Quaternion mBaseOrientation;
+        Ogre::Vector3 mBasePosition;
         //! Seconds since the emitter was told to stop, negative while it is running
         double mFade;
         double mBaseWidth;
@@ -162,7 +166,7 @@ private:
     struct Candidate
     {
         Candidate() :
-            mEffect(0), mPosition(Ogre::Vector3::ZERO), mDistance(0.0), mPriority(0), mActive(false)
+            mEffect(0), mPosition(Ogre::Vector3::ZERO), mDistance(0.0), mPriority(0), mYaw(0.0), mActive(false)
         {}
 
         uint32_t mEffect;
@@ -173,6 +177,8 @@ private:
         Ogre::Vector3 mPosition;
         double mDistance;
         int32_t mPriority;
+        //! Degrees around the vertical axis (kind model): the decoration looks away from the wall
+        double mYaw;
         bool mActive;
     };
 
@@ -199,6 +205,9 @@ private:
     void updateOneShots(double timeSinceLastFrame);
     void updateMotions(double timeSinceLastFrame);
     void destroyEmitter(Emitter& emitter);
+    bool createModel(const std::string& mesh, const Ogre::Vector3& position, double yaw, const std::string& baseName,
+        Ogre::SceneNode*& node, Ogre::Entity*& entity);
+    void moveModel(Emitter& emitter, const AmbienceEffect& effect, double timeSinceLastFrame);
     void restoreMotionNode(MotionNode& motionNode);
 
     bool isCreatureNear(double x, double y, double radius) const;
@@ -223,7 +232,7 @@ private:
     double mScanTimer;
     double mPruneTimer;
     uint32_t mUniqueNumber;
-    //! Names of missing particle systems already reported
+    //! Names of missing particle systems and meshes already reported
     std::set<std::string> mMissingSystems;
 
     //! Effects per tile visual (indexed by the TileVisual value), per mesh name (memo) and per event
