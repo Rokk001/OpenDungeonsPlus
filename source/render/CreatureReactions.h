@@ -18,6 +18,7 @@
 #ifndef CREATUREREACTIONS_H
 #define CREATUREREACTIONS_H
 
+#include "game/CreatureRelationships.h"
 #include "render/CreatureReactionConfig.h"
 #include "rooms/RoomType.h"
 
@@ -157,6 +158,10 @@ public:
 
     //! \brief Client hook: the hand of the keeper moved over the creature
     void noteHandHover(Creature* creature);
+
+    //! \brief Client hook: the relationship tier of a pair of creatures changed (not for the replay on join and
+    //! load). Both creatures show a short emote, which one depends on the new tier and on the direction.
+    void noteRelationshipTier(Creature* first, Creature* second, RelationshipTier oldTier, RelationshipTier newTier);
 
     //! \brief Ends the running reaction of the creature and forgets the waiting ones. Needed before the creature
     //! changes its parent node and size (picked up and dropped).

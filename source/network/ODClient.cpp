@@ -950,7 +950,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 RelationshipTier oldTier = relationships->tierOf(creatureA, creatureB, true);
                 relationships->setTier(creatureA, creatureB, static_cast<RelationshipTier>(tier));
                 if(!replay)
+                {
                     reportRelationshipPost(gameMap, creatureA, creatureB, oldTier, static_cast<RelationshipTier>(tier));
+                    if(CreatureReactions::getSingletonPtr() != nullptr)
+                    {
+                        CreatureReactions::getSingleton().noteRelationshipTier(gameMap->getCreature(creatureA),
+                            gameMap->getCreature(creatureB), oldTier, static_cast<RelationshipTier>(tier));
+                    }
+                }
             }
             break;
         }
