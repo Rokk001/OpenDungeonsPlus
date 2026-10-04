@@ -3167,11 +3167,10 @@ Region	ExitHall	51	2	57	8
 Name	openingRound
 Mode	once
 Cond	time	3
-Action	message	1	The halls under Lanternhill twist like a knot, and the old keepers filled every corner with traps. Walk a creature of your own through the maze and find the exit hall before the lamps burn out.
-Action	objective	1	Bring a possessed creature to the exit hall in the north-east before time runs out.
+Action	message	1	The halls under Lanternhill twist like a knot, and the old keepers filled every corner with traps. Possess a creature of your own, walk it through the maze and find the exit hall before the lamps burn out.
+Action	objective	1	Bring a creature to the exit hall in the north-east before time runs out.
 Action	timelimit	900
 Action	reveal	1	ExitHall
-Action	possess	Walker1
 [/Trigger]
 [Trigger]
 Name	moatTwo
@@ -3190,7 +3189,7 @@ Action	terrain	50	6	50	6	path
 [Trigger]
 Name	hallReached
 Mode	once
-Cond	possessed	1	ExitHall
+Cond	region	1	ExitHall
 Action	message	1	The exit hall is yours, and the heart gives you a shard for the way you walked.
 Action	win	1
 [/Trigger]
