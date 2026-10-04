@@ -4036,6 +4036,7 @@ Name	quayEntered
 Mode	once
 Cond	region	1	EastQuay
 Action	message	1	The east quay. Its keeper has called on the north-east cliff for help, and a squad is already on the road.
+Action	alliance	3	5	make
 Action	reveal	1	Basin
 Action	spawn	3	51	39	1	Orc:3	Troll:3	Spider:3	Goblin:3
 [/Trigger]
@@ -4044,6 +4045,7 @@ Name	dockEntered
 Mode	once
 Cond	region	1	WestDock
 Action	message	1	The west dock. The keeper here has sent a runner across the south span to the quay.
+Action	alliance	2	4	make
 Action	reveal	1	SouthSpan
 Action	spawn	5	37	71	1	Orc:3	Troll:3	Goblin:3
 [/Trigger]
@@ -4171,5 +4173,21 @@ Mode	once
 Cond	goal	1	KillAllEnemies
 Action	message	1	The last keeper is dead and the harbour lies calm. Stormhaven answers to you.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	tideTurns
+Mode	once
+Cond	time	2200
+Action	message	1	The tide has turned on the old oaths. The cliff keeper and the quay keeper drift apart, and the two northern keepers shake hands.
+Action	alliance	3	5	break
+Action	alliance	2	3	make
+[/Trigger]
+[Trigger]
+Name	tideTurns2
+Mode	once
+Cond	time	3300
+Action	message	1	The last pact is breaking. The north-west keeper has left the dock keeper and joins the quay keeper against your cove.
+Action	alliance	2	4	break
+Action	alliance	2	5	make
 [/Trigger]
 [/Triggers]

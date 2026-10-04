@@ -2825,6 +2825,7 @@ ProtectDungeonTemple	NULL
 60	21	4	0
 60	22	1	0
 60	23	1	0
+60	30	3	100
 60	47	1	0
 60	48	1	0
 60	49	1	0
@@ -2874,6 +2875,7 @@ ProtectDungeonTemple	NULL
 61	21	4	0
 61	22	1	0
 61	23	1	0
+61	30	3	100
 61	47	1	0
 61	48	1	0
 61	49	1	0
@@ -2921,6 +2923,7 @@ ProtectDungeonTemple	NULL
 62	21	4	0
 62	22	1	0
 62	23	1	0
+62	30	3	100
 62	47	1	0
 62	48	1	0
 62	49	1	0
@@ -2966,6 +2969,7 @@ ProtectDungeonTemple	NULL
 63	20	4	0
 63	21	1	0
 63	22	1	0
+63	30	3	100
 63	46	1	0
 63	47	1	0
 63	48	1	0
@@ -3013,6 +3017,7 @@ ProtectDungeonTemple	NULL
 64	18	1	0
 64	19	1	0
 64	20	1	0
+64	30	3	100
 64	45	1	0
 64	46	1	0
 64	47	1	0
@@ -3057,6 +3062,7 @@ ProtectDungeonTemple	NULL
 65	16	1	0
 65	17	1	0
 65	18	1	0
+65	30	3	100
 65	44	1	0
 65	45	1	0
 65	46	1	0
@@ -3094,6 +3100,7 @@ ProtectDungeonTemple	NULL
 65	123	1	0
 65	127	3	100
 66	0	3	100
+66	30	3	100
 66	43	1	0
 66	44	1	0
 66	45	1	0
@@ -3129,6 +3136,7 @@ ProtectDungeonTemple	NULL
 66	123	1	0
 66	127	3	100
 67	0	3	100
+67	30	3	100
 67	43	1	0
 67	44	1	0
 67	45	1	0
@@ -3159,6 +3167,7 @@ ProtectDungeonTemple	NULL
 67	122	1	0
 67	127	3	100
 68	0	3	100
+68	30	3	100
 68	42	1	0
 68	43	1	0
 68	44	1	0
@@ -3184,6 +3193,7 @@ ProtectDungeonTemple	NULL
 69	0	3	100
 69	6	1	0
 69	7	1	0
+69	30	3	100
 69	42	1	0
 69	43	1	0
 69	44	1	0
@@ -3233,6 +3243,7 @@ ProtectDungeonTemple	NULL
 70	6	1	0
 70	7	1	0
 70	8	1	0
+70	30	3	100
 70	40	1	0
 70	42	1	0
 70	43	1	0
@@ -3284,6 +3295,7 @@ ProtectDungeonTemple	NULL
 71	6	1	0
 71	7	1	0
 71	8	1	0
+71	30	3	100
 71	43	1	0
 71	44	1	0
 71	45	1	0
@@ -3334,6 +3346,7 @@ ProtectDungeonTemple	NULL
 72	6	1	0
 72	7	1	0
 72	8	1	0
+72	30	3	100
 72	43	1	0
 72	44	1	0
 72	45	1	0
@@ -3362,6 +3375,7 @@ ProtectDungeonTemple	NULL
 73	0	3	100
 73	7	1	0
 73	8	1	0
+73	30	3	100
 73	43	1	0
 73	44	1	0
 73	45	1	0
@@ -3391,6 +3405,7 @@ ProtectDungeonTemple	NULL
 74	0	3	100
 74	7	1	0
 74	8	1	0
+74	30	3	100
 74	44	1	0
 74	45	1	0
 74	46	1	0
@@ -3419,6 +3434,7 @@ ProtectDungeonTemple	NULL
 75	0	3	100
 75	7	1	0
 75	8	1	0
+75	30	3	100
 75	44	1	0
 75	45	1	0
 75	46	1	0
@@ -3468,6 +3484,7 @@ ProtectDungeonTemple	NULL
 76	0	3	100
 76	7	1	0
 76	8	1	0
+76	30	3	100
 76	45	1	0
 76	46	1	0
 76	47	1	0
@@ -3518,6 +3535,7 @@ ProtectDungeonTemple	NULL
 77	0	3	100
 77	7	1	0
 77	8	1	0
+77	30	3	100
 77	46	1	0
 77	47	1	0
 77	48	1	0
@@ -3565,6 +3583,7 @@ ProtectDungeonTemple	NULL
 78	0	3	100
 78	7	1	0
 78	8	1	0
+78	30	3	100
 78	47	1	0
 78	48	1	0
 78	49	1	0
@@ -3592,6 +3611,7 @@ ProtectDungeonTemple	NULL
 79	0	3	100
 79	7	1	0
 79	8	1	0
+79	30	3	100
 79	34	1	0
 79	35	1	0
 79	36	1	0
@@ -3620,8 +3640,31 @@ ProtectDungeonTemple	NULL
 79	122	2	100
 79	127	3	100
 80	0	3	100
-80	7	1	0
-80	8	1	0
+80	1	3	100
+80	2	3	100
+80	3	3	100
+80	4	3	100
+80	5	3	100
+80	6	3	100
+80	7	3	100
+80	8	3	100
+80	9	3	100
+80	10	3	100
+80	11	3	100
+80	12	3	100
+80	13	3	100
+80	14	3	100
+80	15	3	100
+80	16	3	100
+80	17	3	100
+80	18	3	100
+80	19	3	100
+80	20	3	100
+80	21	3	100
+80	22	3	100
+80	23	3	100
+80	24	3	100
+80	30	3	100
 80	32	1	0
 80	33	1	0
 80	34	1	0
@@ -3652,6 +3695,7 @@ ProtectDungeonTemple	NULL
 81	0	3	100
 81	7	1	0
 81	8	1	0
+81	30	3	100
 81	31	1	0
 81	32	1	0
 81	33	1	0
@@ -3682,6 +3726,7 @@ ProtectDungeonTemple	NULL
 82	0	3	100
 82	7	1	0
 82	8	1	0
+82	30	3	100
 82	31	1	0
 82	32	1	0
 82	33	4	0
@@ -3717,7 +3762,7 @@ ProtectDungeonTemple	NULL
 83	7	1	0
 83	8	1	0
 83	9	2	100
-83	30	1	0
+83	30	3	100
 83	31	1	0
 83	32	4	0
 83	33	4	0
@@ -3759,7 +3804,7 @@ ProtectDungeonTemple	NULL
 84	9	2	100
 84	10	2	100
 84	28	2	100
-84	30	1	0
+84	30	3	100
 84	31	1	0
 84	32	4	0
 84	33	4	0
@@ -3794,7 +3839,7 @@ ProtectDungeonTemple	NULL
 85	0	3	100
 85	7	1	0
 85	8	1	0
-85	30	1	0
+85	30	3	100
 85	31	1	0
 85	32	4	0
 85	33	4	0
@@ -3826,7 +3871,7 @@ ProtectDungeonTemple	NULL
 86	7	1	0
 86	8	1	0
 86	29	2	100
-86	30	2	100
+86	30	3	100
 86	31	1	0
 86	32	1	0
 86	33	4	0
@@ -3860,7 +3905,7 @@ ProtectDungeonTemple	NULL
 87	8	1	0
 87	28	2	100
 87	29	2	100
-87	30	2	100
+87	30	3	100
 87	31	1	0
 87	32	1	0
 87	33	1	0
@@ -3901,7 +3946,7 @@ ProtectDungeonTemple	NULL
 88	20	1	0
 88	21	1	0
 88	29	2	100
-88	30	2	100
+88	30	3	100
 88	32	1	0
 88	33	1	0
 88	34	1	0
@@ -3947,6 +3992,7 @@ ProtectDungeonTemple	NULL
 89	23	1	0
 89	24	1	0
 89	25	1	0
+89	30	3	100
 89	33	1	0
 89	34	1	0
 89	35	1	0
@@ -3988,6 +4034,7 @@ ProtectDungeonTemple	NULL
 90	24	1	0
 90	25	1	0
 90	26	1	0
+90	30	3	100
 90	47	1	0
 90	48	1	0
 90	49	1	0
@@ -4024,6 +4071,7 @@ ProtectDungeonTemple	NULL
 91	24	1	0
 91	25	1	0
 91	26	1	0
+91	30	3	100
 91	47	1	0
 91	48	1	0
 91	49	1	0
@@ -4061,6 +4109,7 @@ ProtectDungeonTemple	NULL
 92	25	1	0
 92	26	1	0
 92	27	1	0
+92	30	3	100
 92	47	1	0
 92	48	1	0
 92	49	1	0
@@ -4110,6 +4159,7 @@ ProtectDungeonTemple	NULL
 93	25	1	0
 93	26	1	0
 93	27	1	0
+93	30	3	100
 93	47	1	0
 93	48	1	0
 93	49	1	0
@@ -4164,6 +4214,7 @@ ProtectDungeonTemple	NULL
 94	25	1	0
 94	26	1	0
 94	27	1	0
+94	30	3	100
 94	47	1	0
 94	48	1	0
 94	49	1	0
@@ -4222,7 +4273,7 @@ ProtectDungeonTemple	NULL
 95	27	1	0
 95	28	1	0
 95	29	1	0
-95	30	1	0
+95	30	3	100
 95	31	1	0
 95	32	1	0
 95	33	1	0
@@ -4298,7 +4349,7 @@ ProtectDungeonTemple	NULL
 96	27	1	0
 96	28	1	0
 96	29	1	0
-96	30	1	0
+96	30	3	100
 96	31	1	0
 96	32	1	0
 96	33	1	0
@@ -4371,7 +4422,7 @@ ProtectDungeonTemple	NULL
 97	27	1	0
 97	28	1	0
 97	29	1	0
-97	30	1	0
+97	30	3	100
 97	31	1	0
 97	32	1	0
 97	33	1	0
@@ -4443,6 +4494,7 @@ ProtectDungeonTemple	NULL
 98	25	1	0
 98	26	1	0
 98	27	1	0
+98	30	3	100
 98	38	1	0
 98	39	1	0
 98	55	1	0
@@ -4498,6 +4550,7 @@ ProtectDungeonTemple	NULL
 99	24	1	0
 99	25	1	0
 99	26	1	0
+99	30	3	100
 99	36	1	0
 99	37	1	0
 99	38	1	0
@@ -4556,6 +4609,7 @@ ProtectDungeonTemple	NULL
 100	24	1	0
 100	25	1	0
 100	26	1	0
+100	30	3	100
 100	34	1	0
 100	35	1	0
 100	36	1	0
@@ -4617,6 +4671,7 @@ ProtectDungeonTemple	NULL
 101	23	1	0
 101	24	1	0
 101	25	1	0
+101	30	3	100
 101	34	1	0
 101	35	1	0
 101	36	4	0
@@ -4676,6 +4731,7 @@ ProtectDungeonTemple	NULL
 102	21	1	0
 102	22	1	0
 102	23	1	0
+102	30	3	100
 102	33	1	0
 102	34	1	0
 102	35	1	0
@@ -4734,6 +4790,7 @@ ProtectDungeonTemple	NULL
 103	20	1	0
 103	21	1	0
 103	22	1	0
+103	30	3	100
 103	33	1	0
 103	34	1	0
 103	35	1	0
@@ -4792,6 +4849,7 @@ ProtectDungeonTemple	NULL
 104	19	1	0
 104	20	1	0
 104	21	1	0
+104	30	3	100
 104	33	1	0
 104	34	1	0
 104	35	1	0
@@ -4837,6 +4895,7 @@ ProtectDungeonTemple	NULL
 105	0	3	100
 105	18	1	0
 105	19	1	0
+105	30	3	100
 105	34	1	0
 105	35	1	0
 105	36	4	0
@@ -4874,6 +4933,7 @@ ProtectDungeonTemple	NULL
 106	0	3	100
 106	5	2	100
 106	6	2	100
+106	30	3	100
 106	34	1	0
 106	35	1	0
 106	36	4	0
@@ -4910,6 +4970,7 @@ ProtectDungeonTemple	NULL
 107	3	2	100
 107	4	2	100
 107	5	2	100
+107	30	3	100
 107	34	2	100
 107	35	1	0
 107	36	1	0
@@ -4941,6 +5002,7 @@ ProtectDungeonTemple	NULL
 108	0	3	100
 108	3	2	100
 108	6	2	100
+108	30	3	100
 108	36	1	0
 108	37	1	0
 108	38	1	0
@@ -4970,6 +5032,7 @@ ProtectDungeonTemple	NULL
 108	127	3	100
 109	0	3	100
 109	5	2	100
+109	30	3	100
 109	33	2	100
 109	34	2	100
 109	35	2	100
@@ -4992,6 +5055,7 @@ ProtectDungeonTemple	NULL
 109	126	1	0
 109	127	3	100
 110	0	3	100
+110	30	3	100
 110	35	2	100
 110	36	2	100
 110	37	2	100
@@ -5732,7 +5796,7 @@ Action	spawn	3	21	41	1	Knight:3	Monk:3	Elf:3	Adventurer:3
 Name	towerF
 Mode	once
 Cond	region	1	TowerF
-Action	message	1	The east tower. A road beyond it runs north-east to the warden, but the way is stopped with earth.
+Action	message	1	The east tower. A road beyond it runs north-east to the warden, but the way is sealed with a stone door that opens only from the far side.
 Action	setflag	eastHeld	1
 Action	reveal	1	TowerG
 Action	spawn	3	69	42	1	Knight:4	Elf:3	Monk:3	Dwarf2:3
@@ -5741,7 +5805,7 @@ Action	spawn	3	69	42	1	Knight:4	Elf:3	Monk:3	Dwarf2:3
 Name	towerG
 Mode	once
 Cond	region	1	TowerG
-Action	message	1	The north tower, with a workshop at its heart. A second road to the warden leaves from its ridge, also stopped with earth.
+Action	message	1	The north tower, with a workshop at its heart. A second road to the warden leaves from its ridge, also sealed shut.
 Action	setflag	northHeld	1
 Action	reveal	1	TowerH
 Action	spawn	3	45	27	1	Knight:4	Elf:3	Monk:3	Adventurer:3
@@ -5751,9 +5815,9 @@ Name	bothHeld
 Mode	once
 Cond	flag	eastHeld	1
 Cond	flag	northHeld	1
-Action	message	1	Both approaches to the warden are in your hands. Dig through the earth and finish the watch.
+Action	message	1	Both approaches to the warden are in your hands. The stone doors grind open. Go in and finish the watch.
 Action	reveal	1	TowerH
-Action	objective	1	Dig into the warden's tower and kill Mora Fenwick.
+Action	objective	1	Enter the warden's tower and kill Mora Fenwick.
 Action	spawn	3	61	47	1	Knight:4	Knight:4	Elf:4	Monk:3	Dwarf2:3
 [/Trigger]
 [Trigger]
@@ -5833,5 +5897,29 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Mora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	sealsOpen
+Mode	once
+Cond	flag	eastHeld	1
+Cond	flag	northHeld	1
+Action	message	1	The seals of both approaches crack open. The way to the warden is free.
+Action	terrain	83	30	85	30	path
+Action	terrain	95	30	97	30	path
+Action	terrain	80	7	80	7	path
+Action	terrain	80	8	80	8	path
+[/Trigger]
+[Trigger]
+Name	watchKey
+Mode	once
+Cond	time	4
+Action	stoneattach	MoraFenwick
+[/Trigger]
+[Trigger]
+Name	keyDropped
+Mode	once
+Cond	time	5
+Cond	alive	MoraFenwick	0
+Action	message	1	Mora Fenwick is dead and the watch key she wore has dropped from her belt.
 [/Trigger]
 [/Triggers]

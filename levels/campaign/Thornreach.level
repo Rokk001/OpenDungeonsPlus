@@ -135,7 +135,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	4
-teamId	2
+teamId	4
 player	AI
 faction	Keeper
 startingX	92
@@ -164,7 +164,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	5
-teamId	3
+teamId	5
 player	AI
 faction	Keeper
 startingX	92
@@ -5950,6 +5950,7 @@ Name	allianceNorth
 Mode	once
 Cond	region	1	NorthWest
 Action	message	1	The north-west keeper has joined hands with the north-east keeper. They share a pact until you fall.
+Action	alliance	2	4	make
 Action	spawn	4	27	11	1	Troll:3	Orc:3	Spider:3	Goblin:3
 [/Trigger]
 [Trigger]
@@ -5957,6 +5958,7 @@ Name	allianceSouth
 Mode	once
 Cond	region	1	SouthWest
 Action	message	1	The south-west keeper and the south-east keeper are allied against you.
+Action	alliance	3	5	make
 Action	spawn	5	27	62	1	Troll:3	Orc:3	Spider:3	Goblin:3
 [/Trigger]
 [Trigger]
@@ -6039,5 +6041,20 @@ Mode	once
 Cond	goal	1	KillAllEnemies
 Action	message	1	The last keeper is dead and the thorns are quiet. Thornreach is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	pactSplit
+Mode	once
+Cond	time	2000
+Action	message	1	The pacts have cracked. The north-east keeper has left the north-west keeper and sworn to the south-east keeper instead.
+Action	alliance	2	4	break
+Action	alliance	4	5	make
+[/Trigger]
+[Trigger]
+Name	pactTurn
+Mode	once
+Cond	time	3200
+Action	message	1	The hedge keepers have cut every old oath. The north-west keeper now fights beside the south-west keeper, and the pact against you is shorter than the one against each other.
+Action	alliance	2	3	make
 [/Trigger]
 [/Triggers]

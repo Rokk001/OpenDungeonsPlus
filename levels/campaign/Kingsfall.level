@@ -3075,6 +3075,11 @@ ProtectDungeonTemple	NULL
 85	67	1	0
 85	89	3	100
 86	0	3	100
+86	3	3	100
+86	4	3	100
+86	5	3	100
+86	6	3	100
+86	7	3	100
 86	18	2	100
 86	19	1	0
 86	20	1	0
@@ -3110,9 +3115,14 @@ ProtectDungeonTemple	NULL
 86	67	1	0
 86	89	3	100
 87	0	3	100
+87	2	3	100
+87	3	3	100
 87	4	1	0
 87	5	1	0
 87	6	1	0
+87	7	3	100
+87	8	3	100
+87	9	3	100
 87	19	1	0
 87	20	1	0
 87	21	1	0
@@ -3144,12 +3154,15 @@ ProtectDungeonTemple	NULL
 87	66	1	0
 87	89	3	100
 88	0	3	100
+88	2	3	100
 88	3	1	0
 88	4	1	0
 88	5	1	0
 88	6	1	0
 88	7	1	0
 88	8	1	0
+88	9	3	100
+88	10	3	100
 88	18	2	100
 88	20	1	0
 88	21	1	0
@@ -3182,6 +3195,7 @@ ProtectDungeonTemple	NULL
 88	65	1	0
 88	89	3	100
 89	0	3	100
+89	2	3	100
 89	3	1	0
 89	4	1	0
 89	5	1	0
@@ -3189,6 +3203,7 @@ ProtectDungeonTemple	NULL
 89	7	1	0
 89	8	1	0
 89	9	1	0
+89	10	3	100
 89	20	1	0
 89	21	1	0
 89	22	1	0
@@ -3217,6 +3232,7 @@ ProtectDungeonTemple	NULL
 89	62	1	0
 89	89	3	100
 90	0	3	100
+90	2	3	100
 90	3	1	0
 90	4	1	0
 90	5	1	0
@@ -3224,6 +3240,7 @@ ProtectDungeonTemple	NULL
 90	7	1	0
 90	8	1	0
 90	9	1	0
+90	10	3	100
 90	21	1	0
 90	22	1	0
 90	23	1	0
@@ -3258,12 +3275,15 @@ ProtectDungeonTemple	NULL
 90	63	1	0
 90	89	3	100
 91	0	3	100
+91	2	3	100
+91	3	3	100
 91	4	1	0
 91	5	1	0
 91	6	1	0
 91	7	1	0
 91	8	1	0
 91	9	1	0
+91	10	3	100
 91	22	1	0
 91	23	1	0
 91	24	1	0
@@ -3297,12 +3317,14 @@ ProtectDungeonTemple	NULL
 91	62	1	0
 91	89	3	100
 92	0	3	100
-92	3	2	100
+92	3	3	100
 92	4	1	0
 92	5	1	0
 92	6	1	0
 92	7	1	0
 92	8	1	0
+92	9	3	100
+92	10	3	100
 92	25	1	0
 92	26	1	0
 92	27	1	0
@@ -3325,12 +3347,13 @@ ProtectDungeonTemple	NULL
 92	89	3	100
 93	0	3	100
 93	2	2	100
-93	3	2	100
-93	4	2	100
+93	3	3	100
+93	4	3	100
 93	5	1	0
 93	6	1	0
 93	7	1	0
 93	8	1	0
+93	9	3	100
 93	35	2	100
 93	37	2	100
 93	39	2	100
@@ -3343,9 +3366,12 @@ ProtectDungeonTemple	NULL
 93	89	3	100
 94	0	3	100
 94	2	2	100
-94	4	2	100
-94	5	2	100
-94	7	2	100
+94	4	3	100
+94	5	3	100
+94	6	3	100
+94	7	3	100
+94	8	3	100
+94	9	3	100
 94	35	2	100
 94	37	2	100
 94	40	2	100
@@ -3803,7 +3829,7 @@ Name	hunt
 Mode	once
 Cond	time	3
 Action	message	1	Kingsfall, master, where Prince Aurel hunts and where he has made his stand. His champions are Falconer Edda, Huntsman Brann and Squire Wick, and a keeper who wants the crown must take them alive.
-Action	objective	1	Capture or convert Falconer Edda, Huntsman Brann and Squire Wick.
+Action	objective	1	Capture or convert Falconer Edda, Huntsman Brann and Squire Wick. A champion who joins you is announced.
 Action	objective	1	Defeat Prince Aurel and his court.
 Action	objective	1	Keep an army of at least twelve creatures at your heart.
 [/Trigger]
@@ -4007,6 +4033,59 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	1	>=	12
 Action	message	1	The prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.
+Action	win	1
+[/Trigger]
+[Trigger]
+Name	cacheOpensSlain
+Mode	once
+Cond	alive	HuntsmanBrann	0
+Cond	time	5
+Action	message	1	The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
+Action	terrain	89	10	89	19	path
+[/Trigger]
+[Trigger]
+Name	cacheOpensYours
+Mode	once
+Cond	owns	1	HuntsmanBrann
+Action	message	1	The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
+Action	terrain	89	10	89	19	path
+[/Trigger]
+[Trigger]
+Name	championFalconerEdda
+Mode	once
+Cond	owns	1	FalconerEdda
+Action	message	1	Falconer Edda has taken your side.
+Action	addflag	champions	1
+[/Trigger]
+[Trigger]
+Name	championHuntsmanBrann
+Mode	once
+Cond	owns	1	HuntsmanBrann
+Action	message	1	Huntsman Brann has taken your side.
+Action	addflag	champions	1
+[/Trigger]
+[Trigger]
+Name	championSquireWick
+Mode	once
+Cond	owns	1	SquireWick
+Action	message	1	Squire Wick has taken your side.
+Action	addflag	champions	1
+[/Trigger]
+[Trigger]
+Name	princeWounded
+Mode	once
+Cond	health	PrinceAurel	<=	35
+Action	message	1	Prince Aurel is badly hurt. His court is rallying around him and the guard of the keep is called out.
+Action	spawn	3	48	14	1	Knight:4	Elf:4	Monk:4	Adventurer:4
+[/Trigger]
+[Trigger]
+Name	collectWin
+Mode	once
+Cond	time	5
+Cond	flag	champions	==	3
+Cond	alive	PrinceAurel	0
+Cond	creatures	1	>=	12
+Action	message	1	The prince is beaten and all three of his champions follow your banner. The hunting grounds of Kingsfall are yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

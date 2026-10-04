@@ -884,6 +884,7 @@ ProtectDungeonTemple	NULL
 30	40	1	0
 30	41	1	0
 30	42	1	0
+30	56	3	100
 30	74	1	0
 30	75	1	0
 30	76	1	0
@@ -899,6 +900,7 @@ ProtectDungeonTemple	NULL
 31	41	1	0
 31	42	1	0
 31	43	1	0
+31	56	3	100
 31	74	1	0
 31	75	1	0
 31	76	1	0
@@ -918,6 +920,7 @@ ProtectDungeonTemple	NULL
 32	43	1	0
 32	44	1	0
 32	45	1	0
+32	56	3	100
 32	74	1	0
 32	75	1	0
 32	76	1	0
@@ -935,6 +938,7 @@ ProtectDungeonTemple	NULL
 33	44	1	0
 33	45	1	0
 33	46	1	0
+33	56	3	100
 33	75	1	0
 33	76	1	0
 33	77	1	0
@@ -952,6 +956,7 @@ ProtectDungeonTemple	NULL
 34	44	1	0
 34	45	1	0
 34	46	1	0
+34	56	3	100
 34	75	1	0
 34	76	1	0
 34	77	1	0
@@ -978,6 +983,7 @@ ProtectDungeonTemple	NULL
 35	45	1	0
 35	46	1	0
 35	47	1	0
+35	56	3	100
 35	75	1	0
 35	76	1	0
 35	77	1	0
@@ -1010,6 +1016,7 @@ ProtectDungeonTemple	NULL
 36	46	1	0
 36	47	1	0
 36	48	1	0
+36	56	3	100
 36	76	1	0
 36	77	1	0
 36	78	1	0
@@ -1043,6 +1050,7 @@ ProtectDungeonTemple	NULL
 37	47	1	0
 37	48	1	0
 37	49	1	0
+37	56	3	100
 37	76	1	0
 37	77	1	0
 37	78	1	0
@@ -1068,6 +1076,7 @@ ProtectDungeonTemple	NULL
 38	47	1	0
 38	48	1	0
 38	49	1	0
+38	56	3	100
 38	57	2	100
 38	76	1	0
 38	77	1	0
@@ -1096,6 +1105,7 @@ ProtectDungeonTemple	NULL
 39	48	1	0
 39	49	1	0
 39	50	1	0
+39	56	3	100
 39	75	1	0
 39	76	1	0
 39	77	1	0
@@ -1125,7 +1135,7 @@ ProtectDungeonTemple	NULL
 40	49	1	0
 40	50	1	0
 40	55	2	100
-40	56	2	100
+40	56	3	100
 40	57	2	100
 40	76	1	0
 40	77	1	0
@@ -1154,6 +1164,7 @@ ProtectDungeonTemple	NULL
 41	48	1	0
 41	49	1	0
 41	50	1	0
+41	56	3	100
 41	65	1	0
 41	66	1	0
 41	75	1	0
@@ -1190,6 +1201,7 @@ ProtectDungeonTemple	NULL
 42	49	1	0
 42	50	1	0
 42	51	1	0
+42	56	3	100
 42	64	1	0
 42	65	1	0
 42	66	1	0
@@ -1233,6 +1245,7 @@ ProtectDungeonTemple	NULL
 43	49	1	0
 43	50	1	0
 43	51	1	0
+43	56	3	100
 43	64	1	0
 43	65	1	0
 43	66	1	0
@@ -1279,6 +1292,7 @@ ProtectDungeonTemple	NULL
 44	49	1	0
 44	50	1	0
 44	51	1	0
+44	56	3	100
 44	63	1	0
 44	64	1	0
 44	65	1	0
@@ -1324,6 +1338,7 @@ ProtectDungeonTemple	NULL
 45	49	1	0
 45	50	1	0
 45	51	1	0
+45	56	3	100
 45	63	1	0
 45	64	1	0
 45	65	1	0
@@ -1369,6 +1384,7 @@ ProtectDungeonTemple	NULL
 46	49	1	0
 46	50	1	0
 46	51	1	0
+46	56	3	100
 46	58	1	0
 46	59	1	0
 46	60	1	0
@@ -1427,7 +1443,7 @@ ProtectDungeonTemple	NULL
 47	53	1	0
 47	54	1	0
 47	55	1	0
-47	56	1	0
+47	56	3	100
 47	57	1	0
 47	58	1	0
 47	59	1	0
@@ -1485,7 +1501,7 @@ ProtectDungeonTemple	NULL
 48	53	1	0
 48	54	1	0
 48	55	1	0
-48	56	1	0
+48	56	3	100
 48	57	1	0
 48	58	1	0
 48	59	1	0
@@ -1542,7 +1558,7 @@ ProtectDungeonTemple	NULL
 49	53	1	0
 49	54	1	0
 49	55	1	0
-49	56	1	0
+49	56	3	100
 49	57	1	0
 49	58	1	0
 49	59	1	0
@@ -1589,6 +1605,7 @@ ProtectDungeonTemple	NULL
 50	49	1	0
 50	50	1	0
 50	51	1	0
+50	56	3	100
 50	64	1	0
 50	65	1	0
 50	66	1	0
@@ -1629,6 +1646,7 @@ ProtectDungeonTemple	NULL
 51	49	1	0
 51	50	1	0
 51	51	1	0
+51	56	3	100
 51	64	1	0
 51	65	1	0
 51	66	1	0
@@ -1670,6 +1688,7 @@ ProtectDungeonTemple	NULL
 52	49	1	0
 52	50	1	0
 52	51	1	0
+52	56	3	100
 52	64	1	0
 52	65	1	0
 52	66	1	0
@@ -1710,6 +1729,7 @@ ProtectDungeonTemple	NULL
 53	49	1	0
 53	50	1	0
 53	51	1	0
+53	56	3	100
 53	65	1	0
 53	66	1	0
 53	67	1	0
@@ -1746,6 +1766,7 @@ ProtectDungeonTemple	NULL
 54	49	1	0
 54	50	1	0
 54	51	1	0
+54	56	3	100
 54	67	1	0
 54	68	1	0
 54	69	1	0
@@ -1773,6 +1794,7 @@ ProtectDungeonTemple	NULL
 55	48	1	0
 55	49	1	0
 55	50	1	0
+55	56	3	100
 55	67	1	0
 55	68	1	0
 55	69	1	0
@@ -1801,6 +1823,7 @@ ProtectDungeonTemple	NULL
 56	52	2	100
 56	53	2	100
 56	54	2	100
+56	56	3	100
 56	68	1	0
 56	69	1	0
 56	70	1	0
@@ -1826,6 +1849,7 @@ ProtectDungeonTemple	NULL
 57	49	1	0
 57	50	1	0
 57	53	2	100
+57	56	3	100
 57	69	1	0
 57	70	1	0
 57	71	1	0
@@ -1849,6 +1873,7 @@ ProtectDungeonTemple	NULL
 58	47	1	0
 58	48	1	0
 58	49	1	0
+58	56	3	100
 58	70	1	0
 58	71	1	0
 58	87	3	100
@@ -1878,6 +1903,7 @@ ProtectDungeonTemple	NULL
 59	47	1	0
 59	48	1	0
 59	49	1	0
+59	56	3	100
 59	69	1	0
 59	70	1	0
 59	71	1	0
@@ -1909,6 +1935,7 @@ ProtectDungeonTemple	NULL
 60	46	1	0
 60	47	1	0
 60	48	1	0
+60	56	3	100
 60	70	1	0
 60	71	1	0
 60	72	1	0
@@ -1932,6 +1959,7 @@ ProtectDungeonTemple	NULL
 61	45	1	0
 61	46	1	0
 61	47	1	0
+61	56	3	100
 61	71	1	0
 61	72	1	0
 61	85	2	100
@@ -1949,6 +1977,7 @@ ProtectDungeonTemple	NULL
 62	44	1	0
 62	45	1	0
 62	46	1	0
+62	56	3	100
 62	70	3	100
 62	71	3	100
 62	72	1	0
@@ -1966,6 +1995,7 @@ ProtectDungeonTemple	NULL
 63	44	1	0
 63	45	1	0
 63	46	1	0
+63	56	3	100
 63	71	1	0
 63	72	1	0
 63	73	1	0
@@ -1984,6 +2014,7 @@ ProtectDungeonTemple	NULL
 64	45	1	0
 64	52	2	100
 64	53	2	100
+64	56	3	100
 64	72	1	0
 64	73	1	0
 64	87	3	100
@@ -1999,6 +2030,7 @@ ProtectDungeonTemple	NULL
 65	42	1	0
 65	43	1	0
 65	52	2	100
+65	56	3	100
 65	71	1	0
 65	72	1	0
 65	73	1	0
@@ -2018,6 +2050,7 @@ ProtectDungeonTemple	NULL
 66	42	1	0
 66	52	2	100
 66	53	2	100
+66	56	3	100
 66	72	1	0
 66	73	1	0
 66	74	1	0
@@ -3112,7 +3145,7 @@ Action	message	1	The low town is yours. The spire has taken notice and the first
 Action	setflag	southHeld	1
 Action	reveal	1	SouthGate
 Action	reveal	1	OuterRing
-Action	objective	1	Break through the south gate onto the outer ring.
+Action	objective	1	Wait for the south gate to open, then break through onto the outer ring.
 [/Trigger]
 [Trigger]
 Name	yardSeen
@@ -3134,7 +3167,7 @@ Action	spawn	3	47	51	1	Knight:3	Elf:3	Monk:3	Adventurer:2
 Name	onRing
 Mode	once
 Cond	region	1	OuterRing
-Action	message	1	You are on the outer ring. Four wings branch off it, and each holds a vault. The east and west links are blocked with earth.
+Action	message	1	You are on the outer ring. Four wings branch off it, and each holds a vault. The east and west links are walled up and open when the inner ring falls.
 Action	reveal	1	WestWing
 Action	reveal	1	NorthWing
 Action	reveal	1	NorthEastWing
@@ -3277,5 +3310,40 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Alaric Penn lies dead on his own coin. Goldspire is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	southGateOpens
+Mode	once
+Cond	flag	southHeld	1
+Action	message	1	The seal of the south gate gives way and the road onto the outer ring is open.
+Action	terrain	47	56	49	56	path
+[/Trigger]
+[Trigger]
+Name	linksOpen
+Mode	once
+Cond	flag	ringsBroken	1
+Action	message	1	A rockfall in the old plugs has opened the east and west links. Your reinforcements can come up the flanks.
+Action	terrain	11	52	12	67	path
+Action	terrain	80	58	81	72	path
+[/Trigger]
+[Trigger]
+Name	treasurerKey
+Mode	once
+Cond	time	4
+Action	stoneattach	AlaricPenn
+[/Trigger]
+[Trigger]
+Name	treasurerHurt
+Mode	once
+Cond	health	AlaricPenn	<=	40
+Action	message	1	Alaric Penn is bleeding coin. He calls the last of his guard to the core.
+Action	spawn	3	48	38	1	Knight:5	Elf:4	Monk:4	Dwarf2:4
+[/Trigger]
+[Trigger]
+Name	keyDropped
+Mode	once
+Cond	time	5
+Cond	alive	AlaricPenn	0
+Action	message	1	The treasurer is dead and the vault key he carried lies where he fell.
 [/Trigger]
 [/Triggers]
