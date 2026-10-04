@@ -25,6 +25,7 @@
 #include "gamemap/GameMap.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "sound/SoundEffectsManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -116,6 +117,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mPruneTimer(0.0),
     mUniqueNumber(0),
     mScanRadius(30.0),
+    mHeartRateFactor(1.0),
     mSeenSizeX(0),
     mSeenSizeY(0),
     mEventsThisScan(0),
@@ -309,9 +311,23 @@ bool RoomAmbience::isIdleLongEnough(const std::string& key, bool busy, double af
 
     it->second.mLastTouched = mClock;
     if(busy)
+    {
         it->second.mLastBusy = mClock;
+        it->second.mEverBusy = true;
+    }
 
     return (mClock - it->second.mLastBusy) >= after;
+}
+
+bool RoomAmbience::isIdleState(const AmbienceEffect& effect, const std::string& key, bool busy)
+{
+    bool idle = isIdleLongEnough(key, busy, effect.mAfter);
+    if(effect.mWhen != AmbienceWhen::vacated)
+        return idle;
+
+    // Only a target that was used while it was watched counts as left behind
+    std::map<std::string, BusyInfo>::iterator it = mBusy.find(key);
+    return idle && (it != mBusy.end()) && it->second.mEverBusy;
 }
 
 bool RoomAmbience::isVisibleNear(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition,
@@ -403,6 +419,8 @@ void RoomAmbience::stopAll()
     mKnownEntities.clear();
     mEntitiesInitialized = false;
     mScanTimer = 0.0;
+    mExtras.reset();
+    mHeartRateFactor = 1.0;
 }
 
 void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
@@ -456,6 +474,7 @@ void RoomAmbience::scan()
     scanObjects(camera, cameraPosition);
     scanTiles(camera, cameraPosition, lookPoint);
     scanEntityEvents(camera, cameraPosition);
+    mExtras.scan(*this, mGameMap, mClock, cameraPosition);
     reconcile();
     playClips();
 
@@ -539,7 +558,7 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
                 if(effect.mWhen == AmbienceWhen::occupied)
                     candidate.mActive = (busy == 1);
                 else
-                    candidate.mActive = isIdleLongEnough("o" + entity->getName(), busy == 1, effect.mAfter);
+                    candidate.mActive = isIdleState(effect, "o" + entity->getName(), busy == 1);
             }
 
             if(effect.mKind == AmbienceKind::particle)
@@ -646,6 +665,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
             int32_t visible = -1;
             int32_t busy = -1;
             int32_t wall = -1;
+            Ogre::Vector3 wallShift = Ogre::Vector3::ZERO;
             std::string key = "t" + Helper::toString(x) + "_" + Helper::toString(y);
             for(uint32_t index : list)
             {
@@ -664,7 +684,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                         continue;
                 }
 
-                if(effect.mNeedWall)
+                if(effect.mNeedWall || effect.mWallSide)
                 {
                     if(wall < 0)
                     {
@@ -674,7 +694,15 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                             if((neighbor != nullptr) && (neighbor->getFullness() > 0.0))
                             {
                                 wall = 1;
-                                break;
+                                // The edge of the tile that touches a wall (a neighbor straight beside the tile is preferred)
+                                int32_t stepX = neighbor->getX() - x;
+                                int32_t stepY = neighbor->getY() - y;
+                                if((stepX == 0) || (stepY == 0))
+                                {
+                                    wallShift = Ogre::Vector3(static_cast<Ogre::Real>(stepX) * 0.45f,
+                                        static_cast<Ogre::Real>(stepY) * 0.45f, 0.0f);
+                                    break;
+                                }
                             }
                         }
                     }
@@ -692,6 +720,8 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 candidate.mEffect = index;
                 candidate.mTarget = key;
                 candidate.mPosition = position + effect.mOffset;
+                if(effect.mWallSide)
+                    candidate.mPosition += wallShift;
                 candidate.mDistance = distance;
                 candidate.mPriority = effect.mPriority;
                 if(effect.mWhen == AmbienceWhen::always)
@@ -706,7 +736,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                     if(effect.mWhen == AmbienceWhen::occupied)
                         candidate.mActive = (busy == 1);
                     else
-                        candidate.mActive = isIdleLongEnough(key, busy == 1, effect.mAfter);
+                        candidate.mActive = isIdleState(effect, key, busy == 1);
                 }
 
                 if(effect.mKind == AmbienceKind::motion)
@@ -1043,8 +1073,15 @@ void RoomAmbience::updateEmitters(double timeSinceLastFrame)
         else if(effects[emitter.mEffect].mFlicker > 0.0)
         {
             double flicker = effects[emitter.mEffect].mFlicker;
-            double rate = TWO_PI * effects[emitter.mEffect].mSpeed;
-            double noise = 0.5 * (std::sin(rate * mClock + emitter.mPhase) + std::sin(1.7 * rate * mClock + 2.0 * emitter.mPhase));
+            double cycles = effects[emitter.mEffect].mSpeed * mClock;
+            if(effects[emitter.mEffect].mHeartRate)
+            {
+                // The beat is summed up, so a change of the heart rate does not make the glow jump
+                emitter.mCycle += effects[emitter.mEffect].mSpeed * mHeartRateFactor * timeSinceLastFrame;
+                cycles = emitter.mCycle;
+            }
+            double rate = TWO_PI * cycles;
+            double noise = 0.5 * (std::sin(rate + emitter.mPhase) + std::sin(1.7 * rate + 2.0 * emitter.mPhase));
             double factor = 1.0 + flicker * noise;
             emitter.mSystem->setDefaultDimensions(static_cast<Ogre::Real>(emitter.mBaseWidth * factor),
                 static_cast<Ogre::Real>(emitter.mBaseHeight * factor));
@@ -1107,6 +1144,11 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
             }
 
             double wave = std::sin(TWO_PI * effect.mSpeed * motionNode.mClock + instance.mPhase);
+            if(effect.mHeartRate)
+            {
+                instance.mCycle += effect.mSpeed * mHeartRateFactor * timeSinceLastFrame;
+                wave = std::sin(TWO_PI * instance.mCycle + instance.mPhase);
+            }
             switch(effect.mMotion)
             {
                 case AmbienceMotion::sway:
@@ -1235,6 +1277,12 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
 
             if(mOneShots.size() >= mConfig.getMaxOneShots())
                 continue;
+        }
+
+        if(!effect.mSound.empty() && (mMode == Mode::full) && (SoundEffectsManager::getSingletonPtr() != nullptr))
+        {
+            SoundEffectsManager::getSingleton().playSpatialSound(effect.mSound, static_cast<float>(position.x),
+                static_cast<float>(position.y));
         }
 
         OneShot oneShot;
