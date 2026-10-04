@@ -51,6 +51,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/RunLevelTest.h"
 
 #include <OgreCamera.h>
 #include <OgreEntity.h>
@@ -114,6 +115,10 @@ ODFrameListener::ODFrameListener(const std::string& mainSceneFileName, Ogre::Ren
     currentMinutes(0)    
 {
     OD_LOG_INF("Creating frame listener...");
+
+    // Frame time measurements of a level test run without the frame rate cap
+    if(RunLevelTest::isActive() && std::getenv("OD_RUN_LEVEL_UNCAPPED") != nullptr)
+        mFpsLimiter.setFrameRate(1000);
 
     mCreatureReactions->setMode(CreatureReactions::modeFromString(
         ConfigManager::getSingleton().getGameValue(Config::CREATURE_REACTIONS, "full", false)));
@@ -394,6 +399,7 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
 
     // Sleep to limit the framerate to the max value
     mFpsLimiter.sleepIfEarly();
+    RunLevelTest::recordFrame(evt.timeSinceLastFrame);
     
 
     CEGUI::System::getSingleton().injectTimePulse(evt.timeSinceLastFrame);
