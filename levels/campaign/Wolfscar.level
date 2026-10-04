@@ -135,7 +135,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	4
-teamId	3
+teamId	4
 player	AI
 faction	Keeper
 startingX	12
@@ -164,7 +164,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	5
-teamId	2
+teamId	5
 player	AI
 faction	Keeper
 startingX	58
@@ -4668,6 +4668,7 @@ Mode	once
 Cond	region	1	WestHold
 Action	message	1	You are in the west hold. The hunter has called the pack and his ally in the north-east is already marching to help.
 Action	spawn	3	12	50	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	alliance	3	4	make
 [/Trigger]
 [Trigger]
 Name	eastHold
@@ -4675,6 +4676,7 @@ Mode	once
 Cond	region	1	EastHold
 Action	message	1	You are in the east hold. The hunter in the north-west is sending his pack across the ravine.
 Action	spawn	2	52	50	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	alliance	2	5	make
 [/Trigger]
 [Trigger]
 Name	gullyCrossed
@@ -4690,6 +4692,8 @@ Name	clearingSeen
 Mode	once
 Cond	region	1	Clearing
 Action	message	1	Both northern keepers are in sight now. They will not come at you together unless you push one of them hard.
+Action	alliance	3	4	break
+Action	alliance	2	5	break
 [/Trigger]
 [Trigger]
 Name	pack1
@@ -4724,6 +4728,7 @@ Name	pack5
 Mode	once
 Cond	time	1900
 Action	message	1	Two hunters have joined their packs against you.
+Action	alliance	2	3	make
 Action	spawn	2	22	68	1	Orc:3	Troll:3	Goblin:3	Spider:3
 [/Trigger]
 [Trigger]
@@ -4750,11 +4755,10 @@ Action	spawn	4	35	70	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
 [Trigger]
 Name	huntersGone
 Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Cond	creatures	3	<=	0
-Cond	creatures	4	<=	0
-Cond	creatures	5	<=	0
+Cond	defeated	2
+Cond	defeated	3
+Cond	defeated	4
+Cond	defeated	5
 Action	message	1	The last hunter is dead and the forest of Wolfscar is silent. It is yours.
 Action	win	1
 [/Trigger]
