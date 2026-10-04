@@ -1,4 +1,4 @@
-"""Check the summon worker icon: shared image binding and the warm imp emblem in the icon atlas."""
+"""Check the summon worker icon: shared image binding and the warm worker emblem in the icon atlas."""
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -37,5 +37,5 @@ assert tile[..., 3][0, 0] == 0 and tile[..., 3][16, 16] > 240 and opaque.sum() >
 rgb = tile[opaque][:, :3]
 assert (rgb[:, 2] > rgb[:, 0] + 12).mean() < 0.01, 'no cold blue enamel'
 centre = tile[40:80, 40:88, :3].reshape(-1, 3)
-assert centre[:, 0].mean() > centre[:, 2].mean() + 40, 'ember coloured imp'
+assert centre[:, 0].mean() > centre[:, 2].mean() + 40, 'ember coloured worker'
 print('SUMMON ICON OK')

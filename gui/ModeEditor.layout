@@ -326,13 +326,13 @@
                 <Window type="OD/GameTabButton" name="StunImpsBoxButton" >
                     <Property name="Area" value="{{0,440},{0,25},{0,500},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
-                    <Property name="TooltipText" value="Adds a box stunning the enemy imps" />
+                    <Property name="TooltipText" value="Adds a box stunning the enemy workers" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="ReceiveImpsBoxButton" >
                     <Property name="Area" value="{{0,500},{0,25},{0,560},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-                    <Property name="TooltipText" value="Adds a box giving free imps" />
+                    <Property name="TooltipText" value="Adds a box giving free workers" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="MakeHappyBoxButton" >
