@@ -182,6 +182,7 @@ private:
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
+    void scanCreatureEvents();
     void reconcile();
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
@@ -255,6 +256,21 @@ private:
         Ogre::Vector3 mPosition;
         uint32_t mGeneration;
     };
+    //! What was seen of a creature at the last scan (dormitory wake-up, enemy in a guard room, healing)
+    struct CreatureSnapshot
+    {
+        CreatureSnapshot() :
+            mHp(0.0), mSleeping(false), mEnemyInGuardRoom(false), mLastHealed(-100.0), mGeneration(0)
+        {}
+
+        double mHp;
+        bool mSleeping;
+        bool mEnemyInGuardRoom;
+        double mLastHealed;
+        uint32_t mGeneration;
+    };
+    std::map<std::string, CreatureSnapshot> mKnownCreatures;
+    bool mCreaturesInitialized;
     std::map<std::string, EntitySnapshot> mKnownEntities;
     uint32_t mGeneration;
     bool mEntitiesInitialized;
