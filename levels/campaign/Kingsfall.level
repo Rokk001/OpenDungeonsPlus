@@ -3784,6 +3784,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	Hollow	36	66	62	88
 Region	SouthMeadows	8	54	92	72
 Region	Ravine	4	38	94	56

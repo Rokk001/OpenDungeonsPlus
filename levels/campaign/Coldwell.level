@@ -1542,6 +1542,17 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Spider
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	Cultist
+Block	1	LavaSpawn
+Block	1	LizardMan
+Block	1	DarkElf
+Block	1	Orc
+Block	1	PitDemon
 Region	Plaza	17	20	37	32
 Region	Undercroft	21	34	33	42
 Region	Court	40	34	54	41

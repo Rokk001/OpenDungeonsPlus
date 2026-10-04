@@ -4749,6 +4749,12 @@ Monk	6
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	WestGlade	8	40	26	64
 Region	SouthGlade	33	78	64	92
 Region	MiddleGlade	34	36	62	60

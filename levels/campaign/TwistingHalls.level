@@ -3158,6 +3158,13 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LavaSpawn
+Block	1	LizardMan
+Block	1	Orc
 Region	Maze	14	1	58	55
 Region	Between	31	1	43	55
 Region	Beyond	45	1	58	55

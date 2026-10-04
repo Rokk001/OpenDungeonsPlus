@@ -3401,6 +3401,11 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	Roach
+Block	1	LavaSpawn
+Block	1	LizardMan
+Block	1	Orc
+Block	1	PitDemon
 Region	Basin	24	28	68	54
 Region	RuinYard	12	16	30	28
 Region	NorthHall	44	5	62	15

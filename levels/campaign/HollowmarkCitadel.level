@@ -5430,6 +5430,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	Camp	36	90	82	108
 Region	WestMine	8	88	32	106
 Region	EastMine	84	88	108	106

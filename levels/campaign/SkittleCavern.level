@@ -969,6 +969,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	Lanes	31	5	46	35
 Region	Mouth1	30	8	32	8
 Region	Mouth2	30	16	32	16

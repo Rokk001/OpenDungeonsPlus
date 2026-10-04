@@ -3064,6 +3064,8 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	Roach
+Block	1	LizardMan
 Region	Quarry	4	62	30	86
 Region	Road	30	70	50	82
 Region	LowTown	38	60	60	74

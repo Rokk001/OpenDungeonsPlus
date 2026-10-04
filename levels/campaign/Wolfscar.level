@@ -4622,6 +4622,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	SouthGlade	20	82	52	100
 Region	Wolfden	24	46	48	66
 Region	WestHold	3	46	22	66
