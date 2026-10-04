@@ -46,6 +46,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/NameAliases.h"
 #include "utils/Random.h"
 
 #include <algorithm>
@@ -2342,6 +2343,17 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
     return nullptr;
 }
 
+//! \brief Returns the tag with the current tile visual name when it holds an older one, e.g. "[/oldName]" -> "[/newName]"
+static std::string resolveTileVisualTag(const std::string& tag)
+{
+    if((tag.size() < 3) || (tag[0] != '[') || (tag[tag.size() - 1] != ']'))
+        return tag;
+
+    bool isEndTag = (tag[1] == '/');
+    std::string name = tag.substr(isEndTag ? 2 : 1, tag.size() - (isEndTag ? 3 : 2));
+    return std::string(isEndTag ? "[/" : "[") + NameAliases::resolve(name) + "]";
+}
+
 int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
 {
     // We check if it is the Seat end tag
@@ -2349,6 +2361,8 @@ int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
     OD_ASSERT_TRUE(is >> str);
     if (str == "[/Seat]")
         return 0;
+
+    str = resolveTileVisualTag(str);
 
     if(str != "[" + Tile::tileVisualToString(tileVisual) + "]")
     {
@@ -2360,7 +2374,7 @@ int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
     while(true)
     {
         OD_ASSERT_TRUE(is >> str);
-        if(str == "[/" + Tile::tileVisualToString(tileVisual) + "]")
+        if(resolveTileVisualTag(str) == "[/" + Tile::tileVisualToString(tileVisual) + "]")
             break;
 
         std::pair<int, int> tilecoords;
