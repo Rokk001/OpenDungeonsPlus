@@ -195,6 +195,8 @@ private:
     friend class CreatureCombatReactions;
     //! Results of blows, arrows and weapon trails (from the cosmetic events of the server)
     friend class CreatureWeaponVisuals;
+    //! Worker reactions (dig hits, claiming, carrying, danger, idling) use the internals too
+    friend class WorkerReactions;
 
     struct RunningReaction
     {
