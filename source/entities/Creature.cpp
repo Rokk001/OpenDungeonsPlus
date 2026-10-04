@@ -3137,13 +3137,14 @@ double Creature::getPitDamageFactor(GameEntity* attacker)
 
 bool Creature::canHaveRelationships() const
 {
-    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled())
+    bool optionOnServerMap = getIsOnServerMap() && getGameMap()->isRelationshipsEnabled();
+    if(!optionOnServerMap)
         return false;
 
-    if((getSeat() == nullptr) || getSeat()->isRogueSeat() || (getSeat()->getFaction() == "Hero"))
-        return false;
-
-    return !getDefinition()->isWorker() && !isInPrison();
+    Seat* seat = getSeat();
+    bool hasSeat = (seat != nullptr);
+    return relationshipsAllowed(optionOnServerMap, hasSeat, hasSeat && seat->isRogueSeat(),
+        hasSeat && (seat->getFaction() == "Hero"), getDefinition()->isWorker(), isInPrison());
 }
 
 double Creature::getRelationshipCombatModifier() const
@@ -3368,22 +3369,23 @@ double Creature::getRelationshipRageFactor(const Seat* victimSeat) const
 
 bool Creature::canStartBrawl() const
 {
-    if(!canHaveRelationships() || !getIsOnMap() || !isAlive() || isKo() || isPossessed() || isBrawling())
+    if(!canHaveRelationships())
         return false;
 
-    if(getPositionTile() == nullptr)
-        return false;
-
-    // Not while fighting, in the arena or the casino, and not when badly hurt
-    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly))
-        return false;
-
-    Room* room = getPositionTile()->getCoveringRoom();
-    if((room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino)))
-        return false;
-
-    int32_t stopPercent = getGameMap()->getCreatureRelationships()->getSettings().mBrawlStopHealthPercent;
-    return (getHP() * 100.0) > (mMaxHP * static_cast<double>(stopPercent + 25));
+    BrawlCandidateState state;
+    state.mAllowed = true;
+    state.mOnMap = getIsOnMap();
+    state.mAlive = isAlive();
+    state.mKo = isKo();
+    state.mPossessed = isPossessed();
+    state.mBrawling = isBrawling();
+    state.mHasTile = (getPositionTile() != nullptr);
+    state.mFighting = isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly);
+    Room* room = state.mHasTile ? getPositionTile()->getCoveringRoom() : nullptr;
+    state.mInArenaOrCasino = (room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino));
+    state.mHp = getHP();
+    state.mMaxHp = mMaxHP;
+    return ::canStartBrawl(state, getGameMap()->getCreatureRelationships()->getSettings());
 }
 
 void Creature::startBrawl(Creature& opponent)
@@ -3423,15 +3425,23 @@ void Creature::updateBrawl()
         return;
     }
 
-    const RelationshipSettings& settings = relationships->getSettings();
-    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
-    bool stop = !isAlive() || !opponent->isAlive() || isKo() || opponent->isKo()
-        || isPossessed() || opponent->isPossessed()
-        || (getHP() <= (mMaxHP * stopRatio)) || (opponent->getHP() <= (opponent->mMaxHP * stopRatio))
-        || ((getGameMap()->getTurnNumber() - mBrawlStartTurn) >= settings.mBrawlMaxTurns)
-        || !isActionInList(CreatureActionType::fightFriendly);
-    if(stop)
+    BrawlFighterState own;
+    own.mAlive = isAlive();
+    own.mKo = isKo();
+    own.mPossessed = isPossessed();
+    own.mHp = getHP();
+    own.mMaxHp = mMaxHP;
+    BrawlFighterState other;
+    other.mAlive = opponent->isAlive();
+    other.mKo = opponent->isKo();
+    other.mPossessed = opponent->isPossessed();
+    other.mHp = opponent->getHP();
+    other.mMaxHp = opponent->mMaxHP;
+    if(shouldStopBrawl(own, other, getGameMap()->getTurnNumber() - mBrawlStartTurn,
+        isActionInList(CreatureActionType::fightFriendly), relationships->getSettings()))
+    {
         endBrawl();
+    }
 }
 
 void Creature::endBrawl()
@@ -3475,11 +3485,11 @@ void Creature::endBrawl()
 
 void Creature::reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB)
 {
-    if(!creatureA.canHaveRelationships() || !creatureB.canHaveRelationships())
+    if(!relationshipEventAllowed(creatureA.canHaveRelationships(), creatureB.canHaveRelationships(),
+        creatureA.getSeat() == creatureB.getSeat()))
+    {
         return;
-
-    if(creatureA.getSeat() != creatureB.getSeat())
-        return;
+    }
 
     GameMap* gameMap = creatureA.getGameMap();
     gameMap->getCreatureRelationships()->onRelationshipEvent(event, creatureA.getName(), creatureB.getName(),

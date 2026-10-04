@@ -1081,3 +1081,82 @@ bool CreatureRelationships::readFromStream(std::istream& is, int64_t turn)
             legacy.insert(pair);
     }
 }
+
+bool relationshipsAllowed(bool optionOnServerMap, bool hasSeat, bool rogueSeat, bool heroFaction,
+    bool worker, bool inPrison)
+{
+    if(!optionOnServerMap)
+        return false;
+
+    if(!hasSeat || rogueSeat || heroFaction)
+        return false;
+
+    return !worker && !inPrison;
+}
+
+bool relationshipEventAllowed(bool firstAllowed, bool secondAllowed, bool sameSeat)
+{
+    return firstAllowed && secondAllowed && sameSeat;
+}
+
+bool anyHatedCoworker(const CreatureRelationships& relationships, bool creatureAllowed,
+    const std::string& creature, const std::vector<std::string>& coworkers)
+{
+    if(!creatureAllowed)
+        return false;
+
+    for(size_t i = 0; i < coworkers.size(); ++i)
+    {
+        if(relationships.isHated(creature, coworkers[i]))
+            return true;
+    }
+
+    return false;
+}
+
+bool useDislikedRoomAsFallback(bool haveDislikedRoom, size_t nbOtherSuitableRooms)
+{
+    return haveDislikedRoom && (nbOtherSuitableRooms == 0);
+}
+
+bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings& settings)
+{
+    if(!state.mAllowed || !state.mOnMap || !state.mAlive || state.mKo || state.mPossessed || state.mBrawling)
+        return false;
+
+    if(!state.mHasTile)
+        return false;
+
+    // Not while fighting, in the arena or the casino, and not when badly hurt
+    if(state.mFighting || state.mInArenaOrCasino)
+        return false;
+
+    return (state.mHp * 100.0) > (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + 25));
+}
+
+bool shouldStopBrawl(const BrawlFighterState& first, const BrawlFighterState& second, int64_t turnsSinceStart,
+    bool stillFighting, const RelationshipSettings& settings)
+{
+    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
+    return !first.mAlive || !second.mAlive || first.mKo || second.mKo
+        || first.mPossessed || second.mPossessed
+        || (first.mHp <= (first.mMaxHp * stopRatio)) || (second.mHp <= (second.mMaxHp * stopRatio))
+        || (turnsSinceStart >= settings.mBrawlMaxTurns)
+        || !stillFighting;
+}
+
+bool isBrawlCheckTurn(int64_t turn, const RelationshipSettings& settings)
+{
+    return (turn % settings.mBrawlCheckIntervalTurns) == 0;
+}
+
+bool isWithinBrawlDistance(double dx, double dy, const RelationshipSettings& settings)
+{
+    double maxDistance = static_cast<double>(settings.mBrawlMaxDistanceTiles);
+    return (dx * dx + dy * dy) <= (maxDistance * maxDistance);
+}
+
+bool brawlChanceHit(int32_t roll, const RelationshipSettings& settings)
+{
+    return roll < settings.mBrawlChancePercent;
+}
