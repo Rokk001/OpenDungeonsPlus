@@ -3120,12 +3120,15 @@ Action	message	1	Goldspire stands over the plateau like a coin on its edge, mast
 Action	objective	1	Kill Treasurer Alaric Penn in the core of the spire.
 Action	objective	1	Dig gold and build a force of your own, the quarry is poor.
 Action	objective	1	Take the low town below the spire.
+Action	portal	1	off
 [/Trigger]
 [Trigger]
 Name	firstCoin
 Mode	once
 Cond	mined	1	>=	500
-Action	message	1	The first coin is in the vault. Rooms for your creatures are within reach now.
+Action	message	1	The first coin is in the vault and your portal draws creatures again. Rooms for them are within reach now.
+Action	portal	1	on
+Action	setflag	portalOn	1
 Action	gold	1	400
 Action	spawn	1	21	73	1	Orc:2	Goblin:2
 [/Trigger]
@@ -3345,5 +3348,14 @@ Mode	once
 Cond	time	5
 Cond	alive	AlaricPenn	0
 Action	message	1	The treasurer is dead and the vault key he carried lies where he fell.
+[/Trigger]
+[Trigger]
+Name	portalWake
+Mode	once
+Cond	time	700
+Cond	flag	portalOn	0
+Action	message	1	The quarry has gone quiet and your portal draws creatures again.
+Action	portal	1	on
+Action	setflag	portalOn	1
 [/Trigger]
 [/Triggers]
