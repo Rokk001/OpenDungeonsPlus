@@ -203,7 +203,7 @@ bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     int newSeatId = player->getSeat()->getId();
     creature->changeSeat(player->getSeat());
     creature->addCreatureEffect(new CreatureEffectDefector(nbTurns, originalSeatId, newSeatId));
-    fireSpellEffect(*pos, "Defector", "Dark");
+    fireSpellEffect(*pos, "Defector", "DefectorCast");
 
     return true;
 }

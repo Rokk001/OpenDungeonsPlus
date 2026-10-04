@@ -4913,7 +4913,7 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
     mNeedFireRefresh = true;
 }
 
-void Creature::addParticleEffect(const std::string& effectScript, uint32_t nbTurns)
+void Creature::addParticleEffect(const std::string& effectScript, int32_t nbTurns)
 {
     EntityParticleEffect* effect = new EntityParticleEffect(
         nextParticleSystemsName(), effectScript, nbTurns);
@@ -5696,6 +5696,7 @@ void Creature::endPossession()
     Player* player = mPossessor;
     mPossessor = nullptr;
     player->setPossessedCreatureName(std::string());
+    endParticleEffectsByScript("SpellCreaturePossess");
 
     // The group does not follow anymore and goes back to its normal behaviour
     for(const std::string& memberName : mGroupMemberNames)

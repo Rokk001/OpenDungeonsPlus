@@ -1897,14 +1897,19 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::possessionEnd:
         {
-            // The creature the keeper returns from shows a short flash of light where it stands
+            // The creature the keeper returns from loses its aura and shows a short flash of light where it
+            // stands. A creature that fell (dead or knocked out as far as the client can tell) shows another effect
             Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
+            bool creatureLost = (possessed != nullptr) && (!possessed->isAlive() || possessed->isKo());
             RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
+            if(possessed != nullptr)
+                possessed->endParticleEffectsByScript("SpellCreaturePossess");
             if((possessed != nullptr) && possessed->getIsOnMap() && (ambience != nullptr))
             {
                 Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),
                     static_cast<Ogre::Real>(possessed->getPosition().y), 0.0f);
-                ambience->triggerEvent("SpellFxPossessEnd", position, false, std::string(), true);
+                ambience->triggerEvent(creatureLost ? "SpellFxPossessLost" : "SpellFxPossessEnd", position, false,
+                    std::string(), true);
             }
             getPlayer()->setPossessedCreatureName(std::string());
             frameListener->getCameraManager()->stopPossession();
@@ -1912,7 +1917,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
                 gm->notifyPossessionEnded();
-                gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
+                if(creatureLost)
+                    gm->displayText(Ogre::ColourValue(1.0f, 0.55f, 0.5f), "Your creature fell. Your mind is torn back to the keeper's view.");
+                else
+                    gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
             }
             break;
         }

@@ -70,7 +70,13 @@ enum class AmbienceKind
     //! when there are more than MaxMarks
     mark,
     //! A sound of the family given by Family: played at the event, or now and then (Every) at an object
-    sound
+    sound,
+    //! A mesh (Mesh) that is stretched from the point From to the target for a moment and flickers: a lightning bolt
+    //! (events only). Amount = width, Speed = flickers per second, Duration in seconds
+    beam,
+    //! An object (Mesh and/or particle system System as trail) that flies from From to the target in Duration seconds
+    //! on an arc of height Amount (events only); Land = event raised at the target when it arrives
+    projectile
 };
 
 enum class AmbienceMotion
@@ -104,6 +110,7 @@ struct AmbienceEffect
         mSpeed(1.0),
         mFlicker(0.0),
         mDuration(3.0),
+        mFrom(Ogre::Vector3(0.0f, 0.0f, 8.0f)),
         mDelay(0.0),
         mEvery(10.0),
         mChance(1.0),
@@ -139,6 +146,12 @@ struct AmbienceEffect
     double mFlicker;
     //! Seconds a one-shot effect is kept
     double mDuration;
+    //! Mesh name without extension (kinds beam and projectile)
+    std::string mMesh;
+    //! Event raised at the target when a projectile arrives
+    std::string mLand;
+    //! Where a beam or projectile starts, relative to the target
+    Ogre::Vector3 mFrom;
     //! Sound family, as in the folders below sounds/Spatial (kind sound)
     std::string mFamily;
     //! Seconds after the event until the sound is played (kind sound, events only)
@@ -182,6 +195,8 @@ public:
     { return mMaxMotions; }
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
+    uint32_t getMaxFlights() const
+    { return mMaxFlights; }
     uint32_t getMaxMarks() const
     { return mMaxMarks; }
     double getOccupiedRadius() const
@@ -205,6 +220,7 @@ private:
     uint32_t mMaxMotions;
     uint32_t mMaxOneShots;
     uint32_t mMaxMarks;
+    uint32_t mMaxFlights;
     double mOccupiedRadius;
     double mReducedDistanceFactor;
 };
