@@ -858,6 +858,8 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
 #ifndef OD_USE_SFML_WINDOW
     wheelNotches /= 120.0f;
 #endif
+    // Every wheel notch is one zoom level.
+    int wheelStepCount = std::max(1, static_cast<int>(std::floor(std::abs(wheelNotches) + 0.5f)));
 
     if (arg.delta > 0)
     {
@@ -867,7 +869,7 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
         }
         else
         {
-            frameListener.getCameraManager()->zoomBy(-0.2f * wheelNotches);
+            frameListener.getCameraManager()->zoomStep(wheelNotches > 0.0f ? -wheelStepCount : wheelStepCount);
         }
     }
     else if (arg.delta < 0)
@@ -878,7 +880,7 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
         }
         else
         {
-            frameListener.getCameraManager()->zoomBy(-0.2f * wheelNotches);
+            frameListener.getCameraManager()->zoomStep(wheelNotches > 0.0f ? -wheelStepCount : wheelStepCount);
         }
     }
 }

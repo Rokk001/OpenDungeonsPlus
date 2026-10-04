@@ -42,6 +42,17 @@ class TileContainer;
 const Ogre::Real MIN_CAMERA_Z = 3.0;
 const Ogre::Real MAX_CAMERA_Z = 16.0;
 
+//! The number of fixed zoom levels. Level 0 is MIN_CAMERA_Z, the last level is MAX_CAMERA_Z and
+//! the levels in between are evenly spaced.
+const unsigned int CAMERA_ZOOM_LEVELS = 5;
+
+//! rief The camera height of a zoom level (0 .. CAMERA_ZOOM_LEVELS - 1)
+inline Ogre::Real getCameraZoomLevelHeight(unsigned int level)
+{
+    return MIN_CAMERA_Z + (MAX_CAMERA_Z - MIN_CAMERA_Z) * static_cast<Ogre::Real>(level)
+        / static_cast<Ogre::Real>(CAMERA_ZOOM_LEVELS - 1);
+}
+
 //! \brief The default views enum, used to cycle between them.
 enum class ViewModes : uint16_t
 {
@@ -135,8 +146,12 @@ public:
 
     //! Continuous input is sampled once per frame, independent of key repeat.
     void setControls(const Ogre::Vector2& pan, Ogre::Real zoom, Ogre::Real swivel, bool fast);
-    //! Pointer motion and wheel steps are distances, not persistent velocities.
+    //! Moves the zoom by whole levels (positive zooms out). Input beyond the first or last level is ignored.
+    void zoomStep(int levels);
+    //! Pointer motion while zooming: every full ZOOM_DRAG_DISTANCE of accumulated motion is one zoom level.
     void zoomBy(Ogre::Real distance);
+    //! Moves the camera to the zoom level nearest to its current height
+    void snapToZoomLevel();
     void orbitBy(Ogre::Real swivel, Ogre::Real pitch);
     void adjustUserView(Ogre::Real roll, Ogre::Real yaw, Ogre::Real pitch);
     void loadUserView(unsigned int slot);
@@ -320,6 +335,7 @@ private:
     //! (1.0 keeps the historic speed). Set from the settings window.
     Ogre::Real mPanSpeedFactor;
     Ogre::Real mFastPanFactor = 1.0f;
+    //! rief Zoom key state of the previous frame, a key press is one zoom level
     Ogre::Real mControlZoom = 0.0f;
     Ogre::Real mControlSwivel = 0.0f;
 
