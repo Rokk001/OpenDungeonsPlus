@@ -149,7 +149,7 @@ public:
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
 
-    //! rief Like rrOrientEntityToward but a creature turns in a short smooth movement (clients, before a blow)
+    //! \brief Like rrOrientEntityToward but a creature turns in a short smooth movement (clients, before a blow)
     void rrOrientEntityTowardSmoothly(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
     void rrScaleCreature(Creature& creature);

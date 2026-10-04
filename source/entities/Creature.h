@@ -535,7 +535,7 @@ public:
     virtual double getAnimationSpeedFactor() const override
     { return mSpeedModifier; }
 
-    //! rief Badly hurt creatures walk and breathe a little slower on screen (clients only)
+    //! \brief Badly hurt creatures walk and breathe a little slower on screen (clients only)
     virtual double getClientPoseSpeedFactor() const override
     {
         if(mOverlayHealthValue >= 6)

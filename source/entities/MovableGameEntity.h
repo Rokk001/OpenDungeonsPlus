@@ -95,7 +95,7 @@ public:
     virtual double getAnimationSpeedFactor() const
     { return 1.0; }
 
-    //! rief Only the clients: how fast the walk and idle clips play on screen (cosmetic, the movement
+    //! \brief Only the clients: how fast the walk and idle clips play on screen (cosmetic, the movement
     //! speed and every timing of the game stay as they are)
     virtual double getClientPoseSpeedFactor() const
     { return 1.0; }
