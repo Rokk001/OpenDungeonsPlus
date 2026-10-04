@@ -462,6 +462,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/MovableTextOverlay.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
+    ${SRC}/render/RenderManagerChickens.cpp
     ${SRC}/render/TextRenderer.cpp
 
     ${SRC}/social/CreaturePosts.cpp
@@ -493,6 +494,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/FencedRoom.cpp
     ${SRC}/rooms/HeartHealthTier.cpp
     ${SRC}/rooms/HatcheryCycle.cpp
+    ${SRC}/rooms/HatcheryRooster.cpp
     ${SRC}/rooms/Room.cpp
     ${SRC}/rooms/RoomArena.cpp
     ${SRC}/rooms/RoomBridge.cpp
