@@ -667,7 +667,7 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker2	Kobold.mesh	35	26	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	32	29	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	ReeveMarsh	Knight.mesh	7	5	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	PostWatch1	Adventurer.mesh	5	13	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	PostWatch1	Adventurer.mesh	6	12	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	PostWatch2	Adventurer.mesh	6	15	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
