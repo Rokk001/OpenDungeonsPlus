@@ -716,6 +716,8 @@ models/DoorSteel.mesh                  Danimal, OD Team        CC-BY-SA 3.0     
 models/DoorBarricade.mesh              Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (frame) with new planks and braces, built in Blender by script
 models/DoorSecret.mesh                 Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (two slabs without the frame), built in Blender by script
 models/DoorRune.mesh                   Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh with rune plates, built in Blender by script
+models/Cannon.skeleton                 OD Team                 GPLv3+                  Two-bone rig of Cannon.mesh (barrel and base) with the clip Triggered (recoil), built in Blender by script, original work, AI-assisted: clip written with an AI assistant; Cannon.mesh is now skinned to it
+models/WoodenDoor.skeleton             Danimal, OD Team        CC-BY-SA 3.0            WoodenDoor.skeleton of Danimal plus the new clip Collapse (barricade falls into a heap), built in Blender by script, AI-assisted
 materials/textures/DoorIronboundWood.png  Nobiax, Danimal, OD Team  CC-BY-SA 3.0       WoodenDoor.png made darker by tools/gen_door_textures.py (script generated, AI-assisted script)
 materials/textures/DoorMetal.png       OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
 materials/textures/DoorSteel.png       OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)

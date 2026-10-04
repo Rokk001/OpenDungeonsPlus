@@ -133,6 +133,19 @@ private:
         double mLife;
     };
 
+    //! \brief The remains of a destroyed barricade, which plays the clip Collapse and then sinks into the floor
+    struct Collapse
+    {
+        Collapse() :
+            mNode(nullptr), mEntity(nullptr), mAge(0.0), mBaseHeight(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        double mAge;
+        double mBaseHeight;
+    };
+
     //! \brief A sound that waits for its time (Delay of an event effect)
     struct PendingSound
     {
@@ -216,6 +229,11 @@ private:
     void updateEmitters(double timeSinceLastFrame);
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
     void updatePendingSounds();
+    //! \brief Lets a destroyed barricade (the door entity on the tile, which the server is about to remove)
+    //! fall into a heap with the clip Collapse of its skeleton
+    void startCollapse(int32_t tileX, int32_t tileY);
+    void updateCollapses(double timeSinceLastFrame);
+    void destroyCollapse(Collapse& collapse);
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
@@ -279,6 +297,7 @@ private:
     //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
+    std::vector<Collapse> mCollapses;
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;

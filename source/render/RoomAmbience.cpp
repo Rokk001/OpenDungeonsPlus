@@ -29,8 +29,11 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <OgreAnimationState.h>
 #include <OgreAxisAlignedBox.h>
 #include <OgreCamera.h>
+#include <OgreEntity.h>
+#include <OgreException.h>
 #include <OgreMath.h>
 #include <OgreParticleSystem.h>
 #include <OgreParticleSystemManager.h>
@@ -404,11 +407,15 @@ void RoomAmbience::stopAll()
 
         for(std::map<std::string, MotionNode>::iterator it = mMotionNodes.begin(); it != mMotionNodes.end(); ++it)
             restoreMotionNode(it->second);
+
+        for(Collapse& collapse : mCollapses)
+            destroyCollapse(collapse);
     }
 
     mEmitters.clear();
     mOneShots.clear();
     mMarks.clear();
+    mCollapses.clear();
     mPendingSounds.clear();
     mShakeTime = 0.0;
     clearShake();
@@ -443,6 +450,7 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     updateOneShots(mOneShots, dt);
     updateOneShots(mMarks, dt);
     updatePendingSounds();
+    updateCollapses(dt);
     updateShake(dt);
     updateMotions(dt);
 }
@@ -1177,6 +1185,116 @@ void RoomAmbience::updateOneShots(std::vector<OneShot>& oneShots, double timeSin
     }
 }
 
+void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY)
+{
+    if(mGameMap == nullptr)
+        return;
+
+    // Only the remains of the barricade the server is about to remove are shown, so a few at most
+    if(mCollapses.size() >= 4)
+        return;
+
+    const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
+    for(RenderedMovableEntity* entity : entities)
+    {
+        if((entity->getObjectType() != GameEntityType::trapEntity) || (entity->getEntityNode() == nullptr))
+            continue;
+
+        if(entity->getName().compare(0, 14, "DoorBarricade_") != 0)
+            continue;
+
+        const Ogre::Vector3& position = entity->getPosition();
+        if((static_cast<int32_t>(std::floor(position.x + 0.5f)) != tileX) ||
+           (static_cast<int32_t>(std::floor(position.y + 0.5f)) != tileY))
+        {
+            continue;
+        }
+
+        if(entity->getMeshName().empty())
+            return;
+
+        Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+        std::string name = "RoomAmbience_Collapse_" + Helper::toString(++mUniqueNumber);
+        Ogre::Entity* ghost = nullptr;
+        try
+        {
+            ghost = sceneManager->createEntity(name, entity->getMeshName() + ".mesh");
+        }
+        catch(const Ogre::Exception&)
+        {
+            return;
+        }
+
+        // Without the clip (an old skeleton) there is nothing to show
+        if(!ghost->hasSkeleton() || !ghost->getAllAnimationStates()->hasAnimationState("Collapse"))
+        {
+            sceneManager->destroyEntity(ghost);
+            return;
+        }
+
+        Collapse collapse;
+        collapse.mEntity = ghost;
+        collapse.mNode = sceneManager->getRootSceneNode()->createChildSceneNode(name + "_node",
+            entity->getEntityNode()->_getDerivedPosition(), entity->getEntityNode()->_getDerivedOrientation());
+        collapse.mNode->setScale(entity->getEntityNode()->_getDerivedScale());
+        collapse.mNode->attachObject(ghost);
+        collapse.mBaseHeight = collapse.mNode->getPosition().z;
+        Ogre::AnimationState* state = ghost->getAnimationState("Collapse");
+        state->setLoop(false);
+        state->setTimePosition(0.0f);
+        state->setEnabled(true);
+        mCollapses.push_back(collapse);
+        return;
+    }
+}
+
+void RoomAmbience::updateCollapses(double timeSinceLastFrame)
+{
+    // The clip lasts 0.7 s, the heap lies there for a moment and then sinks into the floor
+    const double clipLength = 0.7;
+    const double holdTime = 2.0;
+    const double sinkTime = 1.0;
+    const double sinkDepth = 0.3;
+    for(std::vector<Collapse>::iterator it = mCollapses.begin(); it != mCollapses.end();)
+    {
+        it->mAge += timeSinceLastFrame;
+        if(it->mAge >= clipLength + holdTime + sinkTime)
+        {
+            destroyCollapse(*it);
+            it = mCollapses.erase(it);
+            continue;
+        }
+
+        if(it->mAge < clipLength)
+        {
+            it->mEntity->getAnimationState("Collapse")->addTime(static_cast<Ogre::Real>(timeSinceLastFrame));
+        }
+        else if(it->mAge > clipLength + holdTime)
+        {
+            double sunk = (it->mAge - clipLength - holdTime) / sinkTime;
+            Ogre::Vector3 position = it->mNode->getPosition();
+            position.z = static_cast<Ogre::Real>(it->mBaseHeight - sunk * sinkDepth);
+            it->mNode->setPosition(position);
+        }
+
+        ++it;
+    }
+}
+
+void RoomAmbience::destroyCollapse(Collapse& collapse)
+{
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    if(collapse.mNode != nullptr)
+        collapse.mNode->detachAllObjects();
+    if(collapse.mEntity != nullptr)
+        sceneManager->destroyEntity(collapse.mEntity);
+    if(collapse.mNode != nullptr)
+        sceneManager->destroySceneNode(collapse.mNode);
+
+    collapse.mNode = nullptr;
+    collapse.mEntity = nullptr;
+}
+
 void RoomAmbience::updateMotions(double timeSinceLastFrame)
 {
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
@@ -1513,6 +1631,8 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
         case 3:
             mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 5.0;
             triggerEvent("DoorWrecked", position, false, typeName);
+            if(typeName == "DoorBarricade")
+                startCollapse(tileX, tileY);
             break;
         case 4:
             // Reloading, or empty after the last shot: the state is kept until the server says ready. The
