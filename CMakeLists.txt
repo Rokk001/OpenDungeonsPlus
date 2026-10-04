@@ -455,6 +455,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/CreatureReactions.cpp
     ${SRC}/render/CreatureCombatReactions.cpp
     ${SRC}/render/WorkerReactions.cpp
+    ${SRC}/render/WorkerExtras.cpp
     ${SRC}/render/DebugDrawer.cpp    
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
