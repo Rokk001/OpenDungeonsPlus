@@ -51,6 +51,7 @@
 #include "render/Gui.h"
 #include "render/CreaturePanel.h"
 #include "render/CreaturePortrait.h"
+#include "render/CreatureAppearancePicture.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
@@ -618,6 +619,7 @@ GameMode::~GameMode()
     social::PostLog::getSingleton().stop();
     social::SocialProfileCache::getSingleton().clear();
     clearCreatureProfilePortraits();
+    clearCreatureAppearancePictures();
     resetIdleHand();
     if(mDefeatSequence.isStarted())
     {
