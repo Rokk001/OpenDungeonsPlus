@@ -18,6 +18,9 @@
 #ifndef ROOMHATCHERY_H
 #define ROOMHATCHERY_H
 
+#include "entities/ChickenEntity.h"
+#include "rooms/HatcheryCycle.h"
+#include "rooms/HatcheryRooster.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
@@ -47,6 +50,12 @@ public:
 
     void creatureDropped(Creature& creature) override;
 
+    //! The rooster protests loudly (picked up by the keeper's hand): plays the angry cackle where he was.
+    static void fireProtest(Tile& tile);
+
+    void exportToStream(std::ostream& os) const override;
+    bool importFromStream(std::istream& is) override;
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
     
@@ -54,8 +63,71 @@ protected:
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
 private:
-    uint32_t getNbChickens();
-    uint32_t mSpawnHexenHenCooldown;
+    //! Plays a hatchery animal sound (family below Rooms/, e.g. "Hatchery/Crow") where the animal is.
+    void fireAnimalSound(const ChickenEntity& animal, const std::string& family);
+    //! Creatures of the hatchery that are after a chicken (hungry, on their way to eat).
+    void collectHungry(std::vector<Creature*>& hungry) const;
+    //! Hens that peck, scratch and flutter now and then; they scatter cackling when a hungry creature comes close.
+    void updateFlock(const std::vector<ChickenEntity*>& hens, bool night);
+    //! Creatures of an enemy seat that stand on a tile of the hatchery.
+    void collectEnemies(std::vector<Creature*>& enemies) const;
+    //! True if a map light is within HatcheryCareLightRadius tiles of the hatchery.
+    bool isLit() const;
+    //! Claimed by the keeper, lit and free of enemies (see HatcheryCycle::wellCared).
+    HatcheryCare getCare(const std::vector<Creature*>& enemies) const;
+    //! Settings of the life cycle from the config, laying times scaled by the research.
+    HatcheryCycleSettings getCycleSettings() const;
+    //! Creates a hatchery animal at the given position.
+    ChickenEntity* spawnAnimal(ChickenKind kind, const Ogre::Vector3& position, const HatcheryCycleSettings& settings);
+    //! Lets a hen or a rooster come out of a coop. Returns false if no coop has a free place.
+    bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count = 1);
+
+    //! Settings of the rooster, the day and the chick line from the config.
+    RoosterSettings getRoosterSettings() const;
+    //! A hatchery has room for one rooster: when it has two or more, two of them fight until one is dead. The
+    //! server draws the winner when the fight starts. Fighters are moved here, not by updateRooster. The loser
+    //! is taken out of the roosters list when the fight is over.
+    void updateFight(std::vector<ChickenEntity*>& roosters, const HatcheryCycleSettings& settings,
+        HatcheryCounts& counts);
+    //! Ends the fight: the one that won stays and crows, the other one dies. Without a winner (one of them was
+    //! picked up or is gone) the fight is called off and the survivor goes on as before.
+    void endFight(ChickenEntity* first, ChickenEntity* second, bool finished, HatcheryCounts& counts);
+    //! Moves the rooster: perching, crowing, chasing a hen, guarding the flock, leading the chicks, sleeping.
+    void updateRooster(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
+        const std::vector<ChickenEntity*>& chicks, const RoosterSettings& settings);
+    void beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& plan);
+    void actRoosterMood(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
+        const RoosterSettings& settings, const Ogre::Vector2& threat);
+    //! Sits the rooster on the roof of the nearest coop with the pose. Without coop he stays on the ground.
+    void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar);
+    void climbDown(ChickenEntity* rooster);
+    //! The chicks follow the hen (or the rooster when he leads) in a line, at night they huddle under the hen.
+    void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks,
+        ChickenEntity* rooster, bool night);
+    //! A creature inside the hatchery that wants to eat chickens or is an enemy, close to the rooster.
+    bool findThreat(const ChickenEntity& rooster, double radius, Ogre::Vector2& position) const;
+    Tile* getNearestCoop(const Ogre::Vector2& position) const;
+    Ogre::Vector2 getPerchSpot(const Tile& coopTile) const;
+    //! A free place next to a coop, where an animal can stand after jumping down.
+    bool getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const;
+
+    //! Turns until the rooster crows next
+    uint32_t mCrowInterval;
+    //! Turns the hatchery has been empty (no hen, chick or egg)
+    uint32_t mCoopHenWait;
+    //! Turns the hatchery has been without rooster
+    uint32_t mCoopRoosterWait;
+
+    //! A fight of two roosters is going on (not saved: after loading, two roosters start a new one)
+    bool mFightActive;
+    //! The two fighters by name and who wins (drawn by the server when the fight starts)
+    std::string mFightFirst;
+    std::string mFightSecond;
+    bool mFightFirstWins;
+    //! They walk up to each other first, then they brawl for mFightTurnsLeft turns
+    bool mFightBrawling;
+    uint32_t mFightApproach;
+    uint32_t mFightTurnsLeft;
 };
 
 #endif // ROOMHATCHERY_H

@@ -549,7 +549,7 @@ probe = (probe.replace('RULES_HEADER', rules.as_posix())
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
-enumerators = [name for name in enumerators if name != 'relationshipTier']
+enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight')]
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'editorRegionData', enumerators[-4:]
 assert enumerators[-3] == 'possessionEnd' and enumerators[-4] == 'possessionStart', enumerators[-6:]
 assert enumerators[-5] == 'casinoPayout' and enumerators[-6] == 'heartHealth', enumerators[-8:]
