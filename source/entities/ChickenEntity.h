@@ -20,6 +20,7 @@
 
 #include "entities/RenderedMovableEntity.h"
 
+#include <cstdint>
 #include <string>
 #include <iosfwd>
 
@@ -29,10 +30,19 @@ class GameMap;
 class Tile;
 class ODPacket;
 
+//! \brief Stage of the life of a hatchery animal. Only a hen can be eaten.
+enum class ChickenKind : uint32_t
+{
+    hen,
+    chick,
+    rooster,
+    egg
+};
+
 class ChickenEntity: public RenderedMovableEntity
 {
 public:
-    ChickenEntity(GameMap* gameMap, const std::string& hatcheryName);
+    ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, ChickenKind kind = ChickenKind::hen);
     ChickenEntity(GameMap* gameMap);
 
     virtual void doUpkeep() override;
@@ -49,6 +59,36 @@ public:
     virtual void correctEntityMovePosition(Ogre::Vector2& position) override;
 
     bool eatChicken(Creature* creature);
+
+    inline ChickenKind getKind() const
+    { return mKind; }
+
+    //! \brief Changes the kind (egg hatches, chick grows). On the server, the clients are told.
+    void setKind(ChickenKind kind);
+
+    //! \brief Client side: the server told that the kind changed.
+    void setKindFromServer(ChickenKind kind);
+
+    //! \brief True if the animal is alive and on the map (not eaten, not dying).
+    inline bool isFree() const
+    { return mChickenState == ChickenState::free; }
+
+    //! \brief Only a free hen can be eaten. Eggs, chicks and the rooster never are.
+    inline bool isEdible() const
+    { return isFree() && (mKind == ChickenKind::hen); }
+
+    //! \brief Turns the egg or chick lived since it was laid or hatched.
+    inline uint32_t getAge() const
+    { return mAge; }
+
+    inline uint32_t incrementAge()
+    { return ++mAge; }
+
+    inline void setLayTimer(uint32_t turns)
+    { mNbTurnLay = turns; }
+
+    //! \brief Counts down the turns to the next egg. Returns true when the hen has to lay now.
+    bool countDownLay();
 
     bool canSlap(Seat* seat) override;
 
@@ -72,6 +112,9 @@ public:
     inline const std::string& getSnatchedFrom() const
     { return mSnatchedFrom; }
 
+    virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
+    virtual void importFromPacket(ODPacket& is) override;
+
     static ChickenEntity* getChickenEntityFromStream(GameMap* gameMap, std::istream& is);
     static ChickenEntity* getChickenEntityFromPacket(GameMap* gameMap, ODPacket& is);
     static std::string getChickenEntityStreamFormat();
@@ -87,6 +130,9 @@ private:
         dying
     };
     ChickenState mChickenState;
+    ChickenKind mKind;
+    uint32_t mNbTurnLay;
+    uint32_t mAge;
     int32_t mNbTurnOutsideHatchery;
     int32_t mNbTurnDie;
     bool mIsSlapped;
