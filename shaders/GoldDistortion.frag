@@ -12,6 +12,8 @@ uniform vec4 ambientLightColour;
 uniform vec4 cameraPosition;
 uniform vec4 diffuseSurface;
 uniform bool shadowingEnabled;
+uniform float veinTime;
+uniform float veinGain;
 in vec2 out_UV0;
 in vec2 out_UV1;
 in vec3 FragPos;
@@ -42,6 +44,13 @@ void main (void)
         result =  lightingTerm * mix(texelColor, diffuseSurface.rgb,0.5);
     else
         result =  lightingTerm * texelColor;
+
+    // Brighter gold veins with a slow glint that wanders over the bright flecks
+    float luma = dot(texelColor, vec3(0.299, 0.587, 0.114));
+    float wave = sin(FragPos.x * 9.0 + FragPos.y * 7.0 + FragPos.z * 11.0 + veinTime * 1.7)
+               * sin(FragPos.x * 5.0 - FragPos.y * 6.0 + FragPos.z * 8.0 - veinTime * 1.1);
+    float glint = pow(max(wave, 0.0), 10.0) * smoothstep(0.4, 0.75, luma);
+    result = result * veinGain + glint * vec3(1.0, 0.86, 0.45);
     color = vec4(result.xyz,  1.0);
        
 }    
