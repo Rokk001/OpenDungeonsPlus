@@ -173,6 +173,11 @@ enum class ServerNotificationType
     //! (0 = the fight starts, 1 = it is over and the first rooster won, 2 = it was called off). The server draws
     //! the winner. Sent to the human players that see the first rooster, only when the phase changes.
     chickenFight,
+    //! Presentation-only effect of a trap or door, sent to the human seats that see the tile:
+    //! + int32_t kind (TrapEffectKind), int32_t tileX, int32_t tileY, string type name of the trap or door
+    //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
+    //! Inserted before timeLimit, which stays the last value.
+    trapEffect,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
     timeLimit
 };

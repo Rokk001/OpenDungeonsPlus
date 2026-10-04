@@ -610,6 +610,132 @@ materials/textures/CreaturePropShadow.png  OD Team                 GPLv3+       
 tools/gen_creature_reaction_art.py     OD Team                 GPLv3+
 tools/check_creature_reactions.py      OD Team                 GPLv3+
 
+=======================================================
+==  Room ambience: effects, sprites, tools           ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+config/roomAmbience*.cfg               OD Team                 GPLv3+
+materials/scripts/RoomAmbience*.material   OD Team            GPLv3+
+particles/RoomAmbience*.particle       OD Team                 GPLv3+
+materials/textures/RoomAmb*.png        OD Team                 GPLv3+                  Drawn from simple shapes and gradients by tools/gen_room_ambience_art.py (script generated, original work, not AI generated)
+tools/gen_room_ambience_art.py         OD Team                 GPLv3+
+tools/check_room_ambience.py           OD Team                 GPLv3+
+materials/textures/RoomAmbRing.png      OD Team                 GPLv3+                  Thin glowing ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbRingRunes.png  OD Team                 GPLv3+                  Double ring with tick marks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbRingDust.png  OD Team                 GPLv3+                  Wide uneven dust ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbMarkScorch.png  OD Team                 GPLv3+                  Scorched floor patch drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbMarkCracks.png  OD Team                 GPLv3+                  Floor cracks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+materials/textures/RoomAmbMarkBolt.png  OD Team                 GPLv3+                  Branching burn lines drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
+tools/gen_spell_marks.py                OD Team                 GPLv3+
+source/tests/check_spell_tier_c.py      OD Team                 GPLv3+
+
+=======================================================
+==  Spell effect sounds: sounds/Spatial/Spells/      ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+sounds/Spatial/Spells/Summon/FxSummon01.ogg       OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Rally/FxRally01.ogg         OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Explosion/FxExplosion01.ogg OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Boost/FxBoost01.ogg         OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Curse/FxCurse01.ogg         OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Dark/FxDark01.ogg           OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Gold/FxGold01.ogg           OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Lightning/FxLightning01.ogg OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Tremor/FxTremor01.ogg       OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Hen/FxHen01.ogg             OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Fire/FxFire01.ogg           OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+tools/gen_spell_sounds.py              OD Team                 GPLv3+
+
+=============================================================
+==  Trap and door sounds: sounds/Spatial/Traps, Doors      ==
+=============================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+sounds/Spatial/Doors/Barricade/Break/FxBarricadeBreak01.ogg                           OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Barricade/Hit/FxBarricadeHit01.ogg                               OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Ironbound/Break/FxIronboundBreak01.ogg                           OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Ironbound/Close/FxIronboundClose01.ogg                           OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Ironbound/Hit/FxIronboundHit01.ogg                               OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Ironbound/Open/FxIronboundOpen01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Runed/Break/FxRunedBreak01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Runed/Close/FxRunedClose01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Runed/Hit/FxRunedHit01.ogg                                       OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Runed/Open/FxRunedOpen01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Secret/Break/FxSecretBreak01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Secret/Close/FxSecretClose01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Secret/Hit/FxSecretHit01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Secret/Open/FxSecretOpen01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Steel/Break/FxSteelBreak01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Steel/Close/FxSteelClose01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Steel/Hit/FxSteelHit01.ogg                                       OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Steel/Open/FxSteelOpen01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Wooden/Break/FxWoodenBreak01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Wooden/Close/FxWoodenClose01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Wooden/Hit/FxWoodenHit01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Doors/Wooden/Open/FxWoodenOpen01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Alarm/Fire/FxAlarmFire01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Alarm/Idle/FxAlarmIdle01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Alarm/Reload/FxAlarmReload01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Boulder/Fire/FxBoulderFire01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Boulder/Idle/FxBoulderIdle01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Boulder/Reload/FxBoulderReload01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Cannon/Idle/FxCannonIdle01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Cannon/Reload/FxCannonReload01.ogg                               OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Fear/Fire/FxFearFire01.ogg                                       OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Fear/Idle/FxFearIdle01.ogg                                       OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Fear/Reload/FxFearReload01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Fireburst/Fire/FxFireburstFire01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Fireburst/Idle/FxFireburstIdle01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Fireburst/Reload/FxFireburstReload01.ogg                         OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Freeze/Fire/FxFreezeFire01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Freeze/Idle/FxFreezeIdle01.ogg                                   OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Freeze/Reload/FxFreezeReload01.ogg                               OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Gas/Fire/FxGasFire01.ogg                                         OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Gas/Idle/FxGasIdle01.ogg                                         OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Gas/Reload/FxGasReload01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Lightning/Fire/FxLightningFire01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Lightning/Idle/FxLightningIdle01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Lightning/Reload/FxLightningReload01.ogg                         OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Spike/Fire/FxSpikeFire01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Spike/Idle/FxSpikeIdle01.ogg                                     OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Spike/Reload/FxSpikeReload01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Trigger/Fire/FxTriggerFire01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Trigger/Idle/FxTriggerIdle01.ogg                                 OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/Trigger/Reload/FxTriggerReload01.ogg                             OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/WatchBanner/Fire/FxWatchBannerFire01.ogg                         OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Traps/WatchBanner/Idle/FxWatchBannerIdle01.ogg                         OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_trap_door_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+tools/gen_trap_door_sounds.py          OD Team                 GPLv3+
+source/tests/check_trap_door_polish.py OD Team                 GPLv3+
+
+=============================================================
+==  Door models and textures of the door types              ==
+=============================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+models/DoorIronbound.mesh              Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (http://opengameart.org/users/danimal) with added iron bands, built in Blender by script, same skeleton WoodenDoor.skeleton
+models/DoorSteel.mesh                  Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh with steel trim, built in Blender by script
+models/DoorBarricade.mesh              Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (frame) with new planks and braces, built in Blender by script
+models/DoorSecret.mesh                 Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (two slabs without the frame), built in Blender by script
+models/DoorRune.mesh                   Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh with rune plates, built in Blender by script
+models/Cannon.skeleton                 OD Team                 GPLv3+                  Two-bone rig of Cannon.mesh (barrel and base) with the clip Triggered (recoil), built in Blender by script, original work, AI-assisted: clip written with an AI assistant; Cannon.mesh is now skinned to it
+models/WoodenDoor.skeleton             Danimal, OD Team        CC-BY-SA 3.0            WoodenDoor.skeleton of Danimal plus the new clip Collapse (barricade falls into a heap), built in Blender by script, AI-assisted
+materials/textures/DoorIronboundWood.png  Nobiax, Danimal, OD Team  CC-BY-SA 3.0       WoodenDoor.png made darker by tools/gen_door_textures.py (script generated, AI-assisted script)
+materials/textures/DoorMetal.png       OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorSteel.png       OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorBarricade.png   OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorSecret.png      OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorRune.png        OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorRuneGlow.png    OD Team                 GPLv3+                  Drawn from lines and blur by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/scripts/DoorTypes.material   OD Team                 GPLv3+
+tools/gen_door_textures.py             OD Team                 GPLv3+
+tools/blender-assets/door_meshes.py    OD Team                 GPLv3+
+
 ================================
 ==  Distribution data: dist/  ==
 ================================

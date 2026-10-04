@@ -49,6 +49,7 @@
 #include "render/CreatureReactions.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "rooms/RoomPortalWave.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -1110,6 +1111,19 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             int xPos;
             int yPos;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
+            static const std::string spellEffectPrefix = "SpellFx/";
+            if(family.compare(0, spellEffectPrefix.size(), spellEffectPrefix) == 0)
+            {
+                // Cosmetic spell effect, no sound belongs to it
+                RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
+                if(ambience != nullptr)
+                {
+                    Ogre::Vector3 position(static_cast<Ogre::Real>(xPos), static_cast<Ogre::Real>(yPos), 0.0f);
+                    ambience->triggerEvent("SpellFx" + family.substr(spellEffectPrefix.size()), position, false,
+                        std::string(), true);
+                }
+                break;
+            }
             SoundEffectsManager::getSingleton().playSpatialSound(family, xPos, yPos);
             if(family == "Rooms/Treasury/DepositGold")
                 RenderManager::getSingleton().rrTreasuryDeposit(gameMap, xPos, yPos);
@@ -1330,6 +1344,22 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
                 RenderManager::getSingleton().rrCreateRoomConstructionEffect(tiles);
+            break;
+        }
+
+        case ServerNotificationType::trapEffect:
+        {
+            int32_t effectKind;
+            int32_t tileX;
+            int32_t tileY;
+            std::string typeName;
+            float fraction;
+            OD_ASSERT_TRUE(packetReceived >> effectKind >> tileX >> tileY >> typeName >> fraction);
+            if((RoomAmbience::getSingletonPtr() != nullptr) &&
+               (frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME))
+            {
+                RoomAmbience::getSingleton().notifyTrapEffect(effectKind, tileX, tileY, typeName, fraction);
+            }
             break;
         }
 
@@ -1867,12 +1897,22 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::possessionEnd:
         {
+            // The creature the keeper returns from shows a short flash of light where it stands
+            Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
+            RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
+            if((possessed != nullptr) && possessed->getIsOnMap() && (ambience != nullptr))
+            {
+                Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),
+                    static_cast<Ogre::Real>(possessed->getPosition().y), 0.0f);
+                ambience->triggerEvent("SpellFxPossessEnd", position, false, std::string(), true);
+            }
             getPlayer()->setPossessedCreatureName(std::string());
             frameListener->getCameraManager()->stopPossession();
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
             {
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
                 gm->notifyPossessionEnded();
+                gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
             }
             break;
         }

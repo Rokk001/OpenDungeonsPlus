@@ -61,6 +61,11 @@ public:
 
     static void fireSpellSound(Tile& tile, const std::string& soundFamily);
 
+    //! \brief Tells the clients that see the tile to show the cosmetic effect of the given name
+    //! (see config/roomAmbienceSpells.cfg) and, if soundFamily is not empty, to play the sound of
+    //! the family "Spells/<soundFamily>". Nothing else changes in the game.
+    static void fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily);
+
     static std::string getSpellStreamFormat();
 
 protected:

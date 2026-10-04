@@ -174,6 +174,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "timeLimit";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
+        case ServerNotificationType::trapEffect:
+            return "trapEffect";
 
         case ServerNotificationType::seatTeam:
             return "seatTeam";

@@ -41,6 +41,7 @@
 #include "render/MovableTextOverlay.h"
 #include "render/Gui.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "render/TextRenderer.h"
 #include "renderscene/RenderSceneMenu.h"
 #include "sound/MusicPlayer.h"
@@ -99,6 +100,7 @@ ODFrameListener::ODFrameListener(const std::string& mainSceneFileName, Ogre::Ren
     mRenderManager(RenderManager::getSingletonPtr()),
     mGameMap(Utils::make_unique<GameMap>(false)),
     mCreatureReactions(Utils::make_unique<CreatureReactions>(mGameMap.get(), ConfigManager::getSingleton().getConfigPath())),
+    mRoomAmbience(Utils::make_unique<RoomAmbience>(mGameMap.get(), ConfigManager::getSingleton().getConfigPath())),
     mModeManager(Utils::make_unique<ModeManager>(renderWindow, gui)),
     mMainScene(Utils::make_unique<RenderSceneMenu>()),
     mShowDebugInfo(false),
@@ -115,6 +117,8 @@ ODFrameListener::ODFrameListener(const std::string& mainSceneFileName, Ogre::Ren
 
     mCreatureReactions->setMode(CreatureReactions::modeFromString(
         ConfigManager::getSingleton().getGameValue(Config::CREATURE_REACTIONS, "full", false)));
+    mRoomAmbience->setMode(RoomAmbience::modeFromString(
+        ConfigManager::getSingleton().getGameValue(Config::ROOM_AMBIENCE, "full", false)));
     TreasuryGoldMesh::setDetail(TreasuryGoldMesh::detailFromString(
         ConfigManager::getSingleton().getGameValue(Config::TREASURY_DETAIL, "full", false)));
 
@@ -374,6 +378,9 @@ void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
     // Cosmetic creature reactions. Like the animations, they stand still while the game is paused.
     if(!mGameMap->getGamePaused())
         mCreatureReactions->update(timeSinceLastFrame);
+    // Cosmetic life in the rooms. Like the animations, it stands still while the game is paused.
+    if(!mGameMap->getGamePaused())
+        mRoomAmbience->update(timeSinceLastFrame);
 }
 
 bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
@@ -454,6 +461,7 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
         currentMode->onFrameEnded(evt);
 
     mCameraManager.onFrameEnded();
+    mRoomAmbience->clearShake();
 
     return true;
 }
@@ -463,6 +471,8 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     AbstractApplicationMode* currentMode = mModeManager->getCurrentMode();
     if(currentMode)
         currentMode->onFrameStarted(evt);
+    // View shake of the spell effects, only while this frame is rendered (see clearShake in frameEnded)
+    mRoomAmbience->applyShake();
     if(mRenderManager  && mRenderManager->mRenderTarget != nullptr)
     {
         // preRenderTargetUpdate:
@@ -661,6 +671,7 @@ void ODFrameListener::initGameRenderer()
 void ODFrameListener::stopGameRenderer()
 {
     mCreatureReactions->stopAll();
+    mRoomAmbience->stopAll();
     mRenderManager->stopGameRenderer(mGameMap.get());
 }
 
