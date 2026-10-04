@@ -113,6 +113,24 @@ inline int splashBudget(TreasuryGoldMesh::Detail detail)
     }
 }
 
+//! Gold dust over completely filled treasuries: seconds between two attempts to start a puff, how long a
+//! puff lives and how many puffs a room may show at once by the "Treasury detail" option
+static const float dustInterval = 0.7f;
+static const float dustLifetime = 3.0f;
+
+inline int dustBudget(TreasuryGoldMesh::Detail detail)
+{
+    switch(detail)
+    {
+        case TreasuryGoldMesh::Detail::full:
+            return 3;
+        case TreasuryGoldMesh::Detail::reduced:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget
 {

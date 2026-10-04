@@ -422,9 +422,14 @@ private:
         std::string mName;
         Ogre::Real mRemaining;
         const void* mRoomKey;
+        bool mDust;
     };
     std::vector<TreasuryEffect> mTreasuryEffects;
     TreasuryCreatureRules::SplashBudget mTreasurySplashBudget;
+    //! Gold dust puffs over full treasuries use the same effect list with a budget of their own
+    TreasuryCreatureRules::SplashBudget mTreasuryDustBudget;
+    Ogre::Real mTreasuryDustTimer = 0.0f;
+    size_t mTreasuryDustCursor = 0;
     //! Where a creature last splashed coins, to space the splashes along its way
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
@@ -505,7 +510,9 @@ private:
     void updateCreatureStep(Creature* creature);
     void refreshCreaturesOnTile(Tile* tile);
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
-    bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position);
+    bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
+        bool dust = false);
+    void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     void startTreasuryPour(Tile* tile, int level);
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);

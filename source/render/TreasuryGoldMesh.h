@@ -19,6 +19,7 @@
 #define TREASURYGOLDMESH_H
 
 #include <string>
+#include <vector>
 
 namespace Ogre
 {
@@ -50,7 +51,9 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
 
 //! \brief The piles drawn on this client, by tile, so creatures can be drawn on the gold surface.
 //! Names that are not pile names, and every pile while the detail is off, are ignored.
-void registerPile(const std::string& entityName, float x, float y, const std::string& meshName);
+//! The room (any pointer identifying it, may be null) lets effects share a budget per room.
+void registerPile(const std::string& entityName, float x, float y, const std::string& meshName,
+    const void* room = nullptr);
 //! Forgets the pile, if the tile still holds the pile of that entity (a newer pile stays)
 void unregisterPile(const std::string& entityName, float x, float y);
 void clearPiles();
@@ -58,6 +61,17 @@ void clearPiles();
 //! Height of the gold surface at the given map position, 0 when there is no pile. The level of the
 //! pile of that tile (0 when none) is returned in level.
 float surfaceHeight(float x, float y, int& level);
+
+//! A completely filled pile: its tile and the room it was registered for
+struct FullPile
+{
+    int mX;
+    int mY;
+    const void* mRoom;
+};
+
+//! Lists the completely filled piles (the sources of the gold dust over full treasuries)
+void collectFullPiles(std::vector<FullPile>& piles);
 }
 
 #endif // TREASURYGOLDMESH_H

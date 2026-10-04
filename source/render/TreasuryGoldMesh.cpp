@@ -43,6 +43,7 @@ struct RegisteredPile
 {
     std::string mEntityName;
     TreasuryGoldLayer::PileShape mShape;
+    const void* mRoom;
 };
 
 std::map<std::pair<int, int>, RegisteredPile> registeredPiles;
@@ -156,7 +157,7 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
     return name;
 }
 
-void registerPile(const std::string& entityName, float x, float y, const std::string& meshName)
+void registerPile(const std::string& entityName, float x, float y, const std::string& meshName, const void* room)
 {
     if(currentDetail == Detail::off)
         return;
@@ -166,6 +167,7 @@ void registerPile(const std::string& entityName, float x, float y, const std::st
         return;
 
     pile.mEntityName = entityName;
+    pile.mRoom = room;
     registeredPiles[tileOf(x, y)] = pile;
 }
 
@@ -179,6 +181,23 @@ void unregisterPile(const std::string& entityName, float x, float y)
 void clearPiles()
 {
     registeredPiles.clear();
+}
+
+void collectFullPiles(std::vector<FullPile>& piles)
+{
+    piles.clear();
+    for(std::map<std::pair<int, int>, RegisteredPile>::const_iterator it = registeredPiles.begin();
+        it != registeredPiles.end(); ++it)
+    {
+        if(it->second.mShape.mLevel < TreasuryGoldLayer::maxLevel)
+            continue;
+
+        FullPile pile;
+        pile.mX = it->first.first;
+        pile.mY = it->first.second;
+        pile.mRoom = it->second.mRoom;
+        piles.push_back(pile);
+    }
 }
 
 float surfaceHeight(float x, float y, int& level)

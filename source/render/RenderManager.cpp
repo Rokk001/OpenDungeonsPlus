@@ -1843,6 +1843,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     }
     updateTreasuryEffects(timeSinceLastFrame);
     updateTreasuryPours(timeSinceLastFrame);
+    updateTreasuryDust(timeSinceLastFrame);
     rrUpdateHeldCreature();
 }
 
@@ -2753,8 +2754,11 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     // Treasury gold piles are built here from their name (or swapped for the classic stacks)
     if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
     {
+        Tile* pileTile = renderedMovableEntity->getPositionTile();
         TreasuryGoldMesh::registerPile(renderedMovableEntity->getName(), renderedMovableEntity->getPosition().x,
-            renderedMovableEntity->getPosition().y, meshName);
+            renderedMovableEntity->getPosition().y, meshName,
+            (pileTile != nullptr && pileTile->getCoveringRoom() != nullptr) ?
+            static_cast<const void*>(pileTile->getCoveringRoom()) : static_cast<const void*>(pileTile));
         meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
         refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
     }
@@ -4650,20 +4654,28 @@ void RenderManager::cancelTreasuryPour(Creature* creature)
     }
 }
 
-bool RenderManager::createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position)
+bool RenderManager::createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
+    bool dust)
 {
     // Only what is in view is animated, and a room shows a limited number of effects at once
     Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
     if(camera != nullptr && !camera->isVisible(position))
         return false;
 
-    if(!mTreasurySplashBudget.tryAcquire(roomKey,
-        TreasuryCreatureRules::splashBudget(TreasuryGoldMesh::getDetail())))
+    TreasuryCreatureRules::SplashBudget& budget = dust ? mTreasuryDustBudget : mTreasurySplashBudget;
+    const int limit = dust ? TreasuryCreatureRules::dustBudget(TreasuryGoldMesh::getDetail()) :
+        TreasuryCreatureRules::splashBudget(TreasuryGoldMesh::getDetail());
+    if(!budget.tryAcquire(roomKey, limit))
         return false;
 
     const std::string name = "TreasuryEffect_" + Helper::toString(++mTreasuryEffectNumber);
     rrCreateFreeParticleEffect(name, script, position, nullptr);
-    mTreasuryEffects.push_back({name, TreasuryCreatureRules::splashLifetime, roomKey});
+    TreasuryEffect effect;
+    effect.mName = name;
+    effect.mRemaining = dust ? TreasuryCreatureRules::dustLifetime : TreasuryCreatureRules::splashLifetime;
+    effect.mRoomKey = roomKey;
+    effect.mDust = dust;
+    mTreasuryEffects.push_back(effect);
     return true;
 }
 
@@ -4679,8 +4691,43 @@ void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
         }
 
         rrDestroyFreeParticleEffect(it->mName);
-        mTreasurySplashBudget.release(it->mRoomKey);
+        if(it->mDust)
+            mTreasuryDustBudget.release(it->mRoomKey);
+        else
+            mTreasurySplashBudget.release(it->mRoomKey);
         it = mTreasuryEffects.erase(it);
+    }
+}
+
+void RenderManager::updateTreasuryDust(Ogre::Real timeSinceLastFrame)
+{
+    mTreasuryDustTimer += timeSinceLastFrame;
+    if(mTreasuryDustTimer < TreasuryCreatureRules::dustInterval)
+        return;
+    mTreasuryDustTimer = 0.0f;
+    if(TreasuryCreatureRules::dustBudget(TreasuryGoldMesh::getDetail()) <= 0)
+        return;
+
+    std::vector<TreasuryGoldMesh::FullPile> piles;
+    TreasuryGoldMesh::collectFullPiles(piles);
+    if(piles.empty())
+        return;
+
+    // Walk on through the full piles from where the last attempt stopped; the first one in view whose
+    // room still has a free place gets a puff
+    const size_t attempts = std::min<size_t>(piles.size(), 8);
+    for(size_t i = 0; i < attempts; ++i)
+    {
+        const TreasuryGoldMesh::FullPile& pile = piles[mTreasuryDustCursor++ % piles.size()];
+        int level = 0;
+        const float height = TreasuryGoldMesh::surfaceHeight(static_cast<float>(pile.mX),
+            static_cast<float>(pile.mY), level);
+        const float offsetX = (static_cast<float>(mTreasuryEffectNumber % 7) - 3.0f) * 0.1f;
+        const float offsetY = (static_cast<float>(mTreasuryEffectNumber % 5) - 2.0f) * 0.12f;
+        if(createTreasuryEffect(pile.mRoom, "TreasuryGoldDust", Ogre::Vector3(
+            static_cast<Ogre::Real>(pile.mX) + offsetX, static_cast<Ogre::Real>(pile.mY) + offsetY,
+            height + 0.1f), true))
+            return;
     }
 }
 
@@ -4690,6 +4737,7 @@ void RenderManager::clearTreasuryEffects()
         rrDestroyFreeParticleEffect(effect.mName);
     mTreasuryEffects.clear();
     mTreasurySplashBudget.clear();
+    mTreasuryDustBudget.clear();
     mTreasuryLastSplash.clear();
     TreasuryGoldMesh::clearPiles();
 }
