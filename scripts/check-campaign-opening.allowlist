@@ -1,11 +1,3 @@
 # Levels that fail scripts/check-campaign-opening.py today: known, to be fixed.
 # They report FAIL but keep the exit code at 0. Remove an entry when its level is corrected.
-Mirewatch.level
-Goldspire.level
-Ebonrook.level
-VarnsCrossing.level
-SwarmNight.level
-Silverdeep.level
-Wraithwood.level
-Kingsfall.level
-HollowmarkCitadel.level
+SwarmNight.level  # intentional (bonus level, kept permanently): the survival waves and the rival keeper are meant to reach the heart at once, so the opening rules do not apply
