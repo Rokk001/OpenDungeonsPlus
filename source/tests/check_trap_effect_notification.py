@@ -56,7 +56,10 @@ if "packetReceived >> effectKind >> tileX >> tileY >> typeName >> fraction" not 
     problems.append("client reads the packet in another order")
 
 ambience = read("source", "render", "RoomAmbience.cpp")
-raised = set(re.findall(r'triggerEvent\("((?:Trap|Door)\w+)"', ambience))
+door_entity = read("source", "entities", "DoorEntity.cpp")
+raised = set(re.findall(r'triggerEvent\("((?:Trap|Door)\w+)"', ambience + door_entity))
+# Events the scan of the entities raises (built, sold)
+raised |= set(re.findall(r'mEvent = "(Trap\w+)"', ambience))
 config = read("config", "roomAmbienceTraps.cfg")
 configured = set(re.findall(r"^\s*Event\s+((?:Trap|Door)\w+)", config, re.M))
 if raised != configured:

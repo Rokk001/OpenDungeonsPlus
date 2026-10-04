@@ -25,6 +25,7 @@
 #include "gamemap/GameMap.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "sound/SoundEffectsManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -54,6 +55,7 @@ const double MOTION_EASE_SPEED = 1.5;
 const double MAX_SCAN_RADIUS = 45.0;
 //! Room tiles changing in one scan above this number are a map load, not building
 const uint32_t MAX_EVENTS_PER_SCAN = 6;
+const size_t MAX_PENDING_SOUNDS = 32;
 const double TWO_PI = 6.283185307179586;
 
 bool matchesPattern(const std::string& pattern, const std::string& name)
@@ -407,6 +409,7 @@ void RoomAmbience::stopAll()
     mEmitters.clear();
     mOneShots.clear();
     mMarks.clear();
+    mPendingSounds.clear();
     mShakeTime = 0.0;
     clearShake();
     mMotionNodes.clear();
@@ -439,6 +442,7 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     updateEmitters(dt);
     updateOneShots(mOneShots, dt);
     updateOneShots(mMarks, dt);
+    updatePendingSounds();
     updateShake(dt);
     updateMotions(dt);
 }
@@ -550,6 +554,11 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             {
                 candidate.mActive = true;
             }
+            else if(effect.mWhen == AmbienceWhen::locked)
+            {
+                // A door that is closed was locked by its keeper
+                candidate.mActive = (entity->getAnimationStateName() == "Close");
+            }
             else if(effect.mWhen == AmbienceWhen::hit)
             {
                 std::string hitKey = Helper::toString(static_cast<int32_t>(std::floor(position.x + 0.5f))) + "," +
@@ -573,7 +582,7 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
                 if(candidate.mActive)
                     mParticleCandidates.push_back(candidate);
             }
-            else if(effect.mKind == AmbienceKind::clip)
+            else if((effect.mKind == AmbienceKind::clip) || (effect.mKind == AmbienceKind::sound))
             {
                 if(candidate.mActive)
                     mClipCandidates.push_back(candidate);
@@ -761,6 +770,8 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
     struct Change
     {
         std::string mEvent;
+        //! Trap or door type the event is about (empty = use the tile)
+        std::string mVisual;
         Ogre::Vector3 mPosition;
     };
 
@@ -797,6 +808,11 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
                 break;
             case GameEntityType::chickenEntity:
                 change.mEvent = "ChickenArrived";
+                break;
+            case GameEntityType::trapEntity:
+                // A trap or door that was built (or that the client sees for the first time)
+                change.mEvent = "TrapBuilt";
+                change.mVisual = name.substr(0, name.find('_'));
                 break;
             default:
                 break;
@@ -846,6 +862,25 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
             change.mPosition = it->second.mPosition;
             changes.push_back(change);
         }
+        else if(mEntitiesInitialized && (it->second.mType == static_cast<uint32_t>(GameEntityType::trapEntity)))
+        {
+            // A trap or door that is gone: sold, unless it was destroyed (reported with its own effect) or the
+            // client only lost sight of it
+            int32_t soldX = static_cast<int32_t>(std::floor(it->second.mPosition.x + 0.5f));
+            int32_t soldY = static_cast<int32_t>(std::floor(it->second.mPosition.y + 0.5f));
+            Tile* soldTile = mGameMap->getTile(soldX, soldY);
+            std::map<std::string, double>::const_iterator wreckedIt =
+                mWreckedUntil.find(Helper::toString(soldX) + "," + Helper::toString(soldY));
+            bool wrecked = (wreckedIt != mWreckedUntil.end()) && (wreckedIt->second > mClock);
+            if(!wrecked && (soldTile != nullptr) && soldTile->getLocalPlayerHasVision())
+            {
+                Change change;
+                change.mEvent = "TrapSold";
+                change.mVisual = it->first.substr(0, it->first.find('_'));
+                change.mPosition = it->second.mPosition;
+                changes.push_back(change);
+            }
+        }
 
         mKnownEntities.erase(it++);
     }
@@ -857,7 +892,7 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
         return;
 
     for(const Change& change : changes)
-        triggerEvent(change.mEvent, change.mPosition, false);
+        triggerEvent(change.mEvent, change.mPosition, false, change.mVisual);
 }
 
 void RoomAmbience::reconcile()
@@ -1023,20 +1058,32 @@ void RoomAmbience::playClips()
     for(const Candidate& candidate : mClipCandidates)
     {
         const AmbienceEffect& effect = effects[candidate.mEffect];
-        if(effect.mClips.empty())
+        bool isSound = (effect.mKind == AmbienceKind::sound);
+        if(isSound ? effect.mFamily.empty() : effect.mClips.empty())
             continue;
 
-        std::map<std::string, double>::iterator timerIt = mClipTimers.find(candidate.mTarget);
+        // A sound has a timer of its own, so an object can have a clip and sounds
+        std::string timerKey = isSound ? (candidate.mTarget + "|" + effect.mName) : candidate.mTarget;
+        std::map<std::string, double>::iterator timerIt = mClipTimers.find(timerKey);
         if(timerIt == mClipTimers.end())
         {
             // The first clip comes after a random part of the interval, so not all objects move together
             std::uniform_real_distribution<double> first(0.0, effect.mEvery);
-            mClipTimers[candidate.mTarget] = mClock + first(mRandom);
+            mClipTimers[timerKey] = mClock + first(mRandom);
             continue;
         }
 
         if((mClock < timerIt->second) || (nbPlayed >= 3))
             continue;
+
+        std::uniform_real_distribution<double> next(0.6, 1.4);
+        if(isSound)
+        {
+            playSound(effect.mFamily, candidate.mPosition);
+            timerIt->second = mClock + effect.mEvery * next(mRandom);
+            ++nbPlayed;
+            continue;
+        }
 
         RenderedMovableEntity* entity = mGameMap->getRenderedMovableEntity(candidate.mTarget);
         if((entity == nullptr) || entity->isMoving())
@@ -1044,9 +1091,31 @@ void RoomAmbience::playClips()
 
         std::uniform_int_distribution<size_t> pick(0, effect.mClips.size() - 1);
         entity->setAnimationState(effect.mClips[pick(mRandom)], false, Ogre::Vector3::ZERO, true);
-        std::uniform_real_distribution<double> next(0.6, 1.4);
         timerIt->second = mClock + effect.mEvery * next(mRandom);
         ++nbPlayed;
+    }
+}
+
+void RoomAmbience::playSound(const std::string& family, const Ogre::Vector3& position)
+{
+    if(SoundEffectsManager::getSingletonPtr() == nullptr)
+        return;
+
+    SoundEffectsManager::getSingleton().playSpatialSound(family, position.x, position.y);
+}
+
+void RoomAmbience::updatePendingSounds()
+{
+    for(std::vector<PendingSound>::iterator it = mPendingSounds.begin(); it != mPendingSounds.end();)
+    {
+        if(mClock < it->mDue)
+        {
+            ++it;
+            continue;
+        }
+
+        playSound(it->mFamily, it->mPosition);
+        it = mPendingSounds.erase(it);
     }
 }
 
@@ -1247,6 +1316,7 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
 
         bool isShake = (effect.mKind == AmbienceKind::shake);
         bool isMark = (effect.mKind == AmbienceKind::mark);
+        bool isSound = (effect.mKind == AmbienceKind::sound);
         if(!forced)
         {
             if(!isEffectUsable(effect) || (camera == nullptr))
@@ -1270,8 +1340,31 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
                     continue;
             }
 
-            if(!isShake && !isMark && (mOneShots.size() >= mConfig.getMaxOneShots()))
+            if(!isShake && !isMark && !isSound && (mOneShots.size() >= mConfig.getMaxOneShots()))
                 continue;
+        }
+
+        if(isSound)
+        {
+            if(effect.mFamily.empty())
+                continue;
+
+            if(effect.mDelay > 0.0)
+            {
+                // The sound of a trap that is loaded again, a door that falls shut
+                PendingSound pending;
+                pending.mFamily = effect.mFamily;
+                pending.mPosition = position;
+                pending.mDue = mClock + effect.mDelay;
+                if(mPendingSounds.size() < MAX_PENDING_SOUNDS)
+                    mPendingSounds.push_back(pending);
+            }
+            else
+            {
+                playSound(effect.mFamily, position);
+            }
+            ++nbStarted;
+            continue;
         }
 
         if(isShake)
@@ -1409,6 +1502,7 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
                 triggerEvent("DoorHurt", position, false, typeName);
             break;
         case 3:
+            mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 5.0;
             triggerEvent("DoorWrecked", position, false, typeName);
             break;
         default:

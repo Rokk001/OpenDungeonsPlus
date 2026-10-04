@@ -72,6 +72,8 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::empty;
     else if(text == "Hit")
         when = AmbienceWhen::hit;
+    else if(text == "Locked")
+        when = AmbienceWhen::locked;
     else
         return false;
 
@@ -291,6 +293,8 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::shake;
             else if(words[1] == "Mark")
                 effect.mKind = AmbienceKind::mark;
+            else if(words[1] == "Sound")
+                effect.mKind = AmbienceKind::sound;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);
@@ -300,6 +304,14 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "System")
         {
             effect.mSystem = words[1];
+        }
+        else if(key == "Family")
+        {
+            effect.mFamily = words[1];
+        }
+        else if(key == "Delay")
+        {
+            effect.mDelay = Helper::toDouble(words[1]);
         }
         else if(key == "Clips")
         {

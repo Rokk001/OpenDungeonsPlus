@@ -89,6 +89,9 @@ public:
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
 
+    //! \brief Plays the sound of the family (a folder below sounds/Spatial) at the position
+    void playSound(const std::string& family, const Ogre::Vector3& position);
+
     //! \brief Moves the camera by the current shake. Called just before the frame is rendered; clearShake()
     //! takes it away again after the frame, so nothing else ever sees the shaken camera.
     void applyShake();
@@ -127,6 +130,18 @@ private:
         Ogre::SceneNode* mNode;
         Ogre::ParticleSystem* mSystem;
         double mLife;
+    };
+
+    //! \brief A sound that waits for its time (Delay of an event effect)
+    struct PendingSound
+    {
+        PendingSound() :
+            mPosition(Ogre::Vector3::ZERO), mDue(0.0)
+        {}
+
+        std::string mFamily;
+        Ogre::Vector3 mPosition;
+        double mDue;
     };
 
     struct MotionInstance
@@ -199,6 +214,7 @@ private:
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
+    void updatePendingSounds();
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
@@ -256,6 +272,9 @@ private:
     Ogre::Vector3 mShakeApplied;
     //! Time until which a door (key "x,y" of its tile) counts as hit, for the effects "When Hit"
     std::map<std::string, double> mHitUntil;
+    //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
+    std::map<std::string, double> mWreckedUntil;
+    std::vector<PendingSound> mPendingSounds;
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;
