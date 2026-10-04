@@ -25,6 +25,7 @@
 #include "entities/CreatureActivity.h"
 #include "eventsystem/CreatureMoved.h"
 #include "eventsystem/Subject.h"
+#include "game/CreatureAppearance.h"
 
 
 #include <Ogre.h>
@@ -166,6 +167,16 @@ public:
     //! \brief Gender of the creature ("Female", "Male" or empty), derived from its name and class. Same
     //! value as the profile gender shown on the client, so it can be used on the server.
     std::string getGender() const;
+
+    //! \brief Dungeonbook appearance (catalog id plus chosen option per slot). Chosen once on the server
+    //! when the creature spawns (or derived from the name for old saves) and never changed afterwards.
+    //! Empty for creatures without a catalog id or while no manifest exists.
+    const CreatureAppearance& getAppearance() const
+    { return mAppearance; }
+
+    //! \brief Client side. Takes over the appearance the server sent in the creature message of
+    //! ServerNotificationType::creatureAppearance. Ignored on the server.
+    void setAppearanceFromServer(const CreatureAppearance& appearance);
     std::string getStatsText();
 
     //! \brief Client side. One line with the strongest friend and the worst enemy of a creature of the
@@ -696,6 +707,16 @@ public:
     //! use a different constructor, and this is then called by the gameMap when other details have been loaded.
     void setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition);
 
+    //! \brief Server side. Chooses the Dungeonbook appearance: random on the first spawn (no duplicate among
+    //! the creatures of the same seat), stable from the name for loaded creatures that have none, and
+    //! replaces options that no longer exist. Does nothing without catalog id or manifest.
+    void assignAppearance(bool firstSpawn);
+
+    //! \brief Server side, called from doUpkeep while the creature has no appearance. Tries again every
+    //! few turns (the manifest may be available now), and sends a new appearance once to the clients
+    //! that already know the creature.
+    void retryAppearance();
+
     //! Called on server side to add an effect (spell, slap, ...) to this creature
     void addCreatureEffect(CreatureEffect* effect);
 
@@ -978,6 +999,10 @@ private:
     //! Class name of the creature. The CreatureDefinition will be set from this name
     //! when the creature will be initialized
     std::string     mDefinitionString;
+    //! \brief Dungeonbook appearance, see getAppearance()
+    CreatureAppearance mAppearance;
+    //! \brief Server side. Upkeeps left until the next try to assign a missing appearance
+    uint32_t mAppearanceRetryTurns = 0;
     //! \brief Pointer to the struct holding the general type of the creature with its values
     const CreatureDefinition* mDefinition;
 

@@ -377,6 +377,7 @@ set(OD_SOURCEFILES
     ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
+    ${SRC}/game/CreatureAppearance.cpp
     ${SRC}/game/CreatureRelationships.cpp
     ${SRC}/game/TrapProductionData.cpp
     ${SRC}/game/PlayerSelection.cpp
@@ -457,6 +458,12 @@ set(OD_SOURCEFILES
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
     ${SRC}/render/PortraitTint.cpp
+    ${SRC}/render/PortraitManifest.cpp
+    ${SRC}/render/AppearanceCompose.cpp
+    ${SRC}/render/CreatureAppearancePicture.cpp
+    ${SRC}/render/PortraitManifestRegistry.cpp
+    ${SRC}/render/DungeonbookAppearanceConfig.cpp
+    ${SRC}/render/DungeonbookQuirks.cpp
     ${SRC}/render/CreaturePanel.cpp
     ${SRC}/render/SocialWindow.cpp
     ${SRC}/render/LooseGoldMesh.cpp

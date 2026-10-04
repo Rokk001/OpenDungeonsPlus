@@ -65,6 +65,7 @@
 
 
 
+#include "game/CreatureAppearance.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -86,10 +87,14 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "render/CreatureOverlayStatus.h"
+#include "render/CreatureAppearancePicture.h"
 #include "render/CreaturePortrait.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/CreatureReactions.h"
+#include "render/DungeonbookAppearanceConfig.h"
+#include "render/DungeonbookQuirks.h"
+#include "render/PortraitManifestRegistry.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -110,6 +115,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/ResourceManager.h"
 
 #include <CEGUI/Event.h>
 #include <CEGUI/Image.h>
@@ -156,6 +162,51 @@ static double getTargetDistanceFactor(const Creature& attacker, const GameEntity
         return COMBAT_CLASS_SUPPORT_TARGET_FACTOR;
 
     return 1.0;
+}
+
+namespace
+{
+//! Turns between two tries to assign a missing appearance
+const uint32_t APPEARANCE_RETRY_TURNS = 200;
+
+//! \brief Server side registry of the portrait manifests used to assign the Dungeonbook appearance.
+//! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
+PortraitManifestRegistry& getAppearanceRegistry()
+{
+    static PortraitManifestRegistry registry;
+    static bool initialized = false;
+    if(!initialized)
+    {
+        initialized = true;
+        std::string path = ConfigManager::getSingleton().getConfigPath();
+        if(!path.empty() && (path[path.size() - 1] != '/') && (path[path.size() - 1] != '\\'))
+            path += "/";
+
+        DungeonbookAppearanceConfig config;
+        config.loadFromFile(path + "dungeonbook-appearance.cfg");
+        const std::vector<std::string>& warnings = config.getWarnings();
+        for(std::vector<std::string>::const_iterator it = warnings.begin(); it != warnings.end(); ++it)
+        {
+            OD_LOG_WRN("Dungeonbook appearance: " + *it);
+        }
+
+        std::string root = config.getAssetRoot();
+        if(root.empty())
+            root = "materials/portraits/variants";
+
+        bool isAbsolute = (root.size() > 1) && ((root[1] == ':') || (root[0] == '/') || (root[0] == '\\'));
+        if(!isAbsolute)
+            root = ResourceManager::getSingleton().getGameDataPath() + root;
+
+        registry.setAssetRoot(root);
+    }
+    return registry;
+}
+
+uint32_t getAppearanceRandom(uint32_t min, uint32_t max)
+{
+    return Random::Uint(min, max);
+}
 }
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
@@ -458,6 +509,10 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     setMeshName(definition->getMeshName());
     setName(getGameMap()->nextUniqueNameCreature(definition->getClassName()));
 
+    // First spawn: the Dungeonbook appearance is chosen once and never changed afterwards
+    if(getIsOnServerMap())
+        assignAppearance(true);
+
     mMaxHP = mDefinition->getMinHp();
     setHP(mMaxHP);
 
@@ -681,7 +736,7 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects";
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]";
 
     return format;
 }
@@ -730,6 +785,10 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t";
         CreatureEffectManager::write(*creatureParticleEffect->mEffect, os);
     }
+
+    // Optional last token, missing in old saves and for creatures without appearance
+    if(!mAppearance.isEmpty())
+        os << "\t" << CreatureAppearanceLogic::toToken(mAppearance);
 }
 
 bool Creature::importFromStream(std::istream& is)
@@ -799,7 +858,97 @@ bool Creature::importFromStream(std::istream& is)
         addCreatureEffect(effect);
     }
 
+    // Optional appearance token. Old saves end after the effects.
+    std::string appearanceToken;
+    if(is >> appearanceToken)
+    {
+        if(!CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
+        {
+            OD_LOG_WRN("Invalid appearance token=" + appearanceToken);
+        }
+    }
+
     return true;
+}
+
+void Creature::assignAppearance(bool firstSpawn)
+{
+    if(!getIsOnServerMap() || (mDefinition == nullptr))
+        return;
+
+    PortraitManifestRegistry& registry = getAppearanceRegistry();
+    CreatureAppearanceLogic::CatalogExistsFunction exists =
+        std::bind(&PortraitManifestRegistry::hasCatalog, &registry, std::placeholders::_1);
+    std::string catalogId = CreatureAppearanceLogic::resolveCatalogId(mDefinition->getMeshName(), getGender(), exists);
+    if(catalogId.empty())
+        return;
+
+    const PortraitManifest* manifest = registry.getManifest(catalogId);
+    std::vector<std::string> messages = registry.takeMessages();
+    for(std::vector<std::string>::const_iterator it = messages.begin(); it != messages.end(); ++it)
+    {
+        OD_LOG_WRN("Dungeonbook appearance: " + *it);
+    }
+
+    // No manifest (yet): the appearance is derived later like for old saves, a stored one is kept
+    if(manifest == nullptr)
+        return;
+
+    if(firstSpawn)
+    {
+        std::vector<CreatureAppearance> taken;
+        std::vector<Creature*> mates = getGameMap()->getCreaturesBySeat(getSeat());
+        for(std::vector<Creature*>::const_iterator it = mates.begin(); it != mates.end(); ++it)
+        {
+            const CreatureAppearance& other = (*it)->getAppearance();
+            if(other.getCatalogId() == catalogId)
+                taken.push_back(other);
+        }
+
+        mAppearance = CreatureAppearanceLogic::pickRandom(*manifest, catalogId, getAppearanceRandom, taken);
+        return;
+    }
+
+    if(mAppearance.isEmpty())
+        mAppearance = CreatureAppearanceLogic::pickStable(*manifest, catalogId, getName());
+    else
+        CreatureAppearanceLogic::validate(*manifest, catalogId, getName(), mAppearance);
+}
+
+void Creature::retryAppearance()
+{
+    if(mAppearanceRetryTurns > 0)
+    {
+        --mAppearanceRetryTurns;
+        return;
+    }
+    mAppearanceRetryTurns = APPEARANCE_RETRY_TURNS;
+
+    // Same derivation as for old saves
+    assignAppearance(false);
+    if(mAppearance.isEmpty())
+        return;
+
+    // Clients that already know the creature get the new appearance once, the others receive it
+    // with the full creature data when they see it
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureAppearance, seat->getPlayer());
+        notification->mPacket << getName() << CreatureAppearanceLogic::toToken(mAppearance);
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
+void Creature::setAppearanceFromServer(const CreatureAppearance& appearance)
+{
+    if(getIsOnServerMap())
+        return;
+
+    mAppearance = appearance;
 }
 
 void Creature::buildStats()
@@ -905,8 +1054,11 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
-    // Last field: the carried gold, shown as a sack on the thief
+    // The carried gold, shown as a sack on the thief
     os << mGoldCarried;
+
+    // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
+    os << CreatureAppearanceLogic::toToken(mAppearance);
 }
 
 void Creature::importFromPacket(ODPacket& is)
@@ -964,6 +1116,16 @@ void Creature::importFromPacket(ODPacket& is)
     importActivityFromPacket(is);
     importProgressFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+
+    // The client only takes over the appearance the server has chosen, it never rolls one itself
+    std::string appearanceToken;
+    OD_ASSERT_TRUE(is >> appearanceToken);
+    mAppearance = CreatureAppearance();
+    if(!appearanceToken.empty() && !CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
+    {
+        OD_LOG_ERR("Invalid appearance token=" + appearanceToken);
+    }
+
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
 
@@ -1140,6 +1302,10 @@ void Creature::dropCarriedEquipment()
 
 void Creature::doUpkeep()
 {
+    // No manifest was available when the creature spawned: assign the appearance as soon as it is
+    if(mAppearance.isEmpty() && getIsOnServerMap())
+        retryAppearance();
+
     // A creature that cannot be controlled anymore is given back to the AI
     if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))
         endPossession();
@@ -2889,8 +3055,19 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     bool isAllied = (localSeat != nullptr) &&
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
 
-    page->getChild("Portrait")->setProperty("Image",
-        getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender).getName());
+    // The composed picture of the creature's appearance; without one (no appearance yet, missing or invalid
+    // manifest) the tinted preview portrait is the fallback and no remarks are shown. Asked on every fill, since
+    // the appearance can arrive later, and the image is set right away because the cache may release it.
+    const CEGUI::Image* appearanceImage = getCreatureAppearanceImage(getName(), mAppearance);
+    if(appearanceImage != nullptr)
+    {
+        page->getChild("Portrait")->setProperty("Image", appearanceImage->getName());
+    }
+    else
+    {
+        page->getChild("Portrait")->setProperty("Image",
+            getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender).getName());
+    }
     page->getChild("NameText")->setText(profile.getFullName());
 
     std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
@@ -2924,6 +3101,14 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + 2);
     page->getChild("LikesText")->setText("Likes: " + joinProfileList(likes));
     page->getChild("DislikesText")->setText("Dislikes: " + joinProfileList(dislikes));
+    // Remarks that match the parts of the picture, only for the composed picture
+    std::string quirks;
+    if(appearanceImage != nullptr)
+    {
+        quirks = DungeonbookQuirkLogic::formatRemarks(getCreatureAppearanceRemarks(getName(), mAppearance));
+    }
+    page->getChild("QuirksText")->setVisible(!quirks.empty());
+    page->getChild("QuirksText")->setText(quirks);
 
     // Health is shown as the same stage the creature overlay uses, the client has no exact value
     CEGUI::ProgressBar* healthBar = static_cast<CEGUI::ProgressBar*>(page->getChild("HealthBar"));
@@ -4578,6 +4763,9 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
                 std::string name = getGameMap()->nextUniqueNameCreature(mDefinition->getClassName());
                 setName(name);
             }
+
+            // Loaded creature: old saves and creatures spawned without a manifest get a stable appearance
+            assignAppearance(false);
         }
     }
 

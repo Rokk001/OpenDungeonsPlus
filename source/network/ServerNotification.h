@@ -171,6 +171,11 @@ enum class ServerNotificationType
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
     //! Inserted before timeLimit; timeLimit and chickenKindChanged stay the last values.
     trapEffect,
+    //! The server assigned a Dungeonbook appearance to a creature after it spawned (the portrait manifest
+    //! was not available before): + string creature name, string appearance token. Sent once to the
+    //! human players that see the creature; clients that see it later get it with the creature data.
+    //! Inserted before timeLimit; timeLimit and chickenKindChanged stay the last values.
+    creatureAppearance,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
     timeLimit,
     //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind

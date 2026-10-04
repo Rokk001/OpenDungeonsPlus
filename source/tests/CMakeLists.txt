@@ -65,6 +65,70 @@ add_boost_test(00-CreatureRelationships
         ${Boost_FILESYSTEM_LIBRARY_RELEASE}
         ${Boost_SYSTEM_LIBRARY_RELEASE})
 
+add_boost_test(00-PortraitManifest
+        SOURCES
+        test_PortraitManifest.cpp
+        ${SRC}/render/PortraitManifest.h
+        ${SRC}/render/PortraitManifest.cpp
+        ${SRC}/render/DungeonbookAppearanceConfig.h
+        ${SRC}/render/DungeonbookAppearanceConfig.cpp)
+
+add_boost_test(00-CreatureAppearance
+        SOURCES
+        test_CreatureAppearance.cpp
+        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/game/CreatureAppearance.cpp
+        ${SRC}/render/PortraitManifest.h
+        ${SRC}/render/PortraitManifest.cpp
+        ${SRC}/render/PortraitManifestRegistry.h
+        ${SRC}/render/PortraitManifestRegistry.cpp
+        ${SRC}/network/ODPacket.h
+        ${SRC}/network/ODPacket.cpp
+        LIBRARIES
+        ${SFML_LIBRARIES})
+
+add_boost_test(00-AppearanceCompose
+        SOURCES
+        test_AppearanceCompose.cpp
+        ${SRC}/render/AppearanceCompose.h
+        ${SRC}/render/AppearanceCompose.cpp
+        ${SRC}/render/PortraitTint.h
+        ${SRC}/render/PortraitTint.cpp
+        ${SRC}/render/PortraitManifest.h
+        ${SRC}/render/PortraitManifest.cpp
+        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/game/CreatureAppearance.cpp
+        ${SRC}/social/SocialRng.h)
+
+add_boost_test(00-DungeonbookQuirks
+        SOURCES
+        test_DungeonbookQuirks.cpp
+        ${SRC}/render/DungeonbookQuirks.h
+        ${SRC}/render/DungeonbookQuirks.cpp
+        ${SRC}/render/PortraitManifest.h
+        ${SRC}/render/PortraitManifest.cpp
+        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/game/CreatureAppearance.cpp)
+
+add_boost_test(00-DungeonbookMultiplayer
+        SOURCES
+        test_DungeonbookMultiplayer.cpp
+        ${SRC}/network/ODPacket.h
+        ${SRC}/network/ODPacket.cpp
+        ${SRC}/render/AppearanceCompose.h
+        ${SRC}/render/AppearanceCompose.cpp
+        ${SRC}/render/PortraitTint.h
+        ${SRC}/render/PortraitTint.cpp
+        ${SRC}/render/PortraitManifest.h
+        ${SRC}/render/PortraitManifest.cpp
+        ${SRC}/render/DungeonbookQuirks.h
+        ${SRC}/render/DungeonbookQuirks.cpp
+        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/game/CreatureAppearance.cpp
+        ${SRC}/social/SocialRng.h
+        LIBRARIES
+        ${SFML_LIBRARIES})
+
 add_boost_test(00-LevelScript
         SOURCES
         test_LevelScript.cpp
