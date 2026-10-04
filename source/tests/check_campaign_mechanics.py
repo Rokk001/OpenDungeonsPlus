@@ -1,6 +1,6 @@
 """Static wiring checks for the game mechanics that the converted campaign levels need.
 
-One section per mechanic, in the order they were added (see docs/internal for the reasons).
+One section per mechanic, in the order they were added.
 """
 from pathlib import Path
 
