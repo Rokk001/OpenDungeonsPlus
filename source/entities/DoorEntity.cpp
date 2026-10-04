@@ -21,6 +21,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
+#include "render/RenderManager.h"
 #include "render/RoomAmbience.h"
 #include "traps/Trap.h"
 #include "traps/TrapDoor.h"
@@ -151,6 +152,8 @@ void DoorEntity::setAnimationState(const std::string& state, bool loop, const Og
     // The state the door had before; empty while the door is only being set up
     bool changed = !getIsOnServerMap() && !mPrevAnimationState.empty() && (state != mPrevAnimationState);
     MovableGameEntity::setAnimationState(state, loop, direction, playIdleWhenAnimationEnds);
+    if(!getIsOnServerMap() && (getMeshName() == "DoorSecret") && RenderManager::getSingletonPtr() != nullptr)
+        RenderManager::getSingleton().rrUpdateSecretDoorLook(this);
     if(!changed)
         return;
 
