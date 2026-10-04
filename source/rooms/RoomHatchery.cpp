@@ -161,6 +161,45 @@ void RoomHatchery::fireAnimalSound(const ChickenEntity& animal, const std::strin
         fireRoomSound(*tile, family);
 }
 
+void RoomHatchery::fireProtest(Tile& tile)
+{
+    fireRoomSound(tile, "Hatchery/Cluck");
+}
+
+void RoomHatchery::exportToStream(std::ostream& os) const
+{
+    Room::exportToStream(os);
+    os << "HatcheryWaits " << mCoopHenWait << " " << mCoopRoosterWait << " " << mCrowInterval << std::endl;
+}
+
+bool RoomHatchery::importFromStream(std::istream& is)
+{
+    if(!Room::importFromStream(is))
+        return false;
+
+    // Saves written before the waiting counters were saved do not have this line. In that case
+    // the stream is put back where it was and the counters start from zero.
+    std::streampos pos = is.tellg();
+    std::string tag;
+    if(!(is >> tag) || (tag != "HatcheryWaits"))
+    {
+        is.clear();
+        is.seekg(pos);
+        return true;
+    }
+
+    uint32_t henWait;
+    uint32_t roosterWait;
+    uint32_t crowInterval;
+    if(!(is >> henWait >> roosterWait >> crowInterval))
+        return false;
+
+    mCoopHenWait = henWait;
+    mCoopRoosterWait = roosterWait;
+    mCrowInterval = crowInterval;
+    return true;
+}
+
 HatcheryCycleSettings RoomHatchery::getCycleSettings() const
 {
     const ConfigManager& config = ConfigManager::getSingleton();
@@ -173,6 +212,7 @@ HatcheryCycleSettings RoomHatchery::getCycleSettings() const
     settings.mTilesPerChicken = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryTilesPerChicken", settings.mTilesPerChicken));
     settings.mCareLayPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryCareLayPercent", settings.mCareLayPercent));
     settings.mTramplePercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryTramplePercent", settings.mTramplePercent));
+    settings.mCoopBatch = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryCoopBatch", settings.mCoopBatch));
 
     // The research of the hatchery shortens the waiting times
     double coopWait = config.getRoomConfigDoubleOrDefault("HatcheryChickenSpawnRate", settings.mCoopWait);
@@ -194,14 +234,15 @@ ChickenEntity* RoomHatchery::spawnAnimal(ChickenKind kind, const Ogre::Vector3& 
     return chicken;
 }
 
-bool RoomHatchery::spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings)
+bool RoomHatchery::spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count)
 {
     if(mCentralActiveSpotTiles.empty())
         return false;
 
     const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
     uint32_t first = Random::Uint(0, mCentralActiveSpotTiles.size() - 1);
-    for(uint32_t i = 0; i < mCentralActiveSpotTiles.size(); ++i)
+    uint32_t spawned = 0;
+    for(uint32_t i = 0; (i < mCentralActiveSpotTiles.size()) && (spawned < count); ++i)
     {
         Tile* coopTile = mCentralActiveSpotTiles[(first + i) % mCentralActiveSpotTiles.size()];
         Ogre::Vector2 freePosition;
@@ -211,9 +252,77 @@ bool RoomHatchery::spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& 
 
         ChickenEntity* animal = spawnAnimal(kind, Ogre::Vector3(freePosition.x, freePosition.y, 0.0f), settings);
         animal->playPose(ChickenPose::emerge, 2);
-        return true;
+        ++spawned;
     }
-    return false;
+    return spawned > 0;
+}
+
+void RoomHatchery::collectHungry(std::vector<Creature*>& hungry) const
+{
+    for(Creature* creature : getGameMap()->getCreatures())
+    {
+        if((creature == nullptr) || !creature->getIsOnMap() || (creature->getSeat() == nullptr))
+            continue;
+
+        Tile* tile = creature->getPositionTile();
+        if((tile == nullptr) || (tile->getCoveringRoom() != this))
+            continue;
+
+        if(creature->isActionInList(CreatureActionType::eatChicken))
+            hungry.push_back(creature);
+    }
+}
+
+void RoomHatchery::updateFlock(const std::vector<ChickenEntity*>& hens, bool calm)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    double radius = config.getRoomConfigDoubleOrDefault("HatcheryScatterRadius", 2.0);
+    uint32_t scatterTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryScatterTurns", 6.0));
+    uint32_t flutterPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFlutterPercent", 3.0));
+    uint32_t scratchPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryScratchPercent", 6.0));
+
+    std::vector<Creature*> hungry;
+    collectHungry(hungry);
+    for(ChickenEntity* hen : hens)
+    {
+        if(hen->isBusy() || hen->isScattering())
+            continue;
+
+        // A hungry creature comes close: the hen runs off cackling to another part of the hatchery
+        const Ogre::Vector2 henPos(hen->getPosition().x, hen->getPosition().y);
+        bool threatened = false;
+        for(Creature* creature : hungry)
+        {
+            const Ogre::Vector2 creaturePos(creature->getPosition().x, creature->getPosition().y);
+            if(henPos.distance(creaturePos) > radius)
+                continue;
+
+            threatened = true;
+            for(uint32_t attempt = 0; attempt < 4; ++attempt)
+            {
+                Tile* away = mCoveredTiles[Random::Uint(0, mCoveredTiles.size() - 1)];
+                const Ogre::Vector2 spot(away->getX(), away->getY());
+                if(spot.distance(creaturePos) < radius + 1.0)
+                    continue;
+
+                if(hen->scatterTo(spot, scatterTurns))
+                {
+                    fireAnimalSound(*hen, "Hatchery/Cluck");
+                    break;
+                }
+            }
+            break;
+        }
+        if(threatened || calm || hen->isMoving())
+            continue;
+
+        // Otherwise she scratches the ground or flutters up for a moment now and then
+        uint32_t roll = Random::Uint(0, 99);
+        if(roll < flutterPercent)
+            hen->playPose(ChickenPose::flutter, 1);
+        else if(roll < flutterPercent + scratchPercent)
+            hen->playPose(ChickenPose::scratch, 2);
+    }
 }
 
 void RoomHatchery::collectEnemies(std::vector<Creature*>& enemies) const
@@ -398,6 +507,7 @@ void RoomHatchery::doUpkeep()
         hen->setCalm(night || full);
     for(ChickenEntity* chick : chicks)
         chick->setCalm(night);
+    updateFlock(hens, night || full);
     // Now and then a chick peeps (at most one peep per turn and hatchery)
     if(!night && !chicks.empty() && (Random::Int(1, 12) == 1))
         fireAnimalSound(*chicks[Random::Uint(0, chicks.size() - 1)], "Hatchery/Peep");
@@ -425,7 +535,8 @@ void RoomHatchery::doUpkeep()
     if(HatcheryCycle::needCoopHen(counts, mNumActiveSpots))
     {
         ++mCoopHenWait;
-        if((mCoopHenWait >= settings.mCoopWait) && spawnFromCoop(ChickenKind::hen, settings))
+        if((mCoopHenWait >= settings.mCoopWait) &&
+           spawnFromCoop(ChickenKind::hen, settings, HatcheryCycle::coopHenCount(settings, capacity)))
             mCoopHenWait = 0;
     }
     else

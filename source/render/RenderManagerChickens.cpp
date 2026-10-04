@@ -355,6 +355,13 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.2f));
     else if(pose == ChickenPose::cackle)
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.12f));
+    else if((pose == ChickenPose::flee) && (chicken->getKind() == ChickenKind::hen))
+    {
+        // A hen scatters from a hungry creature: a few feathers fly
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.12f));
+    }
+    else if(pose == ChickenPose::flutter)
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
     else if(pose == ChickenPose::emerge)
     {
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
@@ -523,6 +530,20 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 // Scratches the ground
                 pitch = 18.0f + 12.0f * std::sin(t * 9.0f);
                 lift = 0.004f * std::fabs(std::sin(t * 9.0f));
+            }
+            else if(pose == ChickenPose::scratch)
+            {
+                // A hen scratches the ground with quick strokes, then pecks
+                pitch = 14.0f + 10.0f * std::sin(p * 12.0f);
+                lift = 0.003f * std::fabs(std::sin(p * 12.0f));
+            }
+            else if(pose == ChickenPose::flutter)
+            {
+                // Flaps up for a moment with the wings out and settles down again
+                const Ogre::Real rise = std::sin(std::min(1.0f, p * 1.4f) * pi);
+                lift = 0.14f * rise;
+                stretch = Ogre::Vector3(1.0f + 0.25f * std::fabs(std::sin(p * 30.0f)) * rise, 1.0f, 1.0f);
+                pitch = -10.0f * rise;
             }
             else if(pose == ChickenPose::lay)
             {

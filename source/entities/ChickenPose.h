@@ -37,6 +37,8 @@ namespace ChickenPose
     static const std::string lay = "Lay";
     static const std::string wobble = "Wobble";
     static const std::string emerge = "Emerge";
+    static const std::string scratch = "Scratch";
+    static const std::string flutter = "Flutter";
 
     //! \brief Clip of the chick breaking out of the egg, played once by the client when the egg hatches (not a pose).
     static const std::string hatchClip = "Hatch";
@@ -47,7 +49,7 @@ namespace ChickenPose
         return (name == strut) || (name == chase) || (name == flee) || (name == mount) ||
             (name == cackle) || (name == perch) || (name == crow) || (name == guard) ||
             (name == lead) || (name == roost) || (name == lay) || (name == wobble) ||
-            (name == emerge);
+            (name == emerge) || (name == scratch) || (name == flutter);
     }
 
     //! \brief True if the pose is a way of walking.

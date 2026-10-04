@@ -62,3 +62,12 @@ assert 'HatcheryTramplePercent' in cfg and 'HatcheryTrampleRadius' in cfg
 assert 'bool ChickenEntity::trample' in chicken and 'ChickenKind::egg' in chicken[chicken.index('bool ChickenEntity::trample'):][:200]
 # only enemies are collected for trampling (allied seats are skipped)
 assert 'isAlliedSeat' in room_cpp[room_cpp.index('void RoomHatchery::collectEnemies'):][:600]
+
+# The waiting counters of the room are saved (old saves without the line still load), one hen per coop comes out
+room_h = (root / 'source/rooms/RoomHatchery.h').read_text()
+assert 'exportToStream' in room_h and 'importFromStream' in room_h
+exp = room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:300]
+assert 'HatcheryWaits' in exp and 'mCoopHenWait' in exp and 'mCoopRoosterWait' in exp
+imp = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:900]
+assert 'seekg(pos)' in imp and 'HatcheryWaits' in imp
+assert 'coopHenCount' in room_cpp and 'HatcheryCoopBatch' in cfg

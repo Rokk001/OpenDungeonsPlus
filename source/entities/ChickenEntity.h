@@ -103,6 +103,12 @@ public:
     inline bool isBusy() const
     { return mBusyTurns > 0; }
 
+    //! \brief A hen runs away to the spot (a hungry creature comes close) and does not scatter again for a while.
+    bool scatterTo(const Ogre::Vector2& spot, uint32_t turns);
+
+    inline bool isScattering() const
+    { return mScatterTurns > 0; }
+
     //! \brief The hatchery tells a chick which animal to follow (the one in front of it in the line).
     void setFollowTarget(const Ogre::Vector2& target, double gap);
     void clearFollowTarget();
@@ -206,6 +212,7 @@ private:
     uint32_t mNbTurnLay;
     uint32_t mAge;
     uint32_t mBusyTurns;
+    uint32_t mScatterTurns;
     bool mCalm;
     bool mRoomDriven;
     bool mOnRoof;

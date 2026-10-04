@@ -24,15 +24,16 @@
 struct HatcheryCycleSettings
 {
     HatcheryCycleSettings() :
-        mLayMin(2),
-        mLayMax(4),
+        mLayMin(3),
+        mLayMax(7),
         mHatchTurns(2),
-        mGrowTurns(3),
+        mGrowTurns(4),
         mCoopWait(15),
         mRoosterWait(15),
         mTilesPerChicken(1),
         mCareLayPercent(25),
-        mTramplePercent(30)
+        mTramplePercent(30),
+        mCoopBatch(0)
     {}
 
     //! Turns between two eggs of one hen (random value in [mLayMin, mLayMax]).
@@ -52,6 +53,8 @@ struct HatcheryCycleSettings
     uint32_t mCareLayPercent;
     //! Chance (percent per turn) that an enemy creature next to an egg tramples it.
     uint32_t mTramplePercent;
+    //! Hens that come out of the coops together once the wait is over (0 = one hen per coop, as many as the capacity allows).
+    uint32_t mCoopBatch;
 };
 
 //! \brief How well the keeper looks after a hatchery.
@@ -106,6 +109,9 @@ public:
 
     //! A hen comes out of a coop only when there is no hen, chick or egg at all.
     static bool needCoopHen(const HatcheryCounts& counts, uint32_t nbCoops);
+
+    //! Number of hens that come out of the coops when the wait of an empty hatchery is over: one per coop.
+    static uint32_t coopHenCount(const HatcheryCycleSettings& settings, uint32_t capacity);
 
     //! A rooster comes out of a coop only when the hatchery has a coop and no rooster.
     static bool needCoopRooster(const HatcheryCounts& counts, uint32_t nbCoops);
