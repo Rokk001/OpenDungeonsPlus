@@ -17,11 +17,15 @@
 
 #include "network/ODServer.h"
 
+#include "gamemap/LevelScript.h"
+#include "gamemap/LevelScriptRunner.h"
+
 #include "ai/KeeperAIType.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
+#include "entities/MissileBoulder.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
 #include "game/Campaign.h"
@@ -1492,8 +1496,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // The Game Settings page can change what each seat may build, cast or research
             gameMap->applySkirmishSkillStates();
 
-            // The complete campaign talisman gives the keepers the Summon champion spell
-            if(Campaign::getSingleton().isActive() && Campaign::getSingleton().isTalismanComplete())
+            // The complete campaign Heartstone gives the keepers the Summon champion spell
+            if(Campaign::getSingleton().isActive() && Campaign::getSingleton().isHeartstoneComplete())
             {
                 for(Seat* seat : gameMap->getSeats())
                 {
@@ -1509,6 +1513,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 // We initialize the seats
                 seat->initSeat();
             }
+
+            // A creature that the last campaign level brought along comes to the dungeon
+            LevelScriptRunner::spawnKeptMinion(*gameMap);
 
             mSeatsConfigured = true;
             gameMap->notifySeatsConfigured();
@@ -1692,8 +1699,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             GameEntityType entityType;
             std::string entityName;
+            float handX;
+            float handY;
             Player* player = clientSocket->getPlayer();
-            OD_ASSERT_TRUE(packetReceived >> entityType >> entityName);
+            OD_ASSERT_TRUE(packetReceived >> entityType >> entityName >> handX >> handY);
             GameEntity* entity = gameMap->getEntityFromTypeAndName(entityType, entityName);
             if(entity == nullptr)
             {
@@ -1710,8 +1719,19 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
 
+            // The slap limit of the level script: a slap beyond it is counted but does nothing
+            if(!gameMap->getLevelScript().registerSlap(player->getSeat()->getId()))
+            {
+                OD_LOG_INF("player seatId=" + Helper::toString(player->getSeat()->getId()) + " is over the slap limit of the level");
+                break;
+            }
+
             OD_LOG_INF("player seatId=" + Helper::toString(player->getSeat()->getId()) + " slapped entity " + entity->getName());
-            entity->slap();
+            MissileBoulder* ball = (entityType == GameEntityType::missileObject) ? dynamic_cast<MissileBoulder*>(entity) : nullptr;
+            if(ball != nullptr)
+                ball->slapFrom(handX, handY);
+            else
+                entity->slap();
 
             ServerNotification notif(ServerNotificationType::entitySlapped, player);
             sendAsyncMsg(notif);
@@ -1841,6 +1861,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             if(!SpellManager::castSpell(gameMap, spellType, player, packetReceived))
                 break;
+
+            gameMap->getLevelScript().recordEvent("Seat" + Helper::toString(player->getSeat()->getId()),
+                "cast:" + SpellManager::getSpellNameFromSpellType(spellType));
 
             uint32_t newCooldown = SpellManager::getSpellCooldown(spellType);
             player->setSpellCooldownTurns(spellType, newCooldown);

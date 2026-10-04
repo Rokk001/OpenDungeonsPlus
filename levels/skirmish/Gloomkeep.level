@@ -6,6 +6,11 @@ Description	A sunken fortress of cells and chains stands in the middle of this l
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	Gloomkeep
+SandboxTarget	50000
+SandboxBonus	prisoners	10	10000	-	Hold ten prisoners at once
+SandboxBonus	trapsFired	20	10000	-	Set off twenty traps
+SandboxNext	skirmish/Wyrmhollow.level
 [/Info]
 
 [Seats]

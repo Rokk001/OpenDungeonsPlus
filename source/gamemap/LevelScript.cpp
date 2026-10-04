@@ -88,6 +88,66 @@ std::string restOfLine(const std::string& line, uint32_t count)
     return trim(line.substr(pos));
 }
 
+bool parseOperator(const std::string& token, LevelScriptCondition& cond)
+{
+    if(!levelScriptParseCompare(token, cond.mCompare))
+        return false;
+
+    cond.mAtLeast = (cond.mCompare == LevelScriptCompare::atLeast);
+    return true;
+}
+
+//! Reads "x,y;x,y;..." (or "-" for none) into a list of tile coordinates
+bool parseWaypoints(const std::string& text, std::vector<std::pair<int32_t, int32_t> >& waypoints)
+{
+    waypoints.clear();
+    if(text == "-")
+        return true;
+
+    std::string::size_type start = 0;
+    while(start < text.size())
+    {
+        std::string::size_type end = text.find(';', start);
+        if(end == std::string::npos)
+            end = text.size();
+
+        std::string item = text.substr(start, end - start);
+        std::string::size_type comma = item.find(',');
+        std::pair<int32_t, int32_t> point;
+        if((comma == std::string::npos) || !parseInt32(item.substr(0, comma), point.first) ||
+           !parseInt32(item.substr(comma + 1), point.second))
+        {
+            return false;
+        }
+
+        waypoints.push_back(point);
+        start = end + 1;
+    }
+    return true;
+}
+
+void writeWaypoints(std::ostream& os, const std::vector<std::pair<int32_t, int32_t> >& waypoints)
+{
+    if(waypoints.empty())
+    {
+        os << "-";
+        return;
+    }
+
+    for(std::size_t i = 0; i < waypoints.size(); ++i)
+    {
+        if(i > 0)
+            os << ";";
+
+        os << waypoints[i].first << "," << waypoints[i].second;
+    }
+}
+
+bool parseOrderJob(const std::string& job)
+{
+    return (job == "killplayer") || (job == "goto") || (job == "killcreatures") || (job == "wait") || (job == "stealgold");
+}
+
 bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& cond)
 {
     // t[0] is "Cond"
@@ -103,9 +163,21 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     if(type == "region")
     {
         cond.mType = LevelScriptConditionType::region;
-        if(t.size() == 4)
+        cond.mNumber = 1;
+        int32_t corner;
+        if((t.size() == 4) || ((t.size() >= 6) && !parseInt32(t[3], corner)))
         {
             cond.mName = t[3];
+            if(t.size() >= 6)
+            {
+                if(!parseOperator(t[4], cond) || !parseInt(t[5], cond.mNumber))
+                    return false;
+            }
+            if(t.size() == 7)
+                cond.mName2 = t[6];
+            else if(t.size() > 7)
+                return false;
+
             return parseInt32(t[2], cond.mSeatId);
         }
         return (t.size() == 7) &&
@@ -118,14 +190,12 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     if(type == "creatures")
     {
         cond.mType = LevelScriptConditionType::creatures;
-        if(t.size() != 5)
+        if((t.size() != 5) && (t.size() != 6))
             return false;
-        if(t[3] == ">=")
-            cond.mAtLeast = true;
-        else if(t[3] == "<=")
-            cond.mAtLeast = false;
-        else
+        if(!parseOperator(t[3], cond))
             return false;
+        if(t.size() == 6)
+            cond.mName2 = t[5];
 
         return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
     }
@@ -156,11 +226,7 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
 
         if(t.size() != 5)
             return false;
-        if(t[3] == ">=")
-            cond.mAtLeast = true;
-        else if(t[3] == "<=")
-            cond.mAtLeast = false;
-        else
+        if(!parseOperator(t[3], cond))
             return false;
 
         return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
@@ -170,11 +236,7 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::creaturesAtLevel;
         if(t.size() != 6)
             return false;
-        if(t[4] == ">=")
-            cond.mAtLeast = true;
-        else if(t[4] == "<=")
-            cond.mAtLeast = false;
-        else
+        if(!parseOperator(t[4], cond))
             return false;
 
         return parseInt32(t[2], cond.mSeatId) && parseInt32(t[3], cond.mX1) && (cond.mX1 >= 1) &&
@@ -197,10 +259,13 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     if(type == "room")
     {
         cond.mType = LevelScriptConditionType::room;
-        if(t.size() != 5)
+        if((t.size() != 5) && (t.size() != 6))
             return false;
 
         cond.mName = t[3];
+        if(t.size() == 6)
+            return parseInt32(t[2], cond.mSeatId) && parseOperator(t[4], cond) && parseInt(t[5], cond.mNumber);
+
         return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
     }
     if(type == "goal")
@@ -215,11 +280,149 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     if(type == "flag")
     {
         cond.mType = LevelScriptConditionType::flag;
-        if(t.size() != 4)
+        if((t.size() != 4) && (t.size() != 5))
             return false;
 
         cond.mName = t[2];
-        return parseInt(t[3], cond.mNumber);
+        cond.mCompare = LevelScriptCompare::equal;
+        cond.mAtLeast = false;
+        if(t.size() == 5)
+        {
+            if(!parseOperator(t[3], cond))
+                return false;
+        }
+        const std::string& value = t[t.size() - 1];
+        if(!value.empty() && (value[0] == '@'))
+        {
+            cond.mName2 = value.substr(1);
+            return (t.size() == 5) && !cond.mName2.empty();
+        }
+        return parseInt(value, cond.mNumber);
+    }
+    if(type == "boulder")
+    {
+        cond.mType = LevelScriptConditionType::boulderInRegion;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
+    }
+    if(type == "possessed")
+    {
+        cond.mType = LevelScriptConditionType::possessedInRegion;
+        if((t.size() != 4) && (t.size() != 5))
+            return false;
+
+        cond.mName = t[3];
+        if(t.size() == 5)
+            cond.mName2 = t[4];
+
+        return parseInt32(t[2], cond.mSeatId);
+    }
+    if(type == "slabs")
+    {
+        cond.mType = LevelScriptConditionType::tileKinds;
+        if(t.size() != 7)
+            return false;
+
+        cond.mName = t[3];
+        cond.mName2 = t[4];
+        return parseInt32(t[2], cond.mSeatId) && parseOperator(t[5], cond) && parseInt(t[6], cond.mNumber);
+    }
+    if(type == "tagged")
+    {
+        cond.mType = LevelScriptConditionType::tilesTagged;
+        if((t.size() != 5) && (t.size() != 6))
+            return false;
+
+        cond.mName = t[3];
+        if(t.size() == 5)
+        {
+            cond.mNumber = -1;
+            return (t[4] == "all") && parseInt32(t[2], cond.mSeatId);
+        }
+        return parseInt32(t[2], cond.mSeatId) && parseOperator(t[4], cond) && parseInt(t[5], cond.mNumber);
+    }
+    if(type == "event")
+    {
+        cond.mType = LevelScriptConditionType::creatureEvent;
+        cond.mNumber = 1;
+        if((t.size() != 4) && (t.size() != 6))
+            return false;
+
+        cond.mName = t[2];
+        cond.mName2 = t[3];
+        if(t.size() == 6)
+            return parseOperator(t[4], cond) && parseInt(t[5], cond.mNumber);
+
+        return true;
+    }
+    if(type == "slaps")
+    {
+        cond.mType = LevelScriptConditionType::playerSlaps;
+        return (t.size() == 5) && parseInt32(t[2], cond.mSeatId) && parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
+    }
+    if(type == "furniture")
+    {
+        cond.mType = LevelScriptConditionType::roomFurniture;
+        if(t.size() != 6)
+            return false;
+
+        cond.mName = t[3];
+        return parseInt32(t[2], cond.mSeatId) && parseOperator(t[4], cond) && parseInt(t[5], cond.mNumber);
+    }
+    if(type == "breached")
+    {
+        cond.mType = LevelScriptConditionType::dungeonBreached;
+        return (t.size() == 3) && parseInt32(t[2], cond.mSeatId);
+    }
+    if(type == "defeated")
+    {
+        cond.mType = LevelScriptConditionType::seatDefeated;
+        return (t.size() == 3) && parseInt32(t[2], cond.mSeatId);
+    }
+    if((type == "owns") || (type == "spell"))
+    {
+        cond.mType = (type == "owns") ? LevelScriptConditionType::ownsCreature : LevelScriptConditionType::spellKnown;
+        if(t.size() != 4)
+            return false;
+
+        cond.mName = t[3];
+        return parseInt32(t[2], cond.mSeatId);
+    }
+    if(type == "health")
+    {
+        cond.mType = LevelScriptConditionType::creatureHealth;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
+    }
+    if((type == "built") || (type == "roomtiles") || (type == "roomsize"))
+    {
+        if(type == "built")
+            cond.mType = LevelScriptConditionType::trapsBuilt;
+        else if(type == "roomtiles")
+            cond.mType = LevelScriptConditionType::roomTiles;
+        else
+            cond.mType = LevelScriptConditionType::largestRoom;
+
+        if(t.size() != 6)
+            return false;
+
+        cond.mName = t[3];
+        return parseInt32(t[2], cond.mSeatId) && parseOperator(t[4], cond) && parseInt(t[5], cond.mNumber);
+    }
+    if(type == "timer")
+    {
+        cond.mType = LevelScriptConditionType::timer;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
     }
     return false;
 }
@@ -256,15 +459,36 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
 
         for(std::size_t i = 6; i < t.size(); ++i)
         {
+            if(t[i].compare(0, 6, "party=") == 0)
+            {
+                action.mParty = t[i].substr(6);
+                if(action.mParty.empty())
+                    return false;
+
+                continue;
+            }
+
             std::string::size_type colon = t[i].find(':');
             if((colon == std::string::npos) || (colon == 0))
                 return false;
 
+            std::string levelText = t[i].substr(colon + 1);
+            std::string creatureName;
+            std::string::size_type at = levelText.find('@');
+            if(at != std::string::npos)
+            {
+                creatureName = levelText.substr(at + 1);
+                levelText = levelText.substr(0, at);
+                if(creatureName.empty())
+                    return false;
+            }
+
             int64_t level;
-            if(!parseInt(t[i].substr(colon + 1), level) || (level < 1))
+            if(!parseInt(levelText, level) || (level < 1))
                 return false;
 
             action.mCreatures.push_back(std::pair<std::string, uint32_t>(t[i].substr(0, colon), static_cast<uint32_t>(level)));
+            action.mCreatureNames.push_back(creatureName);
         }
         return true;
     }
@@ -319,6 +543,151 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mType = LevelScriptActionType::timeLimit;
         return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
     }
+    if(type == "terrain")
+    {
+        action.mType = LevelScriptActionType::alterTerrain;
+        if((t.size() != 7) && (t.size() != 8))
+            return false;
+
+        action.mText = t[6];
+        action.mSeatId = -1;
+        return parseInt32(t[2], action.mX) && parseInt32(t[3], action.mY) &&
+            parseInt32(t[4], action.mX2) && parseInt32(t[5], action.mY2) &&
+            ((t.size() == 7) || parseInt32(t[7], action.mSeatId));
+    }
+    if(type == "portal")
+    {
+        action.mType = LevelScriptActionType::portalStatus;
+        if((t.size() != 4) || ((t[3] != "on") && (t[3] != "off")))
+            return false;
+
+        action.mNumber = (t[3] == "on") ? 1 : 0;
+        return parseInt32(t[2], action.mSeatId);
+    }
+    if(type == "available")
+    {
+        action.mType = LevelScriptActionType::creatureAvailable;
+        if((t.size() != 5) || ((t[4] != "0") && (t[4] != "1")))
+            return false;
+
+        action.mText = t[3];
+        action.mNumber = (t[4] == "1") ? 1 : 0;
+        return parseInt32(t[2], action.mSeatId);
+    }
+    if(type == "golfball")
+    {
+        action.mType = LevelScriptActionType::golfBall;
+        return (t.size() == 5) && parseInt32(t[2], action.mSeatId) && parseInt32(t[3], action.mX) &&
+            parseInt32(t[4], action.mY);
+    }
+    if(type == "stonecreate")
+    {
+        action.mType = LevelScriptActionType::stoneCreate;
+        return (t.size() == 4) && parseInt32(t[2], action.mX) && parseInt32(t[3], action.mY);
+    }
+    if(type == "stoneattach")
+    {
+        action.mType = LevelScriptActionType::stoneAttach;
+        if(t.size() != 3)
+            return false;
+
+        action.mText = t[2];
+        return true;
+    }
+    if(type == "keepminion")
+    {
+        action.mType = LevelScriptActionType::keepMinion;
+        return (t.size() == 3) && parseInt32(t[2], action.mSeatId);
+    }
+    if(type == "possess")
+    {
+        action.mType = LevelScriptActionType::possessCreature;
+        if(t.size() != 3)
+            return false;
+
+        action.mText = t[2];
+        return true;
+    }
+    if(type == "remove")
+    {
+        action.mType = LevelScriptActionType::removeCreature;
+        if(t.size() != 3)
+            return false;
+
+        action.mText = t[2];
+        return true;
+    }
+    if(type == "alliance")
+    {
+        action.mType = LevelScriptActionType::alliance;
+        if((t.size() != 5) || ((t[4] != "make") && (t[4] != "break")))
+            return false;
+
+        action.mNumber = (t[4] == "make") ? 1 : 0;
+        return parseInt32(t[2], action.mSeatId) && parseInt32(t[3], action.mTargetSeatId);
+    }
+    if(type == "generate")
+    {
+        action.mType = LevelScriptActionType::generateCreature;
+        if(t.size() != 4)
+            return false;
+
+        std::string::size_type colon = t[3].find(':');
+        int64_t level;
+        if((colon == std::string::npos) || (colon == 0) || !parseInt(t[3].substr(colon + 1), level) || (level < 1))
+            return false;
+
+        action.mCreatures.push_back(std::pair<std::string, uint32_t>(t[3].substr(0, colon), static_cast<uint32_t>(level)));
+        action.mCreatureNames.push_back(std::string());
+        return parseInt32(t[2], action.mSeatId);
+    }
+    if(type == "order")
+    {
+        action.mType = LevelScriptActionType::creatureOrder;
+        if((t.size() < 6) || !parseOrderJob(t[2]) || !parseInt32(t[3], action.mSeatId) ||
+           !parseWaypoints(t[4], action.mWaypoints))
+        {
+            return false;
+        }
+
+        action.mText = t[2];
+        for(std::size_t i = 5; i < t.size(); ++i)
+            action.mCreatureNames.push_back(t[i]);
+
+        return true;
+    }
+    if(type == "speed")
+    {
+        action.mType = LevelScriptActionType::creatureSpeed;
+        if((t.size() < 4) || ((t[2] != "run") && (t[2] != "walk")))
+            return false;
+
+        action.mNumber = (t[2] == "run") ? 1 : 0;
+        for(std::size_t i = 3; i < t.size(); ++i)
+            action.mCreatureNames.push_back(t[i]);
+
+        return true;
+    }
+    if(type == "roomowner")
+    {
+        action.mType = LevelScriptActionType::roomOwner;
+        return (t.size() == 5) && parseInt32(t[2], action.mX) && parseInt32(t[3], action.mY) &&
+            parseInt32(t[4], action.mSeatId);
+    }
+    if(type == "slaplimit")
+    {
+        action.mType = LevelScriptActionType::slapLimit;
+        return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
+    }
+    if(type == "timer")
+    {
+        action.mType = LevelScriptActionType::startTimer;
+        if((t.size() != 3) && (t.size() != 4))
+            return false;
+
+        action.mText = t[2];
+        return (t.size() == 3) || (parseInt(t[3], action.mNumber) && (action.mNumber >= 0));
+    }
     if(type == "discover")
     {
         action.mType = LevelScriptActionType::discoverLevel;
@@ -341,54 +710,135 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::region:
             if(!c.mName.empty())
+            {
                 os << "region\t" << c.mSeatId << "\t" << c.mName;
+                if((c.mCompare != LevelScriptCompare::atLeast) || (c.mNumber != 1) || !c.mName2.empty())
+                {
+                    os << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+                    if(!c.mName2.empty())
+                        os << "\t" << c.mName2;
+                }
+            }
             else
                 os << "region\t" << c.mSeatId << "\t" << c.mX1 << "\t" << c.mY1 << "\t" << c.mX2 << "\t" << c.mY2;
             break;
         case LevelScriptConditionType::creatures:
-            os << "creatures\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "creatures\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            if(!c.mName2.empty())
+                os << "\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::seatDefeated:
+            os << "defeated\t" << c.mSeatId;
+            break;
+        case LevelScriptConditionType::playerSlaps:
+            os << "slaps\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::roomFurniture:
+            os << "furniture\t" << c.mSeatId << "\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::dungeonBreached:
+            os << "breached\t" << c.mSeatId;
+            break;
+        case LevelScriptConditionType::boulderInRegion:
+            os << "boulder\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::possessedInRegion:
+            os << "possessed\t" << c.mSeatId << "\t" << c.mName;
+            if(!c.mName2.empty())
+                os << "\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::tileKinds:
+            os << "slabs\t" << c.mSeatId << "\t" << c.mName << "\t" << c.mName2 << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::tilesTagged:
+            os << "tagged\t" << c.mSeatId << "\t" << c.mName << "\t";
+            if(c.mNumber < 0)
+                os << "all";
+            else
+                os << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::creatureEvent:
+            os << "event\t" << c.mName << "\t" << c.mName2;
+            if((c.mCompare != LevelScriptCompare::atLeast) || (c.mNumber != 1))
+                os << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::ownsCreature:
+            os << "owns\t" << c.mSeatId << "\t" << c.mName;
+            break;
+        case LevelScriptConditionType::spellKnown:
+            os << "spell\t" << c.mSeatId << "\t" << c.mName;
+            break;
+        case LevelScriptConditionType::creatureHealth:
+            os << "health\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::trapsBuilt:
+            os << "built\t" << c.mSeatId << "\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::roomTiles:
+            os << "roomtiles\t" << c.mSeatId << "\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::largestRoom:
+            os << "roomsize\t" << c.mSeatId << "\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::room:
-            os << "room\t" << c.mSeatId << "\t" << c.mName << "\t" << c.mNumber;
+            os << "room\t" << c.mSeatId << "\t" << c.mName << "\t";
+            if(c.mCompare != LevelScriptCompare::atLeast)
+                os << levelScriptCompareToken(c.mCompare) << "\t";
+
+            os << c.mNumber;
             break;
         case LevelScriptConditionType::goal:
             os << "goal\t" << c.mSeatId << "\t" << c.mName;
             break;
         case LevelScriptConditionType::flag:
-            os << "flag\t" << c.mName << "\t" << c.mNumber;
+            if((c.mCompare == LevelScriptCompare::equal) && c.mName2.empty())
+            {
+                os << "flag\t" << c.mName << "\t" << c.mNumber;
+            }
+            else
+            {
+                os << "flag\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t";
+                if(c.mName2.empty())
+                    os << c.mNumber;
+                else
+                    os << "@" << c.mName2;
+            }
+            break;
+        case LevelScriptConditionType::timer:
+            os << "timer\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::gold:
-            os << "gold\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "gold\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::mana:
-            os << "mana\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "mana\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::kills:
-            os << "kills\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "kills\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::goldMined:
-            os << "mined\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "mined\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::happyCreatures:
-            os << "happy\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "happy\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::angryCreatures:
-            os << "angry\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "angry\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::creaturesAtLevel:
-            os << "atlevel\t" << c.mSeatId << "\t" << c.mX1 << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "atlevel\t" << c.mSeatId << "\t" << c.mX1 << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::creaturesLost:
-            os << "lost\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "lost\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::creaturesPickedUp:
-            os << "pickedup\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "pickedup\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::creaturesDropped:
-            os << "dropped\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "dropped\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::creaturesSlapped:
-            os << "slapped\t" << c.mSeatId << "\t" << (c.mAtLeast ? ">=" : "<=") << "\t" << c.mNumber;
+            os << "slapped\t" << c.mSeatId << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::claimed:
             os << "claimed\t" << c.mSeatId << "\t" << c.mName << "\t";
@@ -414,8 +864,14 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::spawn:
             os << "spawn\t" << a.mSeatId << "\t" << a.mX << "\t" << a.mY << "\t" << a.mTargetSeatId;
-            for(const std::pair<std::string, uint32_t>& creature : a.mCreatures)
-                os << "\t" << creature.first << ":" << creature.second;
+            if(!a.mParty.empty())
+                os << "\tparty=" << a.mParty;
+            for(std::size_t i = 0; i < a.mCreatures.size(); ++i)
+            {
+                os << "\t" << a.mCreatures[i].first << ":" << a.mCreatures[i].second;
+                if((i < a.mCreatureNames.size()) && !a.mCreatureNames[i].empty())
+                    os << "@" << a.mCreatureNames[i];
+            }
             break;
         case LevelScriptActionType::gold:
             os << "gold\t" << a.mSeatId << "\t" << a.mNumber;
@@ -441,8 +897,65 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
         case LevelScriptActionType::timeLimit:
             os << "timelimit\t" << a.mNumber;
             break;
+        case LevelScriptActionType::startTimer:
+            os << "timer\t" << a.mText << "\t" << a.mNumber;
+            break;
+        case LevelScriptActionType::alterTerrain:
+            os << "terrain\t" << a.mX << "\t" << a.mY << "\t" << a.mX2 << "\t" << a.mY2 << "\t" << a.mText;
+            if(a.mSeatId >= 0)
+                os << "\t" << a.mSeatId;
+            break;
+        case LevelScriptActionType::portalStatus:
+            os << "portal\t" << a.mSeatId << "\t" << (a.mNumber != 0 ? "on" : "off");
+            break;
+        case LevelScriptActionType::creatureAvailable:
+            os << "available\t" << a.mSeatId << "\t" << a.mText << "\t" << (a.mNumber != 0 ? 1 : 0);
+            break;
+        case LevelScriptActionType::removeCreature:
+            os << "remove\t" << a.mText;
+            break;
+        case LevelScriptActionType::possessCreature:
+            os << "possess\t" << a.mText;
+            break;
+        case LevelScriptActionType::golfBall:
+            os << "golfball\t" << a.mSeatId << "\t" << a.mX << "\t" << a.mY;
+            break;
+        case LevelScriptActionType::stoneCreate:
+            os << "stonecreate\t" << a.mX << "\t" << a.mY;
+            break;
+        case LevelScriptActionType::stoneAttach:
+            os << "stoneattach\t" << a.mText;
+            break;
+        case LevelScriptActionType::keepMinion:
+            os << "keepminion\t" << a.mSeatId;
+            break;
+        case LevelScriptActionType::alliance:
+            os << "alliance\t" << a.mSeatId << "\t" << a.mTargetSeatId << "\t" << (a.mNumber != 0 ? "make" : "break");
+            break;
+        case LevelScriptActionType::generateCreature:
+            os << "generate\t" << a.mSeatId << "\t";
+            if(!a.mCreatures.empty())
+                os << a.mCreatures[0].first << ":" << a.mCreatures[0].second;
+            break;
         case LevelScriptActionType::discoverLevel:
             os << "discover\t" << a.mText;
+            break;
+        case LevelScriptActionType::creatureOrder:
+            os << "order\t" << a.mText << "\t" << a.mSeatId << "\t";
+            writeWaypoints(os, a.mWaypoints);
+            for(const std::string& name : a.mCreatureNames)
+                os << "\t" << name;
+            break;
+        case LevelScriptActionType::creatureSpeed:
+            os << "speed\t" << (a.mNumber != 0 ? "run" : "walk");
+            for(const std::string& name : a.mCreatureNames)
+                os << "\t" << name;
+            break;
+        case LevelScriptActionType::roomOwner:
+            os << "roomowner\t" << a.mX << "\t" << a.mY << "\t" << a.mSeatId;
+            break;
+        case LevelScriptActionType::slapLimit:
+            os << "slaplimit\t" << a.mNumber;
             break;
     }
     os << "\n";
@@ -499,10 +1012,93 @@ bool LevelScript::importFromStream(std::istream& is)
 
             mFlags[t[1]] = value;
         }
+        else if(key == "Timer")
+        {
+            int64_t running;
+            LevelScriptTimer timer;
+            if(inTrigger || (t.size() != 4) || !parseInt(t[2], running) || !parseInt(t[3], timer.mTurns))
+                return false;
+
+            timer.mRunning = (running != 0);
+            mTimers[t[1]] = timer;
+        }
+        else if(key == "FreePossession")
+        {
+            if(inTrigger || (t.size() != 1))
+                return false;
+
+            mFreePossession = true;
+        }
+        else if(key == "PortalOff")
+        {
+            int32_t seatId;
+            if(inTrigger || (t.size() != 2) || !parseInt32(t[1], seatId))
+                return false;
+
+            mPortalOff.insert(seatId);
+        }
+        else if(key == "Block")
+        {
+            int32_t seatId;
+            if(inTrigger || (t.size() != 3) || !parseInt32(t[1], seatId))
+                return false;
+
+            mBlocked.insert(std::make_pair(seatId, t[2]));
+        }
+        else if(key == "Event")
+        {
+            int64_t count;
+            if(inTrigger || (t.size() != 4) || !parseInt(t[3], count))
+                return false;
+
+            mEvents[std::make_pair(t[1], t[2])] = count;
+        }
+        else if(key == "Stone")
+        {
+            if(inTrigger || (t.size() != 2))
+                return false;
+
+            mStoneCarriers.insert(t[1]);
+        }
+        else if(key == "Member")
+        {
+            if(inTrigger || (t.size() != 3))
+                return false;
+
+            mPartyMembers[t[1]] = t[2];
+        }
         else if(key == "TimeLimit")
         {
             if(inTrigger || (t.size() != 2) || !parseInt(t[1], mTimeLimitSeconds))
                 return false;
+        }
+        else if(key == "SlapLimit")
+        {
+            if(inTrigger || (t.size() != 2) || !parseInt(t[1], mSlapLimit))
+                return false;
+        }
+        else if(key == "Slaps")
+        {
+            int32_t seatId;
+            int64_t count;
+            if(inTrigger || (t.size() != 3) || !parseInt32(t[1], seatId) || !parseInt(t[2], count))
+                return false;
+
+            mSlaps[seatId] = count;
+        }
+        else if(key == "Order")
+        {
+            LevelScriptOrder order;
+            int64_t index;
+            if(inTrigger || (t.size() != 6) || !parseOrderJob(t[2]) || !parseInt32(t[3], order.mSeatId) ||
+               !parseInt(t[4], index) || (index < 0) || !parseWaypoints(t[5], order.mWaypoints))
+            {
+                return false;
+            }
+
+            order.mJob = t[2];
+            order.mIndex = static_cast<uint32_t>(index);
+            mOrders[t[1]] = order;
         }
         else if(key == "Region")
         {
@@ -583,8 +1179,42 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
         os << "Flag\t" << flag.first << "\t" << flag.second << "\n";
 
+    for(const std::pair<const std::string, LevelScriptTimer>& timer : mTimers)
+        os << "Timer\t" << timer.first << "\t" << (timer.second.mRunning ? 1 : 0) << "\t" << timer.second.mTurns << "\n";
+
+    if(mFreePossession)
+        os << "FreePossession\n";
+
+    for(int32_t seatId : mPortalOff)
+        os << "PortalOff\t" << seatId << "\n";
+
+    for(const std::pair<int32_t, std::string>& block : mBlocked)
+        os << "Block\t" << block.first << "\t" << block.second << "\n";
+
+    for(const std::pair<const std::pair<std::string, std::string>, int64_t>& event : mEvents)
+        os << "Event\t" << event.first.first << "\t" << event.first.second << "\t" << event.second << "\n";
+
+    for(const std::pair<const std::string, std::string>& member : mPartyMembers)
+        os << "Member\t" << member.first << "\t" << member.second << "\n";
+
     if(mTimeLimitSeconds != TIME_LIMIT_NOT_SET)
         os << "TimeLimit\t" << mTimeLimitSeconds << "\n";
+
+    if(mSlapLimit >= 0)
+        os << "SlapLimit\t" << mSlapLimit << "\n";
+
+    for(const std::pair<const int32_t, int64_t>& slaps : mSlaps)
+        os << "Slaps\t" << slaps.first << "\t" << slaps.second << "\n";
+
+    for(const std::pair<const std::string, LevelScriptOrder>& order : mOrders)
+    {
+        os << "Order\t" << order.first << "\t" << order.second.mJob << "\t" << order.second.mSeatId << "\t"
+           << order.second.mIndex << "\t";
+        writeWaypoints(os, order.second.mWaypoints);
+        os << "\n";
+    }
+    for(const std::string& carrier : mStoneCarriers)
+        os << "Stone\t" << carrier << "\n";
 
     for(const LevelScriptRegion& region : mRegions)
     {
@@ -619,8 +1249,65 @@ void LevelScript::clear()
 {
     mTriggers.clear();
     mFlags.clear();
+    mTimers.clear();
+    mEvents.clear();
+    mPortalOff.clear();
+    mFreePossession = false;
+    mBlocked.clear();
+    mPartyMembers.clear();
+    mWatched.clear();
+    mWatchedValid = false;
     mRegions.clear();
     mTimeLimitSeconds = TIME_LIMIT_NOT_SET;
+    mOrders.clear();
+    mSlaps.clear();
+    mSlapLimit = -1;
+    mStoneCarriers.clear();
+    mStoneCarrierTiles.clear();
+}
+
+bool LevelScript::isBoulderHole(int32_t x, int32_t y) const
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptCondition& cond : trigger.mConditions)
+        {
+            if(cond.mType != LevelScriptConditionType::boulderInRegion)
+                continue;
+
+            const LevelScriptRegion* region = getRegion(cond.mName);
+            if((region != nullptr) && region->contains(x, y))
+                return true;
+        }
+    }
+    return false;
+}
+
+void LevelScript::addStoneCarrier(const std::string& creatureName)
+{
+    mStoneCarriers.insert(creatureName);
+}
+
+void LevelScript::removeStoneCarrier(const std::string& creatureName)
+{
+    mStoneCarriers.erase(creatureName);
+    mStoneCarrierTiles.erase(creatureName);
+}
+
+void LevelScript::setStoneCarrierTile(const std::string& creatureName, int32_t x, int32_t y)
+{
+    mStoneCarrierTiles[creatureName] = std::make_pair(x, y);
+}
+
+bool LevelScript::getStoneCarrierTile(const std::string& creatureName, int32_t& x, int32_t& y) const
+{
+    std::map<std::string, std::pair<int32_t, int32_t> >::const_iterator it = mStoneCarrierTiles.find(creatureName);
+    if(it == mStoneCarrierTiles.end())
+        return false;
+
+    x = it->second.first;
+    y = it->second.second;
+    return true;
 }
 
 void LevelScript::rebaseTimeLimit(int64_t elapsedSeconds)
@@ -711,4 +1398,222 @@ int64_t LevelScript::getFlag(const std::string& name) const
 void LevelScript::setFlag(const std::string& name, int64_t value)
 {
     mFlags[name] = value;
+}
+
+int64_t LevelScript::getTimerTurns(const std::string& name) const
+{
+    std::map<std::string, LevelScriptTimer>::const_iterator it = mTimers.find(name);
+    if(it == mTimers.end())
+        return 0;
+
+    return it->second.mTurns;
+}
+
+void LevelScript::startTimer(const std::string& name, int64_t turns)
+{
+    LevelScriptTimer& timer = mTimers[name];
+    timer.mRunning = true;
+    timer.mTurns = turns;
+}
+
+void LevelScript::advanceTimers()
+{
+    for(std::pair<const std::string, LevelScriptTimer>& timer : mTimers)
+    {
+        if(timer.second.mRunning)
+            ++timer.second.mTurns;
+    }
+}
+
+bool levelScriptCompare(int64_t value, LevelScriptCompare op, int64_t reference)
+{
+    switch(op)
+    {
+        case LevelScriptCompare::atLeast:
+            return value >= reference;
+        case LevelScriptCompare::atMost:
+            return value <= reference;
+        case LevelScriptCompare::equal:
+            return value == reference;
+        case LevelScriptCompare::notEqual:
+            return value != reference;
+        case LevelScriptCompare::greater:
+            return value > reference;
+        case LevelScriptCompare::less:
+            return value < reference;
+    }
+    return false;
+}
+
+const char* levelScriptCompareToken(LevelScriptCompare op)
+{
+    switch(op)
+    {
+        case LevelScriptCompare::atLeast:
+            return ">=";
+        case LevelScriptCompare::atMost:
+            return "<=";
+        case LevelScriptCompare::equal:
+            return "==";
+        case LevelScriptCompare::notEqual:
+            return "!=";
+        case LevelScriptCompare::greater:
+            return ">";
+        case LevelScriptCompare::less:
+            return "<";
+    }
+    return "==";
+}
+
+bool levelScriptParseCompare(const std::string& token, LevelScriptCompare& op)
+{
+    static const LevelScriptCompare all[] = {
+        LevelScriptCompare::atLeast, LevelScriptCompare::atMost, LevelScriptCompare::equal,
+        LevelScriptCompare::notEqual, LevelScriptCompare::greater, LevelScriptCompare::less};
+    for(LevelScriptCompare candidate : all)
+    {
+        if(token == levelScriptCompareToken(candidate))
+        {
+            op = candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
+void LevelScript::recordEvent(const std::string& creatureName, const std::string& eventName)
+{
+    if(!mWatchedValid)
+    {
+        mWatched.clear();
+        for(const LevelScriptTrigger& trigger : mTriggers)
+        {
+            for(const LevelScriptCondition& cond : trigger.mConditions)
+            {
+                if(cond.mType == LevelScriptConditionType::creatureEvent)
+                    mWatched.insert(cond.mName);
+            }
+        }
+        mWatchedValid = true;
+    }
+
+    if(mWatched.empty())
+        return;
+
+    if(mWatched.count(creatureName) > 0)
+        ++mEvents[std::make_pair(creatureName, eventName)];
+
+    std::map<std::string, std::string>::const_iterator member = mPartyMembers.find(creatureName);
+    if((member != mPartyMembers.end()) && (mWatched.count(member->second) > 0))
+        ++mEvents[std::make_pair(member->second, eventName)];
+}
+
+int64_t LevelScript::getEventCount(const std::string& tag, const std::string& eventName) const
+{
+    std::map<std::pair<std::string, std::string>, int64_t>::const_iterator it =
+        mEvents.find(std::make_pair(tag, eventName));
+    if(it == mEvents.end())
+        return 0;
+
+    return it->second;
+}
+
+void LevelScript::addPartyMember(const std::string& party, const std::string& creatureName)
+{
+    mPartyMembers[creatureName] = party;
+}
+
+void LevelScript::setOrder(const std::string& creatureName, const LevelScriptOrder& order)
+{
+    mOrders[creatureName] = order;
+}
+
+void LevelScript::clearOrder(const std::string& creatureName)
+{
+    mOrders.erase(creatureName);
+}
+
+const LevelScriptOrder* LevelScript::getOrder(const std::string& creatureName) const
+{
+    if(mOrders.empty())
+        return nullptr;
+
+    std::map<std::string, LevelScriptOrder>::const_iterator it = mOrders.find(creatureName);
+    if(it == mOrders.end())
+        return nullptr;
+
+    return &it->second;
+}
+
+void LevelScript::advanceOrder(const std::string& creatureName)
+{
+    std::map<std::string, LevelScriptOrder>::iterator it = mOrders.find(creatureName);
+    if(it == mOrders.end())
+        return;
+
+    LevelScriptOrder& order = it->second;
+    if(order.mJob != "goto")
+        return;
+
+    ++order.mIndex;
+    if(order.mIndex >= order.mWaypoints.size())
+    {
+        // The last waypoint is reached, the creature stays there
+        order.mJob = "wait";
+        order.mWaypoints.clear();
+        order.mIndex = 0;
+    }
+}
+
+std::vector<std::string> LevelScript::getPartyMemberNames(const std::string& party) const
+{
+    std::vector<std::string> names;
+    for(const std::pair<const std::string, std::string>& member : mPartyMembers)
+    {
+        if(member.second == party)
+            names.push_back(member.first);
+    }
+    return names;
+}
+
+bool LevelScript::registerSlap(int32_t seatId)
+{
+    int64_t& count = mSlaps[seatId];
+    ++count;
+    return (mSlapLimit < 0) || (count <= mSlapLimit);
+}
+
+int64_t LevelScript::getSlaps(int32_t seatId) const
+{
+    std::map<int32_t, int64_t>::const_iterator it = mSlaps.find(seatId);
+    if(it == mSlaps.end())
+        return 0;
+
+    return it->second;
+}
+
+void LevelScript::setPortalOff(int32_t seatId, bool off)
+{
+    if(off)
+        mPortalOff.insert(seatId);
+    else
+        mPortalOff.erase(seatId);
+}
+
+bool LevelScript::isPortalOff(int32_t seatId) const
+{
+    return mPortalOff.count(seatId) > 0;
+}
+
+void LevelScript::setCreatureBlocked(int32_t seatId, const std::string& className, bool blocked)
+{
+    if(blocked)
+        mBlocked.insert(std::make_pair(seatId, className));
+    else
+        mBlocked.erase(std::make_pair(seatId, className));
+}
+
+bool LevelScript::isCreatureBlocked(int32_t seatId, const std::string& className) const
+{
+    return mBlocked.count(std::make_pair(seatId, className)) > 0;
 }

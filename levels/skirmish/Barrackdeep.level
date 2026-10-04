@@ -6,6 +6,11 @@ Description	Wild beasts of every kind roam the deep caves of Barrackdeep, one ke
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	Barrackdeep
+SandboxTarget	32000
+SandboxBonus	creatures	30	6500	-	Gather thirty fighting creatures
+SandboxBonus	levelAtLeast	10	6500	4	Train ten creatures to level four
+SandboxNext	skirmish/Embervault.level
 [/Info]
 
 [Seats]

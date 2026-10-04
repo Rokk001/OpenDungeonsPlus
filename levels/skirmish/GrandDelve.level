@@ -6,6 +6,11 @@ Description	A vast hall lies at the heart of this delve, wide enough for a templ
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	GrandDelve
+SandboxTarget	44000
+SandboxBonus	roomTiles	36	9000	Temple	Build a temple of 36 tiles
+SandboxBonus	roomTypes	8	9000	-	Own eight different kinds of room
+SandboxNext	skirmish/Gloomkeep.level
 [/Info]
 
 [Seats]

@@ -71,6 +71,8 @@
 #include "game/SkillType.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
+#include "gamemap/LevelScriptRunner.h"
 #include "gamemap/SandboxMode.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
@@ -1660,6 +1662,10 @@ bool Creature::handleIdleAction()
             }
         }
     }
+
+    // A standing order of the level script (go to a point, attack a dungeon, wait, ...) comes first
+    if(LevelScriptRunner::doCreatureOrder(*this))
+        return false;
 
     // The champion has no needs. It charges at the enemies and waits when there is none
     if(mDefinition->isChampion())
@@ -3521,6 +3527,18 @@ void Creature::reportFightParticipants(Creature& killer)
     }
 }
 
+namespace
+{
+//! Counts an event of the creature for the conditions of the level script (server only)
+void recordScriptEvent(const Creature& creature, const std::string& eventName)
+{
+    if(!creature.getIsOnServerMap())
+        return;
+
+    creature.getGameMap()->getLevelScript().recordEvent(creature.getName(), eventName);
+}
+} // namespace
+
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
@@ -3559,6 +3577,9 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         totalDamage *= creatureAttacking->getRelationshipRageFactor(getSeat());
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
+    if(wasAlive && (damageDone > 0.0))
+        recordScriptEvent(*this, "attacked");
+
     if(mHp <= 0)
     {
         // A possessed creature is not knocked out, it dies and the keeper loses mana
@@ -3575,6 +3596,7 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         else if(ko && !getDefinition()->isWorker())
         {
             mHp = 1.0;
+            recordScriptEvent(*this, "incapacitated");
             mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
             dropCarriedEquipment();
@@ -3615,6 +3637,12 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
             reportFightParticipants(*creatureAttacking);
         if(wasAlive && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled())
             reportDeathToFriends(attacker);
+
+        if(wasAlive)
+        {
+            recordScriptEvent(*this, "killed");
+            recordScriptEvent(*this, "incapacitated");
+        }
         fireEntityDead();
     }
 
@@ -3805,6 +3833,8 @@ void Creature::pickup()
     mIsInHand = true;
     if(getSeat() != nullptr)
         ++getSeat()->getStatistics().mCreaturesPickedUp;
+
+    recordScriptEvent(*this, "pickedup");
 
     fireCreatureSound(CreatureSound::Pickup);
 }
@@ -4264,6 +4294,8 @@ void Creature::slap()
 
     if(getSeat() != nullptr)
         ++getSeat()->getStatistics().mCreaturesSlapped;
+
+    recordScriptEvent(*this, "slapped");
 
     CreatureEffectSlap* effect = new CreatureEffectSlap(
         ConfigManager::getSingleton().getSlapEffectDuration(), "");
@@ -5295,6 +5327,7 @@ void Creature::fightCreature(Creature& creature, bool ko, bool notifyPlayerIfHit
 
 void Creature::flee()
 {
+    recordScriptEvent(*this, "afraid");
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
@@ -5306,6 +5339,7 @@ void Creature::fleeFromTile(Tile* fearTile, int32_t nbTurns)
     if(isPossessed())
         endPossession();
 
+    recordScriptEvent(*this, "afraid");
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
@@ -5341,6 +5375,10 @@ void Creature::changeSeat(Seat* newSeat)
 {
     OD_LOG_INF("creature=" + getName() + " changes side from seatId=" + Helper::toString(getSeat()->getId()) + " to seatId=" + Helper::toString(newSeat->getId()));
     OD_ASSERT_TRUE_MSG(getSeat() != newSeat, "creature=" + getName() + ", seatId=" + Helper::toString(newSeat->getId()));
+    // A neutral creature that joins a keeper is claimed
+    if(getSeat()->isRogueSeat() && !newSeat->isRogueSeat())
+        recordScriptEvent(*this, "claimed");
+
     setSeat(newSeat);
     if(getGameMap()->isRelationshipsEnabled())
         getGameMap()->getCreatureRelationships()->removeCreature(getName());

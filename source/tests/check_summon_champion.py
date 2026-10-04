@@ -2,7 +2,7 @@
 
 The spell costs 108,000 mana and the champion then costs 2,250 mana per second after a free period of
 price / drain = 48 seconds. The champion is the only creature that cannot be hurt. The spell is not
-researchable, the complete campaign talisman unlocks it."""
+researchable, the complete campaign Heartstone unlocks it."""
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -70,7 +70,7 @@ manager = read("source/game/SkillManager.cpp")
 assert manager.count("isRewardSkill") >= 2, "random and all-done research skip the reward skill"
 assert "isRewardSkill" in read("source/game/Seat.cpp"), "the server refuses to queue it"
 server = read("source/network/ODServer.cpp")
-assert "isTalismanComplete()" in server and "SkillType::spellSummonChampion" in server, "the talisman unlocks it"
+assert "isHeartstoneComplete()" in server and "SkillType::spellSummonChampion" in server, "the Heartstone unlocks it"
 
 # The buttons exist in both windows, the tree node stays hidden
 spells_tab = ET.parse(repo / "gui/WindowTabSpells.layout").find('.//Window[@name="SummonChampionButton"]')

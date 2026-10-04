@@ -25,6 +25,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "ODApplication.h"
@@ -235,6 +236,10 @@ void RoomPortal::doUpkeep()
     if(getSeat()->isRogueSeat())
         return;
 
+    // A level script can switch the portals of a seat off
+    if(getGameMap()->getLevelScript().isPortalOff(getSeat()->getId()))
+        return;
+
     if(getSeat()->getPlayer() == nullptr)
         return;
 
@@ -278,6 +283,7 @@ void RoomPortal::spawnCreature()
     newCreature->addToGameMap();
     newCreature->createMesh();
     newCreature->setPosition(newCreature->getPosition());
+    ++getSeat()->getStatistics().mCreaturesEntered;
 }
 
 void RoomPortal::setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)

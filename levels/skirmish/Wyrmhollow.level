@@ -5,6 +5,11 @@ Name	Wyrmhollow
 Description	Deep beneath the ash hills a great wyrm has slept on its hoard for an age, ringed by veins of living fire. Grow your dungeon along the old ring road, dig through the gate plugs and decide whether to wake the hollow. Heroes keep a small outpost in the north-east. Build as you like; nothing here ends the game.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
+Sandbox	1
+SandboxRealm	Wyrmhollow
+SandboxTarget	56000
+SandboxBonus	gold	30000	11000	-	Hold 30000 gold at once
+SandboxBonus	levelAtLeast	3	11000	8	Raise three creatures to level eight
 [/Info]
 
 [Seats]

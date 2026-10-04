@@ -54,7 +54,7 @@ assert 'case LevelScriptActionType::timeLimit:' in runner and 'gameMap.setScript
 assert 'type == "timelimit"' in script_cpp and 'key == "TimeLimit"' in script_cpp
 assert '"TimeLimit\\t"' in script_cpp
 check = function(gamemap, 'void GameMap::checkGameDuration()')
-assert 'mLevelScript.getTimeLimitSeconds()' in check
+assert 'mLevelScript->getTimeLimitSeconds()' in check
 assert 'sendTimeLimit(' in check
 assert check.index('sendTimeLimit(') < check.index('notifyTimeUp')
 assert 'Time is up!' in check

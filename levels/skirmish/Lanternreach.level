@@ -6,6 +6,11 @@ Description	A far reach of small lantern caves linked by narrow paths, a canyon 
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	Lanternreach
+SandboxTarget	20000
+SandboxBonus	rooms	8	4000	-	Take over or build eight rooms
+SandboxBonus	rooms	12	4000	-	Own twelve rooms
+SandboxNext	skirmish/Splitstone.level
 [/Info]
 
 [Seats]

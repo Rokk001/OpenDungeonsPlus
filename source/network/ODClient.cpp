@@ -99,7 +99,8 @@ ODClient::ODClient() :
     ODSocketClient(),
     mIsPlayerConfig(false),
     mHasLevelStatistics(false),
-    mTimeLimitSeconds(-1)
+    mTimeLimitSeconds(-1),
+    mHasSandboxRealmComplete(false)
 {
 }
 
@@ -455,6 +456,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             mLevelStatistics = LevelStatistics();
             mTimeLimitSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
+            mSandboxStatus = SandboxStatus();
+            mHasSandboxRealmComplete = false;
 
             OD_ASSERT_TRUE(packetReceived >> nbPlayers);
             for(int i = 0; i < nbPlayers; ++i)
@@ -952,6 +955,42 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 if(!replay)
                     reportRelationshipPost(gameMap, creatureA, creatureB, oldTier, static_cast<RelationshipTier>(tier));
             }
+            break;
+        }
+
+        case ServerNotificationType::seatTeam:
+        {
+            int32_t seatId;
+            int32_t teamId;
+            OD_ASSERT_TRUE(packetReceived >> seatId >> teamId);
+            Seat* seat = gameMap->getSeatById(seatId);
+            if(seat != nullptr)
+                seat->setTeamId(teamId);
+
+            break;
+        }
+
+        case ServerNotificationType::sandboxStatus:
+        {
+            SandboxStatus status;
+            uint32_t nbBonuses;
+            OD_ASSERT_TRUE(packetReceived >> status.mScore >> status.mTarget >> status.mNextRoom
+                >> status.mSecondsLeft >> nbBonuses);
+            for(uint32_t i = 0; i < nbBonuses; ++i)
+            {
+                SandboxBonusStatus bonus;
+                OD_ASSERT_TRUE(packetReceived >> bonus.mText >> bonus.mPoints >> bonus.mAwarded);
+                status.mBonuses.push_back(bonus);
+            }
+            status.mIsReceived = true;
+            mSandboxStatus = status;
+            break;
+        }
+
+        case ServerNotificationType::sandboxRealmComplete:
+        {
+            OD_ASSERT_TRUE(packetReceived >> mSandboxRealmId >> mSandboxNextLevel >> mSandboxRealmText);
+            mHasSandboxRealmComplete = true;
             break;
         }
 

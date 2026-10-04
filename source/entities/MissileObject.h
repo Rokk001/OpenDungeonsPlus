@@ -34,7 +34,8 @@ enum class MissileObjectType
 {
     oneHit,
     boulder,
-    blast
+    blast,
+    stone
 };
 
 ODPacket& operator<<(ODPacket& os, const MissileObjectType& rot);
@@ -73,6 +74,19 @@ public:
     virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget)
     {}
 
+    /*! brief Function called for each tile on the path of the missile. If it returns true, the missile stops
+     * on that tile
+     */
+    virtual bool stopsOnTile(Tile* tile)
+    { return false; }
+
+    //! \brief A missile that stays on the map once it stopped (it is not destroyed) and can be launched again
+    virtual bool staysWhenStopped() const
+    { return false; }
+
+    //! \brief Sends a missile that stopped on its way again
+    void launch(const Ogre::Vector3& direction, double speed);
+
     virtual GameEntityType getObjectType() const override;
 
     virtual double getMoveSpeed() const override
@@ -105,6 +119,13 @@ protected:
 
     void setDirection(const Ogre::Vector3& direction)
     { mDirection = direction; }
+
+    void setSpeed(double speed)
+    { mSpeed = speed; }
+
+    //! \brief The missile stops where it is: it is destroyed once it does not move any more, except if it stays
+    void stopMissile()
+    { mIsMissileAlive = false; }
 
     virtual void exportHeadersToStream(std::ostream& os) const override;
     virtual void exportHeadersToPacket(ODPacket& os) const override;

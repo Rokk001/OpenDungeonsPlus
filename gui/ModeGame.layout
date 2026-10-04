@@ -67,6 +67,32 @@
                     <Property name="VerticalAlignment" value="Top" />
                 </Window>
             </Window>
+            <Window type="OD/StaticText" name="SandboxScoreDisplay" >
+                <Property name="Visible" value="False" />
+                <Property name="Area" value="{{0.5,-330},{0,6},{0.5,-110},{0,42}}" />
+                <Property name="Text" value="" />
+                <Property name="Font" value="MedievalSharp-20" />
+                <Property name="TextColours" value="FFF6CB62" />
+                <Property name="TooltipText" value="Your score and the score of the realm" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            </Window>
+            <Window type="OD/StaticText" name="SandboxRoomDisplay" >
+                <Property name="Visible" value="False" />
+                <Property name="Area" value="{{0.5,110},{0,6},{0.5,400},{0,42}}" />
+                <Property name="Text" value="" />
+                <Property name="Font" value="MedievalSharp-20" />
+                <Property name="TextColours" value="FFF6CB62" />
+                <Property name="TooltipText" value="The next room becomes available after this time" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            </Window>
             <Window type="OD/StaticText" name="TimeLimitDisplay" >
                 <Property name="Visible" value="False" />
                 <Property name="Area" value="{{0.5,-100},{0,6},{0.5,100},{0,42}}" />
@@ -118,6 +144,7 @@
         <LayoutImport type="DefaultWindow" filename="WindowProduction.layout" name="ProductionWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSocial.layout" name="SocialWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSandbox.layout" name="SandboxWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowSandboxRealm.layout" name="SandboxRealmWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowGameOptions.layout" name="GameOptionsMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSettingsNavigation.layout" name="SettingsNavigationImport" />
         <LayoutImport type="DefaultWindow" filename="WindowGameEvent.layout" name="EventWindowImport" />

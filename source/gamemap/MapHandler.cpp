@@ -17,6 +17,8 @@
 
 #include "gamemap/MapHandler.h"
 
+#include "gamemap/LevelScript.h"
+
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
 #include "game/CreatureRelationships.h"
@@ -171,6 +173,8 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             gameMap.setRelationshipsEnabled(nextParam.substr(param.size()) != "Off");
             continue;
         }
+        if(gameMap.getSandboxMode().importInfoLine(nextParam))
+            continue;
     }
 
     levelFile >> nextParam;
@@ -704,7 +708,10 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     if(!gameMap.getTileSetName().empty())
         levelFile << "TileSet\t" << gameMap.getTileSetName() << std::endl;
     if(gameMap.isSandbox())
+    {
         levelFile << "Sandbox\t1" << std::endl;
+        gameMap.getSandboxMode().exportInfo(levelFile);
+    }
 
     // Only saved games record the option, levels written by the editor do not
     bool isGameSave = gameMap.isServerGameMap() && !gameMap.isInEditorMode();
@@ -994,6 +1001,20 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
         if (nextParam == "Sandbox\t1")
         {
             levelInfo.mIsSandbox = true;
+            continue;
+        }
+
+        param = "SandboxRealm\t";
+        if (nextParam.compare(0, param.size(), param) == 0)
+        {
+            levelInfo.mSandboxRealm = nextParam.substr(param.size());
+            continue;
+        }
+
+        param = "SandboxNext\t";
+        if (nextParam.compare(0, param.size(), param) == 0)
+        {
+            levelInfo.mSandboxNext = nextParam.substr(param.size());
             continue;
         }
 

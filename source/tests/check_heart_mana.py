@@ -76,6 +76,7 @@ struct Seat {
  double mManaShortageSeconds=0.0,mWorkerPopCountdown=-1.0;
  unsigned int mNumClaimedTiles=0;int mNumCreaturesWorkers=0;bool mHadLibrary=false;
  Seat(int t,int i):team(t),id(i){}
+ struct CompletedGoal{std::string getName()const{return std::string();}};unsigned int numCompletedGoals()const{return 0;}CompletedGoal* getCompletedGoal(unsigned int){return nullptr;}
  void addSkillPoints(int){}
  SeatStatistics& getStatistics(){return stats;}Player* getPlayer(){return mPlayer;}int getId()const{return id;}
  bool isRogueSeat()const{return id==0;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}
