@@ -19,7 +19,11 @@ name and url as arguments. The push is blocked (exit 1) if
 
 The term list is a local file outside version control. Its repo-relative path is read
 from the git config key protectedcontent.terms. Besides terms (one per line, "#" comments)
-it may contain lines "path: <prefix>" that name blocked path prefixes. If the term list is
+it may contain lines "path: <prefix>" that name blocked path prefixes and lines
+"word: <term>" whose term only matches as a whole word (case-insensitive; no letter, digit
+or underscore directly before or after it). Lines without a prefix match as substrings, as
+before. An older copy of this script that does not know "word:" reads the whole line as a
+substring that practically never occurs, so it blocks nothing extra. If the term list is
 not configured, missing or empty the push is blocked as well (fail safe).
 
 Usage:
@@ -39,6 +43,7 @@ ZERO_SHA = "0" * 40
 
 TERMS_CONFIG_KEY = "protectedcontent.terms"
 PATH_DIRECTIVE = "path:"
+WORD_DIRECTIVE = "word:"
 
 # Blocked path prefixes, filled from the "path:" lines of the term list.
 BLOCKED_PREFIXES = []
@@ -106,6 +111,15 @@ def run_git(args, cwd):
     return proc.returncode, proc.stdout.decode("utf-8", errors="replace")
 
 
+class WordTerm(str):
+    """A term that only matches as a whole word."""
+
+    def __new__(cls, text):
+        instance = str.__new__(cls, text)
+        instance.pattern = re.compile(r"(?<!\w)" + re.escape(text) + r"(?!\w)")
+        return instance
+
+
 def read_terms_file(path):
     terms = []
     with open(path, "r", encoding="utf-8", errors="replace") as handle:
@@ -117,6 +131,11 @@ def read_terms_file(path):
                 prefix = line[len(PATH_DIRECTIVE):].strip()
                 if prefix != "" and prefix not in BLOCKED_PREFIXES:
                     BLOCKED_PREFIXES.append(prefix)
+                continue
+            if line.lower().startswith(WORD_DIRECTIVE):
+                word = line[len(WORD_DIRECTIVE):].strip().lower()
+                if word != "":
+                    terms.append(WordTerm(word))
                 continue
             terms.append(line.lower())
     return terms
@@ -159,7 +178,10 @@ def find_terms(cwd, explicit_path):
 def find_term(text, terms):
     lowered = text.lower()
     for term in terms:
-        if term in lowered:
+        if isinstance(term, WordTerm):
+            if term.pattern.search(lowered):
+                return term
+        elif term in lowered:
             return term
     return None
 
@@ -305,10 +327,24 @@ def check_tree(tip, baseline, terms, cwd, problems):
         if path.startswith(CONVERTER_PREFIX):
             problems.append("tree: %s is under %s" % (path, CONVERTER_PREFIX))
 
-    arguments = ["grep", "-I", "-i", "-n", "-F", "--no-color"]
-    for term in terms:
-        arguments += ["-e", term]
-    code, hits = run_git(arguments + [tip], cwd)
+    # Pre-filter with git grep; find_term below makes the final decision. Whole-word terms
+    # get a word-boundary pattern so that a short word does not select every file.
+    hits = ""
+    plain = [term for term in terms if not isinstance(term, WordTerm)]
+    words = [term for term in terms if isinstance(term, WordTerm)]
+    if len(plain) > 0:
+        arguments = ["grep", "-I", "-i", "-n", "-F", "--no-color"]
+        for term in plain:
+            arguments += ["-e", term]
+        code, found = run_git(arguments + [tip], cwd)
+        hits += found
+    if len(words) > 0:
+        arguments = ["grep", "-I", "-i", "-n", "-E", "--no-color"]
+        for term in words:
+            escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", str(term))
+            arguments += ["-e", "(^|[^[:alnum:]_])" + escaped + "([^[:alnum:]_]|$)"]
+        code, found = run_git(arguments + [tip], cwd)
+        hits += found
     cache = {}
     prefix = tip + ":"
     for hit in split_lines(hits):
@@ -519,6 +555,22 @@ def self_test():
 
     try:
         terms = ["zzterm"]
+        word_terms = [WordTerm("zork"), "zzterm"]
+        for text, expected in (("zork", True), ("Zork!", True), ("a zork b", True),
+                               ("a-zork-b", True), ("zorkmid", False), ("unzork", False),
+                               ("zork_x", False), ("zork2", False), ("", False)):
+            if (find_term(text, word_terms) is not None) != expected:
+                failures.append("word term on %r must %smatch" % (text,
+                                "" if expected else "not "))
+        if find_term("xxzzterm", word_terms) is None:
+            failures.append("substring term must match inside words")
+        word_file = os.path.join(tempfile.gettempdir(), "odp-word-terms-selftest.txt")
+        with open(word_file, "w") as handle:
+            handle.write("word: Zork\nplain\n")
+        read_back = read_terms_file(word_file)
+        os.remove(word_file)
+        if len(read_back) != 2 or not isinstance(read_back[0], WordTerm) or                 isinstance(read_back[1], WordTerm):
+            failures.append("term list parsing of word: lines failed")
         del BLOCKED_PREFIXES[:]
         BLOCKED_PREFIXES.append("blocked-area/")
         one_commit_scenario("clean", {"a.txt": "fine\n"}, "clean change", terms, False)
@@ -526,6 +578,13 @@ def self_test():
                             True, "commit message")
         one_commit_scenario("added line", {"c.txt": "line with zzterm inside\n"}, "add c",
                             terms, True, "added line")
+        word_scenario = [WordTerm("zork")]
+        one_commit_scenario("word inside word", {"w.txt": "zorkmid important\n"},
+                            "unzork", word_scenario, False)
+        one_commit_scenario("whole word line", {"w2.txt": "a zork b\n"}, "add w2",
+                            word_scenario, True, "added line")
+        one_commit_scenario("whole word message", {"w3.txt": "x\n"}, "Zork!",
+                            word_scenario, True, "commit message")
         one_commit_scenario("file name", {"zzterm-file.txt": "x\n"}, "add file", terms,
                             True, "file name")
         one_commit_scenario("binary content ignored", {"bin.dat": b"\x00zzterm\x00"},
