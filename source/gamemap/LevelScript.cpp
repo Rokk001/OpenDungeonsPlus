@@ -377,6 +377,55 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::dungeonBreached;
         return (t.size() == 3) && parseInt32(t[2], cond.mSeatId);
     }
+    if(type == "portal")
+    {
+        cond.mType = LevelScriptConditionType::portalActive;
+        if((t.size() != 4) || ((t[3] != "on") && (t[3] != "off")))
+            return false;
+
+        cond.mNumber = (t[3] == "on") ? 1 : 0;
+        return parseInt32(t[2], cond.mSeatId);
+    }
+    if(type == "alive")
+    {
+        cond.mType = LevelScriptConditionType::creatureAlive;
+        if((t.size() != 3) && (t.size() != 4))
+            return false;
+
+        cond.mName = t[2];
+        cond.mNumber = 1;
+        if(t.size() == 4)
+        {
+            if((t[3] != "0") && (t[3] != "1"))
+                return false;
+
+            cond.mNumber = (t[3] == "1") ? 1 : 0;
+        }
+        return true;
+    }
+    if(type == "reached")
+    {
+        cond.mType = LevelScriptConditionType::creatureReached;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        if(t[3] == "region")
+        {
+            cond.mName2 = t[4];
+            return !cond.mName2.empty();
+        }
+        return (t[3] == "heart") && parseInt32(t[4], cond.mSeatId);
+    }
+    if(type == "stone")
+    {
+        cond.mType = LevelScriptConditionType::stoneInRegion;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
+    }
     if(type == "defeated")
     {
         cond.mType = LevelScriptConditionType::seatDefeated;
@@ -738,6 +787,23 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::dungeonBreached:
             os << "breached\t" << c.mSeatId;
+            break;
+        case LevelScriptConditionType::portalActive:
+            os << "portal\t" << c.mSeatId << "\t" << (c.mNumber != 0 ? "on" : "off");
+            break;
+        case LevelScriptConditionType::creatureAlive:
+            os << "alive\t" << c.mName;
+            if(c.mNumber == 0)
+                os << "\t0";
+            break;
+        case LevelScriptConditionType::creatureReached:
+            if(c.mName2.empty())
+                os << "reached\t" << c.mName << "\theart\t" << c.mSeatId;
+            else
+                os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::stoneInRegion:
+            os << "stone\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::boulderInRegion:
             os << "boulder\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
