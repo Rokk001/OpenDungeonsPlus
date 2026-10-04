@@ -77,7 +77,7 @@ spellInferno
 [/Seat]
 [Seat]
 seatId	2
-teamId	2
+teamId	2/3/4
 player	AI
 faction	Keeper
 startingX	14
@@ -106,7 +106,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	3
-teamId	2
+teamId	3/2/4
 player	AI
 faction	Keeper
 startingX	72
@@ -135,7 +135,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	4
-teamId	4
+teamId	4/2/3
 player	AI
 faction	Keeper
 startingX	18
@@ -4726,5 +4726,52 @@ Mode	once
 Cond	goal	1	KillAllEnemies
 Action	message	1	The last rival lies dead beside his silver. Silverdeep answers to you.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	pactSworn
+Mode	once
+Cond	time	4
+Action	alliance	2	3	make
+[/Trigger]
+[Trigger]
+Name	spanA
+Mode	once
+Cond	region	1	EastBank
+Action	message	1	The miners of the first lake have laid a span across it for you.
+Action	terrain	22	29	42	29	bridge	1
+[/Trigger]
+[Trigger]
+Name	spanB
+Mode	once
+Cond	region	1	Midway
+Action	message	1	A span runs south across the middle lake, laid by the warden's old crew.
+Action	terrain	57	49	57	67	bridge	1
+[/Trigger]
+[Trigger]
+Name	spanC
+Mode	once
+Cond	region	1	SouthBank
+Action	message	1	The last lake lies ahead, and a span has been thrown across it for whoever dares.
+Action	terrain	20	86	40	86	bridge	1
+[/Trigger]
+[Trigger]
+Name	pactBreaks
+Mode	once
+Cond	kills	1	>=	45
+Cond	flag	pactDone	0
+Action	message	1	The pact of the eastern and western keepers has broken over the spoils. The eastern keeper turns on the western keeper and offers his hand to the southern keeper.
+Action	alliance	2	3	break
+Action	alliance	3	4	make
+Action	setflag	pactDone	1
+[/Trigger]
+[Trigger]
+Name	pactBreaksLate
+Mode	once
+Cond	time	2600
+Cond	flag	pactDone	0
+Action	message	1	The pact of the eastern and western keepers has broken over the spoils. The eastern keeper turns on the western keeper and offers his hand to the southern keeper.
+Action	alliance	2	3	break
+Action	alliance	3	4	make
+Action	setflag	pactDone	1
 [/Trigger]
 [/Triggers]

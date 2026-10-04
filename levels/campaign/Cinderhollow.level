@@ -5191,4 +5191,25 @@ Cond	goal	1	KillAllEnemies
 Action	message	1	The rival keeper is dead and his heart is cold. Cinderhollow is quiet.
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	dawnClock
+Mode	once
+Cond	time	3
+Action	timer	dawnClock
+[/Trigger]
+[Trigger]
+Name	lavaBridge
+Mode	once
+Cond	time	1800
+Action	message	1	The lava lake has sunk with the dawn and a stone causeway rises across it to the crater.
+Action	terrain	55	31	55	34	bridge	1
+[/Trigger]
+[Trigger]
+Name	rivalHeartFalls
+Mode	once
+Cond	time	1800
+Cond	defeated	2
+Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
+Action	win	1
+[/Trigger]
 [/Triggers]
