@@ -2831,6 +2831,7 @@ Region	Terrace4	22	12	62	18
 Region	Hold	24	2	48	11
 Region	Basin	52	2	68	10
 Region	SealedCairn	2	16	12	27
+Region	CairnHall	3	18	8	24
 Region	Caldera	44	56	62	66
 Region	LavaCross	28	36	42	55
 [Trigger]
@@ -2890,10 +2891,45 @@ Action	spawn	3	36	14	1	Knight:3	Dwarf2:3	Monk:3	Elf:3
 Action	objective	1	Break into the hold and strike down the warden.
 [/Trigger]
 [Trigger]
+Name	cairnStone
+Mode	once
+Cond	time	3
+Action	stonecreate	5	21
+[/Trigger]
+[Trigger]
 Name	sealedFound
 Mode	once
-Cond	region	1	SealedCairn
-Action	message	1	A cairn at the end of the third terrace has been bricked in. A pale stone is set in its heart, and a hidden hall has opened.
+Cond	region	1	CairnHall
+Action	message	1	A cairn at the end of the third terrace has been bricked in, and a hidden hall lies behind it. A pale stone rests on a plinth, and a bound cairn spirit rises beside it and takes the stone up. Carry it home to your own heart.
+Action	spawn	1	5	22	1	Spider:3@CairnBearer
+Action	stoneattach	CairnBearer
+Action	setflag	bearerOut	1
+Action	objective	1	Bring the cairn spirit with the pale stone to your dungeon heart.
+[/Trigger]
+[Trigger]
+Name	stoneHome
+Mode	once
+Cond	reached	CairnBearer	heart	1
+Action	message	1	The pale stone has reached your heart and a hidden land has opened.
+Action	setflag	stoneDone	1
+Action	discover	campaign/SkittleCavern.level
+[/Trigger]
+[Trigger]
+Name	bearerLost
+Mode	once
+Cond	flag	bearerOut	1
+Cond	flag	stoneDone	0
+Cond	alive	CairnBearer	0
+Action	message	1	The cairn spirit has fallen. Another one rises from the plinth to carry the stone.
+Action	spawn	1	5	22	1	Spider:3@CairnBearer2
+Action	stoneattach	CairnBearer2
+[/Trigger]
+[Trigger]
+Name	stoneHome2
+Mode	once
+Cond	reached	CairnBearer2	heart	1
+Action	message	1	The pale stone has reached your heart and a hidden land has opened.
+Action	setflag	stoneDone	1
 Action	discover	campaign/SkittleCavern.level
 [/Trigger]
 [Trigger]

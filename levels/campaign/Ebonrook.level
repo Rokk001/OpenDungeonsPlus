@@ -241,6 +241,9 @@ ProtectDungeonTemple	NULL
 1	33	2	100
 1	34	2	100
 1	35	2	100
+1	84	3	100
+1	85	3	100
+1	86	3	100
 1	89	2	100
 1	90	2	100
 1	91	2	100
@@ -257,6 +260,9 @@ ProtectDungeonTemple	NULL
 2	56	4	0
 2	57	4	0
 2	58	4	0
+2	84	3	100
+2	85	3	100
+2	86	3	100
 2	89	2	100
 2	90	2	100
 2	94	2	100
@@ -277,6 +283,9 @@ ProtectDungeonTemple	NULL
 3	60	2	100
 3	61	2	100
 3	62	2	100
+3	84	3	100
+3	85	3	100
+3	86	3	100
 3	89	2	100
 3	90	2	100
 3	106	2	100
@@ -293,6 +302,9 @@ ProtectDungeonTemple	NULL
 4	58	4	0
 4	60	6	100
 4	61	6	100
+4	84	3	100
+4	85	3	100
+4	86	3	100
 4	108	2	100
 4	109	3	100
 5	0	3	100
@@ -308,6 +320,9 @@ ProtectDungeonTemple	NULL
 5	58	4	0
 5	59	2	100
 5	60	6	100
+5	84	3	100
+5	85	3	100
+5	86	3	100
 5	109	3	100
 6	0	3	100
 6	5	2	100
@@ -323,6 +338,9 @@ ProtectDungeonTemple	NULL
 6	58	4	0
 6	59	2	100
 6	60	2	100
+6	84	3	100
+6	85	3	100
+6	86	3	100
 6	109	3	100
 7	0	3	100
 7	42	1	0
@@ -335,6 +353,9 @@ ProtectDungeonTemple	NULL
 7	56	4	0
 7	57	4	0
 7	58	4	0
+7	84	3	100
+7	85	3	100
+7	86	3	100
 7	109	3	100
 8	0	3	100
 8	42	1	0
@@ -353,6 +374,9 @@ ProtectDungeonTemple	NULL
 8	73	2	100
 8	74	2	100
 8	76	2	100
+8	84	3	100
+8	85	3	100
+8	86	3	100
 8	109	3	100
 9	0	3	100
 9	42	1	0
@@ -368,6 +392,9 @@ ProtectDungeonTemple	NULL
 9	58	4	0
 9	70	2	100
 9	71	2	100
+9	84	3	100
+9	85	3	100
+9	86	3	100
 9	109	3	100
 10	0	3	100
 10	41	1	0
@@ -383,6 +410,9 @@ ProtectDungeonTemple	NULL
 10	57	4	0
 10	58	4	0
 10	76	2	100
+10	84	3	100
+10	85	3	100
+10	86	3	100
 10	109	3	100
 11	0	3	100
 11	41	1	0
@@ -397,6 +427,9 @@ ProtectDungeonTemple	NULL
 11	56	4	0
 11	57	4	0
 11	58	4	0
+11	84	3	100
+11	85	3	100
+11	86	3	100
 11	109	3	100
 12	0	3	100
 12	41	1	0
@@ -412,6 +445,9 @@ ProtectDungeonTemple	NULL
 12	56	4	0
 12	57	4	0
 12	58	4	0
+12	84	3	100
+12	85	3	100
+12	86	3	100
 12	109	3	100
 13	0	3	100
 13	40	1	0
@@ -428,6 +464,9 @@ ProtectDungeonTemple	NULL
 13	56	4	0
 13	57	4	0
 13	58	4	0
+13	84	3	100
+13	85	3	100
+13	86	3	100
 13	109	3	100
 14	0	3	100
 14	40	1	0
@@ -445,6 +484,9 @@ ProtectDungeonTemple	NULL
 14	56	4	0
 14	57	4	0
 14	58	4	0
+14	84	3	100
+14	85	3	100
+14	86	3	100
 14	109	3	100
 15	0	3	100
 15	25	1	0
@@ -467,6 +509,9 @@ ProtectDungeonTemple	NULL
 15	69	1	0
 15	70	1	0
 15	71	1	0
+15	84	3	100
+15	85	3	100
+15	86	3	100
 15	109	3	100
 16	0	3	100
 16	23	1	0
@@ -496,6 +541,9 @@ ProtectDungeonTemple	NULL
 16	71	1	0
 16	72	1	0
 16	73	1	0
+16	84	3	100
+16	85	3	100
+16	86	3	100
 16	109	3	100
 17	0	3	100
 17	21	1	0
@@ -530,6 +578,9 @@ ProtectDungeonTemple	NULL
 17	72	1	0
 17	73	1	0
 17	74	1	0
+17	84	3	100
+17	85	3	100
+17	86	3	100
 17	109	3	100
 18	0	3	100
 18	20	1	0
@@ -567,6 +618,9 @@ ProtectDungeonTemple	NULL
 18	73	1	0
 18	74	1	0
 18	75	1	0
+18	84	3	100
+18	85	3	100
+18	86	3	100
 18	109	3	100
 19	0	3	100
 19	19	1	0
@@ -605,6 +659,9 @@ ProtectDungeonTemple	NULL
 19	73	1	0
 19	74	1	0
 19	75	1	0
+19	84	3	100
+19	85	3	100
+19	86	3	100
 19	97	1	0
 19	98	1	0
 19	99	1	0
@@ -650,6 +707,9 @@ ProtectDungeonTemple	NULL
 20	74	1	0
 20	75	1	0
 20	76	1	0
+20	84	3	100
+20	85	3	100
+20	86	3	100
 20	96	1	0
 20	97	1	0
 20	98	1	0
@@ -692,6 +752,9 @@ ProtectDungeonTemple	NULL
 21	74	1	0
 21	75	1	0
 21	76	1	0
+21	84	3	100
+21	85	3	100
+21	86	3	100
 21	95	1	0
 21	96	1	0
 21	97	1	0
@@ -736,6 +799,9 @@ ProtectDungeonTemple	NULL
 22	75	1	0
 22	76	1	0
 22	77	1	0
+22	84	3	100
+22	85	3	100
+22	86	3	100
 22	94	1	0
 22	95	1	0
 22	96	1	0
@@ -785,6 +851,9 @@ ProtectDungeonTemple	NULL
 23	75	1	0
 23	76	1	0
 23	77	1	0
+23	84	3	100
+23	85	3	100
+23	86	3	100
 23	94	1	0
 23	95	1	0
 23	96	1	0
@@ -841,6 +910,9 @@ ProtectDungeonTemple	NULL
 24	81	1	0
 24	82	1	0
 24	83	1	0
+24	84	3	100
+24	85	3	100
+24	86	3	100
 24	93	1	0
 24	94	1	0
 24	95	1	0
@@ -899,9 +971,9 @@ ProtectDungeonTemple	NULL
 25	81	1	0
 25	82	1	0
 25	83	1	0
-25	84	1	0
-25	85	1	0
-25	86	1	0
+25	84	3	100
+25	85	3	100
+25	86	3	100
 25	87	1	0
 25	88	1	0
 25	89	1	0
@@ -957,6 +1029,9 @@ ProtectDungeonTemple	NULL
 26	76	1	0
 26	77	1	0
 26	80	1	0
+26	84	3	100
+26	85	3	100
+26	86	3	100
 26	88	1	0
 26	89	1	0
 26	90	1	0
@@ -1012,6 +1087,9 @@ ProtectDungeonTemple	NULL
 27	75	1	0
 27	76	1	0
 27	77	1	0
+27	84	3	100
+27	85	3	100
+27	86	3	100
 27	89	1	0
 27	90	1	0
 27	92	1	0
@@ -1064,6 +1142,9 @@ ProtectDungeonTemple	NULL
 28	74	1	0
 28	75	1	0
 28	76	1	0
+28	84	3	100
+28	85	3	100
+28	86	3	100
 28	92	1	0
 28	93	1	0
 28	94	1	0
@@ -1111,6 +1192,9 @@ ProtectDungeonTemple	NULL
 29	73	1	0
 29	74	1	0
 29	75	1	0
+29	84	3	100
+29	85	3	100
+29	86	3	100
 29	92	1	0
 29	93	1	0
 29	94	1	0
@@ -1158,6 +1242,9 @@ ProtectDungeonTemple	NULL
 30	73	1	0
 30	74	1	0
 30	76	1	0
+30	84	3	100
+30	85	3	100
+30	86	3	100
 30	92	1	0
 30	93	1	0
 30	94	1	0
@@ -1202,6 +1289,9 @@ ProtectDungeonTemple	NULL
 31	71	1	0
 31	72	1	0
 31	73	1	0
+31	84	3	100
+31	85	3	100
+31	86	3	100
 31	92	1	0
 31	93	1	0
 31	94	1	0
@@ -1244,6 +1334,9 @@ ProtectDungeonTemple	NULL
 32	72	1	0
 32	73	1	0
 32	74	1	0
+32	84	3	100
+32	85	3	100
+32	86	3	100
 32	92	1	0
 32	93	1	0
 32	94	1	0
@@ -1279,6 +1372,9 @@ ProtectDungeonTemple	NULL
 33	68	1	0
 33	72	1	0
 33	73	1	0
+33	84	3	100
+33	85	3	100
+33	86	3	100
 33	92	1	0
 33	93	1	0
 33	94	1	0
@@ -1311,6 +1407,9 @@ ProtectDungeonTemple	NULL
 34	58	4	0
 34	72	1	0
 34	73	1	0
+34	84	3	100
+34	85	3	100
+34	86	3	100
 34	92	1	0
 34	93	1	0
 34	94	1	0
@@ -1342,6 +1441,9 @@ ProtectDungeonTemple	NULL
 35	72	1	0
 35	73	1	0
 35	74	1	0
+35	84	3	100
+35	85	3	100
+35	86	3	100
 35	93	1	0
 35	94	1	0
 35	95	1	0
@@ -1374,6 +1476,9 @@ ProtectDungeonTemple	NULL
 36	73	1	0
 36	74	1	0
 36	75	1	0
+36	84	3	100
+36	85	3	100
+36	86	3	100
 36	93	1	0
 36	94	1	0
 36	95	1	0
@@ -1416,6 +1521,9 @@ ProtectDungeonTemple	NULL
 37	67	1	0
 37	73	1	0
 37	74	1	0
+37	84	3	100
+37	85	3	100
+37	86	3	100
 37	93	1	0
 37	94	1	0
 37	95	1	0
@@ -1461,6 +1569,9 @@ ProtectDungeonTemple	NULL
 38	73	1	0
 38	74	1	0
 38	75	1	0
+38	84	3	100
+38	85	3	100
+38	86	3	100
 38	94	1	0
 38	95	1	0
 38	96	1	0
@@ -1504,6 +1615,9 @@ ProtectDungeonTemple	NULL
 39	68	1	0
 39	74	1	0
 39	75	1	0
+39	84	3	100
+39	85	3	100
+39	86	3	100
 39	95	1	0
 39	96	1	0
 39	97	1	0
@@ -1547,6 +1661,9 @@ ProtectDungeonTemple	NULL
 40	74	1	0
 40	75	1	0
 40	76	1	0
+40	84	3	100
+40	85	3	100
+40	86	3	100
 40	94	1	0
 40	97	1	0
 40	98	1	0
@@ -1574,6 +1691,9 @@ ProtectDungeonTemple	NULL
 41	69	1	0
 41	74	1	0
 41	75	1	0
+41	84	3	100
+41	85	3	100
+41	86	3	100
 41	97	1	0
 41	98	1	0
 41	109	3	100
@@ -1599,6 +1719,9 @@ ProtectDungeonTemple	NULL
 42	74	1	0
 42	75	1	0
 42	76	1	0
+42	84	3	100
+42	85	3	100
+42	86	3	100
 42	97	1	0
 42	98	1	0
 42	99	1	0
@@ -1624,7 +1747,9 @@ ProtectDungeonTemple	NULL
 43	70	1	0
 43	75	1	0
 43	76	1	0
-43	86	2	100
+43	84	3	100
+43	85	3	100
+43	86	3	100
 43	97	1	0
 43	98	1	0
 43	109	3	100
@@ -1654,8 +1779,31 @@ ProtectDungeonTemple	NULL
 44	75	1	0
 44	76	1	0
 44	77	1	0
-44	84	2	100
-44	106	2	100
+44	84	3	100
+44	85	3	100
+44	86	3	100
+44	87	3	100
+44	88	3	100
+44	89	3	100
+44	90	3	100
+44	91	3	100
+44	92	3	100
+44	93	3	100
+44	94	3	100
+44	95	3	100
+44	96	3	100
+44	97	3	100
+44	98	3	100
+44	99	3	100
+44	100	3	100
+44	101	3	100
+44	102	3	100
+44	103	3	100
+44	104	3	100
+44	105	3	100
+44	106	3	100
+44	107	3	100
+44	108	3	100
 44	109	3	100
 45	0	3	100
 45	17	1	0
@@ -1680,10 +1828,31 @@ ProtectDungeonTemple	NULL
 45	71	1	0
 45	75	1	0
 45	76	1	0
-45	84	2	100
-45	86	2	100
-45	106	2	100
-45	108	2	100
+45	84	3	100
+45	85	3	100
+45	86	3	100
+45	87	3	100
+45	88	3	100
+45	89	3	100
+45	90	3	100
+45	91	3	100
+45	92	3	100
+45	93	3	100
+45	94	3	100
+45	95	3	100
+45	96	3	100
+45	97	3	100
+45	98	3	100
+45	99	3	100
+45	100	3	100
+45	101	3	100
+45	102	3	100
+45	103	3	100
+45	104	3	100
+45	105	3	100
+45	106	3	100
+45	107	3	100
+45	108	3	100
 45	109	3	100
 46	0	3	100
 46	16	1	0
@@ -1709,11 +1878,31 @@ ProtectDungeonTemple	NULL
 46	72	1	0
 46	75	1	0
 46	76	1	0
-46	86	2	100
-46	92	1	0
-46	106	2	100
-46	107	2	100
-46	108	2	100
+46	84	3	100
+46	85	3	100
+46	86	3	100
+46	87	3	100
+46	88	3	100
+46	89	3	100
+46	90	3	100
+46	91	3	100
+46	92	3	100
+46	93	3	100
+46	94	3	100
+46	95	3	100
+46	96	3	100
+46	97	3	100
+46	98	3	100
+46	99	3	100
+46	100	3	100
+46	101	3	100
+46	102	3	100
+46	103	3	100
+46	104	3	100
+46	105	3	100
+46	106	3	100
+46	107	3	100
+46	108	3	100
 46	109	3	100
 47	0	3	100
 47	17	1	0
@@ -5223,7 +5412,7 @@ Action	gold	1	1500
 Name	crossed
 Mode	once
 Cond	region	1	SouthHub
-Action	message	1	The river is behind you. The south has three more glades and the way to the nest is stopped with earth in two places.
+Action	message	1	The river is behind you. The south has three more glades and the way to the nest is sealed with stone in two places.
 Action	reveal	1	SouthWest
 Action	reveal	1	SouthEast
 Action	reveal	1	Hollow
@@ -5233,7 +5422,7 @@ Action	spawn	3	63	79	1	Knight:4	Elf:3	Monk:3	Dwarf2:3
 Name	hollowSeen
 Mode	once
 Cond	region	1	Hollow
-Action	message	1	The southern hollow. An arena stands in the open. Dig west along the south road to the roots.
+Action	message	1	The southern hollow. An arena stands in the open. The south road west to the roots is sealed and opens once the wood has bled.
 Action	setflag	hollowHeld	1
 Action	reveal	1	Roots
 Action	spawn	3	63	91	1	Knight:4	Elf:4	Monk:3	Adventurer:3
@@ -5242,7 +5431,7 @@ Action	spawn	3	63	91	1	Knight:4	Elf:4	Monk:3	Adventurer:3
 Name	swSeen
 Mode	once
 Cond	region	1	SouthWest
-Action	message	1	The south-west glade, with a library of the rooks. The north road to the nest is stopped with earth.
+Action	message	1	The south-west glade, with a library of the rooks. The north road to the nest is sealed and opens once the wood has bled.
 Action	setflag	swHeld	1
 Action	reveal	1	Roots
 Action	spawn	3	23	71	1	Knight:4	Monk:3	Elf:3	Dwarf2:3
@@ -5252,7 +5441,7 @@ Name	rootsSeen
 Mode	once
 Cond	region	1	Roots
 Action	message	1	The roots of the black wood. Sabine Rook is here and she is awake.
-Action	objective	1	Dig through the earth and strike down Sabine Rook.
+Action	objective	1	Strike down Sabine Rook.
 Action	spawn	2	38	98	1	Knight:5	Elf:4	Monk:4	Dwarf2:4
 [/Trigger]
 [Trigger]
@@ -5423,5 +5612,49 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Sabine Rook is dead and the rooks fly south. Ebonrook is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	southRoadOpens
+Mode	once
+Cond	flag	hollowHeld	1
+Cond	kills	1	>=	20
+Action	message	1	The seal of the south road gives way. The road west to the roots is open.
+Action	terrain	44	97	46	98	path
+[/Trigger]
+[Trigger]
+Name	northRoadOpens
+Mode	once
+Cond	flag	swHeld	1
+Cond	kills	1	>=	20
+Action	message	1	The seal of the north road gives way. The road down to the roots is open.
+Action	terrain	25	84	25	86	path
+[/Trigger]
+[Trigger]
+Name	roadsLate
+Mode	once
+Cond	time	2400
+Action	message	1	The rooks have called their masons home and both seals of the roots fall away.
+Action	terrain	44	97	46	98	path
+Action	terrain	25	84	25	86	path
+[/Trigger]
+[Trigger]
+Name	wardenKey
+Mode	once
+Cond	time	4
+Action	stoneattach	SabineRook
+[/Trigger]
+[Trigger]
+Name	wardenHurt
+Mode	once
+Cond	health	SabineRook	<=	40
+Action	message	1	Sabine Rook is bleeding and calls every rook of the roots to her side.
+Action	spawn	2	38	98	1	Knight:5	Elf:4	Monk:4	Dwarf2:4
+[/Trigger]
+[Trigger]
+Name	wardenKeyDropped
+Mode	once
+Cond	time	5
+Cond	alive	SabineRook	0
+Action	message	1	The warden is dead and the key to the rook hoard lies where she fell.
 [/Trigger]
 [/Triggers]

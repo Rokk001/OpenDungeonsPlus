@@ -77,7 +77,7 @@ trapFireburst
 [/Seat]
 [Seat]
 seatId	2
-teamId	2
+teamId	2/3
 player	AI
 faction	Keeper
 startingX	76
@@ -106,7 +106,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	3
-teamId	3
+teamId	3/2
 player	AI
 faction	Keeper
 startingX	76
@@ -4760,5 +4760,19 @@ Cond	goal	1	KillAllEnemies
 Action	message	1	Both keepers lie dead and the great roads are quiet. Varn has lost his crossing.
 Action	discover	campaign/SwarmNight.level
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	crossingPact
+Mode	once
+Cond	region	1	EastRoad
+Action	message	1	The two rival keepers have sworn to hold the east road together until you are broken.
+Action	alliance	2	3	make
+[/Trigger]
+[Trigger]
+Name	crossingPactBreaks
+Mode	once
+Cond	time	3200
+Action	message	1	The pact of the rival keepers has cracked. Each wants the crossing for himself.
+Action	alliance	2	3	break
 [/Trigger]
 [/Triggers]
