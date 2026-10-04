@@ -429,6 +429,17 @@ private:
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
 
+    //! A worker pouring its gold out on top of a pile (procedural climb and tilt of the render node)
+    struct TreasuryPour
+    {
+        Creature* mCreature;
+        Ogre::Real mElapsed;
+        int mLevel;
+        float mRise;
+        Ogre::Quaternion mTilt;
+    };
+    std::vector<TreasuryPour> mTreasuryPours;
+
     struct CreatureDropAnimation
     {
         Creature* mCreature;
@@ -496,6 +507,10 @@ private:
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
     bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
+    void startTreasuryPour(Tile* tile, int level);
+    void updateTreasuryPours(Ogre::Real timeSinceLastFrame);
+    void cancelTreasuryPour(Creature* creature);
+    float getTreasuryPourRise(Creature* creature) const;
     void clearTreasuryEffects();
     void cancelCreatureStep(Creature* creature = nullptr);
     void clearRoomConstructionEffects();

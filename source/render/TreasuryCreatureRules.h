@@ -20,6 +20,7 @@
 
 #include "render/TreasuryGoldMesh.h"
 
+#include <cmath>
 #include <map>
 
 //! \brief Client side rules for creatures walking on the treasury gold: how far they are lifted,
@@ -35,6 +36,48 @@ static const float stepDistance = 0.55f;
 static const float splashLifetime = 1.4f;
 //! Creatures higher above the floor than this (flying ones) are not lifted
 static const float groundHeightLimit = 0.3f;
+
+//! Seconds a worker spends climbing the pile, pouring out the gold and coming back down
+static const float pourDuration = 1.4f;
+
+inline float smoothStep(float edgeStart, float edgeEnd, float t)
+{
+    if(t <= edgeStart)
+        return 0.0f;
+    if(t >= edgeEnd)
+        return 1.0f;
+    const float x = (t - edgeStart) / (edgeEnd - edgeStart);
+    return x * x * (3.0f - 2.0f * x);
+}
+
+//! Extra height of a pouring worker above the gold surface of its tile at time t (seconds): up to the
+//! top of the heap, held while pouring, then down again. Higher piles are climbed higher.
+inline float pourRise(float t, int level)
+{
+    const float amplitude = 0.035f * static_cast<float>(level < 0 ? 0 : level);
+    const float progress = t / pourDuration;
+    return amplitude * (smoothStep(0.0f, 0.3f, progress) - smoothStep(0.85f, 1.0f, progress));
+}
+
+//! Forward lean (radians, negative leans forward) of a pouring worker: tips over the heap, rocks a little
+//! while the coins run out, then straightens up.
+inline float pourLean(float t)
+{
+    const float progress = t / pourDuration;
+    const float tip = smoothStep(0.3f, 0.5f, progress) - smoothStep(0.85f, 1.0f, progress);
+    const float rock = std::sin(progress * 6.2831853f * 3.0f) * 0.07f * smoothStep(0.45f, 0.55f, progress)
+        * (1.0f - smoothStep(0.8f, 0.9f, progress));
+    return -0.5f * tip + rock;
+}
+
+//! Sideways sway (radians) of the climb: the worker wobbles while it scrambles up and down the heap
+inline float pourSway(float t)
+{
+    const float progress = t / pourDuration;
+    const float climbing = smoothStep(0.0f, 0.1f, progress) * (1.0f - smoothStep(0.3f, 0.4f, progress))
+        + smoothStep(0.85f, 0.9f, progress) * (1.0f - smoothStep(0.97f, 1.0f, progress));
+    return std::sin(progress * 6.2831853f * 6.0f) * 0.12f * climbing;
+}
 
 inline bool isDeep(int level)
 {

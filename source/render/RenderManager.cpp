@@ -1842,6 +1842,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         creature->setAnimationState(EntityAnimation::idle_anim, true);
     }
     updateTreasuryEffects(timeSinceLastFrame);
+    updateTreasuryPours(timeSinceLastFrame);
     rrUpdateHeldCreature();
 }
 
@@ -4449,7 +4450,8 @@ void RenderManager::updateCreatureStep(Creature* creature)
     int goldLevel = 0;
     const float goldHeight = TreasuryCreatureRules::liftOnGold(
         TreasuryGoldMesh::surfaceHeight(position.x, position.y, goldLevel), position.z);
-    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f)
+    const float pourRise = getTreasuryPourRise(creature);
+    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f && pourRise <= 0.0f)
         return;
     const Ogre::Vector2 point(position.x, position.y);
     const Ogre::Vector2 direction(creature->getWalkDirection().x, creature->getWalkDirection().y);
@@ -4478,7 +4480,7 @@ void RenderManager::updateCreatureStep(Creature* creature)
             break;
         }
     }
-    lift += goldHeight;
+    lift += goldHeight + pourRise;
     node->setPosition(position + Ogre::Vector3(0, 0, lift));
     if(creature->isMoving())
         treasuryCreatureStep(creature, position, goldHeight, goldLevel);
@@ -4546,6 +4548,106 @@ void RenderManager::rrTreasuryDeposit(GameMap* gameMap, int x, int y)
         static_cast<const void*>(tile->getCoveringRoom()) : static_cast<const void*>(tile);
     createTreasuryEffect(roomKey, "TreasuryCoinPour",
         Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), height + 0.02f));
+    startTreasuryPour(tile, level);
+}
+
+void RenderManager::startTreasuryPour(Tile* tile, int level)
+{
+    if(tile == nullptr)
+        return;
+
+    // Only what is in view is animated
+    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+    if(camera != nullptr && !camera->isVisible(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+        static_cast<Ogre::Real>(tile->getY()), 0.0f)))
+        return;
+
+    // The worker that delivers the gold is the one standing on the tile
+    const std::vector<GameEntity*> entities = tile->getEntitiesInTile();
+    for(GameEntity* entity : entities)
+    {
+        if(entity->getObjectType() != GameEntityType::creature)
+            continue;
+
+        Creature* creature = static_cast<Creature*>(entity);
+        if(creature->getDefinition() == nullptr || !creature->getDefinition()->isWorker()
+            || creature->getEntityNode() == nullptr)
+            continue;
+
+        for(const TreasuryPour& pour : mTreasuryPours)
+        {
+            if(pour.mCreature == creature)
+                return;
+        }
+
+        TreasuryPour newPour;
+        newPour.mCreature = creature;
+        newPour.mElapsed = 0.0f;
+        newPour.mLevel = level;
+        newPour.mRise = 0.0f;
+        newPour.mTilt = Ogre::Quaternion::IDENTITY;
+        mTreasuryPours.push_back(newPour);
+        return;
+    }
+}
+
+float RenderManager::getTreasuryPourRise(Creature* creature) const
+{
+    for(const TreasuryPour& pour : mTreasuryPours)
+    {
+        if(pour.mCreature == creature)
+            return pour.mRise;
+    }
+    return 0.0f;
+}
+
+void RenderManager::updateTreasuryPours(Ogre::Real timeSinceLastFrame)
+{
+    for(std::vector<TreasuryPour>::iterator it = mTreasuryPours.begin(); it != mTreasuryPours.end();)
+    {
+        Creature* creature = it->mCreature;
+        Ogre::SceneNode* node = creature->getEntityNode();
+        if(node == nullptr || !creature->getIsOnMap())
+        {
+            it = mTreasuryPours.erase(it);
+            continue;
+        }
+
+        // The server keeps turning the creature: take the tilt of the last frame off first
+        const Ogre::Quaternion base = node->getOrientation() * it->mTilt.Inverse();
+        it->mElapsed += timeSinceLastFrame;
+        if(it->mElapsed >= TreasuryCreatureRules::pourDuration || creature->isMoving())
+        {
+            node->setOrientation(base);
+            it = mTreasuryPours.erase(it);
+            updateCreatureStep(creature);
+            continue;
+        }
+
+        it->mRise = TreasuryCreatureRules::pourRise(it->mElapsed, it->mLevel);
+        it->mTilt = Ogre::Quaternion(Ogre::Radian(TreasuryCreatureRules::pourLean(it->mElapsed)), Ogre::Vector3::UNIT_X)
+            * Ogre::Quaternion(Ogre::Radian(TreasuryCreatureRules::pourSway(it->mElapsed)), Ogre::Vector3::UNIT_Y);
+        node->setOrientation(base * it->mTilt);
+        updateCreatureStep(creature);
+        ++it;
+    }
+}
+
+void RenderManager::cancelTreasuryPour(Creature* creature)
+{
+    for(std::vector<TreasuryPour>::iterator it = mTreasuryPours.begin(); it != mTreasuryPours.end();)
+    {
+        if(creature != nullptr && it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+
+        Ogre::SceneNode* node = it->mCreature->getEntityNode();
+        if(node != nullptr)
+            node->setOrientation(node->getOrientation() * it->mTilt.Inverse());
+        it = mTreasuryPours.erase(it);
+    }
 }
 
 bool RenderManager::createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position)
@@ -4594,6 +4696,7 @@ void RenderManager::clearTreasuryEffects()
 
 void RenderManager::cancelCreatureStep(Creature* creature)
 {
+    cancelTreasuryPour(creature);
     for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
     {
         Creature* current = *it;
