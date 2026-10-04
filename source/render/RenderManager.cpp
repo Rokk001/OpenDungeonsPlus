@@ -41,6 +41,7 @@
 #include "gamemap/GameMap.h"
 #include "gamemap/TileSet.h"
 #include "modes/ModeManager.h"
+#include "render/CreatureCombatReactions.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/CreatureReactions.h"
 #include "render/DebugDrawer.h"
@@ -531,11 +532,24 @@ Ogre::Bone* getCombatBodyBone(Ogre::Skeleton* skeleton)
     return skeleton->getBone(0);
 }
 
-std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate)
+//! Bones of the sword arm, for the sword blows of createCreatureCombatAttack
+bool isRightArmBone(const std::string& lowerName)
+{
+    return lowerName == "arm_r" || lowerName == "upper_arm.r" || lowerName == "upperarm_r";
+}
+
+bool isRightForearmBone(const std::string& lowerName)
+{
+    return lowerName == "forearm_r" || lowerName == "forearm.r";
+}
+
+//! blow is the sword blow: 1 cut from above, 2 cut from the side, 3 thrust, 0 the plain strike
+std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate, int blow)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
     if(!skeleton->hasAnimation(original)) return original;
-    const std::string name = "AttackCombat_" + original + (alternate ? "_B" : "_A");
+    const std::string name = "AttackCombat_" + original +
+        (blow != 0 ? "_Sword" + Helper::toString(blow) : (alternate ? "_B" : "_A"));
     const Ogre::Animation* source = skeleton->getAnimation(original);
     const CombatMotion style = getCombatMotion(entity->getMesh()->getName());
     const Ogre::Real duration = std::min(source->getLength(), style == CombatMotion::heavy ? 1.45f :
@@ -577,8 +591,32 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
                 Ogre::Real pitch = bone == body ? 7.0f * strike - 4.0f * windup : 0.0f;
                 if(head) pitch += (style == CombatMotion::bite ? 14.0f : 5.0f) * strike;
                 if(jaw) pitch -= (style == CombatMotion::bite || style == CombatMotion::heavy ? 18.0f : 6.0f) * strike;
-                const Ogre::Real twist = bone == body ? (alternate ? -1.0f : 1.0f) *
+                Ogre::Real twist = bone == body ? (alternate ? -1.0f : 1.0f) *
                     (style == CombatMotion::tentacle ? 14.0f : 7.0f) * (strike - windup) : 0.0f;
+                if(blow != 0)
+                {
+                    // Added on top of the strike of the source clip, so the sword hand still follows its own path
+                    const bool rightArm = isRightArmBone(boneName), rightForearm = isRightForearmBone(boneName);
+                    if(blow == 1)
+                    {
+                        if(rightArm) pitch += -48.0f * windup + 26.0f * strike;
+                        if(rightForearm) pitch += -22.0f * windup + 12.0f * strike;
+                        if(bone == body) pitch += -5.0f * windup + 9.0f * strike;
+                    }
+                    else if(blow == 2)
+                    {
+                        if(rightArm) twist += 38.0f * windup - 58.0f * strike;
+                        if(rightForearm) pitch += -8.0f * strike;
+                        if(bone == body) twist += 16.0f * (strike - windup);
+                    }
+                    else
+                    {
+                        if(rightArm) pitch += 22.0f * windup - 30.0f * strike;
+                        if(rightForearm) pitch += 30.0f * windup - 38.0f * strike;
+                        if(bone == body) pitch += 4.0f * windup + 6.0f * strike;
+                        if(bone->getParent() == nullptr) offset.y += 0.02f * windup - 0.04f * strike;
+                    }
+                }
                 const Ogre::Quaternion basis = bone->_getDerivedOrientation();
                 frame->setTranslate(pose.getTranslate() + offset);
                 const Ogre::Real stretch = style == CombatMotion::fluid && bone == body ?
@@ -1633,6 +1671,8 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 
     for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
         updateCreatureStep(*it++);
+
+    updateCreatureTurns(timeSinceLastFrame);
 
     std::vector<Creature*> finishedFeeding;
     for(CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
@@ -2994,6 +3034,13 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     cancelCreatureFeedingAnimation(curCreature);
     clearCreatureCombatEffects(curCreature);
     mCreatureAttackVariants.erase(curCreature);
+    for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
+    {
+        if(it->mCreature == curCreature)
+            it = mCreatureTurns.erase(it);
+        else
+            ++it;
+    }
     cancelCreatureDropAnimation(curCreature);
     if(curCreature->getOverlayStatus() != nullptr)
     {
@@ -3038,6 +3085,60 @@ void RenderManager::rrOrientEntityToward(MovableGameEntity* gameEntity, const Og
     for(CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
         if(sleeping.mCreature == gameEntity)
             sleeping.mBaseOrientation = node->getOrientation();
+}
+
+void RenderManager::rrOrientEntityTowardSmoothly(MovableGameEntity* gameEntity, const Ogre::Vector3& direction)
+{
+    Ogre::SceneNode* node = mSceneManager->getSceneNode(gameEntity->getOgreNamePrefix() + gameEntity->getName() + "_node");
+    const Ogre::Quaternion before = node->getOrientation();
+    rrOrientEntityToward(gameEntity, direction);
+    const Ogre::Quaternion after = node->getOrientation();
+    Creature* creature = static_cast<Creature*>(gameEntity);
+    for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end(); ++it)
+    {
+        if(it->mCreature == creature)
+        {
+            mCreatureTurns.erase(it);
+            break;
+        }
+    }
+    // A creature that sleeps or already faces the target is turned at once
+    Ogre::Radian angle;
+    Ogre::Vector3 axis;
+    (before.Inverse() * after).ToAngleAxis(angle, axis);
+    Ogre::Real turn = angle.valueRadians();
+    if(turn > Ogre::Math::PI)
+        turn = Ogre::Math::TWO_PI - turn;
+    if(turn < 0.05f)
+        return;
+    for(const CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
+        if(sleeping.mCreature == gameEntity)
+            return;
+    node->setOrientation(before);
+    CreatureTurn entry = {creature, node, before, after, before, 0.0f, 0.12f + 0.14f * turn / Ogre::Math::PI};
+    mCreatureTurns.push_back(entry);
+}
+
+void RenderManager::updateCreatureTurns(Ogre::Real timeSinceLastFrame)
+{
+    for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
+    {
+        // Somebody else (a reaction, a drop, the sleep) set the orientation: let go and keep what they set
+        if(!it->mNode->getOrientation().equals(it->mLast, Ogre::Radian(0.02f)))
+        {
+            it = mCreatureTurns.erase(it);
+            continue;
+        }
+        it->mElapsed += timeSinceLastFrame;
+        const Ogre::Real t = std::min(1.0f, it->mElapsed / it->mDuration);
+        const Ogre::Real eased = t * t * (3.0f - 2.0f * t);
+        it->mLast = Ogre::Quaternion::Slerp(eased, it->mFrom, it->mTo, true);
+        it->mNode->setOrientation(it->mLast);
+        if(t >= 1.0f)
+            it = mCreatureTurns.erase(it);
+        else
+            ++it;
+    }
 }
 
 void RenderManager::rrScaleCreature(Creature& creature)
@@ -3540,7 +3641,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             uint32_t& nextVariant = mCreatureAttackVariants[dropCreature];
             anim = attackVariants[nextVariant % attackVariants.size()];
-            anim = createCreatureCombatAttack(objectEntity, anim, (nextVariant % 2) != 0);
+            // A creature with a sword cuts from above, from the side and thrusts in turn
+            const int blow = (getCombatMotion(objectEntity->getMesh()->getName()) == CombatMotion::humanoid &&
+                CreatureCombatReactions::carriesSword(dropCreature)) ? static_cast<int>(nextVariant % 3) + 1 : 0;
+            anim = createCreatureCombatAttack(objectEntity, anim, (nextVariant % 2) != 0, blow);
             ++nextVariant;
         }
     }
@@ -4391,7 +4495,10 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
         it = mCreatureCombatReactions.erase(it);
     }
     if(creature == nullptr)
+    {
         mCreatureAttackVariants.clear();
+        mCreatureTurns.clear();
+    }
 }
 void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position)
 {

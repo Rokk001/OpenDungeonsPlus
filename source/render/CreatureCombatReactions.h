@@ -40,6 +40,9 @@ public:
     //! the creature that is in front of it flinches, and weapons are drawn.
     static void noteAttack(CreatureReactions& reactions, Creature* attacker, const std::string& clip);
 
+    //! \brief True if the weapon the creature strikes with is a sword (the sword blows of the attack clips)
+    static bool carriesSword(const Creature* creature);
+
     //! \brief The creature runs from a fight: it draws its weapon
     static void noteAlarm(CreatureReactions& reactions, Creature* creature);
 

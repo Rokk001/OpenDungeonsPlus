@@ -230,7 +230,18 @@ void MovableGameEntity::setAnimationState(const std::string& state, bool loop, c
     mPrevAnimationStateLoop = loop;
 
     if(direction != Ogre::Vector3::ZERO)
-        setWalkDirection(direction);
+    {
+        // Before a blow the creature turns to its target in a short smooth movement instead of snapping round
+        const bool blow = (state == EntityAnimation::combat_attack_anim) || (state == EntityAnimation::ranged_attack_anim) ||
+            (state == EntityAnimation::attack_anim);
+        if(blow && getObjectType() == GameEntityType::creature)
+        {
+            mWalkDirection = direction;
+            RenderManager::getSingleton().rrOrientEntityTowardSmoothly(this, direction);
+        }
+        else
+            setWalkDirection(direction);
+    }
 
     RenderManager::getSingleton().rrSetObjectAnimationState(this, state, loop);
 
@@ -264,7 +275,12 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
         if(mDestinationPlayIdleWhenAnimationEnds && getAnimationState()->hasEnded())
             RenderManager::getSingleton().rrSetObjectAnimationState(this, EntityAnimation::idle_anim, true);
         else
-            getAnimationState()->addTime(static_cast<Ogre::Real>(addedTime));
+        {
+            double shownTime = addedTime;
+            if(mPrevAnimationState == EntityAnimation::walk_anim || mPrevAnimationState == EntityAnimation::idle_anim)
+                shownTime *= getClientPoseSpeedFactor();
+            getAnimationState()->addTime(static_cast<Ogre::Real>(shownTime));
+        }
     }
 
     if (mWalkQueue.empty())
