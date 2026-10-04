@@ -46,15 +46,15 @@ These instructions apply to every change made to this repository with an AI assi
   feature session) merges into `integration/all`, pushes it, or starts an integration
   agent.
 - Every other session finishes its work on its own branch and only registers it as
-  "ready for integration/all" in its own state file (`docs/internal/ANIMATION-STATE.md`,
-  `docs/internal/RELATIONSHIP-STATE.md`). It does not merge, rebase onto or push
+  "ready for integration/all" in its own state file (`docs/internal/projects/animations/ANIMATION-STATE.md`,
+  `docs/internal/projects/relationships/RELATIONSHIP-STATE.md`). It does not merge, rebase onto or push
   `integration/all` itself, and it keeps commits that were never meant for the remote on
   its own branch.
 - The campaign session starts a fresh integration subagent (`pr-fixer`, no model override,
   never resume an old one) after every finished batch and otherwise at the latest every
   30 minutes. The subagent does only this:
   1. Find what is ready: finished campaign branches and every branch that
-     `docs/internal/ANIMATION-STATE.md` or `docs/internal/RELATIONSHIP-STATE.md` lists as
+     `docs/internal/projects/animations/ANIMATION-STATE.md` or `docs/internal/projects/relationships/RELATIONSHIP-STATE.md` lists as
      "ready for integration/all". Branches not listed as ready are not merged.
   2. Merge them into `integration/all`, then run the release build, all check scripts and,
      the load test (see "Load tests").
