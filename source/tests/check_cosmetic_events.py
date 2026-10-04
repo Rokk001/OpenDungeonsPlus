@@ -18,8 +18,9 @@ body = notification_h[notification_h.index('enum class ServerNotificationType'):
 body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
-# The new kind is appended last, timeLimit stays in front of it: no existing number moves
-assert names[-1] == 'cosmeticEvent' and names[-2] == 'timeLimit', names[-3:]
+# The new kind is appended last, after timeLimit and the chicken kind notification when that one is
+# present: no existing number moves
+assert names[-1] == 'cosmeticEvent' and names[names.index('timeLimit') + 1:-1] in ([], ['chickenKindChanged']), names[-4:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')
