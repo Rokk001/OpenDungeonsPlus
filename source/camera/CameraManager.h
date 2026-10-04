@@ -38,20 +38,9 @@ class TileContainer;
 class GameMap;
 class TileContainer;
 
-// The min/max camera height in tile size
+// The default min/max camera height in tile size, used when the user config has no zoom heights
 const Ogre::Real MIN_CAMERA_Z = 3.0;
 const Ogre::Real MAX_CAMERA_Z = 16.0;
-
-//! The number of fixed zoom levels. Level 0 is MIN_CAMERA_Z, the last level is MAX_CAMERA_Z and
-//! the levels in between are evenly spaced.
-const unsigned int CAMERA_ZOOM_LEVELS = 5;
-
-//! \brief The camera height of a zoom level (0 .. CAMERA_ZOOM_LEVELS - 1)
-inline Ogre::Real getCameraZoomLevelHeight(unsigned int level)
-{
-    return MIN_CAMERA_Z + (MAX_CAMERA_Z - MIN_CAMERA_Z) * static_cast<Ogre::Real>(level)
-        / static_cast<Ogre::Real>(CAMERA_ZOOM_LEVELS - 1);
-}
 
 //! \brief The default views enum, used to cycle between them.
 enum class ViewModes : uint16_t
@@ -152,6 +141,8 @@ public:
     void zoomBy(Ogre::Real distance);
     //! Moves the camera to the zoom level nearest to its current height
     void snapToZoomLevel();
+    //! The camera height of a zoom level (0 .. number of levels - 1)
+    Ogre::Real getZoomLevelHeight(int level) const;
     void orbitBy(Ogre::Real swivel, Ogre::Real pitch);
     void adjustUserView(Ogre::Real roll, Ogre::Real yaw, Ogre::Real pitch);
     void loadUserView(unsigned int slot);
@@ -291,8 +282,23 @@ private:
     //! \brief The current (or last) default view mode requested.
     ViewModes       mCurrentDefaultViewMode;
 
-    //! \brief The user height change value.
-    Ogre::Real      mZChange;
+    //! \brief The zoom levels, read from the user config: the number of levels, the heights of the first
+    //! and the last level (the levels in between are evenly spaced) and the speed of the animation between
+    //! two levels in tile size per second.
+    int             mZoomLevels;
+    Ogre::Real      mZoomMinZ;
+    Ogre::Real      mZoomMaxZ;
+    Ogre::Real      mZoomSpeed;
+
+    //! \brief The zoom level whose height is nearest to the given camera height
+    int getNearestZoomLevel(Ogre::Real height) const;
+
+    //! \brief The camera height the zoom animation moves to, only valid while mZoomAnimating is set.
+    Ogre::Real      mZoomTargetZ;
+    bool            mZoomAnimating;
+
+    //! \brief Pointer motion accumulated towards the next zoom level
+    Ogre::Real      mZoomDragDistance;
 
     //! \brief The Z-axis rotation, left or right from the user point of view.
     Ogre::Degree    mSwivelDegrees;
