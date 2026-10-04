@@ -857,7 +857,7 @@ Region	Gallery	10	6	24	12
 Name	dayBreak
 Mode	once
 Cond	time	2
-Action	message	1	Master, the rock around your heart is soft. Send the imps into the walls and bring out the gold.
+Action	message	1	Master, the rock around your heart is soft. Send the workers into the walls and bring out the gold.
 Action	objective	1	Strike down Reeve Tobin Marsh in his village hall.
 Action	objective	1	First, mine 60 gold from the walls around your heart.
 [/Trigger]
