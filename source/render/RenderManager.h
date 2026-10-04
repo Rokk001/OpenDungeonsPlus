@@ -417,19 +417,53 @@ private:
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
     std::set<Creature*> mSteppingCreatures;
 
+    //! The kinds of treasury effect; each has a budget per room of its own
+    enum class TreasuryEffectKind
+    {
+        splash,
+        dust,
+        ambient
+    };
     struct TreasuryEffect
     {
         std::string mName;
         Ogre::Real mRemaining;
         const void* mRoomKey;
-        bool mDust;
+        TreasuryEffectKind mKind;
     };
     std::vector<TreasuryEffect> mTreasuryEffects;
     TreasuryCreatureRules::SplashBudget mTreasurySplashBudget;
     //! Gold dust puffs over full treasuries use the same effect list with a budget of their own
     TreasuryCreatureRules::SplashBudget mTreasuryDustBudget;
+    //! Sparkles, sliding coins and rolling coins on rich piles, also with a budget of their own
+    TreasuryCreatureRules::SplashBudget mTreasuryAmbientBudget;
     Ogre::Real mTreasuryDustTimer = 0.0f;
     size_t mTreasuryDustCursor = 0;
+    Ogre::Real mTreasuryAmbientTimer = 0.0f;
+    size_t mTreasuryAmbientCursor = 0;
+
+    //! A pile that grows or sinks: its node settles to the new height over a short time
+    struct TreasuryPileSettle
+    {
+        std::string mEntityName;
+        Ogre::SceneNode* mNode;
+        Ogre::Real mElapsed;
+        float mFrom;
+        bool mTaken;
+    };
+    std::vector<TreasuryPileSettle> mTreasuryPileSettles;
+
+    //! A creature that took a loose heap of gold carries a sack of coins for a while
+    struct TreasuryThiefSack
+    {
+        Creature* mCreature;
+        std::string mSackName;
+        Ogre::Real mRemaining;
+    };
+    std::vector<TreasuryThiefSack> mTreasuryThiefSacks;
+
+    //! Names of the warm lights over rich treasuries (one per patch of tiles)
+    std::set<std::string> mTreasuryGlowLights;
     //! Where a creature last splashed coins, to space the splashes along its way
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
@@ -515,8 +549,17 @@ private:
     void refreshCreaturesOnTile(Tile* tile);
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
     bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
-        bool dust = false);
+        TreasuryEffectKind kind = TreasuryEffectKind::splash);
     void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
+    void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
+    void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
+        int newLevel);
+    void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
+    void cancelTreasuryPileSettle(const std::string& entityName);
+    void startTreasuryThiefSack(RenderedMovableEntity* gold);
+    void updateTreasuryThiefSacks(Ogre::Real timeSinceLastFrame);
+    void removeTreasuryThiefSack(Creature* creature);
+    void refreshTreasuryGlow(int x, int y);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     void startTreasuryPour(Tile* tile, int level);
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);

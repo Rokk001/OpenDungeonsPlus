@@ -47,31 +47,57 @@ Detail getDetail();
 //! \brief Returns the name of the mesh to load for the given object mesh name. Names that are not
 //! pile names are returned unchanged. Pile meshes are built on demand, or replaced by the classic gold
 //! stacks when the detail is off.
+//! A pile without gold (the scattered coins on the bare floor of an empty treasury) is only drawn at the
+//! detail "full"; for the other settings an empty string comes back and no mesh is drawn.
 std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& meshName);
+
+//! The dungeon heart still names its treasury ring tiles with the classic stacks. On this client those
+//! are drawn as gold piles too: returns the pile name for the classic stack name at the given tile, or
+//! the name unchanged (not a classic stack name, or the detail is off).
+std::string pileNameForClassicStack(const std::string& meshName, float x, float y);
 
 //! \brief The piles drawn on this client, by tile, so creatures can be drawn on the gold surface.
 //! Names that are not pile names, and every pile while the detail is off, are ignored.
 //! The room (any pointer identifying it, may be null) lets effects share a budget per room.
-void registerPile(const std::string& entityName, float x, float y, const std::string& meshName,
-    const void* room = nullptr);
+//! Returns the level this tile had when it was last registered (-1 when it never was, or the pile is
+//! ignored), so the caller can tell a pile that grew from one that was taken from.
+int registerPile(const std::string& entityName, float x, float y, const std::string& meshName,
+    const void* room = nullptr, bool replacesClassicStack = false);
 //! Forgets the pile, if the tile still holds the pile of that entity (a newer pile stays)
 void unregisterPile(const std::string& entityName, float x, float y);
 void clearPiles();
+
+//! True when the pile on that tile stands in for a classic stack of the server (dungeon heart ring), so the
+//! stack is not to be treated as an obstacle to step over any more
+bool replacesClassicStack(float x, float y);
 
 //! Height of the gold surface at the given map position, 0 when there is no pile. The level of the
 //! pile of that tile (0 when none) is returned in level.
 float surfaceHeight(float x, float y, int& level);
 
-//! A completely filled pile: its tile and the room it was registered for
+//! A pile: its tile, its level and the room it was registered for
 struct FullPile
 {
     int mX;
     int mY;
     const void* mRoom;
+    int mLevel;
 };
 
 //! Lists the completely filled piles (the sources of the gold dust over full treasuries)
 void collectFullPiles(std::vector<FullPile>& piles);
+//! Lists the piles of at least the given level (sparkles and sliding coins need a deep pile)
+void collectPiles(std::vector<FullPile>& piles, int minLevel);
+
+//! The glow of the piles in a square patch of tiles: how strong it is (0 no glow, 1 all tiles full) and
+//! where its middle is. Nothing glows at the detail "off", only full piles at "reduced".
+struct Glow
+{
+    float mStrength;
+    float mX;
+    float mY;
+};
+Glow glowOfPatch(int originX, int originY, int size);
 }
 
 #endif // TREASURYGOLDMESH_H

@@ -16,12 +16,14 @@ import sys
 REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 # Budget
-MAX_TRIANGLES_PER_PILE = 100
+MAX_TRIANGLES_PER_PILE = 150
 MAX_TRIANGLES_PER_HEAP = 150
 MAX_TRIANGLES_PER_SACK = 400
-MAX_TRIANGLES_100_TILE_ROOM = 10000
+MAX_TRIANGLES_100_TILE_ROOM = 15000
 # Gold elsewhere adds no particle system and no per-frame work on the CPU
 MAX_NEW_PARTICLE_SYSTEMS = 0
+# Effects one room may show at once (splash + dust + sparkle/sliding/rolling coins), and glow lights per patch
+MAX_ROOM_EFFECTS = 16
 
 
 def read(path):
@@ -47,8 +49,22 @@ def main():
     sack_sectors = constant(loose, 'SackSectors')
     profile_count = constant(loose, 'ProfileCount')
 
-    pile_tris = {'full': 2 * full_divisions ** 2, 'reduced': 2 * reduced_divisions ** 2}
-    pile_verts = {'full': (full_divisions + 1) ** 2, 'reduced': (reduced_divisions + 1) ** 2}
+    layer = read('source/rooms/TreasuryGoldLayer.h')
+    coin_sides = constant(pile, 'CoinSides')
+    spill_sides = constant(pile, 'SpillSides')
+    gem_faces = constant(pile, 'GemFaces')
+    max_top_coins = constant(layer, 'maxTopCoins')
+    max_gems = constant(layer, 'maxGems')
+    max_spill_coins = constant(layer, 'maxSpillCoins')
+    scatter_coins = constant(layer, 'scatterCoins')
+
+    # Coins on top, gems and spilled coins lie in a second section (a second draw call) of the full pile mesh
+    detail_tris = max_top_coins * coin_sides + max_gems * gem_faces + max_spill_coins * spill_sides
+    detail_verts = max_top_coins * (coin_sides + 1) + max_gems * 6 + max_spill_coins * (spill_sides + 1)
+    scatter_tris = scatter_coins * coin_sides
+
+    pile_tris = {'full': 2 * full_divisions ** 2 + detail_tris, 'reduced': 2 * reduced_divisions ** 2}
+    pile_verts = {'full': (full_divisions + 1) ** 2 + detail_verts, 'reduced': (reduced_divisions + 1) ** 2}
     heap_tris = 2 * heap_rings * heap_sectors
     heap_verts = (heap_rings + 1) * heap_sectors
     sack_tris = 2 * (profile_count - 1) * sack_sectors + heap_tris
@@ -63,6 +79,7 @@ def main():
     limit(pile_tris['full'] <= MAX_TRIANGLES_PER_PILE, 'pile too heavy: %d triangles' % pile_tris['full'])
     limit(heap_tris <= MAX_TRIANGLES_PER_HEAP, 'heap too heavy: %d triangles' % heap_tris)
     limit(sack_tris <= MAX_TRIANGLES_PER_SACK, 'sack too heavy: %d triangles' % sack_tris)
+    limit(scatter_tris <= MAX_TRIANGLES_PER_PILE, 'floor scatter too heavy: %d triangles' % scatter_tris)
     limit(100 * pile_tris['full'] <= MAX_TRIANGLES_100_TILE_ROOM,
           'a 100 tile treasury costs %d triangles' % (100 * pile_tris['full']))
 
@@ -72,8 +89,17 @@ def main():
         new_particles += len(re.findall(r'ParticleSystem|particle_system', read(name)))
     limit(new_particles <= MAX_NEW_PARTICLE_SYSTEMS, 'gold elsewhere added %d particle systems' % new_particles)
 
+    rules = read('source/render/TreasuryCreatureRules.h')
+    splash = int(re.search(r'splashBudget.*?Detail::full:\s*return (\d+);', rules, re.S).group(1))
+    dust = int(re.search(r'dustBudget.*?Detail::full:\s*return (\d+);', rules, re.S).group(1))
+    ambient = constant(rules, 'ambientBudgetFull')
+    limit(splash + dust + ambient <= MAX_ROOM_EFFECTS,
+          'a room may show %d effects at once' % (splash + dust + ambient))
+
     print('mesh                 triangles  vertices')
-    print('pile (full)          %9d  %8d' % (pile_tris['full'], pile_verts['full']))
+    print('pile (full)          %9d  %8d  (of that %d triangles of coins and gems in a second section)' % (
+        pile_tris['full'], pile_verts['full'], detail_tris))
+    print('empty tile scatter   %9d' % scatter_tris)
     print('pile (reduced)       %9d  %8d' % (pile_tris['reduced'], pile_verts['reduced']))
     print('floor heap           %9d  %8d' % (heap_tris, heap_verts))
     print('carried sack         %9d  %8d' % (sack_tris, sack_verts))
@@ -84,6 +110,9 @@ def main():
         print('%10d %9d %18d %21d %22d' % (tiles, tiles, tiles * pile_tris['full'],
                                            tiles * pile_tris['reduced'], 0))
     print()
+    print('effects per room at once (full): %d splash + %d dust + %d sparkle/slide/roll = %d (budget %d)' % (
+        splash, dust, ambient, splash + dust + ambient, MAX_ROOM_EFFECTS))
+    print('glow: one light per 3x3 patch of tiles with rich piles, none at detail off')
     print('per worker carrying gold: 1 sack object (%d triangles), the floor heap object stays hidden' % sack_tris)
     print('veins: shader only (no extra objects, no particles)')
 

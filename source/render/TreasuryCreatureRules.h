@@ -175,6 +175,62 @@ inline int dustBudget(TreasuryGoldMesh::Detail detail)
     }
 }
 
+//! Sparkles and sliding coins on the gold of rich treasuries, and the coins that roll away when gold is taken:
+//! seconds between two attempts, how long such an effect counts against the budget of its room, and how many
+//! a room may show at once by the "Treasury detail" option. They have a budget of their own.
+static const float ambientInterval = 0.9f;
+static const float ambientLifetime = 2.5f;
+static const int ambientBudgetFull = 3;
+static const int ambientBudgetReduced = 1;
+//! Piles of at least this level slide coins down their slope; the sparkle needs a richer pile
+static const int slideLevel = 3;
+static const int glintLevel = 5;
+
+inline int ambientBudget(TreasuryGoldMesh::Detail detail)
+{
+    switch(detail)
+    {
+        case TreasuryGoldMesh::Detail::full:
+            return ambientBudgetFull;
+        case TreasuryGoldMesh::Detail::reduced:
+            return ambientBudgetReduced;
+        default:
+            return 0;
+    }
+}
+
+//! A pile that grows (gold delivered) or sinks (gold taken) is not swapped at once: its height settles over
+//! this many seconds. When taking, it dips into a dent first and then smooths out.
+static const float pileSettleTime = 0.7f;
+static const float dentDepth = 0.88f;
+static const float dentShare = 0.35f;
+
+//! Height factor of a settling pile (1 = the new pile) at time t, coming from the factor "from" (the old level
+//! over the new one, limited). Growing starts low and rises; taking starts high, dips below 1 and returns.
+inline float pileSettleScale(float from, bool taken, float t)
+{
+    if(t >= pileSettleTime)
+        return 1.0f;
+    const float progress = t / pileSettleTime;
+    if(!taken)
+        return from + (1.0f - from) * smoothStep(0.0f, 1.0f, progress);
+    if(progress < dentShare)
+        return from + (dentDepth - from) * smoothStep(0.0f, dentShare, progress);
+    return dentDepth + (1.0f - dentDepth) * smoothStep(dentShare, 1.0f, progress);
+}
+
+//! The old level over the new one as a start height factor, kept in a range that looks sane for any change
+inline float pileSettleFrom(int oldLevel, int newLevel)
+{
+    if(oldLevel <= 0 || newLevel <= 0)
+        return 1.0f;
+    const float ratio = static_cast<float>(oldLevel) / static_cast<float>(newLevel);
+    return ratio < 0.4f ? 0.4f : (ratio > 1.6f ? 1.6f : ratio);
+}
+
+//! A creature that takes a loose heap of gold walks off with a sack of coins for this many seconds
+static const float thiefSackTime = 10.0f;
+
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget
 {
