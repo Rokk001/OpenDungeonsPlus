@@ -492,6 +492,7 @@ set(OD_SOURCEFILES
     
     ${SRC}/rooms/FencedRoom.cpp
     ${SRC}/rooms/HeartHealthTier.cpp
+    ${SRC}/rooms/HatcheryCycle.cpp
     ${SRC}/rooms/Room.cpp
     ${SRC}/rooms/RoomArena.cpp
     ${SRC}/rooms/RoomBridge.cpp
