@@ -46,3 +46,28 @@ for key in ('HatcheryLayMin', 'HatcheryLayMax', 'HatcheryHatchTurns', 'HatcheryG
     assert key in config and key in room, key
 
 print('hatchery life cycle checks passed')
+
+# Breeding needs care: lay faster when claimed, lit and without enemies; eggs wait while enemies stand in the hatchery
+cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
+room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
+cfg = (root / 'config/rooms.cfg').read_text()
+assert 'wellCared' in cycle and 'canHatch' in cycle
+assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp
+assert 'HatcheryCareLayPercent' in cfg and 'HatcheryCareLightRadius' in cfg
+
+# Enemies trample eggs, own creatures never eat them
+cycle_h = (root / 'source/rooms/HatcheryCycle.h').read_text()
+assert 'tramples' in cycle_h and 'egg->trample(enemy)' in room_cpp
+assert 'HatcheryTramplePercent' in cfg and 'HatcheryTrampleRadius' in cfg
+assert 'bool ChickenEntity::trample' in chicken and 'ChickenKind::egg' in chicken[chicken.index('bool ChickenEntity::trample'):][:200]
+# only enemies are collected for trampling (allied seats are skipped)
+assert 'isAlliedSeat' in room_cpp[room_cpp.index('void RoomHatchery::collectEnemies'):][:600]
+
+# The waiting counters of the room are saved (old saves without the line still load), one hen per coop comes out
+room_h = (root / 'source/rooms/RoomHatchery.h').read_text()
+assert 'exportToStream' in room_h and 'importFromStream' in room_h
+exp = room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:300]
+assert 'HatcheryWaits' in exp and 'mCoopHenWait' in exp and 'mCoopRoosterWait' in exp
+imp = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:900]
+assert 'seekg(pos)' in imp and 'HatcheryWaits' in imp
+assert 'coopHenCount' in room_cpp and 'HatcheryCoopBatch' in cfg

@@ -65,6 +65,17 @@ BOOST_AUTO_TEST_CASE(test_Rules)
     BOOST_CHECK(HatcheryCycle::canLay(counts, 4));
 }
 
+BOOST_AUTO_TEST_CASE(test_CoopHenCount)
+{
+    HatcheryCycleSettings settings;
+    // By default one hen per coop comes out, at least one
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 3), 3u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 0), 1u);
+    settings.mCoopBatch = 2;
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 3), 2u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 1), 1u);
+}
+
 BOOST_AUTO_TEST_CASE(test_LayInterval)
 {
     HatcheryCycleSettings settings;
@@ -211,7 +222,10 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
             ++coopWait;
             if(coopWait >= settings.mCoopWait)
             {
-                hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
+                // One hen per coop comes out
+                uint32_t nbFromCoops = HatcheryCycle::coopHenCount(settings, capacity);
+                for(uint32_t i = 0; i < nbFromCoops; ++i)
+                    hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
                 coopWait = 0;
             }
         }
@@ -251,9 +265,63 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
             double newPerMinute = newEaten / (nbTurns / 1.4 / 60.0);
             std::cout << "parity coops=" << coops[c] << " eatPercent/turn=" << demands[d]
                 << " old=" << oldPerMinute << " new=" << newPerMinute << " per minute" << std::endl;
-            BOOST_CHECK_CLOSE(newPerMinute, oldPerMinute, 15.0);
+            BOOST_CHECK_CLOSE(newPerMinute, oldPerMinute, 3.0);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(test_Care)
+{
+    HatcheryCare care;
+    BOOST_CHECK(!HatcheryCycle::wellCared(care));
+    care.mClaimed = true;
+    BOOST_CHECK(!HatcheryCycle::wellCared(care));
+    care.mLit = true;
+    BOOST_CHECK(HatcheryCycle::wellCared(care));
+    care.mEnemies = true;
+    BOOST_CHECK(!HatcheryCycle::wellCared(care));
+
+    // Without care the settings stay as they are, with care the laying times get shorter
+    HatcheryCycleSettings settings;
+    settings.mLayMin = 8;
+    settings.mLayMax = 12;
+    settings.mCareLayPercent = 25;
+    HatcheryCycleSettings plain = HatcheryCycle::withCare(settings, care);
+    BOOST_CHECK_EQUAL(plain.mLayMin, 8u);
+    BOOST_CHECK_EQUAL(plain.mLayMax, 12u);
+    care.mEnemies = false;
+    HatcheryCycleSettings cared = HatcheryCycle::withCare(settings, care);
+    BOOST_CHECK_EQUAL(cared.mLayMin, 6u);
+    BOOST_CHECK_EQUAL(cared.mLayMax, 9u);
+    BOOST_CHECK_EQUAL(cared.mHatchTurns, settings.mHatchTurns);
+    settings.mCareLayPercent = 0;
+    BOOST_CHECK_EQUAL(HatcheryCycle::withCare(settings, care).mLayMin, 8u);
+    settings.mCareLayPercent = 500;
+    BOOST_CHECK(HatcheryCycle::withCare(settings, care).mLayMin >= 1u);
+
+    // Eggs do not hatch while enemies stand in the hatchery
+    HatcheryCounts counts;
+    counts.mRoosters = 1;
+    BOOST_CHECK(HatcheryCycle::canHatch(counts, false));
+    BOOST_CHECK(!HatcheryCycle::canHatch(counts, true));
+    counts.mRoosters = 0;
+    BOOST_CHECK(!HatcheryCycle::canHatch(counts, false));
+}
+
+BOOST_AUTO_TEST_CASE(test_Trample)
+{
+    HatcheryCycleSettings settings;
+    settings.mTramplePercent = 30;
+    // Only enemies trample, only eggs get trampled, the dice decide
+    BOOST_CHECK(HatcheryCycle::tramples(settings, true, true, 0));
+    BOOST_CHECK(HatcheryCycle::tramples(settings, true, true, 29));
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, true, true, 30));
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, false, true, 0));
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, true, false, 0));
+    settings.mTramplePercent = 0;
+    BOOST_CHECK(!HatcheryCycle::tramples(settings, true, true, 0));
+    settings.mTramplePercent = 1000;
+    BOOST_CHECK(HatcheryCycle::tramples(settings, true, true, 99));
 }
 
 BOOST_AUTO_TEST_CASE(test_RoosterDay)
@@ -318,6 +386,16 @@ BOOST_AUTO_TEST_CASE(test_RoosterDecide)
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::lead);
     context.mRoll = settings.mChasePercent + settings.mLeadPercent;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
+    // He calls the hens to food, only when there is a hen
+    context.mRoll = settings.mChasePercent + settings.mLeadPercent + settings.mPerchPercent;
+    plan = HatcheryRooster::decide(context, settings);
+    BOOST_CHECK(plan.mMood == RoosterMood::call);
+    BOOST_CHECK_EQUAL(plan.mTurns, settings.mCallTurns);
+    context.mHasHen = false;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+    context.mHasHen = true;
+    context.mRoll = settings.mChasePercent + settings.mLeadPercent + settings.mPerchPercent + settings.mCallPercent;
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
 
     // Without a hen, chick or coop those moods are not chosen
     context.mHasHen = false;

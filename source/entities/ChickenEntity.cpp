@@ -31,7 +31,9 @@
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
 #include "rooms/Room.h"
+#include "rooms/RoomHatchery.h"
 #include "rooms/RoomType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
@@ -51,6 +53,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mNbTurnLay(0),
     mAge(0),
     mBusyTurns(0),
+    mScatterTurns(0),
     mCalm(false),
     mRoomDriven(false),
     mOnRoof(false),
@@ -76,6 +79,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mNbTurnLay(0),
     mAge(0),
     mBusyTurns(0),
+    mScatterTurns(0),
     mCalm(false),
     mRoomDriven(false),
     mOnRoof(false),
@@ -97,7 +101,17 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
 
 std::string ChickenEntity::getMeshNameForKind(ChickenKind kind)
 {
-    return (kind == ChickenKind::egg) ? "ChickenEgg" : "Chicken";
+    switch(kind)
+    {
+        case ChickenKind::egg:
+            return "ChickenEgg";
+        case ChickenKind::chick:
+            return "ChickenChick";
+        case ChickenKind::rooster:
+            return "ChickenRooster";
+        default:
+            return "Chicken";
+    }
 }
 
 void ChickenEntity::createMeshLocal(NodeType nt)
@@ -173,6 +187,16 @@ void ChickenEntity::doUpkeep()
         return;
     }
 
+    // Eggs and chicks that are dropped anywhere but in a hatchery are lost soon
+    if(((mKind == ChickenKind::egg) || (mKind == ChickenKind::chick)) && (currentHatchery == nullptr) &&
+       (mNbTurnOutsideHatchery >= static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryYoungLostTurns", 2.0))))
+    {
+        removeEntityFromPositionTile();
+        mChickenState = ChickenState::eaten;
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+        return;
+    }
+
     // If we are outside a hatchery for too long, we die
     if(mIsSlapped || (mNbTurnOutsideHatchery >= NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE))
     {
@@ -184,6 +208,9 @@ void ChickenEntity::doUpkeep()
     // An egg does not move
     if(mKind == ChickenKind::egg)
         return;
+
+    if(mScatterTurns > 0)
+        --mScatterTurns;
 
     // The pose of a laying hen or a cackling one: the animal stays where it is for a moment
     if(mBusyTurns > 0)
@@ -202,16 +229,19 @@ void ChickenEntity::doUpkeep()
     if(isMoving())
         return;
 
-    // Chicks stay in line behind the animal in front of them
-    if((mKind == ChickenKind::chick) && mFollowing)
+    // Chicks stay in line behind the animal in front of them, hens run to the rooster when he calls them
+    if(((mKind == ChickenKind::chick) || (mKind == ChickenKind::hen)) && mFollowing)
     {
         if(walkToward(mFollowTarget, mFollowGap, EntityAnimation::walk_anim))
             return;
 
-        // Close enough: wait there
+        // Close enough: wait there (a hen pecks at the food)
         if(Ogre::Vector2(getPosition().x, getPosition().y).distance(mFollowTarget) <= mFollowGap + 0.3)
         {
-            setAnimationState(mCalm ? ChickenPose::roost : EntityAnimation::idle_anim, true);
+            if(mKind == ChickenKind::hen)
+                setAnimationState("Pick", true);
+            else
+                setAnimationState(mCalm ? ChickenPose::roost : EntityAnimation::idle_anim, true);
             return;
         }
     }
@@ -305,6 +335,17 @@ void ChickenEntity::playPose(const std::string& pose, uint32_t turns)
 {
     mBusyTurns = turns;
     clearDestinations(pose, true, false);
+}
+
+bool ChickenEntity::scatterTo(const Ogre::Vector2& spot, uint32_t turns)
+{
+    mFollowing = false;
+    mBusyTurns = 0;
+    if(!walkToward(spot, 0.0, ChickenPose::flee))
+        return false;
+
+    mScatterTurns = turns;
+    return true;
 }
 
 void ChickenEntity::setFollowTarget(const Ogre::Vector2& target, double gap)
@@ -485,6 +526,14 @@ bool ChickenEntity::tryPickup(Seat* seat)
 
 void ChickenEntity::pickup()
 {
+    // The rooster protests loudly when the hand takes him
+    if(getIsOnServerMap() && (mKind == ChickenKind::rooster))
+    {
+        Tile* pickupTile = getPositionTile();
+        if(pickupTile != nullptr)
+            RoomHatchery::fireProtest(*pickupTile);
+    }
+    mScatterTurns = 0;
     mOnRoof = false;
     mBusyTurns = 0;
     mFollowing = false;
@@ -568,7 +617,10 @@ void ChickenEntity::setKindFromServer(ChickenKind kind)
         if(hadMesh)
         {
             createMesh();
-            RenderManager::getSingleton().rrSetObjectAnimationState(this, EntityAnimation::idle_anim, true);
+            // The chick that comes out of the egg plays its hatching clip once
+            const bool hatching = (oldKind == ChickenKind::egg) && (kind == ChickenKind::chick);
+            RenderManager::getSingleton().rrSetObjectAnimationState(this,
+                hatching ? ChickenPose::hatchClip : EntityAnimation::idle_anim, !hatching);
         }
     }
     else
@@ -635,6 +687,19 @@ bool ChickenEntity::eatChicken(Creature* creature)
         return false;
 
     OD_LOG_INF("chicken=" + getName() + " eaten by " + creature->getName());
+
+    removeEntityFromPositionTile();
+    mChickenState = ChickenState::eaten;
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    return true;
+}
+
+bool ChickenEntity::trample(Creature* creature)
+{
+    if(!isFree() || (mKind != ChickenKind::egg))
+        return false;
+
+    OD_LOG_INF("egg=" + getName() + " trampled by " + creature->getName());
 
     removeEntityFromPositionTile();
     mChickenState = ChickenState::eaten;

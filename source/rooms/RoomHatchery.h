@@ -50,6 +50,12 @@ public:
 
     void creatureDropped(Creature& creature) override;
 
+    //! The rooster protests loudly (picked up by the keeper's hand): plays the angry cackle where he was.
+    static void fireProtest(Tile& tile);
+
+    void exportToStream(std::ostream& os) const override;
+    bool importFromStream(std::istream& is) override;
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
     
@@ -57,12 +63,24 @@ protected:
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
 private:
+    //! Plays a hatchery animal sound (family below Rooms/, e.g. "Hatchery/Crow") where the animal is.
+    void fireAnimalSound(const ChickenEntity& animal, const std::string& family);
+    //! Creatures of the hatchery that are after a chicken (hungry, on their way to eat).
+    void collectHungry(std::vector<Creature*>& hungry) const;
+    //! Hens that peck, scratch and flutter now and then; they scatter cackling when a hungry creature comes close.
+    void updateFlock(const std::vector<ChickenEntity*>& hens, bool night);
+    //! Creatures of an enemy seat that stand on a tile of the hatchery.
+    void collectEnemies(std::vector<Creature*>& enemies) const;
+    //! True if a map light is within HatcheryCareLightRadius tiles of the hatchery.
+    bool isLit() const;
+    //! Claimed by the keeper, lit and free of enemies (see HatcheryCycle::wellCared).
+    HatcheryCare getCare(const std::vector<Creature*>& enemies) const;
     //! Settings of the life cycle from the config, laying times scaled by the research.
     HatcheryCycleSettings getCycleSettings() const;
     //! Creates a hatchery animal at the given position.
     ChickenEntity* spawnAnimal(ChickenKind kind, const Ogre::Vector3& position, const HatcheryCycleSettings& settings);
     //! Lets a hen or a rooster come out of a coop. Returns false if no coop has a free place.
-    bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings);
+    bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count = 1);
 
     //! Settings of the rooster, the day and the chick line from the config.
     RoosterSettings getRoosterSettings() const;
