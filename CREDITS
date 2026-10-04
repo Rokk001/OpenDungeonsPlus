@@ -542,3 +542,4 @@ materials/portraits/variants/Cultist.mesh*/*.png  Image generator, Mario  GPLv3+
 materials/portraits/neutral-variants/  Image generator, Mario  GPLv3+  Derived neutral-base delivery copies, registered isolated source features, alpha masks and diagnostic composites; original generated sources preserved.
 materials/portraits/generated-outfits/  Image generator, Mario  GPLv3+  Newly generated isolated clothing and armor layers with exact prompts and provenance; unmodified generator copies.
 materials/portraits/variants/*/outfit-*.png  Image generator, Mario  GPLv3+  Registered clothing layers and locally fitted build copies from generated-outfits; original sources preserved.
+materials/portraits/variants/*/review/  Image generator, Mario  GPLv3+  Native-resolution and 50x100 diagnostic composites of the preserved AI-generated portrait sources and their derived registrations.
