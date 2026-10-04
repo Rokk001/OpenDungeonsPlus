@@ -54,9 +54,9 @@ retry = body(creature, 'void Creature::retryAppearance()')
 assert 'assignAppearance(false);' in retry
 assert 'ServerNotificationType::creatureAppearance' in retry
 
-# Notification: inserted before timeLimit, named, handled by the client
+# Notification: inserted before relationshipTier, named, handled by the client
 last = re.findall(r'^\s+([A-Za-z]+),?\s*$', notification_header.split('enum class ServerNotificationType')[1].split('};')[0], re.M)
-assert last[-3:] == ['creatureAppearance', 'timeLimit', 'chickenKindChanged'], last[-4:]
+assert last[-5:] == ['creatureAppearance', 'relationshipTier', 'trapEffect', 'timeLimit', 'chickenKindChanged'], last[-6:]
 assert 'case ServerNotificationType::creatureAppearance:' in notification_source
 assert 'case ServerNotificationType::creatureAppearance:' in client
 assert 'setAppearanceFromServer(' in client

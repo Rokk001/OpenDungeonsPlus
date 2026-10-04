@@ -1054,11 +1054,10 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
-    // The carried gold, shown as a sack on the thief
-    os << mGoldCarried;
-
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
+    // Last field: the carried gold, shown as a sack on the thief
+    os << mGoldCarried;
 }
 
 void Creature::importFromPacket(ODPacket& is)
@@ -1115,8 +1114,6 @@ void Creature::importFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
-    OD_ASSERT_TRUE(is >> mGoldCarried);
-
     // The client only takes over the appearance the server has chosen, it never rolls one itself
     std::string appearanceToken;
     OD_ASSERT_TRUE(is >> appearanceToken);
@@ -1125,6 +1122,7 @@ void Creature::importFromPacket(ODPacket& is)
     {
         OD_LOG_ERR("Invalid appearance token=" + appearanceToken);
     }
+    OD_ASSERT_TRUE(is >> mGoldCarried);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
