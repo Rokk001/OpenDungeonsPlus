@@ -46,6 +46,7 @@
 #include "render/DebugDrawer.h"
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
+#include "render/TreasuryGoldMesh.h"
 #include "rooms/Room.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -2743,6 +2744,9 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
 {
     std::string meshName = renderedMovableEntity->getMeshName();
+    // Treasury gold piles are built here from their name (or swapped for the classic stacks)
+    if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
+        meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
     
     std::string tempString = renderedMovableEntity->getOgreNamePrefix() + renderedMovableEntity->getName() + (static_cast<bool>(nt) ?  "" : "_dtc" );
 

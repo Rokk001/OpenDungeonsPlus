@@ -71,6 +71,7 @@ const std::string LIGHT_FACTOR = "LightFactor";
 const std::string CREATURE_REACTIONS = "CreatureReactions";
 const std::string UI_SCALE = "UI Scale";
 const std::string BLOOD_EFFECTS = "Blood Effects";
+const std::string TREASURY_DETAIL = "TreasuryDetail";
 }
 
 typedef std::map<TileVisual,std::map<int,float>> HighMap;

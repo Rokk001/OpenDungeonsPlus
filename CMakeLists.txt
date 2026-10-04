@@ -462,6 +462,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/MovableTextOverlay.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
+    ${SRC}/render/TreasuryGoldMesh.cpp
     ${SRC}/render/TextRenderer.cpp
 
     ${SRC}/social/CreaturePosts.cpp

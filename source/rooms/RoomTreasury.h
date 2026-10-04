@@ -21,6 +21,8 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
+#include <map>
+
 enum class TileVisual;
 
 class RoomTreasuryTileData : public TileData
@@ -92,7 +94,10 @@ protected:
 
 private:
     int getGoldCapacityPerTile() const;
-    void updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData);
+    //! brief Fill step of the tile at the given position, 0 for tiles that are not part of this room
+    int getLevelOfTile(const std::map<Tile*, int>& levels, int x, int y) const;
+    void updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
+        const std::map<Tile*, int>& levels);
     bool mGoldChanged;
 };
 
