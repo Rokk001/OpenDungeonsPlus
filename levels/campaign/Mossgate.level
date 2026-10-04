@@ -838,6 +838,17 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Spider
+Block	1	Rat
+Block	1	Roach
+Block	1	Cultist
+Block	1	LavaSpawn
+Block	1	LizardMan
+Block	1	DarkElf
+Block	1	Orc
+Block	1	PitDemon
+Block	1	Troll
 Region	Meadow	14	18	27	26
 Region	Yard	3	11	13	20
 Region	Hall	3	2	11	8

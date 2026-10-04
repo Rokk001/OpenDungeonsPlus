@@ -2285,6 +2285,15 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Spider
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LavaSpawn
+Block	1	LizardMan
+Block	1	Orc
+Block	1	PitDemon
 Region	Shelf	3	30	56	42
 Region	WestLanding	8	29	28	33
 Region	EastLanding	46	29	54	34

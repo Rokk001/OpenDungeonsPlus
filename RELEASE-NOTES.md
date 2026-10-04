@@ -8,6 +8,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Campaign levels now keep the creature types of the human keeper limited per level (Block lines of the level script); the file format and the save format are unchanged
 * Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
 

@@ -3032,6 +3032,13 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
+Block	1	PitDemon
 Region	Quarry	3	70	20	82
 Region	SouthLanding	20	64	38	72
 Region	MidBank	25	40	40	52

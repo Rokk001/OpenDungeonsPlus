@@ -17,9 +17,11 @@ seat the rooms, spells, traps and doors of the lists [SkillDone], [SkillPending]
 ("make") have to be the same. A level that continues the one before it is compared with
 that level. Reward skills that no source list names are not compared.
 
-Creature types are controlled by the source with creature blocks that the current level
-format cannot express. They are reported as a NOTE line (types allowed by the source) and
-never fail the check.
+Creature types are compared as well: a creature type is allowed for the human keeper seat
+unless the level blocks it with a "Block <seatId> <class>" line of the [Triggers] section or
+a script action "available <seatId> <class> 0" (an action with 1 allows it again). The types
+that come through the portal of a keeper (config/factions.cfg) have to be allowed or blocked
+exactly like in the level it is compared with.
 
 One line per level: PASS or FAIL, the file and the differences.
 
@@ -205,6 +207,23 @@ def compare(reference, level):
     return differences
 
 
+def allowed_creatures(progression, pool):
+    return [c for c in pool if c not in progression.blocked or c in progression.unblocked]
+
+
+def compare_creatures(reference, level, pool):
+    """The differences of the creature types that may come to the human keeper seat."""
+    wanted = set(allowed_creatures(reference, pool))
+    found = set(allowed_creatures(level, pool))
+    differences = []
+    for name in pool:
+        if name in wanted and name not in found:
+            differences.append("creature %s: blocked, expected allowed" % name)
+        elif name in found and name not in wanted:
+            differences.append("creature %s: allowed, expected blocked" % name)
+    return differences
+
+
 def load_map(against):
     path = os.path.join(against, MAP_FILE)
     if not os.path.isfile(path):
@@ -222,14 +241,11 @@ def check_file(path, against, mapping, levels_dir):
         return "SKIP %s (not part of the rebuilt campaign)" % name, False
     if "source_file" in entry:
         source_path = os.path.join(against, entry["source_file"])
-        creatures = True
     elif "source" in entry:
         source_dir = os.path.join(against, mapping.get("source_dir", ""))
         source_path = os.path.join(source_dir, entry["source"] + ".level")
-        creatures = True
     else:
         source_path = os.path.join(levels_dir, entry["previous"] + ".level")
-        creatures = False
         earlier = mapping.get(entry["previous"])
         if not os.path.isfile(source_path) and isinstance(earlier, dict) and "source" in earlier:
             # the level before is not part of this checkout yet: compare with what it is made from
@@ -242,15 +258,12 @@ def check_file(path, against, mapping, levels_dir):
     if not reference.has_human or not level.has_human:
         return "SKIP %s (no human seat)" % name, False
     differences = compare(reference, level)
+    pool = keeper_pool(repository_root())
+    differences += compare_creatures(reference, level, pool)
     line = "%s %s unlocks: %d differences" % ("FAIL" if differences else "PASS", name,
                                               len(differences))
     if differences:
         line += "\n" + "\n".join("  " + text for text in differences)
-    if creatures:
-        pool = keeper_pool(repository_root())
-        allowed = [c for c in pool if c not in reference.blocked or c in reference.unblocked]
-        line += "\nNOTE %s creatures: source allows %d of %d types, the level format has " \
-                "no creature block (%s)" % (name, len(allowed), len(pool), ", ".join(allowed))
     return line, bool(differences)
 
 
@@ -283,11 +296,13 @@ def check_files(files, against, levels_dir):
 # Self test with generated levels
 # ---------------------------------------------------------------------------------------
 
-def make_level(done, pending, not_allowed, make_lines=()):
+def make_level(done, pending, not_allowed, make_lines=(), blocks=()):
     lines = ["[Seats]", "[Seat]", "seatId\t1", "player\tHuman", "[SkillDone]"]
     lines += done + ["[/SkillDone]", "[SkillNotAllowed]"] + not_allowed
     lines += ["[/SkillNotAllowed]", "[SkillPending]"] + pending + ["[/SkillPending]", "[/Seat]"]
     lines += ["[/Seats]", "[Triggers]"]
+    for name in blocks:
+        lines.append("Block	1	" + name)
     for skill in make_lines:
         lines += ["[Trigger]", "Name\tt", "Mode\tonce", "Cond\ttime\t1",
                   "Action\tmake\t1\t" + skill, "[/Trigger]"]
@@ -327,6 +342,24 @@ def self_test():
         lines, failed = check_files([os.path.join(levels, "Three.level")], private, levels)
         if not failed or "roomC" not in lines[0]:
             failures.append("different level not reported: %s" % lines)
+        pool = keeper_pool(repository_root())
+        if len(pool) >= 2:
+            write(os.path.join(private, "src", "S1.level"),
+                  make_level(["roomA"], ["roomB"], ["roomC"], ["roomB"], pool[:1]))
+            write(os.path.join(levels, "One.level"),
+                  make_level(["roomA"], ["roomB"], ["roomC"], ["roomB"], pool[:1]))
+            write(os.path.join(levels, "Two.level"),
+                  make_level(["roomA"], ["roomB"], ["roomC"], ["roomB"], pool[:1]))
+            write(os.path.join(levels, "Three.level"),
+                  make_level(["roomA"], ["roomB"], ["roomC"], ["roomB"], pool[1:2]))
+            lines, failed = check_files([os.path.join(levels, "One.level"),
+                                         os.path.join(levels, "Two.level")], private, levels)
+            if failed or not all(line.startswith("PASS") for line in lines):
+                failures.append("equal creature blocks: %s" % lines)
+            lines, failed = check_files([os.path.join(levels, "Three.level")], private, levels)
+            if (not failed or "creature %s: blocked, expected allowed" % pool[1] not in lines[0] or
+                    "creature %s: allowed, expected blocked" % pool[0] not in lines[0]):
+                failures.append("different creature blocks not reported: %s" % lines)
         lines, failed = check_files([os.path.join(levels, "One.level")],
                                     os.path.join(work, "missing"), levels)
         if failed or "skipped" not in lines[0]:

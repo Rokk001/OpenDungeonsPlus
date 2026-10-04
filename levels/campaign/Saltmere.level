@@ -3197,6 +3197,10 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	Roach
+Block	1	LizardMan
+Block	1	Orc
+Block	1	PitDemon
 Region	HighFlat	24	14	50	28
 Region	VentField	3	26	20	46
 Region	Lagoon	18	44	44	62

@@ -1470,6 +1470,8 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	Roach
+Block	1	LizardMan
 Region	WestRoad	3	8	12	40
 Region	EastRoad	34	8	43	40
 Region	MiddleRoad	14	12	26	38

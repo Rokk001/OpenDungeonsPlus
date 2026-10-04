@@ -3997,6 +3997,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	Cove	36	80	62	100
 Region	WestCove	6	84	30	98
 Region	EastQuay	42	44	62	70

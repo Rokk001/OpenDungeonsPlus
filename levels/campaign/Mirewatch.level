@@ -5644,6 +5644,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	TowerA	37	97	55	111
 Region	TowerB	79	101	97	115
 Region	TowerC	17	69	35	83

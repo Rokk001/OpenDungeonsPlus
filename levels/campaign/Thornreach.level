@@ -5883,6 +5883,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	WestBand	3	22	22	50
 Region	Hedge1	26	5	52	30
 Region	Hedge2	26	42	52	68
