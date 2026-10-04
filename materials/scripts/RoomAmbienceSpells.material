@@ -113,3 +113,23 @@ material RoomAmbMarkBolt
         }
     }
 }
+
+// The lightning bolt mesh (models/SpellBolt.mesh, texture drawn by tools/gen_spell_bolt.py): added light
+material SpellBolt
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend src_alpha one
+            depth_write off
+            cull_hardware none
+
+            texture_unit
+            {
+                texture SpellBolt.png
+            }
+        }
+    }
+}

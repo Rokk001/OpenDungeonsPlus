@@ -78,7 +78,13 @@ enum class AmbienceKind
     roll,
     //! Slowly turns an object (a cannon) toward creatures within Amount tiles and back to where it stood when none
     //! is near, at Speed degrees per second (objects only)
-    turn
+    turn,
+    //! A mesh (Mesh) that is stretched from the point From to the target for a moment and flickers: a lightning bolt
+    //! (events only). Amount = width, Speed = flickers per second, Duration in seconds
+    beam,
+    //! An object (Mesh and/or particle system System as trail) that flies from From to the target in Duration seconds
+    //! on an arc of height Amount (events only); Land = event raised at the target when it arrives
+    projectile
 };
 
 enum class AmbienceMotion
@@ -112,6 +118,7 @@ struct AmbienceEffect
         mSpeed(1.0),
         mFlicker(0.0),
         mDuration(3.0),
+        mFrom(Ogre::Vector3(0.0f, 0.0f, 8.0f)),
         mDelay(0.0),
         mBelow(0.35),
         mEvery(10.0),
@@ -133,7 +140,8 @@ struct AmbienceEffect
     AmbienceKind mKind;
     //! Particle system template (kind particle)
     std::string mSystem;
-    //! Mesh of a rolling object and particle system where it breaks up (kind roll)
+    //! Mesh name without extension (kinds roll, beam and projectile) and particle system where a rolling object
+    //! breaks up (kind roll)
     std::string mMesh;
     std::string mEndSystem;
     //! Clips to choose from (kind clip)
@@ -151,6 +159,10 @@ struct AmbienceEffect
     double mFlicker;
     //! Seconds a one-shot effect is kept
     double mDuration;
+    //! Event raised at the target when a projectile arrives
+    std::string mLand;
+    //! Where a beam or projectile starts, relative to the target
+    Ogre::Vector3 mFrom;
     //! Sound family, as in the folders below sounds/Spatial (kind sound)
     std::string mFamily;
     //! Seconds after the event until the sound is played (kind sound, events only)
@@ -196,6 +208,8 @@ public:
     { return mMaxMotions; }
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
+    uint32_t getMaxFlights() const
+    { return mMaxFlights; }
     uint32_t getMaxMarks() const
     { return mMaxMarks; }
     double getOccupiedRadius() const
@@ -219,6 +233,7 @@ private:
     uint32_t mMaxMotions;
     uint32_t mMaxOneShots;
     uint32_t mMaxMarks;
+    uint32_t mMaxFlights;
     double mOccupiedRadius;
     double mReducedDistanceFactor;
 };

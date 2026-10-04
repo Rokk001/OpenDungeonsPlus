@@ -15,14 +15,14 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "OccupiedRadius",
+SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "MaxFlights", "OccupiedRadius",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below")
+               "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below", "Land", "From")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth")
-KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound", "Roll", "Turn")
+KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
@@ -174,8 +174,9 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         counts["events"] += 1
         if "Event" not in effect:
             problems.append("%s: event effect without Event" % where)
-        if kind not in ("Particle", "Shake", "Mark", "Sound", "Roll"):
-            problems.append("%s: event effects must be particles, shakes, marks, sounds or rolls" % where)
+        counts["names"].add(effect.get("Event", [""])[0])
+        if kind not in ("Particle", "Shake", "Mark", "Sound", "Roll", "Beam", "Projectile"):
+            problems.append("%s: event effects must be particles, shakes, marks, sounds, rolls, beams or projectiles" % where)
     else:
         if "Match" not in effect:
             problems.append("%s: no Match" % where)
@@ -205,8 +206,37 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: When LowHealth only works on the dungeon heart (DungeonTempleObject)" % where)
     elif "Below" in effect:
         problems.append("%s: Below only belongs to When LowHealth" % where)
-    if kind in ("Shake", "Mark") and target != "Event":
-        problems.append("%s: shakes and marks only work as events" % where)
+    if kind in ("Shake", "Mark", "Beam", "Projectile") and target != "Event":
+        problems.append("%s: shakes, marks, beams and projectiles only work as events" % where)
+    if kind in ("Beam", "Projectile"):
+        mesh = effect.get("Mesh", [None])[0]
+        system = effect.get("System", [None])[0]
+        if mesh is not None and not mesh_exists(mesh):
+            problems.append("%s: no mesh %s" % (where, mesh))
+        if kind == "Beam" and mesh is None:
+            problems.append("%s: a beam needs a Mesh" % where)
+        if kind == "Projectile" and mesh is None and system is None:
+            problems.append("%s: a projectile needs a Mesh or a System" % where)
+        if system is not None and system not in systems:
+            problems.append("%s: unknown particle system %s" % (where, system))
+        for key in ("From", "Duration", "Amount"):
+            if key not in effect:
+                problems.append("%s: %s without %s" % (where, kind.lower(), key))
+        if "Duration" in effect and is_number(effect["Duration"][0]) and not 0.05 <= float(effect["Duration"][0]) <= 1.5:
+            problems.append("%s: Duration of a flight must be between 0.05 and 1.5 seconds" % where)
+        if "Amount" in effect and is_number(effect["Amount"][0]) and not 0.0 <= float(effect["Amount"][0]) <= 6.0:
+            problems.append("%s: Amount of a flight must be between 0 and 6" % where)
+        if "From" in effect and len(effect["From"]) == 3 and all(is_number(v) for v in effect["From"]):
+            if max(abs(float(v)) for v in effect["From"]) > 20.0:
+                problems.append("%s: From is more than 20 units away" % where)
+        if kind == "Beam" and "Speed" not in effect:
+            problems.append("%s: a beam needs Speed (flickers per second)" % where)
+        if "Land" in effect:
+            counts["lands"].append((where, effect["Land"][0]))
+        if kind == "Beam" and "Land" in effect:
+            problems.append("%s: only projectiles have Land" % where)
+    elif "Land" in effect or "From" in effect or ("Mesh" in effect and kind != "Roll"):
+        problems.append("%s: Mesh, Land and From only belong to beams and projectiles (Mesh also to rolls)" % where)
     if kind == "Shake":
         for key in ("Amount", "Duration", "Speed", "MaxDistance"):
             if key not in effect:
@@ -275,7 +305,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 "Delay", "Below"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
-    for key in ("Offset", "Axis"):
+    for key in ("Offset", "Axis", "From"):
         if key in effect and (len(effect[key]) != 3 or not all(is_number(v) for v in effect[key])):
             problems.append("%s: %s needs three numbers" % (where, key))
     for key in ("Reduced", "NeedWall"):
@@ -353,10 +383,13 @@ def check_file(path, problems, visuals, systems, mats, counts):
 
 def main():
     problems = []
-    counts = {"effects": 0, "events": 0}
+    counts = {"effects": 0, "events": 0, "lands": [], "names": set()}
     check_file(os.path.join(ROOT, "config", "roomAmbience.cfg"), problems, tile_visuals(), particle_systems(),
                materials(), counts)
     check_particle_files(problems)
+    for where, land in counts["lands"]:
+        if land not in counts["names"]:
+            problems.append("%s: Land event %s has no effect" % (where, land))
     if problems:
         for problem in problems:
             print("PROBLEM:", problem)

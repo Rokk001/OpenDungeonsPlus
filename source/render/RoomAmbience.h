@@ -193,6 +193,32 @@ private:
         Seat* mSeat;
     };
 
+    //! \brief A bolt (kind beam) or a flying object (kind projectile) on its way to the target
+    struct Flight
+    {
+        Flight() :
+            mNode(nullptr), mEntity(nullptr), mTrailNode(nullptr), mTrailSystem(nullptr), mBeam(false),
+            mStart(Ogre::Vector3::ZERO), mEnd(Ogre::Vector3::ZERO), mAge(0.0), mDuration(0.4), mWidth(1.0),
+            mArc(0.0), mFlickerRate(20.0), mFlickerClock(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::SceneNode* mTrailNode;
+        Ogre::ParticleSystem* mTrailSystem;
+        bool mBeam;
+        Ogre::Vector3 mStart;
+        Ogre::Vector3 mEnd;
+        double mAge;
+        double mDuration;
+        double mWidth;
+        double mArc;
+        double mFlickerRate;
+        double mFlickerClock;
+        //! Event raised at the target on arrival (projectile)
+        std::string mLand;
+    };
+
     //! \brief A sound that waits for its time (Delay of an event effect)
     struct PendingSound
     {
@@ -291,6 +317,10 @@ private:
     //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
     void finishRoller(Roller& roller, bool leaveEffects);
     void updateShake(double timeSinceLastFrame);
+    //! \brief Starts a beam or a projectile (effect kinds beam and projectile) for an event at the given place
+    void startFlight(const AmbienceEffect& effect, const Ogre::Vector3& position);
+    void updateFlights(double timeSinceLastFrame);
+    void destroyFlight(Flight& flight);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
     void updateMotions(double timeSinceLastFrame);
@@ -363,6 +393,7 @@ private:
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
     std::vector<Collapse> mCollapses;
+    std::vector<Flight> mFlights;
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;
