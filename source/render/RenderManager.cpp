@@ -3220,6 +3220,50 @@ void RenderManager::rrDestroyWeapon(Creature* curCreature, const Weapon* curWeap
     }
 }
 
+namespace
+{
+const std::string WORKER_TOOL_MESH = "DwarfPick.mesh";
+const std::string WORKER_TOOL_PREFIX = "WorkerTool_";
+}
+
+void RenderManager::rrCreateWorkerTool(Creature* curCreature)
+{
+    const CreatureDefinition* definition = curCreature->getDefinition();
+    if((definition == nullptr) || !definition->isWorker() || (curCreature->getWeaponR() != nullptr))
+        return;
+
+    const std::string toolName = WORKER_TOOL_PREFIX + curCreature->getName();
+    if(mSceneManager->hasEntity(toolName))
+        return;
+
+    Ogre::Entity* ent = mSceneManager->getEntity(curCreature->getOgreNamePrefix() + curCreature->getName());
+    Ogre::Skeleton* skeleton = ent->getSkeleton();
+    // The kobold has a pick in its own model; the dwarf worker has the bone for a weapon only
+    if((skeleton == nullptr) || skeleton->hasBone("Pick") || !skeleton->hasBone("Weapon_R"))
+        return;
+
+    if(!Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(WORKER_TOOL_MESH))
+        return;
+
+    WeaponMount mount;
+    if(!getWeaponMount(skeleton, "R", WORKER_TOOL_MESH, mount))
+        return;
+
+    Ogre::Entity* toolEntity = mSceneManager->createEntity(toolName, WORKER_TOOL_MESH);
+    ent->attachObjectToBone(mount.mBoneName, toolEntity, mount.mRotation, mount.mOffset);
+}
+
+void RenderManager::rrDestroyWorkerTool(Creature* curCreature)
+{
+    const std::string toolName = WORKER_TOOL_PREFIX + curCreature->getName();
+    if(!mSceneManager->hasEntity(toolName))
+        return;
+
+    Ogre::Entity* toolEntity = mSceneManager->getEntity(toolName);
+    toolEntity->detachFromParent();
+    mSceneManager->destroyEntity(toolEntity);
+}
+
 void RenderManager::rrCreateMapLight(MapLight* curMapLight, bool displayVisual)
 {
     // Create the light and attach it to the lightSceneNode.

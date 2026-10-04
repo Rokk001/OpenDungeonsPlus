@@ -615,6 +615,8 @@ void Creature::createMeshWeapons()
 
     if(mWeaponR != nullptr)
         RenderManager::getSingleton().rrCreateWeapon(this, mWeaponR, "R");
+
+    RenderManager::getSingleton().rrCreateWorkerTool(this);
 }
 
 void Creature::destroyMeshWeapons()
@@ -630,6 +632,8 @@ void Creature::destroyMeshWeapons()
 
     if(mWeaponR != nullptr)
         RenderManager::getSingleton().rrDestroyWeapon(this, mWeaponR, "R");
+
+    RenderManager::getSingleton().rrDestroyWorkerTool(this);
 }
 
 GameEntityType Creature::getObjectType() const
