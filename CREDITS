@@ -616,6 +616,25 @@ materials/textures/RoomAmb*.png        OD Team                 GPLv3+           
 tools/gen_room_ambience_art.py         OD Team                 GPLv3+
 tools/check_room_ambience.py           OD Team                 GPLv3+
 
+=======================================================
+==  Spell effect sounds: sounds/Spatial/Spells/      ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+sounds/Spatial/Spells/Summon/FxSummon01.ogg       OD Team      GPLv3+                  Synthesized from sine waves and noise by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Rally/FxRally01.ogg         OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Explosion/FxExplosion01.ogg OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Boost/FxBoost01.ogg         OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Curse/FxCurse01.ogg         OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Dark/FxDark01.ogg           OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Gold/FxGold01.ogg           OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Lightning/FxLightning01.ogg OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Tremor/FxTremor01.ogg       OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Hen/FxHen01.ogg             OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Spells/Fire/FxFire01.ogg           OD Team      GPLv3+                  Synthesized by tools/gen_spell_sounds.py (script generated, original work, not AI generated)
+tools/gen_spell_sounds.py              OD Team                 GPLv3+
+
 ================================
 ==  Distribution data: dist/  ==
 ================================

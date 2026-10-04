@@ -170,6 +170,7 @@ bool SpellCallToWar::castSpellOnTile(GameMap* gameMap, Player* player, Tile* til
                                 static_cast<Ogre::Real>(0.0));
     spell->createMesh();
     spell->setPosition(spawnPosition);
+    fireSpellEffect(*tile, "CallToWar", "Rally");
 
     return true;
 }
