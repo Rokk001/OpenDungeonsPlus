@@ -6,6 +6,11 @@ Description	A great stone ridge splits this land in two. Your cave lies on the q
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	Splitstone
+SandboxTarget	26000
+SandboxBonus	gold	12000	5000	-	Hold 12000 gold at once
+SandboxBonus	goldTiles	20	5000	-	Mine out twenty gold seams
+SandboxNext	skirmish/Barrackdeep.level
 [/Info]
 
 [Seats]

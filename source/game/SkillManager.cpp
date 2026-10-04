@@ -804,7 +804,7 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl4depends.push_back(skill);
 
-    // Not researchable: the campaign talisman unlocks it. It has no dependency and no node in the skill tree window
+    // Not researchable: the campaign Heartstone unlocks it. It has no dependency and no node in the skill tree window
     resType = SkillType::spellSummonChampion;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
@@ -854,7 +854,7 @@ bool SkillManager::isSpellAvailable(SpellType type, const Seat* seat)
     SkillType resType = family.at(index);
     // The spells researched in a library cannot be cast while that library is lost.
     // Summoning a worker needs no research in the game this one follows, so it stays.
-    // Reward skills (Summon champion) are unlocked by a talisman, not researched, so they stay too.
+    // Reward skills (Summon champion) are unlocked by a Heartstone, not researched, so they stay too.
     if(seat->isLibraryLost() && (type != SpellType::summonWorker) && !Skills::isRewardSkill(resType))
         return false;
 
@@ -1066,7 +1066,7 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::spellSummonChampion: return "Summons one champion that cannot be hurt and charges at the enemies. Costs " +
             spell("SummonChampionPrice") + " mana, free for " + Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
             config.getSpellConfigDouble("SummonChampionDrainPerSecond")) + " seconds, then " + spell("SummonChampionDrainPerSecond") +
-            " mana per second. Unlocked by the complete talisman.";
+            " mana per second. Unlocked by the complete Heartstone.";
         case SkillType::spellPossess: return "Control one of your creatures in first person; free for " +
             spell("PossessFreeSeconds") + " seconds after the cast, then a mana drain per second that depends on the creature.";
         default: return "";

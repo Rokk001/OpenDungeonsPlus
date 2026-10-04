@@ -133,6 +133,12 @@ public:
     inline bool isRogueSeat() const
     { return mId == 0; }
 
+    //! \brief The neutral seat and the hero seats do not pay mana when their traps fire: their traps are part
+    //! of the level and these seats have no mana income
+
+    inline bool isTrapManaFree() const
+    { return isRogueSeat() || (getFaction() == "Hero"); }
+
     inline SeatStatistics& getStatistics()
     { return mStatistics; }
 
@@ -317,8 +323,12 @@ public:
 
     //! \brief Called when the skill entity reaches its destination. From there, the
     //! skilled thing is available
-    //! Returns true if the type was inserted and false otherwise
-    bool addSkill(SkillType type);
+    //! Returns true if the type was inserted and false otherwise. The player is told about the new
+    //! skill unless notify is false (the caller then sends its own notice)
+    bool addSkill(SkillType type, bool notify = true);
+
+    //! \brief Returns true if the level does not allow the skill to be researched
+    bool isSkillNotAllowed(SkillType type) const;
 
     //! \brief Server side function. Called when a fresh grimoire is brought to the dungeon
     //! temple. When enough points are gathered, the corresponding skill will become available

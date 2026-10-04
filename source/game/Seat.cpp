@@ -29,6 +29,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "gamemap/DraggableTileContainer.h"
 #include "giftboxes/GiftBoxBonus.h"
 #include "goals/Goal.h"
@@ -1559,7 +1560,7 @@ void Seat::exportTilesVisualInitialStates(TileVisual tileVisual, std::ostream& o
     os << "[/" + Tile::tileVisualToString(tileVisual) + "]" << std::endl;
 }
 
-bool Seat::addSkill(SkillType type)
+bool Seat::addSkill(SkillType type, bool notify)
 {
     if(std::find(mSkillDone.begin(), mSkillDone.end(), type) != mSkillDone.end())
         return false;
@@ -1575,7 +1576,8 @@ bool Seat::addSkill(SkillType type)
     }
 
     // Tells the player a new room/trap/spell is available.
-    if((getPlayer() != nullptr) &&
+    if(notify &&
+       (getPlayer() != nullptr) &&
        getPlayer()->getIsHuman() &&
        !getPlayer()->getHasLost())
     {
@@ -1588,6 +1590,11 @@ bool Seat::addSkill(SkillType type)
     }
 
     return true;
+}
+
+bool Seat::isSkillNotAllowed(SkillType type) const
+{
+    return std::find(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), type) != mSkillNotAllowed.end();
 }
 
 void Seat::setSkillAvailability(SkillType type, bool allowed, bool done)
@@ -2249,6 +2256,10 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
     {
         // Only check for fighter creatures.
         if (!def.first || def.first->isWorker())
+            continue;
+
+        // A level script can keep a creature class away from this seat
+        if(gameMap.getLevelScript().isCreatureBlocked(getId(), def.first->getClassName()))
             continue;
 
         // The skirmish settings can limit the number of creatures of one class

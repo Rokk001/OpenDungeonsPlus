@@ -18,6 +18,7 @@
 #ifndef LEVELSCRIPTRUNNER_H
 #define LEVELSCRIPTRUNNER_H
 
+class Creature;
 class GameMap;
 
 namespace LevelScriptRunner
@@ -25,6 +26,15 @@ namespace LevelScriptRunner
     //! \brief Checks the triggers of the game map level script and runs the actions of
     //! the ones whose conditions are met. Server side only, called once per turn.
     void doTurn(GameMap& gameMap);
+
+    //! \brief Carries out the standing order that a script action gave to the creature (go to
+    //! the dungeon of a player, walk to a point, hunt creatures, wait, steal gold). Server side only,
+    //! called when the creature has nothing to do. Returns true if the order takes the turn of the
+    //! creature, false if the creature may do what it does without an order.
+    bool doCreatureOrder(Creature& creature);
+    //! \brief Campaign: the creature that the kept minion special of the last level won brought along
+    //! comes to the dungeon temple of the first human keeper. Called once when the game starts.
+    void spawnKeptMinion(GameMap& gameMap);
 }
 
 #endif // LEVELSCRIPTRUNNER_H

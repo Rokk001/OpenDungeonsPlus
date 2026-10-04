@@ -896,7 +896,9 @@ bool EditorMode::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
             {
                 ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSlapEntity,
                      closestEntity->getObjectType(),
-                     closestEntity->getName());
+                     closestEntity->getName(),
+                     keeperHandPos.x,
+                     keeperHandPos.y);
                 return true;
             }
         }

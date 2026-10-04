@@ -170,6 +170,13 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "timeLimit";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
+
+        case ServerNotificationType::seatTeam:
+            return "seatTeam";
+        case ServerNotificationType::sandboxStatus:
+            return "sandboxStatus";
+        case ServerNotificationType::sandboxRealmComplete:
+            return "sandboxRealmComplete";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));

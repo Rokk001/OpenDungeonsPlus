@@ -84,15 +84,15 @@ static const std::string sampleBonus =
     "[Level]\nFile=campaign/Bonus.level\nTitle=Hidden\nBonus=1\n"
     "[Level]\nFile=campaign/Two.level\nTitle=Second\n";
 
-BOOST_AUTO_TEST_CASE(test_bonus_levels_and_talisman)
+BOOST_AUTO_TEST_CASE(test_bonus_levels_and_Heartstone)
 {
     Campaign& campaign = Campaign::getSingleton();
     std::istringstream is(sampleBonus);
     BOOST_REQUIRE(campaign.importDefinition(is));
     BOOST_REQUIRE_EQUAL(campaign.getNumLevels(), 3u);
     BOOST_CHECK(campaign.getLevel(1).mBonus);
-    BOOST_CHECK_EQUAL(campaign.getTalismanTotal(), 1u);
-    BOOST_CHECK_EQUAL(campaign.getTalismanPieces(), 0u);
+    BOOST_CHECK_EQUAL(campaign.getHeartstoneTotal(), 1u);
+    BOOST_CHECK_EQUAL(campaign.getHeartstonePieces(), 0u);
 
     // The bonus level stays hidden when level 1 is completed.
     BOOST_CHECK(!campaign.isUnlocked(1));
@@ -109,8 +109,8 @@ BOOST_AUTO_TEST_CASE(test_bonus_levels_and_talisman)
     BOOST_CHECK(campaign.discoverBonusLevel("campaign/Bonus.level"));
     BOOST_CHECK(!campaign.discoverBonusLevel("campaign/Bonus.level"));
     BOOST_CHECK(campaign.isUnlocked(1));
-    BOOST_CHECK_EQUAL(campaign.getTalismanPieces(), 1u);
-    BOOST_CHECK(campaign.isTalismanComplete());
+    BOOST_CHECK_EQUAL(campaign.getHeartstonePieces(), 1u);
+    BOOST_CHECK(campaign.isHeartstoneComplete());
 
     // The discovery is saved.
     std::ostringstream os;

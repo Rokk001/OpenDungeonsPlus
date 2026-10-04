@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <iosfwd>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,7 +34,16 @@
 //!
 //!   [Triggers]
 //!   Flag    <name>  <value>                   # initial value of a flag (unset flags are 0)
+//!   Timer   <name> <running 0|1> <turns>      # written by the game: a timer started by an action, in game turns
+//!   FreePossession                            # written by the game: possessions of this level cost no mana
+//!   PortalOff <seatId>                        # written by the game: a seat whose portals are switched off
+//!   Block   <seatId> <class>                  # written by the game: a creature class that cannot come to the seat
+//!   Event   <tag> <eventName> <count>         # written by the game: events of creatures and parties counted so far
+//!   Member  <creatureName> <partyTag>         # written by the game: a creature that a spawn action created for a party
 //!   TimeLimit <seconds>                       # written by the game: the time limit set by an action, in level seconds (-2: removed)
+//!   SlapLimit <count>                         # written by the game: the number of slaps a player may do (action slaplimit)
+//!   Slaps   <seatId> <count>                  # written by the game: slaps a player has tried so far
+//!   Order   <creatureName> <job> <seatId> <index> <x,y;x,y;...|->   # written by the game: the standing order of a creature (action order), index is the waypoint it walks to
 //!   Region  <name> <x1> <y1> <x2> <y2>        # a named rectangle of tiles (placed in the level editor)
 //!   [Trigger]
 //!   Name    <name>
@@ -41,7 +51,27 @@
 //!   Cond    time <seconds>                    # at least that many seconds since the level start
 //!   Cond    region <seatId> <x1> <y1> <x2> <y2>   # a creature of the seat (-1: any) is in the rectangle
 //!   Cond    region <seatId> <regionName>          # the same, with the rectangle of a named region
-//!   Cond    creatures <seatId> >= | <= <count>
+//!   Cond    region <seatId> <regionName> <op> <count> [<class>]   # number of living creatures (of that class) of the seat in the region
+//!   Cond    creatures <seatId> <op> <count> [<class>]   # living creatures of the seat, optionally of one creature class
+//!   Cond    event <tag> <eventName> [<op> <count>]   # a creature (its name) or a party (its tag) had that event that many times, default at least once.
+//!           # events: killed (dies), incapacitated (dies or is knocked out), attacked (takes damage), slapped, pickedup, imprisoned, tortured,
+//!           # afraid (starts to flee), steals (takes gold), claimed (a neutral creature joins a keeper), created (the creature or a member of the party exists; counts them).
+//!           # Two more tags: Seat<id> with the event cast:<spellName> (the player cast that spell, spell type names such as callToWar) and the tag Level with the event payday.
+//!   Cond    slabs <seatId> <regionName> <kind> <op> <count>   # tiles of the region of that kind: rock (earth wall), path (dug floor), gold, gems, claimed (claimed floor), wall (reinforced wall), water, lava, impenetrable or a room name; seat -1 any owner, 0 unclaimed
+//!   Cond    tagged <seatId> <regionName> <op> <count>   # tiles of the region marked for digging by the seat
+//!   Cond    tagged <seatId> <regionName> all            # every diggable tile of the region is marked for digging by the seat (and there is one)
+//!   Cond    possessed <seatId> <regionName> [<class>]   # a creature (of that class) that the seat possesses is in the region
+//!   Cond    boulder <regionName> <op> <count>   # rolling boulders (from boulder traps) that are inside the region right now
+//!   Cond    defeated <seatId>                 # the seat has lost its dungeon (its player is out of the game)
+//!   Cond    slaps <seatId> <op> <count>       # slaps the player of the seat has tried to do (a slap that the slap limit refuses counts too)
+//!   Cond    furniture <seatId> <roomName> <op> <count>   # furniture objects (bookcases, beds, ...) in the rooms of that type of the seat
+//!   Cond    breached <seatId>                 # a creature of a seat that is not allied with the seat stands on tiles that the seat has claimed (inside the dungeon)
+//!   Cond    owns <seatId> <creatureName>      # the creature with that name is alive and belongs to the seat
+//!   Cond    health <creatureName> <op> <percent>   # health of that living creature in percent of its maximum
+//!   Cond    spell <seatId> <skillName>        # the seat has the spell (or any other skill) researched
+//!   Cond    built <seatId> <trapName> <op> <count>   # tiles of traps or doors of that type (Cannon, DoorSteel, ...) of the seat; trapName any counts all
+//!   Cond    roomtiles <seatId> <roomName> <op> <count>   # tiles of all rooms of that type of the seat
+//!   Cond    roomsize <seatId> <roomName> <op> <count>    # tiles of the largest room of that type of the seat
 //!   Cond    room <seatId> <roomName> <count>  # seat owns at least count rooms of that type
 //!   Cond    gold <seatId> >= | <= <amount>    # gold of the seat
 //!   Cond    mana <seatId> >= | <= <amount>    # mana of the seat
@@ -57,17 +87,39 @@
 //!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
 //!   Cond    flag <name> <value>               # flag has exactly that value
+//!   Cond    flag <name> <op> <value>          # op is == != < <= > >=; value may be @<otherFlag>
+//!   Cond    timer <name> <op> <seconds>       # a timer started by "Action timer" has run that long (a timer that was never started counts 0)
+//!
+//! Every comparison of a number accepts the operators >= <= == != > < (the older conditions
+//! only had >= and <=).
 //!   Action  message <seatId> <text>           # seat -1: every human player
 //!   Action  objective <seatId> <text>
-//!   Action  spawn <seatId> <x> <y> <targetSeatId> <class:level> [<class:level> ...]
+//!   Action  spawn <seatId> <x> <y> <targetSeatId> [party=<tag>] <class:level>[@<name>] [...]   # the tag names the group for event conditions, a name is the creature name (if no creature has it)
 //!   Action  gold <seatId> <amount>
 //!   Action  setflag <name> <value>
 //!   Action  addflag <name> <delta>            # adds to the flag (a negative value subtracts)
+//!   Action  terrain <x1> <y1> <x2> <y2> <kind> [<seatId>]   # changes the tiles of the rectangle: rock, path, gold, gems, claimed, wall (claimed by the seat), water, lava, impenetrable
+//!   Action  portal <seatId> on | off          # the portals of the seat do (not) attract creatures
+//!   Action  available <seatId> <class> 1 | 0  # a creature class can (not) come to the dungeon of the seat
+//!   Action  possess <creatureName>           # the human player takes the creature over (possession). From then on every possession of the level is free (no mana drain), the level is a possession level
+//!   Action  remove <creatureName>             # the creature leaves the map
+//!   Action  alliance <seatA> <seatB> make | break   # the seats become allies (they join one team) or the seat leaves its team
+//!   Action  generate <seatId> <class:level>   # a creature comes through a portal of the seat now
+//!   Action  timer <name> [<seconds>]          # starts (or restarts) the timer at that value, 0 if it is left out
+//!   Action  order <job> <seatId> <x,y;x,y;...|-> <name> [<name> ...]   # standing order for creatures (names or party tags): job killplayer (go to the dungeon of the seat and fight), goto (walk the waypoints, then wait), killcreatures (hunt the creatures of the seat, -1: of any other seat), wait (stand still), stealgold (go to the treasury of the seat and take its gold)
+//!   Action  speed <run|walk> <name> [<name> ...]   # the creatures (names or party tags) run or walk again
+//!   Action  roomowner <x> <y> <seatId>        # the room that covers the tile belongs to the seat from now on
+//!   Action  slaplimit <count>                 # the players may only slap that many times (a slap beyond the limit does nothing)
 //!   Action  win <seatId>                      # seat -1: every human player
 //!   Action  lose <seatId>
 //!   Action  reveal <seatId> <regionName>      # the tiles of the region stay visible to the seat
 //!   Action  make <seatId> <skillName>         # room, trap, door or spell becomes available (skill type name such as roomHatchery); seat -1: every human player
 //!   Action  timelimit <seconds>               # the level is lost for every keeper when that many seconds have passed from now (0: removes any time limit); the remaining time is shown on the HUD
+//!   Action  golfball <seatId> <x> <y>         # a boulder lies on the tile; the seat rolls it by slapping it. A region named by a "boulder" condition is a hole: the ball stops in it
+//!   Action  stonecreate <x> <y>                 # a portal stone lies on the tile
+//!   Action  stoneattach <creatureName>          # the creature carries a portal stone; it drops where the creature dies
+//!   Action  keepminion <seatId>              # campaign: the strongest fighter of the seat comes along to the next level if this level is won (it starts at the dungeon temple)
+//!   Action  terrain <x1> <y1> <x2> <y2> bridge <seatId>   # also: a wooden bridge of the seat over lava or water
 //!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
@@ -76,6 +128,26 @@
 //! All the conditions of a trigger must be true at the same time. A trigger that is
 //! not repeatable fires once. A repeatable one fires again once the cooldown elapsed
 //! and the conditions are (still) true.
+
+//! How a number of a condition is compared with the value of the game
+enum class LevelScriptCompare
+{
+    atLeast,
+    atMost,
+    equal,
+    notEqual,
+    greater,
+    less
+};
+
+//! True if value op reference holds
+bool levelScriptCompare(int64_t value, LevelScriptCompare op, int64_t reference);
+
+//! The text form of the operator (>=, <=, ==, !=, >, <)
+const char* levelScriptCompareToken(LevelScriptCompare op);
+
+//! Reads an operator, false if the text is none of them
+bool levelScriptParseCompare(const std::string& token, LevelScriptCompare& op);
 
 enum class LevelScriptConditionType
 {
@@ -96,7 +168,23 @@ enum class LevelScriptConditionType
     creaturesLost,
     creaturesPickedUp,
     creaturesDropped,
-    creaturesSlapped
+    creaturesSlapped,
+    timer,
+    seatDefeated,
+    ownsCreature,
+    creatureHealth,
+    spellKnown,
+    trapsBuilt,
+    roomTiles,
+    largestRoom,
+    creatureEvent,
+    tileKinds,
+    tilesTagged,
+    possessedInRegion,
+    boulderInRegion,
+    playerSlaps,
+    roomFurniture,
+    dungeonBreached
 };
 
 enum class LevelScriptActionType
@@ -112,7 +200,23 @@ enum class LevelScriptActionType
     reveal,
     discoverLevel,
     make,
-    timeLimit
+    timeLimit,
+    startTimer,
+    alterTerrain,
+    portalStatus,
+    creatureAvailable,
+    removeCreature,
+    alliance,
+    generateCreature,
+    possessCreature,
+    creatureOrder,
+    creatureSpeed,
+    roomOwner,
+    slapLimit,
+    golfBall,
+    stoneCreate,
+    stoneAttach,
+    keepMinion
 };
 
 struct LevelScriptCondition
@@ -125,6 +229,7 @@ struct LevelScriptCondition
         mX2(0),
         mY2(0),
         mAtLeast(true),
+        mCompare(LevelScriptCompare::atLeast),
         mNumber(0)
     {}
 
@@ -136,12 +241,17 @@ struct LevelScriptCondition
     int32_t mY2;
     //! \brief For the conditions that compare a number: true for >=, false for <=
     bool mAtLeast;
+    //! The same comparison with all the operators (mAtLeast is true when it is atLeast)
+    LevelScriptCompare mCompare;
     //! \brief Seconds (time), count (creatures, room, claimed, -1 for all of the region),
     //! amount (gold, mana, goldMined), count (kills and the creature conditions) or value (flag)
     int64_t mNumber;
     //! \brief Room name (room), goal name (goal), flag name (flag) or, for region, the
     //! name of a region of the script (empty when the rectangle is given by mX1 to mY2)
     std::string mName;
+    //! The flag a flag condition compares with (empty when it compares with mNumber), or the creature class
+    //! that a creatures or region condition counts (empty: every creature)
+    std::string mName2;
 };
 
 struct LevelScriptAction
@@ -151,6 +261,8 @@ struct LevelScriptAction
         mSeatId(-1),
         mX(0),
         mY(0),
+        mX2(0),
+        mY2(0),
         mTargetSeatId(-1),
         mNumber(0)
     {}
@@ -159,6 +271,9 @@ struct LevelScriptAction
     int32_t mSeatId;
     int32_t mX;
     int32_t mY;
+    //! \brief terrain: second corner of the rectangle
+    int32_t mX2;
+    int32_t mY2;
     //! \brief spawn: seat whose dungeon the spawned group attacks (-1: none)
     int32_t mTargetSeatId;
     //! \brief Gold amount (gold), flag value (setflag), amount added to a flag (addflag) or
@@ -169,6 +284,12 @@ struct LevelScriptAction
     std::string mText;
     //! \brief spawn: creature class name and level
     std::vector<std::pair<std::string, uint32_t> > mCreatures;
+    //! \brief spawn: name of each creature of mCreatures (empty: the game chooses one)
+    std::vector<std::string> mCreatureNames;
+    //! \brief spawn: tag of the party the created creatures belong to (empty: none)
+    std::string mParty;
+    //! \brief order: the waypoints (tile coordinates) of a goto order
+    std::vector<std::pair<int32_t, int32_t> > mWaypoints;
 };
 
 //! \brief A named rectangle of tiles, both corners included. The level editor places them
@@ -219,11 +340,44 @@ struct LevelScriptTrigger
     int64_t mLastFiredTurn;
 };
 
+//! \brief The standing order of a creature, given by an order action (the AI of the creature carries it out)
+struct LevelScriptOrder
+{
+    LevelScriptOrder() :
+        mSeatId(-1),
+        mIndex(0)
+    {}
+
+    //! killplayer, goto, killcreatures, wait or stealgold
+    std::string mJob;
+    //! The seat that is attacked, hunted or robbed (-1: none)
+    int32_t mSeatId;
+    //! goto: the tiles to walk to, one after the other
+    std::vector<std::pair<int32_t, int32_t> > mWaypoints;
+    //! goto: the waypoint the creature walks to now
+    uint32_t mIndex;
+};
+
+//! A timer that an action started: it counts game turns while it runs
+struct LevelScriptTimer
+{
+    LevelScriptTimer() :
+        mRunning(false),
+        mTurns(0)
+    {}
+
+    bool mRunning;
+    int64_t mTurns;
+};
+
 class LevelScript
 {
 public:
     LevelScript() :
-        mTimeLimitSeconds(TIME_LIMIT_NOT_SET)
+        mFreePossession(false),
+        mWatchedValid(false),
+        mTimeLimitSeconds(TIME_LIMIT_NOT_SET),
+        mSlapLimit(-1)
     {}
 
     //! \brief Reads the lines after the [Triggers] tag, up to and including [/Triggers].
@@ -236,16 +390,78 @@ public:
     void clear();
 
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET); }
+    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
-    { return mTriggers; }
+    {
+        mWatchedValid = false;
+        return mTriggers;
+    }
 
     inline const std::vector<LevelScriptTrigger>& getTriggers() const
     { return mTriggers; }
 
     int64_t getFlag(const std::string& name) const;
     void setFlag(const std::string& name, int64_t value);
+
+    //! Timers: a timer that was never started does not exist and counts 0 turns
+    int64_t getTimerTurns(const std::string& name) const;
+    void startTimer(const std::string& name, int64_t turns);
+
+    //! Adds one turn to every running timer
+    void advanceTimers();
+
+    inline const std::map<std::string, LevelScriptTimer>& getTimers() const
+    { return mTimers; }
+
+    //! A level that starts with a possession (Action possess) does not drain mana for it
+    inline bool isFreePossession() const
+    { return mFreePossession; }
+
+    inline void setFreePossession(bool free)
+    { mFreePossession = free; }
+
+    //! Portals of a seat that are switched off
+    void setPortalOff(int32_t seatId, bool off);
+    bool isPortalOff(int32_t seatId) const;
+
+    //! Creature classes that cannot come to the dungeon of a seat
+    void setCreatureBlocked(int32_t seatId, const std::string& className, bool blocked);
+    bool isCreatureBlocked(int32_t seatId, const std::string& className) const;
+
+    //! Counts an event of a creature (and of the party it belongs to). Only the creatures and parties
+    //! that a condition of the script names are counted.
+    void recordEvent(const std::string& creatureName, const std::string& eventName);
+    int64_t getEventCount(const std::string& tag, const std::string& eventName) const;
+
+    //! Puts a creature into a party
+    void addPartyMember(const std::string& party, const std::string& creatureName);
+
+    inline const std::map<std::pair<std::string, std::string>, int64_t>& getEvents() const
+    { return mEvents; }
+
+    inline const std::map<std::string, std::string>& getPartyMembers() const
+    { return mPartyMembers; }
+
+    //! Standing orders of the creatures (by creature name)
+    void setOrder(const std::string& creatureName, const LevelScriptOrder& order);
+    void clearOrder(const std::string& creatureName);
+    //! Returns nullptr if the creature has no order
+    const LevelScriptOrder* getOrder(const std::string& creatureName) const;
+    //! Moves a goto order to the next waypoint, the order is a wait order after the last one
+    void advanceOrder(const std::string& creatureName);
+
+    //! Names of the creatures of a party (tag) that were created by a spawn action
+    std::vector<std::string> getPartyMemberNames(const std::string& party) const;
+
+    //! Counts a slap the player of the seat tries. Returns false if the slap limit refuses it.
+    bool registerSlap(int32_t seatId);
+    int64_t getSlaps(int32_t seatId) const;
+    inline int64_t getSlapLimit() const
+    { return mSlapLimit; }
+
+    inline void setSlapLimit(int64_t limit)
+    { mSlapLimit = limit; }
 
     inline const std::map<std::string, int64_t>& getFlags() const
     { return mFlags; }
@@ -271,6 +487,23 @@ public:
     //! \brief Replaces all the regions, used by the editor when the server sends them
     void setRegions(const std::vector<LevelScriptRegion>& regions);
 
+    inline const std::map<int32_t, int64_t>& getSlapCounts() const
+    { return mSlaps; }
+
+    //! True if the tile is in a region that a boulder condition names: a golf ball stops there
+    bool isBoulderHole(int32_t x, int32_t y) const;
+
+    //! Creatures that carry a portal stone (it drops where they die)
+    void addStoneCarrier(const std::string& creatureName);
+    void removeStoneCarrier(const std::string& creatureName);
+
+    inline const std::set<std::string>& getStoneCarriers() const
+    { return mStoneCarriers; }
+
+    //! The last tile a stone carrier was seen on (not saved)
+    void setStoneCarrierTile(const std::string& creatureName, int32_t x, int32_t y);
+    bool getStoneCarrierTile(const std::string& creatureName, int32_t& x, int32_t& y) const;
+
     static const int64_t TIME_LIMIT_NOT_SET = -1;
     static const int64_t TIME_LIMIT_REMOVED = -2;
 
@@ -291,8 +524,23 @@ public:
 private:
     std::vector<LevelScriptTrigger> mTriggers;
     std::map<std::string, int64_t> mFlags;
+    std::map<std::string, LevelScriptTimer> mTimers;
+    bool mFreePossession;
+    std::set<int32_t> mPortalOff;
+    std::set<std::pair<int32_t, std::string> > mBlocked;
+    std::map<std::pair<std::string, std::string>, int64_t> mEvents;
+    //! creature name -> party tag
+    std::map<std::string, std::string> mPartyMembers;
+    //! The creature names and party tags that the event conditions of the triggers name
+    mutable std::set<std::string> mWatched;
+    mutable bool mWatchedValid;
     std::vector<LevelScriptRegion> mRegions;
     int64_t mTimeLimitSeconds;
+    std::map<std::string, LevelScriptOrder> mOrders;
+    std::map<int32_t, int64_t> mSlaps;
+    int64_t mSlapLimit;
+    std::set<std::string> mStoneCarriers;
+    std::map<std::string, std::pair<int32_t, int32_t> > mStoneCarrierTiles;
 };
 
 #endif // LEVELSCRIPT_H

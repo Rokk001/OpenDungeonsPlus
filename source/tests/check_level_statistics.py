@@ -91,6 +91,9 @@ struct SeatStatistics
 struct Seat
 {
     Seat(int id, int team, const std::string& faction) : mId(id), mTeamId(team), mFaction(faction) {}
+    struct CompletedGoal { std::string getName() const { return std::string(); } };
+    unsigned int numCompletedGoals() const { return 0; }
+    CompletedGoal* getCompletedGoal(unsigned int) { return nullptr; }
     int getTeamId() const { return mTeamId; }
     const std::string& getFaction() const { return mFaction; }
     bool isAlliedSeat(const Seat* seat) const { return getTeamId() == seat->getTeamId(); }
@@ -182,6 +185,7 @@ struct Creature : public GameEntity
     int mDeaths;
     CreatureDefinition mDefinition;
 };
+void recordScriptEvent(const Creature&, const std::string&) {}
 TAKE_DAMAGE
 struct MockRoom
 {
@@ -416,6 +420,9 @@ struct Player
 struct Seat
 {
     Seat(int i, int t) : id(i), team(t), player(nullptr) {}
+    struct CompletedGoal { std::string getName() const { return std::string(); } };
+    unsigned int numCompletedGoals() const { return 0; }
+    CompletedGoal* getCompletedGoal(unsigned int) { return nullptr; }
     int getId() const { return id; }
     Player* getPlayer() { return player; }
     bool isAlliedSeat(Seat* s) { return s && team == s->team; }

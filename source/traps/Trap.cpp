@@ -149,7 +149,7 @@ void Trap::doUpkeep()
 bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
 {
     // A trap fizzles if its owner cannot pay the mana needed to fire
-    double manaToFire = getManaToFire();
+    double manaToFire = getSeat()->isTrapManaFree() ? 0.0 : getManaToFire();
     if((manaToFire > 0.0) && (getSeat()->getMana() < manaToFire))
         return false;
 
@@ -159,6 +159,7 @@ bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
     if(manaToFire > 0.0)
         getSeat()->takeMana(manaToFire);
 
+    ++getSeat()->getStatistics().mTrapsFired;
     trapTileData->setReloadTime(mReloadTime);
     if(!trapTileData->decreaseShoot())
         deactivate(tile);

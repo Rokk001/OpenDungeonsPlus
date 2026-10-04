@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE(test_invalid)
         // Nothing to claim
         "[Trigger]\nName\tx\nCond\tclaimed\t1\tGate\t0\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
         // Wrong comparison
-        "[Trigger]\nName\tx\nCond\tgold\t1\t==\t5\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nCond\tgold\t1\t=\t5\nAction\twin\t1\n[/Trigger]\n[/Triggers]\n",
         // Region with a missing corner value
         "Region\tA\t1\t2\t3\n[/Triggers]\n",
         // Region inside a trigger
@@ -383,4 +383,443 @@ BOOST_AUTO_TEST_CASE(test_empty)
     std::istringstream is("[/Triggers]\n");
     BOOST_CHECK(script.importFromStream(is));
     BOOST_CHECK(script.isEmpty());
+}
+
+//! Every comparison operator, a flag compared with another flag, and the timers
+BOOST_AUTO_TEST_CASE(test_flag_operators_and_timers)
+{
+    static const std::string text =
+        "Timer\tspawnDelay\t1\t45\n"
+        "Timer\tstopped\t0\t7\n"
+        "[Trigger]\n"
+        "Name\tops\n"
+        "Mode\tonce\n"
+        "Cond\tflag\tF1\t!=\t0\n"
+        "Cond\tflag\tF2\t>\t3\n"
+        "Cond\tflag\tF3\t<\t4\n"
+        "Cond\tflag\tF4\t>=\t@F5\n"
+        "Cond\tflag\tF6\t==\t2\n"
+        "Cond\tflag\tF7\t1\n"
+        "Cond\tgold\t1\t==\t500\n"
+        "Cond\tcreatures\t1\t!=\t0\n"
+        "Cond\ttimer\tspawnDelay\t>=\t30\n"
+        "Action\ttimer\tspawnDelay\t5\n"
+        "Action\ttimer\tother\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 1u);
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 9u);
+    BOOST_CHECK(trigger.mConditions[0].mCompare == LevelScriptCompare::notEqual);
+    BOOST_CHECK(trigger.mConditions[1].mCompare == LevelScriptCompare::greater);
+    BOOST_CHECK(trigger.mConditions[2].mCompare == LevelScriptCompare::less);
+    BOOST_CHECK(trigger.mConditions[3].mCompare == LevelScriptCompare::atLeast);
+    BOOST_CHECK_EQUAL(trigger.mConditions[3].mName2, "F5");
+    BOOST_CHECK(trigger.mConditions[4].mCompare == LevelScriptCompare::equal);
+    BOOST_CHECK(trigger.mConditions[5].mCompare == LevelScriptCompare::equal);
+    BOOST_CHECK_EQUAL(trigger.mConditions[5].mNumber, 1);
+    BOOST_CHECK(trigger.mConditions[6].mCompare == LevelScriptCompare::equal);
+    BOOST_CHECK(trigger.mConditions[7].mCompare == LevelScriptCompare::notEqual);
+    BOOST_CHECK(trigger.mConditions[8].mType == LevelScriptConditionType::timer);
+    BOOST_CHECK_EQUAL(trigger.mConditions[8].mNumber, 30);
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 2u);
+    BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::startTimer);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mNumber, 5);
+    BOOST_CHECK_EQUAL(trigger.mActions[1].mNumber, 0);
+
+    BOOST_CHECK(levelScriptCompare(5, LevelScriptCompare::greater, 4));
+    BOOST_CHECK(!levelScriptCompare(4, LevelScriptCompare::greater, 4));
+    BOOST_CHECK(levelScriptCompare(4, LevelScriptCompare::less, 5));
+    BOOST_CHECK(levelScriptCompare(4, LevelScriptCompare::notEqual, 5));
+    BOOST_CHECK(levelScriptCompare(4, LevelScriptCompare::equal, 4));
+
+    // Timers are saved with their turns and keep running after a load
+    BOOST_CHECK_EQUAL(script.getTimerTurns("spawnDelay"), 45);
+    BOOST_CHECK_EQUAL(script.getTimerTurns("never"), 0);
+    script.advanceTimers();
+    BOOST_CHECK_EQUAL(script.getTimerTurns("spawnDelay"), 46);
+    BOOST_CHECK_EQUAL(script.getTimerTurns("stopped"), 7);
+    script.startTimer("fresh", 3);
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    BOOST_CHECK_EQUAL(again.getTimerTurns("spawnDelay"), 46);
+    BOOST_CHECK_EQUAL(again.getTimerTurns("fresh"), 3);
+    BOOST_CHECK_EQUAL(again.getTimers().size(), 3u);
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+
+    // Invalid forms are refused
+    static const char* bad[] = {
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tflag\tF1\t<>\t2\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttimer\tt\t1\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\ttimer\n[/Trigger]\n[/Triggers]\n"};
+    for(const char* entry : bad)
+    {
+        LevelScript invalid;
+        std::istringstream isBad(entry);
+        BOOST_CHECK_MESSAGE(!invalid.importFromStream(isBad), entry);
+    }
+}
+
+//! The conditions for seats, specific creatures, spells, traps and rooms
+BOOST_AUTO_TEST_CASE(test_seat_and_creature_conditions)
+{
+    static const std::string text =
+        "Region\tGate\t10\t10\t20\t20\n"
+        "[Trigger]\n"
+        "Name\tmany\n"
+        "Mode\tonce\n"
+        "Cond\tdefeated\t4\n"
+        "Cond\towns\t1\tLordKnight3\n"
+        "Cond\thealth\tLordKnight3\t<\t50\n"
+        "Cond\tspell\t1\tspellPossess\n"
+        "Cond\tbuilt\t1\tCannon\t>=\t2\n"
+        "Cond\tbuilt\t2\tany\t==\t0\n"
+        "Cond\troomtiles\t1\tTreasury\t>=\t12\n"
+        "Cond\troomsize\t1\tHatchery\t>=\t9\n"
+        "Cond\tcreatures\t1\t>=\t2\tKnight\n"
+        "Cond\tcreatures\t1\t>=\t2\n"
+        "Cond\tregion\t1\tGate\n"
+        "Cond\tregion\t1\tGate\t>=\t3\n"
+        "Cond\tregion\t1\tGate\t==\t2\tKnight\n"
+        "Cond\tregion\t1\t4\t5\t6\t7\n"
+        "Action\tmessage\t1\tHello\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 1u);
+    const std::vector<LevelScriptCondition>& c = script.getTriggers()[0].mConditions;
+    BOOST_REQUIRE_EQUAL(c.size(), 14u);
+    BOOST_CHECK(c[0].mType == LevelScriptConditionType::seatDefeated);
+    BOOST_CHECK_EQUAL(c[0].mSeatId, 4);
+    BOOST_CHECK(c[1].mType == LevelScriptConditionType::ownsCreature);
+    BOOST_CHECK_EQUAL(c[1].mName, "LordKnight3");
+    BOOST_CHECK(c[2].mType == LevelScriptConditionType::creatureHealth);
+    BOOST_CHECK(c[2].mCompare == LevelScriptCompare::less);
+    BOOST_CHECK_EQUAL(c[2].mNumber, 50);
+    BOOST_CHECK(c[3].mType == LevelScriptConditionType::spellKnown);
+    BOOST_CHECK(c[4].mType == LevelScriptConditionType::trapsBuilt);
+    BOOST_CHECK_EQUAL(c[4].mName, "Cannon");
+    BOOST_CHECK(c[5].mCompare == LevelScriptCompare::equal);
+    BOOST_CHECK(c[6].mType == LevelScriptConditionType::roomTiles);
+    BOOST_CHECK(c[7].mType == LevelScriptConditionType::largestRoom);
+    BOOST_CHECK_EQUAL(c[8].mName2, "Knight");
+    BOOST_CHECK(c[9].mName2.empty());
+    // A region without an operator wants one creature, as before
+    BOOST_CHECK(c[10].mCompare == LevelScriptCompare::atLeast);
+    BOOST_CHECK_EQUAL(c[10].mNumber, 1);
+    BOOST_CHECK_EQUAL(c[11].mNumber, 3);
+    BOOST_CHECK(c[12].mCompare == LevelScriptCompare::equal);
+    BOOST_CHECK_EQUAL(c[12].mName2, "Knight");
+    BOOST_CHECK(c[13].mName.empty());
+    BOOST_CHECK_EQUAL(c[13].mX2, 6);
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+
+    static const char* bad[] = {
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tdefeated\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\thealth\tA\t>=\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tbuilt\t1\tCannon\t2\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tregion\t1\tGate\t>=\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n"};
+    for(const char* entry : bad)
+    {
+        LevelScript invalid;
+        std::istringstream isBad(entry);
+        BOOST_CHECK_MESSAGE(!invalid.importFromStream(isBad), entry);
+    }
+}
+
+//! Events of named creatures and parties, counted only for the names that a condition watches
+BOOST_AUTO_TEST_CASE(test_creature_events)
+{
+    static const std::string text =
+        "Event\tLordKnight3\tkilled\t1\n"
+        "Member\tKnight_7\tPartyA\n"
+        "[Trigger]\n"
+        "Name\tlord\n"
+        "Mode\tonce\n"
+        "Cond\tevent\tLordKnight3\tkilled\n"
+        "Cond\tevent\tPartyA\tincapacitated\t>=\t2\n"
+        "Cond\troom\t1\tTreasury\t>\t0\n"
+        "Cond\troom\t1\tHatchery\t2\n"
+        "Action\tspawn\t2\t5\t6\t-1\tparty=PartyA\tKnight:2\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 4u);
+    BOOST_CHECK(trigger.mConditions[0].mType == LevelScriptConditionType::creatureEvent);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mName2, "killed");
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mNumber, 1);
+    BOOST_CHECK_EQUAL(trigger.mConditions[1].mNumber, 2);
+    BOOST_CHECK(trigger.mConditions[2].mCompare == LevelScriptCompare::greater);
+    BOOST_CHECK(trigger.mConditions[3].mCompare == LevelScriptCompare::atLeast);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mParty, "PartyA");
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mCreatures.size(), 1u);
+
+    BOOST_CHECK_EQUAL(script.getEventCount("LordKnight3", "killed"), 1);
+    script.recordEvent("Unwatched", "killed");
+    BOOST_CHECK_EQUAL(script.getEventCount("Unwatched", "killed"), 0);
+    // A member counts for its own name only if watched, and always for its party
+    script.recordEvent("Knight_7", "incapacitated");
+    BOOST_CHECK_EQUAL(script.getEventCount("PartyA", "incapacitated"), 1);
+    BOOST_CHECK_EQUAL(script.getEventCount("Knight_7", "incapacitated"), 0);
+    script.addPartyMember("PartyA", "Knight_8");
+    script.recordEvent("Knight_8", "incapacitated");
+    BOOST_CHECK_EQUAL(script.getEventCount("PartyA", "incapacitated"), 2);
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    BOOST_CHECK_EQUAL(again.getEventCount("PartyA", "incapacitated"), 2);
+    BOOST_CHECK_EQUAL(again.getPartyMembers().size(), 2u);
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+}
+
+//! Tiles, tags, possession, boulders and the actions that change the level
+BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
+{
+    static const std::string text =
+        "PortalOff\t3\n"
+        "Block\t1\tTroll\n"
+        "Region\tHole\t5\t5\t7\t7\n"
+        "[Trigger]\n"
+        "Name\tworld\n"
+        "Mode\tonce\n"
+        "Cond\tslabs\t0\tHole\tpath\t>=\t4\n"
+        "Cond\tslabs\t-1\tHole\tTreasury\t==\t0\n"
+        "Cond\ttagged\t1\tHole\t>=\t2\n"
+        "Cond\ttagged\t1\tHole\tall\n"
+        "Cond\tpossessed\t1\tHole\n"
+        "Cond\tpossessed\t1\tHole\tWyvern\n"
+        "Cond\tboulder\tHole\t>=\t1\n"
+        "Action\tterrain\t5\t5\t7\t7\trock\n"
+        "Action\tterrain\t8\t8\t8\t8\tclaimed\t1\n"
+        "Action\tportal\t2\toff\n"
+        "Action\tportal\t2\ton\n"
+        "Action\tavailable\t1\tTroll\t0\n"
+        "Action\tavailable\t1\tTroll\t1\n"
+        "Action\tremove\tKnight_5\n"
+        "Action\tpossess\tWizard4\n"
+        "Action\talliance\t4\t5\tmake\n"
+        "Action\talliance\t4\t5\tbreak\n"
+        "Action\tgenerate\t2\tGoblin:3\n"
+        "Action\tspawn\t3\t9\t9\t-1\tparty=Raid\tKnight:2@LordTitus\tArcher:1\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    BOOST_CHECK(script.isPortalOff(3));
+    BOOST_CHECK(!script.isPortalOff(2));
+    BOOST_CHECK(script.isCreatureBlocked(1, "Troll"));
+    BOOST_CHECK(!script.isCreatureBlocked(2, "Troll"));
+    script.setPortalOff(2, true);
+    script.setCreatureBlocked(1, "Troll", false);
+    BOOST_CHECK(script.isPortalOff(2));
+    BOOST_CHECK(!script.isCreatureBlocked(1, "Troll"));
+    script.setPortalOff(2, false);
+    script.setCreatureBlocked(1, "Troll", true);
+
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 7u);
+    BOOST_CHECK(trigger.mConditions[0].mType == LevelScriptConditionType::tileKinds);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mName2, "path");
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mSeatId, 0);
+    BOOST_CHECK(trigger.mConditions[2].mType == LevelScriptConditionType::tilesTagged);
+    BOOST_CHECK_EQUAL(trigger.mConditions[2].mNumber, 2);
+    BOOST_CHECK_EQUAL(trigger.mConditions[3].mNumber, -1);
+    BOOST_CHECK(trigger.mConditions[4].mType == LevelScriptConditionType::possessedInRegion);
+    BOOST_CHECK_EQUAL(trigger.mConditions[5].mName2, "Wyvern");
+    BOOST_CHECK(trigger.mConditions[6].mType == LevelScriptConditionType::boulderInRegion);
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 12u);
+    BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::alterTerrain);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mX2, 7);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mSeatId, -1);
+    BOOST_CHECK_EQUAL(trigger.mActions[1].mSeatId, 1);
+    BOOST_CHECK_EQUAL(trigger.mActions[2].mNumber, 0);
+    BOOST_CHECK_EQUAL(trigger.mActions[3].mNumber, 1);
+    BOOST_CHECK(trigger.mActions[6].mType == LevelScriptActionType::removeCreature);
+    BOOST_CHECK(trigger.mActions[7].mType == LevelScriptActionType::possessCreature);
+    BOOST_CHECK_EQUAL(trigger.mActions[8].mNumber, 1);
+    BOOST_CHECK_EQUAL(trigger.mActions[9].mNumber, 0);
+    BOOST_CHECK(trigger.mActions[10].mType == LevelScriptActionType::generateCreature);
+    BOOST_CHECK_EQUAL(trigger.mActions[11].mCreatureNames.size(), 2u);
+    BOOST_CHECK_EQUAL(trigger.mActions[11].mCreatureNames[0], "LordTitus");
+    BOOST_CHECK(trigger.mActions[11].mCreatureNames[1].empty());
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+
+    static const char* bad[] = {
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tterrain\t1\t1\t2\t2\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tportal\t1\tmaybe\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tavailable\t1\tTroll\t2\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\talliance\t1\t2\tfriends\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tspawn\t1\t1\t1\t-1\tKnight:2@\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tslabs\t1\tHole\tpath\t2\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttagged\t1\tHole\tsome\nAction\tmessage\t1\tx\n[/Trigger]\n[/Triggers]\n"};
+    for(const char* entry : bad)
+    {
+        LevelScript invalid;
+        std::istringstream isBad(entry);
+        BOOST_CHECK_MESSAGE(!invalid.importFromStream(isBad), entry);
+    }
+}
+
+//! A level that starts with a scripted possession does not drain mana
+BOOST_AUTO_TEST_CASE(test_free_possession)
+{
+    LevelScript script;
+    BOOST_CHECK(!script.isFreePossession());
+    script.setFreePossession(true);
+    BOOST_CHECK(!script.isEmpty());
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is));
+    BOOST_CHECK(again.isFreePossession());
+    again.clear();
+    BOOST_CHECK(!again.isFreePossession());
+}
+
+//! Standing orders, the slap counter and the last conditions and actions the campaign needs
+BOOST_AUTO_TEST_CASE(test_orders_and_slaps)
+{
+    const std::string text =
+        "SlapLimit\t10\n"
+        "Slaps\t3\t4\n"
+        "Order\tKnight1\tgoto\t-1\t1\t5,6;7,8\n"
+        "Order\tKnight2\tkillplayer\t1\t0\t-\n"
+        "[Trigger]\n"
+        "Name\tt1\n"
+        "Mode\tonce\n"
+        "Cond\tslaps\t3\t>=\t11\n"
+        "Cond\tfurniture\t3\tLibrary\t>=\t1\n"
+        "Cond\tbreached\t3\n"
+        "Cond\tevent\tSeat3\tcast:callToWar\n"
+        "Cond\tevent\tLevel\tpayday\n"
+        "Action\torder\tgoto\t-1\t5,6;7,8\tKnight3\tParty1\n"
+        "Action\torder\twait\t-1\t-\tKnight4\n"
+        "Action\tspeed\trun\tKnight3\n"
+        "Action\troomowner\t40\t40\t3\n"
+        "Action\tslaplimit\t10\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    BOOST_CHECK(!script.isEmpty());
+    BOOST_CHECK_EQUAL(script.getSlapLimit(), 10);
+    BOOST_CHECK_EQUAL(script.getSlaps(3), 4);
+    BOOST_REQUIRE(script.getOrder("Knight1") != nullptr);
+    BOOST_CHECK(script.getOrder("Knight1")->mJob == "goto");
+    BOOST_CHECK_EQUAL(script.getOrder("Knight1")->mIndex, 1u);
+    BOOST_CHECK_EQUAL(script.getOrder("Knight1")->mWaypoints.size(), 2u);
+    BOOST_CHECK(script.getOrder("Knight1")->mWaypoints[1] == std::make_pair(7, 8));
+    BOOST_REQUIRE(script.getOrder("Knight2") != nullptr);
+    BOOST_CHECK_EQUAL(script.getOrder("Knight2")->mSeatId, 1);
+    BOOST_CHECK(script.getOrder("Nobody") == nullptr);
+
+    BOOST_REQUIRE_EQUAL(script.getTriggers().size(), 1u);
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 5u);
+    BOOST_CHECK(trigger.mConditions[0].mType == LevelScriptConditionType::playerSlaps);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mNumber, 11);
+    BOOST_CHECK(trigger.mConditions[1].mType == LevelScriptConditionType::roomFurniture);
+    BOOST_CHECK(trigger.mConditions[1].mName == "Library");
+    BOOST_CHECK(trigger.mConditions[2].mType == LevelScriptConditionType::dungeonBreached);
+    BOOST_CHECK(trigger.mConditions[3].mType == LevelScriptConditionType::creatureEvent);
+    BOOST_CHECK(trigger.mConditions[3].mName2 == "cast:callToWar");
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 5u);
+    BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::creatureOrder);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mCreatureNames.size(), 2u);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mWaypoints.size(), 2u);
+    BOOST_CHECK(trigger.mActions[1].mWaypoints.empty());
+    BOOST_CHECK(trigger.mActions[2].mType == LevelScriptActionType::creatureSpeed);
+    BOOST_CHECK_EQUAL(trigger.mActions[2].mNumber, 1);
+    BOOST_CHECK(trigger.mActions[3].mType == LevelScriptActionType::roomOwner);
+    BOOST_CHECK_EQUAL(trigger.mActions[3].mX, 40);
+    BOOST_CHECK(trigger.mActions[4].mType == LevelScriptActionType::slapLimit);
+
+    // Written and read again
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream isAgain(written.substr(written.find('\n') + 1));
+    BOOST_REQUIRE(again.importFromStream(isAgain));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK(written == os2.str());
+
+    // A goto order moves on and turns into a wait order after the last waypoint
+    script.advanceOrder("Knight1");
+    BOOST_CHECK(script.getOrder("Knight1")->mJob == "wait");
+    script.advanceOrder("Knight2");
+    BOOST_CHECK(script.getOrder("Knight2")->mJob == "killplayer");
+    script.clearOrder("Knight2");
+    BOOST_CHECK(script.getOrder("Knight2") == nullptr);
+
+    // A slap beyond the limit is refused, but counted
+    LevelScript limited;
+    limited.setSlapLimit(2);
+    BOOST_CHECK(limited.registerSlap(3));
+    BOOST_CHECK(limited.registerSlap(3));
+    BOOST_CHECK(!limited.registerSlap(3));
+    BOOST_CHECK_EQUAL(limited.getSlaps(3), 3);
+    BOOST_CHECK(limited.registerSlap(4));
+    LevelScript unlimited;
+    BOOST_CHECK(unlimited.registerSlap(3));
+
+    // Malformed lines
+    const char* invalid[] = {
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\torder\tdance\t-1\t-\tKnight1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\torder\twait\t-1\t-\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\torder\tgoto\t-1\t5;6\tKnight1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tspeed\tfly\tKnight1\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\troomowner\t1\t2\n[/Trigger]\n[/Triggers]\n",
+        "[Trigger]\nName\tx\nMode\tonce\nCond\tslaps\t3\t11\nAction\tslaplimit\t1\n[/Trigger]\n[/Triggers]\n",
+        "Order\tKnight1\tgoto\t-1\t0\n[/Triggers]\n"
+    };
+    for(const char* entry : invalid)
+    {
+        LevelScript bad;
+        std::istringstream isBad(entry);
+        BOOST_CHECK_MESSAGE(!bad.importFromStream(isBad), entry);
+    }
 }

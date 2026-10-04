@@ -43,9 +43,30 @@ public:
     virtual bool hitCreature(Tile* tile, GameEntity* entity) override;
     virtual bool wallHitNextDirection(const Ogre::Vector3& actDirection, Tile* tile, Ogre::Vector3& nextDirection) override;
 
+    //! \brief A golf ball is a boulder that the keeper slaps: it rolls, slows down and stays where it stops.
+    //! It does not hurt anybody and falls into the holes of the level script. A golf ball has a negative damage.
+    bool isGolfBall() const
+    { return mDamage < 0.0; }
+
+    //! \brief Creates a golf ball (not added to the map yet)
+    static MissileBoulder* createGolfBall(GameMap* gameMap, Seat* seat, const std::string& name);
+
+    //! \brief The ball lies still and can be slapped
+    bool isResting();
+
+    //! \brief Slaps the ball away from the point (fromX, fromY) in tile coordinates
+    void slapFrom(float fromX, float fromY);
+
+    virtual bool canSlap(Seat* seat) override;
+    virtual void slap() override;
+    virtual bool stopsOnTile(Tile* tile) override;
+    virtual bool staysWhenStopped() const override
+    { return isGolfBall(); }
+
     static MissileBoulder* getMissileBoulderFromStream(GameMap* gameMap, std::istream& is);
     static MissileBoulder* getMissileBoulderFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
+    virtual void updateDirection() override;
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 

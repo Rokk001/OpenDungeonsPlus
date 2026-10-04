@@ -40,7 +40,7 @@ struct CampaignLevel
     std::string mBriefing;
     std::string mDebriefing;
     //! A bonus (secret) level does not block the main sequence. Finding one
-    //! gives a piece of the talisman.
+    //! gives a piece of the Heartstone.
     bool mBonus;
     //! Id of the province (or of the bonus site) of the level on the world map
     std::string mProvince;
@@ -73,7 +73,7 @@ struct CampaignLevel
 //!
 //! A bonus level is hidden until a level script finds it (action "discover",
 //! the level file name as argument). It is not needed to finish the campaign,
-//! and each discovered bonus level is one piece of the talisman.
+//! and each discovered bonus level is one piece of the Heartstone.
 //!
 //! Progress file (written by the game):
 //!   Completed <index> [<index> ...]
@@ -118,12 +118,18 @@ public:
     //! discovered (progress is saved).
     bool discoverBonusLevel(const std::string& file);
     bool isDiscovered(size_t index) const;
-    //! \brief Number of discovered bonus levels (found talisman pieces).
-    size_t getTalismanPieces() const;
-    //! \brief Number of bonus levels (talisman pieces to find).
-    size_t getTalismanTotal() const;
+    //! \brief Number of discovered bonus levels (found Heartstone pieces).
+    size_t getHeartstonePieces() const;
+    //! \brief Number of bonus levels (Heartstone pieces to find).
+    size_t getHeartstoneTotal() const;
     //! \brief True if the campaign has bonus levels and all were discovered.
-    bool isTalismanComplete() const;
+    bool isHeartstoneComplete() const;
+    //! \brief The kept minion special was used in the level that is played: the creature (class and level)
+    //! comes along to the next level, if this level is won.
+    void setKeptMinion(const std::string& className, uint32_t level);
+    //! \brief The creature that came along from the last level won. Returns false if there is none; the
+    //! creature is taken (it comes to one level only).
+    bool takeKeptMinion(std::string& className, uint32_t& level);
     //! \brief True if any level was completed (a campaign can be continued).
     bool hasProgress() const;
     //! \brief Forgets all progress (New Campaign).
@@ -175,6 +181,12 @@ private:
     bool mPlayedLevelWon;
     std::string mLevelSummary;
     uint32_t mDifficulty;
+    //! The creature chosen by the kept minion special in the level that is played, and the one that came
+    //! from the last level won (saved)
+    std::string mKeptPendingClass;
+    uint32_t mKeptPendingLevel;
+    std::string mKeptClass;
+    uint32_t mKeptLevel;
 
     size_t getCurrentLevelNoLock() const;
     bool isUnlockedNoLock(size_t index) const;

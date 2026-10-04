@@ -6,6 +6,11 @@ Description	A hushed crag with a small cave to call home. Dig out the dormitory 
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	Quietcrag
+SandboxTarget	14000
+SandboxBonus	rooms	4	3000	-	Build four rooms
+SandboxBonus	creatures	6	3000	-	Gather six fighting creatures
+SandboxNext	skirmish/Lanternreach.level
 [/Info]
 
 [Seats]

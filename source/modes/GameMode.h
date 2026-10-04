@@ -169,6 +169,12 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool takeSandboxHero(const CEGUI::EventArgs& = {});
     bool startSandboxSingleInvasion(const CEGUI::EventArgs& = {});
     bool startSandboxContinualInvasion(const CEGUI::EventArgs& = {});
+    //! \brief Shows the score and the room timer the server sent (on the HUD and in the sandbox window) and
+    //! opens the prompt when the server tells that the realm is complete
+    void updateSandboxStatus();
+    //! \brief The prompt after a completed realm: leave for the next realm, or stay in this one
+    bool onSandboxNextRealm(const CEGUI::EventArgs& = {});
+    bool onSandboxStay(const CEGUI::EventArgs& = {});
 
     //! \brief Shows/hides/toggles the player settings window
     //! \brief Casino payout control, opened by clicking on one of the player's casinos
@@ -339,6 +345,11 @@ private:
 
     //! \brief The level of the heroes taken from the sandbox hero toolbox
     uint32_t mSandboxHeroLevel;
+    //! \brief The level file of the next realm offered by the open prompt
+    std::string mSandboxNextLevel;
+    //! \brief What the sandbox score and room timer of the HUD show, to set the text only on a change
+    std::string mSandboxScoreShown;
+    std::string mSandboxRoomShown;
 
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window

@@ -22,6 +22,8 @@
 
 #include "gamemap/GameMap.h"
 
+#include "gamemap/LevelScript.h"
+
 #include "ai/KeeperAIType.h"
 #include "creatureaction/CreatureAction.h"
 #include "creaturemood/CreatureMood.h"
@@ -111,6 +113,19 @@ const double AUTO_WORKER_INTERVAL_SECONDS = 5.0;
 
 //! \brief Squared distance within which an enemy creature triggers the heart defence.
 const int HEART_DEFENCE_RANGE_SQUARED = 7 * 7;
+
+//! \brief True if the seat has completed a goal that is more than keeping its dungeon temple. A seat
+//! whose only goal is to protect its temple does not win through its goals at once: the level script
+//! wins it (campaign levels do that).
+bool hasCompletedWinningGoal(Seat* seat)
+{
+    for(unsigned int i = 0; i < seat->numCompletedGoals(); ++i)
+    {
+        if(seat->getCompletedGoal(i)->getName() != "ProtectDungeonTemple")
+            return true;
+    }
+    return false;
+}
 
 //! \brief Mana a seat gains per second: the heart plus one per claimed tile,
 //! the tile part capped. The tiles of the heart area are not counted again.
@@ -240,12 +255,23 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mHighMap(nullptr),
         generator(42)
 {
+    mLevelScript.reset(new LevelScript());
     resetUniqueNumbers();
 }
 
 GameMap::~GameMap()
 {
     clearAll();
+}
+
+LevelScript& GameMap::getLevelScript()
+{
+    return *mLevelScript;
+}
+
+const LevelScript& GameMap::getLevelScript() const
+{
+    return *mLevelScript;
 }
 
 std::string GameMap::serverStr()
@@ -367,7 +393,7 @@ void GameMap::clearAll()
         processDeletionQueues();
 
         clearGoalsForAllSeats();
-        mLevelScript.clear();
+        mLevelScript->clear();
         clearSeats();
         mLocalPlayer = nullptr;
         clearPlayers();
@@ -1337,6 +1363,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     if((mTimePayDay >= ConfigManager::getSingleton().getTimePayDay()))
     {
         mTimePayDay = 0;
+        getLevelScript().recordEvent("Level", "payday");
         // We only notify players with a dungeon temple
         for(Player* player : getPlayers())
         {
@@ -1387,7 +1414,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         // Check the goals and move completed ones to the completedGoals list for the seat.
         //NOTE: Once seats are placed on this list, they stay there even if goals are unmet.  We may want to change this.
         // A sandbox level has no goals: a seat without goals must not win at once
-        if (!mIsSandbox && seat->checkAllGoals() == 0 && seat->numFailedGoals() == 0)
+        if (!mIsSandbox && seat->checkAllGoals() == 0 && seat->numFailedGoals() == 0 && hasCompletedWinningGoal(seat))
             addWinningSeat(seat);
 
         seat->mNumCreaturesFightersMax = getMaxNumberCreatures(seat);
@@ -3755,12 +3782,12 @@ void GameMap::setScriptTimeLimit(int64_t seconds)
 {
     if(seconds <= 0)
     {
-        mLevelScript.setTimeLimitSeconds(LevelScript::TIME_LIMIT_REMOVED);
+        mLevelScript->setTimeLimitSeconds(LevelScript::TIME_LIMIT_REMOVED);
         return;
     }
 
     int64_t elapsedSeconds = static_cast<int64_t>(static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond);
-    mLevelScript.setTimeLimitSeconds(elapsedSeconds + seconds);
+    mLevelScript->setTimeLimitSeconds(elapsedSeconds + seconds);
     // A new limit can run out again, even after an earlier one did
     mGameDurationAnnounced = false;
 }
@@ -3787,7 +3814,7 @@ void GameMap::checkGameDuration()
 {
     // The limit of a script action wins over the game duration of the game settings.
     // Both count game time, not real time, so the game speed does not change them.
-    const int64_t scriptLimit = mLevelScript.getTimeLimitSeconds();
+    const int64_t scriptLimit = mLevelScript->getTimeLimitSeconds();
     double endTurn = -1.0;
     if(scriptLimit >= 0)
         endTurn = static_cast<double>(scriptLimit) * ODApplication::turnsPerSecond;

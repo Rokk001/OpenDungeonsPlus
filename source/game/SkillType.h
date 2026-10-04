@@ -115,7 +115,7 @@ namespace Skills
     std::string skillTypeToPlayerVisibleString(SkillType type);
 
     //! \brief True for the skills that cannot be researched. A seat only gets them as a reward
-    //! (the Summon champion spell comes with the completed campaign talisman).
+    //! (the Summon champion spell comes with the completed campaign Heartstone).
     bool isRewardSkill(SkillType type);
 }
 

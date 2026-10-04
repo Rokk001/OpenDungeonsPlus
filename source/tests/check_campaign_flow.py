@@ -28,4 +28,7 @@ assert 'resetProgress()' in confirmed
 defeat = game[game.index('bool GameMode::onClickDefeatDebriefingConfirm('):game.index('bool GameMode::onClickYesQuitMenu(')]
 assert 'Campaign::getSingleton().isActive()' in defeat
 assert 'MENU_CAMPAIGN' in defeat and 'requestMainMenuWithSkirmishSubMenu()' in defeat
+# A seat whose only goal is to protect its temple must not win at once: the level script wins the hero levels
+game_map = read('source/gamemap/GameMap.cpp')
+assert 'hasCompletedWinningGoal(seat))' in game_map and '!= "ProtectDungeonTemple"' in game_map
 print('campaign flow: ok')

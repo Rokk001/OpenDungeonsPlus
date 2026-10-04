@@ -522,7 +522,7 @@ void MenuModeCampaign::fillMap()
     progress->setProperty("VertFormatting", "CentreAligned");
     progress->setProperty("TextColours", "FF2A1A0C");
     progress->setText(Helper::toString(conquered) + " / " + Helper::toString(provinceTotal)
-        + " provinces conquered\n" + Helper::toString(static_cast<int>(campaign.getTalismanPieces())) + " / "
+        + " provinces conquered\n" + Helper::toString(static_cast<int>(campaign.getHeartstonePieces())) + " / "
         + Helper::toString(siteTotal) + " hidden sites");
 
     CEGUI::Window* bar = createMapWindow("OD/ProgressBar", "ProgressBar", panelX + panelWidth * 0.04f,

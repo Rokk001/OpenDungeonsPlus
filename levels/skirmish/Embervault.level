@@ -6,6 +6,11 @@ Description	A single long vault runs from the deep south to the far north, and a
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 Sandbox	1
+SandboxRealm	Embervault
+SandboxTarget	38000
+SandboxBonus	gold	20000	7500	-	Hold 20000 gold at once
+SandboxBonus	rooms	16	7500	-	Own sixteen rooms
+SandboxNext	skirmish/GrandDelve.level
 [/Info]
 
 [Seats]
