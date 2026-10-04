@@ -1704,7 +1704,7 @@ bool Seat::useStoredSpecial(GiftBoxType type)
     mStoredSpecialBoxes.erase(it);
     --mStoredSpecials[static_cast<uint32_t>(type)];
 
-    // Imps and left over gold appear at the dungeon heart
+    // Workers and left over gold appear at the dungeon heart
     Tile* tile = nullptr;
     std::vector<Room*> hearts = mGameMap->getRoomsByTypeAndSeat(RoomType::dungeonTemple, this);
     if(!hearts.empty())
