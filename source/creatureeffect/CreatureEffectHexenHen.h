@@ -27,7 +27,7 @@ class CreatureEffectHexenHen : public CreatureEffect
 {
 public:
     CreatureEffectHexenHen(int32_t nbTurnsEffect) :
-        CreatureEffect(nbTurnsEffect, "")
+        CreatureEffect(nbTurnsEffect, "SpellCreatureHexenHen")
     {}
 
     CreatureEffectHexenHen() :

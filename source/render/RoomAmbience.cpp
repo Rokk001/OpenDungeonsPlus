@@ -1173,7 +1173,7 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
 }
 
 uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
-        const std::string& visualName)
+        const std::string& visualName, bool noThrottle)
 {
     if((mMode == Mode::off) || (RenderManager::getSingletonPtr() == nullptr))
         return 0;
@@ -1185,7 +1185,7 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
     if(!forced)
     {
         std::map<std::string, double>::iterator lastIt = mLastEventTime.find(eventName);
-        if((lastIt != mLastEventTime.end()) && ((mClock - lastIt->second) < 0.1))
+        if(!noThrottle && (lastIt != mLastEventTime.end()) && ((mClock - lastIt->second) < 0.1))
             return 0;
     }
 

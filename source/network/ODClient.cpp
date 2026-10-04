@@ -48,6 +48,7 @@
 #include "render/CreatureReactions.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "rooms/RoomPortalWave.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -1109,6 +1110,19 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             int xPos;
             int yPos;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
+            static const std::string spellEffectPrefix = "SpellFx/";
+            if(family.compare(0, spellEffectPrefix.size(), spellEffectPrefix) == 0)
+            {
+                // Cosmetic spell effect, no sound belongs to it
+                RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
+                if(ambience != nullptr)
+                {
+                    Ogre::Vector3 position(static_cast<Ogre::Real>(xPos), static_cast<Ogre::Real>(yPos), 0.0f);
+                    ambience->triggerEvent("SpellFx" + family.substr(spellEffectPrefix.size()), position, false,
+                        std::string(), true);
+                }
+                break;
+            }
             SoundEffectsManager::getSingleton().playSpatialSound(family, xPos, yPos);
             break;
         }

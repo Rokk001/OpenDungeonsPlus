@@ -156,8 +156,10 @@ bool SpellSummonChampion::castSpell(GameMap* gameMap, Player* player, ODPacket& 
                                 static_cast<Ogre::Real>(tile->getY()),
                                 static_cast<Ogre::Real>(0.0));
     champion->addParticleEffect("SummonWorker", 3);
+    champion->addParticleEffect("SpellCreatureChampion", 12);
     champion->createMesh();
     champion->setPosition(spawnPosition);
+    fireSpellEffect(*tile, "Champion", "Summon");
 
     return true;
 }

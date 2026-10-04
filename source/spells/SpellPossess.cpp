@@ -176,6 +176,10 @@ bool SpellPossess::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         return false;
 
     creature->startPossession(*player);
+    creature->addParticleEffect("SpellCreaturePossess", 20);
+    Tile* pos = creature->getPositionTile();
+    if(pos != nullptr)
+        fireSpellEffect(*pos, "Possess", "Dark");
     return true;
 }
 

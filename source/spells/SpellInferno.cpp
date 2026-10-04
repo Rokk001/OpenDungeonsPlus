@@ -149,6 +149,8 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     if(!player->getSeat()->takeMana(price))
         return false;
 
+    fireSpellEffect(*tileTarget, "Inferno", "Fire");
+
     int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoRadiusTiles"));
     double damagePerTurn = ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurn");
     int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoNbTurns"));
@@ -167,8 +169,8 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         if((pos == nullptr) || !isTileInRadius(pos, x, y, radius))
             continue;
 
-        // There is no dedicated fire particle effect yet, the explosion one is used as a placeholder
-        creature->addCreatureEffect(new CreatureEffectBurn(nbTurns, damagePerTurn, "SpellCreatureExplosion"));
+        creature->addCreatureEffect(new CreatureEffectBurn(nbTurns, damagePerTurn, "SpellCreatureInferno"));
+        fireSpellEffect(*pos, "InfernoHit", "");
     }
 
     return true;

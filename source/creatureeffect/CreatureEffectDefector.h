@@ -27,7 +27,7 @@ class CreatureEffectDefector : public CreatureEffect
 {
 public:
     CreatureEffectDefector(int32_t nbTurnsEffect, int originalSeatId, int newSeatId) :
-        CreatureEffect(nbTurnsEffect, ""),
+        CreatureEffect(nbTurnsEffect, "SpellCreatureDefector"),
         mOriginalSeatId(originalSeatId),
         mNewSeatId(newSeatId)
     {}
