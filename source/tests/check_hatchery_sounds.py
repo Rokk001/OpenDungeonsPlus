@@ -19,6 +19,6 @@ assert 'tools/hatchery/gen_hatchery_sounds.py' in credits
 assert (root / 'tools/hatchery/gen_hatchery_sounds.py').exists()
 
 # The server plays them through the room sound message (family "Rooms/Hatchery/<Family>")
-for family in ('Crow', 'Cluck', 'Peep', 'EggCrack'):
+for family in families:
     assert '"Hatchery/%s"' % family in room, family
 print('hatchery sounds ok')
