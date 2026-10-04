@@ -373,6 +373,7 @@ set(OD_SOURCEFILES
 	${SRC}/eventsystem/Subject.cpp		
 	
     ${SRC}/game/Campaign.cpp
+    ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
     ${SRC}/game/CreatureRelationships.cpp
@@ -448,6 +449,9 @@ set(OD_SOURCEFILES
     ${SRC}/network/ServerNotification.cpp
 
     ${SRC}/render/CreatureOverlayStatus.cpp
+    ${SRC}/render/CreatureReactionConfig.cpp
+    ${SRC}/render/CreatureReactions.cpp
+    ${SRC}/render/CreatureCombatReactions.cpp
     ${SRC}/render/DebugDrawer.cpp    
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
@@ -567,6 +571,7 @@ set(OD_SOURCEFILES
     ${SRC}/utils/NameAliases.cpp
     ${SRC}/utils/Random.cpp
     ${SRC}/utils/ResourceManager.cpp
+    ${SRC}/utils/RunLevelTest.cpp
     ${SRC}/utils/VectorInt64.cpp
 
     ${SRC}/ODApplication.cpp

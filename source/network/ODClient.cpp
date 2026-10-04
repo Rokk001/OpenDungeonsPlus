@@ -45,6 +45,7 @@
 #include "network/ODPacket.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
+#include "render/CreatureReactions.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "rooms/RoomPortalWave.h"
@@ -645,6 +646,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(entity->getObjectType() == GameEntityType::creature)
                 static_cast<Creature*>(entity)->socialCreatureAdded();
 
+            if((nt == NodeType::MTILES_NODE) && (CreatureReactions::getSingletonPtr() != nullptr))
+                CreatureReactions::getSingleton().noteEntityAdded(entity);
+
             break;
         }
 
@@ -679,6 +683,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             Ogre::SceneNode* entityNode = entity->getEntityNode();
             if(entityNode != nullptr && entityNode->getParentSceneNode() != nullptr)
                 entityNode->getParentSceneNode()->removeChild(entityNode);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteEntityRemoved(entity);
 
             entity->removeEntityFromPositionTile(gameMapPointer);
             entity->removeFromGameMap(gameMapPointer);
@@ -995,7 +1002,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             MovableGameEntity* entity = gameMap->getRenderedMovableEntity(entityName);
             if(entity == nullptr)
             {
-                OD_LOG_ERR("MovableGameEntity pointer equal to nullptr: entityName=" + entityName);
+                // The entity can already be gone on the client when the order arrives (for example a trap rebuilt in the meantime)
+                OD_LOG_WRN("MovableGameEntity pointer equal to nullptr: entityName=" + entityName);
                 break;
             }
 
@@ -1290,6 +1298,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 RenderManager::getSingleton().rrSetFeedingChicken(creature,
                     gameMap->getAnimatedObject(chickenName), chickenPosition);
+                if(CreatureReactions::getSingletonPtr() != nullptr)
+                    CreatureReactions::getSingleton().noteChickenFeeding(creature, chickenName);
             }
             break;
         }
@@ -1567,6 +1577,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             carried->removeEntityFromPositionTile();
 
             RenderManager::getSingleton().rrCarryEntity(carrier, carried);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteCarry(carrier, carried);
             break;
         }
 
@@ -1593,6 +1606,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             RenderManager::getSingleton().rrReleaseCarriedEntity(carrier, carried);
             carried->setPosition(pos);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteRelease(carrier, carried);
             break;
         }
 

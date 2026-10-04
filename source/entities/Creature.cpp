@@ -87,6 +87,7 @@
 #include "render/CreaturePortrait.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
+#include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -991,6 +992,10 @@ void Creature::setPosition(const Ogre::Vector3& v, GameMap *gameMap )
                     }
                     inputManager.mHighlightedCreature = closestCreature;
                     closestCreature->maxAmbient();
+
+                    // The creature notices the hand that comes over it
+                    if(CreatureReactions::getSingletonPtr() != nullptr)
+                        CreatureReactions::getSingleton().noteHandHover(closestCreature);
                 }
             }
         }
@@ -2260,6 +2265,11 @@ void Creature::updateFromPacket(ODPacket& is)
     MovableGameEntity::updateFromPacket(is);
 
     int seatId;
+    unsigned int oldLevel = mLevel;
+    uint32_t oldMoodValue = mOverlayMoodValue;
+    uint32_t oldHealthValue = mOverlayHealthValue;
+    Seat* oldSeat = getSeat();
+    Seat* oldSeatPrison = mSeatPrison;
     OD_ASSERT_TRUE(is >> mLevel);
     OD_ASSERT_TRUE(is >> seatId);
     OD_ASSERT_TRUE(is >> mOverlayHealthValue);
@@ -2322,6 +2332,10 @@ void Creature::updateFromPacket(ODPacket& is)
         social::CreaturePosts::reportUpdate(getGameMap()->getTurnNumber(), getName(),
             getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
     }
+
+    // Level up and payday are shown as cosmetic reactions of the creature
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+        CreatureReactions::getSingleton().noteCreatureUpdate(this, oldLevel, oldMoodValue, oldHealthValue, oldSeat, oldSeatPrison);
 }
 
 bool Creature::isSocialFeedSource() const

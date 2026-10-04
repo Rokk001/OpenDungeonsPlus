@@ -567,6 +567,42 @@ Relative/Old/Keeper/{AllyDefeated,CreatureNew,CreatureNoBed,CreatureNoFood,Defea
 Relative/KeeperGroan/Keeper/Lost
 -> OD_voice_keeper(groan)_defeat*.ogg            eugeneloza    CC-BY-SA 3.0            http://opengameart.org/content/voice-acting-sketch-open-dungeons
 
+=======================================================
+==  Creature reactions: icons, particles, tools      ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+config/creatureReactions.cfg           OD Team                 GPLv3+
+materials/scripts/CreatureReactions.material   OD Team        GPLv3+
+particles/CreatureReactions.particle   OD Team                 GPLv3+
+materials/textures/CreatureEmote*.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/ReactionParticle*.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteStar.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteFist.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/ReactionParticleRing.png  OD Team           GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteBook.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteGear.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteSmoke.png  OD Team             GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteChicken.png  OD Team           GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteSack.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/ReactionParticleGlow.png  OD Team           GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/ReactionParticleSmoke.png  OD Team          GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteYawn.png   OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteDots.png   OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteCloud.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreatureEmoteExit.png   OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropBall.png    OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropYoyo.png    OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropCoin.png    OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropPebble.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropBeetle.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropTool.png    OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropTrail.png   OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+materials/textures/CreaturePropShadow.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
+tools/gen_creature_reaction_art.py     OD Team                 GPLv3+
+tools/check_creature_reactions.py      OD Team                 GPLv3+
+
 ================================
 ==  Distribution data: dist/  ==
 ================================
@@ -596,3 +632,134 @@ meta/gui/application-icon.png          AI-generated, Mario     GPLv3+           
 dist/OD-Logo.ico                       AI-generated, Mario     GPLv3+                  AI-generated for this project (image generator, 2026-09)
 materials/textures/Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Prisoner,RallyTroops,Sleepy,Stunned,Unhappy}.pngAI-generated, Mario     GPLv3+                  Resampled from CreatureMoodAtlas.png by tools/package-creature-mood-icons.ps1
 
+
+
+===================================
+==  Hollowmark campaign artwork  ==
+===================================
+
+gui/campaign/campaign-world.json    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/preview_states.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T01_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T01_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T01_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T01_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T02_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T02_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T02_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T02_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T03_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T03_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T03_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T03_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T04_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T04_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T04_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T04_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T05_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T05_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T05_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T05_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T06_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T06_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T06_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T06_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T07_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T07_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T07_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T07_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T08_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T08_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T08_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T08_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09A_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09A_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09A_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09A_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09B_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09B_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09B_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T09B_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T10_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T10_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T10_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T10_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T11_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T11_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T11_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T11_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T12_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T12_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T12_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T12_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T13_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T13_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T13_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T13_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T14_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T14_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T14_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T14_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T15_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T15_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T15_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T15_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T16_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T16_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T16_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T16_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T17_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T17_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T17_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T17_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18A_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18A_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18A_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18A_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18B_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18B_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18B_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T18B_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T19_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T19_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T19_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T19_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T20_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T20_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T20_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T20_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T21_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T21_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T21_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T21_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T22_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T22_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T22_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T22_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T23_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T23_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T23_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T23_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T24_available.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T24_conquered.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T24_lift.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/provinces/T24_locked.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B01_done.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B01_found.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B01_hidden.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B02_done.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B02_found.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B02_hidden.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B03_done.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B03_found.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B03_hidden.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B04_done.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B04_found.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B04_hidden.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B05_done.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B05_found.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/sites/B05_hidden.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/world_base.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+gui/campaign/world_idmap.png    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+tools/artwork/campaign-map/PROMPTS.md    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
+tools/artwork/campaign-map/validate_world.py    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md

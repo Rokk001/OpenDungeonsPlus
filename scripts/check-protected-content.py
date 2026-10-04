@@ -12,7 +12,8 @@ name and url as arguments. The push is blocked (exit 1) if
     files are checked by name only), has files under levels/campaign/ that are not in
     CAMPAIGN_ALLOW_LIST, or has anything under tools/level-convert/,
   * a commit with new content (its patch is not part of the history already on the
-    remote) has a term in a file name or an added line, or adds media files that are
+    remote) has a term in a file name or an added line, adds or changes a file under
+    docs/internal/ (files already on the branch before are not checked), or adds media files that are
     not covered by the CREDITS file at the pushed tip. Commits that were only rewritten
     from history already on the remote are not diffed again.
 
@@ -42,10 +43,37 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Campaign1.level",
     "levels/campaign/Campaign2.level",
     "levels/campaign/Campaign3.level",
+    "levels/campaign/Mossgate.level",
+    "levels/campaign/Brackenford.level",
+    "levels/campaign/Coldwell.level",
+    "levels/campaign/Tinmoor.level",
+    "levels/campaign/Ravensledge.level",
+    "levels/campaign/Ashcombe.level",
+    "levels/campaign/Greywater.level",
+    "levels/campaign/HollinFen.level",
+    "levels/campaign/Saltmere.level",
+    "levels/campaign/Dunmarrow.level",
+    "levels/campaign/Ironbridge.level",
+    "levels/campaign/Wolfscar.level",
+    "levels/campaign/Lanternhill.level",
+    "levels/campaign/Cinderhollow.level",
+    "levels/campaign/Thornreach.level",
+    "levels/campaign/Bellwick.level",
+    "levels/campaign/Highcairn.level",
+    "levels/campaign/Stormhaven.level",
+    "levels/campaign/Mirewatch.level",
+    "levels/campaign/Goldspire.level",
+    "levels/campaign/Ebonrook.level",
+    "levels/campaign/VarnsCrossing.level",
+    "levels/campaign/Silverdeep.level",
+    "levels/campaign/Wraithwood.level",
+    "levels/campaign/Kingsfall.level",
+    "levels/campaign/HollowmarkCitadel.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"
 CONVERTER_PREFIX = "tools/level-convert/"
+INTERNAL_DOCS_PREFIX = "docs/internal/"
 
 MEDIA_EXTENSIONS = set([
     "png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "tif", "tiff", "svg",
@@ -54,6 +82,11 @@ MEDIA_EXTENSIONS = set([
 ])
 
 CREDITS_NAMES = ["CREDITS", "CREDITS.md", "CREDITS.txt"]
+
+LEVEL_PREFIX = "levels/"
+LEVEL_SUFFIXES = (".level", ".cfg")
+SIMILARITY_SCRIPT = "check-level-similarity.py"
+PROGRESSION_SCRIPT = "check-campaign-progression.py"
 
 
 def run_git(args, cwd):
@@ -211,6 +244,9 @@ def check_commit_content(commit, terms, cwd, added_files, problems):
         term = find_term(path, terms)
         if term is not None:
             problems.append("commit %s: term '%s' in file name %s" % (short, term, path))
+        if path.startswith(INTERNAL_DOCS_PREFIX):
+            problems.append("commit %s: %s is under %s (internal documents are never "
+                            "pushed)" % (short, path, INTERNAL_DOCS_PREFIX))
         extension = path.rsplit(".", 1)[-1].lower() if "." in os.path.basename(path) else ""
         if status in ("A", "C", "R") and extension in MEDIA_EXTENSIONS:
             added_files.setdefault(path, short)
@@ -306,6 +342,99 @@ def check_push(ref_lines, terms, remote_name, cwd):
     return problems
 
 
+def changed_level_files(tip, commits, cwd):
+    """Level files under levels/ that the given commits add or change and that exist at tip."""
+    paths = set()
+    for commit in commits:
+        code, parents = run_git(["rev-list", "--parents", "-n", "1", commit], cwd)
+        if len(parents.split()) > 2:
+            continue
+        code, names = run_git(["diff-tree", "--root", "--no-commit-id", "-r", "-M",
+                               "--name-status", commit], cwd)
+        for line in split_lines(names):
+            fields = line.split("\t")
+            path = fields[-1]
+            if (fields[0][0] != "D" and path.startswith(LEVEL_PREFIX)
+                    and path.endswith(LEVEL_SUFFIXES)):
+                paths.add(path)
+    return sorted(path for path in paths
+                  if run_git(["cat-file", "-e", "%s:%s" % (tip, path)], cwd)[0] == 0)
+
+
+def check_level_similarity(ref_lines, remote_name, cwd, problems):
+    """Runs the level similarity check on new or changed levels; it skips itself when the
+    local folder with the other levels does not exist."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), SIMILARITY_SCRIPT)
+    if not os.path.isfile(script):
+        return
+    for ref_line in ref_lines:
+        fields = ref_line.split()
+        if len(fields) != 4 or fields[1] == ZERO_SHA:
+            continue
+        code, tip = run_git(["rev-parse", "%s^{commit}" % fields[1]], cwd)
+        if code != 0:
+            continue
+        tip = tip.strip()
+        paths = changed_level_files(tip, commits_to_check(tip, fields[3], remote_name, cwd),
+                                    cwd)
+        if not paths:
+            continue
+        work = tempfile.mkdtemp(prefix="level-similarity-")
+        try:
+            for path in paths:
+                proc = subprocess.run(["git", "show", "%s:%s" % (tip, path)], cwd=cwd,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                target = os.path.join(work, path)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "wb") as handle:
+                    handle.write(proc.stdout)
+            proc = subprocess.run([sys.executable, script] + paths, cwd=work,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for line in proc.stdout.decode("utf-8", errors="replace").split("\n"):
+                if line.startswith("FAIL"):
+                    problems.append("similarity: %s" % line.strip())
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+
+
+def check_campaign_progression(ref_lines, remote_name, cwd, problems):
+    """Runs the unlock check on new or changed campaign levels; it skips itself when the
+    local folder with the other levels does not exist."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), PROGRESSION_SCRIPT)
+    if not os.path.isfile(script):
+        return
+    for ref_line in ref_lines:
+        fields = ref_line.split()
+        if len(fields) != 4 or fields[1] == ZERO_SHA:
+            continue
+        code, tip = run_git(["rev-parse", "%s^{commit}" % fields[1]], cwd)
+        if code != 0:
+            continue
+        tip = tip.strip()
+        paths = [path for path in changed_level_files(
+                     tip, commits_to_check(tip, fields[3], remote_name, cwd), cwd)
+                 if (path.startswith(CAMPAIGN_PREFIX) or path.startswith("levels/skirmish/"))
+                 and path.endswith(".level")]
+        if not paths:
+            continue
+        work = tempfile.mkdtemp(prefix="campaign-progression-")
+        try:
+            for path in paths:
+                proc = subprocess.run(["git", "show", "%s:%s" % (tip, path)], cwd=cwd,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                target = os.path.join(work, path)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "wb") as handle:
+                    handle.write(proc.stdout)
+            proc = subprocess.run([sys.executable, script] + paths, cwd=work,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for line in proc.stdout.decode("utf-8", errors="replace").split("\n"):
+                if line.startswith("FAIL"):
+                    problems.append("progression: %s" % line.strip())
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+
+
 def report_and_exit(problems):
     sys.stderr.write("Push blocked by check-protected-content:\n")
     for problem in problems:
@@ -382,6 +511,18 @@ def self_test():
                             "other level", terms, True, "allow list")
         one_commit_scenario("converter", {"tools/level-convert/run.py": "x\n"},
                             "converter", terms, True, "tools/level-convert/")
+        one_commit_scenario("internal document added", {"docs/internal/PLAN.md": "x\n"},
+                            "internal document", terms, True, "docs/internal/")
+        work, git, commit_files, base = new_repo()
+        earlier = commit_files({"docs/internal/PLAN.md": "x\n"}, "internal document")
+        changed = commit_files({"docs/internal/PLAN.md": "y\n"}, "internal document changed")
+        expect("internal document changed", work,
+               ["refs/heads/topic %s refs/heads/topic %s" % (changed, earlier)], terms,
+               True, "docs/internal/")
+        unrelated = commit_files({"d.txt": "fine\n"}, "unrelated change")
+        expect("internal document already on branch", work,
+               ["refs/heads/topic %s refs/heads/topic %s" % (unrelated, changed)], terms,
+               False)
         one_commit_scenario("media without credits", {"gfx/pic.png": b"\x89PNG"},
                             "add picture", terms, True, "CREDITS")
         one_commit_scenario("media with glob",
@@ -480,6 +621,8 @@ def main(argv):
 
     ref_lines = [line for line in sys.stdin.read().split("\n") if line.strip() != ""]
     problems = check_push(ref_lines, terms, remote_name, cwd)
+    check_level_similarity(ref_lines, remote_name, cwd, problems)
+    check_campaign_progression(ref_lines, remote_name, cwd, problems)
     if problems:
         return report_and_exit(problems)
     return 0

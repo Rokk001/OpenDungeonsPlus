@@ -42,6 +42,7 @@
 #include "gamemap/TileSet.h"
 #include "modes/ModeManager.h"
 #include "render/CreatureOverlayStatus.h"
+#include "render/CreatureReactions.h"
 #include "render/DebugDrawer.h"
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
@@ -4897,8 +4898,17 @@ void RenderManager::rrCarryEntity(Creature* carrier, GameEntity* carried)
         EntityParentNodeAttach::DETACH_CARRIED, true);
     carriedNode->setInheritScale(false);
     carrierNode->addChild(carriedNode);
-    // We want the carried object to be at half tile (z = 0.5)
-    carriedNode->setPosition(Ogre::Vector3(0, 0, 0.5));
+    // The carried object rests with its lowest point on the highest point of the carrier. A fixed
+    // height of half a tile floated above small carriers and sank into tall ones.
+    const Ogre::Real carrierScale = carrierNode->_getDerivedScale().z;
+    const Ogre::Real carriedScale = carriedNode->getScale().z;
+    Ogre::Real carrySpotZ = 0.5;
+    if(carrierScale > 0.0)
+    {
+        carrySpotZ = (carrierEnt->getBoundingBox().getMaximum().z * carrierScale -
+            carriedEnt->getBoundingBox().getMinimum().z * carriedScale) / carrierScale;
+    }
+    carriedNode->setPosition(Ogre::Vector3(0, 0, carrySpotZ));
 }
 
 void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carried)
@@ -5362,6 +5372,14 @@ void RenderManager::entitySlapped()
     Ogre::Entity* ent = mSceneManager->getEntity("keeperHandEnt");
     if(ent->hasAnimationState("Slap"))
         mHandAnimationState = setEntityAnimation(ent, "Slap", false);
+
+    // The creatures that stand around look at the hand that slaps
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+    {
+        // The creature that was slapped reacts, the ones around only look
+        CreatureReactions::getSingleton().noteSlapped(mHandLightNode->getPosition());
+        CreatureReactions::getSingleton().noteNearbyEvent("AmbientLookSlap", mHandLightNode->getPosition(), nullptr, 1.0);
+    }
 }
 
 std::string RenderManager::rrBuildSkullFlagMaterial(const std::string& materialNameBase,
@@ -5454,6 +5472,8 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
                 as->setTimePosition(0);
 
             as->setLoop(loop);
+            // A creature reaction may have hidden the clip by giving it no weight
+            as->setWeight(1.0f);
             as->setEnabled(true);
             animState = as;
             continue;

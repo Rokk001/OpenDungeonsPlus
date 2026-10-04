@@ -75,7 +75,8 @@ add_boost_test(00-Campaign
         SOURCES
         test_Campaign.cpp
         ${SRC}/game/Campaign.h
-        ${SRC}/game/Campaign.cpp)
+        ${SRC}/game/Campaign.cpp
+        ${SRC}/game/CampaignWorld.cpp)
 
 add_boost_test(00-Pathfinding
         SOURCES
