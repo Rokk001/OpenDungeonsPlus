@@ -171,7 +171,12 @@ enum class ServerNotificationType
     //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
     //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
     //! Appended last so that no existing numeric value changes.
-    chickenKindChanged
+    chickenKindChanged,
+    //! The server assigned a Dungeonbook appearance to a creature after it spawned (the portrait manifest
+    //! was not available before): + string creature name, string appearance token. Sent once to the
+    //! human players that see the creature; clients that see it later get it with the creature data.
+    //! Appended last so that no existing numeric value changes.
+    creatureAppearance
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

@@ -1365,6 +1365,18 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::creatureAppearance:
+        {
+            std::string creatureName;
+            std::string appearanceToken;
+            OD_ASSERT_TRUE(packetReceived >> creatureName >> appearanceToken);
+            Creature* creature = gameMap->getCreature(creatureName);
+            CreatureAppearance appearance;
+            if(creature != nullptr && CreatureAppearanceLogic::fromToken(appearanceToken, appearance))
+                creature->setAppearanceFromServer(appearance);
+            break;
+        }
+
         case ServerNotificationType::creatureCombatImpact:
         {
             std::string creatureName;
