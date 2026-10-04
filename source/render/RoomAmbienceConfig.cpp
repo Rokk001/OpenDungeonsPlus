@@ -78,6 +78,8 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::reloading;
     else if(text == "Ready")
         when = AmbienceWhen::ready;
+    else if(text == "LowHealth")
+        when = AmbienceWhen::lowHealth;
     else
         return false;
 
@@ -316,6 +318,10 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "Delay")
         {
             effect.mDelay = Helper::toDouble(words[1]);
+        }
+        else if(key == "Below")
+        {
+            effect.mBelow = Helper::toDouble(words[1]);
         }
         else if(key == "Clips")
         {

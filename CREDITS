@@ -935,3 +935,14 @@ sounds/Spatial/Rooms/Hatchery/Peep/Peep02.ogg   OD Team                 GPLv3+  
 sounds/Spatial/Rooms/Hatchery/EggCrack/EggCrack01.ogg   OD Team                 GPLv3+                  Synthesized (egg shell cracking) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
 sounds/Spatial/Rooms/Hatchery/EggCrack/EggCrack02.ogg   OD Team                 GPLv3+                  Synthesized (egg shell cracking) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
 tools/hatchery/gen_hatchery_sounds.py  OD Team                 GPLv3+                  Original work, not AI generated
+
+=============================================================
+==  Casino and arena sounds: sounds/Spatial/Rooms          ==
+=============================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+sounds/Spatial/Rooms/Casino/Win/FxCasinoWin01.ogg   OD Team   GPLv3+   Synthesized (chimes and coins) from sine waves and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Rooms/Casino/Loss/FxCasinoLoss01.ogg   OD Team   GPLv3+   Synthesized (groan of a few voices) from harmonic tones and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Rooms/Arena/Cheer/FxArenaCheer01.ogg   OD Team   GPLv3+   Synthesized (cheering crowd and clapping) from harmonic tones and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+tools/gen_room_effect_sounds.py        OD Team                 GPLv3+                  Original work, AI-assisted: script written with an AI assistant

@@ -243,6 +243,9 @@ private:
     void restoreMotionNode(MotionNode& motionNode);
 
     bool isCreatureNear(double x, double y, double radius) const;
+    //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
+    //! heart badge shows it) is below the given value
+    bool isLocalHeartBelow(const Ogre::Vector3& position, double below) const;
     //! \brief Updates and returns the state "no creature for a while" of a target
     bool isIdleLongEnough(const std::string& key, bool busy, double after);
     double getDistanceLimit(const AmbienceEffect& effect) const;
@@ -326,15 +329,17 @@ private:
         Ogre::Vector3 mPosition;
         uint32_t mGeneration;
     };
-    //! What was seen of a creature at the last scan (dormitory wake-up, enemy in a guard room, healing)
+    //! What was seen of a creature at the last scan (dormitory wake-up, enemy in a guard room, healing, casino game)
     struct CreatureSnapshot
     {
         CreatureSnapshot() :
-            mHp(0.0), mSleeping(false), mEnemyInGuardRoom(false), mLastHealed(-100.0), mGeneration(0)
+            mHp(0.0), mSleeping(false), mAttacking(false), mEnemyInGuardRoom(false), mLastHealed(-100.0), mGeneration(0)
         {}
 
         double mHp;
         bool mSleeping;
+        //! Plays the attack animation (the winner of a casino game)
+        bool mAttacking;
         bool mEnemyInGuardRoom;
         double mLastHealed;
         uint32_t mGeneration;

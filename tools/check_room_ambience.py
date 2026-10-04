@@ -19,9 +19,9 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "Family", "Delay")
+               "NeedWall", "Clips", "Every", "Family", "Delay", "Below")
 TARGETS = ("Object", "Tile", "Event")
-WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready")
+WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth")
 KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
@@ -195,8 +195,16 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: a sound on an object needs Every" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
-    if when in ("Locked", "Reloading", "Ready") and target != "Object":
+    if when in ("Locked", "Reloading", "Ready", "LowHealth") and target != "Object":
         problems.append("%s: When %s only works on objects" % (where, when))
+    if when == "LowHealth":
+        below = effect.get("Below", [None])[0]
+        if below is None or not is_number(below) or not 0.0 < float(below) <= 1.0:
+            problems.append("%s: When LowHealth needs Below between 0 and 1" % where)
+        if "Match" in effect and effect["Match"] != ["DungeonTempleObject"]:
+            problems.append("%s: When LowHealth only works on the dungeon heart (DungeonTempleObject)" % where)
+    elif "Below" in effect:
+        problems.append("%s: Below only belongs to When LowHealth" % where)
     if kind in ("Shake", "Mark") and target != "Event":
         problems.append("%s: shakes and marks only work as events" % where)
     if kind == "Shake":
@@ -234,7 +242,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if not effect.get("Clips"):
             problems.append("%s: clip effect without Clips" % where)
     for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority",
-                "Delay"):
+                "Delay", "Below"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
     for key in ("Offset", "Axis"):

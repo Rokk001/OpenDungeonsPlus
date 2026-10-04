@@ -22,8 +22,11 @@
 #include "entities/GameEntityType.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
+#include "game/HeartHealthRing.h"
+#include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "network/ODClient.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "sound/SoundEffectsManager.h"
@@ -309,6 +312,27 @@ bool RoomAmbience::isCreatureNear(double x, double y, double radius) const
     return false;
 }
 
+bool RoomAmbience::isLocalHeartBelow(const Ogre::Vector3& position, double below) const
+{
+    ODClient* client = ODClient::getSingletonPtr();
+    Player* localPlayer = mGameMap->getLocalPlayer();
+    if((client == nullptr) || (localPlayer == nullptr) || (localPlayer->getSeat() == nullptr))
+        return false;
+
+    // Only the health of the own heart is known to the client
+    Tile* tile = mGameMap->getTile(static_cast<int32_t>(std::floor(position.x + 0.5f)),
+        static_cast<int32_t>(std::floor(position.y + 0.5f)));
+    if((tile == nullptr) || (tile->getSeat() != localPlayer->getSeat()))
+        return false;
+
+    const HeartHealthRing::BadgeState& badge = client->getHeartBadge();
+    // Before the first message of the server the health is not known
+    if(badge.mHP < 0.0)
+        return false;
+
+    return static_cast<double>(badge.mFraction) < below;
+}
+
 bool RoomAmbience::isIdleLongEnough(const std::string& key, bool busy, double after)
 {
     std::map<std::string, BusyInfo>::iterator it = mBusy.find(key);
@@ -586,6 +610,10 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
                 std::map<std::string, double>::const_iterator reloadIt = mReloadingUntil.find(reloadKey);
                 bool reloading = (reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock);
                 candidate.mActive = (effect.mWhen == AmbienceWhen::reloading) ? reloading : !reloading;
+            }
+            else if(effect.mWhen == AmbienceWhen::lowHealth)
+            {
+                candidate.mActive = isLocalHeartBelow(position, effect.mBelow);
             }
             else
             {
@@ -921,11 +949,18 @@ void RoomAmbience::scanCreatureEvents()
 {
     struct Change
     {
+        Change() :
+            mPosition(Ogre::Vector3::ZERO), mCreature(nullptr)
+        {}
+
         std::string mEvent;
         Ogre::Vector3 mPosition;
         std::string mVisual;
+        Creature* mCreature;
     };
 
+    // The loser of a casino game stands this close (world units) to the winner
+    const double CASINO_OPPONENT_RADIUS = 3.0;
     // A creature has to be healed by at least this much between two scans to count
     const double MIN_HEAL = 0.5;
     // Seconds between two healing effects of the same creature
@@ -944,9 +979,13 @@ void RoomAmbience::scanCreatureEvents()
             visual = Tile::tileVisualToString(tile->getTileVisual());
 
         bool sleeping = false;
+        bool attacking = false;
         Ogre::AnimationState* animationState = creature->getAnimationState();
         if(animationState != nullptr)
+        {
             sleeping = (animationState->getAnimationName() == EntityAnimation::sleep_anim);
+            attacking = (animationState->getAnimationName() == EntityAnimation::attack_anim);
+        }
 
         bool enemyInGuardRoom = false;
         if((tile != nullptr) && (tile->getTileVisual() == TileVisual::guardRoom) && (tile->getSeat() != nullptr) &&
@@ -962,6 +1001,7 @@ void RoomAmbience::scanCreatureEvents()
             CreatureSnapshot snapshot;
             snapshot.mHp = hp;
             snapshot.mSleeping = sleeping;
+            snapshot.mAttacking = attacking;
             snapshot.mEnemyInGuardRoom = enemyInGuardRoom;
             snapshot.mGeneration = mGeneration;
             mKnownCreatures.insert(std::make_pair(key, snapshot));
@@ -975,6 +1015,14 @@ void RoomAmbience::scanCreatureEvents()
             Change change;
             change.mPosition = creature->getPosition();
             change.mVisual = visual;
+            change.mCreature = creature;
+            if(attacking && !snapshot.mAttacking && (visual == "casinoRoom"))
+            {
+                // The server lets the winner of a game attack and the loser stand; found below with the loser
+                change.mEvent = "CasinoWin";
+                changes.push_back(change);
+            }
+
             if(snapshot.mSleeping && !sleeping && (visual == "dormitoryRoom"))
             {
                 change.mEvent = "CreatureWoke";
@@ -998,6 +1046,7 @@ void RoomAmbience::scanCreatureEvents()
 
         snapshot.mHp = hp;
         snapshot.mSleeping = sleeping;
+        snapshot.mAttacking = attacking;
         snapshot.mEnemyInGuardRoom = enemyInGuardRoom;
     }
 
@@ -1008,6 +1057,54 @@ void RoomAmbience::scanCreatureEvents()
         else
             mKnownCreatures.erase(it++);
     }
+
+    // A casino game needs a loser close to the winner in the casino (a fight there is no game); the loser groans
+    std::vector<Change> losses;
+    for(std::vector<Change>::iterator it = changes.begin(); it != changes.end();)
+    {
+        if(it->mEvent != "CasinoWin")
+        {
+            ++it;
+            continue;
+        }
+
+        Creature* loser = nullptr;
+        double nearest = CASINO_OPPONENT_RADIUS;
+        for(Creature* other : mGameMap->getCreatures())
+        {
+            if((other == it->mCreature) || !other->getIsOnMap() || (other->getSeat() == nullptr) ||
+               (it->mCreature->getSeat() == nullptr) || !other->getSeat()->isAlliedSeat(it->mCreature->getSeat()))
+            {
+                continue;
+            }
+
+            Tile* otherTile = other->getPositionTile();
+            if((otherTile == nullptr) || (otherTile->getTileVisual() != TileVisual::casinoRoom))
+                continue;
+
+            double distance = (other->getPosition() - it->mPosition).length();
+            if(distance <= nearest)
+            {
+                nearest = distance;
+                loser = other;
+            }
+        }
+
+        if(loser == nullptr)
+        {
+            it = changes.erase(it);
+            continue;
+        }
+
+        Change loss;
+        loss.mEvent = "CasinoLoss";
+        loss.mPosition = loser->getPosition();
+        loss.mVisual = it->mVisual;
+        loss.mCreature = loser;
+        losses.push_back(loss);
+        ++it;
+    }
+    changes.insert(changes.end(), losses.begin(), losses.end());
 
     // Many changes at once are a map being loaded or revealed, not creatures acting
     bool settled = (mClock > 3.0) && mCreaturesInitialized && (changes.size() <= MAX_EVENTS_PER_SCAN);

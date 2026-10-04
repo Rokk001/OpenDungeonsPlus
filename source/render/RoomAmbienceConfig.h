@@ -52,7 +52,9 @@ enum class AmbienceWhen
     //! The target (a trap) reloads or is empty, as the server reported it
     reloading,
     //! The target (a trap) is loaded and ready, the opposite of reloading
-    ready
+    ready,
+    //! The target (the dungeon heart of the local keeper) has less health than the fraction given in mBelow
+    lowHealth
 };
 
 enum class AmbienceKind
@@ -105,6 +107,7 @@ struct AmbienceEffect
         mFlicker(0.0),
         mDuration(3.0),
         mDelay(0.0),
+        mBelow(0.35),
         mEvery(10.0),
         mChance(1.0),
         mSpacing(1),
@@ -143,6 +146,8 @@ struct AmbienceEffect
     std::string mFamily;
     //! Seconds after the event until the sound is played (kind sound, events only)
     double mDelay;
+    //! Health fraction (0 to 1) under which a lowHealth effect runs
+    double mBelow;
     //! Average seconds between two clips (kind clip)
     double mEvery;
     //! Chance that an event effect is shown

@@ -364,6 +364,9 @@ private:
     //! new ongoing work): the work it was doing ends and may have a done moment
     void finishOngoing(Creature* creature, const std::string& newEvent);
     void updateOngoing();
+    //! \brief While a bout goes on in an arena, the creatures of its keeper that watch it from within the spectator
+    //! distance cheer, and the crowd of the arena cheers (confetti and shouting of the room ambience)
+    void scanArenaSpectators();
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
@@ -470,6 +473,10 @@ private:
     std::map<std::string, double> mSlappedAt;
     //! Time before which no new meeting of two creatures starts
     double mNextInteraction;
+    //! Time of the next look for spectators of the arena fights
+    double mNextSpectatorScan;
+    //! Time before which the crowd of an arena (by room name) does not cheer again
+    std::map<std::string, double> mNextArenaCheer;
 
     //! Time before which a creature may not show a reaction of a kind again ("creature|event")
     std::map<std::string, double> mCooldownEnd;
