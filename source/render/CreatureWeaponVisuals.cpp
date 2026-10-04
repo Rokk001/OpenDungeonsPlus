@@ -105,11 +105,13 @@ struct ShooterWeapon
 {
     ShooterWeapon() :
         mCrossbow(false),
-        mHand("L")
+        mHand("L"),
+        mMeshName()
     {}
 
     bool mCrossbow;
     std::string mHand;
+    std::string mMeshName;
 };
 
 bool findShooterWeapon(const Creature* creature, ShooterWeapon& result)
@@ -127,6 +129,7 @@ bool findShooterWeapon(const Creature* creature, ShooterWeapon& result)
 
         result.mCrossbow = (mesh.find("crossbow") != std::string::npos);
         result.mHand = hands[i];
+        result.mMeshName = weapons[i]->getMeshName();
         return true;
     }
     return false;
@@ -141,12 +144,17 @@ struct Shooter
 {
     Shooter() :
         mCrossbow(false),
+        mMountOffset(Ogre::Vector3::ZERO),
+        mMountRotation(Ogre::Quaternion::IDENTITY),
         mReleasedAt(-1000.0)
     {}
 
     std::string mArrowName;
     std::string mWeaponName;
     bool mCrossbow;
+    //! Offset and rotation of the weapon model on its bone (the arrow sits in the frame of the model)
+    Ogre::Vector3 mMountOffset;
+    Ogre::Quaternion mMountRotation;
     //! Time of the last launch
     double mReleasedAt;
 };
@@ -218,12 +226,10 @@ bool isEnemyNear(CreatureReactions& reactions, const Creature* creature, double 
     return false;
 }
 
-//! The rotation of weapon models on their bone (see RenderManager::rrCreateWeapon)
-Ogre::Quaternion weaponRotation()
+//! Where the model of the weapon sits on the skeleton (see RenderManager::getWeaponMount)
+bool weaponMount(const Ogre::Skeleton* skeleton, const ShooterWeapon& weapon, RenderManager::WeaponMount& mount)
 {
-    Ogre::Quaternion rotation;
-    rotation.FromAngleAxis(Ogre::Degree(-90.0), Ogre::Vector3::UNIT_X);
-    return rotation;
+    return RenderManager::getWeaponMount(skeleton, weapon.mHand, weapon.mMeshName, mount);
 }
 
 void destroyArrow(const std::string& arrowName)
@@ -248,8 +254,8 @@ bool createArrow(CreatureReactions& reactions, Creature* creature, const Shooter
     if((body == nullptr) || (body->getSkeleton() == nullptr))
         return false;
 
-    std::string boneName = "Weapon_" + weapon.mHand;
-    if(!body->getSkeleton()->hasBone(boneName))
+    RenderManager::WeaponMount mount;
+    if(!weaponMount(body->getSkeleton(), weapon, mount))
         return false;
 
     Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
@@ -281,9 +287,11 @@ bool createArrow(CreatureReactions& reactions, Creature* creature, const Shooter
 
     // The arrow flies to +z of the weapon model: its tip (-y) is turned to +z
     Ogre::Quaternion arrowRotation(Ogre::Degree(-90.0), Ogre::Vector3::UNIT_X);
-    body->attachObjectToBone(boneName, arrow, weaponRotation() * arrowRotation);
+    body->attachObjectToBone(mount.mBoneName, arrow, mount.mRotation * arrowRotation);
     shooter.mWeaponName = weaponEntityName(creature, weapon.mHand);
     shooter.mCrossbow = weapon.mCrossbow;
+    shooter.mMountOffset = mount.mOffset;
+    shooter.mMountRotation = mount.mRotation;
     return true;
 }
 
@@ -334,7 +342,7 @@ void placeArrow(CreatureReactions& reactions, Shooter& shooter)
             static_cast<Ogre::Real>(BOW_STRING_Z + tailOffset - drawn * DRAW_DISTANCE));
     }
 
-    tagPoint->setPosition(weaponRotation() * position);
+    tagPoint->setPosition(shooter.mMountOffset + shooter.mMountRotation * position);
     Ogre::Real length = static_cast<Ogre::Real>(lengthScale * arrived);
     Ogre::Real width = static_cast<Ogre::Real>(ARROW_WIDTH_FACTOR) * length;
     tagPoint->setScale(width, length, width);
