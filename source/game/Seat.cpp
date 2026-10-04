@@ -2358,6 +2358,7 @@ int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
 {
     // We check if it is the Seat end tag
     std::string str;
+    std::streampos position = is.tellg();
     OD_ASSERT_TRUE(is >> str);
     if (str == "[/Seat]")
         return 0;
@@ -2366,6 +2367,15 @@ int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
 
     if(str != "[" + Tile::tileVisualToString(tileVisual) + "]")
     {
+        // Saves from before a tile visual existed have no block for it: nothing to read.
+        // A wrong tag still fails later, when the marked tiles block is expected.
+        if(position != std::streampos(-1))
+        {
+            is.seekg(position);
+            return 1;
+        }
+
+
         OD_LOG_INF("WARNING: expected [" + Tile::tileVisualToString(tileVisual) + "] and read " + str);
         return -1;
     }
