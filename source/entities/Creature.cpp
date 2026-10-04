@@ -3212,7 +3212,10 @@ void Creature::reportDeathToFriends(GameEntity* killer)
             continue;
         }
 
-        mourner->addRelationshipMood(-settings.mGriefMoodPenalty);
+        // The partner grieves more than a friend
+        int32_t penalty = relationships->isLovers(getName(), mourner->getName()) ?
+            settings.mPartnerGriefMoodPenalty : settings.mGriefMoodPenalty;
+        mourner->addRelationshipMood(-penalty);
         if((killer != nullptr) && (killer->getSeat() != nullptr) && (killer->getSeat() != getSeat()))
         {
             mourner->mRageUntilTurn = turn + settings.mGriefRageTurns;
@@ -3302,7 +3305,11 @@ void Creature::reportLeavingToBestFriend()
         return;
 
     CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
-    std::string bestFriend = relationships->getBestFriend(getName());
+    // The partner comes first, then the best friend
+    std::string bestFriend = relationships->getPartner(getName());
+    bool isPartner = !bestFriend.empty();
+    if(!isPartner)
+        bestFriend = relationships->getBestFriend(getName());
     if(bestFriend.empty())
         return;
 
@@ -3315,10 +3322,13 @@ void Creature::reportLeavingToBestFriend()
         return;
     }
 
-    if(Random::Int(0, 99) >= relationships->getSettings().mLeaveTogetherChancePercent)
+    int32_t chance = isPartner ? relationships->getSettings().mLeavePartnerChancePercent :
+        relationships->getSettings().mLeaveTogetherChancePercent;
+    if(Random::Int(0, 99) >= chance)
         return;
 
-    OD_LOG_INF("creature=" + friendCreature->getName() + " leaves its dungeon together with its best friend " + getName());
+    OD_LOG_INF("creature=" + friendCreature->getName() + " leaves its dungeon together with its " +
+        (isPartner ? "partner " : "best friend ") + getName());
     friendCreature->leaveDungeon();
 }
 
