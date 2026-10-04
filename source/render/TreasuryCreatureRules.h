@@ -40,6 +40,16 @@ static const float groundHeightLimit = 0.3f;
 //! Seconds a worker spends climbing the pile, pouring out the gold and coming back down
 static const float pourDuration = 1.4f;
 
+//! Names of the worker clips that replace the procedural climb and tip (skeleton clips, played by the
+//! client while the worker delivers gold). Without them the procedural motion is used.
+static const char* const pourClimbClip = "ClimbGold";
+static const char* const pourTipClip = "PourGold";
+//! Share of the pour time (0..1) spent climbing up, and when the descent starts
+static const float pourClimbEnd = 0.3f;
+static const float pourDescendStart = 0.85f;
+//! Clip time kept free at the end of a clip so that it never counts as ended before the phase changes
+static const float pourClipMargin = 0.1f;
+
 inline float smoothStep(float edgeStart, float edgeEnd, float t)
 {
     if(t <= edgeStart)
@@ -77,6 +87,40 @@ inline float pourSway(float t)
     const float climbing = smoothStep(0.0f, 0.1f, progress) * (1.0f - smoothStep(0.3f, 0.4f, progress))
         + smoothStep(0.85f, 0.9f, progress) * (1.0f - smoothStep(0.97f, 1.0f, progress));
     return std::sin(progress * 6.2831853f * 6.0f) * 0.12f * climbing;
+}
+
+//! Phase of the delivery clip at time t (seconds): 0 climb up, 1 pour, 2 climb down (the climb clip backwards)
+inline int pourClipPhase(float t)
+{
+    const float progress = t / pourDuration;
+    if(progress < pourClimbEnd)
+        return 0;
+    return progress < pourDescendStart ? 1 : 2;
+}
+
+//! Time position inside the clip of the current phase for the time t (seconds)
+inline float pourClipTime(float t, float climbLength, float pourLength)
+{
+    const float progress = t / pourDuration;
+    float time = 0.0f;
+    float length = climbLength;
+    switch(pourClipPhase(t))
+    {
+        case 0:
+            time = climbLength * progress / pourClimbEnd;
+            break;
+        case 1:
+            time = pourLength * (progress - pourClimbEnd) / (pourDescendStart - pourClimbEnd);
+            length = pourLength;
+            break;
+        default:
+            time = climbLength * (1.0f - (progress - pourDescendStart) / (1.0f - pourDescendStart));
+            break;
+    }
+    const float limit = length - pourClipMargin;
+    if(time > limit)
+        time = limit;
+    return time < 0.0f ? 0.0f : time;
 }
 
 inline bool isDeep(int level)

@@ -442,6 +442,10 @@ private:
         int mLevel;
         float mRise;
         Ogre::Quaternion mTilt;
+        //! Skeleton clips of the worker (climb and pour); null when the mesh has none (procedural motion)
+        Ogre::Entity* mEntity;
+        Ogre::AnimationState* mClip;
+        int mPhase;
     };
     std::vector<TreasuryPour> mTreasuryPours;
 

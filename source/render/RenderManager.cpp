@@ -4590,6 +4590,18 @@ void RenderManager::startTreasuryPour(Tile* tile, int level)
         newPour.mLevel = level;
         newPour.mRise = 0.0f;
         newPour.mTilt = Ogre::Quaternion::IDENTITY;
+        newPour.mEntity = nullptr;
+        newPour.mClip = nullptr;
+        newPour.mPhase = -1;
+        // A worker mesh with the delivery clips plays them; any other mesh keeps the procedural motion
+        const std::string entityName = creature->getOgreNamePrefix() + creature->getName();
+        if(mSceneManager->hasEntity(entityName))
+        {
+            Ogre::Entity* entity = mSceneManager->getEntity(entityName);
+            if(entity->hasSkeleton() && entity->getSkeleton()->hasAnimation(TreasuryCreatureRules::pourClimbClip)
+                && entity->getSkeleton()->hasAnimation(TreasuryCreatureRules::pourTipClip))
+                newPour.mEntity = entity;
+        }
         mTreasuryPours.push_back(newPour);
         return;
     }
@@ -4623,14 +4635,42 @@ void RenderManager::updateTreasuryPours(Ogre::Real timeSinceLastFrame)
         if(it->mElapsed >= TreasuryCreatureRules::pourDuration || creature->isMoving())
         {
             node->setOrientation(base);
+            // Back to the idle pose, unless the creature already got another animation (it walks off)
+            if(it->mClip != nullptr && creature->getAnimationState() == it->mClip && !creature->isMoving())
+                rrSetObjectAnimationState(creature, EntityAnimation::idle_anim, true);
             it = mTreasuryPours.erase(it);
             updateCreatureStep(creature);
             continue;
         }
 
         it->mRise = TreasuryCreatureRules::pourRise(it->mElapsed, it->mLevel);
-        it->mTilt = Ogre::Quaternion(Ogre::Radian(TreasuryCreatureRules::pourLean(it->mElapsed)), Ogre::Vector3::UNIT_X)
-            * Ogre::Quaternion(Ogre::Radian(TreasuryCreatureRules::pourSway(it->mElapsed)), Ogre::Vector3::UNIT_Y);
+        if(it->mEntity != nullptr)
+        {
+            // The skeleton clips (climb, pour, climb back down) do the body motion, the pile height only lifts the node
+            const int phase = TreasuryCreatureRules::pourClipPhase(it->mElapsed);
+            if(phase != it->mPhase)
+            {
+                it->mPhase = phase;
+                const std::string clip = phase == 1 ? TreasuryCreatureRules::pourTipClip : TreasuryCreatureRules::pourClimbClip;
+                it->mClip = setEntityAnimation(it->mEntity, clip, true);
+                creature->setAnimationState(it->mClip);
+            }
+            if(it->mClip != nullptr)
+            {
+                Ogre::Skeleton* skeleton = it->mEntity->getSkeleton();
+                it->mClip->setTimePosition(TreasuryCreatureRules::pourClipTime(it->mElapsed,
+                    skeleton->getAnimation(TreasuryCreatureRules::pourClimbClip)->getLength(),
+                    skeleton->getAnimation(TreasuryCreatureRules::pourTipClip)->getLength()));
+                it->mTilt = Ogre::Quaternion::IDENTITY;
+            }
+            else
+                it->mEntity = nullptr;
+        }
+        if(it->mEntity == nullptr)
+        {
+            it->mTilt = Ogre::Quaternion(Ogre::Radian(TreasuryCreatureRules::pourLean(it->mElapsed)), Ogre::Vector3::UNIT_X)
+                * Ogre::Quaternion(Ogre::Radian(TreasuryCreatureRules::pourSway(it->mElapsed)), Ogre::Vector3::UNIT_Y);
+        }
         node->setOrientation(base * it->mTilt);
         updateCreatureStep(creature);
         ++it;

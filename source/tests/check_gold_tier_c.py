@@ -24,6 +24,15 @@ assert 'creature->setPosition' not in render.split('void RenderManager::updateTr
 for name in ('pourRise', 'pourLean', 'pourSway', 'pourDuration'):
     assert name in rules
 
+# Pour clips: the Kobold skeleton carries ClimbGold and PourGold, the code plays them and keeps the procedural
+# motion as the fallback when a mesh has no such clips.
+assert 'pourClimbClip = "ClimbGold"' in rules and 'pourTipClip = "PourGold"' in rules
+assert 'pourClipPhase' in rules and 'pourClipTime' in rules
+assert 'TreasuryCreatureRules::pourClipTime' in render and 'newPour.mEntity = entity' in render
+assert 'it->mEntity == nullptr' in render
+skeleton = (repo / 'models/Kobold.skeleton').read_bytes()
+assert b'ClimbGold' in skeleton and b'PourGold' in skeleton
+
 # Dust: same effect list, view test and detail option, own budget per room, only full piles.
 assert 'updateTreasuryDust(timeSinceLastFrame)' in render
 assert 'dustBudget(TreasuryGoldMesh::getDetail())' in render
