@@ -35,6 +35,7 @@
 #include "entities/MovableGameEntity.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
+#include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -51,6 +52,7 @@
 #include "render/TreasuryGoldMesh.h"
 #include "sound/SoundEffectsManager.h"
 #include "rooms/Room.h"
+#include "rooms/RoomType.h"
 #include "rooms/TreasuryGoldLayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -947,6 +949,7 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     OD_ASSERT_TRUE(gameMap);
     OD_ASSERT_TRUE(mHandKeeperNode);
     mCreatureTextOverlayDisplayed = false;
+    mGameMap = gameMap;
 
     // Cover tile and room seams with continuous earth below the dungeon.
     // The plane lies below the deepest tile geometry (arena pit floor at z = -3.012,
@@ -1218,6 +1221,7 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    mGameMap = nullptr;
     if(mSceneManager->hasEntity("DungeonGroundUnderlay"))
     {
         mSceneManager->destroyEntity("DungeonGroundUnderlay");
@@ -1848,7 +1852,6 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryDust(timeSinceLastFrame);
     updateTreasuryAmbient(timeSinceLastFrame);
     updateTreasuryPileSettles(timeSinceLastFrame);
-    updateTreasuryThiefSacks(timeSinceLastFrame);
     rrUpdateHeldCreature();
 }
 
@@ -2883,9 +2886,6 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
                              + curRenderedMovableEntity->getName()+  (static_cast<bool>(nt) ?  "" : "_dtc" );
     Ogre::SceneNode* node = curRenderedMovableEntity->getEntityNode();
     cancelTreasuryPileSettle(curRenderedMovableEntity->getName());
-    // A creature standing next to a loose heap that vanishes has taken the gold with it
-    if(curRenderedMovableEntity->getObjectType() == GameEntityType::treasuryObject)
-        startTreasuryThiefSack(curRenderedMovableEntity);
     if(mSceneManager->hasEntity(tempString))
     {
         Ogre::Entity* ent = mSceneManager->getEntity(tempString);
@@ -2998,6 +2998,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     creatureOverlay->displayHealthOverlay(mCreatureTextOverlayDisplayed ? -1.0 : 0.0);
 
     curCreature->showOutliner();
+    rrRefreshCreatureGoldSack(curCreature);
 }
 
 void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
@@ -4800,6 +4801,8 @@ void RenderManager::updateTreasuryDust(Ogre::Real timeSinceLastFrame)
     if(TreasuryCreatureRules::dustBudget(TreasuryGoldMesh::getDetail()) <= 0)
         return;
 
+    startTreasuryPortalDust();
+
     std::vector<TreasuryGoldMesh::FullPile> piles;
     TreasuryGoldMesh::collectFullPiles(piles);
     if(piles.empty())
@@ -4820,6 +4823,33 @@ void RenderManager::updateTreasuryDust(Ogre::Real timeSinceLastFrame)
             static_cast<Ogre::Real>(pile.mX) + offsetX, static_cast<Ogre::Real>(pile.mY) + offsetY,
             height + 0.1f), TreasuryEffectKind::dust))
             return;
+    }
+}
+
+void RenderManager::startTreasuryPortalDust()
+{
+    // The client only knows the gold of the local keeper, so only its portals show the dust
+    if(mGameMap == nullptr || mGameMap->getLocalPlayer() == nullptr)
+        return;
+
+    Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    if(seat == nullptr || !TreasuryCreatureRules::isRichKeeper(seat->getGold(), seat->getGoldMax()))
+        return;
+
+    // One puff per portal at most; the view test and the budget of the portal are in createTreasuryEffect
+    const std::vector<Room*> portals = mGameMap->getRoomsByTypeAndSeat(RoomType::portal, seat);
+    for(Room* portal : portals)
+    {
+        const std::vector<Tile*> tiles = portal->getCoveredTiles();
+        if(tiles.empty())
+            continue;
+
+        Tile* tile = tiles[mTreasuryPortalDustCursor++ % tiles.size()];
+        const float offsetX = (static_cast<float>(mTreasuryEffectNumber % 7) - 3.0f) * 0.1f;
+        const float offsetY = (static_cast<float>(mTreasuryEffectNumber % 5) - 2.0f) * 0.12f;
+        createTreasuryEffect(portal, "TreasuryGoldDust", Ogre::Vector3(
+            static_cast<Ogre::Real>(tile->getX()) + offsetX, static_cast<Ogre::Real>(tile->getY()) + offsetY,
+            TreasuryCreatureRules::portalDustHeight), TreasuryEffectKind::dust);
     }
 }
 
@@ -4920,74 +4950,55 @@ void RenderManager::cancelTreasuryPileSettle(const std::string& entityName)
     }
 }
 
-void RenderManager::startTreasuryThiefSack(RenderedMovableEntity* gold)
+void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
 {
-    Tile* tile = gold->getPositionTile();
-    if(tile == nullptr || TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::off)
+    if(creature == nullptr || creature->getDefinition() == nullptr || creature->getDefinition()->getStealGold() <= 0
+        || creature->getEntityNode() == nullptr || !creature->getIsOnMap())
         return;
 
-    // Only what is in view is animated
-    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
-    if(camera != nullptr && !camera->isVisible(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
-        static_cast<Ogre::Real>(tile->getY()), 0.0f)))
-        return;
+    // The size follows the gold carried by the thief as the server sent it. Nothing is shown when
+    // the thief carries no gold or the treasury detail option is off.
+    std::string sackMesh;
+    if(creature->getGoldCarried() > 0)
+        sackMesh = LooseGoldMesh::prepareSack(mSceneManager, TreasuryObject::getMeshNameForGold(creature->getGoldCarried()));
 
-    const std::string sackMesh = LooseGoldMesh::prepareSack(mSceneManager, gold->getMeshName());
+    for(std::vector<TreasuryThiefSack>::iterator it = mTreasuryThiefSacks.begin(); it != mTreasuryThiefSacks.end(); ++it)
+    {
+        if(it->mCreature != creature)
+            continue;
+
+        if(it->mSackMesh == sackMesh)
+            return;
+
+        removeTreasuryThiefSack(creature);
+        break;
+    }
+
     if(sackMesh.empty())
         return;
 
-    const std::vector<GameEntity*> entities = tile->getEntitiesInTile();
-    for(GameEntity* entity : entities)
-    {
-        if(entity->getObjectType() != GameEntityType::creature)
-            continue;
-
-        Creature* creature = static_cast<Creature*>(entity);
-        if(creature->getDefinition() == nullptr || creature->getDefinition()->getStealGold() <= 0
-            || creature->getEntityNode() == nullptr || !creature->getIsOnMap())
-            continue;
-
-        const std::string creatureName = creature->getOgreNamePrefix() + creature->getName();
-        if(!mSceneManager->hasEntity(creatureName))
-            continue;
-
-        removeTreasuryThiefSack(creature);
-        Ogre::Entity* creatureEntity = mSceneManager->getEntity(creatureName);
-        const std::string sackName = "TreasuryThiefSack_" + creatureName;
-        if(mSceneManager->hasEntity(sackName))
-            continue;
-
-        // The sack sits on the back of the thief; it does not shrink with the creature
-        Ogre::SceneNode* sackNode = creature->getEntityNode()->createChildSceneNode(sackName + "_node");
-        sackNode->setInheritScale(false);
-        sackNode->setScale(0.7f, 0.7f, 0.7f);
-        sackNode->setPosition(Ogre::Vector3(0.0f, 0.0f, creatureEntity->getBoundingBox().getMaximum().z * 0.85f));
-        Ogre::Entity* sack = mSceneManager->createEntity(sackName, sackMesh + ".mesh");
-        sackNode->attachObject(sack);
-
-        TreasuryThiefSack thiefSack;
-        thiefSack.mCreature = creature;
-        thiefSack.mSackName = sackName;
-        thiefSack.mRemaining = TreasuryCreatureRules::thiefSackTime;
-        mTreasuryThiefSacks.push_back(thiefSack);
+    const std::string creatureName = creature->getOgreNamePrefix() + creature->getName();
+    if(!mSceneManager->hasEntity(creatureName))
         return;
-    }
-}
 
-void RenderManager::updateTreasuryThiefSacks(Ogre::Real timeSinceLastFrame)
-{
-    for(size_t i = 0; i < mTreasuryThiefSacks.size();)
-    {
-        mTreasuryThiefSacks[i].mRemaining -= timeSinceLastFrame;
-        if(mTreasuryThiefSacks[i].mRemaining > 0.0f)
-        {
-            ++i;
-            continue;
-        }
+    const std::string sackName = "TreasuryThiefSack_" + creatureName;
+    if(mSceneManager->hasEntity(sackName))
+        return;
 
-        // Removing shortens the list: the next sack is then at the same index
-        removeTreasuryThiefSack(mTreasuryThiefSacks[i].mCreature);
-    }
+    // The sack sits on the back of the thief; it does not shrink with the creature
+    Ogre::Entity* creatureEntity = mSceneManager->getEntity(creatureName);
+    Ogre::SceneNode* sackNode = creature->getEntityNode()->createChildSceneNode(sackName + "_node");
+    sackNode->setInheritScale(false);
+    sackNode->setScale(0.7f, 0.7f, 0.7f);
+    sackNode->setPosition(Ogre::Vector3(0.0f, 0.0f, creatureEntity->getBoundingBox().getMaximum().z * 0.85f));
+    Ogre::Entity* sack = mSceneManager->createEntity(sackName, sackMesh + ".mesh");
+    sackNode->attachObject(sack);
+
+    TreasuryThiefSack thiefSack;
+    thiefSack.mCreature = creature;
+    thiefSack.mSackName = sackName;
+    thiefSack.mSackMesh = sackMesh;
+    mTreasuryThiefSacks.push_back(thiefSack);
 }
 
 void RenderManager::removeTreasuryThiefSack(Creature* creature)

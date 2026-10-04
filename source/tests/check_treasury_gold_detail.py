@@ -46,8 +46,8 @@ assert 'startTreasuryPileChange(node' in render and 'updateTreasuryPileSettles(t
 assert 'previousPileLevel' in render and 'int registerPile(' in read('source/render/TreasuryGoldMesh.h')
 assert 'pileSettleScale' in rules and 'dentDepth' in rules
 
-# Thieves carry a sack away from the heap they took; glow lights per patch.
-assert 'startTreasuryThiefSack' in render and 'getStealGold() <= 0' in render
+# Thieves show a sack sized by the gold the server sends with the creature packet; glow lights per patch.
+assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render
 assert 'removeTreasuryThiefSack(curCreature)' in render
 assert 'refreshTreasuryGlow' in render and 'glowOfPatch' in render and 'ROOM_LIGHT_MASK' in render
 
@@ -55,9 +55,8 @@ assert 'refreshTreasuryGlow' in render and 'glowOfPatch' in render and 'ROOM_LIG
 assert 'TreasuryEffectKind::ambient' in render and 'ambientBudget(TreasuryGoldMesh::getDetail())' in render
 assert 'case TreasuryGoldMesh::Detail::full:' in rules.split('inline int ambientBudget')[1]
 assert 'camera->isVisible' in render.split('void RenderManager::startTreasuryPileChange')[1].split('void RenderManager::updateTreasuryPileSettles')[0]
-assert 'camera->isVisible' in render.split('void RenderManager::startTreasuryThiefSack')[1].split('void RenderManager::updateTreasuryThiefSacks')[0]
 assert 'currentDetail == Detail::off' in mesh.split('Glow glowOfPatch')[1]
 
 # The piles are lit by the glow but the creature walking code is not touched: no position written.
-assert 'creature->setPosition' not in render.split('void RenderManager::startTreasuryThiefSack')[1].split('void RenderManager::refreshTreasuryGlow')[0]
+assert 'creature->setPosition' not in render.split('void RenderManager::rrRefreshCreatureGoldSack')[1].split('void RenderManager::refreshTreasuryGlow')[0]
 print('ok')

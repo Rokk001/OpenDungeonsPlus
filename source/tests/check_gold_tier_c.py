@@ -39,4 +39,36 @@ assert 'dustBudget(TreasuryGoldMesh::getDetail())' in render
 assert 'collectFullPiles' in render and 'TreasuryGoldLayer::maxLevel' in mesh
 assert 'particle_system TreasuryGoldDust' in particles
 assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryGoldDust')[1]
+
+# Portal dust: the existing dust effect and budget, started from the dust timer, only for the local keeper's
+# portals when rich; the threshold values live in the rules header.
+portal = render.split('void RenderManager::startTreasuryPortalDust')[1].split('void RenderManager::updateTreasuryAmbient')[0]
+assert 'RoomType::portal' in portal and 'isRichKeeper(seat->getGold(), seat->getGoldMax())' in portal
+assert 'TreasuryEffectKind::dust' in portal and '"TreasuryGoldDust"' in portal
+assert 'startTreasuryPortalDust();' in render.split('void RenderManager::updateTreasuryDust')[1].split('collectFullPiles')[0]
+assert 'portalRichShare' in rules and 'portalRichMinGold' in rules and 'portalDustHeight' in rules
+import re
+share = float(re.search(r'portalRichShare = ([0-9.]+)f', rules).group(1))
+min_gold = int(re.search(r'portalRichMinGold = ([0-9]+)', rules).group(1))
+def rich(gold, gold_max):
+    return gold_max > 0 and gold >= min_gold and gold >= share * gold_max
+assert not rich(0, 0) and not rich(400, 400) and not rich(499, 600)
+assert rich(500, 1000) and not rich(499, 1000) and rich(2000, 3000) and not rich(1400, 3000)
+
+# Thief gold: one trailing field in the creature packets (new and update), written and read at the end,
+# only sent again when the amount changed; the client sack follows it. The old heap guess is gone.
+creature = read('source/entities/Creature.cpp')
+for name in ('exportToPacket(ODPacket& os, const Seat* seat) const', 'exportToPacketForUpdate(ODPacket& os, Seat* seat)'):
+    body = creature.split('void Creature::' + name)[1].split('\n}\n')[0]
+    assert body.rstrip().endswith('os << mGoldCarried;'), name
+for name in ('importFromPacket(ODPacket& is)', 'updateFromPacket(ODPacket& is)'):
+    body = creature.split('void Creature::' + name)[1].split('\n}\n')[0]
+    assert 'OD_ASSERT_TRUE(is >> mGoldCarried);' in body, name
+    assert body.index('importProgressFromPacket(is);') < body.index('is >> mGoldCarried'), name
+assert 'mGoldCarried != mGoldCarriedNotified' in creature
+assert 'rrRefreshCreatureGoldSack(this)' in creature
+assert 'rrRefreshCreatureGoldSack(curCreature)' in render
+for gone in ('startTreasuryThiefSack', 'updateTreasuryThiefSacks', 'thiefSackTime'):
+    assert gone not in render and gone not in rules, gone
+assert 'getMeshNameForGold(creature->getGoldCarried())' in render
 print('ok')

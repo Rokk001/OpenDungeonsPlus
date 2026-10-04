@@ -175,6 +175,20 @@ inline int dustBudget(TreasuryGoldMesh::Detail detail)
     }
 }
 
+//! Gold dust over the portal of a rich keeper (same puffs and budget per room as the dust over full piles): the
+//! keeper is rich when the gold held reaches this share of the treasury capacity and at least the minimum amount.
+//! The dust floats this high above the floor of the portal.
+static const float portalRichShare = 0.5f;
+static const int portalRichMinGold = 500;
+static const float portalDustHeight = 0.9f;
+
+inline bool isRichKeeper(int gold, int goldMax)
+{
+    if(goldMax <= 0 || gold < portalRichMinGold)
+        return false;
+    return static_cast<float>(gold) >= portalRichShare * static_cast<float>(goldMax);
+}
+
 //! Sparkles and sliding coins on the gold of rich treasuries, and the coins that roll away when gold is taken:
 //! seconds between two attempts, how long such an effect counts against the budget of its room, and how many
 //! a room may show at once by the "Treasury detail" option. They have a budget of their own.
@@ -227,9 +241,6 @@ inline float pileSettleFrom(int oldLevel, int newLevel)
     const float ratio = static_cast<float>(oldLevel) / static_cast<float>(newLevel);
     return ratio < 0.4f ? 0.4f : (ratio > 1.6f ? 1.6f : ratio);
 }
-
-//! A creature that takes a loose heap of gold walks off with a sack of coins for this many seconds
-static const float thiefSackTime = 10.0f;
 
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget

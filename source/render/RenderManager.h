@@ -148,6 +148,8 @@ public:
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
     void rrCreateCreature(Creature* curCreature);
     void rrDestroyCreature(Creature* curCreature);
+    //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)
+    void rrRefreshCreatureGoldSack(Creature* creature);
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
@@ -439,6 +441,9 @@ private:
     TreasuryCreatureRules::SplashBudget mTreasuryAmbientBudget;
     Ogre::Real mTreasuryDustTimer = 0.0f;
     size_t mTreasuryDustCursor = 0;
+    size_t mTreasuryPortalDustCursor = 0;
+    //! Set while a game is shown; the portal dust looks up the portals of the local keeper there
+    GameMap* mGameMap = nullptr;
     Ogre::Real mTreasuryAmbientTimer = 0.0f;
     size_t mTreasuryAmbientCursor = 0;
 
@@ -453,12 +458,12 @@ private:
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
 
-    //! A creature that took a loose heap of gold carries a sack of coins for a while
+    //! A thief carrying gold shows a sack of coins, its size follows the amount the server sends
     struct TreasuryThiefSack
     {
         Creature* mCreature;
         std::string mSackName;
-        Ogre::Real mRemaining;
+        std::string mSackMesh;
     };
     std::vector<TreasuryThiefSack> mTreasuryThiefSacks;
 
@@ -551,13 +556,12 @@ private:
     bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
         TreasuryEffectKind kind = TreasuryEffectKind::splash);
     void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
+    void startTreasuryPortalDust();
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
         int newLevel);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPileSettle(const std::string& entityName);
-    void startTreasuryThiefSack(RenderedMovableEntity* gold);
-    void updateTreasuryThiefSacks(Ogre::Real timeSinceLastFrame);
     void removeTreasuryThiefSack(Creature* creature);
     void refreshTreasuryGlow(int x, int y);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
