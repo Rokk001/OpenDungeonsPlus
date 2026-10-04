@@ -48,7 +48,11 @@ enum class AmbienceWhen
     //! The target (a door) took a hit a moment ago
     hit,
     //! The target (a door) is closed, which is what a lock by the keeper does
-    locked
+    locked,
+    //! The target (a trap) reloads or is empty, as the server reported it
+    reloading,
+    //! The target (a trap) is loaded and ready, the opposite of reloading
+    ready
 };
 
 enum class AmbienceKind

@@ -39,8 +39,8 @@ if '"trapEffect"' not in read("source", "network", "ServerNotification.cpp"):
 trap_h = read("source", "traps", "Trap.h")
 kinds = re.search(r"enum class TrapEffectKind[^{]*\{(.*?)\}", trap_h, re.S)
 values = re.findall(r"(\w+)\s*=\s*(\d+)", kinds.group(1)) if kinds else []
-if [name for name, _ in values] != ["fired", "linked", "doorHit", "doorWrecked"] or \
-        [int(number) for _, number in values] != [0, 1, 2, 3]:
+if [name for name, _ in values] != ["fired", "linked", "doorHit", "doorWrecked", "reloading", "ready"] or \
+        [int(number) for _, number in values] != [0, 1, 2, 3, 4, 5]:
     problems.append("TrapEffectKind values changed: %s" % values)
 
 trap_cpp = read("source", "traps", "Trap.cpp")
@@ -64,6 +64,22 @@ config = read("config", "roomAmbienceTraps.cfg")
 configured = set(re.findall(r"^\s*Event\s+((?:Trap|Door)\w+)", config, re.M))
 if raised != configured:
     problems.append("events raised %s, events configured %s" % (sorted(raised), sorted(configured)))
+
+# Reload state: sent once per change (not per turn), only for traps, and used by the client
+doup = trap_cpp[trap_cpp.index("void Trap::doUpkeep"):]
+doup = doup[:doup.index("bool Trap::fireTile")]
+if "wasReloading" not in doup or "TrapEffectKind::ready" not in doup:
+    problems.append("the end of a reload is not sent once")
+fire = trap_cpp[trap_cpp.index("bool Trap::fireTile"):trap_cpp.index("void Trap::fireTrapEffect")]
+if "TrapEffectKind::reloading" not in fire or "!isDoor()" not in fire:
+    problems.append("the start of a reload is not sent for traps only")
+if "case 4:" not in ambience or "case 5:" not in ambience or "mReloadingUntil" not in ambience:
+    problems.append("the client does not keep the reload state")
+for word in ("AmbienceWhen::reloading", "AmbienceWhen::ready"):
+    if word not in ambience:
+        problems.append("the client does not use " + word)
+if "When        Reloading" not in config or "When        Ready" not in config:
+    problems.append("the config has no effects for reloading and ready")
 
 door = read("source", "traps", "TrapDoor.cpp")
 if "TrapEffectKind::doorWrecked" not in door or "TrapEffectKind::doorHit" not in door:

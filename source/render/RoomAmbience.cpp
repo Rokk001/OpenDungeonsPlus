@@ -566,6 +566,14 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
                 std::map<std::string, double>::const_iterator hitIt = mHitUntil.find(hitKey);
                 candidate.mActive = (hitIt != mHitUntil.end()) && (hitIt->second > mClock);
             }
+            else if((effect.mWhen == AmbienceWhen::reloading) || (effect.mWhen == AmbienceWhen::ready))
+            {
+                std::string reloadKey = Helper::toString(static_cast<int32_t>(std::floor(position.x + 0.5f))) + "," +
+                    Helper::toString(static_cast<int32_t>(std::floor(position.y + 0.5f)));
+                std::map<std::string, double>::const_iterator reloadIt = mReloadingUntil.find(reloadKey);
+                bool reloading = (reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock);
+                candidate.mActive = (effect.mWhen == AmbienceWhen::reloading) ? reloading : !reloading;
+            }
             else
             {
                 if(busy < 0)
@@ -868,6 +876,7 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
             // client only lost sight of it
             int32_t soldX = static_cast<int32_t>(std::floor(it->second.mPosition.x + 0.5f));
             int32_t soldY = static_cast<int32_t>(std::floor(it->second.mPosition.y + 0.5f));
+            mReloadingUntil.erase(Helper::toString(soldX) + "," + Helper::toString(soldY));
             Tile* soldTile = mGameMap->getTile(soldX, soldY);
             std::map<std::string, double>::const_iterator wreckedIt =
                 mWreckedUntil.find(Helper::toString(soldX) + "," + Helper::toString(soldY));
@@ -1505,6 +1514,20 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
             mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 5.0;
             triggerEvent("DoorWrecked", position, false, typeName);
             break;
+        case 4:
+            // Reloading, or empty after the last shot: the state is kept until the server says ready. The
+            // long time only protects against a ready message that was missed out of sight.
+            mReloadingUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 300.0;
+            break;
+        case 5:
+        {
+            // The reload look fades out for two seconds, so that a short reload is seen at all
+            std::map<std::string, double>::iterator reloadIt =
+                mReloadingUntil.find(Helper::toString(tileX) + "," + Helper::toString(tileY));
+            if((reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock + 2.0))
+                reloadIt->second = mClock + 2.0;
+            break;
+        }
         default:
             break;
     }

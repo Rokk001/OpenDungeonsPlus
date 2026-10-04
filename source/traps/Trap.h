@@ -170,7 +170,11 @@ enum class TrapEffectKind : int32_t
     //! A door took damage; the health fraction tells how much is left
     doorHit = 2,
     //! A door was destroyed
-    doorWrecked = 3
+    doorWrecked = 3,
+    //! The trap fired and now reloads (or is empty if it was the last shot); sent once, not every turn
+    reloading = 4,
+    //! The trap is loaded again; sent once when the reload ends
+    ready = 5
 };
 
 /*! \class Trap Trap.h

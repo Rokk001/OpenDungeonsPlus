@@ -85,6 +85,7 @@ public:
 
     //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
+    //! Kinds reloading and ready only set the state for the effects "When Reloading" and "When Ready".
     //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
@@ -272,6 +273,9 @@ private:
     Ogre::Vector3 mShakeApplied;
     //! Time until which a door (key "x,y" of its tile) counts as hit, for the effects "When Hit"
     std::map<std::string, double> mHitUntil;
+    //! Time until which a trap (key "x,y" of its tile) counts as reloading or empty, for the effects
+    //! "When Reloading" and "When Ready"
+    std::map<std::string, double> mReloadingUntil;
     //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;

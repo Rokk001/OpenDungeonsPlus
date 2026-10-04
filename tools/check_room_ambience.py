@@ -21,7 +21,7 @@ EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Mo
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
                "NeedWall", "Clips", "Every", "Family", "Delay")
 TARGETS = ("Object", "Tile", "Event")
-WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked")
+WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready")
 KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
@@ -195,8 +195,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: a sound on an object needs Every" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
-    if when == "Locked" and target != "Object":
-        problems.append("%s: When Locked only works on objects" % where)
+    if when in ("Locked", "Reloading", "Ready") and target != "Object":
+        problems.append("%s: When %s only works on objects" % (where, when))
     if kind in ("Shake", "Mark") and target != "Event":
         problems.append("%s: shakes and marks only work as events" % where)
     if kind == "Shake":
