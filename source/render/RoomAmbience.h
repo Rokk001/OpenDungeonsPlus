@@ -33,6 +33,7 @@
 #include <vector>
 
 class GameMap;
+class Tile;
 
 /*! \brief Cosmetic life in the rooms (dust, glow, sparks, moving objects), client side only.
  *
@@ -158,6 +159,8 @@ private:
         uint32_t mEffect;
         //! Name of the entity (objects) or the tile (tiles)
         std::string mTarget;
+        //! Name of the scene node to move when the target is not an entity (bridge of a tile)
+        std::string mNodeName;
         Ogre::Vector3 mPosition;
         double mDistance;
         int32_t mPriority;
@@ -195,6 +198,7 @@ private:
     bool createParticleSystem(const std::string& system, const Ogre::Vector3& position, const std::string& baseName,
         Ogre::SceneNode*& node, Ogre::ParticleSystem*& particleSystem);
     const std::vector<uint32_t>& getObjectEffects(const std::string& meshName);
+    std::vector<uint32_t> getBridgeEffects(Tile* tile) const;
     bool isVisibleNear(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& position,
         double radius, double limit) const;
 
@@ -213,6 +217,8 @@ private:
     std::vector<std::vector<uint32_t> > mTileEffects;
     std::map<std::string, std::vector<uint32_t> > mObjectEffectsMemo;
     std::map<std::string, std::vector<uint32_t> > mEventEffects;
+    //! Effects of bridge tiles, per bridge mesh and per tile visual (lavaGround, waterGround)
+    std::map<std::string, std::vector<uint32_t> > mBridgeEffects;
     std::vector<uint32_t> mNoEffects;
     std::vector<uint32_t> mObjectWildcardEffects;
     double mScanRadius;

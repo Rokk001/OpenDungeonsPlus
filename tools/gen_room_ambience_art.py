@@ -184,6 +184,26 @@ def sprite_z(path):
     finish(image, path)
 
 
+def sprite_swirl(path):
+    """Spiral of light arms around a bright centre, white so the particle colour tints it."""
+    image, draw = new_canvas()
+    c = CANVAS / 2
+    for arm in range(3):
+        points = []
+        for i in range(60):
+            t = i / 59.0
+            angle = arm * 2.0944 + t * 5.2
+            radius = 14 + t * 108
+            points.append((c + radius * math.cos(angle), c + radius * math.sin(angle)))
+        for i in range(len(points) - 1):
+            width = int(16 - 12 * (i / 59.0)) + 2
+            alpha = int(255 * (1.0 - 0.7 * (i / 59.0)))
+            draw.line((points[i], points[i + 1]), fill=(255, 255, 255, alpha), width=width)
+    image = image.filter(ImageFilter.GaussianBlur(4))
+    radial(image, (255, 255, 255, 200), 44, 1.5)
+    finish(image, path)
+
+
 SPRITES = {
     "RoomAmbSpark": sprite_spark,
     "RoomAmbGlow": sprite_glow,
@@ -197,6 +217,7 @@ SPRITES = {
     "RoomAmbFeather": sprite_feather,
     "RoomAmbGrain": sprite_grain,
     "RoomAmbZ": sprite_z,
+    "RoomAmbSwirl": sprite_swirl,
 }
 
 
