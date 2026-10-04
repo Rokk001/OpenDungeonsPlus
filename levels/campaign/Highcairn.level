@@ -2863,6 +2863,7 @@ Mode	once
 Cond	region	1	Caldera
 Action	message	1	A hot basin of lava with gold in its walls. Hold it and you can feed your army without climbing.
 Action	gold	1	400
+Action	terrain	53	64	53	64	manawell
 [/Trigger]
 [Trigger]
 Name	terrace2

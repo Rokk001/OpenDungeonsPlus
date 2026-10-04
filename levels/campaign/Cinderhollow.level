@@ -5196,6 +5196,7 @@ Name	dawnClock
 Mode	once
 Cond	time	3
 Action	timer	dawnClock
+Action	countdown	1797
 [/Trigger]
 [Trigger]
 Name	lavaBridge
@@ -5211,5 +5212,12 @@ Cond	time	1800
 Cond	defeated	2
 Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	ashWell
+Mode	once
+Cond	slabs	-1	GoldHollow	gold	<=	0
+Action	message	1	The last gold of the seam is out and the rock behind it sweats mana. A spring has opened in the hollow.
+Action	terrain	30	55	30	55	manawell
 [/Trigger]
 [/Triggers]
