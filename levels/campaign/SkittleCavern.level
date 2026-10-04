@@ -938,16 +938,6 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker2	Kobold.mesh	10	22	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	13	19	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker4	Kobold.mesh	13	21	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin1	Adventurer.mesh	34	8	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin2	Adventurer.mesh	36	8	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin3	Adventurer.mesh	38	8	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin4	Adventurer.mesh	34	16	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin5	Adventurer.mesh	36	16	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin6	Adventurer.mesh	38	16	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin7	Adventurer.mesh	37	24	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin8	Adventurer.mesh	39	24	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin9	Adventurer.mesh	37	32	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pin10	Adventurer.mesh	39	32	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -980,24 +970,71 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Region	Lanes	31	5	46	35
+Region	Mouth1	30	8	32	8
+Region	Mouth2	30	16	32	16
+Region	Mouth3	30	24	32	24
+Region	Mouth4	30	32	32	32
 [Trigger]
 Name	openingRound
 Mode	once
 Cond	time	3
-Action	message	1	A vaulted cavern holds rows of stone-faced guards that stand in four lanes like skittles, and old boulder traps wait between them. Dig into each lane and let the boulders roll.
+Action	message	1	A vaulted cavern holds four long lanes with old boulder traps in them, and stone-faced guards stand in the lanes like skittles as soon as the earth plugs are opened. Dig into each lane and let the boulders roll.
 Action	objective	1	Knock down all ten standing guards before time runs out.
 Action	timelimit	540
-Action	order	wait	2	-	Pin1	Pin2	Pin3	Pin4	Pin5	Pin6	Pin7	Pin8	Pin9	Pin10
+[/Trigger]
+[Trigger]
+Name	lane1Opened
+Mode	once
+Cond	region	1	Mouth1
+Action	message	1	Lane 1 is open and its guards step up to their marks.
+Action	spawn	2	34	8	-1	Adventurer:1@Pin1
+Action	spawn	2	36	8	-1	Adventurer:1@Pin2
+Action	spawn	2	38	8	-1	Adventurer:1@Pin3
+Action	order	wait	2	-	Pin1	Pin2	Pin3
+Action	addflag	lanesOpened	1
+[/Trigger]
+[Trigger]
+Name	lane2Opened
+Mode	once
+Cond	region	1	Mouth2
+Action	message	1	Lane 2 is open and its guards step up to their marks.
+Action	spawn	2	34	16	-1	Adventurer:1@Pin4
+Action	spawn	2	36	16	-1	Adventurer:1@Pin5
+Action	spawn	2	38	16	-1	Adventurer:1@Pin6
+Action	order	wait	2	-	Pin4	Pin5	Pin6
+Action	addflag	lanesOpened	1
+[/Trigger]
+[Trigger]
+Name	lane3Opened
+Mode	once
+Cond	region	1	Mouth3
+Action	message	1	Lane 3 is open and its guards step up to their marks.
+Action	spawn	2	37	24	-1	Adventurer:1@Pin7
+Action	spawn	2	39	24	-1	Adventurer:1@Pin8
+Action	order	wait	2	-	Pin7	Pin8
+Action	addflag	lanesOpened	1
+[/Trigger]
+[Trigger]
+Name	lane4Opened
+Mode	once
+Cond	region	1	Mouth4
+Action	message	1	Lane 4 is open and its guards step up to their marks.
+Action	spawn	2	37	32	-1	Adventurer:1@Pin9
+Action	spawn	2	39	32	-1	Adventurer:1@Pin10
+Action	order	wait	2	-	Pin9	Pin10
+Action	addflag	lanesOpened	1
 [/Trigger]
 [Trigger]
 Name	halfDown
 Mode	once
-Cond	creatures	2	<=	5
+Cond	flag	lanesOpened	>=	2
+Cond	kills	1	>=	5
 Action	message	1	Half of the guards are down.
 [/Trigger]
 [Trigger]
 Name	laneCleared
 Mode	once
+Cond	flag	lanesOpened	>=	4
 Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	The last guard has fallen and the lanes lie quiet. The heart gives you a shard.
