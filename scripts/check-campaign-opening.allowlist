@@ -22,4 +22,4 @@ Bellwick.level
 Highcairn.level
 SkittleCavern.level
 Stormhaven.level
-SwarmNight.level
+SwarmNight.level  # intentional (bonus level, kept permanently): the survival waves and the rival keeper are meant to reach the heart at once, so the opening rules do not apply
