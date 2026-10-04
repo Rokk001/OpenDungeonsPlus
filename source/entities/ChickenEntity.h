@@ -61,6 +61,9 @@ public:
 
     bool eatChicken(Creature* creature);
 
+    //! \brief An enemy creature tramples the egg: it is gone at once. Only free eggs can be trampled.
+    bool trample(Creature* creature);
+
     inline ChickenKind getKind() const
     { return mKind; }
 
