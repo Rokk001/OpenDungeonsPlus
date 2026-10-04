@@ -385,6 +385,24 @@ private:
     std::vector<CreatureTurn> mCreatureTurns;
     void updateCreatureTurns(Ogre::Real timeSinceLastFrame);
 
+    //! A small body variant of a death (falls back, sinks aside) laid over the Die clip on the creature node
+    //! (cosmetic, chosen from the creature name, ends by itself and leaves the final pose)
+    struct CreatureDeathVariant
+    {
+        Creature* mCreature;
+        Ogre::SceneNode* mNode;
+        Ogre::Quaternion mBaseOrientation;
+        Ogre::Vector3 mBasePosition;
+        Ogre::Quaternion mLastOrientation;
+        Ogre::Vector3 mLastPosition;
+        int mVariant;
+        Ogre::Real mElapsed;
+        Ogre::Real mDuration;
+    };
+    std::vector<CreatureDeathVariant> mCreatureDeathVariants;
+    void updateCreatureDeathVariants(Ogre::Real timeSinceLastFrame);
+    void startCreatureDeathVariant(Creature* creature, Ogre::Entity* entity);
+
     enum class CreatureFeedingStyle
     {
         peck,
