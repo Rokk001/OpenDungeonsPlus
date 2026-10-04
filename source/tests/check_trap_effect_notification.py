@@ -30,8 +30,15 @@ if names[-1] != "timeLimit":
     problems.append("timeLimit is not the last server notification")
 if "trapEffect" not in names or names.index("trapEffect") != len(names) - 2:
     problems.append("trapEffect must be right before timeLimit")
-if names[-3] != "relationshipTier":
+# Only the chicken notifications of the hatchery may sit between relationshipTier and trapEffect, in this order
+BETWEEN_RELATIONSHIP_AND_TRAP = ["chickenKindChanged", "chickenFight"]
+if "relationshipTier" not in names:
     problems.append("trapEffect must follow relationshipTier")
+else:
+    between = names[names.index("relationshipTier") + 1:-2]
+    if between != [name for name in BETWEEN_RELATIONSHIP_AND_TRAP if name in between]:
+        problems.append("trapEffect must follow relationshipTier (only %s may be between them, in this order): %s"
+                        % (", ".join(BETWEEN_RELATIONSHIP_AND_TRAP), between))
 
 if '"trapEffect"' not in read("source", "network", "ServerNotification.cpp"):
     problems.append("trapEffect has no name in ServerNotification.cpp")
