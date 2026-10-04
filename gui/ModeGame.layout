@@ -69,9 +69,9 @@
             </Window>
             <Window type="OD/StaticText" name="SandboxScoreDisplay" >
                 <Property name="Visible" value="False" />
-                <Property name="Area" value="{{0.5,-330},{0,6},{0.5,-110},{0,42}}" />
+                <Property name="Area" value="{{0.5,270},{0,6},{0.5,480},{0,42}}" />
                 <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-20" />
+                <Property name="Font" value="MedievalSharp-13" />
                 <Property name="TextColours" value="FFF6CB62" />
                 <Property name="TooltipText" value="Your score and the score of the realm" />
                 <Property name="HorzFormatting" value="CentreAligned" />
@@ -82,9 +82,9 @@
             </Window>
             <Window type="OD/StaticText" name="SandboxRoomDisplay" >
                 <Property name="Visible" value="False" />
-                <Property name="Area" value="{{0.5,110},{0,6},{0.5,400},{0,42}}" />
+                <Property name="Area" value="{{0.5,490},{0,6},{0.5,800},{0,42}}" />
                 <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-20" />
+                <Property name="Font" value="MedievalSharp-13" />
                 <Property name="TextColours" value="FFF6CB62" />
                 <Property name="TooltipText" value="The next room becomes available after this time" />
                 <Property name="HorzFormatting" value="CentreAligned" />

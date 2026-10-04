@@ -76,8 +76,8 @@ const float LIFT_SCALE = 1.04f;
 //! Distance in map pixels from the centre of a bonus site marker that still hits it
 const float SITE_HIT_RADIUS = 40.0f;
 //! Size of the tooltip window and its distance from the mouse, in screen pixels
-const float TOOLTIP_WIDTH = 260.0f;
-const float TOOLTIP_HEIGHT = 96.0f;
+const float TOOLTIP_WIDTH = 420.0f;
+const float TOOLTIP_HEIGHT = 120.0f;
 const float TOOLTIP_OFFSET = 18.0f;
 
 //! Reads and decodes a PNG file into RGBA bytes. Returns false if it cannot be read.
@@ -491,7 +491,7 @@ void MenuModeCampaign::fillMap()
         static_cast<float>(cartouche.mY), static_cast<float>(cartouche.mWidth), static_cast<float>(cartouche.mHeight));
     title->setProperty("FrameEnabled", "False");
     title->setProperty("BackgroundEnabled", "False");
-    title->setProperty("Font", "MedievalSharp-20");
+    title->setProperty("Font", "MedievalSharp-12");
     title->setProperty("HorzFormatting", "CentreAligned");
     title->setProperty("VertFormatting", "CentreAligned");
     title->setProperty("TextColours", "FF2A1A0C");
@@ -514,7 +514,7 @@ void MenuModeCampaign::fillMap()
     float panelWidth = static_cast<float>(panel.mWidth);
     float panelHeight = static_cast<float>(panel.mHeight);
     CEGUI::Window* progress = createMapWindow("OD/StaticText", "ProgressText", panelX + panelWidth * 0.04f,
-        panelY + panelHeight * 0.04f, panelWidth * 0.92f, panelHeight * 0.58f);
+        panelY, panelWidth * 0.92f, panelHeight * 0.70f);
     progress->setProperty("FrameEnabled", "False");
     progress->setProperty("BackgroundEnabled", "False");
     progress->setProperty("Font", "MedievalSharp-8");
@@ -526,11 +526,11 @@ void MenuModeCampaign::fillMap()
         + Helper::toString(siteTotal) + " hidden sites");
 
     CEGUI::Window* bar = createMapWindow("OD/ProgressBar", "ProgressBar", panelX + panelWidth * 0.04f,
-        panelY + panelHeight * 0.68f, panelWidth * 0.74f, panelHeight * 0.24f);
+        panelY + panelHeight * 0.74f, panelWidth * 0.74f, panelHeight * 0.20f);
     static_cast<CEGUI::ProgressBar*>(bar)->setProgress(static_cast<float>(percent) / 100.0f);
 
     CEGUI::Window* percentText = createMapWindow("OD/StaticText", "ProgressPercent", panelX + panelWidth * 0.80f,
-        panelY + panelHeight * 0.62f, panelWidth * 0.16f, panelHeight * 0.34f);
+        panelY + panelHeight * 0.68f, panelWidth * 0.16f, panelHeight * 0.32f);
     percentText->setProperty("FrameEnabled", "False");
     percentText->setProperty("BackgroundEnabled", "False");
     percentText->setProperty("Font", "MedievalSharp-8");
