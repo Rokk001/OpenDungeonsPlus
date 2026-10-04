@@ -53,6 +53,7 @@
 #include "render/TreasuryCreatureRules.h"
 #include "render/TreasuryGoldMesh.h"
 #include "sound/SoundEffectsManager.h"
+#include "rooms/HatcheryCoopHouse.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "rooms/TreasuryGoldLayer.h"
@@ -2860,7 +2861,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
     renderedMovableEntity->setParentSceneNode(node->getParentSceneNode());
     renderedMovableEntity->setEntityNode(node);
-    if(meshName == "ChickenCoop")
+    if(HatcheryCoopHouse::isCoopMesh(meshName))
         rrCreateCoopDecor(static_cast<BuildingObject*>(renderedMovableEntity));
 
     if(pileLevel >= 0)
@@ -2917,7 +2918,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     cancelTreasuryPileSettle(curRenderedMovableEntity->getName());
     mTreasuryBatch.removePile(curRenderedMovableEntity->getName());
     mTreasuryBuriedObjects.erase(curRenderedMovableEntity);
-    if(curRenderedMovableEntity->getMeshName() == "ChickenCoop")
+    if(HatcheryCoopHouse::isCoopMesh(curRenderedMovableEntity->getMeshName()))
         rrDestroyCoopDecor(static_cast<BuildingObject*>(curRenderedMovableEntity));
     if(mSceneManager->hasEntity(tempString))
     {
@@ -3541,7 +3542,12 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         const bool isChick = static_cast<ChickenEntity*>(curAnimatedObject)->getKind() == ChickenKind::chick;
         const std::string clip = ChickenPose::skeletonClip(animation, isChick);
         if(!clip.empty() && objectEntity->getSkeleton()->hasAnimation(clip))
+        {
             anim = clip;
+            // Laying and fluttering play once, the pose ends with the clip
+            if(ChickenPose::isOneShotClip(clip))
+                loop = false;
+        }
     }
     Creature* dropCreature = nullptr;
     if(curAnimatedObject->getObjectType() == GameEntityType::creature)

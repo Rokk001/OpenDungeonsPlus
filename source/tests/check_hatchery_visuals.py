@@ -110,3 +110,39 @@ assert 'ChickenPose::scratch' in looks and 'ChickenPose::flutter' in looks
 assert 'fireProtest' in body(chicken, 'void ChickenEntity::pickup')
 # Eggs and chicks dropped outside a hatchery are lost
 assert 'HatcheryYoungLostTurns' in chickUpkeep and 'HatcheryYoungLostTurns' in config
+
+# Coop mesh with nests, door clip and roof lookout, and the real hen clips Lay and Flutter (text checks only)
+coop_h = (root / 'source/rooms/HatcheryCoopHouse.h').read_text()
+for name in ('meshName = "ChickenCoopHouse"', 'oldMeshName = "ChickenCoop"', 'doorClip = "Door"', 'roofPerchHeight',
+             'roofPerchOffset', 'nestCenter', 'nestEggSpot', 'nestEggSpotWorld', 'isCoopMesh'):
+    assert name in coop_h, name
+assert 'HatcheryCoopHouse::meshName' in body(room, 'BuildingObject* RoomHatchery::notifyActiveSpotCreated')
+assert 'HatcheryCoopHouse::roofPerchHeight' in room and 'HatcheryCoopHouse::roofPerchOffset' in room
+assert 'ChickenCoop"' not in room
+assert render.count('HatcheryCoopHouse::isCoopMesh') == 2
+coop_mesh = (models / 'ChickenCoopHouse.mesh').read_bytes()
+assert b'ChickenCoopHouse.skeleton' in coop_mesh and b'ChickenCoop' in coop_mesh and b'ChickenStraw' in coop_mesh
+coop_skeleton = (models / 'ChickenCoopHouse.skeleton').read_bytes()
+for name in (b'Root', b'Door', b'Lookout', b'Idle'):
+    assert name in coop_skeleton, name
+assert (models / 'ChickenCoop.mesh').exists()
+bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
+assert '{"ChickenCoopHouse", -.203275f, -.4f, .796725f, .4f}' in bounds
+assert 'ChickenCoop ChickenCoopHouse' in (root / 'config/roomAmbienceProduction.cfg').read_text()
+assert 'ChickenCoopHouse.mesh' in credits and 'ChickenCoopHouse.skeleton' in credits and 'clips Lay, Flutter' in credits
+# The door of the coop swings with the animal that comes out, the old mesh shakes as before
+assert 'mDoor' in looks and 'HatcheryCoopHouse::doorClip' in body(looks, 'void RenderManager::rrCreateCoopDecor')
+assert 'mDoor->setEnabled(true)' in body(looks, 'void RenderManager::rrSetChickenPose')
+assert 'mShake = 0.8f' in body(looks, 'void RenderManager::rrSetChickenPose')
+assert 'mDoor->addTime' in body(looks, 'void RenderManager::updateChickenLooks')
+assert 'decor.mNest != nullptr' in body(looks, 'void RenderManager::rrDestroyCoopDecor')
+# Hen clips: used when the skeleton has them, procedural motion stays as fallback
+for name in (b'Lay', b'Flutter', b'Peep', b'Run', b'Crow', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep', b'Walk', b'Idle'):
+    assert name in skeleton, name
+assert 'return "Lay"' in pose and 'return "Flutter"' in pose and 'isOneShotClip' in pose
+assert 'ChickenPose::isOneShotClip(clip)' in hook and 'hasAnimation(clip)' in hook
+assert 'hasAnimation("Lay")' in looks and 'hasAnimation("Flutter")' in looks
+assert 'stretch = Ogre::Vector3(1.14f, 1.1f' in looks and 'lift = 0.14f * rise' in looks
+for name in ('hen_lay_flutter.py', 'coop_house.py'):
+    assert (root / 'tools/blender-assets' / name).exists(), name
+print('hatchery coop and hen clip checks passed')

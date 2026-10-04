@@ -227,6 +227,8 @@ public:
     void rrUpdateChickenLook(ChickenEntity* chicken);
     //! \brief The egg hatched: shell pieces fly.
     void rrChickenHatched(ChickenEntity* chicken);
+    //! \brief An egg was trampled at the position: shell pieces and yolk fly, a few feathers of a startled hen.
+    void rrEggTrampled(const Ogre::Vector3& position);
     //! \brief Two roosters fight (phase as in ServerNotificationType::chickenFight): while they brawl, feather
     //! clouds fly between them at the configured interval, when it is over a last cloud flies.
     void rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase);
@@ -439,15 +441,20 @@ private:
         ChickenEntity* mFightPartner;
         bool mFightLeader;
         Ogre::Real mFightTimer;
+        //! The egg lies in a nest of a coop: its own straw is hidden, the nest has straw
+        bool mNestEgg;
     };
     std::map<ChickenEntity*, ChickenLook> mChickenLooks;
 
     struct CoopDecor
     {
         Ogre::SceneNode* mNode;
+        //! The nest decoration, null for the coop mesh that has nests of its own
         Ogre::Entity* mNest;
         Ogre::Entity* mFeathers;
         Ogre::Real mShake;
+        //! The door clip of the coop mesh, null for the old coop mesh (the coop shakes then)
+        Ogre::AnimationState* mDoor;
     };
     std::map<BuildingObject*, CoopDecor> mCoopDecors;
     Ogre::Real mCoopDecorTimer = 0.0f;
