@@ -114,6 +114,8 @@ bool Campaign::importDefinition(std::istream& is)
             level.mDebriefing = unescapeText(value);
         else if(key == "Bonus")
             level.mBonus = (value == "1");
+        else if(key == "Heartstone")
+            level.mHeartstone = (value != "0");
         else if(key == "Province")
             level.mProvince = value;
         else if(key == "Branch")
@@ -351,7 +353,7 @@ size_t Campaign::getHeartstonePieces() const
     size_t count = 0;
     for(size_t i = 0; i < mLevels.size(); ++i)
     {
-        if(mLevels[i].mBonus && mDiscovered[i])
+        if(mLevels[i].mBonus && mLevels[i].mHeartstone && mDiscovered[i])
             ++count;
     }
     return count;
@@ -363,7 +365,7 @@ size_t Campaign::getHeartstoneTotal() const
     size_t count = 0;
     for(size_t i = 0; i < mLevels.size(); ++i)
     {
-        if(mLevels[i].mBonus)
+        if(mLevels[i].mBonus && mLevels[i].mHeartstone)
             ++count;
     }
     return count;

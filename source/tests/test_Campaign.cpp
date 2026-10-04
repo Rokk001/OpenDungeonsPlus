@@ -84,6 +84,30 @@ static const std::string sampleBonus =
     "[Level]\nFile=campaign/Bonus.level\nTitle=Hidden\nBonus=1\n"
     "[Level]\nFile=campaign/Two.level\nTitle=Second\n";
 
+static const std::string sampleBonusOwnReward =
+    "[Level]\nFile=campaign/One.level\nTitle=First\n"
+    "[Level]\nFile=campaign/Bonus.level\nTitle=Hidden\nBonus=1\n"
+    "[Level]\nFile=campaign/Own.level\nTitle=Own reward\nBonus=1\nHeartstone=0\n";
+
+BOOST_AUTO_TEST_CASE(test_bonus_level_without_Heartstone_piece)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream is(sampleBonusOwnReward);
+    BOOST_REQUIRE(campaign.importDefinition(is));
+    BOOST_CHECK(campaign.getLevel(1).mHeartstone);
+    BOOST_CHECK(campaign.getLevel(2).mBonus);
+    BOOST_CHECK(!campaign.getLevel(2).mHeartstone);
+    BOOST_CHECK_EQUAL(campaign.getHeartstoneTotal(), 1u);
+
+    // Finding the level with its own reward gives no piece.
+    BOOST_CHECK(campaign.discoverBonusLevel("campaign/Own.level"));
+    BOOST_CHECK_EQUAL(campaign.getHeartstonePieces(), 0u);
+    BOOST_CHECK(!campaign.isHeartstoneComplete());
+    BOOST_CHECK(campaign.discoverBonusLevel("campaign/Bonus.level"));
+    BOOST_CHECK_EQUAL(campaign.getHeartstonePieces(), 1u);
+    BOOST_CHECK(campaign.isHeartstoneComplete());
+}
+
 BOOST_AUTO_TEST_CASE(test_bonus_levels_and_Heartstone)
 {
     Campaign& campaign = Campaign::getSingleton();
