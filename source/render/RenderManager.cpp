@@ -2751,8 +2751,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 {
     std::string meshName = renderedMovableEntity->getMeshName();
     // Treasury gold piles are built here from their name (or swapped for the classic stacks)
-    if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
-        meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
+    bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
+    meshName = isBuildingObject ? TreasuryGoldMesh::prepareMesh(mSceneManager, meshName) : meshName;
     
     std::string tempString = renderedMovableEntity->getOgreNamePrefix() + renderedMovableEntity->getName() + (static_cast<bool>(nt) ?  "" : "_dtc" );
 
