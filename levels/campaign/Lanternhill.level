@@ -3118,8 +3118,28 @@ Action	spawn	3	69	32	1	Knight:3	Monk:2	Elf:2	Adventurer:2
 Name	hollowFound
 Mode	once
 Cond	region	1	SealedLantern
-Action	message	1	The sisters of the lamp bricked this hollow up long ago. A pale stone in the wall glows against your own heart, and a hidden hall has opened.
+Action	message	1	The sisters of the lamp bricked this hollow up long ago. A pale stone glows in the wall, and a lost spider has lifted it. Bring it to your dungeon heart.
+Action	spawn	1	70	9	1	Spider:1@LampBearer
+Action	stoneattach	LampBearer
+Action	setflag	lanternStone	1
+Action	timer	lanternSpawn	0
+[/Trigger]
+[Trigger]
+Name	lanternStoneHome
+Mode	once
+Cond	reached	LampBearer	heart	1
+Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/TwistingHalls.level
+[/Trigger]
+[Trigger]
+Name	lanternStoneLost
+Mode	repeat	60
+Cond	flag	lanternStone	1
+Cond	timer	lanternSpawn	>=	5
+Cond	alive	LampBearer	0
+Action	message	1	The stone-bearer has fallen. Another creature has lifted the stone in the hollow.
+Action	spawn	1	70	9	1	Spider:1@LampBearer
+Action	stoneattach	LampBearer
 [/Trigger]
 [Trigger]
 Name	patrol1

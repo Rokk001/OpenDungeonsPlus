@@ -3617,8 +3617,28 @@ Action	objective	1	Reach the chapel and strike down the warden.
 Name	hollowFound
 Mode	once
 Cond	region	1	SealedHollow
-Action	message	1	This hollow was bricked up by the sisters. A pale stone in the wall pulses in time with your heart, and a hidden hall has opened.
+Action	message	1	The sisters bricked this hollow up. A pale stone sits in the wall niche, and a lost goblin has lifted it. Bring it to your dungeon heart.
+Action	spawn	1	6	54	1	Goblin:1@HollowBearer
+Action	stoneattach	HollowBearer
+Action	setflag	hollowStone	1
+Action	timer	hollowSpawn	0
+[/Trigger]
+[Trigger]
+Name	hollowStoneHome
+Mode	once
+Cond	reached	HollowBearer	heart	1
+Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/CrowshotGallery.level
+[/Trigger]
+[Trigger]
+Name	hollowStoneLost
+Mode	repeat	60
+Cond	flag	hollowStone	1
+Cond	timer	hollowSpawn	>=	5
+Cond	alive	HollowBearer	0
+Action	message	1	The stone-bearer has fallen. Another goblin has lifted the stone in the hollow.
+Action	spawn	1	6	54	1	Goblin:1@HollowBearer
+Action	stoneattach	HollowBearer
 [/Trigger]
 [Trigger]
 Name	patrol1
