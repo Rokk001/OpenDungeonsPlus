@@ -81,7 +81,7 @@ public:
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
         const std::string& visualName = std::string());
 
-    //! rief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
+    //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
     //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
