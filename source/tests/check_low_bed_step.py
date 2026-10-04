@@ -14,6 +14,7 @@ probe = r'''
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include "gamemap/RoomObjectStep.h"
+#include "render/TreasuryCreatureRules.h"
 #include <set>
 #include <iostream>
 enum class GameEntityType {buildingObject,creature};
@@ -32,9 +33,10 @@ struct Creature {
  auto* getGameMap(){return map;}const auto& getPosition(){return pos;}const auto& getWalkDirection(){return direction;}
  const auto& getMeshName(){return mesh;}int getLevel(){return level;}
 };
+namespace TreasuryGoldMesh {float surfaceHeight(float,float,int& level){level=0;return 0;}}
 struct RenderManager {
  std::set<Creature*> mSteppingCreatures;
- void updateCreatureStep(Creature*);void cancelCreatureStep(Creature* = nullptr);
+ void updateCreatureStep(Creature*);void treasuryCreatureStep(Creature*,const Ogre::Vector3&,float,int){}void cancelCreatureStep(Creature* = nullptr);
 };
 void RenderManager::updateCreatureStep(METHODS
 void renderPreview(const std::string& repo,const std::string& prefix){

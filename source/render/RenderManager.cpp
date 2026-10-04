@@ -2755,7 +2755,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 {
     std::string meshName = renderedMovableEntity->getMeshName();
     // Treasury gold piles are built here from their name (or swapped for the classic stacks)
-    bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
+    const bool isBuildingObject = renderedMovableEntity->getObjectType() == GameEntityType::buildingObject;
     if(isBuildingObject)
     {
         TreasuryGoldMesh::registerPile(renderedMovableEntity->getName(), renderedMovableEntity->getPosition().x,
@@ -4507,6 +4507,33 @@ void RenderManager::updateCreatureStep(Creature* creature)
         mSteppingCreatures.erase(creature);
 }
 
+void RenderManager::cancelCreatureStep(Creature* creature)
+{
+    for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
+    {
+        Creature* current = *it;
+        if(creature != nullptr && creature != current)
+        {
+            ++it;
+            continue;
+        }
+        if(current->getEntityNode() != nullptr)
+            current->getEntityNode()->setPosition(current->getPosition());
+        it = mSteppingCreatures.erase(it);
+    }
+}
+
+void RenderManager::rrMoveMapLightFlicker(MapLight* mapLight, const Ogre::Vector3& position)
+{
+    if(mapLight->getFlickerNode() == nullptr)
+    {
+        OD_LOG_ERR("MapLight do not have flicker=" + mapLight->getName());
+        return;
+    }
+
+    mapLight->getFlickerNode()->setPosition(position);
+}
+
 void RenderManager::refreshCreaturesOnTile(Tile* tile)
 {
     if(tile == nullptr)
@@ -4609,33 +4636,6 @@ void RenderManager::clearTreasuryEffects()
     mTreasurySplashBudget.clear();
     mTreasuryLastSplash.clear();
     TreasuryGoldMesh::clearPiles();
-}
-
-void RenderManager::cancelCreatureStep(Creature* creature)
-{
-    for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
-    {
-        Creature* current = *it;
-        if(creature != nullptr && creature != current)
-        {
-            ++it;
-            continue;
-        }
-        if(current->getEntityNode() != nullptr)
-            current->getEntityNode()->setPosition(current->getPosition());
-        it = mSteppingCreatures.erase(it);
-    }
-}
-
-void RenderManager::rrMoveMapLightFlicker(MapLight* mapLight, const Ogre::Vector3& position)
-{
-    if(mapLight->getFlickerNode() == nullptr)
-    {
-        OD_LOG_ERR("MapLight do not have flicker=" + mapLight->getName());
-        return;
-    }
-
-    mapLight->getFlickerNode()->setPosition(position);
 }
 
 Ogre::ParticleSystem* RenderManager::rrEntityAddParticleEffect(GameEntity* entity, const std::string& particleName,
