@@ -3606,7 +3606,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillButton->setEnabled(true);
         skillProgressBar->hide();
     }
-    guiSheet->getChild(castButtonName)->setVisible(level > 0 || !isAllowed);
+    guiSheet->getChild(castButtonName)->setVisible(level > 0);
     const bool isLockedByLibrary = SkillManager::isLockedByLostLibrary(resType, localPlayerSeat);
     guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     skillButton->setText("");
