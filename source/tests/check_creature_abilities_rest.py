@@ -86,6 +86,6 @@ assert re.search(r"^\s+RaiseDead\t24\t2\t10\t4\t3\t42\tSkeleton$", blocks["Lich"
 assert re.search(r"^\s+Whirlwind\t14\t1\t2\t8\t3\t3$", blocks["CaveHornet"], re.M), "pushed back by three tiles"
 assert re.search(r"^\s+GasCloud\t7\t1\t2\t4\t1\.5\t2\t", blocks["Slime"], re.M), "gas cloud from level 4"
 for worker in ("Kobold", "DwarfWorker"):
-    assert re.search(r"^\s+Teleport\t7\t0\t8\t8\t30$", blocks[worker], re.M), "imp-like workers teleport from level 8"
+    assert re.search(r"^\s+Teleport\t7\t0\t8\t8\t30$", blocks[worker], re.M), "these workers teleport from level 8"
 
 print("ok")
