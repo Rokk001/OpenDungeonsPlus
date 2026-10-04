@@ -197,7 +197,7 @@ private:
     bool isEffectUsable(const AmbienceEffect& effect) const;
     bool createParticleSystem(const std::string& system, const Ogre::Vector3& position, const std::string& baseName,
         Ogre::SceneNode*& node, Ogre::ParticleSystem*& particleSystem);
-    const std::vector<uint32_t>& getObjectEffects(const std::string& meshName);
+    const std::vector<uint32_t>& getObjectEffects(const std::string& meshName, const std::string& kind);
     std::vector<uint32_t> getBridgeEffects(Tile* tile) const;
     bool isVisibleNear(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& position,
         double radius, double limit) const;

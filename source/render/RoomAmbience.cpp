@@ -212,9 +212,10 @@ void RoomAmbience::buildIndex()
     mScanRadius = std::min(mScanRadius, MAX_SCAN_RADIUS);
 }
 
-const std::vector<uint32_t>& RoomAmbience::getObjectEffects(const std::string& meshName)
+const std::vector<uint32_t>& RoomAmbience::getObjectEffects(const std::string& meshName, const std::string& kind)
 {
-    std::map<std::string, std::vector<uint32_t> >::iterator it = mObjectEffectsMemo.find(meshName);
+    std::string memoKey = meshName + "|" + kind;
+    std::map<std::string, std::vector<uint32_t> >::iterator it = mObjectEffectsMemo.find(memoKey);
     if(it != mObjectEffectsMemo.end())
         return it->second;
 
@@ -228,7 +229,10 @@ const std::vector<uint32_t>& RoomAmbience::getObjectEffects(const std::string& m
 
         for(const std::string& pattern : effect.mMatch)
         {
-            if(matchesPattern(pattern, meshName))
+            // "trap:<type>" matches the type of a trap or door (Alarm, Gas, DoorSteel...), all others the mesh
+            bool matches = (pattern.compare(0, 5, "trap:") == 0) ?
+                (!kind.empty() && matchesPattern(pattern.substr(5), kind)) : matchesPattern(pattern, meshName);
+            if(matches)
             {
                 list.push_back(i);
                 break;
@@ -237,7 +241,7 @@ const std::vector<uint32_t>& RoomAmbience::getObjectEffects(const std::string& m
     }
 
     std::pair<std::map<std::string, std::vector<uint32_t> >::iterator, bool> inserted =
-        mObjectEffectsMemo.insert(std::make_pair(meshName, list));
+        mObjectEffectsMemo.insert(std::make_pair(memoKey, list));
     return inserted.first->second;
 }
 
@@ -486,7 +490,12 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
         if(entity->getEntityNode() == nullptr)
             continue;
 
-        const std::vector<uint32_t>& list = getObjectEffects(entity->getMeshName());
+        // The trap and door types share meshes; their entity names start with the type (Alarm_3_...)
+        std::string kind;
+        if(entity->getObjectType() == GameEntityType::trapEntity)
+            kind = entity->getName().substr(0, entity->getName().find('_'));
+
+        const std::vector<uint32_t>& list = getObjectEffects(entity->getMeshName(), kind);
         if(list.empty())
             continue;
 
