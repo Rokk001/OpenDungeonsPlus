@@ -4845,4 +4845,11 @@ Cond	goal	1	KillAllEnemies
 Action	message	1	The witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours.
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	gladeWell
+Mode	once
+Cond	slabs	1	WestGlade	claimed	>=	40
+Action	message	1	The west glade is yours, master, and the fog over its middle has thinned to a spring of mana. Claim it with a worker.
+Action	terrain	17	52	17	52	manawell
+[/Trigger]
 [/Triggers]

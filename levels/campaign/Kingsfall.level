@@ -4088,4 +4088,11 @@ Cond	creatures	1	>=	12
 Action	message	1	The prince is beaten and all three of his champions follow your banner. The hunting grounds of Kingsfall are yours.
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	centreWell
+Mode	once
+Cond	slabs	1	Centre	claimed	>=	25
+Action	message	1	The royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a worker.
+Action	terrain	49	35	49	35	manawell
+[/Trigger]
 [/Triggers]
