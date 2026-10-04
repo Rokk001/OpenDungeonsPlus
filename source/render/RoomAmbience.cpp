@@ -596,7 +596,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
 
             std::vector<uint32_t> bridgeList;
             const std::vector<uint32_t>* listPointer = &mNoEffects;
-            if(currentRoom)
+            if(!mTileEffects[current].empty())
             {
                 listPointer = &mTileEffects[current];
             }
@@ -682,8 +682,8 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
 
                 if(effect.mKind == AmbienceKind::motion)
                 {
-                    // Only the bridge of a tile can be moved; a motion of a room tile has nothing to move
-                    if(!currentRoom)
+                    // Only the bridge of a tile can be moved; a motion of another tile has nothing to move
+                    if(listPointer == &bridgeList)
                     {
                         candidate.mNodeName = tile->getOgreNamePrefix() + tile->getName() + "_bridgeMesh_node";
                         mMotionCandidates.push_back(candidate);
