@@ -128,6 +128,40 @@ particle_system TreasuryGoldDust
     }
 }
 
+// Finer, slower motes above the dungeon heart of a rich keeper (see RenderManager::startTreasuryHeartDust).
+particle_system TreasuryHeartDust
+{
+    material        ReactionParticleSpark
+    point_rendering false
+    particle_width  0.04
+    particle_height 0.04
+    cull_each       false
+    quota           8
+    billboard_type  point
+
+    emitter Box
+    {
+        angle               25
+        colour_range_start  1.0 0.85 0.4 0.6
+        colour_range_end    1.0 0.7 0.2 0.4
+        emission_rate       4
+        time_to_live_min    1.4
+        time_to_live_max    2.4
+        direction           0 0 1
+        velocity_min        0.03
+        velocity_max        0.09
+        width               0.6
+        height              0.6
+        depth               0.1
+        duration            2.0
+    }
+
+    affector ColourFader
+    {
+        alpha -0.3
+    }
+}
+
 // A few coins that slide down the slope of a heap now and then (see RenderManager::updateTreasuryAmbient).
 particle_system TreasuryCoinSlide
 {
