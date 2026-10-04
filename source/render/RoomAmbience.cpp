@@ -90,6 +90,21 @@ bool candidateBefore(const std::pair<int32_t, double>& a, const std::pair<int32_
     return a.second < b.second;
 }
 
+//! Orders indices by priority (high first) and then by distance (near first)
+struct IndexOrder
+{
+    explicit IndexOrder(const std::vector<std::pair<int32_t, double> >& order) :
+        mOrder(order)
+    {}
+
+    bool operator()(uint32_t a, uint32_t b) const
+    {
+        return candidateBefore(mOrder[a], mOrder[b]);
+    }
+
+    const std::vector<std::pair<int32_t, double> >& mOrder;
+};
+
 } // namespace
 
 RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
@@ -282,8 +297,9 @@ bool RoomAmbience::isIdleLongEnough(const std::string& key, bool busy, double af
     std::map<std::string, BusyInfo>::iterator it = mBusy.find(key);
     if(it == mBusy.end())
     {
+        // A target counts as empty only after it was seen without a creature for the given time
         BusyInfo info;
-        info.mLastBusy = 0.0;
+        info.mLastBusy = mClock;
         it = mBusy.insert(std::make_pair(key, info)).first;
     }
 
@@ -564,11 +580,15 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 continue;
 
             uint8_t current = static_cast<uint8_t>(tile->getTileVisual());
+            if(current >= mTileEffects.size())
+                continue;
+
             size_t seenIndex = static_cast<size_t>(x) * static_cast<size_t>(sizeY) + static_cast<size_t>(y);
             uint8_t previous = mSeenVisual[seenIndex];
             mSeenVisual[seenIndex] = current;
             bool currentRoom = (current >= firstRoomVisual) && (current < static_cast<uint8_t>(TileVisual::countTileVisual));
-            if((previous != 255) && (previous != current))
+            // A tile that was not known yet (visual 0) coming into view is not a room being built
+            if((previous != 255) && (previous != 0) && (previous != current))
             {
                 bool previousRoom = (previous >= firstRoomVisual);
                 if(currentRoom && !previousRoom)
@@ -817,18 +837,7 @@ void RoomAmbience::reconcile()
     std::vector<uint32_t> sorted;
     for(uint32_t i = 0; i < order.size(); ++i)
         sorted.push_back(i);
-    for(uint32_t i = 1; i < sorted.size(); ++i)
-    {
-        // insertion sort: stable and the lists are short
-        uint32_t current = sorted[i];
-        uint32_t j = i;
-        while((j > 0) && candidateBefore(order[current], order[sorted[j - 1]]))
-        {
-            sorted[j] = sorted[j - 1];
-            --j;
-        }
-        sorted[j] = current;
-    }
+    std::stable_sort(sorted.begin(), sorted.end(), IndexOrder(order));
 
     for(std::map<std::string, Emitter>::iterator it = mEmitters.begin(); it != mEmitters.end(); ++it)
         it->second.mSeen = false;
@@ -886,17 +895,7 @@ void RoomAmbience::reconcile()
     sorted.clear();
     for(uint32_t i = 0; i < order.size(); ++i)
         sorted.push_back(i);
-    for(uint32_t i = 1; i < sorted.size(); ++i)
-    {
-        uint32_t current = sorted[i];
-        uint32_t j = i;
-        while((j > 0) && candidateBefore(order[current], order[sorted[j - 1]]))
-        {
-            sorted[j] = sorted[j - 1];
-            --j;
-        }
-        sorted[j] = current;
-    }
+    std::stable_sort(sorted.begin(), sorted.end(), IndexOrder(order));
 
     for(std::map<std::string, MotionNode>::iterator it = mMotionNodes.begin(); it != mMotionNodes.end(); ++it)
     {
@@ -980,7 +979,6 @@ void RoomAmbience::reconcile()
 
         found->mWanted = candidate.mActive;
     }
-
 }
 
 void RoomAmbience::playClips()
