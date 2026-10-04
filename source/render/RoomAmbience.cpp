@@ -531,6 +531,13 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             {
                 candidate.mActive = true;
             }
+            else if(effect.mWhen == AmbienceWhen::hit)
+            {
+                std::string hitKey = Helper::toString(static_cast<int32_t>(std::floor(position.x + 0.5f))) + "," +
+                    Helper::toString(static_cast<int32_t>(std::floor(position.y + 0.5f)));
+                std::map<std::string, double>::const_iterator hitIt = mHitUntil.find(hitKey);
+                candidate.mActive = (hitIt != mHitUntil.end()) && (hitIt->second > mClock);
+            }
             else
             {
                 if(busy < 0)
@@ -1250,4 +1257,32 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
         mLastEventTime[eventName] = mClock;
 
     return nbStarted;
+}
+
+void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction)
+{
+    if(mMode == Mode::off)
+        return;
+
+    Ogre::Vector3 position(static_cast<Ogre::Real>(tileX), static_cast<Ogre::Real>(tileY), 0.0f);
+    switch(kind)
+    {
+        case 0:
+            triggerEvent("TrapFired", position, false, typeName);
+            break;
+        case 1:
+            triggerEvent("TrapLinked", position, false, typeName);
+            break;
+        case 2:
+            mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 1.0;
+            triggerEvent("DoorHit", position, false, typeName);
+            if(fraction <= 0.5f)
+                triggerEvent("DoorHurt", position, false, typeName);
+            break;
+        case 3:
+            triggerEvent("DoorWrecked", position, false, typeName);
+            break;
+        default:
+            break;
+    }
 }

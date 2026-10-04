@@ -48,6 +48,7 @@
 #include "render/CreatureReactions.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "rooms/RoomPortalWave.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -1327,6 +1328,22 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
                 RenderManager::getSingleton().rrCreateRoomConstructionEffect(tiles);
+            break;
+        }
+
+        case ServerNotificationType::trapEffect:
+        {
+            int32_t effectKind;
+            int32_t tileX;
+            int32_t tileY;
+            std::string typeName;
+            float fraction;
+            OD_ASSERT_TRUE(packetReceived >> effectKind >> tileX >> tileY >> typeName >> fraction);
+            if((RoomAmbience::getSingletonPtr() != nullptr) &&
+               (frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME))
+            {
+                RoomAmbience::getSingleton().notifyTrapEffect(effectKind, tileX, tileY, typeName, fraction);
+            }
             break;
         }
 
