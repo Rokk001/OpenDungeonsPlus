@@ -153,6 +153,13 @@ void RoomHatchery::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
     }
 }
 
+void RoomHatchery::fireAnimalSound(const ChickenEntity& animal, const std::string& family)
+{
+    Tile* tile = animal.getPositionTile();
+    if(tile != nullptr)
+        fireRoomSound(*tile, family);
+}
+
 HatcheryCycleSettings RoomHatchery::getCycleSettings() const
 {
     const ConfigManager& config = ConfigManager::getSingleton();
@@ -266,6 +273,7 @@ void RoomHatchery::doUpkeep()
 
         spawnAnimal(ChickenKind::egg, hen->getPosition(), settings);
         hen->playPose(ChickenPose::lay, 2);
+        fireAnimalSound(*hen, "Hatchery/Cluck");
         ++counts.mEggs;
     }
 
@@ -282,6 +290,7 @@ void RoomHatchery::doUpkeep()
                 continue;
             }
 
+            fireAnimalSound(*egg, "Hatchery/EggCrack");
             egg->setKind(ChickenKind::chick);
             --counts.mEggs;
             ++counts.mChicks;
@@ -308,6 +317,9 @@ void RoomHatchery::doUpkeep()
         hen->setCalm(night || full);
     for(ChickenEntity* chick : chicks)
         chick->setCalm(night);
+    // Now and then a chick peeps (at most one peep per turn and hatchery)
+    if(!night && !chicks.empty() && (Random::Int(1, 12) == 1))
+        fireAnimalSound(*chicks[Random::Uint(0, chicks.size() - 1)], "Hatchery/Peep");
     ChickenEntity* rooster = roosters.empty() ? nullptr : roosters.front();
     updateChickLine(hens, chicks, rooster, night);
     for(ChickenEntity* oneRooster : roosters)
@@ -469,6 +481,7 @@ void RoomHatchery::beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& p
     if(plan.mMood == RoosterMood::crow)
     {
         rooster->resetSinceCrow();
+        fireAnimalSound(*rooster, "Hatchery/Crow");
         mCrowInterval = HatcheryRooster::crowInterval(getRoosterSettings(), Random::Uint(0, 1000));
     }
 }
@@ -525,6 +538,7 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
             {
                 rooster->playPose(ChickenPose::mount, 2);
                 target->playPose(ChickenPose::cackle, 3);
+                fireAnimalSound(*target, "Hatchery/Cluck");
                 rooster->setMood(RoosterMood::strut, 0);
                 rooster->setRoomDriven(false);
                 break;

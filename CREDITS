@@ -777,3 +777,21 @@ ChickenCoopNest.mesh                   OD Team                 GPLv3+           
 ChickenLooseFeathers.mesh              OD Team                 GPLv3+                  Made in code at run time (source/render/RenderManagerChickens.cpp): loose feathers, no file (original work, not AI generated)
 ChickenRoosterComb.mesh                OD Team                 GPLv3+                  Made in code at run time (source/render/RenderManagerChickens.cpp): rooster comb, no file (original work, not AI generated)
 ChickenRoosterTail.mesh                OD Team                 GPLv3+                  Made in code at run time (source/render/RenderManagerChickens.cpp): rooster tail feathers, no file (original work, not AI generated)
+
+=======================================================
+==  Hatchery animal sounds: crow, cluck, call, peep, egg crack  ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+sounds/Spatial/Rooms/Hatchery/Crow/Crow01.ogg   OD Team                 GPLv3+                  Synthesized (rooster crow) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Crow/Crow02.ogg   OD Team                 GPLv3+                  Synthesized (rooster crow) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Cluck/Cluck01.ogg   OD Team                 GPLv3+                  Synthesized (hen cluck and cackle) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Cluck/Cluck02.ogg   OD Team                 GPLv3+                  Synthesized (hen cluck and cackle) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/FoodCall/FoodCall01.ogg   OD Team                 GPLv3+                  Synthesized (rooster call to food) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/FoodCall/FoodCall02.ogg   OD Team                 GPLv3+                  Synthesized (rooster call to food) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Peep/Peep01.ogg   OD Team                 GPLv3+                  Synthesized (chick peep) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Peep/Peep02.ogg   OD Team                 GPLv3+                  Synthesized (chick peep) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/EggCrack/EggCrack01.ogg   OD Team                 GPLv3+                  Synthesized (egg shell cracking) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/EggCrack/EggCrack02.ogg   OD Team                 GPLv3+                  Synthesized (egg shell cracking) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+tools/hatchery/gen_hatchery_sounds.py  OD Team                 GPLv3+                  Original work, not AI generated
