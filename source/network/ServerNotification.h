@@ -166,11 +166,12 @@ enum class ServerNotificationType
     //! (RelationshipTier), bool replay (true: replay of the current tier, no Dungeonbook post).
     //! Only sent when the creature relationships option is on.
     relationshipTier,
+    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
+    timeLimit,
     //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
     //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
-    chickenKindChanged,
-    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
-    timeLimit
+    //! Appended last so that no existing numeric value changes.
+    chickenKindChanged
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

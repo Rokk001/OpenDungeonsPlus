@@ -24,7 +24,7 @@ client_ids = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', client_h.split(
 assert client_ids.index('editorRegionEdit') == client_ids.index('askPossessSkill') + 1, 'client message moved'
 assert client_ids[-2:] == ['editorRegionEdit', 'askUseSpecial'], client_ids[-3:]
 assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
-assert server_h.split('};')[0].rstrip().endswith('timeLimit') and 'editorRegionData,' in server_h, 'server message appended out of order'
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*$', server_h.split('enum class ServerNotificationType')[1].split('};')[0], re.M)[-2:] == ['timeLimit', 'chickenKindChanged'] and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp
 
 # The server only edits regions in editor mode and always answers with the full list.
