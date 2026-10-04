@@ -25,6 +25,9 @@ HALLS = [
     (14, "Arena", 5), (15, "Casino", 5), (16, "Torture", 5), (17, "GuardRoom", 5), (18, "Temple", 5),
 ]
 
+# Data a room type reads after its tiles (beds, claimed value, points, held creatures).
+ROOM_EXTRA = {2: "0", 4: "9\t5", 5: "0\t0", 7: "0", 9: "0", 11: "0", 16: "0"}
+
 SKILLS = [
     "roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "spellSummonWorker", "roomArena",
     "roomBridgeStone", "roomBridgeWooden", "roomCasino", "roomCrypt", "roomPrison", "roomTorture",
@@ -96,6 +99,8 @@ def main():
         out.append("[Room]\n%d\t%s\t1\t%d\n" % (number, name, len(tiles)))
         for x, y in tiles:
             out.append("%d\t%d\n" % (x, y))
+        if number in ROOM_EXTRA:
+            out.append(ROOM_EXTRA[number] + "\n")
         out.append("[/Room]\n")
     out.append("[/Rooms]\n")
     out.append("[Traps]\n# typeTrap\tname\tseatId\tnumTiles\t\tSubsequent Lines: tileX\ttileY\tisActivated(0/1)\t\tSubsequent Lines: optional specific data\n[/Traps]\n")
@@ -133,7 +138,7 @@ def main():
             ("TreasuryObject", "# SeatId\tName\tMeshName\tPosX\tPosY\tPosZ\topacity\trotationAngle\tvalue"),
             ("Chickens", "# SeatId\tName\tMeshName\tPosX\tPosY\tPosZ\topacity\trotationAngle\tPosX\tPosY\tPosZ")):
         out.append("[%s]\n%s\n[/%s]\n" % (section, header, section))
-    OUT.write_text("\n".join(out), encoding="utf-8", newline="\n")
+    OUT.write_text("".join(out), encoding="utf-8", newline="\n")
     print("wrote %s: %d floor tiles, %d creatures" % (OUT, len(floor), counter[0]))
 
 
