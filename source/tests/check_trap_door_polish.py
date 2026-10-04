@@ -84,6 +84,23 @@ for system in ("RoomAmbLockGlow", "RoomAmbRevealGlow"):
     if "particle_system %s" % system not in particles:
         problems.append("particle system %s is missing" % system)
 
+# Own meshes of the door types: file, assignment in TrapDoor.cpp, materials and textures
+trap_door = read("source", "traps", "TrapDoor.cpp")
+material_text = read("materials", "scripts", "DoorTypes.material")
+for mesh in ("DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRune"):
+    if not os.path.exists(os.path.join(ROOT, "models", mesh + ".mesh")):
+        problems.append("models/%s.mesh is missing" % mesh)
+    if ('std::string mesh%s = "%s"' % (mesh[4:], mesh)) not in trap_door:
+        problems.append("TrapDoor.cpp does not use the mesh %s" % mesh)
+for material in ("DoorIronboundWood", "DoorMetal", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRune", "DoorRuneGlow"):
+    if "material %s" % material not in material_text:
+        problems.append("material %s is not defined" % material)
+    if "textures/%s.png" % material not in credits:
+        problems.append("texture %s has no CREDITS line" % material)
+for texture in re.findall(r"^\s*texture\s+(\S+)", material_text, re.M):
+    if not os.path.exists(os.path.join(ROOT, "materials", "textures", texture)):
+        problems.append("texture %s is missing" % texture)
+
 if problems:
     for problem in problems:
         print("PROBLEM: " + problem)

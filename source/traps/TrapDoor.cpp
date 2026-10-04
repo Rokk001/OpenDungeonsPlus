@@ -83,11 +83,30 @@ private:
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32(mConfigPrefix + "DoorCostPerTile"); }
 
-    // No dedicated models exist yet for the stronger doors. They use the wooden door model
+    // All door models share the skeleton of the wooden door (clips Open, Close and Destroyed)
     const std::string& getMeshName() const override
     {
-        static const std::string meshName = "WoodenDoor";
-        return meshName;
+        static const std::string meshWooden = "WoodenDoor";
+        static const std::string meshIronbound = "DoorIronbound";
+        static const std::string meshSteel = "DoorSteel";
+        static const std::string meshBarricade = "DoorBarricade";
+        static const std::string meshSecret = "DoorSecret";
+        static const std::string meshRune = "DoorRune";
+        switch(mDoorType)
+        {
+            case TrapType::doorIronbound:
+                return meshIronbound;
+            case TrapType::doorSteel:
+                return meshSteel;
+            case TrapType::doorBarricade:
+                return meshBarricade;
+            case TrapType::doorSecret:
+                return meshSecret;
+            case TrapType::doorRuned:
+                return meshRune;
+            default:
+                return meshWooden;
+        }
     }
 
     virtual void checkBuildTrap(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override

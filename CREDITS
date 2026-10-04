@@ -705,6 +705,28 @@ sounds/Spatial/Traps/WatchBanner/Idle/FxWatchBannerIdle01.ogg                   
 tools/gen_trap_door_sounds.py          OD Team                 GPLv3+
 source/tests/check_trap_door_polish.py OD Team                 GPLv3+
 
+=============================================================
+==  Door models and textures of the door types              ==
+=============================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+models/DoorIronbound.mesh              Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (http://opengameart.org/users/danimal) with added iron bands, built in Blender by script, same skeleton WoodenDoor.skeleton
+models/DoorSteel.mesh                  Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh with steel trim, built in Blender by script
+models/DoorBarricade.mesh              Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (frame) with new planks and braces, built in Blender by script
+models/DoorSecret.mesh                 Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh (two slabs without the frame), built in Blender by script
+models/DoorRune.mesh                   Danimal, OD Team        CC-BY-SA 3.0           Derived from WoodenDoor.mesh with rune plates, built in Blender by script
+materials/textures/DoorIronboundWood.png  Nobiax, Danimal, OD Team  CC-BY-SA 3.0       WoodenDoor.png made darker by tools/gen_door_textures.py (script generated, AI-assisted script)
+materials/textures/DoorMetal.png       OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorSteel.png       OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorBarricade.png   OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorSecret.png      OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorRune.png        OD Team                 GPLv3+                  Drawn from noise and lines by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/textures/DoorRuneGlow.png    OD Team                 GPLv3+                  Drawn from lines and blur by tools/gen_door_textures.py (script generated, original work, AI-assisted: script written with an AI assistant)
+materials/scripts/DoorTypes.material   OD Team                 GPLv3+
+tools/gen_door_textures.py             OD Team                 GPLv3+
+tools/blender-assets/door_meshes.py    OD Team                 GPLv3+
+
 ================================
 ==  Distribution data: dist/  ==
 ================================
