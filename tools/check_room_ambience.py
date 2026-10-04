@@ -26,6 +26,8 @@ KINDS = ("Particle", "Motion", "Clip")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
+# Tile visuals a bridge can lie over
+BRIDGE_VISUALS = ("lavaGround", "waterGround")
 
 
 def read_lines(path):
@@ -123,8 +125,9 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                     if not os.path.exists(os.path.join(ROOT, "materials", "textures", texture)):
                         problems.append("%s: material %s uses missing texture %s" % (where, material, texture))
     elif kind == "Motion":
-        if target != "Object":
-            problems.append("%s: motions only work on objects" % where)
+        bridges = target == "Tile" and all(m.startswith("bridge:") for m in effect.get("Match", []))
+        if target != "Object" and not bridges:
+            problems.append("%s: motions only work on objects and bridges" % where)
         motion = effect.get("Motion", [None])[0]
         if motion not in MOTIONS:
             problems.append("%s: bad Motion %s" % (where, motion))
@@ -150,6 +153,10 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 pattern = match.replace("*", "")
                 if not any(f.startswith(pattern) or f.endswith(pattern + ".mesh") for f in os.listdir(os.path.join(ROOT, "models"))):
                     problems.append("%s: wildcard %s matches no mesh" % (where, match))
+        elif match.startswith("bridge:"):
+            name = match[len("bridge:"):]
+            if name not in BRIDGE_VISUALS and not mesh_exists(name):
+                problems.append("%s: unknown bridge mesh or visual %s" % (where, name))
         elif match not in visuals:
             problems.append("%s: unknown tile visual %s" % (where, match))
     counts["effects"] += 1
