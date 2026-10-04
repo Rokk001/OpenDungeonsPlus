@@ -24,6 +24,10 @@
 #include <OgreSceneManager.h>
 #include <OgreVector3.h>
 
+#include <cmath>
+#include <map>
+#include <utility>
+
 namespace TreasuryGoldMesh
 {
 namespace
@@ -34,6 +38,19 @@ const std::string ReducedSuffix = "_r";
 const float TextureRepeat = 2.0f;
 
 Detail currentDetail = Detail::full;
+
+struct RegisteredPile
+{
+    std::string mEntityName;
+    TreasuryGoldLayer::PileShape mShape;
+};
+
+std::map<std::pair<int, int>, RegisteredPile> registeredPiles;
+
+std::pair<int, int> tileOf(float x, float y)
+{
+    return std::make_pair(static_cast<int>(std::floor(x + 0.5f)), static_cast<int>(std::floor(y + 0.5f)));
+}
 
 Ogre::Vector3 pilePoint(const TreasuryGoldLayer::PileShape& shape, float u, float v)
 {
@@ -137,5 +154,44 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
         buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 2 : 6);
 
     return name;
+}
+
+void registerPile(const std::string& entityName, float x, float y, const std::string& meshName)
+{
+    if(currentDetail == Detail::off)
+        return;
+
+    RegisteredPile pile;
+    if(!TreasuryGoldLayer::parseMeshName(meshName, pile.mShape))
+        return;
+
+    pile.mEntityName = entityName;
+    registeredPiles[tileOf(x, y)] = pile;
+}
+
+void unregisterPile(const std::string& entityName, float x, float y)
+{
+    std::map<std::pair<int, int>, RegisteredPile>::iterator it = registeredPiles.find(tileOf(x, y));
+    if(it != registeredPiles.end() && it->second.mEntityName == entityName)
+        registeredPiles.erase(it);
+}
+
+void clearPiles()
+{
+    registeredPiles.clear();
+}
+
+float surfaceHeight(float x, float y, int& level)
+{
+    level = 0;
+    const std::pair<int, int> tile = tileOf(x, y);
+    std::map<std::pair<int, int>, RegisteredPile>::const_iterator it = registeredPiles.find(tile);
+    if(it == registeredPiles.end())
+        return 0.0f;
+
+    level = it->second.mShape.mLevel;
+    const float u = x - static_cast<float>(tile.first) + 0.5f;
+    const float v = y - static_cast<float>(tile.second) + 0.5f;
+    return TreasuryGoldLayer::heightAt(it->second.mShape, u, v);
 }
 }
