@@ -19,6 +19,7 @@
 #define ROOMAMBIENCE_H
 
 #include "render/RoomAmbienceConfig.h"
+#include "render/RoomAmbienceExtras.h"
 
 #include <OgrePrerequisites.h>
 #include <OgreQuaternion.h>
@@ -86,12 +87,16 @@ public:
     inline uint32_t getNbMovedObjects() const
     { return static_cast<uint32_t>(mMotionNodes.size()); }
 
+    //! \brief Speed factor of the effects marked "HeartRate" (1 = calm heart, more = hurt heart)
+    inline void setHeartRateFactor(double factor)
+    { mHeartRateFactor = factor; }
+
 private:
     struct Emitter
     {
         Emitter() :
             mEffect(0), mNode(nullptr), mSystem(nullptr), mFade(-1.0), mBaseWidth(1.0), mBaseHeight(1.0),
-            mPhase(0.0), mSeen(false)
+            mPhase(0.0), mCycle(0.0), mSeen(false)
         {}
 
         uint32_t mEffect;
@@ -102,6 +107,8 @@ private:
         double mBaseWidth;
         double mBaseHeight;
         double mPhase;
+        //! Cycles of the flicker so far (only used by effects that follow the heart rate)
+        double mCycle;
         bool mSeen;
     };
 
@@ -119,11 +126,13 @@ private:
     struct MotionInstance
     {
         MotionInstance() :
-            mEffect(0), mPhase(0.0), mIntensity(0.0), mWanted(false)
+            mEffect(0), mPhase(0.0), mCycle(0.0), mIntensity(0.0), mWanted(false)
         {}
 
         uint32_t mEffect;
         double mPhase;
+        //! Cycles of the motion so far (only used by effects that follow the heart rate)
+        double mCycle;
         double mIntensity;
         bool mWanted;
     };
@@ -170,11 +179,13 @@ private:
     struct BusyInfo
     {
         BusyInfo() :
-            mLastBusy(0.0), mLastTouched(0.0)
+            mLastBusy(0.0), mLastTouched(0.0), mEverBusy(false)
         {}
 
         double mLastBusy;
         double mLastTouched;
+        //! A creature was close at some time (used for "Vacated")
+        bool mEverBusy;
     };
 
     void buildIndex();
@@ -193,6 +204,8 @@ private:
     bool isCreatureNear(double x, double y, double radius) const;
     //! \brief Updates and returns the state "no creature for a while" of a target
     bool isIdleLongEnough(const std::string& key, bool busy, double after);
+    //! \brief The state "Empty" or "Vacated" of a target, depending on the effect
+    bool isIdleState(const AmbienceEffect& effect, const std::string& key, bool busy);
     double getDistanceLimit(const AmbienceEffect& effect) const;
     bool isEffectUsable(const AmbienceEffect& effect) const;
     bool createParticleSystem(const std::string& system, const Ogre::Vector3& position, const std::string& baseName,
@@ -222,6 +235,8 @@ private:
     std::vector<uint32_t> mNoEffects;
     std::vector<uint32_t> mObjectWildcardEffects;
     double mScanRadius;
+    double mHeartRateFactor;
+    RoomAmbienceExtras mExtras;
 
     std::map<std::string, Emitter> mEmitters;
     std::vector<OneShot> mOneShots;
