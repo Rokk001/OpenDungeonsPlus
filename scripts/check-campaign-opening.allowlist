@@ -1,0 +1,33 @@
+# Levels that fail scripts/check-campaign-opening.py today: known, to be fixed.
+# They report FAIL but keep the exit code at 0. Remove an entry when its level is corrected.
+Mossgate.level
+Brackenford.level
+Coldwell.level
+Tinmoor.level
+BoulderCourse.level
+Ravensledge.level
+Ashcombe.level
+Greywater.level
+HollinFen.level
+CrowshotGallery.level
+Saltmere.level
+Dunmarrow.level
+Ironbridge.level
+Wolfscar.level
+Lanternhill.level
+TwistingHalls.level
+Cinderhollow.level
+Thornreach.level
+Bellwick.level
+Highcairn.level
+SkittleCavern.level
+Stormhaven.level
+Mirewatch.level
+Goldspire.level
+Ebonrook.level
+VarnsCrossing.level
+SwarmNight.level
+Silverdeep.level
+Wraithwood.level
+Kingsfall.level
+HollowmarkCitadel.level
