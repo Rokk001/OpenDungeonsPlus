@@ -299,6 +299,10 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::mark;
             else if(words[1] == "Sound")
                 effect.mKind = AmbienceKind::sound;
+            else if(words[1] == "Roll")
+                effect.mKind = AmbienceKind::roll;
+            else if(words[1] == "Turn")
+                effect.mKind = AmbienceKind::turn;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);
@@ -308,6 +312,14 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "System")
         {
             effect.mSystem = words[1];
+        }
+        else if(key == "Mesh")
+        {
+            effect.mMesh = words[1];
+        }
+        else if(key == "EndSystem")
+        {
+            effect.mEndSystem = words[1];
         }
         else if(key == "Family")
         {

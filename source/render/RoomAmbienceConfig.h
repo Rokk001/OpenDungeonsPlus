@@ -70,7 +70,13 @@ enum class AmbienceKind
     //! when there are more than MaxMarks
     mark,
     //! A sound of the family given by Family: played at the event, or now and then (Every) at an object
-    sound
+    sound,
+    //! A mesh (Mesh) that rolls Amount tiles in Duration seconds from the place of an event, spinning at Speed degrees
+    //! per second, with the particle system System as a trail and EndSystem where it breaks up (events only)
+    roll,
+    //! Slowly turns an object (a cannon) toward creatures within Amount tiles and back to where it stood when none
+    //! is near, at Speed degrees per second (objects only)
+    turn
 };
 
 enum class AmbienceMotion
@@ -124,6 +130,9 @@ struct AmbienceEffect
     AmbienceKind mKind;
     //! Particle system template (kind particle)
     std::string mSystem;
+    //! Mesh of a rolling object and particle system where it breaks up (kind roll)
+    std::string mMesh;
+    std::string mEndSystem;
     //! Clips to choose from (kind clip)
     std::vector<std::string> mClips;
     AmbienceMotion mMotion;
