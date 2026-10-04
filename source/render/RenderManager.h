@@ -150,6 +150,8 @@ public:
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
     void rrCreateCreature(Creature* curCreature);
     void rrDestroyCreature(Creature* curCreature);
+    //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)
+    void rrRefreshCreatureGoldSack(Creature* creature);
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
@@ -458,17 +460,74 @@ private:
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
     std::set<Creature*> mSteppingCreatures;
 
+    //! The kinds of treasury effect; each has a budget per room of its own
+    enum class TreasuryEffectKind
+    {
+        splash,
+        dust,
+        ambient
+    };
     struct TreasuryEffect
     {
         std::string mName;
         Ogre::Real mRemaining;
         const void* mRoomKey;
+        TreasuryEffectKind mKind;
     };
     std::vector<TreasuryEffect> mTreasuryEffects;
     TreasuryCreatureRules::SplashBudget mTreasurySplashBudget;
+    //! Gold dust puffs over full treasuries use the same effect list with a budget of their own
+    TreasuryCreatureRules::SplashBudget mTreasuryDustBudget;
+    //! Sparkles, sliding coins and rolling coins on rich piles, also with a budget of their own
+    TreasuryCreatureRules::SplashBudget mTreasuryAmbientBudget;
+    Ogre::Real mTreasuryDustTimer = 0.0f;
+    size_t mTreasuryDustCursor = 0;
+    size_t mTreasuryPortalDustCursor = 0;
+    //! Set while a game is shown; the portal dust looks up the portals of the local keeper there
+    GameMap* mGameMap = nullptr;
+    Ogre::Real mTreasuryAmbientTimer = 0.0f;
+    size_t mTreasuryAmbientCursor = 0;
+
+    //! A pile that grows or sinks: its node settles to the new height over a short time
+    struct TreasuryPileSettle
+    {
+        std::string mEntityName;
+        Ogre::SceneNode* mNode;
+        Ogre::Real mElapsed;
+        float mFrom;
+        bool mTaken;
+    };
+    std::vector<TreasuryPileSettle> mTreasuryPileSettles;
+
+    //! A thief carrying gold shows a sack of coins, its size follows the amount the server sends
+    struct TreasuryThiefSack
+    {
+        Creature* mCreature;
+        std::string mSackName;
+        std::string mSackMesh;
+    };
+    std::vector<TreasuryThiefSack> mTreasuryThiefSacks;
+
+    //! Names of the warm lights over rich treasuries (one per patch of tiles)
+    std::set<std::string> mTreasuryGlowLights;
     //! Where a creature last splashed coins, to space the splashes along its way
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
+
+    //! A worker pouring its gold out on top of a pile (procedural climb and tilt of the render node)
+    struct TreasuryPour
+    {
+        Creature* mCreature;
+        Ogre::Real mElapsed;
+        int mLevel;
+        float mRise;
+        Ogre::Quaternion mTilt;
+        //! Skeleton clips of the worker (climb and pour); null when the mesh has none (procedural motion)
+        Ogre::Entity* mEntity;
+        Ogre::AnimationState* mClip;
+        int mPhase;
+    };
+    std::vector<TreasuryPour> mTreasuryPours;
 
     struct CreatureDropAnimation
     {
@@ -538,8 +597,22 @@ private:
     void updateCreatureStep(Creature* creature);
     void refreshCreaturesOnTile(Tile* tile);
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
-    bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position);
+    bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
+        TreasuryEffectKind kind = TreasuryEffectKind::splash);
+    void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
+    void startTreasuryPortalDust();
+    void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
+    void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
+        int newLevel);
+    void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
+    void cancelTreasuryPileSettle(const std::string& entityName);
+    void removeTreasuryThiefSack(Creature* creature);
+    void refreshTreasuryGlow(int x, int y);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
+    void startTreasuryPour(Tile* tile, int level);
+    void updateTreasuryPours(Ogre::Real timeSinceLastFrame);
+    void cancelTreasuryPour(Creature* creature);
+    float getTreasuryPourRise(Creature* creature) const;
     void clearTreasuryEffects();
     void cancelCreatureStep(Creature* creature = nullptr);
     void clearRoomConstructionEffects();

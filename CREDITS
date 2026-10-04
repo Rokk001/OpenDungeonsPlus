@@ -366,6 +366,8 @@ KnightCoffin.mesh                      YD                      CC0              
 KnightStatue.mesh                      YD                      CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
 KnightStatue2.mesh                     YD                      CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
 Kobold.*                               surt                    CC0                     http://opengameart.org/forumtopic/cc0-scraps
+Kobold.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+                  Two worker clips for delivering gold, AI-generated with a Blender script (tools/blender-assets/kobold_gold_clips.py, authored in Blender, original work)
+tools/blender-assets/*                 OD Team                 GPLv3+                  Blender scripts (Ogre XML import/export, pose helper, clip builders), original work, AI-generated
 Kreatur.*                              Skorpio                 CC-BY-SA 3.0, GPLv3+
 Lamp.mesh                              Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59621#p59621
 Lava*.mesh                             Skorpio                 CC-BY-SA 3.0, GPLv3+

@@ -154,6 +154,97 @@ inline float heightAt(const PileShape& shape, float u, float v)
     return height + 0.004f;
 }
 
+//! Small details lying on a pile (coins, gems, spilled coins at open edges). Their number and place follow
+//! from the shape alone, so every client builds the same pile from its name.
+static const int maxTopCoins = 3;
+static const int maxGems = 2;
+//! Coins lying at the foot of the pile on every open edge of a full pile (two per edge, four edges)
+static const int maxSpillCoins = 8;
+//! Coins scattered on the bare floor of a tile without gold
+static const int scatterCoins = 3;
+
+//! Pseudo random number 0..1 from two integers (the same everywhere, no random state)
+inline float hash01(int a, int b)
+{
+    unsigned int h = static_cast<unsigned int>(a) * 73856093u ^ static_cast<unsigned int>(b) * 19349663u;
+    h ^= h >> 13;
+    h *= 1274126177u;
+    h ^= h >> 16;
+    return static_cast<float>(h & 0xFFFFu) / 65535.0f;
+}
+
+//! Single coins on top of the heap: none on a thin layer, up to maxTopCoins on a deep one
+inline int topCoinCount(const PileShape& shape)
+{
+    if(shape.mLevel < 2)
+        return 0;
+    return 1 + shape.mLevel / 3;
+}
+
+//! Gems scattered in rich piles: none below level 5, one in some level 5 and 6 piles, up to maxGems in full ones
+inline int gemCount(const PileShape& shape)
+{
+    if(shape.mLevel < 5)
+        return 0;
+    if(shape.mLevel < maxLevel)
+        return (shape.mVariant % 2 == 0) ? 1 : 0;
+    return 1 + (shape.mVariant % 2);
+}
+
+//! Edge 0 north, 1 east, 2 south, 3 west. It is open when both of its corners are lower than the pile
+//! itself, i.e. it faces a wall, the outside of the room or a lower pile.
+inline bool edgeOpen(const PileShape& shape, int edge)
+{
+    return shape.mCorner[edge] < shape.mLevel && shape.mCorner[(edge + 1) % 4] < shape.mLevel;
+}
+
+//! Slight overflow of a nearly full pile at its open edges: one coin (level 6) or two (full) per open edge
+inline int spillCoinsPerEdge(const PileShape& shape)
+{
+    if(shape.mLevel >= maxLevel)
+        return 2;
+    return shape.mLevel == maxLevel - 1 ? 1 : 0;
+}
+
+//! Whether an empty tile of a treasury gets a few scattered coins (a quarter of them, so the bare floor
+//! of an empty room is dotted with coins without an object on every tile)
+inline bool hasFloorScatter(int x, int y)
+{
+    return (x * 3 + y * 5) % 4 == 0;
+}
+
+//! Fill step of the pile that the classic stack mesh names stand for ("GoldstackLv1" is 2 ... "GoldstackLv4" is 7)
+//! Returns 0 for any other name
+inline int levelForClassicName(const std::string& name)
+{
+    const std::string prefix = "GoldstackLv";
+    if(name.size() != prefix.size() + 1 || name.compare(0, prefix.size(), prefix) != 0)
+        return 0;
+    switch(name[prefix.size()])
+    {
+        case '1':
+            return 2;
+        case '2':
+            return 4;
+        case '3':
+            return 6;
+        case '4':
+            return maxLevel;
+        default:
+            return 0;
+    }
+}
+
+//! Share of the glow of a full treasury that a tile of the given level contributes (0 below level 5)
+inline float glowWeight(int level)
+{
+    if(level < 5)
+        return 0.0f;
+    if(level == 5)
+        return 0.25f;
+    return level == 6 ? 0.5f : 1.0f;
+}
+
 //! The pot mesh used when the treasury detail option is off (one of the four classic stacks)
 inline const char* classicMeshForLevel(int level)
 {
