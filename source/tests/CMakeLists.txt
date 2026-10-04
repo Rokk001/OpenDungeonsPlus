@@ -73,6 +73,16 @@ add_boost_test(00-PortraitManifest
         ${SRC}/render/DungeonbookAppearanceConfig.h
         ${SRC}/render/DungeonbookAppearanceConfig.cpp)
 
+add_boost_test(00-CreatureAppearance
+        SOURCES
+        test_CreatureAppearance.cpp
+        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/game/CreatureAppearance.cpp
+        ${SRC}/render/PortraitManifest.h
+        ${SRC}/render/PortraitManifest.cpp
+        ${SRC}/render/PortraitManifestRegistry.h
+        ${SRC}/render/PortraitManifestRegistry.cpp)
+
 add_boost_test(00-LevelScript
         SOURCES
         test_LevelScript.cpp
