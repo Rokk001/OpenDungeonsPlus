@@ -4831,6 +4831,7 @@ void RenderManager::updateTreasuryDust(Ogre::Real timeSinceLastFrame)
         return;
 
     startTreasuryPortalDust();
+    startTreasuryHeartDust();
 
     std::vector<TreasuryGoldMesh::FullPile> piles;
     TreasuryGoldMesh::collectFullPiles(piles);
@@ -4879,6 +4880,32 @@ void RenderManager::startTreasuryPortalDust()
         createTreasuryEffect(portal, "TreasuryGoldDust", Ogre::Vector3(
             static_cast<Ogre::Real>(tile->getX()) + offsetX, static_cast<Ogre::Real>(tile->getY()) + offsetY,
             TreasuryCreatureRules::portalDustHeight), TreasuryEffectKind::dust);
+    }
+}
+
+void RenderManager::startTreasuryHeartDust()
+{
+    // Same rule as for the portals: only the heart of the local keeper, and only when that keeper is rich
+    if(mGameMap == nullptr || mGameMap->getLocalPlayer() == nullptr)
+        return;
+
+    Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    if(seat == nullptr || !TreasuryCreatureRules::isRichKeeper(seat->getGold(), seat->getGoldMax()))
+        return;
+
+    // The view test and the budget of the room are in createTreasuryEffect
+    const std::vector<Room*> hearts = mGameMap->getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat);
+    for(Room* heart : hearts)
+    {
+        Tile* tile = heart->getCentralTile();
+        if(tile == nullptr)
+            continue;
+
+        const float offsetX = (static_cast<float>(mTreasuryEffectNumber % 7) - 3.0f) * 0.05f;
+        const float offsetY = (static_cast<float>(mTreasuryEffectNumber % 5) - 2.0f) * 0.06f;
+        createTreasuryEffect(heart, "TreasuryHeartDust", Ogre::Vector3(
+            static_cast<Ogre::Real>(tile->getX()) + offsetX, static_cast<Ogre::Real>(tile->getY()) + offsetY,
+            TreasuryCreatureRules::heartDustHeight), TreasuryEffectKind::dust);
     }
 }
 

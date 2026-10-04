@@ -181,6 +181,8 @@ inline int dustBudget(TreasuryGoldMesh::Detail detail)
 static const float portalRichShare = 0.5f;
 static const int portalRichMinGold = 500;
 static const float portalDustHeight = 0.9f;
+//! The dungeon heart of a rich keeper uses the same rule; its dust floats this high above the heart.
+static const float heartDustHeight = 1.8f;
 
 inline bool isRichKeeper(int gold, int goldMax)
 {

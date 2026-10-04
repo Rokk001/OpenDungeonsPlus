@@ -55,6 +55,18 @@ def rich(gold, gold_max):
 assert not rich(0, 0) and not rich(400, 400) and not rich(499, 600)
 assert rich(500, 1000) and not rich(499, 1000) and rich(2000, 3000) and not rich(1400, 3000)
 
+# Heart dust: same rule, effect list, budget and detail option as the portal dust, but its own height and its own
+# particle system, only for the dungeon heart of the local keeper.
+heart = render.split('void RenderManager::startTreasuryHeartDust')[1].split('void RenderManager::updateTreasuryAmbient')[0]
+assert 'RoomType::dungeonTemple' in heart and 'isRichKeeper(seat->getGold(), seat->getGoldMax())' in heart
+assert 'getLocalPlayer()->getSeat()' in heart and 'TreasuryEffectKind::dust' in heart
+assert '"TreasuryHeartDust"' in heart and 'heartDustHeight' in heart
+assert 'startTreasuryHeartDust();' in render.split('void RenderManager::updateTreasuryDust')[1].split('collectFullPiles')[0]
+assert 'void startTreasuryHeartDust();' in read('source/render/RenderManager.h')
+assert 'heartDustHeight' in rules
+assert 'particle_system TreasuryHeartDust' in particles
+assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryHeartDust')[1].split('particle_system')[0]
+
 # Thief gold: one trailing field in the creature packets (new and update), written and read at the end,
 # only sent again when the amount changed; the client sack follows it. The old heap guess is gone.
 creature = read('source/entities/Creature.cpp')

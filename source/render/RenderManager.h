@@ -608,6 +608,7 @@ private:
         TreasuryEffectKind kind = TreasuryEffectKind::splash);
     void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
     void startTreasuryPortalDust();
+    void startTreasuryHeartDust();
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
         int newLevel);
