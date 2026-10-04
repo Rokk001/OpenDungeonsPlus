@@ -81,6 +81,70 @@ def materials():
     return result
 
 
+SYSTEM_KEYS = ("material", "point_rendering", "particle_width", "particle_height", "cull_each", "quota",
+               "billboard_type", "common_direction", "common_up_vector", "billboard_origin", "sorted")
+EMITTER_KEYS = ("angle", "colour", "colour_range_start", "colour_range_end", "direction", "emission_rate", "position",
+                "velocity", "velocity_min", "velocity_max", "time_to_live", "time_to_live_min", "time_to_live_max",
+                "duration", "duration_min", "duration_max", "repeat_delay", "repeat_delay_min", "repeat_delay_max",
+                "width", "height", "depth", "inner_width", "inner_height", "inner_depth")
+EMITTERS = ("Point", "Box", "Ring")
+AFFECTOR_KEYS = {
+    "ColourFader": ("red", "green", "blue", "alpha"),
+    "ColourInterpolator": tuple("time%d" % i for i in range(6)) + tuple("colour%d" % i for i in range(6)),
+    "Scaler": ("rate",),
+    "Rotator": ("rotation_speed_range_start", "rotation_speed_range_end", "rotation_range_start", "rotation_range_end"),
+    "LinearForce": ("force_vector", "force_application"),
+    "DirectionRandomiser": ("randomness", "scope", "keep_velocity"),
+}
+BILLBOARD_TYPES = ("point", "oriented_common", "oriented_self", "perpendicular_common", "perpendicular_self")
+
+
+def check_particle_files(problems):
+    """Looks for misspelled keys in the particle files of the room ambience (OGRE only logs them when it loads them)."""
+    for path in sorted(glob.glob(os.path.join(ROOT, "particles", "RoomAmbience*.particle"))):
+        base = os.path.basename(path)
+        context = []
+        pending = None
+        with open(path, encoding="utf-8") as handle:
+            for number, raw in enumerate(handle, 1):
+                line = raw.split("//", 1)[0].strip()
+                if not line:
+                    continue
+                where = "%s:%d" % (base, number)
+                if line == "{":
+                    context.append(pending)
+                    pending = None
+                    continue
+                if line == "}":
+                    context.pop()
+                    continue
+                words = line.split()
+                if words[0] == "particle_system":
+                    pending = ("system",)
+                elif words[0] == "emitter":
+                    pending = ("emitter",)
+                    if len(words) < 2 or words[1] not in EMITTERS:
+                        problems.append("%s: unknown emitter %s" % (where, line))
+                elif words[0] == "affector":
+                    kind = words[1] if len(words) > 1 else "?"
+                    pending = ("affector", kind)
+                    if kind not in AFFECTOR_KEYS:
+                        problems.append("%s: unknown affector %s" % (where, kind))
+                elif context:
+                    scope = context[-1]
+                    if scope == ("system",):
+                        if words[0] not in SYSTEM_KEYS:
+                            problems.append("%s: unknown system key %s" % (where, words[0]))
+                        elif words[0] == "billboard_type" and words[1] not in BILLBOARD_TYPES:
+                            problems.append("%s: unknown billboard type %s" % (where, words[1]))
+                    elif scope == ("emitter",):
+                        if words[0] not in EMITTER_KEYS:
+                            problems.append("%s: unknown emitter key %s" % (where, words[0]))
+                    elif scope and scope[0] == "affector":
+                        if words[0] not in AFFECTOR_KEYS.get(scope[1], ()):
+                            problems.append("%s: unknown key %s for affector %s" % (where, words[0], scope[1]))
+
+
 def mesh_exists(name):
     return os.path.exists(os.path.join(ROOT, "models", name + ".mesh"))
 
@@ -214,6 +278,7 @@ def main():
     counts = {"effects": 0, "events": 0}
     check_file(os.path.join(ROOT, "config", "roomAmbience.cfg"), problems, tile_visuals(), particle_systems(),
                materials(), counts)
+    check_particle_files(problems)
     if problems:
         for problem in problems:
             print("PROBLEM:", problem)
