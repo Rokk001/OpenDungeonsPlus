@@ -69,6 +69,11 @@ CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Wraithwood.level",
     "levels/campaign/Kingsfall.level",
     "levels/campaign/HollowmarkCitadel.level",
+    "levels/campaign/BoulderCourse.level",
+    "levels/campaign/CrowshotGallery.level",
+    "levels/campaign/TwistingHalls.level",
+    "levels/campaign/SkittleCavern.level",
+    "levels/campaign/SwarmNight.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"

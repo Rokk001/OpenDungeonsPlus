@@ -31,4 +31,12 @@ assert 'MENU_CAMPAIGN' in defeat and 'requestMainMenuWithSkirmishSubMenu()' in d
 # A seat whose only goal is to protect its temple must not win at once: the level script wins the hero levels
 game_map = read('source/gamemap/GameMap.cpp')
 assert 'hasCompletedWinningGoal(seat))' in game_map and '!= "ProtectDungeonTemple"' in game_map
+# The Heartstone has four pieces (B01 to B04); the fifth bonus site has its own reward.
+campaign = read('levels/campaign/Campaign.cfg')
+entries = [e for e in campaign.replace(chr(13), '').split('[Level]')[1:] if 'Bonus=1' in e]
+assert len(entries) == 5
+pieces = [e for e in entries if 'Heartstone=0' not in e]
+assert len(pieces) == 4 and all('Province=B0' in e for e in pieces)
+assert 'Province=B05' in [e for e in entries if 'Heartstone=0' in e][0]
+assert 'key == "Heartstone"' in read('source/game/Campaign.cpp')
 print('campaign flow: ok')

@@ -31,6 +31,7 @@ struct CampaignLevel
 {
     CampaignLevel():
         mBonus(false),
+        mHeartstone(true),
         mDifficulty(1)
     {
     }
@@ -42,6 +43,9 @@ struct CampaignLevel
     //! A bonus (secret) level does not block the main sequence. Finding one
     //! gives a piece of the Heartstone.
     bool mBonus;
+    //! Whether a bonus level counts as a piece of the Heartstone. A bonus level
+    //! with its own reward sets this to false.
+    bool mHeartstone;
     //! Id of the province (or of the bonus site) of the level on the world map
     std::string mProvince;
     //! Province id of the branch sister: of two sisters completing one unlocks
@@ -63,6 +67,7 @@ struct CampaignLevel
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
 //!   Bonus=1 (optional) marks a bonus level.
+//!   Heartstone=0 (optional) a bonus level that is not a piece of the Heartstone.
 //!   Province=T01 (optional) the province or bonus site of the level on the
 //!   world map (gui/campaign/campaign-world.json). Levels without it are not
 //!   shown on the map.
