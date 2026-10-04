@@ -631,7 +631,7 @@ ProtectDungeonTemple	NULL
 14	18	1	0	2
 14	19	1	0
 14	20	1	0
-14	21	1	0
+14	21	3	100
 14	22	1	0
 14	23	1	0
 14	24	1	0
@@ -691,7 +691,7 @@ ProtectDungeonTemple	NULL
 15	18	1	0	2
 15	19	1	0
 15	20	1	0
-15	21	1	0
+15	21	3	100
 15	22	1	0
 15	23	1	0
 15	47	1	0
@@ -3874,14 +3874,15 @@ Region	HighDunes	40	36	66	52
 Region	NorthDunes	18	20	44	34
 Region	Camp	4	4	28	22
 Region	ShaftHead	4	34	16	46
+Region	ExitShaft	12	52	22	54
 [Trigger]
 Name	wind
 Mode	once
 Cond	time	3
-Action	message	1	Dunmarrow is a sea of sand over old barrows, master. Warden Ysolde Dunn has seen your banners and is packing her camp in the far north-west. Catch her before the clock runs out.
-Action	objective	1	Kill Warden Ysolde Dunn before time runs out.
+Action	message	1	Dunmarrow is a sea of sand over old barrows, master. Warden Ysolde Dunn has seen your banners and is packing her camp in the far north-west. Catch her before she is gone.
+Action	objective	1	Kill Warden Ysolde Dunn before she escapes through the old shaft.
 Action	objective	1	Find the old tunnels under the dunes.
-Action	timelimit	2700
+Action	order	wait	2	-	YsoldeDunn
 [/Trigger]
 [Trigger]
 Name	southCrossed
@@ -3920,15 +3921,16 @@ Action	message	1	From these dunes you can see her camp. The wagons are loaded an
 Action	spawn	2	50	38	1	Knight:2	Elf:2	Adventurer:2	Monk:2
 Action	reveal	1	NorthDunes
 Action	objective	1	Reach the camp before the wagons leave.
-Action	timelimit	1000
 Action	setflag	wagons	1
+Action	timer	wagonClock	0
 [/Trigger]
 [Trigger]
 Name	campSeen
 Mode	once
 Cond	region	1	NorthDunes
-Action	message	1	The camp gate is in sight. Her last guards are forming up on the ramp.
+Action	message	1	The camp gate is in sight. Her last guards are forming up on the ramp, and the gate swings open.
 Action	spawn	2	18	18	1	Knight:3	Knight:2	Dwarf2:2	Monk:2
+Action	terrain	14	21	15	21	path
 [/Trigger]
 [Trigger]
 Name	campEntered
@@ -3971,10 +3973,27 @@ Action	message	1	Dunn has thrown her reserves into the south.
 Action	spawn	2	40	110	1	Knight:3	Knight:3	Elf:3	Monk:3	Adventurer:2
 [/Trigger]
 [Trigger]
+Name	wagonLeaves
+Mode	once
+Cond	flag	wagons	1
+Cond	timer	wagonClock	>=	900
+Cond	alive	YsoldeDunn
+Action	message	1	The wagons are rolling! Dunn is running for the old shaft. Cut her off.
+Action	terrain	14	21	15	21	path
+Action	order	goto	2	16,12;14,19;14,22;12,26;11,31;10,36;10,42;12,47;16,49;18,51;17,53	YsoldeDunn
+Action	speed	run	YsoldeDunn
+[/Trigger]
+[Trigger]
+Name	wardenEscaped
+Mode	once
+Cond	reached	YsoldeDunn	region	ExitShaft
+Action	message	1	Dunn has slipped down the old shaft and her wagons are gone. Dunmarrow is lost.
+Action	lose	1
+[/Trigger]
+[Trigger]
 Name	wardenCaught
 Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
+Cond	event	YsoldeDunn	killed
 Action	message	1	Ysolde Dunn is dead in the sand and her wagons are still. Dunmarrow is yours.
 Action	win	1
 [/Trigger]
