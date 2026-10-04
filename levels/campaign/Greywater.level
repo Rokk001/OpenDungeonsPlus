@@ -1920,7 +1920,7 @@ ProtectDungeonTemple	NULL
 38	14	1	0
 38	15	1	0
 38	16	1	0
-38	17	1	0
+38	17	3	100
 38	18	1	0
 38	19	1	0
 38	20	3	100
@@ -1968,7 +1968,7 @@ ProtectDungeonTemple	NULL
 39	14	1	0
 39	15	1	0
 39	16	1	0
-39	17	1	0
+39	17	3	100
 39	18	1	0
 39	19	1	0
 39	20	1	0
@@ -2010,7 +2010,7 @@ ProtectDungeonTemple	NULL
 40	14	1	0
 40	15	1	0
 40	16	1	0
-40	17	1	0
+40	17	3	100
 40	18	1	0
 40	19	1	0
 40	20	1	0
@@ -2050,7 +2050,7 @@ ProtectDungeonTemple	NULL
 41	14	1	0
 41	15	1	0
 41	16	1	0
-41	17	1	0
+41	17	3	100
 41	18	1	0
 41	19	1	0
 41	20	1	0
@@ -2088,7 +2088,7 @@ ProtectDungeonTemple	NULL
 42	14	1	0
 42	15	1	0
 42	16	1	0
-42	17	1	0
+42	17	3	100
 42	18	1	0
 42	19	1	0
 42	22	1	0
@@ -3054,6 +3054,7 @@ Action	message	1	Greywater lies on an underground river, master, and its warden 
 Action	objective	1	Kill Warden Corwin Gray in the river hall in the north.
 Action	objective	1	Mine 600 gold from the cave walls.
 Action	objective	1	Keep your dungeon heart alive.
+Action	portal	0	off
 [/Trigger]
 [Trigger]
 Name	firstCoin
@@ -3089,9 +3090,12 @@ Action	spawn	3	36	30	2	Knight:2	Adventurer:2	Adventurer:2
 Name	midBankHeld
 Mode	once
 Cond	claimed	1	MidBank	60
-Action	message	1	The middle bank is held. Heavier creatures are ready to serve.
+Action	message	1	The middle bank is held. Heavier creatures are ready to serve, and the sluice gate on the east bank grinds open.
 Action	spawn	1	16	75	1	Orc:2	Goblin:2
 Action	reveal	1	NorthBank
+Action	terrain	38	17	42	17	path
+Action	setflag	sluiceOpen	1
+Action	portal	0	on
 [/Trigger]
 [Trigger]
 Name	wharfSeen
@@ -3129,10 +3133,19 @@ Action	message	1	Gray is out of patience. Hold your heart.
 Action	spawn	3	28	70	1	Knight:3	Knight:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
+Name	sluiceTimeout
+Mode	once
+Cond	time	2000
+Cond	flag	sluiceOpen	0
+Action	message	1	The river hall has lifted its sluice gate on the east bank. The way north is open.
+Action	terrain	38	17	42	17	path
+Action	setflag	sluiceOpen	1
+Action	portal	0	on
+[/Trigger]
+[Trigger]
 Name	wardenFalls
 Mode	once
-Cond	time	5
-Cond	creatures	4	<=	0
+Cond	event	CorwinGray	killed
 Action	message	1	Corwin Gray is dead and the river belongs to you. The dwarves will want new terms.
 Action	win	1
 [/Trigger]

@@ -3413,6 +3413,7 @@ Region	Trail	56	12	72	32
 Region	Approach	70	3	90	28
 Region	Hold	73	5	89	21
 Region	EastHollow	80	30	90	42
+Region	ExitRoad	60	55	64	58
 [Trigger]
 Name	smoulder
 Mode	once
@@ -3420,7 +3421,7 @@ Cond	time	3
 Action	message	1	The Ashcombe valley still smokes from an old fire, master, and Warden Liesl Ashby has mounted her wagons to flee over the northern pass. You have most of an hour before she is gone.
 Action	objective	1	Kill Warden Liesl Ashby before she escapes the valley.
 Action	objective	1	Cross the ash basin and find the northern hold.
-Action	timelimit	3000
+Action	order	wait	2	-	LieslAshby
 [/Trigger]
 [Trigger]
 Name	basinEntered
@@ -3447,11 +3448,11 @@ Action	reveal	1	Approach
 Name	wagonsMoving
 Mode	once
 Cond	region	1	Approach
-Action	message	1	Her wagons are rolling! Ashby will cross the pass in fifteen minutes, no longer.
+Action	message	1	Her wagons are being loaded! Ashby will leave the hold in five minutes and run for the south road.
 Action	spawn	3	76	22	1	Knight:2	Elf:2	Adventurer:2	Monk:2
-Action	objective	1	Break into the hold before the wagons reach the pass.
-Action	timelimit	900
+Action	objective	1	Break into the hold before the wagons leave, or catch Ashby on the road.
 Action	setflag	fleeing	1
+Action	timer	wagonClock	0
 [/Trigger]
 [Trigger]
 Name	holdBreached
@@ -3489,10 +3490,26 @@ Action	message	1	Ashby has called back everything she has left.
 Action	spawn	3	46	12	1	Knight:3	Knight:3	Elf:3	Adventurer:3	Monk:3
 [/Trigger]
 [Trigger]
+Name	wagonLeaves
+Mode	once
+Cond	flag	fleeing	1
+Cond	timer	wagonClock	>=	300
+Cond	alive	LieslAshby
+Action	message	1	The wagons are out of the gate! Ashby is making for the south road. Cut her off.
+Action	order	goto	2	82,18;83,24;84,30;87,36;84,45;81,49;78,52;75,55;63,56	LieslAshby
+Action	speed	run	LieslAshby
+[/Trigger]
+[Trigger]
+Name	wardenEscaped
+Mode	once
+Cond	reached	LieslAshby	region	ExitRoad
+Action	message	1	Ashby has reached the south road and her wagons are gone. Ashcombe is lost.
+Action	lose	1
+[/Trigger]
+[Trigger]
 Name	wardenDown
 Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
+Cond	event	LieslAshby	killed
 Action	message	1	Liesl Ashby has fallen before her wagons could leave. The ashes of Ashcombe are yours.
 Action	win	1
 [/Trigger]
