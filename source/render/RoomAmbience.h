@@ -33,6 +33,7 @@
 #include <vector>
 
 class GameMap;
+class Seat;
 class Tile;
 
 /*! \brief Cosmetic life in the rooms (dust, glow, sparks, moving objects), client side only.
@@ -101,7 +102,7 @@ public:
     inline uint32_t getNbParticleSystems() const
     { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size() + mMarks.size()); }
     inline uint32_t getNbMovedObjects() const
-    { return static_cast<uint32_t>(mMotionNodes.size()); }
+    { return static_cast<uint32_t>(mMotionNodes.size() + mTurrets.size()); }
 
 private:
     struct Emitter
@@ -144,6 +145,52 @@ private:
         Ogre::Entity* mEntity;
         double mAge;
         double mBaseHeight;
+    };
+
+    //! \brief A cannon (or another object of an effect of kind turn) that follows creatures in range with its barrel
+    struct Turret
+    {
+        Turret() :
+            mEffect(0), mPosition(Ogre::Vector3::ZERO), mRestFront(Ogre::Vector3::NEGATIVE_UNIT_Y), mSeat(nullptr),
+            mGeneration(0)
+        {}
+
+        std::string mNodeName;
+        uint32_t mEffect;
+        Ogre::Vector3 mPosition;
+        //! Direction (flat) the object looked in when it was first seen, where it turns back to
+        Ogre::Vector3 mRestFront;
+        Seat* mSeat;
+        uint32_t mGeneration;
+    };
+
+    //! \brief A rolling object (kind roll) with its dust trail, which breaks up at the end of its way
+    struct Roller
+    {
+        Roller() :
+            mNode(nullptr), mEntity(nullptr), mTrailNode(nullptr), mTrail(nullptr), mEffect(0), mStart(Ogre::Vector3::ZERO),
+            mDirection(Ogre::Vector3::UNIT_X), mAge(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::SceneNode* mTrailNode;
+        Ogre::ParticleSystem* mTrail;
+        uint32_t mEffect;
+        Ogre::Vector3 mStart;
+        Ogre::Vector3 mDirection;
+        double mAge;
+    };
+
+    //! \brief Where a creature was at the last scan and whose it is
+    struct CreatureSpot
+    {
+        CreatureSpot() :
+            mPosition(Ogre::Vector3::ZERO), mSeat(nullptr)
+        {}
+
+        Ogre::Vector3 mPosition;
+        Seat* mSeat;
     };
 
     //! \brief A sound that waits for its time (Delay of an event effect)
@@ -235,6 +282,14 @@ private:
     void startCollapse(int32_t tileX, int32_t tileY);
     void updateCollapses(double timeSinceLastFrame);
     void destroyCollapse(Collapse& collapse);
+    //! \brief Lets the objects of effects of kind turn follow the creatures near them, or go back to rest
+    void updateTurrets(double timeSinceLastFrame);
+    void restoreTurret(const Turret& turret);
+    //! \brief Starts a rolling object of the effect (kind roll) at the given place; true if it was started
+    bool startRoll(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position);
+    void updateRollers(double timeSinceLastFrame);
+    //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
+    void finishRoller(Roller& roller, bool leaveEffects);
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
@@ -280,6 +335,12 @@ private:
     //! Ground marks (kind mark), oldest first
     std::vector<OneShot> mMarks;
     std::map<std::string, MotionNode> mMotionNodes;
+    //! Objects that follow creatures (kind turn), per entity name
+    std::map<std::string, Turret> mTurrets;
+    //! Time until which a trap (key "x,y" of its tile) keeps its turn, because the server aims it for a shot
+    std::map<std::string, double> mTurretHoldUntil;
+    std::vector<Roller> mRollers;
+    std::vector<CreatureSpot> mCreatureSpots;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;
     //! View shake: seconds left and in total, strength in world units at the start, shakes per second, phase
