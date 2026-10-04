@@ -56,7 +56,7 @@ public:
     //! The guessed flinch of the combat reactions is not shown then.
     static bool wasBlowSoftened(const std::string& targetName, double now);
 
-    //! rief Access to the internals of CreatureReactions for the helper functions of this file. They only read
+    //! \brief Access to the internals of CreatureReactions for the helper functions of this file. They only read
     //! the state of the reactions (time, map, mode); show() starts an event the same way the combat reactions do.
     static bool isActive(const CreatureReactions& reactions);
     static double getTime(const CreatureReactions& reactions);
