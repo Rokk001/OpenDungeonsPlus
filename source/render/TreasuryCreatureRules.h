@@ -19,6 +19,7 @@
 #define TREASURYCREATURERULES_H
 
 #include "render/TreasuryGoldMesh.h"
+#include "rooms/TreasuryGoldLayer.h"
 
 #include <cmath>
 #include <map>
@@ -240,6 +241,44 @@ inline float pileSettleFrom(int oldLevel, int newLevel)
         return 1.0f;
     const float ratio = static_cast<float>(oldLevel) / static_cast<float>(newLevel);
     return ratio < 0.4f ? 0.4f : (ratio > 1.6f ? 1.6f : ratio);
+}
+
+//! Objects standing in the gold (room objects, gold lying on the floor of a treasury) are drawn partly buried:
+//! the deeper the pile of their tile, the larger the share of their height that sinks into the gold. Only a
+//! render offset of the object node; position, bounds and paths of the object are not changed.
+static const float buryShareFirst = 0.1f;
+static const float buryShareFull = 0.5f;
+//! The offset settles at this rate (seconds for roughly 95 percent of a change), as fast as the piles themselves
+static const float buriedSettleTime = pileSettleTime;
+//! A smaller remaining distance is closed at once
+static const float buriedSnapDistance = 0.002f;
+
+//! Share of its height (0..1) that an object sinks into a pile of the given level
+inline float buryShare(int level)
+{
+    if(level <= 0)
+        return 0.0f;
+    const int top = level > TreasuryGoldLayer::maxLevel ? TreasuryGoldLayer::maxLevel : level;
+    return buryShareFirst + (buryShareFull - buryShareFirst) * static_cast<float>(top - 1)
+        / static_cast<float>(TreasuryGoldLayer::maxLevel - 1);
+}
+
+//! Height of the base of an object above the floor, so that the share of its height given by buryShare()
+//! is buried below the gold surface. Never below the floor, and always zero where there is no pile.
+inline float buriedLift(float surfaceHeight, int level, float objectHeight)
+{
+    if(level <= 0 || surfaceHeight <= 0.0f)
+        return 0.0f;
+    const float lift = surfaceHeight - buryShare(level) * (objectHeight > 0.0f ? objectHeight : 0.0f);
+    return lift > 0.0f ? lift : 0.0f;
+}
+
+//! One step of the smooth move of the offset from current towards target (elapsed seconds)
+inline float buriedStep(float current, float target, float elapsed)
+{
+    const float rate = 1.0f - std::exp(-3.0f * elapsed / buriedSettleTime);
+    const float next = current + (target - current) * rate;
+    return std::fabs(target - next) < buriedSnapDistance ? target : next;
 }
 
 //! Counts the splashes shown per room (the room is identified by any pointer)

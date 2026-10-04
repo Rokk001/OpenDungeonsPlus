@@ -506,6 +506,15 @@ private:
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
 
+    //! An object standing in the gold of a treasury, drawn partly buried: only its node is lifted by mCurrent
+    struct TreasuryBuriedObject
+    {
+        float mHeight;
+        float mCurrent;
+        float mTarget;
+    };
+    std::map<RenderedMovableEntity*, TreasuryBuriedObject> mTreasuryBuriedObjects;
+
     //! A thief carrying gold shows a sack of coins, its size follows the amount the server sends
     struct TreasuryThiefSack
     {
@@ -613,6 +622,10 @@ private:
         int newLevel);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPileSettle(const std::string& entityName);
+    void registerBuriedObject(RenderedMovableEntity* entity, float objectHeight);
+    void refreshBuriedObjectsOnTile(Tile* tile);
+    void updateTreasuryBuriedObjects(Ogre::Real timeSinceLastFrame);
+    float getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce);
     void removeTreasuryThiefSack(Creature* creature);
     void refreshTreasuryGlow(int x, int y);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);

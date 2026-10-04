@@ -1858,6 +1858,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryDust(timeSinceLastFrame);
     updateTreasuryAmbient(timeSinceLastFrame);
     updateTreasuryPileSettles(timeSinceLastFrame);
+    updateTreasuryBuriedObjects(timeSinceLastFrame);
     rrUpdateHeldCreature();
 }
 
@@ -2770,6 +2771,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     int previousPileLevel = -1;
     // Treasury gold piles are built here from their name (or swapped for the classic stacks)
     const bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
+    // True when the entity is itself a gold pile, so it is not an object standing in the gold
+    bool isPileEntity = false;
     if(isBuildingObject)
     {
         Tile* pileTile = renderedMovableEntity->getPositionTile();
@@ -2779,8 +2782,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         const bool classicStack = (pileName != meshName);
         meshName = pileName;
         TreasuryGoldLayer::PileShape pileShape;
-        if(TreasuryGoldLayer::parseMeshName(meshName, pileShape)
-            && TreasuryGoldMesh::getDetail() != TreasuryGoldMesh::Detail::off)
+        isPileEntity = TreasuryGoldLayer::parseMeshName(meshName, pileShape);
+        if(isPileEntity && TreasuryGoldMesh::getDetail() != TreasuryGoldMesh::Detail::off)
             pileLevel = pileShape.mLevel;
         previousPileLevel = TreasuryGoldMesh::registerPile(renderedMovableEntity->getName(),
             renderedMovableEntity->getPosition().x, renderedMovableEntity->getPosition().y, meshName,
@@ -2789,6 +2792,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             classicStack);
         meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
         refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
+        refreshBuriedObjectsOnTile(renderedMovableEntity->getPositionTile());
     }
     // Gold on the floor is drawn as a small coin heap
     else if(renderedMovableEntity->getObjectType() == GameEntityType::treasuryObject)
@@ -2867,6 +2871,11 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             static_cast<int>(renderedMovableEntity->getPosition().y + 0.5));
     }
 
+    // Objects and gold lying on a treasury stand partly buried in its gold
+    if(nt == NodeType::MTILES_NODE && ent != nullptr && !isPileEntity && (isBuildingObject ||
+        renderedMovableEntity->getObjectType() == GameEntityType::treasuryObject))
+        registerBuriedObject(renderedMovableEntity, ent->getBoundingBox().getSize().z * node->getScale().z);
+
     // If it is required, we hide the tile
     if((renderedMovableEntity->getHideCoveredTile()) &&
        (renderedMovableEntity->getOpacity() >= 1.0))
@@ -2894,6 +2903,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
                              + curRenderedMovableEntity->getName()+  (static_cast<bool>(nt) ?  "" : "_dtc" );
     Ogre::SceneNode* node = curRenderedMovableEntity->getEntityNode();
     cancelTreasuryPileSettle(curRenderedMovableEntity->getName());
+    mTreasuryBuriedObjects.erase(curRenderedMovableEntity);
     if(curRenderedMovableEntity->getMeshName() == "ChickenCoop")
         rrDestroyCoopDecor(static_cast<BuildingObject*>(curRenderedMovableEntity));
     if(mSceneManager->hasEntity(tempString))
@@ -2920,6 +2930,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
         refreshTreasuryGlow(static_cast<int>(curRenderedMovableEntity->getPosition().x + 0.5),
             static_cast<int>(curRenderedMovableEntity->getPosition().y + 0.5));
         refreshCreaturesOnTile(curRenderedMovableEntity->getPositionTile());
+        refreshBuriedObjectsOnTile(curRenderedMovableEntity->getPositionTile());
     }
 
     // If it was hidden, we display the tile
@@ -4500,7 +4511,10 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
         return;
     }
          
-    entity->getEntityNode()->setPosition(position);
+    float buriedLift = 0.0f;
+    if(entity->getObjectType() == GameEntityType::buildingObject || entity->getObjectType() == GameEntityType::treasuryObject)
+        buriedLift = getBuriedLift(static_cast<RenderedMovableEntity*>(entity), true);
+    entity->getEntityNode()->setPosition(position + Ogre::Vector3(0.0f, 0.0f, buriedLift));
     if(entity->getObjectType() == GameEntityType::creature)
         updateCreatureStep(static_cast<Creature*>(entity));
 }
@@ -4979,6 +4993,84 @@ void RenderManager::cancelTreasuryPileSettle(const std::string& entityName)
     }
 }
 
+void RenderManager::registerBuriedObject(RenderedMovableEntity* entity, float objectHeight)
+{
+    TreasuryBuriedObject buried;
+    buried.mHeight = objectHeight;
+    buried.mCurrent = 0.0f;
+    buried.mTarget = 0.0f;
+    mTreasuryBuriedObjects[entity] = buried;
+    // A new object stands at its depth at once, only a change of the pile is animated
+    const float lift = getBuriedLift(entity, true);
+    if(lift > 0.0f && entity->getEntityNode() != nullptr)
+        entity->getEntityNode()->setPosition(entity->getPosition() + Ogre::Vector3(0.0f, 0.0f, lift));
+}
+
+void RenderManager::refreshBuriedObjectsOnTile(Tile* tile)
+{
+    if(tile == nullptr || mTreasuryBuriedObjects.empty())
+        return;
+
+    for(std::map<RenderedMovableEntity*, TreasuryBuriedObject>::iterator it = mTreasuryBuriedObjects.begin();
+        it != mTreasuryBuriedObjects.end(); ++it)
+    {
+        const Ogre::Vector3 position = it->first->getPosition();
+        if(static_cast<int>(position.x + 0.5f) != tile->getX() || static_cast<int>(position.y + 0.5f) != tile->getY())
+            continue;
+
+        int level = 0;
+        const float surface = TreasuryGoldMesh::surfaceHeight(position.x, position.y, level);
+        it->second.mTarget = TreasuryCreatureRules::buriedLift(surface, level, it->second.mHeight);
+        // Only what is in view is animated, the rest takes its depth at once
+        Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+        if(camera == nullptr || !camera->isVisible(position) ||
+            TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::off)
+        {
+            it->second.mCurrent = it->second.mTarget;
+            Ogre::SceneNode* node = it->first->getEntityNode();
+            if(node != nullptr && node->getParent() == mRoomSceneNode)
+                node->setPosition(position + Ogre::Vector3(0.0f, 0.0f, it->second.mCurrent));
+        }
+    }
+}
+
+void RenderManager::updateTreasuryBuriedObjects(Ogre::Real timeSinceLastFrame)
+{
+    for(std::map<RenderedMovableEntity*, TreasuryBuriedObject>::iterator it = mTreasuryBuriedObjects.begin();
+        it != mTreasuryBuriedObjects.end(); ++it)
+    {
+        TreasuryBuriedObject& buried = it->second;
+        if(buried.mCurrent == buried.mTarget)
+            continue;
+
+        buried.mCurrent = TreasuryCreatureRules::buriedStep(buried.mCurrent, buried.mTarget, timeSinceLastFrame);
+        Ogre::SceneNode* node = it->first->getEntityNode();
+        // A carried object hangs on its carrier and is not moved here
+        if(node != nullptr && node->getParent() == mRoomSceneNode)
+            node->setPosition(it->first->getPosition() + Ogre::Vector3(0.0f, 0.0f, buried.mCurrent));
+    }
+}
+
+float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce)
+{
+    std::map<RenderedMovableEntity*, TreasuryBuriedObject>::iterator it = mTreasuryBuriedObjects.find(entity);
+    if(it == mTreasuryBuriedObjects.end())
+        return 0.0f;
+
+    Ogre::SceneNode* node = entity->getEntityNode();
+    // A carried object hangs on its carrier
+    if(node == nullptr || node->getParent() != mRoomSceneNode)
+        return 0.0f;
+
+    const Ogre::Vector3 position = entity->getPosition();
+    int level = 0;
+    const float surface = TreasuryGoldMesh::surfaceHeight(position.x, position.y, level);
+    it->second.mTarget = TreasuryCreatureRules::buriedLift(surface, level, it->second.mHeight);
+    if(settleAtOnce)
+        it->second.mCurrent = it->second.mTarget;
+    return it->second.mCurrent;
+}
+
 void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
 {
     if(creature == nullptr || creature->getDefinition() == nullptr || creature->getDefinition()->getStealGold() <= 0
@@ -5105,6 +5197,7 @@ void RenderManager::clearTreasuryEffects()
     mTreasuryAmbientBudget.clear();
     mTreasuryLastSplash.clear();
     mTreasuryPileSettles.clear();
+    mTreasuryBuriedObjects.clear();
     while(!mTreasuryThiefSacks.empty())
         removeTreasuryThiefSack(mTreasuryThiefSacks.back().mCreature);
     for(const std::string& name : mTreasuryGlowLights)
