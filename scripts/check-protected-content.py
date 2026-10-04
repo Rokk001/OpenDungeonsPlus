@@ -216,9 +216,12 @@ def commits_to_check(local_sha, remote_sha, remote_name, cwd):
 
 
 def patch_ids(revisions, cwd):
-    """Maps commit -> patch id for the non-merge commits of the given rev-list args."""
-    proc = subprocess.run(["git", "log", "-p", "--no-color", "--no-merges"] + revisions,
-                          cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    """Maps commit -> patch id for the non-merge commits of the given rev-list args. The
+    revisions go through stdin: a rebase can list thousands of them, more than a Windows
+    command line holds (WinError 206)."""
+    data = ("\n".join(revisions) + "\n").encode("utf-8")
+    proc = subprocess.run(["git", "log", "-p", "--no-color", "--no-merges", "--stdin"],
+                          cwd=cwd, input=data, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if proc.returncode != 0:
         return {}
     ids = subprocess.run(["git", "patch-id", "--stable"], cwd=cwd, input=proc.stdout,
@@ -599,6 +602,35 @@ def self_test():
         dirty = git("rev-parse", "HEAD")
         expect("rewritten message", work, ["refs/heads/t %s refs/heads/t %s"
                                            % (dirty, old)], terms, True, "commit message")
+
+        # a rebase lists the whole new history: far more revisions than one command line
+        # holds on Windows (WinError 206 before the revisions went through stdin)
+        work, git, commit_files, base = new_repo()
+        second = commit_files({"second.txt": "second\n"}, "second base")
+
+        def fast_import_chain(ref, parent, count):
+            stream = []
+            for number in range(count):
+                text = "line %d" % number
+                message = "change %d" % number
+                stream += ["commit %s" % ref,
+                           "committer T <t@example.invalid> %d +0000" % (number + 1),
+                           "data %d" % len(message), message]
+                if number == 0:
+                    stream += ["from %s" % parent]
+                stream += ["M 100644 inline f%d.txt" % number, "data %d" % len(text), text, ""]
+            proc = subprocess.run(["git", "fast-import", "--quiet"], cwd=work,
+                                  input=("\n".join(stream) + "\n").encode("utf-8"),
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if proc.returncode != 0:
+                raise RuntimeError("fast-import failed: %s" % proc.stderr.decode())
+            return git("rev-parse", ref)
+
+        # the same changes on two bases: the pushed tip is the rebased copy of the old one
+        old = fast_import_chain("refs/heads/old", base, 900)
+        rebased = fast_import_chain("refs/heads/rebased", second, 900)
+        expect("rebase with many commits", work, ["refs/heads/rebased %s refs/heads/rebased %s"
+                                                  % (rebased, old)], terms, False)
 
         # fail safe on the term list
         empty = os.path.join(work, "empty-terms.txt")
