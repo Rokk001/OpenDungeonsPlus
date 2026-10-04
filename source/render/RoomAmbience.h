@@ -27,6 +27,7 @@
 
 #include <cstdint>
 #include <map>
+#include <random>
 #include <set>
 #include <string>
 #include <vector>
@@ -130,10 +131,15 @@ private:
     struct MotionNode
     {
         MotionNode() :
+            mMovesPosition(false), mMovesOrientation(false), mMovesScale(false),
             mBasePosition(Ogre::Vector3::ZERO), mBaseScale(Ogre::Vector3::UNIT_SCALE), mClock(0.0), mSeen(false)
         {}
 
         std::string mNodeName;
+        //! Which parts of the node are driven by the motions (put back only these)
+        bool mMovesPosition;
+        bool mMovesOrientation;
+        bool mMovesScale;
         Ogre::Quaternion mBaseOrientation;
         Ogre::Vector3 mBasePosition;
         Ogre::Vector3 mBaseScale;
@@ -174,6 +180,7 @@ private:
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void reconcile();
+    void playClips();
     void updateEmitters(double timeSinceLastFrame);
     void updateOneShots(double timeSinceLastFrame);
     void updateMotions(double timeSinceLastFrame);
@@ -220,6 +227,11 @@ private:
     std::vector<Ogre::Vector3> mCreaturePositions;
     std::vector<Candidate> mParticleCandidates;
     std::vector<Candidate> mMotionCandidates;
+    std::vector<Candidate> mClipCandidates;
+    //! Time at which an object plays its next clip (kind clip)
+    std::map<std::string, double> mClipTimers;
+    //! Dice of its own, so the game random sequence is untouched
+    std::mt19937 mRandom;
 
     //! Tile visual seen at the last scan per tile (255 = never seen), used to find rooms built or sold
     std::vector<uint8_t> mSeenVisual;
