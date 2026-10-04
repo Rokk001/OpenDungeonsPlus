@@ -28,6 +28,7 @@
 #include "network/CosmeticEvent.h"
 #include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
+#include "render/WorkerExtras.h"
 #include "utils/Helper.h"
 
 #include <OgreAnimationState.h>
@@ -230,7 +231,11 @@ bool WorkerReactions::show(CreatureReactions& reactions, Creature* creature, con
     if((creature == nullptr) || !creature->isAlive() || !creature->getIsOnMap())
         return false;
 
-    return reactions.trigger(creature, eventName);
+    bool started = reactions.trigger(creature, eventName);
+    if(started && (reactions.mMode == CreatureReactions::Mode::full))
+        WorkerExtras::playSound(eventName, creature, reactions.mTime);
+
+    return started;
 }
 
 void WorkerReactions::later(CreatureReactions& reactions, Creature* creature, const std::string& eventName,
@@ -291,6 +296,17 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
     if((clip == "Die") || (clip == "die"))
     {
         addSpot(sDeaths, creature->getPosition().x, creature->getPosition().y, now);
+
+        // A worker that dies with gold on its body loses a cloud of coins where it falls (the gold itself is
+        // dropped by the server as before)
+        std::map<std::string, WorkerState>::iterator itDead = sStates.find(creature->getName());
+        if(isWorker(creature) && (itDead != sStates.end()) && (itDead->second.mGold > 0))
+        {
+            itDead->second.mGold = 0;
+            if(reactions.isCreatureNearCamera(creature) && reactions.trigger(creature, "WorkerDeathCoins", true) &&
+               (reactions.mMode == CreatureReactions::Mode::full))
+                WorkerExtras::playSound("WorkerDeathCoins", creature, now);
+        }
         return;
     }
 
@@ -396,6 +412,8 @@ void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier,
     {
         Creature* body = static_cast<Creature*>(carried);
         show(reactions, carrier, body->isAlive() ? "PickPrisoner" : "PickBody");
+        if(body->isAlive())
+            WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
     }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity) ||
             (type == GameEntityType::skillEntity))
@@ -422,6 +440,7 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
     else if(type == GameEntityType::creature)
     {
         Creature* body = static_cast<Creature*>(carried);
+        WorkerExtras::endStruggle(reactions.mGameMap, body->getName());
         if(body->isAlive() && ((room == "Prison") || (room == "Torture")))
             later(reactions, carrier, "PrisonerShove", 0.1);
         else if(!body->isAlive() && (room == "Crypt"))
@@ -783,11 +802,15 @@ void WorkerReactions::update(CreatureReactions& reactions, double timeSinceLastF
 {
     if(!isActive(reactions))
     {
+        WorkerExtras::update(reactions.mGameMap, timeSinceLastFrame, false);
         if(!sStates.empty() || !sLater.empty())
             stopAll(reactions);
 
         return;
     }
+
+    // The carried prisoners struggle in the full mode only
+    WorkerExtras::update(reactions.mGameMap, timeSinceLastFrame, reactions.mMode == CreatureReactions::Mode::full);
 
     for(std::vector<LaterReaction>::iterator it = sLater.begin(); it != sLater.end(); ++it)
         it->mDelay -= timeSinceLastFrame;
@@ -811,6 +834,7 @@ void WorkerReactions::update(CreatureReactions& reactions, double timeSinceLastF
 
 void WorkerReactions::stopAll(CreatureReactions& reactions)
 {
+    WorkerExtras::stopAll(reactions.mGameMap);
     removeAllGoldBodies();
     sStates.clear();
     sLater.clear();
