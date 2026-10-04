@@ -29,11 +29,13 @@
 #include "entities/ChickenPose.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "rooms/HatcheryCoopHouse.h"
 #include "rooms/Room.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <OgreAnimationState.h>
 #include <OgreEntity.h>
 #include <OgreManualObject.h>
 #include <OgreMesh.h>
@@ -415,7 +417,17 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
             }
         }
         if(nearest != mCoopDecors.end())
-            nearest->second.mShake = 0.8f;
+        {
+            if(nearest->second.mDoor != nullptr)
+            {
+                // The door of the coop mesh swings once
+                nearest->second.mDoor->setTimePosition(0.0f);
+                nearest->second.mDoor->setLoop(false);
+                nearest->second.mDoor->setEnabled(true);
+            }
+            else
+                nearest->second.mShake = 0.8f;
+        }
     }
 }
 
@@ -428,16 +440,34 @@ void RenderManager::rrCreateCoopDecor(BuildingObject* coop)
     const std::string name = coop->getOgreNamePrefix() + coop->getName() + "_decor";
     CoopDecor decor;
     decor.mShake = 0.0f;
+    decor.mNest = nullptr;
+    decor.mDoor = nullptr;
+
+    // The coop mesh with a skeleton has nests and a door of its own, the old mesh gets a nest beside it and shakes
+    if((node->numAttachedObjects() > 0) && (node->getAttachedObject(0)->getMovableType() == "Entity"))
+    {
+        Ogre::Entity* body = static_cast<Ogre::Entity*>(node->getAttachedObject(0));
+        if(body->hasSkeleton() && body->getSkeleton()->hasAnimation(HatcheryCoopHouse::doorClip))
+        {
+            decor.mDoor = body->getAnimationState(HatcheryCoopHouse::doorClip);
+            decor.mDoor->setLoop(false);
+            decor.mDoor->setEnabled(false);
+        }
+    }
+
     decor.mNode = node->createChildSceneNode(name + "_node", Ogre::Vector3(0.9f, 0.0f, 0.0f));
-    rrEnsureChickenMesh(MeshNest);
     rrEnsureChickenMesh(MeshFeathers);
-    decor.mNest = mSceneManager->createEntity(name + "_nest", MeshNest + ".mesh");
+    if(decor.mDoor == nullptr)
+    {
+        rrEnsureChickenMesh(MeshNest);
+        decor.mNest = mSceneManager->createEntity(name + "_nest", MeshNest + ".mesh");
+        decor.mNest->setQueryFlags(0);
+        decor.mNode->attachObject(decor.mNest);
+        decor.mNest->setVisible(false);
+    }
     decor.mFeathers = mSceneManager->createEntity(name + "_feathers", MeshFeathers + ".mesh");
-    decor.mNest->setQueryFlags(0);
     decor.mFeathers->setQueryFlags(0);
-    decor.mNode->attachObject(decor.mNest);
     decor.mNode->attachObject(decor.mFeathers);
-    decor.mNest->setVisible(false);
     decor.mFeathers->setVisible(false);
     mCoopDecors[coop] = decor;
     // The first check is done at once
@@ -451,9 +481,12 @@ void RenderManager::rrDestroyCoopDecor(BuildingObject* coop)
         return;
 
     CoopDecor& decor = it->second;
-    decor.mNode->detachObject(decor.mNest);
+    if(decor.mNest != nullptr)
+    {
+        decor.mNode->detachObject(decor.mNest);
+        mSceneManager->destroyEntity(decor.mNest);
+    }
     decor.mNode->detachObject(decor.mFeathers);
-    mSceneManager->destroyEntity(decor.mNest);
     mSceneManager->destroyEntity(decor.mFeathers);
     if(coop->getEntityNode() != nullptr)
     {
@@ -575,11 +608,15 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             }
             else if(pose == ChickenPose::flutter)
             {
-                // Flaps up for a moment with the wings out and settles down again
-                const Ogre::Real rise = std::sin(std::min(1.0f, p * 1.4f) * pi);
-                lift = 0.14f * rise;
-                stretch = Ogre::Vector3(1.0f + 0.25f * std::fabs(std::sin(p * 30.0f)) * rise, 1.0f, 1.0f);
-                pitch = -10.0f * rise;
+                // The flutter clip lifts the hen and beats the wings, without it she is stretched and lifted here
+                if(!look.mEntity->getSkeleton()->hasAnimation("Flutter"))
+                {
+                    // Flaps up for a moment with the wings out and settles down again
+                    const Ogre::Real rise = std::sin(std::min(1.0f, p * 1.4f) * pi);
+                    lift = 0.14f * rise;
+                    stretch = Ogre::Vector3(1.0f + 0.25f * std::fabs(std::sin(p * 30.0f)) * rise, 1.0f, 1.0f);
+                    pitch = -10.0f * rise;
+                }
             }
             else if(pose == ChickenPose::fight)
             {
@@ -592,8 +629,12 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             }
             else if(pose == ChickenPose::lay)
             {
-                // Sits down and fluffs up, then stands up proudly
-                if(p < 1.2f)
+                // The lay clip sits down, fluffs up and stands up, without it the body is squashed here
+                if(look.mEntity->getSkeleton()->hasAnimation("Lay"))
+                {
+                    // Nothing to add
+                }
+                else if(p < 1.2f)
                     stretch = Ogre::Vector3(1.14f, 1.1f, 0.78f + 0.03f * std::sin(p * 25.0f));
                 else
                     stretch = Ogre::Vector3(1.0f, 1.0f, 1.12f);
@@ -674,8 +715,21 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 for(Tile* roomTile : room->getCoveredTiles())
                     animals += roomTile->countEntitiesOnTile(GameEntityType::chickenEntity);
             }
-            decor.mNest->setVisible(animals > 0);
+            if(decor.mNest != nullptr)
+                decor.mNest->setVisible(animals > 0);
             decor.mFeathers->setVisible(animals == 0);
+        }
+
+        // The door clip of the coop mesh plays once and then rests closed
+        if((decor.mDoor != nullptr) && decor.mDoor->getEnabled())
+        {
+            decor.mDoor->addTime(timeSinceLastFrame);
+            if(decor.mDoor->hasEnded())
+            {
+                decor.mDoor->setEnabled(false);
+                decor.mDoor->setTimePosition(0.0f);
+            }
+            continue;
         }
 
         // The coop shakes for a moment when an animal comes out

@@ -444,9 +444,12 @@ private:
     struct CoopDecor
     {
         Ogre::SceneNode* mNode;
+        //! The nest decoration, null for the coop mesh that has nests of its own
         Ogre::Entity* mNest;
         Ogre::Entity* mFeathers;
         Ogre::Real mShake;
+        //! The door clip of the coop mesh, null for the old coop mesh (the coop shakes then)
+        Ogre::AnimationState* mDoor;
     };
     std::map<BuildingObject*, CoopDecor> mCoopDecors;
     Ogre::Real mCoopDecorTimer = 0.0f;
