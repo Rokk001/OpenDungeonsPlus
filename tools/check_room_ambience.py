@@ -210,7 +210,10 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if key in effect and effect[key][0] not in ("yes", "no", "true", "false", "1", "0"):
             problems.append("%s: %s needs yes or no" % (where, key))
     for match in effect.get("Match", []):
-        if target == "Object":
+        if target == "Object" and match.startswith("trap:"):
+            if not re.match(r"^[A-Za-z*]+$", match[len("trap:"):]):
+                problems.append("%s: bad trap type %s" % (where, match))
+        elif target == "Object":
             if "*" not in match and not mesh_exists(match):
                 problems.append("%s: no mesh %s" % (where, match))
             elif "*" in match:
