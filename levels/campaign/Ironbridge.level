@@ -4289,6 +4289,13 @@ Cond	region	1	OreDock
 Action	message	1	The ore dock feeds the rival hold. Hold it and he will starve his own forges.
 [/Trigger]
 [Trigger]
+Name	yardWell
+Mode	once
+Cond	claimed	1	RollingYard	100
+Action	message	1	The rolling yard is yours, and the old quench pool under it still seeps mana. Use it to feed the last push.
+Action	terrain	78	38	78	38	manawell	1
+[/Trigger]
+[Trigger]
 Name	forgewave1
 Mode	once
 Cond	time	300
