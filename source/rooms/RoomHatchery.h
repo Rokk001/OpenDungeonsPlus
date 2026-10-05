@@ -109,8 +109,9 @@ private:
     void beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& plan);
     void actRoosterMood(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
         const RoosterSettings& settings, const Ogre::Vector2& threat);
-    //! Sits the rooster on the roof of the nearest coop with the pose. Without coop he stays on the ground.
-    void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar);
+    //! Sits the rooster on the roof of the nearest coop with the pose (when sleeping: of the highest coop). Without
+    //! coop he stays on the ground.
+    void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar, bool highest = false);
     void climbDown(ChickenEntity* rooster);
     //! The chicks follow the hen (or the rooster when he leads) in a line, at night they huddle under the hen.
     void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks,
@@ -118,6 +119,17 @@ private:
     //! A creature inside the hatchery that wants to eat chickens or is an enemy, close to the rooster.
     bool findThreat(const ChickenEntity& rooster, double radius, Ogre::Vector2& position) const;
     Tile* getNearestCoop(const Ogre::Vector2& position) const;
+    //! Height of the roof of the coop above the floor (the same for every coop mesh, from the config).
+    double getRoofHeight(const Tile& coopTile) const;
+    //! The coop with the highest roof; the nearest one among equally high ones (all coops are equally high now).
+    Tile* getHighestCoop(const Ogre::Vector2& position) const;
+    //! True if the hen sits on a seat of a coop (the center of a nest).
+    bool isAtCoopSeat(const ChickenEntity& hen) const;
+    //! A free seat (center of a nest inside the hatchery) in a coop, the one closest to the hen first. False if
+    //! every seat is taken by another hen or there is no coop.
+    bool findCoopSeat(const Ogre::Vector2& henPosition, const std::vector<ChickenEntity*>& hens, Ogre::Vector3& seat) const;
+    //! In a full hatchery the hens sit in the coops (a free seat each), when it is not full they come out again.
+    void updateCoopSitting(const std::vector<ChickenEntity*>& hens, bool sit);
     Ogre::Vector2 getPerchSpot(const Tile& coopTile) const;
     //! A free place next to a coop, where an animal can stand after jumping down.
     bool getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const;

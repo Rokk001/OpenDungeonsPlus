@@ -187,3 +187,16 @@ assert laying.count('spawnAnimal(ChickenKind::egg') == 1
 assert '"HatcheryLays "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:900]
 assert 'tag == "HatcheryLays"' in room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:2600]
 print('hatchery delayed egg checks passed')
+
+# Full hatchery: the hens sit in the coops. The sleeping rooster takes the highest roof (the nearest one among equals).
+assert 'updateCoopSitting(hens, full)' in room_cpp
+sitting = body(room_cpp, 'void RoomHatchery::updateCoopSitting')
+assert 'hen->teleport(seat)' in sitting and 'leaveNest(hen)' in sitting and 'findCoopSeat' in sitting
+assert 'getCoveringRoom() != this' in body(room_cpp, 'bool RoomHatchery::findCoopSeat')
+assert 'HatcheryCoopSit' in config and 'HatcheryCoopSeatRadius' in config
+assert '!night && !full' in room_cpp, 'a sitting hen does not run to the calling rooster'
+high = body(room_cpp, 'Tile* RoomHatchery::getHighestCoop')
+assert 'roof > highestRoof' in high and 'distance < highestDistance' in high
+assert 'roostOnRoof(rooster, ChickenPose::roost, false, true)' in room_cpp
+assert 'highest ? getHighestCoop(position) : getNearestCoop(position)' in room_cpp
+print('hatchery coop seat and roof checks passed')

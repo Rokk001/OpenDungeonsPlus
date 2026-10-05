@@ -714,6 +714,7 @@ void RoomHatchery::doUpkeep()
     for(ChickenEntity* chick : chicks)
         chick->setCalm(night);
     updateFlock(hens, night || full);
+    updateCoopSitting(hens, full);
     // Now and then a chick peeps (at most one peep per turn and hatchery)
     if(!night && !chicks.empty() && (Random::Uint(1, std::max<uint32_t>(1, roosterSettings.mChickPeepChance)) == 1))
         fireAnimalSound(*chicks[Random::Uint(0, chicks.size() - 1)], "Hatchery/Peep");
@@ -734,7 +735,7 @@ void RoomHatchery::doUpkeep()
     }
     for(ChickenEntity* hen : hens)
     {
-        if((caller != nullptr) && !hen->isBusy() && !night)
+        if((caller != nullptr) && !hen->isBusy() && !night && !full)
             hen->setFollowTarget(Ogre::Vector2(caller->getPosition().x, caller->getPosition().y), roosterSettings.mCallFollowGap);
         else
             hen->clearFollowTarget();
@@ -944,6 +945,110 @@ Tile* RoomHatchery::getNearestCoop(const Ogre::Vector2& position) const
     return nearest;
 }
 
+double RoomHatchery::getRoofHeight(const Tile& coopTile) const
+{
+    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopRoofHeight",
+        HatcheryCoopHouse::roofPerchHeight);
+}
+
+Tile* RoomHatchery::getHighestCoop(const Ogre::Vector2& position) const
+{
+    Tile* highest = nullptr;
+    double highestRoof = 0.0;
+    float highestDistance = 0.0f;
+    for(Tile* coopTile : mCentralActiveSpotTiles)
+    {
+        double roof = getRoofHeight(*coopTile);
+        float distance = position.squaredDistance(Ogre::Vector2(coopTile->getX(), coopTile->getY()));
+        if((highest == nullptr) || (roof > highestRoof) || ((roof == highestRoof) && (distance < highestDistance)))
+        {
+            highest = coopTile;
+            highestRoof = roof;
+            highestDistance = distance;
+        }
+    }
+    return highest;
+}
+
+bool RoomHatchery::isAtCoopSeat(const ChickenEntity& hen) const
+{
+    const double seatRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopSeatRadius", 0.2);
+    const Ogre::Vector2 henPos(hen.getPosition().x, hen.getPosition().y);
+    for(Tile* coopTile : mCentralActiveSpotTiles)
+    {
+        for(uint32_t nest = 0; nest < HatcheryCoopHouse::nestCount; ++nest)
+        {
+            const Ogre::Vector3 seat = HatcheryCoopHouse::nestCenter(nest);
+            if(henPos.distance(Ogre::Vector2(coopTile->getX() + seat.x, coopTile->getY() + seat.y)) <= seatRadius)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool RoomHatchery::findCoopSeat(const Ogre::Vector2& henPosition, const std::vector<ChickenEntity*>& hens,
+    Ogre::Vector3& seat) const
+{
+    const double seatRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopSeatRadius", 0.2);
+    bool found = false;
+    float nearestDistance = 0.0f;
+    for(Tile* coopTile : mCentralActiveSpotTiles)
+    {
+        for(uint32_t nest = 0; nest < HatcheryCoopHouse::nestCount; ++nest)
+        {
+            const Ogre::Vector3 place = HatcheryCoopHouse::nestCenter(nest) +
+                Ogre::Vector3(static_cast<Ogre::Real>(coopTile->getX()), static_cast<Ogre::Real>(coopTile->getY()), 0.0f);
+
+            // The seat has to be on a tile of this hatchery, like the places of the eggs
+            Tile* placeTile = getGameMap()->getTile(Helper::round(place.x), Helper::round(place.y));
+            if((placeTile == nullptr) || (placeTile->getCoveringRoom() != this))
+                continue;
+
+            const Ogre::Vector2 placePos(place.x, place.y);
+            bool taken = false;
+            for(ChickenEntity* other : hens)
+            {
+                if(placePos.distance(Ogre::Vector2(other->getPosition().x, other->getPosition().y)) <= seatRadius)
+                    taken = true;
+            }
+            if(taken)
+                continue;
+
+            float distance = henPosition.squaredDistance(placePos);
+            if(!found || (distance < nearestDistance))
+            {
+                found = true;
+                nearestDistance = distance;
+                seat = place;
+            }
+        }
+    }
+    return found;
+}
+
+void RoomHatchery::updateCoopSitting(const std::vector<ChickenEntity*>& hens, bool sit)
+{
+    if(mCentralActiveSpotTiles.empty() ||
+       (ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopSit", 1.0) < 0.5))
+        return;
+
+    for(ChickenEntity* hen : hens)
+    {
+        if(hen->isBusy() || hen->isScattering())
+            continue;
+
+        const bool inCoop = isAtCoopSeat(*hen);
+        if(sit && !inCoop && !hen->isMoving())
+        {
+            Ogre::Vector3 seat;
+            if(findCoopSeat(Ogre::Vector2(hen->getPosition().x, hen->getPosition().y), hens, seat))
+                hen->teleport(seat);
+        }
+        else if(!sit && inCoop)
+            leaveNest(hen);
+    }
+}
+
 Ogre::Vector2 RoomHatchery::getPerchSpot(const Tile& coopTile) const
 {
     // The lookout plank of the coop mesh lies over the roof ridge, 0.3 along the tile
@@ -1000,10 +1105,10 @@ void RoomHatchery::climbDown(ChickenEntity* rooster)
     rooster->hopDown(spot);
 }
 
-void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar)
+void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar, bool highest)
 {
     const Ogre::Vector2 position(rooster->getPosition().x, rooster->getPosition().y);
-    Tile* coopTile = getNearestCoop(position);
+    Tile* coopTile = highest ? getHighestCoop(position) : getNearestCoop(position);
     if(coopTile == nullptr)
     {
         // No coop: he sits on the ground
@@ -1020,8 +1125,7 @@ void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, 
     const Ogre::Vector2 spot = getPerchSpot(*coopTile);
     if(hopFromFar || (position.distance(spot) < mRoosterSettings.mHopDistance))
     {
-        double roofHeight = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopRoofHeight",
-            HatcheryCoopHouse::roofPerchHeight);
+        double roofHeight = getRoofHeight(*coopTile);
         rooster->hopToRoof(Ogre::Vector3(spot.x, spot.y, static_cast<Ogre::Real>(roofHeight)));
         rooster->setAnimationState(pose, true);
         return;
@@ -1071,7 +1175,8 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
             roostOnRoof(rooster, ChickenPose::perch, false);
             break;
         case RoosterMood::roost:
-            roostOnRoof(rooster, ChickenPose::roost, false);
+            // He sleeps on the highest roof
+            roostOnRoof(rooster, ChickenPose::roost, false, true);
             break;
         case RoosterMood::crow:
             // He crows from the roof when it is close
