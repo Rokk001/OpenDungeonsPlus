@@ -65,7 +65,7 @@ for prefix in re.findall(r'^    (\w+)NbShootsBeforeDeactivation\t', traps_cfg, r
 assert 'notifyWorkerAction(mCreature, getType())' in action.split('CreatureActionReloadTrap::~')[0]
 assert 'notifyWorkerStopsAction(mCreature, getType())' in action.split('CreatureActionReloadTrap::~')[1].split('}')[0]
 prefs = function_body(player, 'std::vector<CreatureActionType> Player::getWorkerPreferredActions(')
-assert 'getNbWorkersDoing(CreatureActionType::reloadTrap)' in prefs and 'nbWorkersReloading + 1' in prefs
+assert 'getNbWorkersDoing(CreatureActionType::reloadTrap)' in prefs and 'nbWorkersReloading)' in prefs
 share = function_body(player, 'bool Player::isWorkerReloadShareOpen()')
 assert 'CreatureActionType::reloadTrap' in share and 'TrapReloadWorkerSharePercent' in share
 assert 'isWorkerReloadShareOpen' in read('source/game/Player.h')
