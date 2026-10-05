@@ -4393,6 +4393,9 @@ ProtectDungeonTemple	NULL
 4	Picket2	Knight.mesh	48	49	0	Knight	5	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Picket3	Elf.mesh	50	44	0	Elf	4	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Picket4	Monk.mesh	50	53	0	Monk	4	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray1	Goblin.mesh	67	64	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Spider.mesh	67	63	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Rat.mesh	66	64	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

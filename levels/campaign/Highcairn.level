@@ -996,7 +996,7 @@ ProtectDungeonTemple	NULL
 29	6	1	0
 29	7	1	0
 29	8	1	0
-29	10	1	0
+29	10	3	100
 29	11	1	0
 29	12	1	0
 29	13	1	0
@@ -1034,7 +1034,7 @@ ProtectDungeonTemple	NULL
 30	7	1	0
 30	8	1	0
 30	9	1	0
-30	10	1	0
+30	10	3	100
 30	11	1	0
 30	12	1	0
 30	13	1	0
@@ -1072,7 +1072,7 @@ ProtectDungeonTemple	NULL
 31	7	1	0
 31	8	1	0
 31	9	1	0
-31	10	1	0
+31	10	3	100
 31	11	1	0
 31	12	1	0
 31	13	1	0
@@ -1110,7 +1110,7 @@ ProtectDungeonTemple	NULL
 32	7	1	0
 32	8	1	0
 32	9	1	0
-32	10	1	0
+32	10	3	100
 32	11	1	0
 32	12	1	0
 32	13	1	0
@@ -3003,5 +3003,36 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Warden Hilde Cairn lies dead among her own stones. Highcairn is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	holdKey
+Mode	once
+Cond	time	4
+Action	stoneattach	TerraceWatch8
+[/Trigger]
+[Trigger]
+Name	holdSealBreaks
+Mode	once
+Cond	time	5
+Cond	alive	TerraceWatch8	0
+Cond	flag	holdOpen	0
+Action	message	1	The captain of the terrace watch is down and the key to the hold lies where he fell. It fits the old lock and the stopped passage to the hold stands open.
+Action	terrain	29	10	32	10	path
+Action	setflag	holdOpen	1
+[/Trigger]
+[Trigger]
+Name	holdSealLate
+Mode	once
+Cond	time	2700
+Cond	flag	holdOpen	0
+Action	message	1	The masons of the hold have broken the seal from inside. The passage to the hold stands open.
+Action	terrain	29	10	32	10	path
+Action	setflag	holdOpen	1
+[/Trigger]
+[Trigger]
+Name	holdKeyHint
+Mode	once
+Cond	region	1	Terrace4
+Action	objective	1	Take the key from the captain of the terrace watch to break the seal of the hold.
 [/Trigger]
 [/Triggers]
