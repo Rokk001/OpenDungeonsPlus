@@ -12,8 +12,6 @@
 
 namespace AppearanceCompose
 {
-const char* const SLOT_HELMET = "helmet";
-const char* const SLOT_SCAR = "scar";
 const uint32_t CACHE_KEEP_NEWEST = 4;
 
 namespace
@@ -22,11 +20,6 @@ namespace
 const float BACKGROUND_RED = 0.025f;
 const float BACKGROUND_GREEN = 0.018f;
 const float BACKGROUND_BLUE = 0.015f;
-
-bool startsWith(const std::string& text, const std::string& prefix)
-{
-    return text.compare(0, prefix.size(), prefix) == 0;
-}
 
 //! Normal "over" blending of a non premultiplied source pixel with the given alpha on the destination
 void blendPixel(uint8_t* dst, const uint8_t* src, uint32_t srcAlpha)
@@ -54,43 +47,65 @@ void blendPixel(uint8_t* dst, const uint8_t* src, uint32_t srcAlpha)
     }
     dst[3] = static_cast<uint8_t>(outAlpha);
 }
+}
 
-//! Alpha of the helmet at a pixel of the canvas, 0 outside of the helmet
-uint32_t getHelmetAlpha(const Part& helmet, uint32_t canvasX, uint32_t canvasY)
+void tintPart(Part& part, const std::string& catalogId, const std::string& optionName, const PortraitTint* tint,
+    const std::string& creatureName)
 {
-    if((canvasX < helmet.mX) || (canvasY < helmet.mY))
-        return 0;
+    if((tint == nullptr) || !part.mImage.isValid())
+        return;
 
-    uint32_t x = canvasX - helmet.mX;
-    uint32_t y = canvasY - helmet.mY;
-    if((x >= helmet.mImage.mWidth) || (y >= helmet.mImage.mHeight))
-        return 0;
+    // A block for this catalog id replaces the generic ones (slot, slot and option) for the part
+    std::vector<std::string> keys;
+    std::string optionKey = part.mSlot + ":" + optionName;
+    std::string catalogKey = catalogId + ":" + optionKey;
+    if(tint->hasMesh(catalogKey))
+    {
+        keys.push_back(catalogKey);
+    }
+    else
+    {
+        if(tint->hasMesh(part.mSlot))
+            keys.push_back(part.mSlot);
+        if(tint->hasMesh(optionKey))
+            keys.push_back(optionKey);
+    }
+    if(keys.empty())
+        return;
 
-    return helmet.mImage.mPixels[(static_cast<size_t>(y) * helmet.mImage.mWidth + x) * 4 + 3];
+    size_t pixels = static_cast<size_t>(part.mImage.mWidth) * part.mImage.mHeight;
+    std::vector<float> rgb(pixels * 3);
+    std::vector<float> coverage(pixels);
+    for(size_t i = 0; i < pixels; ++i)
+    {
+        const uint8_t* pixel = &part.mImage.mPixels[i * 4];
+        rgb[i * 3] = pixel[0] / 255.0f;
+        rgb[i * 3 + 1] = pixel[1] / 255.0f;
+        rgb[i * 3 + 2] = pixel[2] / 255.0f;
+        coverage[i] = (pixel[3] > 0) ? 1.0f : 0.0f;
+    }
+
+    for(size_t k = 0; k < keys.size(); ++k)
+        tint->apply(keys[k], creatureName, rgb, part.mImage.mWidth, part.mImage.mHeight, &coverage);
+
+    for(size_t i = 0; i < pixels; ++i)
+    {
+        if(coverage[i] == 0.0f)
+            continue;
+
+        uint8_t* pixel = &part.mImage.mPixels[i * 4];
+        pixel[0] = static_cast<uint8_t>(rgb[i * 3] * 255.0f + 0.5f);
+        pixel[1] = static_cast<uint8_t>(rgb[i * 3 + 1] * 255.0f + 0.5f);
+        pixel[2] = static_cast<uint8_t>(rgb[i * 3 + 2] * 255.0f + 0.5f);
+    }
 }
-}
 
-bool isHelmetDamageClipped(const std::string& catalogId)
-{
-    return startsWith(catalogId, "Knight.") || startsWith(catalogId, "Cultist.");
-}
-
-RgbaImage compose(const RgbaImage& base, const std::vector<Part>& parts, bool clipDamageToHelmet)
+RgbaImage compose(const RgbaImage& base, const std::vector<Part>& parts)
 {
     if(!base.isValid())
         return RgbaImage();
 
     RgbaImage result = base;
-
-    const Part* helmet = nullptr;
-    if(clipDamageToHelmet)
-    {
-        for(std::vector<Part>::const_iterator it = parts.begin(); it != parts.end(); ++it)
-        {
-            if((it->mSlot == SLOT_HELMET) && it->mImage.isValid())
-                helmet = &(*it);
-        }
-    }
 
     for(std::vector<Part>::const_iterator it = parts.begin(); it != parts.end(); ++it)
     {
@@ -98,7 +113,6 @@ RgbaImage compose(const RgbaImage& base, const std::vector<Part>& parts, bool cl
         if(!part.mImage.isValid())
             continue;
 
-        bool clipToHelmet = (helmet != nullptr) && (part.mSlot == SLOT_SCAR);
         for(uint32_t y = 0; y < part.mImage.mHeight; ++y)
         {
             uint32_t canvasY = part.mY + y;
@@ -113,8 +127,6 @@ RgbaImage compose(const RgbaImage& base, const std::vector<Part>& parts, bool cl
 
                 const uint8_t* src = &part.mImage.mPixels[(static_cast<size_t>(y) * part.mImage.mWidth + x) * 4];
                 uint32_t alpha = src[3];
-                if(clipToHelmet)
-                    alpha = (alpha * getHelmetAlpha(*helmet, canvasX, canvasY) + 127) / 255;
 
                 uint8_t* dst = &result.mPixels[(static_cast<size_t>(canvasY) * result.mWidth + canvasX) * 4];
                 blendPixel(dst, src, alpha);

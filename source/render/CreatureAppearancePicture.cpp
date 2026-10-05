@@ -26,6 +26,7 @@
 #include <CEGUI/System.h>
 #include <CEGUI/Texture.h>
 
+#include <chrono>
 #include <fstream>
 #include <iterator>
 #include <set>
@@ -51,6 +52,8 @@ struct PictureState
     DungeonbookAppearanceConfig mConfig;
     //! Colour regions of the neutral bases (config/dungeonbook-base-tints.cfg)
     PortraitTint mTint;
+    //! Colours of the hair and beard parts (config/dungeonbook-part-tints.cfg)
+    PortraitTint mPartTint;
     //! Profile remarks (config/dungeonbook-quirks.cfg)
     DungeonbookQuirks mQuirks;
     //! Cached pictures, least recently used first
@@ -58,7 +61,14 @@ struct PictureState
     //! Catalog ids and picture keys that failed; they are logged once and not tried again until the map is
     //! unloaded. Only failures that come from the files, never the empty appearance.
     std::set<std::string> mFailed;
+    //! What was logged already (catalog id or key plus the reason), so a failure that repeats is logged once
+    std::set<std::string> mLogged;
+    //! Last time the failed pictures and manifests were given another chance
+    std::chrono::steady_clock::time_point mLastRetry;
 };
+
+//! Seconds between two new tries of failed manifests and pictures (they read files, so never every frame)
+const int RETRY_SECONDS = 10;
 
 PictureState& getRawState()
 {
@@ -103,6 +113,20 @@ PictureState& getState()
         OD_LOG_WRN("Dungeonbook base tints: " + *it);
     }
 
+    // A missing file or a bad line only costs the colours of the parts
+    state.mPartTint.loadFromFile(path + "dungeonbook-part-tints.cfg");
+    const std::vector<std::string>& partErrors = state.mPartTint.getErrors();
+    for(std::vector<std::string>::const_iterator it = partErrors.begin(); it != partErrors.end(); ++it)
+    {
+        OD_LOG_WRN("Dungeonbook part tints: " + *it);
+    }
+
+    // The regions of the bases may come without a skin amplitude (shift 0): the skin of every creature then
+    // varies by the amplitude of the entry base-skin of the part tints, as the skin of the old portraits does
+    float skinShift[3];
+    if(state.mPartTint.getRegionShift("base-skin", "Skin", skinShift))
+        state.mTint.setShiftWhereNone("Skin", skinShift);
+
     // A missing file or a bad line only costs the remarks
     state.mQuirks.loadFromFile(path + "dungeonbook-quirks.cfg");
     const std::vector<std::string>& quirkWarnings = state.mQuirks.getWarnings();
@@ -125,7 +149,8 @@ void logRegistryMessages(PictureState& state)
 //! Logs the reason once per catalog id or picture key and remembers the failure
 void rememberFailure(PictureState& state, const std::string& failedKey, const std::string& reason)
 {
-    if(state.mFailed.insert(failedKey).second)
+    state.mFailed.insert(failedKey);
+    if(state.mLogged.insert(failedKey + "|" + reason).second)
     {
         OD_LOG_WRN("Dungeonbook appearance of " + failedKey + " falls back to the creature portrait: " + reason);
     }
@@ -196,12 +221,17 @@ const CEGUI::Image* buildPicture(PictureState& state, const std::string& creatur
         return nullptr;
     }
 
+    // The server is authoritative; for the display an option that the manifest no longer has is replaced the same
+    // stable way as there, so the picture is complete until the server tells the corrected look
+    CreatureAppearance shown = appearance;
+    CreatureAppearanceLogic::validate(manifest, appearance.getCatalogId(), creatureName, shown);
+
     // The parts in the order of the Slot lines of the manifest
     std::vector<AppearanceCompose::Part> parts;
     const std::vector<PortraitManifest::Slot>& slots = manifest.getSlots();
     for(std::vector<PortraitManifest::Slot>::const_iterator it = slots.begin(); it != slots.end(); ++it)
     {
-        uint32_t number = appearance.getChoice(it->mName);
+        uint32_t number = shown.getChoice(it->mName);
         if(number == 0)
             continue;
 
@@ -216,11 +246,12 @@ const CEGUI::Image* buildPicture(PictureState& state, const std::string& creatur
         if(!loadRgbaImage(option->mPath, it->mWidth, it->mHeight, part.mImage, error))
             return nullptr;
 
+        // The bases have no hair, eyes or beards: the parts carry them and get the colour of the creature
+        AppearanceCompose::tintPart(part, appearance.getCatalogId(), option->mName, &state.mPartTint, creatureName);
         parts.push_back(part);
     }
 
-    AppearanceCompose::RgbaImage composed = AppearanceCompose::compose(base, parts,
-        AppearanceCompose::isHelmetDamageClipped(appearance.getCatalogId()));
+    AppearanceCompose::RgbaImage composed = AppearanceCompose::compose(base, parts);
     std::vector<AppearanceCompose::Part>().swap(parts);
     base = AppearanceCompose::RgbaImage();
 
@@ -273,6 +304,17 @@ const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, 
         return nullptr;
 
     PictureState& state = getState();
+
+    // Failed manifests and pictures get another chance now and then, so files that arrive or are repaired
+    // later are used without a restart
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    if(!state.mFailed.empty() && (now - state.mLastRetry >= std::chrono::seconds(RETRY_SECONDS)))
+    {
+        state.mLastRetry = now;
+        state.mFailed.clear();
+        state.mRegistry.retryFailed();
+    }
+
     const std::string& catalogId = appearance.getCatalogId();
     const std::string key = AppearanceCompose::makePictureKey(appearance, creatureName);
     if((state.mFailed.count(catalogId) != 0) || (state.mFailed.count(key) != 0))
@@ -349,5 +391,6 @@ void clearCreatureAppearancePictures()
     }
     state.mEntries.clear();
     state.mFailed.clear();
+    state.mLogged.clear();
     state.mRegistry.clear();
 }

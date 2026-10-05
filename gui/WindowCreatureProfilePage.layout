@@ -107,7 +107,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="QuirksText" >
-            <Property name="Area" value="{{0.0,16},{0.0,262},{1.0,-16},{0.0,282}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,408},{1.0,-16},{0.0,456}}" />
             <Property name="Visible" value="False" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -179,6 +179,10 @@
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+        <Window type="OD/VerticalScrollbar" name="ProfileScrollbar" >
+            <Property name="Area" value="{{1.0,-14},{0.0,0},{1.0,0},{1.0,0}}" />
+            <Property name="Visible" value="False" />
         </Window>
     </Window>
 </GUILayout>
