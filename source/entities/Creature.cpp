@@ -2433,6 +2433,10 @@ double Creature::getLowHealthWalkFactor() const
     if(static_cast<double>(mOverlayHealthValue) < firstStage)
         return 1.0;
 
+    // A creature type can have its own factor (same limits as the global one), the global one is the default
+    if((mDefinition != nullptr) && (mDefinition->getLowHealthWalkSpeedFactor() >= 0.0))
+        return std::max(0.2, std::min(1.0, mDefinition->getLowHealthWalkSpeedFactor()));
+
     return ConfigManager::getSingleton().getLowHealthWalkSpeedFactor();
 }
 

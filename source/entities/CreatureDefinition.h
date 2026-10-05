@@ -169,6 +169,8 @@ public:
     inline bool                 isChampion      () const    { return mChampion; }
     inline double               getPossessManaCost () const { return mPossessManaCost; }
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
+    //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
+    inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -270,6 +272,9 @@ private:
     double mPossessManaCost;
     //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side
     double mTortureTimeToConvert;
+
+    //! \brief Optional (LowHealthWalkSpeedFactor): negative means the value of global.cfg is used
+    double mLowHealthWalkSpeedFactor;
 
     //! \brief The name of the creatures class
     std::string mClassName;
