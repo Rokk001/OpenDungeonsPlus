@@ -182,6 +182,13 @@ if shutil.which('OgreXMLConverter') is not None:
     assert abs(min(lay_hip) + 0.05) < 0.002, min(lay_hip)
     assert abs(max(flutter_root) - 0.075) < 0.002, max(flutter_root)
     assert max(abs(v) for v in frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'y')) < 0.002
+    # Idle starts on the pose of its second frame (the first frame used to be a one frame glitch with the hip sunk)
+    idle = [a for a in skeleton_xml.find('animations').findall('animation') if a.get('name') == 'Idle'][0]
+    for track in idle.find('tracks').findall('track'):
+        first, second = track.find('keyframes').findall('keyframe')[:2]
+        assert first.get('time') == '0', track.get('bone')
+        for tag in ('translate', 'rotate'):
+            assert first.find(tag).attrib == second.find(tag).attrib, (track.get('bone'), tag)
 else:
     print('OgreXMLConverter not on the PATH: skeleton frame check skipped')
 # The rooster that guards the flock pecks (Pick clip and a lunge of the head)
