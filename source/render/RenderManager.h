@@ -125,6 +125,10 @@ public:
     void moveWorldCoords(Ogre::Real x, Ogre::Real y);
     void entitySlapped();
 
+    //! \brief The server said that the keeper owning the heart or portal room is rich (keeperWealth event): the
+    //! gold dust shows over it while its tile is in view of the local keeper, tier 0 removes it
+    void noteKeeperWealth(const std::string& roomName, int seatId, int tier);
+
     static const Ogre::Real BLENDER_UNITS_PER_OGRE_UNIT;
     static const Ogre::Real KEEPER_HAND_WORLD_Z;
     static const Ogre::Real DRAGGABLE_NODE_HEIGHT;
@@ -525,6 +529,9 @@ private:
     Ogre::Real mTreasuryDustTimer = 0.0f;
     size_t mTreasuryDustCursor = 0;
     size_t mTreasuryPortalDustCursor = 0;
+    //! Rich keepers other than the local one: name of the heart or portal room -> seconds the news of the server
+    //! still counts. The server only tells the seats that see the tile, so this holds nothing about hidden buildings.
+    std::map<std::string, Ogre::Real> mForeignWealth;
     //! Set while a game is shown; the portal dust looks up the portals of the local keeper there
     GameMap* mGameMap = nullptr;
     Ogre::Real mTreasuryAmbientTimer = 0.0f;
@@ -701,6 +708,7 @@ private:
     void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
     void startTreasuryPortalDust();
     void startTreasuryHeartDust();
+    void startForeignWealthDust();
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
         int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);

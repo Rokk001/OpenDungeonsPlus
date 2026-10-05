@@ -219,6 +219,9 @@ void RoomPortal::doUpkeep()
     // Call the super class Room::doUpkeep() function to do any generic upkeep common to all rooms.
     Room::doUpkeep();
 
+    // Other keepers who see the portal learn that the owner is rich (dust over the portal)
+    announceKeeperWealth(getCentralTile());
+
     if(mSpawnCreatureCountdown > 0)
     {
         --mSpawnCreatureCountdown;

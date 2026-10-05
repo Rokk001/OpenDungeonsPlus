@@ -85,10 +85,10 @@ static bool oldClientProcess(int32_t cmd, ODPacket& packet, int& handled)
 int main()
 {
     // Round trip of every kind, with the sentinel behind it to prove nothing is left over or missing
-    for(int32_t type = 0; type <= 15; ++type)
+    for(int32_t type = 0; type <= 16; ++type)
     {
         // 10 to 14 are kept free for kinds of another branch
-        if((type > 9) && (type != 15))
+        if((type > 9) && (type != 15) && (type != 16))
             continue;
 
         CosmeticEvent event;

@@ -550,6 +550,9 @@ void RoomDungeonTemple::doUpkeep()
         return;
 
     checkHeartHealthTier();
+
+    // Other keepers who see the heart learn that the owner is rich (dust over the heart)
+    announceKeeperWealth(getHeartTile());
 }
 
 void RoomDungeonTemple::exportToStream(std::ostream& os) const
