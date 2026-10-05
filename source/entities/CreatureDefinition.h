@@ -172,8 +172,8 @@ public:
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
     //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
     inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
-    \brief Speed factor of the walk clips of this type on the client (1 = as authored), limited to 0.3 - 3.0
-    inline double               getWalkClipRate () const    { return std::max(0.3, std::min(3.0, mWalkClipRate)); }
+    //! \brief Speed factor of the walk clips of this type on the client (1 = as authored), limited to 0.2 - 8.0
+    inline double               getWalkClipRate () const    { return std::max(0.2, std::min(8.0, mWalkClipRate)); }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -279,7 +279,7 @@ private:
     //! \brief Optional (LowHealthWalkSpeedFactor): negative means the value of global.cfg is used
     double mLowHealthWalkSpeedFactor;
 
-    \brief Optional (WalkClipRate): speed factor of the Walk, WalkHurt and CarryWalk clips on the client, so that the
+    //! \brief Optional (WalkClipRate): speed factor of the Walk, WalkHurt and CarryWalk clips on the client, so that the
     //! feet of a creature type do not slide. Cosmetic: the move speed does not change. 1 when not set
     double mWalkClipRate;
 

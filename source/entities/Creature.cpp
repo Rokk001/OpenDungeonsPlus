@@ -2501,9 +2501,10 @@ double Creature::getClientPoseSpeedFactor() const
         factor *= getDragWorkerSpeedFactor();
 
     // The walk clips (Walk, WalkHurt, CarryWalk) of a type can run faster or slower than the move speed so that the
-    // feet do not slide (WalkClipRate). Only the shown clip, the move speed is not touched
+    // feet do not slide (WalkClipRate). Only the shown clip, the move speed is not touched. The rate is measured on the
+    // unscaled model: a bigger creature (see RenderManager::rrScaleCreature) takes longer strides, so the scale is divided out
     if((getAnimationStateName() == EntityAnimation::walk_anim) && (mDefinition != nullptr))
-        factor *= mDefinition->getWalkClipRate();
+        factor *= mDefinition->getWalkClipRate() / (1.0 + 0.02 * static_cast<double>(getLevel()));
     return factor;
 }
 

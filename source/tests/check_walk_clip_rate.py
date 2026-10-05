@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pure check (nothing compiled, nothing started): the optional key WalkClipRate of config/creatures.cfg is parsed,
-copied, streamed and dumped like LowHealthWalkSpeedFactor, limited to 0.3 - 3.0, applied only to the client clip speed
-of the walk state (Walk, WalkHurt, CarryWalk), never to the move speed, and set for the types whose feet slide."""
+copied, streamed and dumped like LowHealthWalkSpeedFactor, limited to 0.2 - 8.0, applied only to the client clip speed
+of the walk state (Walk, WalkHurt, CarryWalk), never to the move speed, divided by the creature scale, and set for every type that has feet on the ground."""
 import re
 from pathlib import Path
 
@@ -22,11 +22,13 @@ assert definition.index('os << c->mLowHealthWalkSpeedFactor;') < definition.inde
 assert definition.index('is >> c->mLowHealthWalkSpeedFactor;') < definition.index('is >> c->mWalkClipRate;')
 assert 'nextParam == "WalkClipRate"' in definition and 'creatureDef->mWalkClipRate = Helper::toDouble(nextParam);' in definition
 assert '"    WalkClipRate' in definition and 'mWalkClipRate != 1.0' in definition
-assert 'std::max(0.3, std::min(3.0, mWalkClipRate))' in definition_h and '#include <algorithm>' in definition_h
+assert 'std::max(0.2, std::min(8.0, mWalkClipRate))' in definition_h and '#include <algorithm>' in definition_h
 
 # Applied only to the client clip speed of the walk state, not to the move speed
 pose = creature[creature.index('double Creature::getClientPoseSpeedFactor'):creature.index('double Creature::getPhysicalDefense')]
 assert '(getAnimationStateName() == EntityAnimation::walk_anim)' in pose and 'getWalkClipRate()' in pose
+assert '(1.0 + 0.02 * static_cast<double>(getLevel()))' in pose
+assert '//! \\brief Speed factor of the walk clips' in definition_h and '//! \\brief Optional (WalkClipRate)' in definition_h
 assert 'getWalkClipRate' not in creature[:creature.index('double Creature::getClientPoseSpeedFactor')]
 assert 'getWalkClipRate' not in read('source/entities/MovableGameEntity.cpp')
 
@@ -40,8 +42,10 @@ for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S)
     if name and rate:
         rates[name.group(1)] = float(rate.group(1))
 for name, value in rates.items():
-    assert 0.6 <= value <= 1.6, (name, value)
-for name in ('Kobold', 'Rat', 'Spider', 'Adventurer', 'Monk', 'DarkElf', 'Elf', 'Champion', 'TentacleAlbine', 'TentacleGreen'):
-    assert name in rates, name
-assert len(rates) == 10, rates
+    assert 0.2 <= value <= 8.0, (name, value)
+no_feet = ('LavaSpawn', 'CaveHornet', 'Slime', 'Wyvern')
+names = [m.group(1) for m in re.finditer(r'\[Creature\].*?^\s*Name\s+(\S+)', creatures_cfg, re.S | re.M)]
+assert len(names) == 35, len(names)
+for name in names:
+    assert (name in rates) != (name in no_feet), name
 print('check_walk_clip_rate: ok')
