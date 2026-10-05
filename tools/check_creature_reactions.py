@@ -24,7 +24,9 @@ SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupSta
             "AmbientAfter", "SitAfter", "LieAfter", "LookRadius", "InteractionChance", "InteractionRadius",
             "InteractionPause", "TwoWeaponMode", "TwoWeaponArmStrength", "ArrowFollowsHand",
             "ArrowPullDistance", "ArrowDrawTime", "ArrowRetakeGap", "ArrowReloadTime", "ArrowHandOffset",
-            "CrossbowReloadTime", "CrossbowReloadJolt")
+            "CrossbowReloadTime", "CrossbowReloadJolt", "WeaponTrail", "WeaponTrailLife",
+            "WeaponTrailWidth", "WeaponTrailLength", "WeaponTrailColour", "WeaponTrailBrightness",
+            "WeaponTrailMinShare", "WeaponTrailMax")
 DRAG_EVENTS = ("DragWounded", "DraggedGroan", "PutWoundedDown")
 RELATION_EVENTS = ("RelationFriend", "RelationBestFriend", "RelationLovers", "RelationNemesis", "RelationHated",
                    "RelationBreakUp")

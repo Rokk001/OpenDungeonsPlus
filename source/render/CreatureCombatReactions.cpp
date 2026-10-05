@@ -28,6 +28,7 @@
 #include "render/CreatureWeaponVisuals.h"
 #include "render/RenderManager.h"
 #include "render/TwoWeaponStrike.h"
+#include "render/WeaponTrail.h"
 #include "utils/Helper.h"
 
 #include <OgreAnimationState.h>
@@ -545,6 +546,10 @@ void CreatureCombatReactions::noteHitEvent(CreatureReactions& reactions, Creatur
     CombatState& targetState = getState(target->getName(), reactions.mTime);
     targetState.mLastAttacked = reactions.mTime;
     scheduleHit(reactions, target, strong ? 1 : 0, !missile && hasShield(target), delay);
+
+    // A strong blow of a weapon leaves a short streak along the blade
+    if(strong && !missile)
+        WeaponTrail::noteStrongBlow(reactions, attacker, delay);
 }
 
 void CreatureCombatReactions::processAttacks(CreatureReactions& reactions)
@@ -992,6 +997,8 @@ void CreatureCombatReactions::tick(CreatureReactions& reactions)
 
 void CreatureCombatReactions::update(CreatureReactions& reactions, double timeSinceLastFrame)
 {
+    WeaponTrail::update(reactions, timeSinceLastFrame);
+
     if(!isActive(reactions))
     {
         // The weapons are shown again and the fallen ones removed when the reactions are reduced or off
@@ -1017,6 +1024,7 @@ void CreatureCombatReactions::update(CreatureReactions& reactions, double timeSi
 
 void CreatureCombatReactions::stopAll(CreatureReactions& reactions)
 {
+    WeaponTrail::stopAll();
     RenderManager* renderManager = RenderManager::getSingletonPtr();
     if(renderManager != nullptr)
     {

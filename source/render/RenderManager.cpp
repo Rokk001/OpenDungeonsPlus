@@ -53,6 +53,7 @@
 #include "render/LooseGoldMesh.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TwoWeaponStrike.h"
+#include "render/WeaponTrail.h"
 #include "render/TreasuryGoldMesh.h"
 #include "sound/SoundEffectsManager.h"
 #include "rooms/Room.h"
@@ -4955,6 +4956,8 @@ void RenderManager::clearChickenFeatherEffects()
 
 void RenderManager::clearCreatureCombatEffects(Creature* creature)
 {
+    WeaponTrail::removeCreature((creature != nullptr) ? creature->getName() : std::string());
+
     for(std::vector<CreatureCombatImpactEffect>::iterator it = mCreatureCombatImpactEffects.begin();
         it != mCreatureCombatImpactEffects.end();)
     {
