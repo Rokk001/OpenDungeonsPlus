@@ -3726,7 +3726,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 2	Spike3	3	1
-49	62	1
+47	54	1
 [/Trap]
 [Trap]
 10	Gas1	3	1
