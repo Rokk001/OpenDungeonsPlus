@@ -29,6 +29,7 @@
 #include <cmath>
 #include <map>
 #include <utility>
+#include <vector>
 
 namespace TreasuryGoldMesh
 {
@@ -54,6 +55,15 @@ const float TopCoinRadius = 0.06f;
 const float ScatterCoinRadius = 0.05f;
 const float SpillCoinRadius = 0.047f;
 const float GemSize = 0.04f;
+// The surface of a pile is a round fan: the middle, rings of PileSectors points out to the foot of the heap, and
+// PileSectors points on the border of the tile in the same directions. The rings only reach as far as the heap,
+// so a small heap gets all its detail and the flat floor around it a few large triangles; the border stays a
+// straight line between the corners, so neighbouring piles still meet.
+const int PileSectors = 16;
+const int FullRings = 2;
+const int ReducedRings = 1;
+// The first ring of the full fan lies at about a third of the foot radius (the heap is steepest there)
+const float RingSpread = 0.65f;
 
 Detail currentDetail = Detail::full;
 
@@ -104,9 +114,107 @@ float dentedHeight(const TreasuryGoldLayer::PileShape& shape, float u, float v, 
     return lowered < 0.004f ? 0.004f : lowered;
 }
 
+//! The round surface of a pile: the points (u, v, height) and the triangles (three indices each)
+struct RoundSurface
+{
+    std::vector<Ogre::Vector3> mPoint;
+    std::vector<int> mIndex;
+};
+
+//! Two triangles per sector between the points starting at inner and those starting at outer (counter-clockwise
+//! seen from above)
+void addBand(RoundSurface& surface, int inner, int outer)
+{
+    for(int sector = 0; sector < PileSectors; ++sector)
+    {
+        const int next = (sector + 1) % PileSectors;
+        surface.mIndex.push_back(inner + sector);
+        surface.mIndex.push_back(outer + sector);
+        surface.mIndex.push_back(outer + next);
+        surface.mIndex.push_back(inner + sector);
+        surface.mIndex.push_back(outer + next);
+        surface.mIndex.push_back(inner + next);
+    }
+}
+
+void buildRoundSurface(const TreasuryGoldLayer::PileShape& shape, int rings, RoundSurface& surface)
+{
+    surface.mPoint.clear();
+    surface.mIndex.clear();
+    surface.mPoint.push_back(Ogre::Vector3(0.5f, 0.5f, TreasuryGoldLayer::heightAt(shape, 0.5f, 0.5f)));
+    for(int ring = 1; ring <= rings; ++ring)
+    {
+        const float along = static_cast<float>(ring) / static_cast<float>(rings);
+        const float fraction = 1.0f - std::pow(1.0f - along, RingSpread);
+        for(int sector = 0; sector < PileSectors; ++sector)
+        {
+            const float angle = 6.2831853f * static_cast<float>(sector) / static_cast<float>(PileSectors);
+            const float dirU = std::cos(angle);
+            const float dirV = std::sin(angle);
+            const float reach = fraction * TreasuryGoldLayer::pileRadiusAt(shape, 0.5f + dirU, 0.5f + dirV);
+            const float u = 0.5f + dirU * reach;
+            const float v = 0.5f + dirV * reach;
+            surface.mPoint.push_back(Ogre::Vector3(u, v, TreasuryGoldLayer::heightAt(shape, u, v)));
+        }
+    }
+    for(int sector = 0; sector < PileSectors; ++sector)
+    {
+        // Where the direction of the sector leaves the tile
+        const float angle = 6.2831853f * static_cast<float>(sector) / static_cast<float>(PileSectors);
+        const float dirU = std::cos(angle);
+        const float dirV = std::sin(angle);
+        const float scale = 0.5f / std::max(std::fabs(dirU), std::fabs(dirV));
+        const float u = std::min(1.0f, std::max(0.0f, 0.5f + dirU * scale));
+        const float v = std::min(1.0f, std::max(0.0f, 0.5f + dirV * scale));
+        surface.mPoint.push_back(Ogre::Vector3(u, v, TreasuryGoldLayer::heightAt(shape, u, v)));
+    }
+
+    // The middle fan, the bands from ring to ring, and the band from the last ring to the tile border
+    for(int sector = 0; sector < PileSectors; ++sector)
+    {
+        surface.mIndex.push_back(0);
+        surface.mIndex.push_back(1 + sector);
+        surface.mIndex.push_back(1 + (sector + 1) % PileSectors);
+    }
+    for(int ring = 1; ring < rings; ++ring)
+        addBand(surface, 1 + (ring - 1) * PileSectors, 1 + ring * PileSectors);
+    addBand(surface, 1 + (rings - 1) * PileSectors, 1 + rings * PileSectors);
+}
+
+//! Height of the round surface at (u, v) as the triangles of the mesh have it: the coarse mesh cuts the exact
+//! heap a little, and the coins and gems have to lie on the mesh. Falls back to the exact height.
+float roundHeightAt(const TreasuryGoldLayer::PileShape& shape, const RoundSurface& surface, float u, float v)
+{
+    for(std::size_t i = 0; i + 2 < surface.mIndex.size(); i += 3)
+    {
+        const Ogre::Vector3& a = surface.mPoint[surface.mIndex[i]];
+        const Ogre::Vector3& b = surface.mPoint[surface.mIndex[i + 1]];
+        const Ogre::Vector3& c = surface.mPoint[surface.mIndex[i + 2]];
+        const float denominator = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y);
+        if(std::fabs(denominator) < 1.0e-9f)
+            continue;
+        const float weightA = ((b.y - c.y) * (u - c.x) + (c.x - b.x) * (v - c.y)) / denominator;
+        const float weightB = ((c.y - a.y) * (u - c.x) + (a.x - c.x) * (v - c.y)) / denominator;
+        const float weightC = 1.0f - weightA - weightB;
+        if(weightA >= -0.0001f && weightB >= -0.0001f && weightC >= -0.0001f)
+            return weightA * a.z + weightB * b.z + weightC * c.z;
+    }
+    return TreasuryGoldLayer::heightAt(shape, u, v);
+}
+
 Ogre::Vector3 pilePoint(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
 {
     return Ogre::Vector3(u - 0.5f, v - 0.5f, dentedHeight(shape, u, v, dent));
+}
+
+//! The point on the pile at (u, v) for a coin or gem: on the round mesh when there is one, else on the exact surface
+Ogre::Vector3 detailPoint(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent,
+    const RoundSurface* surface)
+{
+    Ogre::Vector3 point = pilePoint(shape, u, v, dent);
+    if(surface != nullptr)
+        point.z = roundHeightAt(shape, *surface, u, v);
+    return point;
 }
 
 //! Normal of the pile surface from the neighbouring heights
@@ -215,7 +323,8 @@ bool hasDetail(const TreasuryGoldLayer::PileShape& shape)
 
 //! Single coins on top of the heap, scattered gems, coins spilled at the open edges; for a tile without
 //! gold only a few coins on the bare floor
-void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent = nullptr)
+void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent = nullptr,
+    const RoundSurface* surface = nullptr)
 {
     const int seed = shape.mVariant * 17 + shape.mLevel;
     if(shape.mLevel == 0)
@@ -243,7 +352,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
         const float lean = 6.2831853f * TreasuryGoldLayer::hash01(seed, 7 * i + 5);
         up += Ogre::Vector3(std::cos(lean), std::sin(lean), 0.0f) * 0.35f;
         up.normalise();
-        Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
+        Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
         centre.z += 0.014f;
         addCoin(object, centre, up, TopCoinRadius, CoinSides, goldColour(u, v));
     }
@@ -255,7 +364,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
         const float turn = 6.2831853f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
         const float u = 0.5f + reach * std::cos(turn);
         const float v = 0.5f + reach * std::sin(turn);
-        Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
+        Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
         centre.z += 0.02f;
         addGem(object, centre, GemSize, gemColour(shape.mVariant, i));
     }
@@ -281,7 +390,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
                 v = 1.0f - across;
             else
                 u = 1.0f - across;
-            Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
+            Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
             centre.z += 0.01f;
             addCoin(object, centre, pileNormal(shape, u, v, dent), SpillCoinRadius, SpillSides, goldColour(u, v));
         }
@@ -289,11 +398,14 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
 }
 
 //! Fills the sections of a pile: the surface (none for a tile without gold, which only has scattered coins) and
-//! the coins and gems. With update the sections of a dynamic object are rewritten, the layout stays the same.
+//! the coins and gems. A pile without a dent is the round fan with that many rings, a pile with a dent (which
+//! needs points everywhere) a square grid with that many divisions. With update the sections of a dynamic object
+//! are rewritten, the layout stays the same.
 void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail,
     const Dent* dent, bool update)
 {
     int section = 0;
+    RoundSurface roundSurface;
     if(shape.mLevel > 0)
     {
         if(update)
@@ -302,34 +414,52 @@ void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& sh
             object->begin(PileMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
         ++section;
 
-        for(int j = 0; j <= divisions; ++j)
+        if(dent == nullptr)
         {
-            for(int i = 0; i <= divisions; ++i)
+            buildRoundSurface(shape, divisions, roundSurface);
+            for(std::size_t i = 0; i < roundSurface.mPoint.size(); ++i)
             {
-                const float u = static_cast<float>(i) / static_cast<float>(divisions);
-                const float v = static_cast<float>(j) / static_cast<float>(divisions);
-                object->position(pilePoint(shape, u, v, dent));
-                object->normal(pileNormal(shape, u, v, dent));
+                const float u = roundSurface.mPoint[i].x;
+                const float v = roundSurface.mPoint[i].y;
+                object->position(u - 0.5f, v - 0.5f, roundSurface.mPoint[i].z);
+                object->normal(pileNormal(shape, u, v));
                 object->textureCoord(u * TextureRepeat, (1.0f - v) * TextureRepeat);
             }
+            for(std::size_t i = 0; i < roundSurface.mIndex.size(); i += 3)
+                object->triangle(roundSurface.mIndex[i], roundSurface.mIndex[i + 1], roundSurface.mIndex[i + 2]);
+            object->end();
         }
-
-        const int row = divisions + 1;
-        for(int j = 0; j < divisions; ++j)
+        else
         {
-            for(int i = 0; i < divisions; ++i)
+            for(int j = 0; j <= divisions; ++j)
             {
-                const int a = j * row + i;
-                const int b = a + 1;
-                const int c = a + row + 1;
-                const int d = a + row;
-                // Counter-clockwise seen from above
-                object->triangle(a, b, c);
-                object->triangle(a, c, d);
+                for(int i = 0; i <= divisions; ++i)
+                {
+                    const float u = static_cast<float>(i) / static_cast<float>(divisions);
+                    const float v = static_cast<float>(j) / static_cast<float>(divisions);
+                    object->position(pilePoint(shape, u, v, dent));
+                    object->normal(pileNormal(shape, u, v, dent));
+                    object->textureCoord(u * TextureRepeat, (1.0f - v) * TextureRepeat);
+                }
             }
-        }
 
-        object->end();
+            const int row = divisions + 1;
+            for(int j = 0; j < divisions; ++j)
+            {
+                for(int i = 0; i < divisions; ++i)
+                {
+                    const int a = j * row + i;
+                    const int b = a + 1;
+                    const int c = a + row + 1;
+                    const int d = a + row;
+                    // Counter-clockwise seen from above
+                    object->triangle(a, b, c);
+                    object->triangle(a, c, d);
+                }
+            }
+
+            object->end();
+        }
     }
 
     if(withDetail && hasDetail(shape))
@@ -338,7 +468,7 @@ void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& sh
             object->beginUpdate(section);
         else
             object->begin(DetailMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-        addDetail(object, shape, dent);
+        addDetail(object, shape, dent, dent == nullptr && shape.mLevel > 0 ? &roundSurface : nullptr);
         object->end();
     }
 }
@@ -352,7 +482,7 @@ void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resource
     sceneManager->destroyManualObject(object);
 }
 
-// Divisions of the surface of a pile that is drawn with a dent (the same as the full mesh)
+// Divisions of the square grid of a pile that is drawn with a dent (it needs points all over the tile)
 const int DentDivisions = 12;
 }
 
@@ -404,7 +534,7 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
     const bool reduced = (currentDetail == Detail::reduced) || (farAway && currentDetail == Detail::full);
     const std::string name = reduced ? meshName + ReducedSuffix : meshName;
     if(!Ogre::MeshManager::getSingleton().resourceExists(name + ".mesh", "Graphics"))
-        buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 6 : 12, !reduced);
+        buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? ReducedRings : FullRings, !reduced);
 
     return name;
 }

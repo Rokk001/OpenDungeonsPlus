@@ -16,8 +16,8 @@ import sys
 REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 # Budget
-# A full pile carries up to 16 coins (6 triangles each), 4 gems (8) and 8 spilled coins (4) on top of its 6x6 surface
-# (72 triangles): 232 triangles. The limit was raised from 150 on purpose for the "sea of coins" of the plan. It
+# A full pile carries up to 16 coins (6 triangles each), 4 gems (8) and 8 spilled coins (4) on top of its round
+# surface (a fan of 16 sectors with 2 rings, 80 triangles): 240 triangles. The limit was raised from 150 on purpose for the "sea of coins" of the plan. It
 # stays cheap because the piles of a room are one static batch (two draw calls), the coins only exist at the detail
 # full, and piles far from the camera use the reduced mesh (8 triangles).
 MAX_TRIANGLES_PER_PILE = 250
@@ -62,8 +62,16 @@ def main():
     pile = read('source/render/TreasuryGoldMesh.cpp')
     loose = read('source/render/LooseGoldMesh.cpp')
 
-    full_divisions = int(re.search(r'reduced \? (\d+) : (\d+)', pile).group(2))
-    reduced_divisions = int(re.search(r'reduced \? (\d+) : (\d+)', pile).group(1))
+    sectors = constant(pile, 'PileSectors')
+    full_rings = constant(pile, 'FullRings')
+    reduced_rings = constant(pile, 'ReducedRings')
+    # The round surface: a fan of one triangle per sector in the middle, a band of two triangles per sector between
+    # two rings, and a band of two triangles per sector from the last ring to the tile border (the border points
+    # are as many as the sectors)
+    full_surface_tris = sectors * (1 + 2 * (full_rings - 1) + 2)
+    reduced_surface_tris = sectors * (1 + 2 * (reduced_rings - 1) + 2)
+    full_surface_verts = 1 + sectors * full_rings + sectors
+    reduced_surface_verts = 1 + sectors * reduced_rings + sectors
     heap_rings = constant(loose, 'HeapRings')
     heap_sectors = constant(loose, 'HeapSectors')
     sack_sectors = constant(loose, 'SackSectors')
@@ -83,8 +91,8 @@ def main():
     detail_verts = max_top_coins * (coin_sides + 1) + max_gems * 6 + max_spill_coins * (spill_sides + 1)
     scatter_tris = scatter_coins * coin_sides
 
-    pile_tris = {'full': 2 * full_divisions ** 2 + detail_tris, 'reduced': 2 * reduced_divisions ** 2}
-    pile_verts = {'full': (full_divisions + 1) ** 2 + detail_verts, 'reduced': (reduced_divisions + 1) ** 2}
+    pile_tris = {'full': full_surface_tris + detail_tris, 'reduced': reduced_surface_tris}
+    pile_verts = {'full': full_surface_verts + detail_verts, 'reduced': reduced_surface_verts}
     heap_tris = 2 * heap_rings * heap_sectors
     heap_verts = (heap_rings + 1) * heap_sectors
     sack_tris = 2 * (profile_count - 1) * sack_sectors + heap_tris
@@ -123,7 +131,7 @@ def main():
     print('pile (full)          %9d  %8d  (of that %d triangles of coins and gems in a second section)' % (
         pile_tris['full'], pile_verts['full'], detail_tris))
     print('                     = %d surface + %d top coins * %d + %d gems * %d + %d spilled coins * %d' % (
-        2 * full_divisions ** 2, max_top_coins, coin_sides, max_gems, gem_faces, max_spill_coins, spill_sides))
+        full_surface_tris, max_top_coins, coin_sides, max_gems, gem_faces, max_spill_coins, spill_sides))
     print('empty tile scatter   %9d' % scatter_tris)
     print('pile (reduced)       %9d  %8d' % (pile_tris['reduced'], pile_verts['reduced']))
     print('floor heap           %9d  %8d' % (heap_tris, heap_verts))
