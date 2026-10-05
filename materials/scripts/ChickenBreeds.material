@@ -31,7 +31,9 @@ material ChickenChick : RTSS/NormalMapping_MultiPass
             }
         }
     }
-}material ChickenRooster : RTSS/NormalMapping_MultiPass
+}
+
+material ChickenRooster : RTSS/NormalMapping_MultiPass
 {
     receive_shadows on
 
