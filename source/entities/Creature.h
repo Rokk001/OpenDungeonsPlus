@@ -577,6 +577,8 @@ public:
         return false;
     }
     void setJobCooldown(int val);
+    inline int getJobCooldown() const
+    { return mJobCooldown; }
 
     inline void foodEaten(double val)
     {

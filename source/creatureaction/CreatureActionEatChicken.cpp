@@ -204,10 +204,26 @@ bool CreatureActionEatChicken::canAcceptGift(const Creature& creature)
 
 bool CreatureActionEatChicken::handleGiftChicken(Creature& creature, ChickenEntity* chicken)
 {
+    // The sniffing is the wait before the meal (the job cooldown set by the constructor): the creature stands
+    // still, turned to the chicken, in its own pose. The pose ends with the wait.
+    const bool sniffing = (chicken != nullptr) && chicken->isEdible() && (creature.getJobCooldown() > 0);
+    if(sniffing)
+    {
+        Ogre::Vector3 direction = chicken->getPosition() - creature.getPosition();
+        direction.z = 0;
+        if(direction.squaredLength() > 0.0001)
+            direction.normalise();
+        else
+            direction = Ogre::Vector3::ZERO;
+        creature.setAnimationState(EntityAnimation::sniff_anim, true, direction);
+    }
+
     const bool edibleBefore = (chicken != nullptr) && chicken->isEdible();
     const double hungerBefore = creature.getHunger();
     const double hpBefore = creature.getHP();
     const bool result = handleEatChicken(creature, chicken);
+    if(sniffing && (creature.getJobCooldown() <= 0))
+        creature.setAnimationState(EntityAnimation::idle_anim, true);
 
     // The chicken was not reached yet (or the meal did not happen)
     if(!edibleBefore || chicken->isEdible())

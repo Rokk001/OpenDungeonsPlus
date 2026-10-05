@@ -102,4 +102,48 @@ assert 'virtual double getClientPoseSpeedFactor() const override;' in creature_h
 assert movable.count('getClientPoseSpeedFactor()') == 1
 assert 'getTiredWalkSpeedFactor' not in render
 
+# Batch 13a: a chicken outside a hatchery walks back to one (dies only without a reachable one)
+for key in ('HatcheryReturnPathTiles', 'HatcheryReturnSearchTiles', 'HatcheryReturnRetryTurns', 'HatcheryReturnMaxTurns'):
+    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+    assert re.search(r'^    ' + key + r'\t\d+', rooms_cfg, re.M), key + ' not set'
+    assert re.search(r'getRoomConfigDoubleOrDefault\(\s*"' + key + '"', chicken), key + ' not read'
+assert 'const bool henMayReturn = (mKind == ChickenKind::hen) && (mGiftTurns == 0) && !mLockedEat;' in upkeep
+assert 'henMayReturn) && (currentHatchery == nullptr) && !mIsSlapped && runBackToHatchery(tile)' in upkeep
+# the walk back comes before the death rule, so only a chicken without a way dies (30 turn rule unchanged)
+assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE))')
+assert 'const int32_t NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE = 30;' in chicken
+# the gift window and a chicken somebody is after are not interrupted; the offer goes first
+assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('offerGift(*tile)')
+back = function_body(chicken, 'bool ChickenEntity::runBackToHatchery(')
+assert 'setWalkPath(' in back and 'getRoomsByTypeAndSeat(RoomType::hatchery, seat)' in back
+assert 'getRoomsByType(RoomType::hatchery)' in back and 'seat = tile->getSeat();' in back
+assert 'failReturn();' in back and 'mReturnRetryTurns' in chicken and 'mReturnTurns' in back
+assert 'getIsOnServerMap' in chicken and 'setWalkPath' not in drop
+# arrival: the hatchery counts the chickens on its tiles, so there is no separate registration (no double count)
+assert 'mHomeSeat = currentHatchery->getSeat();' in upkeep
+hatchery = read('source/rooms/RoomHatchery.cpp')
+assert 'tile->fillWithEntities(entities, SelectionEntityWanted::chicken' in hatchery
+# nothing saved or sent for it
+assert 'mReturnTurns' not in export + importBody + packet and 'mReturnRetryTurns' not in export + importBody + packet
+
+# Batch 13a: own sniffing pose, set by the server action, shown once on the client
+movable_h = read('source/entities/MovableGameEntity.h')
+assert 'sniff_anim = "Sniff"' in movable_h
+sniff_meal = function_body(action, 'bool CreatureActionEatChicken::handleGiftChicken(')
+assert 'creature.getJobCooldown() > 0' in sniff_meal and 'EntityAnimation::sniff_anim' in sniff_meal
+assert sniff_meal.index('EntityAnimation::sniff_anim') < sniff_meal.index('handleEatChicken(creature, chicken)')
+assert 'inline int getJobCooldown() const' in creature_h
+assert 'Gift' not in eat and 'sniff' not in eat       # the hatchery meal stays untouched
+assert 'if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))' in render
+reactions = read('source/render/CreatureReactions.cpp')
+assert 'clip == EntityAnimation::sniff_anim' in reactions and '"ChickenSniff"' in reactions
+cfg_reactions = read('config/creatureReactions.cfg')
+sniff_event = cfg_reactions[cfg_reactions.index('Name        ChickenSniff'):cfg_reactions.index('Name        ChickenGift')]
+assert 'Name    SniffAndShrug' in sniff_event
+gift_event = cfg_reactions[cfg_reactions.index('Name        ChickenGift'):]
+gift_event = gift_event[:gift_event.index('[/Event]')]
+assert 'SniffAndShrug' not in gift_event               # the sniffing is shown once, not again after the meal
+assert cfg_reactions.count('Name    SniffAndShrug') == 1
+assert 'cosmetic' not in sniff_meal.lower()            # no new network message: the clip name is the existing animation message
+
 print('check_gift_chicken_tired_walk: ok')

@@ -1523,6 +1523,12 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         noteDigging(creature);
     }
+    else if(clip == EntityAnimation::sniff_anim)
+    {
+        // The server action state of a creature that sniffs at a chicken the keeper gave it. This is the only
+        // place that shows the sniffing: the reaction after the meal (ChickenGift) has no sniffing of its own
+        queueReaction(creature, "ChickenSniff", DONE_WAIT_MAX, 0.2);
+    }
     else if((clip == "EatChicken") && (getRoomName(creature) == "Hatchery"))
     {
         // The meal in the hatchery is over when the animation is: then the creature shows how it liked it

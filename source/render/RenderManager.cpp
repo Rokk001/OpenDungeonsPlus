@@ -3782,6 +3782,9 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
 
     if(dropCreature != nullptr)
         clearCreatureDecay(dropCreature);
+    // The sniffing of a creature has no clip of its own: it stands (idle clip), the reaction shows the sniffing
+    if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))
+        anim = EntityAnimation::idle_anim;
     if(anim == EntityAnimation::rot_anim && dropCreature != nullptr)
     {
         // Transport must end in a corpse pose, never replay a standing idle.
