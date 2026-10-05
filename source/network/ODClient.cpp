@@ -1408,6 +1408,12 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::wallTorches:
+        {
+            gameMap->updateWallTorchesFromPacket(packetReceived);
+            break;
+        }
+
         case ServerNotificationType::creatureChickenFeeding:
         {
             std::string creatureName;

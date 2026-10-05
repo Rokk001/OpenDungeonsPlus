@@ -187,7 +187,14 @@ enum class ServerNotificationType
     //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
     //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
     //! Appended last so that no existing numeric value changes.
-    chickenKindChanged
+    chickenKindChanged,
+    //! The wall torches the receiving player may see (see GameMap::getWallTorches): + bool full (true: the
+    //! list replaces all torches), uint32_t number of removed torches, then per torch int32_t x, int32_t y,
+    //! int32_t direction; uint32_t number of added torches, then per torch int32_t x, int32_t y,
+    //! int32_t direction (WallTorches::getDirX/getDirY: where the open tile is, seen from the wall),
+    //! int32_t seatId of the wall owner. Sent once when a client joins or loads (the whole list) and when
+    //! the torches or the tiles the player sees change. Appended last so that no existing numeric value changes.
+    wallTorches
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
