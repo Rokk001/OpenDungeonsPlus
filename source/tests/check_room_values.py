@@ -12,7 +12,7 @@ def read(path):
 
 
 rooms = read("config/rooms.cfg")
-values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", rooms, re.M))
+values = dict(re.findall(r"^\s+(\w+)\s+(-?[\d.]+)\s*$", rooms, re.M))
 expected = {
     "TreasuryCostPerTile": "72", "DormitoryCostPerTile": "92", "WorkshopCostPerTile": "215",
     "CryptCostPerTile": "620", "TortureCostPerTile": "470",
@@ -53,4 +53,18 @@ for cls, line in (("Troll", "RoomTiles\tWorkshop\t9\t0"), ("DarkElf", "RoomTiles
     block = block[:block.index("[/SpawnCondition]")]
     assert line in block, f"{cls} spawn condition"
 assert "RoomType::guardRoom" in read("source/ai/KeeperAI.cpp")
+# Every hatchery key the code reads is in the config with a value and a documentation line in the file header, and
+# the default of the client look numbers is the value of the config
+hatchery_code = read("source/rooms/RoomHatchery.cpp") + read("source/render/RenderManagerChickens.cpp") +     read("source/entities/ChickenEntity.cpp")
+used = set(re.findall(r'"(Hatchery\w+)"', hatchery_code))
+used -= {"HatcheryWaits", "HatcheryDay", "HatcheryLays"}  # tags of the save game, not config keys
+assert len(used) > 100, len(used)
+documented = set(re.findall(r"^# (Hatchery\w+)\s", rooms, re.M))
+for key in sorted(used):
+    assert key in values, f"{key} is read by the code but has no value in config/rooms.cfg"
+    assert key in documented, f"{key} is not documented in the header of config/rooms.cfg"
+look_defaults = re.findall(r'configValue\("(HatcheryLook\w+)", (-?[\d.]+)f\)', read("source/render/RenderManagerChickens.cpp"))
+assert len(look_defaults) > 80, len(look_defaults)
+for key, default in look_defaults:
+    assert abs(float(values[key]) - float(default)) < 1e-6, f"{key}: config {values[key]}, default in the code {default}"
 print("CHECKS OK")

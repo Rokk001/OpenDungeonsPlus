@@ -405,11 +405,11 @@ void RoomHatchery::updateFlock(const std::vector<ChickenEntity*>& hens, bool cal
                 continue;
 
             threatened = true;
-            for(uint32_t attempt = 0; attempt < 4; ++attempt)
+            for(uint32_t attempt = 0; attempt < mRoosterSettings.mScatterAttempts; ++attempt)
             {
                 Tile* away = mCoveredTiles[Random::Uint(0, mCoveredTiles.size() - 1)];
                 const Ogre::Vector2 spot(away->getX(), away->getY());
-                if(spot.distance(creaturePos) < radius + 1.0)
+                if(spot.distance(creaturePos) < radius + mRoosterSettings.mScatterMargin)
                     continue;
 
                 if(hen->scatterTo(spot, scatterTurns))
@@ -490,6 +490,7 @@ void RoomHatchery::doUpkeep()
         return;
 
     const HatcheryCycleSettings settings = getCycleSettings();
+    mRoosterSettings = getRoosterSettings();
 
     // Sort the animals of the hatchery by kind. Eaten or dying ones do not count.
     std::vector<ChickenEntity*> hens;
@@ -624,8 +625,8 @@ void RoomHatchery::doUpkeep()
     updateFight(roosters, settings, counts);
 
     // Behaviour for the eyes: sleeping at night, sitting calmly in a full hatchery, the chick line, the rooster
-    const RoosterSettings roosterSettings = getRoosterSettings();
-    bool night = HatcheryRooster::isNight(getGameMap()->getTurnNumber(), roosterSettings);
+    const RoosterSettings& roosterSettings = mRoosterSettings;
+    bool night =HatcheryRooster::isNight(getGameMap()->getTurnNumber(), roosterSettings);
     bool full = (capacity > 0) && !HatcheryCycle::canLay(counts, capacity);
     for(ChickenEntity* hen : hens)
         hen->setCalm(night || full);
@@ -633,7 +634,7 @@ void RoomHatchery::doUpkeep()
         chick->setCalm(night);
     updateFlock(hens, night || full);
     // Now and then a chick peeps (at most one peep per turn and hatchery)
-    if(!night && !chicks.empty() && (Random::Int(1, 12) == 1))
+    if(!night && !chicks.empty() && (Random::Uint(1, std::max<uint32_t>(1, roosterSettings.mChickPeepChance)) == 1))
         fireAnimalSound(*chicks[Random::Uint(0, chicks.size() - 1)], "Hatchery/Peep");
     ChickenEntity* rooster = roosters.empty() ? nullptr : roosters.front();
     updateChickLine(hens, chicks, rooster, night);
@@ -653,7 +654,7 @@ void RoomHatchery::doUpkeep()
     for(ChickenEntity* hen : hens)
     {
         if((caller != nullptr) && !hen->isBusy() && !night)
-            hen->setFollowTarget(Ogre::Vector2(caller->getPosition().x, caller->getPosition().y), 0.4);
+            hen->setFollowTarget(Ogre::Vector2(caller->getPosition().x, caller->getPosition().y), roosterSettings.mCallFollowGap);
         else
             hen->clearFollowTarget();
     }
@@ -744,9 +745,9 @@ void RoomHatchery::updateFight(std::vector<ChickenEntity*>& roosters, const Hatc
         else
         {
             if(!first->isMoving())
-                first->walkToward(secondPos, reach * 0.5, ChickenPose::chase);
+                first->walkToward(secondPos, reach * mRoosterSettings.mFightStandFactor, ChickenPose::chase);
             if(!second->isMoving())
-                second->walkToward(firstPos, reach * 0.5, ChickenPose::chase);
+                second->walkToward(firstPos, reach * mRoosterSettings.mFightStandFactor, ChickenPose::chase);
             return;
         }
     }
@@ -827,6 +828,22 @@ RoosterSettings RoomHatchery::getRoosterSettings() const
     settings.mCallTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryRoosterCallTurns", settings.mCallTurns));
     settings.mDayTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryDayTurns", settings.mDayTurns));
     settings.mNightPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryNightPercent", settings.mNightPercent));
+    settings.mCrowTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryRoosterCrowTurns", settings.mCrowTurns));
+    settings.mRoostDivisor = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryRoosterRoostDivisor", settings.mRoostDivisor));
+    settings.mGuardFar = config.getRoomConfigDoubleOrDefault("HatcheryRoosterGuardFar", settings.mGuardFar);
+    settings.mGuardNear = config.getRoomConfigDoubleOrDefault("HatcheryRoosterGuardNear", settings.mGuardNear);
+    settings.mGuardApproachGap = config.getRoomConfigDoubleOrDefault("HatcheryRoosterGuardApproachGap", settings.mGuardApproachGap);
+    settings.mCatchDistance = config.getRoomConfigDoubleOrDefault("HatcheryRoosterCatchDistance", settings.mCatchDistance);
+    settings.mWalkGap = config.getRoomConfigDoubleOrDefault("HatcheryRoosterWalkGap", settings.mWalkGap);
+    settings.mHopDistance = config.getRoomConfigDoubleOrDefault("HatcheryRoosterHopDistance", settings.mHopDistance);
+    settings.mCallFollowGap = config.getRoomConfigDoubleOrDefault("HatcheryCallFollowGap", settings.mCallFollowGap);
+    settings.mSnuggleGap = config.getRoomConfigDoubleOrDefault("HatcheryChickSnuggleGap", settings.mSnuggleGap);
+    settings.mLeadScratchChance = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryRoosterLeadScratchChance", settings.mLeadScratchChance));
+    settings.mCallScratchChance = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryRoosterCallScratchChance", settings.mCallScratchChance));
+    settings.mChickPeepChance = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryChickPeepChance", settings.mChickPeepChance));
+    settings.mScatterAttempts = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryScatterAttempts", settings.mScatterAttempts));
+    settings.mScatterMargin = config.getRoomConfigDoubleOrDefault("HatcheryScatterMargin", settings.mScatterMargin);
+    settings.mFightStandFactor = config.getRoomConfigDoubleOrDefault("HatcheryFightStandFactor", settings.mFightStandFactor);
     return settings;
 }
 
@@ -920,7 +937,7 @@ void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, 
     }
 
     const Ogre::Vector2 spot = getPerchSpot(*coopTile);
-    if(hopFromFar || (position.distance(spot) < 0.6f))
+    if(hopFromFar || (position.distance(spot) < mRoosterSettings.mHopDistance))
     {
         double roofHeight = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopRoofHeight",
             HatcheryCoopHouse::roofPerchHeight);
@@ -929,7 +946,7 @@ void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, 
         return;
     }
 
-    if(!rooster->isMoving() && !rooster->walkToward(spot, 0.3, ChickenPose::strut))
+    if(!rooster->isMoving() && !rooster->walkToward(spot, mRoosterSettings.mWalkGap, ChickenPose::strut))
     {
         // No way to the coop: forget about the roof
         rooster->setMood(RoosterMood::strut, 0);
@@ -980,12 +997,12 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
             break;
         case RoosterMood::lead:
             // Scratches the ground now and then, the chicks come along
-            if(!rooster->isMoving() && (Random::Int(1, 3) == 1))
+            if(!rooster->isMoving() && (Random::Uint(1, std::max<uint32_t>(1, settings.mLeadScratchChance)) == 1))
                 rooster->playPose(ChickenPose::lead, 2);
             break;
         case RoosterMood::call:
             // Scratches the ground while the hens and chicks gather around him
-            if(!rooster->isMoving() && (Random::Int(1, 2) == 1))
+            if(!rooster->isMoving() && (Random::Uint(1, std::max<uint32_t>(1, settings.mCallScratchChance)) == 1))
                 rooster->playPose(ChickenPose::lead, 2);
             break;
         case RoosterMood::chase:
@@ -1012,7 +1029,7 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
             }
 
             // Caught: he jumps on her for a moment, feathers fly and she cackles
-            if(nearestDistance < 0.55f * 0.55f)
+            if(nearestDistance < static_cast<float>(settings.mCatchDistance * settings.mCatchDistance))
             {
                 rooster->playPose(ChickenPose::mount, 2);
                 target->playPose(ChickenPose::cackle, 3);
@@ -1022,7 +1039,7 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
                 break;
             }
 
-            if(!rooster->walkToward(Ogre::Vector2(target->getPosition().x, target->getPosition().y), 0.3, ChickenPose::chase))
+            if(!rooster->walkToward(Ogre::Vector2(target->getPosition().x, target->getPosition().y), settings.mWalkGap, ChickenPose::chase))
             {
                 rooster->setMood(RoosterMood::strut, 0);
                 rooster->setRoomDriven(false);
@@ -1033,12 +1050,12 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
         {
             // Runs to the creature, puffs up and runs off when it gets too close
             double distance = position.distance(threat);
-            if(distance > 2.2)
+            if(distance > settings.mGuardFar)
             {
                 if(!rooster->isMoving())
-                    rooster->walkToward(threat, 1.8, ChickenPose::strut);
+                    rooster->walkToward(threat, settings.mGuardApproachGap, ChickenPose::strut);
             }
-            else if(distance > 0.9)
+            else if(distance > settings.mGuardNear)
             {
                 if(!rooster->isMoving())
                     rooster->setAnimationState(ChickenPose::guard, true);
@@ -1128,7 +1145,7 @@ void RoomHatchery::updateChickLine(const std::vector<ChickenEntity*>& hens, cons
     if(night)
     {
         for(ChickenEntity* chick : chicks)
-            chick->setFollowTarget(leaderPos, 0.1);
+            chick->setFollowTarget(leaderPos, mRoosterSettings.mSnuggleGap);
         return;
     }
 
