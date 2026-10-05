@@ -76,10 +76,22 @@ core = effects(("config", "roomAmbienceCoreObjects.cfg"))
 need(any(e["Name"] == ["HeartFlare"] and e.get("When") == ["Occupied"] for e in core), "HeartFlare must stay as it was")
 
 # --- casino
-need('"CasinoWin"' in ambience_cpp and '"CasinoLoss"' in ambience_cpp, "CasinoWin / CasinoLoss are not raised")
-need("mAttacking" in ambience_h and "EntityAnimation::attack_anim" in ambience_cpp, "the winner is not found by its animation")
-need("isAlliedSeat" in ambience_cpp[ambience_cpp.index("CASINO_OPPONENT_RADIUS"):],
-     "a casino game needs an allied loser (a fight is no game)")
+# The server tells the result (a small cosmetic event); the clients show the win and the loss only on it
+client_cpp = read("source", "network", "ODClient.cpp")
+casino_cpp = read("source", "rooms", "RoomCasino.cpp")
+event_h = read("source", "network", "CosmeticEvent.h")
+need("casinoResult = 15" in event_h, "the casino result is not a cosmetic event")
+need("sendGameResult(*p.second.mCreature1.mCreature, *p.second.mCreature2.mCreature)" in casino_cpp and
+     "sendGameResult(*p.second.mCreature2.mCreature, *p.second.mCreature1.mCreature)" in casino_cpp,
+     "the casino does not send the result for both winners")
+send = casino_cpp[casino_cpp.index("void RoomCasino::sendGameResult"):]
+need("CosmeticEventType::casinoResult" in send and "sendCosmeticEvent" in send and "getSeatsWithVision()" in send,
+     "the result is not sent to the keepers who see the winner")
+need('event.is(CosmeticEventType::casinoResult)' in client_cpp and '"CasinoWin"' in client_cpp and '"CasinoLoss"' in client_cpp,
+     "the client does not raise CasinoWin / CasinoLoss on the cosmetic event")
+need('"CasinoWin"' not in ambience_cpp and '"CasinoLoss"' not in ambience_cpp and "CASINO_OPPONENT_RADIUS" not in ambience_cpp,
+     "the casino is still detected by an animation")
+need("mAttacking" not in ambience_h and "attack_anim" not in ambience_cpp, "the attack animation is still read for the casino")
 for event in ("CasinoWin", "CasinoLoss"):
     mine = [e for e in fx if e.get("Event") == [event]]
     need(any(e.get("Kind") == ["Particle"] for e in mine), "%s has no particle effect" % event)

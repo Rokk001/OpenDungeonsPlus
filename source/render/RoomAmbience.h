@@ -446,11 +446,11 @@ private:
         Ogre::Vector3 mPosition;
         uint32_t mGeneration;
     };
-    //! What was seen of a creature at the last scan (dormitory wake-up, enemy in a guard room, healing, casino game)
+    //! What was seen of a creature at the last scan (dormitory wake-up, enemy in a guard room, healing)
     struct CreatureSnapshot
     {
         CreatureSnapshot() :
-            mHp(0.0), mSleeping(false), mPrisoner(false), mSeat(nullptr), mAttacking(false), mEnemyInGuardRoom(false),
+            mHp(0.0), mSleeping(false), mPrisoner(false), mSeat(nullptr), mEnemyInGuardRoom(false),
             mLastHealed(-100.0), mGeneration(0)
         {}
 
@@ -460,8 +460,6 @@ private:
         bool mPrisoner;
         //! The seat the creature belonged to (a change in a torture chamber is a conversion)
         Seat* mSeat;
-        //! Plays the attack animation (the winner of a casino game)
-        bool mAttacking;
         bool mEnemyInGuardRoom;
         double mLastHealed;
         uint32_t mGeneration;

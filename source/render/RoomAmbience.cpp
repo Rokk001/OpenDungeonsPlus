@@ -1107,17 +1107,14 @@ void RoomAmbience::scanCreatureEvents()
     struct Change
     {
         Change() :
-            mPosition(Ogre::Vector3::ZERO), mCreature(nullptr)
+            mPosition(Ogre::Vector3::ZERO)
         {}
 
         std::string mEvent;
         Ogre::Vector3 mPosition;
         std::string mVisual;
-        Creature* mCreature;
     };
 
-    // The loser of a casino game stands this close (world units) to the winner
-    const double CASINO_OPPONENT_RADIUS = 3.0;
     // A creature has to be healed by at least this much between two scans to count
     const double MIN_HEAL = 0.5;
     // Seconds between two healing effects of the same creature
@@ -1136,13 +1133,9 @@ void RoomAmbience::scanCreatureEvents()
             visual = Tile::tileVisualToString(tile->getTileVisual());
 
         bool sleeping = false;
-        bool attacking = false;
         Ogre::AnimationState* animationState = creature->getAnimationState();
         if(animationState != nullptr)
-        {
             sleeping = (animationState->getAnimationName() == EntityAnimation::sleep_anim);
-            attacking = (animationState->getAnimationName() == EntityAnimation::attack_anim);
-        }
 
         bool enemyInGuardRoom = false;
         if((tile != nullptr) && (tile->getTileVisual() == TileVisual::guardRoom) && (tile->getSeat() != nullptr) &&
@@ -1162,7 +1155,6 @@ void RoomAmbience::scanCreatureEvents()
             snapshot.mPrisoner = prisoner;
             snapshot.mSeat = creatureSeat;
             snapshot.mSleeping = sleeping;
-            snapshot.mAttacking = attacking;
             snapshot.mEnemyInGuardRoom = enemyInGuardRoom;
             snapshot.mGeneration = mGeneration;
             mKnownCreatures.insert(std::make_pair(key, snapshot));
@@ -1176,14 +1168,6 @@ void RoomAmbience::scanCreatureEvents()
             Change change;
             change.mPosition = creature->getPosition();
             change.mVisual = visual;
-            change.mCreature = creature;
-            if(attacking && !snapshot.mAttacking && (visual == "casinoRoom"))
-            {
-                // The server lets the winner of a game attack and the loser stand; found below with the loser
-                change.mEvent = "CasinoWin";
-                changes.push_back(change);
-            }
-
             if(snapshot.mSleeping && !sleeping && (visual == "dormitoryRoom"))
             {
                 change.mEvent = "CreatureWoke";
@@ -1223,7 +1207,6 @@ void RoomAmbience::scanCreatureEvents()
         snapshot.mPrisoner = prisoner;
         snapshot.mSeat = creatureSeat;
         snapshot.mSleeping = sleeping;
-        snapshot.mAttacking = attacking;
         snapshot.mEnemyInGuardRoom = enemyInGuardRoom;
     }
 
@@ -1234,54 +1217,6 @@ void RoomAmbience::scanCreatureEvents()
         else
             mKnownCreatures.erase(it++);
     }
-
-    // A casino game needs a loser close to the winner in the casino (a fight there is no game); the loser groans
-    std::vector<Change> losses;
-    for(std::vector<Change>::iterator it = changes.begin(); it != changes.end();)
-    {
-        if(it->mEvent != "CasinoWin")
-        {
-            ++it;
-            continue;
-        }
-
-        Creature* loser = nullptr;
-        double nearest = CASINO_OPPONENT_RADIUS;
-        for(Creature* other : mGameMap->getCreatures())
-        {
-            if((other == it->mCreature) || !other->getIsOnMap() || (other->getSeat() == nullptr) ||
-               (it->mCreature->getSeat() == nullptr) || !other->getSeat()->isAlliedSeat(it->mCreature->getSeat()))
-            {
-                continue;
-            }
-
-            Tile* otherTile = other->getPositionTile();
-            if((otherTile == nullptr) || (otherTile->getTileVisual() != TileVisual::casinoRoom))
-                continue;
-
-            double distance = (other->getPosition() - it->mPosition).length();
-            if(distance <= nearest)
-            {
-                nearest = distance;
-                loser = other;
-            }
-        }
-
-        if(loser == nullptr)
-        {
-            it = changes.erase(it);
-            continue;
-        }
-
-        Change loss;
-        loss.mEvent = "CasinoLoss";
-        loss.mPosition = loser->getPosition();
-        loss.mVisual = it->mVisual;
-        loss.mCreature = loser;
-        losses.push_back(loss);
-        ++it;
-    }
-    changes.insert(changes.end(), losses.begin(), losses.end());
 
     // Many changes at once are a map being loaded or revealed, not creatures acting
     bool settled = (mClock > 3.0) && mCreaturesInitialized && (changes.size() <= MAX_EVENTS_PER_SCAN);
