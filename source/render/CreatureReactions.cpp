@@ -798,8 +798,11 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
 
     if(mMode == Mode::full)
     {
-        // Tier C / B: a clip, only while the creature stands still (it must not slide while posing)
-        if(!creature->isMoving() && !event.mWhileWorking && !event.mDying && startClip(reaction, creature, variant))
+        // Tier C / B: a clip, only while the creature stands still (it must not slide while posing).
+        // An event that decorates the work animation plays a clip only when its variant names one: the clip is laid
+        // over the running work clip (which keeps its time with weight 0) and the work clip is shown again afterwards.
+        bool clipAllowed = !event.mDying && (!event.mWhileWorking || !variant.mClip.empty());
+        if(!creature->isMoving() && clipAllowed && startClip(reaction, creature, variant))
             shown = true;
 
         for(const ReactionEffect& effect : variant.mEffects)
