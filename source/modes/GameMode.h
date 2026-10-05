@@ -429,6 +429,8 @@ private:
     bool clickMap(const CEGUI::EventArgs&);
     bool zoomMiniMap(const CEGUI::EventArgs&);
     bool clickHeartBadge(const CEGUI::EventArgs&);
+    //! \brief Sets the tooltip of the time limit display: a script countdown or a time limit
+    void updateTimeLimitTooltip(bool isCountdown);
     void updateMapDetail();
     void focusRoom(RoomType type);
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
