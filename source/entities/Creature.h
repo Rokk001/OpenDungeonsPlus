@@ -886,6 +886,14 @@ public:
     //! Uses the health stage that server and clients both know, so both move it at the same speed
     double getLowHealthWalkFactor() const;
 
+    //! \brief True if a creature with this health stage counts as badly hurt for walking (the stage test of
+    //! getLowHealthWalkFactor, without the factor). The client shows the clip WalkHurt for it
+    static bool isLowHealthWalkStage(uint32_t healthStage);
+
+    //! \brief True if this creature is badly hurt for walking (see isLowHealthWalkStage)
+    bool isLowHealthWalking() const
+    { return isLowHealthWalkStage(mOverlayHealthValue); }
+
     bool isHungry() const;
 
     void resetKoTurns();

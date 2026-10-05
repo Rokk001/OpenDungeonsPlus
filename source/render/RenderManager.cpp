@@ -4260,6 +4260,13 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     {
         anim = EntityAnimation::carry_walk_anim;
     }
+    // A badly hurt creature limps when the skeleton has the clip. Carrying wins (CarryWalk is chosen above).
+    // Same clip length and key times as Walk and the same entity state, so the speed factors stay as they are
+    else if((dropCreature != nullptr) && (anim == EntityAnimation::walk_anim) && dropCreature->isLowHealthWalking() &&
+       objectEntity->getSkeleton()->hasAnimation(EntityAnimation::walk_hurt_anim))
+    {
+        anim = EntityAnimation::walk_hurt_anim;
+    }
 
     // Handle the case where this entity does not have the requested animation.
     while (!objectEntity->getSkeleton()->hasAnimation(anim))

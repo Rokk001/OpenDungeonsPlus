@@ -826,8 +826,12 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
         Ogre::SceneNode* node = creature->getEntityNode();
         // Turning and squashing look wrong on a creature that walks
         bool standingMotion = isStandingMotion(variant.mMotion.mType);
+        // The hurt walk of a skeleton with the clip WalkHurt already limps: no second limp (shake or hop) on top
+        Ogre::AnimationState* walkState = creature->getAnimationState();
+        bool playsHurtWalk = (event.mName == "HurtWalk") && (walkState != nullptr) &&
+            (walkState->getAnimationName() == EntityAnimation::walk_hurt_anim);
         if((variant.mMotion.mType != ReactionMotion::Type::none) && (variant.mMotion.mDuration > 0.0) &&
-           (node != nullptr) && !(standingMotion && creature->isMoving()))
+           (node != nullptr) && !(standingMotion && creature->isMoving()) && !playsHurtWalk)
         {
             reaction.mMotion = variant.mMotion;
             reaction.mMotionLastPosition = node->getPosition();

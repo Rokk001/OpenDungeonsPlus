@@ -38,8 +38,9 @@ assert 'std::max(0.2, std::min(1.0, mLowHealthWalkSpeedFactor))' in config_h
 assert 'std::max(1.0, std::min(100.0, mLowHealthWalkThresholdPercent))' in config_h
 
 # One rule on the health stage (known on server and clients, no new message)
-rule = function_body(creature, 'double Creature::getLowHealthWalkFactor() const')
-assert 'mOverlayHealthValue' in rule and 'getLowHealthWalkThresholdPercent()' in rule
+rule = (function_body(creature, 'bool Creature::isLowHealthWalkStage(uint32_t healthStage)') + ' ' +
+        function_body(creature, 'double Creature::getLowHealthWalkFactor() const'))
+assert 'mOverlayHealthValue' in rule or 'isLowHealthWalking()' in rule and 'getLowHealthWalkThresholdPercent()' in rule
 assert 'getLowHealthWalkSpeedFactor()' in rule and 'getIsOnServerMap' not in rule
 assert 'double getLowHealthWalkFactor() const;' in creature_h
 assert 'NB_OVERLAY_HEALTH_VALUES = 8' in creature
