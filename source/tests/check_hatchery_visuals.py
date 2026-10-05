@@ -170,4 +170,6 @@ if shutil.which('OgreXMLConverter') is not None:
     assert max(abs(v) for v in frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'y')) < 0.002
 else:
     print('OgreXMLConverter not on the PATH: skeleton frame check skipped')
+# The rooster that guards the flock pecks (Pick clip and a lunge of the head)
+assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'HatcheryLookGuardPeckSpeed' in config
 print('hatchery coop and hen clip checks passed')

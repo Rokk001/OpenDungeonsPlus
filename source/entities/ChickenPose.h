@@ -85,6 +85,9 @@ namespace ChickenPose
         // Two roosters fighting peck at each other, the wings and the lunges are added by the client
         if(name == fight)
             return "Pick";
+        // The rooster guarding the flock pecks at the creature in front of him, the lunge is added by the client
+        if(name == guard)
+            return "Pick";
         if((name == chase) || (name == flee))
             return "Run";
         if(isChick && (name == "Idle"))
