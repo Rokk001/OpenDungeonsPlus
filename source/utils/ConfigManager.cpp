@@ -61,6 +61,8 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mSlapEffectDuration(15),
     mTiredWakefulness(20.0),
     mTiredWalkSpeedFactor(0.8),
+    mHeartHealthStages(5),
+    mHeartHealthStageEvents(true),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
@@ -518,6 +520,20 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mTiredWakefulness = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "HeartHealthStages")
+        {
+            configFile >> nextParam;
+            mHeartHealthStages = Helper::toInt(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "HeartHealthStageEvents")
+        {
+            configFile >> nextParam;
+            mHeartHealthStageEvents = Helper::toInt(nextParam) != 0;
             // Not mandatory
         }
 

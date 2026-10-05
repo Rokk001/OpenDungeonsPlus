@@ -55,7 +55,7 @@ int32_t toTileCoordinate(double value)
 
 RoomAmbienceExtras::RoomAmbienceExtras() :
     mNextCrow(0.0),
-    mNextHeartBeat(0.0),
+    mNextHeartBeat(),
     mGeneration(0),
     mInitialized(false),
     mRandom(54321)
@@ -68,7 +68,7 @@ void RoomAmbienceExtras::reset()
     mHungryPositions.clear();
     mChickenFlee.clear();
     mNextCrow = 0.0;
-    mNextHeartBeat = 0.0;
+    mNextHeartBeat.clear();
     mInitialized = false;
 }
 
@@ -157,7 +157,7 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
 {
     const Player* localPlayer = gameMap->getLocalPlayer();
     const Seat* localSeat = (localPlayer != nullptr) ? localPlayer->getSeat() : nullptr;
-    bool heartFound = false;
+    ambience.clearHeartRates();
     bool coopNear = false;
     Ogre::Vector3 coopPosition = Ogre::Vector3::ZERO;
     double coopDistance = CROW_DISTANCE;
@@ -205,29 +205,41 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
                 coopNear = true;
             }
         }
-        else if((meshName == "DungeonTempleObject") && !heartFound && (localSeat != nullptr)
-            && (ODClient::getSingletonPtr() != nullptr))
+        else if((meshName == "DungeonTempleObject") && (ODClient::getSingletonPtr() != nullptr))
         {
+            // Every heart beats with its own health: the local keeper's from the exact health of its badge, a
+            // foreign one from the step the server told (heartHealthStage). Without a known health it beats calmly.
             Tile* tile = gameMap->getTile(toTileCoordinate(position.x), toTileCoordinate(position.y));
-            if((tile != nullptr) && (tile->getSeat() == localSeat))
+            if((tile == nullptr) || (tile->getSeat() == nullptr))
+                continue;
+
+            double fraction = 1.0;
+            bool attacked = false;
+            if(tile->getSeat() == localSeat)
             {
-                heartFound = true;
                 HeartHealthRing::BadgeState& badge = ODClient::getSingleton().getHeartBadge();
-                double fraction = static_cast<double>(badge.mFraction);
-                // The beat gets faster the more the heart is hurt, and a bit faster again while it is attacked
-                double factor = 1.0 + 1.6 * (1.0 - fraction) + (badge.mGlow ? 0.3 : 0.0);
-                ambience.setHeartRateFactor(factor);
-                if(mInitialized && (fraction < HEART_HURT_FRACTION) && (clock >= mNextHeartBeat))
-                {
-                    mNextHeartBeat = clock + 0.7 + 0.8 * fraction;
-                    ambience.triggerEvent("HeartHurt", position, false);
-                }
+                fraction = static_cast<double>(badge.mFraction);
+                attacked = badge.mGlow;
+            }
+            else
+            {
+                float stageFraction = ODClient::getSingleton().getHeartStageFraction(tile->getSeat()->getId());
+                if(stageFraction < 0.0f)
+                    continue;
+                fraction = static_cast<double>(stageFraction);
+            }
+
+            // The beat gets faster the more the heart is hurt, and a bit faster again while it is attacked
+            double factor = 1.0 + 1.6 * (1.0 - fraction) + (attacked ? 0.3 : 0.0);
+            ambience.addHeartRate(position, factor);
+            double& nextBeat = mNextHeartBeat[tile->getSeat()->getId()];
+            if(mInitialized && (fraction < HEART_HURT_FRACTION) && (clock >= nextBeat))
+            {
+                nextBeat = clock + 0.7 + 0.8 * fraction;
+                ambience.triggerEvent("HeartHurt", position, false);
             }
         }
     }
-
-    if(!heartFound)
-        ambience.setHeartRateFactor(1.0);
 
     // The rooster crows now and then when the camera is near a hatchery
     if(clock >= mNextCrow)

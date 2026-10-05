@@ -382,6 +382,10 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         {
             effect.mSpacing = std::max<uint32_t>(1, Helper::toUInt32(words[1]));
         }
+        else if(key == "GrainMin")
+        {
+            effect.mGrainMin = Helper::toUInt32(words[1]);
+        }
         else if(key == "MaxDistance")
         {
             effect.mMaxDistance = Helper::toDouble(words[1]);

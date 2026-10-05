@@ -132,6 +132,57 @@ namespace
         sock->setHeartMessageTurn(turn);
     }
 
+    //! \brief Tells a human player in which step (HeartHealthStages) the health of every dungeon heart is
+    //! that it sees, so the clients can let a foreign heart beat faster when it is hurt. Own and allied
+    //! hearts count as seen. A step is sent when it changes and again when the heart comes into view
+    //! (the entry of a heart out of view is dropped). Cosmetic only: the exact health is never sent.
+    void notifyHeartStages(GameMap* gameMap, ODSocketClient* sock, Player* player)
+    {
+        if(!player->getIsHuman() || player->getSeat() == nullptr || !sock->supportsCosmeticEvents()
+           || !ConfigManager::getSingleton().getHeartHealthStageEvents())
+            return;
+
+        const int32_t stages = ConfigManager::getSingleton().getHeartHealthStages();
+        std::map<int32_t, int32_t>& sent = sock->getHeartStagesSent();
+        Seat* ownSeat = player->getSeat();
+        for(Room* room : gameMap->getRooms())
+        {
+            if(room->getType() != RoomType::dungeonTemple || room->getSeat() == nullptr)
+                continue;
+
+            RoomDungeonTemple* temple = static_cast<RoomDungeonTemple*>(room);
+            Tile* heartTile = temple->getHeartTile();
+            if(heartTile == nullptr)
+                continue;
+
+            Seat* heartSeat = room->getSeat();
+            const int32_t seatId = heartSeat->getId();
+            const bool seen = (heartSeat == ownSeat) || ownSeat->isAlliedSeat(heartSeat)
+                || ownSeat->hasVisionOnTile(heartTile);
+            std::map<int32_t, int32_t>::iterator it = sent.find(seatId);
+            if(!seen)
+            {
+                if(it != sent.end())
+                    sent.erase(it);
+                continue;
+            }
+
+            const int32_t stage = HeartHealthRing::healthStage(
+                static_cast<float>(temple->getHeartHealthFraction()), stages);
+            if((it != sent.end()) && (it->second == stage))
+                continue;
+
+            sent[seatId] = stage;
+            CosmeticEvent event(CosmeticEventType::heartHealthStage);
+            event.mValue = seatId;
+            event.mValue2 = stage;
+            event.mText = Helper::toString(stages);
+            event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
+                static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
+            ODServer::getSingleton().sendCosmeticEvent(player, event);
+        }
+    }
+
     //! \brief Gives a creature the level the editor asked for. Levelling raises the maximum
     //! HP without healing, which is what we want in game but not here: a creature placed in
     //! a level is expected to start it in full health.
@@ -502,6 +553,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         ODServer::getSingleton().queueServerNotification(serverNotification);
 
         notifyHeartHealth(gameMap, sock, player);
+        notifyHeartStages(gameMap, sock, player);
 
         // A client that joined or loaded gets the current relationship tiers once
         if(!sock->getRelationshipsSynced())

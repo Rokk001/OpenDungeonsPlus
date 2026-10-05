@@ -84,6 +84,12 @@ public:
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
         const std::string& visualName = std::string(), bool noThrottle = false);
 
+    //! \brief The grain levels of a hatchery as the server told them (cosmetic event hatcheryGrain): maxLevel the
+    //! level of a full tile, validSeconds how long the list may be trusted, text "x,y,level;..." the tiles that are
+    //! not full. Effects with "GrainMin" follow the levels; a tile that lost grain since the last message shows
+    //! the event GrainPecked.
+    void notifyHatcheryGrain(const std::string& roomName, int32_t maxLevel, int32_t validSeconds, const std::string& text);
+
     //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
     //! Kinds reloading and ready only set the state for the effects "When Reloading" and "When Ready".
@@ -104,9 +110,14 @@ public:
     inline uint32_t getNbMovedObjects() const
     { return static_cast<uint32_t>(mMotionNodes.size()); }
 
-    //! \brief Speed factor of the effects marked "HeartRate" (1 = calm heart, more = hurt heart)
-    inline void setHeartRateFactor(double factor)
-    { mHeartRateFactor = factor; }
+    //! \brief Forgets the beat of all hearts (the extras tell them again after every scan)
+    inline void clearHeartRates()
+    { mHeartRates.clear(); }
+
+    //! \brief Speed factor of the effects marked "HeartRate" that sit at the heart at position (1 = calm
+    //! heart, more = hurt heart). Every heart beats on its own; effects far from all told hearts stay calm.
+    inline void addHeartRate(const Ogre::Vector3& position, double factor)
+    { mHeartRates.push_back(HeartRate(position, factor)); }
 
 private:
     struct Emitter
@@ -296,7 +307,39 @@ private:
     std::vector<uint32_t> mNoEffects;
     std::vector<uint32_t> mObjectWildcardEffects;
     double mScanRadius;
-    double mHeartRateFactor;
+    struct HeartRate
+    {
+        HeartRate(const Ogre::Vector3& position, double factor) :
+            mPosition(position), mFactor(factor)
+        {}
+
+        Ogre::Vector3 mPosition;
+        double mFactor;
+    };
+
+    //! \brief Beat factor of the heart nearest to position, 1 if there is none within a few tiles
+    double getHeartRateFactor(const Ogre::Vector3& position) const;
+
+    std::vector<HeartRate> mHeartRates;
+
+    //! The grain of one hatchery as last told by the server
+    struct GrainRoom
+    {
+        GrainRoom() :
+            mMax(0), mExpire(0.0)
+        {}
+
+        //! Level of the tiles that are not full, by x * 65536 + y
+        std::map<int64_t, int32_t> mLevels;
+        int32_t mMax;
+        //! Clock time after which the list is not trusted any more
+        double mExpire;
+    };
+
+    //! \brief Grain level of the floor of a hatchery tile; full when nothing (valid) is known
+    int32_t getGrainLevel(Tile* tile) const;
+
+    std::map<std::string, GrainRoom> mGrainRooms;
     RoomAmbienceExtras mExtras;
 
     std::map<std::string, Emitter> mEmitters;

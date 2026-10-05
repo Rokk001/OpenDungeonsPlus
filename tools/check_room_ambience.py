@@ -19,7 +19,7 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "Family", "Delay", "WallSide", "HeartRate", "Sound", "Mesh")
+               "NeedWall", "Clips", "Every", "Family", "Delay", "WallSide", "HeartRate", "Sound", "Mesh", "GrainMin")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "Vacated")
 KINDS = ("Particle", "Motion", "Clip", "Model", "Shake", "Mark", "Sound")
@@ -246,7 +246,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if not effect.get("Clips"):
             problems.append("%s: clip effect without Clips" % where)
     for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority",
-                "Delay"):
+                "Delay", "GrainMin"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
     for key in ("Offset", "Axis"):

@@ -149,6 +149,14 @@ public:
     inline double getTiredWalkSpeedFactor() const
     { return std::max(0.2, std::min(1.0, mTiredWalkSpeedFactor)); }
 
+    //! \brief Number of steps of the heart health that the keepers who see a heart are told, limited to 2 - 20
+    inline int32_t getHeartHealthStages() const
+    { return std::max(2, std::min(20, mHeartHealthStages)); }
+
+    //! \brief True if the steps of the hearts are sent to the keepers who see them (cosmetic event heartHealthStage)
+    inline bool getHeartHealthStageEvents() const
+    { return mHeartHealthStageEvents; }
+
     inline int64_t getTimePayDay() const
     { return mTimePayDay; }
 
@@ -365,6 +373,8 @@ private:
     uint32_t mSlapEffectDuration;
     double mTiredWakefulness;
     double mTiredWalkSpeedFactor;
+    int32_t mHeartHealthStages;
+    bool mHeartHealthStageEvents;
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;

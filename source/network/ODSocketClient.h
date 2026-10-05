@@ -26,6 +26,7 @@
 #include <string>
 #include <cstdint>
 #include <fstream>
+#include <map>
 
 class Player;
 
@@ -103,6 +104,9 @@ class ODSocketClient
         //! \brief Turn of the last heartHealth message sent, negative if none
         int64_t getHeartMessageTurn() const { return mHeartMessageTurn; }
         void setHeartMessageTurn(int64_t turn) { mHeartMessageTurn = turn; }
+        //! \brief Step of each seat's heart last sent with heartHealthStage, by seat id. A seat is missing
+        //! while the keeper does not see its heart, so the step is sent again when it comes into view.
+        std::map<int32_t, int32_t>& getHeartStagesSent() { return mHeartStagesSent; }
         const std::string& getState() {return mState;}
         bool isDataAvailable(int miliseconds=5);
         int32_t getGameTimeMillis()
@@ -159,6 +163,7 @@ class ODSocketClient
         float mHeartHealthSent;
         double mHeartHPSent;
         int64_t mHeartMessageTurn;
+        std::map<int32_t, int32_t> mHeartStagesSent;
         //! True once the client got the current relationship tiers
         bool mRelationshipsSynced;
         std::string mState;

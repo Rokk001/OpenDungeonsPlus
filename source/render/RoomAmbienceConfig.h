@@ -112,6 +112,7 @@ struct AmbienceEffect
         mEvery(10.0),
         mChance(1.0),
         mSpacing(1),
+        mGrainMin(0),
         mMaxDistance(28.0),
         mPriority(5),
         mReduced(false),
@@ -157,6 +158,8 @@ struct AmbienceEffect
     double mChance;
     //! Tile targets: only every n-th tile gets the effect
     uint32_t mSpacing;
+    //! Tile targets: only shown while the grain level of the tile (hatchery floor) is at least this (0 = always)
+    uint32_t mGrainMin;
     double mMaxDistance;
     //! Higher priority effects are served first when the budget is used up
     int32_t mPriority;

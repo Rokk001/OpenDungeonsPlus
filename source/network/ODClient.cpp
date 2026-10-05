@@ -113,6 +113,14 @@ ODClient::~ODClient()
 {
 }
 
+float ODClient::getHeartStageFraction(int32_t seatId) const
+{
+    std::map<int32_t, float>::const_iterator it = mHeartStageFractions.find(seatId);
+    if(it == mHeartStageFractions.end())
+        return -1.0f;
+    return it->second;
+}
+
 void ODClient::playerDisconnected()
 {
     std::string message = getPlayer() ? getPlayer()->getNick() + " disconnected from the server." : "A player disconnected.";
@@ -468,6 +476,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             mLevelStatistics = LevelStatistics();
             mTimeLimitSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
+            mHeartStageFractions.clear();
             mSandboxStatus = SandboxStatus();
             mHasSandboxRealmComplete = false;
 
@@ -999,6 +1008,25 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 // The chicken really hops: feathers, dust and a cluck where it was
                 RoomAmbience::getSingleton().triggerEvent("ChickenFlee", event.mPosition, false);
+            }
+
+            if(event.is(CosmeticEventType::heartHealthStage))
+            {
+                // The coarse health of a heart that this keeper sees; only the beat of that heart follows it
+                int32_t stages = Helper::toInt(event.mText);
+                mHeartStageFractions[event.mValue] = HeartHealthRing::stageFraction(event.mValue2, stages);
+                break;
+            }
+
+            if(event.is(CosmeticEventType::hatcheryGrain))
+            {
+                // How much grain is left on the floor of a hatchery: the grain decals follow it
+                if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+                   (RoomAmbience::getSingletonPtr() != nullptr))
+                {
+                    RoomAmbience::getSingleton().notifyHatcheryGrain(event.mObject, event.mValue, event.mValue2, event.mText);
+                }
+                break;
             }
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&

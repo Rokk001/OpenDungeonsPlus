@@ -24,6 +24,8 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
+#include <map>
+
 class Creature;
 enum class TileVisual;
 
@@ -103,12 +105,39 @@ private:
     //! A free place next to a coop, where an animal can stand after jumping down.
     bool getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const;
 
+    //! Grain on the floor: how full a tile is (0 = bare to HatcheryGrainLevels = full). Only tiles that are not full
+    //! are kept, a tile that is not in the map is full. Hens that scratch take grain, it grows back over time.
+    int32_t getGrainLevel(const Tile* tile) const;
+    //! A hen scratches on the tile: with the chance HatcheryGrainEatPercent one level of grain is gone.
+    void eatGrain(Tile* tile);
+    //! Lets bare tiles grow grain again and tells the clients that see the hatchery how full its tiles are.
+    void updateGrain();
+    //! Sends the grain levels (cosmetic event hatcheryGrain) to every human player with sight on a tile of the room.
+    void sendGrain();
+
+    //! Grain on the floor: how full a tile is (0 = bare to HatcheryGrainLevels = full). Only tiles that are not full
+    //! are kept, a tile that is not in the map is full. Hens that scratch take grain, it grows back over time.
+    int32_t getGrainLevel(const Tile* tile) const;
+    //! A hen scratches on the tile: with the chance HatcheryGrainEatPercent one level of grain is gone.
+    void eatGrain(Tile* tile);
+    //! Lets bare tiles grow grain again and tells the clients that see the hatchery how full its tiles are.
+    void updateGrain();
+    //! Sends the grain levels (cosmetic event hatcheryGrain) to every human player with sight on a tile of the room.
+    void sendGrain();
+
     //! Turns until the rooster crows next
     uint32_t mCrowInterval;
     //! Turns the hatchery has been empty (no hen, chick or egg)
     uint32_t mCoopHenWait;
     //! Turns the hatchery has been without rooster
     uint32_t mCoopRoosterWait;
+    //! Grain level of the tiles that are not full
+    std::map<Tile*, int32_t> mGrain;
+    //! The grain changed since the last message to the clients
+    bool mGrainDirty;
+    //! Turns since the last message because of a change, and since the last message of any kind
+    uint32_t mGrainSyncWait;
+    uint32_t mGrainResyncWait;
 };
 
 #endif // ROOMHATCHERY_H

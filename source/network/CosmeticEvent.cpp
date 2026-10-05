@@ -20,7 +20,7 @@
 bool CosmeticEvent::isKnownType() const
 {
     return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
-           (mType <= static_cast<int32_t>(CosmeticEventType::bedStatus));
+           (mType <= static_cast<int32_t>(CosmeticEventType::hatcheryGrain));
 }
 
 std::string CosmeticEvent::typeString() const
@@ -51,6 +51,10 @@ std::string CosmeticEvent::typeString() const
             return "calmed";
         case static_cast<int32_t>(CosmeticEventType::bedStatus):
             return "bedStatus";
+        case static_cast<int32_t>(CosmeticEventType::heartHealthStage):
+            return "heartHealthStage";
+        case static_cast<int32_t>(CosmeticEventType::hatcheryGrain):
+            return "hatcheryGrain";
         default:
             break;
     }

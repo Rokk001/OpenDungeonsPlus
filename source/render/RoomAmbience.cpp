@@ -24,9 +24,11 @@
 #include "entities/Tile.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "rooms/Room.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "sound/SoundEffectsManager.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -60,6 +62,9 @@ const double MAX_SCAN_RADIUS = 45.0;
 //! Room tiles changing in one scan above this number are a map load, not building
 const uint32_t MAX_EVENTS_PER_SCAN = 6;
 const size_t MAX_PENDING_SOUNDS = 32;
+//! Distance in tiles within which an effect belongs to a heart for the beat
+const double HEART_RATE_RADIUS = 3.0;
+
 const double TWO_PI = 6.283185307179586;
 
 bool matchesPattern(const std::string& pattern, const std::string& name)
@@ -122,7 +127,6 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mPruneTimer(0.0),
     mUniqueNumber(0),
     mScanRadius(30.0),
-    mHeartRateFactor(1.0),
     mSeenSizeX(0),
     mSeenSizeY(0),
     mEventsThisScan(0),
@@ -529,7 +533,84 @@ void RoomAmbience::stopAll()
     mEntitiesInitialized = false;
     mScanTimer = 0.0;
     mExtras.reset();
-    mHeartRateFactor = 1.0;
+    mHeartRates.clear();
+    mGrainRooms.clear();
+}
+
+int32_t RoomAmbience::getGrainLevel(Tile* tile) const
+{
+    const int32_t levels = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
+    Room* room = tile->getCoveringRoom();
+    if(room == nullptr)
+        return levels;
+
+    std::map<std::string, GrainRoom>::const_iterator roomIt = mGrainRooms.find(room->getName());
+    if((roomIt == mGrainRooms.end()) || (mClock > roomIt->second.mExpire))
+        return levels;
+
+    std::map<int64_t, int32_t>::const_iterator it = roomIt->second.mLevels.find(
+        static_cast<int64_t>(tile->getX()) * 65536 + tile->getY());
+    if(it == roomIt->second.mLevels.end())
+        return roomIt->second.mMax;
+
+    return std::min(roomIt->second.mMax, it->second);
+}
+
+void RoomAmbience::notifyHatcheryGrain(const std::string& roomName, int32_t maxLevel, int32_t validSeconds,
+    const std::string& text)
+{
+    GrainRoom& room = mGrainRooms[roomName];
+    const bool wasValid = (room.mMax > 0) && (mClock <= room.mExpire);
+    std::map<int64_t, int32_t> before;
+    before.swap(room.mLevels);
+    const int32_t beforeMax = room.mMax;
+    room.mMax = maxLevel;
+    room.mExpire = mClock + validSeconds;
+
+    // "x,y,level;x,y,level;..."
+    uint32_t nbPecks = 0;
+    std::vector<std::string> entries = Helper::split(text, ';', true);
+    for(const std::string& entry : entries)
+    {
+        std::vector<std::string> parts = Helper::split(entry, ',', true);
+        if(parts.size() != 3)
+            continue;
+
+        int32_t x = Helper::toInt(parts[0]);
+        int32_t y = Helper::toInt(parts[1]);
+        int32_t level = Helper::toInt(parts[2]);
+        int64_t key = static_cast<int64_t>(x) * 65536 + y;
+        room.mLevels[key] = level;
+
+        // A tile that has less grain than before: a hen just pecked there (a few small clouds at most)
+        int32_t previous = beforeMax;
+        std::map<int64_t, int32_t>::const_iterator it = before.find(key);
+        if(it != before.end())
+            previous = it->second;
+        if(wasValid && (level < previous) && (nbPecks < 3))
+        {
+            ++nbPecks;
+            triggerEvent("GrainPecked", Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f), false);
+        }
+    }
+}
+
+double RoomAmbience::getHeartRateFactor(const Ogre::Vector3& position) const
+{
+    double best = 1.0;
+    double bestDistance = HEART_RATE_RADIUS * HEART_RATE_RADIUS;
+    for(std::vector<HeartRate>::const_iterator it = mHeartRates.begin(); it != mHeartRates.end(); ++it)
+    {
+        double dx = it->mPosition.x - position.x;
+        double dy = it->mPosition.y - position.y;
+        double distance = dx * dx + dy * dy;
+        if(distance <= bestDistance)
+        {
+            bestDistance = distance;
+            best = it->mFactor;
+        }
+    }
+    return best;
 }
 
 void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
@@ -817,6 +898,10 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                     if(((hash >> 3) % effect.mSpacing) != 0)
                         continue;
                 }
+
+                // Grain that the hens have eaten is gone from the floor
+                if((effect.mGrainMin > 0) && (getGrainLevel(tile) < static_cast<int32_t>(effect.mGrainMin)))
+                    continue;
 
                 if(effect.mNeedWall || effect.mWallSide)
                 {
@@ -1401,7 +1486,8 @@ void RoomAmbience::updateEmitters(double timeSinceLastFrame)
             if(effects[emitter.mEffect].mHeartRate)
             {
                 // The beat is summed up, so a change of the heart rate does not make the glow jump
-                emitter.mCycle += effects[emitter.mEffect].mSpeed * mHeartRateFactor * timeSinceLastFrame;
+                emitter.mCycle += effects[emitter.mEffect].mSpeed
+                    * getHeartRateFactor(emitter.mNode->_getDerivedPosition()) * timeSinceLastFrame;
                 cycles = emitter.mCycle;
             }
             double rate = TWO_PI * cycles;
@@ -1580,7 +1666,8 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
             double wave = std::sin(TWO_PI * effect.mSpeed * motionNode.mClock + instance.mPhase);
             if(effect.mHeartRate)
             {
-                instance.mCycle += effect.mSpeed * mHeartRateFactor * timeSinceLastFrame;
+                instance.mCycle += effect.mSpeed
+                    * getHeartRateFactor(motionNode.mBasePosition) * timeSinceLastFrame;
                 wave = std::sin(TWO_PI * instance.mCycle + instance.mPhase);
             }
             switch(effect.mMotion)

@@ -77,7 +77,21 @@ enum class CosmeticEventType : int32_t
     //! 0: it has none. Sent when this changes and, for a creature without a bed, now and then again, so that a
     //! keeper who only sees the creature later learns it too. Only the creatures of the receiving keeper and of
     //! its allies.
-    bedStatus = 11
+    bedStatus = 11,
+    //! The health of a dungeon heart is now at a new step. mValue seat id of the heart, mValue2 the step
+    //! (0: destroyed, the number of steps: unhurt), mText the number of steps as a decimal text,
+    //! mPosition the position of the heart. Sent for the heart of every seat that the receiving keeper
+    //! sees (its own and its allies' always) when the step changes and again when a heart comes into
+    //! view, so that the beat of a foreign heart can follow its health. Only coarse steps are sent, never
+    //! the exact health. Older clients skip the kind.
+    heartHealthStage = 12,
+    //! How full the grain on the floor of a hatchery is. mObject name of the hatchery, mValue the level of a
+    //! full tile (the most), mValue2 how many seconds the list stays valid (a keeper that is not told again
+    //! after that treats the grain as full), mText the tiles that are not full as "x,y,level;x,y,level;..."
+    //! (a tile that is not in the list is full; an empty text: all full), mPosition the first tile of the room.
+    //! Sent to the keepers that see a tile of the hatchery when the grain changed and now and then again while a
+    //! tile is not full. Only shows the grain decals; the game never depends on it.
+    hatcheryGrain = 13
 };
 
 //! \brief The data of one cosmetic event. Every kind uses the same layout on the wire, so a
