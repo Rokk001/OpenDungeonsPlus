@@ -195,7 +195,7 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
         }
 
         const std::string& meshName = entity->getMeshName();
-        if(meshName == "ChickenCoop")
+        if((meshName == "ChickenCoop") || (meshName == "ChickenCoopHouse"))
         {
             double distance = (position - cameraPosition).length();
             if(distance < coopDistance)

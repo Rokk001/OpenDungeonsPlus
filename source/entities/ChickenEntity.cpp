@@ -236,8 +236,9 @@ void ChickenEntity::doUpkeep()
     if(isMoving())
         return;
 
-    // A hungry creature that comes to eat this chicken makes it hop away (short, rare, limited)
-    if(tryFlee(tile, currentHatchery))
+    // A hungry creature that comes to eat this chicken makes it hop away (short, rare, limited);
+    // not while the hatchery scatters the hen, which is its own flight
+    if((mScatterTurns == 0) && tryFlee(tile, currentHatchery))
         return;
 
     // Chicks stay in line behind the animal in front of them, hens run to the rooster when he calls them
