@@ -45,6 +45,15 @@ const int CoinSides = 6;
 const int SpillSides = 4;
 // Faces of a gem (an octahedron)
 const int GemFaces = 8;
+// A coin: the middle rises by CoinDome, the rim is darker (CoinRimShade) and its normal leans outward (CoinRound)
+const float CoinDome = 0.008f;
+const float CoinRimShade = 0.7f;
+const float CoinRound = 0.7f;
+// Size of the coins and gems lying on the gold, in tile units (radius, gem size)
+const float TopCoinRadius = 0.06f;
+const float ScatterCoinRadius = 0.05f;
+const float SpillCoinRadius = 0.047f;
+const float GemSize = 0.04f;
 
 Detail currentDetail = Detail::full;
 
@@ -118,7 +127,8 @@ Ogre::ColourValue goldColour(float a, float b)
     return Ogre::ColourValue(std::min(1.0f, shade), std::min(1.0f, 0.8f * shade), 0.3f * shade, 1.0f);
 }
 
-//! A flat disc (a fan of the given number of sides) lying on the surface
+//! A flat disc (a fan of the given number of sides) lying on the surface. The middle sits a little higher and
+//! is lighter, the rim is rounded away and darker, so a coin reads as a coin and not as a flat patch.
 void addCoin(Ogre::ManualObject* object, const Ogre::Vector3& centre, const Ogre::Vector3& up, float radius,
     int sides, const Ogre::ColourValue& colour)
 {
@@ -127,19 +137,24 @@ void addCoin(Ogre::ManualObject* object, const Ogre::Vector3& centre, const Ogre
         axisA = up.crossProduct(Ogre::Vector3::UNIT_X);
     axisA.normalise();
     const Ogre::Vector3 axisB = up.crossProduct(axisA);
+    const Ogre::ColourValue rimColour(colour.r * CoinRimShade, colour.g * CoinRimShade, colour.b * CoinRimShade,
+        1.0f);
 
     const int baseIndex = static_cast<int>(object->getCurrentVertexCount());
-    object->position(centre);
+    object->position(centre + up * CoinDome);
     object->normal(up);
     object->textureCoord(0.0f, 0.0f);
     object->colour(colour);
     for(int i = 0; i < sides; ++i)
     {
         const float angle = 6.2831853f * static_cast<float>(i) / static_cast<float>(sides);
-        object->position(centre + (axisA * std::cos(angle) + axisB * std::sin(angle)) * radius);
-        object->normal(up);
+        const Ogre::Vector3 radial = axisA * std::cos(angle) + axisB * std::sin(angle);
+        Ogre::Vector3 rimNormal = up + radial * CoinRound;
+        rimNormal.normalise();
+        object->position(centre + radial * radius);
+        object->normal(rimNormal);
         object->textureCoord(0.0f, 0.0f);
-        object->colour(colour);
+        object->colour(rimColour);
     }
     for(int i = 0; i < sides; ++i)
         object->triangle(baseIndex, baseIndex + 1 + i, baseIndex + 1 + (i + 1) % sides);
@@ -209,7 +224,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
         {
             const float u = 0.15f + 0.7f * TreasuryGoldLayer::hash01(seed, 31 * i + 1);
             const float v = 0.15f + 0.7f * TreasuryGoldLayer::hash01(seed, 31 * i + 2);
-            addCoin(object, Ogre::Vector3(u - 0.5f, v - 0.5f, 0.008f), Ogre::Vector3::UNIT_Z, 0.04f, CoinSides,
+            addCoin(object, Ogre::Vector3(u - 0.5f, v - 0.5f, 0.008f), Ogre::Vector3::UNIT_Z, ScatterCoinRadius, CoinSides,
                 goldColour(u, v));
         }
         return;
@@ -226,7 +241,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
         up.normalise();
         Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
         centre.z += 0.014f;
-        addCoin(object, centre, up, 0.045f, CoinSides, goldColour(u, v));
+        addCoin(object, centre, up, TopCoinRadius, CoinSides, goldColour(u, v));
     }
 
     for(int i = 0; i < TreasuryGoldLayer::gemCount(shape); ++i)
@@ -235,7 +250,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
         const float v = 0.25f + 0.5f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
         Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
         centre.z += 0.02f;
-        addGem(object, centre, 0.028f, gemColour(shape.mVariant, i));
+        addGem(object, centre, GemSize, gemColour(shape.mVariant, i));
     }
 
     // Overflow: coins that rolled down to the foot of the pile at the open edges
@@ -261,7 +276,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
                 u = 1.0f - across;
             Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
             centre.z += 0.01f;
-            addCoin(object, centre, pileNormal(shape, u, v, dent), 0.035f, SpillSides, goldColour(u, v));
+            addCoin(object, centre, pileNormal(shape, u, v, dent), SpillCoinRadius, SpillSides, goldColour(u, v));
         }
     }
 }
@@ -430,14 +445,13 @@ std::string pileNameForClassicStack(const std::string& meshName, float x, float 
     if(level <= 0)
         return meshName;
 
-    // A plateau a little below the tile level: the ring tiles lie next to each other, so the edges stay low
-    // enough to look like a heap and the lumps of the neighbours do not show a gap
+    // The ring tiles lie in a single row (the heart on one side, the floor on the other), so, as for any pile whose
+    // neighbours do not reach the corner, all four corners are on the floor: a mound that runs out flat at the
+    // tile edges instead of a plateau with a cut edge
     const std::pair<int, int> tile = tileOf(x, y);
     TreasuryGoldLayer::PileShape shape;
     shape.mLevel = level;
     shape.mVariant = (tile.first * 7 + tile.second * 13) % TreasuryGoldLayer::variantCount;
-    for(int i = 0; i < 4; ++i)
-        shape.mCorner[i] = level - 1;
     return TreasuryGoldLayer::meshName(shape);
 }
 
