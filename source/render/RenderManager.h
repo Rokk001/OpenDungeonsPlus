@@ -56,6 +56,8 @@ class Weapon;
 namespace Ogre
 {
 class AnimationState;
+class Entity;
+class ManualObject;
 class OverlaySystem;
 class SceneManager;
 class SceneNode;
@@ -156,6 +158,9 @@ public:
     void rrDestroyCreature(Creature* curCreature);
     //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)
     void rrRefreshCreatureGoldSack(Creature* creature);
+    //! The "Treasury detail" option changed: every pile, floor gold heap and thief sack is drawn again for the new
+    //! setting (the piles and heaps a few per frame, see updateTreasuryRebuild)
+    void rrTreasuryDetailChanged();
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
@@ -508,6 +513,22 @@ private:
     Ogre::Real mTreasuryAmbientTimer = 0.0f;
     size_t mTreasuryAmbientCursor = 0;
 
+    //! The gold piles of this client (also the classic stacks that are drawn as piles) with the node type they were
+    //! created for and whether they use the reduced mesh because they are far from the camera. The level of detail
+    //! switches piles by creating their mesh again; the option change does the same for all of them.
+    struct TreasuryPileInfo
+    {
+        NodeType mNodeType;
+        bool mFar;
+    };
+    std::map<RenderedMovableEntity*, TreasuryPileInfo> mTreasuryPiles;
+    //! While a pile is created again for the level of detail: 1 reduced, 0 full (-1 when not, the distance decides)
+    int mTreasuryPileFarOverride = -1;
+    //! Piles (true) and floor gold heaps (false) waiting to be drawn again after the detail option changed
+    std::vector<std::pair<RenderedMovableEntity*, bool> > mTreasuryRebuildQueue;
+    size_t mTreasuryRebuildIndex = 0;
+    Ogre::Real mTreasuryLodTimer = 0.0f;
+
     //! A pile that grows or sinks: its node settles to the new height over a short time
     struct TreasuryPileSettle
     {
@@ -516,8 +537,26 @@ private:
         Ogre::Real mElapsed;
         float mFrom;
         bool mTaken;
+        //! True when the taken pile does not dip as a whole but shows a local dent (see TreasuryPileDent)
+        bool mLocalDent;
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
+    //! The dent where gold was taken: while it lasts a dynamic copy of the pile is drawn in place of its entity
+    //! (the entity is detached from its node and does not take part in the room batch), and given back afterwards
+    struct TreasuryPileDent
+    {
+        std::string mEntityName;
+        std::string mOgreName;
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::ManualObject* mObject;
+        std::string mMeshName;
+        float mU;
+        float mV;
+        Ogre::Real mElapsed;
+    };
+    std::vector<TreasuryPileDent> mTreasuryPileDents;
+    int mTreasuryDentNumber = 0;
     //! The settled piles of a treasury are drawn as one batch per room
     TreasuryGoldBatch mTreasuryBatch;
 
@@ -539,8 +578,20 @@ private:
     };
     std::vector<TreasuryThiefSack> mTreasuryThiefSacks;
 
-    //! Names of the warm lights over rich treasuries (one per patch of tiles)
+    //! Names of the warm lights over rich treasuries (one per patch of tiles) that have a light at the moment
     std::set<std::string> mTreasuryGlowLights;
+    //! Every patch of tiles with glow, by light name; only the ones near the camera and within the limits of
+    //! their room and of the game get a light (see applyTreasuryGlowLights)
+    struct TreasuryGlowPatch
+    {
+        float mStrength;
+        float mX;
+        float mY;
+        const void* mRoom;
+    };
+    std::map<std::string, TreasuryGlowPatch> mTreasuryGlowPatches;
+    bool mTreasuryGlowDirty = false;
+    Ogre::Real mTreasuryGlowTimer = 0.0f;
     //! Where a creature last splashed coins, to space the splashes along its way
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
@@ -635,7 +686,14 @@ private:
     void startTreasuryHeartDust();
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
-        int newLevel);
+        int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);
+    void updateTreasuryDents(Ogre::Real timeSinceLastFrame);
+    //! Distance of a point to the camera in tiles (0 without a camera)
+    float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
+    void updateTreasuryLod(Ogre::Real timeSinceLastFrame);
+    void updateTreasuryRebuild();
+    //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
+    void finishTreasuryDent(const std::string& entityName);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPileSettle(const std::string& entityName);
     bool isTreasuryPileSettling(const std::string& entityName) const;
@@ -645,6 +703,10 @@ private:
     float getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce);
     void removeTreasuryThiefSack(Creature* creature);
     void refreshTreasuryGlow(int x, int y);
+    void updateTreasuryGlow(Ogre::Real timeSinceLastFrame);
+    void applyTreasuryGlowLights();
+    void setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch);
+    void destroyTreasuryGlowLight(const std::string& name);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     void startTreasuryPour(Tile* tile, int level);
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);

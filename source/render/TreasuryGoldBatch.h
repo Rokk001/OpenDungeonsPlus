@@ -47,6 +47,10 @@ public:
     //! The settle animation of the pile is over: the pile joins the batch with its next rebuild
     void pileSettled(const std::string& entityName);
 
+    //! A pile that was just created again (another level of detail) stays hidden while the batch of its room still
+    //! shows the old one; the next rebuild of the batch takes it over. A room without a batch keeps it visible.
+    void hideUntilBatched(const std::string& entityName);
+
     //! The pile is gone (its entity may already be destroyed): the batch of its room is rebuilt
     void removePile(const std::string& entityName);
 

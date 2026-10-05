@@ -48,8 +48,9 @@ assert 'TreasuryEffectKind::dust' in portal and '"TreasuryGoldDust"' in portal
 assert 'startTreasuryPortalDust();' in render.split('void RenderManager::updateTreasuryDust')[1].split('collectFullPiles')[0]
 assert 'portalRichShare' in rules and 'portalRichMinGold' in rules and 'portalDustHeight' in rules
 import re
-share = float(re.search(r'portalRichShare = ([0-9.]+)f', rules).group(1))
-min_gold = int(re.search(r'portalRichMinGold = ([0-9]+)', rules).group(1))
+settings = read('source/rooms/TreasurySettings.h')
+share = float(re.search(r'portalRichShare = ([0-9.]+)f', settings).group(1))
+min_gold = int(re.search(r'portalRichMinGold = ([0-9]+)', settings).group(1))
 def rich(gold, gold_max):
     return gold_max > 0 and gold >= min_gold and gold >= share * gold_max
 assert not rich(0, 0) and not rich(400, 400) and not rich(499, 600)

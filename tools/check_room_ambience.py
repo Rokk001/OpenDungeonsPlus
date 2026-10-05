@@ -155,6 +155,46 @@ def mesh_exists(name):
     return os.path.exists(os.path.join(ROOT, "models", name + ".mesh"))
 
 
+# The piles of a treasury are meshes built at run time from their names (source/rooms/TreasuryGoldLayer.h):
+# TreasuryGold_<level>_<four corner levels>_<variant>. A pattern with a trailing "*" matches a name that starts
+# with it, as in the game.
+PILE_PREFIX = "TreasuryGold_"
+# Systems of the effects that the client starts itself on treasury piles (see TreasuryCreatureRules.h): sparkle from
+# glintLevel on, sliding coins from slideLevel on. An idle effect with the same system on such a pile would double them.
+PILE_OWN_SPARKLE_SYSTEMS = ("RoomAmbGoldGlint", "RoomAmbGoldGlintRich", "RoomAmbGoldShine")
+PILE_OWN_SLIDE_SYSTEMS = ("RoomAmbCoinSlide",)
+_pile_names = []
+
+
+def pile_names():
+    if not _pile_names:
+        with open(os.path.join(ROOT, "source", "rooms", "TreasuryGoldLayer.h"), encoding="utf-8") as handle:
+            layer = handle.read()
+        max_level = int(re.search(r"maxLevel = (\d+);", layer).group(1))
+        variants = int(re.search(r"variantCount = (\d+);", layer).group(1))
+        for level in range(max_level + 1):
+            for corners in range((max_level + 1) ** 4):
+                digits = "".join(str((corners // (max_level + 1) ** i) % (max_level + 1)) for i in range(4))
+                for variant in range(variants):
+                    _pile_names.append("%s%d_%s_%d" % (PILE_PREFIX, level, digits, variant))
+    return _pile_names
+
+
+def pile_setting(name):
+    with open(os.path.join(ROOT, "source", "rooms", "TreasurySettings.h"), encoding="utf-8") as handle:
+        return int(re.search(r"int " + name + r" = (\d+);", handle.read()).group(1))
+
+
+def pile_levels(match):
+    """Levels of the piles a pattern matches, empty when it matches none"""
+    if match.endswith("*"):
+        head = match[:-1]
+        names = [n for n in pile_names() if n.startswith(head)]
+    else:
+        names = [n for n in pile_names() if n == match]
+    return set(int(n[len(PILE_PREFIX)]) for n in names)
+
+
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
     for key in effect:
         if key not in EFFECT_KEYS:
@@ -316,6 +356,18 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if target == "Object" and match.startswith("trap:"):
             if not re.match(r"^[A-Za-z*]+$", match[len("trap:"):]):
                 problems.append("%s: bad trap type %s" % (where, match))
+        elif target == "Object" and match.startswith(PILE_PREFIX):
+            levels = pile_levels(match) if "*" not in match[:-1] else set()
+            if not levels:
+                problems.append("%s: %s matches no treasury pile name" % (where, match))
+            elif effect.get("When", ["Always"])[0] == "Always" and effect.get("Kind", [""])[0] == "Particle":
+                system = effect.get("System", [""])[0]
+                if system in PILE_OWN_SPARKLE_SYSTEMS and max(levels) >= pile_setting("glintLevel"):
+                    problems.append("%s: %s doubles the sparkle that the client starts on piles of level %d and up"
+                                    % (where, system, pile_setting("glintLevel")))
+                if system in PILE_OWN_SLIDE_SYSTEMS and max(levels) >= pile_setting("slideLevel"):
+                    problems.append("%s: %s doubles the sliding coins that the client starts on piles of level %d and up"
+                                    % (where, system, pile_setting("slideLevel")))
         elif target == "Object":
             if "*" not in match and not mesh_exists(match):
                 problems.append("%s: no mesh %s" % (where, match))

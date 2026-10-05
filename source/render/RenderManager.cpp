@@ -100,9 +100,11 @@
 #include <RTShaderSystem/OgreShaderRenderState.h>
 #include <RTShaderSystem/OgreShaderExIntegratedPSSM3.h>
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <functional>
+#include <utility>
 
 template<> RenderManager* Ogre::Singleton<RenderManager>::msSingleton = nullptr;
 
@@ -1860,6 +1862,9 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryDust(timeSinceLastFrame);
     updateTreasuryAmbient(timeSinceLastFrame);
     updateTreasuryPileSettles(timeSinceLastFrame);
+    updateTreasuryGlow(timeSinceLastFrame);
+    updateTreasuryLod(timeSinceLastFrame);
+    updateTreasuryRebuild();
     mTreasuryBatch.update(timeSinceLastFrame);
     updateTreasuryBuriedObjects(timeSinceLastFrame);
     rrUpdateHeldCreature();
@@ -2776,6 +2781,10 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     const bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
     // True when the entity is itself a gold pile, so it is not an object standing in the gold
     bool isPileEntity = false;
+    // Name of the pile shape drawn for the entity (before the mesh behind it is chosen by the detail option)
+    std::string pileMeshName;
+    // True when the pile is far from the camera and uses the reduced mesh
+    bool pileFar = false;
     if(isBuildingObject)
     {
         Tile* pileTile = renderedMovableEntity->getPositionTile();
@@ -2793,7 +2802,16 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             (pileTile != nullptr && pileTile->getCoveringRoom() != nullptr) ?
             static_cast<const void*>(pileTile->getCoveringRoom()) : static_cast<const void*>(pileTile),
             classicStack);
-        meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
+        pileMeshName = meshName;
+        if(isPileEntity && TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::full)
+        {
+            if(mTreasuryPileFarOverride >= 0)
+                pileFar = (mTreasuryPileFarOverride == 1);
+            else
+                pileFar = TreasuryCreatureRules::lodReducedAt(false,
+                    getTreasuryCameraDistance(renderedMovableEntity->getPosition()));
+        }
+        meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar);
         refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
         refreshBuriedObjectsOnTile(renderedMovableEntity->getPositionTile());
     }
@@ -2868,11 +2886,21 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     if(HatcheryCoopHouse::isCoopMesh(meshName))
         rrCreateCoopDecor(static_cast<BuildingObject*>(renderedMovableEntity));
 
+    // Piles (and the classic stacks drawn as piles) are listed, so their mesh can be created again
+    if(isBuildingObject && nt == NodeType::MTILES_NODE &&
+        (isPileEntity || TreasuryGoldLayer::levelForClassicName(renderedMovableEntity->getMeshName()) > 0))
+    {
+        TreasuryPileInfo pileInfo;
+        pileInfo.mNodeType = nt;
+        pileInfo.mFar = pileFar;
+        mTreasuryPiles[renderedMovableEntity] = pileInfo;
+    }
+
     if(pileLevel >= 0)
     {
         // Gold added or taken: the pile settles to its new height, and a taken pile throws coins
         startTreasuryPileChange(node, renderedMovableEntity->getName(), renderedMovableEntity->getPositionTile(),
-            previousPileLevel, pileLevel);
+            previousPileLevel, pileLevel, ent, pileMeshName);
         refreshTreasuryGlow(static_cast<int>(renderedMovableEntity->getPosition().x + 0.5),
             static_cast<int>(renderedMovableEntity->getPosition().y + 0.5));
         // The settled pile is drawn by the batch of its room (one draw batch per room, not per tile)
@@ -2951,6 +2979,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     cancelTreasuryPileSettle(curRenderedMovableEntity->getName());
     mTreasuryBatch.removePile(curRenderedMovableEntity->getName());
     mTreasuryBuriedObjects.erase(curRenderedMovableEntity);
+    mTreasuryPiles.erase(curRenderedMovableEntity);
     if(HatcheryCoopHouse::isCoopMesh(curRenderedMovableEntity->getMeshName()))
         rrDestroyCoopDecor(static_cast<BuildingObject*>(curRenderedMovableEntity));
     if(mSceneManager->hasEntity(tempString))
@@ -5013,7 +5042,7 @@ void RenderManager::updateTreasuryAmbient(Ogre::Real timeSinceLastFrame)
 }
 
 void RenderManager::startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile,
-    int oldLevel, int newLevel)
+    int oldLevel, int newLevel, Ogre::Entity* entity, const std::string& pileMeshName)
 {
     if(node == nullptr || tile == nullptr || oldLevel < 0 || oldLevel == newLevel
         || TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::off)
@@ -5026,34 +5055,222 @@ void RenderManager::startTreasuryPileChange(Ogre::SceneNode* node, const std::st
         return;
 
     const bool taken = newLevel < oldLevel;
+
+    // At the full detail a taken pile gets a local dent (a bowl that forms where the gold was taken and fills up
+    // again) instead of dipping as a whole. The dent is drawn by a dynamic copy of the pile.
+    float dentU = 0.5f;
+    float dentV = 0.5f;
+    Ogre::ManualObject* dentObject = nullptr;
+    if(taken && entity != nullptr && newLevel > 0 && TreasuryCreatureRules::dentLocalDepth > 0.0f)
+    {
+        ++mTreasuryDentNumber;
+        dentU = 0.3f + 0.4f * TreasuryGoldLayer::hash01(tile->getX() * 31 + tile->getY(), mTreasuryDentNumber);
+        dentV = 0.3f + 0.4f * TreasuryGoldLayer::hash01(tile->getY() * 17 + tile->getX(), mTreasuryDentNumber + 7);
+        dentObject = TreasuryGoldMesh::createDentedPile(mSceneManager, pileMeshName, dentU, dentV,
+            TreasuryCreatureRules::dentRadius);
+    }
+
     TreasuryPileSettle settle;
     settle.mEntityName = entityName;
     settle.mNode = node;
     settle.mElapsed = 0.0f;
     settle.mFrom = TreasuryCreatureRules::pileSettleFrom(oldLevel, newLevel);
     settle.mTaken = taken;
+    settle.mLocalDent = (dentObject != nullptr);
     node->setScale(1.0f, 1.0f, settle.mFrom);
     mTreasuryPileSettles.push_back(settle);
+
+    if(dentObject != nullptr)
+    {
+        node->detachObject(entity);
+        node->attachObject(dentObject);
+        TreasuryPileDent dent;
+        dent.mEntityName = entityName;
+        dent.mOgreName = entity->getName();
+        dent.mNode = node;
+        dent.mEntity = entity;
+        dent.mObject = dentObject;
+        dent.mMeshName = pileMeshName;
+        dent.mU = dentU;
+        dent.mV = dentV;
+        dent.mElapsed = 0.0f;
+        mTreasuryPileDents.push_back(dent);
+    }
 
     if(!taken)
         return;
 
     // Taking gold leaves a dent, and coins roll away from it
     int level = 0;
-    const float height = TreasuryGoldMesh::surfaceHeight(position.x, position.y, level);
+    const float height = TreasuryGoldMesh::surfaceHeight(position.x + dentU - 0.5f, position.y + dentV - 0.5f, level);
     const void* roomKey = tile->getCoveringRoom() != nullptr ?
         static_cast<const void*>(tile->getCoveringRoom()) : static_cast<const void*>(tile);
-    if(createTreasuryEffect(roomKey, "TreasuryCoinRoll", Ogre::Vector3(position.x, position.y, height + 0.02f),
+    if(createTreasuryEffect(roomKey, "TreasuryCoinRoll",
+        Ogre::Vector3(position.x + dentU - 0.5f, position.y + dentV - 0.5f, height + 0.02f),
         TreasuryEffectKind::ambient) && SoundEffectsManager::getSingletonPtr() != nullptr)
         SoundEffectsManager::getSingleton().playSpatialSound("Rooms/Treasury/CoinStep", position.x, position.y);
 }
 
+float RenderManager::getTreasuryCameraDistance(const Ogre::Vector3& position) const
+{
+    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+    if(camera == nullptr)
+        return 0.0f;
+
+    return (position - camera->getDerivedPosition()).length();
+}
+
+void RenderManager::rrTreasuryDetailChanged()
+{
+    // A pile that is being dented is given back first; the piles themselves are drawn again below
+    while(!mTreasuryPileDents.empty())
+        finishTreasuryDent(mTreasuryPileDents.back().mEntityName);
+
+    // Every pile and every floor gold heap (not the ones a creature carries) is queued for the new setting
+    mTreasuryRebuildQueue.clear();
+    mTreasuryRebuildIndex = 0;
+    for(std::map<RenderedMovableEntity*, TreasuryPileInfo>::const_iterator it = mTreasuryPiles.begin();
+        it != mTreasuryPiles.end(); ++it)
+        mTreasuryRebuildQueue.push_back(std::make_pair(it->first, true));
+    for(std::map<RenderedMovableEntity*, TreasuryBuriedObject>::const_iterator it = mTreasuryBuriedObjects.begin();
+        it != mTreasuryBuriedObjects.end(); ++it)
+    {
+        Ogre::SceneNode* node = it->first->getEntityNode();
+        if(it->first->getObjectType() == GameEntityType::treasuryObject && node != nullptr
+            && node->getParent() == mRoomSceneNode)
+            mTreasuryRebuildQueue.push_back(std::make_pair(it->first, false));
+    }
+
+    // The sacks of the thieves follow the option at once: they go away at off and come back otherwise
+    if(mGameMap != nullptr)
+    {
+        const std::vector<Creature*>& creatures = mGameMap->getCreatures();
+        for(Creature* creature : creatures)
+            rrRefreshCreatureGoldSack(creature);
+    }
+}
+
+void RenderManager::updateTreasuryRebuild()
+{
+    int budget = TreasuryCreatureRules::rebuildPerFrame;
+    while(budget > 0 && mTreasuryRebuildIndex < mTreasuryRebuildQueue.size())
+    {
+        const std::pair<RenderedMovableEntity*, bool> item = mTreasuryRebuildQueue[mTreasuryRebuildIndex];
+        ++mTreasuryRebuildIndex;
+
+        // An entity that went away in the meantime is not listed any more
+        NodeType nodeType = NodeType::MTILES_NODE;
+        if(item.second)
+        {
+            std::map<RenderedMovableEntity*, TreasuryPileInfo>::const_iterator pile = mTreasuryPiles.find(item.first);
+            if(pile == mTreasuryPiles.end())
+                continue;
+            nodeType = pile->second.mNodeType;
+        }
+        else
+        {
+            Ogre::SceneNode* node = item.first->getEntityNode();
+            if(mTreasuryBuriedObjects.find(item.first) == mTreasuryBuriedObjects.end() || node == nullptr
+                || node->getParent() != mRoomSceneNode)
+                continue;
+        }
+
+        item.first->destroyMesh(nodeType);
+        item.first->createMesh(nodeType);
+        --budget;
+    }
+
+    if(mTreasuryRebuildIndex >= mTreasuryRebuildQueue.size() && !mTreasuryRebuildQueue.empty())
+    {
+        mTreasuryRebuildQueue.clear();
+        mTreasuryRebuildIndex = 0;
+    }
+}
+
+void RenderManager::updateTreasuryLod(Ogre::Real timeSinceLastFrame)
+{
+    mTreasuryLodTimer += timeSinceLastFrame;
+    if(mTreasuryLodTimer < TreasuryCreatureRules::lodInterval)
+        return;
+
+    mTreasuryLodTimer = 0.0f;
+    // Only the full detail has a level of detail: reduced is coarse everywhere, off draws the classic stacks
+    if(TreasuryGoldMesh::getDetail() != TreasuryGoldMesh::Detail::full || mViewport == nullptr
+        || mViewport->getCamera() == nullptr)
+        return;
+
+    // The piles that cross the distance (with hysteresis), a limited number per check; a settling pile waits
+    std::vector<std::pair<RenderedMovableEntity*, bool> > switches;
+    for(std::map<RenderedMovableEntity*, TreasuryPileInfo>::const_iterator it = mTreasuryPiles.begin();
+        it != mTreasuryPiles.end(); ++it)
+    {
+        const bool reduced = TreasuryCreatureRules::lodReducedAt(it->second.mFar,
+            getTreasuryCameraDistance(it->first->getPosition()));
+        if(reduced == it->second.mFar || isTreasuryPileSettling(it->first->getName()))
+            continue;
+
+        switches.push_back(std::make_pair(it->first, reduced));
+        if(static_cast<int>(switches.size()) >= TreasuryCreatureRules::lodSwitchesPerUpdate)
+            break;
+    }
+
+    for(std::vector<std::pair<RenderedMovableEntity*, bool> >::const_iterator it = switches.begin();
+        it != switches.end(); ++it)
+    {
+        RenderedMovableEntity* entity = it->first;
+        const NodeType nodeType = mTreasuryPiles[entity].mNodeType;
+        mTreasuryPileFarOverride = it->second ? 1 : 0;
+        entity->destroyMesh(nodeType);
+        entity->createMesh(nodeType);
+        mTreasuryPileFarOverride = -1;
+        mTreasuryBatch.hideUntilBatched(entity->getName());
+    }
+}
+
+void RenderManager::updateTreasuryDents(Ogre::Real timeSinceLastFrame)
+{
+    std::vector<std::string> finished;
+    for(std::vector<TreasuryPileDent>::iterator it = mTreasuryPileDents.begin(); it != mTreasuryPileDents.end(); ++it)
+    {
+        it->mElapsed += timeSinceLastFrame;
+        if(it->mElapsed >= TreasuryCreatureRules::pileSettleTime)
+        {
+            finished.push_back(it->mEntityName);
+            continue;
+        }
+
+        TreasuryGoldMesh::updateDentedPile(it->mObject, it->mMeshName, it->mU, it->mV,
+            TreasuryCreatureRules::dentRadius,
+            TreasuryCreatureRules::dentLocalDepth * TreasuryCreatureRules::localDentFactor(it->mElapsed));
+    }
+    for(const std::string& name : finished)
+        finishTreasuryDent(name);
+}
+
+void RenderManager::finishTreasuryDent(const std::string& entityName)
+{
+    for(std::vector<TreasuryPileDent>::iterator it = mTreasuryPileDents.begin(); it != mTreasuryPileDents.end(); ++it)
+    {
+        if(it->mEntityName != entityName)
+            continue;
+
+        // The dynamic copy goes away (destroying it also detaches it), the entity of the pile is drawn again
+        mSceneManager->destroyManualObject(it->mObject);
+        if(mSceneManager->hasEntity(it->mOgreName))
+            it->mNode->attachObject(it->mEntity);
+        mTreasuryPileDents.erase(it);
+        return;
+    }
+}
+
 void RenderManager::updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame)
 {
+    updateTreasuryDents(timeSinceLastFrame);
     for(std::vector<TreasuryPileSettle>::iterator it = mTreasuryPileSettles.begin(); it != mTreasuryPileSettles.end();)
     {
         it->mElapsed += timeSinceLastFrame;
-        it->mNode->setScale(1.0f, 1.0f, TreasuryCreatureRules::pileSettleScale(it->mFrom, it->mTaken, it->mElapsed));
+        it->mNode->setScale(1.0f, 1.0f, TreasuryCreatureRules::pileSettleScale(it->mFrom,
+            it->mTaken && !it->mLocalDent, it->mElapsed));
         if(it->mElapsed >= TreasuryCreatureRules::pileSettleTime)
         {
             mTreasuryBatch.pileSettled(it->mEntityName);
@@ -5077,6 +5294,7 @@ bool RenderManager::isTreasuryPileSettling(const std::string& entityName) const
 
 void RenderManager::cancelTreasuryPileSettle(const std::string& entityName)
 {
+    finishTreasuryDent(entityName);
     for(std::vector<TreasuryPileSettle>::iterator it = mTreasuryPileSettles.begin(); it != mTreasuryPileSettles.end();)
     {
         if(it->mEntityName == entityName)
@@ -5247,20 +5465,90 @@ void RenderManager::refreshTreasuryGlow(int x, int y)
 
     if(glow.mStrength <= 0.0f)
     {
-        if(mSceneManager->hasLight(name))
-        {
-            Ogre::Light* light = mSceneManager->getLight(name);
-            Ogre::SceneNode* node = light->getParentSceneNode();
-            if(node != nullptr)
-                node->detachObject(light);
-            mSceneManager->destroyLight(light);
-            if(node != nullptr)
-                mSceneManager->destroySceneNode(node);
-        }
-        mTreasuryGlowLights.erase(name);
+        mTreasuryGlowPatches.erase(name);
+        destroyTreasuryGlowLight(name);
         return;
     }
 
+    TreasuryGlowPatch patch;
+    patch.mStrength = glow.mStrength;
+    patch.mX = glow.mX;
+    patch.mY = glow.mY;
+    patch.mRoom = glow.mRoom;
+    mTreasuryGlowPatches[name] = patch;
+    // A patch that has a light follows its pile at once; which patches get one is chosen with the next update
+    if(mTreasuryGlowLights.find(name) != mTreasuryGlowLights.end())
+        setTreasuryGlowLight(name, patch);
+    mTreasuryGlowDirty = true;
+}
+
+void RenderManager::updateTreasuryGlow(Ogre::Real timeSinceLastFrame)
+{
+    mTreasuryGlowTimer += timeSinceLastFrame;
+    // A change is picked up quickly, but never more often than every tenth of a second; the camera moves
+    // all the time, so the lights are chosen again every glowUpdateInterval seconds in any case
+    if(!(mTreasuryGlowDirty && mTreasuryGlowTimer >= 0.1f) && mTreasuryGlowTimer < TreasuryCreatureRules::glowUpdateInterval)
+        return;
+
+    mTreasuryGlowTimer = 0.0f;
+    mTreasuryGlowDirty = false;
+    applyTreasuryGlowLights();
+}
+
+void RenderManager::applyTreasuryGlowLights()
+{
+    // The patches near the camera get a light, the nearest first, up to the limit of their room and of the game
+    const TreasuryGoldMesh::Detail detail = TreasuryGoldMesh::getDetail();
+    const int perRoomLimit = TreasuryCreatureRules::glowLimitPerRoom(detail);
+    const int totalLimit = TreasuryCreatureRules::glowLimitTotal(detail);
+    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+
+    std::vector<std::pair<float, std::string> > candidates;
+    for(std::map<std::string, TreasuryGlowPatch>::const_iterator it = mTreasuryGlowPatches.begin();
+        it != mTreasuryGlowPatches.end(); ++it)
+    {
+        float distance = 0.0f;
+        if(camera != nullptr)
+        {
+            const Ogre::Vector3 lightPosition(it->second.mX, it->second.mY, 0.8f);
+            distance = (lightPosition - camera->getDerivedPosition()).length();
+            if(distance > TreasuryCreatureRules::glowViewDistance)
+                continue;
+        }
+        candidates.push_back(std::make_pair(distance, it->first));
+    }
+    std::sort(candidates.begin(), candidates.end());
+
+    std::set<std::string> wanted;
+    std::map<const void*, int> perRoom;
+    for(std::vector<std::pair<float, std::string> >::const_iterator it = candidates.begin(); it != candidates.end(); ++it)
+    {
+        if(static_cast<int>(wanted.size()) >= totalLimit)
+            break;
+
+        int& count = perRoom[mTreasuryGlowPatches[it->second].mRoom];
+        if(count >= perRoomLimit)
+            continue;
+
+        ++count;
+        wanted.insert(it->second);
+    }
+
+    std::vector<std::string> unwanted;
+    for(const std::string& name : mTreasuryGlowLights)
+    {
+        if(wanted.find(name) == wanted.end())
+            unwanted.push_back(name);
+    }
+    for(const std::string& name : unwanted)
+        destroyTreasuryGlowLight(name);
+
+    for(const std::string& name : wanted)
+        setTreasuryGlowLight(name, mTreasuryGlowPatches[name]);
+}
+
+void RenderManager::setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch)
+{
     Ogre::Light* light;
     if(mSceneManager->hasLight(name))
         light = mSceneManager->getLight(name);
@@ -5274,10 +5562,25 @@ void RenderManager::refreshTreasuryGlow(int x, int y)
         light->setLightMask(ROOM_LIGHT_MASK);
         Ogre::SceneNode* node = mLightSceneNode->createChildSceneNode(name + "_node");
         node->attachObject(light);
-        mTreasuryGlowLights.insert(name);
     }
-    light->getParentSceneNode()->setPosition(Ogre::Vector3(glow.mX, glow.mY, 0.8f));
-    light->setDiffuseColour(Ogre::ColourValue(1.0f, 0.72f, 0.3f) * (0.9f * glow.mStrength));
+    mTreasuryGlowLights.insert(name);
+    light->getParentSceneNode()->setPosition(Ogre::Vector3(patch.mX, patch.mY, 0.8f));
+    light->setDiffuseColour(Ogre::ColourValue(1.0f, 0.72f, 0.3f) * (0.9f * patch.mStrength));
+}
+
+void RenderManager::destroyTreasuryGlowLight(const std::string& name)
+{
+    if(mSceneManager->hasLight(name))
+    {
+        Ogre::Light* light = mSceneManager->getLight(name);
+        Ogre::SceneNode* node = light->getParentSceneNode();
+        if(node != nullptr)
+            node->detachObject(light);
+        mSceneManager->destroyLight(light);
+        if(node != nullptr)
+            mSceneManager->destroySceneNode(node);
+    }
+    mTreasuryGlowLights.erase(name);
 }
 
 void RenderManager::clearTreasuryEffects()
@@ -5290,8 +5593,13 @@ void RenderManager::clearTreasuryEffects()
     mTreasuryAmbientBudget.clear();
     mTreasuryLastSplash.clear();
     mTreasuryPileSettles.clear();
+    while(!mTreasuryPileDents.empty())
+        finishTreasuryDent(mTreasuryPileDents.back().mEntityName);
     mTreasuryBatch.clear();
     mTreasuryBuriedObjects.clear();
+    mTreasuryPiles.clear();
+    mTreasuryRebuildQueue.clear();
+    mTreasuryRebuildIndex = 0;
     while(!mTreasuryThiefSacks.empty())
         removeTreasuryThiefSack(mTreasuryThiefSacks.back().mCreature);
     for(const std::string& name : mTreasuryGlowLights)
@@ -5307,6 +5615,8 @@ void RenderManager::clearTreasuryEffects()
             mSceneManager->destroySceneNode(glowNode);
     }
     mTreasuryGlowLights.clear();
+    mTreasuryGlowPatches.clear();
+    mTreasuryGlowDirty = false;
     TreasuryGoldMesh::clearPiles();
 }
 

@@ -25,7 +25,9 @@ assert 'render/TreasuryGoldBatch.cpp' in cmake
 assert '#include "render/TreasuryGoldBatch.h"' in header and 'TreasuryGoldBatch mTreasuryBatch;' in header
 
 # One batch per room: the key is the room only (no patch of tiles), the rule constant is the rebuild interval.
-interval = float(re.search(r'batchRebuildInterval\s*=\s*([0-9.]+)f\s*;', rules).group(1))
+settings = read('source/rooms/TreasurySettings.h')
+interval = float(re.search(r'batchRebuildInterval\s*=\s*([0-9.]+)f\s*;', settings).group(1))
+assert 'batchRebuildInterval' in rules
 assert 0.1 <= interval <= 0.5
 assert 'batchChunkSize' not in rules and 'batchChunkIndex' not in rules
 assert 'batchChunkSize' not in batch and 'batchChunkIndex' not in batch

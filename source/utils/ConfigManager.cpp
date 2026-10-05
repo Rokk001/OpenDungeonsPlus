@@ -22,6 +22,7 @@
 #include "entities/Weapon.h"
 #include "game/Skill.h"
 #include "gamemap/TileSet.h"
+#include "rooms/TreasurySettings.h"
 #include "spawnconditions/SpawnCondition.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -142,6 +143,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     }
 
     loadRelationships(configPath + "relationships.cfg");
+    loadTreasury(configPath + "treasury.cfg");
 
     // Reserve space in any case.
     mUserConfig.resize(Config::Ctg::TOTAL);
@@ -1014,6 +1016,40 @@ void ConfigManager::loadRelationships(const std::string& fileName)
         defFile >> value;
         mRelationshipsConfig[nextParam] = value;
     }
+}
+
+void ConfigManager::loadTreasury(const std::string& fileName)
+{
+    OD_LOG_INF("Load treasury file: " + fileName);
+    std::stringstream defFile;
+    if(!Helper::readFile(fileName, defFile, true))
+    {
+        OD_LOG_WRN("Couldn't read " + fileName + ", using the default treasury values");
+        return;
+    }
+
+    std::string nextParam;
+    defFile >> nextParam;
+    if(nextParam != "[Treasury]")
+    {
+        OD_LOG_WRN("Invalid treasury start format. Line was " + nextParam);
+        return;
+    }
+
+    std::map<std::string, std::string> values;
+    while(defFile.good())
+    {
+        if(!(defFile >> nextParam))
+            break;
+
+        if(nextParam == "[/Treasury]")
+            break;
+
+        std::string value;
+        defFile >> value;
+        values[nextParam] = value;
+    }
+    TreasurySettings::current() = TreasurySettings::fromConfig(values);
 }
 
 bool ConfigManager::loadTraps(const std::string& fileName)
