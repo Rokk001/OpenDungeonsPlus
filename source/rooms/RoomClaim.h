@@ -62,16 +62,27 @@ namespace RoomClaim
         return static_cast<int32_t>(static_cast<double>(costPerTile) * static_cast<double>(numTiles) * percent / 100.0);
     }
 
+    //! \brief How many seconds a worker whose claim rate equals the reference claim rate
+    //! needs alone to take a room over: the number of its tiles times the duration of one
+    //! tile. This is the size of the pool of the whole room. The health of the room is a
+    //! fraction of it (1.0 = full), so a room that grows or shrinks while it is being taken
+    //! over keeps its share of the pool and the time left follows the new size.
+    inline double takeoverSeconds(double secondsPerTile, uint32_t numTiles)
+    {
+        return secondsPerTile * static_cast<double>(numTiles);
+    }
+
     //! \brief The part of the health of a whole room (1.0 = full) one dance takes
     //! away. A worker whose claim rate equals referenceClaimRate working alone
-    //! empties a room in secondsPerTile seconds for every tile of it.
+    //! empties a room in takeoverSeconds() seconds, secondsPerTile for every tile of it.
     inline double healthLostPerDance(double danceRate, double referenceClaimRate, double secondsPerTile,
         double turnsPerSecond, uint32_t numTiles)
     {
-        if((referenceClaimRate <= 0.0) || (secondsPerTile <= 0.0) || (turnsPerSecond <= 0.0) || (numTiles == 0))
+        double seconds = takeoverSeconds(secondsPerTile, numTiles);
+        if((referenceClaimRate <= 0.0) || (seconds <= 0.0) || (turnsPerSecond <= 0.0))
             return 1.0;
 
-        return (danceRate / referenceClaimRate) / (secondsPerTile * turnsPerSecond * static_cast<double>(numTiles));
+        return (danceRate / referenceClaimRate) / (seconds * turnsPerSecond);
     }
 
     //! \brief The part of the health of a whole room (1.0 = full) one dance of an own
@@ -80,10 +91,11 @@ namespace RoomClaim
     inline double healthRepairedPerDance(double danceRate, double referenceClaimRate, double secondsPerTile,
         double turnsPerSecond, uint32_t numTiles, double repairFactor)
     {
-        if((referenceClaimRate <= 0.0) || (secondsPerTile <= 0.0) || (turnsPerSecond <= 0.0) || (numTiles == 0))
+        double seconds = takeoverSeconds(secondsPerTile, numTiles);
+        if((referenceClaimRate <= 0.0) || (seconds <= 0.0) || (turnsPerSecond <= 0.0))
             return 1.0;
 
-        return repairFactor * (danceRate / referenceClaimRate) / (secondsPerTile * turnsPerSecond * static_cast<double>(numTiles));
+        return repairFactor * (danceRate / referenceClaimRate) / (seconds * turnsPerSecond);
     }
 }
 

@@ -109,6 +109,10 @@ check('double getClaimHealth() const' in room_header and 'double mClaimHealth;' 
 check('virtual void changeOwner(Seat* seat) override;' in portal_header, 'RoomPortal.h declares its changeOwner')
 check('mClaimHealth = (mClaimHealth * nbTilesThis' in function(room_source, 'void Room::absorbRoom('),
       'merging rooms averages the pool by tiles')
+check('newRoom->mClaimHealth = mClaimHealth;' in function(room_source, 'void Room::checkForSplit('),
+      'the part of a room that breaks off keeps the share of the pool')
+check('inline double takeoverSeconds(' in read('source/rooms/RoomClaim.h')
+      and 'numCoveredTiles()' in claim, 'the pool of a room is its number of tiles times the duration of one tile')
 
 check('logPortalCandidate(creature, myTile, "standing")' in search_source and '"neighbor"' in search_source
       and '"sight"' in search_source, 'the claim search logs portal tiles')
@@ -176,6 +180,26 @@ int main()
     check(std::abs(one - 5 * five) <= 5, "five workers need a fifth of the time");
     check(turnsToTake(impRate + 0.06 * 4, ENEMY, 25, 1) < turnsToTake(impRate, ENEMY, 25, 1), "a level 5 worker is faster");
     check(turnsToTake(impRate, ENEMY, 50, 1) > 1.9 * turnsToTake(impRate, ENEMY, 25, 1), "twice the tiles take twice the time");
+    check(RoomClaim::takeoverSeconds(ENEMY, 25) == ENEMY * 25.0, "the pool is the number of tiles times the duration of one tile");
+
+    // A room that is worn down halfway and then shrinks to half the tiles keeps its share of the pool:
+    // the half of 50 tiles is gone, so half of the 25 tiles are left
+    double health = 1.0;
+    int turns = 0;
+    while(health > 0.5)
+    {
+        health -= RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 50);
+        ++turns;
+    }
+    int turnsLeft = 0;
+    while(health > 0.0 && turnsLeft < 100000)
+    {
+        health -= RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25);
+        ++turnsLeft;
+    }
+    check(std::fabs(turnsLeft / TPS - 0.5 * 25 * ENEMY) < 1.0, "the time left follows the new size of the room");
+    check(std::fabs((turns + turnsLeft) / TPS - (0.5 * 50 + 0.5 * 25) * ENEMY) < 1.5, "half a 50 tile pool and half a 25 tile pool in all");
+
     check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25) > 0.0, "a dance lowers the pool");
     check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 0) >= 1.0, "a room without tiles is taken at once");
 

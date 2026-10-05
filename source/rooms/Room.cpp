@@ -150,6 +150,10 @@ void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)
         secondsPerTile = config.getRoomConfigDoubleOrDefault("RoomConvertSecondsPerTile", 2.5);
     double referenceClaimRate = config.getRoomConfigDoubleOrDefault("RoomConvertClaimRate", 0.42);
 
+    // The pool of the room is its number of tiles times the duration of one tile (RoomClaim::takeoverSeconds).
+    // It is kept as a fraction and the size is read at every dance, so a room that grows or shrinks
+    // meanwhile keeps its share. All the workers on any tile of the room lower the same pool and
+    // the whole room changes hands when it is empty.
     mClaimHealth -= RoomClaim::healthLostPerDance(danceRate, referenceClaimRate, secondsPerTile,
         ODApplication::turnsPerSecond, static_cast<uint32_t>(numCoveredTiles()));
 
@@ -635,6 +639,9 @@ void Room::checkForSplit()
         newRoom->setIsOnMap(true);
         newRoom->setName(gameMap->nextUniqueNameRoom(newRoom->getType()));
         newRoom->setSeat(getSeat());
+        // The part that breaks off keeps the share of the takeover pool this room had worn down,
+        // so cutting a room in two does not give the owner a fresh pool
+        newRoom->mClaimHealth = mClaimHealth;
 
         OD_LOG_INF(gameMap->serverStr() + "room=" + getName() + " no longer holds together, "
             + Helper::toString(static_cast<int32_t>(group.size())) + " of its tiles become room="

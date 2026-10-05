@@ -573,7 +573,9 @@ void WorkerReactions::showClaim(CreatureReactions& reactions, Creature* worker)
         return;
 
     // Dancing on a tile of a room of an enemy: the room is being taken over. The tiles change owner
-    // on the server and the client gets the new owner with the tile, which ends the takeover (tickWorker)
+    // on the server all at once (one pool for the whole room that every dancer lowers) and the client gets the
+    // new owner with the tiles, which ends the takeover for every worker of the room in the same moment
+    // (tickWorker). The work reaction repeats for as long as the worker dances, that is while the pool sinks
     Seat* tileOwner = tile->getSeat();
     if(tile->getIsRoom() && (tileOwner != nullptr) && (worker->getSeat() != nullptr) &&
        !worker->getSeat()->isAlliedSeat(tileOwner))
@@ -661,7 +663,8 @@ void WorkerReactions::tickWorker(CreatureReactions& reactions, Creature* worker)
         showClaim(reactions, worker);
     }
 
-    // The room the worker was taking over is its own now: a short triumph. Without a change of owner
+    // The room the worker was taking over is its own now (every tile of it changed owner at once, so one
+    // check of the danced tile covers the whole room): a short triumph. Without a change of owner
     // the takeover is forgotten after a while (the worker was chased off or the room is guarded)
     if(state.mTakeoverTile != nullptr)
     {

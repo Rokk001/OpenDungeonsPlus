@@ -76,7 +76,7 @@ public:
         destructibleOnly = 0,
         //! Workers can dance room tiles away and fighters can still destroy them.
         claimableAndDestructible = 1,
-        //! Only workers can take a room, tile by tile; fighters leave rooms alone.
+        //! Only workers can take a room, all of it at once; fighters leave rooms alone.
         claimableOnly = 2
     };
 
@@ -86,8 +86,9 @@ public:
 
     //! \brief Rooms can be taken over by enemy workers when the RoomsClaimableByEnemies
     //! switch is set in the room configuration file. The whole room has one health
-    //! pool (mClaimHealth) that every dance on any of its tiles lowers; when it is
-    //! empty all the tiles change hands at once (changeOwner). The dungeon temple is
+    //! pool (mClaimHealth, a fraction of tiles times RoomConvertSecondsPerTile) that
+    //! every dance on any of its tiles lowers; when it is empty all the tiles change
+    //! hands at once (changeOwner). The dungeon temple is
     //! never claimable: it can only be destroyed. Bridges override this pair with
     //! their own claiming rules (square by square).
     virtual bool isClaimable(Seat* seat) const override;

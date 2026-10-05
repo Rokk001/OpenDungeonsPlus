@@ -88,6 +88,40 @@ assert 'isTakeoverBlocked' in room_h and 'getTakeoverPrice' in room_h
 # The two pure rules
 assert 'inline bool isGuardClose(' in claim_h and 'inline int32_t takeoverPrice(' in claim_h
 
+# The room is taken over at once: one pool of tiles x duration of one tile, lowered by every dancer on any tile
+assert 'inline double takeoverSeconds(double secondsPerTile, uint32_t numTiles)' in claim_h
+
+
+def inline_body(source, signature):
+    start = source.index(signature)
+    return source[start:source.index('\n    }\n', start)]
+
+
+assert 'secondsPerTile * static_cast<double>(numTiles)' in inline_body(claim_h, 'inline double takeoverSeconds(')
+for rule in ('inline double healthLostPerDance(', 'inline double healthRepairedPerDance('):
+    assert 'takeoverSeconds(secondsPerTile, numTiles)' in inline_body(claim_h, rule), rule + ' uses the pool size'
+# One duration value in the config (no second key with the same meaning), documented with the pool formula
+assert len(re.findall(r'^\s+RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one set value'
+assert len(re.findall(r'^\s+# RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one documented value'
+assert not re.search(r'RoomTakeover(Seconds|Turns)PerTile', rooms_cfg + room + room_h + claim_h), 'no double of RoomConvertSecondsPerTile'
+assert 'tiles times this value' in rooms_cfg and 'at once' in rooms_cfg
+dance_room = function_body(room, 'void Room::claimForSeat(')
+assert 'numCoveredTiles()' in dance_room, 'the size of the pool is read at every dance'
+assert dance_room.index('mClaimHealth -=') < dance_room.index('changeOwner(seat)'), 'the whole room changes owner only after the pool is empty'
+assert 'handTilesOverToSeat(seat, tiles)' in function_body(room, 'void Room::changeOwner(') and 'mCoveredTiles' in function_body(room, 'void Room::changeOwner(')
+# A room that grows or shrinks while it is worn down keeps its share of the pool: merging averages by tiles,
+# the part that breaks off keeps the share, the taker's new room starts full
+assert 'mClaimHealth = (mClaimHealth * nbTilesThis' in function_body(room, 'void Room::absorbRoom(')
+assert 'newRoom->mClaimHealth = mClaimHealth;' in function_body(room, 'void Room::checkForSplit(')
+# Bridges keep their own square by square rule and are not rooms of one pool
+bridge = read('source/rooms/RoomBridge.cpp')
+bridge_claim = function_body(bridge, 'void RoomBridge::claimForSeat(')
+assert 'mClaimedValue' in bridge_claim and 'handTileOverToSeat(seat, tile)' in bridge_claim and 'mClaimHealth' not in bridge_claim
+# The portal changes hands as a whole and restarts at a full pool
+assert 'mClaimHealth = 1.0;' in function_body(read('source/rooms/RoomPortal.cpp'), 'void RoomPortal::changeOwner(')
+# Client: one reaction per worker when the danced tile (and with it the whole room) changed owner, none per tile
+assert worker.count('"TakeoverDone"') == 1 and 'at once' in function_body(worker, 'void WorkerReactions::tickWorker(')
+
 # Client: reactions while dancing on a tile of an enemy room and when the tile is ours
 for name in ('TakeoverWork', 'TakeoverDone'):
     assert '"' + name + '"' in worker, name
@@ -119,6 +153,11 @@ int main()
     check(RoomClaim::takeoverPrice(100, 10, 25.0) == 250, "a quarter of 10 tiles at 100");
     check(RoomClaim::takeoverPrice(0, 10, 25.0) == 0, "a free room costs nothing");
     check(RoomClaim::takeoverPrice(100, 0, 25.0) == 0, "no tiles, no price");
+    check(RoomClaim::takeoverSeconds(2.5, 25) == 62.5, "the pool is tiles times the duration of one tile");
+    check(RoomClaim::takeoverSeconds(2.5, 0) == 0.0, "no tiles, no pool");
+    // One worker at the reference rate: the pool of 25 tiles is empty after 62.5 s of dancing
+    double lost = RoomClaim::healthLostPerDance(0.42, 0.42, 2.5, 1.4, 25);
+    check(lost > 0.0 && (lost * 1.4 * 62.5 > 0.999) && (lost * 1.4 * 62.5 < 1.001), "one dance is a 1/(seconds x turns) share");
     std::cout << "FAILURES=" << gFailures << '\n';
     return gFailures ? 1 : 0;
 }
