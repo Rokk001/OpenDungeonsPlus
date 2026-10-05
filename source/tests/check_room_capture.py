@@ -103,6 +103,16 @@ check('mClaimedValue' not in portal_source and 'mClaimedValue' not in portal_hea
 check('numCoveredTiles()' in function(portal_source, 'void RoomPortal::exportToStream('),
       'the portal file format still stores the claim value as a number of tiles')
 
+# A bridge is one room with one pool: no square by square claim value, the research only scales the dance
+bridge_source = read('source/rooms/RoomBridge.cpp')
+bridge_claim = function(bridge_source, 'void RoomBridge::claimForSeat(')
+check('Room::claimForSeat(seat, tile, danceRate)' in bridge_claim and 'getResearchValue(' in bridge_claim,
+      'a bridge is taken over with the pool of Room, slowed by the research of its owner')
+check('mClaimedValue' not in bridge_source and 'mClaimedValue' not in read('source/rooms/RoomBridge.h'),
+      'a bridge has no claim value per square any more')
+check('numCoveredTiles()' in function(bridge_source, 'void RoomBridge::exportToStream('),
+      'the bridge file format still stores the claim value as a number of squares')
+
 check('mClaimHealth(1.0)' in function(room_source, 'Room::Room('), 'a new room starts with a full pool')
 check('double getClaimHealth() const' in room_header and 'double mClaimHealth;' in room_header
       and 'virtual void changeOwner(Seat* seat);' in room_header, 'Room.h declares the pool and changeOwner')
@@ -199,6 +209,11 @@ int main()
     }
     check(std::fabs(turnsLeft / TPS - 0.5 * 25 * ENEMY) < 1.0, "the time left follows the new size of the room");
     check(std::fabs((turns + turnsLeft) / TPS - (0.5 * 50 + 0.5 * 25) * ENEMY) < 1.5, "half a 50 tile pool and half a 25 tile pool in all");
+
+    // A bridge is one room: its pool is all its squares times the duration of one square
+    check(std::fabs(RoomClaim::takeoverSeconds(ENEMY, 8) - 8 * ENEMY) < 1e-9, "a bridge of 8 squares has the pool of 8 tiles");
+    check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 8) > RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25),
+          "a short bridge is taken faster than a big room");
 
     check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25) > 0.0, "a dance lowers the pool");
     check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 0) >= 1.0, "a room without tiles is taken at once");
