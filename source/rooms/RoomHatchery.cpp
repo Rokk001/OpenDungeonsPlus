@@ -274,6 +274,7 @@ HatcheryCycleSettings RoomHatchery::getCycleSettings() const
     settings.mFightTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFightTurns", settings.mFightTurns));
     settings.mFightApproachTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFightApproachTurns", settings.mFightApproachTurns));
     settings.mLayShowTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryLayShowTurns", settings.mLayShowTurns));
+    settings.mNestWalkTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryNestWalkTurns", settings.mNestWalkTurns));
 
     // The research of the hatchery shortens the waiting times
     double coopWait = config.getRoomConfigDoubleOrDefault("HatcheryChickenSpawnRate", settings.mCoopWait);
@@ -397,15 +398,6 @@ void RoomHatchery::releasePendingEggs(const HatcheryCycleSettings& settings)
     std::vector<PendingEgg>::iterator it = mPendingEggs.begin();
     while(it != mPendingEggs.end())
     {
-        ++it->mAge;
-
-        // The hen is still on her way to the nest, she has not started to lay
-        if(!it->mHen.empty())
-        {
-            ++it;
-            continue;
-        }
-
         if(it->mTurns > 0)
             --it->mTurns;
         if(it->mTurns > 0)
@@ -417,7 +409,7 @@ void RoomHatchery::releasePendingEggs(const HatcheryCycleSettings& settings)
         // The place must still belong to the hatchery, otherwise the egg is not laid
         Tile* spotTile = getGameMap()->getTile(Helper::round(it->mSpot.x), Helper::round(it->mSpot.y));
         if((spotTile != nullptr) && (spotTile->getCoveringRoom() == this))
-            spawnAnimal(ChickenKind::egg, it->mSpot, settings)->setAge(it->mAge);
+            spawnAnimal(ChickenKind::egg, it->mSpot, settings);
         it = mPendingEggs.erase(it);
     }
 }
@@ -438,7 +430,8 @@ bool RoomHatchery::isOnNestTrip(const ChickenEntity& hen) const
     return false;
 }
 
-void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, HatcheryCounts& counts)
+void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings,
+    HatcheryCounts& counts)
 {
     // The hen has arrived when she is this close to the place next to the nest
     const double arrive = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryNestArrive", 0.3);
@@ -470,10 +463,10 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, Hatc
             continue;
         }
 
-        if(it->mWalkTurns > 0)
-            --it->mWalkTurns;
+        // The walk takes the same time every time: when it is over she lays where she stands
+        const bool walkOver = it->mTurns <= settings.mLayShowTurns;
         const double distance = Ogre::Vector2(hen->getPosition().x, hen->getPosition().y).distance(it->mStand);
-        if((distance > arrive) && (it->mWalkTurns > 0))
+        if((distance > arrive) && !walkOver)
         {
             if(!hen->isBusy() && !hen->isScattering())
                 hen->setFollowTarget(it->mStand, 0.1);
@@ -481,7 +474,7 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, Hatc
             continue;
         }
 
-        // She is there (or has needed too long): she sits down and lays, the egg appears in the nest after the clip
+        // She is there (or the walk is over): she sits down until the egg lies in the nest
         hen->clearFollowTarget();
         hen->playPose(ChickenPose::lay, std::max<uint32_t>(2, it->mTurns));
         it->mHen.clear();
@@ -709,7 +702,7 @@ void RoomHatchery::doUpkeep()
     }
 
     // Hens that walk to a nest sit down when they arrive
-    updateNestTrips(hens, counts);
+    updateNestTrips(hens, settings, counts);
 
     // Places of the eggs of the hatchery: the nests of the coops are filled place by place
     std::vector<Ogre::Vector2> eggPositions;
@@ -721,13 +714,15 @@ void RoomHatchery::doUpkeep()
 
     // Hens lay eggs while the hatchery is not full
     uint32_t capacity = HatcheryCycle::capacity(mCoveredTiles.size(), mNumActiveSpots, settings);
-    const uint32_t nestWalkTurns = static_cast<uint32_t>(
-        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryNestWalkTurns", 40.0));
     for(ChickenEntity* hen : hens)
     {
-        // She is on her way to a nest and lays when she arrives
+        // She is on her way to a nest and lays when she arrives. The walk and the Lay pose count against her next
+        // laying interval (the timer keeps running), so the rate of the eggs stays the same.
         if(isOnNestTrip(*hen))
+        {
+            hen->countDownLay();
             continue;
+        }
 
         if(!hen->countDownLay())
             continue;
@@ -745,12 +740,11 @@ void RoomHatchery::doUpkeep()
         // With a free nest she first walks to the place next to it (the nests lie inside the footprint of the coop,
         // she cannot stand in them) and lays there, see updateNestTrips. HatcheryNestWalkTurns 0 = she lays where she is.
         Ogre::Vector2 standing;
-        if(nestFound && (settings.mLayShowTurns > 0) && (nestWalkTurns > 0) && getNestStandPoint(eggSpot, standing))
+        if(nestFound && (settings.mLayShowTurns > 0) && (settings.mNestWalkTurns > 0) && getNestStandPoint(eggSpot, standing))
         {
-            PendingEgg trip(eggSpot, settings.mLayShowTurns);
+            PendingEgg trip(eggSpot, HatcheryCycle::layDelay(settings));
             trip.mHen = hen->getName();
             trip.mStand = standing;
-            trip.mWalkTurns = nestWalkTurns;
             mPendingEggs.push_back(trip);
             hen->setFollowTarget(standing, 0.1);
             fireAnimalSound(*hen, "Hatchery/Cluck");

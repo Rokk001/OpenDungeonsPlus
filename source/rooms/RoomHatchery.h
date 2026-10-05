@@ -96,7 +96,8 @@ private:
     bool isOnNestTrip(const ChickenEntity& hen) const;
     //! Hens on their way to a nest: when one arrives (or needs too long) she sits down and lays (Lay pose), a hen
     //! that is gone takes her egg with her.
-    void updateNestTrips(const std::vector<ChickenEntity*>& hens, HatcheryCounts& counts);
+    void updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings,
+        HatcheryCounts& counts);
     //! Lets a hen or a rooster come out of a coop. Returns false if no coop has a free place.
     bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count = 1);
 
@@ -155,22 +156,16 @@ private:
         PendingEgg(const Ogre::Vector3& spot, uint32_t turns) :
             mSpot(spot),
             mTurns(turns),
-            mStand(0.0f, 0.0f),
-            mWalkTurns(0),
-            mAge(0)
+            mStand(0.0f, 0.0f)
         {}
 
         Ogre::Vector3 mSpot;
         uint32_t mTurns;
-        //! Not empty while the hen is still on her way to the nest: her name, the place next to the nest where she
-        //! stands to lay, and the turns left for the walk. mTurns only counts down once she has started to lay.
-        //! Not saved: a save in between lets the egg appear as it would after the walk.
+        //! Not empty while the hen is still on her way to the nest: her name and the place next to the nest where she
+        //! stands to lay. mTurns counts down from the start (walk and Lay pose together, HatcheryCycle::layDelay).
+        //! Not saved: a save in between lets the egg appear after the turns that are left.
         std::string mHen;
         Ogre::Vector2 mStand;
-        uint32_t mWalkTurns;
-        //! Turns since the hen started (walk and Lay pose). The egg takes them with it as its age, so the walk does
-        //! not make the hatching later (balance parity of the life cycle).
-        uint32_t mAge;
     };
     std::vector<PendingEgg> mPendingEggs;
     //! Turns the hatchery has been empty (no hen, chick or egg)

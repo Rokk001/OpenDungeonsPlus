@@ -72,6 +72,14 @@ bool HatcheryCycle::canHatch(const HatcheryCounts& counts, bool enemiesPresent)
     return eggsMayHatch(counts) && !enemiesPresent;
 }
 
+uint32_t HatcheryCycle::layDelay(const HatcheryCycleSettings& settings)
+{
+    if(settings.mLayShowTurns == 0)
+        return 0;
+
+    return settings.mNestWalkTurns + settings.mLayShowTurns;
+}
+
 bool HatcheryCycle::wellCared(const HatcheryCare& care)
 {
     return care.mClaimed && care.mLit && !care.mEnemies;

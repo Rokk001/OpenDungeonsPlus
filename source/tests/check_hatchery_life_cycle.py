@@ -129,15 +129,18 @@ assert 'ChickenPose::lay' in lay, 'the hen sits down where she is (robust varian
 assert 'getNestStandPoint(eggSpot, standing)' in lay and 'trip.mHen = hen->getName()' in lay and 'setFollowTarget(standing' in lay
 assert doUpkeep.index('isOnNestTrip(*hen)') < doUpkeep.index('hen->countDownLay()'), 'a hen on her way does not start a second egg'
 trips = body(room_cpp, 'void RoomHatchery::updateNestTrips')
-assert 'HatcheryNestArrive' in trips and 'ChickenPose::lay' in trips and 'it->mWalkTurns' in trips, 'arrival or timeout starts the Lay pose'
+assert 'HatcheryNestArrive' in trips and 'ChickenPose::lay' in trips and 'walkOver' in trips, 'arrival or the end of the walk starts the Lay pose'
+assert 'layDelay(settings)' in doUpkeep and 'uint32_t HatcheryCycle::layDelay' in cycle_cpp, 'the egg appears after the same turns every time'
 assert 'hen == nullptr' in trips and '--counts.mEggs' in trips, 'a hen that is gone takes her egg with her'
 assert 'standingPosition' in body(room_cpp, 'bool RoomHatchery::getNestStandPoint')
-assert '!it->mHen.empty()' in body(room_cpp, 'void RoomHatchery::releasePendingEggs'), 'the egg waits for the hen'
+assert 'mHen' not in body(room_cpp, 'void RoomHatchery::releasePendingEggs'), 'the egg appears after the same turns, the hen walking or not'
 assert doUpkeep.index('updateNestTrips(hens, counts)') < doUpkeep.index('releasePendingEggs(settings)')
 assert 'HatcheryNestWalkTurns' in cfg and 'HatcheryNestArrive' in cfg
-# The walk must not delay the hatching (balance parity): the egg takes the turns since the hen started as its age
-assert '++it->mAge' in body(room_cpp, 'void RoomHatchery::releasePendingEggs') and '->setAge(it->mAge)' in room_cpp
-assert 'void setAge(' in chicken_h
+# The hatching clock starts when the egg lies in the nest; the walk and the Lay pose count against the next laying
+# interval of the hen (her timer keeps running on the way), so the rate of the eggs stays the same
+assert 'setAge' not in room_cpp and 'setAge' not in chicken_h and 'mAge' not in room_h
+trip_skip = doUpkeep[doUpkeep.index('isOnNestTrip(*hen)'):doUpkeep.index('continue;', doUpkeep.index('isOnNestTrip(*hen)'))]
+assert 'hen->countDownLay();' in trip_skip, 'the lay timer keeps running while the hen walks'
 assert 'eggs.erase(eggIt)' in doUpkeep and doUpkeep.index('eggs.erase(eggIt)') < doUpkeep.index('eggPositions.push_back'),     'trampled eggs free their place'
 # The chick from a nest stands next to the coop, the nest lies in the footprint of the coop
 assert 'leaveNest(egg)' in doUpkeep and 'chick->teleport(' in body(room_cpp, 'void RoomHatchery::leaveNest')

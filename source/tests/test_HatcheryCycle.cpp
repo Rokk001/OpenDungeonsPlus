@@ -202,6 +202,10 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
     std::vector<SimAnimal> hens;
     std::vector<SimAnimal> chicks;
     std::vector<SimAnimal> eggs;
+    // Eggs a hen is still laying: the walk to the nest and the Lay pose (HatcheryCycle::layDelay), then the egg lies
+    // in the nest and starts to age. They count as eggs for the capacity, as in RoomHatchery::doUpkeep.
+    std::vector<SimAnimal> pending;
+    const uint32_t layDelay = HatcheryCycle::layDelay(settings);
     uint32_t roosters = 1;
     uint32_t coopWait = 0;
     uint32_t roosterWait = 0;
@@ -220,8 +224,23 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
         HatcheryCounts counts;
         counts.mHens = hens.size();
         counts.mChicks = chicks.size();
-        counts.mEggs = eggs.size();
+        counts.mEggs = eggs.size() + pending.size();
         counts.mRoosters = roosters;
+
+        // The eggs whose hen has finished lay in the nest, they age from the next turn on
+        std::vector<SimAnimal> newEggs;
+        std::vector<SimAnimal> stillPending;
+        for(size_t i = 0; i < pending.size(); ++i)
+        {
+            if(pending[i].mTimer > 1)
+            {
+                --pending[i].mTimer;
+                stillPending.push_back(pending[i]);
+            }
+            else
+                newEggs.push_back(SimAnimal(0));
+        }
+        pending = stillPending;
 
         // Laying
         for(size_t i = 0; i < hens.size(); ++i)
@@ -234,7 +253,10 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
             hens[i].mTimer = HatcheryCycle::layInterval(settings, rng.next());
             if(!HatcheryCycle::canLay(counts, capacity))
                 continue;
-            eggs.push_back(SimAnimal(0));
+            if(layDelay > 0)
+                pending.push_back(SimAnimal(layDelay));
+            else
+                newEggs.push_back(SimAnimal(0));
             ++counts.mEggs;
         }
         // Hatching
@@ -251,6 +273,7 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
             }
             eggs = stillEggs;
         }
+        eggs.insert(eggs.end(), newEggs.begin(), newEggs.end());
         // Growing
         std::vector<SimAnimal> stillChicks;
         for(size_t i = 0; i < chicks.size(); ++i)
@@ -266,7 +289,7 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
         // Coop fallback
         counts.mHens = hens.size();
         counts.mChicks = chicks.size();
-        counts.mEggs = eggs.size();
+        counts.mEggs = eggs.size() + pending.size();
         counts.mRoosters = roosters;
         if(HatcheryCycle::needCoopHen(counts, nbCoops))
         {
@@ -298,8 +321,21 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
 }
 }
 
+BOOST_AUTO_TEST_CASE(test_LayDelay)
+{
+    // Walk to the nest (3 turns) and Lay pose (2 turns) together: the egg lies in the nest 5 turns after the hen started
+    HatcheryCycleSettings settings;
+    BOOST_CHECK_EQUAL(HatcheryCycle::layDelay(settings), settings.mNestWalkTurns + settings.mLayShowTurns);
+    BOOST_CHECK_EQUAL(HatcheryCycle::layDelay(settings), 5u);
+    settings.mLayShowTurns = 0;
+    BOOST_CHECK_EQUAL(HatcheryCycle::layDelay(settings), 0u);
+}
+
 //! Balance parity: with the default values the number of edible chickens per minute has to stay the
-//! one of the spawning before the life cycle, for the same hatchery size and the same demand.
+//! one of the spawning before the life cycle, for the same hatchery size and the same demand. The model
+//! includes the walk to the nest and the Lay pose (HatcheryCycle::layDelay): the egg starts to age when it lies in
+//! the nest, while the laying timer of the hen has run since she started. Limit 3 percent. A Python port of the model
+//! (the same generator and order) gives the worst deviation 2.92 percent for these defaults.
 BOOST_AUTO_TEST_CASE(test_BalanceParity)
 {
     HatcheryCycleSettings settings;

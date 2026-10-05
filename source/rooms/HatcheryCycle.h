@@ -25,10 +25,10 @@
 struct HatcheryCycleSettings
 {
     HatcheryCycleSettings() :
-        mLayMin(3),
-        mLayMax(7),
+        mLayMin(1),
+        mLayMax(4),
         mHatchTurns(2),
-        mGrowTurns(4),
+        mGrowTurns(1),
         mCoopWait(15),
         mTilesPerChicken(1),
         mCareLayPercent(25),
@@ -36,7 +36,8 @@ struct HatcheryCycleSettings
         mCoopBatch(0),
         mFightTurns(14),
         mFightApproachTurns(40),
-        mLayShowTurns(2)
+        mLayShowTurns(2),
+        mNestWalkTurns(3)
     {}
 
     //! Turns between two eggs of one hen (random value in [mLayMin, mLayMax]).
@@ -63,6 +64,10 @@ struct HatcheryCycleSettings
     uint32_t mFightApproachTurns;
     //! Turns a laying hen shows herself sitting before the egg appears in the nest (0 = the egg appears at once).
     uint32_t mLayShowTurns;
+    //! Turns a laying hen gets to walk to the place next to her nest before the Lay pose (0 = she sits down where she is).
+    //! The walk always takes this long, however far she is: she waits there when she is early and lays where she stands
+    //! when she is late, so the egg appears after the same number of turns every time (see HatcheryCycle::layDelay).
+    uint32_t mNestWalkTurns;
 };
 
 //! \brief How well the keeper looks after a hatchery.
@@ -136,6 +141,10 @@ public:
 
     //! Eggs only hatch while the hatchery has a rooster and no enemy stands in it.
     static bool canHatch(const HatcheryCounts& counts, bool enemiesPresent);
+
+    //! Turns between the moment a hen starts to lay and the egg lying in the nest: the walk to the nest and the
+    //! Lay pose. The hatching clock of the egg starts afterwards, the laying timer of the hen runs meanwhile.
+    static uint32_t layDelay(const HatcheryCycleSettings& settings);
 
     //! Breeding needs care: claimed, lit and without enemies.
     static bool wellCared(const HatcheryCare& care);
