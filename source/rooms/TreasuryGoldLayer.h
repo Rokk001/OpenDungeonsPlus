@@ -123,6 +123,42 @@ inline bool parseMeshName(const std::string& name, PileShape& shape)
     return true;
 }
 
+//! The shape of a pile on a tile of a single-row ring (the treasury ring of the dungeon heart). The tile has no
+//! neighbours on its other sides, so the rule of the treasury (lowest level of the four tiles that meet at a
+//! corner) would leave every corner on the floor. Here a corner is raised when the tile has a ring neighbour
+//! next to that corner: it takes the lowest level of the ring tiles that meet there (an empty ring tile counts
+//! as 0), so two neighbouring piles share the heights along their common edge and run into each other, while
+//! the open sides run out on the floor.
+//! around[dx + 1][dy + 1] is the level of the ring tile at that offset (0 for an empty one), -1 for a tile that
+//! is not part of the ring; around[1][1] is the tile itself.
+inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
+{
+    PileShape shape;
+    shape.mLevel = around[1][1];
+    shape.mVariant = (x * 7 + y * 13) % variantCount;
+    // North is towards +y: north-west, north-east, south-east, south-west
+    const int dx[4] = {-1, 1, 1, -1};
+    const int dy[4] = {1, 1, -1, -1};
+    for(int i = 0; i < 4; ++i)
+    {
+        const int sideX = around[dx[i] + 1][1];
+        const int sideY = around[1][dy[i] + 1];
+        // Only a ring neighbour beside the tile raises the corner, a diagonal one alone does not
+        if(sideX < 0 && sideY < 0)
+            continue;
+
+        int corner = shape.mLevel;
+        const int meeting[3] = {sideX, sideY, around[dx[i] + 1][dy[i] + 1]};
+        for(int j = 0; j < 3; ++j)
+        {
+            if(meeting[j] >= 0 && meeting[j] < corner)
+                corner = meeting[j];
+        }
+        shape.mCorner[i] = corner;
+    }
+    return shape;
+}
+
 //! Surface height of a pile at (u, v), both 0..1 across the tile (u towards +x, v towards +y).
 //! The edges only depend on the corners; the middle rises to the level of the tile itself.
 inline float heightAt(const PileShape& shape, float u, float v)

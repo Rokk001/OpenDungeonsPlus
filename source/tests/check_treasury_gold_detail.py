@@ -33,6 +33,10 @@ assert 'shape.mLevel == 0 && (currentDetail != Detail::full || farAway)' in mesh
 
 # Dungeon heart ring: the classic stacks are drawn as piles on the client (server names and tests untouched).
 assert 'pileNameForClassicStack' in render and 'replacesClassicStack' in render
+# The server names the heart ring piles with the levels of the ring neighbours, so the piles run into each other
+temple = read('source/rooms/RoomDungeonTemple.cpp')
+assert 'TreasuryGoldLayer::ringPileShape(' in temple and 'inline PileShape ringPileShape(' in layer
+assert 'getMeshNameForGold' not in temple.split('void RoomDungeonTemple::updateTreasuryMeshesForTile')[1].split(chr(10) + '}' + chr(10))[0]
 
 # Look of the gold: a metal sheen from the lights only (no self-lighting, no additive blending), moderate specular,
 # a gentle glow light, and a ring pile that runs out on the floor at its edges (no plateau with a cut edge).

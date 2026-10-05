@@ -42,6 +42,7 @@ probe = r'''
 #include <sstream>
 #include <string>
 #include <vector>
+#include "rooms/TreasuryGoldLayer.h"
 int errorsLogged = 0;
 #define OD_LOG_ERR(x) ++errorsLogged
 #define OD_LOG_INF(x)
@@ -339,5 +340,5 @@ print('WIRING OK: platform look follows the covering room, dead rooms are skippe
 with tempfile.TemporaryDirectory(prefix='odp-heart-ruin-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
