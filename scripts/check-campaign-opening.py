@@ -37,6 +37,9 @@ For every level the state at the START of the game is checked (no trigger has fi
    checked around the heart. Applies to every level with a human (or, failing that,
    a choice) seat, campaign or not.
 
+Tiles that the level file does not list are treated like the game does: full dirt
+(fullness 100), diggable but not walkable until dug. This applies to every rule above.
+
 Output is one line per level (PASS or FAIL, file, numbers). Levels listed in
 scripts/check-campaign-opening.allowlist report FAIL but do not change the exit code
 ("known, to be fixed"); the exit code is 0 only if every level passes or is allowlisted.
@@ -208,6 +211,13 @@ def parse_level(path):
                     level.spawns.append((trigger_name, seat_value, x, y, index))
     if level.width <= 0 or level.height <= 0:
         return None
+    # A tile that is not listed is full, diggable dirt in the game (new maps start as dirt
+    # with fullness 100), not solid rock.
+    for x in range(level.width):
+        for y in range(level.height):
+            if (x, y) not in level.types:
+                level.types[(x, y)] = TILE_DIRT
+                level.fullness[(x, y)] = 100.0
     return level
 
 
@@ -635,8 +645,9 @@ def run(files, root, use_allowlist, order, radius=SAFE_RADIUS, full=False):
 
 # --- Self test ---------------------------------------------------------------------------
 def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None, spawn_x=None,
-                    trap_x=None, rock_wall_x=None, neutral_x=None):
-    """40x20 map, rock border, human temple around (heart_x, 10), enemy at enemy_x."""
+                    trap_x=None, rock_wall_x=None, neutral_x=None, omit_dirt=False):
+    """40x20 map, rock border, human temple around (heart_x, 10), enemy at enemy_x.
+    omit_dirt leaves the full dirt tiles out of the file (the game fills them as dirt)."""
     width, height = 80, 20
     lines = ["OpenDungeons_Version:0.7.1", "", "[Seats]"]
     for seat_id, team, player, x in ((1, 1, "Human", heart_x), (2, 2, "Inactive", enemy_x)):
@@ -724,10 +735,18 @@ def self_test():
         synthetic_level(safe_trap, 60, 4, 1, False, portal_x=70, trap_x=75)
         synthetic_level(safe_rock, 60, 4, 1, False, rock_wall_x=66, spawn_x=70)
         synthetic_level(safe_neutral, 60, 4, 1, False, portal_x=70, neutral_x=75)
+        sparse_spawn = os.path.join(directory, "sparse_spawn.level")
+        sparse_ok = os.path.join(directory, "sparse_ok.level")
+        sparse_rock = os.path.join(directory, "sparse_rock.level")
+        synthetic_level(sparse_spawn, 60, 4, 1, False, portal_x=70, spawn_x=78, omit_dirt=True)
+        synthetic_level(sparse_ok, 60, 4, 1, False, portal_x=70, spawn_x=30, omit_dirt=True)
+        synthetic_level(sparse_rock, 60, 4, 1, False, rock_wall_x=66, spawn_x=70,
+                        omit_dirt=True)
         expectations = [(good, 5, "PASS"), (near, 5, "FAIL"), (open_area, 5, "FAIL"),
                         (touching, 5, "FAIL"), (safe_ok, 5, "PASS"), (safe_far, 5, "PASS"),
                         (safe_spawn, 5, "FAIL"), (safe_trap, 5, "FAIL"), (safe_rock, 5, "PASS"),
-                        (safe_neutral, 5, "PASS")]
+                        (safe_neutral, 5, "PASS"), (sparse_spawn, 5, "FAIL"),
+                        (sparse_ok, 5, "PASS"), (sparse_rock, 5, "PASS")]
         ok = True
         for path, index, expected in expectations:
             status, reasons, numbers, _ = check_level(path, index)
@@ -750,6 +769,9 @@ def self_test():
             ok = False
         status, reasons, _, _ = check_level(safe_trap, 5)
         if not any("enemy trap" in r for r in reasons):
+            ok = False
+        status, reasons, _, _ = check_level(sparse_spawn, 5)
+        if not any("enemy spawn" in r for r in reasons):
             ok = False
         print("self-test %s" % ("passed" if ok else "FAILED"))
         return 0 if ok else 1
