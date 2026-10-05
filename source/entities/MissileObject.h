@@ -114,6 +114,10 @@ protected:
     virtual void updateDirection()
     {}
 
+    //! \brief Called once when the missile stopped while moving (after a hit as well). Nothing by default
+    virtual void missileStopped()
+    {}
+
     GameEntity* getEntityTarget() const
     { return mEntityTarget; }
 

@@ -157,6 +157,18 @@ public:
     inline bool getHeartHealthStageEvents() const
     { return mHeartHealthStageEvents; }
 
+    //! \brief True if the server tells the keepers what a blow or shot really did (cosmetic event hitResult)
+    inline bool getHitEvents() const
+    { return mHitEvents; }
+
+    //! \brief A blow that lets through less than this share of its damage counts as glancing (0.01 - 0.9)
+    inline double getHitGlanceShare() const
+    { return std::max(0.01, std::min(0.9, mHitGlanceShare)); }
+
+    //! \brief A hit that takes at least this share of the maximum health of its target is a strong one (0.01 - 1)
+    inline double getHitStrongShare() const
+    { return std::max(0.01, std::min(1.0, mHitStrongShare)); }
+
     inline int64_t getTimePayDay() const
     { return mTimePayDay; }
 
@@ -378,6 +390,9 @@ private:
     double mTiredWalkSpeedFactor;
     int32_t mHeartHealthStages;
     bool mHeartHealthStageEvents;
+    bool mHitEvents;
+    double mHitGlanceShare;
+    double mHitStrongShare;
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
