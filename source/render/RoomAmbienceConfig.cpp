@@ -78,6 +78,8 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::reloading;
     else if(text == "Ready")
         when = AmbienceWhen::ready;
+    else if(text == "Vacated")
+        when = AmbienceWhen::vacated;
     else
         return false;
 
@@ -389,6 +391,18 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "NeedWall")
         {
             effect.mNeedWall = toBool(words[1]);
+        }
+        else if(key == "WallSide")
+        {
+            effect.mWallSide = toBool(words[1]);
+        }
+        else if(key == "HeartRate")
+        {
+            effect.mHeartRate = toBool(words[1]);
+        }
+        else if(key == "Sound")
+        {
+            effect.mSound = words[1];
         }
         else
         {
