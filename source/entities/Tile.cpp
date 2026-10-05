@@ -1558,6 +1558,14 @@ void Tile::removeEntity(GameEntity *entity)
 
 void Tile::claimForSeat(Seat* seat, double nDanceRate)
 {
+    // The tile of a dungeon heart is never danced on, not even as plain ground
+    Room* heartRoom = getCoveringRoom();
+    if((heartRoom != nullptr) && (heartRoom->getType() == RoomType::dungeonTemple))
+    {
+        OD_LOG_WRN("Tile=" + displayAsString(this) + " belongs to a dungeon temple and cannot be claimed");
+        return;
+    }
+
     // If there is a claimable building, we claim it
     if((getCoveringBuilding() != nullptr) &&
         (getCoveringBuilding()->isClaimable(seat)))
@@ -1622,6 +1630,15 @@ void Tile::claimTile(Seat* seat)
     // Claim the tile.
     OD_LOG_INF(getGameMap()->serverStr() + "Tile=" + displayAsString(this)
         + " claimed by seat=" + Seat::displayAsString(seat));
+
+    // The server never lets a dungeon heart tile change owner
+    Room* heartRoom = getCoveringRoom();
+    if(getGameMap()->isServerGameMap() && (heartRoom != nullptr) &&
+       (heartRoom->getType() == RoomType::dungeonTemple) && (heartRoom->getSeat() != seat))
+    {
+        OD_LOG_WRN("Tile=" + displayAsString(this) + " belongs to a dungeon temple and cannot be claimed by seat=" + Seat::displayAsString(seat));
+        return;
+    }
 
     // We need this because if we are a client, the tile may be from a non allied seat
     setSeat(seat);

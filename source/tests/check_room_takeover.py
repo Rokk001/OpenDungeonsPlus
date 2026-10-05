@@ -32,8 +32,7 @@ tile = read('source/entities/Tile.cpp')
 worker = read('source/render/WorkerReactions.cpp')
 
 # Configuration: documented, set, read with a default; the defaults keep the old behaviour except the guard
-defaults = {'RoomTakeoverGuardRadius': '5', 'RoomTakeoverCostPercent': '0',
-            'RoomTakeoverExcludePortal': '0', 'RoomTakeoverExcludeBridge': '0'}
+defaults = {'RoomTakeoverGuardRadius': '5', 'RoomTakeoverCostPercent': '0'}
 for key, value in defaults.items():
     assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms_cfg, re.M), key
     assert re.search(r'^\s+# ' + key + r'\s', rooms_cfg, re.M), key + ' is not documented'
@@ -41,11 +40,14 @@ for key, value in defaults.items():
 
 # Server decides; rooms of nobody, the client and the heart are not touched by the new rules
 blocked = function_body(room, 'bool Room::isTakeoverBlocked(')
-for needle in ('isServerGameMap()', 'isRogueSeat()', 'RoomType::portal', 'RoomType::bridgeWooden',
-               'RoomTakeoverGuardRadius', 'isWorker()', 'isKo()', 'isInContainment()', 'isAlliedSeat(getSeat())',
+for needle in ('isServerGameMap()', 'isRogueSeat()', 'RoomTakeoverGuardRadius', 'isWorker()', 'isKo()', 'isInContainment()', 'isAlliedSeat(getSeat())',
                'RoomClaim::isGuardClose(', 'getTakeoverPrice()', 'getGold() < price'):
     assert needle in blocked, needle
 assert 'dungeonTemple' not in blocked, 'the heart exception stays in RoomClaim::isClaimableBy'
+# Every kind of room can be taken over: portals and bridges are not excluded, the switches are gone
+assert 'RoomType::portal' not in blocked and 'RoomType::bridge' not in blocked, 'no room type is excluded'
+for source_text in (rooms_cfg, room, room_h, claim_h, tile):
+    assert 'TakeoverExclude' not in source_text, 'the takeover exclude switches no longer exist'
 price = function_body(room, 'int32_t Room::getTakeoverPrice() const')
 assert 'RoomClaim::takeoverPrice(' in price and 'RoomManager::costPerTile(' in price and 'isRogueSeat()' in price
 assert 'RoomTakeoverCostPercent' in price
@@ -59,6 +61,28 @@ assert dance.index('->claimForSeat(seat, this, nDanceRate)') < dance.index('with
 assert 'getSeat() != ownerBefore' in dance
 # Level scripts and the heart reward call Room::claimForSeat directly and stay free and unguarded
 assert 'isTakeoverBlocked' not in function_body(room, 'void Room::claimForSeat(')
+
+# The dungeon heart can only be destroyed: every path that changes the owner of a room or of a tile
+# of a room leaves it out
+heart = 'RoomType::dungeonTemple'
+claim_room = function_body(room, 'void Room::claimForSeat(')
+assert heart in claim_room and claim_room.index(heart) < claim_room.index('mClaimHealth -='), 'Room::claimForSeat'
+change = function_body(room, 'void Room::changeOwner(')
+assert heart in change and change.index(heart) < change.index('handTilesOverToSeat('), 'Room::changeOwner'
+hand = function_body(room, 'Room* Room::handTilesOverToSeat(')
+assert heart in hand and hand.index(heart) < hand.index('RoomManager::createRoom('), 'Room::handTilesOverToSeat'
+assert 'return nullptr' in hand[:hand.index('RoomManager::createRoom(')]
+assert 'Room* Room::handTileOverToSeat(' in room and 'return handTilesOverToSeat(' in room  # bridges go through it
+assert heart in function_body(tile, 'void Tile::claimForSeat(') and     function_body(tile, 'void Tile::claimForSeat(').index(heart) < function_body(tile, 'void Tile::claimForSeat(').index('isClaimable(seat)')
+tile_claim = function_body(tile, 'void Tile::claimTile(')
+assert heart in tile_claim and tile_claim.index(heart) < tile_claim.index('setSeat(seat)') and 'isServerGameMap()' in tile_claim
+assert heart in function_body(room, 'bool Room::isClaimable(')
+script = read('source/gamemap/LevelScriptRunner.cpp')
+script_change = function_body(script, 'void changeRoomOwner(')
+assert heart in script_change and script_change.index(heart) < script_change.index('->claimForSeat(')
+reward_source = read('source/rooms/RoomDungeonTemple.cpp')
+assert 'candidate->getType() == ' + heart in reward_source, 'the heart reward skips the loser heart'
+assert 'tile->getCoveringBuilding() != nullptr)' in reward_source, 'the reward claims only tiles without a building directly'
 assert 'isTakeoverBlocked' in room_h and 'getTakeoverPrice' in room_h
 
 # The two pure rules

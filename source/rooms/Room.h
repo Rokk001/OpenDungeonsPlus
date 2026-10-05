@@ -94,10 +94,11 @@ public:
     virtual void claimForSeat(Seat* seat, Tile* tile, double danceRate) override;
 
     //! \brief Server only. True when the seat may not dance on the tile of this
-    //! enemy room now: the room is of a kind the config excludes from takeover
-    //! (RoomTakeoverExcludePortal, RoomTakeoverExcludeBridge), a defender that is
-    //! no worker stands within RoomTakeoverGuardRadius tiles of the tile, or the seat
-    //! cannot pay the price. Rooms of nobody are never blocked.
+    //! enemy room now: a defender that is no worker stands within
+    //! RoomTakeoverGuardRadius tiles of the tile, or the seat cannot pay the price.
+    //! Every kind of room can be taken over (the dungeon temple is excluded by
+    //! isClaimable and the guards in claimForSeat and handTilesOverToSeat).
+    //! Rooms of nobody are never blocked.
     bool isTakeoverBlocked(const Seat* seat, const Tile* tile) const;
 
     //! \brief The gold the taker pays when the room changes hands

@@ -99,14 +99,6 @@ bool Room::isTakeoverBlocked(const Seat* seat, const Tile* tile) const
         return false;
 
     ConfigManager& config = ConfigManager::getSingleton();
-    RoomType type = getType();
-    if((type == RoomType::portal) && (config.getRoomConfigDoubleOrDefault("RoomTakeoverExcludePortal", 0.0) > 0.0))
-        return true;
-
-    bool isBridge = (type == RoomType::bridgeWooden) || (type == RoomType::bridgeStone);
-    if(isBridge && (config.getRoomConfigDoubleOrDefault("RoomTakeoverExcludeBridge", 0.0) > 0.0))
-        return true;
-
     // A room is only taken while nobody defends it: a fighter of the owner (or of its
     // allies) that is up and about close to the tile keeps the workers off
     double guardRadius = config.getRoomConfigDoubleOrDefault("RoomTakeoverGuardRadius", 5.0);
@@ -142,6 +134,13 @@ bool Room::isTakeoverBlocked(const Seat* seat, const Tile* tile) const
 
 void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)
 {
+    // The dungeon heart is only ever destroyed, no caller may take it over
+    if(getType() == RoomType::dungeonTemple)
+    {
+        OD_LOG_WRN("The dungeon temple " + getName() + " cannot be claimed by seat id=" + Helper::toString(seat->getId()));
+        return;
+    }
+
     ConfigManager& config = ConfigManager::getSingleton();
     // A room nobody owns is taken five times faster than an enemy one
     double secondsPerTile;
@@ -182,6 +181,12 @@ void Room::repairClaimHealth(double danceRate)
 
 void Room::changeOwner(Seat* seat)
 {
+    if(getType() == RoomType::dungeonTemple)
+    {
+        OD_LOG_WRN("The dungeon temple " + getName() + " cannot change its owner to seat id=" + Helper::toString(seat->getId()));
+        return;
+    }
+
     Seat* oldSeat = getSeat();
     std::vector<Tile*> tiles = mCoveredTiles;
     Room* newRoom = handTilesOverToSeat(seat, tiles);
@@ -262,6 +267,13 @@ Room* Room::handTileOverToSeat(Seat* seat, Tile* tile)
 
 Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
 {
+    // Lowest common point of every owner change of a room: the dungeon heart stays with its owner
+    if(getType() == RoomType::dungeonTemple)
+    {
+        OD_LOG_WRN("The dungeon temple " + getName() + " cannot hand tiles over to seat id=" + Helper::toString(seat->getId()));
+        return nullptr;
+    }
+
     GameMap* gameMap = getGameMap();
 
     OD_LOG_INF("Room=" + getName() + " " + Helper::toString(static_cast<int32_t>(tiles.size()))
