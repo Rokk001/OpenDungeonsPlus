@@ -176,6 +176,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "relationshipTier";
         case ServerNotificationType::trapEffect:
             return "trapEffect";
+        case ServerNotificationType::cosmeticEvent:
+            return "cosmeticEvent";
 
         case ServerNotificationType::seatTeam:
             return "seatTeam";

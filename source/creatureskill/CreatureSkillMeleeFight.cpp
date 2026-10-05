@@ -23,11 +23,13 @@
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "network/CosmeticEvent.h"
 #include "gamemap/GameMap.h"
 #include "spells/Spell.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
 #include <istream>
 
 const std::string CreatureSkillMeleeFightName = "Melee";
@@ -98,6 +100,20 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
             target->getWeaponR() != nullptr;
         target->fireCombatImpact(attackerArmed && targetArmed,
             damageDone > 0.0, creature->getPosition());
+
+        // Tell the clients how much of the blow got through, so that they can show a hit, a glancing blow
+        // or a blow that did nothing. The game has no random miss: this only reads the damage that was
+        // already calculated, it changes neither the damage nor when it is dealt.
+        const double rawDamage = phyAtk + magAtk + eleAtk;
+        double share = (rawDamage > 0.0) ? damageDone / rawDamage : 0.0;
+        share = std::max(0.0, std::min(1.0, share));
+        CosmeticEvent event(CosmeticEventType::meleeResult);
+        event.mSubject = creature->getName();
+        event.mObject = target->getName();
+        event.mValue = (damageDone <= 0.0) ? 2 : ((share < 0.34) ? 1 : 0);
+        event.mValue2 = static_cast<int32_t>(share * 1000.0 + 0.5);
+        event.mPosition = target->getPosition();
+        target->fireCosmeticEvent(event, false);
     }
     if(notifyPlayerIfHit)
         attackedObject->notifyFightPlayer(attackedTile);

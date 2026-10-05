@@ -43,6 +43,7 @@
 #include "modes/MenuModeConfigureSeats.h"
 #include "modes/ModeManager.h"
 #include "network/ChatEventMessage.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODPacket.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
@@ -302,18 +303,25 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_ASSERT_TRUE(packetReceived >> creatureProgress);
             setSupportsCreatureProgress(false);
 
+            bool cosmeticEvents = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
+            setSupportsCosmeticEvents(false);
+
             ODPacket packSend;
             const std::string& nick = gameMap->getLocalPlayerNick();
             packSend << ClientNotificationType::setNick << nick;
-            if(liveNickname || creatureMood || creatureActivity || creaturePanel || creatureProgress)
+            if(liveNickname || creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
                 packSend << liveNickname;
-            if(creatureMood || creatureActivity || creaturePanel || creatureProgress)
+            if(creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
                 packSend << creatureMood;
-            if(creatureActivity || creaturePanel || creatureProgress)
+            if(creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
                 packSend << creatureActivity;
-            if(creaturePanel || creatureProgress)
+            if(creaturePanel || creatureProgress || cosmeticEvents)
                 packSend << creaturePanel;
-            if(creatureProgress)
+            if(creatureProgress || cosmeticEvents)
+                packSend << creatureProgress;
+            if(cosmeticEvents)
                 packSend << true;
             send(packSend);
 
@@ -542,6 +550,12 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> relationships);
             gameMap->setRelationshipsEnabled(relationships);
+
+            // Older servers end the packet here; without the agreement no cosmetic event ever arrives
+            bool cosmeticEvents = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
+            setSupportsCosmeticEvents(cosmeticEvents);
 
             // Now that the we have received all needed information, we can launch the requested mode
             OD_LOG_INF("Starting game map");
@@ -963,6 +977,28 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                             gameMap->getCreature(creatureB), oldTier, static_cast<RelationshipTier>(tier));
                     }
                 }
+            }
+            break;
+        }
+
+        case ServerNotificationType::cosmeticEvent:
+        {
+            CosmeticEvent event;
+            if(!(packetReceived >> event))
+            {
+                OD_LOG_ERR("Truncated cosmetic event");
+                break;
+            }
+
+            // Only shown when the agreement was made. A kind that a newer server knows is skipped: every
+            // kind has the same layout, so nothing is lost in the packet.
+            if(!supportsCosmeticEvents() || !event.isKnownType())
+                break;
+
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+               CreatureReactions::getSingletonPtr() != nullptr)
+            {
+                CreatureReactions::getSingleton().noteCosmeticEvent(event);
             }
             break;
         }

@@ -161,6 +161,11 @@ enum class ServerNotificationType
     //! Answer to editorRegionEdit, all the region markers of the level script:
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
     editorRegionData,
+    //! A short cosmetic note that something happened (a mood change, a full treasury, a blow, a missile
+    //! launch): + a CosmeticEvent (see network/CosmeticEvent.h). Only sent to clients that negotiated
+    //! cosmetic events; an older client never gets it. Inserted before creatureAppearance; trapEffect,
+    //! timeLimit and chickenKindChanged stay the last values.
+    cosmeticEvent,
     //! The server assigned a Dungeonbook appearance to a creature after it spawned (the portrait manifest
     //! was not available before): + string creature name, string appearance token. Sent once to the
     //! human players that see the creature; clients that see it later get it with the creature data.
