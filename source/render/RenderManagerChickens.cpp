@@ -536,6 +536,7 @@ void RenderManager::rrCreateChickenLook(ChickenEntity* chicken)
     look.mFightTimer = 0.0f;
     look.mMountPartner = nullptr;
     look.mMountCrouch = 0.0f;
+    look.mMountPhase = 0;
     look.mNestEgg = false;
     mChickenLooks[chicken] = look;
     applyChickenKindLook(chicken);
@@ -657,8 +658,11 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
     const Ogre::Vector3 position = chicken->getPosition();
 
     look.mMountPartner = nullptr;
+    look.mMountPhase = 0;
     if(pose == ChickenPose::mount)
     {
+        // The Mount clip is started with the pose
+        look.mMountPhase = 1;
         // The hen he caught is the nearest one; he climbs on her back (the feathers fly when he is up)
         Ogre::Real nearestDistance = 2.25f;
         for(std::map<ChickenEntity*, ChickenLook>::iterator other = mChickenLooks.begin(); other != mChickenLooks.end(); ++other)
@@ -950,7 +954,11 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             }
             else if(pose == ChickenPose::cackle)
             {
-                if(look.mMountCrouch > 0.0f)
+                if((look.mMountCrouch > 0.0f) && look.mEntity->getSkeleton()->hasAnimation("Duck"))
+                {
+                    // The duck clip ducks her under him, nothing is added
+                }
+                else if(look.mMountCrouch > 0.0f)
                 {
                     // The rooster sits on her: she ducks down under him and quivers
                     stretch = Ogre::Vector3(1.0f + 0.1f * look.mMountCrouch, 1.0f + 0.1f * look.mMountCrouch,
@@ -973,6 +981,19 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 const Ogre::Real downRatio = std::min(1.0f, std::max(0.0f, (values.mMountSeconds - p) / climb));
                 const Ogre::Real on = std::min(upRatio * upRatio * (3.0f - 2.0f * upRatio),
                     downRatio * downRatio * (3.0f - 2.0f * downRatio));
+                if(look.mEntity->getSkeleton()->hasAnimation("Tread"))
+                {
+                    // The clips follow the phases: Mount (climb), Tread (looped), Dismount (climb down); their lengths
+                    // are the climb time and the rest of the 1.9 s of the pose. Tread follows 0.05 s before the Mount
+                    // clip ends: an ended clip would send the animal to idle and end the pose
+                    const int phase = (p < climb - 0.05f) ? 1 : ((p < values.mMountSeconds - climb) ? 2 : 3);
+                    if(phase != look.mMountPhase)
+                    {
+                        look.mMountPhase = phase;
+                        const char* const clips[3] = {"Mount", "Tread", "Dismount"};
+                        chicken->setAnimationState(setEntityAnimation(look.mEntity, clips[phase - 1], phase == 2));
+                    }
+                }
                 // Beating the wings and treading only while he sits on her
                 const Ogre::Real sitting = std::max(0.0f, on * 2.0f - 1.0f);
                 pitch = values.mMountPitch * on;

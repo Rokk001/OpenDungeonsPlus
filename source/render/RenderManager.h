@@ -466,6 +466,8 @@ private:
         ChickenEntity* mMountPartner;
         //! How far the hen is ducked down under the rooster (0 to 1), set by the rooster every frame
         Ogre::Real mMountCrouch;
+        //! The clip phase of the rooster while he mounts: 1 climbing on, 2 treading, 3 climbing down (0 when not mounting)
+        int mMountPhase;
         //! The egg lies in a nest of a coop: its own straw is hidden, the nest has straw
         bool mNestEgg;
     };
