@@ -2042,6 +2042,15 @@ bool ODClient::replay(const std::string& filename)
 
 void ODClient::queueClientNotification(ClientNotification* n)
 {
+    // The keeper's hand throws a spark when a spell is cast (cosmetic, nothing is sent for it)
+    if((n->mType == ClientNotificationType::askCastSpell) && (RoomAmbience::getSingletonPtr() != nullptr) &&
+       (RenderManager::getSingletonPtr() != nullptr))
+    {
+        Ogre::Vector3 handPosition;
+        if(RenderManager::getSingleton().getKeeperHandPosition(handPosition))
+            RoomAmbience::getSingleton().noteHandCast(handPosition);
+    }
+
     mClientNotificationQueue.push_back(n);
 }
 

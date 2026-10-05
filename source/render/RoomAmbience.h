@@ -91,6 +91,9 @@ public:
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
 
+    //! \brief The local keeper has sent a spell cast: shows the event SpellFxHandCast at the place of the keeper's hand
+    void noteHandCast(const Ogre::Vector3& handPosition);
+
     //! \brief Plays the sound of the family (a folder below sounds/Spatial) at the position
     void playSound(const std::string& family, const Ogre::Vector3& position);
 
@@ -300,6 +303,11 @@ private:
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanCreatureEvents();
+    //! \brief Raises HeartHit (and the state for "When Hit") when the health of the own dungeon heart, as the heart badge
+    //! shows it, has gone down since the last scan
+    void scanHeartHit();
+    //! \brief Raises BannerAlert when an enemy creature is within the aura of a watch banner (once per distress time)
+    void scanBannerAlerts();
     void reconcile();
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
@@ -427,11 +435,16 @@ private:
     struct CreatureSnapshot
     {
         CreatureSnapshot() :
-            mHp(0.0), mSleeping(false), mAttacking(false), mEnemyInGuardRoom(false), mLastHealed(-100.0), mGeneration(0)
+            mHp(0.0), mSleeping(false), mPrisoner(false), mSeat(nullptr), mAttacking(false), mEnemyInGuardRoom(false),
+            mLastHealed(-100.0), mGeneration(0)
         {}
 
         double mHp;
         bool mSleeping;
+        //! Is in jail (a prison or a torture chamber)
+        bool mPrisoner;
+        //! The seat the creature belonged to (a change in a torture chamber is a conversion)
+        Seat* mSeat;
         //! Plays the attack animation (the winner of a casino game)
         bool mAttacking;
         bool mEnemyInGuardRoom;
@@ -443,6 +456,10 @@ private:
     std::map<std::string, EntitySnapshot> mKnownEntities;
     uint32_t mGeneration;
     bool mEntitiesInitialized;
+    //! Heart health (points) of the badge at the last scan, negative while unknown
+    double mLastHeartHP;
+    //! Time until which a watch banner (entity name) does not flare again
+    std::map<std::string, double> mBannerAlertUntil;
 };
 
 #endif // ROOMAMBIENCE_H
