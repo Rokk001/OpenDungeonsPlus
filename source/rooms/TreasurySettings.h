@@ -95,6 +95,9 @@ struct TreasurySettings
     float lodInterval = 0.5f;
     int lodSwitchesPerUpdate = 10;
 
+    //! Piles and floor gold heaps rebuilt per frame after the treasury detail option changed
+    int rebuildPerFrame = 12;
+
     typedef std::map<std::string, std::string> Config;
 
     //! The values of the game. Written once when the configuration is loaded.
@@ -174,6 +177,8 @@ struct TreasurySettings
         s.lodHysteresis = readFloat(config, "LodHysteresis", s.lodHysteresis, 0.0f, 100.0f);
         s.lodInterval = readFloat(config, "LodInterval", s.lodInterval, 0.1f, 10.0f);
         s.lodSwitchesPerUpdate = readInt(config, "LodSwitchesPerUpdate", s.lodSwitchesPerUpdate, 1, 100);
+
+        s.rebuildPerFrame = readInt(config, "RebuildPerFrame", s.rebuildPerFrame, 1, 500);
         return s;
     }
 };

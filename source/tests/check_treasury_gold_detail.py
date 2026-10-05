@@ -87,6 +87,18 @@ assert 'lodReducedAt(false' in render and 'prepareMesh(mSceneManager, meshName, 
 assert 'inline bool lodReducedAt' in rules and 'lodHysteresis' in rules
 assert 'void TreasuryGoldBatch::hideUntilBatched' in read('source/render/TreasuryGoldBatch.cpp')
 
+# Live option: changing the "Treasury detail" setting rebuilds what exists (piles, batches, buried objects follow
+# through the piles, glow, floor gold, thief sacks), a few per frame, and only when the setting really changed.
+settings_window = read('source/modes/SettingsWindow.cpp')
+assert 'previousTreasuryDetail != TreasuryGoldMesh::getDetail()' in settings_window
+assert 'RenderManager::getSingleton().rrTreasuryDetailChanged()' in settings_window
+rebuild = render.split('void RenderManager::rrTreasuryDetailChanged')[1].split('void RenderManager::updateTreasuryLod')[0]
+assert 'mTreasuryPiles.begin()' in rebuild and 'GameEntityType::treasuryObject' in rebuild
+assert 'rrRefreshCreatureGoldSack(creature)' in rebuild and 'finishTreasuryDent' in rebuild
+assert 'destroyMesh(nodeType)' in rebuild and 'createMesh(nodeType)' in rebuild and 'rebuildPerFrame' in rebuild
+assert 'updateTreasuryRebuild();' in render and 'mTreasuryRebuildQueue.clear()' in render.split('void RenderManager::clearTreasuryEffects')[1]
+assert 'static const int& rebuildPerFrame' in rules
+
 # Thieves show a sack sized by the gold the server sends with the creature packet; glow lights per patch.
 assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render
 assert 'removeTreasuryThiefSack(curCreature)' in render

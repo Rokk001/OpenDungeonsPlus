@@ -1864,6 +1864,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryPileSettles(timeSinceLastFrame);
     updateTreasuryGlow(timeSinceLastFrame);
     updateTreasuryLod(timeSinceLastFrame);
+    updateTreasuryRebuild();
     mTreasuryBatch.update(timeSinceLastFrame);
     updateTreasuryBuriedObjects(timeSinceLastFrame);
     rrUpdateHeldCreature();
@@ -5119,6 +5120,73 @@ float RenderManager::getTreasuryCameraDistance(const Ogre::Vector3& position) co
     return (position - camera->getDerivedPosition()).length();
 }
 
+void RenderManager::rrTreasuryDetailChanged()
+{
+    // A pile that is being dented is given back first; the piles themselves are drawn again below
+    while(!mTreasuryPileDents.empty())
+        finishTreasuryDent(mTreasuryPileDents.back().mEntityName);
+
+    // Every pile and every floor gold heap (not the ones a creature carries) is queued for the new setting
+    mTreasuryRebuildQueue.clear();
+    mTreasuryRebuildIndex = 0;
+    for(std::map<RenderedMovableEntity*, TreasuryPileInfo>::const_iterator it = mTreasuryPiles.begin();
+        it != mTreasuryPiles.end(); ++it)
+        mTreasuryRebuildQueue.push_back(std::make_pair(it->first, true));
+    for(std::map<RenderedMovableEntity*, TreasuryBuriedObject>::const_iterator it = mTreasuryBuriedObjects.begin();
+        it != mTreasuryBuriedObjects.end(); ++it)
+    {
+        Ogre::SceneNode* node = it->first->getEntityNode();
+        if(it->first->getObjectType() == GameEntityType::treasuryObject && node != nullptr
+            && node->getParent() == mRoomSceneNode)
+            mTreasuryRebuildQueue.push_back(std::make_pair(it->first, false));
+    }
+
+    // The sacks of the thieves follow the option at once: they go away at off and come back otherwise
+    if(mGameMap != nullptr)
+    {
+        const std::vector<Creature*>& creatures = mGameMap->getCreatures();
+        for(Creature* creature : creatures)
+            rrRefreshCreatureGoldSack(creature);
+    }
+}
+
+void RenderManager::updateTreasuryRebuild()
+{
+    int budget = TreasuryCreatureRules::rebuildPerFrame;
+    while(budget > 0 && mTreasuryRebuildIndex < mTreasuryRebuildQueue.size())
+    {
+        const std::pair<RenderedMovableEntity*, bool> item = mTreasuryRebuildQueue[mTreasuryRebuildIndex];
+        ++mTreasuryRebuildIndex;
+
+        // An entity that went away in the meantime is not listed any more
+        NodeType nodeType = NodeType::MTILES_NODE;
+        if(item.second)
+        {
+            std::map<RenderedMovableEntity*, TreasuryPileInfo>::const_iterator pile = mTreasuryPiles.find(item.first);
+            if(pile == mTreasuryPiles.end())
+                continue;
+            nodeType = pile->second.mNodeType;
+        }
+        else
+        {
+            Ogre::SceneNode* node = item.first->getEntityNode();
+            if(mTreasuryBuriedObjects.find(item.first) == mTreasuryBuriedObjects.end() || node == nullptr
+                || node->getParent() != mRoomSceneNode)
+                continue;
+        }
+
+        item.first->destroyMesh(nodeType);
+        item.first->createMesh(nodeType);
+        --budget;
+    }
+
+    if(mTreasuryRebuildIndex >= mTreasuryRebuildQueue.size() && !mTreasuryRebuildQueue.empty())
+    {
+        mTreasuryRebuildQueue.clear();
+        mTreasuryRebuildIndex = 0;
+    }
+}
+
 void RenderManager::updateTreasuryLod(Ogre::Real timeSinceLastFrame)
 {
     mTreasuryLodTimer += timeSinceLastFrame;
@@ -5530,6 +5598,8 @@ void RenderManager::clearTreasuryEffects()
     mTreasuryBatch.clear();
     mTreasuryBuriedObjects.clear();
     mTreasuryPiles.clear();
+    mTreasuryRebuildQueue.clear();
+    mTreasuryRebuildIndex = 0;
     while(!mTreasuryThiefSacks.empty())
         removeTreasuryThiefSack(mTreasuryThiefSacks.back().mCreature);
     for(const std::string& name : mTreasuryGlowLights)

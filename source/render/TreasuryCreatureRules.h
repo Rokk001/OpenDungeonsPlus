@@ -339,6 +339,9 @@ static const float& lodHysteresis = TreasurySettings::current().lodHysteresis;
 static const float& lodInterval = TreasurySettings::current().lodInterval;
 static const int& lodSwitchesPerUpdate = TreasurySettings::current().lodSwitchesPerUpdate;
 
+//! Piles and floor gold heaps rebuilt per frame after the "Treasury detail" option changed
+static const int& rebuildPerFrame = TreasurySettings::current().rebuildPerFrame;
+
 inline bool lodReducedAt(bool currentlyReduced, float distance)
 {
     return distance > (currentlyReduced ? lodFarDistance - lodHysteresis : lodFarDistance);

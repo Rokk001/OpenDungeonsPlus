@@ -158,6 +158,9 @@ public:
     void rrDestroyCreature(Creature* curCreature);
     //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)
     void rrRefreshCreatureGoldSack(Creature* creature);
+    //! The "Treasury detail" option changed: every pile, floor gold heap and thief sack is drawn again for the new
+    //! setting (the piles and heaps a few per frame, see updateTreasuryRebuild)
+    void rrTreasuryDetailChanged();
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
@@ -519,6 +522,9 @@ private:
     std::map<RenderedMovableEntity*, TreasuryPileInfo> mTreasuryPiles;
     //! While a pile is created again for the level of detail: 1 reduced, 0 full (-1 when not, the distance decides)
     int mTreasuryPileFarOverride = -1;
+    //! Piles (true) and floor gold heaps (false) waiting to be drawn again after the detail option changed
+    std::vector<std::pair<RenderedMovableEntity*, bool> > mTreasuryRebuildQueue;
+    size_t mTreasuryRebuildIndex = 0;
     Ogre::Real mTreasuryLodTimer = 0.0f;
 
     //! A pile that grows or sinks: its node settles to the new height over a short time
@@ -683,6 +689,7 @@ private:
     //! Distance of a point to the camera in tiles (0 without a camera)
     float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
     void updateTreasuryLod(Ogre::Real timeSinceLastFrame);
+    void updateTreasuryRebuild();
     //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
     void finishTreasuryDent(const std::string& entityName);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);

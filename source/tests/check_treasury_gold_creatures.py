@@ -101,6 +101,8 @@ int main()
     check(!lodReducedAt(true, lodFarDistance - lodHysteresis - 1.0f), "a reduced pile returns to full when clearly near");
     check(lodHysteresis >= 0.0f && lodSwitchesPerUpdate >= 1 && lodInterval > 0.0f, "the level of detail is bounded");
 
+    check(rebuildPerFrame >= 1, "the option change rebuilds at least one pile per frame");
+
     SplashBudget budget;
     int roomA = 0;
     int roomB = 0;
