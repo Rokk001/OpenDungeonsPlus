@@ -516,7 +516,7 @@ private:
         bool mTaken;
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
-    //! The settled piles of a treasury are drawn as one batch per room and patch of tiles
+    //! The settled piles of a treasury are drawn as one batch per room
     TreasuryGoldBatch mTreasuryBatch;
 
     //! An object standing in the gold of a treasury, drawn partly buried: only its node is lifted by mCurrent

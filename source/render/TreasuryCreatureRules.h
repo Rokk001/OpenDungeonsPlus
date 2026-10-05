@@ -283,17 +283,9 @@ inline float buriedStep(float current, float target, float elapsed)
     return std::fabs(target - next) < buriedSnapDistance ? target : next;
 }
 
-//! The settled piles of a room are drawn as static batches (one per room and patch of tiles, see
-//! TreasuryGoldBatch.h): a patch is this many tiles wide and high, so a change rebuilds only its own patch
-static const int batchChunkSize = 8;
-//! A changed patch is rebuilt at once when it was not rebuilt for this long, otherwise as soon as this time is over
+//! The settled piles of a room are drawn as one static batch per room (see TreasuryGoldBatch.h).
+//! A changed room is rebuilt at once when it was not rebuilt for this long, otherwise as soon as this time is over
 static const float batchRebuildInterval = 0.25f;
-
-//! Index of the patch a tile coordinate lies in (rounds down, also for negative coordinates)
-inline int batchChunkIndex(int tile)
-{
-    return tile >= 0 ? tile / batchChunkSize : -((-tile + batchChunkSize - 1) / batchChunkSize);
-}
 
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget

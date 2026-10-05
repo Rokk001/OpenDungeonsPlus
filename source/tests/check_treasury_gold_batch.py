@@ -1,6 +1,5 @@
 """Wiring checks for the room batches of the treasury gold: settled piles are drawn by one static batch per room
-and patch of tiles instead of one scene object per tile; a change rebuilds only its own patch, at most every
-interval; settling piles, the registry (creature heights), the detail option and the room object bounds slice stay
+instead of one scene object per tile; a change rebuilds only its own room, at most every interval; settling piles, the registry (creature heights), the detail option and the room object bounds slice stay
 as they were. Client only, text only (no compiler needed)."""
 from pathlib import Path
 import re
@@ -19,32 +18,23 @@ batch_h = read('source/render/TreasuryGoldBatch.h')
 rules = read('source/render/TreasuryCreatureRules.h')
 cmake = read('CMakeLists.txt')
 
-# Technique: Ogre::StaticGeometry per room and patch, built from the pile entities.
+# Technique: one Ogre::StaticGeometry per room, built from the pile entities.
 assert 'createStaticGeometry' in batch and 'destroyStaticGeometry' in batch
 assert 'addEntity(member.mEntity, member.mNode->getPosition(), member.mNode->getOrientation()' in batch
 assert 'render/TreasuryGoldBatch.cpp' in cmake
 assert '#include "render/TreasuryGoldBatch.h"' in header and 'TreasuryGoldBatch mTreasuryBatch;' in header
 
-# Patches: key = room + patch of tiles; rule constants live in the rules header and are used by the batch.
-chunk = int(re.search(r'batchChunkSize\s*=\s*(\d+)\s*;', rules).group(1))
+# One batch per room: the key is the room only (no patch of tiles), the rule constant is the rebuild interval.
 interval = float(re.search(r'batchRebuildInterval\s*=\s*([0-9.]+)f\s*;', rules).group(1))
-assert 4 <= chunk <= 16 and 0.1 <= interval <= 0.5
-assert 'batchChunkIndex(tileX)' in batch and 'batchChunkIndex(tileY)' in batch
+assert 0.1 <= interval <= 0.5
+assert 'batchChunkSize' not in rules and 'batchChunkIndex' not in rules
+assert 'batchChunkSize' not in batch and 'batchChunkIndex' not in batch
+assert 'typedef const void* ChunkKey;' in batch_h and 'tuple' not in batch_h
+assert 'member.mKey = roomKey;' in batch and 'int tileX' not in batch_h
+assert 'setOrigin(Ogre::Vector3(-500.0f, -500.0f, -500.0f))' in batch
 assert 'batchRebuildInterval' in batch and 'mSinceRebuild' in batch
 
-# Python mirror of the patch index: rounds down also for negative tiles.
-def chunk_index(tile):
-    return tile // chunk
-for tile in range(-20, 40):
-    c = tile // chunk
-    assert c * chunk <= tile < (c + 1) * chunk
-body = rules.split('inline int batchChunkIndex')[1].split('}')[0]
-assert 'tile / batchChunkSize' in body and '(-tile + batchChunkSize - 1) / batchChunkSize' in body
-for tile in range(-20, 40):
-    ours = tile // chunk if tile >= 0 else -((-tile + chunk - 1) // chunk)
-    assert ours == chunk_index(tile), tile
-
-# Dirty flag per patch: add, settle end and removal of a batched pile mark only their own patch.
+# Dirty flag per room: add, settle end and removal of a batched pile mark only their own room.
 add = batch.split('void TreasuryGoldBatch::addPile')[1].split('void TreasuryGoldBatch::pileSettled')[0]
 assert 'mDirty = true' in add
 settled = batch.split('void TreasuryGoldBatch::pileSettled')[1].split('void TreasuryGoldBatch::removePile')[0]
@@ -54,7 +44,7 @@ assert 'mBatched' in removal and 'mDirty = true' in removal
 update = batch.split('void TreasuryGoldBatch::update')[1].split('void TreasuryGoldBatch::rebuild')[0]
 assert '!chunk.mDirty || chunk.mSinceRebuild < TreasuryCreatureRules::batchRebuildInterval' in update
 rebuild = batch.split('void TreasuryGoldBatch::rebuild')[1].split('void TreasuryGoldBatch::clear')[0]
-# only the patch's own members are added, settling piles stay visible entities, build before hiding
+# only the room's own members are added, settling piles stay visible entities, build before hiding
 assert 'chunk.mMembers' in rebuild and 'if(member.mSettling)' in rebuild and 'setVisible(true)' in rebuild
 assert rebuild.index('->build()') < rebuild.index('setVisible(false)')
 assert 'reset()' in rebuild

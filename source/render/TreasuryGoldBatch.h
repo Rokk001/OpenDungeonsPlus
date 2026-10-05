@@ -21,7 +21,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <tuple>
 
 namespace Ogre
 {
@@ -31,37 +30,37 @@ class SceneNode;
 class StaticGeometry;
 }
 
-//! \brief Draws the settled gold piles of a treasury as a few static batches instead of one scene object per
-//! tile. The piles stay ordinary entities (so the settle animation, the creature heights and the objects
+//! \brief Draws the settled gold piles of a treasury as one static batch per room instead of one scene object
+//! per tile. The piles stay ordinary entities (so the settle animation, the creature heights and the objects
 //! buried in the gold keep working); a pile that is not settling is hidden and drawn by the batch of its
-//! room and patch of tiles (TreasuryCreatureRules::batchChunkSize) instead. A change marks only its patch
-//! dirty; the patch is rebuilt at most every TreasuryCreatureRules::batchRebuildInterval seconds.
+//! room instead. A change marks only its room dirty; the batch of the room is rebuilt at most every
+//! TreasuryCreatureRules::batchRebuildInterval seconds.
 //! Everything here only touches client scene objects.
 class TreasuryGoldBatch
 {
 public:
-    //! Takes a pile into the batch of its room and patch of tiles. A settling pile stays a visible entity of
-    //! its own until pileSettled() is called.
+    //! Takes a pile into the batch of its room. A settling pile stays a visible entity of its own until
+    //! pileSettled() is called.
     void addPile(Ogre::SceneManager* sceneManager, const std::string& entityName, const void* roomKey,
-        int tileX, int tileY, Ogre::Entity* entity, Ogre::SceneNode* node, bool settling);
+        Ogre::Entity* entity, Ogre::SceneNode* node, bool settling);
 
     //! The settle animation of the pile is over: the pile joins the batch with its next rebuild
     void pileSettled(const std::string& entityName);
 
-    //! The pile is gone (its entity may already be destroyed): its patch is rebuilt
+    //! The pile is gone (its entity may already be destroyed): the batch of its room is rebuilt
     void removePile(const std::string& entityName);
 
-    //! Rebuilds the dirty patches whose interval is over
+    //! Rebuilds the dirty room batches whose interval is over
     void update(float timeSinceLastFrame);
 
     //! Destroys all batches. The entities are not touched (they may be gone already).
     void clear();
 
-    //! Number of patches that currently have a batch (one pass over the piles per patch and material)
+    //! Number of rooms that currently have a batch (one pass over the piles per room and material)
     size_t getBatchCount() const;
 
 private:
-    typedef std::tuple<const void*, int, int> ChunkKey;
+    typedef const void* ChunkKey;
 
     struct Member
     {
@@ -80,7 +79,7 @@ private:
         float mSinceRebuild = 0.0f;
     };
 
-    void rebuild(ChunkKey key, Chunk& chunk);
+    void rebuild(Chunk& chunk);
 
     Ogre::SceneManager* mSceneManager = nullptr;
     int mGeometryNumber = 0;

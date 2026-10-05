@@ -2875,15 +2875,14 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             previousPileLevel, pileLevel);
         refreshTreasuryGlow(static_cast<int>(renderedMovableEntity->getPosition().x + 0.5),
             static_cast<int>(renderedMovableEntity->getPosition().y + 0.5));
-        // The settled pile is drawn by the batch of its room (one draw batch per patch of tiles, not per tile)
+        // The settled pile is drawn by the batch of its room (one draw batch per room, not per tile)
         if(ent != nullptr)
         {
             Tile* batchTile = renderedMovableEntity->getPositionTile();
             mTreasuryBatch.addPile(mSceneManager, renderedMovableEntity->getName(),
                 (batchTile != nullptr && batchTile->getCoveringRoom() != nullptr) ?
                 static_cast<const void*>(batchTile->getCoveringRoom()) : static_cast<const void*>(batchTile),
-                static_cast<int>(renderedMovableEntity->getPosition().x + 0.5),
-                static_cast<int>(renderedMovableEntity->getPosition().y + 0.5), ent, node,
+                ent, node,
                 isTreasuryPileSettling(renderedMovableEntity->getName()));
         }
     }

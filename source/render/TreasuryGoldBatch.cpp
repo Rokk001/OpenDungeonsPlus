@@ -30,7 +30,7 @@
 #include <vector>
 
 void TreasuryGoldBatch::addPile(Ogre::SceneManager* sceneManager, const std::string& entityName,
-    const void* roomKey, int tileX, int tileY, Ogre::Entity* entity, Ogre::SceneNode* node, bool settling)
+    const void* roomKey, Ogre::Entity* entity, Ogre::SceneNode* node, bool settling)
 {
     if(sceneManager == nullptr || entity == nullptr || node == nullptr)
         return;
@@ -41,8 +41,7 @@ void TreasuryGoldBatch::addPile(Ogre::SceneManager* sceneManager, const std::str
     mSceneManager = sceneManager;
 
     Member member;
-    member.mKey = ChunkKey(roomKey, TreasuryCreatureRules::batchChunkIndex(tileX),
-        TreasuryCreatureRules::batchChunkIndex(tileY));
+    member.mKey = roomKey;
     member.mEntity = entity;
     member.mNode = node;
     member.mSettling = settling;
@@ -52,12 +51,12 @@ void TreasuryGoldBatch::addPile(Ogre::SceneManager* sceneManager, const std::str
     std::map<ChunkKey, Chunk>::iterator chunkIt = mChunks.find(member.mKey);
     if(chunkIt == mChunks.end())
     {
-        // A new patch is built at once
+        // A new room batch is built at once
         chunkIt = mChunks.insert(std::make_pair(member.mKey, Chunk())).first;
         chunkIt->second.mSinceRebuild = TreasuryCreatureRules::batchRebuildInterval;
     }
     chunkIt->second.mMembers.insert(entityName);
-    // A patch that was not touched for a while is rebuilt at once, a busy one when its interval is over
+    // A batch that was not touched for a while is rebuilt at once, a busy one when its interval is over
     chunkIt->second.mDirty = true;
 }
 
@@ -84,7 +83,7 @@ void TreasuryGoldBatch::removePile(const std::string& entityName)
         // The pile may still be shown by the batch, which then has to be rebuilt without it
         if(it->second.mBatched)
             chunkIt->second.mDirty = true;
-        // A patch that never got a batch and has no pile left is dropped
+        // A room that never got a batch and has no pile left is dropped
         else if(chunkIt->second.mMembers.empty() && chunkIt->second.mGeometry == nullptr)
             mChunks.erase(chunkIt);
     }
@@ -103,7 +102,7 @@ void TreasuryGoldBatch::update(float timeSinceLastFrame)
             continue;
         }
 
-        rebuild(it->first, chunk);
+        rebuild(chunk);
         if(chunk.mMembers.empty())
         {
             if(chunk.mGeometry != nullptr && mSceneManager != nullptr)
@@ -115,7 +114,7 @@ void TreasuryGoldBatch::update(float timeSinceLastFrame)
     }
 }
 
-void TreasuryGoldBatch::rebuild(ChunkKey key, Chunk& chunk)
+void TreasuryGoldBatch::rebuild(Chunk& chunk)
 {
     chunk.mDirty = false;
     chunk.mSinceRebuild = 0.0f;
@@ -127,10 +126,8 @@ void TreasuryGoldBatch::rebuild(ChunkKey key, Chunk& chunk)
     {
         const std::string name = "TreasuryGoldBatch_" + Helper::toString(++mGeometryNumber);
         chunk.mGeometry = mSceneManager->createStaticGeometry(name);
-        // One region per patch: the origin lies below and beside the patch, the region is larger than the patch
-        const float size = static_cast<float>(TreasuryCreatureRules::batchChunkSize);
-        chunk.mGeometry->setOrigin(Ogre::Vector3(static_cast<Ogre::Real>(std::get<1>(key)) * size - 1.0f,
-            static_cast<Ogre::Real>(std::get<2>(key)) * size - 1.0f, -500.0f));
+        // One region per room: the region is larger than any room, so the room is drawn as one batch
+        chunk.mGeometry->setOrigin(Ogre::Vector3(-500.0f, -500.0f, -500.0f));
         chunk.mGeometry->setRegionDimensions(Ogre::Vector3(1000.0f, 1000.0f, 1000.0f));
     }
 
