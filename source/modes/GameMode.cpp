@@ -4618,7 +4618,7 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, text);
                 }
             }
-            else if(tile->getEverVisible() && tile->isDiggable(player->getSeat()))
+            else if(tile->isDiggable(player->getSeat()))
             {
                 displayText(Ogre::ColourValue::White, tile->getMarkedForDigging(player) ?
                     "Marked wall. Click or drag to remove digging marks." : "Wall. Click or drag to mark for digging.");
