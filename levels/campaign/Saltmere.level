@@ -3119,6 +3119,7 @@ Action	terrain	48	78	49	78	path
 Action	setflag	portGatesOpen	1
 Action	portal	0	on
 Action	objective	1	Break open the gates of the port.
+Action	generate	1	Spider:1
 [/Trigger]
 [Trigger]
 Name	portEntered
@@ -3201,5 +3202,12 @@ Mode	once
 Cond	event	BramSeward	killed
 Action	message	1	Admiral Bram Seward is dead and his fleet is without a flag. Saltmere is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	bramWavers
+Mode	once
+Cond	health	BramSeward	<	40
+Action	message	1	The admiral is wounded, and the harbour watch is closing around him.
+Action	spawn	3	47	85	1	Knight:3	Monk:2
 [/Trigger]
 [/Triggers]

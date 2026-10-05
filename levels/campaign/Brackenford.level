@@ -1385,6 +1385,7 @@ Action	message	1	Two goblins have heard about your grove and want a share. Let t
 Action	spawn	1	12	28	-1	Goblin:2	Goblin:2
 Action	reveal	1	Landing
 Action	objective	1	Cross the ford and clear the landing yard.
+Action	generate	1	Goblin:1
 [/Trigger]
 [Trigger]
 Name	landingSeen
