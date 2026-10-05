@@ -583,6 +583,7 @@ config/creatureReactions.cfg           OD Team                 GPLv3+
 materials/scripts/CreatureReactions.material   OD Team        GPLv3+
 particles/CreatureReactions.particle   OD Team                 GPLv3+
 particles/TreasuryCoins.particle        OD Team                 CC0                     Coin splash and coin pour particles of the treasury, reuse the existing coin sprite (original work, not AI generated)
+particles/WorkerReactions.particle   OD Team                   GPLv3+
 materials/textures/CreatureEmote*.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
 materials/textures/ReactionParticle*.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
 materials/textures/CreatureEmoteStar.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work, not AI generated)
