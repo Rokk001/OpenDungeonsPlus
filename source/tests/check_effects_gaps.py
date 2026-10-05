@@ -101,7 +101,12 @@ skeleton = open(os.path.join(ROOT, "models", "WarBanner.skeleton"), "rb").read()
 need(b"Loop" in skeleton, "WarBanner.skeleton has no clip Loop")
 
 # --- hand: sent with the local cast, no network value
-need("ClientNotificationType::askCastSpell" in client and "noteHandCast" in client, "the hand cast is not hooked to the cast")
+server_code = read("source", "network", "ODServer.cpp")
+need('"SpellFx/HandCast"' in server_code and server_code.index("SpellManager::castSpell(gameMap") < server_code.index('"SpellFx/HandCast"'),
+     "the server must send the hand spark only after the spell was accepted")
+need('family == "SpellFx/HandCast"' in client and "noteHandCast" in client, "the client does not show the hand spark on the server message")
+need("ClientNotificationType::askCastSpell" not in client[client.index("void ODClient::queueClientNotification"):][:400],
+     "the hand spark must not be raised by the local request any more")
 need("getKeeperHandPosition" in render_h and "getKeeperHandPosition" in render_cpp, "RenderManager::getKeeperHandPosition missing")
 
 # --- no new network value: the last value stays timeLimit
