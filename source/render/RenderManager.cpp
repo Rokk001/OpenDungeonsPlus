@@ -55,6 +55,7 @@
 #include "render/TreasuryGoldMesh.h"
 #include "sound/SoundEffectsManager.h"
 #include "rooms/HatcheryCoopHouse.h"
+#include "rooms/KeeperWealth.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "rooms/TreasuryGoldLayer.h"
@@ -1231,6 +1232,7 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
     mGameMap = nullptr;
+    mForeignWealth.clear();
     if(mSceneManager->hasEntity("DungeonGroundUnderlay"))
     {
         mSceneManager->destroyEntity("DungeonGroundUnderlay");
@@ -4948,8 +4950,30 @@ void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
     }
 }
 
+void RenderManager::noteKeeperWealth(const std::string& roomName, int seatId, int tier)
+{
+    // The local keeper's own buildings use its own gold (startTreasuryPortalDust, startTreasuryHeartDust)
+    if(mGameMap == nullptr || mGameMap->getLocalPlayer() == nullptr || mGameMap->getLocalPlayer()->getSeat() == nullptr ||
+       mGameMap->getLocalPlayer()->getSeat()->getId() == seatId)
+        return;
+
+    if(tier <= 0)
+        mForeignWealth.erase(roomName);
+    else
+        mForeignWealth[roomName] = KeeperWealth::announceLifetime;
+}
+
 void RenderManager::updateTreasuryDust(Ogre::Real timeSinceLastFrame)
 {
+    for(std::map<std::string, Ogre::Real>::iterator it = mForeignWealth.begin(); it != mForeignWealth.end();)
+    {
+        it->second -= timeSinceLastFrame;
+        if(it->second <= 0.0f)
+            mForeignWealth.erase(it++);
+        else
+            ++it;
+    }
+
     mTreasuryDustTimer += timeSinceLastFrame;
     if(mTreasuryDustTimer < TreasuryCreatureRules::dustInterval)
         return;
@@ -4959,6 +4983,7 @@ void RenderManager::updateTreasuryDust(Ogre::Real timeSinceLastFrame)
 
     startTreasuryPortalDust();
     startTreasuryHeartDust();
+    startForeignWealthDust();
 
     std::vector<TreasuryGoldMesh::FullPile> piles;
     TreasuryGoldMesh::collectFullPiles(piles);
@@ -5033,6 +5058,50 @@ void RenderManager::startTreasuryHeartDust()
         createTreasuryEffect(heart, "TreasuryHeartDust", Ogre::Vector3(
             static_cast<Ogre::Real>(tile->getX()) + offsetX, static_cast<Ogre::Real>(tile->getY()) + offsetY,
             TreasuryCreatureRules::heartDustHeight), TreasuryEffectKind::dust);
+    }
+}
+
+void RenderManager::startForeignWealthDust()
+{
+    if(mGameMap == nullptr || mGameMap->getLocalPlayer() == nullptr || mGameMap->getLocalPlayer()->getSeat() == nullptr)
+        return;
+
+    const Seat* localSeat = mGameMap->getLocalPlayer()->getSeat();
+    for(std::map<std::string, Ogre::Real>::iterator it = mForeignWealth.begin(); it != mForeignWealth.end();)
+    {
+        Room* room = mGameMap->getRoomByName(it->first);
+        if(room == nullptr || room->getSeat() == localSeat ||
+           (room->getType() != RoomType::portal && room->getType() != RoomType::dungeonTemple))
+        {
+            mForeignWealth.erase(it++);
+            continue;
+        }
+        ++it;
+
+        const bool isHeart = (room->getType() == RoomType::dungeonTemple);
+        Tile* tile = nullptr;
+        if(isHeart)
+        {
+            tile = room->getCentralTile();
+        }
+        else
+        {
+            const std::vector<Tile*> tiles = room->getCoveredTiles();
+            if(!tiles.empty())
+                tile = tiles[mTreasuryPortalDustCursor++ % tiles.size()];
+        }
+
+        // Fog: the dust only shows while the local keeper sees the tile of the heart or portal
+        if(tile == nullptr || !tile->getLocalPlayerHasVision())
+            continue;
+
+        const float spread = isHeart ? 0.05f : 0.1f;
+        const float offsetX = (static_cast<float>(mTreasuryEffectNumber % 7) - 3.0f) * spread;
+        const float offsetY = (static_cast<float>(mTreasuryEffectNumber % 5) - 2.0f) * spread * 1.2f;
+        createTreasuryEffect(room, isHeart ? "TreasuryHeartDust" : "TreasuryGoldDust", Ogre::Vector3(
+            static_cast<Ogre::Real>(tile->getX()) + offsetX, static_cast<Ogre::Real>(tile->getY()) + offsetY,
+            isHeart ? TreasuryCreatureRules::heartDustHeight : TreasuryCreatureRules::portalDustHeight),
+            TreasuryEffectKind::dust);
     }
 }
 

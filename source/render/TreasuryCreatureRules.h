@@ -19,6 +19,7 @@
 #define TREASURYCREATURERULES_H
 
 #include "render/TreasuryGoldMesh.h"
+#include "rooms/KeeperWealth.h"
 #include "rooms/TreasuryGoldLayer.h"
 #include "rooms/TreasurySettings.h"
 
@@ -190,9 +191,7 @@ static const float heartDustHeight = 1.8f;
 
 inline bool isRichKeeper(int gold, int goldMax)
 {
-    if(goldMax <= 0 || gold < portalRichMinGold)
-        return false;
-    return static_cast<float>(gold) >= portalRichShare * static_cast<float>(goldMax);
+    return KeeperWealth::tier(gold, goldMax) > 0;
 }
 
 //! Sparkles and sliding coins on the gold of rich treasuries, and the coins that roll away when gold is taken:

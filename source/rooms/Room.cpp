@@ -33,6 +33,7 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "ODApplication.h"
+#include "rooms/KeeperWealth.h"
 #include "rooms/RoomClaim.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomTorches.h"
@@ -1129,6 +1130,35 @@ void Room::fireRoomCosmeticEvent(Tile& tile, const CosmeticEvent& event)
     for(Seat* seat : tile.getSeatsWithVision())
     {
         if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
+}
+
+void Room::announceKeeperWealth(Tile* tile)
+{
+    if(tile == nullptr || getSeat() == nullptr || getSeat()->isRogueSeat())
+        return;
+
+    if((getGameMap()->getTurnNumber() % KeeperWealth::announceTurns) != 0)
+        return;
+
+    int tier = KeeperWealth::tier(getSeat()->getGold(), getSeat()->getGoldMax());
+    if(tier <= 0)
+        return;
+
+    CosmeticEvent event(CosmeticEventType::keeperWealth);
+    event.mObject = getName();
+    event.mValue = getSeat()->getId();
+    event.mValue2 = tier;
+    event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+        static_cast<Ogre::Real>(tile->getY()), 0.0f);
+
+    // Only the seats that see the tile get it: a building in the fog stays unknown
+    for(Seat* seat : tile->getSeatsWithVision())
+    {
+        if(seat == getSeat() || seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
             continue;
 
         ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);

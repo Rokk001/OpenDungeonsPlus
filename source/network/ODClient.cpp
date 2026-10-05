@@ -1002,6 +1002,13 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             }
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+               event.is(CosmeticEventType::keeperWealth) && (RenderManager::getSingletonPtr() != nullptr))
+            {
+                // The heart or portal of a rich keeper is in view: the gold dust above it (tier only, no gold)
+                RenderManager::getSingleton().noteKeeperWealth(event.mObject, event.mValue, event.mValue2);
+            }
+
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
                event.is(CosmeticEventType::casinoResult) && (RoomAmbience::getSingletonPtr() != nullptr))
             {
                 // A game of the casino ended: the coins at the winner, the grey smoke and the groan at the loser
