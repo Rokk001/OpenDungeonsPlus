@@ -108,6 +108,10 @@ public:
     inline uint32_t incrementAge()
     { return ++mAge; }
 
+    //! \brief An egg that was laid after a walk to the nest has already lived the turns since the hen started.
+    inline void setAge(uint32_t age)
+    { mAge = age; }
+
     inline void setLayTimer(uint32_t turns)
     { mNbTurnLay = turns; }
 
