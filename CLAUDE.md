@@ -51,3 +51,13 @@ These instructions apply to every change made to this repository with an AI assi
   are green.
 - Check scripts, load tests and the pre-push hook are never removed, weakened or bypassed.
   If a check measures wrongly, correct the check openly and report it to the owner first.
+
+## Tool-Pfade
+
+- OgreXMLConverter.exe: `C:\Users\mario\od-deps\build\ogre\bin\release\OgreXMLConverter.exe`
+- blender.exe: `C:\Users\mario\AppData\Local\Microsoft\WindowsApps\blender-launcher.exe` (Store-App, `blender.exe` selbst ist nicht direkt ausfuehrbar; Aufruf `--background <blend> --python <script>`)
+- cl.exe: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe`
+- vcvars64.bat: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat`
+- cmake.exe: `C:\Users\mario\od-deps\tools\cmake-3.31.8-windows-x86_64\bin\cmake.exe`
+
+Diese Pfade direkt verwenden, nie danach suchen.
