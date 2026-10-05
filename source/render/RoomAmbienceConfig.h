@@ -54,7 +54,9 @@ enum class AmbienceWhen
     //! The target (a trap) is loaded and ready, the opposite of reloading
     ready,
     //! The target (the dungeon heart of the local keeper) has less health than the fraction given in mBelow
-    lowHealth
+    lowHealth,
+    //! A creature was close at some time while the target was in view and none has been for mAfter seconds (a bed after the sleeper left)
+    vacated
 };
 
 enum class AmbienceKind
@@ -127,7 +129,9 @@ struct AmbienceEffect
         mMaxDistance(28.0),
         mPriority(5),
         mReduced(false),
-        mNeedWall(false)
+        mNeedWall(false),
+        mWallSide(false),
+        mHeartRate(false)
     {}
 
     std::string mName;
@@ -182,6 +186,12 @@ struct AmbienceEffect
     bool mReduced;
     //! Tile targets: only tiles beside a wall
     bool mNeedWall;
+    //! Tile targets: moved to the edge of the tile that touches a wall (implies mNeedWall)
+    bool mWallSide;
+    //! The speed follows the beat of the player's dungeon heart (faster when it is hurt)
+    bool mHeartRate;
+    //! Sound family played when an event effect starts (only in the mode "full")
+    std::string mSound;
 };
 
 /*! \brief Settings and effects of config/roomAmbience.cfg

@@ -2232,4 +2232,11 @@ Cond	region	1	Outpost
 Action	message	1	The heroes have an outpost here, and two coffers they never open. Take the gold when you can.
 Action	gold	1	300
 [/Trigger]
+[Trigger]
+Name	pensWell
+Mode	once
+Cond	slabs	1	Pens	claimed	>=	15
+Action	message	1	The pens are yours and a spring of mana has opened among them. Claim it with a worker.
+Action	terrain	28	48	28	48	manawell
+[/Trigger]
 [/Triggers]

@@ -32,8 +32,10 @@
 #include <string>
 #include <vector>
 
+struct CosmeticEvent;
 class Creature;
 class CreatureCombatReactions;
+class CreatureWeaponVisuals;
 class GameEntity;
 class GameMap;
 class MovableGameEntity;
@@ -163,6 +165,11 @@ public:
     //! load). Both creatures show a short emote, which one depends on the new tier and on the direction.
     void noteRelationshipTier(Creature* first, Creature* second, RelationshipTier oldTier, RelationshipTier newTier);
 
+    //! \brief Client hook: the server sent a cosmetic event (only when cosmetic events were agreed on). Mood
+    //! changes, fear, waiting for work and the full treasury are shown here. The other kinds (carried gold,
+    //! melee result, missile launch, finished digging) are left to the code that shows them.
+    void noteCosmeticEvent(const CosmeticEvent& event);
+
     //! \brief Ends the running reaction of the creature and forgets the waiting ones. Needed before the creature
     //! changes its parent node and size (picked up and dropped).
     void endForCreature(Creature* creature);
@@ -186,6 +193,10 @@ public:
 private:
     //! Weapon and fight reactions (draw, stance, attack styles, hits, dropped weapons) use the internals
     friend class CreatureCombatReactions;
+    //! Results of blows, arrows and weapon trails (from the cosmetic events of the server)
+    friend class CreatureWeaponVisuals;
+    //! Worker reactions (dig hits, claiming, carrying, danger, idling) use the internals too
+    friend class WorkerReactions;
 
     struct RunningReaction
     {
@@ -262,6 +273,11 @@ private:
         std::string mPropSetName;
         std::string mPropNodeName;
         double mPropHeight;
+        //! Prop 'fall': the scene nodes of the falling models and where they started
+        std::vector<std::string> mPropFallNames;
+        Ogre::Vector3 mPropFallOrigin;
+        Ogre::Vector3 mPropFallForward;
+        Ogre::Vector3 mPropFallRight;
 
         //! Icon that starts later in the reaction. Empty once it is shown.
         std::string mLateEmote;
@@ -354,6 +370,8 @@ private:
     //! \brief The bout in the arena is over because the creature was knocked out: the one that fought it
     //! cheers as the winner and the others in the arena cheer as spectators
     void celebrateBout(Creature* loser);
+    //! Shows the done moment of the meals whose time has come
+    void updateMealEnds();
     //! \brief Name of the room the creature stands in ("Arena", "Dormitory", ...), empty if in none
     std::string getRoomName(const Creature* creature) const;
     //! \brief The event that is shown now and then while the creature goes on with what the animation
@@ -370,6 +388,11 @@ private:
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
+    //! \brief "happy", "neutral" or "unhappy": the mood of the creature as far as the client knows it. A creature
+    //! that just arrived through a portal uses the mood the server told for the arrival.
+    std::string getMoodClass(const Creature* creature) const;
+    //! \brief True if the server sends cosmetic events to this client
+    static bool hasServerEvents();
     //! \brief True if the local keeper holds the creature in the hand
     bool isInHand(const Creature* creature) const;
     //! \brief A creature appeared on the client map: one of the keeper arrives through a portal, an enemy is spotted
@@ -415,6 +438,9 @@ private:
     bool createProps(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
     void updateProps(RunningReaction& reaction, Creature* creature);
     void removeProps(RunningReaction& reaction);
+    //! \brief Small models that fall off the creature and lie on the floor (shackles of a converted prisoner)
+    bool createFallingProps(RunningReaction& reaction, Creature* creature, const ReactionProp& prop);
+    void updateFallingProps(RunningReaction& reaction);
 
     //! \brief Shows the second icon (and the second effect) of the reaction when it is time
     void updateLate(RunningReaction& reaction, Creature* creature);
@@ -496,6 +522,14 @@ private:
     std::map<std::string, OngoingWork> mOngoing;
     //! The gold the creatures delivered lately ("creature" -> deliveries)
     std::map<std::string, Delivery> mDeliveries;
+    //! Time of the last gold delivery to a treasury of each creature ("creature" -> mTime)
+    std::map<std::string, double> mLastDelivery;
+    //! The mood level the server told for an arrival through a portal ("creature" -> level and time)
+    std::map<std::string, std::pair<int32_t, double> > mArrivalMoods;
+    //! Creatures that were told to eat a chicken: time at which the meal counts as over if no meal clip said so
+    std::map<std::string, double> mMealEnds;
+    //! Time the meal clip was last seen for each creature (the clip, when there is one, shows the done moment)
+    std::map<std::string, double> mMealClipSeen;
 };
 
 #endif // CREATUREREACTIONS_H

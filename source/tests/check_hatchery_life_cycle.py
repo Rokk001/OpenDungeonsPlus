@@ -25,8 +25,8 @@ assert '!chicken->isEdible()' in body(room, 'bool RoomHatchery::useRoom')
 assert '!chicken->isEdible()' in food
 
 # Old saves have no kind: the chicken stays a hen (the kind is read optionally after the position).
-imp = body(chicken, 'bool ChickenEntity::importFromStream')
-assert 'mKind = static_cast<ChickenKind>(kind)' in imp and 'is.clear()' in imp
+imported = body(chicken, 'bool ChickenEntity::importFromStream')
+assert 'mKind = static_cast<ChickenKind>(kind)' in imported and 'is.clear()' in imported
 assert 'mKind(ChickenKind::hen)' in chicken
 
 # Clients get the kind with the entity and a small event when it changes.
@@ -68,8 +68,8 @@ room_h = (root / 'source/rooms/RoomHatchery.h').read_text()
 assert 'exportToStream' in room_h and 'importFromStream' in room_h
 exp = room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:300]
 assert 'HatcheryWaits' in exp and 'mCoopHenWait' in exp and 'mCoopRoosterWait' in exp
-imp = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:900]
-assert 'seekg(pos)' in imp and 'HatcheryWaits' in imp
+imported = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:900]
+assert 'seekg(pos)' in imported and 'HatcheryWaits' in imported
 assert 'coopHenCount' in room_cpp and 'HatcheryCoopBatch' in cfg
 
 # The new rooster comes after the same wait as a hen (HatcheryChickenSpawnRate); the own rooster wait is gone,

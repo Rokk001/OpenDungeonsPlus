@@ -2658,6 +2658,7 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 # Level scripting test. See source/gamemap/LevelScript.h for the format.
+Region	StoryCorner	36	41	38	43
 [Trigger]
 Name	welcome
 Mode	once
@@ -2678,5 +2679,30 @@ Name	afterAmbush
 Mode	once
 Cond	flag	ambushStarted	1
 Action	objective	1	Defend your dungeon against the heroes.
+[/Trigger]
+[Trigger]
+Name	storySwitches
+Mode	once
+Cond	time	2
+Action	portal	1	off
+Action	terrain	38	43	38	43	rock
+Action	stonecreate	36	41
+[/Trigger]
+[Trigger]
+Name	storyChecks
+Mode	once
+Cond	portal	1	off
+Cond	alive	Scarab1
+Cond	alive	NoSuchBeast	0
+Cond	reached	Scarab1	region	StoryCorner
+Cond	stone	StoryCorner	>=	1
+Action	setflag	storyChecked	1
+Action	portal	1	on
+[/Trigger]
+[Trigger]
+Name	storyHeart
+Mode	once
+Cond	reached	Scarab1	heart	1
+Action	setflag	storyHeart	1
 [/Trigger]
 [/Triggers]

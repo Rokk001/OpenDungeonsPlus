@@ -111,7 +111,9 @@ struct ReactionProp
         //! The shadow of a hand on the wall
         shadow,
         //! Pebbles pushed along the floor
-        kick
+        kick,
+        //! Small models (the mesh named in mSprite, e.g. shackles) fall from the hands to the floor and lie there
+        fall
     };
 
     ReactionProp() :
@@ -195,6 +197,9 @@ struct ReactionVariant
     std::vector<std::string> mCreatures;
     std::vector<std::string> mGroups;
     std::vector<std::string> mJobs;
+    //! Mood classes the variant is allowed for: happy (Happy), neutral (Neutral or not known), unhappy (Upset,
+    //! Angry, Furious). An empty list allows everything.
+    std::vector<std::string> mMoods;
 
     //! Only for creature types that need to sleep (see CreatureReactions::creatureNeedsSleep)
     bool mRequiresSleepNeed;

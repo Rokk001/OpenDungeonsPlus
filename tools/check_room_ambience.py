@@ -19,9 +19,10 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below", "Land", "From")
+               "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below", "Land", "From",
+               "WallSide", "HeartRate", "Sound")
 TARGETS = ("Object", "Tile", "Event")
-WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth")
+WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth", "Vacated")
 KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
@@ -215,7 +216,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         counts["events"] += 1
         if "Event" not in effect:
             problems.append("%s: event effect without Event" % where)
-        counts["names"].add(effect.get("Event", [""])[0])
+        else:
+            counts["names"].add(effect["Event"][0])
         if kind not in ("Particle", "Shake", "Mark", "Sound", "Roll", "Beam", "Projectile"):
             problems.append("%s: event effects must be particles, shakes, marks, sounds, rolls, beams or projectiles" % where)
     else:
@@ -349,9 +351,17 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
     for key in ("Offset", "Axis", "From"):
         if key in effect and (len(effect[key]) != 3 or not all(is_number(v) for v in effect[key])):
             problems.append("%s: %s needs three numbers" % (where, key))
-    for key in ("Reduced", "NeedWall"):
+    for key in ("Reduced", "NeedWall", "WallSide", "HeartRate"):
         if key in effect and effect[key][0] not in ("yes", "no", "true", "false", "1", "0"):
             problems.append("%s: %s needs yes or no" % (where, key))
+    if "Sound" in effect:
+        folder = os.path.join(ROOT, "sounds", "Spatial", *effect["Sound"][0].split("/"))
+        if target != "Event":
+            problems.append("%s: Sound only works on event effects" % where)
+        elif not glob.glob(os.path.join(folder, "*.ogg")):
+            problems.append("%s: no .ogg file in the sound family %s" % (where, effect["Sound"][0]))
+    if "HeartRate" in effect and effect["HeartRate"][0] in ("yes", "true", "1") and "Speed" not in effect:
+        problems.append("%s: HeartRate needs a Speed" % where)
     for match in effect.get("Match", []):
         if target == "Object" and match.startswith("trap:"):
             if not re.match(r"^[A-Za-z*]+$", match[len("trap:"):]):
@@ -434,6 +444,17 @@ def check_file(path, problems, visuals, systems, mats, counts):
         problems.append("%s: missing [/RoomAmbience]" % base)
 
 
+def check_started_events(problems, names):
+    """Every event that the code starts by name needs at least one effect in the configuration."""
+    for source in ("RoomAmbience.cpp", "RoomAmbienceExtras.cpp"):
+        path = os.path.join(ROOT, "source", "render", source)
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        for match in re.finditer(r'triggerEvent\("(\w+)"', text):
+            if match.group(1) not in names:
+                problems.append("%s starts the event %s, no effect in the configuration uses it" % (source, match.group(1)))
+
+
 def main():
     problems = []
     counts = {"effects": 0, "events": 0, "lands": [], "names": set()}
@@ -443,6 +464,7 @@ def main():
     for where, land in counts["lands"]:
         if land not in counts["names"]:
             problems.append("%s: Land event %s has no effect" % (where, land))
+    check_started_events(problems, counts["names"])
     if problems:
         for problem in problems:
             print("PROBLEM:", problem)

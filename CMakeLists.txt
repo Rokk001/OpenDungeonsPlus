@@ -377,6 +377,7 @@ set(OD_SOURCEFILES
     ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
+    ${SRC}/game/CreatureAppearance.cpp
     ${SRC}/game/CreatureRelationships.cpp
     ${SRC}/game/TrapProductionData.cpp
     ${SRC}/game/PlayerSelection.cpp
@@ -441,6 +442,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/network/ChatEventMessage.cpp
     ${SRC}/network/ClientNotification.cpp
+    ${SRC}/network/CosmeticEvent.cpp
     ${SRC}/network/ODClient.cpp
     ${SRC}/network/ODPacket.cpp
     ${SRC}/network/ODServer.cpp
@@ -453,16 +455,26 @@ set(OD_SOURCEFILES
     ${SRC}/render/CreatureReactionConfig.cpp
     ${SRC}/render/CreatureReactions.cpp
     ${SRC}/render/CreatureCombatReactions.cpp
+    ${SRC}/render/CreatureWeaponVisuals.cpp
+    ${SRC}/render/WorkerReactions.cpp
+    ${SRC}/render/WorkerExtras.cpp
     ${SRC}/render/DebugDrawer.cpp    
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
     ${SRC}/render/PortraitTint.cpp
+    ${SRC}/render/PortraitManifest.cpp
+    ${SRC}/render/AppearanceCompose.cpp
+    ${SRC}/render/CreatureAppearancePicture.cpp
+    ${SRC}/render/PortraitManifestRegistry.cpp
+    ${SRC}/render/DungeonbookAppearanceConfig.cpp
+    ${SRC}/render/DungeonbookQuirks.cpp
     ${SRC}/render/CreaturePanel.cpp
     ${SRC}/render/SocialWindow.cpp
     ${SRC}/render/LooseGoldMesh.cpp
     ${SRC}/render/MovableTextOverlay.cpp
     ${SRC}/render/RoomAmbience.cpp
     ${SRC}/render/RoomAmbienceConfig.cpp
+    ${SRC}/render/RoomAmbienceExtras.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/RenderManagerChickens.cpp

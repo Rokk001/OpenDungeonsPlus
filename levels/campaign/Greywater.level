@@ -239,10 +239,6 @@ ProtectDungeonTemple	NULL
 1	9	2	100
 1	65	2	100
 1	67	2	100
-1	75	1	0
-1	76	1	0
-1	77	1	0
-1	78	1	0
 1	79	2	100
 1	80	2	100
 1	81	2	100
@@ -253,12 +249,6 @@ ProtectDungeonTemple	NULL
 2	11	2	100
 2	12	2	100
 2	65	2	100
-2	74	1	0
-2	75	1	0
-2	76	1	0
-2	77	1	0
-2	78	1	0
-2	79	1	0
 2	80	2	100
 2	81	2	100
 2	82	2	100
@@ -305,7 +295,6 @@ ProtectDungeonTemple	NULL
 4	66	2	100
 4	72	1	0	1
 4	73	1	0	1
-4	74	1	0
 4	75	1	0	1
 4	76	1	0	1
 4	77	1	0	1
@@ -338,10 +327,6 @@ ProtectDungeonTemple	NULL
 5	62	2	100
 5	72	1	0	1
 5	73	1	0	1
-5	74	1	0
-5	75	1	0
-5	76	1	0
-5	77	1	0
 5	78	1	0
 5	79	1	0	1
 5	80	1	0	1
@@ -373,16 +358,9 @@ ProtectDungeonTemple	NULL
 6	53	1	0
 6	62	2	100
 6	64	2	100
-6	71	1	0
 6	72	1	0	1
 6	73	1	0	1
-6	74	1	0
-6	75	1	0
-6	76	1	0
-6	77	1	0
 6	78	1	0
-6	79	1	0
-6	80	1	0
 6	81	2	100
 6	82	2	100
 6	83	3	100
@@ -413,17 +391,12 @@ ProtectDungeonTemple	NULL
 7	53	1	0
 7	54	1	0
 7	62	2	100
-7	71	1	0
-7	72	1	0
 7	73	1	0
 7	74	1	0	1
 7	75	1	0	1
 7	76	1	0	1
 7	77	1	0	1
 7	78	1	0	1
-7	79	1	0
-7	80	1	0
-7	81	1	0
 7	83	3	100
 8	0	3	100
 8	5	1	0
@@ -479,15 +452,6 @@ ProtectDungeonTemple	NULL
 8	58	1	0
 8	59	1	0
 8	60	1	0
-8	61	1	0
-8	62	1	0
-8	63	1	0
-8	64	1	0
-8	65	1	0
-8	66	1	0
-8	67	1	0
-8	71	1	0
-8	72	1	0
 8	73	1	0
 8	74	1	0	1
 8	75	1	0	1
@@ -552,26 +516,11 @@ ProtectDungeonTemple	NULL
 9	58	1	0
 9	59	1	0
 9	60	1	0
-9	61	1	0
-9	62	1	0
-9	63	1	0
-9	64	1	0
-9	65	1	0
-9	66	1	0
-9	67	1	0
-9	68	1	0
-9	69	1	0
-9	70	1	0
-9	71	1	0
-9	72	1	0
-9	73	1	0
 9	74	1	0	1
 9	75	1	0	1
 9	76	1	0	1
 9	77	1	0	1
 9	78	1	0	1
-9	79	1	0
-9	80	1	0
 9	81	1	0	1
 9	83	3	100
 10	0	3	100
@@ -603,17 +552,11 @@ ProtectDungeonTemple	NULL
 10	53	1	0
 10	54	1	0
 10	55	1	0
-10	70	1	0
-10	71	1	0
-10	72	1	0
-10	73	1	0
 10	74	1	0	1
 10	75	1	0	1
 10	76	1	0	1
 10	77	1	0	1
 10	78	1	0	1
-10	79	1	0
-10	80	1	0
 10	81	1	0	1
 10	83	3	100
 11	0	3	100
@@ -644,18 +587,11 @@ ProtectDungeonTemple	NULL
 11	53	1	0
 11	54	1	0
 11	55	1	0
-11	70	1	0
-11	71	1	0
-11	72	1	0
-11	73	1	0
 11	74	1	0	1
 11	75	1	0	1
 11	76	1	0	1
 11	77	1	0	1
 11	78	1	0	1
-11	79	1	0
-11	80	1	0
-11	81	1	0
 11	83	3	100
 12	0	3	100
 12	22	1	0
@@ -673,17 +609,13 @@ ProtectDungeonTemple	NULL
 12	51	1	0
 12	52	1	0
 12	53	1	0
-12	71	1	0
 12	72	1	0	1
 12	73	1	0	1
 12	74	1	0
 12	75	1	0
-12	76	1	0
-12	77	1	0
 12	78	1	0
 12	79	1	0	1
 12	80	1	0	1
-12	81	1	0
 12	82	2	100
 12	83	3	100
 13	0	3	100
@@ -696,17 +628,11 @@ ProtectDungeonTemple	NULL
 13	45	2	100
 13	50	1	0
 13	53	2	100
-13	71	1	0
 13	72	1	0	1
 13	73	1	0	1
-13	74	1	0
 13	75	1	0
-13	76	1	0
-13	77	1	0
-13	78	1	0
 13	79	1	0	1
 13	80	1	0	1
-13	81	1	0
 13	82	2	100
 13	83	3	100
 14	0	3	100
@@ -716,12 +642,8 @@ ProtectDungeonTemple	NULL
 14	73	1	0	1
 14	74	1	0
 14	75	1	0
-14	76	1	0
-14	77	1	0
-14	78	1	0
 14	79	1	0	1
 14	80	1	0	1
-14	81	1	0
 14	82	2	100
 14	83	3	100
 15	0	3	100
@@ -740,8 +662,6 @@ ProtectDungeonTemple	NULL
 15	76	1	0	1
 15	77	1	0	1
 15	78	1	0	1
-15	79	1	0
-15	80	1	0
 15	81	2	100
 15	83	3	100
 16	0	3	100
@@ -762,7 +682,6 @@ ProtectDungeonTemple	NULL
 16	76	1	0	1
 16	77	1	0	1
 16	78	1	0	1
-16	79	1	0
 16	80	2	100
 16	81	2	100
 16	82	2	100
@@ -813,8 +732,6 @@ ProtectDungeonTemple	NULL
 18	56	1	0
 18	73	1	0	1
 18	74	1	0	1
-18	75	1	0
-18	76	1	0
 18	83	3	100
 19	0	3	100
 19	4	2	100
@@ -845,8 +762,6 @@ ProtectDungeonTemple	NULL
 19	58	1	0
 19	73	1	0	1
 19	74	1	0	1
-19	75	1	0
-19	76	1	0
 19	77	2	100
 19	83	3	100
 20	0	3	100
@@ -877,9 +792,6 @@ ProtectDungeonTemple	NULL
 20	58	1	0
 20	59	1	0
 20	60	1	0
-20	74	1	0
-20	75	1	0
-20	76	1	0
 20	77	2	100
 20	83	3	100
 21	0	3	100
@@ -913,10 +825,6 @@ ProtectDungeonTemple	NULL
 21	58	1	0
 21	59	1	0
 21	60	1	0
-21	61	1	0
-21	74	1	0
-21	75	1	0
-21	76	1	0
 21	77	2	100
 21	83	3	100
 22	0	3	100
@@ -953,12 +861,6 @@ ProtectDungeonTemple	NULL
 22	58	1	0
 22	59	1	0
 22	60	1	0
-22	61	1	0
-22	62	1	0
-22	63	1	0
-22	74	1	0
-22	75	1	0
-22	76	1	0
 22	83	3	100
 23	0	3	100
 23	2	1	0
@@ -997,14 +899,6 @@ ProtectDungeonTemple	NULL
 23	58	1	0
 23	59	1	0
 23	60	1	0
-23	61	1	0
-23	62	1	0
-23	63	1	0
-23	64	1	0
-23	65	1	0
-23	74	1	0
-23	75	1	0
-23	76	1	0
 23	83	3	100
 24	0	3	100
 24	2	1	0
@@ -1044,16 +938,6 @@ ProtectDungeonTemple	NULL
 24	58	4	0
 24	59	1	0
 24	60	1	0
-24	61	1	0
-24	62	1	0
-24	63	1	0
-24	64	1	0
-24	65	1	0
-24	66	1	0
-24	67	1	0
-24	74	1	0
-24	75	1	0
-24	76	1	0
 24	83	3	100
 25	0	3	100
 25	2	1	0
@@ -1920,7 +1804,7 @@ ProtectDungeonTemple	NULL
 38	14	1	0
 38	15	1	0
 38	16	1	0
-38	17	1	0
+38	17	3	100
 38	18	1	0
 38	19	1	0
 38	20	3	100
@@ -1968,7 +1852,7 @@ ProtectDungeonTemple	NULL
 39	14	1	0
 39	15	1	0
 39	16	1	0
-39	17	1	0
+39	17	3	100
 39	18	1	0
 39	19	1	0
 39	20	1	0
@@ -2010,7 +1894,7 @@ ProtectDungeonTemple	NULL
 40	14	1	0
 40	15	1	0
 40	16	1	0
-40	17	1	0
+40	17	3	100
 40	18	1	0
 40	19	1	0
 40	20	1	0
@@ -2050,7 +1934,7 @@ ProtectDungeonTemple	NULL
 41	14	1	0
 41	15	1	0
 41	16	1	0
-41	17	1	0
+41	17	3	100
 41	18	1	0
 41	19	1	0
 41	20	1	0
@@ -2088,7 +1972,7 @@ ProtectDungeonTemple	NULL
 42	14	1	0
 42	15	1	0
 42	16	1	0
-42	17	1	0
+42	17	3	100
 42	18	1	0
 42	19	1	0
 42	22	1	0
@@ -3032,6 +2916,13 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
+Block	1	PitDemon
 Region	Quarry	3	70	20	82
 Region	SouthLanding	20	64	38	72
 Region	MidBank	25	40	40	52
@@ -3047,6 +2938,7 @@ Action	message	1	Greywater lies on an underground river, master, and its warden 
 Action	objective	1	Kill Warden Corwin Gray in the river hall in the north.
 Action	objective	1	Mine 600 gold from the cave walls.
 Action	objective	1	Keep your dungeon heart alive.
+Action	portal	0	off
 [/Trigger]
 [Trigger]
 Name	firstCoin
@@ -3082,9 +2974,12 @@ Action	spawn	3	36	30	2	Knight:2	Adventurer:2	Adventurer:2
 Name	midBankHeld
 Mode	once
 Cond	claimed	1	MidBank	60
-Action	message	1	The middle bank is held. Heavier creatures are ready to serve.
+Action	message	1	The middle bank is held. Heavier creatures are ready to serve, and the sluice gate on the east bank grinds open.
 Action	spawn	1	16	75	1	Orc:2	Goblin:2
 Action	reveal	1	NorthBank
+Action	terrain	38	17	42	17	path
+Action	setflag	sluiceOpen	1
+Action	portal	0	on
 [/Trigger]
 [Trigger]
 Name	wharfSeen
@@ -3122,10 +3017,19 @@ Action	message	1	Gray is out of patience. Hold your heart.
 Action	spawn	3	28	70	1	Knight:3	Knight:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
+Name	sluiceTimeout
+Mode	once
+Cond	time	2000
+Cond	flag	sluiceOpen	0
+Action	message	1	The river hall has lifted its sluice gate on the east bank. The way north is open.
+Action	terrain	38	17	42	17	path
+Action	setflag	sluiceOpen	1
+Action	portal	0	on
+[/Trigger]
+[Trigger]
 Name	wardenFalls
 Mode	once
-Cond	time	5
-Cond	creatures	4	<=	0
+Cond	event	CorwinGray	killed
 Action	message	1	Corwin Gray is dead and the river belongs to you. The dwarves will want new terms.
 Action	win	1
 [/Trigger]

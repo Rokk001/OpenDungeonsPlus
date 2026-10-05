@@ -8,6 +8,9 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Creatures can get an individual picture in the Dungeonbook, composed from a neutral base and one part per slot (chosen once when the creature spawns and stored in the save game as an optional field; old saves still load) together with short profile remarks that match the parts. Without the part images the Dungeonbook keeps the previous portrait
+* Campaign levels now keep the creature types of the human keeper limited per level (Block lines of the level script); the file format and the save format are unchanged
+* Level scripts gained the conditions portal, alive, reached and stone (portal state, named creatures, reaching a region or a heart, portal stones on the ground); existing levels load unchanged
 * Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
 

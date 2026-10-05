@@ -28,6 +28,7 @@
 
 const int32_t RelationshipSettings::VALUE_MIN = -100;
 const int32_t RelationshipSettings::VALUE_MAX = 100;
+const size_t RelationshipCreatureState::MAX_CAPTORS;
 
 namespace
 {
@@ -1080,4 +1081,159 @@ bool CreatureRelationships::readFromStream(std::istream& is, int64_t turn)
         if(!hasFlag)
             legacy.insert(pair);
     }
+}
+
+void writeRelationshipCreatureStates(std::ostream& os, const std::vector<RelationshipCreatureState>& states)
+{
+    for(size_t i = 0; i < states.size(); ++i)
+    {
+        const RelationshipCreatureState& state = states[i];
+        if(state.isEmpty())
+            continue;
+
+        os << state.mName << "\t" << state.mGriefMood << "\t" << std::max<int64_t>(0, state.mRageTurnsLeft) << "\t"
+           << state.mRageSeatId << "\t" << state.mBrawlOpponent << "\t" << std::max<int64_t>(0, state.mBrawlTurnsLeft);
+        for(size_t j = 0; j < state.mCaptors.size() && (j < RelationshipCreatureState::MAX_CAPTORS); ++j)
+            os << "\t" << state.mCaptors[j];
+        os << "\n";
+    }
+}
+
+bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCreatureState>& states)
+{
+    states.clear();
+    std::string line;
+    while(true)
+    {
+        if(!is.good())
+            return false;
+
+        std::getline(is, line);
+        if(!line.empty() && (line[line.size() - 1] == '\r'))
+            line.erase(line.size() - 1);
+
+        if(line == "[/RelationshipState]")
+            return true;
+
+        if(line.empty() || (line[0] == '#'))
+            continue;
+
+        std::vector<std::string> fields;
+        std::string::size_type start = 0;
+        while(true)
+        {
+            std::string::size_type pos = line.find('\t', start);
+            if(pos == std::string::npos)
+            {
+                fields.push_back(line.substr(start));
+                break;
+            }
+            fields.push_back(line.substr(start, pos - start));
+            start = pos + 1;
+        }
+
+        int64_t grief;
+        int64_t rageTurns;
+        int64_t rageSeat;
+        int64_t brawlTurns;
+        if((fields.size() < 6) || fields[0].empty() || !parseInt(fields[1], grief) || !parseInt(fields[2], rageTurns)
+           || !parseInt(fields[3], rageSeat) || !parseInt(fields[5], brawlTurns))
+        {
+            return false;
+        }
+
+        RelationshipCreatureState state;
+        state.mName = fields[0];
+        state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-100000, std::min<int64_t>(100000, grief)));
+        state.mRageTurnsLeft = std::max<int64_t>(0, rageTurns);
+        state.mRageSeatId = static_cast<int32_t>(rageSeat);
+        state.mBrawlOpponent = fields[4];
+        state.mBrawlTurnsLeft = std::max<int64_t>(0, brawlTurns);
+        // Older saves have no captor fields
+        for(size_t i = 6; i < fields.size() && (state.mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
+        {
+            if(!fields[i].empty())
+                state.mCaptors.push_back(fields[i]);
+        }
+        states.push_back(state);
+    }
+}
+
+bool relationshipsAllowed(bool optionOnServerMap, bool hasSeat, bool rogueSeat, bool heroFaction,
+    bool worker, bool inPrison)
+{
+    if(!optionOnServerMap)
+        return false;
+
+    if(!hasSeat || rogueSeat || heroFaction)
+        return false;
+
+    return !worker && !inPrison;
+}
+
+bool relationshipEventAllowed(bool firstAllowed, bool secondAllowed, bool sameSeat)
+{
+    return firstAllowed && secondAllowed && sameSeat;
+}
+
+bool anyHatedCoworker(const CreatureRelationships& relationships, bool creatureAllowed,
+    const std::string& creature, const std::vector<std::string>& coworkers)
+{
+    if(!creatureAllowed)
+        return false;
+
+    for(size_t i = 0; i < coworkers.size(); ++i)
+    {
+        if(relationships.isHated(creature, coworkers[i]))
+            return true;
+    }
+
+    return false;
+}
+
+bool useDislikedRoomAsFallback(bool haveDislikedRoom, size_t nbOtherSuitableRooms)
+{
+    return haveDislikedRoom && (nbOtherSuitableRooms == 0);
+}
+
+bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings& settings)
+{
+    if(!state.mAllowed || !state.mOnMap || !state.mAlive || state.mKo || state.mPossessed || state.mBrawling)
+        return false;
+
+    if(!state.mHasTile)
+        return false;
+
+    // Not while fighting, in the arena or the casino, and not when badly hurt
+    if(state.mFighting || state.mInArenaOrCasino)
+        return false;
+
+    return (state.mHp * 100.0) > (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + 25));
+}
+
+bool shouldStopBrawl(const BrawlFighterState& first, const BrawlFighterState& second, int64_t turnsSinceStart,
+    bool stillFighting, const RelationshipSettings& settings)
+{
+    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
+    return !first.mAlive || !second.mAlive || first.mKo || second.mKo
+        || first.mPossessed || second.mPossessed
+        || (first.mHp <= (first.mMaxHp * stopRatio)) || (second.mHp <= (second.mMaxHp * stopRatio))
+        || (turnsSinceStart >= settings.mBrawlMaxTurns)
+        || !stillFighting;
+}
+
+bool isBrawlCheckTurn(int64_t turn, const RelationshipSettings& settings)
+{
+    return (turn % settings.mBrawlCheckIntervalTurns) == 0;
+}
+
+bool isWithinBrawlDistance(double dx, double dy, const RelationshipSettings& settings)
+{
+    double maxDistance = static_cast<double>(settings.mBrawlMaxDistanceTiles);
+    return (dx * dx + dy * dy) <= (maxDistance * maxDistance);
+}
+
+bool brawlChanceHit(int32_t roll, const RelationshipSettings& settings)
+{
+    return roll < settings.mBrawlChancePercent;
 }

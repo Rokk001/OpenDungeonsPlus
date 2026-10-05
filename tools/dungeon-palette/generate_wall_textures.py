@@ -98,7 +98,7 @@ def cells_on_torus(n, seed, count, warp_amp, warp_seed):
 
 
 # Screen values are about 1.2x the texture luminance and 1.25x the texture saturation (room shader gain and
-# saturation boost, cursor light); the means below come from docs/internal/STYLE-GUIDE.md and were calibrated
+# saturation boost, cursor light); the means below were calibrated
 # with the overview render.
 EARTH_MEAN = np.array([46.0, 36.0, 27.0]) / 255.0   # warm dark brown, hue about 28 degrees
 

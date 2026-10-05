@@ -106,6 +106,8 @@ bool isTileOfKind(const Tile* tile, const std::string& kind)
         return visual == TileVisual::lavaGround;
     if(kind == "impenetrable")
         return (visual == TileVisual::rockFull) || (visual == TileVisual::rockGround);
+    if(kind == "manawell")
+        return tile->getType() == TileType::manaWell;
 
     Room* room = tile->getCoveringRoom();
     if(room == nullptr)
@@ -354,6 +356,60 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
                     return true;
             }
             return false;
+        }
+        case LevelScriptConditionType::portalActive:
+            return script.isPortalOff(cond.mSeatId) == (cond.mNumber == 0);
+        case LevelScriptConditionType::creatureAlive:
+        {
+            Creature* creature = gameMap.getCreature(cond.mName);
+            bool isAlive = (creature != nullptr) && creature->isAlive();
+            return isAlive == (cond.mNumber != 0);
+        }
+        case LevelScriptConditionType::creatureReached:
+        {
+            Creature* creature = gameMap.getCreature(cond.mName);
+            if((creature == nullptr) || !creature->isAlive() || (creature->getPositionTile() == nullptr))
+                return false;
+
+            Tile* tile = creature->getPositionTile();
+            if(!cond.mName2.empty())
+            {
+                const LevelScriptRegion* region = script.getRegion(cond.mName2);
+                if(region == nullptr)
+                {
+                    OD_LOG_ERR("Level script: unknown region name=" + cond.mName2);
+                    return false;
+                }
+                return region->contains(tile->getX(), tile->getY());
+            }
+
+            Room* room = tile->getCoveringRoom();
+            return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) &&
+                (room->getSeat() != nullptr) && (room->getSeat()->getId() == cond.mSeatId);
+        }
+        case LevelScriptConditionType::stoneInRegion:
+        {
+            const LevelScriptRegion* region = script.getRegion(cond.mName);
+            if(region == nullptr)
+            {
+                OD_LOG_ERR("Level script: unknown region name=" + cond.mName);
+                return false;
+            }
+
+            int64_t numStones = 0;
+            for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
+            {
+                if(entity->getObjectType() != GameEntityType::missileObject)
+                    continue;
+
+                if(static_cast<MissileObject*>(entity)->getMissileType() != MissileObjectType::stone)
+                    continue;
+
+                Tile* tile = entity->getPositionTile();
+                if((tile != nullptr) && region->contains(tile->getX(), tile->getY()))
+                    ++numStones;
+            }
+            return levelScriptCompare(numStones, cond.mCompare, cond.mNumber);
         }
         case LevelScriptConditionType::seatDefeated:
         {
@@ -774,6 +830,12 @@ void alterTerrain(GameMap& gameMap, const LevelScriptAction& action)
         type = TileType::rock;
         fullness = 100.0;
     }
+    else if(action.mText == "manawell")
+    {
+        // A mana well is open ground. With a seat it starts claimed and feeds that seat's mana
+        type = TileType::manaWell;
+        claim = (action.mSeatId >= 0);
+    }
     else
     {
         OD_LOG_ERR("Level script: unknown terrain kind=" + action.mText);
@@ -1097,6 +1159,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             break;
         case LevelScriptActionType::timeLimit:
             gameMap.setScriptTimeLimit(action.mNumber);
+            break;
+        case LevelScriptActionType::countdown:
+            gameMap.setScriptCountdown(action.mNumber);
             break;
         case LevelScriptActionType::startTimer:
             script.startTimer(action.mText, secondsToTurns(action.mNumber));

@@ -50,6 +50,7 @@
 #include "utils/Helper.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/RunLevelTest.h"
 #include "utils/MakeUnique.h"
 #include "utils/RunLevelTest.h"
 
@@ -474,6 +475,8 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
 
 bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
 {
+    if(RunLevelTest::isActive())
+        RunLevelTest::onFrame(evt.timeSinceLastFrame);
     AbstractApplicationMode* currentMode = mModeManager->getCurrentMode();
     if(currentMode)
         currentMode->onFrameStarted(evt);

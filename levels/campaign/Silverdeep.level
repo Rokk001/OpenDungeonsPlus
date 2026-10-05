@@ -77,7 +77,7 @@ spellInferno
 [/Seat]
 [Seat]
 seatId	2
-teamId	2
+teamId	2/3/4
 player	AI
 faction	Keeper
 startingX	14
@@ -106,7 +106,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	3
-teamId	2
+teamId	3/2/4
 player	AI
 faction	Keeper
 startingX	72
@@ -135,7 +135,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	4
-teamId	4
+teamId	4/2/3
 player	AI
 faction	Keeper
 startingX	18
@@ -2322,10 +2322,10 @@ ProtectDungeonTemple	NULL
 53	108	2	100
 53	111	3	100
 54	0	3	100
-54	18	1	0
-54	19	1	0
-54	20	1	0
-54	21	1	0
+54	18	1	100
+54	19	1	100
+54	20	1	100
+54	21	1	100
 54	40	1	0
 54	41	1	0
 54	42	1	0
@@ -2365,9 +2365,9 @@ ProtectDungeonTemple	NULL
 54	76	1	0
 54	111	3	100
 55	0	3	100
-55	18	1	0
-55	19	1	0
-55	20	1	0
+55	18	1	100
+55	19	1	100
+55	20	1	100
 55	41	1	0
 55	42	1	0
 55	43	1	0
@@ -2405,9 +2405,9 @@ ProtectDungeonTemple	NULL
 55	75	1	0
 55	111	3	100
 56	0	3	100
-56	17	1	0
-56	18	1	0
-56	19	1	0
+56	17	1	100
+56	18	1	100
+56	19	1	100
 56	43	1	0
 56	44	1	0
 56	45	1	0
@@ -2444,10 +2444,10 @@ ProtectDungeonTemple	NULL
 57	7	1	0	1
 57	8	1	0	1
 57	9	1	0	1
-57	16	1	0
-57	17	1	0
-57	18	1	0
-57	19	1	0
+57	16	1	100
+57	17	1	100
+57	18	1	100
+57	19	1	100
 57	43	1	0
 57	44	1	0
 57	45	1	0
@@ -2485,9 +2485,9 @@ ProtectDungeonTemple	NULL
 58	7	1	0	1
 58	8	1	0	1
 58	9	1	0	1
-58	16	1	0
-58	17	1	0
-58	18	1	0
+58	16	1	100
+58	17	1	100
+58	18	1	100
 58	43	1	0
 58	44	1	0
 58	45	1	0
@@ -2525,12 +2525,12 @@ ProtectDungeonTemple	NULL
 59	8	1	0	1
 59	9	1	0	1
 59	10	1	0
-59	11	1	0
-59	12	1	0
-59	13	1	0
-59	15	1	0
-59	16	1	0
-59	17	1	0
+59	11	1	100
+59	12	1	100
+59	13	1	100
+59	15	1	100
+59	16	1	100
+59	17	1	100
 59	43	1	0
 59	44	1	0
 59	45	1	0
@@ -2569,16 +2569,16 @@ ProtectDungeonTemple	NULL
 60	0	3	100
 60	3	2	100
 60	5	2	100
-60	8	1	0
-60	9	1	0
+60	8	1	100
+60	9	1	100
 60	10	1	0
-60	11	1	0
-60	12	1	0
-60	13	1	0
-60	14	1	0
-60	15	1	0
-60	16	1	0
-60	17	1	0
+60	11	1	100
+60	12	1	100
+60	13	1	100
+60	14	1	100
+60	15	1	100
+60	16	1	100
+60	17	1	100
 60	40	1	0
 60	49	1	0
 60	50	4	0
@@ -2612,16 +2612,16 @@ ProtectDungeonTemple	NULL
 61	3	2	100
 61	4	2	100
 61	6	4	0
-61	7	1	0
-61	8	1	0
-61	9	1	0
+61	7	1	100
+61	8	1	100
+61	9	1	100
 61	10	1	0
-61	11	1	0
-61	12	1	0
-61	13	1	0
-61	14	1	0
-61	15	1	0
-61	16	1	0
+61	11	1	100
+61	12	1	100
+61	13	1	100
+61	14	1	100
+61	15	1	100
+61	16	1	100
 61	49	1	0
 61	50	1	0
 61	51	4	0
@@ -2650,18 +2650,18 @@ ProtectDungeonTemple	NULL
 61	101	2	100
 61	111	3	100
 62	0	3	100
-62	6	1	0
-62	7	1	0
-62	8	1	0
-62	9	1	0
+62	6	1	100
+62	7	1	100
+62	8	1	100
+62	9	1	100
 62	10	1	0
 62	11	1	0
-62	12	1	0
-62	13	1	0
+62	12	1	100
+62	13	1	100
 62	14	1	0	1
 62	15	1	0	1
-62	16	1	0
-62	17	1	0
+62	16	1	100
+62	17	1	100
 62	36	2	100
 62	37	2	100
 62	38	2	100
@@ -2689,20 +2689,20 @@ ProtectDungeonTemple	NULL
 62	82	6	100
 62	111	3	100
 63	0	3	100
-63	5	1	0
-63	6	1	0
-63	7	1	0
-63	8	1	0
-63	9	1	0
-63	10	1	0
+63	5	1	100
+63	6	1	100
+63	7	1	100
+63	8	1	100
+63	9	1	100
+63	10	1	100
 63	11	1	0
-63	12	1	0
-63	13	1	0
+63	12	1	100
+63	13	1	100
 63	14	1	0	1
 63	15	1	0	1
-63	16	1	0
-63	17	1	0
-63	18	1	0
+63	16	1	100
+63	17	1	100
+63	18	1	100
 63	38	2	100
 63	39	2	100
 63	50	1	0
@@ -2736,19 +2736,19 @@ ProtectDungeonTemple	NULL
 63	85	1	0
 63	111	3	100
 64	0	3	100
-64	5	1	0
-64	6	1	0
+64	5	1	100
+64	6	1	100
 64	7	1	0	1
 64	8	1	0	1
-64	9	1	0
-64	10	1	0
+64	9	1	100
+64	10	1	100
 64	11	1	0
-64	12	1	0
-64	13	1	0
+64	12	1	100
+64	13	1	100
 64	14	1	0	1
 64	15	1	0	1
 64	16	1	0
-64	17	1	0
+64	17	1	100
 64	18	1	0
 64	19	1	0
 64	20	1	0
@@ -2786,24 +2786,24 @@ ProtectDungeonTemple	NULL
 64	87	1	0
 64	111	3	100
 65	0	3	100
-65	5	1	0
-65	6	1	0
+65	5	1	100
+65	6	1	100
 65	7	1	0	1
 65	8	1	0	1
-65	9	1	0
-65	10	1	0
+65	9	1	100
+65	10	1	100
 65	11	1	0
-65	12	1	0
-65	13	1	0
+65	12	1	100
+65	13	1	100
 65	14	1	0
-65	15	1	0
+65	15	1	100
 65	16	1	0
 65	17	1	0
 65	18	1	0
 65	19	1	0
 65	20	1	0
-65	21	1	0
-65	22	1	0
+65	21	1	100
+65	22	1	100
 65	52	1	0
 65	53	4	0
 65	54	4	0
@@ -2836,8 +2836,8 @@ ProtectDungeonTemple	NULL
 65	88	1	0
 65	111	3	100
 66	0	3	100
-66	5	1	0
-66	6	1	0
+66	5	1	100
+66	6	1	100
 66	7	1	0	1
 66	8	1	0	1
 66	9	1	0
@@ -2847,15 +2847,15 @@ ProtectDungeonTemple	NULL
 66	13	1	0	1
 66	14	1	0	1
 66	15	1	0
-66	16	1	0
-66	17	1	0
+66	16	1	100
+66	17	1	100
 66	18	1	0
 66	19	1	0
 66	20	1	0
-66	21	1	0
-66	22	1	0
-66	23	1	0
-66	24	1	0
+66	21	1	100
+66	22	1	100
+66	23	1	100
+66	24	1	100
 66	25	1	0
 66	53	1	0
 66	54	4	0
@@ -2888,25 +2888,25 @@ ProtectDungeonTemple	NULL
 66	108	2	100
 66	111	3	100
 67	0	3	100
-67	5	1	0
-67	6	1	0
-67	7	1	0
+67	5	1	100
+67	6	1	100
+67	7	1	100
 67	8	1	0
-67	9	1	0
+67	9	1	100
 67	10	1	0	1
 67	11	1	0	1
 67	12	1	0	1
 67	13	1	0	1
 67	14	1	0	1
-67	15	1	0
-67	16	1	0
-67	17	1	0
-67	18	1	0
-67	19	1	0
-67	21	1	0
-67	22	1	0
-67	23	1	0
-67	24	1	0
+67	15	1	100
+67	16	1	100
+67	17	1	100
+67	18	1	100
+67	19	1	100
+67	21	1	100
+67	22	1	100
+67	23	1	100
+67	24	1	100
 67	25	1	0
 67	26	1	0
 67	27	1	0
@@ -2939,21 +2939,21 @@ ProtectDungeonTemple	NULL
 67	108	2	100
 67	111	3	100
 68	0	3	100
-68	6	1	0
-68	7	1	0
+68	6	1	100
+68	7	1	100
 68	8	1	0
-68	9	1	0
+68	9	1	100
 68	10	1	0	1
 68	11	1	0	1
 68	12	1	0	1
 68	13	1	0	1
 68	14	1	0	1
-68	15	1	0
-68	16	1	0
-68	17	1	0
-68	18	1	0
-68	19	1	0
-68	23	1	0
+68	15	1	100
+68	16	1	100
+68	17	1	100
+68	18	1	100
+68	19	1	100
+68	23	1	100
 68	25	1	0
 68	26	1	0
 68	27	1	0
@@ -2988,20 +2988,20 @@ ProtectDungeonTemple	NULL
 68	108	2	100
 68	111	3	100
 69	0	3	100
-69	6	1	0
-69	7	1	0
-69	8	1	0
-69	9	1	0
+69	6	1	100
+69	7	1	100
+69	8	1	100
+69	9	1	100
 69	10	1	0	1
 69	11	1	0	1
 69	12	1	0	1
 69	13	1	0	1
 69	14	1	0	1
-69	15	1	0
-69	16	1	0
-69	17	1	0
-69	18	1	0
-69	19	1	0
+69	15	1	100
+69	16	1	100
+69	17	1	100
+69	18	1	100
+69	19	1	100
 69	26	1	0
 69	28	1	0
 69	29	1	0
@@ -3034,19 +3034,19 @@ ProtectDungeonTemple	NULL
 69	89	1	0
 69	111	3	100
 70	0	3	100
-70	6	1	0
-70	7	1	0
-70	8	1	0
-70	9	1	0
+70	6	1	100
+70	7	1	100
+70	8	1	100
+70	9	1	100
 70	10	1	0	1
 70	11	1	0	1
 70	12	1	0	1
 70	13	1	0	1
 70	14	1	0	1
 70	15	1	0
-70	16	1	0
-70	17	1	0
-70	18	1	0
+70	16	1	100
+70	17	1	100
+70	18	1	100
 70	29	1	0
 70	30	1	0
 70	31	1	0
@@ -3081,19 +3081,19 @@ ProtectDungeonTemple	NULL
 70	108	2	100
 70	111	3	100
 71	0	3	100
-71	6	1	0
-71	7	1	0
-71	8	1	0
-71	9	1	0
+71	6	1	100
+71	7	1	100
+71	8	1	100
+71	9	1	100
 71	10	1	0
-71	11	1	0
-71	12	1	0
-71	13	1	0
-71	14	1	0
+71	11	1	100
+71	12	1	100
+71	13	1	100
+71	14	1	100
 71	15	1	0
-71	16	1	0
-71	17	1	0
-71	18	1	0
+71	16	1	100
+71	17	1	100
+71	18	1	100
 71	30	1	0
 71	33	1	0
 71	34	1	0
@@ -3126,14 +3126,14 @@ ProtectDungeonTemple	NULL
 71	89	1	0
 71	111	3	100
 72	0	3	100
-72	7	1	0
+72	7	1	100
 72	8	1	0	1
 72	9	1	0	1
 72	10	1	0
-72	11	1	0
-72	12	1	0
-72	13	1	0
-72	14	1	0
+72	11	1	100
+72	12	1	100
+72	13	1	100
+72	14	1	100
 72	15	1	0
 72	16	1	0	1
 72	17	1	0	1
@@ -3166,18 +3166,18 @@ ProtectDungeonTemple	NULL
 72	89	1	0
 72	111	3	100
 73	0	3	100
-73	7	1	0
+73	7	1	100
 73	8	1	0	1
 73	9	1	0	1
-73	10	1	0
-73	11	1	0
-73	12	1	0
-73	13	1	0
-73	14	1	0
-73	15	1	0
+73	10	1	100
+73	11	1	100
+73	12	1	100
+73	13	1	100
+73	14	1	100
+73	15	1	100
 73	16	1	0	1
 73	17	1	0	1
-73	18	1	0
+73	18	1	100
 73	39	4	0
 73	41	1	0
 73	42	1	0
@@ -3207,19 +3207,19 @@ ProtectDungeonTemple	NULL
 73	89	1	0
 73	111	3	100
 74	0	3	100
-74	7	1	0
+74	7	1	100
 74	8	1	0	1
 74	9	1	0	1
-74	10	1	0
-74	11	1	0
-74	12	1	0
-74	13	1	0
-74	14	1	0
-74	15	1	0
+74	10	1	100
+74	11	1	100
+74	12	1	100
+74	13	1	100
+74	14	1	100
+74	15	1	100
 74	16	1	0	1
 74	17	1	0	1
-74	18	1	0
-74	19	1	0
+74	18	1	100
+74	19	1	100
 74	43	1	0
 74	45	1	0
 74	46	1	0
@@ -3245,22 +3245,26 @@ ProtectDungeonTemple	NULL
 74	87	1	0
 74	88	1	0	3
 74	89	1	0	3
+74	100	3	100
+74	101	3	100
+74	102	3	100
+74	103	3	100
 74	111	3	100
 75	0	3	100
-75	8	1	0
-75	9	1	0
-75	10	1	0
-75	11	1	0
-75	12	1	0
-75	13	1	0
-75	14	1	0
-75	15	1	0
-75	16	1	0
-75	17	1	0
-75	18	1	0
-75	19	1	0
-75	20	1	0
-75	21	1	0
+75	8	1	100
+75	9	1	100
+75	10	1	100
+75	11	1	100
+75	12	1	100
+75	13	1	100
+75	14	1	100
+75	15	1	100
+75	16	1	100
+75	17	1	100
+75	18	1	100
+75	19	1	100
+75	20	1	100
+75	21	1	100
 75	47	1	0
 75	59	1	0
 75	60	1	0
@@ -3283,24 +3287,29 @@ ProtectDungeonTemple	NULL
 75	87	1	0
 75	88	1	0	3
 75	89	1	0	3
+75	99	3	100
+75	100	3	100
 75	101	1	0
 75	102	1	0
+75	103	3	100
+75	104	3	100
+75	105	3	100
 75	111	3	100
 76	0	3	100
-76	8	1	0
-76	9	1	0
-76	10	1	0
-76	11	1	0
-76	12	1	0
-76	13	1	0
-76	14	1	0
-76	15	1	0
-76	16	1	0
-76	18	1	0
-76	19	1	0
-76	20	1	0
-76	21	1	0
-76	22	1	0
+76	8	1	100
+76	9	1	100
+76	10	1	100
+76	11	1	100
+76	12	1	100
+76	13	1	100
+76	14	1	100
+76	15	1	100
+76	16	1	100
+76	18	1	100
+76	19	1	100
+76	20	1	100
+76	21	1	100
+76	22	1	100
 76	57	2	100
 76	58	2	100
 76	59	2	100
@@ -3331,24 +3340,28 @@ ProtectDungeonTemple	NULL
 76	89	1	0	3
 76	92	1	0
 76	93	1	0
+76	98	3	100
+76	99	3	100
 76	100	1	0
 76	101	1	0
 76	102	1	0
 76	103	1	0
 76	104	1	0
+76	105	3	100
+76	106	3	100
 76	111	3	100
 77	0	3	100
-77	9	1	0
-77	10	1	0
-77	11	1	0
-77	12	1	0
-77	13	1	0
-77	14	1	0
-77	15	1	0
-77	20	1	0
-77	21	1	0
-77	22	1	0
-77	23	1	0
+77	9	1	100
+77	10	1	100
+77	11	1	100
+77	12	1	100
+77	13	1	100
+77	14	1	100
+77	15	1	100
+77	20	1	100
+77	21	1	100
+77	22	1	100
+77	23	1	100
 77	58	2	100
 77	59	2	100
 77	60	1	0
@@ -3375,6 +3388,7 @@ ProtectDungeonTemple	NULL
 77	88	1	0	3
 77	89	1	0	3
 77	92	1	0
+77	98	3	100
 77	99	1	0
 77	100	1	0
 77	101	1	0
@@ -3382,16 +3396,17 @@ ProtectDungeonTemple	NULL
 77	103	1	0
 77	104	1	0
 77	105	1	0
+77	106	3	100
 77	111	3	100
 78	0	3	100
-78	11	1	0
-78	12	1	0
-78	13	1	0
-78	14	1	0
-78	21	1	0
-78	22	1	0
-78	23	1	0
-78	24	1	0
+78	11	1	100
+78	12	1	100
+78	13	1	100
+78	14	1	100
+78	21	1	100
+78	22	1	100
+78	23	1	100
+78	24	1	100
 78	25	1	0
 78	61	1	0
 78	62	1	0
@@ -3413,6 +3428,9 @@ ProtectDungeonTemple	NULL
 78	85	1	0
 78	86	1	0
 78	87	1	0
+78	96	3	100
+78	97	3	100
+78	98	3	100
 78	99	1	0
 78	100	1	0
 78	101	1	0
@@ -3420,11 +3438,12 @@ ProtectDungeonTemple	NULL
 78	103	1	0
 78	104	1	0
 78	105	1	0
+78	106	3	100
 78	111	3	100
 79	0	3	100
-79	22	1	0
-79	23	1	0
-79	24	1	0
+79	22	1	100
+79	23	1	100
+79	24	1	100
 79	25	1	0
 79	26	1	0
 79	58	1	0
@@ -3449,7 +3468,9 @@ ProtectDungeonTemple	NULL
 79	87	1	0	3
 79	88	1	0	3
 79	89	1	0	3
+79	96	3	100
 79	97	1	0
+79	98	3	100
 79	99	1	0
 79	100	1	0
 79	101	1	0
@@ -3457,9 +3478,10 @@ ProtectDungeonTemple	NULL
 79	103	1	0
 79	104	1	0
 79	105	1	0
+79	106	3	100
 79	111	3	100
 80	0	3	100
-80	24	1	0
+80	24	1	100
 80	25	1	0
 80	26	1	0
 80	27	1	0
@@ -3490,6 +3512,7 @@ ProtectDungeonTemple	NULL
 80	87	1	0	3
 80	88	1	0	3
 80	89	1	0	3
+80	96	3	100
 80	97	1	0
 80	98	1	0
 80	99	1	0
@@ -3499,6 +3522,7 @@ ProtectDungeonTemple	NULL
 80	103	1	0
 80	104	1	0
 80	105	1	0
+80	106	3	100
 80	111	3	100
 81	0	3	100
 81	25	1	0
@@ -3549,6 +3573,9 @@ ProtectDungeonTemple	NULL
 81	88	1	0	3
 81	89	1	0	3
 81	90	2	100
+81	96	3	100
+81	97	3	100
+81	98	3	100
 81	99	1	0
 81	100	1	0
 81	101	1	0
@@ -3556,6 +3583,7 @@ ProtectDungeonTemple	NULL
 81	103	1	0
 81	104	1	0
 81	105	1	0
+81	106	3	100
 81	111	3	100
 82	0	3	100
 82	27	1	0
@@ -3599,6 +3627,7 @@ ProtectDungeonTemple	NULL
 82	84	1	0
 82	85	1	0
 82	90	2	100
+82	98	3	100
 82	99	1	0
 82	100	1	0
 82	101	1	0
@@ -3606,6 +3635,7 @@ ProtectDungeonTemple	NULL
 82	103	1	0
 82	104	1	0
 82	105	1	0
+82	106	3	100
 82	111	3	100
 83	0	3	100
 83	28	1	0
@@ -3619,12 +3649,15 @@ ProtectDungeonTemple	NULL
 83	83	1	0
 83	88	2	100
 83	90	2	100
+83	98	3	100
+83	99	3	100
 83	100	1	0
 83	101	1	0
 83	102	1	0
 83	103	1	0
 83	104	1	0
 83	105	1	0
+83	106	3	100
 83	111	3	100
 84	0	3	100
 84	4	2	100
@@ -3633,11 +3666,14 @@ ProtectDungeonTemple	NULL
 84	25	2	100
 84	46	2	100
 84	70	2	100
+84	99	3	100
 84	100	1	0
 84	101	1	0
 84	102	1	0
 84	103	1	0
 84	104	1	0
+84	105	3	100
+84	106	3	100
 84	107	2	100
 84	108	2	100
 84	110	2	100
@@ -3648,8 +3684,13 @@ ProtectDungeonTemple	NULL
 85	25	2	100
 85	46	2	100
 85	47	2	100
+85	99	3	100
+85	100	3	100
 85	101	1	0
 85	102	1	0
+85	103	3	100
+85	104	3	100
+85	105	3	100
 85	108	2	100
 85	111	3	100
 86	0	3	100
@@ -3662,6 +3703,10 @@ ProtectDungeonTemple	NULL
 86	45	2	100
 86	46	2	100
 86	47	2	100
+86	100	3	100
+86	101	3	100
+86	102	3	100
+86	103	3	100
 86	108	2	100
 86	109	2	100
 86	110	2	100
@@ -4430,6 +4475,7 @@ ProtectDungeonTemple	NULL
 5	Bankwatch4	Adventurer.mesh	61	50	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Bankwatch5	Dwarf1.mesh	12	88	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Bankwatch6	Knight.mesh	42	86	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	DorianSilt	Knight.mesh	56	45	0	Knight	7	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -4461,6 +4507,12 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Block	1	CaveHornet
+Block	1	Rat
+Block	1	Roach
+Block	1	Goblin
+Block	1	LizardMan
+Block	1	Orc
 Region	Cave	56	4	82	22
 Region	NorthShaft	44	18	60	34
 Region	LakeA	18	22	46	36
@@ -4475,6 +4527,7 @@ Region	Rival3	60	72	86	94
 Region	Rival4	6	96	32	110
 Region	Gallery	4	8	14	18
 Region	Vault	72	96	86	108
+Region	VaultGate	76	86	82	89
 [Trigger]
 Name	descent
 Mode	once
@@ -4483,12 +4536,15 @@ Action	message	1	Silverdeep, master, the richest mines of the kingdom. Warden Do
 Action	objective	1	Destroy the heart of every rival keeper.
 Action	objective	1	Cross the three lakes by the wooden spans.
 Action	objective	1	You have no gold: mine the silver first.
+Action	portal	1	off
 [/Trigger]
 [Trigger]
 Name	firstSilver
 Mode	once
 Cond	mined	1	>=	400
-Action	message	1	The first silver is in your hands. Beds and food come before an army.
+Action	message	1	The first silver is in your hands and your portal draws creatures again. Beds and food come before an army.
+Action	portal	1	on
+Action	setflag	portalOn	1
 Action	gold	1	700
 [/Trigger]
 [Trigger]
@@ -4528,7 +4584,7 @@ Action	gold	1	1500
 Name	midway
 Mode	once
 Cond	region	1	Midway
-Action	message	1	The middle lake is the deepest. The eastern keeper and the western keeper have sworn to share what they win from you.
+Action	message	1	The middle lake is the deepest. The eastern keeper and the western keeper have sworn to share what they win from you. Warden Dorian Silt stands here with the key to the sealed silver vault on his belt.
 Action	reveal	1	LakeB
 Action	reveal	1	SouthBank
 Action	spawn	3	55	73	1	Orc:5	Troll:5	Goblin:5
@@ -4720,5 +4776,101 @@ Mode	once
 Cond	goal	1	KillAllEnemies
 Action	message	1	The last rival lies dead beside his silver. Silverdeep answers to you.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	pactSworn
+Mode	once
+Cond	time	4
+Action	alliance	2	3	make
+[/Trigger]
+[Trigger]
+Name	spanA
+Mode	once
+Cond	region	1	EastBank
+Action	message	1	The miners of the first lake have laid a span across it for you.
+Action	terrain	22	29	42	29	bridge	1
+[/Trigger]
+[Trigger]
+Name	spanB
+Mode	once
+Cond	region	1	Midway
+Action	message	1	A span runs south across the middle lake, laid by the warden's old crew.
+Action	terrain	57	49	57	67	bridge	1
+[/Trigger]
+[Trigger]
+Name	spanC
+Mode	once
+Cond	region	1	SouthBank
+Action	message	1	The last lake lies ahead, and a span has been thrown across it for whoever dares.
+Action	terrain	20	86	40	86	bridge	1
+[/Trigger]
+[Trigger]
+Name	pactBreaks
+Mode	once
+Cond	kills	1	>=	45
+Cond	flag	pactDone	0
+Action	message	1	The pact of the eastern and western keepers has broken over the spoils. The eastern keeper turns on the western keeper and offers his hand to the southern keeper.
+Action	alliance	2	3	break
+Action	alliance	3	4	make
+Action	setflag	pactDone	1
+[/Trigger]
+[Trigger]
+Name	pactBreaksLate
+Mode	once
+Cond	time	2600
+Cond	flag	pactDone	0
+Action	message	1	The pact of the eastern and western keepers has broken over the spoils. The eastern keeper turns on the western keeper and offers his hand to the southern keeper.
+Action	alliance	2	3	break
+Action	alliance	3	4	make
+Action	setflag	pactDone	1
+[/Trigger]
+[Trigger]
+Name	portalWake
+Mode	once
+Cond	time	600
+Cond	flag	portalOn	0
+Action	message	1	The shafts have settled and your portal draws creatures again.
+Action	portal	1	on
+Action	setflag	portalOn	1
+[/Trigger]
+[Trigger]
+Name	wardenKey
+Mode	once
+Cond	time	4
+Action	stoneattach	DorianSilt
+[/Trigger]
+[Trigger]
+Name	keyDropped
+Mode	once
+Cond	time	5
+Cond	alive	DorianSilt	0
+Action	message	1	Dorian Silt is dead and the vault key he wore lies where he fell. Carry it to the south shore of the east hold to break the seal of the silver vault.
+[/Trigger]
+[Trigger]
+Name	vaultKeyUsed
+Mode	once
+Cond	flag	vaultOpen	0
+Cond	stone	VaultGate	>=	1
+Action	message	1	The key turns in the old lock. The seal of the silver vault breaks and a shaft opens to the south.
+Action	terrain	80	90	80	96	path
+Action	setflag	vaultOpen	1
+[/Trigger]
+[Trigger]
+Name	vaultHoldFalls
+Mode	once
+Cond	flag	vaultOpen	0
+Cond	defeated	3
+Action	message	1	The east hold has fallen and its keepers can no longer guard the vault. The seal breaks and a shaft opens to the south.
+Action	terrain	80	90	80	96	path
+Action	setflag	vaultOpen	1
+[/Trigger]
+[Trigger]
+Name	vaultLate
+Mode	once
+Cond	flag	vaultOpen	0
+Cond	time	3300
+Action	message	1	The warden has sent his crew to break the vault seal from inside. A shaft opens to the south.
+Action	terrain	80	90	80	96	path
+Action	setflag	vaultOpen	1
 [/Trigger]
 [/Triggers]

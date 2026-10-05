@@ -30,7 +30,7 @@ retreat of a whole attack at 50 percent of the fighters lost.
 
 Threat superiority needed over the enemy, share of the creatures used in the first fight, call to
 war threshold and removal rules, a chance of using traps and doors instead of a count, delay before
-placing a researched room, maximum imps, imprison percentage, openness, wait after an attack, the
+placing a researched room, maximum workers, imprison percentage, openness, wait after an attack, the
 "only attack attackers" and "never attack" flags, and the other economy fields (mining until,
 exploring, dig policies). No further levels are offered.
 

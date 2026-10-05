@@ -51,6 +51,7 @@
 #include "render/Gui.h"
 #include "render/CreaturePanel.h"
 #include "render/CreaturePortrait.h"
+#include "render/CreatureAppearancePicture.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
@@ -618,6 +619,7 @@ GameMode::~GameMode()
     social::PostLog::getSingleton().stop();
     social::SocialProfileCache::getSingleton().clear();
     clearCreatureProfilePortraits();
+    clearCreatureAppearancePictures();
     resetIdleHand();
     if(mDefeatSequence.isStarted())
     {
@@ -858,6 +860,8 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
 #ifndef OD_USE_SFML_WINDOW
     wheelNotches /= 120.0f;
 #endif
+    // Every wheel notch is one zoom level.
+    int wheelStepCount = std::max(1, static_cast<int>(std::floor(std::abs(wheelNotches) + 0.5f)));
 
     if (arg.delta > 0)
     {
@@ -867,7 +871,7 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
         }
         else
         {
-            frameListener.getCameraManager()->zoomBy(-0.2f * wheelNotches);
+            frameListener.getCameraManager()->zoomStep(wheelNotches > 0.0f ? -wheelStepCount : wheelStepCount);
         }
     }
     else if (arg.delta < 0)
@@ -878,7 +882,7 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
         }
         else
         {
-            frameListener.getCameraManager()->zoomBy(-0.2f * wheelNotches);
+            frameListener.getCameraManager()->zoomStep(wheelNotches > 0.0f ? -wheelStepCount : wheelStepCount);
         }
     }
 }
@@ -1860,6 +1864,12 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
     return true;
 }
 
+void GameMode::updateTimeLimitTooltip(bool isCountdown)
+{
+    CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
+    timeLimitDisplay->setTooltipText(isCountdown ? "Time left until the next stage of the level" : "Time left until the level is lost");
+}
+
 bool GameMode::clickHeartBadge(const CEGUI::EventArgs& arg)
 {
     const CEGUI::MouseEventArgs& mouse = static_cast<const CEGUI::MouseEventArgs&>(arg);
@@ -2106,8 +2116,11 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 
     // The countdown of a level with a time limit (the server sends -1 when there is none)
     CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
-    const int32_t timeLimitSeconds = ODClient::getSingleton().getTimeLimitSeconds();
-    if(timeLimitSeconds < 0)
+    // A countdown of the level script carries a flag: it is a wait, not a limit, so it is never red
+    const int32_t timeLimitReceived = ODClient::getSingleton().getTimeLimitSeconds();
+    const bool isCountdown = (timeLimitReceived >= 0) && ((timeLimitReceived & GameMap::TIME_LIMIT_COUNTDOWN_FLAG) != 0);
+    const int32_t timeLimitSeconds = isCountdown ? (timeLimitReceived & ~GameMap::TIME_LIMIT_COUNTDOWN_FLAG) : timeLimitReceived;
+    if(timeLimitReceived < 0)
     {
         if(mTimeLimitShown >= 0)
         {
@@ -2115,12 +2128,13 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
             mTimeLimitShown = -1;
         }
     }
-    else if(timeLimitSeconds != mTimeLimitShown)
+    else if(timeLimitReceived != mTimeLimitShown)
     {
-        mTimeLimitShown = timeLimitSeconds;
+        mTimeLimitShown = timeLimitReceived;
         timeLimitDisplay->setText(formatDebriefingTime(timeLimitSeconds));
-        // The last minute is shown in red
-        timeLimitDisplay->setProperty("TextColours", timeLimitSeconds <= 60 ? "FFE05A4A" : "FFF6CB62");
+        // The last minute of a time limit is shown in red
+        timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= 60) ? "FFE05A4A" : "FFF6CB62");
+        updateTimeLimitTooltip(isCountdown);
         timeLimitDisplay->show();
     }
 

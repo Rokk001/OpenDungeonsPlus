@@ -377,6 +377,55 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::dungeonBreached;
         return (t.size() == 3) && parseInt32(t[2], cond.mSeatId);
     }
+    if(type == "portal")
+    {
+        cond.mType = LevelScriptConditionType::portalActive;
+        if((t.size() != 4) || ((t[3] != "on") && (t[3] != "off")))
+            return false;
+
+        cond.mNumber = (t[3] == "on") ? 1 : 0;
+        return parseInt32(t[2], cond.mSeatId);
+    }
+    if(type == "alive")
+    {
+        cond.mType = LevelScriptConditionType::creatureAlive;
+        if((t.size() != 3) && (t.size() != 4))
+            return false;
+
+        cond.mName = t[2];
+        cond.mNumber = 1;
+        if(t.size() == 4)
+        {
+            if((t[3] != "0") && (t[3] != "1"))
+                return false;
+
+            cond.mNumber = (t[3] == "1") ? 1 : 0;
+        }
+        return true;
+    }
+    if(type == "reached")
+    {
+        cond.mType = LevelScriptConditionType::creatureReached;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        if(t[3] == "region")
+        {
+            cond.mName2 = t[4];
+            return !cond.mName2.empty();
+        }
+        return (t[3] == "heart") && parseInt32(t[4], cond.mSeatId);
+    }
+    if(type == "stone")
+    {
+        cond.mType = LevelScriptConditionType::stoneInRegion;
+        if(t.size() != 5)
+            return false;
+
+        cond.mName = t[2];
+        return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
+    }
     if(type == "defeated")
     {
         cond.mType = LevelScriptConditionType::seatDefeated;
@@ -541,6 +590,11 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
     if(type == "timelimit")
     {
         action.mType = LevelScriptActionType::timeLimit;
+        return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
+    }
+    if(type == "countdown")
+    {
+        action.mType = LevelScriptActionType::countdown;
         return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
     }
     if(type == "terrain")
@@ -739,6 +793,23 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
         case LevelScriptConditionType::dungeonBreached:
             os << "breached\t" << c.mSeatId;
             break;
+        case LevelScriptConditionType::portalActive:
+            os << "portal\t" << c.mSeatId << "\t" << (c.mNumber != 0 ? "on" : "off");
+            break;
+        case LevelScriptConditionType::creatureAlive:
+            os << "alive\t" << c.mName;
+            if(c.mNumber == 0)
+                os << "\t0";
+            break;
+        case LevelScriptConditionType::creatureReached:
+            if(c.mName2.empty())
+                os << "reached\t" << c.mName << "\theart\t" << c.mSeatId;
+            else
+                os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::stoneInRegion:
+            os << "stone\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
         case LevelScriptConditionType::boulderInRegion:
             os << "boulder\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
@@ -897,6 +968,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
         case LevelScriptActionType::timeLimit:
             os << "timelimit\t" << a.mNumber;
             break;
+        case LevelScriptActionType::countdown:
+            os << "countdown\t" << a.mNumber;
+            break;
         case LevelScriptActionType::startTimer:
             os << "timer\t" << a.mText << "\t" << a.mNumber;
             break;
@@ -965,6 +1039,7 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
 
 const int64_t LevelScript::TIME_LIMIT_NOT_SET;
 const int64_t LevelScript::TIME_LIMIT_REMOVED;
+const int64_t LevelScript::COUNTDOWN_NOT_SET;
 
 bool LevelScript::importFromStream(std::istream& is)
 {
@@ -1070,6 +1145,11 @@ bool LevelScript::importFromStream(std::istream& is)
         else if(key == "TimeLimit")
         {
             if(inTrigger || (t.size() != 2) || !parseInt(t[1], mTimeLimitSeconds))
+                return false;
+        }
+        else if(key == "Countdown")
+        {
+            if(inTrigger || (t.size() != 2) || !parseInt(t[1], mCountdownSeconds))
                 return false;
         }
         else if(key == "SlapLimit")
@@ -1200,6 +1280,9 @@ void LevelScript::exportToStream(std::ostream& os) const
     if(mTimeLimitSeconds != TIME_LIMIT_NOT_SET)
         os << "TimeLimit\t" << mTimeLimitSeconds << "\n";
 
+    if(mCountdownSeconds != COUNTDOWN_NOT_SET)
+        os << "Countdown\t" << mCountdownSeconds << "\n";
+
     if(mSlapLimit >= 0)
         os << "SlapLimit\t" << mSlapLimit << "\n";
 
@@ -1259,6 +1342,7 @@ void LevelScript::clear()
     mWatchedValid = false;
     mRegions.clear();
     mTimeLimitSeconds = TIME_LIMIT_NOT_SET;
+    mCountdownSeconds = COUNTDOWN_NOT_SET;
     mOrders.clear();
     mSlaps.clear();
     mSlapLimit = -1;
@@ -1312,10 +1396,11 @@ bool LevelScript::getStoneCarrierTile(const std::string& creatureName, int32_t& 
 
 void LevelScript::rebaseTimeLimit(int64_t elapsedSeconds)
 {
-    if(mTimeLimitSeconds < 0)
-        return;
+    if(mTimeLimitSeconds >= 0)
+        mTimeLimitSeconds = std::max<int64_t>(0, mTimeLimitSeconds - elapsedSeconds);
 
-    mTimeLimitSeconds = std::max<int64_t>(0, mTimeLimitSeconds - elapsedSeconds);
+    if(mCountdownSeconds >= 0)
+        mCountdownSeconds = std::max<int64_t>(0, mCountdownSeconds - elapsedSeconds);
 }
 
 bool LevelScriptRegion::contains(int32_t x, int32_t y) const

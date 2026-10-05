@@ -1,6 +1,6 @@
 """Static wiring checks for the game mechanics that the converted campaign levels need.
 
-One section per mechanic, in the order they were added (see docs/internal for the reasons).
+One section per mechanic, in the order they were added.
 """
 from pathlib import Path
 
@@ -52,6 +52,10 @@ for name in ('tileKinds', 'tilesTagged', 'possessedInRegion', 'boulderInRegion')
 for name in ('alterTerrain', 'portalStatus', 'creatureAvailable', 'removeCreature', 'alliance', 'generateCreature',
              'possessCreature'):
     assert 'case LevelScriptActionType::%s:' % name in runner, name
+assert 'TileType::manaWell' in runner and 'kind == "manawell"' in runner
+assert 'case LevelScriptActionType::countdown:' in runner and 'setScriptCountdown(' in runner
+assert 'TIME_LIMIT_COUNTDOWN_FLAG' in read('source/modes/GameMode.cpp') and 'TIME_LIMIT_COUNTDOWN_FLAG' in read('source/gamemap/GameMap.cpp')
+assert 'type == "countdown"' in script and 'os << "countdown' in script and 'key == "Countdown"' in script
 assert 'startPossession(' in runner and 'newCreature->setName(' in runner
 assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
 assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')
