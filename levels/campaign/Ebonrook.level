@@ -18,7 +18,7 @@ startingY	14
 colorId	1
 gold	0
 goldMined	0
-mana	100
+mana	300
 [SkillDone]
 roomArena
 roomBridgeStone
@@ -5367,12 +5367,15 @@ Action	message	1	Ebonrook is a black wood that keeps its own night, master. Ward
 Action	objective	1	Kill Warden Sabine Rook in the roots of the south-west.
 Action	objective	1	Cross the river by the north bridges.
 Action	objective	1	Your gold is gone: mine, and feed your army from the glades.
+Action	portal	1	off
 [/Trigger]
 [Trigger]
 Name	firstCoin
 Mode	once
 Cond	mined	1	>=	300
-Action	message	1	The first coin of the wood. Your creatures need beds and food soon.
+Action	message	1	The first coin of the wood, and your portal draws creatures again. They need beds and food soon.
+Action	portal	1	on
+Action	setflag	portalOn	1
 Action	gold	1	800
 [/Trigger]
 [Trigger]
@@ -5412,7 +5415,8 @@ Action	gold	1	1500
 Name	crossed
 Mode	once
 Cond	region	1	SouthHub
-Action	message	1	The river is behind you. The south has three more glades and the way to the nest is sealed with stone in two places.
+Action	message	1	The river is behind you. The south has three more glades and the way to the nest is sealed with stone in two places. Possess one of your creatures and walk it into the southern hollow, and the rooks will lose the south road.
+Action	objective	1	Possess a creature and walk it into the southern hollow.
 Action	reveal	1	SouthWest
 Action	reveal	1	SouthEast
 Action	reveal	1	Hollow
@@ -5656,5 +5660,22 @@ Mode	once
 Cond	time	5
 Cond	alive	SabineRook	0
 Action	message	1	The warden is dead and the key to the rook hoard lies where she fell.
+[/Trigger]
+[Trigger]
+Name	portalWake
+Mode	once
+Cond	time	600
+Cond	flag	portalOn	0
+Action	message	1	The glades have settled and your portal draws creatures again.
+Action	portal	1	on
+Action	setflag	portalOn	1
+[/Trigger]
+[Trigger]
+Name	scoutPossessed
+Mode	once
+Cond	possessed	1	Hollow
+Action	message	1	Your possessed scout stands in the southern hollow. The rooks see it and pull back from the south road, and a cache of coin lies open.
+Action	terrain	44	97	46	98	path
+Action	gold	1	600
 [/Trigger]
 [/Triggers]

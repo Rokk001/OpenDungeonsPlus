@@ -5732,6 +5732,7 @@ Action	message	1	The mire is awake, master. Watcher Mora Fenwick has eight tower
 Action	objective	1	Kill Watcher Mora Fenwick in her tower, in the north-east.
 Action	objective	1	You have only workers: dig, claim and build before you march.
 Action	objective	1	Take the towers on the way, one by one.
+Action	portal	1	off
 [/Trigger]
 [Trigger]
 Name	firstCoin
@@ -5745,7 +5746,9 @@ Action	spawn	1	21	111	1	Orc:2	Goblin:2
 Name	hollowHeld
 Mode	once
 Cond	claimed	1	Hollow	40
-Action	message	1	The hollow is held. A causeway leads east across the black water to the first tower.
+Action	message	1	The hollow is held and your portal draws creatures again. A causeway leads east across the black water to the first tower.
+Action	portal	1	on
+Action	setflag	portalOn	1
 Action	reveal	1	TowerA
 Action	reveal	1	LowRoad
 [/Trigger]
@@ -5921,5 +5924,14 @@ Mode	once
 Cond	time	5
 Cond	alive	MoraFenwick	0
 Action	message	1	Mora Fenwick is dead and the watch key she wore has dropped from her belt.
+[/Trigger]
+[Trigger]
+Name	portalWake
+Mode	once
+Cond	time	600
+Cond	flag	portalOn	0
+Action	message	1	The mire has settled around your hollow, and your portal draws creatures again.
+Action	portal	1	on
+Action	setflag	portalOn	1
 [/Trigger]
 [/Triggers]
