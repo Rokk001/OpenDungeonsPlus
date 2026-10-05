@@ -130,14 +130,20 @@ creature = read("source", "entities", "Creature.cpp")
 end_possession = creature[creature.index("void Creature::endPossession"):creature.index("void Creature::formPossessionGroup")]
 if 'endParticleEffectsByScript("SpellCreaturePossess")' not in end_possession:
     problems.append("the server does not end the possession aura")
+# The aura is permanent on the clients, a refresh never removes a missing effect and the turn deletes the ended effect
+# before the refresh of the turn is built: the other keepers are told at once, while the effect is still there
+if "fireCreatureRefreshIfNeeded()" not in end_possession or end_possession.index("fireCreatureRefreshIfNeeded()") < end_possession.index("endParticleEffectsByScript"):
+    problems.append("endPossession must send the refresh with the ended aura at once")
+if "mPacket << lost" not in end_possession or "const bool lost = !isAlive() || isKo() || !getIsOnMap()" not in end_possession:
+    problems.append("the server must tell the client whether the creature fell")
 client = read("source", "network", "ODClient.cpp")
 end = client[client.index("case ServerNotificationType::possessionEnd:"):]
 end = end[:end.index("default:")]
 for needle in ('endParticleEffectsByScript("SpellCreaturePossess")', "creatureLost", "SpellFxPossessLost", "SpellFxPossessEnd"):
     if needle not in end:
         problems.append("possessionEnd lacks %s" % needle)
-if "isAlive()" not in end or "isKo()" not in end:
-    problems.append("possessionEnd must tell a fallen creature from a normal end")
+if "packetReceived >> creatureLost" not in end or "isAlive()" in end:
+    problems.append("possessionEnd must take the fallen creature from the server message, not guess it")
 if end.index("SpellFxPossessEnd") > end.index("setPossessedCreatureName"):
     problems.append("the effect must be raised before the possessed name is cleared")
 entity = read("source", "entities", "GameEntity.cpp")

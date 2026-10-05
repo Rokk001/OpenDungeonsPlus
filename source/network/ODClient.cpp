@@ -1969,9 +1969,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::possessionEnd:
         {
             // The creature the keeper returns from loses its aura and shows a short flash of light where it
-            // stands. A creature that fell (dead or knocked out as far as the client can tell) shows another effect
+            // stands. A creature that fell (the server says so: dead, knocked out or gone) shows another effect
+            bool creatureLost;
+            OD_ASSERT_TRUE(packetReceived >> creatureLost);
             Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
-            bool creatureLost = (possessed != nullptr) && (!possessed->isAlive() || possessed->isKo());
             RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
             if(possessed != nullptr)
                 possessed->endParticleEffectsByScript("SpellCreaturePossess");

@@ -6086,7 +6086,14 @@ void Creature::endPossession()
     Player* player = mPossessor;
     mPossessor = nullptr;
     player->setPossessedCreatureName(std::string());
+    // Whether the creature fell (dead, knocked out or gone), so the client does not have to guess it
+    const bool lost = !isAlive() || isKo() || !getIsOnMap();
     endParticleEffectsByScript("SpellCreaturePossess");
+    // The aura is permanent on the clients and a refresh never removes an effect that is missing from it. The turn
+    // deletes the ended effect before the refresh of the turn is built, so the clients are told now, while the effect
+    // is still there with no turns left
+    mNeedFireRefresh = true;
+    fireCreatureRefreshIfNeeded();
 
     // The group does not follow anymore and goes back to its normal behaviour
     for(const std::string& memberName : mGroupMemberNames)
@@ -6113,6 +6120,7 @@ void Creature::endPossession()
 
     ServerNotification* serverNotification = new ServerNotification(
         ServerNotificationType::possessionEnd, player);
+    serverNotification->mPacket << lost;
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 

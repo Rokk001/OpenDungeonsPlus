@@ -1952,6 +1952,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 player->setPossessedCreatureName(std::string());
                 ServerNotification* serverNotification = new ServerNotification(
                     ServerNotificationType::possessionEnd, player);
+                const bool lost = true;
+                serverNotification->mPacket << lost;
                 queueServerNotification(serverNotification);
                 break;
             }

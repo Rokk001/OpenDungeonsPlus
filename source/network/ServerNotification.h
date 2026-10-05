@@ -156,7 +156,7 @@ enum class ServerNotificationType
     casinoPayout,
     //! The player now possesses the creature: + string creatureName
     possessionStart,
-    //! The player no longer possesses a creature
+    //! The player no longer possesses a creature: + bool lost (the creature fell: dead, knocked out or gone)
     possessionEnd,
     //! Answer to editorRegionEdit, all the region markers of the level script:
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
