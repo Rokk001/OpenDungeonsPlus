@@ -5591,7 +5591,7 @@ void RenderManager::setTreasuryGlowLight(const std::string& name, const Treasury
     }
     mTreasuryGlowLights.insert(name);
     light->getParentSceneNode()->setPosition(Ogre::Vector3(patch.mX, patch.mY, 0.8f));
-    light->setDiffuseColour(Ogre::ColourValue(1.0f, 0.72f, 0.3f) * (0.9f * patch.mStrength));
+    light->setDiffuseColour(Ogre::ColourValue(1.0f, 0.72f, 0.3f) * (0.5f * patch.mStrength));
 }
 
 void RenderManager::destroyTreasuryGlowLight(const std::string& name)
