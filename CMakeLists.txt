@@ -475,6 +475,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/RoomAmbience.cpp
     ${SRC}/render/RoomAmbienceConfig.cpp
     ${SRC}/render/RoomAmbienceExtras.cpp
+    ${SRC}/render/WallTorchView.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/RenderManagerChickens.cpp
