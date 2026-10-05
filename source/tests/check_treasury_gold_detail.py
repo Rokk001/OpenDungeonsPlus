@@ -21,7 +21,7 @@ material = read('materials/scripts/TreasuryGoldPile.material')
 
 # Coins, gems and spilled coins: a second mesh section, only at the full detail, derived from the pile name alone.
 assert 'material TreasuryGoldDetail' in material and 'ambient vertexcolour' in material
-assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 6 : 12, !reduced)' in mesh
+assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? ReducedRings : FullRings, !reduced)' in mesh
 for name in ('topCoinCount', 'gemCount', 'edgeOpen', 'spillCoinsPerEdge', 'hasFloorScatter', 'levelForClassicName', 'glowWeight'):
     assert name in layer and name in mesh + render + treasury
 assert 'maxTopCoins' in layer and 'maxGems' in layer and 'maxSpillCoins' in layer
