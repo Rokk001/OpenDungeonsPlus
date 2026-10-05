@@ -5,8 +5,11 @@
 
 Checks that the tags are balanced, that keys and values can be read, that every particle system used
 exists in particles/*.particle with a material that has its texture, and that the mesh names and tile
-visual names that are matched exist (names of rooms that only some builds have are accepted). Exits
-with 1 and prints every problem if something is wrong.
+visual names that are matched exist (names of rooms that only some builds have are accepted). It also
+checks the room rule: every room type has at least 3 idle effects and 1 operation effect (see below).
+Exits with 1 and prints every problem if something is wrong.
+
+    python tools/check_room_ambience.py --table    prints the count per room (idle | operation | files:lines)
 """
 
 import glob
@@ -33,6 +36,38 @@ TRAP_TYPES = ("Spike", "Alarm", "Fear", "Gas", "Lightning", "Fireburst", "Freeze
               "Boulder", "DoorWooden", "DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRuned")
 # Tile visuals a bridge can lie over
 BRIDGE_VISUALS = ("lavaGround", "waterGround")
+
+
+# The room rule: every room type needs at least this many effects that run all the time (idle: Always,
+# on a tile or an object, also sounds) and this many that are tied to a state or an event (operation:
+# Occupied, Vacated, Hit, Locked, Ready, Reloading, or an event at the room). Effects with When Empty
+# and events without a Match (any room) are not counted, so a room cannot pass on the shared effects.
+MIN_IDLE = 3
+MIN_OPERATION = 1
+# Room type -> tile visuals and object meshes (an effect counts for the room when its Match names one of them)
+ROOM_RULE = (
+    ("dungeonTemple", ("dungeonTempleRoom",), ("DungeonTempleObject",)),
+    ("dormitory", ("dormitoryRoom",), ("*Bed", "Hammock")),
+    ("treasury", ("treasuryRoom",), ("GoldstackLv1", "GoldstackLv2", "GoldstackLv3", "GoldstackLv4")),
+    ("portal", ("portalRoom",), ("PortalObject",)),
+    ("workshop", ("workshopRoom",), ("Chimney", "Anvil", "Grindstone", "WorkshopMachine1", "WorkshopMachine2")),
+    ("trainingHall", ("trainingHallRoom",), ("TrainingDummy1", "TrainingDummy2", "TrainingDummy3", "TrainingDummy4")),
+    ("library", ("libraryRoom",), ("Podium", "Bookcase", "Bookshelf")),
+    ("hatchery", ("hatcheryRoom",), ("ChickenCoop", "Chicken")),
+    ("crypt", ("cryptRoom",), ("KnightCoffin", "StoneCoffin", "CelticCross", "KnightStatue", "KnightStatue2")),
+    ("portalWave", ("portalWaveRoom",), ()),
+    ("prison", ("prisonRoom",), ("Skull", "FenceStraight", "FenceCorner")),
+    ("bridgeWooden", ("bridge:WoodBridge",), ()),
+    ("bridgeStone", ("bridge:StoneBridge",), ()),
+    ("arena", ("arenaRoom",), ("WeaponShield1", "WeaponShield2")),
+    ("casino", ("casinoRoom",), ("Roulette", "CasinoPokerTable", "CasinoWallBeer")),
+    ("torture", ("tortureRoom",), ("TortureObject",)),
+    ("guardRoom", ("guardRoom",), ()),
+    ("temple", ("templeRoom",), ()),
+)
+# Room types that are exempt from the rule, with the reason (none at the moment)
+RULE_EXCEPTIONS = {}
+OPERATION_WHENS = ("Occupied", "Vacated", "Hit", "Locked", "Reloading", "Ready")
 
 
 def read_lines(path):
@@ -344,6 +379,65 @@ def check_started_events(problems, names):
                 problems.append("%s starts the event %s, no effect in the configuration uses it" % (source, match.group(1)))
 
 
+def collect_effects(path, found):
+    """Reads every effect of a file and its includes with file and line (for the room rule)."""
+    current = None
+    with open(path, encoding="utf-8") as handle:
+        for number, raw in enumerate(handle, 1):
+            words = raw.split("#", 1)[0].split()
+            if not words:
+                continue
+            if words == ["[Effect]"]:
+                current = {"_where": "%s:%d" % (os.path.basename(path), number)}
+            elif words == ["[/Effect]"]:
+                found.append(current)
+                current = None
+            elif current is not None:
+                current[words[0]] = words[1:]
+            elif words[0] == "Include" and len(words) == 2:
+                included = os.path.join(os.path.dirname(path), words[1])
+                if os.path.exists(included):
+                    collect_effects(included, found)
+
+
+def count_rooms(effects):
+    """Returns {room: (idle effects, operation effects)}, each a list of where-strings."""
+    result = {}
+    for room, visuals, meshes in ROOM_RULE:
+        idle = []
+        operation = []
+        for effect in effects:
+            matches = effect.get("Match", [])
+            target = effect.get("Target", [""])[0]
+            when = effect.get("When", ["Always"])[0]
+            if target == "Event":
+                if any(m in visuals for m in matches):
+                    operation.append(effect["_where"])
+            elif (target == "Tile" and any(m in visuals for m in matches)) or                     (target == "Object" and any(m in meshes for m in matches)):
+                if when == "Always":
+                    idle.append(effect["_where"])
+                elif when in OPERATION_WHENS:
+                    operation.append(effect["_where"])
+        result[room] = (idle, operation)
+    return result
+
+
+def check_room_rule(problems, table):
+    effects = []
+    collect_effects(os.path.join(ROOT, "config", "roomAmbience.cfg"), effects)
+    counts = count_rooms(effects)
+    for room, (idle, operation) in counts.items():
+        if table:
+            print("%-14s idle %2d | operation %2d | %s | %s" % (room, len(idle), len(operation), ", ".join(idle),
+                                                               ", ".join(operation)))
+        if room in RULE_EXCEPTIONS:
+            continue
+        if len(idle) < MIN_IDLE:
+            problems.append("room %s has %d idle effects, needs %d" % (room, len(idle), MIN_IDLE))
+        if len(operation) < MIN_OPERATION:
+            problems.append("room %s has %d operation effects, needs %d" % (room, len(operation), MIN_OPERATION))
+
+
 def main():
     problems = []
     counts = {"effects": 0, "events": 0, "names": set()}
@@ -351,6 +445,7 @@ def main():
                materials(), counts)
     check_particle_files(problems)
     check_started_events(problems, counts["names"])
+    check_room_rule(problems, "--table" in sys.argv)
     if problems:
         for problem in problems:
             print("PROBLEM:", problem)
