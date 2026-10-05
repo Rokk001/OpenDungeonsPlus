@@ -90,17 +90,34 @@ bool HatcheryCycle::walkFits(uint32_t walk, const HatcheryCycleSettings& setting
     return (settings.mNestWalkTurns > 0) && (walk <= settings.mNestWalkTurns);
 }
 
-bool HatcheryCycle::wellCared(const HatcheryCare& care)
+uint32_t HatcheryCycle::carePercent(const HatcheryCycleSettings& settings, const HatcheryCare& care)
 {
-    return care.mClaimed && care.mLit && !care.mEnemies;
+    if(!care.mClaimed)
+        return 0;
+
+    uint32_t percent = 0;
+    if(care.mLit)
+        percent += settings.mCareLightPercent;
+    if(!care.mEnemies)
+        percent += settings.mCareCalmPercent;
+    return std::min<uint32_t>(percent, 90);
+}
+
+bool HatcheryCycle::hasWallTorch(int32_t x, int32_t y, uint32_t spacing)
+{
+    if(spacing <= 1)
+        return true;
+
+    uint32_t hash = static_cast<uint32_t>(x * 73856093) ^ static_cast<uint32_t>(y * 19349663);
+    return ((hash >> 3) % spacing) == 0;
 }
 
 HatcheryCycleSettings HatcheryCycle::withCare(const HatcheryCycleSettings& settings, const HatcheryCare& care)
 {
-    if(!wellCared(care))
+    uint32_t percent = carePercent(settings, care);
+    if(percent == 0)
         return settings;
 
-    uint32_t percent = std::min<uint32_t>(settings.mCareLayPercent, 90);
     HatcheryCycleSettings ret = settings;
     ret.mLayFactor = settings.mLayFactor * ((100 - percent) / 100.0);
     return ret;

@@ -71,9 +71,10 @@ private:
     void updateFlock(const std::vector<ChickenEntity*>& hens, bool night);
     //! Creatures of an enemy seat that stand on a tile of the hatchery.
     void collectEnemies(std::vector<Creature*>& enemies) const;
-    //! True if a map light is within HatcheryCareLightRadius tiles of the hatchery.
+    //! True if a map light is within HatcheryCareLightRadius tiles of the hatchery, or a wall torch is on a hatchery
+    //! tile that touches a wall reinforced by the keeper.
     bool isLit() const;
-    //! Claimed by the keeper, lit and free of enemies (see HatcheryCycle::wellCared).
+    //! Claimed by the keeper, lit and free of enemies (see HatcheryCycle::carePercent).
     HatcheryCare getCare(const std::vector<Creature*>& enemies) const;
     //! Settings of the life cycle from the config, laying times scaled by the research.
     HatcheryCycleSettings getCycleSettings() const;

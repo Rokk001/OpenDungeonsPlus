@@ -226,7 +226,7 @@ struct SimCase
     SimCase() :
         mWalkMax(0),
         mNest(true),
-        mCarePercent(0),
+        mCare(false),
         mTrample(false),
         mEnemyPercent(5),
         mTramplePercent(30)
@@ -236,8 +236,9 @@ struct SimCase
     uint32_t mWalkMax;
     //! False = no free nest: she sits down where she is, no walk.
     bool mNest;
-    //! The care bonus while the hatchery is claimed, lit and free of enemies (0 = none).
-    uint32_t mCarePercent;
+    //! The care bonuses (light and no enemies, see HatcheryCycle::carePercent) of a claimed, lit hatchery; they are
+    //! left out of the 3 percent parity check.
+    bool mCare;
     //! Enemies stand in the hatchery mEnemyPercent of the turns: eggs do not hatch then, there is no care, and every
     //! egg is trampled with mTramplePercent per such turn.
     bool mTrample;
@@ -267,9 +268,10 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
     HatcheryCare care;
     care.mClaimed = true;
     care.mLit = true;
-    HatcheryCycleSettings carePercentSettings = settings;
-    carePercentSettings.mCareLayPercent = simCase.mCarePercent;
-    const HatcheryCycleSettings caredSettings = HatcheryCycle::withCare(carePercentSettings, care);
+    HatcheryCare careWithEnemy = care;
+    careWithEnemy.mEnemies = true;
+    const HatcheryCycleSettings caredSettings = simCase.mCare ? HatcheryCycle::withCare(settings, care) : settings;
+    const HatcheryCycleSettings enemySettings = simCase.mCare ? HatcheryCycle::withCare(settings, careWithEnemy) : settings;
     std::vector<SimHen> hens;
     std::vector<uint32_t> chicks;
     std::vector<uint32_t> eggs;
@@ -282,8 +284,8 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
     for(uint32_t turn = 0; turn < nbTurns; ++turn)
     {
         const bool enemy = simCase.mTrample && ((trampleRng.next() % 100) < simCase.mEnemyPercent);
-        // Enemies in the hatchery: no care bonus
-        const HatcheryCycleSettings& laying = enemy ? settings : caredSettings;
+        // Enemies in the hatchery: no bonus for the calm
+        const HatcheryCycleSettings& laying = enemy ? enemySettings : caredSettings;
         if(((demand.next() % 100) < eatPercent) && !hens.empty())
         {
             hens.erase(hens.begin());
@@ -440,13 +442,12 @@ BOOST_AUTO_TEST_CASE(test_LateEgg)
 
 //! Balance parity: with the default values the number of edible chickens per minute has to stay the one of the
 //! spawning before the life cycle, for the same hatchery size and the same demand: within 3 percent of the old
-//! number, in every case below. The egg appears when the laying timer of the hen runs out (the walk to the nest only
+//! number, in every case below that has no care bonus (the bonuses of a claimed, lit, calm hatchery are printed but
+//! not limited, they speed the hatchery up on purpose). The egg appears when the laying timer of the hen runs out (the walk to the nest only
 //! has to fit into the time before, a late egg gets the age it would have had), the laying timer carries the factor
 //! HatcheryCycleSettings::mLayFactor that balances the cycle against the old spawning. A Python port of the model (the
-//! same generators and order) gives the worst deviation per case: 2.71 percent (no walk), 2.84 (walk 0 to 6 turns),
-//! 2.71 (no free nest), 2.84 (care bonus 2 percent), 2.60 (care bonus and walk), 2.92 (enemies trample, 5 percent of
-//! the turns, 30 percent per egg). A care bonus of 25 percent would give 7.27 percent (Python port): 2 percent is
-//! about the largest bonus that keeps the parity together with the other cases.
+//! same generators and order) gives the worst deviation per case without bonus: 2.71 percent (no walk), 2.84 (walk 0
+//! to 6 turns), 2.71 (no free nest), 2.92 (enemies trample, 5 percent of the turns, 30 percent per egg).
 BOOST_AUTO_TEST_CASE(test_BalanceParity)
 {
     HatcheryCycleSettings settings;
@@ -468,11 +469,11 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
     names.push_back("no free nest");
     cases.push_back(noNest);
     SimCase careNoWalk = noWalk;
-    careNoWalk.mCarePercent = settings.mCareLayPercent;
+    careNoWalk.mCare = true;
     names.push_back("care bonus");
     cases.push_back(careNoWalk);
     SimCase careWalk = walk;
-    careWalk.mCarePercent = settings.mCareLayPercent;
+    careWalk.mCare = true;
     names.push_back("care bonus and variable walk");
     cases.push_back(careWalk);
     SimCase trample = walk;
@@ -494,8 +495,12 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
                 std::cout << "parity " << names[k] << " coops=" << coops[c] << " eatPercent/turn=" << demands[d]
                     << " old=" << oldPerMinute << " new=" << newPerMinute << " per minute, deviation "
                     << deviation << " percent" << std::endl;
-                BOOST_CHECK_MESSAGE(deviation <= 3.0, names[k] << " coops=" << coops[c] << " demand=" << demands[d]
-                    << ": " << deviation << " percent");
+                // The care bonuses make a cared-for hatchery lay faster on purpose: only printed, not limited
+                if(!cases[k].mCare)
+                {
+                    BOOST_CHECK_MESSAGE(deviation <= 3.0, names[k] << " coops=" << coops[c] << " demand=" << demands[d]
+                        << ": " << deviation << " percent");
+                }
             }
         }
     }
@@ -503,35 +508,56 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
 
 BOOST_AUTO_TEST_CASE(test_Care)
 {
-    HatcheryCare care;
-    BOOST_CHECK(!HatcheryCycle::wellCared(care));
-    care.mClaimed = true;
-    BOOST_CHECK(!HatcheryCycle::wellCared(care));
-    care.mLit = true;
-    BOOST_CHECK(HatcheryCycle::wellCared(care));
-    care.mEnemies = true;
-    BOOST_CHECK(!HatcheryCycle::wellCared(care));
-
-    // Without care the settings stay as they are, with care the laying times get shorter (through the factor)
+    // The two bonuses (light 10, no enemies 15) add up, but only while all tiles are claimed
     HatcheryCycleSettings settings;
     settings.mLayMin = 8;
     settings.mLayMax = 12;
-    settings.mCareLayPercent = 25;
-    HatcheryCycleSettings plain = HatcheryCycle::withCare(settings, care);
+    HatcheryCare care;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 0u);
+    care.mLit = true;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 0u);
+    care.mClaimed = true;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 25u);
+    care.mEnemies = true;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 10u);
+    care.mLit = false;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 0u);
+    care.mEnemies = false;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 15u);
+
+    // Without a bonus the settings stay as they are, with care the laying times get shorter (through the factor)
+    HatcheryCare none;
+    HatcheryCycleSettings plain = HatcheryCycle::withCare(settings, none);
     BOOST_CHECK_EQUAL(plain.mLayMin, 8u);
     BOOST_CHECK_EQUAL(plain.mLayMax, 12u);
     BOOST_CHECK_EQUAL(plain.mLayFactor, settings.mLayFactor);
-    care.mEnemies = false;
+    care.mLit = true;
     HatcheryCycleSettings cared = HatcheryCycle::withCare(settings, care);
     BOOST_CHECK_EQUAL(cared.mLayMin, 8u);
     BOOST_CHECK_EQUAL(cared.mLayMax, 12u);
     BOOST_CHECK_CLOSE(cared.mLayFactor, settings.mLayFactor * 0.75, 0.0001);
     BOOST_CHECK_EQUAL(cared.mHatchTurns, settings.mHatchTurns);
-    settings.mCareLayPercent = 0;
+    settings.mCareLightPercent = 0;
+    settings.mCareCalmPercent = 0;
     BOOST_CHECK_EQUAL(HatcheryCycle::withCare(settings, care).mLayFactor, settings.mLayFactor);
-    settings.mCareLayPercent = 500;
+    settings.mCareLightPercent = 500;
+    BOOST_CHECK_EQUAL(HatcheryCycle::carePercent(settings, care), 90u);
     BOOST_CHECK_CLOSE(HatcheryCycle::withCare(settings, care).mLayFactor, settings.mLayFactor * 0.1, 0.0001);
     BOOST_CHECK(HatcheryCycle::layInterval(HatcheryCycle::withCare(settings, care), 0) >= 1u);
+
+    // One tile in six has a wall torch (the hash of the client), spacing 1 = every tile
+    uint32_t torches = 0;
+    for(int32_t x = 0; x < 60; ++x)
+    {
+        for(int32_t y = 0; y < 60; ++y)
+        {
+            if(HatcheryCycle::hasWallTorch(x, y, 6))
+                ++torches;
+            BOOST_CHECK(HatcheryCycle::hasWallTorch(x, y, 1));
+        }
+    }
+    BOOST_CHECK(torches > 3600 / 6 - 200);
+    BOOST_CHECK(torches < 3600 / 6 + 200);
 
     // Eggs do not hatch while enemies stand in the hatchery
     HatcheryCounts counts;

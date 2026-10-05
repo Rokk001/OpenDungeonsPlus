@@ -32,7 +32,8 @@ struct HatcheryCycleSettings
         mGrowTurns(4),
         mCoopWait(15),
         mTilesPerChicken(1),
-        mCareLayPercent(2),
+        mCareLightPercent(10),
+        mCareCalmPercent(15),
         mTramplePercent(30),
         mCoopBatch(0),
         mFightTurns(14),
@@ -57,8 +58,10 @@ struct HatcheryCycleSettings
     uint32_t mCoopWait;
     //! Number of hatchery tiles needed for one hen, chick or egg.
     uint32_t mTilesPerChicken;
-    //! Percent by which the laying times are shorter while the hatchery is well cared for.
-    uint32_t mCareLayPercent;
+    //! Percent by which the laying times are shorter while a light (map light or wall torch) is close to the claimed hatchery.
+    uint32_t mCareLightPercent;
+    //! Percent by which the laying times are shorter while the claimed hatchery has no enemy in it. Adds to mCareLightPercent.
+    uint32_t mCareCalmPercent;
     //! Chance (percent per turn) that an enemy creature next to an egg tramples it.
     uint32_t mTramplePercent;
     //! Hens that come out of the coops together once the wait is over (0 = one hen per coop, as many as the capacity allows).
@@ -157,11 +160,15 @@ public:
     //! The nest is used only when the walk to it is no longer than mNestWalkTurns.
     static bool walkFits(uint32_t walk, const HatcheryCycleSettings& settings);
 
-    //! Breeding needs care: claimed, lit and without enemies.
-    static bool wellCared(const HatcheryCare& care);
+    //! Percent by which the laying times are shorter: nothing unless all tiles are claimed, then mCareLightPercent
+    //! while a light is close plus mCareCalmPercent while no enemy stands in the hatchery (at most 90).
+    static uint32_t carePercent(const HatcheryCycleSettings& settings, const HatcheryCare& care);
 
-    //! The settings with the laying times shortened by mCareLayPercent (at most 90, through mLayFactor) when the
-    //! hatchery is well cared for, otherwise unchanged.
+    //! True if the wall torch of the room ambience (client side, config/roomAmbienceDeferred.cfg) is drawn on the tile:
+    //! the same coordinate hash as the client uses for "Spacing", one tile in spacing.
+    static bool hasWallTorch(int32_t x, int32_t y, uint32_t spacing);
+
+    //! The settings with the laying times shortened by carePercent (through mLayFactor), unchanged without care.
     static HatcheryCycleSettings withCare(const HatcheryCycleSettings& settings, const HatcheryCare& care);
 
     //! Enemy creatures and heroes trample eggs. Creatures of the keeper never harm eggs, and nothing

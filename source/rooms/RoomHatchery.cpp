@@ -279,7 +279,8 @@ HatcheryCycleSettings RoomHatchery::getCycleSettings() const
     settings.mHatchTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryHatchTurns", settings.mHatchTurns));
     settings.mGrowTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrowTurns", settings.mGrowTurns));
     settings.mTilesPerChicken = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryTilesPerChicken", settings.mTilesPerChicken));
-    settings.mCareLayPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryCareLayPercent", settings.mCareLayPercent));
+    settings.mCareLightPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryCareLightPercent", settings.mCareLightPercent));
+    settings.mCareCalmPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryCareCalmPercent", settings.mCareCalmPercent));
     settings.mTramplePercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryTramplePercent", settings.mTramplePercent));
     settings.mCoopBatch = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryCoopBatch", settings.mCoopBatch));
     settings.mFightTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFightTurns", settings.mFightTurns));
@@ -661,6 +662,21 @@ void RoomHatchery::collectEnemies(std::vector<Creature*>& enemies) const
 
 bool RoomHatchery::isLit() const
 {
+    // A wall torch (drawn by the room ambience on the tiles that touch a wall) is on a tile of the hatchery itself,
+    // so it is always in range: it counts when the tile has the torch and touches a wall reinforced by the keeper
+    uint32_t torchSpacing = static_cast<uint32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryTorchSpacing", 6.0));
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(!HatcheryCycle::hasWallTorch(tile->getX(), tile->getY(), torchSpacing))
+            continue;
+
+        for(Tile* neighbor : tile->getAllNeighbors())
+        {
+            if((neighbor != nullptr) && neighbor->isWallClaimedForSeat(getSeat()))
+                return true;
+        }
+    }
+
     double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCareLightRadius", 8.0);
     double radiusSquared = radius * radius;
     for(MapLight* light : getGameMap()->getMapLights())
