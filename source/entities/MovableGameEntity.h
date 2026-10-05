@@ -45,6 +45,12 @@ namespace EntityAnimation
     static const std::string eat_chicken_anim = "EatChicken";
     //! A creature sniffs at food it was given (server action state; the client shows the idle clip and a reaction)
     static const std::string sniff_anim = "Sniff";
+    //! A worker pulls a hurt creature backwards by the legs (the clip it plays while walking; the room
+    //! configuration names the clip of the skeleton, see DormitoryWoundedDragWorkerClip)
+    static const std::string drag_anim = "Drag";
+    //! The hurt creature that is pulled lies on the ground and slides behind the worker (see
+    //! DormitoryWoundedDragCreatureClip)
+    static const std::string dragged_anim = "Dragged";
 };
 
 class MovableGameEntity : public GameEntity
@@ -124,6 +130,10 @@ public:
     //! \brief Name of the animation the entity was last told to play (empty if none yet)
     inline const std::string& getAnimationStateName() const
     { return mPrevAnimationState; }
+
+    //! \brief The points the entity still has to walk to (the first one is the next)
+    inline const std::deque<Ogre::Vector2>& getWalkQueue() const
+    { return mWalkQueue; }
 
     virtual void restoreEntityState() override;
 

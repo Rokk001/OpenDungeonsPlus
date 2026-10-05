@@ -64,6 +64,7 @@
 #include "utils/Random.h"
 
 #include <cctype>
+#include <set>
 
 
 #include <OgreBone.h>
@@ -802,6 +803,39 @@ bool needsCreatureDropFallback(Ogre::Entity* entity)
     return !entity->getSkeleton()->hasAnimation("Die") ||
         entity->getMesh()->getName() == "lich.mesh" ||
         entity->getMesh()->getName() == "Cultist.mesh";
+}
+
+//! The clip a skeleton plays for the worker that pulls a hurt creature (pulledCreature false) or for the creature
+//! that is pulled (true). The clip is named in the room configuration; a skeleton without it plays the fallback
+//! clip of the configuration (said once in the log), and the idle clip if it has not even that. A pulled
+//! creature with a fallback clip lies still on the last frame of it (freezeOnLastFrame).
+std::string chooseDragClip(Ogre::Entity* entity, bool pulledCreature, bool& freezeOnLastFrame)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    freezeOnLastFrame = false;
+    std::string clip = config.getRoomConfigStringOrDefault(
+        pulledCreature ? "DormitoryWoundedDragCreatureClip" : "DormitoryWoundedDragWorkerClip",
+        pulledCreature ? EntityAnimation::dragged_anim : EntityAnimation::drag_anim);
+    if(entity->getSkeleton()->hasAnimation(clip))
+        return clip;
+
+    std::string fallback = config.getRoomConfigStringOrDefault(
+        pulledCreature ? "DormitoryWoundedDragCreatureFallbackClip" : "DormitoryWoundedDragWorkerFallbackClip",
+        pulledCreature ? EntityAnimation::die_anim : EntityAnimation::walk_anim);
+    // The death clip of some models is not made for lying on the ground
+    if((fallback == EntityAnimation::die_anim) && needsCreatureDropFallback(entity))
+        fallback = EntityAnimation::idle_anim;
+    if(!entity->getSkeleton()->hasAnimation(fallback))
+        fallback = EntityAnimation::idle_anim;
+
+    static std::set<std::string> sMissingClipsSaid;
+    if(sMissingClipsSaid.insert(entity->getMesh()->getName() + "/" + clip).second)
+    {
+        OD_LOG_INF("Mesh=" + entity->getMesh()->getName() + " has no clip=" + clip + ", showing clip=" + fallback);
+    }
+
+    freezeOnLastFrame = pulledCreature && (fallback != EntityAnimation::idle_anim);
+    return fallback;
 }
 
 std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string& poseName, Ogre::Real duration)
@@ -3987,6 +4021,11 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         }
     }
 
+    // The worker that pulls a hurt creature and the creature that is pulled have clips of their own
+    bool freezeOnLastFrame = false;
+    if((dropCreature != nullptr) && ((anim == EntityAnimation::drag_anim) || (anim == EntityAnimation::dragged_anim)))
+        anim = chooseDragClip(objectEntity, anim == EntityAnimation::dragged_anim, freezeOnLastFrame);
+
     // Handle the case where this entity does not have the requested animation.
     while (!objectEntity->getSkeleton()->hasAnimation(anim))
     {
@@ -4020,7 +4059,9 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if (!objectEntity->getSkeleton()->hasAnimation(anim))
         return;
 
-    Ogre::AnimationState* animState = setEntityAnimation(objectEntity, anim, loop);
+    Ogre::AnimationState* animState = setEntityAnimation(objectEntity, anim, loop && !freezeOnLastFrame);
+    if(freezeOnLastFrame)
+        animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
 }
 

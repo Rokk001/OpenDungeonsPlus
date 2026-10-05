@@ -43,13 +43,41 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
-    static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest,
-        int32_t nbTurnsActive);
+    static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
+
+    //! \brief True if the entity is not carried but pulled over the ground: a hurt creature (alive and not
+    //! knocked out to death) on its way to its bed. Everything else is carried.
+    static bool isPulledOverGround(GameEntity& entity);
+
+    //! \brief One turn of pulling a hurt creature (see mIsDrag). The worker walks backwards to the bed with
+    //! the creature on the ground behind it: the creature is not in the carry node of the worker, it keeps
+    //! its place on the map and follows the way of the worker at a fixed distance. This action is deleted
+    //! by popAction, so nothing of it may be used after that call.
+    bool handleDragCreature();
 
 private:
+    void releaseEntity(const std::string& reason);
+    void startDrag();
+    void startLaying(Creature& dragged);
+    void followTrail(Creature& dragged, double targetArc);
+    bool stopDragging(bool standUp);
+
     GameEntity* mEntityToCarry;
     Tile* mTileDest;
     Building* mBuildingDest;
+
+    //! True if the entity is pulled instead of carried
+    bool mIsDrag;
+    //! Pulling: 0 while the worker walks, 1 while the creature is moved the last steps into the bed
+    int32_t mDragPhase;
+    //! Pulling: turns spent in phase 1
+    int32_t mDragLayTurns;
+    //! Pulling: the way of the worker so far (the first point is where the creature lay) and, for each point, the
+    //! length of the way up to it
+    std::vector<Ogre::Vector2> mDragTrail;
+    std::vector<double> mDragTrailArc;
+    //! Pulling: the length of the way up to the point the creature has been sent to
+    double mDragFollowArc;
 };
 
 #endif // CREATUREACTIONCARRYENTITY_H

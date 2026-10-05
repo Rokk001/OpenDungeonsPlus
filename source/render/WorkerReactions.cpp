@@ -327,11 +327,33 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
         return;
     }
 
+    // The hurt creature that a worker pulls over the ground groans: the server sets its clip (not a reaction of
+    // its own, so this is the only place that shows it). It happens once when the pulling starts.
+    if(clip == EntityAnimation::dragged_anim)
+    {
+        show(reactions, creature, "DraggedGroan");
+        return;
+    }
+
     if(!isWorker(creature))
         return;
 
     WorkerState& state = getState(creature->getName());
+    std::string previousClip = state.mClip;
     state.mClip = clip;
+
+    // A worker that pulls a hurt creature to its bed: it takes the legs when the clip starts, it lets go
+    // when the clip ends in the dormitory (the server walks it there and only there it stops pulling)
+    if(clip == EntityAnimation::drag_anim)
+    {
+        if(previousClip != clip)
+            show(reactions, creature, "DragWounded");
+    }
+    else if(previousClip == EntityAnimation::drag_anim)
+    {
+        if(reactions.getRoomName(creature) == "Dormitory")
+            later(reactions, creature, "PutWoundedDown", 0.2);
+    }
 
     if(clip == "Claim")
     {
@@ -428,18 +450,9 @@ void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier,
     else if(type == GameEntityType::creature)
     {
         Creature* body = static_cast<Creature*>(carried);
-        // A hurt creature of the keeper that is not knocked out to death is lifted gently, it does not struggle
-        bool isWounded = body->isAlive() && !body->isKoDeath() && (body->getSeat() == carrier->getSeat());
-        if(isWounded)
-        {
-            show(reactions, carrier, "PickWounded");
-        }
-        else
-        {
-            show(reactions, carrier, body->isAlive() ? "PickPrisoner" : "PickBody");
-            if(body->isAlive())
-                WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
-        }
+        show(reactions, carrier, body->isAlive() ? "PickPrisoner" : "PickBody");
+        if(body->isAlive())
+            WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
     }
     else if((type == GameEntityType::craftedTrap) && isDoorType(static_cast<CraftedTrap*>(carried)->getTrapType()))
     {
@@ -471,9 +484,7 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
     {
         Creature* body = static_cast<Creature*>(carried);
         WorkerExtras::endStruggle(reactions.mGameMap, body->getName());
-        if(body->isAlive() && !body->isKoDeath() && (body->getSeat() == carrier->getSeat()) && (room == "Dormitory"))
-            later(reactions, carrier, "PutWoundedDown", 0.2);
-        else if(body->isAlive() && ((room == "Prison") || (room == "Torture")))
+        if(body->isAlive() && ((room == "Prison") || (room == "Torture")))
             later(reactions, carrier, "PrisonerShove", 0.1);
         else if(!body->isAlive() && (room == "Crypt"))
             later(reactions, carrier, "CorpseLookBack", 0.6);

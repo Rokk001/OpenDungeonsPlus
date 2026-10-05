@@ -500,7 +500,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
-    mIsBeingCarried          (false),
+    mIsBeingDragged          (false),
     mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
@@ -609,7 +609,7 @@ Creature::Creature(GameMap* gameMap) :
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
-    mIsBeingCarried          (false),
+    mIsBeingDragged          (false),
     mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
@@ -1450,8 +1450,8 @@ void Creature::doUpkeep()
         return;
     }
 
-    // A creature a worker carries to its bed does nothing on its own (a KO to death one goes on below)
-    if(mIsBeingCarried && (mKoTurnCounter == 0))
+    // A creature a worker pulls to its bed does nothing on its own (a KO to death one goes on below)
+    if(mIsBeingDragged && (mKoTurnCounter == 0))
         return;
 
     if(mKoTurnCounter < 0)
@@ -2375,6 +2375,23 @@ double Creature::getMoveSpeed(Tile* tile) const
     if(isTired())
         tiredFactor = ConfigManager::getSingleton().getTiredWalkSpeedFactor();
 
+    // A worker that pulls a hurt creature is slower (clip drag_anim). The pulled creature does not walk
+    // by itself: it slides after the worker a bit faster than the worker pulls, so it never falls behind.
+    // Server and clients know both by the clip name, so both move them at the same speed
+    const std::string& clip = getAnimationStateName();
+    if(clip == EntityAnimation::drag_anim)
+    {
+        tiredFactor *= getDragWorkerSpeedFactor();
+    }
+    else if(clip == EntityAnimation::dragged_anim)
+    {
+        const CreatureDefinition* workerDefinition = ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker();
+        double workerSpeed = (workerDefinition != nullptr) ? workerDefinition->getMoveSpeedGround() : 1.0;
+        ConfigManager& config = ConfigManager::getSingleton();
+        return workerSpeed * getDragWorkerSpeedFactor() *
+            std::max(1.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragFollowSpeedFactor", 1.3));
+    }
+
     if(getIsOnServerMap())
     {
         // Check if the covering building allows this creature to go through
@@ -2392,6 +2409,12 @@ double Creature::getMoveSpeed(Tile* tile) const
     }
 }
 
+double Creature::getDragWorkerSpeedFactor()
+{
+    double factor = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragWorkerSpeedFactor", 0.6);
+    return std::max(0.1, std::min(1.0, factor));
+}
+
 double Creature::getClientPoseSpeedFactor() const
 {
     double factor = 1.0;
@@ -2405,6 +2428,10 @@ double Creature::getClientPoseSpeedFactor() const
     // A tired creature also walks slower on the server (see getMoveSpeed): the walk clip keeps up
     if((mOverlayMoodValue & CreatureMoodValues::Tired) != 0)
         factor *= ConfigManager::getSingleton().getTiredWalkSpeedFactor();
+
+    // The worker that pulls a hurt creature walks slower too (see getMoveSpeed)
+    if(getAnimationStateName() == EntityAnimation::drag_anim)
+        factor *= getDragWorkerSpeedFactor();
     return factor;
 }
 
@@ -4565,7 +4592,8 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     if(getHP() <= 0.0)
         return EntityCarryType::corpse;
 
-    // A hurt creature of the carrier's seat close enough is carried to its bed
+    // A hurt creature of the carrier's seat close enough is pulled to its bed (the worker takes it by the legs,
+    // see CreatureActionCarryEntity: it is not carried, but it takes the place of a carried thing in the search)
     if((carrier != nullptr) && (carrier->getSeat() == getSeat()) && getIsOnServerMap() &&
        isWoundedForBedCarry())
     {
@@ -4593,7 +4621,7 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 
 bool Creature::isWoundedForBedCarry() const
 {
-    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingCarried || mIsInHand ||
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
        isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
     {
         return false;
@@ -4673,9 +4701,20 @@ bool Creature::isHostileNear(double radius) const
 void Creature::notifyEntityCarryOn(Creature* carrier)
 {
     removeEntityFromPositionTile();
-    mIsBeingCarried = true;
+}
 
-    // A hurt creature that is not knocked out to death stops what it did: it is held still
+void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
+{
+    mPosition = position;
+    addEntityToPositionTile();
+}
+
+void Creature::notifyDragStart()
+{
+    mIsBeingDragged = true;
+
+    // A hurt creature that is not knocked out to death stops what it did, it lies on the ground and the worker
+    // pulls it. It stays on the map (it is not carried): the walk paths the worker gives it move it.
     if(getIsOnServerMap() && (mKoTurnCounter >= 0))
     {
         clearDestinations(EntityAnimation::idle_anim, true, true);
@@ -4683,18 +4722,35 @@ void Creature::notifyEntityCarryOn(Creature* carrier)
     }
 }
 
-void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
+void Creature::notifyDragEnd()
 {
-    mPosition = position;
-    addEntityToPositionTile();
-    if(mIsBeingCarried && getIsOnServerMap())
-    {
-        // The pause before it can be carried again, whatever the end of the carry was (also for the
-        // KO to death ones, which are not affected by it)
-        double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", 150.0);
-        mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
-    }
-    mIsBeingCarried = false;
+    if(!mIsBeingDragged)
+        return;
+
+    mIsBeingDragged = false;
+    if(!getIsOnServerMap())
+        return;
+
+    // The pause before it can be pulled again, whatever the end of the drag was
+    double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", 150.0);
+    mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
+}
+
+bool Creature::setDragDestination(Tile* tile)
+{
+    if(tile == nullptr)
+        return false;
+
+    Tile* posTile = getPositionTile();
+    if(posTile == nullptr)
+        return false;
+
+    std::list<Tile*> result = getGameMap()->path(this, tile);
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(result, path, true, 0.0);
+    setWalkPath(EntityAnimation::drag_anim, EntityAnimation::idle_anim, true, true, path, true);
+    return isMoving() || (posTile == tile);
 }
 
 void Creature::carryEntity(GameEntity* carriedEntity)
