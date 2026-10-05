@@ -513,10 +513,12 @@ Glow glowOfPatch(int originX, int originY, int size)
     glow.mStrength = 0.0f;
     glow.mX = 0.0f;
     glow.mY = 0.0f;
+    glow.mRoom = nullptr;
     if(currentDetail == Detail::off)
         return glow;
 
     float total = 0.0f;
+    float strongest = 0.0f;
     for(int x = originX; x < originX + size; ++x)
     {
         for(int y = originY; y < originY + size; ++y)
@@ -534,6 +536,11 @@ Glow glowOfPatch(int originX, int originY, int size)
             if(weight <= 0.0f)
                 continue;
             total += weight;
+            if(weight > strongest)
+            {
+                strongest = weight;
+                glow.mRoom = it->second.mRoom;
+            }
             glow.mX += weight * static_cast<float>(x);
             glow.mY += weight * static_cast<float>(y);
         }

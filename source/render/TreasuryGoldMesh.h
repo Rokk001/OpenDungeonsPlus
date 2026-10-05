@@ -106,6 +106,8 @@ struct Glow
     float mStrength;
     float mX;
     float mY;
+    //! The room of the pile that contributes most (any pointer identifying it, may be null)
+    const void* mRoom;
 };
 Glow glowOfPatch(int originX, int originY, int size);
 }

@@ -100,9 +100,11 @@
 #include <RTShaderSystem/OgreShaderRenderState.h>
 #include <RTShaderSystem/OgreShaderExIntegratedPSSM3.h>
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <functional>
+#include <utility>
 
 template<> RenderManager* Ogre::Singleton<RenderManager>::msSingleton = nullptr;
 
@@ -1860,6 +1862,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryDust(timeSinceLastFrame);
     updateTreasuryAmbient(timeSinceLastFrame);
     updateTreasuryPileSettles(timeSinceLastFrame);
+    updateTreasuryGlow(timeSinceLastFrame);
     mTreasuryBatch.update(timeSinceLastFrame);
     updateTreasuryBuriedObjects(timeSinceLastFrame);
     rrUpdateHeldCreature();
@@ -5323,20 +5326,90 @@ void RenderManager::refreshTreasuryGlow(int x, int y)
 
     if(glow.mStrength <= 0.0f)
     {
-        if(mSceneManager->hasLight(name))
-        {
-            Ogre::Light* light = mSceneManager->getLight(name);
-            Ogre::SceneNode* node = light->getParentSceneNode();
-            if(node != nullptr)
-                node->detachObject(light);
-            mSceneManager->destroyLight(light);
-            if(node != nullptr)
-                mSceneManager->destroySceneNode(node);
-        }
-        mTreasuryGlowLights.erase(name);
+        mTreasuryGlowPatches.erase(name);
+        destroyTreasuryGlowLight(name);
         return;
     }
 
+    TreasuryGlowPatch patch;
+    patch.mStrength = glow.mStrength;
+    patch.mX = glow.mX;
+    patch.mY = glow.mY;
+    patch.mRoom = glow.mRoom;
+    mTreasuryGlowPatches[name] = patch;
+    // A patch that has a light follows its pile at once; which patches get one is chosen with the next update
+    if(mTreasuryGlowLights.find(name) != mTreasuryGlowLights.end())
+        setTreasuryGlowLight(name, patch);
+    mTreasuryGlowDirty = true;
+}
+
+void RenderManager::updateTreasuryGlow(Ogre::Real timeSinceLastFrame)
+{
+    mTreasuryGlowTimer += timeSinceLastFrame;
+    // A change is picked up quickly, but never more often than every tenth of a second; the camera moves
+    // all the time, so the lights are chosen again every glowUpdateInterval seconds in any case
+    if(!(mTreasuryGlowDirty && mTreasuryGlowTimer >= 0.1f) && mTreasuryGlowTimer < TreasuryCreatureRules::glowUpdateInterval)
+        return;
+
+    mTreasuryGlowTimer = 0.0f;
+    mTreasuryGlowDirty = false;
+    applyTreasuryGlowLights();
+}
+
+void RenderManager::applyTreasuryGlowLights()
+{
+    // The patches near the camera get a light, the nearest first, up to the limit of their room and of the game
+    const TreasuryGoldMesh::Detail detail = TreasuryGoldMesh::getDetail();
+    const int perRoomLimit = TreasuryCreatureRules::glowLimitPerRoom(detail);
+    const int totalLimit = TreasuryCreatureRules::glowLimitTotal(detail);
+    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+
+    std::vector<std::pair<float, std::string> > candidates;
+    for(std::map<std::string, TreasuryGlowPatch>::const_iterator it = mTreasuryGlowPatches.begin();
+        it != mTreasuryGlowPatches.end(); ++it)
+    {
+        float distance = 0.0f;
+        if(camera != nullptr)
+        {
+            const Ogre::Vector3 lightPosition(it->second.mX, it->second.mY, 0.8f);
+            distance = (lightPosition - camera->getDerivedPosition()).length();
+            if(distance > TreasuryCreatureRules::glowViewDistance)
+                continue;
+        }
+        candidates.push_back(std::make_pair(distance, it->first));
+    }
+    std::sort(candidates.begin(), candidates.end());
+
+    std::set<std::string> wanted;
+    std::map<const void*, int> perRoom;
+    for(std::vector<std::pair<float, std::string> >::const_iterator it = candidates.begin(); it != candidates.end(); ++it)
+    {
+        if(static_cast<int>(wanted.size()) >= totalLimit)
+            break;
+
+        int& count = perRoom[mTreasuryGlowPatches[it->second].mRoom];
+        if(count >= perRoomLimit)
+            continue;
+
+        ++count;
+        wanted.insert(it->second);
+    }
+
+    std::vector<std::string> unwanted;
+    for(const std::string& name : mTreasuryGlowLights)
+    {
+        if(wanted.find(name) == wanted.end())
+            unwanted.push_back(name);
+    }
+    for(const std::string& name : unwanted)
+        destroyTreasuryGlowLight(name);
+
+    for(const std::string& name : wanted)
+        setTreasuryGlowLight(name, mTreasuryGlowPatches[name]);
+}
+
+void RenderManager::setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch)
+{
     Ogre::Light* light;
     if(mSceneManager->hasLight(name))
         light = mSceneManager->getLight(name);
@@ -5350,10 +5423,25 @@ void RenderManager::refreshTreasuryGlow(int x, int y)
         light->setLightMask(ROOM_LIGHT_MASK);
         Ogre::SceneNode* node = mLightSceneNode->createChildSceneNode(name + "_node");
         node->attachObject(light);
-        mTreasuryGlowLights.insert(name);
     }
-    light->getParentSceneNode()->setPosition(Ogre::Vector3(glow.mX, glow.mY, 0.8f));
-    light->setDiffuseColour(Ogre::ColourValue(1.0f, 0.72f, 0.3f) * (0.9f * glow.mStrength));
+    mTreasuryGlowLights.insert(name);
+    light->getParentSceneNode()->setPosition(Ogre::Vector3(patch.mX, patch.mY, 0.8f));
+    light->setDiffuseColour(Ogre::ColourValue(1.0f, 0.72f, 0.3f) * (0.9f * patch.mStrength));
+}
+
+void RenderManager::destroyTreasuryGlowLight(const std::string& name)
+{
+    if(mSceneManager->hasLight(name))
+    {
+        Ogre::Light* light = mSceneManager->getLight(name);
+        Ogre::SceneNode* node = light->getParentSceneNode();
+        if(node != nullptr)
+            node->detachObject(light);
+        mSceneManager->destroyLight(light);
+        if(node != nullptr)
+            mSceneManager->destroySceneNode(node);
+    }
+    mTreasuryGlowLights.erase(name);
 }
 
 void RenderManager::clearTreasuryEffects()
@@ -5385,6 +5473,8 @@ void RenderManager::clearTreasuryEffects()
             mSceneManager->destroySceneNode(glowNode);
     }
     mTreasuryGlowLights.clear();
+    mTreasuryGlowPatches.clear();
+    mTreasuryGlowDirty = false;
     TreasuryGoldMesh::clearPiles();
 }
 

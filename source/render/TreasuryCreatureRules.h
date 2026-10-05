@@ -301,6 +301,37 @@ inline float buriedStep(float current, float target, float elapsed)
 //! A changed room is rebuilt at once when it was not rebuilt for this long, otherwise as soon as this time is over
 static const float& batchRebuildInterval = TreasurySettings::current().batchRebuildInterval;
 
+//! Glow lights over rich treasuries: how many one room and all rooms together may have by the "Treasury detail"
+//! option, and how far from the camera a patch may be to get one (tiles). They come from config/treasury.cfg.
+inline int glowLimitPerRoom(TreasuryGoldMesh::Detail detail)
+{
+    switch(detail)
+    {
+        case TreasuryGoldMesh::Detail::full:
+            return TreasurySettings::current().glowMaxPerRoom;
+        case TreasuryGoldMesh::Detail::reduced:
+            return TreasurySettings::current().glowMaxPerRoomReduced;
+        default:
+            return 0;
+    }
+}
+
+inline int glowLimitTotal(TreasuryGoldMesh::Detail detail)
+{
+    switch(detail)
+    {
+        case TreasuryGoldMesh::Detail::full:
+            return TreasurySettings::current().glowMaxTotal;
+        case TreasuryGoldMesh::Detail::reduced:
+            return TreasurySettings::current().glowMaxTotalReduced;
+        default:
+            return 0;
+    }
+}
+
+static const float& glowViewDistance = TreasurySettings::current().glowViewDistance;
+static const float& glowUpdateInterval = TreasurySettings::current().glowUpdateInterval;
+
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget
 {

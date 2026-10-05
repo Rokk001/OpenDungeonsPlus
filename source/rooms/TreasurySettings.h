@@ -76,6 +76,16 @@ struct TreasurySettings
     float buryShareFull = 0.5f;
     float batchRebuildInterval = 0.25f;
 
+    // Warm glow lights over rich treasuries: at most this many per room and in all (full detail), the same at
+    // reduced detail (none at off), only for patches closer to the camera than the view distance (tiles), and
+    // the lights are chosen again at most every glowUpdateInterval seconds
+    int glowMaxPerRoom = 4;
+    int glowMaxTotal = 24;
+    int glowMaxPerRoomReduced = 1;
+    int glowMaxTotalReduced = 6;
+    float glowViewDistance = 28.0f;
+    float glowUpdateInterval = 1.0f;
+
     typedef std::map<std::string, std::string> Config;
 
     //! The values of the game. Written once when the configuration is loaded.
@@ -143,6 +153,13 @@ struct TreasurySettings
         s.buryShareFirst = readFloat(config, "BuryShareFirst", s.buryShareFirst, 0.0f, 1.0f);
         s.buryShareFull = readFloat(config, "BuryShareFull", s.buryShareFull, 0.0f, 1.0f);
         s.batchRebuildInterval = readFloat(config, "BatchRebuildInterval", s.batchRebuildInterval, 0.05f, 5.0f);
+
+        s.glowMaxPerRoom = readInt(config, "GlowMaxPerRoom", s.glowMaxPerRoom, 0, 100);
+        s.glowMaxTotal = readInt(config, "GlowMaxTotal", s.glowMaxTotal, 0, 500);
+        s.glowMaxPerRoomReduced = readInt(config, "GlowMaxPerRoomReduced", s.glowMaxPerRoomReduced, 0, 100);
+        s.glowMaxTotalReduced = readInt(config, "GlowMaxTotalReduced", s.glowMaxTotalReduced, 0, 500);
+        s.glowViewDistance = readFloat(config, "GlowViewDistance", s.glowViewDistance, 1.0f, 500.0f);
+        s.glowUpdateInterval = readFloat(config, "GlowUpdateInterval", s.glowUpdateInterval, 0.1f, 30.0f);
         return s;
     }
 };

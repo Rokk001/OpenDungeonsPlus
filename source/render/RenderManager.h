@@ -557,8 +557,20 @@ private:
     };
     std::vector<TreasuryThiefSack> mTreasuryThiefSacks;
 
-    //! Names of the warm lights over rich treasuries (one per patch of tiles)
+    //! Names of the warm lights over rich treasuries (one per patch of tiles) that have a light at the moment
     std::set<std::string> mTreasuryGlowLights;
+    //! Every patch of tiles with glow, by light name; only the ones near the camera and within the limits of
+    //! their room and of the game get a light (see applyTreasuryGlowLights)
+    struct TreasuryGlowPatch
+    {
+        float mStrength;
+        float mX;
+        float mY;
+        const void* mRoom;
+    };
+    std::map<std::string, TreasuryGlowPatch> mTreasuryGlowPatches;
+    bool mTreasuryGlowDirty = false;
+    Ogre::Real mTreasuryGlowTimer = 0.0f;
     //! Where a creature last splashed coins, to space the splashes along its way
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
@@ -666,6 +678,10 @@ private:
     float getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce);
     void removeTreasuryThiefSack(Creature* creature);
     void refreshTreasuryGlow(int x, int y);
+    void updateTreasuryGlow(Ogre::Real timeSinceLastFrame);
+    void applyTreasuryGlowLights();
+    void setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch);
+    void destroyTreasuryGlowLight(const std::string& name);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     void startTreasuryPour(Tile* tile, int level);
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);

@@ -33,6 +33,8 @@ MATERIALS_REDUCED = 1
 MAX_NEW_PARTICLE_SYSTEMS = 0
 # Effects one room may show at once (splash + dust + sparkle/sliding/rolling coins), and glow lights per patch
 MAX_ROOM_EFFECTS = 16
+# Dynamic point lights of the glow over rich treasuries, in all rooms together
+MAX_GLOW_LIGHTS = 32
 
 
 def read(path):
@@ -112,6 +114,8 @@ def main():
     splash = int(setting(settings, 'splashBudgetFull'))
     dust = int(setting(settings, 'dustBudgetFull'))
     ambient = int(setting(settings, 'ambientBudgetFull'))
+    limit(setting(settings, 'glowMaxTotal') <= MAX_GLOW_LIGHTS and setting(settings, 'glowMaxPerRoom') <= setting(settings, 'glowMaxTotal'),
+          'too many glow lights')
     limit(splash + dust + ambient <= MAX_ROOM_EFFECTS,
           'a room may show %d effects at once' % (splash + dust + ambient))
 
@@ -142,7 +146,10 @@ def main():
     print()
     print('effects per room at once (full): %d splash + %d dust + %d sparkle/slide/roll = %d (budget %d)' % (
         splash, dust, ambient, splash + dust + ambient, MAX_ROOM_EFFECTS))
-    print('glow: one light per 3x3 patch of tiles with rich piles, none at detail off')
+    print('glow: one light per 3x3 patch of tiles with rich piles near the camera, at most %d per room and %d in all'
+          ' (%d / %d at reduced), none at detail off' % (
+              setting(settings, 'glowMaxPerRoom'), setting(settings, 'glowMaxTotal'),
+              setting(settings, 'glowMaxPerRoomReduced'), setting(settings, 'glowMaxTotalReduced')))
     print('per worker carrying gold: 1 sack object (%d triangles), the floor heap object stays hidden' % sack_tris)
     print('veins: shader only (no extra objects, no particles)')
 

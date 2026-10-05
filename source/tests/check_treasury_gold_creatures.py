@@ -81,6 +81,18 @@ int main()
         "the dent is gone when the pile has settled");
     check(dentRadius > 0.0f && dentRadius <= 0.5f && dentLocalDepth > 0.0f, "the dent stays inside its tile");
 
+    // Glow lights: limited per room and in all, fewer at reduced detail, none when the detail is off
+    check(glowLimitPerRoom(TreasuryGoldMesh::Detail::full) > glowLimitPerRoom(TreasuryGoldMesh::Detail::reduced),
+        "reduced detail allows fewer glow lights per room");
+    check(glowLimitTotal(TreasuryGoldMesh::Detail::full) > glowLimitTotal(TreasuryGoldMesh::Detail::reduced),
+        "reduced detail allows fewer glow lights in all");
+    check(glowLimitPerRoom(TreasuryGoldMesh::Detail::reduced) > 0, "reduced detail still has a few glow lights");
+    check(glowLimitPerRoom(TreasuryGoldMesh::Detail::off) == 0 && glowLimitTotal(TreasuryGoldMesh::Detail::off) == 0,
+        "no glow lights when the detail is off");
+    check(glowLimitPerRoom(TreasuryGoldMesh::Detail::full) <= glowLimitTotal(TreasuryGoldMesh::Detail::full),
+        "a room never has more glow lights than the game");
+    check(glowViewDistance > 0.0f && glowUpdateInterval > 0.0f, "the glow has a view distance and an interval");
+
     SplashBudget budget;
     int roomA = 0;
     int roomB = 0;

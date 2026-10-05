@@ -64,6 +64,16 @@ assert 'updateTreasuryDents(timeSinceLastFrame)' in render
 assert 'it->mTaken && !it->mLocalDent' in render
 assert 'localDentFactor' in rules and 'dentRadius' in rules and 'dentLocalDepth' in rules
 
+# Glow lights: one candidate per patch, but only the patches near the camera get a light, the nearest first, within a
+# limit per room and in all; reduced detail allows few, off none. Counted again when the camera moved.
+glow = render.split('void RenderManager::applyTreasuryGlowLights')[1].split('void RenderManager::setTreasuryGlowLight')[0]
+assert 'glowViewDistance' in glow and 'glowLimitPerRoom(detail)' in glow and 'glowLimitTotal(detail)' in glow
+assert 'std::sort(candidates.begin(), candidates.end())' in glow and 'getDerivedPosition()' in glow
+assert 'updateTreasuryGlow(timeSinceLastFrame)' in render and 'glowUpdateInterval' in render
+assert 'createLight' not in render.split('void RenderManager::refreshTreasuryGlow')[1].split('void RenderManager::updateTreasuryGlow')[0]
+assert 'mRoom' in mesh.split('Glow glowOfPatch')[1] and 'glowLimitPerRoom' in rules and 'glowLimitTotal' in rules
+assert 'case TreasuryGoldMesh::Detail::reduced:' in rules.split('inline int glowLimitTotal')[1]
+
 # Thieves show a sack sized by the gold the server sends with the creature packet; glow lights per patch.
 assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render
 assert 'removeTreasuryThiefSack(curCreature)' in render
