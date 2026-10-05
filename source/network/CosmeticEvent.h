@@ -99,8 +99,9 @@ enum class CosmeticEventType : int32_t
     //! keepers that see a tile of the room and to the old and the new owner. Only ends the dancing of the
     //! workers that took the room; the game never depends on it.
     roomTakeover = 14,
-    //! (15 is kept free: another branch uses it for the result of a casino game. When both are merged,
-    //! isKnownType has to accept 0 to 9, 10 to 14, 15 and 16, and the tests that list the kinds need both.)
+    //! (15 and 16 are kept free: another branch uses them for the result of a casino game and for the wealth of a
+    //! keeper. When both are merged, isKnownType has to accept 0 to 14, 15, 16, 17 and 18, and the tests that list the
+    //! kinds need all of them.)
     //! What a blow or a shot of a creature really did to a creature, told when the damage was calculated (melee)
     //! or when the missile arrived (shot). mSubject attacker, mObject target, mValue the CosmeticHitResult,
     //! mValue2 the damage that was done in per mille of the maximum health of the target (0 to 1000, the base of
@@ -109,15 +110,15 @@ enum class CosmeticEventType : int32_t
     //! those of CosmeticHitResult. For a melee blow the kind meleeResult follows it with
     //! the old fields, for clients that do not know this kind. Older clients skip the kind, an older server
     //! sends none.
-    hitResult = 16,
+    hitResult = 17,
     //! A creature starts a blow or a shot and turns to its target first. Sent just before the animation of the blow.
     //! mSubject attacker, mObject target, mPosition the direction from the attacker to the target (length 1, height 0),
     //! mValue and mValue2 are not used (0). The client turns the attacker smoothly with the angular speed of its
     //! configuration and starts the strike clip when the turn is done (at the latest after the configured delay, the turn
     //! then runs over the wind-up). Damage and its timing are decided by the server and are not touched. Older clients skip
-    //! the kind and turn as before, an older server sends none. (17 is the next free number after hitResult; isKnownType
+    //! the kind and turn as before, an older server sends none. (18 is the next free number after hitResult; isKnownType
     //! has to accept it too.)
-    attackTurn = 17
+    attackTurn = 18
 };
 
 //! \brief The result in mValue of the event hitResult
