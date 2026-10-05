@@ -35,7 +35,8 @@ struct HatcheryCycleSettings
         mTramplePercent(30),
         mCoopBatch(0),
         mFightTurns(14),
-        mFightApproachTurns(40)
+        mFightApproachTurns(40),
+        mLayShowTurns(2)
     {}
 
     //! Turns between two eggs of one hen (random value in [mLayMin, mLayMax]).
@@ -60,6 +61,8 @@ struct HatcheryCycleSettings
     uint32_t mFightTurns;
     //! Turns two roosters get at most to walk up to each other before the fight starts where they stand.
     uint32_t mFightApproachTurns;
+    //! Turns a laying hen shows herself sitting before the egg appears in the nest (0 = the egg appears at once).
+    uint32_t mLayShowTurns;
 };
 
 //! \brief How well the keeper looks after a hatchery.

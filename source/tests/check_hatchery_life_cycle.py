@@ -172,3 +172,18 @@ imp_day = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:1800
 assert 'HatcheryDay' in imp_day and 'seekg(pos)' in imp_day
 assert 'test_RoosterNewDayCrow' in (root / 'source/tests/test_HatcheryCycle.cpp').read_text()
 print('hatchery new day crow checks passed')
+
+# The hen shows herself laying: the egg appears after HatcheryLayShowTurns turns, a pending egg is saved and counted
+assert 'mLayShowTurns' in (root / 'source/rooms/HatcheryCycle.h').read_text()
+assert 'HatcheryLayShowTurns' in room_cpp and 'HatcheryLayShowTurns' in config
+laying = body(room_cpp, 'void RoomHatchery::doUpkeep')
+assert 'mPendingEggs.push_back(PendingEgg(eggSpot, settings.mLayShowTurns))' in laying
+assert 'releasePendingEggs(settings)' in laying and 'eggs.size() + mPendingEggs.size()' in laying
+assert laying.index('releasePendingEggs(settings)') < laying.index('hen->countDownLay()')
+release = body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+assert 'spawnAnimal(ChickenKind::egg' in release and 'erase(it)' in release
+# the egg is created in one place only (here or at once without delay), never in both
+assert laying.count('spawnAnimal(ChickenKind::egg') == 1
+assert '"HatcheryLays "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:900]
+assert 'tag == "HatcheryLays"' in room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:2600]
+print('hatchery delayed egg checks passed')
