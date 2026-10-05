@@ -7,7 +7,7 @@ another work. Run it from the repository root to write the images again:
     python tools/gen_room_effects_art.py
 
 Output (all 64x64 RGBA, in materials/textures): RoomAmbFlame, RoomAmbBracket, RoomAmbGear, RoomAmbRat,
-RoomAmbRatL, RoomAmbRumple and RoomAmbRing, used by particles/RoomAmbienceDeferred.particle.
+RoomAmbRatL, RoomAmbRumple and RoomAmbSoftRing, used by particles/RoomAmbienceDeferred.particle.
 
 Needs Pillow. The helpers are the ones of tools/gen_room_ambience_art.py.
 """
@@ -170,7 +170,7 @@ SPRITES = {
     "RoomAmbRat": sprite_rat,
     "RoomAmbRatL": sprite_rat_left,
     "RoomAmbRumple": sprite_rumple,
-    "RoomAmbRing": sprite_ring,
+    "RoomAmbSoftRing": sprite_ring,
 }
 
 

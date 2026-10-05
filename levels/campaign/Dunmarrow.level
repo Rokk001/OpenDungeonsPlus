@@ -631,7 +631,7 @@ ProtectDungeonTemple	NULL
 14	18	1	0	2
 14	19	1	0
 14	20	1	0
-14	21	1	0
+14	21	3	100
 14	22	1	0
 14	23	1	0
 14	24	1	0
@@ -691,7 +691,7 @@ ProtectDungeonTemple	NULL
 15	18	1	0	2
 15	19	1	0
 15	20	1	0
-15	21	1	0
+15	21	3	100
 15	22	1	0
 15	23	1	0
 15	47	1	0
@@ -1909,7 +1909,7 @@ ProtectDungeonTemple	NULL
 41	109	1	0
 41	110	1	0
 41	111	1	0
-41	112	1	0
+41	112	1	100
 41	113	3	100
 41	114	3	100
 41	115	3	100
@@ -1943,8 +1943,8 @@ ProtectDungeonTemple	NULL
 42	108	1	0
 42	109	1	0
 42	110	1	0
-42	111	1	0
-42	112	1	0
+42	111	1	100
+42	112	1	100
 42	113	3	100
 42	114	3	100
 42	115	3	100
@@ -1977,8 +1977,8 @@ ProtectDungeonTemple	NULL
 43	107	1	0
 43	108	1	0
 43	109	1	0
-43	110	1	0
-43	111	1	0
+43	110	1	100
+43	111	1	100
 43	112	1	0
 43	113	3	100
 43	114	3	100
@@ -2011,8 +2011,8 @@ ProtectDungeonTemple	NULL
 44	106	1	0
 44	107	1	0
 44	108	1	0
-44	109	1	0
-44	110	1	0
+44	109	1	100
+44	110	1	100
 44	111	1	0
 44	112	1	0
 44	113	1	0
@@ -2044,8 +2044,8 @@ ProtectDungeonTemple	NULL
 45	74	1	0
 45	75	1	0
 45	107	1	0
-45	108	1	0
-45	109	1	0
+45	108	1	100
+45	109	1	100
 45	110	1	0
 45	111	1	0
 45	112	1	0
@@ -2070,8 +2070,8 @@ ProtectDungeonTemple	NULL
 46	70	1	0
 46	74	1	0
 46	75	1	0
-46	107	1	0
-46	108	1	0
+46	107	1	100
+46	108	1	100
 46	109	1	0
 46	110	1	0
 46	111	1	0
@@ -2356,7 +2356,7 @@ ProtectDungeonTemple	NULL
 53	98	1	0
 53	99	1	0
 53	100	1	0
-53	113	1	0
+53	113	1	100
 53	114	1	0
 53	122	6	100
 53	127	3	100
@@ -2406,7 +2406,7 @@ ProtectDungeonTemple	NULL
 54	98	1	0
 54	99	1	0
 54	100	1	0
-54	113	1	0
+54	113	1	100
 54	114	1	0
 54	122	6	100
 54	127	3	100
@@ -2458,7 +2458,7 @@ ProtectDungeonTemple	NULL
 55	98	1	0
 55	99	1	0
 55	100	1	0
-55	113	1	0
+55	113	1	100
 55	114	1	0
 55	122	6	100
 55	127	3	100
@@ -2512,9 +2512,9 @@ ProtectDungeonTemple	NULL
 56	98	1	0
 56	99	1	0
 56	100	1	0
-56	113	1	0
+56	113	1	100
 56	114	1	0
-56	115	1	0
+56	115	1	100
 56	127	3	100
 57	0	3	100
 57	30	1	0
@@ -2563,7 +2563,7 @@ ProtectDungeonTemple	NULL
 57	98	1	0
 57	99	1	0
 57	100	1	0
-57	113	1	0
+57	113	1	100
 57	114	1	0
 57	127	3	100
 58	0	3	100
@@ -2611,9 +2611,9 @@ ProtectDungeonTemple	NULL
 58	98	1	0
 58	99	1	0
 58	100	1	0
-58	113	1	0
+58	113	1	100
 58	114	1	0
-58	115	1	0
+58	115	1	100
 58	127	3	100
 59	0	3	100
 59	30	1	0
@@ -2658,9 +2658,9 @@ ProtectDungeonTemple	NULL
 59	97	1	0
 59	98	1	0
 59	99	1	0
-59	113	1	0
+59	113	1	100
 59	114	1	0
-59	115	1	0
+59	115	1	100
 59	127	3	100
 60	0	3	100
 60	29	1	0
@@ -2705,7 +2705,7 @@ ProtectDungeonTemple	NULL
 60	97	1	0
 60	98	1	0
 60	99	1	0
-60	113	1	0
+60	113	1	100
 60	114	1	0	1
 60	115	1	0	1
 60	116	1	0	1
@@ -2802,12 +2802,12 @@ ProtectDungeonTemple	NULL
 62	96	1	0
 62	97	1	0
 62	98	1	0
-62	112	1	0
-62	113	1	0
+62	112	1	100
+62	113	1	100
 62	114	1	0
-62	115	1	0
-62	116	1	0
-62	117	1	0
+62	115	1	100
+62	116	1	100
+62	117	1	100
 62	118	1	0	1
 62	119	1	0	1
 62	127	3	100
@@ -2852,14 +2852,14 @@ ProtectDungeonTemple	NULL
 63	97	1	0
 63	111	1	0	1
 63	112	1	0	1
-63	113	1	0
+63	113	1	100
 63	114	1	0
-63	115	1	0
-63	116	1	0
-63	117	1	0
+63	115	1	100
+63	116	1	100
+63	117	1	100
 63	118	1	0	1
 63	119	1	0	1
-63	120	1	0
+63	120	1	100
 63	127	3	100
 64	0	3	100
 64	22	6	100
@@ -2899,15 +2899,15 @@ ProtectDungeonTemple	NULL
 64	96	1	0
 64	111	1	0	1
 64	112	1	0	1
-64	113	1	0
+64	113	1	100
 64	114	1	0
-64	115	1	0
-64	116	1	0
-64	117	1	0
+64	115	1	100
+64	116	1	100
+64	117	1	100
 64	118	1	0	1
 64	119	1	0	1
-64	120	1	0
-64	121	1	0
+64	120	1	100
+64	121	1	100
 64	127	3	100
 65	0	3	100
 65	22	6	100
@@ -2932,18 +2932,18 @@ ProtectDungeonTemple	NULL
 65	90	1	0
 65	93	1	0
 65	94	1	0
-65	110	1	0
+65	110	1	100
 65	111	1	0	1
 65	112	1	0	1
 65	113	1	0
 65	114	1	0
-65	115	1	0
-65	116	1	0
-65	117	1	0
+65	115	1	100
+65	116	1	100
+65	117	1	100
 65	118	1	0
-65	119	1	0
-65	120	1	0
-65	121	1	0
+65	119	1	100
+65	120	1	100
+65	121	1	100
 65	127	3	100
 66	0	3	100
 66	22	6	100
@@ -2967,8 +2967,8 @@ ProtectDungeonTemple	NULL
 66	78	1	0
 66	89	1	0
 66	90	1	0
-66	110	1	0
-66	111	1	0
+66	110	1	100
+66	111	1	100
 66	112	1	0
 66	113	1	0
 66	114	1	0	1
@@ -2977,9 +2977,9 @@ ProtectDungeonTemple	NULL
 66	117	1	0	1
 66	118	1	0	1
 66	119	1	0
-66	120	1	0
-66	121	1	0
-66	122	1	0
+66	120	1	100
+66	121	1	100
+66	122	1	100
 66	127	3	100
 67	0	3	100
 67	32	1	0
@@ -3002,10 +3002,10 @@ ProtectDungeonTemple	NULL
 67	78	1	0
 67	89	1	0
 67	90	1	0
-67	110	1	0
-67	111	1	0
-67	112	1	0
-67	113	1	0
+67	110	1	100
+67	111	1	100
+67	112	1	100
+67	113	1	100
 67	114	1	0	1
 67	115	1	0	1
 67	116	1	0	1
@@ -3013,8 +3013,8 @@ ProtectDungeonTemple	NULL
 67	118	1	0	1
 67	119	1	0
 67	120	1	0
-67	121	1	0
-67	122	1	0
+67	121	1	100
+67	122	1	100
 67	127	3	100
 68	0	3	100
 68	33	1	0
@@ -3035,19 +3035,19 @@ ProtectDungeonTemple	NULL
 68	76	1	0
 68	77	1	0
 68	89	1	0
-68	110	1	0
-68	111	1	0
-68	112	1	0
-68	113	1	0
+68	110	1	100
+68	111	1	100
+68	112	1	100
+68	113	1	100
 68	114	1	0	1
 68	115	1	0	1
 68	116	1	0	1
 68	117	1	0	1
 68	118	1	0	1
-68	119	1	0
-68	120	1	0
-68	121	1	0
-68	122	1	0
+68	119	1	100
+68	120	1	100
+68	121	1	100
+68	122	1	100
 68	127	3	100
 69	0	3	100
 69	33	1	0
@@ -3068,19 +3068,19 @@ ProtectDungeonTemple	NULL
 69	77	1	0
 69	88	1	0
 69	89	1	0
-69	110	1	0
-69	111	1	0
-69	112	1	0
-69	113	1	0
+69	110	1	100
+69	111	1	100
+69	112	1	100
+69	113	1	100
 69	114	1	0	1
 69	115	1	0	1
 69	116	1	0	1
 69	117	1	0	1
 69	118	1	0	1
-69	119	1	0
-69	120	1	0
-69	121	1	0
-69	122	1	0
+69	119	1	100
+69	120	1	100
+69	121	1	100
+69	122	1	100
 69	127	3	100
 70	0	3	100
 70	34	1	0
@@ -3105,8 +3105,8 @@ ProtectDungeonTemple	NULL
 70	77	1	0
 70	88	1	0
 70	89	1	0
-70	110	1	0
-70	111	1	0
+70	110	1	100
+70	111	1	100
 70	112	1	0
 70	113	1	0
 70	114	1	0	1
@@ -3143,15 +3143,15 @@ ProtectDungeonTemple	NULL
 71	76	1	0
 71	88	1	0
 71	89	1	0
-71	111	1	0
+71	111	1	100
 71	112	3	100
-71	113	1	0
+71	113	1	100
 71	114	1	0
-71	115	1	0
-71	116	1	0
-71	117	1	0
+71	115	1	100
+71	116	1	100
+71	117	1	100
 71	118	1	0
-71	119	1	0
+71	119	1	100
 71	120	1	0	1
 71	121	1	0	1
 71	122	1	0	1
@@ -3188,13 +3188,13 @@ ProtectDungeonTemple	NULL
 72	113	3	100
 72	114	1	0	1
 72	115	1	0	1
-72	116	1	0
-72	117	1	0
+72	116	1	100
+72	117	1	100
 72	118	1	0
-72	119	1	0
-72	120	1	0
-72	121	1	0
-72	122	1	0
+72	119	1	100
+72	120	1	100
+72	121	1	100
+72	122	1	100
 72	127	3	100
 73	0	3	100
 73	32	1	0
@@ -3227,15 +3227,15 @@ ProtectDungeonTemple	NULL
 73	88	1	0
 73	89	1	0
 73	90	1	0
-73	113	1	0
+73	113	1	100
 73	114	1	0	1
 73	115	1	0	1
-73	116	1	0
-73	117	1	0
+73	116	1	100
+73	117	1	100
 73	118	1	0
-73	119	1	0
-73	120	1	0
-73	121	1	0
+73	119	1	100
+73	120	1	100
+73	121	1	100
 73	127	3	100
 74	0	3	100
 74	31	1	0
@@ -3270,11 +3270,11 @@ ProtectDungeonTemple	NULL
 74	91	1	0
 74	114	1	0	1
 74	115	1	0	1
-74	116	1	0
-74	117	1	0
+74	116	1	100
+74	117	1	100
 74	118	1	0	1
 74	119	1	0	1
-74	120	1	0
+74	120	1	100
 74	127	3	100
 75	0	3	100
 75	31	1	0
@@ -3305,9 +3305,9 @@ ProtectDungeonTemple	NULL
 75	90	1	0
 75	91	1	0
 75	92	1	0
-75	115	1	0
-75	116	1	0
-75	117	1	0
+75	115	1	100
+75	116	1	100
+75	117	1	100
 75	118	1	0	1
 75	119	1	0	1
 75	127	3	100
@@ -3874,14 +3874,15 @@ Region	HighDunes	40	36	66	52
 Region	NorthDunes	18	20	44	34
 Region	Camp	4	4	28	22
 Region	ShaftHead	4	34	16	46
+Region	ExitShaft	12	52	22	54
 [Trigger]
 Name	wind
 Mode	once
 Cond	time	3
-Action	message	1	Dunmarrow is a sea of sand over old barrows, master. Warden Ysolde Dunn has seen your banners and is packing her camp in the far north-west. Catch her before the clock runs out.
-Action	objective	1	Kill Warden Ysolde Dunn before time runs out.
+Action	message	1	Dunmarrow is a sea of sand over old barrows, master. Warden Ysolde Dunn has seen your banners and is packing her camp in the far north-west. Catch her before she is gone.
+Action	objective	1	Kill Warden Ysolde Dunn before she escapes through the old shaft.
 Action	objective	1	Find the old tunnels under the dunes.
-Action	timelimit	2700
+Action	order	wait	2	-	YsoldeDunn
 [/Trigger]
 [Trigger]
 Name	southCrossed
@@ -3920,15 +3921,16 @@ Action	message	1	From these dunes you can see her camp. The wagons are loaded an
 Action	spawn	2	50	38	1	Knight:2	Elf:2	Adventurer:2	Monk:2
 Action	reveal	1	NorthDunes
 Action	objective	1	Reach the camp before the wagons leave.
-Action	timelimit	1000
 Action	setflag	wagons	1
+Action	timer	wagonClock	0
 [/Trigger]
 [Trigger]
 Name	campSeen
 Mode	once
 Cond	region	1	NorthDunes
-Action	message	1	The camp gate is in sight. Her last guards are forming up on the ramp.
+Action	message	1	The camp gate is in sight. Her last guards are forming up on the ramp, and the gate swings open.
 Action	spawn	2	18	18	1	Knight:3	Knight:2	Dwarf2:2	Monk:2
+Action	terrain	14	21	15	21	path
 [/Trigger]
 [Trigger]
 Name	campEntered
@@ -3971,10 +3973,27 @@ Action	message	1	Dunn has thrown her reserves into the south.
 Action	spawn	2	40	110	1	Knight:3	Knight:3	Elf:3	Monk:3	Adventurer:2
 [/Trigger]
 [Trigger]
+Name	wagonLeaves
+Mode	once
+Cond	flag	wagons	1
+Cond	timer	wagonClock	>=	900
+Cond	alive	YsoldeDunn
+Action	message	1	The wagons are rolling! Dunn is running for the old shaft. Cut her off.
+Action	terrain	14	21	15	21	path
+Action	order	goto	2	16,12;14,19;14,22;12,26;11,31;10,36;10,42;12,47;16,49;18,51;17,53	YsoldeDunn
+Action	speed	run	YsoldeDunn
+[/Trigger]
+[Trigger]
+Name	wardenEscaped
+Mode	once
+Cond	reached	YsoldeDunn	region	ExitShaft
+Action	message	1	Dunn has slipped down the old shaft and her wagons are gone. Dunmarrow is lost.
+Action	lose	1
+[/Trigger]
+[Trigger]
 Name	wardenCaught
 Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
+Cond	event	YsoldeDunn	killed
 Action	message	1	Ysolde Dunn is dead in the sand and her wagons are still. Dunmarrow is yours.
 Action	win	1
 [/Trigger]

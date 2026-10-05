@@ -88,7 +88,7 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
         if(!resMgr.getRunLevel().empty())
         {
             boost::filesystem::path levelPath = boost::filesystem::absolute(boost::filesystem::path(resMgr.getRunLevel()));
-            RunLevelTest::configure(levelPath.generic_string(), resMgr.getRunLevelSeconds());
+            RunLevelTest::configure(levelPath.generic_string(), resMgr.getRunLevelSeconds(), resMgr.getRunLevelSeed());
             if(resMgr.getRunLevelSeconds() <= 0)
                 RunLevelTest::fail(RunLevelTest::codeUsage, "usage error: --seconds must be greater than 0");
             else if(!boost::filesystem::exists(levelPath))

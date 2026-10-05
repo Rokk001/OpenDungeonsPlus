@@ -77,7 +77,7 @@ trapLightning
 [/Seat]
 [Seat]
 seatId	2
-teamId	2
+teamId	2/3/4/5
 player	AI
 faction	Keeper
 startingX	16
@@ -106,7 +106,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	3
-teamId	3
+teamId	3/2/4/5
 player	AI
 faction	Keeper
 startingX	50
@@ -135,7 +135,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	4
-teamId	4
+teamId	4/2/3/5
 player	AI
 faction	Keeper
 startingX	14
@@ -164,7 +164,7 @@ spellSummonWorker
 [/Seat]
 [Seat]
 seatId	5
-teamId	5
+teamId	5/2/3/4
 player	AI
 faction	Keeper
 startingX	52
@@ -1341,7 +1341,7 @@ ProtectDungeonTemple	NULL
 23	88	1	0
 23	89	1	0
 23	90	1	0
-23	91	1	0
+23	91	1	100
 23	92	1	0
 23	93	1	0
 23	94	1	0
@@ -1371,9 +1371,9 @@ ProtectDungeonTemple	NULL
 24	73	1	0
 24	76	1	0
 24	89	1	0
-24	90	1	0
-24	91	1	0
-24	92	1	0
+24	90	1	100
+24	91	1	100
+24	92	1	100
 24	93	1	0
 24	101	3	100
 25	0	3	100
@@ -1399,11 +1399,11 @@ ProtectDungeonTemple	NULL
 25	71	1	0
 25	72	1	0
 25	80	2	100
-25	89	1	0
-25	90	1	0
+25	89	1	100
+25	90	1	100
 25	91	1	0
-25	92	1	0
-25	93	1	0
+25	92	1	100
+25	93	1	100
 25	101	3	100
 26	0	3	100
 26	14	1	0
@@ -1440,7 +1440,7 @@ ProtectDungeonTemple	NULL
 26	90	3	100
 26	91	1	0
 26	92	1	0
-26	93	1	0
+26	93	1	100
 26	101	3	100
 27	0	3	100
 27	14	1	0
@@ -1933,9 +1933,9 @@ ProtectDungeonTemple	NULL
 35	72	1	0
 35	73	1	0
 35	90	1	0
-35	91	1	0
-35	92	1	0
-35	93	1	0
+35	91	1	100
+35	92	1	100
+35	93	1	100
 35	101	3	100
 36	0	3	100
 36	3	1	0
@@ -1970,8 +1970,8 @@ ProtectDungeonTemple	NULL
 36	72	1	0
 36	73	1	0
 36	90	1	0
-36	91	1	0
-36	92	1	0
+36	91	1	100
+36	92	1	100
 36	101	3	100
 37	0	3	100
 37	3	1	0
@@ -2006,8 +2006,8 @@ ProtectDungeonTemple	NULL
 37	72	1	0
 37	73	1	0
 37	90	1	0
-37	91	1	0
-37	92	1	0
+37	91	1	100
+37	92	1	100
 37	101	3	100
 38	0	3	100
 38	3	1	0
@@ -2040,8 +2040,8 @@ ProtectDungeonTemple	NULL
 38	72	1	0
 38	73	1	0
 38	90	1	0
-38	91	1	0
-38	92	1	0
+38	91	1	100
+38	92	1	100
 38	101	3	100
 39	0	3	100
 39	4	1	0
@@ -2062,8 +2062,8 @@ ProtectDungeonTemple	NULL
 39	71	1	0
 39	72	1	0
 39	90	1	0
-39	91	1	0
-39	92	1	0
+39	91	1	100
+39	92	1	100
 39	101	3	100
 40	0	3	100
 40	13	1	0
@@ -2083,8 +2083,8 @@ ProtectDungeonTemple	NULL
 40	72	1	0
 40	82	2	100
 40	90	1	0
-40	91	1	0
-40	92	1	0
+40	91	1	100
+40	92	1	100
 40	101	3	100
 41	0	3	100
 41	13	1	0
@@ -2102,10 +2102,10 @@ ProtectDungeonTemple	NULL
 41	35	1	0
 41	71	1	0
 41	72	1	0
-41	73	1	0
+41	73	1	100
 41	90	1	0
-41	91	1	0
-41	92	1	0
+41	91	1	100
+41	92	1	100
 41	93	1	0	1
 41	94	1	0	1
 41	95	1	0	1
@@ -2128,14 +2128,14 @@ ProtectDungeonTemple	NULL
 42	33	1	0
 42	34	1	0
 42	35	1	0
-42	72	1	0
-42	73	1	0
+42	72	1	100
+42	73	1	100
 42	82	2	100
 42	83	2	100
-42	88	1	0
-42	89	1	0
+42	88	1	100
+42	89	1	100
 42	90	1	0
-42	91	1	0
+42	91	1	100
 42	93	1	0	1
 42	94	1	0	1
 42	95	1	0	1
@@ -2162,10 +2162,10 @@ ProtectDungeonTemple	NULL
 43	45	2	100
 43	46	2	100
 43	55	1	0
-43	72	1	0
+43	72	1	100
 43	73	1	0
-43	87	1	0
-43	88	1	0
+43	87	1	100
+43	88	1	100
 43	89	1	0	1
 43	90	1	0	1
 43	91	1	0	1
@@ -2205,20 +2205,20 @@ ProtectDungeonTemple	NULL
 44	58	1	0
 44	63	2	100
 44	65	2	100
-44	71	1	0
+44	71	1	100
 44	72	1	0
 44	73	1	0
 44	83	2	100
 44	85	1	0	1
 44	86	1	0	1
-44	87	1	0
-44	88	1	0
+44	87	1	100
+44	88	1	100
 44	89	1	0	1
 44	90	1	0	1
 44	91	1	0	1
 44	92	1	0
-44	93	1	0
-44	94	1	0
+44	93	1	100
+44	94	1	100
 44	98	2	100
 44	101	3	100
 45	0	3	100
@@ -2257,15 +2257,15 @@ ProtectDungeonTemple	NULL
 45	74	1	0
 45	85	1	0	1
 45	86	1	0	1
-45	87	1	0
-45	88	1	0
+45	87	1	100
+45	88	1	100
 45	89	1	0
 45	90	1	0
-45	91	1	0
+45	91	1	100
 45	92	1	0
-45	93	1	0
-45	94	1	0
-45	95	1	0
+45	93	1	100
+45	94	1	100
+45	95	1	100
 45	96	2	100
 45	97	2	100
 45	101	3	100
@@ -2309,7 +2309,7 @@ ProtectDungeonTemple	NULL
 46	72	1	0
 46	73	1	0
 46	74	1	0
-46	75	1	0
+46	75	1	100
 46	83	2	100
 46	85	1	0	1
 46	86	1	0	1
@@ -2317,11 +2317,11 @@ ProtectDungeonTemple	NULL
 46	88	1	0
 46	89	1	0
 46	90	1	0
-46	91	1	0
+46	91	1	100
 46	92	1	0
-46	93	1	0
-46	94	1	0
-46	95	1	0
+46	93	1	100
+46	94	1	100
+46	95	1	100
 46	98	2	100
 46	101	3	100
 47	0	3	100
@@ -2365,22 +2365,22 @@ ProtectDungeonTemple	NULL
 47	72	1	0
 47	73	1	0
 47	74	1	0
-47	75	1	0
-47	76	1	0
+47	75	1	100
+47	76	1	100
 47	81	2	100
 47	82	2	100
 47	83	2	100
-47	84	1	0
-47	85	1	0
-47	86	1	0
-47	87	1	0
+47	84	1	100
+47	85	1	100
+47	86	1	100
+47	87	1	100
 47	88	1	0
 47	89	1	0
 47	90	1	0
-47	91	1	0
+47	91	1	100
 47	92	1	0
-47	93	1	0
-47	94	1	0
+47	93	1	100
+47	94	1	100
 47	95	1	0	1
 47	96	1	0	1
 47	101	3	100
@@ -2427,14 +2427,14 @@ ProtectDungeonTemple	NULL
 48	72	1	0
 48	73	1	0
 48	74	1	0
-48	75	1	0
-48	76	1	0
+48	75	1	100
+48	76	1	100
 48	82	2	100
 48	83	2	100
-48	84	1	0
-48	85	1	0
-48	86	1	0
-48	87	1	0
+48	84	1	100
+48	85	1	100
+48	86	1	100
+48	87	1	100
 48	88	1	0	1
 48	89	1	0	1
 48	90	1	0	1
@@ -2493,8 +2493,8 @@ ProtectDungeonTemple	NULL
 49	72	1	0
 49	73	1	0
 49	74	1	0
-49	75	1	0
-49	76	1	0
+49	75	1	100
+49	76	1	100
 49	77	1	0
 49	82	1	0	1
 49	83	1	0	1
@@ -2507,8 +2507,8 @@ ProtectDungeonTemple	NULL
 49	90	1	0	1
 49	91	1	0	1
 49	92	1	0	1
-49	93	1	0
-49	94	1	0
+49	93	1	100
+49	94	1	100
 49	95	1	0	1
 49	96	1	0	1
 49	101	3	100
@@ -2566,8 +2566,8 @@ ProtectDungeonTemple	NULL
 50	72	1	0
 50	73	1	0
 50	74	1	0
-50	75	1	0
-50	76	1	0
+50	75	1	100
+50	76	1	100
 50	77	1	0
 50	79	1	0
 50	80	1	0
@@ -2583,9 +2583,9 @@ ProtectDungeonTemple	NULL
 50	90	1	0	1
 50	91	1	0	1
 50	92	1	0	1
-50	93	1	0
-50	94	1	0
-50	95	1	0
+50	93	1	100
+50	94	1	100
+50	95	1	100
 50	101	3	100
 51	0	3	100
 51	6	1	0
@@ -2645,8 +2645,8 @@ ProtectDungeonTemple	NULL
 51	60	1	0
 51	61	1	0
 51	62	1	0
-51	63	1	0
-51	64	1	0
+51	63	1	100
+51	64	1	100
 51	65	1	0
 51	66	1	0
 51	67	1	0
@@ -2675,9 +2675,9 @@ ProtectDungeonTemple	NULL
 51	90	1	0	1
 51	91	1	0	1
 51	92	1	0	1
-51	93	1	0
-51	94	1	0
-51	95	1	0
+51	93	1	100
+51	94	1	100
+51	95	1	100
 51	101	3	100
 52	0	3	100
 52	6	1	0
@@ -2737,8 +2737,8 @@ ProtectDungeonTemple	NULL
 52	60	1	0
 52	61	1	0
 52	62	1	0
-52	63	1	0
-52	64	1	0
+52	63	1	100
+52	64	1	100
 52	65	1	0
 52	66	1	0
 52	67	1	0
@@ -2749,27 +2749,27 @@ ProtectDungeonTemple	NULL
 52	72	1	0
 52	73	1	0
 52	74	1	0
-52	75	1	0
-52	76	1	0
-52	77	1	0
-52	78	1	0
-52	79	1	0
-52	80	1	0
-52	81	1	0
+52	75	1	100
+52	76	1	100
+52	77	1	100
+52	78	1	100
+52	79	1	100
+52	80	1	100
+52	81	1	100
 52	82	1	0	1
 52	83	1	0	1
-52	84	1	0
-52	85	1	0
-52	86	1	0
-52	87	1	0
+52	84	1	100
+52	85	1	100
+52	86	1	100
+52	87	1	100
 52	88	1	0	1
 52	89	1	0	1
 52	90	1	0	1
 52	91	1	0	1
 52	92	1	0	1
-52	93	1	0
-52	94	1	0
-52	95	1	0
+52	93	1	100
+52	94	1	100
+52	95	1	100
 52	96	2	100
 52	101	3	100
 53	0	3	100
@@ -2825,8 +2825,8 @@ ProtectDungeonTemple	NULL
 53	61	1	0
 53	62	1	0
 53	63	1	0
-53	64	1	0
-53	65	1	0
+53	64	1	100
+53	65	1	100
 53	66	1	0
 53	67	1	0
 53	68	1	0
@@ -2836,24 +2836,24 @@ ProtectDungeonTemple	NULL
 53	72	1	0
 53	73	1	0
 53	74	1	0
-53	75	1	0
-53	76	1	0
-53	77	1	0
-53	78	1	0
-53	79	1	0
-53	80	1	0
-53	81	1	0
-53	85	1	0
-53	86	1	0
-53	87	1	0
+53	75	1	100
+53	76	1	100
+53	77	1	100
+53	78	1	100
+53	79	1	100
+53	80	1	100
+53	81	1	100
+53	85	1	100
+53	86	1	100
+53	87	1	100
 53	88	1	0
-53	89	1	0
+53	89	1	100
 53	90	1	0
-53	91	1	0
+53	91	1	100
 53	92	1	0
 53	93	1	0
 53	94	1	0
-53	95	1	0
+53	95	1	100
 53	96	2	100
 53	101	3	100
 54	0	3	100
@@ -2905,17 +2905,17 @@ ProtectDungeonTemple	NULL
 54	72	1	0
 54	73	1	0
 54	74	1	0
-54	75	1	0
-54	76	1	0
-54	77	1	0
-54	78	1	0
-54	85	1	0
-54	86	1	0
-54	87	1	0
+54	75	1	100
+54	76	1	100
+54	77	1	100
+54	78	1	100
+54	85	1	100
+54	86	1	100
+54	87	1	100
 54	88	1	0
-54	89	1	0
+54	89	1	100
 54	90	1	0
-54	91	1	0
+54	91	1	100
 54	92	1	0
 54	93	3	100
 54	94	1	0	1
@@ -2972,18 +2972,18 @@ ProtectDungeonTemple	NULL
 55	72	3	100
 55	73	1	0
 55	74	1	0
-55	75	1	0
-55	76	1	0
-55	77	1	0
-55	78	1	0
-55	86	1	0
-55	87	1	0
+55	75	1	100
+55	76	1	100
+55	77	1	100
+55	78	1	100
+55	86	1	100
+55	87	1	100
 55	88	1	0
-55	89	1	0
-55	90	1	0
-55	91	1	0
+55	89	1	100
+55	90	1	100
+55	91	1	100
 55	92	1	0
-55	93	1	0
+55	93	1	100
 55	94	1	0	1
 55	95	1	0	1
 55	96	2	100
@@ -3033,19 +3033,19 @@ ProtectDungeonTemple	NULL
 56	72	3	100
 56	73	3	100
 56	74	1	0
-56	75	1	0
-56	76	1	0
-56	77	1	0
+56	75	1	100
+56	76	1	100
+56	77	1	100
 56	82	1	0	1
 56	83	1	0	1
-56	86	1	0
+56	86	1	100
 56	87	1	0	1
 56	88	1	0	1
-56	89	1	0
-56	90	1	0
-56	91	1	0
+56	89	1	100
+56	90	1	100
+56	91	1	100
 56	92	1	0
-56	93	1	0
+56	93	1	100
 56	94	1	0	1
 56	95	1	0	1
 56	101	3	100
@@ -3086,19 +3086,19 @@ ProtectDungeonTemple	NULL
 57	72	3	100
 57	73	1	0
 57	74	1	0
-57	75	1	0
-57	76	1	0
-57	77	1	0
+57	75	1	100
+57	76	1	100
+57	77	1	100
 57	82	1	0	1
 57	83	1	0	1
 57	87	1	0	1
 57	88	1	0	1
-57	89	1	0
-57	90	1	0
-57	91	1	0
+57	89	1	100
+57	90	1	100
+57	91	1	100
 57	92	1	0
-57	93	1	0
-57	94	1	0
+57	93	1	100
+57	94	1	100
 57	96	2	100
 57	101	3	100
 58	0	3	100
@@ -3138,14 +3138,14 @@ ProtectDungeonTemple	NULL
 58	72	1	0
 58	73	1	0
 58	74	1	0
-58	75	1	0
+58	75	1	100
 58	82	1	0	1
 58	83	1	0	1
 58	87	1	0	1
 58	88	1	0	1
-58	89	1	0
-58	90	1	0
-58	91	1	0
+58	89	1	100
+58	90	1	100
+58	91	1	100
 58	92	1	0	1
 58	93	1	0	1
 58	94	1	0	1
@@ -4022,6 +4022,8 @@ Action	message	1	The storm is breaking on Stormhaven, master. Captain Ivo Strand
 Action	objective	1	Destroy the heart of every rival keeper.
 Action	objective	1	Cross the inlet by the stone spans.
 Action	objective	1	Do not let the keepers join their strength against you.
+Action	portal	2	off
+Action	portal	3	off
 [/Trigger]
 [Trigger]
 Name	coveHeld
@@ -4036,6 +4038,8 @@ Name	quayEntered
 Mode	once
 Cond	region	1	EastQuay
 Action	message	1	The east quay. Its keeper has called on the north-east cliff for help, and a squad is already on the road.
+Action	alliance	3	5	make
+Action	portal	3	on
 Action	reveal	1	Basin
 Action	spawn	3	51	39	1	Orc:3	Troll:3	Spider:3	Goblin:3
 [/Trigger]
@@ -4044,6 +4048,8 @@ Name	dockEntered
 Mode	once
 Cond	region	1	WestDock
 Action	message	1	The west dock. The keeper here has sent a runner across the south span to the quay.
+Action	alliance	2	4	make
+Action	portal	2	on
 Action	reveal	1	SouthSpan
 Action	spawn	5	37	71	1	Orc:3	Troll:3	Goblin:3
 [/Trigger]
@@ -4077,6 +4083,7 @@ Cond	region	1	Lighthouse
 Action	message	1	Below the old lighthouse the earth is soft. Something is walled up in the north.
 Action	reveal	1	GaleCave
 Action	gold	1	600
+Action	terrain	30	15	30	15	manawell
 [/Trigger]
 [Trigger]
 Name	gale
@@ -4171,5 +4178,29 @@ Mode	once
 Cond	goal	1	KillAllEnemies
 Action	message	1	The last keeper is dead and the harbour lies calm. Stormhaven answers to you.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	tideTurns
+Mode	once
+Cond	time	2200
+Action	message	1	The tide has turned on the old oaths. The cliff keeper and the quay keeper drift apart, and the two northern keepers shake hands.
+Action	alliance	3	5	break
+Action	alliance	2	3	make
+[/Trigger]
+[Trigger]
+Name	tideTurns2
+Mode	once
+Cond	time	3300
+Action	message	1	The last pact is breaking. The north-west keeper has left the dock keeper and joins the quay keeper against your cove.
+Action	alliance	2	4	break
+Action	alliance	2	5	make
+[/Trigger]
+[Trigger]
+Name	northPortals
+Mode	once
+Cond	time	1500
+Action	message	1	The northern keepers have thrown their portals open and are calling every recruit in the harbour.
+Action	portal	2	on
+Action	portal	3	on
 [/Trigger]
 [/Triggers]

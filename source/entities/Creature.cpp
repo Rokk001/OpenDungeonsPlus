@@ -66,6 +66,7 @@
 
 
 
+#include "game/CreatureAppearance.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -88,10 +89,14 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "render/CreatureOverlayStatus.h"
+#include "render/CreatureAppearancePicture.h"
 #include "render/CreaturePortrait.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/CreatureReactions.h"
+#include "render/DungeonbookAppearanceConfig.h"
+#include "render/DungeonbookQuirks.h"
+#include "render/PortraitManifestRegistry.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -112,6 +117,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "utils/ResourceManager.h"
 
 #include <CEGUI/Event.h>
 #include <CEGUI/Image.h>
@@ -158,6 +164,51 @@ static double getTargetDistanceFactor(const Creature& attacker, const GameEntity
         return COMBAT_CLASS_SUPPORT_TARGET_FACTOR;
 
     return 1.0;
+}
+
+namespace
+{
+//! Turns between two tries to assign a missing appearance
+const uint32_t APPEARANCE_RETRY_TURNS = 200;
+
+//! \brief Server side registry of the portrait manifests used to assign the Dungeonbook appearance.
+//! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
+PortraitManifestRegistry& getAppearanceRegistry()
+{
+    static PortraitManifestRegistry registry;
+    static bool initialized = false;
+    if(!initialized)
+    {
+        initialized = true;
+        std::string path = ConfigManager::getSingleton().getConfigPath();
+        if(!path.empty() && (path[path.size() - 1] != '/') && (path[path.size() - 1] != '\\'))
+            path += "/";
+
+        DungeonbookAppearanceConfig config;
+        config.loadFromFile(path + "dungeonbook-appearance.cfg");
+        const std::vector<std::string>& warnings = config.getWarnings();
+        for(std::vector<std::string>::const_iterator it = warnings.begin(); it != warnings.end(); ++it)
+        {
+            OD_LOG_WRN("Dungeonbook appearance: " + *it);
+        }
+
+        std::string root = config.getAssetRoot();
+        if(root.empty())
+            root = "materials/portraits/variants";
+
+        bool isAbsolute = (root.size() > 1) && ((root[1] == ':') || (root[0] == '/') || (root[0] == '\\'));
+        if(!isAbsolute)
+            root = ResourceManager::getSingleton().getGameDataPath() + root;
+
+        registry.setAssetRoot(root);
+    }
+    return registry;
+}
+
+uint32_t getAppearanceRandom(uint32_t min, uint32_t max)
+{
+    return Random::Uint(min, max);
+}
 }
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
@@ -418,6 +469,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
+    mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
@@ -459,6 +511,10 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mPosition = position;
     setMeshName(definition->getMeshName());
     setName(getGameMap()->nextUniqueNameCreature(definition->getClassName()));
+
+    // First spawn: the Dungeonbook appearance is chosen once and never changed afterwards
+    if(getIsOnServerMap())
+        assignAppearance(true);
 
     mMaxHP = mDefinition->getMinHp();
     setHP(mMaxHP);
@@ -519,6 +575,7 @@ Creature::Creature(GameMap* gameMap) :
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
+    mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
@@ -687,7 +744,7 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects";
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]";
 
     return format;
 }
@@ -736,6 +793,10 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t";
         CreatureEffectManager::write(*creatureParticleEffect->mEffect, os);
     }
+
+    // Optional last token, missing in old saves and for creatures without appearance
+    if(!mAppearance.isEmpty())
+        os << "\t" << CreatureAppearanceLogic::toToken(mAppearance);
 }
 
 bool Creature::importFromStream(std::istream& is)
@@ -805,7 +866,97 @@ bool Creature::importFromStream(std::istream& is)
         addCreatureEffect(effect);
     }
 
+    // Optional appearance token. Old saves end after the effects.
+    std::string appearanceToken;
+    if(is >> appearanceToken)
+    {
+        if(!CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
+        {
+            OD_LOG_WRN("Invalid appearance token=" + appearanceToken);
+        }
+    }
+
     return true;
+}
+
+void Creature::assignAppearance(bool firstSpawn)
+{
+    if(!getIsOnServerMap() || (mDefinition == nullptr))
+        return;
+
+    PortraitManifestRegistry& registry = getAppearanceRegistry();
+    CreatureAppearanceLogic::CatalogExistsFunction exists =
+        std::bind(&PortraitManifestRegistry::hasCatalog, &registry, std::placeholders::_1);
+    std::string catalogId = CreatureAppearanceLogic::resolveCatalogId(mDefinition->getMeshName(), getGender(), exists);
+    if(catalogId.empty())
+        return;
+
+    const PortraitManifest* manifest = registry.getManifest(catalogId);
+    std::vector<std::string> messages = registry.takeMessages();
+    for(std::vector<std::string>::const_iterator it = messages.begin(); it != messages.end(); ++it)
+    {
+        OD_LOG_WRN("Dungeonbook appearance: " + *it);
+    }
+
+    // No manifest (yet): the appearance is derived later like for old saves, a stored one is kept
+    if(manifest == nullptr)
+        return;
+
+    if(firstSpawn)
+    {
+        std::vector<CreatureAppearance> taken;
+        std::vector<Creature*> mates = getGameMap()->getCreaturesBySeat(getSeat());
+        for(std::vector<Creature*>::const_iterator it = mates.begin(); it != mates.end(); ++it)
+        {
+            const CreatureAppearance& other = (*it)->getAppearance();
+            if(other.getCatalogId() == catalogId)
+                taken.push_back(other);
+        }
+
+        mAppearance = CreatureAppearanceLogic::pickRandom(*manifest, catalogId, getAppearanceRandom, taken);
+        return;
+    }
+
+    if(mAppearance.isEmpty())
+        mAppearance = CreatureAppearanceLogic::pickStable(*manifest, catalogId, getName());
+    else
+        CreatureAppearanceLogic::validate(*manifest, catalogId, getName(), mAppearance);
+}
+
+void Creature::retryAppearance()
+{
+    if(mAppearanceRetryTurns > 0)
+    {
+        --mAppearanceRetryTurns;
+        return;
+    }
+    mAppearanceRetryTurns = APPEARANCE_RETRY_TURNS;
+
+    // Same derivation as for old saves
+    assignAppearance(false);
+    if(mAppearance.isEmpty())
+        return;
+
+    // Clients that already know the creature get the new appearance once, the others receive it
+    // with the full creature data when they see it
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureAppearance, seat->getPlayer());
+        notification->mPacket << getName() << CreatureAppearanceLogic::toToken(mAppearance);
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
+void Creature::setAppearanceFromServer(const CreatureAppearance& appearance)
+{
+    if(getIsOnServerMap())
+        return;
+
+    mAppearance = appearance;
 }
 
 void Creature::buildStats()
@@ -911,6 +1062,10 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
+    // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
+    os << CreatureAppearanceLogic::toToken(mAppearance);
+    // Last field: the carried gold, shown as a sack on the thief
+    os << mGoldCarried;
 }
 
 void Creature::importFromPacket(ODPacket& is)
@@ -967,6 +1122,16 @@ void Creature::importFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+    // The client only takes over the appearance the server has chosen, it never rolls one itself
+    std::string appearanceToken;
+    OD_ASSERT_TRUE(is >> appearanceToken);
+    mAppearance = CreatureAppearance();
+    if(!appearanceToken.empty() && !CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
+    {
+        OD_LOG_ERR("Invalid appearance token=" + appearanceToken);
+    }
+    OD_ASSERT_TRUE(is >> mGoldCarried);
+
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
 
@@ -1143,6 +1308,10 @@ void Creature::dropCarriedEquipment()
 
 void Creature::doUpkeep()
 {
+    // No manifest was available when the creature spawned: assign the appearance as soon as it is
+    if(mAppearance.isEmpty() && getIsOnServerMap())
+        retryAppearance();
+
     // A creature that cannot be controlled anymore is given back to the AI
     if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))
         endPossession();
@@ -1399,9 +1568,11 @@ void Creature::doUpkeep()
             mPrayerRelief = 0;
     }
 
-    // A nemesis brawl may end
+    // A nemesis brawl may end, a brawl restored from a saved game may start
     if(!mBrawlOpponent.empty())
         updateBrawl();
+    else if(!mBrawlResumeOpponent.empty())
+        resumeBrawl();
 
     // The mood from relationship events fades
     if(mRelationshipTempMood != 0)
@@ -2273,6 +2444,8 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
+    // Last field: the carried gold, shown as a sack on the thief
+    os << mGoldCarried;
 }
 
 void Creature::updateFromPacket(ODPacket& is)
@@ -2346,6 +2519,9 @@ void Creature::updateFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+    OD_ASSERT_TRUE(is >> mGoldCarried);
+    // The thief sack follows the gold carried; the creature mesh may not exist yet
+    RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
     if(postSource)
     {
@@ -2895,8 +3071,19 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     bool isAllied = (localSeat != nullptr) &&
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
 
-    page->getChild("Portrait")->setProperty("Image",
-        getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender).getName());
+    // The composed picture of the creature's appearance; without one (no appearance yet, missing or invalid
+    // manifest) the tinted preview portrait is the fallback and no remarks are shown. Asked on every fill, since
+    // the appearance can arrive later, and the image is set right away because the cache may release it.
+    const CEGUI::Image* appearanceImage = getCreatureAppearanceImage(getName(), mAppearance);
+    if(appearanceImage != nullptr)
+    {
+        page->getChild("Portrait")->setProperty("Image", appearanceImage->getName());
+    }
+    else
+    {
+        page->getChild("Portrait")->setProperty("Image",
+            getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender).getName());
+    }
     page->getChild("NameText")->setText(profile.getFullName());
 
     std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
@@ -2930,6 +3117,14 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + 2);
     page->getChild("LikesText")->setText("Likes: " + joinProfileList(likes));
     page->getChild("DislikesText")->setText("Dislikes: " + joinProfileList(dislikes));
+    // Remarks that match the parts of the picture, only for the composed picture
+    std::string quirks;
+    if(appearanceImage != nullptr)
+    {
+        quirks = DungeonbookQuirkLogic::formatRemarks(getCreatureAppearanceRemarks(getName(), mAppearance));
+    }
+    page->getChild("QuirksText")->setVisible(!quirks.empty());
+    page->getChild("QuirksText")->setText(quirks);
 
     // Health is shown as the same stage the creature overlay uses, the client has no exact value
     CEGUI::ProgressBar* healthBar = static_cast<CEGUI::ProgressBar*>(page->getChild("HealthBar"));
@@ -3153,13 +3348,14 @@ double Creature::getPitDamageFactor(GameEntity* attacker)
 
 bool Creature::canHaveRelationships() const
 {
-    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled())
+    bool optionOnServerMap = getIsOnServerMap() && getGameMap()->isRelationshipsEnabled();
+    if(!optionOnServerMap)
         return false;
 
-    if((getSeat() == nullptr) || getSeat()->isRogueSeat() || (getSeat()->getFaction() == "Hero"))
-        return false;
-
-    return !getDefinition()->isWorker() && !isInPrison();
+    Seat* seat = getSeat();
+    bool hasSeat = (seat != nullptr);
+    return relationshipsAllowed(optionOnServerMap, hasSeat, hasSeat && seat->isRogueSeat(),
+        hasSeat && (seat->getFaction() == "Hero"), getDefinition()->isWorker(), isInPrison());
 }
 
 double Creature::getRelationshipCombatModifier() const
@@ -3384,22 +3580,23 @@ double Creature::getRelationshipRageFactor(const Seat* victimSeat) const
 
 bool Creature::canStartBrawl() const
 {
-    if(!canHaveRelationships() || !getIsOnMap() || !isAlive() || isKo() || isPossessed() || isBrawling())
+    if(!canHaveRelationships())
         return false;
 
-    if(getPositionTile() == nullptr)
-        return false;
-
-    // Not while fighting, in the arena or the casino, and not when badly hurt
-    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly))
-        return false;
-
-    Room* room = getPositionTile()->getCoveringRoom();
-    if((room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino)))
-        return false;
-
-    int32_t stopPercent = getGameMap()->getCreatureRelationships()->getSettings().mBrawlStopHealthPercent;
-    return (getHP() * 100.0) > (mMaxHP * static_cast<double>(stopPercent + 25));
+    BrawlCandidateState state;
+    state.mAllowed = true;
+    state.mOnMap = getIsOnMap();
+    state.mAlive = isAlive();
+    state.mKo = isKo();
+    state.mPossessed = isPossessed();
+    state.mBrawling = isBrawling();
+    state.mHasTile = (getPositionTile() != nullptr);
+    state.mFighting = isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly);
+    Room* room = state.mHasTile ? getPositionTile()->getCoveringRoom() : nullptr;
+    state.mInArenaOrCasino = (room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino));
+    state.mHp = getHP();
+    state.mMaxHp = mMaxHP;
+    return ::canStartBrawl(state, getGameMap()->getCreatureRelationships()->getSettings());
 }
 
 void Creature::startBrawl(Creature& opponent)
@@ -3439,15 +3636,23 @@ void Creature::updateBrawl()
         return;
     }
 
-    const RelationshipSettings& settings = relationships->getSettings();
-    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
-    bool stop = !isAlive() || !opponent->isAlive() || isKo() || opponent->isKo()
-        || isPossessed() || opponent->isPossessed()
-        || (getHP() <= (mMaxHP * stopRatio)) || (opponent->getHP() <= (opponent->mMaxHP * stopRatio))
-        || ((getGameMap()->getTurnNumber() - mBrawlStartTurn) >= settings.mBrawlMaxTurns)
-        || !isActionInList(CreatureActionType::fightFriendly);
-    if(stop)
+    BrawlFighterState own;
+    own.mAlive = isAlive();
+    own.mKo = isKo();
+    own.mPossessed = isPossessed();
+    own.mHp = getHP();
+    own.mMaxHp = mMaxHP;
+    BrawlFighterState other;
+    other.mAlive = opponent->isAlive();
+    other.mKo = opponent->isKo();
+    other.mPossessed = opponent->isPossessed();
+    other.mHp = opponent->getHP();
+    other.mMaxHp = opponent->mMaxHP;
+    if(shouldStopBrawl(own, other, getGameMap()->getTurnNumber() - mBrawlStartTurn,
+        isActionInList(CreatureActionType::fightFriendly), relationships->getSettings()))
+    {
         endBrawl();
+    }
 }
 
 void Creature::endBrawl()
@@ -3489,13 +3694,122 @@ void Creature::endBrawl()
     }
 }
 
-void Creature::reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB)
+bool Creature::getRelationshipState(RelationshipCreatureState& state) const
 {
-    if(!creatureA.canHaveRelationships() || !creatureB.canHaveRelationships())
+    state = RelationshipCreatureState();
+    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled())
+        return false;
+
+    GameMap* gameMap = getGameMap();
+    int64_t turn = gameMap->getTurnNumber();
+    state.mName = getName();
+    // The captors belong to creatures that are held prisoner, which cannot have relationships
+    state.mCaptors = mCaptors;
+    if(!canHaveRelationships())
+        return !state.isEmpty();
+
+    state.mGriefMood = mRelationshipTempMood;
+    if(mRageUntilTurn > turn)
+    {
+        state.mRageTurnsLeft = mRageUntilTurn - turn;
+        state.mRageSeatId = mRageSeatId;
+    }
+
+    if(!mBrawlOpponent.empty())
+    {
+        int64_t maxTurns = gameMap->getCreatureRelationships()->getSettings().mBrawlMaxTurns;
+        state.mBrawlOpponent = mBrawlOpponent;
+        state.mBrawlTurnsLeft = std::max<int64_t>(1, maxTurns - (turn - mBrawlStartTurn));
+    }
+    else if(!mBrawlResumeOpponent.empty())
+    {
+        // Saved again before the restored brawl could start
+        state.mBrawlOpponent = mBrawlResumeOpponent;
+        state.mBrawlTurnsLeft = std::max<int64_t>(1, mBrawlResumeTurnsLeft);
+    }
+
+    return !state.isEmpty();
+}
+
+void Creature::setRelationshipState(const RelationshipCreatureState& state)
+{
+    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled())
         return;
 
-    if(creatureA.getSeat() != creatureB.getSeat())
+    GameMap* gameMap = getGameMap();
+    // Captors that are not around any more are ignored
+    mCaptors.clear();
+    for(size_t i = 0; i < state.mCaptors.size() && (mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
+    {
+        if(gameMap->getCreature(state.mCaptors[i]) != nullptr)
+            mCaptors.push_back(state.mCaptors[i]);
+    }
+
+    if(!canHaveRelationships())
         return;
+
+    const RelationshipSettings& settings = gameMap->getCreatureRelationships()->getSettings();
+    int64_t turn = gameMap->getTurnNumber();
+    mRelationshipTempMood = std::max(-settings.mTempMoodMax, std::min(settings.mTempMoodMax, state.mGriefMood));
+    if((state.mRageTurnsLeft > 0) && (state.mRageSeatId >= 0))
+    {
+        mRageUntilTurn = turn + state.mRageTurnsLeft;
+        mRageSeatId = state.mRageSeatId;
+    }
+
+    // The fight itself is not saved: the brawl starts again once both creatures are able to fight
+    if(!state.mBrawlOpponent.empty() && (state.mBrawlTurnsLeft > 0) && (state.mBrawlOpponent != getName()))
+    {
+        static const int64_t RESUME_WAIT_TURNS = 100;
+        mBrawlResumeOpponent = state.mBrawlOpponent;
+        mBrawlResumeTurnsLeft = std::min(state.mBrawlTurnsLeft, settings.mBrawlMaxTurns);
+        mBrawlResumeGiveUpTurn = turn + RESUME_WAIT_TURNS;
+    }
+}
+
+void Creature::resumeBrawl()
+{
+    if(mBrawlResumeOpponent.empty())
+        return;
+
+    GameMap* gameMap = getGameMap();
+    int64_t turn = gameMap->getTurnNumber();
+    Creature* opponent = gameMap->getCreature(mBrawlResumeOpponent);
+    bool valid = (opponent != nullptr) && (opponent->mBrawlResumeOpponent == getName()) && canHaveRelationships()
+        && opponent->canHaveRelationships() && (turn < mBrawlResumeGiveUpTurn);
+    if(!valid)
+    {
+        // The opponent is gone, was not restored as well, or the creatures did not get ready in time
+        mBrawlResumeOpponent.clear();
+        return;
+    }
+
+    // Only one of the two starts the brawl
+    if(getName() > opponent->getName())
+        return;
+
+    if(!canStartBrawl() || !opponent->canStartBrawl())
+        return;
+
+    int64_t turnsLeft = std::min(mBrawlResumeTurnsLeft, opponent->mBrawlResumeTurnsLeft);
+    mBrawlResumeOpponent.clear();
+    opponent->mBrawlResumeOpponent.clear();
+    startBrawl(*opponent);
+    if(isBrawling())
+    {
+        int64_t maxTurns = gameMap->getCreatureRelationships()->getSettings().mBrawlMaxTurns;
+        mBrawlStartTurn = turn - std::max<int64_t>(0, maxTurns - turnsLeft);
+        opponent->mBrawlStartTurn = mBrawlStartTurn;
+    }
+}
+
+void Creature::reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB)
+{
+    if(!relationshipEventAllowed(creatureA.canHaveRelationships(), creatureB.canHaveRelationships(),
+        creatureA.getSeat() == creatureB.getSeat()))
+    {
+        return;
+    }
 
     GameMap* gameMap = creatureA.getGameMap();
     gameMap->getCreatureRelationships()->onRelationshipEvent(event, creatureA.getName(), creatureB.getName(),
@@ -4322,6 +4636,7 @@ void Creature::slap()
     // A slap stops a brawl
     if(!mBrawlOpponent.empty())
         endBrawl();
+    mBrawlResumeOpponent.clear();
 
     if(getSeat() != nullptr)
         ++getSeat()->getStatistics().mCreaturesSlapped;
@@ -4412,6 +4727,13 @@ void Creature::fireCreatureRefreshIfNeeded()
     if(!(mActivity == activity))
     {
         mActivity = activity;
+        mNeedFireRefresh = true;
+    }
+
+    // The carried gold is sent with the update, only when the amount changed
+    if(mGoldCarried != mGoldCarriedNotified)
+    {
+        mGoldCarriedNotified = mGoldCarried;
         mNeedFireRefresh = true;
     }
 
@@ -4577,6 +4899,9 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
                 std::string name = getGameMap()->nextUniqueNameCreature(mDefinition->getClassName());
                 setName(name);
             }
+
+            // Loaded creature: old saves and creatures spawned without a manifest get a stable appearance
+            assignAppearance(false);
         }
     }
 
@@ -5488,6 +5813,7 @@ void Creature::changeSeat(Seat* newSeat)
     mSpecialMood = 0;
     mRelationshipTempMood = 0;
     mRageUntilTurn = 0;
+    mBrawlResumeOpponent.clear();
     mWakefulness = 100;
     mHunger = 0;
     mNbTurnsTorture = 0;

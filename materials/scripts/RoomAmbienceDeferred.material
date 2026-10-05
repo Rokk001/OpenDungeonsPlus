@@ -114,7 +114,7 @@ material RoomAmbRumple
     }
 }
 
-material RoomAmbRing
+material RoomAmbSoftRing
 {
     technique
     {
@@ -127,7 +127,7 @@ material RoomAmbRing
 
             texture_unit
             {
-                texture RoomAmbRing.png
+                texture RoomAmbSoftRing.png
             }
         }
     }

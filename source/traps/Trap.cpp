@@ -139,8 +139,13 @@ void Trap::doUpkeep()
         if (!trapTileData->isActivated())
             continue;
 
+        bool wasReloading = (trapTileData->getReloadTime() > 0);
         if(trapTileData->decreaseReloadTime())
             continue;
+
+        // Tell the clients only when the reload ends, not on every turn
+        if(wasReloading && !isDoor())
+            fireTrapEffect(TrapEffectKind::ready, tile, 1.0);
 
         fireTile(tile, trapTileData);
     }
@@ -159,8 +164,14 @@ bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
     if(manaToFire > 0.0)
         getSeat()->takeMana(manaToFire);
 
+    // Doors report their own effects (a runed door only when it really fires)
+    if(!isDoor())
+        fireTrapEffect(TrapEffectKind::fired, tile, 1.0);
+
     ++getSeat()->getStatistics().mTrapsFired;
     trapTileData->setReloadTime(mReloadTime);
+    if((mReloadTime > 0) && !isDoor())
+        fireTrapEffect(TrapEffectKind::reloading, tile, 1.0);
     if(!trapTileData->decreaseShoot())
         deactivate(tile);
 
@@ -171,6 +182,25 @@ bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
         seat->setVisibleBuildingOnTile(this, tile);
 
     return true;
+}
+
+void Trap::fireTrapEffect(TrapEffectKind kind, Tile* tile, double fraction)
+{
+    if(tile == nullptr)
+        return;
+
+    const std::string& typeName = TrapManager::getTrapNameFromTrapType(getType());
+    for(Seat* seat : tile->getSeatsWithVision())
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::trapEffect, seat->getPlayer());
+        notification->mPacket << static_cast<int32_t>(kind) << tile->getX() << tile->getY()
+            << typeName << static_cast<float>(fraction);
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
 }
 
 bool Trap::forceTrigger(Tile* tile)
@@ -360,6 +390,9 @@ void Trap::activate(Tile* tile)
     trapTileData->setActivated(true);
     trapTileData->setNbShootsBeforeDeactivation(mNbShootsBeforeDeactivation);
     trapTileData->setReloadTime(0);
+    // A trap that was empty is loaded again
+    if(!isDoor() && getGameMap()->isServerGameMap() && !getGameMap()->isInEditorMode())
+        fireTrapEffect(TrapEffectKind::ready, tile, 1.0);
 
     BuildingObject* entity = getBuildingObjectFromTile(tile);
     if (entity == nullptr)

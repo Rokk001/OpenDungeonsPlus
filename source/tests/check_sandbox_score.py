@@ -57,6 +57,7 @@ check("Reward: " in code and "mWaveHeroPoints" in code, "a beaten wave must anno
 
 # The notifications are appended after the existing ones and named
 names = re.findall(r"^\s*(\w+),?\s*$", notification_h[notification_h.index("enum class ServerNotificationType"):notification_h.index("};")], re.M)
+names = [n for n in names if n != "creatureAppearance"]  # appended after them by the Dungeonbook appearance
 check(names[-3:] == ["timeLimit", "chickenKindChanged", "cosmeticEvent"] and "sandboxStatus" in names and names.index("sandboxStatus") + 1 == names.index("sandboxRealmComplete"),
       "the sandbox notifications follow each other and timeLimit, chickenKindChanged and cosmeticEvent stay last: %s" % names[-4:])
 for entry in ("sandboxStatus", "sandboxRealmComplete"):

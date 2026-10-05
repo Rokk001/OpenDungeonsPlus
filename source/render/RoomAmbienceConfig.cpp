@@ -56,6 +56,7 @@ RoomAmbienceConfig::RoomAmbienceConfig() :
     mMaxParticlesReduced(10),
     mMaxMotions(40),
     mMaxOneShots(8),
+    mMaxMarks(6),
     mOccupiedRadius(2.2),
     mReducedDistanceFactor(0.55)
 {
@@ -69,6 +70,14 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::occupied;
     else if(text == "Empty")
         when = AmbienceWhen::empty;
+    else if(text == "Hit")
+        when = AmbienceWhen::hit;
+    else if(text == "Locked")
+        when = AmbienceWhen::locked;
+    else if(text == "Reloading")
+        when = AmbienceWhen::reloading;
+    else if(text == "Ready")
+        when = AmbienceWhen::ready;
     else if(text == "Vacated")
         when = AmbienceWhen::vacated;
     else
@@ -183,6 +192,8 @@ bool RoomAmbienceConfig::loadSettings(std::istream& file)
             mMaxMotions = Helper::toUInt32(words[1]);
         else if(words[0] == "MaxOneShots")
             mMaxOneShots = Helper::toUInt32(words[1]);
+        else if(words[0] == "MaxMarks")
+            mMaxMarks = Helper::toUInt32(words[1]);
         else if(words[0] == "OccupiedRadius")
             mOccupiedRadius = Helper::toDouble(words[1]);
         else if(words[0] == "ReducedDistanceFactor")
@@ -286,6 +297,12 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::clip;
             else if(words[1] == "Model")
                 effect.mKind = AmbienceKind::model;
+            else if(words[1] == "Shake")
+                effect.mKind = AmbienceKind::shake;
+            else if(words[1] == "Mark")
+                effect.mKind = AmbienceKind::mark;
+            else if(words[1] == "Sound")
+                effect.mKind = AmbienceKind::sound;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);
@@ -299,6 +316,14 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "Mesh")
         {
             effect.mMesh = words[1];
+        }
+        else if(key == "Family")
+        {
+            effect.mFamily = words[1];
+        }
+        else if(key == "Delay")
+        {
+            effect.mDelay = Helper::toDouble(words[1]);
         }
         else if(key == "Clips")
         {

@@ -230,9 +230,6 @@ ProtectDungeonTemple	NULL
 3	76	2	100
 3	77	3	100
 4	0	3	100
-4	11	1	0
-4	12	1	0
-4	13	1	0
 4	27	2	100
 4	46	2	100
 4	52	1	0
@@ -243,8 +240,6 @@ ProtectDungeonTemple	NULL
 4	74	2	100
 4	77	3	100
 5	0	3	100
-5	10	1	0
-5	11	1	0
 5	12	1	0
 5	13	1	0
 5	14	1	0	1
@@ -266,10 +261,7 @@ ProtectDungeonTemple	NULL
 6	0	3	100
 6	8	1	0	1
 6	9	1	0	1
-6	10	1	0
-6	11	1	0
 6	12	1	0
-6	13	1	0
 6	14	1	0	1
 6	15	1	0	1
 6	26	2	100
@@ -286,13 +278,9 @@ ProtectDungeonTemple	NULL
 7	0	3	100
 7	8	1	0	1
 7	9	1	0	1
-7	10	1	0
-7	11	1	0
 7	12	1	0
-7	13	1	0
 7	14	1	0	1
 7	15	1	0	1
-7	16	1	0
 7	39	1	0
 7	40	1	0
 7	41	1	0
@@ -309,14 +297,7 @@ ProtectDungeonTemple	NULL
 8	0	3	100
 8	8	1	0	1
 8	9	1	0	1
-8	10	1	0
-8	11	1	0
 8	12	1	0
-8	13	1	0
-8	14	1	0
-8	15	1	0
-8	16	1	0
-8	17	1	0
 8	37	1	0
 8	38	1	0
 8	39	1	0
@@ -339,11 +320,8 @@ ProtectDungeonTemple	NULL
 9	6	1	0	1
 9	7	1	0
 9	8	1	0
-9	9	1	0
 9	10	1	0
-9	11	1	0
 9	12	1	0
-9	13	1	0
 9	14	1	0
 9	15	1	0
 9	16	1	0
@@ -372,7 +350,6 @@ ProtectDungeonTemple	NULL
 10	0	3	100
 10	5	1	0	1
 10	6	1	0	1
-10	7	1	0
 10	8	1	0
 10	9	1	0
 10	10	1	0	1
@@ -380,8 +357,6 @@ ProtectDungeonTemple	NULL
 10	12	1	0	1
 10	13	1	0	1
 10	14	1	0	1
-10	15	1	0
-10	16	1	0
 10	17	1	0	1
 10	18	1	0	1
 10	36	1	0
@@ -406,25 +381,12 @@ ProtectDungeonTemple	NULL
 11	0	3	100
 11	5	1	0	1
 11	6	1	0	1
-11	7	1	0
-11	8	1	0
-11	9	1	0
 11	10	1	0	1
 11	11	1	0	1
 11	12	1	0	1
 11	13	1	0	1
 11	14	1	0	1
 11	15	1	0
-11	16	1	0
-11	17	1	0
-11	18	1	0
-11	19	1	0
-11	20	1	0
-11	21	1	0
-11	22	1	0
-11	23	1	0
-11	24	1	0
-11	25	1	0
 11	36	1	0
 11	37	1	0
 11	38	1	0
@@ -447,28 +409,11 @@ ProtectDungeonTemple	NULL
 11	70	1	0
 11	77	3	100
 12	0	3	100
-12	6	1	0
-12	7	1	0
-12	8	1	0
-12	9	1	0
 12	10	1	0	1
 12	11	1	0	1
 12	12	1	0	1
 12	13	1	0	1
 12	14	1	0	1
-12	15	1	0
-12	16	1	0
-12	17	1	0
-12	18	1	0
-12	19	1	0
-12	20	1	0
-12	21	1	0
-12	22	1	0
-12	23	1	0
-12	24	1	0
-12	25	1	0
-12	26	1	0
-12	27	1	0
 12	28	1	0
 12	29	1	0
 12	30	1	0
@@ -495,10 +440,6 @@ ProtectDungeonTemple	NULL
 12	70	1	0
 12	77	3	100
 13	0	3	100
-13	6	1	0
-13	7	1	0
-13	8	1	0
-13	9	1	0
 13	10	1	0	1
 13	11	1	0	1
 13	12	1	0	1
@@ -508,14 +449,6 @@ ProtectDungeonTemple	NULL
 13	16	1	0
 13	17	1	0	1
 13	18	1	0	1
-13	20	1	0
-13	21	1	0
-13	22	1	0
-13	23	1	0
-13	24	1	0
-13	25	1	0
-13	26	1	0
-13	27	1	0
 13	28	1	0
 13	29	1	0
 13	30	1	0
@@ -556,11 +489,8 @@ ProtectDungeonTemple	NULL
 14	12	1	0	1
 14	13	1	0	1
 14	14	1	0	1
-14	15	1	0
-14	16	1	0
 14	17	1	0	1
 14	18	1	0	1
-14	26	1	0
 14	30	1	0
 14	31	1	0
 14	32	1	0
@@ -606,18 +536,10 @@ ProtectDungeonTemple	NULL
 15	0	3	100
 15	5	1	0	1
 15	6	1	0	1
-15	7	1	0
-15	8	1	0
 15	9	1	0
-15	10	1	0
 15	11	1	0
 15	12	1	0
-15	13	1	0
 15	14	1	0
-15	15	1	0
-15	16	1	0
-15	17	1	0
-15	18	1	0
 15	31	1	0
 15	32	1	0
 15	33	1	0
@@ -647,17 +569,12 @@ ProtectDungeonTemple	NULL
 16	0	3	100
 16	5	1	0	1
 16	6	1	0	1
-16	7	1	0
 16	8	1	0	1
 16	9	1	0	1
-16	10	1	0
 16	11	1	0
-16	12	1	0
-16	13	1	0
 16	14	1	0
 16	15	1	0	1
 16	16	1	0	1
-16	17	1	0
 16	30	1	0
 16	31	1	0
 16	32	1	0
@@ -688,17 +605,10 @@ ProtectDungeonTemple	NULL
 17	0	3	100
 17	5	1	0	1
 17	6	1	0	1
-17	7	1	0
 17	8	1	0	1
 17	9	1	0	1
-17	10	1	0
-17	11	1	0
-17	12	1	0
-17	13	1	0
-17	14	1	0
 17	15	1	0	1
 17	16	1	0	1
-17	17	1	0
 17	29	1	0
 17	30	1	0
 17	31	1	0
@@ -730,11 +640,6 @@ ProtectDungeonTemple	NULL
 18	0	3	100
 18	8	1	0	1
 18	9	1	0	1
-18	10	1	0
-18	11	1	0
-18	12	1	0
-18	13	1	0
-18	14	1	0
 18	15	1	0	1
 18	16	1	0	1
 18	28	1	0
@@ -764,11 +669,6 @@ ProtectDungeonTemple	NULL
 18	69	1	0
 18	77	3	100
 19	0	3	100
-19	9	1	0
-19	10	1	0
-19	11	1	0
-19	12	1	0
-19	13	1	0
 19	28	1	0
 19	29	1	0
 19	30	1	0
@@ -795,10 +695,6 @@ ProtectDungeonTemple	NULL
 19	69	1	0
 19	77	3	100
 20	0	3	100
-20	11	1	0
-20	12	1	0
-20	13	1	0
-20	27	1	0
 20	28	1	0
 20	29	1	0
 20	30	1	0
@@ -824,11 +720,6 @@ ProtectDungeonTemple	NULL
 21	0	3	100
 21	1	2	100
 21	2	2	100
-21	11	1	0
-21	12	1	0
-21	13	1	0
-21	26	1	0
-21	27	1	0
 21	28	1	0
 21	29	1	0
 21	30	1	0
@@ -854,12 +745,6 @@ ProtectDungeonTemple	NULL
 22	0	3	100
 22	2	2	100
 22	4	2	100
-22	10	1	0
-22	11	1	0
-22	12	1	0
-22	13	1	0
-22	26	1	0
-22	27	1	0
 22	28	1	0
 22	29	3	100
 22	30	3	100
@@ -886,13 +771,6 @@ ProtectDungeonTemple	NULL
 23	2	2	100
 23	3	2	100
 23	4	2	100
-23	10	1	0
-23	11	1	0
-23	12	1	0
-23	13	1	0
-23	25	1	0
-23	26	1	0
-23	27	1	0
 23	28	1	0
 23	29	3	100
 23	30	3	100
@@ -921,13 +799,6 @@ ProtectDungeonTemple	NULL
 24	2	2	100
 24	3	2	100
 24	4	2	100
-24	10	1	0
-24	11	1	0
-24	12	1	0
-24	13	1	0
-24	25	1	0
-24	26	1	0
-24	27	1	0
 24	28	3	100
 24	29	3	100
 24	30	3	100
@@ -954,14 +825,6 @@ ProtectDungeonTemple	NULL
 24	73	2	100
 24	77	3	100
 25	0	3	100
-25	10	1	0
-25	11	1	0
-25	12	1	0
-25	13	1	0
-25	24	1	0
-25	25	1	0
-25	26	1	0
-25	27	1	0
 25	28	1	0
 25	29	3	100
 25	30	3	100
@@ -989,14 +852,6 @@ ProtectDungeonTemple	NULL
 25	73	2	100
 25	77	3	100
 26	0	3	100
-26	10	1	0
-26	11	1	0
-26	12	1	0
-26	13	1	0
-26	24	1	0
-26	25	1	0
-26	26	1	0
-26	27	1	0
 26	28	1	0
 26	29	3	100
 26	30	3	100
@@ -1025,14 +880,6 @@ ProtectDungeonTemple	NULL
 26	74	2	100
 26	77	3	100
 27	0	3	100
-27	10	1	0
-27	11	1	0
-27	12	1	0
-27	23	1	0
-27	24	1	0
-27	25	1	0
-27	26	1	0
-27	27	1	0
 27	28	1	0
 27	29	1	0
 27	30	1	0
@@ -3617,8 +3464,36 @@ Action	objective	1	Reach the chapel and strike down the warden.
 Name	hollowFound
 Mode	once
 Cond	region	1	SealedHollow
-Action	message	1	This hollow was bricked up by the sisters. A pale stone in the wall pulses in time with your heart, and a hidden hall has opened.
+Action	message	1	The sisters bricked this hollow up. A pale stone sits in the wall niche, and a lost goblin has lifted it. Bring it to your dungeon heart.
+Action	spawn	1	6	54	1	Goblin:1@HollowBearer
+Action	stoneattach	HollowBearer
+Action	setflag	hollowStone	1
+Action	timer	hollowSpawn	0
+[/Trigger]
+[Trigger]
+Name	hollowStoneHome
+Mode	once
+Cond	reached	HollowBearer	heart	1
+Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/CrowshotGallery.level
+[/Trigger]
+[Trigger]
+Name	hollowStoneLost
+Mode	repeat	60
+Cond	flag	hollowStone	1
+Cond	timer	hollowSpawn	>=	5
+Cond	alive	HollowBearer	0
+Action	message	1	The stone-bearer has fallen. Another goblin has lifted the stone in the hollow.
+Action	spawn	1	6	54	1	Goblin:1@HollowBearer
+Action	stoneattach	HollowBearer
+[/Trigger]
+[Trigger]
+Name	fenDrains
+Mode	once
+Cond	claimed	1	Fen	120
+Action	message	1	With so much of the fen under your claim, the reed pool has drained and a spring of raw mana has surfaced beside it.
+Action	terrain	27	35	33	37	path
+Action	terrain	38	36	38	36	manawell	1
 [/Trigger]
 [Trigger]
 Name	patrol1

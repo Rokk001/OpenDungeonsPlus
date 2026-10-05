@@ -159,6 +159,24 @@ private:
     bool mRemoveTrap;
 };
 
+//! \brief What a trap effect notification tells the clients (see ServerNotificationType::trapEffect).
+//! New values are only added at the end.
+enum class TrapEffectKind : int32_t
+{
+    //! The trap went off just now
+    fired = 0,
+    //! A trigger trap set this (linked) trap off or marked it
+    linked = 1,
+    //! A door took damage; the health fraction tells how much is left
+    doorHit = 2,
+    //! A door was destroyed
+    doorWrecked = 3,
+    //! The trap fired and now reloads (or is empty if it was the last shot); sent once, not every turn
+    reloading = 4,
+    //! The trap is loaded again; sent once when the reload ends
+    ready = 5
+};
+
 /*! \class Trap Trap.h
  *  \brief Defines a trap
  */
@@ -198,6 +216,10 @@ public:
 
     //! \brief Number of tiles of this trap that are armed.
     uint32_t getNbActivatedTiles() const;
+
+    //! \brief Tells the human seats that see the tile about a trap effect (cosmetic only).
+    //! fraction is the health left of a door (0 to 1), 1 for everything else.
+    void fireTrapEffect(TrapEffectKind kind, Tile* tile, double fraction);
 
     virtual bool isDoor() const
     { return false; }

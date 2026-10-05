@@ -19,6 +19,8 @@
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
+#include "entities/Tile.h"
+#include "spells/Spell.h"
 
 static const std::string CreatureEffectHexenHenName = "HexenHen";
 
@@ -52,6 +54,10 @@ void CreatureEffectHexenHen::applyEffect(Creature& creature)
         return;
 
     creature.requestRefresh();
+
+    Tile* posTile = creature.getPositionTile();
+    if(posTile != nullptr)
+        Spell::fireSpellEffect(*posTile, "Hen", "Hen");
 }
 
 CreatureEffectHexenHen* CreatureEffectHexenHen::load(std::istream& is)

@@ -45,6 +45,14 @@ enum class AmbienceWhen
     occupied,
     //! No creature was close to the target for the time given in mAfter
     empty,
+    //! The target (a door) took a hit a moment ago
+    hit,
+    //! The target (a door) is closed, which is what a lock by the keeper does
+    locked,
+    //! The target (a trap) reloads or is empty, as the server reported it
+    reloading,
+    //! The target (a trap) is loaded and ready, the opposite of reloading
+    ready,
     //! A creature was close at some time while the target was in view and none has been for mAfter seconds (a bed after the sleeper left)
     vacated
 };
@@ -58,7 +66,15 @@ enum class AmbienceKind
     //! Now and then a clip of the object's own mesh (a chicken scratching)
     clip,
     //! A small static decoration mesh placed on a tile (a weapon rack, a banner), with an optional motion
-    model
+    model,
+    //! A short shake of the view (events only): Amount = strength in world units, Speed = shakes per second,
+    //! Duration in seconds, MaxDistance = distance of the event from the middle of the view beyond which it is not felt
+    shake,
+    //! A particle system that stays on the floor for Duration seconds (events only); the oldest mark is removed
+    //! when there are more than MaxMarks
+    mark,
+    //! A sound of the family given by Family: played at the event, or now and then (Every) at an object
+    sound
 };
 
 enum class AmbienceMotion
@@ -92,6 +108,7 @@ struct AmbienceEffect
         mSpeed(1.0),
         mFlicker(0.0),
         mDuration(3.0),
+        mDelay(0.0),
         mEvery(10.0),
         mChance(1.0),
         mSpacing(1),
@@ -130,6 +147,10 @@ struct AmbienceEffect
     double mFlicker;
     //! Seconds a one-shot effect is kept
     double mDuration;
+    //! Sound family, as in the folders below sounds/Spatial (kind sound)
+    std::string mFamily;
+    //! Seconds after the event until the sound is played (kind sound, events only)
+    double mDelay;
     //! Average seconds between two clips (kind clip)
     double mEvery;
     //! Chance that an event effect is shown
@@ -175,6 +196,8 @@ public:
     { return mMaxMotions; }
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
+    uint32_t getMaxMarks() const
+    { return mMaxMarks; }
     double getOccupiedRadius() const
     { return mOccupiedRadius; }
     double getReducedDistanceFactor() const
@@ -195,6 +218,7 @@ private:
     uint32_t mMaxParticlesReduced;
     uint32_t mMaxMotions;
     uint32_t mMaxOneShots;
+    uint32_t mMaxMarks;
     double mOccupiedRadius;
     double mReducedDistanceFactor;
 };

@@ -1676,4 +1676,11 @@ Cond	time	2200
 Action	message	1	A larger party is on its way, master.
 Action	spawn	2	60	45	1	Knight:1	Elf:1	Adventurer:2	Monk:1
 [/Trigger]
+[Trigger]
+Name	hollowWell
+Mode	once
+Cond	slabs	1	Hollow	claimed	>=	15
+Action	message	1	Your claim on the hollow has opened a spring of mana beside the pond. Claim it with a worker and your spells will come faster.
+Action	terrain	19	48	19	48	manawell
+[/Trigger]
 [/Triggers]

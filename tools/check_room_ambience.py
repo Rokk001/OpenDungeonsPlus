@@ -15,17 +15,22 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "OccupiedRadius",
+SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "OccupiedRadius",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "WallSide", "HeartRate", "Sound", "Mesh")
+               "NeedWall", "Clips", "Every", "Family", "Delay", "WallSide", "HeartRate", "Sound", "Mesh")
 TARGETS = ("Object", "Tile", "Event")
-WHENS = ("Always", "Occupied", "Empty", "Vacated")
-KINDS = ("Particle", "Motion", "Clip", "Model")
+WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "Vacated")
+KINDS = ("Particle", "Motion", "Clip", "Model", "Shake", "Mark", "Sound")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
+# Events of the trap and door messages of the server; their Match names a trap or door type
+TRAP_EVENTS = ("TrapFired", "TrapLinked", "DoorHit", "DoorHurt", "DoorWrecked", "DoorOpen", "DoorClose", "TrapBuilt",
+               "TrapSold")
+TRAP_TYPES = ("Spike", "Alarm", "Fear", "Gas", "Lightning", "Fireburst", "Freeze", "WatchBanner", "Trigger", "Cannon",
+              "Boulder", "DoorWooden", "DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRuned")
 # Tile visuals a bridge can lie over
 BRIDGE_VISUALS = ("lavaGround", "waterGround")
 
@@ -171,12 +176,40 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: event effect without Event" % where)
         else:
             counts["names"].add(effect["Event"][0])
-        if kind != "Particle":
-            problems.append("%s: event effects must be particles" % where)
+        if kind not in ("Particle", "Shake", "Mark", "Sound"):
+            problems.append("%s: event effects must be particles, shakes, marks or sounds" % where)
     else:
         if "Match" not in effect:
             problems.append("%s: no Match" % where)
-    if kind == "Particle":
+    if kind == "Sound":
+        family = effect.get("Family", [None])[0]
+        if target == "Tile":
+            problems.append("%s: sounds only work on objects and events" % where)
+        if family is None:
+            problems.append("%s: sound without Family" % where)
+        else:
+            folder = os.path.join(ROOT, "sounds", "Spatial", *family.split("/"))
+            if not glob.glob(os.path.join(folder, "*.ogg")):
+                problems.append("%s: no .ogg file for sound family %s" % (where, family))
+        if "Delay" in effect and target != "Event":
+            problems.append("%s: Delay only works for events" % where)
+        if target == "Object" and "Every" not in effect:
+            problems.append("%s: a sound on an object needs Every" % where)
+    elif "Family" in effect or "Delay" in effect:
+        problems.append("%s: Family and Delay only belong to sounds" % where)
+    if when in ("Locked", "Reloading", "Ready") and target != "Object":
+        problems.append("%s: When %s only works on objects" % (where, when))
+    if kind in ("Shake", "Mark") and target != "Event":
+        problems.append("%s: shakes and marks only work as events" % where)
+    if kind == "Shake":
+        for key in ("Amount", "Duration", "Speed", "MaxDistance"):
+            if key not in effect:
+                problems.append("%s: shake without %s" % (where, key))
+        if "Amount" in effect and is_number(effect["Amount"][0]) and float(effect["Amount"][0]) > 0.5:
+            problems.append("%s: shake Amount above 0.5 is too strong" % where)
+        if "Duration" in effect and is_number(effect["Duration"][0]) and float(effect["Duration"][0]) > 2.0:
+            problems.append("%s: shake Duration above 2 seconds" % where)
+    if kind in ("Particle", "Mark"):
         system = effect.get("System", [None])[0]
         if system is None:
             problems.append("%s: particle without System" % where)
@@ -212,7 +245,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: clips only work on objects" % where)
         if not effect.get("Clips"):
             problems.append("%s: clip effect without Clips" % where)
-    for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority"):
+    for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority",
+                "Delay"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
     for key in ("Offset", "Axis"):
@@ -244,6 +278,9 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             name = match[len("bridge:"):]
             if name not in BRIDGE_VISUALS and not mesh_exists(name):
                 problems.append("%s: unknown bridge mesh or visual %s" % (where, name))
+        elif target == "Event" and effect.get("Event", [""])[0] in TRAP_EVENTS:
+            if match not in TRAP_TYPES:
+                problems.append("%s: unknown trap or door type %s" % (where, match))
         elif match not in visuals:
             problems.append("%s: unknown tile visual %s" % (where, match))
     counts["effects"] += 1

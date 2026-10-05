@@ -132,8 +132,8 @@ def main():
     print("wrote Gong01.ogg")
     write_ogg(crow(), os.path.join(root, "sounds", "Spatial", "Rooms", "Hatchery", "RoosterCrow", "RoosterCrow01.ogg"))
     print("wrote RoosterCrow01.ogg")
-    write_ogg(cluck(), os.path.join(root, "sounds", "Spatial", "Rooms", "Hatchery", "Cluck", "Cluck01.ogg"))
-    print("wrote Cluck01.ogg")
+    write_ogg(cluck(), os.path.join(root, "sounds", "Spatial", "Rooms", "Hatchery", "Cluck", "Cluck03.ogg"))
+    print("wrote Cluck03.ogg")
 
 
 if __name__ == "__main__":

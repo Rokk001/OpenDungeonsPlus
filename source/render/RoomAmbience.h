@@ -78,12 +78,29 @@ public:
 
     //! \brief Shows the one-shot effects of the given event at the given place.
     //! forced ignores the chance, the view test and the mode "reduced". visualName is the tile visual
-    //! (room) the event is about; empty = the one of the tile at the position. Returns the number of effects started
+    //! (room) the event is about; empty = the one of the tile at the position. noThrottle lets the same event
+    //! start again within a tenth of a second (a spell cast on several creatures at once).
+    //! Returns the number of effects started
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
-        const std::string& visualName = std::string());
+        const std::string& visualName = std::string(), bool noThrottle = false);
+
+    //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
+    //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
+    //! Kinds reloading and ready only set the state for the effects "When Reloading" and "When Ready".
+    //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
+    //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
+    void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
+
+    //! \brief Plays the sound of the family (a folder below sounds/Spatial) at the position
+    void playSound(const std::string& family, const Ogre::Vector3& position);
+
+    //! \brief Moves the camera by the current shake. Called just before the frame is rendered; clearShake()
+    //! takes it away again after the frame, so nothing else ever sees the shaken camera.
+    void applyShake();
+    void clearShake();
 
     inline uint32_t getNbParticleSystems() const
-    { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size()); }
+    { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size() + mMarks.size()); }
     inline uint32_t getNbMovedObjects() const
     { return static_cast<uint32_t>(mMotionNodes.size()); }
 
@@ -125,6 +142,31 @@ private:
         Ogre::SceneNode* mNode;
         Ogre::ParticleSystem* mSystem;
         double mLife;
+    };
+
+    //! \brief The remains of a destroyed barricade, which plays the clip Collapse and then sinks into the floor
+    struct Collapse
+    {
+        Collapse() :
+            mNode(nullptr), mEntity(nullptr), mAge(0.0), mBaseHeight(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        double mAge;
+        double mBaseHeight;
+    };
+
+    //! \brief A sound that waits for its time (Delay of an event effect)
+    struct PendingSound
+    {
+        PendingSound() :
+            mPosition(Ogre::Vector3::ZERO), mDue(0.0)
+        {}
+
+        std::string mFamily;
+        Ogre::Vector3 mPosition;
+        double mDue;
     };
 
     struct MotionInstance
@@ -199,10 +241,20 @@ private:
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
+    void scanCreatureEvents();
     void reconcile();
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
-    void updateOneShots(double timeSinceLastFrame);
+    void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
+    void updatePendingSounds();
+    //! \brief Lets a destroyed barricade (the door entity on the tile, which the server is about to remove)
+    //! fall into a heap with the clip Collapse of its skeleton
+    void startCollapse(int32_t tileX, int32_t tileY);
+    void updateCollapses(double timeSinceLastFrame);
+    void destroyCollapse(Collapse& collapse);
+    void updateShake(double timeSinceLastFrame);
+    //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
+    void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
     void updateMotions(double timeSinceLastFrame);
     void destroyEmitter(Emitter& emitter);
     bool createModel(const std::string& mesh, const Ogre::Vector3& position, double yaw, const std::string& baseName,
@@ -249,9 +301,28 @@ private:
 
     std::map<std::string, Emitter> mEmitters;
     std::vector<OneShot> mOneShots;
+    //! Ground marks (kind mark), oldest first
+    std::vector<OneShot> mMarks;
     std::map<std::string, MotionNode> mMotionNodes;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;
+    //! View shake: seconds left and in total, strength in world units at the start, shakes per second, phase
+    double mShakeTime;
+    double mShakeTotal;
+    double mShakeAmount;
+    double mShakeSpeed;
+    double mShakePhase;
+    //! Offset the camera node was moved by in applyShake (zero when not applied)
+    Ogre::Vector3 mShakeApplied;
+    //! Time until which a door (key "x,y" of its tile) counts as hit, for the effects "When Hit"
+    std::map<std::string, double> mHitUntil;
+    //! Time until which a trap (key "x,y" of its tile) counts as reloading or empty, for the effects
+    //! "When Reloading" and "When Ready"
+    std::map<std::string, double> mReloadingUntil;
+    //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
+    std::map<std::string, double> mWreckedUntil;
+    std::vector<PendingSound> mPendingSounds;
+    std::vector<Collapse> mCollapses;
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;
@@ -279,6 +350,21 @@ private:
         Ogre::Vector3 mPosition;
         uint32_t mGeneration;
     };
+    //! What was seen of a creature at the last scan (dormitory wake-up, enemy in a guard room, healing)
+    struct CreatureSnapshot
+    {
+        CreatureSnapshot() :
+            mHp(0.0), mSleeping(false), mEnemyInGuardRoom(false), mLastHealed(-100.0), mGeneration(0)
+        {}
+
+        double mHp;
+        bool mSleeping;
+        bool mEnemyInGuardRoom;
+        double mLastHealed;
+        uint32_t mGeneration;
+    };
+    std::map<std::string, CreatureSnapshot> mKnownCreatures;
+    bool mCreaturesInitialized;
     std::map<std::string, EntitySnapshot> mKnownEntities;
     uint32_t mGeneration;
     bool mEntitiesInitialized;

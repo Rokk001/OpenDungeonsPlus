@@ -167,9 +167,9 @@ particle_system RoomAmbAltarFlame
 }
 
 // Rings of light that spread over the floor when the bell rings
-particle_system RoomAmbBellRing
+particle_system RoomAmbGongRing
 {
-    material        RoomAmbRing
+    material        RoomAmbSoftRing
     point_rendering false
     particle_width  0.4
     particle_height 0.4
@@ -453,7 +453,7 @@ particle_system RoomAmbHeartDrops
 // A violet ring of light where a prisoner changed sides
 particle_system RoomAmbConvertRing
 {
-    material        RoomAmbRing
+    material        RoomAmbSoftRing
     point_rendering false
     particle_width  0.4
     particle_height 0.4
