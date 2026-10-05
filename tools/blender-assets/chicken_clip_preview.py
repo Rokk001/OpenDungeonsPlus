@@ -24,6 +24,8 @@ def main():
     arm = [o for o in bpy.data.objects if o.type == "ARMATURE"][0]
     mesh = [o for o in bpy.data.objects if o.type == "MESH" and o.parent == arm][0]
     scene = bpy.context.scene
+    for shown in (arm, mesh):
+        shown.hide_render = False  # the rooster file keeps its objects hidden for rendering
     scene.render.engine = "BLENDER_WORKBENCH"
     scene.display.shading.light = "STUDIO"
     scene.display.shading.color_type = "TEXTURE"
