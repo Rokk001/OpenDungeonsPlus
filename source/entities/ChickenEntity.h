@@ -58,6 +58,12 @@ public:
     virtual bool tryPickup(Seat* seat) override;
     virtual void pickup() override;
     virtual bool tryDrop(Seat* seat, Tile* tile) override;
+    virtual void drop(const Ogre::Vector3& v) override;
+
+    //! \brief Turns left in which this chicken, dropped by the keeper outside a hatchery, is offered to
+    //! a creature that is not hungry (0 = not offered, see offerGift).
+    inline uint32_t getGiftTurns() const
+    { return mGiftTurns; }
 
     virtual void correctEntityMovePosition(Ogre::Vector2& position) override;
 
@@ -230,12 +236,17 @@ private:
     int32_t mNbTurnDie;
     bool mIsSlapped;
     bool mLockedEat;
+    uint32_t mGiftTurns;
     std::string mLockOwner;
     std::string mSnatchedFrom;
     ChickenFlight::State mFlight;
 
     //! Places (inside the room) the chicken could walk to from the given tile in one step
     void collectMovePositions(Tile* tile, Room* currentHatchery, std::vector<Ogre::Vector2>& positions);
+    //! \brief Server side: the chicken was dropped by the keeper. Offers it to the closest idle creature of
+    //! the keeper that is not hungry, which sniffs at it and eats it slowly anyway (see CreatureActionEatChicken).
+    void offerGift(Tile& tile);
+
     //! A hungry creature that locked this chicken comes close: hop away from it (see ChickenFlight.h).
     //! Returns true if the chicken started to hop.
     bool tryFlee(Tile* tile, Room* currentHatchery);

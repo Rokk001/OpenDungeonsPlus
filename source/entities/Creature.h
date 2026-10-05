@@ -559,17 +559,8 @@ public:
     virtual double getAnimationSpeedFactor() const override
     { return mSpeedModifier; }
 
-    //! \brief Badly hurt creatures walk and breathe a little slower on screen (clients only)
-    virtual double getClientPoseSpeedFactor() const override
-    {
-        if(mOverlayHealthValue >= 6)
-            return 0.78;
-        if(mOverlayHealthValue == 5)
-            return 0.85;
-        if(mOverlayHealthValue == 4)
-            return 0.92;
-        return 1.0;
-    }
+    //! \brief Badly hurt creatures walk and breathe a little slower on screen and so do tired ones, matching their slower speed (clients only)
+    virtual double getClientPoseSpeedFactor() const override;
 
     inline void jobDone(double val)
     {
@@ -592,6 +583,16 @@ public:
         mHunger -= val;
         if(mHunger < 0.0)
             mHunger = 0.0;
+    }
+
+    //! \brief Sets the hunger (0 = full, 100 = starving), server side
+    inline void setHunger(double val)
+    {
+        mHunger = val;
+        if(mHunger < 0.0)
+            mHunger = 0.0;
+        else if(mHunger > 100.0)
+            mHunger = 100.0;
     }
 
     //! \brief Tells whether the creature can go through the given tile.

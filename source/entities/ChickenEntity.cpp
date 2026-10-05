@@ -17,6 +17,7 @@
 
 #include "entities/ChickenEntity.h"
 
+#include "creatureaction/CreatureActionEatChicken.h"
 #include "entities/ChickenFlight.h"
 #include "entities/ChickenPose.h"
 #include "entities/Creature.h"
@@ -40,7 +41,9 @@
 #include "utils/Helper.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
+#include "utils/MakeUnique.h"
 
+#include <algorithm>
 #include <cmath>
 #include <deque>
 #include <iostream>
@@ -71,7 +74,8 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mNbTurnOutsideHatchery(0),
     mNbTurnDie(0),
     mIsSlapped(false),
-    mLockedEat(false)
+    mLockedEat(false),
+    mGiftTurns(0)
 {
 }
 
@@ -97,7 +101,8 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mNbTurnOutsideHatchery(0),
     mNbTurnDie(0),
     mIsSlapped(false),
-    mLockedEat(false)
+    mLockedEat(false),
+    mGiftTurns(0)
 {
     setMeshName("Chicken");
 }
@@ -207,6 +212,9 @@ void ChickenEntity::doUpkeep()
         clearDestinations(EntityAnimation::die_anim, false, false);
         return;
     }
+
+    if(mGiftTurns > 0)
+        offerGift(*tile);
 
     ChickenFlight::tick(mFlight);
 
@@ -609,8 +617,25 @@ void ChickenEntity::pickup()
     mBusyTurns = 0;
     mFollowing = false;
     mReturningHome = false;
+    mGiftTurns = 0;
     removeEntityFromPositionTile();
     RenderedMovableEntity::pickup();
+}
+
+void ChickenEntity::drop(const Ogre::Vector3& v)
+{
+    RenderedMovableEntity::drop(v);
+    if(!getIsOnServerMap() || (mKind != ChickenKind::hen) || getGameMap()->isInEditorMode())
+        return;
+
+    // A hen the keeper drops next to the creatures (not back into a hatchery, whose meals follow
+    // their own rules) is offered to the creatures that are not hungry
+    Tile* dropTile = getGameMap()->getTile(static_cast<int>(v.x + 0.5), static_cast<int>(v.y + 0.5));
+    if((dropTile == nullptr) || dropTile->checkCoveringRoomType(RoomType::hatchery))
+        return;
+
+    mGiftTurns = static_cast<uint32_t>(std::max(0.0,
+        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryGiftOfferTurns", 14.0)));
 }
 
 bool ChickenEntity::tryDrop(Seat* seat, Tile* tile)
@@ -699,6 +724,47 @@ void ChickenEntity::setKindFromServer(ChickenKind kind)
 
     if((oldKind == ChickenKind::egg) && (kind != ChickenKind::egg))
         RenderManager::getSingleton().rrChickenHatched(this);
+}
+
+void ChickenEntity::offerGift(Tile& tile)
+{
+    --mGiftTurns;
+    if(!isEdible() || mLockedEat || (tile.getSeat() == nullptr))
+    {
+        // Somebody is already after this chicken (or it is gone): nothing to offer anymore
+        if(!isEdible() || mLockedEat)
+            mGiftTurns = 0;
+        return;
+    }
+
+    const double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryGiftOfferRadius", 6.0);
+    Creature* closest = nullptr;
+    float closestDist = 0.0f;
+    for(Creature* creature : getGameMap()->getCreaturesBySeat(tile.getSeat()))
+    {
+        Tile* creatureTile = creature->getPositionTile();
+        if(creatureTile == nullptr)
+            continue;
+
+        float dist = Pathfinding::squaredDistanceTile(*creatureTile, tile);
+        if(dist > static_cast<float>(radius * radius))
+            continue;
+
+        if((closest != nullptr) && (dist >= closestDist))
+            continue;
+
+        if(!CreatureActionEatChicken::canAcceptGift(*creature))
+            continue;
+
+        closest = creature;
+        closestDist = dist;
+    }
+
+    if(closest == nullptr)
+        return;
+
+    closest->pushAction(Utils::make_unique<CreatureActionEatChicken>(*closest, *this, true));
+    mGiftTurns = 0;
 }
 
 bool ChickenEntity::countDownLay()
@@ -845,6 +911,8 @@ void ChickenEntity::exportToStream(std::ostream& os) const
     RenderedMovableEntity::exportToStream(os);
     os << mPosition.x << "\t" << mPosition.y << "\t" << mPosition.z << "\t";
     os << static_cast<uint32_t>(mKind) << "\t" << mNbTurnLay << "\t" << mAge << "\t";
+    // Appended later: turns the keeper's gift is still offered to a creature that is not hungry
+    os << mGiftTurns << "\t";
 }
 
 bool ChickenEntity::importFromStream(std::istream& is)
@@ -868,6 +936,13 @@ bool ChickenEntity::importFromStream(std::istream& is)
         mNbTurnLay = nbTurnLay;
         mAge = age;
         setMeshName(getMeshNameForKind(mKind));
+
+        // Saves written before the gift offer end here: nothing is offered
+        uint32_t giftTurns = 0;
+        if(is >> giftTurns)
+            mGiftTurns = giftTurns;
+        else
+            is.clear();
     }
     else
         is.clear();
@@ -881,7 +956,7 @@ std::string ChickenEntity::getChickenEntityStreamFormat()
     if(!format.empty())
         format += "\t";
 
-    format += "PosX\tPosY\tPosZ\tKind\tLayTimer\tAge";
+    format += "PosX\tPosY\tPosZ\tKind\tLayTimer\tAge\tGiftTurns";
 
     return format;
 }
