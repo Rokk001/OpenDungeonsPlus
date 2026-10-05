@@ -1010,6 +1010,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 RoomAmbience::getSingleton().triggerEvent("ChickenFlee", event.mPosition, false);
             }
 
+            if(event.is(CosmeticEventType::attackTurn))
+            {
+                // The creature turns to its target before the blow that follows at once: the turn is announced
+                // for it (the animation message of the blow uses it)
+                RenderManager::getSingleton().rrNoteAttackTurn(event.mSubject, event.mPosition);
+                break;
+            }
+
             if(event.is(CosmeticEventType::heartHealthStage))
             {
                 // The coarse health of a heart that this keeper sees; only the beat of that heart follows it
