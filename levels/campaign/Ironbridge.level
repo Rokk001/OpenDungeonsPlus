@@ -4178,7 +4178,7 @@ ProtectDungeonTemple	NULL
 3	YardWatch1	Adventurer.mesh	50	30	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	YardWatch2	Dwarf1.mesh	76	36	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	YardWatch3	Knight.mesh	80	12	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	YardWatch4	Elf.mesh	18	30	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	YardWatch4	Elf.mesh	18	17	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	YardWatch5	Adventurer.mesh	46	58	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	YardWatch6	Monk.mesh	50	12	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
@@ -4300,7 +4300,7 @@ Name	forgewave1
 Mode	once
 Cond	time	300
 Action	message	1	Smiths in armour are crossing from the west yard.
-Action	spawn	3	20	30	1	Adventurer:2	Dwarf1:2	Elf:2
+Action	spawn	3	20	16	1	Adventurer:2	Dwarf1:2	Elf:2
 [/Trigger]
 [Trigger]
 Name	forgewave2
@@ -4314,7 +4314,7 @@ Name	forgewave3
 Mode	once
 Cond	time	1150
 Action	message	1	Fenn is sending a bridge guard against your dungeon.
-Action	spawn	3	20	30	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
+Action	spawn	3	20	16	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
 [/Trigger]
 [Trigger]
 Name	forgewave4
@@ -4328,7 +4328,7 @@ Name	forgewave5
 Mode	once
 Cond	time	2200
 Action	message	1	The forge guild has armed its apprentices.
-Action	spawn	3	20	30	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
+Action	spawn	3	20	16	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
 [/Trigger]
 [Trigger]
 Name	forgewave6
@@ -4342,7 +4342,7 @@ Name	forgewave7
 Mode	once
 Cond	time	3500
 Action	message	1	Fenn has emptied the armouries.
-Action	spawn	3	20	30	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
+Action	spawn	3	20	16	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	forgewave8
