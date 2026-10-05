@@ -22,6 +22,7 @@
 
 #include "rooms/HatcheryCycle.h"
 #include "rooms/HatcheryRooster.h"
+#include "rooms/RoomTorches.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -326,7 +327,12 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
 
             uint32_t walk = 0;
             if(simCase.mNest && (simCase.mWalkMax > 0))
+            {
                 walk = walkRng.next() % (simCase.mWalkMax + 1);
+                // The way has to fit into the time of the interval, otherwise she lays where she sits
+                if(!HatcheryCycle::walkFits(walk, done, settings))
+                    walk = 0;
+            }
             const uint32_t late = lateTurns(done, walk, settings);
             if(late > 0)
                 lateEggs.push_back(SimLateEgg(late));
@@ -421,11 +427,14 @@ BOOST_AUTO_TEST_CASE(test_Walk)
     BOOST_CHECK(HatcheryCycle::tripDue(2, 0, settings));
     BOOST_CHECK(!HatcheryCycle::tripDue(3, 0, settings));
 
-    // A nest is used when the walk is no longer than the longest walk; 0 turns = she never walks
-    BOOST_CHECK(HatcheryCycle::walkFits(settings.mNestWalkTurns, settings));
-    BOOST_CHECK(!HatcheryCycle::walkFits(settings.mNestWalkTurns + 1, settings));
-    settings.mNestWalkTurns = 0;
-    BOOST_CHECK(!HatcheryCycle::walkFits(0, settings));
+    // A nest is used when the walk and the Lay pose (2 turns) fit into the turns left until the egg: the window is the
+    // real way in the time she has, not a fixed number of turns
+    BOOST_CHECK(HatcheryCycle::walkFits(3, 5, settings));
+    BOOST_CHECK(!HatcheryCycle::walkFits(4, 5, settings));
+    BOOST_CHECK(HatcheryCycle::walkFits(0, 2, settings));
+    BOOST_CHECK(!HatcheryCycle::walkFits(0, 1, settings));
+    BOOST_CHECK(HatcheryCycle::walkFits(12, 14, settings));
+    BOOST_CHECK(!HatcheryCycle::walkFits(12, 13, settings));
 }
 
 BOOST_AUTO_TEST_CASE(test_LateEgg)
@@ -436,18 +445,28 @@ BOOST_AUTO_TEST_CASE(test_LateEgg)
     BOOST_CHECK_EQUAL(lateTurns(3, 3, settings), 2u);
     BOOST_CHECK_EQUAL(lateTurns(3, 0, settings), 0u);
     BOOST_CHECK_EQUAL(lateTurns(7, 8, settings), 3u);
-    // The longest walk (6) and the Lay pose (2) are never more than 5 turns late with the shortest interval
-    BOOST_CHECK(lateTurns(settings.mLayMin, settings.mNestWalkTurns, settings) <= settings.mHatchTurns + settings.mGrowTurns - 1);
+    // A way that fits (HatcheryCycle::walkFits) is never late
+    for(uint32_t interval = settings.mLayMin; interval <= settings.mLayMax; ++interval)
+    {
+        for(uint32_t walk = 0; walk <= 20; ++walk)
+        {
+            if(HatcheryCycle::walkFits(walk, interval, settings))
+                BOOST_CHECK_EQUAL(lateTurns(interval, walk, settings), 0u);
+        }
+    }
 }
 
 //! Balance parity: with the default values the number of edible chickens per minute has to stay the one of the
 //! spawning before the life cycle, for the same hatchery size and the same demand: within 3 percent of the old
 //! number, in every case below that has no care bonus (the bonuses of a claimed, lit, calm hatchery are printed but
-//! not limited, they speed the hatchery up on purpose). The egg appears when the laying timer of the hen runs out (the walk to the nest only
-//! has to fit into the time before, a late egg gets the age it would have had), the laying timer carries the factor
-//! HatcheryCycleSettings::mLayFactor that balances the cycle against the old spawning. A Python port of the model (the
-//! same generators and order) gives the worst deviation per case without bonus: 2.71 percent (no walk), 2.84 (walk 0
-//! to 6 turns), 2.71 (no free nest), 2.92 (enemies trample, 5 percent of the turns, 30 percent per egg).
+//! not limited, they speed the hatchery up on purpose). The egg appears when the laying timer of the hen runs out: the
+//! hen uses the nest only when the real way and the Lay pose fit into the time of her laying interval (walkFits),
+//! otherwise she lays where she sits, so the rate does not depend on how far the nests are (a way that is longer than
+//! the interval would delay the eggs and break the parity: 6.5 percent with ways up to 12 turns, 17 percent up to 20).
+//! The laying timer carries the factor HatcheryCycleSettings::mLayFactor that balances the cycle against the old
+//! spawning. A Python port of the model (the same generators and order) gives the worst deviation per case without
+//! bonus: 2.44 percent (no walk, ways of 0 to 6 or 0 to 60 turns, no free nest), 2.80 (enemies trample, 5 percent of
+//! the turns, 30 percent per egg). With the bonuses (light 10, calm 15) it is 7.0 percent, which is intended.
 BOOST_AUTO_TEST_CASE(test_BalanceParity)
 {
     HatcheryCycleSettings settings;
@@ -461,9 +480,13 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
     names.push_back("no walk");
     cases.push_back(noWalk);
     SimCase walk = noWalk;
-    walk.mWalkMax = settings.mNestWalkTurns;
-    names.push_back("variable walk");
+    walk.mWalkMax = 6;
+    names.push_back("variable walk 0 to 6 turns");
     cases.push_back(walk);
+    SimCase farNests = noWalk;
+    farNests.mWalkMax = 60;
+    names.push_back("variable walk 0 to 60 turns (far nests)");
+    cases.push_back(farNests);
     SimCase noNest = noWalk;
     noNest.mNest = false;
     names.push_back("no free nest");
@@ -545,20 +568,6 @@ BOOST_AUTO_TEST_CASE(test_Care)
     BOOST_CHECK_CLOSE(HatcheryCycle::withCare(settings, care).mLayFactor, settings.mLayFactor * 0.1, 0.0001);
     BOOST_CHECK(HatcheryCycle::layInterval(HatcheryCycle::withCare(settings, care), 0) >= 1u);
 
-    // One tile in six has a wall torch (the hash of the client), spacing 1 = every tile
-    uint32_t torches = 0;
-    for(int32_t x = 0; x < 60; ++x)
-    {
-        for(int32_t y = 0; y < 60; ++y)
-        {
-            if(HatcheryCycle::hasWallTorch(x, y, 6))
-                ++torches;
-            BOOST_CHECK(HatcheryCycle::hasWallTorch(x, y, 1));
-        }
-    }
-    BOOST_CHECK(torches > 3600 / 6 - 200);
-    BOOST_CHECK(torches < 3600 / 6 + 200);
-
     // Eggs do not hatch while enemies stand in the hatchery
     HatcheryCounts counts;
     counts.mRoosters = 1;
@@ -566,6 +575,44 @@ BOOST_AUTO_TEST_CASE(test_Care)
     BOOST_CHECK(!HatcheryCycle::canHatch(counts, true));
     counts.mRoosters = 0;
     BOOST_CHECK(!HatcheryCycle::canHatch(counts, false));
+}
+
+BOOST_AUTO_TEST_CASE(test_Torches)
+{
+    // The rooms that carry wall torches: the thirteen rooms of the room ambience, no heart, portals or bridges
+    const RoomType torchRooms[] = {RoomType::dormitory, RoomType::library, RoomType::workshop, RoomType::trainingHall,
+        RoomType::treasury, RoomType::hatchery, RoomType::prison, RoomType::torture, RoomType::crypt, RoomType::arena,
+        RoomType::casino, RoomType::guardRoom, RoomType::temple};
+    for(RoomType type : torchRooms)
+        BOOST_CHECK(RoomTorches::hasTorchRoomType(type));
+    const RoomType noTorchRooms[] = {RoomType::nullRoomType, RoomType::dungeonTemple, RoomType::portal,
+        RoomType::portalWave, RoomType::bridgeWooden, RoomType::bridgeStone};
+    for(RoomType type : noTorchRooms)
+        BOOST_CHECK(!RoomTorches::hasTorchRoomType(type));
+
+    // The torch spots are a fixed pick over the coordinates (pinned values, the same on server and client)
+    BOOST_CHECK(RoomTorches::isTorchSpot(0, 0));
+    BOOST_CHECK(RoomTorches::isTorchSpot(17, 40));
+    BOOST_CHECK(!RoomTorches::isTorchSpot(1, 0));
+    BOOST_CHECK(!RoomTorches::isTorchSpot(0, 1));
+    BOOST_CHECK(!RoomTorches::isTorchSpot(5, 7));
+    BOOST_CHECK(!RoomTorches::isTorchSpot(12, 3));
+    BOOST_CHECK(!RoomTorches::isTorchSpot(30, 30));
+    BOOST_CHECK(!RoomTorches::isTorchSpot(59, 2));
+
+    // One tile in six, and the same answer every time
+    uint32_t torches = 0;
+    for(int32_t x = 0; x < 60; ++x)
+    {
+        for(int32_t y = 0; y < 60; ++y)
+        {
+            const bool spot = RoomTorches::isTorchSpot(x, y);
+            BOOST_CHECK_EQUAL(spot, RoomTorches::isTorchSpot(x, y));
+            if(spot)
+                ++torches;
+        }
+    }
+    BOOST_CHECK_EQUAL(torches, 590u);
 }
 
 BOOST_AUTO_TEST_CASE(test_Trample)

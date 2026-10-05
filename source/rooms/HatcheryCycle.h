@@ -27,7 +27,7 @@ struct HatcheryCycleSettings
     HatcheryCycleSettings() :
         mLayMin(3),
         mLayMax(7),
-        mLayFactor(1.025),
+        mLayFactor(1.021),
         mHatchTurns(2),
         mGrowTurns(4),
         mCoopWait(15),
@@ -38,15 +38,14 @@ struct HatcheryCycleSettings
         mCoopBatch(0),
         mFightTurns(14),
         mFightApproachTurns(40),
-        mLayShowTurns(2),
-        mNestWalkTurns(6)
+        mLayShowTurns(2)
     {}
 
     //! Turns between two eggs of one hen (random value in [mLayMin, mLayMax], multiplied by mLayFactor).
     uint32_t mLayMin;
     uint32_t mLayMax;
     //! Factor on the laying times. It balances the cycle against the spawning before it (the parity test of the unit
-    //! tests): 1.025 makes the edible chickens per minute equal to the old ones within 3 percent. The care bonus and
+    //! tests): 1.021 makes the edible chickens per minute equal to the old ones within 3 percent. The care bonus and
     //! the research multiply it, the times stay whole turns (the fraction is rounded up or down by chance).
     double mLayFactor;
     //! Turns an egg needs to hatch, once the hatchery has a rooster.
@@ -72,10 +71,6 @@ struct HatcheryCycleSettings
     uint32_t mFightApproachTurns;
     //! Turns a laying hen shows herself sitting before the egg appears in the nest (0 = the egg appears at once).
     uint32_t mLayShowTurns;
-    //! Longest walk to the place next to the nest, in turns (0 = she sits down where she is). The hen sets off when the
-    //! turns left until her egg are as many as the walk (real distance and walking speed) plus the Lay pose, so the egg
-    //! appears when the laying timer runs out; a nest that is farther away than this is not used.
-    uint32_t mNestWalkTurns;
 };
 
 //! \brief How well the keeper looks after a hatchery.
@@ -157,16 +152,14 @@ public:
     //! than the walk and the Lay pose together. remaining counts the turn in which the timer runs out as 1.
     static bool tripDue(uint32_t remaining, uint32_t walk, const HatcheryCycleSettings& settings);
 
-    //! The nest is used only when the walk to it is no longer than mNestWalkTurns.
-    static bool walkFits(uint32_t walk, const HatcheryCycleSettings& settings);
+    //! The nest is used only when the walk to it and the Lay pose fit into the turns left until her egg (remaining, as
+    //! in tripDue): the window is the real way in the time she has, so the egg appears when the timer runs out and the
+    //! rate of the eggs does not depend on how far the nest is. Otherwise she lays where she sits.
+    static bool walkFits(uint32_t walk, uint32_t remaining, const HatcheryCycleSettings& settings);
 
     //! Percent by which the laying times are shorter: nothing unless all tiles are claimed, then mCareLightPercent
     //! while a light or wall torch is close plus mCareCalmPercent while no enemy stands in the hatchery (at most 90).
     static uint32_t carePercent(const HatcheryCycleSettings& settings, const HatcheryCare& care);
-
-    //! True if the wall torch of the room ambience (client side, config/roomAmbienceDeferred.cfg) is drawn on the tile:
-    //! the same coordinate hash as the client uses for "Spacing", one tile in spacing.
-    static bool hasWallTorch(int32_t x, int32_t y, uint32_t spacing);
 
     //! The settings with the laying times shortened by carePercent (through mLayFactor), unchanged without care.
     static HatcheryCycleSettings withCare(const HatcheryCycleSettings& settings, const HatcheryCare& care);

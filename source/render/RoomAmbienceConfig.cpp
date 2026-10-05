@@ -437,6 +437,10 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         {
             effect.mOwnerOnly = toBool(words[1]);
         }
+        else if(key == "Torch")
+        {
+            effect.mTorch = toBool(words[1]);
+        }
         else if(key == "Sound")
         {
             effect.mSound = words[1];

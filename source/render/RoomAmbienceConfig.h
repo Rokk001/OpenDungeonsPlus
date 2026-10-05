@@ -132,7 +132,8 @@ struct AmbienceEffect
         mNeedWall(false),
         mWallSide(false),
         mHeartRate(false),
-        mOwnerOnly(false)
+        mOwnerOnly(false),
+        mTorch(false)
     {}
 
     std::string mName;
@@ -193,6 +194,9 @@ struct AmbienceEffect
     bool mHeartRate;
     //! Object targets: shown only to the keeper the object belongs to (the glint of a secret door must not give it away)
     bool mOwnerOnly;
+    //! Tile targets: only the tiles that carry a wall torch by the rule of the game (Room::hasTorchOn), which is the
+    //! same rule that makes a torch light a hatchery; replaces Spacing for the torches
+    bool mTorch;
     //! Sound family played when an event effect starts (only in the mode "full")
     std::string mSound;
 };

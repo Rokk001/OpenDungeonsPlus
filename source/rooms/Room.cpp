@@ -35,6 +35,7 @@
 #include "ODApplication.h"
 #include "rooms/RoomClaim.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomTorches.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -68,6 +69,19 @@ Room::ClaimMode Room::getClaimMode()
         return ClaimMode::claimableOnly;
 
     return ClaimMode::destructibleOnly;
+}
+
+bool Room::hasTorchOn(Tile* tile) const
+{
+    if((tile == nullptr) || !RoomTorches::hasTorchRoomType(getType()) || !RoomTorches::isTorchSpot(tile->getX(), tile->getY()))
+        return false;
+
+    for(Tile* neighbor : tile->getAllNeighbors())
+    {
+        if((neighbor != nullptr) && (neighbor->getFullness() > 0.0) && neighbor->isClaimedForSeat(getSeat()))
+            return true;
+    }
+    return false;
 }
 
 bool Room::isClaimable(Seat* seat) const

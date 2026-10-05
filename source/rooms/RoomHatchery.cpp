@@ -39,6 +39,7 @@
 #include "network/ServerNotification.h"
 #include "rooms/HatcheryCoopHouse.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomTorches.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -286,7 +287,6 @@ HatcheryCycleSettings RoomHatchery::getCycleSettings() const
     settings.mFightTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFightTurns", settings.mFightTurns));
     settings.mFightApproachTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFightApproachTurns", settings.mFightApproachTurns));
     settings.mLayShowTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryLayShowTurns", settings.mLayShowTurns));
-    settings.mNestWalkTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryNestWalkTurns", settings.mNestWalkTurns));
     settings.mLayFactor = config.getRoomConfigDoubleOrDefault("HatcheryLayFactor", settings.mLayFactor);
 
     // The research of the hatchery shortens the waiting times
@@ -446,6 +446,15 @@ bool RoomHatchery::getNestStandPoint(const Ogre::Vector3& nestSpot, Ogre::Vector
     return RoomObjectNavigation::standingPosition(obstacles, Ogre::Vector2(nestSpot.x, nestSpot.y), standing);
 }
 
+uint32_t RoomHatchery::nestWalkTurns(ChickenEntity& hen, const Ogre::Vector2& standing) const
+{
+    const double arrive = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryNestArrive", 0.3);
+    const double tilesPerTurn = hen.getMoveSpeed() / ODApplication::turnsPerSecond;
+    const double distance = Ogre::Vector2(hen.getPosition().x, hen.getPosition().y).distance(standing);
+    const uint32_t walk = HatcheryCycle::walkTurns(distance - arrive, tilesPerTurn);
+    return (walk > 0) ? walk + 1 : 0;
+}
+
 bool RoomHatchery::isOnNestTrip(const ChickenEntity& hen) const
 {
     for(const PendingEgg& pending : mPendingEggs)
@@ -514,7 +523,20 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
             continue;
         }
 
-        // She sets off when the turns left until the egg are as many as the walk and the Lay pose (at once when it is due)
+        // She sets off when the turns left until the egg are as many as the walk and the Lay pose (at once when it is due).
+        // Until then she wanders, so the walk is measured again from where she is: when it does not fit into the time
+        // left any more, the egg lies where she sits down
+        if(!it->mStarted && it->mNest && !it->mDue)
+        {
+            it->mWalk = nestWalkTurns(*hen, it->mStand);
+            if(!HatcheryCycle::walkFits(it->mWalk, hen->getLayTimer(), settings))
+            {
+                it->mNest = false;
+                it->mWalk = 0;
+                it->mSpot = hen->getPosition();
+                it->mStand = Ogre::Vector2(hen->getPosition().x, hen->getPosition().y);
+            }
+        }
         if(!it->mStarted)
         {
             if(!it->mDue && !HatcheryCycle::tripDue(hen->getLayTimer(), it->mWalk, settings))
@@ -660,58 +682,21 @@ void RoomHatchery::collectEnemies(std::vector<Creature*>& enemies) const
     }
 }
 
-//! The rooms that carry wall torches: the Match list of the WallTorch effects in config/roomAmbienceDeferred.cfg
-static bool hasTorchRoomType(RoomType type)
-{
-    switch(type)
-    {
-        case RoomType::dormitory:
-        case RoomType::library:
-        case RoomType::workshop:
-        case RoomType::trainingHall:
-        case RoomType::treasury:
-        case RoomType::hatchery:
-        case RoomType::prison:
-        case RoomType::torture:
-        case RoomType::crypt:
-        case RoomType::arena:
-        case RoomType::casino:
-        case RoomType::guardRoom:
-        case RoomType::temple:
-            return true;
-        default:
-            return false;
-    }
-}
-
 bool RoomHatchery::isLit() const
 {
     double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCareLightRadius", 8.0);
     double radiusSquared = radius * radius;
 
-    // Every wall torch in range counts, also the ones of other rooms: the room ambience draws a torch on one tile in
-    // HatcheryTorchSpacing of the tiles of such a room, and here it counts when that tile touches a wall reinforced by the keeper
-    uint32_t torchSpacing = static_cast<uint32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryTorchSpacing", 6.0));
+    // Every wall torch in range counts, also the ones of other rooms. Room::hasTorchOn is the rule the room ambience
+    // uses to draw the torches, so a torch that is drawn lights the hatchery
     for(Room* room : getGameMap()->getRooms())
     {
-        if(!hasTorchRoomType(room->getType()))
+        if(!RoomTorches::hasTorchRoomType(room->getType()))
             continue;
 
         for(Tile* tile : room->getCoveredTiles())
         {
-            if(!HatcheryCycle::hasWallTorch(tile->getX(), tile->getY(), torchSpacing))
-                continue;
-
-            bool reinforced = false;
-            for(Tile* neighbor : tile->getAllNeighbors())
-            {
-                if((neighbor != nullptr) && neighbor->isWallClaimedForSeat(getSeat()))
-                {
-                    reinforced = true;
-                    break;
-                }
-            }
-            if(!reinforced)
+            if(!room->hasTorchOn(tile))
                 continue;
 
             for(Tile* own : mCoveredTiles)
@@ -845,32 +830,25 @@ void RoomHatchery::doUpkeep()
         eggPositions.push_back(Ogre::Vector2(pending.mSpot.x, pending.mSpot.y));
 
     // Hens lay eggs while the hatchery is not full. The egg appears when the laying timer of the hen runs out, so the
-    // rate of the eggs does not depend on the way to the nest: the hen plans her egg as soon as the walk and the Lay pose
-    // would not fit into the time left any more, and is on her way to the nest by then (updateNestTrips).
-    const double arrive = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryNestArrive", 0.3);
-    const uint32_t leadTurns = settings.mNestWalkTurns + settings.mLayShowTurns;
+    // rate of the eggs does not depend on the way to the nest: the hen plans her egg at the start of her laying
+    // interval, uses the nest only if the real way (distance at her walking speed) and the Lay pose fit into the time
+    // left, and sets off when they would not fit any more (updateNestTrips).
     uint32_t capacity = HatcheryCycle::capacity(mCoveredTiles.size(), mNumActiveSpots, settings);
     for(ChickenEntity* hen : hens)
     {
-        if((findPendingEgg(*hen) == nullptr) && (settings.mLayShowTurns > 0) && (hen->getLayTimer() <= leadTurns) &&
-           HatcheryCycle::canLay(counts, capacity))
+        if((findPendingEgg(*hen) == nullptr) && (settings.mLayShowTurns > 0) && HatcheryCycle::canLay(counts, capacity))
         {
             // The egg lies in a free place of a coop nest (the closest coop first), she walks to the place next to it
             // (the nests lie inside the footprint of the coop, she cannot stand in them). Without a free nest, or
-            // when the nest is farther than HatcheryNestWalkTurns, she sits down where she is and the egg lies there.
+            // when the way to it does not fit into the time left, she sits down where she is and the egg lies there.
             Ogre::Vector3 eggSpot = hen->getPosition();
             Ogre::Vector2 standing(hen->getPosition().x, hen->getPosition().y);
             uint32_t walk = 0;
             bool nest = findNestSpot(hen->getPosition(), eggPositions, eggSpot) && getNestStandPoint(eggSpot, standing);
             if(nest)
             {
-                // The real distance at the walking speed of the hen, and a turn for setting off
-                const double tilesPerTurn = hen->getMoveSpeed() / ODApplication::turnsPerSecond;
-                const double distance = Ogre::Vector2(hen->getPosition().x, hen->getPosition().y).distance(standing);
-                walk = HatcheryCycle::walkTurns(distance - arrive, tilesPerTurn);
-                if(walk > 0)
-                    ++walk;
-                if(!HatcheryCycle::walkFits(walk, settings))
+                walk = nestWalkTurns(*hen, standing);
+                if(!HatcheryCycle::walkFits(walk, hen->getLayTimer(), settings))
                     nest = false;
             }
             if(!nest)

@@ -51,10 +51,16 @@ print('hatchery life cycle checks passed')
 cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 cfg = (root / 'config/rooms.cfg').read_text()
-assert 'carePercent' in cycle and 'hasWallTorch' in cycle and 'canHatch' in cycle
+assert 'carePercent' in cycle and 'canHatch' in cycle
+torches = (root / 'source/rooms/RoomTorches.cpp').read_text()
+assert 'isTorchSpot' in torches and 'hasTorchRoomType' in torches
+assert 'hasTorchOn' in (root / 'source/rooms/Room.cpp').read_text() and 'hasTorchOn' in room_cpp
+assert 'hasTorchOn' in (root / 'source/render/RoomAmbience.cpp').read_text()
+ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
+assert ambience_cfg.count('Torch       yes') == 4
 assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp
 assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
-assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' in cfg
+assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' not in cfg
 
 # Enemies trample eggs, own creatures never eat them
 cycle_h = (root / 'source/rooms/HatcheryCycle.h').read_text()
@@ -121,15 +127,17 @@ assert 'mCentralActiveSpotTiles' in nest and 'squaredDistance' in nest, 'closest
 assert 'HatcheryNestEggs' in nest and 'HatcheryNestSameRadius' in nest
 assert 'HatcheryNestEggs' in cfg and 'HatcheryNestSameRadius' in cfg
 assert 'nestEggSpot' in coop_h and 'nestCount' in coop_h and 'eggsPerNest' in coop_h
-lay = doUpkeep[doUpkeep.index('const double arrive'):doUpkeep.index('Eggs hatch while there is a rooster')]
+lay = doUpkeep[doUpkeep.index('Hens lay eggs while the hatchery is not full'):doUpkeep.index('Eggs hatch while there is a rooster')]
 assert 'findNestSpot(' in lay and 'eggs.push_back(spawnAnimal(ChickenKind::egg, eggSpot, settings))' in lay
 assert 'eggPositions.push_back' in lay, 'an egg laid this turn takes its place at once'
 assert 'HatcheryCycle::canLay(counts, capacity)' in lay, 'capacity still limits the eggs'
 assert 'ChickenPose::lay' in lay, 'the hen sits down where she is when the egg has no nest'
 # The hen plans her egg early, walks to the place next to the nest (real distance, real walking speed) and lays there
 assert 'getNestStandPoint(eggSpot, standing)' in lay and 'plan.mHen = hen->getName()' in lay
-assert 'HatcheryCycle::walkTurns(' in lay and 'getMoveSpeed()' in lay and 'ODApplication::turnsPerSecond' in lay, 'the walk window follows the real distance and speed'
-assert 'HatcheryCycle::walkFits(' in lay and 'hen->getLayTimer() <= leadTurns' in lay
+walk_body = body(room_cpp, 'uint32_t RoomHatchery::nestWalkTurns')
+assert 'HatcheryCycle::walkTurns(' in walk_body and 'getMoveSpeed()' in walk_body and 'ODApplication::turnsPerSecond' in walk_body, 'the walk window follows the real distance and speed'
+assert 'nestWalkTurns(*hen, standing)' in lay and 'HatcheryCycle::walkFits(walk, hen->getLayTimer(), settings)' in lay
+assert 'leadTurns' not in room_cpp and 'mNestWalkTurns' not in room_cpp and 'mNestWalkTurns' not in cycle
 assert 'planned->mDue = true' in lay, 'the egg is laid when the laying timer runs out, not when the hen arrives'
 trips = body(room_cpp, 'void RoomHatchery::updateNestTrips')
 assert 'HatcheryNestArrive' in trips and 'ChickenPose::lay' in trips and 'HatcheryCycle::tripDue(' in trips, 'she sets off when the turns left are as many as walk and pose'
@@ -137,7 +145,7 @@ assert 'setFollowTarget(it->mStand' in trips and 'hen == nullptr' in trips and '
 assert 'uint32_t HatcheryCycle::walkTurns' in cycle_cpp and 'bool HatcheryCycle::tripDue' in cycle_cpp and 'layDelay' not in cycle_cpp
 assert 'standingPosition' in body(room_cpp, 'bool RoomHatchery::getNestStandPoint')
 assert doUpkeep.index('updateNestTrips(hens, settings)') < doUpkeep.index('hen->countDownLay()') < doUpkeep.index('releasePendingEggs(settings, eggs)')
-assert 'HatcheryNestWalkTurns' in cfg and 'HatcheryNestArrive' in cfg and 'HatcheryLayFactor' in cfg and 'HatcheryLayFactor' in room_cpp
+assert 'HatcheryNestWalkTurns' not in cfg and 'HatcheryNestArrive' in cfg and 'HatcheryLayFactor' in cfg and 'HatcheryLayFactor' in room_cpp
 # A late egg (the walk was longer than the time left) gets the age it would have had, and so does the chick: the rhythm
 # of the cycle does not depend on the way to the nest. The parity test in the unit tests models exactly this.
 assert 'egg->setAge(it->mLate)' in body(room_cpp, 'void RoomHatchery::releasePendingEggs')

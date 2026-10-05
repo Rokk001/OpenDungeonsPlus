@@ -22,6 +22,7 @@
 #include "entities/GameEntityType.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
+#include "rooms/Room.h"
 #include "game/HeartHealthRing.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -855,7 +856,14 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 if(distance > limit)
                     continue;
 
-                if(effect.mSpacing > 1)
+                if(effect.mTorch)
+                {
+                    // The torches are the ones the game counts as light (the server decides with the same rule)
+                    Room* torchRoom = tile->getCoveringRoom();
+                    if((torchRoom == nullptr) || !torchRoom->hasTorchOn(tile))
+                        continue;
+                }
+                else if(effect.mSpacing > 1)
                 {
                     uint32_t hash = static_cast<uint32_t>(x * 73856093) ^ static_cast<uint32_t>(y * 19349663);
                     if(((hash >> 3) % effect.mSpacing) != 0)

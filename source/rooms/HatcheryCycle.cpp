@@ -85,9 +85,9 @@ bool HatcheryCycle::tripDue(uint32_t remaining, uint32_t walk, const HatcheryCyc
     return remaining <= walk + settings.mLayShowTurns;
 }
 
-bool HatcheryCycle::walkFits(uint32_t walk, const HatcheryCycleSettings& settings)
+bool HatcheryCycle::walkFits(uint32_t walk, uint32_t remaining, const HatcheryCycleSettings& settings)
 {
-    return (settings.mNestWalkTurns > 0) && (walk <= settings.mNestWalkTurns);
+    return walk + settings.mLayShowTurns <= remaining;
 }
 
 uint32_t HatcheryCycle::carePercent(const HatcheryCycleSettings& settings, const HatcheryCare& care)
@@ -101,15 +101,6 @@ uint32_t HatcheryCycle::carePercent(const HatcheryCycleSettings& settings, const
     if(!care.mEnemies)
         percent += settings.mCareCalmPercent;
     return std::min<uint32_t>(percent, 90);
-}
-
-bool HatcheryCycle::hasWallTorch(int32_t x, int32_t y, uint32_t spacing)
-{
-    if(spacing <= 1)
-        return true;
-
-    uint32_t hash = static_cast<uint32_t>(x * 73856093) ^ static_cast<uint32_t>(y * 19349663);
-    return ((hash >> 3) % spacing) == 0;
 }
 
 HatcheryCycleSettings HatcheryCycle::withCare(const HatcheryCycleSettings& settings, const HatcheryCare& care)

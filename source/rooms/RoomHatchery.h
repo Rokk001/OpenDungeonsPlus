@@ -94,6 +94,9 @@ private:
     void releasePendingEggs(const HatcheryCycleSettings& settings, std::vector<ChickenEntity*>& eggs);
     //! A free place next to the nest where a hen can stand (the nests lie inside the footprint of the coop).
     bool getNestStandPoint(const Ogre::Vector3& nestSpot, Ogre::Vector2& standing) const;
+    //! Turns the hen needs to walk from where she is to the place next to the nest: the real distance at her walking
+    //! speed, and a turn for setting off. 0 when she is there already.
+    uint32_t nestWalkTurns(ChickenEntity& hen, const Ogre::Vector2& standing) const;
     //! True from the moment the hen sets off for the nest until her egg appears (see PendingEgg::mHen).
     bool isOnNestTrip(const ChickenEntity& hen) const;
     struct PendingEgg;
