@@ -23,8 +23,10 @@
 #include "rooms/HatcheryCycle.h"
 #include "rooms/HatcheryRooster.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <vector>
 
 BOOST_AUTO_TEST_CASE(test_Capacity)
@@ -130,6 +132,19 @@ BOOST_AUTO_TEST_CASE(test_CoopHenCount)
 BOOST_AUTO_TEST_CASE(test_LayInterval)
 {
     HatcheryCycleSettings settings;
+    // The factor makes the times a fraction longer: the fraction is rounded up now and then, so the average is exact
+    double sum = 0.0;
+    const uint32_t nbDraws = 100000;
+    for(uint32_t random = 0; random < nbDraws; ++random)
+    {
+        uint32_t turns = HatcheryCycle::layInterval(settings, random);
+        BOOST_CHECK(turns >= settings.mLayMin);
+        BOOST_CHECK(turns <= settings.mLayMax + 1);
+        sum += turns;
+    }
+    const double average = (settings.mLayMin + settings.mLayMax) / 2.0 * settings.mLayFactor;
+    BOOST_CHECK_CLOSE(sum / nbDraws, average, 0.5);
+    settings.mLayFactor = 1.0;
     for(uint32_t random = 0; random < 100; ++random)
     {
         uint32_t turns = HatcheryCycle::layInterval(settings, random);
@@ -188,61 +203,111 @@ uint32_t simulateOld(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, ui
     return eaten;
 }
 
-struct SimAnimal
+//! A hen with the turns until her next egg and the length of the interval that has just run out.
+struct SimHen
 {
-    SimAnimal(uint32_t timer) : mTimer(timer) {}
+    SimHen(uint32_t timer) : mTimer(timer), mDone(timer) {}
     uint32_t mTimer;
+    uint32_t mDone;
 };
 
-//! Model of the life cycle with the rules of HatcheryCycle, in the order the hatchery handles them.
-uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, const HatcheryCycleSettings& settings)
+//! An egg whose timer has run out but whose hen is late at the nest: it appears mTurns turns later and gets the age
+//! mLate (the age it would have had on time, see RoomHatchery::releasePendingEggs).
+struct SimLateEgg
+{
+    SimLateEgg(uint32_t turns) : mTurns(turns), mLate(turns) {}
+    uint32_t mTurns;
+    uint32_t mLate;
+};
+
+//! The conditions of one run of the parity model.
+struct SimCase
+{
+    SimCase() :
+        mWalkMax(0),
+        mNest(true),
+        mCarePercent(0),
+        mTrample(false),
+        mEnemyPercent(5),
+        mTramplePercent(30)
+    {}
+
+    //! Longest walk to the nest in turns, the walk of an egg is drawn between 0 and this (variable distance).
+    uint32_t mWalkMax;
+    //! False = no free nest: she sits down where she is, no walk.
+    bool mNest;
+    //! The care bonus while the hatchery is claimed, lit and free of enemies (0 = none).
+    uint32_t mCarePercent;
+    //! Enemies stand in the hatchery mEnemyPercent of the turns: eggs do not hatch then, there is no care, and every
+    //! egg is trampled with mTramplePercent per such turn.
+    bool mTrample;
+    uint32_t mEnemyPercent;
+    uint32_t mTramplePercent;
+};
+
+//! Turns an egg is late when the hen needs walk + Lay pose turns but had only the interval she has just run through
+//! (she sets off when the timer starts at the earliest, see HatcheryCycle::tripDue). The hatching clock of the egg
+//! starts with this age, so the rhythm of the cycle does not depend on the way.
+uint32_t lateTurns(uint32_t interval, uint32_t walk, const HatcheryCycleSettings& settings)
+{
+    const uint32_t need = walk + settings.mLayShowTurns;
+    return (need > interval) ? need - interval : 0;
+}
+
+//! Model of the life cycle with the rules of HatcheryCycle, in the order the hatchery handles them. The egg appears
+//! when the laying timer of the hen runs out (late eggs are backdated), it is hatched and grown in the same turn
+//! as it is counted. A Python port of this function (the same generators and order) gives the same numbers.
+uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, const HatcheryCycleSettings& settings,
+    const SimCase& simCase)
 {
     Lcg demand(12345);
     Lcg rng(777);
-    std::vector<SimAnimal> hens;
-    std::vector<SimAnimal> chicks;
-    std::vector<SimAnimal> eggs;
-    // Eggs a hen is still laying: the walk to the nest and the Lay pose (HatcheryCycle::layDelay), then the egg lies
-    // in the nest and starts to age. They count as eggs for the capacity, as in RoomHatchery::doUpkeep.
-    std::vector<SimAnimal> pending;
-    const uint32_t layDelay = HatcheryCycle::layDelay(settings);
-    uint32_t roosters = 1;
+    Lcg walkRng(4242);
+    Lcg trampleRng(99);
+    HatcheryCare care;
+    care.mClaimed = true;
+    care.mLit = true;
+    HatcheryCycleSettings carePercentSettings = settings;
+    carePercentSettings.mCareLayPercent = simCase.mCarePercent;
+    const HatcheryCycleSettings caredSettings = HatcheryCycle::withCare(carePercentSettings, care);
+    std::vector<SimHen> hens;
+    std::vector<uint32_t> chicks;
+    std::vector<uint32_t> eggs;
+    std::vector<SimLateEgg> lateEggs;
     uint32_t coopWait = 0;
-    uint32_t roosterWait = 0;
-    uint32_t capacity = HatcheryCycle::capacity(nbCoops, nbCoops, settings);
+    const uint32_t capacity = HatcheryCycle::capacity(nbCoops, nbCoops, settings);
     for(uint32_t i = 0; i < nbCoops; ++i)
-        hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
+        hens.push_back(SimHen(HatcheryCycle::layInterval(caredSettings, rng.next())));
     uint32_t eaten = 0;
     for(uint32_t turn = 0; turn < nbTurns; ++turn)
     {
-        if((demand.next() % 100 < eatPercent) && !hens.empty())
+        const bool enemy = simCase.mTrample && ((trampleRng.next() % 100) < simCase.mEnemyPercent);
+        // Enemies in the hatchery: no care bonus
+        const HatcheryCycleSettings& laying = enemy ? settings : caredSettings;
+        if(((demand.next() % 100) < eatPercent) && !hens.empty())
         {
             hens.erase(hens.begin());
             ++eaten;
         }
 
-        HatcheryCounts counts;
-        counts.mHens = hens.size();
-        counts.mChicks = chicks.size();
-        counts.mEggs = eggs.size() + pending.size();
-        counts.mRoosters = roosters;
+        uint32_t population = hens.size() + chicks.size() + eggs.size() + lateEggs.size();
 
-        // The eggs whose hen has finished lay in the nest, they age from the next turn on
-        std::vector<SimAnimal> newEggs;
-        std::vector<SimAnimal> stillPending;
-        for(size_t i = 0; i < pending.size(); ++i)
+        // Late eggs whose hen has finished appear now, with the age they would have had on time
+        std::vector<uint32_t> born;
+        std::vector<SimLateEgg> stillLate;
+        for(size_t i = 0; i < lateEggs.size(); ++i)
         {
-            if(pending[i].mTimer > 1)
-            {
-                --pending[i].mTimer;
-                stillPending.push_back(pending[i]);
-            }
+            if(lateEggs[i].mTurns <= 1)
+                born.push_back(lateEggs[i].mLate);
             else
-                newEggs.push_back(SimAnimal(0));
+            {
+                --lateEggs[i].mTurns;
+                stillLate.push_back(lateEggs[i]);
+            }
         }
-        pending = stillPending;
+        lateEggs = stillLate;
 
-        // Laying
+        // Laying: the egg is laid when the timer runs out
         for(size_t i = 0; i < hens.size(); ++i)
         {
             if(hens[i].mTimer > 1)
@@ -250,47 +315,72 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
                 --hens[i].mTimer;
                 continue;
             }
-            hens[i].mTimer = HatcheryCycle::layInterval(settings, rng.next());
-            if(!HatcheryCycle::canLay(counts, capacity))
+            const uint32_t interval = HatcheryCycle::layInterval(laying, rng.next());
+            const uint32_t done = hens[i].mDone;
+            hens[i].mTimer = interval;
+            hens[i].mDone = interval;
+            if(population >= capacity)
                 continue;
-            if(layDelay > 0)
-                pending.push_back(SimAnimal(layDelay));
+
+            uint32_t walk = 0;
+            if(simCase.mNest && (simCase.mWalkMax > 0))
+                walk = walkRng.next() % (simCase.mWalkMax + 1);
+            const uint32_t late = lateTurns(done, walk, settings);
+            if(late > 0)
+                lateEggs.push_back(SimLateEgg(late));
             else
-                newEggs.push_back(SimAnimal(0));
-            ++counts.mEggs;
+                born.push_back(0);
+            ++population;
         }
-        // Hatching
-        if(HatcheryCycle::eggsMayHatch(counts))
+
+        // Enemies trample the eggs that lie there
+        if(enemy)
         {
-            std::vector<SimAnimal> stillEggs;
+            std::vector<uint32_t> kept;
             for(size_t i = 0; i < eggs.size(); ++i)
             {
-                ++eggs[i].mTimer;
-                if(eggs[i].mTimer >= settings.mHatchTurns)
-                    chicks.push_back(SimAnimal(0));
-                else
-                    stillEggs.push_back(eggs[i]);
+                if((trampleRng.next() % 100) >= simCase.mTramplePercent)
+                    kept.push_back(eggs[i]);
             }
-            eggs = stillEggs;
+            eggs = kept;
         }
-        eggs.insert(eggs.end(), newEggs.begin(), newEggs.end());
+        eggs.insert(eggs.end(), born.begin(), born.end());
+
+        // Hatching (a rooster is there, and no enemy)
+        std::vector<uint32_t> stillEggs;
+        for(size_t i = 0; i < eggs.size(); ++i)
+        {
+            if(enemy)
+            {
+                stillEggs.push_back(eggs[i]);
+                continue;
+            }
+            const uint32_t age = eggs[i] + 1;
+            if(age >= settings.mHatchTurns)
+                chicks.push_back(age - settings.mHatchTurns);
+            else
+                stillEggs.push_back(age);
+        }
+        eggs = stillEggs;
+
         // Growing
-        std::vector<SimAnimal> stillChicks;
+        std::vector<uint32_t> stillChicks;
         for(size_t i = 0; i < chicks.size(); ++i)
         {
-            ++chicks[i].mTimer;
-            if(chicks[i].mTimer >= settings.mGrowTurns)
-                hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
+            const uint32_t age = chicks[i] + 1;
+            if(age >= settings.mGrowTurns)
+                hens.push_back(SimHen(HatcheryCycle::layInterval(laying, rng.next())));
             else
-                stillChicks.push_back(chicks[i]);
+                stillChicks.push_back(age);
         }
         chicks = stillChicks;
 
         // Coop fallback
+        HatcheryCounts counts;
         counts.mHens = hens.size();
         counts.mChicks = chicks.size();
-        counts.mEggs = eggs.size() + pending.size();
-        counts.mRoosters = roosters;
+        counts.mEggs = eggs.size() + lateEggs.size();
+        counts.mRoosters = 1;
         if(HatcheryCycle::needCoopHen(counts, nbCoops))
         {
             ++coopWait;
@@ -299,60 +389,114 @@ uint32_t simulateNew(uint32_t nbCoops, uint32_t eatPercent, uint32_t nbTurns, co
                 // One hen per coop comes out
                 uint32_t nbFromCoops = HatcheryCycle::coopHenCount(settings, capacity);
                 for(uint32_t i = 0; i < nbFromCoops; ++i)
-                    hens.push_back(SimAnimal(HatcheryCycle::layInterval(settings, rng.next())));
+                    hens.push_back(SimHen(HatcheryCycle::layInterval(laying, rng.next())));
                 coopWait = 0;
             }
         }
         else
             coopWait = 0;
-        if(HatcheryCycle::needCoopRooster(counts, nbCoops))
-        {
-            ++roosterWait;
-            if(roosterWait >= settings.mCoopWait)
-            {
-                ++roosters;
-                roosterWait = 0;
-            }
-        }
-        else
-            roosterWait = 0;
     }
     return eaten;
 }
 }
 
-BOOST_AUTO_TEST_CASE(test_LayDelay)
+BOOST_AUTO_TEST_CASE(test_Walk)
 {
-    // Walk to the nest (3 turns) and Lay pose (2 turns) together: the egg lies in the nest 5 turns after the hen started
+    // The walk window follows the real distance at the walking speed of a hen (0.4 tiles per second, 1.4 turns per second)
+    const double tilesPerTurn = 0.4 / 1.4;
+    BOOST_CHECK_EQUAL(HatcheryCycle::walkTurns(0.0, tilesPerTurn), 0u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::walkTurns(-1.0, tilesPerTurn), 0u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::walkTurns(1.0, 0.0), 0u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::walkTurns(0.2, tilesPerTurn), 1u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::walkTurns(1.0, tilesPerTurn), 4u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::walkTurns(2.1, tilesPerTurn), 8u);
+    BOOST_CHECK(HatcheryCycle::walkTurns(2.1, tilesPerTurn) > HatcheryCycle::walkTurns(1.0, tilesPerTurn));
+
+    // She sets off when the turns left until the egg are as many as the walk and the Lay pose (2 turns)
     HatcheryCycleSettings settings;
-    BOOST_CHECK_EQUAL(HatcheryCycle::layDelay(settings), settings.mNestWalkTurns + settings.mLayShowTurns);
-    BOOST_CHECK_EQUAL(HatcheryCycle::layDelay(settings), 5u);
-    settings.mLayShowTurns = 0;
-    BOOST_CHECK_EQUAL(HatcheryCycle::layDelay(settings), 0u);
+    BOOST_CHECK(HatcheryCycle::tripDue(6, 4, settings));
+    BOOST_CHECK(!HatcheryCycle::tripDue(7, 4, settings));
+    BOOST_CHECK(HatcheryCycle::tripDue(2, 0, settings));
+    BOOST_CHECK(!HatcheryCycle::tripDue(3, 0, settings));
+
+    // A nest is used when the walk is no longer than the longest walk; 0 turns = she never walks
+    BOOST_CHECK(HatcheryCycle::walkFits(settings.mNestWalkTurns, settings));
+    BOOST_CHECK(!HatcheryCycle::walkFits(settings.mNestWalkTurns + 1, settings));
+    settings.mNestWalkTurns = 0;
+    BOOST_CHECK(!HatcheryCycle::walkFits(0, settings));
 }
 
-//! Balance parity: with the default values the number of edible chickens per minute has to stay the
-//! one of the spawning before the life cycle, for the same hatchery size and the same demand. The model
-//! includes the walk to the nest and the Lay pose (HatcheryCycle::layDelay): the egg starts to age when it lies in
-//! the nest, while the laying timer of the hen has run since she started. Limit 3 percent. A Python port of the model
-//! (the same generator and order) gives the worst deviation 2.92 percent for these defaults.
+BOOST_AUTO_TEST_CASE(test_LateEgg)
+{
+    // The egg is on time when walk and pose fit into the interval she has run through, otherwise it is that late
+    HatcheryCycleSettings settings;
+    BOOST_CHECK_EQUAL(lateTurns(5, 3, settings), 0u);
+    BOOST_CHECK_EQUAL(lateTurns(3, 3, settings), 2u);
+    BOOST_CHECK_EQUAL(lateTurns(3, 0, settings), 0u);
+    BOOST_CHECK_EQUAL(lateTurns(7, 8, settings), 3u);
+    // The longest walk (6) and the Lay pose (2) are never more than 5 turns late with the shortest interval
+    BOOST_CHECK(lateTurns(settings.mLayMin, settings.mNestWalkTurns, settings) <= settings.mHatchTurns + settings.mGrowTurns - 1);
+}
+
+//! Balance parity: with the default values the number of edible chickens per minute has to stay the one of the
+//! spawning before the life cycle, for the same hatchery size and the same demand: within 3 percent of the old
+//! number, in every case below. The egg appears when the laying timer of the hen runs out (the walk to the nest only
+//! has to fit into the time before, a late egg gets the age it would have had), the laying timer carries the factor
+//! HatcheryCycleSettings::mLayFactor that balances the cycle against the old spawning. A Python port of the model (the
+//! same generators and order) gives the worst deviation per case: 2.71 percent (no walk), 2.84 (walk 0 to 6 turns),
+//! 2.71 (no free nest), 2.84 (care bonus 2 percent), 2.60 (care bonus and walk), 2.92 (enemies trample, 5 percent of
+//! the turns, 30 percent per egg). A care bonus of 25 percent would give 7.27 percent (Python port): 2 percent is
+//! about the largest bonus that keeps the parity together with the other cases.
 BOOST_AUTO_TEST_CASE(test_BalanceParity)
 {
     HatcheryCycleSettings settings;
     const uint32_t nbTurns = 84000; // about 1000 minutes with 1.4 turns per second
     const uint32_t demands[] = {2, 5, 10, 20};
     const uint32_t coops[] = {1, 2, 4, 8};
-    for(uint32_t c = 0; c < 4; ++c)
+
+    std::vector<std::string> names;
+    std::vector<SimCase> cases;
+    SimCase noWalk;
+    names.push_back("no walk");
+    cases.push_back(noWalk);
+    SimCase walk = noWalk;
+    walk.mWalkMax = settings.mNestWalkTurns;
+    names.push_back("variable walk");
+    cases.push_back(walk);
+    SimCase noNest = noWalk;
+    noNest.mNest = false;
+    names.push_back("no free nest");
+    cases.push_back(noNest);
+    SimCase careNoWalk = noWalk;
+    careNoWalk.mCarePercent = settings.mCareLayPercent;
+    names.push_back("care bonus");
+    cases.push_back(careNoWalk);
+    SimCase careWalk = walk;
+    careWalk.mCarePercent = settings.mCareLayPercent;
+    names.push_back("care bonus and variable walk");
+    cases.push_back(careWalk);
+    SimCase trample = walk;
+    trample.mTrample = true;
+    names.push_back("enemies trample eggs");
+    cases.push_back(trample);
+
+    for(size_t k = 0; k < cases.size(); ++k)
     {
-        for(uint32_t d = 0; d < 4; ++d)
+        for(uint32_t c = 0; c < 4; ++c)
         {
-            double oldEaten = simulateOld(coops[c], demands[d], nbTurns, settings.mCoopWait);
-            double newEaten = simulateNew(coops[c], demands[d], nbTurns, settings);
-            double oldPerMinute = oldEaten / (nbTurns / 1.4 / 60.0);
-            double newPerMinute = newEaten / (nbTurns / 1.4 / 60.0);
-            std::cout << "parity coops=" << coops[c] << " eatPercent/turn=" << demands[d]
-                << " old=" << oldPerMinute << " new=" << newPerMinute << " per minute" << std::endl;
-            BOOST_CHECK_CLOSE(newPerMinute, oldPerMinute, 3.0);
+            for(uint32_t d = 0; d < 4; ++d)
+            {
+                const double oldEaten = simulateOld(coops[c], demands[d], nbTurns, settings.mCoopWait);
+                const double newEaten = simulateNew(coops[c], demands[d], nbTurns, settings, cases[k]);
+                const double oldPerMinute = oldEaten / (nbTurns / 1.4 / 60.0);
+                const double newPerMinute = newEaten / (nbTurns / 1.4 / 60.0);
+                const double deviation = std::abs(newPerMinute - oldPerMinute) / oldPerMinute * 100.0;
+                std::cout << "parity " << names[k] << " coops=" << coops[c] << " eatPercent/turn=" << demands[d]
+                    << " old=" << oldPerMinute << " new=" << newPerMinute << " per minute, deviation "
+                    << deviation << " percent" << std::endl;
+                BOOST_CHECK_MESSAGE(deviation <= 3.0, names[k] << " coops=" << coops[c] << " demand=" << demands[d]
+                    << ": " << deviation << " percent");
+            }
         }
     }
 }
@@ -368,7 +512,7 @@ BOOST_AUTO_TEST_CASE(test_Care)
     care.mEnemies = true;
     BOOST_CHECK(!HatcheryCycle::wellCared(care));
 
-    // Without care the settings stay as they are, with care the laying times get shorter
+    // Without care the settings stay as they are, with care the laying times get shorter (through the factor)
     HatcheryCycleSettings settings;
     settings.mLayMin = 8;
     settings.mLayMax = 12;
@@ -376,15 +520,18 @@ BOOST_AUTO_TEST_CASE(test_Care)
     HatcheryCycleSettings plain = HatcheryCycle::withCare(settings, care);
     BOOST_CHECK_EQUAL(plain.mLayMin, 8u);
     BOOST_CHECK_EQUAL(plain.mLayMax, 12u);
+    BOOST_CHECK_EQUAL(plain.mLayFactor, settings.mLayFactor);
     care.mEnemies = false;
     HatcheryCycleSettings cared = HatcheryCycle::withCare(settings, care);
-    BOOST_CHECK_EQUAL(cared.mLayMin, 6u);
-    BOOST_CHECK_EQUAL(cared.mLayMax, 9u);
+    BOOST_CHECK_EQUAL(cared.mLayMin, 8u);
+    BOOST_CHECK_EQUAL(cared.mLayMax, 12u);
+    BOOST_CHECK_CLOSE(cared.mLayFactor, settings.mLayFactor * 0.75, 0.0001);
     BOOST_CHECK_EQUAL(cared.mHatchTurns, settings.mHatchTurns);
     settings.mCareLayPercent = 0;
-    BOOST_CHECK_EQUAL(HatcheryCycle::withCare(settings, care).mLayMin, 8u);
+    BOOST_CHECK_EQUAL(HatcheryCycle::withCare(settings, care).mLayFactor, settings.mLayFactor);
     settings.mCareLayPercent = 500;
-    BOOST_CHECK(HatcheryCycle::withCare(settings, care).mLayMin >= 1u);
+    BOOST_CHECK_CLOSE(HatcheryCycle::withCare(settings, care).mLayFactor, settings.mLayFactor * 0.1, 0.0001);
+    BOOST_CHECK(HatcheryCycle::layInterval(HatcheryCycle::withCare(settings, care), 0) >= 1u);
 
     // Eggs do not hatch while enemies stand in the hatchery
     HatcheryCounts counts;

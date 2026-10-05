@@ -108,8 +108,17 @@ public:
     inline uint32_t incrementAge()
     { return ++mAge; }
 
+    //! \brief Server side: an egg that appeared late (its hen was late at the nest) or a chick that hatched late gets
+    //! the age it would have had on time, so the cycle keeps its rhythm.
+    inline void setAge(uint32_t age)
+    { mAge = age; }
+
     inline void setLayTimer(uint32_t turns)
     { mNbTurnLay = turns; }
+
+    //! \brief Turns until the next egg, the turn in which the timer runs out counts as 1.
+    inline uint32_t getLayTimer() const
+    { return mNbTurnLay; }
 
     //! \brief Counts down the turns to the next egg. Returns true when the hen has to lay now.
     bool countDownLay();
