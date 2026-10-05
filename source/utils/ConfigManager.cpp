@@ -61,6 +61,8 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mSlapEffectDuration(15),
     mTiredWakefulness(20.0),
     mTiredWalkSpeedFactor(0.8),
+    mLowHealthWalkSpeedFactor(0.7),
+    mLowHealthWalkThresholdPercent(50.0),
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
     mHitEvents(true),
@@ -645,6 +647,20 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mTiredWalkSpeedFactor = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "LowHealthWalkSpeedFactor")
+        {
+            configFile >> nextParam;
+            mLowHealthWalkSpeedFactor = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "LowHealthWalkThresholdPercent")
+        {
+            configFile >> nextParam;
+            mLowHealthWalkThresholdPercent = Helper::toDouble(nextParam);
             // Not mandatory
         }
 

@@ -2377,6 +2377,9 @@ double Creature::getMoveSpeed(Tile* tile) const
     if(isTired())
         tiredFactor = ConfigManager::getSingleton().getTiredWalkSpeedFactor();
 
+    // A badly hurt creature limps along: it moves slower too (tired and hurt add up, see getLowHealthWalkFactor)
+    tiredFactor *= getLowHealthWalkFactor();
+
     // A worker that pulls a hurt creature is slower (clip drag_anim). The pulled creature does not walk
     // by itself: it slides after the worker a bit faster than the worker pulls, so it never falls behind.
     // Server and clients know both by the clip name, so both move them at the same speed
@@ -2417,15 +2420,38 @@ double Creature::getDragWorkerSpeedFactor()
     return std::max(0.1, std::min(1.0, factor));
 }
 
+double Creature::getLowHealthWalkFactor() const
+{
+    // The health stage (0 = unhurt, 1 to 6 = lost a sixth more each, 7 = no health left) is known on the
+    // server and on the clients. Stage s means the health is below 100 * (1 - (s - 1) / 6) percent, so
+    // a creature is badly hurt from the first stage that lies completely below the configured percent
+    const double nbSteps = static_cast<double>(NB_OVERLAY_HEALTH_VALUES - 2);
+    double thresholdPercent = ConfigManager::getSingleton().getLowHealthWalkThresholdPercent();
+    double firstStage = std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0;
+    if(static_cast<double>(mOverlayHealthValue) < firstStage)
+        return 1.0;
+
+    return ConfigManager::getSingleton().getLowHealthWalkSpeedFactor();
+}
+
 double Creature::getClientPoseSpeedFactor() const
 {
     double factor = 1.0;
-    if(mOverlayHealthValue >= 6)
-        factor = 0.78;
-    else if(mOverlayHealthValue == 5)
-        factor = 0.85;
-    else if(mOverlayHealthValue == 4)
-        factor = 0.92;
+    if(getAnimationStateName() == EntityAnimation::idle_anim)
+    {
+        // Hurt creatures breathe a little slower when they stand
+        if(mOverlayHealthValue >= 6)
+            factor = 0.78;
+        else if(mOverlayHealthValue == 5)
+            factor = 0.85;
+        else if(mOverlayHealthValue == 4)
+            factor = 0.92;
+    }
+    else
+    {
+        // The walk clip keeps up with the slower speed of a badly hurt creature (see getMoveSpeed)
+        factor = getLowHealthWalkFactor();
+    }
 
     // A tired creature also walks slower on the server (see getMoveSpeed): the walk clip keeps up
     if((mOverlayMoodValue & CreatureMoodValues::Tired) != 0)
