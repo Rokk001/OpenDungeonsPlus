@@ -34,6 +34,21 @@ assert 'shape.mLevel == 0 && (currentDetail != Detail::full || farAway)' in mesh
 # Dungeon heart ring: the classic stacks are drawn as piles on the client (server names and tests untouched).
 assert 'pileNameForClassicStack' in render and 'replacesClassicStack' in render
 
+# Look of the gold: a metal sheen from the lights only (no self-lighting, no additive blending), moderate specular,
+# a gentle glow light, and a ring pile that runs out on the floor at its edges (no plateau with a cut edge).
+assert 'emissive' not in material.replace('no emissive term', '')
+assert 'scene_blend' not in material
+for line in material.splitlines():
+    if line.strip().startswith('specular'):
+        assert float(line.split()[1]) <= 0.6, line
+ring = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
+assert 'mCorner[i] = level' not in ring and 'mCorner' not in ring
+assert '(peak - base) * bump * std::sqrt(bump)' in layer and '(peak - base) * std::sqrt(bump)' not in layer
+assert '(0.5f * patch.mStrength)' in render.split('void RenderManager::setTreasuryGlowLight')[1].split('void RenderManager::destroyTreasuryGlowLight')[0]
+# Coins and gems stay readable: rounded coins with a lighter middle, a radius of at least 0.05 on top of the gold
+assert 'CoinDome' in mesh and 'CoinRimShade' in mesh and 'CoinRound' in mesh
+assert 'TopCoinRadius = 0.06f' in mesh and 'GemSize = 0.04f' in mesh
+
 # Rain over the whole tile, sliding, rolling and sparkling coins.
 pour = particles.split('particle_system TreasuryCoinPour')[1].split('particle_system')[0]
 assert 'emitter Box' in pour
