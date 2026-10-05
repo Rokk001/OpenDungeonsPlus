@@ -510,6 +510,13 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
             gameMap->sendRelationshipTiers(seat);
         }
 
+        // A client that joined or loaded gets the whole list of wall torches again
+        if(!sock->getWallTorchesSynced())
+        {
+            sock->setWallTorchesSynced(true);
+            gameMap->resetWallTorchesSent(seat);
+        }
+
         // Here, the creature list is pulled. It could be possible that the creature dies before the stat window is
         // closed. So, if we cannot find the creature, we just erase it.
         std::vector<std::string>& creatures = mCreaturesInfoWanted[sock];

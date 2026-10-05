@@ -54,6 +54,7 @@ class ODSocketClient
             mHeartHPSent(-1.0),
             mHeartMessageTurn(-1),
             mRelationshipsSynced(false),
+            mWallTorchesSynced(false),
             mPendingTimestamp(-1),
             mSupportsLiveNickname(false),
             mSupportsCreatureMood(false),
@@ -97,6 +98,8 @@ class ODSocketClient
         void setHeartHealthSent(float fraction) { mHeartHealthSent = fraction; }
         bool getRelationshipsSynced() const { return mRelationshipsSynced; }
         void setRelationshipsSynced(bool synced) { mRelationshipsSynced = synced; }
+        bool getWallTorchesSynced() const { return mWallTorchesSynced; }
+        void setWallTorchesSynced(bool synced) { mWallTorchesSynced = synced; }
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
         double getHeartHPSent() const { return mHeartHPSent; }
         void setHeartHPSent(double hp) { mHeartHPSent = hp; }
@@ -161,6 +164,8 @@ class ODSocketClient
         int64_t mHeartMessageTurn;
         //! True once the client got the current relationship tiers
         bool mRelationshipsSynced;
+        //! True once the client got the whole list of wall torches
+        bool mWallTorchesSynced;
         std::string mState;
 
 
