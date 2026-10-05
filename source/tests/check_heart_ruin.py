@@ -123,7 +123,7 @@ struct Room:Building {
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 99;}
  virtual bool removeCoveredTile(Tile* t){
   mCoveredTiles.erase(std::remove(mCoveredTiles.begin(),mCoveredTiles.end(),t),mCoveredTiles.end());mCoveredTilesDestroyed.push_back(t);return true;}
- virtual void doUpkeep(){++doUpkeeps;}
+ virtual void doUpkeep(){++doUpkeeps;}void announceKeeperWealth(Tile*){}
  virtual void restoreInitialEntityState(){++restored;}
  virtual void exportToStream(std::ostream& os)const{os<<floorHP<<'\n';}
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}

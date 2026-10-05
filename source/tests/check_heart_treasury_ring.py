@@ -143,7 +143,7 @@ struct Room:Building {
  GameMap* getGameMap()const{return map;}
  Tile* getCentralTile()const{return central;}
  uint32_t numCoveredTiles()const{return static_cast<uint32_t>(mCoveredTiles.size());}
- virtual void doUpkeep(){++doUpkeeps;}
+ virtual void doUpkeep(){++doUpkeeps;}void announceKeeperWealth(Tile*){}
  virtual bool removeCoveredTile(Tile* t){
   auto it=std::find(mCoveredTiles.begin(),mCoveredTiles.end(),t);
   if(it==mCoveredTiles.end())return false;
