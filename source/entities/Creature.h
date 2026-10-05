@@ -37,6 +37,7 @@
 #include <string>
 
 enum class RelationshipEvent;
+struct RelationshipCreatureState;
 class Building;
 class Creature;
 class CreatureAction;
@@ -472,6 +473,18 @@ public:
 
     //! Server side. True if the creature can start a brawl now (idle, not in a fight and not hurt).
     bool canStartBrawl() const;
+
+    //! Server side. Fills state with what has to be saved of the relationships of this creature
+    //! (grief mood, rage, brawl). Returns false if there is nothing to save.
+    bool getRelationshipState(RelationshipCreatureState& state) const;
+
+    //! Server side. Restores what getRelationshipState saved. A saved brawl is only resumed
+    //! when the opponent was restored too and both are able to fight again soon (see resumeBrawl).
+    void setRelationshipState(const RelationshipCreatureState& state);
+
+    //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
+    //! part, gives up after a while.
+    void resumeBrawl();
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -1161,6 +1174,11 @@ private:
     //! Name of the creature this one brawls with (relationships), empty if there is no brawl
     std::string                     mBrawlOpponent;
     int64_t                         mBrawlStartTurn = 0;
+    //! Brawl restored from a saved game: the opponent and the turns it may still last. Starts as
+    //! soon as both creatures can fight (see resumeBrawl), empty if there is none.
+    std::string                     mBrawlResumeOpponent;
+    int64_t                         mBrawlResumeTurnsLeft = 0;
+    int64_t                         mBrawlResumeGiveUpTurn = 0;
 
     //! Combat modifier of the relationships, computed at most once per turn
     mutable int64_t                 mCombatModifierTurn = -1;

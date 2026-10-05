@@ -28,6 +28,7 @@
 
 const int32_t RelationshipSettings::VALUE_MIN = -100;
 const int32_t RelationshipSettings::VALUE_MAX = 100;
+const size_t RelationshipCreatureState::MAX_CAPTORS;
 
 namespace
 {
@@ -1079,5 +1080,81 @@ bool CreatureRelationships::readFromStream(std::istream& is, int64_t turn)
         mPairs[pair] = data;
         if(!hasFlag)
             legacy.insert(pair);
+    }
+}
+
+void writeRelationshipCreatureStates(std::ostream& os, const std::vector<RelationshipCreatureState>& states)
+{
+    for(size_t i = 0; i < states.size(); ++i)
+    {
+        const RelationshipCreatureState& state = states[i];
+        if(state.isEmpty())
+            continue;
+
+        os << state.mName << "\t" << state.mGriefMood << "\t" << std::max<int64_t>(0, state.mRageTurnsLeft) << "\t"
+           << state.mRageSeatId << "\t" << state.mBrawlOpponent << "\t" << std::max<int64_t>(0, state.mBrawlTurnsLeft);
+        for(size_t j = 0; j < state.mCaptors.size() && (j < RelationshipCreatureState::MAX_CAPTORS); ++j)
+            os << "\t" << state.mCaptors[j];
+        os << "\n";
+    }
+}
+
+bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCreatureState>& states)
+{
+    states.clear();
+    std::string line;
+    while(true)
+    {
+        if(!is.good())
+            return false;
+
+        std::getline(is, line);
+        if(!line.empty() && (line[line.size() - 1] == '\r'))
+            line.erase(line.size() - 1);
+
+        if(line == "[/RelationshipState]")
+            return true;
+
+        if(line.empty() || (line[0] == '#'))
+            continue;
+
+        std::vector<std::string> fields;
+        std::string::size_type start = 0;
+        while(true)
+        {
+            std::string::size_type pos = line.find('\t', start);
+            if(pos == std::string::npos)
+            {
+                fields.push_back(line.substr(start));
+                break;
+            }
+            fields.push_back(line.substr(start, pos - start));
+            start = pos + 1;
+        }
+
+        int64_t grief;
+        int64_t rageTurns;
+        int64_t rageSeat;
+        int64_t brawlTurns;
+        if((fields.size() < 6) || fields[0].empty() || !parseInt(fields[1], grief) || !parseInt(fields[2], rageTurns)
+           || !parseInt(fields[3], rageSeat) || !parseInt(fields[5], brawlTurns))
+        {
+            return false;
+        }
+
+        RelationshipCreatureState state;
+        state.mName = fields[0];
+        state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-100000, std::min<int64_t>(100000, grief)));
+        state.mRageTurnsLeft = std::max<int64_t>(0, rageTurns);
+        state.mRageSeatId = static_cast<int32_t>(rageSeat);
+        state.mBrawlOpponent = fields[4];
+        state.mBrawlTurnsLeft = std::max<int64_t>(0, brawlTurns);
+        // Older saves have no captor fields
+        for(size_t i = 6; i < fields.size() && (state.mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
+        {
+            if(!fields[i].empty())
+                state.mCaptors.push_back(fields[i]);
+        }
+        states.push_back(state);
     }
 }
