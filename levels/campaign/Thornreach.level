@@ -285,6 +285,7 @@ ProtectDungeonTemple	NULL
 1	47	2	100
 1	48	2	100
 1	49	2	100
+1	57	2	100
 1	71	3	100
 2	0	3	100
 2	7	2	100
@@ -307,6 +308,7 @@ ProtectDungeonTemple	NULL
 3	24	3	100
 3	46	2	100
 3	48	2	100
+3	57	2	100
 3	68	2	100
 3	71	3	100
 4	0	3	100
@@ -319,6 +321,7 @@ ProtectDungeonTemple	NULL
 4	23	2	100
 4	24	3	100
 4	25	2	100
+4	57	2	100
 4	62	1	0
 4	63	1	0
 4	64	1	0
@@ -348,6 +351,7 @@ ProtectDungeonTemple	NULL
 5	40	1	0	1
 5	41	1	0	1
 5	46	2	100
+5	57	2	100
 5	58	1	0	3
 5	59	1	0	3
 5	60	1	0	3
@@ -429,6 +433,7 @@ ProtectDungeonTemple	NULL
 7	41	1	0	1
 7	42	1	100
 7	46	2	100
+7	57	2	100
 7	58	1	0
 7	59	1	0
 7	60	1	0
@@ -5985,6 +5990,7 @@ Name	hunt1
 Mode	once
 Cond	time	260
 Action	message	1	Thorn hunters are riding out of the north-west.
+Action	terrain	28	29	28	29	path
 Action	spawn	2	31	29	1	Orc:2	Goblin:2	Spider:2
 [/Trigger]
 [Trigger]
@@ -5992,6 +5998,7 @@ Name	hunt2
 Mode	once
 Cond	time	560
 Action	message	1	A pack from the south-east is crossing the maze.
+Action	terrain	28	44	28	44	path
 Action	spawn	5	30	44	1	Orc:2	Spider:2	Troll:2
 [/Trigger]
 [Trigger]
