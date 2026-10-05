@@ -411,9 +411,18 @@ void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier,
     else if(type == GameEntityType::creature)
     {
         Creature* body = static_cast<Creature*>(carried);
-        show(reactions, carrier, body->isAlive() ? "PickPrisoner" : "PickBody");
-        if(body->isAlive())
-            WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
+        // A hurt creature of the keeper that is not knocked out to death is lifted gently, it does not struggle
+        bool isWounded = body->isAlive() && !body->isKoDeath() && (body->getSeat() == carrier->getSeat());
+        if(isWounded)
+        {
+            show(reactions, carrier, "PickWounded");
+        }
+        else
+        {
+            show(reactions, carrier, body->isAlive() ? "PickPrisoner" : "PickBody");
+            if(body->isAlive())
+                WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
+        }
     }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity) ||
             (type == GameEntityType::skillEntity))
@@ -441,7 +450,9 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
     {
         Creature* body = static_cast<Creature*>(carried);
         WorkerExtras::endStruggle(reactions.mGameMap, body->getName());
-        if(body->isAlive() && ((room == "Prison") || (room == "Torture")))
+        if(body->isAlive() && !body->isKoDeath() && (body->getSeat() == carrier->getSeat()) && (room == "Dormitory"))
+            later(reactions, carrier, "PutWoundedDown", 0.2);
+        else if(body->isAlive() && ((room == "Prison") || (room == "Torture")))
             later(reactions, carrier, "PrisonerShove", 0.1);
         else if(!body->isAlive() && (room == "Crypt"))
             later(reactions, carrier, "CorpseLookBack", 0.6);
