@@ -134,7 +134,7 @@ assert 'layDelay(settings)' in doUpkeep and 'uint32_t HatcheryCycle::layDelay' i
 assert 'hen == nullptr' in trips and '--counts.mEggs' in trips, 'a hen that is gone takes her egg with her'
 assert 'standingPosition' in body(room_cpp, 'bool RoomHatchery::getNestStandPoint')
 assert 'mHen' not in body(room_cpp, 'void RoomHatchery::releasePendingEggs'), 'the egg appears after the same turns, the hen walking or not'
-assert doUpkeep.index('updateNestTrips(hens, counts)') < doUpkeep.index('releasePendingEggs(settings)')
+assert doUpkeep.index('updateNestTrips(hens, settings, counts)') < doUpkeep.index('releasePendingEggs(settings)')
 assert 'HatcheryNestWalkTurns' in cfg and 'HatcheryNestArrive' in cfg
 # The hatching clock starts when the egg lies in the nest; the walk and the Lay pose count against the next laying
 # interval of the hen (her timer keeps running on the way), so the rate of the eggs stays the same
