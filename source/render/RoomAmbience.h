@@ -336,7 +336,7 @@ private:
         double mExpire;
     };
 
-    //! \brief Grain level of the floor of a hatchery tile; full when nothing (valid) is known
+    //! \brief Grain level of the floor of a hatchery tile; 0 (no grain shown) while the server has not told the grain of its hatchery yet
     int32_t getGrainLevel(Tile* tile) const;
 
     std::map<std::string, GrainRoom> mGrainRooms;

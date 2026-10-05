@@ -77,7 +77,8 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mNbTurnDie(0),
     mIsSlapped(false),
     mLockedEat(false),
-    mGiftTurns(0)
+    mGiftTurns(0),
+    mPeckWait(0)
 {
 }
 
@@ -106,7 +107,8 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mNbTurnDie(0),
     mIsSlapped(false),
     mLockedEat(false),
-    mGiftTurns(0)
+    mGiftTurns(0),
+    mPeckWait(0)
 {
     setMeshName("Chicken");
 }
@@ -154,6 +156,9 @@ void ChickenEntity::doUpkeep()
 
     if(!getIsOnMap())
         return;
+
+    if(mPeckWait > 0)
+        --mPeckWait;
 
     Tile* tile = getPositionTile();
     if(tile == nullptr)
@@ -266,7 +271,10 @@ void ChickenEntity::doUpkeep()
         if(Ogre::Vector2(getPosition().x, getPosition().y).distance(mFollowTarget) <= mFollowGap + 0.3)
         {
             if(mKind == ChickenKind::hen)
+            {
                 setAnimationState("Pick", true);
+                peckGround(currentHatchery);
+            }
             else
                 setAnimationState(mCalm ? ChickenPose::roost : EntityAnimation::idle_anim, true);
             return;
@@ -283,12 +291,30 @@ void ChickenEntity::doUpkeep()
     wander(tile, currentHatchery);
 }
 
+bool ChickenEntity::startPeck()
+{
+    if((mKind != ChickenKind::hen) || (mPeckWait > 0))
+        return false;
+
+    mPeckWait = static_cast<uint32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryPeckIntervalTurns", 6.0));
+    return true;
+}
+
+void ChickenEntity::peckGround(Room* currentHatchery)
+{
+    if((mKind != ChickenKind::hen) || (currentHatchery == nullptr) || (currentHatchery->getType() != RoomType::hatchery))
+        return;
+
+    static_cast<RoomHatchery*>(currentHatchery)->henPecks(*this);
+}
+
 void ChickenEntity::wander(Tile* tile, Room* currentHatchery)
 {
     // We might not move
     if(Random::Int(1,2) == 1)
     {
         setAnimationState("Pick");
+        peckGround(currentHatchery);
         return;
     }
 

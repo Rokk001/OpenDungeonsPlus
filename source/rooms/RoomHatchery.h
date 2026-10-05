@@ -27,6 +27,9 @@
 #include <map>
 
 class Creature;
+class Player;
+class Seat;
+struct CosmeticEvent;
 enum class TileVisual;
 
 class RoomHatchery: public Room
@@ -51,6 +54,15 @@ public:
     void handleCreatureUsingAbsorbedRoom(Creature& creature) override;
 
     void creatureDropped(Creature& creature) override;
+
+    //! A hen pecks at the ground (scratching, picking, picking at the rooster's call): with the chance
+    //! HatcheryGrainEatPercent the tile she stands on loses one level of grain. A hen pecks at most once per
+    //! HatcheryPeckIntervalTurns (see ChickenEntity::startPeck), so every pose of the hen is covered alike.
+    void henPecks(ChickenEntity& hen);
+    //! True if the seat has sight on a tile of the hatchery.
+    bool isSeenBy(const Seat* seat) const;
+    //! Sends the grain levels (cosmetic event hatcheryGrain) to one human player at once.
+    void sendGrainTo(Player* player);
 
     //! The rooster protests loudly (picked up by the keeper's hand): plays the angry cackle where he was.
     static void fireProtest(Tile& tile);
@@ -114,16 +126,8 @@ private:
     void updateGrain();
     //! Sends the grain levels (cosmetic event hatcheryGrain) to every human player with sight on a tile of the room.
     void sendGrain();
-
-    //! Grain on the floor: how full a tile is (0 = bare to HatcheryGrainLevels = full). Only tiles that are not full
-    //! are kept, a tile that is not in the map is full. Hens that scratch take grain, it grows back over time.
-    int32_t getGrainLevel(const Tile* tile) const;
-    //! A hen scratches on the tile: with the chance HatcheryGrainEatPercent one level of grain is gone.
-    void eatGrain(Tile* tile);
-    //! Lets bare tiles grow grain again and tells the clients that see the hatchery how full its tiles are.
-    void updateGrain();
-    //! Sends the grain levels (cosmetic event hatcheryGrain) to every human player with sight on a tile of the room.
-    void sendGrain();
+    //! The event with the current grain levels of the whole hatchery.
+    CosmeticEvent makeGrainEvent() const;
 
     //! Turns until the rooster crows next
     uint32_t mCrowInterval;

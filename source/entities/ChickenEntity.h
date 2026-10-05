@@ -105,6 +105,11 @@ public:
     //! \brief Counts down the turns to the next egg. Returns true when the hen has to lay now.
     bool countDownLay();
 
+    //! \brief A hen is about to peck at the ground (scratch pose, "Pick" animation, picking at the rooster's call).
+    //! True if this peck counts: only hens peck, and at most once per HatcheryPeckIntervalTurns, however
+    //! many of her poses ask for it. Server side only, nothing of it is saved or sent.
+    bool startPeck();
+
     //! \brief Plays a pose (see ChickenPose.h) and holds the animal still for the number of turns.
     void playPose(const std::string& pose, uint32_t turns);
 
@@ -239,6 +244,8 @@ private:
     bool mIsSlapped;
     bool mLockedEat;
     uint32_t mGiftTurns;
+    //! Turns until the hen may peck (and take grain) again
+    uint32_t mPeckWait;
     std::string mLockOwner;
     std::string mSnatchedFrom;
     ChickenFlight::State mFlight;
@@ -265,6 +272,8 @@ private:
 
     //! \brief Server side: one random step inside the hatchery (or around if outside).
     void wander(Tile* tile, Room* currentHatchery);
+    //! \brief Server side: the hen pecks at the ground of the hatchery she is in (takes grain from the tile).
+    void peckGround(Room* currentHatchery);
 
     void addTileToListIfPossible(int x, int y, Room* currentHatchery, std::vector<Tile*>& possibleTileMove);
 };

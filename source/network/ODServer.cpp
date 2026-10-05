@@ -49,6 +49,7 @@
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomDungeonTemple.h"
+#include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
 #include "rooms/RoomWorkshop.h"
@@ -180,6 +181,38 @@ namespace
             event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
                 static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
             ODServer::getSingleton().sendCosmeticEvent(player, event);
+        }
+    }
+
+    //! \brief Sends a human player the grain of every hatchery that has just come into its sight (a hatchery is
+    //! remembered per client while it is seen). So a newly seen hatchery shows its real grain at once, also for a keeper
+    //! who joins or a game that was loaded (the remembered set of a new client is empty). Cosmetic only.
+    void notifyHatcheryGrainSeen(GameMap* gameMap, ODSocketClient* sock, Player* player)
+    {
+        if(!player->getIsHuman() || player->getSeat() == nullptr || !sock->supportsCosmeticEvents())
+            return;
+
+        std::set<std::string>& seen = sock->getGrainSeen();
+        Seat* ownSeat = player->getSeat();
+        for(Room* room : gameMap->getRooms())
+        {
+            if(room->getType() != RoomType::hatchery)
+                continue;
+
+            RoomHatchery* hatchery = static_cast<RoomHatchery*>(room);
+            std::set<std::string>::iterator it = seen.find(room->getName());
+            if(!hatchery->isSeenBy(ownSeat))
+            {
+                if(it != seen.end())
+                    seen.erase(it);
+                continue;
+            }
+
+            if(it != seen.end())
+                continue;
+
+            seen.insert(room->getName());
+            hatchery->sendGrainTo(player);
         }
     }
 
@@ -554,6 +587,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
 
         notifyHeartHealth(gameMap, sock, player);
         notifyHeartStages(gameMap, sock, player);
+        notifyHatcheryGrainSeen(gameMap, sock, player);
 
         // A client that joined or loaded gets the current relationship tiers once
         if(!sock->getRelationshipsSynced())

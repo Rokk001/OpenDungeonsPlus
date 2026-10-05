@@ -367,7 +367,7 @@ void RoomHatchery::updateFlock(const std::vector<ChickenEntity*>& hens, bool cal
         else if(roll < flutterPercent + scratchPercent)
         {
             hen->playPose(ChickenPose::scratch, 2);
-            eatGrain(hen->getPositionTile());
+            henPecks(*hen);
         }
     }
 }
@@ -380,6 +380,28 @@ int32_t RoomHatchery::getGrainLevel(const Tile* tile) const
         return levels;
 
     return std::min(levels, it->second);
+}
+
+void RoomHatchery::henPecks(ChickenEntity& hen)
+{
+    // The pecking rhythm is the hen's own (one peck per HatcheryPeckIntervalTurns, whatever she is doing)
+    if(!hen.startPeck())
+        return;
+
+    eatGrain(hen.getPositionTile());
+}
+
+bool RoomHatchery::isSeenBy(const Seat* seat) const
+{
+    for(Tile* tile : mCoveredTiles)
+    {
+        for(Seat* seeing : tile->getSeatsWithVision())
+        {
+            if(seeing == seat)
+                return true;
+        }
+    }
+    return false;
 }
 
 void RoomHatchery::eatGrain(Tile* tile)
@@ -403,12 +425,12 @@ void RoomHatchery::eatGrain(Tile* tile)
 void RoomHatchery::updateGrain()
 {
     const ConfigManager& config = ConfigManager::getSingleton();
+    // Without the reaction the grain is always full, which the keepers are told like any other state
     if(!(config.getRoomConfigDoubleOrDefault("HatcheryGrainReaction", 1.0) > 0.0))
-    {
         mGrain.clear();
-        return;
-    }
 
+    // Regrowth: the same chance per turn for every tile that is not full. Care, light, research and the state of
+    // the room play no part in it (only the config value HatcheryGrainRegrowPermille).
     const int32_t levels = static_cast<int32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
     uint32_t regrowPermille = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainRegrowPermille", 8.0));
     for(std::map<Tile*, int32_t>::iterator it = mGrain.begin(); it != mGrain.end();)
@@ -439,7 +461,8 @@ void RoomHatchery::updateGrain()
     uint32_t syncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainSyncTurns", 2.0));
     uint32_t resyncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainResyncTurns", 14.0));
     bool changed = mGrainDirty && (mGrainSyncWait >= syncTurns);
-    bool again = !mGrain.empty() && (mGrainResyncWait >= resyncTurns);
+    // The state is repeated even when every tile is full, so a message that got lost is made up for
+    bool again = (mGrainResyncWait >= resyncTurns);
     if(!changed && !again)
         return;
 
@@ -451,9 +474,6 @@ void RoomHatchery::updateGrain()
 
 void RoomHatchery::sendGrain()
 {
-    const ConfigManager& config = ConfigManager::getSingleton();
-    uint32_t resyncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainResyncTurns", 14.0));
-
     // The keepers that see a tile of the hatchery
     std::set<Seat*> seats;
     for(Tile* tile : mCoveredTiles)
@@ -463,6 +483,29 @@ void RoomHatchery::sendGrain()
     }
     if(seats.empty())
         return;
+
+    const CosmeticEvent event = makeGrainEvent();
+    for(Seat* seat : seats)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
+}
+
+void RoomHatchery::sendGrainTo(Player* player)
+{
+    if((player == nullptr) || mCoveredTiles.empty())
+        return;
+
+    ODServer::getSingleton().sendCosmeticEvent(player, makeGrainEvent());
+}
+
+CosmeticEvent RoomHatchery::makeGrainEvent() const
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    uint32_t resyncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainResyncTurns", 14.0));
 
     std::ostringstream text;
     for(std::map<Tile*, int32_t>::const_iterator it = mGrain.begin(); it != mGrain.end(); ++it)
@@ -475,18 +518,12 @@ void RoomHatchery::sendGrain()
     CosmeticEvent event(CosmeticEventType::hatcheryGrain);
     event.mObject = getName();
     event.mValue = static_cast<int32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
-    // The message is repeated every resync, a keeper that hears nothing for three times as long trusts it no more
+    // The message is repeated every resync, a client keeps the last state it was told (it is only used for the dust of a peck while it is fresh)
     event.mValue2 = static_cast<int32_t>(std::ceil(3.0 * resyncTurns / ODApplication::turnsPerSecond));
     event.mText = text.str();
     event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(mCoveredTiles.front()->getX()),
         static_cast<Ogre::Real>(mCoveredTiles.front()->getY()), 0.0f);
-    for(Seat* seat : seats)
-    {
-        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
-            continue;
-
-        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
-    }
+    return event;
 }
 
 void RoomHatchery::collectEnemies(std::vector<Creature*>& enemies) const

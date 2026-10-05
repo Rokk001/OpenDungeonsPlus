@@ -544,9 +544,11 @@ int32_t RoomAmbience::getGrainLevel(Tile* tile) const
     if(room == nullptr)
         return levels;
 
+    // Nothing is shown until the server has told the grain of the hatchery (it does so at once when the keeper
+    // sees it): no decoration rather than full grain that may be wrong. The last list stays valid until the next.
     std::map<std::string, GrainRoom>::const_iterator roomIt = mGrainRooms.find(room->getName());
-    if((roomIt == mGrainRooms.end()) || (mClock > roomIt->second.mExpire))
-        return levels;
+    if(roomIt == mGrainRooms.end())
+        return 0;
 
     std::map<int64_t, int32_t>::const_iterator it = roomIt->second.mLevels.find(
         static_cast<int64_t>(tile->getX()) * 65536 + tile->getY());

@@ -95,7 +95,7 @@ for key, value in grain_keys.items():
 
 # Server authority: hens take grain when they scratch, it grows back, nothing else about the hens changes
 scratch = function_body(hatchery, 'void RoomHatchery::updateFlock(')
-assert 'hen->playPose(ChickenPose::scratch, 2);\n            eatGrain(hen->getPositionTile());' in scratch
+assert 'hen->playPose(ChickenPose::scratch, 2);\n            henPecks(*hen);' in scratch
 eat = function_body(hatchery, 'void RoomHatchery::eatGrain(')
 for needle in ('getCoveringRoom() != this', 'HatcheryGrainReaction', 'HatcheryGrainEatPercent', 'mGrain[tile] = level - 1;'):
     assert needle in eat, needle
@@ -105,8 +105,9 @@ for needle in ('HatcheryGrainRegrowPermille', 'mGrain.erase(it++)', 'HatcheryGra
     assert needle in update, needle
 assert 'updateGrain();' in function_body(hatchery, 'void RoomHatchery::doUpkeep(')
 send = function_body(hatchery, 'void RoomHatchery::sendGrain(')
-for needle in ('getSeatsWithVision()', 'getIsHuman()', 'sendCosmeticEvent(', 'CosmeticEventType::hatcheryGrain'):
+for needle in ('getSeatsWithVision()', 'getIsHuman()', 'sendCosmeticEvent(', 'makeGrainEvent()'):
     assert needle in send, needle
+assert 'CosmeticEventType::hatcheryGrain' in function_body(hatchery, 'CosmeticEvent RoomHatchery::makeGrainEvent(')
 
 # Saving: one optional line after the waiting counters, appended only when grain is missing; old saves load
 export = function_body(hatchery, 'void RoomHatchery::exportToStream(')
@@ -118,7 +119,8 @@ assert load.index('HatcheryWaits') < load.index('"HatcheryGrain"')
 # Client: levels from the event, decals by level, a peck shows a small cloud; stale lists are dropped
 assert 'event.is(CosmeticEventType::hatcheryGrain)' in client and 'notifyHatcheryGrain(' in client
 level = function_body(ambience, 'int32_t RoomAmbience::getGrainLevel(')
-assert 'mClock > roomIt->second.mExpire' in level and 'return levels;' in level
+assert 'mClock > roomIt->second.mExpire' not in level, 'the last told state stays until the next one'
+assert 'if(roomIt == mGrainRooms.end())' in level and 'return 0;' in level, 'unknown grain shows nothing'
 assert 'getGrainLevel(tile) < static_cast<int32_t>(effect.mGrainMin)' in ambience
 assert 'mGrainRooms.clear();' in ambience
 assert 'GrainPecked' in function_body(ambience, 'void RoomAmbience::notifyHatcheryGrain(')
@@ -126,6 +128,61 @@ for min_level in (1, 2, 3):
     assert re.search(r'^\s+GrainMin\s+' + str(min_level) + r'\s*$', ambience_cfg, re.M), min_level
 assert re.search(r'^\s+Event\s+GrainPecked\s*$', deferred_cfg, re.M)
 assert 'key == "GrainMin"' in read('source/render/RoomAmbienceConfig.cpp')
+
+# Batch 13b, part 1: the grain grows back at one constant speed. The regrowth reads only the config value and
+# nothing of the hatchery state (care, light, research, enemies, animals) and the hatchery never changes the rate
+for forbidden in ('getCare(', 'isLit(', 'getResearchValue', 'collectEnemies(', 'getCycleSettings(', 'mHens', 'getSeat()'):
+    assert forbidden not in update, 'regrowth must not depend on ' + forbidden
+assert update.count('Random::Uint(0, 999) < regrowPermille') == 1 and update.count('++it->second;') == 1
+assert hatchery.count('getRoomConfigDoubleOrDefault("HatcheryGrainRegrowPermille"') == 1, 'one place reads the regrowth rate'
+assert re.search(r'^# HatcheryGrainRegrowPermille .*it does not depend on care, light, research', rooms_cfg, re.M)
+
+# Batch 13b, part 3: every peck of a hen takes grain, whatever pose or clip it is. All "Pick" animations of a hen
+# and the scratch pose go through ChickenEntity::peckGround / RoomHatchery::henPecks, with one peck rhythm per hen
+chicken = read('source/entities/ChickenEntity.cpp')
+chicken_h = read('source/entities/ChickenEntity.h')
+assert chicken.count('setAnimationState("Pick"') == 2, 'every Pick animation of the hen must be paired with a peck'
+for call in re.finditer(r'setAnimationState\("Pick"[^;]*;', chicken):
+    assert 'peckGround(currentHatchery);' in chicken[call.end():call.end() + 120], 'Pick without a peck'
+follow = chicken[chicken.index('(a hen pecks at the food)'):]
+assert follow.index('setAnimationState("Pick", true);') < follow.index('peckGround(currentHatchery);') < follow.index('mCalm ? ChickenPose::roost')
+assert 'peckGround(currentHatchery);' in function_body(chicken, 'void ChickenEntity::wander(')
+start_peck = function_body(chicken, 'bool ChickenEntity::startPeck(')
+assert 'mKind != ChickenKind::hen' in start_peck and 'mPeckWait > 0' in start_peck
+assert '"HatcheryPeckIntervalTurns", 6.0)' in start_peck
+assert re.search(r'^# HatcheryPeckIntervalTurns\s', rooms_cfg, re.M) and re.search(r'^    HatcheryPeckIntervalTurns\t6\s*$', rooms_cfg, re.M)
+assert chicken.count('mPeckWait(0)') == 2 and 'if(mPeckWait > 0)\n        --mPeckWait;' in chicken
+peck_ground = function_body(chicken, 'void ChickenEntity::peckGround(')
+assert 'RoomType::hatchery' in peck_ground and 'henPecks(*this)' in peck_ground
+pecks = function_body(hatchery, 'void RoomHatchery::henPecks(')
+assert 'startPeck()' in pecks and 'eatGrain(hen.getPositionTile())' in pecks
+# No other path takes grain, so the rhythm and the percent chance apply to every pose alike
+assert hatchery.count('eatGrain(') == 2 and 'eatGrain(' not in chicken, 'eatGrain is only reached through henPecks'
+# Every pose in which a hen pecks is covered: scratch (flock), Pick (wandering and at the rooster's call).
+# The poses that are not pecking (flutter, lay, roost, cackle, flee, ...) do not take grain
+assert hatchery.count('henPecks(*hen);') == 1 and 'ChickenPose::scratch' in scratch
+assert 'bool startPeck();' in chicken_h and 'uint32_t mPeckWait;' in chicken_h
+assert 'void henPecks(ChickenEntity& hen);' in hatchery_h
+
+# Batch 13b, part 2: a newly seen hatchery shows the real grain. The server sends it as soon as a keeper gains
+# sight (remembered per client, so joining, loading and a new client count), the client shows nothing until told
+seen = function_body(server, 'void notifyHatcheryGrainSeen(')
+for needle in ('getIsHuman()', 'supportsCosmeticEvents()', 'getGrainSeen()', 'RoomType::hatchery', 'isSeenBy(ownSeat)',
+               'seen.erase(it)', 'seen.insert(room->getName())', 'sendGrainTo(player)'):
+    assert needle in seen, needle
+assert seen.index('isSeenBy(ownSeat)') < seen.index('seen.insert(') < seen.index('sendGrainTo(player)')
+assert 'notifyHatcheryGrainSeen(gameMap, sock, player);' in server and '#include "rooms/RoomHatchery.h"' in server
+assert 'std::set<std::string>& getGrainSeen()' in socket_h and 'std::set<std::string> mGrainSeen;' in socket_h
+seen_by = function_body(hatchery, 'bool RoomHatchery::isSeenBy(')
+assert 'getSeatsWithVision()' in seen_by and 'seeing == seat' in seen_by
+to = function_body(hatchery, 'void RoomHatchery::sendGrainTo(')
+assert 'sendCosmeticEvent(player, makeGrainEvent())' in to
+# The state is repeated also when every tile is full (a lost message is made up for) and with the reaction off
+assert 'bool again = (mGrainResyncWait >= resyncTurns);' in update
+assert update.index('mGrain.clear();') < update.index('sendGrain();')
+assert 'mGrain.clear();\n        return;' not in update, 'with the reaction off the full state is still sent'
+# Nothing is shown before the first state is known; the old servers send nothing and show no grain decals
+assert 'return 0;' in level
 
 if '--probe' in sys.argv:
     probe = r'''
