@@ -166,8 +166,8 @@ event_h = read('source/network/CosmeticEvent.h')
 event_cpp = read('source/network/CosmeticEvent.cpp')
 results = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticHitResult')[1].split('};')[0], re.M)
 assert results == [('hit', '0'), ('glanced', '1'), ('blocked', '2'), ('missed', '3'), ('dodged', '4'), ('parried', '5')], results
-assert 'hitResult = 16' in event_h and 'casinoResult' not in event_h
-assert 'isKnownType has to accept 0 to 9, 10 to 14, 15 and 16' in event_h
+assert 'hitResult = 17' in event_h and 'casinoResult' not in event_h
+assert 'isKnownType has to accept 0 to 14, 15, 16, 17 and 18' in event_h
 known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')
 assert 'CosmeticEventType::hitResult' in known
 # An old client skips the unknown result values (default branch of noteHitResult) and reads the older kind
