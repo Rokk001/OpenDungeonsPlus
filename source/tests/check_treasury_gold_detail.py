@@ -21,7 +21,7 @@ material = read('materials/scripts/TreasuryGoldPile.material')
 
 # Coins, gems and spilled coins: a second mesh section, only at the full detail, derived from the pile name alone.
 assert 'material TreasuryGoldDetail' in material and 'ambient vertexcolour' in material
-assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 2 : 6, !reduced)' in mesh
+assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 6 : 12, !reduced)' in mesh
 for name in ('topCoinCount', 'gemCount', 'edgeOpen', 'spillCoinsPerEdge', 'hasFloorScatter', 'levelForClassicName', 'glowWeight'):
     assert name in layer and name in mesh + render + treasury
 assert 'maxTopCoins' in layer and 'maxGems' in layer and 'maxSpillCoins' in layer
@@ -33,6 +33,10 @@ assert 'shape.mLevel == 0 && (currentDetail != Detail::full || farAway)' in mesh
 
 # Dungeon heart ring: the classic stacks are drawn as piles on the client (server names and tests untouched).
 assert 'pileNameForClassicStack' in render and 'replacesClassicStack' in render
+# The server names the heart ring piles with the levels of the ring neighbours, so the piles run into each other
+temple = read('source/rooms/RoomDungeonTemple.cpp')
+assert 'TreasuryGoldLayer::ringPileShape(' in temple and 'inline PileShape ringPileShape(' in layer
+assert 'getMeshNameForGold' not in temple.split('void RoomDungeonTemple::updateTreasuryMeshesForTile')[1].split(chr(10) + '}' + chr(10))[0]
 
 # Look of the gold: a metal sheen from the lights only (no self-lighting, no additive blending), moderate specular,
 # a gentle glow light, and a ring pile that runs out on the floor at its edges (no plateau with a cut edge).
@@ -43,7 +47,10 @@ for line in material.splitlines():
         assert float(line.split()[1]) <= 0.6, line
 ring = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
 assert 'mCorner[i] = level' not in ring and 'mCorner' not in ring
-assert '(peak - base) * bump * std::sqrt(bump)' in layer and '(peak - base) * std::sqrt(bump)' not in layer
+assert 'height += (peak - base) * bump;' in layer and 'rest * std::sqrt(rest)' in layer
+# A little gold is a small round heap in the middle of the tile, a full tile reaches the edges
+assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'return 0.5f;' in layer
+assert 'pileRadius(shape.mLevel)' in mesh.split('void addDetail')[1]
 assert '(0.5f * patch.mStrength)' in render.split('void RenderManager::setTreasuryGlowLight')[1].split('void RenderManager::destroyTreasuryGlowLight')[0]
 # Coins and gems stay readable: rounded coins with a lighter middle, a radius of at least 0.05 on top of the gold
 assert 'CoinDome' in mesh and 'CoinRimShade' in mesh and 'CoinRound' in mesh
