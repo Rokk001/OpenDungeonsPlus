@@ -125,7 +125,7 @@ public:
     void moveWorldCoords(Ogre::Real x, Ogre::Real y);
     void entitySlapped();
 
-    //! brief The server said that the keeper owning the heart or portal room is rich (keeperWealth event): the
+    //! \brief The server said that the keeper owning the heart or portal room is rich (keeperWealth event): the
     //! gold dust shows over it while its tile is in view of the local keeper, tier 0 removes it
     void noteKeeperWealth(const std::string& roomName, int seatId, int tier);
 
