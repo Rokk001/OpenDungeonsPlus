@@ -134,7 +134,8 @@ private:
         double mLife;
     };
 
-    //! \brief The remains of a destroyed barricade, which plays the clip Collapse and then sinks into the floor
+    //! \brief The remains of a destroyed door, which plays the clip Collapse (barricade) or Destroyed (every other
+    //! door) and then sinks into the floor
     struct Collapse
     {
         Collapse() :
@@ -145,6 +146,7 @@ private:
         Ogre::Entity* mEntity;
         double mAge;
         double mBaseHeight;
+        std::string mClip;
     };
 
     //! \brief A cannon (or another object of an effect of kind turn) that follows creatures in range with its barrel
@@ -303,9 +305,9 @@ private:
     void updateEmitters(double timeSinceLastFrame);
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
     void updatePendingSounds();
-    //! \brief Lets a destroyed barricade (the door entity on the tile, which the server is about to remove)
-    //! fall into a heap with the clip Collapse of its skeleton
-    void startCollapse(int32_t tileX, int32_t tileY);
+    //! \brief Lets a destroyed door (the door entity of the given type on the tile, which the server is about to
+    //! remove) play the clip Collapse (barricade) or Destroyed (every other door) of its skeleton on a ghost copy
+    void startCollapse(int32_t tileX, int32_t tileY, const std::string& typeName);
     void updateCollapses(double timeSinceLastFrame);
     void destroyCollapse(Collapse& collapse);
     //! \brief Lets the objects of effects of kind turn follow the creatures near them, or go back to rest

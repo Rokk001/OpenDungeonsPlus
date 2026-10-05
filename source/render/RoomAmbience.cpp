@@ -1465,14 +1465,18 @@ void RoomAmbience::updateOneShots(std::vector<OneShot>& oneShots, double timeSin
     }
 }
 
-void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY)
+void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY, const std::string& typeName)
 {
     if(mGameMap == nullptr)
         return;
 
-    // Only the remains of the barricade the server is about to remove are shown, so a few at most
+    // Only the remains of the door the server is about to remove are shown, so a few at most
     if(mCollapses.size() >= 4)
         return;
+
+    // The barricade falls into a heap, every other door breaks with the clip Destroyed
+    const std::string clipName = (typeName == "DoorBarricade") ? "Collapse" : "Destroyed";
+    const std::string entityPrefix = typeName + "_";
 
     const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
     for(RenderedMovableEntity* entity : entities)
@@ -1480,7 +1484,7 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY)
         if((entity->getObjectType() != GameEntityType::trapEntity) || (entity->getEntityNode() == nullptr))
             continue;
 
-        if(entity->getName().compare(0, 14, "DoorBarricade_") != 0)
+        if(entity->getName().compare(0, entityPrefix.length(), entityPrefix) != 0)
             continue;
 
         const Ogre::Vector3& position = entity->getPosition();
@@ -1506,7 +1510,7 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY)
         }
 
         // Without the clip (an old skeleton) there is nothing to show
-        if(!ghost->hasSkeleton() || !ghost->getAllAnimationStates()->hasAnimationState("Collapse"))
+        if(!ghost->hasSkeleton() || !ghost->getAllAnimationStates()->hasAnimationState(clipName))
         {
             sceneManager->destroyEntity(ghost);
             return;
@@ -1514,12 +1518,13 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY)
 
         Collapse collapse;
         collapse.mEntity = ghost;
+        collapse.mClip = clipName;
         collapse.mNode = sceneManager->getRootSceneNode()->createChildSceneNode(name + "_node",
             entity->getEntityNode()->_getDerivedPosition(), entity->getEntityNode()->_getDerivedOrientation());
         collapse.mNode->setScale(entity->getEntityNode()->_getDerivedScale());
         collapse.mNode->attachObject(ghost);
         collapse.mBaseHeight = collapse.mNode->getPosition().z;
-        Ogre::AnimationState* state = ghost->getAnimationState("Collapse");
+        Ogre::AnimationState* state = ghost->getAnimationState(clipName);
         state->setLoop(false);
         state->setTimePosition(0.0f);
         state->setEnabled(true);
@@ -1536,8 +1541,8 @@ void RoomAmbience::updateCollapses(double timeSinceLastFrame)
     const double sinkDepth = 0.3;
     for(std::vector<Collapse>::iterator it = mCollapses.begin(); it != mCollapses.end();)
     {
-        // The length of the clip of the barricade skeleton
-        const double clipLength = static_cast<double>(it->mEntity->getAnimationState("Collapse")->getLength());
+        // The length of the clip of the door skeleton
+        const double clipLength = static_cast<double>(it->mEntity->getAnimationState(it->mClip)->getLength());
         it->mAge += timeSinceLastFrame;
         if(it->mAge >= clipLength + holdTime + sinkTime)
         {
@@ -1548,7 +1553,7 @@ void RoomAmbience::updateCollapses(double timeSinceLastFrame)
 
         if(it->mAge < clipLength)
         {
-            it->mEntity->getAnimationState("Collapse")->addTime(static_cast<Ogre::Real>(timeSinceLastFrame));
+            it->mEntity->getAnimationState(it->mClip)->addTime(static_cast<Ogre::Real>(timeSinceLastFrame));
         }
         else if(it->mAge > clipLength + holdTime)
         {
@@ -2296,8 +2301,7 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
         case 3:
             mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 5.0;
             triggerEvent("DoorWrecked", position, false, typeName);
-            if(typeName == "DoorBarricade")
-                startCollapse(tileX, tileY);
+            startCollapse(tileX, tileY, typeName);
             break;
         case 4:
             // Reloading, or empty after the last shot: the state is kept until the server says ready. The

@@ -78,8 +78,25 @@ if "rrUpdateSecretDoorLook" not in read("source", "render", "RenderManager.h"):
 # The collapse takes its length from the clip
 ambience = read("source", "render", "RoomAmbience.cpp")
 update = ambience[ambience.index("void RoomAmbience::updateCollapses"):ambience.index("void RoomAmbience::destroyCollapse")]
-if 'getAnimationState("Collapse")->getLength()' not in update or "clipLength = 0.7" in update:
+if 'getAnimationState(it->mClip)->getLength()' not in update or "clipLength = 0.7" in update:
     problems.append("updateCollapses does not take the clip length from the skeleton")
+
+# Every door type shows its wreck on a ghost copy: the barricade with Collapse, all others with Destroyed
+start = ambience[ambience.index("void RoomAmbience::startCollapse"):ambience.index("void RoomAmbience::updateCollapses")]
+if '(typeName == "DoorBarricade") ? "Collapse" : "Destroyed"' not in start:
+    problems.append("startCollapse does not pick Collapse for the barricade and Destroyed for every other door")
+if "entityPrefix" not in start or '"DoorBarricade_"' in start:
+    problems.append("startCollapse still only finds barricade entities")
+if "hasAnimationState(clipName)" not in start or "createEntity(name, entity->getMeshName()" not in start:
+    problems.append("startCollapse does not check the clip on the ghost copy of the door mesh")
+if "state = ghost->getAnimationState(clipName)" not in start or "collapse.mClip = clipName" not in start:
+    problems.append("startCollapse does not play the picked clip on the ghost copy")
+wrecked = ambience[ambience.index("case 3:", ambience.index("void RoomAmbience::notifyTrapEffect")):]
+wrecked = wrecked[:wrecked.index("break;")]
+if "startCollapse(tileX, tileY, typeName)" not in wrecked or 'typeName == "DoorBarricade"' in wrecked:
+    problems.append("doorWrecked does not start the wreck for every door type")
+if "std::string mClip;" not in read("source", "render", "RoomAmbience.h"):
+    problems.append("Collapse does not remember its clip")
 
 # The sold sounds
 config = read("config", "roomAmbienceTraps.cfg")
