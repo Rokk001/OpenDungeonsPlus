@@ -27,6 +27,7 @@
 #include "render/CreatureReactions.h"
 #include "render/CreatureWeaponVisuals.h"
 #include "render/RenderManager.h"
+#include "render/TwoWeaponStrike.h"
 #include "utils/Helper.h"
 
 #include <OgreAnimationState.h>
@@ -445,6 +446,16 @@ void CreatureCombatReactions::scheduleHit(CreatureReactions& reactions, Creature
 bool CreatureCombatReactions::carriesSword(const Creature* creature)
 {
     return mainWeaponKind(creature) == "Sword";
+}
+
+bool CreatureCombatReactions::carriesTwoAttackWeapons(const Creature* creature)
+{
+    const Weapon* left = creature->getWeaponL();
+    const Weapon* right = creature->getWeaponR();
+    if((left == nullptr) || (right == nullptr))
+        return false;
+
+    return TwoWeaponStrike::isStrikeKind(weaponKind(left)) && TwoWeaponStrike::isStrikeKind(weaponKind(right));
 }
 
 void CreatureCombatReactions::noteAttack(CreatureReactions& reactions, Creature* attacker, const std::string& clip)

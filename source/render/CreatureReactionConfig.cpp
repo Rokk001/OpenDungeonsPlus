@@ -67,6 +67,8 @@ CreatureReactionConfig::CreatureReactionConfig() :
     mInteractionChance(0.05),
     mInteractionRadius(3.5),
     mInteractionPause(5.0),
+    mTwoWeaponMode(1),
+    mTwoWeaponArmStrength(1.0),
     mDefaultGroup("Fighters")
 {
 }
@@ -229,6 +231,10 @@ bool CreatureReactionConfig::loadSettings(std::istream& file)
             mInteractionRadius = Helper::toDouble(words[1]);
         else if(words[0] == "InteractionPause")
             mInteractionPause = Helper::toDouble(words[1]);
+        else if(words[0] == "TwoWeaponMode")
+            mTwoWeaponMode = Helper::toUInt32(words[1]);
+        else if(words[0] == "TwoWeaponArmStrength")
+            mTwoWeaponArmStrength = Helper::toDouble(words[1]);
         else if(words[0] == "DefaultGroup")
             mDefaultGroup = words[1];
         else
