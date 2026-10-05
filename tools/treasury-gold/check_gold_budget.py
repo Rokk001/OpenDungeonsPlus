@@ -43,7 +43,16 @@ def constant(text, name):
     return int(match.group(1))
 
 
+def setting(text, name):
+    """Default of a member of the TreasurySettings struct (the values config/treasury.cfg starts from)"""
+    match = re.search(r'\b(?:int|float) ' + name + r' = ([0-9.]+)f?;', text)
+    if match is None:
+        raise SystemExit('setting not found: ' + name)
+    return float(match.group(1))
+
+
 def main():
+    settings = read('source/rooms/TreasurySettings.h')
     pile = read('source/render/TreasuryGoldMesh.cpp')
     loose = read('source/render/LooseGoldMesh.cpp')
 
@@ -58,10 +67,10 @@ def main():
     coin_sides = constant(pile, 'CoinSides')
     spill_sides = constant(pile, 'SpillSides')
     gem_faces = constant(pile, 'GemFaces')
-    max_top_coins = constant(layer, 'maxTopCoins')
-    max_gems = constant(layer, 'maxGems')
-    max_spill_coins = constant(layer, 'maxSpillCoins')
-    scatter_coins = constant(layer, 'scatterCoins')
+    max_top_coins = int(setting(settings, 'maxTopCoins'))
+    max_gems = int(setting(settings, 'maxGems'))
+    max_spill_coins = 4 * int(setting(settings, 'spillCoinsFull'))
+    scatter_coins = int(setting(settings, 'scatterCoins'))
 
     # Coins on top, gems and spilled coins lie in a second section (a second draw call) of the full pile mesh
     detail_tris = max_top_coins * coin_sides + max_gems * gem_faces + max_spill_coins * spill_sides
@@ -96,9 +105,9 @@ def main():
 
     rules = read('source/render/TreasuryCreatureRules.h')
     limit('batchChunkSize' not in rules, 'the batch is split into patches again')
-    splash = int(re.search(r'splashBudget.*?Detail::full:\s*return (\d+);', rules, re.S).group(1))
-    dust = int(re.search(r'dustBudget.*?Detail::full:\s*return (\d+);', rules, re.S).group(1))
-    ambient = constant(rules, 'ambientBudgetFull')
+    splash = int(setting(settings, 'splashBudgetFull'))
+    dust = int(setting(settings, 'dustBudgetFull'))
+    ambient = int(setting(settings, 'ambientBudgetFull'))
     limit(splash + dust + ambient <= MAX_ROOM_EFFECTS,
           'a room may show %d effects at once' % (splash + dust + ambient))
 

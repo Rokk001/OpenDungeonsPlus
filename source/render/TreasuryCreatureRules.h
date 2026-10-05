@@ -20,6 +20,7 @@
 
 #include "render/TreasuryGoldMesh.h"
 #include "rooms/TreasuryGoldLayer.h"
+#include "rooms/TreasurySettings.h"
 
 #include <cmath>
 #include <map>
@@ -27,19 +28,21 @@
 //! \brief Client side rules for creatures walking on the treasury gold: how far they are lifted,
 //! when a step splashes coins and how many splashes a room may show at once. Nothing here
 //! touches the renderer, the server or the creature position used for pathing.
+//! The tunable numbers live in config/treasury.cfg (see TreasurySettings.h); the constants below are references
+//! to the live values, so a value is read when it is used.
 namespace TreasuryCreatureRules
 {
 //! From this pile level on the gold is deep enough to splash and clink
-static const int deepLevel = 4;
+static const int& deepLevel = TreasurySettings::current().deepLevel;
 //! Distance walked between two splashes, in tiles
-static const float stepDistance = 0.55f;
+static const float& stepDistance = TreasurySettings::current().stepDistance;
 //! Seconds a splash counts against the budget of its room
-static const float splashLifetime = 1.4f;
+static const float& splashLifetime = TreasurySettings::current().splashLifetime;
 //! Creatures higher above the floor than this (flying ones) are not lifted
 static const float groundHeightLimit = 0.3f;
 
 //! Seconds a worker spends climbing the pile, pouring out the gold and coming back down
-static const float pourDuration = 1.4f;
+static const float& pourDuration = TreasurySettings::current().pourDuration;
 
 //! Names of the worker clips that replace the procedural climb and tip (skeleton clips, played by the
 //! client while the worker delivers gold). Without them the procedural motion is used.
@@ -150,9 +153,9 @@ inline int splashBudget(TreasuryGoldMesh::Detail detail)
     switch(detail)
     {
         case TreasuryGoldMesh::Detail::full:
-            return 6;
+            return TreasurySettings::current().splashBudgetFull;
         case TreasuryGoldMesh::Detail::reduced:
-            return 2;
+            return TreasurySettings::current().splashBudgetReduced;
         default:
             return 0;
     }
@@ -160,17 +163,17 @@ inline int splashBudget(TreasuryGoldMesh::Detail detail)
 
 //! Gold dust over completely filled treasuries: seconds between two attempts to start a puff, how long a
 //! puff lives and how many puffs a room may show at once by the "Treasury detail" option
-static const float dustInterval = 0.7f;
-static const float dustLifetime = 3.0f;
+static const float& dustInterval = TreasurySettings::current().dustInterval;
+static const float& dustLifetime = TreasurySettings::current().dustLifetime;
 
 inline int dustBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)
     {
         case TreasuryGoldMesh::Detail::full:
-            return 3;
+            return TreasurySettings::current().dustBudgetFull;
         case TreasuryGoldMesh::Detail::reduced:
-            return 1;
+            return TreasurySettings::current().dustBudgetReduced;
         default:
             return 0;
     }
@@ -179,8 +182,8 @@ inline int dustBudget(TreasuryGoldMesh::Detail detail)
 //! Gold dust over the portal of a rich keeper (same puffs and budget per room as the dust over full piles): the
 //! keeper is rich when the gold held reaches this share of the treasury capacity and at least the minimum amount.
 //! The dust floats this high above the floor of the portal.
-static const float portalRichShare = 0.5f;
-static const int portalRichMinGold = 500;
+static const float& portalRichShare = TreasurySettings::current().portalRichShare;
+static const int& portalRichMinGold = TreasurySettings::current().portalRichMinGold;
 static const float portalDustHeight = 0.9f;
 //! The dungeon heart of a rich keeper uses the same rule; its dust floats this high above the heart.
 static const float heartDustHeight = 1.8f;
@@ -195,13 +198,13 @@ inline bool isRichKeeper(int gold, int goldMax)
 //! Sparkles and sliding coins on the gold of rich treasuries, and the coins that roll away when gold is taken:
 //! seconds between two attempts, how long such an effect counts against the budget of its room, and how many
 //! a room may show at once by the "Treasury detail" option. They have a budget of their own.
-static const float ambientInterval = 0.9f;
-static const float ambientLifetime = 2.5f;
-static const int ambientBudgetFull = 3;
-static const int ambientBudgetReduced = 1;
+static const float& ambientInterval = TreasurySettings::current().ambientInterval;
+static const float& ambientLifetime = TreasurySettings::current().ambientLifetime;
+static const int& ambientBudgetFull = TreasurySettings::current().ambientBudgetFull;
+static const int& ambientBudgetReduced = TreasurySettings::current().ambientBudgetReduced;
 //! Piles of at least this level slide coins down their slope; the sparkle needs a richer pile
-static const int slideLevel = 3;
-static const int glintLevel = 5;
+static const int& slideLevel = TreasurySettings::current().slideLevel;
+static const int& glintLevel = TreasurySettings::current().glintLevel;
 
 inline int ambientBudget(TreasuryGoldMesh::Detail detail)
 {
@@ -218,9 +221,9 @@ inline int ambientBudget(TreasuryGoldMesh::Detail detail)
 
 //! A pile that grows (gold delivered) or sinks (gold taken) is not swapped at once: its height settles over
 //! this many seconds. When taking, it dips into a dent first and then smooths out.
-static const float pileSettleTime = 0.7f;
-static const float dentDepth = 0.88f;
-static const float dentShare = 0.35f;
+static const float& pileSettleTime = TreasurySettings::current().pileSettleTime;
+static const float& dentDepth = TreasurySettings::current().dentDepth;
+static const float& dentShare = TreasurySettings::current().dentShare;
 
 //! Height factor of a settling pile (1 = the new pile) at time t, coming from the factor "from" (the old level
 //! over the new one, limited). Growing starts low and rises; taking starts high, dips below 1 and returns.
@@ -248,10 +251,10 @@ inline float pileSettleFrom(int oldLevel, int newLevel)
 //! Objects standing in the gold (room objects, gold lying on the floor of a treasury) are drawn partly buried:
 //! the deeper the pile of their tile, the larger the share of their height that sinks into the gold. Only a
 //! render offset of the object node; position, bounds and paths of the object are not changed.
-static const float buryShareFirst = 0.1f;
-static const float buryShareFull = 0.5f;
+static const float& buryShareFirst = TreasurySettings::current().buryShareFirst;
+static const float& buryShareFull = TreasurySettings::current().buryShareFull;
 //! The offset settles at this rate (seconds for roughly 95 percent of a change), as fast as the piles themselves
-static const float buriedSettleTime = pileSettleTime;
+static const float& buriedSettleTime = TreasurySettings::current().pileSettleTime;
 //! A smaller remaining distance is closed at once
 static const float buriedSnapDistance = 0.002f;
 
@@ -285,7 +288,7 @@ inline float buriedStep(float current, float target, float elapsed)
 
 //! The settled piles of a room are drawn as one static batch per room (see TreasuryGoldBatch.h).
 //! A changed room is rebuilt at once when it was not rebuilt for this long, otherwise as soon as this time is over
-static const float batchRebuildInterval = 0.25f;
+static const float& batchRebuildInterval = TreasurySettings::current().batchRebuildInterval;
 
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget

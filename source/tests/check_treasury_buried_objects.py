@@ -15,6 +15,7 @@ render = read('source/render/RenderManager.cpp')
 header = read('source/render/RenderManager.h')
 rules = read('source/render/TreasuryCreatureRules.h')
 layer = read('source/rooms/TreasuryGoldLayer.h')
+settings = read('source/rooms/TreasurySettings.h')
 
 # Pure rules exist
 for name in ('buryShare', 'buriedLift', 'buriedStep', 'buryShareFirst', 'buryShareFull', 'buriedSettleTime'):
@@ -22,10 +23,11 @@ for name in ('buryShare', 'buriedLift', 'buriedStep', 'buryShareFirst', 'burySha
 
 # Mirror of the rules
 max_level = int(layer.split('maxLevel = ')[1].split(';')[0])
-step = float(layer.split('return ')[1].split('f *')[0]) if False else 0.055
-first = float(rules.split('buryShareFirst = ')[1].split('f;')[0])
-full = float(rules.split('buryShareFull = ')[1].split('f;')[0])
-settle = float(rules.split('pileSettleTime = ')[1].split('f;')[0])
+# The numbers are the defaults of the settings struct (config/treasury.cfg overrides them)
+step = float(settings.split('float levelHeight = ')[1].split('f;')[0])
+first = float(settings.split('float buryShareFirst = ')[1].split('f;')[0])
+full = float(settings.split('float buryShareFull = ')[1].split('f;')[0])
+settle = float(settings.split('float pileSettleTime = ')[1].split('f;')[0])
 snap = float(rules.split('buriedSnapDistance = ')[1].split('f;')[0])
 assert 0.0 < first < full <= 0.6 and settle > 0.0 and snap > 0.0
 
