@@ -99,6 +99,8 @@ private:
     void updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
         const std::map<Tile*, int>& levels);
     bool mGoldChanged;
+    //! The clients were told that the treasury is full (cosmetic only, until room is not full again)
+    bool mFullAnnounced;
 };
 
 #endif // ROOMTREASURY_H

@@ -362,9 +362,6 @@ ProtectDungeonTemple	NULL
 7	6	1	0	1
 7	7	1	0	1
 7	8	2	100
-7	9	1	0
-7	10	1	0
-7	11	1	0
 7	12	1	0
 7	13	1	0	1
 7	14	1	0	1
@@ -408,13 +405,7 @@ ProtectDungeonTemple	NULL
 8	6	1	0	1
 8	7	1	0	1
 8	8	1	0
-8	9	1	0
-8	10	1	0
-8	11	1	0
 8	12	1	0
-8	13	1	0
-8	14	1	0
-8	15	1	0
 8	29	1	0
 8	30	1	0
 8	31	1	0
@@ -457,11 +448,7 @@ ProtectDungeonTemple	NULL
 8	89	1	0
 8	95	3	100
 9	0	3	100
-9	7	1	0
 9	8	1	0
-9	9	1	0
-9	10	1	0
-9	11	1	0
 9	12	1	0
 9	13	1	0
 9	14	1	0
@@ -517,12 +504,7 @@ ProtectDungeonTemple	NULL
 10	6	1	0
 10	7	1	0
 10	8	1	0
-10	9	1	0
-10	10	1	0
-10	11	1	0
 10	12	1	0
-10	13	1	0
-10	14	1	0
 10	15	1	0	1
 10	16	1	0	1
 10	28	1	0
@@ -569,17 +551,8 @@ ProtectDungeonTemple	NULL
 11	0	3	100
 11	4	1	0	1
 11	5	1	0	1
-11	6	1	0
-11	7	1	0
 11	8	1	0
-11	9	1	0
-11	10	1	0
-11	11	1	0
 11	12	1	0
-11	13	1	0
-11	14	1	0
-11	15	1	0
-11	16	1	0
 11	28	1	0
 11	29	1	0
 11	30	1	0
@@ -621,17 +594,11 @@ ProtectDungeonTemple	NULL
 12	0	3	100
 12	4	1	0	1
 12	5	1	0	1
-12	6	1	0
-12	7	1	0
 12	8	1	0	1
 12	9	1	0	1
 12	10	1	0	1
 12	11	1	0	1
 12	12	1	0	1
-12	13	1	0
-12	14	1	0
-12	15	1	0
-12	16	1	0
 12	28	1	0
 12	29	1	0
 12	30	1	0
@@ -671,17 +638,11 @@ ProtectDungeonTemple	NULL
 12	95	3	100
 13	0	3	100
 13	4	1	0
-13	5	1	0
-13	6	1	0
-13	7	1	0
 13	8	1	0	1
 13	9	1	0	1
 13	10	1	0	1
 13	11	1	0	1
 13	12	1	0	1
-13	13	1	0
-13	14	1	0
-13	15	1	0
 13	28	1	0
 13	29	1	0
 13	30	1	0
@@ -720,9 +681,6 @@ ProtectDungeonTemple	NULL
 13	95	3	100
 14	0	3	100
 14	4	1	0
-14	5	1	0
-14	6	1	0
-14	7	1	0
 14	8	1	0	1
 14	9	1	0	1
 14	10	1	0	1
@@ -769,9 +727,6 @@ ProtectDungeonTemple	NULL
 15	0	3	100
 15	3	1	0	1
 15	4	1	0	1
-15	5	1	0
-15	6	1	0
-15	7	1	0
 15	8	1	0	1
 15	9	1	0	1
 15	10	1	0	1
@@ -814,8 +769,6 @@ ProtectDungeonTemple	NULL
 16	0	3	100
 16	3	1	0	1
 16	4	1	0	1
-16	5	1	0
-16	6	1	0
 16	7	1	0
 16	8	1	0	1
 16	9	1	0	1
@@ -859,11 +812,7 @@ ProtectDungeonTemple	NULL
 17	0	3	100
 17	3	1	0	1
 17	4	1	0	1
-17	5	1	0
-17	6	1	0
 17	7	1	0	1
-17	8	1	0	1
-17	9	1	0
 17	10	1	0
 17	11	3	100
 17	12	3	100
@@ -907,16 +856,9 @@ ProtectDungeonTemple	NULL
 18	0	3	100
 18	3	1	0	1
 18	4	1	0	1
-18	5	1	0
-18	6	1	0
 18	7	1	0	1
-18	8	1	0	1
-18	9	1	0
 18	10	1	0
-18	11	1	0
 18	12	3	100
-18	13	1	0
-18	14	1	0
 18	28	1	0
 18	29	1	0
 18	30	1	0
@@ -953,16 +895,7 @@ ProtectDungeonTemple	NULL
 18	85	1	0
 18	95	3	100
 19	0	3	100
-19	5	1	0
-19	6	1	0
-19	7	1	0
-19	8	1	0
-19	9	1	0
 19	10	1	0
-19	11	1	0
-19	12	1	0
-19	13	1	0
-19	14	1	0
 19	28	1	0
 19	29	1	0
 19	30	1	0
@@ -992,10 +925,6 @@ ProtectDungeonTemple	NULL
 19	85	1	0
 19	95	3	100
 20	0	3	100
-20	6	1	0
-20	7	1	0
-20	8	1	0
-20	9	1	0
 20	10	1	0
 20	11	1	0
 20	12	1	0	1
@@ -1030,11 +959,8 @@ ProtectDungeonTemple	NULL
 20	86	1	0
 20	95	3	100
 21	0	3	100
-21	7	1	0
-21	8	1	0
 21	9	1	0	1
 21	10	1	0	1
-21	11	1	0
 21	12	1	0	1
 21	13	1	0	1
 21	27	1	0
@@ -1067,7 +993,6 @@ ProtectDungeonTemple	NULL
 22	0	3	100
 22	9	1	0	1
 22	10	1	0	1
-22	11	1	0
 22	12	1	0	1
 22	13	1	0	1
 22	26	1	0
@@ -1098,11 +1023,6 @@ ProtectDungeonTemple	NULL
 22	86	1	0
 22	95	3	100
 23	0	3	100
-23	9	1	0
-23	10	1	0
-23	11	1	0
-23	12	1	0
-23	13	1	0
 23	26	1	0
 23	27	1	0
 23	28	1	0
@@ -1142,12 +1062,6 @@ ProtectDungeonTemple	NULL
 23	94	2	100
 23	95	3	100
 24	0	3	100
-24	10	1	0
-24	11	1	0
-24	12	1	0
-24	13	1	0
-24	14	1	0
-24	25	1	0
 24	26	1	0
 24	27	1	0
 24	40	2	100
@@ -1183,13 +1097,6 @@ ProtectDungeonTemple	NULL
 24	92	2	100
 24	95	3	100
 25	0	3	100
-25	10	1	0
-25	11	1	0
-25	12	1	0
-25	13	1	0
-25	14	1	0
-25	16	1	0
-25	25	1	0
 25	26	1	0
 25	27	1	0
 25	38	2	100
@@ -1223,18 +1130,8 @@ ProtectDungeonTemple	NULL
 25	86	1	0
 25	95	3	100
 26	0	3	100
-26	11	1	0
-26	12	1	0
-26	13	1	0
-26	14	1	0
-26	15	1	0
-26	16	1	0
-26	17	1	0
-26	18	1	0
 26	19	3	100
 26	20	3	100
-26	24	1	0
-26	25	1	0
 26	26	1	0
 26	27	1	0
 26	40	2	100
@@ -1268,17 +1165,8 @@ ProtectDungeonTemple	NULL
 26	87	1	0
 26	95	3	100
 27	0	3	100
-27	12	1	0
-27	13	1	0
-27	14	1	0
-27	15	1	0
-27	16	1	0
-27	17	1	0
-27	18	1	0
-27	19	1	0
 27	20	3	100
 27	21	3	100
-27	25	1	0
 27	26	1	0
 27	44	1	0
 27	45	1	0
@@ -1312,19 +1200,6 @@ ProtectDungeonTemple	NULL
 27	87	1	0
 27	95	3	100
 28	0	3	100
-28	13	1	0
-28	14	1	0
-28	15	1	0
-28	16	1	0
-28	17	1	0
-28	18	1	0
-28	19	1	0
-28	20	1	0
-28	21	1	0
-28	22	1	0
-28	23	1	0
-28	24	1	0
-28	25	1	0
 28	26	1	0
 28	34	4	0
 28	35	4	0
@@ -1361,19 +1236,6 @@ ProtectDungeonTemple	NULL
 28	87	1	0
 28	95	3	100
 29	0	3	100
-29	13	1	0
-29	14	1	0
-29	15	1	0
-29	16	1	0
-29	17	1	0
-29	18	1	0
-29	19	1	0
-29	20	1	0
-29	21	1	0
-29	22	1	0
-29	23	1	0
-29	24	1	0
-29	25	1	0
 29	34	4	0
 29	35	4	0
 29	36	4	0
@@ -2012,7 +1874,7 @@ ProtectDungeonTemple	NULL
 40	73	1	0
 40	74	1	0
 40	75	1	0
-40	78	1	0
+40	78	3	100
 40	79	1	0
 40	80	1	0
 40	81	1	0
@@ -2059,7 +1921,7 @@ ProtectDungeonTemple	NULL
 41	75	1	0
 41	76	1	0
 41	77	1	0
-41	78	1	0
+41	78	3	100
 41	79	1	0
 41	80	1	0
 41	81	1	0
@@ -2356,7 +2218,7 @@ ProtectDungeonTemple	NULL
 48	67	1	0
 48	76	1	0
 48	77	1	0
-48	78	1	0
+48	78	3	100
 48	79	1	0
 48	80	1	0
 48	81	1	0
@@ -2409,7 +2271,7 @@ ProtectDungeonTemple	NULL
 49	75	1	0
 49	76	1	0
 49	77	1	0
-49	78	1	0
+49	78	3	100
 49	79	1	0
 49	80	1	0
 49	82	1	0
@@ -2872,11 +2734,9 @@ ProtectDungeonTemple	NULL
 0
 [/Room]
 [Room]
-11	Prison1	1	4
+11	Prison1	1	2
 17	7
-17	8
 18	7
-18	8
 0
 [/Room]
 [Room]
@@ -3217,6 +3077,7 @@ Action	message	1	Saltmere is a string of salt flats and lagoons, master, and at 
 Action	objective	1	Kill Admiral Bram Seward in the port at the southern end.
 Action	objective	1	Mine 800 gold from the salt walls.
 Action	objective	1	Keep your dungeon heart alive.
+Action	portal	0	off
 [/Trigger]
 [Trigger]
 Name	firstSalt
@@ -3251,9 +3112,14 @@ Action	spawn	3	50	70	1	Adventurer:2	Dwarf1:2	Elf:2
 Name	flatHeld
 Mode	once
 Cond	claimed	1	SouthFlat	50
-Action	message	1	The south flat is yours and the port gates are in range. Seward knows it.
+Action	message	1	The south flat is yours and the port gates are in range. Seward knows it, and both gate tunnels grind open.
 Action	reveal	1	Port
+Action	terrain	40	78	41	78	path
+Action	terrain	48	78	49	78	path
+Action	setflag	portGatesOpen	1
+Action	portal	0	on
 Action	objective	1	Break open the gates of the port.
+Action	generate	1	Spider:1
 [/Trigger]
 [Trigger]
 Name	portEntered
@@ -3320,11 +3186,28 @@ Action	message	1	The admiral has emptied his barracks.
 Action	spawn	3	31	21	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
+Name	portGatesTimeout
+Mode	once
+Cond	time	2400
+Cond	flag	portGatesOpen	0
+Action	message	1	The port has opened its gate tunnels to draw you in.
+Action	terrain	40	78	41	78	path
+Action	terrain	48	78	49	78	path
+Action	setflag	portGatesOpen	1
+Action	portal	0	on
+[/Trigger]
+[Trigger]
 Name	admiralFalls
 Mode	once
-Cond	time	5
-Cond	creatures	4	<=	0
+Cond	event	BramSeward	killed
 Action	message	1	Admiral Bram Seward is dead and his fleet is without a flag. Saltmere is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	bramWavers
+Mode	once
+Cond	health	BramSeward	<	40
+Action	message	1	The admiral is wounded, and the harbour watch is closing around him.
+Action	spawn	3	47	85	1	Knight:3	Monk:2
 [/Trigger]
 [/Triggers]

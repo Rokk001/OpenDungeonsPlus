@@ -2636,4 +2636,11 @@ Cond	region	1	Gate
 Action	message	1	Travellers have fitted steel doors across this passage. A hero portal lies beyond it in the north-east corner.
 Action	gold	1	500
 [/Trigger]
+[Trigger]
+Name	northHallWell
+Mode	once
+Cond	slabs	1	NorthHall	claimed	>=	20
+Action	message	1	The north hall is yours and a spring of mana has opened in it. Claim it with a worker.
+Action	terrain	46	11	46	11	manawell
+[/Trigger]
 [/Triggers]

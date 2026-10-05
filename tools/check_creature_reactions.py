@@ -16,7 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRIORITIES = ("death", "combat", "held", "event", "work", "mood", "ambient")
 JOBS = ("Fighter", "Worker")
 MOTIONS = ("hop", "shake", "squash", "spin", "turn", "look", "lookat", "sit", "lie", "startle", "lunge")
-PROPS = ("juggle", "yoyo", "flip", "stack", "toss", "critter", "balance", "doodle", "shadow", "kick")
+PROPS = ("juggle", "yoyo", "flip", "stack", "toss", "critter", "balance", "doodle", "shadow", "kick", "fall")
 ROOMS = ("Hatchery", "Treasury", "Portal", "Dormitory", "Library", "Workshop", "TrainingHall", "Prison", "Torture",
          "Arena", "Temple", "Casino", "GuardRoom", "Crypt", "DungeonTemple")
 SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupStaggerMax", "DefaultGroup",
@@ -27,8 +27,53 @@ RELATION_EVENTS = ("RelationFriend", "RelationBestFriend", "RelationLovers", "Re
                    "RelationBreakUp")
 EVENT_KEYS = ("Name", "Priority", "Cooldown", "Probability", "GroupMax", "WhileWorking", "InHand", "Dying")
 VARIANT_KEYS = ("Name", "Weight", "Clip", "Fallback", "Emote", "Effect", "Motion", "Cooldown", "Probability",
-                "Creatures", "Groups", "Jobs", "RequiresSleepNeed", "RequiresWall", "RequiresNeighbour", "LookAtRoom",
+                "Creatures", "Groups", "Jobs", "Moods", "RequiresSleepNeed", "RequiresWall", "RequiresNeighbour", "LookAtRoom",
                 "LateEmote", "LateEffect", "Prop", "Spreads")
+
+
+# Every entry of the reaction list (E events, R rooms, M moods, S meetings, A ambient) and the event(s) that show it.
+# M03 lists the variants a to n instead.
+CATALOGUE = {
+    "E01": ("Victory",), "E02": ("GroupVictory",), "E03": ("LevelUp",), "E04": ("GoldGift",),
+    "E05": ("ChickenGift",), "E06": ("PaydayPaid", "PaydayUnpaid"), "E07": ("Slapped",), "E08": ("PickedUp",),
+    "E09": ("Dropped",), "E10": ("PortalArrival",), "E11": ("LeaveAngry",), "E12": ("Healed",),
+    "E13": ("SpellHaste", "SpellStrength", "SpellDefense"), "E14": ("PrisonFreed", "PrisonConverted"),
+    "E15": ("HurtWalk", "HurtIdle"), "E16": ("FleePanic",), "E17": ("AllyDied",), "E18": ("EnemySpotted",),
+    "E19": ("HandHover", "HandHoverDuck"), "E20": ("Death",), "E21": ("LostFight",),
+    "R01": ("LibraryWork", "ResearchDone", "ResearchLookUp"), "R02": ("WorkshopWork", "ItemCrafted", "ItemCraftedApplause"),
+    "R03": ("TrainingWork", "TrainingDone"), "R04": ("TreasuryWork", "TreasuryFull"),
+    "R05": ("HatcheryWork", "HatcheryMealDone"), "R06": ("DormitoryWork", "WakeRested"),
+    "R07": ("TempleWork", "TempleDone"), "R08": ("PrisonWork", "PrisonConverted"),
+    "R09": ("TortureWork", "TortureBroken"), "R10": ("ArenaWork", "ArenaBoutOver"),
+    "R11": ("DigWork", "DigGold"), "R12": ("ClaimWork", "ClaimDone"), "R13": ("CarryGold", "GoldDelivered"),
+    "M01": ("MoodHappy",), "M02": ("MoodContent",), "M03": ("MoodBored",), "M04": ("MoodAngry",),
+    "M05": ("MoodUpset",), "M06": ("MoodScared",), "M07": ("MoodTired",), "M08": ("MoodHungry",),
+    "M09": ("MoodGreedy",), "M10": ("MoodProud",), "M11": ("MoodImpatient",), "M12": ("MoodLeaving",),
+    "S01": ("Chat", "ChatReply"), "S02": ("GroupVictory",), "S03": ("SparPush", "SparStumble"),
+    "S04": ("LaughAtSlapped",), "S05": ("WaveAtFighter", "NodBack"), "S06": ("Grumble", "GrumbleBack"),
+    "A01": ("AmbientIdle",), "A02": ("AmbientSitDown", "AmbientLieDown"), "A03": ("AmbientHabit",),
+    "A04": ("AmbientLookFight", "AmbientLookSlap", "AmbientLookGold"),
+}
+BORED_VARIANTS = {
+    "M03a": ("JuggleBalls",), "M03b": ("YoYo",), "M03c": ("WideYawn", "YawnCovered", "DoubleYawn", "YawnSpreads"),
+    "M03d": ("TwiddleThumbs",), "M03e": ("FlipCoin",), "M03f": ("StackPebbles",), "M03g": ("DoodleInDust",),
+    "M03h": ("PebbleAtWall",), "M03i": ("PlayWithBeetle",), "M03j": ("BalanceTool",), "M03k": ("ShadowFigures",),
+    "M03l": ("NodOff",), "M03m": ("SighAtCeiling",), "M03n": ("KickPebbles",),
+}
+
+
+def check_catalogue(events, error):
+    """Every entry of the reaction list has its events, and the events of the list have the variants of the list."""
+    for entry, names in CATALOGUE.items():
+        for name in names:
+            if name not in events:
+                error("catalogue %s: event %s is missing" % (entry, name))
+    bored = events.get("MoodBored")
+    have = set(v["Name"][0] for v in bored["variants"] if "Name" in v) if bored else set()
+    for entry, names in BORED_VARIANTS.items():
+        for name in names:
+            if name not in have:
+                error("catalogue %s: MoodBored has no variant %s" % (entry, name))
 
 
 def read_lines(path):
@@ -183,6 +228,9 @@ def main():
                 error("event %s: Spreads names the unknown event %s" % (name, target[0]))
 
     check_relationship_events(events, error)
+    check_catalogue(events, error)
+
+    check_material_lookups(error)
 
     default_group = None
     for words in lines:
@@ -246,10 +294,15 @@ def check_variant(key, words, variant, event, creatures, groups, materials, part
     if key == "Prop":
         if len(words) != 6 or words[1] not in PROPS or not all(is_number(w) for w in words[3:]):
             error("%s: Prop must be '<%s> <sprite> <count> <size> <seconds>'" % (where, "|".join(PROPS)))
+        elif words[1] == "fall":
+            if not os.path.exists(os.path.join(ROOT, "models", words[2])):
+                error("%s: no model %s for the prop" % (where, words[2]))
         elif "CreatureProp_" + words[2] not in materials:
             error("%s: no material CreatureProp_%s" % (where, words[2]))
         elif not os.path.exists(os.path.join(ROOT, "materials", "textures", "CreatureProp%s.png" % words[2])):
             error("%s: no texture for prop %s" % (where, words[2]))
+    if key == "Moods" and not all(w in ("happy", "neutral", "unhappy") for w in words[1:]):
+        error("%s: Moods must be happy, neutral or unhappy" % where)
     if key == "LookAtRoom" and words[1] not in ROOMS:
         error("%s: unknown room %s" % (where, words[1]))
     if key in ("RequiresWall", "RequiresNeighbour") and words[1] not in ("yes", "no"):
@@ -270,6 +323,16 @@ def check_variant(key, words, variant, event, creatures, groups, materials, part
                 error("%s: unknown job %s" % (where, name))
     if key == "RequiresSleepNeed" and words[1] not in ("yes", "no"):
         error("%s: RequiresSleepNeed must be yes or no" % where)
+
+
+def check_material_lookups(error):
+    """The materials live in the resource group Graphics; a lookup without the group never finds them."""
+    path = os.path.join(ROOT, "source", "render", "CreatureReactions.cpp")
+    with open(path, encoding="utf-8") as source:
+        text = source.read()
+    for found in re.finditer(r"MaterialManager::getSingleton\(\)\.resourceExists\(([^;]*?)\)\)", text):
+        if "," not in found.group(1):
+            error("CreatureReactions.cpp: MaterialManager resourceExists(%s) needs the group \"Graphics\"" % found.group(1))
 
 
 def finish(errors, nb_events=0):

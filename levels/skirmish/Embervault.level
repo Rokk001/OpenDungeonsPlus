@@ -2513,4 +2513,11 @@ Cond	region	1	NorthVault
 Action	message	1	The northern vault. A hero portal stands here, so travellers can reach you through the whole length of the corridor.
 Action	gold	1	250
 [/Trigger]
+[Trigger]
+Name	spanWell
+Mode	once
+Cond	slabs	1	MidSpan	claimed	>=	20
+Action	message	1	The span is claimed and a spring of mana has opened on the near bank. Claim it with a worker.
+Action	terrain	34	63	34	63	manawell
+[/Trigger]
 [/Triggers]

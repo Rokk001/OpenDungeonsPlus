@@ -40,6 +40,7 @@
 //!   Block   <seatId> <class>                  # written by the game: a creature class that cannot come to the seat
 //!   Event   <tag> <eventName> <count>         # written by the game: events of creatures and parties counted so far
 //!   Member  <creatureName> <partyTag>         # written by the game: a creature that a spawn action created for a party
+//!   Countdown <seconds>                       # written by the game: the HUD countdown set by an action, in level seconds
 //!   TimeLimit <seconds>                       # written by the game: the time limit set by an action, in level seconds (-2: removed)
 //!   SlapLimit <count>                         # written by the game: the number of slaps a player may do (action slaplimit)
 //!   Slaps   <seatId> <count>                  # written by the game: slaps a player has tried so far
@@ -57,7 +58,7 @@
 //!           # events: killed (dies), incapacitated (dies or is knocked out), attacked (takes damage), slapped, pickedup, imprisoned, tortured,
 //!           # afraid (starts to flee), steals (takes gold), claimed (a neutral creature joins a keeper), created (the creature or a member of the party exists; counts them).
 //!           # Two more tags: Seat<id> with the event cast:<spellName> (the player cast that spell, spell type names such as callToWar) and the tag Level with the event payday.
-//!   Cond    slabs <seatId> <regionName> <kind> <op> <count>   # tiles of the region of that kind: rock (earth wall), path (dug floor), gold, gems, claimed (claimed floor), wall (reinforced wall), water, lava, impenetrable or a room name; seat -1 any owner, 0 unclaimed
+//!   Cond    slabs <seatId> <regionName> <kind> <op> <count>   # tiles of the region of that kind: rock (earth wall), path (dug floor), gold, gems, claimed (claimed floor), wall (reinforced wall), water, lava, impenetrable, manawell or a room name; seat -1 any owner, 0 unclaimed
 //!   Cond    tagged <seatId> <regionName> <op> <count>   # tiles of the region marked for digging by the seat
 //!   Cond    tagged <seatId> <regionName> all            # every diggable tile of the region is marked for digging by the seat (and there is one)
 //!   Cond    possessed <seatId> <regionName> [<class>]   # a creature (of that class) that the seat possesses is in the region
@@ -103,7 +104,7 @@
 //!   Action  gold <seatId> <amount>
 //!   Action  setflag <name> <value>
 //!   Action  addflag <name> <delta>            # adds to the flag (a negative value subtracts)
-//!   Action  terrain <x1> <y1> <x2> <y2> <kind> [<seatId>]   # changes the tiles of the rectangle: rock, path, gold, gems, claimed, wall (claimed by the seat), water, lava, impenetrable
+//!   Action  terrain <x1> <y1> <x2> <y2> <kind> [<seatId>]   # changes the tiles of the rectangle: rock, path, gold, gems, claimed, wall (claimed by the seat), water, lava, impenetrable, manawell (open ground that gives its claiming seat mana; with a seat it starts claimed, path removes it)
 //!   Action  portal <seatId> on | off          # the portals of the seat do (not) attract creatures
 //!   Action  available <seatId> <class> 1 | 0  # a creature class can (not) come to the dungeon of the seat
 //!   Action  possess <creatureName>           # the human player takes the creature over (possession). From then on every possession of the level is free (no mana drain), the level is a possession level
@@ -119,6 +120,7 @@
 //!   Action  lose <seatId>
 //!   Action  reveal <seatId> <regionName>      # the tiles of the region stay visible to the seat
 //!   Action  make <seatId> <skillName>         # room, trap, door or spell becomes available (skill type name such as roomHatchery); seat -1: every human player
+//!   Action  countdown <seconds>               # shows a countdown on the HUD that ends without a defeat (0 removes it); a running time limit is shown instead of it
 //!   Action  timelimit <seconds>               # the level is lost for every keeper when that many seconds have passed from now (0: removes any time limit); the remaining time is shown on the HUD
 //!   Action  golfball <seatId> <x> <y>         # a boulder lies on the tile; the seat rolls it by slapping it. A region named by a "boulder" condition is a hole: the ball stops in it
 //!   Action  stonecreate <x> <y>                 # a portal stone lies on the tile
@@ -217,6 +219,7 @@ enum class LevelScriptActionType
     discoverLevel,
     make,
     timeLimit,
+    countdown,
     startTimer,
     alterTerrain,
     portalStatus,
@@ -393,6 +396,7 @@ public:
         mFreePossession(false),
         mWatchedValid(false),
         mTimeLimitSeconds(TIME_LIMIT_NOT_SET),
+        mCountdownSeconds(COUNTDOWN_NOT_SET),
         mSlapLimit(-1)
     {}
 
@@ -406,7 +410,7 @@ public:
     void clear();
 
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
@@ -532,7 +536,17 @@ public:
     inline void setTimeLimitSeconds(int64_t seconds)
     { mTimeLimitSeconds = seconds; }
 
-    //! \brief Moves a time limit that is set so that it counts from a new level start, which is
+    static const int64_t COUNTDOWN_NOT_SET = -1;
+
+    //! \brief The HUD countdown set by a script action, as the level second at which it ends.
+    //! COUNTDOWN_NOT_SET if there is none. Unlike a time limit, running out has no effect.
+    inline int64_t getCountdownSeconds() const
+    { return mCountdownSeconds; }
+
+    inline void setCountdownSeconds(int64_t seconds)
+    { mCountdownSeconds = seconds; }
+
+    //! \brief Moves a time limit and a countdown that are set so that it counts from a new level start, which is
     //! elapsedSeconds later than the current one. Used when a game is saved: the turn counter
     //! starts at 0 again when it is loaded.
     void rebaseTimeLimit(int64_t elapsedSeconds);
@@ -552,6 +566,7 @@ private:
     mutable bool mWatchedValid;
     std::vector<LevelScriptRegion> mRegions;
     int64_t mTimeLimitSeconds;
+    int64_t mCountdownSeconds;
     std::map<std::string, LevelScriptOrder> mOrders;
     std::map<int32_t, int64_t> mSlaps;
     int64_t mSlapLimit;

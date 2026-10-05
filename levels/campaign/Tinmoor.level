@@ -206,8 +206,6 @@ ProtectDungeonTemple	NULL
 3	35	2	100
 3	36	2	100
 3	37	2	100
-3	45	1	0
-3	46	1	0
 3	55	3	100
 4	0	3	100
 4	18	1	0
@@ -217,12 +215,6 @@ ProtectDungeonTemple	NULL
 4	22	1	0
 4	32	2	100
 4	34	2	100
-4	44	1	0
-4	45	1	0
-4	46	1	0
-4	47	1	0
-4	48	1	0
-4	49	1	0
 4	55	3	100
 5	0	3	100
 5	18	1	0
@@ -235,14 +227,7 @@ ProtectDungeonTemple	NULL
 5	29	1	0
 5	30	1	0
 5	34	2	100
-5	43	1	0
 5	44	1	0
-5	45	1	0
-5	46	1	0
-5	47	1	0
-5	48	1	0
-5	49	1	0
-5	50	1	0
 5	55	3	100
 6	0	3	100
 6	18	1	0
@@ -254,16 +239,7 @@ ProtectDungeonTemple	NULL
 6	28	1	0
 6	29	1	0
 6	30	1	0
-6	42	1	0
-6	43	1	0
 6	44	1	0
-6	45	1	0
-6	46	1	0
-6	47	1	0
-6	48	1	0
-6	49	1	0
-6	50	1	0
-6	51	1	0
 6	55	3	100
 7	0	3	100
 7	17	1	0
@@ -276,16 +252,11 @@ ProtectDungeonTemple	NULL
 7	28	1	0
 7	29	1	0
 7	30	1	0
-7	42	1	0
-7	43	1	0
 7	44	1	0	1
 7	45	1	0	1
 7	46	1	0	1
 7	47	1	0	1
 7	48	1	0	1
-7	49	1	0
-7	50	1	0
-7	51	1	0
 7	55	3	100
 8	0	3	100
 8	17	1	0
@@ -297,17 +268,11 @@ ProtectDungeonTemple	NULL
 8	28	1	0
 8	29	1	0
 8	30	1	0
-8	41	1	0
-8	42	1	0
-8	43	1	0
 8	44	1	0	1
 8	45	1	0	1
 8	46	1	0	1
 8	47	1	0	1
 8	48	1	0	1
-8	49	1	0
-8	50	1	0
-8	51	1	0
 8	55	3	100
 9	0	3	100
 9	15	1	0
@@ -326,17 +291,11 @@ ProtectDungeonTemple	NULL
 9	28	1	0
 9	29	1	0
 9	30	1	0
-9	41	1	0
-9	42	1	0
-9	43	1	0
 9	44	1	0	1
 9	45	1	0	1
 9	46	1	0	1
 9	47	1	0	1
 9	48	1	0	1
-9	49	1	0
-9	50	1	0
-9	51	1	0
 9	55	3	100
 10	0	3	100
 10	12	1	0
@@ -356,17 +315,11 @@ ProtectDungeonTemple	NULL
 10	28	1	0
 10	29	1	0
 10	30	1	0
-10	41	1	0
-10	42	1	0
-10	43	1	0
 10	44	1	0	1
 10	45	1	0	1
 10	46	1	0	1
 10	47	1	0	1
 10	48	1	0	1
-10	49	1	0
-10	50	1	0
-10	51	1	0
 10	55	3	100
 11	0	3	100
 11	5	1	0
@@ -380,16 +333,12 @@ ProtectDungeonTemple	NULL
 11	28	1	0
 11	29	1	0
 11	30	1	0
-11	41	1	0
-11	42	1	0
-11	43	1	0
 11	44	1	0	1
 11	45	1	0	1
 11	46	1	0	1
 11	47	1	0	1
 11	48	1	0	1
 11	49	1	0
-11	50	1	0
 11	55	3	100
 12	0	3	100
 12	4	1	0
@@ -401,15 +350,8 @@ ProtectDungeonTemple	NULL
 12	28	1	0
 12	29	1	0
 12	30	1	0
-12	42	1	0
-12	43	1	0
 12	44	1	0
-12	45	1	0
 12	46	1	0
-12	47	1	0
-12	48	1	0
-12	49	1	0
-12	50	1	0
 12	55	3	100
 13	0	3	100
 13	4	1	0
@@ -422,14 +364,8 @@ ProtectDungeonTemple	NULL
 13	28	1	0
 13	29	1	0
 13	30	1	0
-13	42	1	0
-13	43	1	0
 13	44	1	0
-13	45	1	0
 13	46	1	0
-13	47	1	0
-13	48	1	0
-13	49	1	0
 13	55	3	100
 14	0	3	100
 14	4	1	0
@@ -442,22 +378,7 @@ ProtectDungeonTemple	NULL
 14	28	1	0
 14	29	1	0
 14	30	1	0
-14	32	1	0
-14	33	1	0
-14	34	1	0
-14	35	1	0
-14	36	1	0
-14	37	1	0
-14	38	1	0
-14	39	1	0
-14	40	1	0
-14	41	1	0
-14	42	1	0
-14	43	1	0
-14	44	1	0
-14	45	1	0
 14	46	1	0
-14	47	1	0
 14	55	3	100
 15	0	3	100
 15	4	1	0
@@ -469,20 +390,7 @@ ProtectDungeonTemple	NULL
 15	28	1	0
 15	29	1	0
 15	30	1	0
-15	31	1	0
-15	32	1	0
-15	33	1	0
-15	34	1	0
-15	35	1	0
-15	36	1	0
-15	40	1	0
-15	41	1	0
-15	42	1	0
-15	43	1	0
-15	44	1	0
-15	45	1	0
 15	46	1	0
-15	47	1	0
 15	55	3	100
 16	0	3	100
 16	4	1	0
@@ -494,9 +402,7 @@ ProtectDungeonTemple	NULL
 16	28	1	0
 16	29	1	0
 16	30	1	0
-16	45	1	0
 16	46	1	0
-16	47	1	0
 16	55	3	100
 17	0	3	100
 17	4	1	0
@@ -511,9 +417,7 @@ ProtectDungeonTemple	NULL
 17	28	1	0
 17	29	1	0
 17	30	1	0
-17	45	1	0
 17	46	1	0
-17	47	1	0
 17	55	3	100
 18	0	3	100
 18	4	1	0
@@ -528,10 +432,7 @@ ProtectDungeonTemple	NULL
 18	28	1	0
 18	29	1	0
 18	30	1	0
-18	39	1	0
-18	45	1	0
 18	46	1	0
-18	47	1	0
 18	55	3	100
 19	0	3	100
 19	4	1	0
@@ -547,9 +448,6 @@ ProtectDungeonTemple	NULL
 19	30	1	0
 19	32	2	100
 19	34	2	100
-19	38	1	0
-19	39	1	0
-19	40	1	0
 19	45	1	0
 19	46	1	0
 19	47	1	0
@@ -566,11 +464,6 @@ ProtectDungeonTemple	NULL
 20	33	2	100
 20	34	2	100
 20	35	2	100
-20	36	1	0
-20	37	1	0
-20	38	1	0
-20	39	1	0
-20	40	1	0
 20	45	1	0
 20	46	1	0
 20	47	1	0
@@ -595,8 +488,6 @@ ProtectDungeonTemple	NULL
 21	37	1	0
 21	38	4	0
 21	39	4	0
-21	40	1	0
-21	41	1	0
 21	45	1	0
 21	46	1	0
 21	47	1	0
@@ -619,17 +510,6 @@ ProtectDungeonTemple	NULL
 22	37	1	0
 22	38	4	0
 22	39	4	0
-22	40	1	0
-22	41	1	0
-22	42	1	0
-22	43	1	0
-22	44	1	0
-22	45	1	0
-22	46	1	0
-22	47	1	0
-22	51	1	0
-22	52	1	0
-22	53	1	0
 22	55	3	100
 23	0	3	100
 23	8	2	100
@@ -652,13 +532,6 @@ ProtectDungeonTemple	NULL
 23	37	1	0
 23	38	4	0
 23	39	4	0
-23	40	1	0
-23	45	1	0
-23	46	1	0
-23	47	1	0
-23	51	1	0
-23	52	1	0
-23	53	1	0
 23	55	3	100
 24	0	3	100
 24	4	2	100
@@ -686,18 +559,6 @@ ProtectDungeonTemple	NULL
 24	29	1	0
 24	30	1	0
 24	31	2	100
-24	35	1	0
-24	36	1	0
-24	37	1	0
-24	38	1	0
-24	39	1	0
-24	40	1	0
-24	45	1	0
-24	46	1	0
-24	47	1	0
-24	51	1	0
-24	52	1	0
-24	53	1	0
 24	55	3	100
 25	0	3	100
 25	11	1	0
@@ -1887,8 +1748,28 @@ Action	setflag	postBAlarm	1
 Name	vaultFound
 Mode	once
 Cond	region	1	SealedVault
-Action	message	1	This chamber was closed off long ago. Something in the stone here answers the heart. A hidden hall has opened.
+Action	message	1	This chamber was closed off long ago. A smooth grey stone hums in the dust, and a stray goblin has picked it up. Bring it to your dungeon heart.
+Action	spawn	1	66	50	1	Goblin:1@VaultBearer
+Action	stoneattach	VaultBearer
+Action	setflag	vaultStone	1
+Action	timer	vaultSpawn	0
+[/Trigger]
+[Trigger]
+Name	vaultStoneHome
+Mode	once
+Cond	reached	VaultBearer	heart	1
+Action	message	1	The stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/BoulderCourse.level
+[/Trigger]
+[Trigger]
+Name	vaultStoneLost
+Mode	repeat	60
+Cond	flag	vaultStone	1
+Cond	timer	vaultSpawn	>=	5
+Cond	alive	VaultBearer	0
+Action	message	1	The stone-bearer has fallen. Another goblin has taken the stone in the vault.
+Action	spawn	1	66	50	1	Goblin:1@VaultBearer
+Action	stoneattach	VaultBearer
 [/Trigger]
 [Trigger]
 Name	firstShift
@@ -1918,5 +1799,18 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Merrin Tay is dead. The seams of Tinmoor are yours to work.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	scoutOrder
+Mode	once
+Cond	time	90
+Action	objective	1	Possess a creature and walk it through the seams to see where the miners dig.
+[/Trigger]
+[Trigger]
+Name	scoutSeams
+Mode	once
+Cond	possessed	1	Seams
+Action	message	1	Through your creature's eyes the seams lie open, and a miners' cache falls to you.
+Action	gold	1	400
 [/Trigger]
 [/Triggers]

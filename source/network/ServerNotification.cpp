@@ -152,6 +152,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "creatureChickenFeeding";
         case ServerNotificationType::chickenKindChanged:
             return "chickenKindChanged";
+        case ServerNotificationType::creatureAppearance:
+            return "creatureAppearance";
         case ServerNotificationType::trapProductionQueue:
             return "trapProductionQueue";
         case ServerNotificationType::playerDefeated:
@@ -172,6 +174,10 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "timeLimit";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
+        case ServerNotificationType::trapEffect:
+            return "trapEffect";
+        case ServerNotificationType::cosmeticEvent:
+            return "cosmeticEvent";
 
         case ServerNotificationType::seatTeam:
             return "seatTeam";

@@ -9643,4 +9643,11 @@ Cond	time	4200
 Action	message	1	The heroes have heard of the hoard. A great host is on its way.
 Action	spawn	2	82	14	1	Knight:5	Knight:5	Wizard:5	Elf:5	Monk:5	Adventurer:5
 [/Trigger]
+[Trigger]
+Name	springhallWell
+Mode	once
+Cond	slabs	1	Springhall	claimed	>=	40
+Action	message	1	The spring hall is yours and a spring of mana has opened in the middle of it. Claim it with a worker.
+Action	terrain	18	15	18	15	manawell
+[/Trigger]
 [/Triggers]

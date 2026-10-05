@@ -239,11 +239,11 @@ ProtectDungeonTemple	NULL
 5	24	1	0
 5	56	1	0	1
 5	57	1	0	1
-5	58	1	0
-5	59	1	0
-5	60	1	0
-5	61	1	0
-5	62	1	0
+5	58	1	100
+5	59	1	100
+5	60	1	100
+5	61	1	100
+5	62	1	100
 5	64	2	100
 5	65	2	100
 5	67	3	100
@@ -261,12 +261,12 @@ ProtectDungeonTemple	NULL
 6	50	2	100
 6	56	1	0	1
 6	57	1	0	1
-6	58	1	0
-6	59	1	0
-6	60	1	0
-6	61	1	0
-6	62	1	0
-6	63	1	0
+6	58	1	100
+6	59	1	100
+6	60	1	100
+6	61	1	100
+6	62	1	100
+6	63	1	100
 6	67	3	100
 7	0	3	100
 7	18	1	0
@@ -279,12 +279,12 @@ ProtectDungeonTemple	NULL
 7	56	1	0	1
 7	57	1	0	1
 7	58	1	0
-7	59	1	0
-7	60	1	0
-7	61	1	0
-7	62	1	0
-7	63	1	0
-7	64	1	0
+7	59	1	100
+7	60	1	100
+7	61	1	100
+7	62	1	100
+7	63	1	100
+7	64	1	100
 7	67	3	100
 8	0	3	100
 8	5	2	100
@@ -307,15 +307,15 @@ ProtectDungeonTemple	NULL
 8	41	1	0
 8	42	1	0
 8	46	6	100
-8	56	1	0
-8	57	1	0
+8	56	1	100
+8	57	1	100
 8	58	1	0
-8	59	1	0
-8	60	1	0
-8	61	1	0
-8	62	1	0
-8	63	1	0
-8	64	1	0
+8	59	1	100
+8	60	1	100
+8	61	1	100
+8	62	1	100
+8	63	1	100
+8	64	1	100
 8	67	3	100
 9	0	3	100
 9	30	1	0
@@ -331,16 +331,16 @@ ProtectDungeonTemple	NULL
 9	40	1	0
 9	41	1	0
 9	42	1	0
-9	56	1	0
-9	57	1	0
+9	56	1	100
+9	57	1	100
 9	58	1	0
-9	59	1	0
-9	60	1	0
-9	61	1	0
-9	62	1	0
-9	63	1	0
-9	64	1	0
-9	65	1	0
+9	59	1	100
+9	60	1	100
+9	61	1	100
+9	62	1	100
+9	63	1	100
+9	64	1	100
+9	65	1	100
 9	67	3	100
 10	0	3	100
 10	2	2	100
@@ -366,17 +366,17 @@ ProtectDungeonTemple	NULL
 10	41	1	0
 10	42	1	0
 10	46	6	100
-10	55	1	0
-10	56	1	0
-10	57	1	0
+10	55	1	100
+10	56	1	100
+10	57	1	100
 10	58	1	0	1
 10	59	1	0	1
 10	60	1	0	1
 10	61	1	0	1
 10	62	1	0	1
-10	63	1	0
-10	64	1	0
-10	65	1	0
+10	63	1	100
+10	64	1	100
+10	65	1	100
 10	67	3	100
 11	0	3	100
 11	3	2	100
@@ -405,17 +405,17 @@ ProtectDungeonTemple	NULL
 11	41	1	0
 11	42	1	0
 11	46	6	100
-11	55	1	0
-11	56	1	0
-11	57	1	0
+11	55	1	100
+11	56	1	100
+11	57	1	100
 11	58	1	0	1
 11	59	1	0	1
 11	60	1	0	1
 11	61	1	0	1
 11	62	1	0	1
-11	63	1	0
-11	64	1	0
-11	65	1	0
+11	63	1	100
+11	64	1	100
+11	65	1	100
 11	67	3	100
 12	0	3	100
 12	24	1	0
@@ -437,17 +437,17 @@ ProtectDungeonTemple	NULL
 12	40	1	0
 12	41	1	0
 12	42	1	0
-12	55	1	0
-12	56	1	0
-12	57	1	0
+12	55	1	100
+12	56	1	100
+12	57	1	100
 12	58	1	0	1
 12	59	1	0	1
 12	60	1	0	1
 12	61	1	0	1
 12	62	1	0	1
 12	63	1	0
-12	64	1	0
-12	65	1	0
+12	64	1	100
+12	65	1	100
 12	67	3	100
 13	0	3	100
 13	5	2	100
@@ -472,17 +472,17 @@ ProtectDungeonTemple	NULL
 13	40	1	0
 13	41	1	0
 13	42	1	0
-13	55	1	0
-13	56	1	0
-13	57	1	0
+13	55	1	100
+13	56	1	100
+13	57	1	100
 13	58	1	0	1
 13	59	1	0	1
 13	60	1	0	1
 13	61	1	0	1
 13	62	1	0	1
-13	63	1	0
-13	64	1	0
-13	65	1	0
+13	63	1	100
+13	64	1	100
+13	65	1	100
 13	67	3	100
 14	0	3	100
 14	8	2	100
@@ -505,24 +505,24 @@ ProtectDungeonTemple	NULL
 14	40	1	0	3
 14	41	1	0
 14	42	1	0
-14	48	1	0
-14	49	1	0
-14	50	1	0
-14	51	1	0
-14	52	1	0
-14	53	1	0
-14	54	1	0
-14	55	1	0
-14	56	1	0
-14	57	1	0
+14	48	1	100
+14	49	1	100
+14	50	1	100
+14	51	1	100
+14	52	1	100
+14	53	1	100
+14	54	1	100
+14	55	1	100
+14	56	1	100
+14	57	1	100
 14	58	1	0	1
 14	59	1	0	1
 14	60	1	0	1
 14	61	1	0	1
 14	62	1	0	1
-14	63	1	0
-14	64	1	0
-14	65	1	0
+14	63	1	100
+14	64	1	100
+14	65	1	100
 14	67	3	100
 15	0	3	100
 15	24	1	0
@@ -539,24 +539,24 @@ ProtectDungeonTemple	NULL
 15	40	1	0	3
 15	41	1	0
 15	42	1	0
-15	48	1	0
-15	49	1	0
-15	50	1	0
-15	51	1	0
-15	52	1	0
-15	53	1	0
-15	54	1	0
-15	55	1	0
-15	56	1	0
-15	57	1	0
+15	48	1	100
+15	49	1	100
+15	50	1	100
+15	51	1	100
+15	52	1	100
+15	53	1	100
+15	54	1	100
+15	55	1	100
+15	56	1	100
+15	57	1	100
 15	58	1	0
 15	59	1	0
-15	60	1	0
+15	60	1	100
 15	61	1	0
 15	62	1	0
-15	63	1	0
-15	64	1	0
-15	65	1	0
+15	63	1	100
+15	64	1	100
+15	65	1	100
 15	67	3	100
 16	0	3	100
 16	24	1	0
@@ -573,23 +573,23 @@ ProtectDungeonTemple	NULL
 16	40	3	100
 16	41	1	0
 16	42	1	0
-16	48	1	0
-16	49	1	0
-16	50	1	0
-16	51	1	0
-16	52	1	0
-16	53	1	0
-16	54	1	0
-16	55	1	0
-16	56	1	0
-16	57	1	0
+16	48	1	100
+16	49	1	100
+16	50	1	100
+16	51	1	100
+16	52	1	100
+16	53	1	100
+16	54	1	100
+16	55	1	100
+16	56	1	100
+16	57	1	100
 16	58	1	0
 16	59	1	0
-16	60	1	0
-16	61	1	0
+16	60	1	100
+16	61	1	100
 16	62	1	0
-16	63	1	0
-16	64	1	0
+16	63	1	100
+16	64	1	100
 16	67	3	100
 17	0	3	100
 17	24	1	0
@@ -606,23 +606,23 @@ ProtectDungeonTemple	NULL
 17	40	3	100
 17	41	1	0
 17	42	1	0
-17	48	1	0
-17	49	1	0
-17	50	1	0
-17	51	1	0
-17	52	1	0
-17	53	1	0
-17	54	1	0
-17	55	1	0
-17	56	1	0
-17	57	1	0
+17	48	1	100
+17	49	1	100
+17	50	1	100
+17	51	1	100
+17	52	1	100
+17	53	1	100
+17	54	1	100
+17	55	1	100
+17	56	1	100
+17	57	1	100
 17	58	1	0
 17	59	1	0
-17	60	1	0
-17	61	1	0
+17	60	1	100
+17	61	1	100
 17	62	1	0	1
 17	63	1	0	1
-17	64	1	0
+17	64	1	100
 17	67	3	100
 18	0	3	100
 18	16	1	0
@@ -640,20 +640,20 @@ ProtectDungeonTemple	NULL
 18	40	1	0
 18	41	1	0
 18	42	1	0
-18	48	1	0
-18	49	1	0
-18	50	1	0
-18	51	1	0
-18	52	1	0
-18	53	1	0
-18	54	1	0
-18	55	1	0
-18	56	1	0
-18	57	1	0
+18	48	1	100
+18	49	1	100
+18	50	1	100
+18	51	1	100
+18	52	1	100
+18	53	1	100
+18	54	1	100
+18	55	1	100
+18	56	1	100
+18	57	1	100
 18	58	1	0
 18	59	1	0
-18	60	1	0
-18	61	1	0
+18	60	1	100
+18	61	1	100
 18	62	1	0	1
 18	63	1	0	1
 18	67	3	100
@@ -673,15 +673,15 @@ ProtectDungeonTemple	NULL
 19	40	1	0
 19	41	1	0
 19	42	1	0
-19	48	1	0
-19	49	1	0
+19	48	1	100
+19	49	1	100
 19	50	3	100
 19	51	3	100
 19	52	3	100
-19	53	1	0
-19	54	1	0
-19	55	1	0
-19	56	1	0
+19	53	1	100
+19	54	1	100
+19	55	1	100
+19	56	1	100
 19	57	1	0
 19	58	1	0
 19	59	1	0
@@ -705,14 +705,14 @@ ProtectDungeonTemple	NULL
 20	40	1	0
 20	41	1	0
 20	42	1	0
-20	48	1	0
-20	49	1	0
+20	48	1	100
+20	49	1	100
 20	50	3	100
 20	51	3	100
 20	52	3	100
-20	53	1	0
-20	54	1	0
-20	55	1	0
+20	53	1	100
+20	54	1	100
+20	55	1	100
 20	56	1	0
 20	57	1	0
 20	59	1	0
@@ -737,14 +737,14 @@ ProtectDungeonTemple	NULL
 21	40	1	0
 21	41	1	0
 21	42	1	0
-21	48	1	0
-21	49	1	0
-21	50	1	0
+21	48	1	100
+21	49	1	100
+21	50	1	100
 21	51	3	100
 21	52	3	100
-21	53	1	0
-21	54	1	0
-21	55	1	0
+21	53	1	100
+21	54	1	100
+21	55	1	100
 21	56	1	0
 21	59	1	0
 21	60	1	0
@@ -774,13 +774,13 @@ ProtectDungeonTemple	NULL
 22	40	1	0
 22	41	1	0
 22	42	1	0
-22	48	1	0
-22	49	1	0
-22	50	1	0
-22	51	1	0
-22	52	1	0
-22	53	1	0
-22	54	1	0
+22	48	1	100
+22	49	1	100
+22	50	1	100
+22	51	1	100
+22	52	1	100
+22	53	1	100
+22	54	1	100
 22	55	1	0
 22	56	1	0
 22	67	3	100
@@ -806,12 +806,12 @@ ProtectDungeonTemple	NULL
 23	40	1	0
 23	41	1	0
 23	42	1	0
-23	48	1	0
-23	49	1	0
-23	50	1	0
-23	51	1	0
-23	52	1	0
-23	53	1	0
+23	48	1	100
+23	49	1	100
+23	50	1	100
+23	51	1	100
+23	52	1	100
+23	53	1	100
 23	54	1	0
 23	55	1	0
 23	66	2	100
@@ -839,12 +839,12 @@ ProtectDungeonTemple	NULL
 24	40	4	0
 24	41	1	0
 24	42	1	0
-24	48	1	0
-24	49	1	0
-24	50	1	0
-24	51	1	0
-24	52	1	0
-24	53	1	0
+24	48	1	100
+24	49	1	100
+24	50	1	100
+24	51	1	100
+24	52	1	100
+24	53	1	100
 24	54	1	0
 24	67	3	100
 25	0	3	100
@@ -871,12 +871,12 @@ ProtectDungeonTemple	NULL
 25	40	4	0
 25	41	1	0
 25	42	1	0
-25	48	1	0
-25	49	1	0
-25	50	1	0
-25	51	1	0
-25	52	1	0
-25	53	1	0
+25	48	1	100
+25	49	1	100
+25	50	1	100
+25	51	1	100
+25	52	1	100
+25	53	1	100
 25	54	1	0
 25	62	2	100
 25	63	2	100
@@ -910,12 +910,12 @@ ProtectDungeonTemple	NULL
 26	40	1	0
 26	41	1	0
 26	42	1	0
-26	48	1	0
-26	49	1	0
-26	50	1	0
-26	51	1	0
-26	52	1	0
-26	53	1	0
+26	48	1	100
+26	49	1	100
+26	50	1	100
+26	51	1	100
+26	52	1	100
+26	53	1	100
 26	54	1	0
 26	64	2	100
 26	67	3	100
@@ -945,12 +945,12 @@ ProtectDungeonTemple	NULL
 27	40	1	0
 27	41	1	0
 27	42	1	0
-27	48	1	0
-27	49	1	0
-27	50	1	0
+27	48	1	100
+27	49	1	100
+27	50	1	100
 27	51	3	100
-27	52	1	0
-27	53	1	0
+27	52	1	100
+27	53	1	100
 27	54	1	0
 27	67	3	100
 28	0	3	100
@@ -996,7 +996,7 @@ ProtectDungeonTemple	NULL
 29	6	1	0
 29	7	1	0
 29	8	1	0
-29	10	1	0
+29	10	3	100
 29	11	1	0
 29	12	1	0
 29	13	1	0
@@ -1019,9 +1019,9 @@ ProtectDungeonTemple	NULL
 29	40	1	0
 29	41	1	0
 29	42	1	0
-29	48	1	0
+29	48	1	100
 29	49	1	0
-29	50	1	0
+29	50	1	100
 29	51	3	100
 29	52	1	0
 29	53	1	0
@@ -1034,7 +1034,7 @@ ProtectDungeonTemple	NULL
 30	7	1	0
 30	8	1	0
 30	9	1	0
-30	10	1	0
+30	10	3	100
 30	11	1	0
 30	12	1	0
 30	13	1	0
@@ -1057,8 +1057,8 @@ ProtectDungeonTemple	NULL
 30	40	1	0
 30	41	1	0
 30	42	1	0
-30	48	1	0
-30	49	1	0
+30	48	1	100
+30	49	1	100
 30	50	1	0
 30	51	1	0
 30	52	1	0
@@ -1072,7 +1072,7 @@ ProtectDungeonTemple	NULL
 31	7	1	0
 31	8	1	0
 31	9	1	0
-31	10	1	0
+31	10	3	100
 31	11	1	0
 31	12	1	0
 31	13	1	0
@@ -1096,8 +1096,8 @@ ProtectDungeonTemple	NULL
 31	41	1	0
 31	42	1	0
 31	48	1	0
-31	49	1	0
-31	50	1	0
+31	49	1	100
+31	50	1	100
 31	51	1	0
 31	52	1	0
 31	53	1	0
@@ -1110,7 +1110,7 @@ ProtectDungeonTemple	NULL
 32	7	1	0
 32	8	1	0
 32	9	1	0
-32	10	1	0
+32	10	3	100
 32	11	1	0
 32	12	1	0
 32	13	1	0
@@ -1135,8 +1135,8 @@ ProtectDungeonTemple	NULL
 32	42	1	0
 32	48	1	0
 32	49	1	0
-32	50	1	0
-32	51	1	0
+32	50	1	100
+32	51	1	100
 32	52	1	0
 32	53	1	0
 32	54	1	0
@@ -1172,8 +1172,8 @@ ProtectDungeonTemple	NULL
 33	48	1	0
 33	49	1	0
 33	50	1	0
-33	51	1	0
-33	52	1	0
+33	51	1	100
+33	52	1	100
 33	53	1	0
 33	54	1	0
 33	63	2	100
@@ -2778,7 +2778,7 @@ ProtectDungeonTemple	NULL
 2	CairnGuard4	Elf.mesh	29	11	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	CairnGuard5	Dwarf2.mesh	45	7	0	Dwarf2	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	CairnGuard6	Adventurer.mesh	35	5	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	TerraceWatch1	Adventurer.mesh	25	54	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	TerraceWatch1	Adventurer.mesh	33	49	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	TerraceWatch2	Elf.mesh	39	54	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	TerraceWatch3	Dwarf1.mesh	49	48	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	TerraceWatch4	Monk.mesh	23	41	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2831,6 +2831,7 @@ Region	Terrace4	22	12	62	18
 Region	Hold	24	2	48	11
 Region	Basin	52	2	68	10
 Region	SealedCairn	2	16	12	27
+Region	CairnHall	3	18	8	24
 Region	Caldera	44	56	62	66
 Region	LavaCross	28	36	42	55
 [Trigger]
@@ -2862,6 +2863,7 @@ Mode	once
 Cond	region	1	Caldera
 Action	message	1	A hot basin of lava with gold in its walls. Hold it and you can feed your army without climbing.
 Action	gold	1	400
+Action	terrain	53	64	53	64	manawell
 [/Trigger]
 [Trigger]
 Name	terrace2
@@ -2890,10 +2892,45 @@ Action	spawn	3	36	14	1	Knight:3	Dwarf2:3	Monk:3	Elf:3
 Action	objective	1	Break into the hold and strike down the warden.
 [/Trigger]
 [Trigger]
+Name	cairnStone
+Mode	once
+Cond	time	3
+Action	stonecreate	5	21
+[/Trigger]
+[Trigger]
 Name	sealedFound
 Mode	once
-Cond	region	1	SealedCairn
-Action	message	1	A cairn at the end of the third terrace has been bricked in. A pale stone is set in its heart, and a hidden hall has opened.
+Cond	region	1	CairnHall
+Action	message	1	A cairn at the end of the third terrace has been bricked in, and a hidden hall lies behind it. A pale stone rests on a plinth, and a bound cairn spirit rises beside it and takes the stone up. Carry it home to your own heart.
+Action	spawn	1	5	22	1	Spider:3@CairnBearer
+Action	stoneattach	CairnBearer
+Action	setflag	bearerOut	1
+Action	objective	1	Bring the cairn spirit with the pale stone to your dungeon heart.
+[/Trigger]
+[Trigger]
+Name	stoneHome
+Mode	once
+Cond	reached	CairnBearer	heart	1
+Action	message	1	The pale stone has reached your heart and a hidden land has opened.
+Action	setflag	stoneDone	1
+Action	discover	campaign/SkittleCavern.level
+[/Trigger]
+[Trigger]
+Name	bearerLost
+Mode	once
+Cond	flag	bearerOut	1
+Cond	flag	stoneDone	0
+Cond	alive	CairnBearer	0
+Action	message	1	The cairn spirit has fallen. Another one rises from the plinth to carry the stone.
+Action	spawn	1	5	22	1	Spider:3@CairnBearer2
+Action	stoneattach	CairnBearer2
+[/Trigger]
+[Trigger]
+Name	stoneHome2
+Mode	once
+Cond	reached	CairnBearer2	heart	1
+Action	message	1	The pale stone has reached your heart and a hidden land has opened.
+Action	setflag	stoneDone	1
 Action	discover	campaign/SkittleCavern.level
 [/Trigger]
 [Trigger]
@@ -2966,5 +3003,36 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Warden Hilde Cairn lies dead among her own stones. Highcairn is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	holdKey
+Mode	once
+Cond	time	4
+Action	stoneattach	TerraceWatch8
+[/Trigger]
+[Trigger]
+Name	holdSealBreaks
+Mode	once
+Cond	time	5
+Cond	alive	TerraceWatch8	0
+Cond	flag	holdOpen	0
+Action	message	1	The captain of the terrace watch is down and the key to the hold lies where he fell. It fits the old lock and the stopped passage to the hold stands open.
+Action	terrain	29	10	32	10	path
+Action	setflag	holdOpen	1
+[/Trigger]
+[Trigger]
+Name	holdSealLate
+Mode	once
+Cond	time	2700
+Cond	flag	holdOpen	0
+Action	message	1	The masons of the hold have broken the seal from inside. The passage to the hold stands open.
+Action	terrain	29	10	32	10	path
+Action	setflag	holdOpen	1
+[/Trigger]
+[Trigger]
+Name	holdKeyHint
+Mode	once
+Cond	region	1	Terrace4
+Action	objective	1	Take the key from the captain of the terrace watch to break the seal of the hold.
 [/Trigger]
 [/Triggers]

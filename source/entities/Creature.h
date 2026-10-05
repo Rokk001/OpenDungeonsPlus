@@ -25,6 +25,7 @@
 #include "entities/CreatureActivity.h"
 #include "eventsystem/CreatureMoved.h"
 #include "eventsystem/Subject.h"
+#include "game/CreatureAppearance.h"
 
 
 #include <Ogre.h>
@@ -36,6 +37,7 @@
 #include <string>
 
 enum class RelationshipEvent;
+struct RelationshipCreatureState;
 class Building;
 class Creature;
 class CreatureAction;
@@ -50,6 +52,8 @@ class ODPacket;
 class Player;
 class Room;
 class Weapon;
+
+struct CosmeticEvent;
 
 enum class CreatureActionType;
 enum class CreatureMoodLevel;
@@ -166,6 +170,16 @@ public:
     //! \brief Gender of the creature ("Female", "Male" or empty), derived from its name and class. Same
     //! value as the profile gender shown on the client, so it can be used on the server.
     std::string getGender() const;
+
+    //! \brief Dungeonbook appearance (catalog id plus chosen option per slot). Chosen once on the server
+    //! when the creature spawns (or derived from the name for old saves) and never changed afterwards.
+    //! Empty for creatures without a catalog id or while no manifest exists.
+    const CreatureAppearance& getAppearance() const
+    { return mAppearance; }
+
+    //! \brief Client side. Takes over the appearance the server sent in the creature message of
+    //! ServerNotificationType::creatureAppearance. Ignored on the server.
+    void setAppearanceFromServer(const CreatureAppearance& appearance);
     std::string getStatsText();
 
     //! \brief Client side. One line with the strongest friend and the worst enemy of a creature of the
@@ -459,6 +473,18 @@ public:
 
     //! Server side. True if the creature can start a brawl now (idle, not in a fight and not hurt).
     bool canStartBrawl() const;
+
+    //! Server side. Fills state with what has to be saved of the relationships of this creature
+    //! (grief mood, rage, brawl). Returns false if there is nothing to save.
+    bool getRelationshipState(RelationshipCreatureState& state) const;
+
+    //! Server side. Restores what getRelationshipState saved. A saved brawl is only resumed
+    //! when the opponent was restored too and both are able to fight again soon (see resumeBrawl).
+    void setRelationshipState(const RelationshipCreatureState& state);
+
+    //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
+    //! part, gives up after a while.
+    void resumeBrawl();
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -571,6 +597,17 @@ public:
         const Ogre::Vector3& attackerPosition);
     void fireChickenFeeding(const std::string& chickenName,
         const Ogre::Vector3& chickenPosition);
+
+    //! \brief Sends a cosmetic event to the human players that see the creature (and negotiated cosmetic events).
+    //! With alliedOnly, only to the keeper of the creature and its allies. It only reports, it changes nothing.
+    void fireCosmeticEvent(const CosmeticEvent& event, bool alliedOnly);
+    //! \brief Sends a cosmetic event of the given kind with this creature as subject
+    void fireCosmeticEvent(int32_t type, int32_t value, int32_t value2, bool alliedOnly);
+    //! \brief The creature found no job again: tells the keeper when it has waited as long as the game
+    //! counts as frustrated (cosmetic only)
+    void fireImpatientIfNeeded();
+    //! \brief The creature arrived through a portal: tells the keeper what mood it would have (cosmetic only)
+    void fireArrivalEvent();
 
     void itsPayDay();
 
@@ -695,6 +732,16 @@ public:
     //! This is normally called by the constructor, but creatures loaded from the map files
     //! use a different constructor, and this is then called by the gameMap when other details have been loaded.
     void setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition);
+
+    //! \brief Server side. Chooses the Dungeonbook appearance: random on the first spawn (no duplicate among
+    //! the creatures of the same seat), stable from the name for loaded creatures that have none, and
+    //! replaces options that no longer exist. Does nothing without catalog id or manifest.
+    void assignAppearance(bool firstSpawn);
+
+    //! \brief Server side, called from doUpkeep while the creature has no appearance. Tries again every
+    //! few turns (the manifest may be available now), and sends a new appearance once to the clients
+    //! that already know the creature.
+    void retryAppearance();
 
     //! Called on server side to add an effect (spell, slap, ...) to this creature
     void addCreatureEffect(CreatureEffect* effect);
@@ -978,6 +1025,10 @@ private:
     //! Class name of the creature. The CreatureDefinition will be set from this name
     //! when the creature will be initialized
     std::string     mDefinitionString;
+    //! \brief Dungeonbook appearance, see getAppearance()
+    CreatureAppearance mAppearance;
+    //! \brief Server side. Upkeeps left until the next try to assign a missing appearance
+    uint32_t mAppearanceRetryTurns = 0;
     //! \brief Pointer to the struct holding the general type of the creature with its values
     const CreatureDefinition* mDefinition;
 
@@ -1011,6 +1062,10 @@ private:
     int32_t         mGoldFee;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
     int32_t         mGoldCarried;
+    //! \brief Server side: the amount of carried gold the clients were last told about
+    int32_t         mGoldCarriedNotified;
+    //! \brief Server side. The gold carried that the clients were told last (cosmetic events only, not saved)
+    int32_t         mGoldCarriedCosmeticNotified;
 
     //! Skill type that will be dropped when the creature dies
     SkillType       mSkillTypeDropDeath;
@@ -1119,6 +1174,11 @@ private:
     //! Name of the creature this one brawls with (relationships), empty if there is no brawl
     std::string                     mBrawlOpponent;
     int64_t                         mBrawlStartTurn = 0;
+    //! Brawl restored from a saved game: the opponent and the turns it may still last. Starts as
+    //! soon as both creatures can fight (see resumeBrawl), empty if there is none.
+    std::string                     mBrawlResumeOpponent;
+    int64_t                         mBrawlResumeTurnsLeft = 0;
+    int64_t                         mBrawlResumeGiveUpTurn = 0;
 
     //! Combat modifier of the relationships, computed at most once per turn
     mutable int64_t                 mCombatModifierTurn = -1;

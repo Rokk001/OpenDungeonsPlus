@@ -189,6 +189,48 @@ struct RelationshipTierChange
     RelationshipTier mNewTier;
 };
 
+//! \brief Relationship state of one creature that is not part of the pair table and has to be
+//! saved with a game: fading grief mood, rage against a seat, a running nemesis brawl. Durations
+//! are stored as the number of turns that are left, because the turn counter starts at 0 again
+//! when a game is loaded.
+struct RelationshipCreatureState
+{
+    RelationshipCreatureState() :
+        mGriefMood(0),
+        mRageTurnsLeft(0),
+        mRageSeatId(-1),
+        mBrawlTurnsLeft(0)
+    {}
+
+    //! The most captors that are saved per creature
+    static const size_t MAX_CAPTORS = 8;
+
+    //! True if there is nothing to save
+    bool isEmpty() const
+    { return (mGriefMood == 0) && (mRageTurnsLeft <= 0) && mBrawlOpponent.empty() && mCaptors.empty(); }
+
+    std::string mName;
+    //! Temporary mood points (negative for grief), fading each turn
+    int32_t mGriefMood;
+    //! Turns the rage after the death of a friend lasts, and the id of the seat it is against
+    int64_t mRageTurnsLeft;
+    int32_t mRageSeatId;
+    //! Name of the creature of a running brawl (empty if none) and the turns it can still last
+    std::string mBrawlOpponent;
+    int64_t mBrawlTurnsLeft;
+    //! Names of the enemy creatures that knocked this creature out (see Creature::mCaptors)
+    std::vector<std::string> mCaptors;
+};
+
+//! \brief Writes one tab separated line per creature state (creature name, grief mood, rage turns
+//! left, rage seat id, brawl opponent, brawl turns left, then one field per captor). States that are
+//! empty are skipped.
+void writeRelationshipCreatureStates(std::ostream& os, const std::vector<RelationshipCreatureState>& states);
+
+//! \brief Reads lines written by writeRelationshipCreatureStates until the line "[/RelationshipState]".
+//! \returns false if the section is invalid.
+bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCreatureState>& states);
+
 //! \brief Relationship values between the creatures of a game map.
 //!
 //! Owned by the game map and only created when the option is switched on. The
@@ -340,5 +382,71 @@ private:
     int64_t mLastDriftTurn;
     GenderLookup mGenderLookup;
 };
+
+//! \brief What decides whether a creature may be part of a relationship (see Creature::canHaveRelationships).
+//! The option must be on, the creature must be on the server map and belong to a keeper seat
+//! (no rogue, no hero), and it must not be a worker or a prisoner.
+bool relationshipsAllowed(bool optionOnServerMap, bool hasSeat, bool rogueSeat, bool heroFaction,
+    bool worker, bool inPrison);
+
+//! \brief A gameplay event only changes a pair when both creatures may have relationships and
+//! belong to the same seat (see Creature::reportRelationshipEvent).
+bool relationshipEventAllowed(bool firstAllowed, bool secondAllowed, bool sameSeat);
+
+//! \brief True if one of the coworkers (the caller selects them: same seat, not the creature itself)
+//! is hated by the creature or is its nemesis (see Room::hasHatedCoworker). Without relationships
+//! (creatureAllowed false) nobody is hated.
+bool anyHatedCoworker(const CreatureRelationships& relationships, bool creatureAllowed,
+    const std::string& creature, const std::vector<std::string>& coworkers);
+
+//! \brief The creature stays in a room it does not like only if no other suitable room exists
+//! (see CreatureActionSearchJob).
+bool useDislikedRoomAsFallback(bool haveDislikedRoom, size_t nbOtherSuitableRooms);
+
+//! \brief State of a creature that is checked before a nemesis brawl (see Creature::canStartBrawl).
+struct BrawlCandidateState
+{
+    bool mAllowed;
+    bool mOnMap;
+    bool mAlive;
+    bool mKo;
+    bool mPossessed;
+    bool mBrawling;
+    bool mHasTile;
+    //! Has a fight or friendly fight action queued
+    bool mFighting;
+    bool mInArenaOrCasino;
+    double mHp;
+    double mMaxHp;
+};
+
+//! \brief True if the creature may start a brawl: not busy, not hurt (health must be more than
+//! the stop percentage plus 25 points of the maximum).
+bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings& settings);
+
+//! \brief State of one fighter of a running brawl (see Creature::updateBrawl).
+struct BrawlFighterState
+{
+    bool mAlive;
+    bool mKo;
+    bool mPossessed;
+    double mHp;
+    double mMaxHp;
+};
+
+//! \brief True if a running brawl ends: someone died, is knocked out or possessed, someone is at or
+//! below the stop percentage of the maximum health, the brawl lasted mBrawlMaxTurns turns or
+//! the fight action of the creature is gone.
+bool shouldStopBrawl(const BrawlFighterState& first, const BrawlFighterState& second, int64_t turnsSinceStart,
+    bool stillFighting, const RelationshipSettings& settings);
+
+//! \brief Brawls are only looked for every mBrawlCheckIntervalTurns turns.
+bool isBrawlCheckTurn(int64_t turn, const RelationshipSettings& settings);
+
+//! \brief True if the two creatures (distance given as tile differences) are close enough to notice each other.
+bool isWithinBrawlDistance(double dx, double dy, const RelationshipSettings& settings);
+
+//! \brief True if a roll of 0 to 99 starts a brawl.
+bool brawlChanceHit(int32_t roll, const RelationshipSettings& settings);
 
 #endif // CREATURERELATIONSHIPS_H

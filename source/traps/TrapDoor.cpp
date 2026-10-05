@@ -83,11 +83,30 @@ private:
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32(mConfigPrefix + "DoorCostPerTile"); }
 
-    // No dedicated models exist yet for the stronger doors. They use the wooden door model
+    // All door models share the skeleton of the wooden door (clips Open, Close and Destroyed)
     const std::string& getMeshName() const override
     {
-        static const std::string meshName = "WoodenDoor";
-        return meshName;
+        static const std::string meshWooden = "WoodenDoor";
+        static const std::string meshIronbound = "DoorIronbound";
+        static const std::string meshSteel = "DoorSteel";
+        static const std::string meshBarricade = "DoorBarricade";
+        static const std::string meshSecret = "DoorSecret";
+        static const std::string meshRune = "DoorRune";
+        switch(mDoorType)
+        {
+            case TrapType::doorIronbound:
+                return meshIronbound;
+            case TrapType::doorSteel:
+                return meshSteel;
+            case TrapType::doorBarricade:
+                return meshBarricade;
+            case TrapType::doorSecret:
+                return meshSecret;
+            case TrapType::doorRuned:
+                return meshRune;
+            default:
+                return meshWooden;
+        }
     }
 
     virtual void checkBuildTrap(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand) const override
@@ -317,8 +336,19 @@ double TrapDoor::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 {
     // Store health in base units, preserving its fraction across research and ownership changes.
     const double factor = SkillManager::getResearchValue(getSeat(), SkillType::trapDoorWooden, 1.0);
-    return Building::takeDamage(attacker, absoluteDamage / factor, physicalDamage / factor,
+    double damageDone = Building::takeDamage(attacker, absoluteDamage / factor, physicalDamage / factor,
         magicalDamage / factor, elementDamage / factor, tileTakingDamage, ko) * factor;
+
+    // The clients show splinters, sparks or the collapse; they need to know how much health is left
+    if(damageDone > 0.0)
+    {
+        double defaultHP = getDefaultTileHP();
+        double fraction = (defaultHP > 0.0) ? (Building::getHP(tileTakingDamage) / defaultHP) : 0.0;
+        fraction = std::max(0.0, std::min(1.0, fraction));
+        fireTrapEffect((fraction <= 0.0) ? TrapEffectKind::doorWrecked : TrapEffectKind::doorHit,
+            tileTakingDamage, fraction);
+    }
+    return damageDone;
 }
 
 TrapDoor::TrapDoor(GameMap* gameMap, TrapType doorType) :
@@ -409,6 +439,7 @@ bool TrapDoor::shoot(Tile* tile)
     if(!getSeat()->takeMana(manaToFire))
         return true;
 
+    fireTrapEffect(TrapEffectKind::fired, tile, 1.0);
     double damage = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamage");
     for(GameEntity* target : enemyCreatures)
     {

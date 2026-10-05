@@ -578,6 +578,13 @@ public:
     //! keeper (0 removes any time limit, also the one of the game settings). Server only.
     void setScriptTimeLimit(int64_t seconds);
 
+    //! \brief Level script action: shows a HUD countdown of that many seconds from now. It has no
+    //! effect when it ends (0 removes it). Server only.
+    void setScriptCountdown(int64_t seconds);
+
+    //! Added to the seconds that sendTimeLimit sends when they are a countdown, not a time limit
+    static const int32_t TIME_LIMIT_COUNTDOWN_FLAG = 0x40000000;
+
     //! \brief Tells the human players how many seconds are left (-1: there is no time limit)
     void sendTimeLimit(int32_t remainingSeconds);
 

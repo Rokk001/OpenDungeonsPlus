@@ -50,6 +50,7 @@
 #include "utils/Helper.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "utils/RunLevelTest.h"
 #include "utils/MakeUnique.h"
 
 #include <OgreCamera.h>
@@ -461,15 +462,20 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
         currentMode->onFrameEnded(evt);
 
     mCameraManager.onFrameEnded();
+    mRoomAmbience->clearShake();
 
     return true;
 }
 
 bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
 {
+    if(RunLevelTest::isActive())
+        RunLevelTest::onFrame(evt.timeSinceLastFrame);
     AbstractApplicationMode* currentMode = mModeManager->getCurrentMode();
     if(currentMode)
         currentMode->onFrameStarted(evt);
+    // View shake of the spell effects, only while this frame is rendered (see clearShake in frameEnded)
+    mRoomAmbience->applyShake();
     if(mRenderManager  && mRenderManager->mRenderTarget != nullptr)
     {
         // preRenderTargetUpdate:

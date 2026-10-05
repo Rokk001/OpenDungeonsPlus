@@ -592,6 +592,11 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mType = LevelScriptActionType::timeLimit;
         return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
     }
+    if(type == "countdown")
+    {
+        action.mType = LevelScriptActionType::countdown;
+        return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
+    }
     if(type == "terrain")
     {
         action.mType = LevelScriptActionType::alterTerrain;
@@ -963,6 +968,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
         case LevelScriptActionType::timeLimit:
             os << "timelimit\t" << a.mNumber;
             break;
+        case LevelScriptActionType::countdown:
+            os << "countdown\t" << a.mNumber;
+            break;
         case LevelScriptActionType::startTimer:
             os << "timer\t" << a.mText << "\t" << a.mNumber;
             break;
@@ -1031,6 +1039,7 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
 
 const int64_t LevelScript::TIME_LIMIT_NOT_SET;
 const int64_t LevelScript::TIME_LIMIT_REMOVED;
+const int64_t LevelScript::COUNTDOWN_NOT_SET;
 
 bool LevelScript::importFromStream(std::istream& is)
 {
@@ -1136,6 +1145,11 @@ bool LevelScript::importFromStream(std::istream& is)
         else if(key == "TimeLimit")
         {
             if(inTrigger || (t.size() != 2) || !parseInt(t[1], mTimeLimitSeconds))
+                return false;
+        }
+        else if(key == "Countdown")
+        {
+            if(inTrigger || (t.size() != 2) || !parseInt(t[1], mCountdownSeconds))
                 return false;
         }
         else if(key == "SlapLimit")
@@ -1266,6 +1280,9 @@ void LevelScript::exportToStream(std::ostream& os) const
     if(mTimeLimitSeconds != TIME_LIMIT_NOT_SET)
         os << "TimeLimit\t" << mTimeLimitSeconds << "\n";
 
+    if(mCountdownSeconds != COUNTDOWN_NOT_SET)
+        os << "Countdown\t" << mCountdownSeconds << "\n";
+
     if(mSlapLimit >= 0)
         os << "SlapLimit\t" << mSlapLimit << "\n";
 
@@ -1325,6 +1342,7 @@ void LevelScript::clear()
     mWatchedValid = false;
     mRegions.clear();
     mTimeLimitSeconds = TIME_LIMIT_NOT_SET;
+    mCountdownSeconds = COUNTDOWN_NOT_SET;
     mOrders.clear();
     mSlaps.clear();
     mSlapLimit = -1;
@@ -1378,10 +1396,11 @@ bool LevelScript::getStoneCarrierTile(const std::string& creatureName, int32_t& 
 
 void LevelScript::rebaseTimeLimit(int64_t elapsedSeconds)
 {
-    if(mTimeLimitSeconds < 0)
-        return;
+    if(mTimeLimitSeconds >= 0)
+        mTimeLimitSeconds = std::max<int64_t>(0, mTimeLimitSeconds - elapsedSeconds);
 
-    mTimeLimitSeconds = std::max<int64_t>(0, mTimeLimitSeconds - elapsedSeconds);
+    if(mCountdownSeconds >= 0)
+        mCountdownSeconds = std::max<int64_t>(0, mCountdownSeconds - elapsedSeconds);
 }
 
 bool LevelScriptRegion::contains(int32_t x, int32_t y) const

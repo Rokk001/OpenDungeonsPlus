@@ -28,6 +28,7 @@
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -435,14 +436,14 @@ bool Room::hasHatedCoworker(Creature* c) const
     if(!c->canHaveRelationships())
         return false;
 
-    CreatureRelationships* relationships = c->getGameMap()->getCreatureRelationships();
+    std::vector<std::string> coworkers;
     for(Creature* other : mCreaturesUsingRoom)
     {
-        if((other != c) && (other->getSeat() == c->getSeat()) && relationships->isHated(c->getName(), other->getName()))
-            return true;
+        if((other != c) && (other->getSeat() == c->getSeat()))
+            coworkers.push_back(other->getName());
     }
 
-    return false;
+    return anyHatedCoworker(*c->getGameMap()->getCreatureRelationships(), true, c->getName(), coworkers);
 }
 
 Creature* Room::getCreatureUsingRoom(unsigned index)
@@ -1106,6 +1107,17 @@ void Room::fireRoomSound(Tile& tile, const std::string& soundFamily)
             ServerNotificationType::playSpatialSound, seat->getPlayer());
         serverNotification->mPacket << sound << tile.getX() << tile.getY();
         ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+void Room::fireRoomCosmeticEvent(Tile& tile, const CosmeticEvent& event)
+{
+    for(Seat* seat : tile.getSeatsWithVision())
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
     }
 }
 

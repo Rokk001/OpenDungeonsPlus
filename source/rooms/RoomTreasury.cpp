@@ -29,6 +29,7 @@
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -269,7 +270,8 @@ static const int maxGoldinTile = 1000;
 
 RoomTreasury::RoomTreasury(GameMap* gameMap) :
     Room(gameMap),
-    mGoldChanged(false)
+    mGoldChanged(false),
+    mFullAnnounced(false)
 {
     setMeshName("Treasury");
 }
@@ -418,12 +420,33 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
     // with vision on tile
     fireRoomSound(*tile, "Treasury/DepositGold");
 
+    // The treasury just became full: the clients may show the workers out of breath (cosmetic only)
+    if(getTotalGoldStored() >= getTotalGoldStorage())
+    {
+        if(!mFullAnnounced)
+        {
+            mFullAnnounced = true;
+            CosmeticEvent event(CosmeticEventType::treasuryFull);
+            event.mObject = getName();
+            event.mValue = getTotalGoldStored();
+            event.mValue2 = getTotalGoldStorage();
+            event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                static_cast<Ogre::Real>(tile->getY()), 0.0f);
+            fireRoomCosmeticEvent(*tile, event);
+        }
+    }
+    else
+    {
+        mFullAnnounced = false;
+    }
+
     return wasDeposited;
 }
 
 int RoomTreasury::withdrawGold(int gold)
 {
     mGoldChanged = true;
+    mFullAnnounced = false;
 
     int withdrawlAmount = 0;
     for (std::pair<Tile* const, TileData*>& p : mTileData)
@@ -469,12 +492,15 @@ void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTre
     // Capturing an upgraded treasury must preserve gold above the new owner's capacity.
     OD_ASSERT_TRUE_MSG(gold >= 0, "room=" + getName() + ", gold=" + Helper::toString(gold));
 
+    // A few empty tiles get a pile of level 0: the clients draw scattered coins on the bare floor for it
+    const bool floorScatter = (gold == 0) && TreasuryGoldLayer::hasFloorScatter(tile->getX(), tile->getY());
+
     // If the tile was and is empty, nothing to do
-    if(roomTreasuryTileData->mMeshOfTile.empty() && (gold == 0))
+    if(roomTreasuryTileData->mMeshOfTile.empty() && (gold == 0) && !floorScatter)
         return;
 
     // If the tile was not empty but is now, we remove it
-    if(gold == 0)
+    if((gold == 0) && !floorScatter)
     {
         roomTreasuryTileData->mMeshOfTile.clear();
         removeBuildingObject(tile);
@@ -546,5 +572,7 @@ void RoomTreasury::notifyCarryingStateChanged(Creature* carrier, GameEntity* car
 
 RoomTreasuryTileData* RoomTreasury::createTileData(Tile* tile)
 {
+    // A new tile of an empty room still gets its scattered floor coins
+    mGoldChanged = true;
     return new RoomTreasuryTileData;
 }
