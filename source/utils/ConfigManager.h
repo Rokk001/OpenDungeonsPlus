@@ -149,6 +149,14 @@ public:
     inline double getTiredWalkSpeedFactor() const
     { return std::max(0.2, std::min(1.0, mTiredWalkSpeedFactor)); }
 
+    //! \brief Factor on the walking speed of a badly hurt creature (1 = no slowdown), limited to 0.2 - 1
+    inline double getLowHealthWalkSpeedFactor() const
+    { return std::max(0.2, std::min(1.0, mLowHealthWalkSpeedFactor)); }
+
+    //! \brief A creature with less than this percent of its health is badly hurt and walks slower, limited to 1 - 100
+    inline double getLowHealthWalkThresholdPercent() const
+    { return std::max(1.0, std::min(100.0, mLowHealthWalkThresholdPercent)); }
+
     //! \brief Number of steps of the heart health that the keepers who see a heart are told, limited to 2 - 20
     inline int32_t getHeartHealthStages() const
     { return std::max(2, std::min(20, mHeartHealthStages)); }
@@ -428,6 +436,8 @@ private:
     uint32_t mSlapEffectDuration;
     double mTiredWakefulness;
     double mTiredWalkSpeedFactor;
+    double mLowHealthWalkSpeedFactor;
+    double mLowHealthWalkThresholdPercent;
     int32_t mHeartHealthStages;
     bool mHeartHealthStageEvents;
     bool mHitEvents;

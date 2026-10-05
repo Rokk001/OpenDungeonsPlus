@@ -564,7 +564,7 @@ public:
     virtual double getAnimationSpeedFactor() const override
     { return mSpeedModifier; }
 
-    //! \brief Badly hurt creatures walk and breathe a little slower on screen and so do tired ones, matching their slower speed (clients only)
+    //! \brief Walk clips keep up with the slower speed of tired and badly hurt creatures, hurt creatures breathe a little slower when standing (clients only)
     virtual double getClientPoseSpeedFactor() const override;
 
     inline void jobDone(double val)
@@ -871,6 +871,10 @@ public:
     void checkWalkPathValid(bool includeWalkDistortion = false);
 
     bool isTired() const;
+
+    //! \brief Share of its normal speed this creature walks at because it is badly hurt (1 = not slowed).
+    //! Uses the health stage that server and clients both know, so both move it at the same speed
+    double getLowHealthWalkFactor() const;
 
     bool isHungry() const;
 
