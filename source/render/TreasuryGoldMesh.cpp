@@ -232,8 +232,12 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
 
     for(int i = 0; i < TreasuryGoldLayer::topCoinCount(shape); ++i)
     {
-        const float u = 0.22f + 0.56f * TreasuryGoldLayer::hash01(seed, 7 * i + 3);
-        const float v = 0.22f + 0.56f * TreasuryGoldLayer::hash01(seed, 7 * i + 4);
+        // On the heap: inside 85 % of its radius
+        const float reach = 0.85f * 0.92f * TreasuryGoldLayer::pileRadius(shape.mLevel)
+            * std::sqrt(TreasuryGoldLayer::hash01(seed, 7 * i + 3));
+        const float turn = 6.2831853f * TreasuryGoldLayer::hash01(seed, 7 * i + 4);
+        const float u = 0.5f + reach * std::cos(turn);
+        const float v = 0.5f + reach * std::sin(turn);
         Ogre::Vector3 up = pileNormal(shape, u, v, dent);
         // Each coin leans a little differently
         const float lean = 6.2831853f * TreasuryGoldLayer::hash01(seed, 7 * i + 5);
@@ -246,8 +250,11 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
 
     for(int i = 0; i < TreasuryGoldLayer::gemCount(shape); ++i)
     {
-        const float u = 0.25f + 0.5f * TreasuryGoldLayer::hash01(seed, 11 * i + 8);
-        const float v = 0.25f + 0.5f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
+        const float reach = 0.6f * 0.92f * TreasuryGoldLayer::pileRadius(shape.mLevel)
+            * std::sqrt(TreasuryGoldLayer::hash01(seed, 11 * i + 8));
+        const float turn = 6.2831853f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
+        const float u = 0.5f + reach * std::cos(turn);
+        const float v = 0.5f + reach * std::sin(turn);
         Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
         centre.z += 0.02f;
         addGem(object, centre, GemSize, gemColour(shape.mVariant, i));
@@ -346,7 +353,7 @@ void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resource
 }
 
 // Divisions of the surface of a pile that is drawn with a dent (the same as the full mesh)
-const int DentDivisions = 6;
+const int DentDivisions = 12;
 }
 
 Detail detailFromString(const std::string& text)
@@ -397,7 +404,7 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
     const bool reduced = (currentDetail == Detail::reduced) || (farAway && currentDetail == Detail::full);
     const std::string name = reduced ? meshName + ReducedSuffix : meshName;
     if(!Ogre::MeshManager::getSingleton().resourceExists(name + ".mesh", "Graphics"))
-        buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 2 : 6, !reduced);
+        buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 6 : 12, !reduced);
 
     return name;
 }

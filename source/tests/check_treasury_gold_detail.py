@@ -21,7 +21,7 @@ material = read('materials/scripts/TreasuryGoldPile.material')
 
 # Coins, gems and spilled coins: a second mesh section, only at the full detail, derived from the pile name alone.
 assert 'material TreasuryGoldDetail' in material and 'ambient vertexcolour' in material
-assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 2 : 6, !reduced)' in mesh
+assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 6 : 12, !reduced)' in mesh
 for name in ('topCoinCount', 'gemCount', 'edgeOpen', 'spillCoinsPerEdge', 'hasFloorScatter', 'levelForClassicName', 'glowWeight'):
     assert name in layer and name in mesh + render + treasury
 assert 'maxTopCoins' in layer and 'maxGems' in layer and 'maxSpillCoins' in layer
@@ -47,7 +47,10 @@ for line in material.splitlines():
         assert float(line.split()[1]) <= 0.6, line
 ring = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
 assert 'mCorner[i] = level' not in ring and 'mCorner' not in ring
-assert '(peak - base) * bump * std::sqrt(bump)' in layer and '(peak - base) * std::sqrt(bump)' not in layer
+assert 'height += (peak - base) * bump;' in layer and 'rest * std::sqrt(rest)' in layer
+# A little gold is a small round heap in the middle of the tile, a full tile reaches the edges
+assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'return 0.5f;' in layer
+assert 'pileRadius(shape.mLevel)' in mesh.split('void addDetail')[1]
 assert '(0.5f * patch.mStrength)' in render.split('void RenderManager::setTreasuryGlowLight')[1].split('void RenderManager::destroyTreasuryGlowLight')[0]
 # Coins and gems stay readable: rounded coins with a lighter middle, a radius of at least 0.05 on top of the gold
 assert 'CoinDome' in mesh and 'CoinRimShade' in mesh and 'CoinRound' in mesh

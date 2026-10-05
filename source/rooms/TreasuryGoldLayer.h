@@ -159,8 +159,28 @@ inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
     return shape;
 }
 
+//! Radius (tile units, the tile is 1 wide) of the round heap of a pile: a little gold is a small heap in the middle
+//! of the tile, a full tile reaches its edges (never beyond them, so the heap never ends in a cut edge)
+inline float pileRadius(int level)
+{
+    if(level <= 1)
+        return 0.16f;
+    if(level >= maxLevel)
+        return 0.5f;
+    return 0.16f + 0.34f * static_cast<float>(level - 1) / static_cast<float>(maxLevel - 1);
+}
+
+//! Radius of the heap of the shape in the direction of (u, v) seen from the middle of the tile: slightly uneven,
+//! never above pileRadius()
+inline float pileRadiusAt(const PileShape& shape, float u, float v)
+{
+    const float angle = std::atan2(v - 0.5f, u - 0.5f);
+    return pileRadius(shape.mLevel) * (0.92f + 0.08f * std::sin(3.0f * angle + 1.7f * static_cast<float>(shape.mVariant)));
+}
+
 //! Surface height of a pile at (u, v), both 0..1 across the tile (u towards +x, v towards +y).
-//! The edges only depend on the corners; the middle rises to the level of the tile itself.
+//! The edges only depend on the corners; a round heap rises from the middle of the tile to the level of the
+//! tile itself and runs out flat at its radius, so a small amount of gold is a small heap, not a block.
 inline float heightAt(const PileShape& shape, float u, float v)
 {
     if(shape.mLevel <= 0)
@@ -173,12 +193,22 @@ inline float heightAt(const PileShape& shape, float u, float v)
     // v grows to the north: top row is north
     const float base = (1.0f - u) * ((1.0f - v) * sw + v * nw) + u * ((1.0f - v) * se + v * ne);
 
-    // 0 on the four edges, 1 in the middle
-    const float bump = 16.0f * u * (1.0f - u) * v * (1.0f - v);
+    // 1 in the middle, 0 at and beyond the radius of the heap (which never exceeds the tile edges)
+    const float du = u - 0.5f;
+    const float dv = v - 0.5f;
+    const float ratio = std::sqrt(du * du + dv * dv) / pileRadiusAt(shape, u, v);
+    float bump = 0.0f;
+    if(ratio < 1.0f)
+    {
+        const float rest = 1.0f - ratio * ratio;
+        bump = rest * std::sqrt(rest);
+    }
     const float peak = levelHeight(shape.mLevel);
-    // The rise towards the middle starts flat at the edges (no wall-like dome), so a pile runs out on the floor
-    // and next to the piles of its neighbours without a visible tile border
-    float height = base + (peak - base) * bump * std::sqrt(bump);
+    // The rise starts flat at the foot of the heap, so a pile runs out on the floor and next to the piles of its
+    // neighbours (which share the heights along the edge through the corners) without a visible tile border
+    float height = base;
+    if(peak > base)
+        height += (peak - base) * bump;
 
     // A few lumps, only on fuller piles, fading out towards the edges
     if(shape.mLevel >= 3)
