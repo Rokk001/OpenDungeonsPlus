@@ -2499,6 +2499,11 @@ double Creature::getClientPoseSpeedFactor() const
     // The worker that pulls a hurt creature walks slower too (see getMoveSpeed)
     if(getAnimationStateName() == EntityAnimation::drag_anim)
         factor *= getDragWorkerSpeedFactor();
+
+    // The walk clips (Walk, WalkHurt, CarryWalk) of a type can run faster or slower than the move speed so that the
+    // feet do not slide (WalkClipRate). Only the shown clip, the move speed is not touched
+    if((getAnimationStateName() == EntityAnimation::walk_anim) && (mDefinition != nullptr))
+        factor *= mDefinition->getWalkClipRate();
     return factor;
 }
 

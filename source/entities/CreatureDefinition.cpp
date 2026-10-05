@@ -78,6 +78,7 @@ CreatureDefinition::CreatureDefinition(
         mPossessManaCost (0.0),
         mTortureTimeToConvert (120.0),
         mLowHealthWalkSpeedFactor (-1.0),
+        mWalkClipRate (1.0),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -135,6 +136,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mPossessManaCost(def.mPossessManaCost),
         mTortureTimeToConvert(def.mTortureTimeToConvert),
         mLowHealthWalkSpeedFactor(def.mLowHealthWalkSpeedFactor),
+        mWalkClipRate(def.mWalkClipRate),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -351,6 +353,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mPossessManaCost;
     os << c->mTortureTimeToConvert;
     os << c->mLowHealthWalkSpeedFactor;
+    os << c->mWalkClipRate;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -397,6 +400,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mPossessManaCost;
     is >> c->mTortureTimeToConvert;
     is >> c->mLowHealthWalkSpeedFactor;
+    is >> c->mWalkClipRate;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -563,6 +567,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mLowHealthWalkSpeedFactor = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "WalkClipRate")
+            {
+                defFile >> nextParam;
+                creatureDef->mWalkClipRate = Helper::toDouble(nextParam);
                 continue;
             }
             else if (nextParam == "MeshName")
@@ -867,6 +877,9 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
     {
         file << "    LowHealthWalkSpeedFactor	" << def2->mLowHealthWalkSpeedFactor << std::endl;
     }
+
+    if((def1 == nullptr) ? (def2->mWalkClipRate != 1.0) : (def1->mWalkClipRate != def2->mWalkClipRate))
+        file << "    WalkClipRate	" << def2->mWalkClipRate << std::endl;
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))
         file << "    MeshName\t" << def2->mMeshName << std::endl;
