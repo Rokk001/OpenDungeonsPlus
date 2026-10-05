@@ -1,6 +1,5 @@
 """Exercise the production level statistics counting hooks and the levelStatistics notification without a game."""
 from pathlib import Path
-import re
 import subprocess
 import tempfile
 import time
@@ -580,7 +579,7 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and [n for n in re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*$', enum_body, re.M) if n != 'creatureAppearance'][-2:] == ['timeLimit', 'chickenKindChanged']
+assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and enum_body.rstrip().endswith('timeLimit')
 assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
 assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')

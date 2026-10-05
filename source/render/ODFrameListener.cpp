@@ -52,7 +52,6 @@
 #include "utils/LogManager.h"
 #include "utils/RunLevelTest.h"
 #include "utils/MakeUnique.h"
-#include "utils/RunLevelTest.h"
 
 #include <OgreCamera.h>
 #include <OgreEntity.h>

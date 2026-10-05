@@ -101,7 +101,9 @@ pick = body(chicken, 'void ChickenEntity::pickup')
 assert 'mFighting = false' in pick, 'a picked up rooster leaves the fight'
 # the event is inserted before timeLimit (which stays the last value) and after chickenKindChanged
 enum_body = notif[notif.index('enum class ServerNotificationType'):notif.index('};')]
-assert enum_body.index('chickenKindChanged') < enum_body.index('chickenFight') < enum_body.index('timeLimit')
+enum_names = [line.split(',')[0].strip() for line in enum_body.splitlines()
+              if line.strip() and not line.strip().startswith(('//', 'enum', '{'))]
+assert enum_names.index('chickenKindChanged') < enum_names.index('chickenFight') < enum_names.index('timeLimit')
 assert enum_body.rstrip().endswith('timeLimit')
 assert 'ServerNotificationType::chickenFight' in chicken and 'ServerNotificationType::chickenFight' in client
 assert 'case ServerNotificationType::chickenFight' in (root / 'source/network/ServerNotification.cpp').read_text()

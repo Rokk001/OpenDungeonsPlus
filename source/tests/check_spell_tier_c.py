@@ -3,8 +3,8 @@
 
     python source/tests/check_spell_tier_c.py
 
-No compiler is needed. Checks that no network message was added (timeLimit and chickenKindChanged
-are still the last notifications and trapEffect still sits right before timeLimit), that the new kinds are wired from the config
+No compiler is needed. Checks that no network message was added (timeLimit is still the last
+notification and trapEffect still sits right before it), that the new kinds are wired from the config
 to the code, that the shake is only applied while a frame is rendered and taken away again, that every
 texture exists with a material and a CREDITS entry, and that every event of the config is raised.
 """
@@ -23,14 +23,14 @@ def read(*parts):
 
 problems = []
 
-# 1. The network is untouched: timeLimit and chickenKindChanged last, trapEffect right before them
+# 1. The network is untouched: no value after timeLimit, trapEffect right before it
 header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-2:] != ["timeLimit", "chickenKindChanged"]:
-    problems.append("timeLimit and chickenKindChanged are not the last server notifications")
-if "trapEffect" not in names or names.index("trapEffect") != len(names) - 3:
+if names[-1] != "timeLimit":
+    problems.append("timeLimit is not the last server notification")
+if "trapEffect" not in names or names.index("trapEffect") != len(names) - 2:
     problems.append("trapEffect must be right before timeLimit")
 
 # 2. Config kinds
