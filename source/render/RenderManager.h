@@ -508,6 +508,19 @@ private:
     Ogre::Real mTreasuryAmbientTimer = 0.0f;
     size_t mTreasuryAmbientCursor = 0;
 
+    //! The gold piles of this client (also the classic stacks that are drawn as piles) with the node type they were
+    //! created for and whether they use the reduced mesh because they are far from the camera. The level of detail
+    //! switches piles by creating their mesh again; the option change does the same for all of them.
+    struct TreasuryPileInfo
+    {
+        NodeType mNodeType;
+        bool mFar;
+    };
+    std::map<RenderedMovableEntity*, TreasuryPileInfo> mTreasuryPiles;
+    //! While a pile is created again for the level of detail: 1 reduced, 0 full (-1 when not, the distance decides)
+    int mTreasuryPileFarOverride = -1;
+    Ogre::Real mTreasuryLodTimer = 0.0f;
+
     //! A pile that grows or sinks: its node settles to the new height over a short time
     struct TreasuryPileSettle
     {
@@ -667,6 +680,9 @@ private:
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
         int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);
     void updateTreasuryDents(Ogre::Real timeSinceLastFrame);
+    //! Distance of a point to the camera in tiles (0 without a camera)
+    float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
+    void updateTreasuryLod(Ogre::Real timeSinceLastFrame);
     //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
     void finishTreasuryDent(const std::string& entityName);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);

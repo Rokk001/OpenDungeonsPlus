@@ -93,6 +93,14 @@ int main()
         "a room never has more glow lights than the game");
     check(glowViewDistance > 0.0f && glowUpdateInterval > 0.0f, "the glow has a view distance and an interval");
 
+    // Level of detail: far piles are reduced, with a hysteresis so a pile on the border does not flip
+    check(!lodReducedAt(false, lodFarDistance - 1.0f), "a near pile keeps the full mesh");
+    check(lodReducedAt(false, lodFarDistance + 1.0f), "a far pile uses the reduced mesh");
+    check(lodReducedAt(true, lodFarDistance - 1.0f) == (lodHysteresis < 1.0f ? false : true),
+        "a reduced pile just inside the border stays reduced");
+    check(!lodReducedAt(true, lodFarDistance - lodHysteresis - 1.0f), "a reduced pile returns to full when clearly near");
+    check(lodHysteresis >= 0.0f && lodSwitchesPerUpdate >= 1 && lodInterval > 0.0f, "the level of detail is bounded");
+
     SplashBudget budget;
     int roomA = 0;
     int roomB = 0;

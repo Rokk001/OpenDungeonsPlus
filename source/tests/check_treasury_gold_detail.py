@@ -29,7 +29,7 @@ assert 'maxTopCoins' in layer and 'maxGems' in layer and 'maxSpillCoins' in laye
 # Bare floor: the server names a level 0 pile for some empty tiles; the client draws nothing for it unless full.
 assert 'hasFloorScatter(tile->getX(), tile->getY())' in treasury
 assert 'mGoldChanged = true;\n    return new RoomTreasuryTileData' in treasury.replace('\r\n', '\n')
-assert 'shape.mLevel == 0 && currentDetail != Detail::full' in mesh
+assert 'shape.mLevel == 0 && (currentDetail != Detail::full || farAway)' in mesh
 
 # Dungeon heart ring: the classic stacks are drawn as piles on the client (server names and tests untouched).
 assert 'pileNameForClassicStack' in render and 'replacesClassicStack' in render
@@ -73,6 +73,19 @@ assert 'updateTreasuryGlow(timeSinceLastFrame)' in render and 'glowUpdateInterva
 assert 'createLight' not in render.split('void RenderManager::refreshTreasuryGlow')[1].split('void RenderManager::updateTreasuryGlow')[0]
 assert 'mRoom' in mesh.split('Glow glowOfPatch')[1] and 'glowLimitPerRoom' in rules and 'glowLimitTotal' in rules
 assert 'case TreasuryGoldMesh::Detail::reduced:' in rules.split('inline int glowLimitTotal')[1]
+
+# Level of detail by distance: piles beyond lodFarDistance use the reduced mesh (no coins and gems, nothing on a bare
+# tile), return below lodFarDistance - lodHysteresis (no flipping), at most a few per check, never while settling;
+# the new entity stays hidden while the room batch still shows the old one.
+assert 'farAway && currentDetail == Detail::full' in mesh and 'bool farAway = false' in read('source/render/TreasuryGoldMesh.h')
+lod = render.split('void RenderManager::updateTreasuryLod')[1].split('void RenderManager::updateTreasuryDents')[0]
+assert 'lodReducedAt(it->second.mFar' in lod and 'lodSwitchesPerUpdate' in lod and 'isTreasuryPileSettling' in lod
+assert 'destroyMesh(nodeType)' in lod and 'createMesh(nodeType)' in lod and 'hideUntilBatched' in lod
+assert 'Detail::full' in lod.split('lodReducedAt')[0]
+assert 'mTreasuryPiles.erase(curRenderedMovableEntity)' in render and 'updateTreasuryLod(timeSinceLastFrame)' in render
+assert 'lodReducedAt(false' in render and 'prepareMesh(mSceneManager, meshName, pileFar)' in render
+assert 'inline bool lodReducedAt' in rules and 'lodHysteresis' in rules
+assert 'void TreasuryGoldBatch::hideUntilBatched' in read('source/render/TreasuryGoldBatch.cpp')
 
 # Thieves show a sack sized by the gold the server sends with the creature packet; glow lights per patch.
 assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render

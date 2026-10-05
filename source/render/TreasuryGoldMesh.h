@@ -50,7 +50,9 @@ Detail getDetail();
 //! stacks when the detail is off.
 //! A pile without gold (the scattered coins on the bare floor of an empty treasury) is only drawn at the
 //! detail "full"; for the other settings an empty string comes back and no mesh is drawn.
-std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& meshName);
+//! A pile far from the camera (farAway) uses the reduced mesh at the detail full: coarse surface, no coins and
+//! gems, and nothing at all for a tile without gold.
+std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& meshName, bool farAway = false);
 
 //! A dynamic copy of the pile with the given name (full detail only, null for any other case) that can be dented:
 //! the dent lies at (u, v) across the tile (0..1) with the given radius in tile units. The caller owns the object

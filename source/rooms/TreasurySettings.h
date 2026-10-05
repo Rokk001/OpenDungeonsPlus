@@ -86,6 +86,15 @@ struct TreasurySettings
     float glowViewDistance = 28.0f;
     float glowUpdateInterval = 1.0f;
 
+    // Level of detail by distance to the camera: piles farther away than lodFarDistance (tiles) use the reduced
+    // mesh (no coins and gems), they return to the full mesh below lodFarDistance - lodHysteresis, so they never
+    // flip back and forth. The check runs every lodInterval seconds and switches at most lodSwitchesPerUpdate
+    // piles per run, so a camera jump is spread over several runs.
+    float lodFarDistance = 22.0f;
+    float lodHysteresis = 4.0f;
+    float lodInterval = 0.5f;
+    int lodSwitchesPerUpdate = 10;
+
     typedef std::map<std::string, std::string> Config;
 
     //! The values of the game. Written once when the configuration is loaded.
@@ -160,6 +169,11 @@ struct TreasurySettings
         s.glowMaxTotalReduced = readInt(config, "GlowMaxTotalReduced", s.glowMaxTotalReduced, 0, 500);
         s.glowViewDistance = readFloat(config, "GlowViewDistance", s.glowViewDistance, 1.0f, 500.0f);
         s.glowUpdateInterval = readFloat(config, "GlowUpdateInterval", s.glowUpdateInterval, 0.1f, 30.0f);
+
+        s.lodFarDistance = readFloat(config, "LodFarDistance", s.lodFarDistance, 1.0f, 500.0f);
+        s.lodHysteresis = readFloat(config, "LodHysteresis", s.lodHysteresis, 0.0f, 100.0f);
+        s.lodInterval = readFloat(config, "LodInterval", s.lodInterval, 0.1f, 10.0f);
+        s.lodSwitchesPerUpdate = readInt(config, "LodSwitchesPerUpdate", s.lodSwitchesPerUpdate, 1, 100);
         return s;
     }
 };

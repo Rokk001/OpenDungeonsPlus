@@ -332,6 +332,18 @@ inline int glowLimitTotal(TreasuryGoldMesh::Detail detail)
 static const float& glowViewDistance = TreasurySettings::current().glowViewDistance;
 static const float& glowUpdateInterval = TreasurySettings::current().glowUpdateInterval;
 
+//! Level of detail by distance: whether a pile at the given distance (tiles) from the camera uses the reduced mesh.
+//! A pile that is reduced already stays so until it is clearly closer again (hysteresis), so it never flips.
+static const float& lodFarDistance = TreasurySettings::current().lodFarDistance;
+static const float& lodHysteresis = TreasurySettings::current().lodHysteresis;
+static const float& lodInterval = TreasurySettings::current().lodInterval;
+static const int& lodSwitchesPerUpdate = TreasurySettings::current().lodSwitchesPerUpdate;
+
+inline bool lodReducedAt(bool currentlyReduced, float distance)
+{
+    return distance > (currentlyReduced ? lodFarDistance - lodHysteresis : lodFarDistance);
+}
+
 //! Counts the splashes shown per room (the room is identified by any pointer)
 class SplashBudget
 {

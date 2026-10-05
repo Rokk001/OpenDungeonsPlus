@@ -70,6 +70,17 @@ void TreasuryGoldBatch::pileSettled(const std::string& entityName)
     mChunks[it->second.mKey].mDirty = true;
 }
 
+void TreasuryGoldBatch::hideUntilBatched(const std::string& entityName)
+{
+    std::map<std::string, Member>::iterator it = mMembers.find(entityName);
+    if(it == mMembers.end() || it->second.mSettling)
+        return;
+
+    std::map<ChunkKey, Chunk>::iterator chunkIt = mChunks.find(it->second.mKey);
+    if(chunkIt != mChunks.end() && chunkIt->second.mGeometry != nullptr)
+        it->second.mEntity->setVisible(false);
+}
+
 void TreasuryGoldBatch::removePile(const std::string& entityName)
 {
     std::map<std::string, Member>::iterator it = mMembers.find(entityName);

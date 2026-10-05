@@ -1863,6 +1863,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     updateTreasuryAmbient(timeSinceLastFrame);
     updateTreasuryPileSettles(timeSinceLastFrame);
     updateTreasuryGlow(timeSinceLastFrame);
+    updateTreasuryLod(timeSinceLastFrame);
     mTreasuryBatch.update(timeSinceLastFrame);
     updateTreasuryBuriedObjects(timeSinceLastFrame);
     rrUpdateHeldCreature();
@@ -2781,6 +2782,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     bool isPileEntity = false;
     // Name of the pile shape drawn for the entity (before the mesh behind it is chosen by the detail option)
     std::string pileMeshName;
+    // True when the pile is far from the camera and uses the reduced mesh
+    bool pileFar = false;
     if(isBuildingObject)
     {
         Tile* pileTile = renderedMovableEntity->getPositionTile();
@@ -2799,7 +2802,15 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             static_cast<const void*>(pileTile->getCoveringRoom()) : static_cast<const void*>(pileTile),
             classicStack);
         pileMeshName = meshName;
-        meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName);
+        if(isPileEntity && TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::full)
+        {
+            if(mTreasuryPileFarOverride >= 0)
+                pileFar = (mTreasuryPileFarOverride == 1);
+            else
+                pileFar = TreasuryCreatureRules::lodReducedAt(false,
+                    getTreasuryCameraDistance(renderedMovableEntity->getPosition()));
+        }
+        meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar);
         refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
         refreshBuriedObjectsOnTile(renderedMovableEntity->getPositionTile());
     }
@@ -2873,6 +2884,16 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         rrUpdateSecretDoorLook(static_cast<DoorEntity*>(renderedMovableEntity));
     if(HatcheryCoopHouse::isCoopMesh(meshName))
         rrCreateCoopDecor(static_cast<BuildingObject*>(renderedMovableEntity));
+
+    // Piles (and the classic stacks drawn as piles) are listed, so their mesh can be created again
+    if(isBuildingObject && nt == NodeType::MTILES_NODE &&
+        (isPileEntity || TreasuryGoldLayer::levelForClassicName(renderedMovableEntity->getMeshName()) > 0))
+    {
+        TreasuryPileInfo pileInfo;
+        pileInfo.mNodeType = nt;
+        pileInfo.mFar = pileFar;
+        mTreasuryPiles[renderedMovableEntity] = pileInfo;
+    }
 
     if(pileLevel >= 0)
     {
@@ -2957,6 +2978,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     cancelTreasuryPileSettle(curRenderedMovableEntity->getName());
     mTreasuryBatch.removePile(curRenderedMovableEntity->getName());
     mTreasuryBuriedObjects.erase(curRenderedMovableEntity);
+    mTreasuryPiles.erase(curRenderedMovableEntity);
     if(HatcheryCoopHouse::isCoopMesh(curRenderedMovableEntity->getMeshName()))
         rrDestroyCoopDecor(static_cast<BuildingObject*>(curRenderedMovableEntity));
     if(mSceneManager->hasEntity(tempString))
@@ -5088,6 +5110,55 @@ void RenderManager::startTreasuryPileChange(Ogre::SceneNode* node, const std::st
         SoundEffectsManager::getSingleton().playSpatialSound("Rooms/Treasury/CoinStep", position.x, position.y);
 }
 
+float RenderManager::getTreasuryCameraDistance(const Ogre::Vector3& position) const
+{
+    Ogre::Camera* camera = mViewport != nullptr ? mViewport->getCamera() : nullptr;
+    if(camera == nullptr)
+        return 0.0f;
+
+    return (position - camera->getDerivedPosition()).length();
+}
+
+void RenderManager::updateTreasuryLod(Ogre::Real timeSinceLastFrame)
+{
+    mTreasuryLodTimer += timeSinceLastFrame;
+    if(mTreasuryLodTimer < TreasuryCreatureRules::lodInterval)
+        return;
+
+    mTreasuryLodTimer = 0.0f;
+    // Only the full detail has a level of detail: reduced is coarse everywhere, off draws the classic stacks
+    if(TreasuryGoldMesh::getDetail() != TreasuryGoldMesh::Detail::full || mViewport == nullptr
+        || mViewport->getCamera() == nullptr)
+        return;
+
+    // The piles that cross the distance (with hysteresis), a limited number per check; a settling pile waits
+    std::vector<std::pair<RenderedMovableEntity*, bool> > switches;
+    for(std::map<RenderedMovableEntity*, TreasuryPileInfo>::const_iterator it = mTreasuryPiles.begin();
+        it != mTreasuryPiles.end(); ++it)
+    {
+        const bool reduced = TreasuryCreatureRules::lodReducedAt(it->second.mFar,
+            getTreasuryCameraDistance(it->first->getPosition()));
+        if(reduced == it->second.mFar || isTreasuryPileSettling(it->first->getName()))
+            continue;
+
+        switches.push_back(std::make_pair(it->first, reduced));
+        if(static_cast<int>(switches.size()) >= TreasuryCreatureRules::lodSwitchesPerUpdate)
+            break;
+    }
+
+    for(std::vector<std::pair<RenderedMovableEntity*, bool> >::const_iterator it = switches.begin();
+        it != switches.end(); ++it)
+    {
+        RenderedMovableEntity* entity = it->first;
+        const NodeType nodeType = mTreasuryPiles[entity].mNodeType;
+        mTreasuryPileFarOverride = it->second ? 1 : 0;
+        entity->destroyMesh(nodeType);
+        entity->createMesh(nodeType);
+        mTreasuryPileFarOverride = -1;
+        mTreasuryBatch.hideUntilBatched(entity->getName());
+    }
+}
+
 void RenderManager::updateTreasuryDents(Ogre::Real timeSinceLastFrame)
 {
     std::vector<std::string> finished;
@@ -5458,6 +5529,7 @@ void RenderManager::clearTreasuryEffects()
         finishTreasuryDent(mTreasuryPileDents.back().mEntityName);
     mTreasuryBatch.clear();
     mTreasuryBuriedObjects.clear();
+    mTreasuryPiles.clear();
     while(!mTreasuryThiefSacks.empty())
         removeTreasuryThiefSack(mTreasuryThiefSacks.back().mCreature);
     for(const std::string& name : mTreasuryGlowLights)
