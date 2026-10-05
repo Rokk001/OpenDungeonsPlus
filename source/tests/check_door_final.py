@@ -52,28 +52,19 @@ if "tools/blender-assets/door_skeletons.py" not in credits:
 if b"Collapse" not in read("models", "WoodenDoor.skeleton", binary=True):
     problems.append("WoodenDoor.skeleton lost its clips")
 
-# The look of the secret door
-materials = read("materials", "scripts", "DoorTypes.material")
-for material, texture in (("DoorSecretWall", "DirtWall.png"), ("DoorSecretWallClaimed", "DungeonClaimedWall0000.png")):
-    if "material " + material + "\n" not in materials.replace("\r\n", "\n"):
-        problems.append("material %s is missing" % material)
-    if not os.path.exists(os.path.join(ROOT, "materials", "textures", texture)):
-        problems.append("texture %s of %s is missing" % (texture, material))
-render = read("source", "render", "RenderManager.cpp")
-if "void RenderManager::rrUpdateSecretDoorLook(DoorEntity* door)" not in render:
-    problems.append("RenderManager has no rrUpdateSecretDoorLook")
-else:
-    body = render[render.index("void RenderManager::rrUpdateSecretDoorLook"):]
-    body = body[:body.index("\n}\n")]
-    for text in ("isAlliedSeat", '"Close"', "DoorSecretWallClaimed", "DoorSecretWall", "isInEditorMode", "setMaterialOpacity"):
-        if text not in body:
-            problems.append("rrUpdateSecretDoorLook does not use " + text)
-if 'meshName == "DoorSecret"' not in render or "rrUpdateSecretDoorLook(static_cast<DoorEntity*>" not in render:
-    problems.append("a new secret door entity does not get its look")
-if "rrUpdateSecretDoorLook(this)" not in read("source", "entities", "DoorEntity.cpp"):
-    problems.append("the secret door does not change its look when it opens or closes")
-if "rrUpdateSecretDoorLook" not in read("source", "render", "RenderManager.h"):
-    problems.append("RenderManager.h does not declare rrUpdateSecretDoorLook")
+# The look of the secret door: the server shows a wall to every seat that did not discover the door (the tile
+# and the door entity only go to the allies and the seats that saw it used); a seat that has the door entity
+# sees the door itself, so the client must not paint a wall over it
+if "appearsAsWallForSeat(tile, this)" not in read("source", "game", "Seat.cpp"):
+    problems.append("the tile of an undiscovered secret door is not sent as a wall")
+if "mSeatsNotHidden" not in read("source", "entities", "TrapEntity.cpp"):
+    problems.append("the secret door entity is not limited to the seats that saw it")
+for client_file in (("source", "render", "RenderManager.cpp"), ("source", "render", "RenderManager.h"),
+        ("source", "entities", "DoorEntity.cpp")):
+    if "rrUpdateSecretDoorLook" in read(*client_file):
+        problems.append(client_file[-1] + " paints a wall look over the secret door of a seat that discovered it")
+if "DoorSecretWall" in read("materials", "scripts", "DoorTypes.material"):
+    problems.append("DoorTypes.material has a wall look for the secret door")
 
 # The collapse takes its length from the clip
 ambience = read("source", "render", "RoomAmbience.cpp")
