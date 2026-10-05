@@ -237,6 +237,8 @@ private:
 
     void buildIndex();
     void scan();
+    //! \brief Hands the torch list of the client map to mWallTorches when it has changed
+    void syncWallTorches();
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
@@ -295,6 +297,8 @@ private:
     double mHeartRateFactor;
     RoomAmbienceExtras mExtras;
     WallTorchView mWallTorches;
+    //! Version of GameMap::getWallTorches() that was handed to mWallTorches last
+    uint32_t mWallTorchesVersion;
 
     std::map<std::string, Emitter> mEmitters;
     std::vector<OneShot> mOneShots;
