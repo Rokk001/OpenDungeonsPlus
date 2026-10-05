@@ -1018,42 +1018,36 @@ particle_system RoomAmbStrawDust
     }
 }
 
-// A chick hatched: feathers and a few sparkles
-particle_system RoomAmbHatchBurst
+// A little dust where a chicken hops away; small, so that it never hides the animals
+particle_system RoomAmbHatchDust
 {
-    material        RoomAmbFeather
+    material        RoomAmbSmoke
     point_rendering false
     particle_width  0.1
     particle_height 0.1
     cull_each       false
-    quota           14
+    quota           4
     billboard_type  point
 
-    emitter Point
+    emitter Box
     {
-        angle               120
-        colour              1.0 1.0 1.0 1.0
-        emission_rate       60
-        time_to_live        1.5
+        angle               70
+        colour_range_start  0.72 0.64 0.5 0.35
+        colour_range_end    0.82 0.74 0.6 0.4
+        emission_rate       18
+        time_to_live        0.6
         direction           0 0 1
-        velocity_min        0.5
-        velocity_max        1.3
-        position            0 0 0.1
-        duration            0.2
+        velocity_min        0.1
+        velocity_max        0.3
+        duration            0.15
+        width               0.12
+        height              0.12
+        depth               0.02
     }
 
-    affector LinearForce
+    affector Scaler
     {
-        force_vector        0 0 -1.8
-        force_application   add
-    }
-
-    affector Rotator
-    {
-        rotation_speed_range_start  -240
-        rotation_speed_range_end    240
-        rotation_range_start        0
-        rotation_range_end          360
+        rate    0.15
     }
 
     affector ColourFader

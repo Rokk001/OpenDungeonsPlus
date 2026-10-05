@@ -460,6 +460,10 @@ private:
         ChickenEntity* mFightPartner;
         bool mFightLeader;
         Ogre::Real mFightTimer;
+        //! The hen the rooster climbs on while he mounts (set when the pose starts, null when none is near)
+        ChickenEntity* mMountPartner;
+        //! How far the hen is ducked down under the rooster (0 to 1), set by the rooster every frame
+        Ogre::Real mMountCrouch;
         //! The egg lies in a nest of a coop: its own straw is hidden, the nest has straw
         bool mNestEgg;
     };
