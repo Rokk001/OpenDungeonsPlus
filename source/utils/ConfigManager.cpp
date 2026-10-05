@@ -63,6 +63,9 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTiredWalkSpeedFactor(0.8),
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
+    mHitEvents(true),
+    mHitGlanceShare(0.34),
+    mHitStrongShare(0.15),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
@@ -534,6 +537,27 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mHeartHealthStageEvents = Helper::toInt(nextParam) != 0;
+            // Not mandatory
+        }
+
+        if(nextParam == "HitEvents")
+        {
+            configFile >> nextParam;
+            mHitEvents = Helper::toInt(nextParam) != 0;
+            // Not mandatory
+        }
+
+        if(nextParam == "HitGlanceShare")
+        {
+            configFile >> nextParam;
+            mHitGlanceShare = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "HitStrongShare")
+        {
+            configFile >> nextParam;
+            mHitStrongShare = Helper::toDouble(nextParam);
             // Not mandatory
         }
 

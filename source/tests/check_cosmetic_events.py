@@ -95,8 +95,11 @@ static bool oldClientProcess(int32_t cmd, ODPacket& packet, int& handled)
 int main()
 {
     // Round trip of every kind, with the sentinel behind it to prove nothing is left over or missing
-    for(int32_t type = 0; type <= 14; ++type)
+    for(int32_t type = 0; type <= 16; ++type)
     {
+        // 15 is kept free for another branch (it is no kind here)
+        if(type == 15)
+            continue;
         CosmeticEvent event;
         event.mType = type;
         event.mSubject = "Orc_3";

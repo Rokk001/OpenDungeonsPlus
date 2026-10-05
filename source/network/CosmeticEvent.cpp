@@ -20,7 +20,8 @@
 bool CosmeticEvent::isKnownType() const
 {
     return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
-           (mType <= static_cast<int32_t>(CosmeticEventType::roomTakeover));
+           ((mType <= static_cast<int32_t>(CosmeticEventType::roomTakeover)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::hitResult)));
 }
 
 std::string CosmeticEvent::typeString() const
@@ -57,6 +58,8 @@ std::string CosmeticEvent::typeString() const
             return "hatcheryGrain";
         case static_cast<int32_t>(CosmeticEventType::roomTakeover):
             return "roomTakeover";
+        case static_cast<int32_t>(CosmeticEventType::hitResult):
+            return "hitResult";
         default:
             break;
     }

@@ -143,7 +143,7 @@ assert 'mClaimHealth = 1.0;' in function_body(read('source/rooms/RoomPortal.cpp'
 event_h = read('source/network/CosmeticEvent.h')
 event_cpp = read('source/network/CosmeticEvent.cpp')
 assert 'roomTakeover = 14' in event_h and 'hatcheryGrain = 13,' in event_h
-assert 'CosmeticEventType::roomTakeover));' in event_cpp and 'return "roomTakeover";' in event_cpp
+assert 'CosmeticEventType::roomTakeover))' in event_cpp and 'return "roomTakeover";' in event_cpp
 fire = function_body(room, 'void Room::fireTakeoverEvent(')
 for needle in ('isServerGameMap()', 'CosmeticEventType::roomTakeover', 'event.mValue = newSeat->getId()', 'event.mValue2 = static_cast<int32_t>(tiles.size())',
                'event.mObject = RoomManager::getRoomReadableName(getType())', 'event.mText = getName()', 'getSeatsWithVision()',
