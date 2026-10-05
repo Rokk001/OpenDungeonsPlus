@@ -161,3 +161,14 @@ for number in ('2.2', '0.9', '1.8', '0.55f', 'Random::Int(1, 3)', 'Random::Int(1
     assert number not in acting, number
 assert 'Random::Int(1, 12)' not in room_cpp
 print('hatchery rooster settings checks passed')
+
+# The new day crow is remembered as a state (the day he crowed for), it is saved, and old saves still load
+assert 'newDayCrowOwed' in rooster_cpp and 'isNewDay(context.mTurn' not in rooster_cpp
+assert 'int64_t mCrowDay' in rooster_h
+assert 'context.mCrowDay = mLastCrowDay' in room_cpp
+assert 'mLastCrowDay = std::max(mLastCrowDay' in body(room_cpp, 'void RoomHatchery::beginRoosterMood')
+assert '"HatcheryDay "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:400]
+imp_day = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:1800]
+assert 'HatcheryDay' in imp_day and 'seekg(pos)' in imp_day
+assert 'test_RoosterNewDayCrow' in (root / 'source/tests/test_HatcheryCycle.cpp').read_text()
+print('hatchery new day crow checks passed')

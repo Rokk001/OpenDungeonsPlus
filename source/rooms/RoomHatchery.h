@@ -124,6 +124,8 @@ private:
     RoosterSettings mRoosterSettings;
     //! Turns until the rooster crows next
     uint32_t mCrowInterval;
+    //! Number of the last day the rooster crowed for (HatcheryRooster::dayNumber), -1 until he is first seen
+    int64_t mLastCrowDay;
     //! Turns the hatchery has been empty (no hen, chick or egg)
     uint32_t mCoopHenWait;
     //! Turns the hatchery has been without rooster
