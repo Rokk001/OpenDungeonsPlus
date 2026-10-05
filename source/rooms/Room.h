@@ -93,6 +93,17 @@ public:
     virtual bool isClaimable(Seat* seat) const override;
     virtual void claimForSeat(Seat* seat, Tile* tile, double danceRate) override;
 
+    //! \brief Server only. True when the seat may not dance on the tile of this
+    //! enemy room now: the room is of a kind the config excludes from takeover
+    //! (RoomTakeoverExcludePortal, RoomTakeoverExcludeBridge), a defender that is
+    //! no worker stands within RoomTakeoverGuardRadius tiles of the tile, or the seat
+    //! cannot pay the price. Rooms of nobody are never blocked.
+    bool isTakeoverBlocked(const Seat* seat, const Tile* tile) const;
+
+    //! \brief The gold the taker pays when the room changes hands
+    //! (RoomTakeoverCostPercent of the build cost of the tiles taken, 0 by default).
+    int32_t getTakeoverPrice() const;
+
     //! \brief The health of the room against being taken over, 1.0 when full.
     inline double getClaimHealth() const
     { return mClaimHealth; }

@@ -20,6 +20,7 @@
 #include "creatureaction/CreatureActionSearchJob.h"
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/CreatureRelationships.h"
@@ -77,6 +78,66 @@ bool Room::isClaimable(Seat* seat) const
     // there for mana; that is not done here.
     return RoomClaim::isClaimableBy(getClaimMode() != ClaimMode::destructibleOnly,
         getSeat()->isAlliedSeat(seat), getType() == RoomType::dungeonTemple);
+}
+
+int32_t Room::getTakeoverPrice() const
+{
+    if(getSeat()->isRogueSeat())
+        return 0;
+
+    // A bridge changes hands square by square, every other room as a whole
+    bool isBridge = (getType() == RoomType::bridgeWooden) || (getType() == RoomType::bridgeStone);
+    uint32_t nbTiles = isBridge ? 1 : static_cast<uint32_t>(numCoveredTiles());
+    double percent = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("RoomTakeoverCostPercent", 0.0);
+    return RoomClaim::takeoverPrice(RoomManager::costPerTile(getType()), nbTiles, percent);
+}
+
+bool Room::isTakeoverBlocked(const Seat* seat, const Tile* tile) const
+{
+    GameMap* gameMap = getGameMap();
+    if((gameMap == nullptr) || !gameMap->isServerGameMap() || (getSeat() == nullptr) || getSeat()->isRogueSeat())
+        return false;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    RoomType type = getType();
+    if((type == RoomType::portal) && (config.getRoomConfigDoubleOrDefault("RoomTakeoverExcludePortal", 0.0) > 0.0))
+        return true;
+
+    bool isBridge = (type == RoomType::bridgeWooden) || (type == RoomType::bridgeStone);
+    if(isBridge && (config.getRoomConfigDoubleOrDefault("RoomTakeoverExcludeBridge", 0.0) > 0.0))
+        return true;
+
+    // A room is only taken while nobody defends it: a fighter of the owner (or of its
+    // allies) that is up and about close to the tile keeps the workers off
+    double guardRadius = config.getRoomConfigDoubleOrDefault("RoomTakeoverGuardRadius", 5.0);
+    if(guardRadius > 0.0)
+    {
+        for(Creature* creature : gameMap->getCreatures())
+        {
+            if(!creature->getIsOnMap() || !creature->isAlive() || creature->isKo() || creature->isInContainment())
+                continue;
+
+            if(creature->getDefinition()->isWorker())
+                continue;
+
+            if(!creature->getSeat()->isAlliedSeat(getSeat()) || creature->getSeat()->isAlliedSeat(seat))
+                continue;
+
+            Tile* guardTile = creature->getPositionTile();
+            if(guardTile == nullptr)
+                continue;
+
+            if(RoomClaim::isGuardClose(guardTile->getX() - tile->getX(), guardTile->getY() - tile->getY(), guardRadius))
+                return true;
+        }
+    }
+
+    // The seat has to be able to pay what the room costs it
+    int32_t price = getTakeoverPrice();
+    if((price > 0) && (seat->getGold() < price))
+        return true;
+
+    return false;
 }
 
 void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)

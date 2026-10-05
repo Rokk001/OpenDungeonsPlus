@@ -1312,7 +1312,14 @@ bool Tile::isGroundClaimable(Seat* seat) const
         return false;
 
     if(getCoveringBuilding() != nullptr)
-        return getCoveringBuilding()->isClaimable(seat);
+    {
+        if(!getCoveringBuilding()->isClaimable(seat))
+            return false;
+
+        // An enemy room is not taken while it is guarded or too dear for the taker
+        Room* room = getCoveringRoom();
+        return (room == nullptr) || !room->isTakeoverBlocked(seat, this);
+    }
 
     if(mType != TileType::dirt && mType != TileType::gold && mType != TileType::manaWell)
         return false;
@@ -1555,7 +1562,25 @@ void Tile::claimForSeat(Seat* seat, double nDanceRate)
     if((getCoveringBuilding() != nullptr) &&
         (getCoveringBuilding()->isClaimable(seat)))
     {
+        // The server decides: a guarded room is not worn down, and the taker pays
+        // for a room once it changes hands
+        Room* room = getCoveringRoom();
+        int32_t takeoverPrice = 0;
+        if(room != nullptr)
+        {
+            if(room->isTakeoverBlocked(seat, this))
+                return;
+
+            takeoverPrice = room->getTakeoverPrice();
+        }
+
+        Seat* ownerBefore = getCoveringBuilding()->getSeat();
         getCoveringBuilding()->claimForSeat(seat, this, nDanceRate);
+        if((takeoverPrice > 0) && (getCoveringBuilding() != nullptr) &&
+           (getCoveringBuilding()->getSeat() != ownerBefore))
+        {
+            getGameMap()->withdrawFromTreasuries(takeoverPrice, seat);
+        }
         return;
     }
 

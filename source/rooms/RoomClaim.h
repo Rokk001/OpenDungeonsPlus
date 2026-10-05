@@ -40,6 +40,28 @@ namespace RoomClaim
         return true;
     }
 
+    //! \brief Whether a defender standing dx and dy tiles away from the tile that is
+    //! danced on is close enough to keep it safe. A radius of 0 or less switches the
+    //! guard rule off.
+    inline bool isGuardClose(int32_t dx, int32_t dy, double radius)
+    {
+        if(radius <= 0.0)
+            return false;
+
+        return (static_cast<double>(dx) * static_cast<double>(dx) + static_cast<double>(dy) * static_cast<double>(dy))
+            <= (radius * radius);
+    }
+
+    //! \brief The gold the taker pays when a room changes hands: a share (percent) of
+    //! what the tiles taken cost to build. 0 when the share is 0 or there is nothing to pay for.
+    inline int32_t takeoverPrice(int32_t costPerTile, uint32_t numTiles, double percent)
+    {
+        if((costPerTile <= 0) || (numTiles == 0) || (percent <= 0.0))
+            return 0;
+
+        return static_cast<int32_t>(static_cast<double>(costPerTile) * static_cast<double>(numTiles) * percent / 100.0);
+    }
+
     //! \brief The part of the health of a whole room (1.0 = full) one dance takes
     //! away. A worker whose claim rate equals referenceClaimRate working alone
     //! empties a room in secondsPerTile seconds for every tile of it.

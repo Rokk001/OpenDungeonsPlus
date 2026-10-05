@@ -62,6 +62,8 @@ const double DIG_HIT_MAX = 3.5;
 //! Seconds between two claiming reactions of a claimer, least and most
 const double CLAIM_MIN = 3.0;
 const double CLAIM_MAX = 5.0;
+//! A takeover of a room tile that does not end with a change of owner is forgotten after this many seconds
+const double TAKEOVER_FORGET = 30.0;
 //! A worker that stands idle this long may start a habit
 const double IDLE_AFTER = 9.0;
 //! Seconds between two repeats of the heavy gait
@@ -118,6 +120,8 @@ struct WorkerState
         mDigLast(-1.0),
         mNextHit(0.0),
         mNextClaim(0.0),
+        mTakeoverTile(nullptr),
+        mTakeoverLast(-1.0),
         mIdleSince(-1.0),
         mNextGait(0.0),
         mNextDanger(0.0),
@@ -132,6 +136,9 @@ struct WorkerState
     double mDigLast;
     double mNextHit;
     double mNextClaim;
+    //! The tile of an enemy room the worker is dancing on and when it last did (-1: none)
+    Tile* mTakeoverTile;
+    double mTakeoverLast;
     double mIdleSince;
     double mNextGait;
     double mNextDanger;
@@ -565,6 +572,19 @@ void WorkerReactions::showClaim(CreatureReactions& reactions, Creature* worker)
     if(tile == nullptr)
         return;
 
+    // Dancing on a tile of a room of an enemy: the room is being taken over. The tiles change owner
+    // on the server and the client gets the new owner with the tile, which ends the takeover (tickWorker)
+    Seat* tileOwner = tile->getSeat();
+    if(tile->getIsRoom() && (tileOwner != nullptr) && (worker->getSeat() != nullptr) &&
+       !worker->getSeat()->isAlliedSeat(tileOwner))
+    {
+        WorkerState& state = getState(worker->getName());
+        state.mTakeoverTile = tile;
+        state.mTakeoverLast = reactions.mTime;
+        show(reactions, worker, "TakeoverWork");
+        return;
+    }
+
     bool enemyTile = false;
     bool wall = false;
     for(int dx = -1; dx <= 1; ++dx)
@@ -639,6 +659,22 @@ void WorkerReactions::tickWorker(CreatureReactions& reactions, Creature* worker)
     {
         state.mNextClaim = now + workerRandom(CLAIM_MIN, CLAIM_MAX);
         showClaim(reactions, worker);
+    }
+
+    // The room the worker was taking over is its own now: a short triumph. Without a change of owner
+    // the takeover is forgotten after a while (the worker was chased off or the room is guarded)
+    if(state.mTakeoverTile != nullptr)
+    {
+        Seat* tileOwner = state.mTakeoverTile->getSeat();
+        if((tileOwner != nullptr) && (worker->getSeat() != nullptr) && worker->getSeat()->isAlliedSeat(tileOwner))
+        {
+            state.mTakeoverTile = nullptr;
+            show(reactions, worker, "TakeoverDone");
+        }
+        else if((now - state.mTakeoverLast) > TAKEOVER_FORGET)
+        {
+            state.mTakeoverTile = nullptr;
+        }
     }
 
     // Walking with a load
