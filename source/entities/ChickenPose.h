@@ -67,13 +67,13 @@ namespace ChickenPose
         return isWalkPose(name) ? "Walk" : "Idle";
     }
 
-    //! \brief True for the clips that play once ("Lay", "Flutter").
+    //! \brief True for the clips that play once ("Lay", "Flutter", "MountCycle", "Duck").
     inline bool isOneShotClip(const std::string& clip)
     {
-        return (clip == "Lay") || (clip == "Flutter");
+        return (clip == "Lay") || (clip == "Flutter") || (clip == "MountCycle") || (clip == "Duck");
     }
 
-    //! \brief The own clip of the hatchery skeleton for an animation name of the server ("Crow", "Run", "Peep", "Lay" or "Flutter"),
+    //! \brief The own clip of the hatchery skeleton for an animation name of the server ("Crow", "Run", "Peep", "Lay", "Flutter", "MountCycle" or "Duck"),
     //! empty if the walk or idle clip is right. A chick peeps while it stands.
     inline std::string skeletonClip(const std::string& name, bool isChick)
     {
@@ -84,6 +84,12 @@ namespace ChickenPose
             return "Lay";
         if(name == flutter)
             return "Flutter";
+        // The rooster climbs on the hen, treads, beats his wings and climbs down (1.9 s, the timing of the client
+        // pose), the hen ducks under him for as long
+        if(name == mount)
+            return "MountCycle";
+        if(name == cackle)
+            return "Duck";
         // Two roosters fighting peck at each other, the wings and the lunges are added by the client
         if(name == fight)
             return "Pick";

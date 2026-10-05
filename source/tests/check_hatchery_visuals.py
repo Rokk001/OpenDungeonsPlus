@@ -140,6 +140,10 @@ assert 'decor.mNest != nullptr' in body(looks, 'void RenderManager::rrDestroyCoo
 for name in (b'Lay', b'Flutter', b'Peep', b'Run', b'Crow', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep', b'Walk', b'Idle'):
     assert name in skeleton, name
 assert 'return "Lay"' in pose and 'return "Flutter"' in pose and 'isOneShotClip' in pose
+# Mating clips: the rooster plays MountCycle (climb, tread, climb down), the hen ducks, both once
+for name in (b'MountCycle', b'Mount', b'Tread', b'Dismount', b'Duck'):
+    assert name in skeleton, name
+assert 'return "MountCycle"' in pose and 'return "Duck"' in pose and '(clip == "MountCycle")' in pose
 assert 'ChickenPose::isOneShotClip(clip)' in hook and 'hasAnimation(clip)' in hook
 assert 'hasAnimation("Lay")' in looks and 'hasAnimation("Flutter")' in looks
 assert 'values.mLayStretchX, values.mLayStretchY' in looks and 'lift = values.mFlutterLift * rise' in looks

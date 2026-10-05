@@ -34,7 +34,7 @@ def lay_pose(t, length=1.6):
         TAIL_L: {"rot": [(Y, -10.0 * sit - 4.0 * shiver, HIP)]},
         TAIL_R: {"rot": [(Y, 10.0 * sit + 4.0 * shiver, HIP)]},
     }
-    wings(spec, 12.0 * sit + 16.0 * fluff + 6.0 * shiver + 30.0 * proud * abs(math.sin(u * math.pi * 10.0)))
+    wings(spec, 16.0 * sit + 28.0 * fluff + 11.0 * shiver + 52.0 * proud * abs(math.sin(u * math.pi * 10.0)))
     return spec
 
 
