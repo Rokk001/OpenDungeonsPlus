@@ -1864,6 +1864,12 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
     return true;
 }
 
+void GameMode::updateTimeLimitTooltip(bool isCountdown)
+{
+    CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
+    timeLimitDisplay->setTooltipText(isCountdown ? "Time left until the next stage of the level" : "Time left until the level is lost");
+}
+
 bool GameMode::clickHeartBadge(const CEGUI::EventArgs& arg)
 {
     const CEGUI::MouseEventArgs& mouse = static_cast<const CEGUI::MouseEventArgs&>(arg);
@@ -2128,7 +2134,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         timeLimitDisplay->setText(formatDebriefingTime(timeLimitSeconds));
         // The last minute of a time limit is shown in red
         timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= 60) ? "FFE05A4A" : "FFF6CB62");
-        timeLimitDisplay->setTooltipText(isCountdown ? "Time left until the next stage of the level" : "Time left until the level is lost");
+        updateTimeLimitTooltip(isCountdown);
         timeLimitDisplay->show();
     }
 
