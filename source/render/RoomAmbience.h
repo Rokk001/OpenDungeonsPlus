@@ -317,8 +317,6 @@ private:
     //! \brief Raises HeartHit (and the state for "When Hit") when the health of the own dungeon heart, as the heart badge
     //! shows it, has gone down since the last scan
     void scanHeartHit();
-    //! \brief Raises BannerAlert when an enemy creature is within the aura of a watch banner (once per distress time)
-    void scanBannerAlerts();
     void reconcile();
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
@@ -473,8 +471,6 @@ private:
     bool mEntitiesInitialized;
     //! Heart health (points) of the badge at the last scan, negative while unknown
     double mLastHeartHP;
-    //! Time until which a watch banner (entity name) does not flare again
-    std::map<std::string, double> mBannerAlertUntil;
 };
 
 #endif // ROOMAMBIENCE_H

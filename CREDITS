@@ -368,6 +368,7 @@ KnightStatue2.mesh                     YD                      CC0              
 Kobold.*                               surt                    CC0                     http://opengameart.org/forumtopic/cc0-scraps
 Kobold.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+                  Two worker clips for delivering gold, AI-generated with a Blender script (tools/blender-assets/kobold_gold_clips.py, authored in Blender, original work)
 Dwarf1.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+                  The same two worker clips for the dwarf worker, AI-generated with a Blender script (tools/blender-assets/dwarf_gold_clips.py, authored in Blender, original work)
+WarBanner.skeleton (clip Droop)        OD Team                 GPLv3+                  Still pose of the watch banner while it reloads (the cloth hangs plumb), AI-generated with a script (tools/blender-assets/banner_droop_clip.py, computed from the bind pose, original work)
 tools/blender-assets/*                 OD Team                 GPLv3+                  Blender scripts (Ogre XML import/export, pose helper, clip builders), original work, AI-generated
 Kreatur.*                              Skorpio                 CC-BY-SA 3.0, GPLv3+
 Lamp.mesh                              Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59621#p59621

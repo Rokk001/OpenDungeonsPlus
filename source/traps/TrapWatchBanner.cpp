@@ -124,7 +124,8 @@ static TrapRegister reg(new TrapWatchBannerFactory);
 
 TrapWatchBanner::TrapWatchBanner(GameMap* gameMap) :
     Trap(gameMap),
-    mNextDistressTurn(0)
+    mNextDistressTurn(0),
+    mReloading(false)
 {
     setMeshName("");
 }
@@ -137,9 +138,21 @@ void TrapWatchBanner::doUpkeep()
     if(turn < mNextDistressTurn)
         return;
 
+    // The reload is over: the flag flies again (the clients are told once)
+    if(mReloading)
+    {
+        mReloading = false;
+        for(Tile* postTile : mCoveredTiles)
+        {
+            if(isActivated(postTile))
+                fireTrapEffect(TrapEffectKind::ready, postTile, 1.0);
+        }
+    }
+
     // The post notices enemies within its aura and calls the guards of the guard rooms
     int32_t aura = ConfigManager::getSingleton().getTrapConfigInt32("WatchBannerAuraTiles");
     Tile* intruderTile = nullptr;
+    Tile* callingTile = nullptr;
     for(Tile* postTile : mCoveredTiles)
     {
         if(!isActivated(postTile))
@@ -165,7 +178,10 @@ void TrapWatchBanner::doUpkeep()
         }
 
         if(intruderTile != nullptr)
+        {
+            callingTile = postTile;
             break;
+        }
     }
 
     if(intruderTile == nullptr)
@@ -173,6 +189,16 @@ void TrapWatchBanner::doUpkeep()
 
     mNextDistressTurn = turn + static_cast<int64_t>(
         ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomDistressSeconds") * ODApplication::turnsPerSecond);
+
+    // The call is the shot of the post: the flag of the post that saw the enemy flares, then every flag of the
+    // banner hangs until the post may call again
+    fireTrapEffect(TrapEffectKind::fired, callingTile, 1.0);
+    mReloading = true;
+    for(Tile* postTile : mCoveredTiles)
+    {
+        if(isActivated(postTile))
+            fireTrapEffect(TrapEffectKind::reloading, postTile, 1.0);
+    }
 
     std::vector<Room*> guardRooms = getGameMap()->getRoomsByTypeAndSeat(RoomType::guardRoom, getSeat());
     for(Room* room : guardRooms)

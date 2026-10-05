@@ -3,10 +3,11 @@
 
     python source/tests/check_effects_gaps.py
 
-Checks that the events HeartHit, CryptRaised, PrisonerArrived, TortureConverted, BannerAlert and SpellFxHandCast are
-raised by the client from what it already knows (no new network value), that the declarations in RoomAmbience.h match
-the definitions, that every effect of config/roomAmbienceFixEffects.cfg exists with the right event, match and kind,
-that its particle systems and sounds exist and have CREDITS entries, and that the watch banner still never fires.
+Checks that the events HeartHit, CryptRaised, PrisonerArrived, TortureConverted and SpellFxHandCast are raised by the
+client from what it already knows (no new network value), that the declarations in RoomAmbience.h match the
+definitions, that every effect of config/roomAmbienceFixEffects.cfg exists with the right event, match and kind, that
+its particle systems and sounds exist and have CREDITS entries, and that the watch banner fires through the server (it
+calls the guards, then reloads: the flag flares, hangs and flies again).
 """
 
 import glob
@@ -65,15 +66,14 @@ for path in glob.glob(os.path.join(ROOT, "particles", "*.particle")):
 need("Include roomAmbienceFixEffects.cfg" in main_cfg, "roomAmbienceFixEffects.cfg is not included")
 
 # --- code: declared and defined, wired into the scan
-for decl in ("scanHeartHit", "scanBannerAlerts", "noteHandCast"):
+for decl in ("scanHeartHit", "noteHandCast"):
     need(re.search(r"\b%s\(" % decl, header), "%s not declared" % decl)
     need("RoomAmbience::%s(" % decl in source, "%s not defined" % decl)
 need(source.index("scanHeartHit();") < source.index("scanObjects(camera, cameraPosition);"),
      "scanHeartHit must run before scanObjects (the hit pulse starts in the same scan)")
-need("scanBannerAlerts();" in source, "scanBannerAlerts is not called")
 
 # --- heart: hit found from the badge of the local keeper, never from the network
-heart = source[source.index("void RoomAmbience::scanHeartHit"):source.index("void RoomAmbience::scanBannerAlerts")]
+heart = source[source.index("void RoomAmbience::scanHeartHit"):source.index("void RoomAmbience::noteHandCast")]
 need("getHeartBadge().mHP" in heart and "mLastHeartHP" in heart, "the hit must come from the health of the heart badge")
 need("getSeat() != localPlayer->getSeat()" in heart, "only the heart of the local keeper may be hit")
 need('"HeartHit"' in heart and "mHitUntil" in heart, "HeartHit and the state for When Hit must be set together")
@@ -88,17 +88,25 @@ need('"TortureConverted"' in source and "snapshot.mSeat != creatureSeat" in sour
 need('visual == "tortureRoom"' in source, "TortureConverted must be limited to the torture chamber")
 need("mPrisoner" in header and "mSeat" in header, "the creature snapshot must remember the jail state and the seat")
 
-# --- banner: the same test as the server, a flag mesh with its Loop clip, never a reload look
-alert = source[source.index("void RoomAmbience::scanBannerAlerts"):source.index("void RoomAmbience::noteHandCast")]
-need("WatchBannerAuraTiles" in alert and "GuardRoomDistressSeconds" in alert, "the banner alert must use the aura and the distress time")
-need("isAlliedSeat" in alert and "mBannerAlertUntil" in alert, "the banner alert needs the ally test and a cooldown")
+# --- banner: it fires when it calls the guards (the server tells the clients: fired, reloading, ready), the flag flies
+# (clip Loop) while it is ready and hangs (clip Droop) while it reloads; the client does not guess the call any more
+need("scanBannerAlerts" not in source and "scanBannerAlerts" not in header and "mBannerAlertUntil" not in header,
+     "the client must not guess the banner call, the server sends it")
 need('"WarBanner"' in banner and os.path.exists(os.path.join(ROOT, "models", "WarBanner.mesh")),
      "the watch banner must use the flag mesh")
-need("virtual bool shoot(Tile* tile) override\n    { return false; }" in banner_h.replace("\r\n", "\n"), "the watch banner must still never fire")
-need(not re.search(r"WatchBanner\s+When\s+Reloading", read("config", "roomAmbienceTraps.cfg") + read("config", "roomAmbienceFixEffects.cfg")),
-     "no reload look for the watch banner")
+need("virtual bool shoot(Tile* tile) override\n    { return false; }" in banner_h.replace("\r\n", "\n"),
+     "the watch banner shoots nothing, its call is its shot")
+need("fireTrapEffect(TrapEffectKind::fired, callingTile, 1.0)" in banner and "fireTrapEffect(TrapEffectKind::reloading, postTile, 1.0)" in banner
+     and "fireTrapEffect(TrapEffectKind::ready, postTile, 1.0)" in banner, "the banner must tell the clients fired, reloading and ready")
+need(banner.index("fireTrapEffect(TrapEffectKind::fired") > banner.index("mNextDistressTurn = turn +") and "mReloading" in banner_h,
+     "the call starts the reload")
 skeleton = open(os.path.join(ROOT, "models", "WarBanner.skeleton"), "rb").read()
 need(b"Loop" in skeleton, "WarBanner.skeleton has no clip Loop")
+need(b"Droop" in skeleton, "WarBanner.skeleton has no clip Droop")
+need("banner_droop_clip.py" in credits, "CREDITS has no entry for the Droop clip")
+need("WatchBannerWave" in fx and fx["WatchBannerWave"]["When"] == ["Ready"], "the flag only waves while the post is ready")
+need("WatchBannerDroop" in fx and fx["WatchBannerDroop"]["When"] == ["Reloading"] and fx["WatchBannerDroop"]["Clips"] == ["Droop"],
+     "the flag hangs while the post reloads")
 
 # --- hand: sent with the local cast, no network value
 server_code = read("source", "network", "ODServer.cpp")
@@ -138,8 +146,8 @@ EXPECTED = (
     ("CannonSmokeRing", "Event", "TrapFired", "Particle"),
     ("SpikeShootDust", "Event", "TrapFired", "Particle"),
     ("LightningTrapBolt", "Event", "TrapFired", "Beam"),
-    ("WatchBannerFlare", "Event", "BannerAlert", "Particle"),
-    ("WatchBannerAlertSound", "Event", "BannerAlert", "Sound"),
+    ("WatchBannerFlare", "Event", "TrapFired", "Particle"),
+    ("WatchBannerAlertSound", "Event", "TrapFired", "Sound"),
     ("RuneDoorCracks", "Event", "DoorHurt", "Particle"),
     ("RuneDoorFlickerRunes", "Event", "DoorHurt", "Particle"),
     ("SteelDoorHitDust", "Event", "DoorHit", "Particle"),

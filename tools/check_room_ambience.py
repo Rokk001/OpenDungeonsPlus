@@ -27,10 +27,9 @@ KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound", "Roll", "Turn",
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
-# Events of the trap and door messages of the server (and BannerAlert, found by the client from the creatures near a
-# watch banner); their Match names a trap or door type
+# Events of the trap and door messages of the server; their Match names a trap or door type
 TRAP_EVENTS = ("TrapFired", "TrapLinked", "DoorHit", "DoorHurt", "DoorWrecked", "DoorOpen", "DoorClose", "TrapBuilt",
-               "TrapSold", "BannerAlert")
+               "TrapSold")
 TRAP_TYPES = ("Spike", "Alarm", "Fear", "Gas", "Lightning", "Fireburst", "Freeze", "WatchBanner", "Trigger", "Cannon",
               "Boulder", "DoorWooden", "DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRuned")
 # Tile visuals a bridge can lie over

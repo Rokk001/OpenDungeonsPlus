@@ -516,7 +516,6 @@ void RoomAmbience::stopAll()
     mCreaturesInitialized = false;
     mEntitiesInitialized = false;
     mLastHeartHP = -1.0;
-    mBannerAlertUntil.clear();
     mScanTimer = 0.0;
     mExtras.reset();
     mHeartRateFactor = 1.0;
@@ -590,7 +589,6 @@ void RoomAmbience::scan()
     scanTiles(camera, cameraPosition, lookPoint);
     scanEntityEvents(camera, cameraPosition);
     scanCreatureEvents();
-    scanBannerAlerts();
     mExtras.scan(*this, mGameMap, mClock, cameraPosition);
     reconcile();
     playClips();
@@ -1300,51 +1298,6 @@ void RoomAmbience::scanHeartHit()
 
         mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + HEART_HIT_SECONDS;
         triggerEvent("HeartHit", position, false, "dungeonTempleRoom");
-    }
-}
-
-void RoomAmbience::scanBannerAlerts()
-{
-    if(mCreatureSpots.empty() || !mEntitiesInitialized || (mClock <= 3.0))
-        return;
-
-    ConfigManager& configManager = ConfigManager::getSingleton();
-    double aura = static_cast<double>(configManager.getTrapConfigInt32("WatchBannerAuraTiles"));
-    double distressSeconds = configManager.getRoomConfigDoubleOrDefault("GuardRoomDistressSeconds", 5.0);
-    const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
-    for(RenderedMovableEntity* entity : entities)
-    {
-        if(entity->getObjectType() != GameEntityType::trapEntity)
-            continue;
-
-        const std::string& name = entity->getName();
-        if(name.compare(0, 12, "WatchBanner_") != 0)
-            continue;
-
-        Seat* bannerSeat = entity->getSeat();
-        if(bannerSeat == nullptr)
-            continue;
-
-        std::map<std::string, double>::const_iterator untilIt = mBannerAlertUntil.find(name);
-        if((untilIt != mBannerAlertUntil.end()) && (untilIt->second > mClock))
-            continue;
-
-        // The post notices an enemy within its aura, like the server (the creatures the client sees)
-        const Ogre::Vector3& position = entity->getPosition();
-        for(const CreatureSpot& spot : mCreatureSpots)
-        {
-            if((spot.mSeat == nullptr) || bannerSeat->isAlliedSeat(spot.mSeat))
-                continue;
-
-            double dx = static_cast<double>(spot.mPosition.x - position.x);
-            double dy = static_cast<double>(spot.mPosition.y - position.y);
-            if((dx * dx + dy * dy) > (aura * aura))
-                continue;
-
-            mBannerAlertUntil[name] = mClock + distressSeconds;
-            triggerEvent("BannerAlert", position, false, "WatchBanner");
-            break;
-        }
     }
 }
 
