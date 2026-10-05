@@ -59,4 +59,10 @@ for call in ('WorkerExtras::startStruggle(', 'WorkerExtras::endStruggle(', 'Work
 assert '"WorkerDeathCoins"' in reactions
 assert 'render/WorkerExtras.cpp' in read('CMakeLists.txt')
 
+# Gold digging shows small splinters only: no big additive glow over the worker
+for name in ('DigHitGold', 'DigFinishGold'):
+    block = re.search(r'Name\s+%s\s*$(.*?)\[/Event\]' % name, cfg, re.MULTILINE | re.DOTALL)
+    assert block, name
+    assert 'ReactionGlow' not in block.group(1), '%s must not use the big glow' % name
+
 print('worker extras: ok (%d sound events, %d families)' % (len(table), len(families)))
