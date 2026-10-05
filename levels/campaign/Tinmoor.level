@@ -1800,4 +1800,17 @@ Cond	creatures	2	<=	0
 Action	message	1	Merrin Tay is dead. The seams of Tinmoor are yours to work.
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	scoutOrder
+Mode	once
+Cond	time	90
+Action	objective	1	Possess a creature and walk it through the seams to see where the miners dig.
+[/Trigger]
+[Trigger]
+Name	scoutSeams
+Mode	once
+Cond	possessed	1	Seams
+Action	message	1	Through your creature's eyes the seams lie open, and a miners' cache falls to you.
+Action	gold	1	400
+[/Trigger]
 [/Triggers]

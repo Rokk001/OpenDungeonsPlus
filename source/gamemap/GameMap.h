@@ -582,10 +582,15 @@ public:
     //! effect when it ends (0 removes it). Server only.
     void setScriptCountdown(int64_t seconds);
 
+    //! \brief Level script action: shows the HUD wave countdown of that many seconds from now. It has no
+    //! effect when it ends (0 removes it). Server only.
+    void setScriptWaveCountdown(int64_t seconds);
+
     //! Added to the seconds that sendTimeLimit sends when they are a countdown, not a time limit
     static const int32_t TIME_LIMIT_COUNTDOWN_FLAG = 0x40000000;
 
-    //! \brief Tells the human players how many seconds are left (-1: there is no time limit)
+    //! \brief Tells the human players how many seconds are left (-1: there is no time limit), and the
+    //! wave countdown that checkGameDuration set
     void sendTimeLimit(int32_t remainingSeconds);
 
     void logFloodFileTiles();
@@ -744,6 +749,10 @@ private:
     bool mGameDurationAnnounced;
     //! \brief Last remaining time sent to the players, -1 when none was sent or there is no limit
     int32_t mTimeLimitSentSeconds;
+    //! \brief Last wave countdown sent to the players (with the time limit), -1 when none was sent or none is shown
+    int32_t mWaveCountdownSentSeconds;
+    //! \brief The wave countdown that the next sendTimeLimit sends, -1 when none is shown
+    int32_t mWaveCountdownToSend;
     std::map<std::string, uint32_t> mCreatureClassLimits;
     std::vector<SkirmishItemState> mSkirmishSkillStates;
     std::vector<SkirmishItemState> mSkirmishSkillStatesLevel;

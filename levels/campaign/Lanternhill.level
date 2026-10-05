@@ -3102,6 +3102,7 @@ Name	mined1
 Mode	once
 Cond	mined	1	>=	700
 Action	message	1	The seams hold. You can afford stronger doors and heavier traps now.
+Action	generate	1	Spider:1
 [/Trigger]
 [Trigger]
 Name	rivalGate

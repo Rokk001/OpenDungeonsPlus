@@ -102,6 +102,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline int32_t getTimeLimitSeconds() const
     { return mTimeLimitSeconds; }
 
+    inline int32_t getWaveCountdownSeconds() const
+    { return mWaveCountdownSeconds; }
+
     //! \brief What the heart health ring of the top-left badge has to show
     inline HeartHealthRing::BadgeState& getHeartBadge()
     { return mHeartBadge; }
@@ -177,6 +180,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
     bool mHasLevelStatistics;
     LevelStatistics mLevelStatistics;
     int32_t mTimeLimitSeconds;
+    int32_t mWaveCountdownSeconds;
 
     // Heart health received with heartHealth
     HeartHealthRing::BadgeState mHeartBadge;

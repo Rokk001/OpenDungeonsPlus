@@ -2885,6 +2885,7 @@ ProtectDungeonTemple	NULL
 3	SiegeHand3	Adventurer.mesh	35	36	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	BankWatch1	Dwarf1.mesh	19	40	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	BankWatch2	Adventurer.mesh	35	30	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	SluiceWarden	Dwarf1.mesh	40	22	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -2980,6 +2981,7 @@ Action	reveal	1	NorthBank
 Action	terrain	38	17	42	17	path
 Action	setflag	sluiceOpen	1
 Action	portal	0	on
+Action	generate	1	Spider:1
 [/Trigger]
 [Trigger]
 Name	wharfSeen
@@ -3032,5 +3034,22 @@ Mode	once
 Cond	event	CorwinGray	killed
 Action	message	1	Corwin Gray is dead and the river belongs to you. The dwarves will want new terms.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	sluiceKey
+Mode	once
+Cond	time	4
+Action	stoneattach	SluiceWarden
+[/Trigger]
+[Trigger]
+Name	sluiceKeyFalls
+Mode	once
+Cond	time	5
+Cond	alive	SluiceWarden	0
+Cond	flag	sluiceOpen	0
+Action	message	1	The sluice warden is down and the key he wore lies in the dust. It turns in the old lock and the sluice gate on the east bank grinds open.
+Action	terrain	38	17	42	17	path
+Action	setflag	sluiceOpen	1
+Action	portal	0	on
 [/Trigger]
 [/Triggers]

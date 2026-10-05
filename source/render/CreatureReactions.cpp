@@ -774,7 +774,7 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     if(!variant.mEmote.empty())
     {
         std::string material = EMOTE_MATERIAL_PREFIX + variant.mEmote;
-        if(!Ogre::MaterialManager::getSingleton().resourceExists(material))
+        if(!Ogre::MaterialManager::getSingleton().resourceExists(material, "Graphics"))
         {
             logMissingOnce("emote", variant.mEmote);
         }
@@ -1271,7 +1271,7 @@ void CreatureReactions::updateLate(RunningReaction& reaction, Creature* creature
     {
         std::string material = EMOTE_MATERIAL_PREFIX + reaction.mLateEmote;
         CreatureOverlayStatus* overlay = creature->getOverlayStatus();
-        if(!Ogre::MaterialManager::getSingleton().resourceExists(material))
+        if(!Ogre::MaterialManager::getSingleton().resourceExists(material, "Graphics"))
         {
             logMissingOnce("emote", reaction.mLateEmote);
         }
@@ -2984,7 +2984,7 @@ bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creatur
         return createFallingProps(reaction, creature, prop);
 
     std::string material = PROP_MATERIAL_PREFIX + prop.mSprite;
-    if(!Ogre::MaterialManager::getSingleton().resourceExists(material))
+    if(!Ogre::MaterialManager::getSingleton().resourceExists(material, "Graphics"))
     {
         logMissingOnce("prop sprite", prop.mSprite);
         return false;

@@ -885,7 +885,12 @@ void Creature::assignAppearance(bool firstSpawn)
         std::bind(&PortraitManifestRegistry::hasCatalog, &registry, std::placeholders::_1);
     std::string catalogId = CreatureAppearanceLogic::resolveCatalogId(mDefinition->getMeshName(), getGender(), exists);
     if(catalogId.empty())
+    {
+        mAppearanceNoCatalog = true;
+        mAppearanceNoCatalogGeneration = registry.getCatalogGeneration();
         return;
+    }
+    mAppearanceNoCatalog = false;
 
     const PortraitManifest* manifest = registry.getManifest(catalogId);
     std::vector<std::string> messages = registry.takeMessages();
@@ -910,6 +915,7 @@ void Creature::assignAppearance(bool firstSpawn)
         }
 
         mAppearance = CreatureAppearanceLogic::pickRandom(*manifest, catalogId, getAppearanceRandom, taken);
+        mAppearanceValidated = true;
         return;
     }
 
@@ -917,20 +923,26 @@ void Creature::assignAppearance(bool firstSpawn)
         mAppearance = CreatureAppearanceLogic::pickStable(*manifest, catalogId, getName());
     else
         CreatureAppearanceLogic::validate(*manifest, catalogId, getName(), mAppearance);
+
+    mAppearanceValidated = true;
 }
 
 void Creature::retryAppearance()
 {
-    if(mAppearanceRetryTurns > 0)
+    // A creature without catalog id is only looked at when the catalog generation changed: no waiting period
+    if((mAppearanceRetryTurns > 0) && !mAppearanceNoCatalog)
     {
         --mAppearanceRetryTurns;
         return;
     }
     mAppearanceRetryTurns = APPEARANCE_RETRY_TURNS;
 
-    // Same derivation as for old saves
+    // A manifest that was missing or invalid at spawn may be there now: the registry looks again, then the
+    // appearance is derived like for old saves
+    getAppearanceRegistry().retryFailed();
+    CreatureAppearance before = mAppearance;
     assignAppearance(false);
-    if(mAppearance.isEmpty())
+    if(mAppearance.isEmpty() || (mAppearance == before))
         return;
 
     // Clients that already know the creature get the new appearance once, the others receive it
@@ -1305,8 +1317,24 @@ void Creature::dropCarriedEquipment()
 void Creature::doUpkeep()
 {
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
-    if(mAppearance.isEmpty() && getIsOnServerMap())
-        retryAppearance();
+    // (or the stored one was never checked against a manifest): the appearance is derived or checked as soon as one is
+    if(getIsOnServerMap())
+    {
+        // New catalog folders are looked for once per retry period for all creatures together, never per creature
+        static int64_t lastCatalogRefresh = -1;
+        int64_t turn = getGameMap()->getTurnNumber();
+        if((lastCatalogRefresh < 0) || (turn < lastCatalogRefresh) || (turn - lastCatalogRefresh >= APPEARANCE_RETRY_TURNS))
+        {
+            lastCatalogRefresh = turn;
+            getAppearanceRegistry().invalidateCatalogs();
+        }
+
+        if(CreatureAppearanceLogic::needsAppearanceCheck(mAppearance.isEmpty(), mAppearanceValidated,
+            mAppearanceNoCatalog, mAppearanceNoCatalogGeneration, getAppearanceRegistry().getCatalogGeneration()))
+        {
+            retryAppearance();
+        }
+    }
 
     // A creature that cannot be controlled anymore is given back to the AI
     if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))

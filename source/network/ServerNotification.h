@@ -188,7 +188,8 @@ enum class ServerNotificationType
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
     //! Inserted before timeLimit, which stays the last value.
     trapEffect,
-    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
+    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit), then an
+    //! int32_t with the seconds left until the next hero wave of a level script (-1: none is shown)
     timeLimit
 };
 

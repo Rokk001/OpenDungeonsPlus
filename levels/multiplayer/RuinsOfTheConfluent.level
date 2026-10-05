@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Ruins of the Confluent
-Description	At the junction of two underground rivers, human knights once built a military outpost. Decades later, only ruins are left, swarming with petty orcs and imps; but some say the knights hid artefacts at the confluent that they plundered from the Keepers of old, and a human expedition seems determined to retrieve them...
+Description	At the junction of two underground rivers, human knights once built a military outpost. Decades later, only ruins are left, swarming with petty orcs and workers; but some say the knights hid artefacts at the confluent that they plundered from the Keepers of old, and a human expedition seems determined to retrieve them...
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

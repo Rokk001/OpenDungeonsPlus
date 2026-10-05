@@ -47,7 +47,9 @@ folder without gender exists. Without a valid manifest the Dungeonbook shows the
 before; the creature bar never uses these folders.
 
 Settings are in `config/dungeonbook-appearance.cfg` (asset folder, cache limits), the colour regions of the
-neutral bases in `config/dungeonbook-base-tints.cfg` and the profile remarks that match the parts in
+neutral bases in `config/dungeonbook-base-tints.cfg`, the hair and beard colours in
+`config/dungeonbook-part-tints.cfg` (the bases have no hair, eyes or beards, so the colour is applied to the chosen
+parts) and the profile remarks that match the parts in
 `config/dungeonbook-quirks.cfg` (one line per slot and option name, as written in the manifests).
 
 ## Goblin.mesh
@@ -56,3 +58,27 @@ Identity reference: `build/portrait-export/portrait-Goblin.mesh.png`.
 Output: `materials/textures/portrait-Goblin.mesh.png`.
 
 Create a finished 2D painted game portrait from this original project's goblin model reference, preserving its identity rather than rendering the model. One narrow vertical portrait, exactly 1:2 width-to-height composition. Subject: bald gray-olive green goblin, huge pointed ears, bright pale green eyes, wide nose, small pointed teeth, lean bare upper torso; all these identity features must match the supplied reference. Reinterpret as an expressive, mischievous hand-painted late-1990s dark-fantasy strategy-game character card: prominent face with a sly crooked grin and slightly raised eyebrow, bold painterly contours, deliberately illustrated shadows, readable shapes at 50x100 pixels, humorous sinister personality. Head fully visible including ears, upper body down to mid-chest, slight three-quarter pose, head occupies upper half, shoulders lower half. Flat very dark desaturated blue backdrop, opaque image. No 3D-rendered surfaces, no photorealism, no UI frame, no text, numbers or symbols, no added equipment, no characters from other games. Output a single portrait image ready to use as game art.
+
+
+## Historical placement audit against costume previews
+
+This superseded audit evaluated 632 derived patches against the costume previews; the current neutral-base delivery is described below.
+All source features and base portraits are unchanged. Technical checks passed, visual acceptance remains open; the former 422 correction flags were unsupported and have been withdrawn.
+The [individual findings](variants/README.md#individual-findings) now cover all 632 options and 34 creature/gender combinations, with exact filenames, observations, actions and local evidence.
+Of these, 404 show placement problems, 128 show overlap problems, 21 have appearance differences with unresolved cause, and 79 have no obvious local defect; none of these counts establishes required regeneration.
+No new artwork was generated for this preparation; game composition is a separate task.
+
+
+## Neutral Dungeonbook assets
+
+[The inventory](generation-inventory.json) combines all saved source-generation records,
+exact prompts, source hashes, clothing attempts and current per-file findings.
+Original preview illustrations and the 632 original feature parts are preserved.
+The two short neutral canvases repeat their final row without rescaling;
+[height-fix provenance](neutral-bases/canvas-height-fixes.json) records original and fixed hashes.
+Final manifests use only Base, Slot and Option rows, with neutral bases and at least
+one full-canvas clothing option per portrait; game composition remains separate.
+The [current findings](neutral-variants/feature-review.md) record exact file observations
+and fit resolutions; [acceptance records](neutral-variants/visual-acceptance.json) bind
+reviewed combinations to their delivered file hashes. Existing source regeneration
+has not been required; only the thirty missing clothing sources were generated.
