@@ -729,6 +729,7 @@ Mode	once
 Cond	mined	1	>=	60
 Action	message	1	The first coins are in. A hatchery will feed the creatures that come to serve you.
 Action	objective	1	Claim the meadow cave west of the gate.
+Action	generate	1	Goblin:1
 [/Trigger]
 [Trigger]
 Name	meadowOurs
@@ -776,5 +777,12 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Action	message	1	Reeve Marsh has fallen. Mossgate has no one left to ring the bell.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	reeveWavers
+Mode	once
+Cond	health	ReeveMarsh	<	40
+Action	message	1	The reeve is bleeding and calling for the last of his watch.
+Action	spawn	3	8	6	1	Adventurer:1	Adventurer:1
 [/Trigger]
 [/Triggers]

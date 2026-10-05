@@ -5761,6 +5761,7 @@ Action	reveal	1	TowerB
 Action	reveal	1	TowerC
 Action	gold	1	500
 Action	spawn	3	47	98	1	Knight:2	Elf:2	Adventurer:2
+Action	objective	1	Possess a creature and scout the north-west tower for the marsh road.
 [/Trigger]
 [Trigger]
 Name	towerB
@@ -5933,5 +5934,13 @@ Cond	flag	portalOn	0
 Action	message	1	The mire has settled around your hollow, and your portal draws creatures again.
 Action	portal	1	on
 Action	setflag	portalOn	1
+[/Trigger]
+[Trigger]
+Name	scoutTowerC
+Mode	once
+Cond	possessed	1	TowerC
+Action	message	1	Your scout looks down from the north-west tower. The road beyond is clear, and a drowned cache is yours.
+Action	reveal	1	TowerE
+Action	gold	1	400
 [/Trigger]
 [/Triggers]

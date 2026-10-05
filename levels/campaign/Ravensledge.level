@@ -2258,4 +2258,11 @@ Cond	creatures	2	<=	0
 Action	message	1	Captain Vane has fallen and the ravens have left the ledge. Ravensledge is yours.
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	osricWavers
+Mode	once
+Cond	health	OsricVane	<	40
+Action	message	1	The captain is hurt. The fort's last guards are rushing to the keep.
+Action	spawn	3	30	8	1	Knight:2	Monk:2
+[/Trigger]
 [/Triggers]
