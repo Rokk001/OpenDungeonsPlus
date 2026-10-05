@@ -45,6 +45,7 @@
 #include "network/ChatEventMessage.h"
 #include "network/CosmeticEvent.h"
 #include "network/ODPacket.h"
+#include "network/RelationshipPacket.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "render/CreatureReactions.h"
@@ -547,10 +548,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_ASSERT_TRUE(packetReceived >> creatureProgress);
             setSupportsCreatureProgress(creatureProgress);
 
-            bool relationships = false;
-            if(!packetReceived.endOfPacket())
-                OD_ASSERT_TRUE(packetReceived >> relationships);
-            gameMap->setRelationshipsEnabled(relationships);
+            gameMap->setRelationshipsEnabled(readRelationshipsFlag(packetReceived));
 
             // Older servers end the packet here; without the agreement no cosmetic event ever arrives
             bool cosmeticEvents = false;
@@ -962,7 +960,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             std::string creatureB;
             int32_t tier;
             bool replay;
-            OD_ASSERT_TRUE(packetReceived >> creatureA >> creatureB >> tier >> replay);
+            OD_ASSERT_TRUE(readRelationshipTier(packetReceived, creatureA, creatureB, tier, replay));
             CreatureRelationships* relationships = gameMap->getCreatureRelationships();
             if((relationships != nullptr) && (tier >= static_cast<int32_t>(RelationshipTier::nemesis))
                 && (tier <= static_cast<int32_t>(RelationshipTier::lovers)))
