@@ -20,6 +20,7 @@
 
 #include "render/RoomAmbienceConfig.h"
 #include "render/RoomAmbienceExtras.h"
+#include "render/WallTorchView.h"
 
 #include <OgrePrerequisites.h>
 #include <OgreQuaternion.h>
@@ -90,6 +91,10 @@ public:
     //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
+
+    //! \brief Replaces the wall torches that are shown by the list the server sent. The client
+    //! derives nothing; the torches are drawn as they are listed (see WallTorchView)
+    void setWallTorchSpots(const std::vector<WallTorchSpot>& spots);
 
     //! \brief Plays the sound of the family (a folder below sounds/Spatial) at the position
     void playSound(const std::string& family, const Ogre::Vector3& position);
@@ -289,6 +294,7 @@ private:
     double mScanRadius;
     double mHeartRateFactor;
     RoomAmbienceExtras mExtras;
+    WallTorchView mWallTorches;
 
     std::map<std::string, Emitter> mEmitters;
     std::vector<OneShot> mOneShots;

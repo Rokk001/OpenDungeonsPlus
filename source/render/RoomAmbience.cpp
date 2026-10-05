@@ -401,6 +401,7 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
 
 void RoomAmbience::stopAll()
 {
+    mWallTorches.stopAll();
     if(RenderManager::getSingletonPtr() != nullptr)
     {
         for(std::map<std::string, Emitter>::iterator it = mEmitters.begin(); it != mEmitters.end(); ++it)
@@ -453,6 +454,11 @@ void RoomAmbience::stopAll()
     mHeartRateFactor = 1.0;
 }
 
+void RoomAmbience::setWallTorchSpots(const std::vector<WallTorchSpot>& spots)
+{
+    mWallTorches.setSpots(spots);
+}
+
 void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
 {
     if(mMode == Mode::off)
@@ -474,6 +480,12 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     updateCollapses(dt);
     updateShake(dt);
     updateMotions(dt);
+
+    Ogre::Camera* camera = nullptr;
+    ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
+    if(frameListener != nullptr)
+        camera = frameListener->getCameraManager()->getActiveCamera();
+    mWallTorches.update(dt, (mMode == Mode::reduced) ? WallTorchView::Mode::reduced : WallTorchView::Mode::full, camera);
 }
 
 void RoomAmbience::scan()
