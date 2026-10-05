@@ -35,6 +35,7 @@
 struct CosmeticEvent;
 class Creature;
 class CreatureCombatReactions;
+class CreatureWeaponVisuals;
 class GameEntity;
 class GameMap;
 class MovableGameEntity;
@@ -192,6 +193,8 @@ public:
 private:
     //! Weapon and fight reactions (draw, stance, attack styles, hits, dropped weapons) use the internals
     friend class CreatureCombatReactions;
+    //! Results of blows, arrows and weapon trails (from the cosmetic events of the server)
+    friend class CreatureWeaponVisuals;
 
     struct RunningReaction
     {
