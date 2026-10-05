@@ -39,21 +39,21 @@ reactions_cfg = read('config/creatureReactions.cfg')
 server = read('source/network/ODServer.cpp')
 client = read('source/network/ODClient.cpp')
 
-# Kind list: appended after the last kind, 15 stays free for another branch, the old numbers never change
+# Kind list: appended after the last kind, 15 and 16 stay free for another branch, the old numbers never change
 enum_body = event_h.split('enum class CosmeticEventType')[1].split('};')[0]
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', enum_body, re.M)
 numbers = [int(number) for _, number in kinds]
 names = [name for name, _ in kinds]
 assert names[-3:] == ['roomTakeover', 'hitResult', 'attackTurn'], names[-3:]
-assert numbers[:15] == list(range(15)) and numbers[15] == 16 and numbers[16] == 17 and len(numbers) == 17, numbers
-assert dict(kinds)['hitResult'] == '16' and dict(kinds)['roomTakeover'] == '14' and dict(kinds)['meleeResult'] == '5'
+assert numbers[:15] == list(range(15)) and numbers[15] == 17 and numbers[16] == 18 and len(numbers) == 17, numbers
+assert dict(kinds)['hitResult'] == '17' and dict(kinds)['roomTakeover'] == '14' and dict(kinds)['meleeResult'] == '5'
 assert 'return "hitResult";' in event_cpp
 known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')
 assert 'CosmeticEventType::roomTakeover' in known and 'CosmeticEventType::hitResult' in known
 # The results: hit, glancing, blocked, shot missed, then the real dodge and parry of a melee blow
 results = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticHitResult')[1].split('};')[0], re.M)
 assert results == [('hit', '0'), ('glanced', '1'), ('blocked', '2'), ('missed', '3'), ('dodged', '4'), ('parried', '5')], results
-assert 'isKnownType has to accept 0 to 9, 10 to 14, 15 and 16' in event_h
+assert 'isKnownType has to accept 0 to 14, 15, 16, 17 and 18' in event_h
 
 # Server: emitters in the damage places, serverauthoritative, no change of damage or timing
 fire = function_body(creature, 'void Creature::fireHitResult(')

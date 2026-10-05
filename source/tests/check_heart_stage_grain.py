@@ -45,8 +45,8 @@ deferred_cfg = read('config/roomAmbienceDeferred.cfg')
 # Network format: the new kinds are appended after the last one (numbers never change), the range test follows
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticEventType')[1].split('};')[0], re.M)
 numbers = [int(number) for _, number in kinds]
-# 15 is kept free for another branch; hitResult is 16
-assert numbers == list(range(15)) + [16, 17], 'cosmetic event kinds must stay numbered without gaps (15 is reserved)'
+# 15 and 16 are kept free for another branch; hitResult is 17
+assert numbers == list(range(15)) + [17, 18], 'cosmetic event kinds must stay numbered without gaps (15 and 16 are reserved)'
 names = [name for name, _ in kinds]
 assert names[-6:] == ['bedStatus', 'heartHealthStage', 'hatcheryGrain', 'roomTakeover', 'hitResult', 'attackTurn'], names[-6:]
 assert dict(kinds)['heartHealthStage'] == '12' and dict(kinds)['hatcheryGrain'] == '13' and dict(kinds)['roomTakeover'] == '14'

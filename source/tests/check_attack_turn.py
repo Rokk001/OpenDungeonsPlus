@@ -31,10 +31,10 @@ config_cpp = read('source/utils/ConfigManager.cpp')
 config_h = read('source/utils/ConfigManager.h')
 global_cfg = read('config/global.cfg')
 
-# Kind: appended behind hitResult (16), 15 stays free for another branch
+# Kind: appended behind hitResult (17), 15 and 16 stay free for another branch
 enum_body = event_h.split('enum class CosmeticEventType')[1].split('};')[0]
 kinds = dict(re.findall(r'^\s+(\w+) = (\d+),?\s*$', enum_body, re.M))
-assert kinds['hitResult'] == '16' and kinds['attackTurn'] == '17', kinds
+assert kinds['hitResult'] == '17' and kinds['attackTurn'] == '18', kinds
 assert 'return "attackTurn";' in event_cpp
 known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')
 assert 'CosmeticEventType::attackTurn' in known and 'CosmeticEventType::hitResult' in known and 'CosmeticEventType::roomTakeover' in known

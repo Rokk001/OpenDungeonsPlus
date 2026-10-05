@@ -21,6 +21,8 @@ bool CosmeticEvent::isKnownType() const
 {
     return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
            ((mType <= static_cast<int32_t>(CosmeticEventType::roomTakeover)) ||
+            // 15 and 16 are used by another branch (they are no kind here, but a known number)
+            (mType == 15) || (mType == 16) ||
             (mType == static_cast<int32_t>(CosmeticEventType::hitResult)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)));
 }

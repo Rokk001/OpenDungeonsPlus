@@ -2450,7 +2450,7 @@ double Creature::getDragWorkerSpeedFactor()
     return std::max(0.1, std::min(1.0, factor));
 }
 
-double Creature::getLowHealthWalkFactor() const
+bool Creature::isLowHealthWalkStage(uint32_t healthStage)
 {
     // The health stage (0 = unhurt, 1 to 6 = lost a sixth more each, 7 = no health left) is known on the
     // server and on the clients. Stage s means the health is below 100 * (1 - (s - 1) / 6) percent, so
@@ -2458,7 +2458,12 @@ double Creature::getLowHealthWalkFactor() const
     const double nbSteps = static_cast<double>(NB_OVERLAY_HEALTH_VALUES - 2);
     double thresholdPercent = ConfigManager::getSingleton().getLowHealthWalkThresholdPercent();
     double firstStage = std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0;
-    if(static_cast<double>(mOverlayHealthValue) < firstStage)
+    return static_cast<double>(healthStage) >= firstStage;
+}
+
+double Creature::getLowHealthWalkFactor() const
+{
+    if(!isLowHealthWalking())
         return 1.0;
 
     // A creature type can have its own factor (same limits as the global one), the global one is the default
@@ -2494,6 +2499,11 @@ double Creature::getClientPoseSpeedFactor() const
     // The worker that pulls a hurt creature walks slower too (see getMoveSpeed)
     if(getAnimationStateName() == EntityAnimation::drag_anim)
         factor *= getDragWorkerSpeedFactor();
+
+    // The walk clips (Walk, WalkHurt, CarryWalk) of a type can run faster or slower than the move speed so that the
+    // feet do not slide (WalkClipRate). Only the shown clip, the move speed is not touched
+    if((getAnimationStateName() == EntityAnimation::walk_anim) && (mDefinition != nullptr))
+        factor *= mDefinition->getWalkClipRate();
     return factor;
 }
 
@@ -2615,6 +2625,14 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mWaterSpeed);
     OD_ASSERT_TRUE(is >> mLavaSpeed);
     OD_ASSERT_TRUE(is >> mSpeedModifier);
+
+    // A creature that walks changes between the walk clip and the hurt walk clip when it becomes badly hurt or
+    // recovers (the clip is chosen in RenderManager::rrSetObjectAnimationState)
+    if(!getIsOnServerMap() && getIsOnMap() && (getAnimationStateName() == EntityAnimation::walk_anim) &&
+       (isLowHealthWalkStage(oldHealthValue) != isLowHealthWalking()))
+    {
+        RenderManager::getSingleton().rrSetObjectAnimationState(this, EntityAnimation::walk_anim, true);
+    }
 
     // We do not scale the creature if it is picked up (because it is already not at its normal size). It will be
     // resized anyway when dropped
