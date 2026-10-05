@@ -18,6 +18,9 @@
 #ifndef CREATUREREACTIONCONFIG_H
 #define CREATUREREACTIONCONFIG_H
 
+#include <OgreVector3.h>
+
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -358,6 +361,38 @@ public:
     inline double getTwoWeaponArmStrength() const
     { return mTwoWeaponArmStrength; }
 
+    //! Archers take the arrow from the pulling hand and draw it with the hand (false: straight back on the bow)
+    inline bool getArrowFollowsHand() const
+    { return mArrowFollowsHand; }
+
+    //! Longest way (model units) the arrow is drawn from the string toward the hand
+    inline double getArrowPullDistance() const
+    { return std::max(0.0, mArrowPullDistance); }
+
+    //! Seconds the string takes to be drawn fully
+    inline double getArrowDrawTime() const
+    { return std::max(0.1, mArrowDrawTime); }
+
+    //! Seconds after a shot until the next arrow or bolt is taken
+    inline double getArrowRetakeGap() const
+    { return std::max(0.0, mArrowRetakeGap); }
+
+    //! Seconds a new arrow needs from the hand to the string
+    inline double getArrowReloadTime() const
+    { return std::max(0.05, mArrowReloadTime); }
+
+    //! Where the nock sits on the pulling hand, in the frame of the hand bone
+    inline const Ogre::Vector3& getArrowHandOffset() const
+    { return mArrowHandOffset; }
+
+    //! Seconds the visible reload of a crossbow takes
+    inline double getCrossbowReloadTime() const
+    { return std::max(0.1, mCrossbowReloadTime); }
+
+    //! Degrees the crossbow tips when the string is cocked
+    inline double getCrossbowReloadJolt() const
+    { return std::max(0.0, std::min(20.0, mCrossbowReloadJolt)); }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -384,6 +419,14 @@ private:
     double mInteractionPause;
     uint32_t mTwoWeaponMode;
     double mTwoWeaponArmStrength;
+    bool mArrowFollowsHand;
+    double mArrowPullDistance;
+    double mArrowDrawTime;
+    double mArrowRetakeGap;
+    double mArrowReloadTime;
+    Ogre::Vector3 mArrowHandOffset;
+    double mCrossbowReloadTime;
+    double mCrossbowReloadJolt;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;

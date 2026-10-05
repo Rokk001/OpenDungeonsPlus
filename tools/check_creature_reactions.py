@@ -22,7 +22,9 @@ ROOMS = ("Hatchery", "Treasury", "Portal", "Dormitory", "Library", "Workshop", "
 SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupStaggerMax", "DefaultGroup",
             "MoodInterval", "MoodPerTick", "MoodWalkingChance", "ImpatientAfter", "ProudSeconds", "BoredAfter",
             "AmbientAfter", "SitAfter", "LieAfter", "LookRadius", "InteractionChance", "InteractionRadius",
-            "InteractionPause", "TwoWeaponMode", "TwoWeaponArmStrength")
+            "InteractionPause", "TwoWeaponMode", "TwoWeaponArmStrength", "ArrowFollowsHand",
+            "ArrowPullDistance", "ArrowDrawTime", "ArrowRetakeGap", "ArrowReloadTime", "ArrowHandOffset",
+            "CrossbowReloadTime", "CrossbowReloadJolt")
 DRAG_EVENTS = ("DragWounded", "DraggedGroan", "PutWoundedDown")
 RELATION_EVENTS = ("RelationFriend", "RelationBestFriend", "RelationLovers", "RelationNemesis", "RelationHated",
                    "RelationBreakUp")
@@ -156,6 +158,8 @@ def main():
                 error("unknown setting %s" % key)
             elif len(words) < 2 or (key != "DefaultGroup" and not is_number(words[1])):
                 error("setting %s needs a value" % key)
+            elif key == "ArrowHandOffset" and not (len(words) == 4 and all(is_number(w) for w in words[1:])):
+                error("setting ArrowHandOffset needs three numbers")
         elif block == "[Groups]":
             if key == "[Group]":
                 group = {"Name": None, "Creatures": []}
