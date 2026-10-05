@@ -49,7 +49,15 @@ for line in cfg:
     else:
         assert parts[0] == 'Region' and len(parts) == 7
         blocks[identifier].append(parts)
-assert len(blocks) == len(measurements) == 34
+assert len(measurements) == 34
+measured_ids = {item['portrait'] for item in measurements}
+fixture_ids = {path.stem for path in (ROOT/'source/tests/fixtures/portraits/neutral-bases').glob('*.png')}
+assert set(blocks) == measured_ids | fixture_ids
+for identifier in fixture_ids - measured_ids:
+    assert len(blocks[identifier]) == 1 and blocks[identifier][0][1] == 'Skin'
+    box = list(map(float, blocks[identifier][0][3].removeprefix('box=').split(',')))
+    assert len(box) == 4 and all(0 <= value <= 1 for value in box)
+    assert box[0] < box[2] and box[1] < box[3]
 for item in measurements:
     assert hashlib.sha256((ROOT/item['source']).read_bytes()).hexdigest() == item['source_sha256']
     regions = blocks[item['portrait']]
