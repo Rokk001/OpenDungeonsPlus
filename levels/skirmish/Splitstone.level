@@ -2315,4 +2315,11 @@ Cond	region	1	Field
 Action	message	1	The southern field is rich in gold. Travellers will come in through the hero portal in the south-east, so bring your creatures along.
 Action	gold	1	400
 [/Trigger]
+[Trigger]
+Name	antechamberWell
+Mode	once
+Cond	slabs	1	Antechamber	claimed	>=	15
+Action	message	1	The antechamber is claimed and a spring of mana has opened in its middle. Claim it with a worker.
+Action	terrain	24	22	24	22	manawell
+[/Trigger]
 [/Triggers]

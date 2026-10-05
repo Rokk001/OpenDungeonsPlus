@@ -3013,4 +3013,11 @@ Mode	once
 Cond	region	1	Springs
 Action	message	1	A pool lies in this cave. A good place to keep a few creatures away from the roads.
 [/Trigger]
+[Trigger]
+Name	springsWell
+Mode	once
+Cond	slabs	1	Springs	claimed	>=	25
+Action	message	1	The springs are claimed and one of them runs with mana now. Claim it with a worker.
+Action	terrain	82	21	82	21	manawell
+[/Trigger]
 [/Triggers]

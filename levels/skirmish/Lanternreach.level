@@ -2748,4 +2748,11 @@ Cond	region	1	Deeps
 Action	message	1	A second portal stands in the deeps. Travellers will come through the south-west hall, so watch the long paths.
 Action	gold	1	300
 [/Trigger]
+[Trigger]
+Name	libraryWell
+Mode	once
+Cond	slabs	1	Library	claimed	>=	20
+Action	message	1	The library floor is yours, and a spring of mana has risen between the shelves. Claim it with a worker.
+Action	terrain	17	14	17	14	manawell
+[/Trigger]
 [/Triggers]
