@@ -69,6 +69,9 @@ struct TreasurySettings
     float pileSettleTime = 0.7f;
     float dentDepth = 0.88f;
     float dentShare = 0.35f;
+    //! Local dent where gold is taken: radius in tile units and depth below the surface
+    float dentRadius = 0.3f;
+    float dentLocalDepth = 0.08f;
     float buryShareFirst = 0.1f;
     float buryShareFull = 0.5f;
     float batchRebuildInterval = 0.25f;
@@ -135,6 +138,8 @@ struct TreasurySettings
         s.pileSettleTime = readFloat(config, "PileSettleTime", s.pileSettleTime, 0.1f, 5.0f);
         s.dentDepth = readFloat(config, "DentDepth", s.dentDepth, 0.3f, 1.0f);
         s.dentShare = readFloat(config, "DentShare", s.dentShare, 0.05f, 0.95f);
+        s.dentRadius = readFloat(config, "DentRadius", s.dentRadius, 0.05f, 0.5f);
+        s.dentLocalDepth = readFloat(config, "DentLocalDepth", s.dentLocalDepth, 0.0f, 0.3f);
         s.buryShareFirst = readFloat(config, "BuryShareFirst", s.buryShareFirst, 0.0f, 1.0f);
         s.buryShareFull = readFloat(config, "BuryShareFull", s.buryShareFull, 0.0f, 1.0f);
         s.batchRebuildInterval = readFloat(config, "BatchRebuildInterval", s.batchRebuildInterval, 0.05f, 5.0f);

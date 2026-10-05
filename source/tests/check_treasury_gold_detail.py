@@ -46,6 +46,24 @@ assert 'startTreasuryPileChange(node' in render and 'updateTreasuryPileSettles(t
 assert 'previousPileLevel' in render and 'int registerPile(' in read('source/render/TreasuryGoldMesh.h')
 assert 'pileSettleScale' in rules and 'dentDepth' in rules
 
+# Local dent: at the full detail a taken pile shows a bowl where the gold was taken (a dynamic copy of the pile
+# with a vertex offset, drawn in place of the entity while it settles), which fills up again; the entity is given
+# back when the settle ends, when the entity goes away and when the renderer is cleared.
+assert 'createDentedPile' in mesh and 'updateDentedPile' in mesh and 'dentedHeight' in mesh
+assert 'object->setDynamic(true)' in mesh and 'object->beginUpdate(section)' in mesh
+assert 'fillPile(object, shape, DentDivisions, true, &dent, true)' in mesh
+change = render.split('void RenderManager::startTreasuryPileChange')[1].split('void RenderManager::updateTreasuryDents')[0]
+assert 'createDentedPile(mSceneManager, pileMeshName' in change and 'node->detachObject(entity)' in change
+assert 'settle.mLocalDent' in change and 'dentLocalDepth' in change
+dents = render.split('void RenderManager::updateTreasuryDents')[1].split('void RenderManager::updateTreasuryPileSettles')[0]
+assert 'localDentFactor' in dents
+assert 'attachObject(it->mEntity)' in dents and 'destroyManualObject(it->mObject)' in dents
+assert 'finishTreasuryDent(entityName);' in render.split('void RenderManager::cancelTreasuryPileSettle')[1].split('void RenderManager::registerBuriedObject')[0]
+assert 'finishTreasuryDent(mTreasuryPileDents.back().mEntityName)' in render.split('void RenderManager::clearTreasuryEffects')[1]
+assert 'updateTreasuryDents(timeSinceLastFrame)' in render
+assert 'it->mTaken && !it->mLocalDent' in render
+assert 'localDentFactor' in rules and 'dentRadius' in rules and 'dentLocalDepth' in rules
+
 # Thieves show a sack sized by the gold the server sends with the creature packet; glow lights per patch.
 assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render
 assert 'removeTreasuryThiefSack(curCreature)' in render

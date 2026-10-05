@@ -56,6 +56,8 @@ class Weapon;
 namespace Ogre
 {
 class AnimationState;
+class Entity;
+class ManualObject;
 class OverlaySystem;
 class SceneManager;
 class SceneNode;
@@ -514,8 +516,26 @@ private:
         Ogre::Real mElapsed;
         float mFrom;
         bool mTaken;
+        //! True when the taken pile does not dip as a whole but shows a local dent (see TreasuryPileDent)
+        bool mLocalDent;
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
+    //! The dent where gold was taken: while it lasts a dynamic copy of the pile is drawn in place of its entity
+    //! (the entity is detached from its node and does not take part in the room batch), and given back afterwards
+    struct TreasuryPileDent
+    {
+        std::string mEntityName;
+        std::string mOgreName;
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::ManualObject* mObject;
+        std::string mMeshName;
+        float mU;
+        float mV;
+        Ogre::Real mElapsed;
+    };
+    std::vector<TreasuryPileDent> mTreasuryPileDents;
+    int mTreasuryDentNumber = 0;
     //! The settled piles of a treasury are drawn as one batch per room
     TreasuryGoldBatch mTreasuryBatch;
 
@@ -633,7 +653,10 @@ private:
     void startTreasuryHeartDust();
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
-        int newLevel);
+        int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);
+    void updateTreasuryDents(Ogre::Real timeSinceLastFrame);
+    //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
+    void finishTreasuryDent(const std::string& entityName);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPileSettle(const std::string& entityName);
     bool isTreasuryPileSettling(const std::string& entityName) const;

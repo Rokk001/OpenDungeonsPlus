@@ -73,6 +73,14 @@ int main()
     check(splashBudget(TreasuryGoldMesh::Detail::reduced) > 0, "reduced detail still splashes");
     check(splashBudget(TreasuryGoldMesh::Detail::off) == 0, "no splashes when the detail is off");
 
+    // The local dent forms, is deepest after dentShare of the settle time and is gone when the pile has settled
+    check(localDentFactor(0.0f) == 0.0f, "no dent before the gold is taken");
+    check(localDentFactor(pileSettleTime * dentShare) > 0.99f, "the dent is deepest early in the settle time");
+    check(localDentFactor(pileSettleTime * dentShare) > localDentFactor(pileSettleTime * 0.8f), "the dent fills up again");
+    check(localDentFactor(pileSettleTime) == 0.0f && localDentFactor(pileSettleTime * 2.0f) == 0.0f,
+        "the dent is gone when the pile has settled");
+    check(dentRadius > 0.0f && dentRadius <= 0.5f && dentLocalDepth > 0.0f, "the dent stays inside its tile");
+
     SplashBudget budget;
     int roomA = 0;
     int roomB = 0;

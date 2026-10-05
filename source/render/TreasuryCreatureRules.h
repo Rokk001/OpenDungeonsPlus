@@ -224,6 +224,9 @@ inline int ambientBudget(TreasuryGoldMesh::Detail detail)
 static const float& pileSettleTime = TreasurySettings::current().pileSettleTime;
 static const float& dentDepth = TreasurySettings::current().dentDepth;
 static const float& dentShare = TreasurySettings::current().dentShare;
+//! Where gold is taken the pile also gets a local dent (full detail): radius and depth in tile units
+static const float& dentRadius = TreasurySettings::current().dentRadius;
+static const float& dentLocalDepth = TreasurySettings::current().dentLocalDepth;
 
 //! Height factor of a settling pile (1 = the new pile) at time t, coming from the factor "from" (the old level
 //! over the new one, limited). Growing starts low and rises; taking starts high, dips below 1 and returns.
@@ -237,6 +240,14 @@ inline float pileSettleScale(float from, bool taken, float t)
     if(progress < dentShare)
         return from + (dentDepth - from) * smoothStep(0.0f, dentShare, progress);
     return dentDepth + (1.0f - dentDepth) * smoothStep(dentShare, 1.0f, progress);
+}
+
+//! Share (0..1) of the full depth of the local dent at time t: it forms quickly (until dentShare of the settle
+//! time) and then fills up again, so it is gone when the pile has settled
+inline float localDentFactor(float t)
+{
+    const float progress = t / pileSettleTime;
+    return smoothStep(0.0f, dentShare, progress) * (1.0f - smoothStep(dentShare, 1.0f, progress));
 }
 
 //! The old level over the new one as a start height factor, kept in a range that looks sane for any change

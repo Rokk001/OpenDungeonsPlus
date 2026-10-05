@@ -66,17 +66,46 @@ std::pair<int, int> tileOf(float x, float y)
     return std::make_pair(static_cast<int>(std::floor(x + 0.5f)), static_cast<int>(std::floor(y + 0.5f)));
 }
 
-Ogre::Vector3 pilePoint(const TreasuryGoldLayer::PileShape& shape, float u, float v)
+//! A dent where gold was taken: the middle (u, v across the tile), the radius in tile units and the depth below
+//! the surface at the middle
+struct Dent
 {
-    return Ogre::Vector3(u - 0.5f, v - 0.5f, TreasuryGoldLayer::heightAt(shape, u, v));
+    float mU;
+    float mV;
+    float mRadius;
+    float mDepth;
+};
+
+//! Surface height of the pile at (u, v), lowered by the dent (a smooth bowl, none outside its radius) and never
+//! lower than the floor layer
+float dentedHeight(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent)
+{
+    const float height = TreasuryGoldLayer::heightAt(shape, u, v);
+    if(dent == nullptr || dent->mDepth <= 0.0f || dent->mRadius <= 0.0f)
+        return height;
+
+    const float du = u - dent->mU;
+    const float dv = v - dent->mV;
+    const float distance = std::sqrt(du * du + dv * dv);
+    if(distance >= dent->mRadius)
+        return height;
+
+    const float bowl = 0.5f * (1.0f + std::cos(3.1415927f * distance / dent->mRadius));
+    const float lowered = height - dent->mDepth * bowl;
+    return lowered < 0.004f ? 0.004f : lowered;
+}
+
+Ogre::Vector3 pilePoint(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
+{
+    return Ogre::Vector3(u - 0.5f, v - 0.5f, dentedHeight(shape, u, v, dent));
 }
 
 //! Normal of the pile surface from the neighbouring heights
-Ogre::Vector3 pileNormal(const TreasuryGoldLayer::PileShape& shape, float u, float v)
+Ogre::Vector3 pileNormal(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
 {
     const float step = 0.02f;
-    const float dx = TreasuryGoldLayer::heightAt(shape, u + step, v) - TreasuryGoldLayer::heightAt(shape, u - step, v);
-    const float dy = TreasuryGoldLayer::heightAt(shape, u, v + step) - TreasuryGoldLayer::heightAt(shape, u, v - step);
+    const float dx = dentedHeight(shape, u + step, v, dent) - dentedHeight(shape, u - step, v, dent);
+    const float dy = dentedHeight(shape, u, v + step, dent) - dentedHeight(shape, u, v - step, dent);
     Ogre::Vector3 normal(-dx / (2.0f * step), -dy / (2.0f * step), 1.0f);
     normal.normalise();
     return normal;
@@ -171,7 +200,7 @@ bool hasDetail(const TreasuryGoldLayer::PileShape& shape)
 
 //! Single coins on top of the heap, scattered gems, coins spilled at the open edges; for a tile without
 //! gold only a few coins on the bare floor
-void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape)
+void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent = nullptr)
 {
     const int seed = shape.mVariant * 17 + shape.mLevel;
     if(shape.mLevel == 0)
@@ -190,12 +219,12 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
     {
         const float u = 0.22f + 0.56f * TreasuryGoldLayer::hash01(seed, 7 * i + 3);
         const float v = 0.22f + 0.56f * TreasuryGoldLayer::hash01(seed, 7 * i + 4);
-        Ogre::Vector3 up = pileNormal(shape, u, v);
+        Ogre::Vector3 up = pileNormal(shape, u, v, dent);
         // Each coin leans a little differently
         const float lean = 6.2831853f * TreasuryGoldLayer::hash01(seed, 7 * i + 5);
         up += Ogre::Vector3(std::cos(lean), std::sin(lean), 0.0f) * 0.35f;
         up.normalise();
-        Ogre::Vector3 centre = pilePoint(shape, u, v);
+        Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
         centre.z += 0.014f;
         addCoin(object, centre, up, 0.045f, CoinSides, goldColour(u, v));
     }
@@ -204,7 +233,7 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
     {
         const float u = 0.25f + 0.5f * TreasuryGoldLayer::hash01(seed, 11 * i + 8);
         const float v = 0.25f + 0.5f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
-        Ogre::Vector3 centre = pilePoint(shape, u, v);
+        Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
         centre.z += 0.02f;
         addGem(object, centre, 0.028f, gemColour(shape.mVariant, i));
     }
@@ -230,22 +259,26 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
                 v = 1.0f - across;
             else
                 u = 1.0f - across;
-            Ogre::Vector3 centre = pilePoint(shape, u, v);
+            Ogre::Vector3 centre = pilePoint(shape, u, v, dent);
             centre.z += 0.01f;
-            addCoin(object, centre, pileNormal(shape, u, v), 0.035f, SpillSides, goldColour(u, v));
+            addCoin(object, centre, pileNormal(shape, u, v, dent), 0.035f, SpillSides, goldColour(u, v));
         }
     }
 }
 
-void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resourceName,
-    const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail)
+//! Fills the sections of a pile: the surface (none for a tile without gold, which only has scattered coins) and
+//! the coins and gems. With update the sections of a dynamic object are rewritten, the layout stays the same.
+void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail,
+    const Dent* dent, bool update)
 {
-    Ogre::ManualObject* object = sceneManager->createManualObject();
-
-    // A tile without gold has no surface, only the scattered coins
+    int section = 0;
     if(shape.mLevel > 0)
     {
-        object->begin(PileMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+        if(update)
+            object->beginUpdate(section);
+        else
+            object->begin(PileMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+        ++section;
 
         for(int j = 0; j <= divisions; ++j)
         {
@@ -253,8 +286,8 @@ void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resource
             {
                 const float u = static_cast<float>(i) / static_cast<float>(divisions);
                 const float v = static_cast<float>(j) / static_cast<float>(divisions);
-                object->position(pilePoint(shape, u, v));
-                object->normal(pileNormal(shape, u, v));
+                object->position(pilePoint(shape, u, v, dent));
+                object->normal(pileNormal(shape, u, v, dent));
                 object->textureCoord(u * TextureRepeat, (1.0f - v) * TextureRepeat);
             }
         }
@@ -279,14 +312,26 @@ void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resource
 
     if(withDetail && hasDetail(shape))
     {
-        object->begin(DetailMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-        addDetail(object, shape);
+        if(update)
+            object->beginUpdate(section);
+        else
+            object->begin(DetailMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+        addDetail(object, shape, dent);
         object->end();
     }
+}
 
+void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resourceName,
+    const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail)
+{
+    Ogre::ManualObject* object = sceneManager->createManualObject();
+    fillPile(object, shape, divisions, withDetail, nullptr, false);
     object->convertToMesh(resourceName, "Graphics");
     sceneManager->destroyManualObject(object);
 }
+
+// Divisions of the surface of a pile that is drawn with a dent (the same as the full mesh)
+const int DentDivisions = 6;
 }
 
 Detail detailFromString(const std::string& text)
@@ -340,6 +385,40 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
         buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? 2 : 6, !reduced);
 
     return name;
+}
+
+Ogre::ManualObject* createDentedPile(Ogre::SceneManager* sceneManager, const std::string& meshName, float u, float v,
+    float radius)
+{
+    TreasuryGoldLayer::PileShape shape;
+    if(sceneManager == nullptr || currentDetail != Detail::full || !TreasuryGoldLayer::parseMeshName(meshName, shape)
+        || shape.mLevel <= 0)
+        return nullptr;
+
+    Ogre::ManualObject* object = sceneManager->createManualObject();
+    object->setDynamic(true);
+    Dent dent;
+    dent.mU = u;
+    dent.mV = v;
+    dent.mRadius = radius;
+    dent.mDepth = 0.0f;
+    fillPile(object, shape, DentDivisions, true, &dent, false);
+    return object;
+}
+
+void updateDentedPile(Ogre::ManualObject* object, const std::string& meshName, float u, float v, float radius,
+    float depth)
+{
+    TreasuryGoldLayer::PileShape shape;
+    if(object == nullptr || !TreasuryGoldLayer::parseMeshName(meshName, shape) || shape.mLevel <= 0)
+        return;
+
+    Dent dent;
+    dent.mU = u;
+    dent.mV = v;
+    dent.mRadius = radius;
+    dent.mDepth = depth;
+    fillPile(object, shape, DentDivisions, true, &dent, true);
 }
 
 std::string pileNameForClassicStack(const std::string& meshName, float x, float y)

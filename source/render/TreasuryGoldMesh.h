@@ -23,6 +23,7 @@
 
 namespace Ogre
 {
+class ManualObject;
 class SceneManager;
 }
 
@@ -50,6 +51,15 @@ Detail getDetail();
 //! A pile without gold (the scattered coins on the bare floor of an empty treasury) is only drawn at the
 //! detail "full"; for the other settings an empty string comes back and no mesh is drawn.
 std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& meshName);
+
+//! A dynamic copy of the pile with the given name (full detail only, null for any other case) that can be dented:
+//! the dent lies at (u, v) across the tile (0..1) with the given radius in tile units. The caller owns the object
+//! (SceneManager::destroyManualObject) and draws it in place of the entity of the pile while the dent lasts.
+Ogre::ManualObject* createDentedPile(Ogre::SceneManager* sceneManager, const std::string& meshName, float u, float v,
+    float radius);
+//! Rewrites a dented pile with the dent at the given depth (tile units, 0 = no dent)
+void updateDentedPile(Ogre::ManualObject* object, const std::string& meshName, float u, float v, float radius,
+    float depth);
 
 //! The dungeon heart still names its treasury ring tiles with the classic stacks. On this client those
 //! are drawn as gold piles too: returns the pile name for the classic stack name at the given tile, or
