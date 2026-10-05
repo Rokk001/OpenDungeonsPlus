@@ -632,6 +632,7 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
         "Action\tspawn\t3\t9\t9\t-1\tparty=Raid\tKnight:2@LordTitus\tArcher:1\n"
         "Action\tterrain\t9\t9\t9\t9\tmanawell\t1\n"
         "Action\tcountdown\t1800\n"
+        "Action\twavecountdown\t420\n"
         "[/Trigger]\n"
         "[/Triggers]\n";
     LevelScript script;
@@ -679,6 +680,8 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
     BOOST_CHECK_EQUAL(trigger.mActions[12].mSeatId, 1);
     BOOST_CHECK(trigger.mActions[13].mType == LevelScriptActionType::countdown);
     BOOST_CHECK_EQUAL(trigger.mActions[13].mNumber, 1800);
+    BOOST_CHECK(trigger.mActions[14].mType == LevelScriptActionType::waveCountdown);
+    BOOST_CHECK_EQUAL(trigger.mActions[14].mNumber, 420);
 
     std::ostringstream os;
     script.exportToStream(os);

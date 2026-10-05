@@ -326,6 +326,8 @@ private:
     bool mRestartLevel = false;
     //! \brief Seconds of the time limit countdown that is shown on the HUD, -1 while it is hidden
     int32_t mTimeLimitShown = -1;
+    //! \brief Seconds of the wave countdown that is shown on the HUD, -1 while it is hidden
+    int32_t mWaveCountdownShown = -1;
 
     //! \brief Sets whether a tile must marked or unmarked for digging.
     //! this value is based on the first marked flag tile selected.
