@@ -176,6 +176,14 @@ public:
     //! \brief Clears all creatures that a player might have in his hand
     void notifyNoMoreDungeonTemple();
 
+    //! \brief Called on the server when the game duration of a skirmish has run out: this player loses
+    //! without a destroyed heart (no conqueror, heart position unknown).
+    void notifyTimeUp();
+
+    //! \brief Sends the debriefing counters of every seat with a player to this (human) player.
+    //! Server side only. levelWon tells how the level ended for this player.
+    void sendLevelStatistics(bool levelWon);
+
     inline bool getIsHuman() const
     { return mIsHuman; }
 
@@ -219,6 +227,18 @@ public:
     //! \brief Notify the player that a creature cannot find a bed
     void notifyCreatureCannotFindFood(Creature& creature);
 
+    //! \brief Notify the player that a build or purchase failed for lack of gold
+    //! Should be called on the server game map
+    void notifyNotEnoughGold();
+
+    //! \brief Notify the player that one of their creatures has died
+    //! Should be called on the server game map
+    void notifyCreatureKilled(Creature& creature);
+
+    //! \brief Notify the player that a new creature type is now attracted to the dungeon
+    //! Should be called on the server game map
+    void notifyNewCreatureType(const std::string& creatureClassName);
+
     void fireEvents();
 
     //! \brief Called on client side to update the current list of events. Note that
@@ -257,6 +277,17 @@ public:
     void notifyWorkerAction(Creature& worker, CreatureActionType actionType);
     void notifyWorkerStopsAction(Creature& worker, CreatureActionType actionType);
 
+    //! \brief Name of the creature the player currently possesses, empty if none.
+    //! Used on both server and client sides.
+    inline const std::string& getPossessedCreatureName() const
+    { return mPossessedCreatureName; }
+
+    inline void setPossessedCreatureName(const std::string& name)
+    { mPossessedCreatureName = name; }
+
+    inline bool isPossessing() const
+    { return !mPossessedCreatureName.empty(); }
+
     //! \brief Returns how many workers are doing the given action
     uint32_t getNbWorkersDoing(CreatureActionType actionType) const;
 
@@ -265,6 +296,9 @@ public:
     std::vector<CreatureActionType> getWorkerPreferredActions(Creature& worker) const;
 
 private:
+    //! \brief Shared part of the defeat: chat messages, sounds, defeat sequence and statistics
+    void notifyDefeat(bool hasTeamLost);
+
     //! \brief Player ID is only used during seat configuration phase
     //! During the game, one should use the seat ID to identify a player because
     //! every AI player has an id = 0.
@@ -303,6 +337,12 @@ private:
     //! the player should be notified again that a creature cannot find place in a hatchery.
     float mCreatureCannotFindFood;
 
+    //! \brief Time left before the player is told again that gold is missing for a purchase.
+    float mNotEnoughGoldTime;
+
+    //! \brief Time left before the player is told again that a creature has died.
+    float mCreatureKilledTime;
+
     bool mHasLost;
 
     //! \brief Seat id that dealt the final blow to the heart, and the heart centre tile. -1 if unknown.
@@ -323,6 +363,9 @@ private:
     //! \brief Used to know what the workers are doing. That will help to change
     //! probability to choose the action to do
     std::vector<uint32_t> mWorkersActions;
+
+    //! \brief The creature the player possesses. Empty if none
+    std::string mPossessedCreatureName;
 
     //! \brief A simple mutator function to put the given entity into the player's hand,
     //! note this should NOT be called directly for creatures on the map,

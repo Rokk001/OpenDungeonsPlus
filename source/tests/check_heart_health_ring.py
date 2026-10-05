@@ -549,8 +549,12 @@ probe = (probe.replace('RULES_HEADER', rules.as_posix())
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
-assert enumerators[-1] == 'heartHealth', enumerators[-3:]
-assert enumerators[-2] == 'levelStatistics' and enumerators[-3] == 'playerDefeated'
+enumerators = [name for name in enumerators if name != 'relationshipTier']
+assert enumerators[-1] == 'chickenKindChanged' and enumerators[-2] == 'timeLimit', enumerators[-4:]
+assert enumerators[-3] == 'editorRegionData' and enumerators[-4] == 'possessionEnd', enumerators[-6:]
+assert enumerators[-5] == 'possessionStart' and enumerators[-6] == 'casinoPayout', enumerators[-8:]
+assert enumerators[-7] == 'heartHealth' and enumerators[-8] == 'levelStatistics', enumerators[-10:]
+assert enumerators[-9] == 'playerDefeated'
 assert enumerators.count('heartHealth') == 1
 assert 'case ServerNotificationType::heartHealth:\n            return "heartHealth";' in notification_source
 case = client[client.index('case ServerNotificationType::heartHealth:'):]

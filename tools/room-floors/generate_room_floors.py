@@ -111,7 +111,7 @@ def normal_map(height, strength):
     return nrm * 0.5 + 0.5
 
 
-# Calibrated tone correction (see docs/internal/FLOORS.md, "Calibration"): per room (saturation factor, brightness
+# Calibrated tone correction (calibration): per room (saturation factor, brightness
 # factor, colour tint), applied to the finished diffuse colours. The room shader raises saturation (x1.3) and the warm room
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
@@ -121,13 +121,13 @@ TONE = {
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
     'treasury': (1.00, 0.76, (0.93, 0.95, 1.06)),
     'trainingHall': (0.50, 0.70, (1.06, 1.00, 0.88)),
-    'casino': (0.22, 1.00, (1.02, 1.0, 0.99)),
+    'casino': (0.22, 0.90, (1.03, 1.00, 1.03)),
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
 }
 
 
-# Repetition pass (docs/internal/FLOORS.md, "F2 repetition pass"): a texture repeats on every tile, so broad blotches
+# Repetition pass (repetition pass): a texture repeats on every tile, so broad blotches
 # and brightness gradients show up as a lattice. flatten() divides the colours by a periodic low-pass of their
 # luminance (sigma in texture px, strength 0..1), so nothing larger than about a fifth of a tile keeps a different
 # mean brightness; the mean luminance stays. Applied to the open floor field before the wall bands are added.

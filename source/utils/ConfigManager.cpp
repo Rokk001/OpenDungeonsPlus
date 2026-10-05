@@ -25,6 +25,7 @@
 #include "spawnconditions/SpawnCondition.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/NameAliases.h"
 
 #include <boost/dynamic_bitset.hpp>
 #include <OgreRoot.h>
@@ -61,6 +62,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
+    mManaWellBonusPerTile(10.0),
     mClaimingWallPenalty(0.8),
     mDigCoefGold(5.0),
     mDigCoefGem(1.0),
@@ -138,6 +140,8 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
         OD_LOG_ERR("Couldn't read loadEditorSettings");
         exit(1);
     }
+
+    loadRelationships(configPath + "relationships.cfg");
 
     // Reserve space in any case.
     mUserConfig.resize(Config::Ctg::TOTAL);
@@ -457,6 +461,8 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         if(nextParam == "[/GameConfig]")
             break;
 
+        nextParam = NameAliases::resolve(nextParam);
+
         if(nextParam == "NetworkPort")
         {
             configFile >> nextParam;
@@ -524,6 +530,13 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mMaxManaPerSeat = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ManaWellBonusPerTile")
+        {
+            configFile >> nextParam;
+            mManaWellBonusPerTile = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -964,10 +977,43 @@ bool ConfigManager::loadRooms(const std::string& fileName)
         if (nextParam == "[/Rooms]")
             break;
 
-        defFile >> mRoomsConfig[nextParam];
+        defFile >> mRoomsConfig[NameAliases::resolve(nextParam)];
     }
 
     return true;
+}
+
+void ConfigManager::loadRelationships(const std::string& fileName)
+{
+    OD_LOG_INF("Load relationships file: " + fileName);
+    mRelationshipsConfig.clear();
+    std::stringstream defFile;
+    if(!Helper::readFile(fileName, defFile, true))
+    {
+        OD_LOG_WRN("Couldn't read " + fileName + ", using the default relationship values");
+        return;
+    }
+
+    std::string nextParam;
+    defFile >> nextParam;
+    if(nextParam != "[Relationships]")
+    {
+        OD_LOG_WRN("Invalid relationships start format. Line was " + nextParam);
+        return;
+    }
+
+    while(defFile.good())
+    {
+        if(!(defFile >> nextParam))
+            break;
+
+        if(nextParam == "[/Relationships]")
+            break;
+
+        std::string value;
+        defFile >> value;
+        mRelationshipsConfig[nextParam] = value;
+    }
 }
 
 bool ConfigManager::loadTraps(const std::string& fileName)
@@ -997,7 +1043,7 @@ bool ConfigManager::loadTraps(const std::string& fileName)
         if (nextParam == "[/Traps]")
             break;
 
-        defFile >> mTrapsConfig[nextParam];
+        defFile >> mTrapsConfig[NameAliases::resolve(nextParam)];
     }
 
     return true;
@@ -1030,7 +1076,7 @@ bool ConfigManager::loadSpellConfig(const std::string& fileName)
         if (nextParam == "[/Spells]")
             break;
 
-        defFile >> mSpellConfig[nextParam];
+        defFile >> mSpellConfig[NameAliases::resolve(nextParam)];
     }
 
     return true;
@@ -1063,7 +1109,7 @@ bool ConfigManager::loadSkills(const std::string& fileName)
         if (nextParam == "[/Skills]")
             break;
 
-        defFile >> mSkillPoints[nextParam];
+        defFile >> mSkillPoints[NameAliases::resolve(nextParam)];
     }
     return true;
 }
@@ -1200,6 +1246,12 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
         if(!loadTilesetValues(defFile, TileVisual::casinoRoom, tileSet->configureTileValues(TileVisual::casinoRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::tortureRoom, tileSet->configureTileValues(TileVisual::tortureRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::guardRoom, tileSet->configureTileValues(TileVisual::guardRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::manaWellGround, tileSet->configureTileValues(TileVisual::manaWellGround),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::templeRoom, tileSet->configureTileValues(TileVisual::templeRoom),*mHighMap))
             return false;
 
     }

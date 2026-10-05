@@ -113,8 +113,12 @@ struct ODServer {
     static ODServer& getSingleton(){static ODServer s;return s;}
     void queueServerNotification(ServerNotification* n){sent.emplace_back(n);}
 };
+GIFTBOXENUM
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
+    bool mHadLibrary=false;
+    std::vector<std::pair<int32_t,uint32_t>> mStoredSpecialBoxes;
+    void addStoredSpecial(GiftBoxType type,uint32_t amount){mStoredSpecialBoxes.push_back(std::pair<int32_t,uint32_t>(static_cast<int32_t>(type),amount));}
     int32_t mSkillPoints=0;const Skill* mCurrentSkill=nullptr;
     SkillType mCurrentSkillType=SkillType::nullSkillType;float mCurrentSkillProgress=0;
     bool mGuiSkillNeedsRefresh=false;
@@ -127,7 +131,7 @@ struct Seat {
     const std::vector<SkillType>& getSkillDone()const{return mSkillDone;}
     const std::vector<SkillType>& getSkillPending()const{return mSkillPending;}
     const std::vector<SkillType>& getSkillNotAllowed()const{return mSkillNotAllowed;}
-    bool addSkill(SkillType);bool isSkillDone(SkillType)const;uint32_t getSkillLevel(SkillType)const;
+    bool addSkill(SkillType,bool=true);bool isSkillDone(SkillType)const;uint32_t getSkillLevel(SkillType)const;
     void setResearchLevels(const std::map<SkillType,uint32_t>&);
     void completeResearch(SkillType);void addSkillPoints(int32_t);void setNextSkill(SkillType);
     void setSkillsDone(const std::vector<SkillType>&);void setSkillTree(const std::vector<SkillType>&);
@@ -149,8 +153,10 @@ int main(int argc,char** argv){try {
     while(std::getline(config,line)){std::istringstream row(line);std::string key;int points;
         if(row>>key>>points && key[0]!='#')ConfigManager::getSingleton().points[key]=points;}
     std::vector<SkillType> all;
-    for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)all.push_back(static_cast<SkillType>(i));
-    check(all.size()==27,"all 27 current research entries");
+    for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
+        if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
+    check(all.size()==49,"all 49 current research entries");
+    {Seat reward;reward.setSkillTree({SkillType::spellSummonChampion});check(reward.mSkillPending.empty(),"the reward skill cannot be researched");}
     for(SkillType type:all){
         const Skill* skill=SkillManager::getSkill(type);check(skill!=nullptr,"catalog completeness");
         const int base=skill->getNeededSkillPoints();
@@ -190,6 +196,17 @@ int main(int argc,char** argv){try {
     check(loaded.getSkillLevel(SkillType::trapCannon)==2 && loaded.mSkillPending==std::vector<SkillType>{SkillType::trapSpike},"resume partial upgrade with order retained");
     std::stringstream old("[SkillDone] roomLibrary [/SkillDone] [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] roomTrainingHall [/SkillPending]");
     Seat legacy;check(legacy.load(old) && legacy.getSkillLevel(SkillType::roomLibrary)==1 && legacy.mSkillPoints==0,"old save without extension");
+    check(!legacy.mHadLibrary && legacy.mStoredSpecialBoxes.empty(),"old save has no lost library and no stored specials");
+    {Seat keeper;keeper.setSkillsDone(all);keeper.mHadLibrary=true;
+     keeper.addStoredSpecial(GiftBoxType::mana,50000);keeper.addStoredSpecial(GiftBoxType::healAll,0);keeper.addStoredSpecial(GiftBoxType::mana,7);
+     std::stringstream kept;keeper.save(kept);Seat restored;
+     check(restored.load(kept) && restored.mHadLibrary,"the lost library state survives a save and load");
+     check(restored.mStoredSpecialBoxes==keeper.mStoredSpecialBoxes && restored.mStoredSpecialBoxes.size()==3,"stored specials survive a save and load in order");
+     std::stringstream nothing;Seat plain;plain.setSkillsDone(all);plain.save(nothing);Seat plainLoaded;
+     check(plainLoaded.load(nothing) && !plainLoaded.mHadLibrary && plainLoaded.mStoredSpecialBoxes.empty(),"a seat without them saves no block");
+     for(const std::string& block:{"[StoredSpecials] 1 0 5 [/StoredSpecials]", "[StoredSpecials] 1 13 5 [/StoredSpecials]", "[StoredSpecials] 2 1 5 [/StoredSpecials]"}){
+      std::stringstream badSpecial("[SkillDone] roomLibrary [/SkillDone] "+block+" [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] [/SkillPending]");
+      Seat rejected;check(!rejected.load(badSpecial),"malformed stored special rejected");}}
     for(const std::string& block:{"-1 0", "0 1 roomLibrary 4", "0 1 trapCannon 2", "0 2 roomLibrary 2 roomLibrary 3"}){
         std::stringstream bad("[SkillDone] roomLibrary [/SkillDone] [ResearchProgress] "+block+" [/ResearchProgress] [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] [/SkillPending]");
         Seat rejected;check(!rejected.load(bad),"malformed save rejected");
@@ -231,7 +248,10 @@ int main(int argc,char** argv){try {
     std::cout<<"CHECKS="<<checks<<" FAILURES=0\n";
 }catch(const std::exception& e){std::cerr<<"CHECK "<<checks<<": "<<e.what()<<"\n";return 1;}}
 '''
-for key, value in {"DEFINITIONS": definitions, "LOAD": load, "SAVE": save,
+gift_header = (root / "source/entities/GiftBoxEntity.h").read_text(encoding="utf-8")
+gift_enum = gift_header[gift_header.index("enum class GiftBoxType"):]
+gift_enum = gift_enum[:gift_enum.index("};") + 2]
+for key, value in {"GIFTBOXENUM": gift_enum, "DEFINITIONS": definitions, "LOAD": load, "SAVE": save,
                    "DECODE": decode, "REQUEST": request}.items():
     probe = probe.replace(key, value)
 
@@ -243,7 +263,7 @@ with tempfile.TemporaryDirectory(prefix="research-progression-") as directory:
     subprocess.run([
         "cl", "/nologo", "/EHsc", "/MD", "/std:c++14",
         f"/I{root / 'source'}", f"/I{prefix / 'include'}", f"/I{prefix / 'include/OGRE'}",
-        str(cpp), str(root / "source/network/ODPacket.cpp"), str(root / "source/game/SkillType.cpp"),
+        str(cpp), str(root / "source/network/ODPacket.cpp"), str(root / "source/game/SkillType.cpp"), str(root / "source/utils/NameAliases.cpp"),
         f"/Fe:{executable}", "/link", f"/LIBPATH:{prefix / 'lib'}",
         "OgreMain.lib", "sfml-network.lib", "sfml-system.lib"
     ], cwd=work, check=True)

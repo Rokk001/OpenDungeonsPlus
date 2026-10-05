@@ -40,6 +40,9 @@ public:
     bool goBack(const CEGUI::EventArgs& e = {}) override;
 
 private:
+    //! \brief Starts the level again if the in-game "Restart Level" button asked for it
+    void restartPendingLevel();
+
     //! \brief The Settings window
     SettingsWindow mSettings;
     bool mSettingsPageOpen = false;
@@ -59,9 +62,19 @@ private:
     bool toggleSubMenu(const std::string& name);
 
     //! \brief Sub menu button triggers
+    bool toggleCampaignSubMenu(const CEGUI::EventArgs&);
+    bool newCampaignPressed(const CEGUI::EventArgs&);
+    bool newCampaignConfirmed(const CEGUI::EventArgs&);
+
+    //! \brief Shows or hides the question that asks whether the saved campaign progress
+    //! may be replaced by a new campaign, in place of the two campaign buttons
+    void showNewCampaignConfirm(bool visible);
     bool toggleSkirmishSubMenu(const CEGUI::EventArgs&);
     bool toggleMultiplayerSubMenu(const CEGUI::EventArgs&);
     bool toggleEditorSubMenu(const CEGUI::EventArgs&);
+
+    //! \brief Opens the level list with the sandbox levels
+    bool sandboxButtonPressed(const CEGUI::EventArgs& e);
 };
 
 #endif // MENUMODEMAIN_H

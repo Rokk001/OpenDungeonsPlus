@@ -52,6 +52,32 @@ add_boost_test(00-Goal
         ${Boost_FILESYSTEM_LIBRARY_RELEASE}
         ${Boost_SYSTEM_LIBRARY_RELEASE})
 
+add_boost_test(00-CreatureRelationships
+        SOURCES
+        test_CreatureRelationships.cpp
+        ${SRC}/game/CreatureRelationships.h
+        ${SRC}/game/CreatureRelationships.cpp
+        ${SRC}/utils/LogManager.cpp
+        ${SRC}/utils/LogSinkConsole.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${SFML_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE})
+
+add_boost_test(00-LevelScript
+        SOURCES
+        test_LevelScript.cpp
+        ${SRC}/gamemap/LevelScript.h
+        ${SRC}/gamemap/LevelScript.cpp)
+
+add_boost_test(00-Campaign
+        SOURCES
+        test_Campaign.cpp
+        ${SRC}/game/Campaign.h
+        ${SRC}/game/Campaign.cpp
+        ${SRC}/game/CampaignWorld.cpp)
+
 add_boost_test(00-Pathfinding
         SOURCES
         test_Pathfinding.cpp)
@@ -61,6 +87,14 @@ add_boost_test(00-DungeonHeartTier
         test_DungeonHeartTier.cpp
         ${SRC}/rooms/HeartHealthTier.h
         ${SRC}/rooms/HeartHealthTier.cpp)
+
+add_boost_test(00-HatcheryCycle
+        SOURCES
+        test_HatcheryCycle.cpp
+        ${SRC}/rooms/HatcheryCycle.h
+        ${SRC}/rooms/HatcheryCycle.cpp
+        ${SRC}/rooms/HatcheryRooster.h
+        ${SRC}/rooms/HatcheryRooster.cpp)
 
 add_boost_test(aa-LaunchGame
         SOURCES

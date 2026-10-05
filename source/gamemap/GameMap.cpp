@@ -22,6 +22,8 @@
 
 #include "gamemap/GameMap.h"
 
+#include "gamemap/LevelScript.h"
+
 #include "ai/KeeperAIType.h"
 #include "creatureaction/CreatureAction.h"
 #include "creaturemood/CreatureMood.h"
@@ -32,10 +34,13 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
+#include "gamemap/LevelScriptRunner.h"
 #include "gamemap/MapHandler.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/TileSet.h"
@@ -62,6 +67,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Random.h"
 #include "utils/ResourceManager.h"
 
 #include "ODApplication.h"
@@ -76,6 +82,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -91,16 +98,35 @@ const double MANA_HEART_INCOME_PER_SECOND = 30.0;
 //! The tile part of the mana income is capped: one mana per second per claimed
 //! tile, up to this many tiles.
 const double MANA_INCOME_TILES_CAP = 500.0;
-//! Mana each worker costs to keep, per second.
+//! Mana each worker above the free ones costs to keep, per second.
 const double MANA_WORKER_UPKEEP_PER_SECOND = 7.0;
 
-//! Workers a seat holds before its living heart stops creating more.
+//! Workers a seat holds before its living heart stops creating more. The heart sustains
+//! these workers on its own, only the ones above them are paid from the mana reserves.
 const int AUTO_WORKERS_TARGET = 4;
+//! Seconds the mana has to stay too low to pay the upkeep before the workers above the
+//! free ones are doomed.
+const double WORKER_MANA_EVALUATION_SECONDS = 10.0;
+//! Seconds the doomed workers have left, if the mana is still too low when it ends they pop.
+const double WORKER_POP_COUNTDOWN_SECONDS = 10.0;
 //! Seconds the living dungeon heart waits between two workers it creates.
 const double AUTO_WORKER_INTERVAL_SECONDS = 5.0;
 
 //! \brief Squared distance within which an enemy creature triggers the heart defence.
 const int HEART_DEFENCE_RANGE_SQUARED = 7 * 7;
+
+//! \brief True if the seat has completed a goal that is more than keeping its dungeon temple. A seat
+//! whose only goal is to protect its temple does not win through its goals at once: the level script
+//! wins it (campaign levels do that).
+bool hasCompletedWinningGoal(Seat* seat)
+{
+    for(unsigned int i = 0; i < seat->numCompletedGoals(); ++i)
+    {
+        if(seat->getCompletedGoal(i)->getName() != "ProtectDungeonTemple")
+            return true;
+    }
+    return false;
+}
 
 //! \brief Mana a seat gains per second: the heart plus one per claimed tile,
 //! the tile part capped. The tiles of the heart area are not counted again.
@@ -115,10 +141,14 @@ double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTi
     return MANA_HEART_INCOME_PER_SECOND + tilesIncome;
 }
 
-//! \brief Mana per second all the workers of a seat cost together.
+//! \brief Mana per second the workers of a seat cost together. The first four are free.
 double manaUpkeepPerSecond(unsigned int numWorkers)
 {
-    return static_cast<double>(numWorkers) * MANA_WORKER_UPKEEP_PER_SECOND;
+    if(numWorkers <= static_cast<unsigned int>(AUTO_WORKERS_TARGET))
+        return 0.0;
+
+    return static_cast<double>(numWorkers - static_cast<unsigned int>(AUTO_WORKERS_TARGET))
+        * MANA_WORKER_UPKEEP_PER_SECOND;
 }
 }
 
@@ -202,25 +232,47 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         everVisitedFlagPool(nullptr),
         mIsServerGameMap(isServerGameMap),
         mNodeType(nt),
+        mGoldDensityPercent(100),
+        mManaRegenerationPercent(100),
+        mMaxCreaturesSetting(0),
+        mGameSpeedPercent(100),
+        mGameDurationMinutes(0),
+        mHeartDestroyedReward(0),
+        mGameDurationAnnounced(false),
+        mTimeLimitSentSeconds(-1),
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
         mIsPaused(false),
         mTimePayDay(0),
+        mIsSandbox(false),
+        mSandboxMode(*this),
         mFloodFillEnabled(false),
         mIsFOWActivated(true),
         mNumCallsTo_path(0),
         mAiManager(*this),
+        mCreatureRelationships(nullptr),
         mTileSet(nullptr),
         mHighMap(nullptr),
         generator(42)
 {
+    mLevelScript.reset(new LevelScript());
     resetUniqueNumbers();
 }
 
 GameMap::~GameMap()
 {
     clearAll();
+}
+
+LevelScript& GameMap::getLevelScript()
+{
+    return *mLevelScript;
+}
+
+const LevelScript& GameMap::getLevelScript() const
+{
+    return *mLevelScript;
 }
 
 std::string GameMap::serverStr()
@@ -342,17 +394,32 @@ void GameMap::clearAll()
         processDeletionQueues();
 
         clearGoalsForAllSeats();
+        mLevelScript->clear();
         clearSeats();
         mLocalPlayer = nullptr;
         clearPlayers();
 
         clearAiManager();
+        setRelationshipsEnabled(false);
 
         mLocalPlayerNick = DEFAULT_NICK;
         mTurnNumber = -1;
         resetUniqueNumbers();
         mIsFOWActivated = true;
+        mGoldDensityPercent = 100;
+        mManaRegenerationPercent = 100;
+        mMaxCreaturesSetting = 0;
+        mGameSpeedPercent = 100;
+        mGameDurationMinutes = 0;
+        mHeartDestroyedReward = 0;
+        mGameDurationAnnounced = false;
+        mTimeLimitSentSeconds = -1;
+        mCreatureClassLimits.clear();
+        mSkirmishSkillStates.clear();
+        mSkirmishSkillStatesLevel.clear();
         mTimePayDay = 0;
+        mIsSandbox = false;
+        mSandboxMode.reset();
 
         // We check if the different vectors are empty
         if(!mActiveObjects.empty())
@@ -1144,12 +1211,137 @@ Creature* GameMap::getCreature(const std::string& cName) const
     return nullptr;
 }
 
+void GameMap::setRelationshipsEnabled(bool enabled)
+{
+    if(!enabled)
+    {
+        delete mCreatureRelationships;
+        mCreatureRelationships = nullptr;
+        return;
+    }
+
+    if(mCreatureRelationships != nullptr)
+        return;
+
+    mCreatureRelationships = new CreatureRelationships(
+        RelationshipSettings::fromConfig(ConfigManager::getSingleton().getRelationshipsConfig()));
+    mCreatureRelationships->setGenderLookup(std::bind(&GameMap::getCreatureGender, this, std::placeholders::_1));
+}
+
+std::string GameMap::getCreatureGender(const std::string& creatureName) const
+{
+    Creature* creature = getCreature(creatureName);
+    if(creature == nullptr)
+        return std::string();
+
+    return creature->getGender();
+}
+
+void GameMap::checkRelationshipBrawls()
+{
+    if(mCreatureRelationships == nullptr)
+        return;
+
+    const RelationshipSettings& settings = mCreatureRelationships->getSettings();
+    if((mTurnNumber % settings.mBrawlCheckIntervalTurns) != 0)
+        return;
+
+    std::vector<CreatureRelationships::Pair> pairs;
+    mCreatureRelationships->getNemesisPairs(pairs);
+    double maxDistance = static_cast<double>(settings.mBrawlMaxDistanceTiles);
+    for(size_t i = 0; i < pairs.size(); ++i)
+    {
+        Creature* creatureA = getCreature(pairs[i].first);
+        Creature* creatureB = getCreature(pairs[i].second);
+        if((creatureA == nullptr) || (creatureB == nullptr) || (creatureA->getSeat() != creatureB->getSeat()))
+            continue;
+
+        if(!creatureA->canStartBrawl() || !creatureB->canStartBrawl())
+            continue;
+
+        Tile* tileA = creatureA->getPositionTile();
+        Tile* tileB = creatureB->getPositionTile();
+        double dx = static_cast<double>(tileA->getX() - tileB->getX());
+        double dy = static_cast<double>(tileA->getY() - tileB->getY());
+        if((dx * dx + dy * dy) > (maxDistance * maxDistance))
+            continue;
+
+        if(Random::Int(0, 99) >= settings.mBrawlChancePercent)
+            continue;
+
+        if(!pathExists(creatureA, tileA, tileB))
+            continue;
+
+        creatureA->startBrawl(*creatureB);
+    }
+}
+
+void GameMap::sendRelationshipTierChanges()
+{
+    if(mCreatureRelationships == nullptr)
+        return;
+
+    std::vector<RelationshipTierChange> changes;
+    mCreatureRelationships->takeTierChanges(changes);
+    for(const RelationshipTierChange& change : changes)
+    {
+        // Both creatures belong to the same keeper. If one is already gone, the client drops
+        // its pairs together with the creature.
+        Creature* creature = getCreature(change.mCreatureA);
+        if(creature == nullptr)
+            continue;
+
+        Seat* seat = creature->getSeat();
+        if((seat == nullptr) || (seat->getPlayer() == nullptr))
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::relationshipTier, seat->getPlayer());
+        serverNotification->mPacket << change.mCreatureA << change.mCreatureB
+            << static_cast<int32_t>(change.mNewTier) << false;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+void GameMap::sendRelationshipTiers(Seat* seat)
+{
+    if((mCreatureRelationships == nullptr) || (seat == nullptr) || (seat->getPlayer() == nullptr))
+        return;
+
+    std::vector<RelationshipTierChange> tiers;
+    mCreatureRelationships->getTiers(tiers);
+    for(const RelationshipTierChange& tier : tiers)
+    {
+        Creature* creature = getCreature(tier.mCreatureA);
+        if((creature == nullptr) || (creature->getSeat() != seat))
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::relationshipTier, seat->getPlayer());
+        serverNotification->mPacket << tier.mCreatureA << tier.mCreatureB
+            << static_cast<int32_t>(tier.mNewTier) << true;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
 void GameMap::doTurn(double timeSinceLastTurn)
 {
     OD_LOG_INF("Computing turn " + Helper::toString(mTurnNumber) + ", timeSinceLastTurn=" + Helper::toString(timeSinceLastTurn));
     unsigned int numCallsTo_path_atStart = mNumCallsTo_path;
 
     uint32_t miscUpkeepTime = doMiscUpkeep(timeSinceLastTurn);
+
+    if(isServerGameMap())
+    {
+        LevelScriptRunner::doTurn(*this);
+        checkGameDuration();
+        if(mCreatureRelationships != nullptr)
+        {
+            mCreatureRelationships->doTurn(mTurnNumber);
+            checkRelationshipBrawls();
+            sendRelationshipTierChanges();
+        }
+    }
 
     for (Seat* seat : mSeats)
     {
@@ -1158,6 +1350,9 @@ void GameMap::doTurn(double timeSinceLastTurn)
 
         seat->getPlayer()->upkeepPlayer(timeSinceLastTurn);
     }
+
+    if(mIsSandbox && mIsServerGameMap)
+        mSandboxMode.doTurn();
 
     OD_LOG_INF("During this turn there were " + Helper::toString(mNumCallsTo_path - numCallsTo_path_atStart)
         + " calls to GameMap::path(), miscUpkeepTime=" + Helper::toString(miscUpkeepTime));
@@ -1179,6 +1374,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     if((mTimePayDay >= ConfigManager::getSingleton().getTimePayDay()))
     {
         mTimePayDay = 0;
+        getLevelScript().recordEvent("Level", "payday");
         // We only notify players with a dungeon temple
         for(Player* player : getPlayers())
         {
@@ -1228,7 +1424,8 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 
         // Check the goals and move completed ones to the completedGoals list for the seat.
         //NOTE: Once seats are placed on this list, they stay there even if goals are unmet.  We may want to change this.
-        if (seat->checkAllGoals() == 0 && seat->numFailedGoals() == 0)
+        // A sandbox level has no goals: a seat without goals must not win at once
+        if (!mIsSandbox && seat->checkAllGoals() == 0 && seat->numFailedGoals() == 0 && hasCompletedWinningGoal(seat))
             addWinningSeat(seat);
 
         seat->mNumCreaturesFightersMax = getMaxNumberCreatures(seat);
@@ -1288,6 +1485,24 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         spell->computeVisibleTiles();
     }
 
+    // Seats that got the whole map revealed (gift box) see every tile
+    for (Seat* seat : mSeats)
+    {
+        if(!seat->isMapRevealed())
+            continue;
+
+        for (int jj = 0; jj < getMapSizeY(); ++jj)
+        {
+            for (int ii = 0; ii < getMapSizeX(); ++ii)
+            {
+                getTile(ii,jj)->notifyVision(seat);
+            }
+        }
+    }
+
+    for (Seat* seat : mSeats)
+        seat->applyRevealedTiles();
+
     for (Seat* seat : mSeats)
     {
         if(!seat->getIsDebuggingVision())
@@ -1307,6 +1522,20 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     for(GameEntity* ge : activeObjects)
         ge->doUpkeep();
 
+    // Count the mana well tiles owned by each seat. They give extra mana each turn
+    std::map<Seat*, uint32_t> nbManaWellTilesPerSeat;
+    for (int jj = 0; jj < getMapSizeY(); ++jj)
+    {
+        for (int ii = 0; ii < getMapSizeX(); ++ii)
+        {
+            Tile* vaultTile = getTile(ii,jj);
+            if((vaultTile->getType() != TileType::manaWell) || !vaultTile->isClaimed())
+                continue;
+
+            ++nbManaWellTilesPerSeat[vaultTile->getSeat()];
+        }
+    }
+
     // Carry out the upkeep round for each seat. This means recomputing how much gold is
     // available in their treasuries, how much mana they gain/lose during this turn, etc.
     for (Seat* seat : mSeats)
@@ -1321,7 +1550,11 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         {
             seat->getPlayer()->notifyNoMoreDungeonTemple();
         }
-        updateSeatMana(seat);
+        uint32_t nbManaWellTiles = 0;
+        std::map<Seat*, uint32_t>::const_iterator itVault = nbManaWellTilesPerSeat.find(seat);
+        if(itVault != nbManaWellTilesPerSeat.end())
+            nbManaWellTiles = itVault->second;
+        updateSeatMana(seat, nbManaWellTiles, timeSinceLastTurn);
         updateSeatAutoWorkers(seat, timeSinceLastTurn);
         updateSeatHeartDefense(seat);
 
@@ -1363,7 +1596,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     return timeTaken;
 }
 
-void GameMap::updateSeatMana(Seat* seat)
+void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn)
 {
     if (seat->getNbRooms(RoomType::dungeonTemple) == 0)
     {
@@ -1386,18 +1619,93 @@ void GameMap::updateSeatMana(Seat* seat)
         numHeartTiles += room->numCoveredTiles();
     }
 
-    seat->mManaIncomePerSecond = manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles);
-    seat->mManaUpkeepPerSecond = manaUpkeepPerSecond(seat->getNumCreaturesWorkers());
+    // The skirmish mana regeneration setting scales the income, not the worker upkeep
+    // Each claimed mana well tile adds its bonus on top of the claimed tile income
+    seat->mManaIncomePerSecond = (manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles)
+        + nbManaWellTiles * ConfigManager::getSingleton().getManaWellBonusPerTile())
+        * mManaRegenerationPercent / 100.0;
+    // The armed traps keep draining mana as well
+    double trapUpkeepPerSecond = 0.0;
+    for (Trap* trap : getTraps())
+    {
+        if (trap->getSeat() != seat)
+            continue;
+        trapUpkeepPerSecond += trap->getManaUpkeepPerSecond() * trap->getNbActivatedTiles();
+    }
+    seat->mManaUpkeepPerSecond = manaUpkeepPerSecond(seat->getNumCreaturesWorkers()) + trapUpkeepPerSecond;
     seat->mManaDelta = (seat->mManaIncomePerSecond - seat->mManaUpkeepPerSecond)
         / ODApplication::turnsPerSecond;
     seat->mMana += seat->mManaDelta;
 
-    // Worker upkeep never brings the mana below 0 and the stored mana has a maximum
+    // Upkeep never brings the mana below 0, running dry is what makes the workers pop
+    bool shortage = false;
     if (seat->mMana < 0.0)
+    {
         seat->mMana = 0.0;
+        shortage = true;
+    }
+    updateSeatWorkerPop(seat, shortage, timeSinceLastTurn);
     const double maxMana = ConfigManager::getSingleton().getMaxManaPerSeat();
     if (seat->mMana > maxMana)
         seat->mMana = maxMana;
+}
+
+void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLastTurn)
+{
+    if (!shortage || seat->getNumCreaturesWorkers() <= AUTO_WORKERS_TARGET)
+    {
+        // The mana covers the upkeep again or there is nothing left to pop
+        seat->mManaShortageSeconds = 0.0;
+        seat->mWorkerPopCountdown = -1.0;
+        return;
+    }
+
+    if (seat->mWorkerPopCountdown < 0.0)
+    {
+        seat->mManaShortageSeconds += timeSinceLastTurn;
+        if (seat->mManaShortageSeconds >= WORKER_MANA_EVALUATION_SECONDS)
+            seat->mWorkerPopCountdown = WORKER_POP_COUNTDOWN_SECONDS;
+        return;
+    }
+
+    seat->mWorkerPopCountdown -= timeSinceLastTurn;
+    if (seat->mWorkerPopCountdown > 0.0)
+        return;
+
+    // Every worker above the free four is lost
+    int numToPop = seat->getNumCreaturesWorkers() - AUTO_WORKERS_TARGET;
+    std::vector<Creature*> workers;
+    for (Creature* creature : mCreatures)
+    {
+        if (numToPop <= 0)
+            break;
+        if (creature->getSeat() != seat || !creature->isAlive())
+            continue;
+        if (!creature->getDefinition()->isWorker())
+            continue;
+        workers.push_back(creature);
+        --numToPop;
+    }
+    for (Creature* worker : workers)
+    {
+        worker->fireRemoveEntityToSeatsWithVision(this);
+        worker->removeEntityFromPositionTile();
+        worker->removeFromGameMap(this);
+        worker->deleteYourself(this, getNodeType());
+    }
+
+    if (seat->getPlayer() != nullptr)
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, seat->getPlayer());
+        serverNotification->mPacket
+            << "Your workers vanished because the mana ran out"
+            << EventShortNoticeType::majorGameEvent;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+
+    seat->mManaShortageSeconds = 0.0;
+    seat->mWorkerPopCountdown = -1.0;
 }
 
 void GameMap::updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn)
@@ -2333,7 +2641,12 @@ bool GameMap::withdrawFromTreasuries(int gold, Seat* seat)
 {
     // Check to see if there is enough gold available in all of the treasuries owned by the given seat.
     if (seat->getGold() < gold)
+    {
+        if(seat->getPlayer() != nullptr)
+            seat->getPlayer()->notifyNotEnoughGold();
+
         return false;
+    }
 
     // Loop over the treasuries withdrawing gold until the full amount has been withdrawn.
     int goldStillNeeded = gold;
@@ -2457,6 +2770,19 @@ void GameMap::addWinningSeat(Seat *s)
             ServerNotificationType::chatServer, player);
         serverNotification->mPacket << "You Won" << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
+
+        // The numbers of the level at the moment of the victory (the campaign menu shows them)
+        player->sendLevelStatistics(true);
+
+        // In a campaign, the progress is saved and the player is told how to go on
+        if(Campaign::getSingleton().onLevelWon())
+        {
+            ServerNotification* campaignNotification = new ServerNotification(
+                ServerNotificationType::chatServer, player);
+            campaignNotification->mPacket << "Campaign progress saved. Open the menu and quit to see the debriefing."
+                << EventShortNoticeType::majorGameEvent;
+            ODServer::getSingleton().queueServerNotification(campaignNotification);
+        }
     }
 
     std::vector<Seat*> seats;
@@ -2512,6 +2838,7 @@ bool GameMap::doFloodFill(Seat* seat, Tile* tile)
             case TileType::dirt:
             case TileType::gold:
             case TileType::rock:           
+            case TileType::manaWell:
             {
                 hasChanged |= tile->updateFloodFillFromTile(seat, FloodFillType::ground, neigh);
                 hasChanged |= tile->updateFloodFillFromTile(seat, FloodFillType::groundWater, neigh);
@@ -2708,6 +3035,7 @@ void GameMap::enableFloodFill()
                 {
                     if(((tile->getType() == TileType::dirt) ||
                         (tile->getType() == TileType::gold) ||
+                        (tile->getType() == TileType::manaWell) ||
                         (tile->getType() == TileType::rock)) &&
                        (tile->getFloodFillValue(rogueSeat, FloodFillType::ground) == Tile::NO_FLOODFILL))
                     {
@@ -3356,6 +3684,8 @@ const TileSetValue& GameMap::getMeshForTile(const Tile* tile)
 uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
 {
     uint32_t nbCreatures = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
+    if(mMaxCreaturesSetting > 0)
+        nbCreatures = mMaxCreaturesSetting;
 
     std::vector<const Room*> portals = getRoomsByTypeAndSeat(RoomType::portal, seat);
     for(const Room* room : portals)
@@ -3365,6 +3695,187 @@ uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
     }
 
     return std::min(nbCreatures, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
+}
+
+void GameMap::setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
+    uint32_t maxCreaturesSetting)
+{
+    mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, 10), 500);
+    mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, 10), 500);
+    mMaxCreaturesSetting = std::min<uint32_t>(maxCreaturesSetting, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
+}
+
+void GameMap::setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinutes, bool fogOfWar,
+    uint32_t heartDestroyedReward)
+{
+    // The game turn ranges from 25 % to 400 % of its default rate
+    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, 25), 400);
+    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, 9999);
+    mIsFOWActivated = fogOfWar;
+    mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, 2);
+}
+
+uint32_t GameMap::getCreatureClassLimit(const std::string& className) const
+{
+    std::map<std::string, uint32_t>::const_iterator it = mCreatureClassLimits.find(className);
+    if(it == mCreatureClassLimits.end())
+        return SKIRMISH_CREATURE_LIMIT_NONE;
+
+    return it->second;
+}
+
+void GameMap::setCreatureClassLimit(const std::string& className, uint32_t limit)
+{
+    if(limit >= SKIRMISH_CREATURE_LIMIT_NONE)
+        mCreatureClassLimits.erase(className);
+    else
+        mCreatureClassLimits[className] = limit;
+}
+
+const std::vector<GameMap::SkirmishItemState>& GameMap::getSkirmishSkillStates()
+{
+    if(!mSkirmishSkillStates.empty())
+        return mSkirmishSkillStates;
+
+    mSkirmishSkillStates.assign(static_cast<uint32_t>(SkillType::countSkill), SkirmishItemState::needsResearch);
+    // The level gives the choices shown first. They are read from the first seat that is configured
+    for(Seat* seat : mSeats)
+    {
+        if(seat->isRogueSeat())
+            continue;
+
+        for(SkillType skillType : seat->getSkillNotAllowed())
+            mSkirmishSkillStates[static_cast<uint32_t>(skillType)] = SkirmishItemState::notAvailable;
+        for(SkillType skillType : seat->getSkillDone())
+            mSkirmishSkillStates[static_cast<uint32_t>(skillType)] = SkirmishItemState::availableAtStart;
+
+        break;
+    }
+    mSkirmishSkillStatesLevel = mSkirmishSkillStates;
+    return mSkirmishSkillStates;
+}
+
+void GameMap::setSkirmishSkillState(SkillType type, SkirmishItemState state)
+{
+    if(type == SkillType::nullSkillType || type >= SkillType::countSkill)
+        return;
+    if(state == SkirmishItemState::unchosen)
+        return;
+
+    getSkirmishSkillStates();
+    mSkirmishSkillStates[static_cast<uint32_t>(type)] = state;
+}
+
+void GameMap::applySkirmishSkillStates()
+{
+    if(mSkirmishSkillStates.empty())
+        return;
+
+    for(Seat* seat : mSeats)
+    {
+        if(seat->isRogueSeat())
+            continue;
+
+        for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
+        {
+            // What the host did not change stays as the level defines it for each seat
+            if(mSkirmishSkillStates[i] == mSkirmishSkillStatesLevel[i])
+                continue;
+
+            seat->setSkillAvailability(static_cast<SkillType>(i),
+                mSkirmishSkillStates[i] != SkirmishItemState::notAvailable,
+                mSkirmishSkillStates[i] == SkirmishItemState::availableAtStart);
+        }
+    }
+}
+
+void GameMap::setScriptTimeLimit(int64_t seconds)
+{
+    if(seconds <= 0)
+    {
+        mLevelScript->setTimeLimitSeconds(LevelScript::TIME_LIMIT_REMOVED);
+        return;
+    }
+
+    int64_t elapsedSeconds = static_cast<int64_t>(static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond);
+    mLevelScript->setTimeLimitSeconds(elapsedSeconds + seconds);
+    // A new limit can run out again, even after an earlier one did
+    mGameDurationAnnounced = false;
+}
+
+void GameMap::sendTimeLimit(int32_t remainingSeconds)
+{
+    if(remainingSeconds == mTimeLimitSentSeconds)
+        return;
+
+    mTimeLimitSentSeconds = remainingSeconds;
+    for(Player* player : getPlayers())
+    {
+        if(!player->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::timeLimit, player);
+        serverNotification->mPacket << remainingSeconds;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+void GameMap::checkGameDuration()
+{
+    // The limit of a script action wins over the game duration of the game settings.
+    // Both count game time, not real time, so the game speed does not change them.
+    const int64_t scriptLimit = mLevelScript->getTimeLimitSeconds();
+    double endTurn = -1.0;
+    if(scriptLimit >= 0)
+        endTurn = static_cast<double>(scriptLimit) * ODApplication::turnsPerSecond;
+    else if((scriptLimit == LevelScript::TIME_LIMIT_NOT_SET) && (mGameDurationMinutes > 0))
+        endTurn = static_cast<double>(mGameDurationMinutes) * 60.0 * ODApplication::turnsPerSecond;
+
+    if(endTurn < 0.0)
+    {
+        sendTimeLimit(-1);
+        return;
+    }
+
+    double secondsLeft = (endTurn - static_cast<double>(mTurnNumber)) / ODApplication::turnsPerSecond;
+    sendTimeLimit(secondsLeft > 0.0 ? static_cast<int32_t>(std::ceil(secondsLeft)) : 0);
+
+    if(mGameDurationAnnounced)
+        return;
+
+    if(static_cast<double>(mTurnNumber) < endTurn)
+        return;
+
+    mGameDurationAnnounced = true;
+    for(Player* player : getPlayers())
+    {
+        if(!player->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, player);
+        if(scriptLimit >= 0)
+        {
+            serverNotification->mPacket << "Time is up! The time limit of this level has run out."
+                << EventShortNoticeType::majorGameEvent;
+        }
+        else
+        {
+            serverNotification->mPacket << "Time is up! The game time of " + Helper::toString(mGameDurationMinutes)
+                + " minutes has run out." << EventShortNoticeType::majorGameEvent;
+        }
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+
+    // When the time runs out every keeper loses, there is no winner
+    for(Seat* seat : mSeats)
+    {
+        if(seat->getPlayer() == nullptr)
+            continue;
+
+        seat->getPlayer()->notifyTimeUp();
+    }
 }
 
 void GameMap::playerSelects(std::vector<GameEntity*>& entities, int tileX1, int tileY1, int tileX2,

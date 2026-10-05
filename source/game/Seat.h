@@ -44,6 +44,7 @@ class Seat;
 class Tile;
 
 
+enum class GiftBoxType;
 enum class KeeperAIType;
 enum class RoomType;
 enum class SkillType;
@@ -131,6 +132,12 @@ public:
 
     inline bool isRogueSeat() const
     { return mId == 0; }
+
+    //! \brief The neutral seat and the hero seats do not pay mana when their traps fire: their traps are part
+    //! of the level and these seats have no mana income
+
+    inline bool isTrapManaFree() const
+    { return isRogueSeat() || (getFaction() == "Hero"); }
 
     inline SeatStatistics& getStatistics()
     { return mStatistics; }
@@ -235,13 +242,38 @@ public:
     bool canOwnedCreatureUseRoomFrom(const Seat* seat) const;
     bool canBuildingBeDestroyedBy(const Seat* seat) const;
 
+    //! \brief Server side. Gives this seat vision on the whole map for the rest of the game,
+    //! as done by a reveal map gift box
+    inline void revealMapPermanently()
+    { mIsMapRevealed = true; }
+
+    //! \brief Server side. Returns true if the map is revealed to this seat. Called once per turn
+    inline bool isMapRevealed() const
+    { return mIsMapRevealed; }
+
+    //! \brief Server side. Keeps a special box a worker delivered to the dungeon heart. The player
+    //! uses it later with the button of the special. The boxes are saved with the seat.
+    void addStoredSpecial(GiftBoxType type, uint32_t amount);
+
+    //! \brief Server side. Applies one stored special of the given type and removes it.
+    //! Returns false if the seat has none of that type.
+    bool useStoredSpecial(GiftBoxType type);
+
     void clearTilesWithVision();
+    //! \brief Gives this seat vision on the given tiles for the given number of turns (server side).
+    void revealTiles(const std::vector<Tile*>& tiles, uint32_t turns);
+    //! \brief Applies the vision granted by revealTiles. Must be called after the vision is cleared
+    //! and before the visible tiles are sent.
+    void applyRevealedTiles();
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);
     
     //! \brief Returns true if this seat can see the given tile and false otherwise
     bool hasVisionOnTile(Tile* tile);
+
+    //! \brief Returns true if this seat has been notified about the given tile at least once (server side)
+    bool hasSeenTile(Tile* tile);
 
     //! \brief Checks if the visible tiles seen by this seat have changed and notify
     //! the players if yes
@@ -281,13 +313,22 @@ public:
     //! otherwise
     bool isSkillDone(SkillType type) const;
 
+    //! \brief Sets how a skill is available before the game starts (skirmish Game Settings).
+    //! Not allowed skills cannot be researched, done skills are available from the start and
+    //! the others have to be researched.
+    void setSkillAvailability(SkillType type, bool allowed, bool done);
+
     uint32_t getSkillLevel(SkillType type) const;
     void setResearchLevels(const std::map<SkillType, uint32_t>& levels);
 
     //! \brief Called when the skill entity reaches its destination. From there, the
     //! skilled thing is available
-    //! Returns true if the type was inserted and false otherwise
-    bool addSkill(SkillType type);
+    //! Returns true if the type was inserted and false otherwise. The player is told about the new
+    //! skill unless notify is false (the caller then sends its own notice)
+    bool addSkill(SkillType type, bool notify = true);
+
+    //! \brief Returns true if the level does not allow the skill to be researched
+    bool isSkillNotAllowed(SkillType type) const;
 
     //! \brief Server side function. Called when a fresh grimoire is brought to the dungeon
     //! temple. When enough points are gathered, the corresponding skill will become available
@@ -380,6 +421,14 @@ private:
     //! creates for this seat. Server side only, not saved with the level.
     double mAutoWorkerTimer;
 
+    //! \brief Seconds the seat's mana has been too low to pay the upkeep of the workers
+    //! above the free four. Server side only, not saved with the level.
+    double mManaShortageSeconds;
+
+    //! \brief Seconds left until the workers above the free four pop, or a negative
+    //! value while that countdown is not running. Server side only, not saved with the level.
+    double mWorkerPopCountdown;
+
     //! \brief True while an enemy creature is within range of the seat's living heart.
     //! Server side only, not saved with the level.
     bool mHeartDefenceActive;
@@ -418,6 +467,9 @@ private:
     std::map<Tile*,TileStateNotified> mTilesStates;
     std::map<Tile*,TileStateNotified> mDraggableTilesStates;    
 
+    //! \brief Tiles revealed by an outside source (like a tortured creature) with the number of turns left.
+    std::vector<std::pair<Tile*, uint32_t> > mRevealedTiles;
+
     //! \brief The notified state of the tile, whether it belongs to the game map or to the
     //! draggable container, or nullptr if it belongs to neither. Never inserts anything:
     //! both maps are filled once, when their container is sized, and a tile missing from
@@ -433,6 +485,14 @@ private:
     uint32_t mTeamIndex;
 
     bool mIsDebuggingVision;
+
+    //! \brief True if the whole map is visible for the rest of the game. Only used on server
+    //! side and not saved: a reveal is lost when the game is saved and loaded
+    bool mIsMapRevealed;
+
+    //! \brief Server side. The stored special boxes (gift box type and amount), in the order received.
+    //! The counts per type are mirrored in SeatData::mStoredSpecials for the clients.
+    std::vector<std::pair<int32_t, uint32_t> > mStoredSpecialBoxes;
 
     //! \brief Counter for skill points
     int32_t mSkillPoints;

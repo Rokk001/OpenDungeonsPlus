@@ -8,6 +8,7 @@ source = (repo / 'source/render/RenderManager.cpp').read_text()
 method = source[source.index('void RenderManager::rrDrawTilePreview('):
                 source.index('\nvoid RenderManager::entitySlapped(')]
 code = r'''
+#include <functional>
 #include <vector>
 #include <string>
 #include <cmath>

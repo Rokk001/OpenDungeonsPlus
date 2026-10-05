@@ -71,6 +71,23 @@ void pickPair(Rng& rng, const std::vector<std::string>& specific, const std::vec
     result[1] = pickDifferent(rng, all, result[0], fallback);
 }
 
+//! Gender index of a creature: 0 female, 1 male, 2 none. Only the creature name and the weights of the group count
+uint32_t makeGenderIndex(const NameGroup& group, const std::string& creatureName)
+{
+    Rng genderRng = makeFieldRng(creatureName, "gender");
+    uint32_t totalWeight = group.mGenderWeights[0] + group.mGenderWeights[1] + group.mGenderWeights[2];
+    uint32_t genderIndex = 2;
+    if(totalWeight > 0)
+    {
+        uint32_t roll = genderRng.below(totalWeight);
+        if(roll < group.mGenderWeights[0])
+            genderIndex = 0;
+        else if(roll < group.mGenderWeights[0] + group.mGenderWeights[1])
+            genderIndex = 1;
+    }
+    return genderIndex;
+}
+
 std::string numberToString(int32_t value)
 {
     std::ostringstream stream;
@@ -78,6 +95,13 @@ std::string numberToString(int32_t value)
     return stream.str();
 }
 
+}
+
+std::string SocialGenerator::makeGender(const SocialData& data, const std::string& creatureName,
+    const std::string& className)
+{
+    const char* genderNames[3] = {"Female", "Male", ""};
+    return genderNames[makeGenderIndex(data.getGroupForClass(className), creatureName)];
 }
 
 CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::string& creatureName,
@@ -90,17 +114,7 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     profile.mGroupName = group.mName;
 
     // Gender
-    Rng genderRng = makeFieldRng(creatureName, "gender");
-    uint32_t totalWeight = group.mGenderWeights[0] + group.mGenderWeights[1] + group.mGenderWeights[2];
-    uint32_t genderIndex = 2;
-    if(totalWeight > 0)
-    {
-        uint32_t roll = genderRng.below(totalWeight);
-        if(roll < group.mGenderWeights[0])
-            genderIndex = 0;
-        else if(roll < group.mGenderWeights[0] + group.mGenderWeights[1])
-            genderIndex = 1;
-    }
+    uint32_t genderIndex = makeGenderIndex(group, creatureName);
     const char* genderNames[3] = {"Female", "Male", ""};
     profile.mGender = genderNames[genderIndex];
 
@@ -321,7 +335,8 @@ std::string SocialGenerator::postTemplate(const SocialData& data, const std::str
 }
 
 std::string SocialGenerator::renderPost(const SocialData& data, const CreatureProfile& profile, bool isWorker,
-    const std::string& category, uint32_t variant, int32_t level, const std::string& room)
+    const std::string& category, uint32_t variant, int32_t level, const std::string& room,
+    const std::string& friendName)
 {
     std::string text = postTemplate(data, profile.mCreatureName, profile.mClassName, isWorker, category, variant);
     if(text.empty())
@@ -341,6 +356,7 @@ std::string SocialGenerator::renderPost(const SocialData& data, const CreaturePr
         slots["level"] = levelStream.str();
     }
     slots["room"] = room;
+    slots["friend"] = friendName;
     return renderText(text, slots);
 }
 

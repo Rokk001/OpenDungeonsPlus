@@ -47,8 +47,9 @@ struct MissileOneHit:GameEntity {
 std::vector<MissileOneHit*> MissileOneHit::created;
 const Ogre::Real CANNON_MISSILE_HEIGHT=.3f;
 struct CreatureSkillMissileLaunch {
- std::string mMissileMesh,mMissilePartScript="MissileMagic";double mMissileSpeed=3,mPhyAtk=0,mPhyAtkPerLvl=0,mMagAtk=13,mMagAtkPerLvl=.25,mEleAtkPerLvl=0;
+ std::string mMissileMesh,mMissilePartScript="MissileMagic";double mMissileSpeed=3,mPhyAtk=0,mPhyAtkPerLvl=0,mMagAtk=13,mMagAtkPerLvl=.25,mEleAtk=0,mEleAtkPerLvl=0;
  bool tryUseFight(GameMap&,Creature*,float,GameEntity*,Tile*,bool,bool)const;
+ MissileOneHit* createMissile(GameMap&,Creature*,const Ogre::Vector3&,double,double,double,GameEntity*,bool,bool)const;
 };
 bool CreatureSkillMissileLaunch::tryUseFight(LAUNCH
 int main(){int checks=0,failures=0;auto check=[&](bool v,const char* why){++checks;if(!v){++failures;std::cout<<"FAIL "<<why<<'\n';}};

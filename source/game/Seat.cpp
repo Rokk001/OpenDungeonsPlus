@@ -19,15 +19,19 @@
 
 #include "ai/KeeperAIType.h"
 #include "entities/Building.h"
+#include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/GiftBoxEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "gamemap/DraggableTileContainer.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "goals/Goal.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -42,8 +46,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/NameAliases.h"
 #include "utils/Random.h"
 
+#include <algorithm>
 #include <istream>
 #include <ostream>
 
@@ -73,11 +79,14 @@ Seat::Seat(GameMap* gameMap) :
     mPlayer(nullptr),
     mGoldMined(0),
     mAutoWorkerTimer(0.0),
+    mManaShortageSeconds(0.0),
+    mWorkerPopCountdown(-1.0),
     mHeartDefenceActive(false),
     mHeartDefenceHeartDamaged(false),
     mDefaultWorkerClass(nullptr),
     mTeamIndex(0),
     mIsDebuggingVision(false),
+    mIsMapRevealed(false),
     mSkillPoints(0),
     mCurrentSkill(nullptr),
     mGuiSkillNeedsRefresh(false),
@@ -277,6 +286,33 @@ void Seat::clearTilesWithVision()
     
 }
 
+void Seat::revealTiles(const std::vector<Tile*>& tiles, uint32_t turns)
+{
+    for(Tile* tile : tiles)
+        mRevealedTiles.push_back(std::pair<Tile*, uint32_t>(tile, turns));
+}
+
+void Seat::applyRevealedTiles()
+{
+    std::vector<std::pair<Tile*, uint32_t> >::iterator it = mRevealedTiles.begin();
+    while(it != mRevealedTiles.end())
+    {
+        it->first->notifyVision(this);
+        if(it->second <= 1)
+            it = mRevealedTiles.erase(it);
+        else
+        {
+            --it->second;
+            ++it;
+        }
+    }
+}
+
+bool Seat::hasSeenTile(Tile* tile)
+{
+    return getTileStateNotified(tile) != nullptr;
+}
+
 void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 {
     if(mPlayer == nullptr)
@@ -457,7 +493,32 @@ void Seat::initSeat()
     std::vector<SkillType> skills = mSkillDone;
     mSkillDone.clear();
     setSkillsDone(skills);
-    skills = mSkillPending;
+    // Pending skills whose dependencies are neither done nor pending before them cannot be researched
+    // (for example a level that lists a skill but not the skills it builds upon). They are left out
+    // here, so that setSkillTree does not reject the whole list because of them
+    std::vector<SkillType> pendingToCheck = mSkillPending;
+    std::vector<SkillType> skillsDoneInTree = mSkillDone;
+    skills.clear();
+    bool progress = true;
+    while(progress)
+    {
+        progress = false;
+        for(std::vector<SkillType>::iterator it = pendingToCheck.begin(); it != pendingToCheck.end(); ++it)
+        {
+            const Skill* skill = SkillManager::getSkill(*it);
+            if((skill != nullptr) && !isSkillDone(*it) && !skill->canBeSkilled(skillsDoneInTree))
+                continue;
+
+            skills.push_back(*it);
+            skillsDoneInTree.push_back(*it);
+            pendingToCheck.erase(it);
+            progress = true;
+            break;
+        }
+    }
+    for(SkillType skillType : pendingToCheck)
+        OD_LOG_INF("Seat " + Helper::toString(mId) + ": pending skill " + Skills::toString(skillType) + " skipped, missing dependencies");
+
     mSkillPending.clear();
     setSkillTree(skills);
 
@@ -946,6 +1007,9 @@ void Seat::computeSeatBeginTurn()
             }
             ++mNbRooms[index];
         }
+
+        if(getNbRooms(RoomType::library) > 0)
+            mHadLibrary = true;
     }
 }
 
@@ -1133,6 +1197,32 @@ bool Seat::importSeatFromStream(std::istream& is)
         if(!(is >> str) || str != "[/ResearchProgress]" || !(is >> str))
             return false;
     }
+    // Optional: the seat once owned a library (keeps the lost library rule after a load)
+    if(str == "[HadLibrary]")
+    {
+        if(!(is >> mHadLibrary) || !(is >> str))
+            return false;
+    }
+    // Optional: the special boxes the player stored, as "type amount" pairs
+    if(str == "[StoredSpecials]")
+    {
+        uint32_t count;
+        if(!(is >> count))
+            return false;
+        for(uint32_t index = 0; index < count; ++index)
+        {
+            int32_t type;
+            uint32_t amount;
+            if(!(is >> type >> amount) || (type <= static_cast<int32_t>(GiftBoxType::skill)) ||
+               (type >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+            {
+                return false;
+            }
+            addStoredSpecial(static_cast<GiftBoxType>(type), amount);
+        }
+        if(!(is >> str) || str != "[/StoredSpecials]" || !(is >> str))
+            return false;
+    }
     if(str != "[SkillNotAllowed]")
     {
         OD_LOG_INF("WARNING: expected [SkillNotAllowed] and read " + str);
@@ -1189,6 +1279,8 @@ bool Seat::importSeatFromStream(std::istream& is)
 
             // Completed unlocks can have their next upgrade queued.
             if(getSkillLevel(type) >= 3)
+                break;
+            if(Skills::isRewardSkill(type))
                 break;
             if(std::find(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), type) != mSkillNotAllowed.end())
                 break;
@@ -1368,6 +1460,17 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         os << Skills::toString(type) << "\t" << getSkillLevel(type) << "\n";
     os << "[/ResearchProgress]\n";
 
+    if(mHadLibrary)
+        os << "[HadLibrary]\t1\n";
+
+    if(!mStoredSpecialBoxes.empty())
+    {
+        os << "[StoredSpecials]\n" << mStoredSpecialBoxes.size() << "\n";
+        for(const std::pair<int32_t, uint32_t>& special : mStoredSpecialBoxes)
+            os << special.first << "\t" << special.second << "\n";
+        os << "[/StoredSpecials]\n";
+    }
+
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)
     {
@@ -1458,7 +1561,7 @@ void Seat::exportTilesVisualInitialStates(TileVisual tileVisual, std::ostream& o
     os << "[/" + Tile::tileVisualToString(tileVisual) + "]" << std::endl;
 }
 
-bool Seat::addSkill(SkillType type)
+bool Seat::addSkill(SkillType type, bool notify)
 {
     if(std::find(mSkillDone.begin(), mSkillDone.end(), type) != mSkillDone.end())
         return false;
@@ -1474,7 +1577,8 @@ bool Seat::addSkill(SkillType type)
     }
 
     // Tells the player a new room/trap/spell is available.
-    if((getPlayer() != nullptr) &&
+    if(notify &&
+       (getPlayer() != nullptr) &&
        getPlayer()->getIsHuman() &&
        !getPlayer()->getHasLost())
     {
@@ -1487,6 +1591,22 @@ bool Seat::addSkill(SkillType type)
     }
 
     return true;
+}
+
+bool Seat::isSkillNotAllowed(SkillType type) const
+{
+    return std::find(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), type) != mSkillNotAllowed.end();
+}
+
+void Seat::setSkillAvailability(SkillType type, bool allowed, bool done)
+{
+    mSkillDone.erase(std::remove(mSkillDone.begin(), mSkillDone.end(), type), mSkillDone.end());
+    mSkillNotAllowed.erase(std::remove(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), type), mSkillNotAllowed.end());
+    mSkillPending.erase(std::remove(mSkillPending.begin(), mSkillPending.end(), type), mSkillPending.end());
+    if(!allowed)
+        mSkillNotAllowed.push_back(type);
+    else if(done)
+        mSkillDone.push_back(type);
 }
 
 bool Seat::isSkillDone(SkillType type) const
@@ -1559,6 +1679,39 @@ SkillType Seat::getFirstSkillPending() const
         return SkillType::nullSkillType;
 
     return mSkillPending.at(0);
+}
+
+void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
+{
+    uint32_t index = static_cast<uint32_t>(type);
+    mStoredSpecialBoxes.push_back(std::pair<int32_t, uint32_t>(static_cast<int32_t>(type), amount));
+    if(mStoredSpecials.size() <= index)
+        mStoredSpecials.resize(static_cast<uint32_t>(GiftBoxType::nbTypes), 0);
+
+    ++mStoredSpecials[index];
+}
+
+bool Seat::useStoredSpecial(GiftBoxType type)
+{
+    std::vector<std::pair<int32_t, uint32_t> >::iterator it = mStoredSpecialBoxes.begin();
+    while((it != mStoredSpecialBoxes.end()) && (it->first != static_cast<int32_t>(type)))
+        ++it;
+
+    if(it == mStoredSpecialBoxes.end())
+        return false;
+
+    uint32_t amount = it->second;
+    mStoredSpecialBoxes.erase(it);
+    --mStoredSpecials[static_cast<uint32_t>(type)];
+
+    // Workers and left over gold appear at the dungeon heart
+    Tile* tile = nullptr;
+    std::vector<Room*> hearts = mGameMap->getRoomsByTypeAndSeat(RoomType::dungeonTemple, this);
+    if(!hearts.empty())
+        tile = hearts[0]->getCentralTile();
+
+    GiftBoxBonus::applyBonus(mGameMap, this, type, amount, tile);
+    return true;
 }
 
 void Seat::addSkillPoints(int32_t points)
@@ -1703,6 +1856,8 @@ void Seat::setSkillTree(const std::vector<SkillType>& skills)
         {
             if(getSkillLevel(skillType) >= 3 || std::find(seen.begin(), seen.end(), skillType) != seen.end())
                 return;
+            if(Skills::isRewardSkill(skillType))
+                return;
             seen.push_back(skillType);
             // We check if the skill is allowed
             if(std::find(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), skillType) != mSkillNotAllowed.end())
@@ -1790,7 +1945,13 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
     }
     
     jj->second.mTileVisual = tile->getTileVisual();
-    
+    // A building that is still hidden from this seat looks like a wall to it
+    if((tile->getCoveringBuilding() != nullptr) &&
+       tile->getCoveringBuilding()->appearsAsWallForSeat(tile, this))
+    {
+        jj->second.mTileVisual = TileVisual::claimedFull;
+    }
+
     switch(jj->second.mTileVisual)
     {
         case TileVisual::claimedFull:
@@ -1809,6 +1970,8 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::arenaRoom:
         case TileVisual::casinoRoom:
         case TileVisual::tortureRoom:         
+        case TileVisual::guardRoom:
+        case TileVisual::templeRoom:
             if(tile->getSeat() == nullptr)
             {
                 OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -1927,6 +2090,8 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
             case TileVisual::arenaRoom:
             case TileVisual::casinoRoom:
             case TileVisual::tortureRoom:
+            case TileVisual::guardRoom:
+            case TileVisual::templeRoom:
                 
                 tileSeatId = tileState.mSeatIdOwner;
                 break;
@@ -2049,6 +2214,8 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
         case TileVisual::arenaRoom:
         case TileVisual::casinoRoom:
         case TileVisual::tortureRoom:        
+        case TileVisual::guardRoom:
+        case TileVisual::templeRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:
@@ -2056,6 +2223,7 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
         case TileVisual::waterGround:
         case TileVisual::rockGround:
         case TileVisual::gemGround:
+        case TileVisual::manaWellGround:
         case TileVisual::rockFull:
             return false;
         case TileVisual::goldFull:
@@ -2090,6 +2258,24 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
         // Only check for fighter creatures.
         if (!def.first || def.first->isWorker())
             continue;
+
+        // A level script can keep a creature class away from this seat
+        if(gameMap.getLevelScript().isCreatureBlocked(getId(), def.first->getClassName()))
+            continue;
+
+        // The skirmish settings can limit the number of creatures of one class
+        const uint32_t classLimit = gameMap.getCreatureClassLimit(def.first->getClassName());
+        if(classLimit < GameMap::SKIRMISH_CREATURE_LIMIT_NONE)
+        {
+            uint32_t nbCreaturesOfClass = 0;
+            for(const Creature* creature : gameMap.getCreatures())
+            {
+                if((creature->getSeat() == this) && (creature->getDefinition()->getClassName() == def.first->getClassName()) && creature->isAlive())
+                    ++nbCreaturesOfClass;
+            }
+            if(nbCreaturesOfClass >= classLimit)
+                continue;
+        }
 
         const std::vector<const SpawnCondition*>& conditions = configManager.getCreatureSpawnConditions(def.first);
         int32_t nbPointsConditions = 0;
@@ -2130,6 +2316,8 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
             std::vector<Seat*> seats;
             seats.push_back(this);
             mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNew);
+            if(getPlayer() != nullptr)
+                getPlayer()->notifyNewCreatureType(def.first->getClassName());
             return def.first;
         }
         nbPointsConditions += configManager.getBaseSpawnPoint();
@@ -2155,16 +2343,39 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
     return nullptr;
 }
 
+//! \brief Returns the tag with the current tile visual name when it holds an older one, e.g. "[/oldName]" -> "[/newName]"
+static std::string resolveTileVisualTag(const std::string& tag)
+{
+    if((tag.size() < 3) || (tag[0] != '[') || (tag[tag.size() - 1] != ']'))
+        return tag;
+
+    bool isEndTag = (tag[1] == '/');
+    std::string name = tag.substr(isEndTag ? 2 : 1, tag.size() - (isEndTag ? 3 : 2));
+    return std::string(isEndTag ? "[/" : "[") + NameAliases::resolve(name) + "]";
+}
+
 int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
 {
     // We check if it is the Seat end tag
     std::string str;
+    std::streampos position = is.tellg();
     OD_ASSERT_TRUE(is >> str);
     if (str == "[/Seat]")
         return 0;
 
+    str = resolveTileVisualTag(str);
+
     if(str != "[" + Tile::tileVisualToString(tileVisual) + "]")
     {
+        // Saves from before a tile visual existed have no block for it: nothing to read.
+        // A wrong tag still fails later, when the marked tiles block is expected.
+        if(position != std::streampos(-1))
+        {
+            is.seekg(position);
+            return 1;
+        }
+
+
         OD_LOG_INF("WARNING: expected [" + Tile::tileVisualToString(tileVisual) + "] and read " + str);
         return -1;
     }
@@ -2173,7 +2384,7 @@ int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
     while(true)
     {
         OD_ASSERT_TRUE(is >> str);
-        if(str == "[/" + Tile::tileVisualToString(tileVisual) + "]")
+        if(resolveTileVisualTag(str) == "[/" + Tile::tileVisualToString(tileVisual) + "]")
             break;
 
         std::pair<int, int> tilecoords;

@@ -22,6 +22,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureMoodValues.h"
 #include "game/Seat.h"
+#include "gamemap/GameMap.h"
 #include "render/MovableTextOverlay.h"
 #include "render/RenderManager.h"
 #include "utils/Helper.h"
@@ -49,7 +50,9 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mLevel(0),
     mTimeDisplayStatus(0),
     mStatus(0),
-    mOverlayIds(std::vector<uint32_t>(static_cast<uint32_t>(CreatureOverlays::nbCreatureOverlays), 0))
+    mOverlayIds(std::vector<uint32_t>(static_cast<uint32_t>(CreatureOverlays::nbCreatureOverlays), 0)),
+    mEmoteCreated(false),
+    mEmoteId(0)
 {
     mMovableTextOverlay = new MovableTextOverlay(creature->getName(),
         ent, cam);
@@ -100,6 +103,31 @@ void CreatureOverlayStatus::displayHealthOverlay(Ogre::Real timeToDisplay)
     mMovableTextOverlay->displayOverlay(healthId, timeToDisplay);
 }
 
+void CreatureOverlayStatus::showEmote(const std::string& materialName, Ogre::Real timeToDisplay)
+{
+    if(!mEmoteCreated)
+    {
+        // The material is given at once: it has to be a valid one when the overlay is created
+        mEmoteId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 16, Ogre::ColourValue::White, materialName);
+        mMovableTextOverlay->forceTextArea(mEmoteId, 32, 32);
+        mEmoteCreated = true;
+    }
+    else
+    {
+        mMovableTextOverlay->setMaterialName(mEmoteId, materialName);
+    }
+
+    mMovableTextOverlay->displayOverlay(mEmoteId, timeToDisplay);
+}
+
+void CreatureOverlayStatus::hideEmote()
+{
+    if(!mEmoteCreated)
+        return;
+
+    mMovableTextOverlay->displayOverlay(mEmoteId, 0);
+}
+
 void CreatureOverlayStatus::updateHealth()
 {
     // We adapt the material
@@ -148,7 +176,8 @@ void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
     else
         mRecoveryElapsed += timeSincelastFrame;
     // Smooth only within the reported turn; never announce readiness before the server.
-    const double fraction = std::min(0.999, mRecoveryElapsed * ODApplication::turnsPerSecond);
+    const double fraction = std::min(0.999, mRecoveryElapsed * ODApplication::turnsPerSecond
+        * mCreature->getGameMap()->getGameSpeedFactor());
     const uint32_t frame = known && duration > 0 && remaining > 0 ?
         1 + static_cast<uint32_t>(62.0 * (duration - remaining + fraction) / duration) : 0;
     mMovableTextOverlay->setAtlasFrame(recoveryId, frame, 8);

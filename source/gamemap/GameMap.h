@@ -19,9 +19,14 @@
 #define GAMEMAP_H
 
 #include "entities/GameEntity.h"
+#include "gamemap/SandboxMode.h"
 #include "gamemap/SelectionEntityWanted.h"
 #include "gamemap/TileContainer.h"
 #include "ai/AIManager.h"
+
+#include <memory>
+
+class LevelScript;
 
 #ifdef __MINGW32__
 #ifndef mode_t
@@ -40,6 +45,7 @@
 class Building;
 class Tile;
 class Creature;
+class CreatureRelationships;
 class GameEntity;
 class Player;
 class Trap;
@@ -61,6 +67,7 @@ enum class GameEntityType;
 enum class FloodFillType;
 enum class KeeperAIType;
 enum class RoomType;
+enum class SkillType;
 enum class SpellType;
 enum class TrapType;
 enum class TileVisual;
@@ -153,6 +160,33 @@ public:
 
     inline bool getIsFOWActivated() const
     { return mIsFOWActivated; }
+
+    //! \brief True if the creature relationships option is switched on for this game. When it
+    //! is off, nothing about relationships exists and no relationship code does anything.
+    inline bool isRelationshipsEnabled() const
+    { return mCreatureRelationships != nullptr; }
+
+    //! \brief The relationships of this game or nullptr if the option is off.
+    inline CreatureRelationships* getCreatureRelationships() const
+    { return mCreatureRelationships; }
+
+    //! \brief Switches the creature relationships option on (an empty table is created with the
+    //! values of config/relationships.cfg) or off (the table is deleted).
+    void setRelationshipsEnabled(bool enabled);
+
+    //! \brief Gender ("Male", "Female" or empty) of the creature with the given name. Used by the
+    //! relationships to decide which pairs can become lovers.
+    std::string getCreatureGender(const std::string& creatureName) const;
+
+    //! \brief Server side. Sends the tier changes recorded since the last call to the keepers
+    //! the creatures belong to.
+    void sendRelationshipTierChanges();
+
+    //! \brief Server side: every few turns, nemesis pairs that are close and idle may start a brawl.
+    void checkRelationshipBrawls();
+
+    //! \brief Server side. Sends every tier that is not neutral to the player of the given seat.
+    void sendRelationshipTiers(Seat* seat);
 
     //! \brief Returns a vector containing all the creatures controlled by the given seat.
     std::vector<Creature*> getCreaturesByAlliedSeat(const Seat* seat) const;
@@ -302,6 +336,10 @@ public:
     { return mGoalsForAllSeats; }
     void clearGoalsForAllSeats();
 
+    //! \brief The triggers and actions of the level ([Triggers] section of the level file)
+    LevelScript& getLevelScript();
+    const LevelScript& getLevelScript() const;
+
     bool withdrawFromTreasuries(int gold, Seat* seat);
 
     inline const std::string& getLevelFileName() const
@@ -333,6 +371,17 @@ public:
 
     inline void setLevelFightMusicFile(const std::string& levelFightMusicFile)
     { mMapInfoFightMusicFile = levelFightMusicFile; }
+
+    //! \brief A sandbox level has no goals to win or lose. The player builds freely and uses the
+    //! sandbox panel to call heroes.
+    inline bool isSandbox() const
+    { return mIsSandbox; }
+
+    inline void setSandbox(bool isSandbox)
+    { mIsSandbox = isSandbox; }
+
+    inline SandboxMode& getSandboxMode()
+    { return mSandboxMode; }
 
     std::string getGoalsStringForPlayer(Player* player);
 
@@ -458,6 +507,79 @@ public:
     Creature* getWorkerForPathFinding(Seat* seat);
 
     uint32_t getMaxNumberCreatures(Seat* seat) const;
+
+    //! \brief Skirmish game settings, chosen by the host in the seat configuration. They are
+    //! only used on the server game map. The percentages scale the base value (100 = unchanged).
+    inline uint32_t getGoldDensityPercent() const
+    { return mGoldDensityPercent; }
+
+    inline uint32_t getManaRegenerationPercent() const
+    { return mManaRegenerationPercent; }
+
+    //! \brief 0 means that the default from the configuration is used
+    inline uint32_t getMaxCreaturesSetting() const
+    { return mMaxCreaturesSetting; }
+
+    void setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
+        uint32_t maxCreaturesSetting);
+
+    //! \brief Availability of a room, spell, trap or door in a skirmish game (Game Settings page)
+    enum class SkirmishItemState : uint32_t
+    {
+        notAvailable,
+        availableAtStart,
+        needsResearch,
+        //! Only used in the packets: the page has not chosen a value, the server value is kept
+        unchosen
+    };
+
+    //! \brief Highest limit that can be set for one creature type. It means no limit
+    static const uint32_t SKIRMISH_CREATURE_LIMIT_NONE = 32;
+
+    //! \brief Sent instead of a setting that the Game Settings page has not shown yet
+    static const uint32_t SKIRMISH_SETTING_UNCHOSEN = 0xFFFFFFFF;
+
+    //! \brief Game speed is a percentage of the default turn rate, duration is in minutes (0 = no limit)
+    inline uint32_t getGameSpeedPercent() const
+    { return mGameSpeedPercent; }
+
+    //! \brief The factor applied to the real time speed of the game (1.0 = default speed)
+    inline double getGameSpeedFactor() const
+    { return static_cast<double>(mGameSpeedPercent) / 100.0; }
+
+    inline uint32_t getGameDurationMinutes() const
+    { return mGameDurationMinutes; }
+
+    //! \brief What the keeper that destroys a dungeon heart receives from the owner of the heart:
+    //! 0 = mana, 1 = mana and specials, 2 = mana, rooms and land
+    inline uint32_t getHeartDestroyedReward() const
+    { return mHeartDestroyedReward; }
+
+    void setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinutes, bool fogOfWar,
+        uint32_t heartDestroyedReward);
+
+    //! \brief Maximum number of creatures of the given class a seat may own.
+    //! SKIRMISH_CREATURE_LIMIT_NONE if unlimited
+    uint32_t getCreatureClassLimit(const std::string& className) const;
+    void setCreatureClassLimit(const std::string& className, uint32_t limit);
+
+    //! \brief The state of every skill chosen on the Game Settings page. The index is the SkillType. It is
+    //! filled from the level the first time it is needed.
+    const std::vector<SkirmishItemState>& getSkirmishSkillStates();
+    void setSkirmishSkillState(SkillType type, SkirmishItemState state);
+
+    //! \brief Applies the states that differ from the level to every seat. To be called before the seats are initialized.
+    void applySkirmishSkillStates();
+
+    //! \brief Called on the server each turn: announces the end of the game time once
+    void checkGameDuration();
+
+    //! \brief Level script action: the time runs out after that many seconds from now, for every
+    //! keeper (0 removes any time limit, also the one of the game settings). Server only.
+    void setScriptTimeLimit(int64_t seconds);
+
+    //! \brief Tells the human players how many seconds are left (-1: there is no time limit)
+    void sendTimeLimit(int32_t remainingSeconds);
 
     void logFloodFileTiles();
     void consoleSetCreatureDestination(const std::string& creatureName, int x, int y);
@@ -606,6 +728,19 @@ private:
     
     NodeType mNodeType;
 
+    uint32_t mGoldDensityPercent;
+    uint32_t mManaRegenerationPercent;
+    uint32_t mMaxCreaturesSetting;
+    uint32_t mGameSpeedPercent;
+    uint32_t mGameDurationMinutes;
+    uint32_t mHeartDestroyedReward;
+    bool mGameDurationAnnounced;
+    //! \brief Last remaining time sent to the players, -1 when none was sent or there is no limit
+    int32_t mTimeLimitSentSeconds;
+    std::map<std::string, uint32_t> mCreatureClassLimits;
+    std::vector<SkirmishItemState> mSkirmishSkillStates;
+    std::vector<SkirmishItemState> mSkirmishSkillStatesLevel;
+
     //! \brief the Local player reference. The local player will also be in the player list so this pointer
     //! should not be deleted as it will be handled like every other in the list.
     Player* mLocalPlayer;
@@ -637,6 +772,8 @@ private:
     std::string mMapInfoDescription;
     std::string mMapInfoMusicFile;
     std::string mMapInfoFightMusicFile;
+    bool mIsSandbox;
+    SandboxMode mSandboxMode;
 
     std::vector<Creature*> mCreatures;
 
@@ -660,6 +797,9 @@ private:
     //! \brief Common player goals
     std::vector<std::unique_ptr<Goal>> mGoalsForAllSeats;
 
+    //! \brief Level triggers and their state (flags, triggers already fired)
+    std::unique_ptr<LevelScript> mLevelScript;
+
     //! \brief Tells whether the map color flood filling is enabled.
     bool mFloodFillEnabled;
 
@@ -678,6 +818,9 @@ private:
     //! AI Handling manager
     AIManager mAiManager;
 
+    //! Relationships between the creatures. nullptr when the option is off.
+    CreatureRelationships* mCreatureRelationships;
+
     //! Map tileset
     const TileSet* mTileSet;
     const HighMap* mHighMap;
@@ -692,7 +835,14 @@ private:
 
     //! \brief Applies the per-second mana income and worker upkeep of one seat for the current
     //! turn. A seat without a living dungeon heart gains and spends nothing.
-    void updateSeatMana(Seat* seat);
+    //! \param nbManaWellTiles Number of mana well tiles the seat has claimed.
+    void updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn);
+
+    //! \brief Pops the workers above the free four when the seat's mana stays too low to
+    //! pay their upkeep: after a period of shortage a countdown starts, and when it ends
+    //! with the shortage still there, every worker above the free four is lost.
+    //! \param shortage True if the mana could not pay the upkeep this turn.
+    void updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLastTurn);
 
     //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
     //! until the seat has four workers. A seat without a living dungeon heart creates none.

@@ -80,6 +80,17 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
         moodValue += mood->computeMood(creature);
     }
 
+    // The casino can raise or lower the mood of any creature
+    moodValue += Helper::round(creature.getCasinoMood());
+    // Praying in a temple makes the creature feel better, whatever its other moods are
+    moodValue += creature.getPrayerRelief();
+    // Make Happy and Make Unhappy specials
+    moodValue += creature.getSpecialMood();
+    // Fights in the arena
+    moodValue += Helper::round(creature.getPitMood());
+    // Creatures of the same keeper that it hates (only with relationships on)
+    moodValue += creature.getRelationshipMood();
+
     return moodValue;
 }
 

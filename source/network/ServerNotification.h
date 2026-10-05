@@ -122,6 +122,16 @@ enum class ServerNotificationType
     // Owner-only reply to a production query or reorder request.
     trapProductionQueue,
 
+    //! The team of a seat changed (an alliance of a level script): + int32_t seatId, int32_t teamId
+    seatTeam,
+    //! Score and room timer of a sandbox level: + int32_t score, int32_t target (0: none), string name of the
+    //! next room that becomes available (empty: none), int32_t seconds until it, uint32_t number of bonus
+    //! objectives, then per bonus: string text, int32_t points, bool awarded.
+    sandboxStatus,
+    //! The score of a sandbox realm reached its target: + string name of the realm, string level file of the
+    //! next realm (empty: none), string text.
+    sandboxRealmComplete,
+
     // Owner-only start of the defeat sequence for a defeated human player:
     // + int32_t conquerorSeatId (-1 if unknown), int32_t heartTileX, int32_t heartTileY (-1/-1 if unknown).
     // Appended last so that no existing numeric value changes.
@@ -139,7 +149,29 @@ enum class ServerNotificationType
     // Sent to a human owner when the fraction changed by at least one percentage point, when the
     // heart is destroyed, and once when the game starts or is loaded.
     // Appended last so that no existing numeric value changes.
-    heartHealth
+    heartHealth,
+
+    //! \brief Answer to askCasinoPayout: tile and payout level of the casino on it
+    // Appended last so that no existing numeric value changes.
+    casinoPayout,
+    //! The player now possesses the creature: + string creatureName
+    possessionStart,
+    //! The player no longer possesses a creature
+    possessionEnd,
+    //! Answer to editorRegionEdit, all the region markers of the level script:
+    //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
+    editorRegionData,
+    //! Owner-only tier of a creature pair that changed (or the current tier, sent once when a
+    //! client joins or a game is loaded): + string creatureA, string creatureB, int32_t tier
+    //! (RelationshipTier), bool replay (true: replay of the current tier, no Dungeonbook post).
+    //! Only sent when the creature relationships option is on.
+    relationshipTier,
+    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
+    timeLimit,
+    //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
+    //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
+    //! Appended last so that no existing numeric value changes.
+    chickenKindChanged
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

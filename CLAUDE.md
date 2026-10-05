@@ -21,3 +21,33 @@ These instructions apply to every change made to this repository with an AI assi
   with `m`, `OD_LOG_*` for logging and `OD_ASSERT_TRUE_MSG` for invariants.
 - Keep changes focused on what was asked; do not reformat or restyle code that the
   change does not need to touch.
+
+## Protected content
+
+- Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
+  commercial games. Only general ideas and generic terms may be used; everything else is
+  created independently.
+- Never use distinctive names from other games. Use the alias table in
+  `docs/development/NAME-ALIASES.md` as the reference for our own names.
+- Never cite another game, its publisher or any outside source for rules, values or names
+  in code, comments, docs, commits, branch names or PR texts.
+- Data from commercial games used for local testing stays outside the repository
+  (`..\OpenDungeonsPlus-private`) and is never committed.
+- Every new asset needs a `CREDITS` entry with source and licence in the same commit;
+  AI-generated assets are marked as such.
+- `scripts/check-protected-content.py` checks pushes against these rules. Install it once
+  per clone as the `pre-push` hook (a small wrapper in the shared hooks directory that
+  calls the script); it needs a local term list and blocks the push if that list is missing.
+
+## Load tests
+
+- Every integration runs exactly one load test: start the game, load one level and let it
+  run briefly. If level files were changed in the integration, only those levels are loaded
+  in addition. There are no sample levels and no run over all maps.
+- The full load test of all levels runs only when the owner explicitly asks for it. If an
+  integration changes code or shared files, the integration agent may propose the full run
+  to the main session, but never starts it itself.
+- `integration/all` is pushed once the release build, all check scripts and this load test
+  are green.
+- Check scripts, load tests and the pre-push hook are never removed, weakened or bypassed.
+  If a check measures wrongly, correct the check openly and report it to the owner first.

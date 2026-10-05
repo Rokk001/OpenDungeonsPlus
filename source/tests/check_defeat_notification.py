@@ -1,5 +1,6 @@
 """Exercise the production Player::notifyNoMoreDungeonTemple defeat notification without a game."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -55,8 +56,11 @@ struct Player {
  Seat* getSeat(){return mSeat;}bool getIsHuman()const{return mIsHuman;}
  RECORD
  void notifyNoMoreDungeonTemple();
+ void notifyDefeat(bool hasTeamLost);
+ void sendLevelStatistics(bool levelWon);
 };
-struct Seat {int id,team;Player* player=nullptr;SeatStatistics stats;
+struct Seat {int id,team;Player* player=nullptr;SeatStatistics stats;double mana=0;
+ double getMana()const{return mana;}void addMana(double value){mana+=value;}
  bool isRogueSeat()const{return id==0;}const SeatStatistics& getStatistics()const{return stats;}
  int getId()const{return id;}Player* getPlayer(){return player;}bool isAlliedSeat(Seat* s){return s&&team==s->team;}};
 struct GameMapMock {int64_t turn=0;int64_t getTurnNumber()const{return turn;}std::vector<Seat*> seats;std::vector<Room*> temples;int sounds=0;
@@ -108,6 +112,8 @@ int main(){int checks=0,failures=0;
 '''
 record = function(header, 'inline void recordHeartDestroyed(')
 method = function(source, 'void Player::notifyNoMoreDungeonTemple(')
+method += function(source, 'void Player::notifyDefeat(')
+method += function(source, 'void Player::sendLevelStatistics(')
 probe = probe.replace('RECORD', record).replace('METHOD', method)
 
 # Static wiring checks on the production sources (client handler and enum position).
@@ -118,8 +124,9 @@ assert 'startDefeatSequence(conquerorSeatId, heartTileX, heartTileY)' in handler
 assert 'ModeManager::GAME' in handler
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'playerDefeated,' in enum_body and 'levelStatistics,' in enum_body and enum_body.rstrip().endswith('heartHealth')
-print('WIRING OK: enum value is not moved (only levelStatistics was appended after it), client handler reads 3 int32 and guards on GAME mode')
+assert 'playerDefeated,' in enum_body and 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*$', enum_body, re.M)[-2:] == ['timeLimit', 'chickenKindChanged']
+assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
+print('WIRING OK: enum value is not moved (only later values were appended after it), client handler reads 3 int32 and guards on GAME mode')
 
 with tempfile.TemporaryDirectory(prefix='odp-defeat-notification-') as directory:
     work = Path(directory)

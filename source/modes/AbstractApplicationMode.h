@@ -60,7 +60,19 @@ public:
     {
         ButtonPressedCreatureWorker,
         ButtonPressedCreatureFighter,
-        ButtonPressedMapLight
+        ButtonPressedMapLight,
+        ButtonPressedBoxMana,
+        ButtonPressedBoxGold,
+        ButtonPressedBoxRevealMap,
+        ButtonPressedBoxLevelUp,
+        ButtonPressedBoxHealAll,
+        ButtonPressedBoxMakeSafe,
+        ButtonPressedBoxWeakenWalls,
+        ButtonPressedBoxStunImps,
+        ButtonPressedBoxReceiveImps,
+        ButtonPressedBoxMakeHappy,
+        ButtonPressedBoxMakeUnhappy,
+        ButtonPressedBoxKillCreatures
     };
 
     virtual void notifyGuiAction(GuiAction guiAction)

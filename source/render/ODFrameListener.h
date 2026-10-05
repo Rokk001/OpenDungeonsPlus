@@ -41,9 +41,11 @@
 
 
 class ChatMessage;
+class CreatureReactions;
 class GameMap;
 class Gui;
 class MovableTextOverlay;
+class RoomAmbience;
 class ModeManager;
 class RenderManager;
 class RenderSceneMenu;
@@ -94,6 +96,14 @@ public:
     //! window destroys the mode manager that frameStarted() relies on.
     inline bool isExitRequested() const
     { return mExitRequested; }
+
+    //! \brief Level that the main menu starts again as soon as it is shown. Empty when
+    //! nothing is pending. Set by the in-game "Restart Level" button.
+    inline const std::string& getPendingRestartLevel() const
+    { return mPendingRestartLevel; }
+
+    inline void setPendingRestartLevel(const std::string& level)
+    { mPendingRestartLevel = level; }
 
     inline float getEventMaxTimeDisplay() const
     { return mEventMaxTimeDisplay; }
@@ -239,6 +249,8 @@ private:
     Gui*                 mGui;
 
     std::unique_ptr<GameMap>       mGameMap;
+    std::unique_ptr<CreatureReactions> mCreatureReactions;
+    std::unique_ptr<RoomAmbience>  mRoomAmbience;
     std::unique_ptr<ModeManager>   mModeManager;
     std::unique_ptr<RenderSceneMenu>   mMainScene;
 
@@ -250,6 +262,9 @@ private:
 
     //! \brief To see if the frameListener wants to exit
     bool mExitRequested;
+
+    //! \brief See getPendingRestartLevel()
+    std::string mPendingRestartLevel;
 
     //! \brief The Camera manager
     CameraManager mCameraManager;

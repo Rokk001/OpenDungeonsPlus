@@ -29,7 +29,9 @@
 #include "ODApplication.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
 #include "network/ODClient.h"
@@ -46,6 +48,7 @@
 #include <cmath>
 #include <istream>
 #include <ostream>
+#include <set>
 
 const std::string RoomDungeonTempleName = "DungeonTemple";
 const std::string RoomDungeonTempleNameDisplay = "Dungeon temple room";
@@ -54,6 +57,163 @@ const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
 namespace
 {
+//! \brief Distance in tiles from the heart centre to each of the four special objects
+const int HEART_REWARD_SPECIAL_DISTANCE = 2;
+
+//! \brief A dance rate large enough to hand a room tile over at once
+const double HEART_REWARD_TAKE_AT_ONCE = 1000000.0;
+
+//! \brief A special that can drop when a heart is destroyed, with its weight in the draw
+struct HeartRewardSpecial
+{
+    GiftBoxType mType;
+    int mWeight;
+};
+
+//! \brief The twelve specials picked from when a heart is destroyed. The chance of a special is its weight
+//! divided by the sum of all weights (100): plain supplies (gold, mana, map view) are the most common,
+//! effects that change the whole dungeon at once (level up, kill creatures, stun workers) are rare.
+const HeartRewardSpecial HEART_REWARD_SPECIALS[] =
+{
+    { GiftBoxType::gold, 15 },
+    { GiftBoxType::mana, 14 },
+    { GiftBoxType::revealMap, 12 },
+    { GiftBoxType::receiveImps, 10 },
+    { GiftBoxType::makeHappy, 9 },
+    { GiftBoxType::healAll, 8 },
+    { GiftBoxType::makeSafe, 7 },
+    { GiftBoxType::weakenWalls, 7 },
+    { GiftBoxType::levelUp, 6 },
+    { GiftBoxType::stunImps, 6 },
+    { GiftBoxType::makeUnhappy, 4 },
+    { GiftBoxType::killCreatures, 2 }
+};
+const int NB_HEART_REWARD_SPECIALS = sizeof(HEART_REWARD_SPECIALS) / sizeof(HEART_REWARD_SPECIALS[0]);
+
+//! \brief Draws one special of the reward pool by its weight
+GiftBoxType pickHeartRewardSpecial()
+{
+    int totalWeight = 0;
+    for(int i = 0; i < NB_HEART_REWARD_SPECIALS; ++i)
+        totalWeight += HEART_REWARD_SPECIALS[i].mWeight;
+
+    int roll = Random::Int(0, totalWeight - 1);
+    for(int i = 0; i < NB_HEART_REWARD_SPECIALS; ++i)
+    {
+        if(roll < HEART_REWARD_SPECIALS[i].mWeight)
+            return HEART_REWARD_SPECIALS[i].mType;
+
+        roll -= HEART_REWARD_SPECIALS[i].mWeight;
+    }
+    return HEART_REWARD_SPECIALS[NB_HEART_REWARD_SPECIALS - 1].mType;
+}
+
+//! \brief Puts four gift boxes of a random type 2 tiles north, east, south and west of the heart
+void placeHeartRewardSpecials(GameMap* gameMap, Seat* winnerSeat, Tile* heartTile)
+{
+    if(heartTile == nullptr)
+        return;
+
+    const int offsetX[4] = {0, HEART_REWARD_SPECIAL_DISTANCE, 0, -HEART_REWARD_SPECIAL_DISTANCE};
+    const int offsetY[4] = {-HEART_REWARD_SPECIAL_DISTANCE, 0, HEART_REWARD_SPECIAL_DISTANCE, 0};
+    for(int i = 0; i < 4; ++i)
+    {
+        Tile* tile = gameMap->getTile(heartTile->getX() + offsetX[i], heartTile->getY() + offsetY[i]);
+        if(tile == nullptr || tile->isFullTile())
+            continue;
+
+        GiftBoxType type = pickHeartRewardSpecial();
+        GiftBoxBonus* giftBox = new GiftBoxBonus(gameMap, "HeartSpecial", type, GiftBoxBonus::getDefaultAmount(type));
+        giftBox->setSeat(winnerSeat);
+        giftBox->addToGameMap();
+        giftBox->createMesh();
+        giftBox->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+            static_cast<Ogre::Real>(tile->getY()), 0.0f));
+    }
+}
+
+//! \brief Every room of the loser except the dungeon heart changes to the winner, using the room's own
+//! ownership change, then every other tile of the loser without a building becomes the winner's.
+void giveHeartRewardRoomsAndLand(GameMap* gameMap, Seat* loserSeat, Seat* winnerSeat)
+{
+    // A room can be cut in two by the hand over, so we search again until none is left
+    std::set<Room*> notTaken;
+    for(int nbRounds = 0; nbRounds < 10000; ++nbRounds)
+    {
+        Room* room = nullptr;
+        for(Room* candidate : gameMap->getRooms())
+        {
+            if(candidate->getSeat() != loserSeat || candidate->getType() == RoomType::dungeonTemple)
+                continue;
+            if(candidate->numCoveredTiles() == 0 || notTaken.count(candidate) > 0)
+                continue;
+
+            room = candidate;
+            break;
+        }
+        if(room == nullptr)
+            break;
+
+        std::vector<Tile*> tiles;
+        for(uint32_t i = 0; i < room->numCoveredTiles(); ++i)
+            tiles.push_back(room->getCoveredTile(i));
+        notTaken.insert(room);
+        for(Tile* tile : tiles)
+        {
+            // The room may be gone or changed after earlier tiles, we only act on tiles still in it
+            if(tile->getCoveringBuilding() != room || room->getSeat() != loserSeat)
+                break;
+
+            room->claimForSeat(winnerSeat, tile, HEART_REWARD_TAKE_AT_ONCE);
+        }
+    }
+
+    for(int x = 0; x < gameMap->getMapSizeX(); ++x)
+    {
+        for(int y = 0; y < gameMap->getMapSizeY(); ++y)
+        {
+            Tile* tile = gameMap->getTile(x, y);
+            if(tile == nullptr || tile->getSeat() != loserSeat || tile->getCoveringBuilding() != nullptr)
+                continue;
+
+            loserSeat->notifyTileClaimedByEnemy(tile);
+            tile->claimTile(winnerSeat);
+        }
+    }
+}
+
+//! \brief The keeper that destroys a dungeon heart receives all the mana stored by the owner of
+//! the heart (up to the maximum). The skirmish setting can add four specials around the heart or the
+//! rooms and the land of the owner.
+void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSeat, Tile* heartTile)
+{
+    if(winnerSeat == nullptr || winnerSeat == loserSeat || winnerSeat->isRogueSeat())
+        return;
+
+    const int mana = static_cast<int>(loserSeat->getMana());
+    if(mana > 0)
+    {
+        gameMap->addManaToSeat(mana, winnerSeat->getId());
+        gameMap->addManaToSeat(-mana, loserSeat->getId());
+    }
+
+    const uint32_t reward = gameMap->getHeartDestroyedReward();
+    if(reward == 1)
+        placeHeartRewardSpecials(gameMap, winnerSeat, heartTile);
+    else if(reward >= 2)
+        giveHeartRewardRoomsAndLand(gameMap, loserSeat, winnerSeat);
+
+    Player* winner = winnerSeat->getPlayer();
+    if(winner != nullptr && winner->getIsHuman())
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, winner);
+        serverNotification->mPacket << "The enemy dungeon heart is destroyed, you gain " + Helper::toString(mana)
+            + " mana" << EventShortNoticeType::majorGameEvent;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
 //! \brief The heart's three health-tier mesh variants. Each has its own rig and
 //! a baked "Pulse" animation running at a tier-specific speed (see assets-src/DungeonHeartObject.blend).
 //! Every mesh also holds the temple's pedestal the heart stands on (see tools/heart-on-temple).
@@ -291,6 +451,8 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
                 heartTile != nullptr ? heartTile->getX() : -1,
                 heartTile != nullptr ? heartTile->getY() : -1);
         }
+        if(!getGameMap()->isInEditorMode())
+            giveDestroyedHeartReward(getGameMap(), getSeat(), attacker->getSeat(), mTempleObject->getPositionTile());
         fireEntityDead();
     }
     else if(!mCriticalWarningSent && !getGameMap()->isInEditorMode()
@@ -730,6 +892,11 @@ void RoomDungeonTemple::checkHeartHealthTier()
     if(mTempleObject == nullptr)
         return;
 
+    // A destroyed heart is only waiting for its object to be released (see doUpkeep): do not
+    // swap it for the critical-tier object in the meantime
+    if(getHP(nullptr) <= 0.0)
+        return;
+
     HeartHealthTier tier = computeHeartHealthTier();
     if(tier == mCurrentHeartTier)
         return;
@@ -810,9 +977,24 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
     {
         case GameEntityType::giftBoxEntity:
         {
-            // We apply the gift box effect
             GiftBoxEntity* giftBox = static_cast<GiftBoxEntity*>(carriedEntity);
-            giftBox->applyEffect();
+            Player* owner = getSeat()->getPlayer();
+            if((giftBox->getGiftBoxType() != GiftBoxType::skill) && (owner != nullptr) && owner->getIsHuman())
+            {
+                // The special is kept as a button, the player decides when to use it
+                GiftBoxBonus* bonus = static_cast<GiftBoxBonus*>(giftBox);
+                getSeat()->addStoredSpecial(bonus->getGiftBoxType(), bonus->getAmount());
+                ServerNotification* serverNotification = new ServerNotification(
+                    ServerNotificationType::chatServer, owner);
+                std::string msg = "You received the special: " + GiftBoxBonus::getDisplayName(bonus->getGiftBoxType()) + ".";
+                serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
+                ODServer::getSingleton().queueServerNotification(serverNotification);
+            }
+            else
+            {
+                // We apply the gift box effect
+                giftBox->applyEffect();
+            }
             giftBox->removeEntityFromPositionTile();
             giftBox->removeFromGameMap();
             giftBox->deleteYourself();

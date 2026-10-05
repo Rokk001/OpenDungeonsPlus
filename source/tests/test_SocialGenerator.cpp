@@ -141,6 +141,24 @@ BOOST_AUTO_TEST_CASE(test_SocialDeterminism)
     BOOST_CHECK(first != other);
 }
 
+BOOST_AUTO_TEST_CASE(test_SocialGenderMatchesProfile)
+{
+    social::SocialData data;
+    data.loadFromDirectory(getConfigDirectory());
+    const char* classes[3] = {"Orc", "Kobold", "CaveHornet"};
+    for(uint32_t c = 0; c < 3; ++c)
+    {
+        for(uint32_t i = 0; i < 40; ++i)
+        {
+            std::ostringstream name;
+            name << classes[c] << i;
+            social::CreatureProfile profile = social::SocialGenerator::makeProfile(data, name.str(), classes[c],
+                isWorkerClass(classes[c]));
+            BOOST_CHECK_EQUAL(social::SocialGenerator::makeGender(data, name.str(), classes[c]), profile.mGender);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(test_SocialNoEmptyField)
 {
     social::SocialData data;
@@ -245,6 +263,21 @@ BOOST_AUTO_TEST_CASE(test_SocialMoodAndPosts)
     BOOST_CHECK(!social::SocialGenerator::postTemplate(data, "Orc17", "Orc", false, "eat", 3).empty());
     BOOST_CHECK_EQUAL(social::SocialGenerator::postTemplate(data, "Orc17", "Orc", false, "eat", 3),
         social::SocialGenerator::postTemplate(data, "Orc17", "Orc", false, "eat", 3));
+}
+
+BOOST_AUTO_TEST_CASE(test_SocialRelationshipPosts)
+{
+    social::SocialData data;
+    data.loadFromDirectory(getConfigDirectory());
+    social::CreatureProfile profile = social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false);
+    const char* categories[] = {"friendship", "hatred", "nemesis", "breakup", "couple", "splitup"};
+    for(std::size_t i = 0; i < sizeof(categories) / sizeof(categories[0]); ++i)
+    {
+        std::string text = social::SocialGenerator::renderPost(data, profile, false, categories[i], 1, 0, "",
+            "Gruk Stonefist");
+        BOOST_CHECK_MESSAGE(!text.empty(), categories[i]);
+        BOOST_CHECK_MESSAGE(text.find("Gruk Stonefist") != std::string::npos, text);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_SocialFallbacks)

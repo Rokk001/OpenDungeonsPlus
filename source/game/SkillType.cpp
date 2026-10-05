@@ -19,12 +19,14 @@
 
 #include "network/ODPacket.h"
 #include "utils/Helper.h"
+#include "utils/NameAliases.h"
 
 namespace Skills
 {
 
-SkillType fromString(const std::string& type)
+SkillType fromString(const std::string& typeName)
 {
+    const std::string type = NameAliases::resolve(typeName);
     for(uint32_t i = 0; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
     {
         SkillType skillType = static_cast<SkillType>(i);
@@ -63,6 +65,10 @@ std::string toString(SkillType type)
             return "roomLibrary";
         case SkillType::roomPrison:
             return "roomPrison";
+        case SkillType::roomGuardRoom:
+            return "roomGuardRoom";
+        case SkillType::roomTemple:
+            return "roomTemple";
         case SkillType::roomTorture:
             return "roomTorture";
         case SkillType::roomTrainingHall:
@@ -93,10 +99,52 @@ std::string toString(SkillType type)
             return "trapCannon";
         case SkillType::trapSpike:
             return "trapSpike";
+        case SkillType::trapAlarm:
+            return "trapAlarm";
         case SkillType::trapDoorWooden:
             return "trapDoorWooden";
+        case SkillType::trapDoorIronbound:
+            return "trapDoorIronbound";
+        case SkillType::trapDoorSteel:
+            return "trapDoorSteel";
+        case SkillType::trapDoorBarricade:
+            return "trapDoorBarricade";
+        case SkillType::trapFear:
+            return "trapFear";
+        case SkillType::trapGas:
+            return "trapGas";
+        case SkillType::trapLightning:
+            return "trapLightning";
+        case SkillType::trapFireburst:
+            return "trapFireburst";
+        case SkillType::trapWatchBanner:
+            return "trapWatchBanner";
+        case SkillType::trapDoorSecret:
+            return "trapDoorSecret";
+        case SkillType::trapDoorRuned:
+            return "trapDoorRuned";
         case SkillType::spellEyeEvil:
             return "spellEyeEvil";
+        case SkillType::spellCreateGold:
+            return "spellCreateGold";
+        case SkillType::spellLightning:
+            return "spellLightning";
+        case SkillType::spellTremor:
+            return "spellTremor";
+        case SkillType::spellDefector:
+            return "spellDefector";
+        case SkillType::spellHexenHen:
+            return "spellHexenHen";
+        case SkillType::spellInferno:
+            return "spellInferno";
+        case SkillType::spellSummonChampion:
+            return "spellSummonChampion";
+        case SkillType::spellPossess:
+            return "spellPossess";
+        case SkillType::trapTrigger:
+            return "trapTrigger";
+        case SkillType::trapFreeze:
+            return "trapFreeze";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
@@ -132,6 +180,10 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Treasury Room";
         case SkillType::roomPrison:
             return "The Prison Room";
+        case SkillType::roomGuardRoom:
+            return "The Guard Room";
+        case SkillType::roomTemple:
+            return "The Temple";
         case SkillType::roomTorture:
             return "The Torture Room";
         case SkillType::spellCallToWar:
@@ -158,13 +210,60 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Cannon Trap";
         case SkillType::trapSpike:
             return "The Spike Trap";
+        case SkillType::trapAlarm:
+            return "The Alarm Trap";
         case SkillType::trapDoorWooden:
             return "The Wooden Door";
+        case SkillType::trapDoorIronbound:
+            return "The Ironbound Door";
+        case SkillType::trapDoorSteel:
+            return "The Steel Door";
+        case SkillType::trapDoorBarricade:
+            return "The Barricade";
+        case SkillType::trapFear:
+            return "The Fear Trap";
+        case SkillType::trapGas:
+            return "The Gas Trap";
+        case SkillType::trapLightning:
+            return "The Lightning Trap";
+        case SkillType::trapFireburst:
+            return "The Fireburst Trap";
+        case SkillType::trapWatchBanner:
+            return "The Watch Banner";
+        case SkillType::trapDoorSecret:
+            return "The Secret Door";
+        case SkillType::trapDoorRuned:
+            return "The Runed Door";
         case SkillType::spellEyeEvil:
             return "The 'Eye of evil' spell";
+        case SkillType::spellCreateGold:
+            return "The 'Create Gold' Spell";
+        case SkillType::spellLightning:
+            return "The 'Lightning' Spell";
+        case SkillType::spellTremor:
+            return "The 'Tremor' Spell";
+        case SkillType::spellDefector:
+            return "The 'Defector' Spell";
+        case SkillType::spellHexenHen:
+            return "The 'Hexen Hen' Spell";
+        case SkillType::spellInferno:
+            return "The 'Inferno' Spell";
+        case SkillType::spellPossess:
+            return "The 'Possess' spell";
+        case SkillType::spellSummonChampion:
+            return "The 'Summon Champion' spell";
+        case SkillType::trapTrigger:
+            return "The Trigger Trap";
+        case SkillType::trapFreeze:
+            return "The Freeze Trap";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
+}
+
+bool isRewardSkill(SkillType type)
+{
+    return (type == SkillType::spellSummonChampion);
 }
 }
 

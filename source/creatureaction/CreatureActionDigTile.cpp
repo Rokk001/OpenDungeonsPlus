@@ -117,9 +117,12 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             case TileType::gold:
             {
                 static const double digCoefGold = ConfigManager::getSingleton().getDigCoefGold();
-                double tempDouble = digCoefGold * amountDug;
+                double tempDouble = digCoefGold * amountDug * creature.getGameMap()->getGoldDensityPercent() / 100.0;
                 creature.addGoldCarried(static_cast<int>(tempDouble));
                 creature.getSeat()->addGoldMined(static_cast<int>(tempDouble));
+                if(tileDig.getFullness() <= 0.0)
+                    ++creature.getSeat()->getStatistics().mGoldTilesMined;
+
                 // Receive experience for digging gold
                 creature.receiveExp(creature.getDigRate() / 20.0);
                 break;

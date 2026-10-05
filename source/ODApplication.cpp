@@ -37,6 +37,7 @@
 #include "utils/LogSinkOgre.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 
 #include <OgreLogManager.h>
 #include <OgreRenderWindow.h>
@@ -60,6 +61,7 @@
 #endif /* OGRE_PLATFORM == OGRE_PLATFORM_WIN32 */
 #endif /* OD_USE_SFML_WINDOW */
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 #include <string>
@@ -83,7 +85,22 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
 
     try
     {
-        if(resMgr.isServerMode())
+        if(!resMgr.getRunLevel().empty())
+        {
+            boost::filesystem::path levelPath = boost::filesystem::absolute(boost::filesystem::path(resMgr.getRunLevel()));
+            RunLevelTest::configure(levelPath.generic_string(), resMgr.getRunLevelSeconds());
+            if(resMgr.getRunLevelSeconds() <= 0)
+                RunLevelTest::fail(RunLevelTest::codeUsage, "usage error: --seconds must be greater than 0");
+            else if(!boost::filesystem::exists(levelPath))
+                RunLevelTest::fail(RunLevelTest::codeLoadError, "load error: level file not found");
+            else
+            {
+                startClient();
+                if(!RunLevelTest::isFinished())
+                    RunLevelTest::fail(RunLevelTest::codeRunError, "run error: the game ended without a result");
+            }
+        }
+        else if(resMgr.isServerMode())
             startServer();
         else
             startClient();
@@ -284,7 +301,11 @@ void ODApplication::startClient()
         renderWindow, &overlaySystem, &gui);
 
     ogreRoot.addFrameListener(&frameListener);
-    
+
+    // Automated level load test: the main menu starts this level as soon as it opens
+    if(RunLevelTest::isActive())
+        frameListener.setPendingRestartLevel(RunLevelTest::getLevelFile());
+
 #ifdef OD_USE_SFML_WINDOW
     bool running = true;
     while(running)
@@ -306,6 +327,8 @@ void ODApplication::startClient()
                 frameListener.getModeManager()->getInputManager().handleSFMLEvent(event);
             }
         }
+        if(RunLevelTest::isFinished())
+            frameListener.requestExit();
         sfmlWindow.clear();
         // If renderOneFrame returns false, it indicates that an exit has been requested
         running = ogreRoot.renderOneFrame();
@@ -320,6 +343,9 @@ void ODApplication::startClient()
     while (true)
     {
         Ogre::WindowEventUtilities::messagePump();
+
+        if(RunLevelTest::isFinished())
+            frameListener.requestExit();
 
         // Closing the window destroys the mode manager from within the pump above, so
         // bail out here rather than rendering a frame that would still use it.

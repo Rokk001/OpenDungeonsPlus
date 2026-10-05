@@ -23,6 +23,11 @@
             <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
             <Property name="Text" value="Load Skirmish" />
         </Window>
+        <Window type="OD/MenuTextButton" name="StartSandboxButton" >
+            <Property name="Font" value="MedievalSharp-12" />
+            <Property name="Area" value="{{0.5,-160},{0.5,104},{0.5,160},{0.5,140}}" />
+            <Property name="Text" value="Sandbox" />
+        </Window>
         <Window type="OD/MenuSymbolButton" name="BackButton" >
             <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />

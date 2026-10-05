@@ -22,10 +22,12 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "entities/TreasuryObject.h"
 #include "game/SkillManager.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDungeonTemple.h"
@@ -67,6 +69,12 @@ const float CREATURE_CANNOT_FIND_BED_TIME_COUNT = 30.0f;
 //! \brief The number of seconds the local player will not be notified again if a creature cannot find place in a dormitory
 const float CREATURE_CANNOT_FIND_FOOD_TIME_COUNT = 30.0f;
 
+//! \brief The number of seconds the local player will not be told again that gold is missing
+const float NOT_ENOUGH_GOLD_TIME_COUNT = 10.0f;
+
+//! \brief The number of seconds the local player will not be told again that a creature has died
+const float CREATURE_KILLED_TIME_COUNT = 15.0f;
+
 Player::Player(GameMap* gameMap, int32_t id) :
     mId(id),
     mGameMap(gameMap),
@@ -77,6 +85,8 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mNoTreasuryAvailableTime(0.0f),
     mCreatureCannotFindBed(0.0f),
     mCreatureCannotFindFood(0.0f),
+    mNotEnoughGoldTime(0.0f),
+    mCreatureKilledTime(0.0f),
     mHasLost(false),
     mConquerorSeatId(-1),
     mDefeatHeartTileX(-1),
@@ -282,6 +292,14 @@ void Player::pickUpEntity(GameEntity *entity)
     }
 
     OD_LOG_INF("player seatId=" + Helper::toString(getSeat()->getId()) + " picked up " + entity->getName());
+
+    // A reaction on the creature has to end before it changes its parent node and its size
+    if(!mGameMap->isServerGameMap() && (CreatureReactions::getSingletonPtr() != nullptr) &&
+       (entity->getObjectType() == GameEntityType::creature))
+    {
+        CreatureReactions::getSingleton().endForCreature(static_cast<Creature*>(entity));
+    }
+
     entity->pickup();
 
     // Start tracking this creature as being in this player's hand
@@ -299,6 +317,10 @@ void Player::pickUpEntity(GameEntity *entity)
         return;
     }
     RenderManager::getSingleton().rrPickUpEntity(entity, this);
+
+    // The creature in the hand shows what it thinks of it
+    if((CreatureReactions::getSingletonPtr() != nullptr) && (entity->getObjectType() == GameEntityType::creature))
+        CreatureReactions::getSingleton().noteHandPicked(static_cast<Creature*>(entity));
 }
 
 
@@ -347,6 +369,9 @@ void Player::dropHand(Tile *t, unsigned int index)
         if(redemWorkerInHeart(entity, t))
             return;
 
+        if(entity->getObjectType() == GameEntityType::treasuryObject)
+            static_cast<TreasuryObject*>(entity)->setDropSeat(getSeat());
+
         entity->drop(pos);
         entity->fireDropEntity(this, t);
         if(!mGameMap->isInEditorMode() && entity->getObjectType() == GameEntityType::creature)
@@ -359,9 +384,18 @@ void Player::dropHand(Tile *t, unsigned int index)
         return;
     }
 
+    // A reaction on the creature has to end before it changes its parent node and its size
+    if((CreatureReactions::getSingletonPtr() != nullptr) && (entity->getObjectType() == GameEntityType::creature))
+        CreatureReactions::getSingleton().endForCreature(static_cast<Creature*>(entity));
+
     entity->correctDropPosition(pos);
     OD_LOG_INF("player seatId=" + Helper::toString(getSeat()->getId()) + " drop " + entity->getName() + " on tile=" + Tile::displayAsString(t));
     entity->drop(pos);
+
+    // The creature that takes what the keeper dropped can show its joy
+    if((this == mGameMap->getLocalPlayer()) && (CreatureReactions::getSingletonPtr() != nullptr))
+        CreatureReactions::getSingleton().noteHandDrop(entity, t);
+
     // If this is the result of another player dropping the creature it is currently not visible so we need to create a mesh for it
     //cout << "\nthis:  " << this << "\nme:  " << gameMap->getLocalPlayer() << endl;
     //cout.flush();
@@ -372,6 +406,10 @@ void Player::dropHand(Tile *t, unsigned int index)
     }
     // Send a render request to rearrange the creatures in the hand to move them all forward 1 place
     RenderManager::getSingleton().rrDropHand(entity, this);
+
+    // The creature lands and shows how it took it
+    if((CreatureReactions::getSingletonPtr() != nullptr) && (entity->getObjectType() == GameEntityType::creature))
+        CreatureReactions::getSingleton().noteHandDropped(static_cast<Creature*>(entity));
 }
 
 void Player::removeEntityFromHand(GameEntity* entity)
@@ -507,6 +545,23 @@ void Player::notifyNoMoreDungeonTemple()
         }
     }
 
+    notifyDefeat(hasTeamLost);
+}
+
+void Player::notifyTimeUp()
+{
+    if(mHasLost)
+        return;
+
+    mHasLost = true;
+    OD_LOG_INF("Player seatId=" + Helper::toString(getSeat()->getId()) + " lost: game time is up");
+
+    // No heart was destroyed: no conqueror, no mana transfer, and the whole team loses with the player
+    notifyDefeat(true);
+}
+
+void Player::notifyDefeat(bool hasTeamLost)
+{
     if(hasTeamLost)
     {
         // This message will be sent in 1v1 or multiplayer so it should not talk about team. If we want to be
@@ -572,30 +627,34 @@ void Player::notifyNoMoreDungeonTemple()
         serverNotification->mPacket << mConquerorSeatId << mDefeatHeartTileX << mDefeatHeartTileY;
         ODServer::getSingleton().queueServerNotification(serverNotification);
 
-        // Snapshot of the debriefing counters of every seat with a player (not the rogue seat)
-        std::vector<Seat*> statisticsSeats;
-        for(Seat* seat : mGameMap->getSeats())
-        {
-            if(seat->isRogueSeat() || (seat->getPlayer() == nullptr))
-                continue;
-
-            statisticsSeats.push_back(seat);
-        }
-
-        serverNotification = new ServerNotification(ServerNotificationType::levelStatistics, this);
-        int32_t elapsedSeconds = static_cast<int32_t>(mGameMap->getTurnNumber() / ODApplication::turnsPerSecond);
-        bool levelWon = false;
-        serverNotification->mPacket << elapsedSeconds << levelWon << static_cast<int32_t>(statisticsSeats.size());
-        for(Seat* seat : statisticsSeats)
-        {
-            const SeatStatistics& statistics = seat->getStatistics();
-            serverNotification->mPacket << static_cast<int32_t>(seat->getId());
-            serverNotification->mPacket << statistics.mKeepersDefeated << statistics.mCreaturesKilled
-                << statistics.mHeroesDestroyed << statistics.mRoomsCaptured << statistics.mItemsMade
-                << statistics.mCreaturesConverted;
-        }
-        ODServer::getSingleton().queueServerNotification(serverNotification);
+        sendLevelStatistics(false);
     }
+}
+
+void Player::sendLevelStatistics(bool levelWon)
+{
+    // Snapshot of the debriefing counters of every seat with a player (not the rogue seat)
+    std::vector<Seat*> statisticsSeats;
+    for(Seat* seat : mGameMap->getSeats())
+    {
+        if(seat->isRogueSeat() || (seat->getPlayer() == nullptr))
+            continue;
+
+        statisticsSeats.push_back(seat);
+    }
+
+    ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::levelStatistics, this);
+    int32_t elapsedSeconds = static_cast<int32_t>(mGameMap->getTurnNumber() / ODApplication::turnsPerSecond);
+    serverNotification->mPacket << elapsedSeconds << levelWon << static_cast<int32_t>(statisticsSeats.size());
+    for(Seat* seat : statisticsSeats)
+    {
+        const SeatStatistics& statistics = seat->getStatistics();
+        serverNotification->mPacket << static_cast<int32_t>(seat->getId());
+        serverNotification->mPacket << statistics.mKeepersDefeated << statistics.mCreaturesKilled
+            << statistics.mHeroesDestroyed << statistics.mRoomsCaptured << statistics.mItemsMade
+            << statistics.mCreaturesConverted;
+    }
+    ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
 void Player::notifyTeamFighting(Player* player, Tile* tile)
@@ -734,6 +793,61 @@ void Player::notifyCreatureCannotFindFood(Creature& creature)
         seats.push_back(getSeat());
         mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNoFood);
     }
+}
+
+void Player::notifyNotEnoughGold()
+{
+    if(mHasLost)
+        return;
+
+    if(!getIsHuman())
+        return;
+
+    if(mNotEnoughGoldTime > 0.0f)
+        return;
+
+    mNotEnoughGoldTime = NOT_ENOUGH_GOLD_TIME_COUNT;
+
+    std::string chatMsg = "You do not have enough gold for that.";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Player::notifyCreatureKilled(Creature& creature)
+{
+    if(mHasLost)
+        return;
+
+    if(!getIsHuman())
+        return;
+
+    if(mCreatureKilledTime > 0.0f)
+        return;
+
+    mCreatureKilledTime = CREATURE_KILLED_TIME_COUNT;
+
+    std::string chatMsg = creature.getName() + " has been killed";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Player::notifyNewCreatureType(const std::string& creatureClassName)
+{
+    if(mHasLost)
+        return;
+
+    if(!getIsHuman())
+        return;
+
+    std::string chatMsg = "A new kind of creature is attracted to your dungeon: " + creatureClassName;
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
 void Player::fireEvents()
@@ -939,6 +1053,22 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
             mCreatureCannotFindFood -= timeSinceLastUpkeep;
         else
             mCreatureCannotFindFood = 0.0f;
+    }
+
+    if(mNotEnoughGoldTime > 0.0f)
+    {
+        if(mNotEnoughGoldTime > timeSinceLastUpkeep)
+            mNotEnoughGoldTime -= timeSinceLastUpkeep;
+        else
+            mNotEnoughGoldTime = 0.0f;
+    }
+
+    if(mCreatureKilledTime > 0.0f)
+    {
+        if(mCreatureKilledTime > timeSinceLastUpkeep)
+            mCreatureKilledTime -= timeSinceLastUpkeep;
+        else
+            mCreatureKilledTime = 0.0f;
     }
 
     if(isEventListUpdated)

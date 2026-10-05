@@ -110,6 +110,18 @@
                         <Property name="MaximumValue" value="100" />
                         <Property name="ClickStepSize" value="5" />
                     </Window>
+                    <Window type="OD/StaticText" name="RoomAmbienceText" >
+                        <Property name="Area" value="{{0,32},{0,210},{0,150},{0,230}}" />
+                        <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                        <Property name="Text" value="Room ambience:" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="FrameEnabled" value="False" />
+                    </Window>
+                    <Window type="OD/Combobox" name="RoomAmbience" >
+                        <Property name="Area" value="{{0,160},{0,210},{0,320},{0,290}}" />
+                        <Property name="ReadOnly" value="True" />
+                        <Property name="TooltipText" value="full: dust, glow, sparks and moving objects in the rooms. reduced: only a few of them, close to the camera. off: no room ambience." />
+                    </Window>
                 </Window>
             </Window>
             <Window type="DefaultWindow" name="Input" >
@@ -212,6 +224,30 @@
                         <Property name="AutoRenderingSurface" value="True" />
                         <Property name="MaximumValue" value="250" />
                         <Property name="ClickStepSize" value="5" />
+                    </Window>
+                    <Window type="OD/StaticText" name="CreatureReactionsText" >
+                        <Property name="Area" value="{{0,32},{0,284},{0,150},{0,304}}" />
+                        <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                        <Property name="Text" value="Creature reactions:" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="FrameEnabled" value="False" />
+                    </Window>
+                    <Window type="OD/Combobox" name="CreatureReactions" >
+                        <Property name="Area" value="{{0,160},{0,284},{0,320},{0,364}}" />
+                        <Property name="ReadOnly" value="True" />
+                        <Property name="TooltipText" value="full: emotes, effects and poses. reduced: emotes only. off: no creature reactions." />
+                    </Window>
+                    <Window type="OD/StaticText" name="TreasuryDetailText" >
+                        <Property name="Area" value="{{0,32},{0,378},{0,150},{0,398}}" />
+                        <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                        <Property name="Text" value="Treasury detail:" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="FrameEnabled" value="False" />
+                    </Window>
+                    <Window type="OD/Combobox" name="TreasuryDetail" >
+                        <Property name="Area" value="{{0,160},{0,378},{0,320},{0,458}}" />
+                        <Property name="ReadOnly" value="True" />
+                        <Property name="TooltipText" value="full: gold piles that fill the treasury floor. reduced: simpler piles. off: the classic small gold stacks. Applies to treasuries drawn after the change." />
                     </Window>
                     <Window type="OD/Checkbox" name="BloodEffectsCheckbox" >
                         <Property name="Area" value="{{0,32},{0,250},{1,-48},{0,276}}" />

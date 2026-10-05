@@ -102,6 +102,15 @@ public:
 
     uint32_t getNbRooms(RoomType roomType) const;
 
+    //! \brief True when the seat once had a library and has none left, for example
+    //! because an enemy took it over. The spells researched there cannot be used
+    //! until a library is owned again.
+    bool isLibraryLost() const;
+
+    //! \brief Number of stored special boxes of the given gift box type (as an integer), the
+    //! boxes a worker carried to the dungeon heart. Each one is used with a button.
+    uint32_t getNbStoredSpecials(uint32_t giftBoxType) const;
+
     inline const std::string& getPlayerType() const
     { return mPlayerType; }
 
@@ -174,6 +183,14 @@ protected:
     //! \brief The number of rooms the player owns (room index being room type).
     //! Useful to display the first free tile on client side for example
     std::vector<uint32_t> mNbRooms;
+
+    //! \brief True once the seat has owned a library. Set on server side, sent to the clients
+    //! with the other changing data.
+    bool mHadLibrary;
+
+    //! \brief Stored special boxes, indexed by gift box type. Set on server side, sent to the
+    //! clients with the other changing data.
+    std::vector<uint32_t> mStoredSpecials;
 
     //! \brief Skills not allowed. Used on server side only
     std::vector<SkillType> mSkillNotAllowed;

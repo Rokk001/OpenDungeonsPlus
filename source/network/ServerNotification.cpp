@@ -150,6 +150,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "creatureCombatImpact";
         case ServerNotificationType::creatureChickenFeeding:
             return "creatureChickenFeeding";
+        case ServerNotificationType::chickenKindChanged:
+            return "chickenKindChanged";
         case ServerNotificationType::trapProductionQueue:
             return "trapProductionQueue";
         case ServerNotificationType::playerDefeated:
@@ -158,6 +160,25 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "levelStatistics";
         case ServerNotificationType::heartHealth:
             return "heartHealth";
+        case ServerNotificationType::casinoPayout:
+            return "casinoPayout";
+        case ServerNotificationType::possessionStart:
+            return "possessionStart";
+        case ServerNotificationType::possessionEnd:
+            return "possessionEnd";
+        case ServerNotificationType::editorRegionData:
+            return "editorRegionData";
+        case ServerNotificationType::timeLimit:
+            return "timeLimit";
+        case ServerNotificationType::relationshipTier:
+            return "relationshipTier";
+
+        case ServerNotificationType::seatTeam:
+            return "seatTeam";
+        case ServerNotificationType::sandboxStatus:
+            return "sandboxStatus";
+        case ServerNotificationType::sandboxRealmComplete:
+            return "sandboxRealmComplete";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));

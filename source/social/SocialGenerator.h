@@ -40,6 +40,12 @@ public:
     //! Highest name variant that is drawn from the name tables, see makeProfile
     static const uint32_t MAX_NAME_VARIANT = 12;
 
+    //! \brief Gender of a creature ("Female", "Male" or empty), the same value makeProfile puts in
+    //! CreatureProfile::mGender. Depends only on the creature name, the class and the data, so the server
+    //! and the client get the same result.
+    static std::string makeGender(const SocialData& data, const std::string& creatureName,
+        const std::string& className);
+
     //! \brief Builds the profile of a creature from its name (for example "Orc17"). Variant 0 is the
     //! normal name; a higher variant draws another first name and surname or title (everything else stays
     //! the same), so a caller can resolve two creatures of a dungeon with the same name. Variants above
@@ -70,9 +76,10 @@ public:
         const std::string& className, bool isWorker, const std::string& category, uint32_t variant);
 
     //! \brief Text of a feed post: the template of the category expanded with the profile and the
-    //! given level and room ("library", ...). Empty if the category has no template.
+    //! given level, room ("library", ...) and friend name (relationship posts). Empty if the category has no template.
     static std::string renderPost(const SocialData& data, const CreatureProfile& profile, bool isWorker,
-        const std::string& category, uint32_t variant, int32_t level, const std::string& room);
+        const std::string& category, uint32_t variant, int32_t level, const std::string& room,
+        const std::string& friendName = std::string());
 
     //! \brief One line with all profile fields, used to compare profiles byte for byte.
     static std::string serialize(const CreatureProfile& profile);

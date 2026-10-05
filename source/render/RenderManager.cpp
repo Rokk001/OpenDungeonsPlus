@@ -27,6 +27,8 @@
 #include "gamemap/RoomObjectStep.h"
 
 #include "entities/BuildingObject.h"
+#include "entities/ChickenEntity.h"
+#include "entities/ChickenPose.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntity.h"
@@ -42,9 +44,11 @@
 #include "gamemap/TileSet.h"
 #include "modes/ModeManager.h"
 #include "render/CreatureOverlayStatus.h"
+#include "render/CreatureReactions.h"
 #include "render/DebugDrawer.h"
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
+#include "render/TreasuryGoldMesh.h"
 #include "rooms/Room.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -111,6 +115,10 @@ const Ogre::Real CREATURE_COMBAT_IMPACT_DURATION = 0.55f;
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
 const Ogre::Real RenderManager::DRAGGABLE_NODE_HEIGHT = 3.0f;
+
+// The room patch lights only use this light mask bit. Plain claimed ground tiles leave it out,
+// so the floor next to a room doorway is not lit brighter than claimed ground elsewhere.
+const uint32_t ROOM_LIGHT_MASK = 0x2;
 
 const int PERLIN_NOISE_TEXTURE_SIZE =  4096;
 
@@ -921,6 +929,7 @@ RenderManager::~RenderManager()
     cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
     clearChickenFeatherEffects();
+    clearChickenLooks();
     clearCreatureCombatEffects();
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
@@ -938,11 +947,14 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     mCreatureTextOverlayDisplayed = false;
 
     // Cover tile and room seams with continuous earth below the dungeon.
+    // The plane lies below the deepest tile geometry (arena pit floor at z = -3.012,
+    // see ArenaLowered.mesh), otherwise it would hide the pit and the creatures in it.
+    const Ogre::Real groundUnderlayHeight = -4.0f;
     const Ogre::Real groundMargin = mViewport->getCamera()->getFarClipDistance();
     const Ogre::Real groundWidth = gameMap->getMapSizeX() + 2.0f * groundMargin;
     const Ogre::Real groundHeight = gameMap->getMapSizeY() + 2.0f * groundMargin;
     Ogre::MeshManager::getSingleton().createPlane("DungeonGroundUnderlayMesh", "Graphics",
-        Ogre::Plane(Ogre::Vector3::UNIT_Z, -1.0f), groundWidth, groundHeight,
+        Ogre::Plane(Ogre::Vector3::UNIT_Z, groundUnderlayHeight), groundWidth, groundHeight,
         1, 1, true, 1, groundWidth, groundHeight, Ogre::Vector3::UNIT_Y);
     Ogre::Entity* ground = mSceneManager->createEntity("DungeonGroundUnderlay", "DungeonGroundUnderlayMesh", "Graphics");
     ground->setMaterialName("DungeonGroundUnderlay", "Graphics");
@@ -1217,6 +1229,7 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
     cancelCreatureSleepAnimation();
     cancelCreatureFeedingAnimation();
     clearChickenFeatherEffects();
+    clearChickenLooks();
     clearCreatureCombatEffects();
     mCreatureDropAnimations.clear();
     mCreatureGroundPoses.clear();
@@ -1620,6 +1633,8 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         mSceneManager->destroySceneNode(it->mNode);
         it = mChickenFeatherEffects.erase(it);
     }
+
+    updateChickenLooks(timeSinceLastFrame);
 
     for(std::set<Creature*>::iterator it = mSteppingCreatures.begin(); it != mSteppingCreatures.end();)
         updateCreatureStep(*it++);
@@ -2298,7 +2313,9 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
                candidate->getEntityNode() == nullptr || !candidate->getLocalPlayerHasVision())
                 continue;
             TileVisual visual = candidate->getTileVisual();
-            if(visual < TileVisual::dungeonTempleRoom || visual >= TileVisual::countTileVisual)
+            // The mana well ground is appended after the room visuals but is not a room
+            if(visual < TileVisual::dungeonTempleRoom || visual >= TileVisual::countTileVisual ||
+               visual == TileVisual::manaWellGround)
                 continue;
             position += Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f);
             ++count;
@@ -2329,6 +2346,7 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
         // A local room fill complements the existing cursor and authored lights.
         light->setAttenuation(6.0f, 1.0f, 0.09f, 0.032f);
         light->setSpecularColour(Ogre::ColourValue::Black);
+        light->setLightMask(ROOM_LIGHT_MASK);
         Ogre::SceneNode* node = mLightSceneNode->createChildSceneNode(name + "_node");
         node->attachObject(light);
     }
@@ -2498,6 +2516,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     if(tileMeshEnt != nullptr)
     {
         tileMeshEnt->setCastShadows(false);
+        if(tile.getTileVisual() == TileVisual::claimedGround)
+            tileMeshEnt->setLightMask(~ROOM_LIGHT_MASK);
+        else
+            tileMeshEnt->setLightMask(0xFFFFFFFF);
         // We replace the material if required by the tileset
         if(!tileSetValue.getMaterialName().empty() )
             tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
@@ -2728,6 +2750,9 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
 {
     std::string meshName = renderedMovableEntity->getMeshName();
+    // Treasury gold piles are built here from their name (or swapped for the classic stacks)
+    bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
+    meshName = isBuildingObject ? TreasuryGoldMesh::prepareMesh(mSceneManager, meshName) : meshName;
     
     std::string tempString = renderedMovableEntity->getOgreNamePrefix() + renderedMovableEntity->getName() + (static_cast<bool>(nt) ?  "" : "_dtc" );
 
@@ -2760,7 +2785,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     Ogre::Entity* ent = nullptr;
     if(!meshName.empty())
     {
-
+        rrEnsureChickenMesh(meshName);
 
         if(!Ogre::MeshManager::getSingleton().resourceExists(meshName + ".mesh","Graphics"))
             Ogre::MeshManager::getSingleton().load(meshName + ".mesh","Graphics");
@@ -2790,6 +2815,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
     renderedMovableEntity->setParentSceneNode(node->getParentSceneNode());
     renderedMovableEntity->setEntityNode(node);
+    if(meshName == "ChickenCoop")
+        rrCreateCoopDecor(static_cast<BuildingObject*>(renderedMovableEntity));
 
     // If it is required, we hide the tile
     if((renderedMovableEntity->getHideCoveredTile()) &&
@@ -2817,6 +2844,8 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     std::string tempString = curRenderedMovableEntity->getOgreNamePrefix()
                              + curRenderedMovableEntity->getName()+  (static_cast<bool>(nt) ?  "" : "_dtc" );
     Ogre::SceneNode* node = curRenderedMovableEntity->getEntityNode();
+    if(curRenderedMovableEntity->getMeshName() == "ChickenCoop")
+        rrDestroyCoopDecor(static_cast<BuildingObject*>(curRenderedMovableEntity));
     if(mSceneManager->hasEntity(tempString))
     {
         Ogre::Entity* ent = mSceneManager->getEntity(tempString);
@@ -2880,7 +2909,7 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
 
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
-    const std::string& meshName = curCreature->getDefinition()->getMeshName();
+    const std::string& meshName = curCreature->getCurrentMeshName();
 
     // Load the mesh for the creature
 
@@ -2913,6 +2942,60 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     creatureOverlay->displayHealthOverlay(mCreatureTextOverlayDisplayed ? -1.0 : 0.0);
 
     curCreature->showOutliner();
+}
+
+void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
+{
+    Ogre::SceneNode* node = curCreature->getEntityNode();
+    std::string creatureName = curCreature->getOgreNamePrefix() + curCreature->getName();
+    if((node == nullptr) || !mSceneManager->hasEntity(creatureName))
+    {
+        OD_LOG_ERR("creature=" + curCreature->getName());
+        return;
+    }
+
+    if(curCreature->getOverlayStatus() != nullptr)
+    {
+        delete curCreature->getOverlayStatus();
+        curCreature->setOverlayStatus(nullptr);
+    }
+
+    // We keep the current animation if the new mesh has it
+    std::string animName = EntityAnimation::idle_anim;
+    bool animLoop = true;
+    if(curCreature->getAnimationState() != nullptr)
+    {
+        animName = curCreature->getAnimationState()->getAnimationName();
+        animLoop = curCreature->getAnimationState()->getLoop();
+        curCreature->setAnimationState(static_cast<Ogre::AnimationState*>(nullptr));
+    }
+
+    Ogre::Entity* oldEnt = mSceneManager->getEntity(creatureName);
+    node->detachObject(oldEnt);
+    mSceneManager->destroyEntity(oldEnt);
+
+    const std::string& meshName = curCreature->getCurrentMeshName();
+    if(!Ogre::MeshManager::getSingleton().resourceExists(meshName, "Graphics"))
+        Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
+
+    Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName, "Graphics");
+    unsigned short src, dest;
+    if(!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    {
+        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+    }
+
+    Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    node->attachObject(ent);
+
+    Ogre::Camera* cam = mViewport->getCamera();
+    CreatureOverlayStatus* creatureOverlay = new CreatureOverlayStatus(curCreature, ent, cam);
+    curCreature->setOverlayStatus(creatureOverlay);
+    creatureOverlay->displayHealthOverlay(mCreatureTextOverlayDisplayed ? -1.0 : 0.0);
+
+    curCreature->showOutliner();
+
+    rrSetObjectAnimationState(curCreature, animName, animLoop);
 }
 
 void RenderManager::rrDestroyCreature(Creature* curCreature)
@@ -3344,11 +3427,30 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
 
     Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
 
+    // The hatchery poses are procedural motion on top of the walk or idle animation
+    std::string poseAnimation = animation;
+    if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
+    {
+        const bool isPose = ChickenPose::isPose(animation);
+        rrSetChickenPose(static_cast<ChickenEntity*>(curAnimatedObject), isPose ? animation : std::string());
+        if(isPose)
+            poseAnimation = ChickenPose::skeletonAnimation(animation);
+    }
+
     // Can't animate entities without skeleton
     if (!objectEntity->hasSkeleton())
         return;
 
-    std::string anim = animation;
+    std::string anim = poseAnimation;
+    if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
+    {
+        // The hatchery animals have clips for crowing, running and peeping, the plain walk and idle clips stay for
+        // skeletons without them
+        const bool isChick = static_cast<ChickenEntity*>(curAnimatedObject)->getKind() == ChickenKind::chick;
+        const std::string clip = ChickenPose::skeletonClip(animation, isChick);
+        if(!clip.empty() && objectEntity->getSkeleton()->hasAnimation(clip))
+            anim = clip;
+    }
     Creature* dropCreature = nullptr;
     if(curAnimatedObject->getObjectType() == GameEntityType::creature)
         dropCreature = static_cast<Creature*>(curAnimatedObject);
@@ -4238,11 +4340,11 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
     }
 }
 
-void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position)
+void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName)
 {
-    const std::string name = "ChickenFeathers_" + Helper::toString(++mChickenFeatherEffectNumber);
+    const std::string name = particleName + "_" + Helper::toString(++mChickenFeatherEffectNumber);
     Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(name + "_node", position);
-    Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, "ChickenFeathers");
+    Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, particleName);
     node->attachObject(particles);
     particles->setQueryFlags(0);
     mChickenFeatherEffects.push_back({node, particles, 1.5f});
@@ -4829,8 +4931,17 @@ void RenderManager::rrCarryEntity(Creature* carrier, GameEntity* carried)
         EntityParentNodeAttach::DETACH_CARRIED, true);
     carriedNode->setInheritScale(false);
     carrierNode->addChild(carriedNode);
-    // We want the carried object to be at half tile (z = 0.5)
-    carriedNode->setPosition(Ogre::Vector3(0, 0, 0.5));
+    // The carried object rests with its lowest point on the highest point of the carrier. A fixed
+    // height of half a tile floated above small carriers and sank into tall ones.
+    const Ogre::Real carrierScale = carrierNode->_getDerivedScale().z;
+    const Ogre::Real carriedScale = carriedNode->getScale().z;
+    Ogre::Real carrySpotZ = 0.5;
+    if(carrierScale > 0.0)
+    {
+        carrySpotZ = (carrierEnt->getBoundingBox().getMaximum().z * carrierScale -
+            carriedEnt->getBoundingBox().getMinimum().z * carriedScale) / carrierScale;
+    }
+    carriedNode->setPosition(Ogre::Vector3(0, 0, carrySpotZ));
 }
 
 void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carried)
@@ -5294,6 +5405,14 @@ void RenderManager::entitySlapped()
     Ogre::Entity* ent = mSceneManager->getEntity("keeperHandEnt");
     if(ent->hasAnimationState("Slap"))
         mHandAnimationState = setEntityAnimation(ent, "Slap", false);
+
+    // The creatures that stand around look at the hand that slaps
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+    {
+        // The creature that was slapped reacts, the ones around only look
+        CreatureReactions::getSingleton().noteSlapped(mHandLightNode->getPosition());
+        CreatureReactions::getSingleton().noteNearbyEvent("AmbientLookSlap", mHandLightNode->getPosition(), nullptr, 1.0);
+    }
 }
 
 std::string RenderManager::rrBuildSkullFlagMaterial(const std::string& materialNameBase,
@@ -5386,6 +5505,8 @@ Ogre::AnimationState* RenderManager::setEntityAnimation(Ogre::Entity* ent, const
                 as->setTimePosition(0);
 
             as->setLoop(loop);
+            // A creature reaction may have hidden the clip by giving it no weight
+            as->setWeight(1.0f);
             as->setEnabled(true);
             animState = as;
             continue;

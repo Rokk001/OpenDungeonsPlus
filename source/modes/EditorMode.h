@@ -20,6 +20,7 @@
 
 #include "GameEditorModeBase.h"
 
+#include "gamemap/LevelScript.h"
 #include "gamemap/TileMarker.h"
 #include "modes/InputCommand.h"
 #include "modes/SettingsWindow.h"
@@ -35,6 +36,7 @@
 class DraggableTileContainer;
 class GameMap;
 class Gui; // Used to change the Current tile type
+enum class GiftBoxType;
 
 enum class TileVisual;
 
@@ -78,6 +80,9 @@ public:
     { return mGameMap; }
 
     virtual void notifyGuiAction(GuiAction guiAction) override;
+
+    //! \brief Asks the server to create a gift box of the given type and put it in the hand
+    void askCreateGiftBox(GiftBoxType type);
 
     //! \brief Options window functions
     bool toggleOptionsWindow(const CEGUI::EventArgs& arg = {});
@@ -124,6 +129,9 @@ public:
     //! Called when the answer to the request sent by askPortalWaveData comes back. An empty
     //! room name means the tile asked about holds no wave portal, and only a hint is shown.
     void showPortalWaveWindow(const std::string& roomName, const RoomPortalWaveConfig& config);
+
+    //! \brief Replaces the region markers shown by the ones the server has just sent
+    void setRegions(const std::vector<LevelScriptRegion>& regions);
 private:
 
     DraggableTileContainer* draggableTileContainer;
@@ -169,6 +177,9 @@ private:
     //! the widgets ourselves are not read back as if the player had made them.
     bool mPortalWaveRefreshing;
 
+    //! \brief True once the region markers have been asked for after the level arrived
+    bool mRegionsRequested;
+
     //! \brief The creature node name being dragged by the mouse
     std::string mDraggedCreature;
 
@@ -208,6 +219,17 @@ private:
     //! \brief Asks the server what the waves of the wave portal covering the given tile are.
     //! They only exist on the server, so the window can only be filled once it answers.
     void askPortalWaveData(Tile* tile);
+
+    //! \brief Sends a region marker change to the server: operation 0 asks for the list,
+    //! 1 sets the region with that name to the rectangle, 2 removes it.
+    void askRegionEdit(int32_t operation, const std::string& name,
+        int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+
+    //! \brief Makes the marked tiles a region with a new name (key R)
+    void markRegion();
+
+    //! \brief Removes the region under the mouse (key Shift + R)
+    void unmarkRegion();
 
     //! \brief Writes the room wide settings and the fields of the wave being shown back into
     //! the working copy. Called before anything that changes which wave is shown, so that

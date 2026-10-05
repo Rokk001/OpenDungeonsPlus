@@ -23,6 +23,7 @@
 #include "network/ODPacket.h"
 #include "game/Skill.h"
 #include "gamemap/GameMap.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "giftboxes/GiftBoxSkill.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -44,6 +45,12 @@ GiftBoxEntity::GiftBoxEntity(GameMap* gameMap) :
 {
 }
 
+GiftBoxEntity::GiftBoxEntity(GameMap* gameMap, GiftBoxType type) :
+    RenderedMovableEntity(gameMap),
+    mGiftBoxType(type)
+{
+}
+
 GameEntityType GiftBoxEntity::getObjectType() const
 {
     return GameEntityType::giftBoxEntity;
@@ -61,6 +68,55 @@ void GiftBoxEntity::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
+bool GiftBoxEntity::tryPickup(Seat* seat)
+{
+    if(!getIsOnMap())
+        return false;
+
+    // We can pickup gift boxes only in editor mode
+    return getGameMap()->isInEditorMode();
+}
+
+bool GiftBoxEntity::tryDrop(Seat* seat, Tile* tile)
+{
+    if(tile->isFullTile())
+        return false;
+
+    // In editor mode, we allow to drop a gift box in dirt, claimed, gold or rock tiles
+    if(getGameMap()->isInEditorMode() &&
+       (tile->getTileVisual() == TileVisual::dirtGround || tile->getTileVisual() == TileVisual::claimedGround ||
+        tile->getTileVisual() == TileVisual::goldGround || tile->getTileVisual() == TileVisual::rockGround))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool GiftBoxEntity::canSlap(Seat* seat)
+{
+    if(!getIsOnMap())
+        return false;
+
+    // In editor mode, we allow to slap a gift box to destroy it
+    return getGameMap()->isInEditorMode();
+}
+
+void GiftBoxEntity::slap()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    if(!getIsOnMap())
+        return;
+
+    if(!getGameMap()->isInEditorMode())
+        return;
+
+    removeFromGameMap();
+    deleteYourself();
+}
+
 GiftBoxEntity* GiftBoxEntity::getGiftBoxEntityFromStream(GameMap* gameMap, std::istream& is)
 {
     GiftBoxType type;
@@ -70,6 +126,21 @@ GiftBoxEntity* GiftBoxEntity::getGiftBoxEntityFromStream(GameMap* gameMap, std::
     {
         case GiftBoxType::skill:
             entity = new GiftBoxSkill(gameMap);
+            break;
+
+        case GiftBoxType::mana:
+        case GiftBoxType::gold:
+        case GiftBoxType::revealMap:
+        case GiftBoxType::levelUp:
+        case GiftBoxType::healAll:
+        case GiftBoxType::makeSafe:
+        case GiftBoxType::weakenWalls:
+        case GiftBoxType::stunImps:
+        case GiftBoxType::receiveImps:
+        case GiftBoxType::makeHappy:
+        case GiftBoxType::makeUnhappy:
+        case GiftBoxType::killCreatures:
+            entity = new GiftBoxBonus(gameMap, type);
             break;
 
         default:

@@ -26,20 +26,26 @@ class DoorEntity;
 class TrapDoor : public Trap
 {
 public:
-    TrapDoor(GameMap* gameMap);
+    TrapDoor(GameMap* gameMap, TrapType doorType);
 
     static const std::string ANIMATION_OPEN;
     static const std::string ANIMATION_CLOSE;
 
     const TrapType getType() const override
-    { return TrapType::doorWooden; }
+    { return mDoorType; }
+
+    double getDefaultTileHP() const override;
 
     bool isDoor() const override
     { return true; }
 
-    // We return true to make sure every creature with vision on the door tile can see it
-    bool shoot(Tile* tile) override
-    { return true; }
+    // We return true to make sure every creature with vision on the door tile can see it.
+    // A secret door is only seen when a creature of its owner stands on it
+    bool shoot(Tile* tile) override;
+
+    // The runed door pays its mana itself when it fires (see shoot), not on every upkeep
+    double getManaToFire() const override
+    { return 0.0; }
 
     void doUpkeep() override;
 
@@ -63,23 +69,27 @@ public:
 
     bool permitsVision(Tile* tile) override;
 
+    bool appearsAsWallForSeat(Tile* tile, Seat* seat) const override;
+
     //! Returns true if tiles North and South (or east and west) are suitable to have a door on the
     //! given tile
     static bool canDoorBeOnTile(GameMap* gameMap, Tile* tile);
 
     static bool buildTrapOnTile(GameMap* gameMap, Player* player, Tile* tile);
 
-    static const TrapType mTrapType;
-
 protected:
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 
 private:
+    //! \brief Wooden, ironbound or steel door
+    TrapType mDoorType;
     //! \brief Wanted state for the door (changes when the player slaps the door)
     bool mIsLocked;
     //! \brief Current state of the door
     bool mIsLockedState;
+    //! brief Turns left before a runed door can fire again
+    uint32_t mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);
 };

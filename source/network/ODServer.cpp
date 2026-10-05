@@ -17,14 +17,20 @@
 
 #include "network/ODServer.h"
 
+#include "gamemap/LevelScript.h"
+#include "gamemap/LevelScriptRunner.h"
+
 #include "ai/KeeperAIType.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
+#include "entities/MissileBoulder.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
 #include "game/HeartHealthRing.h"
+#include "giftboxes/GiftBoxBonus.h"
 #include "game/Player.h"
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
@@ -40,6 +46,7 @@
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
+#include "rooms/RoomCasino.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
@@ -55,6 +62,7 @@
 #include "utils/LogManager.h"
 #include "utils/MasterServer.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 #include "ODApplication.h"
 
 #include <SFML/Network.hpp>
@@ -66,6 +74,8 @@
 #include <boost/lexical_cast.hpp>
 
 
+//! \brief Number of tiles of a 5x5 dungeon heart (3x3 core and treasury ring)
+const uint32_t HEART_TILES_PER_LEVEL = 25;
 const std::string SAVEGAME_SKIRMISH_PREFIX = "SK-";
 const std::string SAVEGAME_MULTIPLAYER_PREFIX = "MP-";
 static const double MASTER_SERVER_UPDATE_PERIOD_MS = 30000.0;
@@ -170,7 +180,8 @@ ODServer::~ODServer()
     delete mGameMap;
 }
 
-bool ODServer::startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer)
+bool ODServer::startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
+    bool relationships)
 {
     OD_LOG_INF("Asked to launch server with levelFilename=" + levelFilename);
 
@@ -208,6 +219,31 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         return false;
     }
 
+    // The relationships option comes from the game setup, a saved game brings its own setting
+    if(mode == ServerMode::ModeEditor)
+        gameMap->setRelationshipsEnabled(false);
+    else if(mode != ServerMode::ModeGameLoaded)
+        gameMap->setRelationshipsEnabled(relationships);
+
+    // Level files must carry 5x5 hearts. Only savegames (and the editor, to fix old maps) may still
+    // contain an older 3x3 heart.
+    if((mode != ServerMode::ModeGameLoaded) && (mode != ServerMode::ModeEditor))
+    {
+        for(Room* room : gameMap->getRoomsByType(RoomType::dungeonTemple))
+        {
+            if(room->numCoveredTiles() == HEART_TILES_PER_LEVEL)
+                continue;
+
+            OD_LOG_ERR("Level " + levelFilename + " rejected: heart " + room->getName() + " covers "
+                + Helper::toString(room->numCoveredTiles()) + " tiles, a level heart must be 5x5 ("
+                + Helper::toString(HEART_TILES_PER_LEVEL) + " tiles)");
+            mServerMode = ServerMode::ModeNone;
+            mServerState = ServerState::StateNone;
+            stopServer();
+            return false;
+        }
+    }
+
     // Set up the socket to listen on the specified port
     int32_t port = getNetworkPort();
     if (!createServer(port))
@@ -221,6 +257,9 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
     int mId = 0 ;
     for(Seat* seat : gameMap->getSeats())
     {
+        // The rogue seat has no client to tell, sending to its player logged an error at every level start
+        if(seat->isRogueSeat())
+            continue;
 
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::restoreEverVisitedTiles, seat->getPlayer());
@@ -277,7 +316,13 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_INACTIVE) == 0)
             seat->setConfigPlayerId(Seat::PLAYER_TYPE_INACTIVE_ID);
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_AI) == 0)
-            seat->setConfigPlayerId(Seat::aITypeToPlayerId(KeeperAIType::normal));
+        {
+            // In the campaign the AI level is the difficulty chosen for the campaign
+            KeeperAIType aiType = KeeperAIType::normal;
+            if(Campaign::getSingleton().isActive())
+                aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getDifficulty());
+            seat->setConfigPlayerId(Seat::aITypeToPlayerId(aiType));
+        }
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_HUMAN) == 0)
             ++nbSeatsHuman;
 
@@ -455,6 +500,13 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
 
         notifyHeartHealth(gameMap, sock, player);
 
+        // A client that joined or loaded gets the current relationship tiers once
+        if(!sock->getRelationshipsSynced())
+        {
+            sock->setRelationshipsSynced(true);
+            gameMap->sendRelationshipTiers(seat);
+        }
+
         // Here, the creature list is pulled. It could be possible that the creature dies before the stat window is
         // closed. So, if we cannot find the creature, we just erase it.
         std::vector<std::string>& creatures = mCreaturesInfoWanted[sock];
@@ -521,6 +573,8 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
 
     gameMap->fireRefreshEntities();
     gameMap->processDeletionQueues();
+    if(RunLevelTest::isActive())
+        RunLevelTest::onServerTurn(*gameMap);
     if(mServerMode != ServerMode::ModeEditor)
     {
         for(ODSocketClient* socket : mSockClients)
@@ -548,10 +602,11 @@ void ODServer::serverThread()
 {
     GameMap* gameMap = mGameMap;
     sf::Clock clock;
-    double turnLengthMs = 1000.0 / ODApplication::turnsPerSecond;
     bool isClientConnected = true;
     while(isConnected() && isClientConnected)
     {
+        // The game speed setting changes the real time length of a turn
+        double turnLengthMs = 1000.0 / (ODApplication::turnsPerSecond * gameMap->getGameSpeedFactor());
         // doTask should return after the length of 1 turn even if their are communications. When
         // it returns, we can launch next turn.
         doTask(static_cast<int32_t>(turnLengthMs));
@@ -666,7 +721,7 @@ void ODServer::serverThread()
         // to wait for server. If server is in advance, he might send commands before the
         // creatures arrive at their destination. That could result in weird issues like
         // creatures going through walls.
-        startNewTurn(static_cast<double>(clock.restart().asSeconds()) * 0.95);
+        startNewTurn(static_cast<double>(clock.restart().asSeconds()) * 0.95 * gameMap->getGameSpeedFactor());
 
         processServerNotifications();
     }
@@ -860,6 +915,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             packet << gameMap->getLevelFightMusicFile();
 
             packet << gameMap->getTileSetName();
+            packet << gameMap->isSandbox();
 
             int32_t nb;
             // Seats
@@ -893,6 +949,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             std::vector<Tile*> gemTiles;
             std::vector<Tile*> waterTiles;
             std::vector<Tile*> lavaTiles;
+            std::vector<Tile*> manaWellTiles;
             
             for (int xxx = 0; xxx < mapSizeX; ++xxx)
             {
@@ -915,6 +972,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                             break;
                         case TileType::lava:
                             lavaTiles.push_back(tile);
+                            break;
+                        case TileType::manaWell:
+                            manaWellTiles.push_back(tile);
                             break;
                             
                         default:
@@ -953,6 +1013,12 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             nb = lavaTiles.size();
             packet << nb;
             for(Tile* tile : lavaTiles)
+            {
+                gameMap->tileToPacket(packet, tile);
+            }
+            nb = manaWellTiles.size();
+            packet << nb;
+            for(Tile* tile : manaWellTiles)
             {
                 gameMap->tileToPacket(packet, tile);
             }
@@ -1062,6 +1128,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             packetSend << clientSocket->supportsCreatureActivity();
             packetSend << clientSocket->supportsCreaturePanel();
             packetSend << clientSocket->supportsCreatureProgress();
+            packetSend << gameMap->isRelationshipsEnabled();
             clientSocket->send(packetSend);
             mSeatsConfigured = true;
             break;
@@ -1207,6 +1274,67 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     OD_ASSERT_TRUE(packetReceived >> teamId);
                 }
                 seat->setConfigTeamId(teamId);
+            }
+
+            // The skirmish game settings follow the seats
+            uint32_t goldDensityPercent;
+            uint32_t manaRegenerationPercent;
+            uint32_t maxCreaturesSetting;
+            OD_ASSERT_TRUE(packetReceived >> goldDensityPercent);
+            OD_ASSERT_TRUE(packetReceived >> manaRegenerationPercent);
+            OD_ASSERT_TRUE(packetReceived >> maxCreaturesSetting);
+            // A setting the page has not shown yet is not chosen: the value of the server is kept
+            if(goldDensityPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                goldDensityPercent = gameMap->getGoldDensityPercent();
+            if(manaRegenerationPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                manaRegenerationPercent = gameMap->getManaRegenerationPercent();
+            if(maxCreaturesSetting == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                maxCreaturesSetting = gameMap->getMaxCreaturesSetting();
+            gameMap->setSkirmishSettings(goldDensityPercent, manaRegenerationPercent, maxCreaturesSetting);
+
+            uint32_t gameSpeedPercent;
+            uint32_t gameDurationMinutes;
+            uint32_t fogOfWar;
+            uint32_t heartDestroyedReward;
+            OD_ASSERT_TRUE(packetReceived >> gameSpeedPercent);
+            OD_ASSERT_TRUE(packetReceived >> gameDurationMinutes);
+            OD_ASSERT_TRUE(packetReceived >> fogOfWar);
+            OD_ASSERT_TRUE(packetReceived >> heartDestroyedReward);
+            if(gameSpeedPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                gameSpeedPercent = gameMap->getGameSpeedPercent();
+            if(gameDurationMinutes == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                gameDurationMinutes = gameMap->getGameDurationMinutes();
+            if(fogOfWar == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                fogOfWar = gameMap->getIsFOWActivated() ? 1 : 0;
+            if(heartDestroyedReward == GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                heartDestroyedReward = gameMap->getHeartDestroyedReward();
+            gameMap->setGameRules(gameSpeedPercent, gameDurationMinutes, fogOfWar != 0, heartDestroyedReward);
+
+            uint32_t nbCreatureLimits;
+            OD_ASSERT_TRUE(packetReceived >> nbCreatureLimits);
+            for(uint32_t i = 0; i < nbCreatureLimits; ++i)
+            {
+                std::string className;
+                uint32_t limit;
+                OD_ASSERT_TRUE(packetReceived >> className >> limit);
+                if(limit != GameMap::SKIRMISH_SETTING_UNCHOSEN)
+                    gameMap->setCreatureClassLimit(className, limit);
+            }
+
+            uint32_t nbSkillStates;
+            OD_ASSERT_TRUE(packetReceived >> nbSkillStates);
+            for(uint32_t i = 0; i < nbSkillStates; ++i)
+            {
+                uint32_t skillType;
+                uint32_t skillState;
+                OD_ASSERT_TRUE(packetReceived >> skillType >> skillState);
+                if(skillState > static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch))
+                    continue;
+                if(skillType >= static_cast<uint32_t>(SkillType::countSkill))
+                    continue;
+
+                gameMap->setSkirmishSkillState(static_cast<SkillType>(skillType),
+                    static_cast<GameMap::SkirmishItemState>(skillState));
             }
             fireSeatConfigurationRefresh();
             break;
@@ -1361,7 +1489,23 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 packetSend << client->supportsCreatureActivity();
                 packetSend << client->supportsCreaturePanel();
                 packetSend << client->supportsCreatureProgress();
+                packetSend << gameMap->isRelationshipsEnabled();
                 client->send(packetSend);
+            }
+
+            // The Game Settings page can change what each seat may build, cast or research
+            gameMap->applySkirmishSkillStates();
+
+            // The complete campaign Heartstone gives the keepers the Summon champion spell
+            if(Campaign::getSingleton().isActive() && Campaign::getSingleton().isHeartstoneComplete())
+            {
+                for(Seat* seat : gameMap->getSeats())
+                {
+                    if(seat->isRogueSeat() || (seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+                        continue;
+
+                    seat->setSkillAvailability(SkillType::spellSummonChampion, true, true);
+                }
             }
 
             for(Seat* seat : gameMap->getSeats())
@@ -1369,6 +1513,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 // We initialize the seats
                 seat->initSeat();
             }
+
+            // A creature that the last campaign level brought along comes to the dungeon
+            LevelScriptRunner::spawnKeptMinion(*gameMap);
 
             mSeatsConfigured = true;
             gameMap->notifySeatsConfigured();
@@ -1552,8 +1699,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             GameEntityType entityType;
             std::string entityName;
+            float handX;
+            float handY;
             Player* player = clientSocket->getPlayer();
-            OD_ASSERT_TRUE(packetReceived >> entityType >> entityName);
+            OD_ASSERT_TRUE(packetReceived >> entityType >> entityName >> handX >> handY);
             GameEntity* entity = gameMap->getEntityFromTypeAndName(entityType, entityName);
             if(entity == nullptr)
             {
@@ -1570,8 +1719,19 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
 
+            // The slap limit of the level script: a slap beyond it is counted but does nothing
+            if(!gameMap->getLevelScript().registerSlap(player->getSeat()->getId()))
+            {
+                OD_LOG_INF("player seatId=" + Helper::toString(player->getSeat()->getId()) + " is over the slap limit of the level");
+                break;
+            }
+
             OD_LOG_INF("player seatId=" + Helper::toString(player->getSeat()->getId()) + " slapped entity " + entity->getName());
-            entity->slap();
+            MissileBoulder* ball = (entityType == GameEntityType::missileObject) ? dynamic_cast<MissileBoulder*>(entity) : nullptr;
+            if(ball != nullptr)
+                ball->slapFrom(handX, handY);
+            else
+                entity->slap();
 
             ServerNotification notif(ServerNotificationType::entitySlapped, player);
             sendAsyncMsg(notif);
@@ -1702,8 +1862,81 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(!SpellManager::castSpell(gameMap, spellType, player, packetReceived))
                 break;
 
+            gameMap->getLevelScript().recordEvent("Seat" + Helper::toString(player->getSeat()->getId()),
+                "cast:" + SpellManager::getSpellNameFromSpellType(spellType));
+
             uint32_t newCooldown = SpellManager::getSpellCooldown(spellType);
             player->setSpellCooldownTurns(spellType, newCooldown);
+            break;
+        }
+
+        case ClientNotificationType::askPossessMove:
+        {
+            Ogre::Vector2 direction;
+            OD_ASSERT_TRUE(packetReceived >> direction);
+            Player* player = clientSocket->getPlayer();
+            if(!player->isPossessing())
+                break;
+
+            Creature* creature = gameMap->getCreature(player->getPossessedCreatureName());
+            if(creature == nullptr || creature->getPossessor() != player)
+                break;
+
+            creature->possessedMove(direction);
+            break;
+        }
+
+        case ClientNotificationType::askPossessAttack:
+        {
+            Ogre::Vector2 aim;
+            OD_ASSERT_TRUE(packetReceived >> aim);
+            Player* player = clientSocket->getPlayer();
+            if(!player->isPossessing())
+                break;
+
+            Creature* creature = gameMap->getCreature(player->getPossessedCreatureName());
+            if(creature == nullptr || creature->getPossessor() != player)
+                break;
+
+            creature->possessedAttack(aim);
+            break;
+        }
+
+        case ClientNotificationType::askPossessSkill:
+        {
+            uint32_t slot;
+            Ogre::Vector2 aim;
+            OD_ASSERT_TRUE(packetReceived >> slot >> aim);
+            Player* player = clientSocket->getPlayer();
+            if(!player->isPossessing())
+                break;
+
+            Creature* creature = gameMap->getCreature(player->getPossessedCreatureName());
+            if(creature == nullptr || creature->getPossessor() != player)
+                break;
+
+            creature->possessedUseSkill(slot, aim);
+            break;
+        }
+
+        case ClientNotificationType::askPossessExit:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(!player->isPossessing())
+                break;
+
+            Creature* creature = gameMap->getCreature(player->getPossessedCreatureName());
+            if(creature == nullptr || creature->getPossessor() != player)
+            {
+                // The creature is gone, we only have to tell the client
+                player->setPossessedCreatureName(std::string());
+                ServerNotification* serverNotification = new ServerNotification(
+                    ServerNotificationType::possessionEnd, player);
+                queueServerNotification(serverNotification);
+                break;
+            }
+
+            creature->endPossession();
             break;
         }
 
@@ -1711,6 +1944,23 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             Player* player = clientSocket->getPlayer();
             TrapManager::sellTrapTiles(gameMap, player->getSeat(), packetReceived);
+            break;
+        }
+
+        case ClientNotificationType::askSandboxTakeHero:
+        {
+            std::string className;
+            uint32_t level;
+            OD_ASSERT_TRUE(packetReceived >> className >> level);
+            gameMap->getSandboxMode().takeHero(clientSocket->getPlayer(), className, level);
+            break;
+        }
+
+        case ClientNotificationType::askSandboxInvasion:
+        {
+            bool continual;
+            OD_ASSERT_TRUE(packetReceived >> continual);
+            gameMap->getSandboxMode().startInvasion(clientSocket->getPlayer(), continual);
             break;
         }
 
@@ -2699,6 +2949,38 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             break;
         }
 
+        case ClientNotificationType::editorRegionEdit:
+        {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode=" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
+            Player* player = clientSocket->getPlayer();
+            int32_t operation;
+            std::string regionName;
+            int32_t x1;
+            int32_t y1;
+            int32_t x2;
+            int32_t y2;
+            OD_ASSERT_TRUE(packetReceived >> operation >> regionName >> x1 >> y1 >> x2 >> y2);
+
+            // The markers belong to the level script, which is saved from the server side
+            LevelScript& levelScript = gameMap->getLevelScript();
+            if(operation == 1)
+                levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
+            else if(operation == 2)
+                levelScript.removeRegion(regionName);
+
+            ServerNotification notif(ServerNotificationType::editorRegionData, player);
+            notif.mPacket << static_cast<uint32_t>(levelScript.getRegions().size());
+            for(const LevelScriptRegion& region : levelScript.getRegions())
+                notif.mPacket << region.mName << region.mX1 << region.mY1 << region.mX2 << region.mY2;
+
+            sendAsyncMsg(notif);
+            break;
+        }
+
         case ClientNotificationType::askSetSkillTree:
         {
             Player* player = clientSocket->getPlayer();
@@ -2762,6 +3044,56 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         }
 
         
+        case ClientNotificationType::askUseSpecial:
+        {
+            Player* player = clientSocket->getPlayer();
+            int32_t giftBoxTypeInt;
+            OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
+            if((giftBoxTypeInt <= static_cast<int32_t>(GiftBoxType::skill)) ||
+               (giftBoxTypeInt >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+            {
+                OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(giftBoxTypeInt));
+                break;
+            }
+
+            // Only the owner of the special can use it, and not once defeated
+            if((player->getSeat() == nullptr) || player->getHasLost())
+                break;
+
+            player->getSeat()->useStoredSpecial(static_cast<GiftBoxType>(giftBoxTypeInt));
+            break;
+        }
+
+        case ClientNotificationType::askCasinoPayout:
+        {
+            Player* player = clientSocket->getPlayer();
+            int xx;
+            int yy;
+            uint32_t level;
+            bool isSet;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> level >> isSet);
+            Tile* tile = gameMap->getTile(xx, yy);
+            if(tile == nullptr)
+                break;
+
+            Room* room = tile->getCoveringRoom();
+            if((room == nullptr) || (room->getType() != RoomType::casino))
+                break;
+
+            // Only the owner of the casino can set the payout
+            if(room->getSeat() != player->getSeat())
+                break;
+
+            RoomCasino* roomCasino = static_cast<RoomCasino*>(room);
+            if(isSet && (level < static_cast<uint32_t>(CasinoPayout::nbValues)))
+                roomCasino->setPayout(static_cast<CasinoPayout>(level));
+
+            ServerNotification notif(ServerNotificationType::casinoPayout, player);
+            notif.mPacket << xx << yy << static_cast<uint32_t>(roomCasino->getPayout());
+            sendAsyncMsg(notif);
+            break;
+        }
+
         case ClientNotificationType::askExecuteConsoleCommand:
         {
             uint32_t nbArgs;
@@ -2797,6 +3129,43 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 mapLight->addSeatWithVision(seat, true);
             }
             player->pickUpEntity(mapLight);
+            break;
+        }
+
+        case ClientNotificationType::editorCreateGiftBox:
+        {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode=" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
+            Player* player = clientSocket->getPlayer();
+            int32_t giftBoxTypeInt;
+            OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
+            GiftBoxType giftBoxType = static_cast<GiftBoxType>(giftBoxTypeInt);
+            if((giftBoxType == GiftBoxType::skill) ||
+               (giftBoxType < GiftBoxType::skill) ||
+               (giftBoxType >= GiftBoxType::nbTypes))
+            {
+                OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(static_cast<int>(giftBoxType)));
+                break;
+            }
+
+            GiftBoxBonus* giftBox = new GiftBoxBonus(gameMap, "EditorGiftBox", giftBoxType,
+                GiftBoxBonus::getDefaultAmount(giftBoxType));
+            giftBox->addToGameMap();
+            giftBox->setPosition(Ogre::Vector3(0.0, 0.0, 0.0));
+            // In editor mode, every player has vision
+            for(Seat* seat : gameMap->getSeats())
+            {
+                if(seat->getPlayer() == nullptr)
+                    continue;
+                if(!seat->getPlayer()->getIsHuman())
+                    continue;
+
+                giftBox->addSeatWithVision(seat, true);
+            }
+            player->pickUpEntity(giftBox);
             break;
         }
 
@@ -2906,6 +3275,11 @@ void ODServer::stopServer()
     mGameMap->clearAll();
 }
 
+const std::string& ODServer::getLevelFilename() const
+{
+    return mGameMap->getLevelFileName();
+}
+
 void ODServer::notifyExit()
 {
     requestStop();
@@ -3007,6 +3381,28 @@ void ODServer::fireSeatConfigurationRefresh()
             packetSend << teamId;
         }
     }
+    packetSend << mGameMap->getGoldDensityPercent() << mGameMap->getManaRegenerationPercent()
+        << mGameMap->getMaxCreaturesSetting();
+    packetSend << mGameMap->getGameSpeedPercent() << mGameMap->getGameDurationMinutes()
+        << static_cast<uint32_t>(mGameMap->getIsFOWActivated() ? 1 : 0) << mGameMap->getHeartDestroyedReward();
+
+    // The limit of each fighter class
+    std::vector<const CreatureDefinition*> fighterDefs;
+    for(const std::pair<const std::string, CreatureDefinition*>& def : ConfigManager::getSingleton().getCreatureDefinitions())
+    {
+        if(!def.second->isWorker())
+            fighterDefs.push_back(def.second);
+    }
+    uint32_t nbCreatureLimits = static_cast<uint32_t>(fighterDefs.size());
+    packetSend << nbCreatureLimits;
+    for(const CreatureDefinition* def : fighterDefs)
+        packetSend << def->getClassName() << mGameMap->getCreatureClassLimit(def->getClassName());
+
+    const std::vector<GameMap::SkirmishItemState>& skillStates = mGameMap->getSkirmishSkillStates();
+    uint32_t nbSkillStates = static_cast<uint32_t>(SkillType::countSkill) - 1;
+    packetSend << nbSkillStates;
+    for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
+        packetSend << i << static_cast<uint32_t>(skillStates[i]);
     sendMsg(nullptr, packetSend);
 }
 

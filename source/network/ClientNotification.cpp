@@ -79,6 +79,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askSetSkillTree";
         case ClientNotificationType::askSetPlayerSettings:
             return "askSetPlayerSettings";
+        case ClientNotificationType::askCasinoPayout:
+            return "askCasinoPayout";
         case ClientNotificationType::askSaveMap:
             return "askSaveMap";
         case ClientNotificationType::askExecuteConsoleCommand:
@@ -121,6 +123,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "editorCreateFighter";
         case ClientNotificationType::editorAskCreateMapLight:
             return "editorAskCreateMapLight";
+        case ClientNotificationType::editorCreateGiftBox:
+            return "editorCreateGiftBox";
         case ClientNotificationType::editorSetCreatureLevel:
             return "editorSetCreatureLevel";
         case ClientNotificationType::editorAskPortalWaveData:
@@ -135,6 +139,22 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askTrapProductionQueue";
         case ClientNotificationType::askMoveTrapProductionOrder:
             return "askMoveTrapProductionOrder";
+        case ClientNotificationType::askSandboxTakeHero:
+            return "askSandboxTakeHero";
+        case ClientNotificationType::askSandboxInvasion:
+            return "askSandboxInvasion";
+        case ClientNotificationType::askPossessMove:
+            return "askPossessMove";
+        case ClientNotificationType::askPossessExit:
+            return "askPossessExit";
+        case ClientNotificationType::askPossessAttack:
+            return "askPossessAttack";
+        case ClientNotificationType::askPossessSkill:
+            return "askPossessSkill";
+        case ClientNotificationType::editorRegionEdit:
+            return "editorRegionEdit";
+        case ClientNotificationType::askUseSpecial:
+            return "askUseSpecial";
         default:
             OD_LOG_ERR("Unknown enum for ClientNotificationType="
                 + Helper::toString(static_cast<int>(type)));

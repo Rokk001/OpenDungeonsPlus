@@ -20,6 +20,8 @@
 #include <CEGUI/System.h>
 #include <CEGUI/Texture.h>
 
+#include <algorithm>
+#include <cctype>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -65,8 +67,13 @@ std::set<std::string>& getFailedTintedPortraitNames()
 
 struct PortraitScene
 {
-    Ogre::SceneManager* scene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager");
+    Ogre::SceneManager* scene;
     std::vector<Ogre::MaterialPtr> materials;
+
+    PortraitScene() :
+        scene(Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager"))
+    {
+    }
 
     ~PortraitScene()
     {
@@ -271,18 +278,31 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName)
     return image;
 }
 
-const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureName, const std::string& meshName)
+const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureName, const std::string& meshName,
+    const std::string& gender)
 {
     const std::string name = TINTED_PREFIX + creatureName;
     CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
     if(images.isDefined(name))
         return images.get(name);
 
-    const std::string filename = "portrait-" + meshName + ".png";
+    // A gender image (portrait-<mesh>-<gender>.png) is used when it exists, its tint regions are
+    // listed in config/portrait-tints.cfg under "<mesh>-<gender>"
+    std::string portraitKey = meshName;
+    if(!gender.empty())
+    {
+        std::string lowerGender = gender;
+        std::transform(lowerGender.begin(), lowerGender.end(), lowerGender.begin(), ::tolower);
+        if(Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics",
+            "portrait-" + meshName + "-" + lowerGender + ".png"))
+            portraitKey = meshName + "-" + lowerGender;
+    }
+
+    const std::string filename = "portrait-" + portraitKey + ".png";
     PortraitTint& tint = getPortraitTint();
-    if(!tint.hasMesh(meshName) || (getFailedTintedPortraitNames().count(name) != 0) ||
+    if(!tint.hasMesh(portraitKey) || (getFailedTintedPortraitNames().count(name) != 0) ||
         !Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", filename))
-        return getCreaturePanelPortraitImage(meshName);
+        return getCreaturePanelPortraitImage(portraitKey);
 
     CEGUI::OgreRenderer& renderer = static_cast<CEGUI::OgreRenderer&>(
         *CEGUI::System::getSingleton().getRenderer());
@@ -329,7 +349,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
         }
         std::vector<uint8_t>().swap(full);
 
-        tint.apply(meshName, creatureName, rgb, width, height);
+        tint.apply(portraitKey, creatureName, rgb, width, height);
 
         std::vector<uint8_t> data(static_cast<size_t>(width) * height * 4);
         for(size_t i = 0; i < static_cast<size_t>(width) * height; ++i)
@@ -363,7 +383,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
         renderer.destroyTexture(name);
     else if(texture)
         Ogre::TextureManager::getSingleton().remove(texture->getHandle());
-    return getCreaturePanelPortraitImage(meshName);
+    return getCreaturePanelPortraitImage(portraitKey);
 }
 
 void clearCreatureProfilePortraits()

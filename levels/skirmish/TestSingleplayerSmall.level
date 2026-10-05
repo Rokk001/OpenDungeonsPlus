@@ -18,7 +18,7 @@ startingY	10
 colorId	1
 gold	1000
 goldMined	100
-mana	500
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -46,7 +46,7 @@ startingY	40
 colorId	2
 gold	1000
 goldMined	100
-mana	500
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -79,7 +79,7 @@ startingY	10
 colorId	3
 gold	1000
 goldMined	100
-mana	500
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -103,7 +103,7 @@ startingY	40
 colorId	4
 gold	1000
 goldMined	100
-mana	500
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -1470,6 +1470,20 @@ DwarfWorker	1
     TurnsWithoutFight	150	20	-35
     # MoodModifierName	CreatureClass	MoodModifier
     Creature	Goblin	-500
+    # MoodModifierName	MoodModifier
+    NoLair	-400
+    # MoodModifierName	TurnsMin	TurnsMax	MoodModifier
+    OutOfWork	10	40	-10
+    # MoodModifierName	TurnsMin	TurnsMax	MoodModifier
+    HeldInHand	100	200	-3
+    # MoodModifierName	DurationTurns	MaxSlaps	MoodModifier
+    Slapped	600	5	-120
+    # MoodModifierName	TurnsMax	MoodModifier
+    Tortured	43	-71
+    # MoodModifierName	TurnsMax	MoodModifier
+    Rested	30	43
+    # MoodModifierName	TurnsMax	MoodModifier
+    HatedCompany	43	-10
     [/MoodModifiers]
     [CreatureSkills]
     # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	EffectDuration	EffectValue

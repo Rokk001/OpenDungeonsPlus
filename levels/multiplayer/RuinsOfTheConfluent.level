@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Ruins of the Confluent
-Description	At the junction of two underground rivers, human knights once built a military outpost. Decades later, only ruins are left, swarming with petty orcs and imps; but some say the knights hid artefacts at the confluent that they plundered from the Keepers of old, and a human expedition seems determined to retrieve them...
+Description	At the junction of two underground rivers, human knights once built a military outpost. Decades later, only ruins are left, swarming with petty orcs and workers; but some say the knights hid artefacts at the confluent that they plundered from the Keepers of old, and a human expedition seems determined to retrieve them...
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -18,7 +18,7 @@ startingY	10
 colorId	1
 gold	1000
 goldMined	0
-mana	2000
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -41,7 +41,7 @@ startingY	50
 colorId	2
 gold	1000
 goldMined	0
-mana	200
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -64,7 +64,7 @@ startingY	50
 colorId	3
 gold	1000
 goldMined	0
-mana	2000
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -87,7 +87,7 @@ startingY	10
 colorId	4
 gold	1000
 goldMined	0
-mana	2000
+mana	100
 [SkillDone]
 roomTreasury
 roomDormitory
@@ -110,7 +110,7 @@ startingY	29
 colorId	5
 gold	1000
 goldMined	0
-mana	2000
+mana	100
 [SkillDone]
 [/SkillDone]
 [SkillNotAllowed]
@@ -2126,6 +2126,20 @@ NatureMonster	5
     HpLoss	-6
     # MoodModifierName	TurnsWithoutFightMin	TurnsWithoutFightMax	MoodModifier
     TurnsWithoutFight	150	20	-35
+    # MoodModifierName	MoodModifier
+    NoLair	-400
+    # MoodModifierName	TurnsMin	TurnsMax	MoodModifier
+    OutOfWork	10	40	-10
+    # MoodModifierName	TurnsMin	TurnsMax	MoodModifier
+    HeldInHand	100	200	-3
+    # MoodModifierName	DurationTurns	MaxSlaps	MoodModifier
+    Slapped	600	5	-120
+    # MoodModifierName	TurnsMax	MoodModifier
+    Tortured	43	-71
+    # MoodModifierName	TurnsMax	MoodModifier
+    Rested	30	43
+    # MoodModifierName	TurnsMax	MoodModifier
+    HatedCompany	43	-10
     [/MoodModifiers]
     [CreatureSkills]
     # SkillName	CooldownNbTurns	WarmupNbTurns	RangeMax	LevelMin	EffectDuration	EffectValue

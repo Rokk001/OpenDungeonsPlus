@@ -161,8 +161,30 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
     //! creature card (the card stays open)
     void showSocialWindow(const std::string& selectedCreature);
+    //! \brief Sandbox panel: toggles the window, changes the level of the heroes (left click up,
+    //! right click down), takes a hero in the hand and starts hero invasions
+    bool toggleSandboxWindow(const CEGUI::EventArgs& = {});
+    bool hideSandboxWindow(const CEGUI::EventArgs& = {});
+    bool onSandboxHeroLevelClicked(const CEGUI::EventArgs& e);
+    bool takeSandboxHero(const CEGUI::EventArgs& = {});
+    bool startSandboxSingleInvasion(const CEGUI::EventArgs& = {});
+    bool startSandboxContinualInvasion(const CEGUI::EventArgs& = {});
+    //! \brief Shows the score and the room timer the server sent (on the HUD and in the sandbox window) and
+    //! opens the prompt when the server tells that the realm is complete
+    void updateSandboxStatus();
+    //! \brief The prompt after a completed realm: leave for the next realm, or stay in this one
+    bool onSandboxNextRealm(const CEGUI::EventArgs& = {});
+    bool onSandboxStay(const CEGUI::EventArgs& = {});
 
     //! \brief Shows/hides/toggles the player settings window
+    //! \brief Casino payout control, opened by clicking on one of the player's casinos
+    void showCasinoPayoutWindow(Tile* tile);
+    bool hideCasinoPayoutWindow(const CEGUI::EventArgs& = {});
+    bool cycleCasinoPayout(const CEGUI::EventArgs& = {});
+    //! \brief Called when the server tells the payout level of a casino. It is only shown if
+    //! it is the casino the window is open for.
+    void setCasinoPayoutShown(int tileX, int tileY, uint32_t level);
+
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool cancelPlayerSettings(const CEGUI::EventArgs& = {});
@@ -238,12 +260,19 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void refreshActionFeedback(float elapsed);
 
     Creature* getClosestCreature(Tile*);
-    
+
+    //! \brief Called on client side when the local player takes control of a creature (possession)
+    void notifyPossessionStarted();
+
+    //! \brief Called on client side when the local player is no longer in control of a creature
+    void notifyPossessionEnded();
+
 protected:
     bool onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/);
 
     //! \brief The different Game Options Menu handlers
     bool showQuitMenuFromOptions(const CEGUI::EventArgs& e = {});
+    bool showRestartLevelFromOptions(const CEGUI::EventArgs& e = {});
     bool showExitApplicationFromOptions(const CEGUI::EventArgs& e = {});
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
@@ -266,6 +295,9 @@ private:
     std::unique_ptr<SocialWindow> mSocialWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
     void refreshHeldCreatureIcons();
+    //! \brief Label next to the hand showing the width x height of the area being dragged
+    CEGUI::Window* mSelectionSizeLabel = nullptr;
+    void refreshSelectionSizeLabel();
     bool shouldExpireEventMessages() const override { return false; }
     void showEventMessages();
     void showEventMessage(EventMessage* message, bool raiseWindow);
@@ -289,6 +321,12 @@ private:
     //! confirmation popup.
     bool mExitToDesktop = false;
 
+    //! \brief Whether the pending confirmation popup restarts the level rather than
+    //! leaving the game. Set by the button that opened the confirmation popup.
+    bool mRestartLevel = false;
+    //! \brief Seconds of the time limit countdown that is shown on the HUD, -1 while it is hidden
+    int32_t mTimeLimitShown = -1;
+
     //! \brief Sets whether a tile must marked or unmarked for digging.
     //! this value is based on the first marked flag tile selected.
     bool mDigSetBool;
@@ -305,6 +343,14 @@ private:
     SettingsWindow mSettings;
     bool mReturningToSettingsNavigation = false;
 
+    //! \brief The level of the heroes taken from the sandbox hero toolbox
+    uint32_t mSandboxHeroLevel;
+    //! \brief The level file of the next realm offered by the open prompt
+    std::string mSandboxNextLevel;
+    //! \brief What the sandbox score and room timer of the HUD show, to set the text only on a change
+    std::string mSandboxScoreShown;
+    std::string mSandboxRoomShown;
+
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the
     //! player clicks on the skill tree window
     std::vector<SkillType> mSkillPending;
@@ -313,6 +359,9 @@ private:
     SkillCurrentCompletion mSkillCurrentCompletion;
 
     bool mIsSkillWindowOpen;
+
+    //! \brief Whether the spell buttons were last shown locked because the library was lost
+    bool mIsLibraryLostShown;
 
     SkillType mCurrentSkillType;
     float mCurrentSkillProgress;
@@ -353,6 +402,12 @@ private:
     bool closeUserCameras(const CEGUI::EventArgs& = {});
     bool selectUserCamera(const CEGUI::EventArgs&);
     bool storeUserCamera(const CEGUI::EventArgs&);
+    //! \brief The player pressed the button of a stored special: asks the server to use it
+    bool useSpecial(const CEGUI::EventArgs& args);
+    //! \brief Shows the buttons of the specials the local player has stored
+    void refreshSpecialButtons();
+    //! \brief The number of stored specials the buttons show, indexed by gift box type
+    std::vector<uint32_t> mSpecialCountsShown;
     unsigned int mUserCameraSlot = 0;
 
     void resetIdleHand();
@@ -382,11 +437,49 @@ private:
     bool mMapKeyDown = false;
 
 
+    //! \brief Tile of the casino whose payout window is open and the payout level shown
+    int mCasinoX;
+    int mCasinoY;
+    uint32_t mCasinoPayout;
+
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;
     
     const ConfigManager &config;
     
+    //! \brief Whether the local player controls a creature (possession)
+    bool isLocalPlayerPossessing();
+
+    //! \brief Handles a key press or release while the player controls a creature. Returns
+    //! true if the key was used and should not be handled as a normal game key.
+    bool handlePossessionKey(OIS::KeyCode key, bool pressed);
+
+    //! \brief Called at each frame while possessing. Sends the walk direction to the server
+    //! when it changed.
+    void updatePossessionInput(float timeSinceLastFrame);
+
+    //! \brief The direction the possessed creature looks at (unit vector on the ground plane)
+    Ogre::Vector2 getPossessionAim();
+
+    //! \brief Sends the possession attack request (left mouse button) to the server
+    void sendPossessionAttack();
+
+    //! \brief Sends the request to use the creature skill of the given slot (keys 1 to 4)
+    void sendPossessionSkill(uint32_t slot);
+
+    //! \brief Sends the possession exit request to the server
+    void sendPossessionExit();
+
+    //! \brief The movement keys held down while possessing
+    bool mPossessKeyForward = false;
+    bool mPossessKeyBackward = false;
+    bool mPossessKeyLeft = false;
+    bool mPossessKeyRight = false;
+
+    //! \brief The last walk direction sent to the server while possessing and the time since it was sent
+    Ogre::Vector2 mPossessLastDirection = Ogre::Vector2::ZERO;
+    float mPossessTimeSinceSent = 0.0f;
+
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
     void handlePlayerActionNone();

@@ -17,11 +17,13 @@ code = r'''
 #include <vector>
 struct Seat { int getNbRooms(int){return 1;} int getGold(){return 100;} };
 struct Player { Seat seat; Seat* getSeat(){return &seat;} };
-struct Position {float x,y;};
-struct Object {std::string mesh;Position position;const std::string& getMeshName(){return mesh;}Position getPosition(){return position;}};
+namespace Ogre {struct Vector3 {float x,y,z;};}
+struct Object {std::string mesh;Ogre::Vector3 position;const std::string& getMeshName(){return mesh;}Ogre::Vector3 getPosition(){return position;}};
+typedef Object RenderedMovableEntity;
+enum class TileType {dirt,manaWell};
 struct GameMap;
 struct Tile {
- GameMap* map;int x=0,y=0;bool full=false,building=false,claimed=true;
+ GameMap* map;TileType mType=TileType::dirt;int x=0,y=0;bool full=false,building=false,claimed=true;
  bool isFullTile()const{return full;}bool getIsBuilding()const{return building;}
  bool isClaimedForSeat(Seat*)const{return claimed;}GameMap* getGameMap()const{return map;}
  int getX()const{return x;}int getY()const{return y;}bool isBuildableUpon(Seat*)const;
@@ -47,10 +49,10 @@ void hover(GameMap* gameMap,const InputManager& inputManager,InputCommand& input
 int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++failures;};
  GameMap map;Tile tile{&map};Seat seat;Object heart{"",{58,102}};
  map.objects={&heart};map.hovered=&tile;
- // Every health tier mesh blocks the tiles under its measured footprint.
+ // Every health tier mesh blocks the tiles under its measured footprint (the 5x5 heart with its pedestal, +-1.733 around the centre).
  for(const char* mesh:{"DungeonHeartObjectHealthy","DungeonHeartObjectDamaged","DungeonHeartObjectCritical"})
  for(int x=54;x<=62;++x)for(int y=98;y<=106;++y){
-  heart.mesh=mesh;tile.x=x;tile.y=y;bool expected=std::abs(x-58)>1||y<101||y>104;
+  heart.mesh=mesh;tile.x=x;tile.y=y;bool expected=std::abs(x-58)>2||std::abs(y-102)>2;
   check(tile.isBuildableUpon(&seat)==expected);
   InputCommand command;hover(&map,InputManager{},command);
   check(command.selected==(expected?1:0));check(command.failures==(expected?0:1));
@@ -60,6 +62,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
  Object portal{"PortalObject",{58,102}};map.objects={&portal};check(tile.isBuildableUpon(&seat));
  tile.building=true;check(!tile.isBuildableUpon(&seat));tile.building=false;
  tile.full=true;check(!tile.isBuildableUpon(&seat));tile.full=false;
+ tile.mType=TileType::manaWell;check(!tile.isBuildableUpon(&seat));tile.mType=TileType::dirt;
  tile.claimed=false;check(!tile.isBuildableUpon(&seat));
  map.hovered=nullptr;InputCommand outside;hover(&map,InputManager{},outside);check(outside.selected==0&&outside.failures==1);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;

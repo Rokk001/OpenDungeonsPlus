@@ -30,7 +30,7 @@ MASK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
 
 # Target tones (8 bit) and the claimed floor tone.
 CLAIMED_BASE = np.array([80.0, 73.0, 65.0])
-ROCK_BASE = np.array([46.0, 41.0, 38.0])
+ROCK_BASE = np.array([52.0, 46.0, 42.0])
 GOLD_DARK = np.array([178.0, 124.0, 16.0])
 GOLD_MID = np.array([246.0, 186.0, 38.0])
 GOLD_GLINT = np.array([252.0, 208.0, 84.0])
@@ -127,22 +127,35 @@ def claimed():
 
 
 def gold():
-    # rock: dark, cool, rough
-    rock_lum = 1.0 + 0.16 * fbm(21, 5.0, 3) + 0.10 * fbm(22, 60.0, 2)
-    cracks = 1.0 - smoothstep(0.0, 0.05, np.abs(fbm(23, 7.0, 2)))
-    rock = ROCK_BASE[None, None, :] * (rock_lum - 0.25 * cracks)[..., None]
-    # gold: ragged clumps and veins (many octaves give a jagged edge), about half of the area
-    clump = fbm(24, 7.0, 5) + 0.6 * fbm(31, 18.0, 3)
-    vein = 1.0 - smoothstep(0.04, 0.20, np.abs(fbm(32, 5.0, 4)))
-    cover = np.maximum(smoothstep(0.05, 0.25, clump), vein * smoothstep(-0.4, 0.2, fbm(33, 5.0, 2)))
-    shade = np.clip(0.5 + 0.25 * fbm(27, 18.0, 3) + 0.18 * fbm(28, 70.0, 2), 0.0, 1.0)
+    # rock: dark, cool, calm (soft mottling, a few cracks)
+    rock_lum = 1.0 + 0.12 * fbm(21, 4.0, 3) + 0.07 * fbm(22, 50.0, 2)
+    cracks = 1.0 - smoothstep(0.0, 0.04, np.abs(fbm(23, 5.0, 2)))
+    rock = ROCK_BASE[None, None, :] * (rock_lum - 0.22 * cracks)[..., None]
+    # ore seams: a few long, smooth veins (zero level lines of a slowly varying, lightly warped field) whose width
+    # swells and pinches along their length; most of the tile stays bare rock
+    field = fbm(32, 1.9, 3)
+    gy = (np.roll(field, -1, 0) - np.roll(field, 1, 0)) * 0.5
+    gx = (np.roll(field, -1, 1) - np.roll(field, 1, 1)) * 0.5
+    dist_px = np.abs(field) / np.maximum(np.hypot(gx, gy), 1e-4)
+    dist_px = dist_px + 2.5 * fbm(41, 25.0, 2)
+    swell = smoothstep(-1.0, 1.0, fbm(33, 3.0, 2))
+    keep = smoothstep(-0.7, 0.1, fbm(34, 2.0, 2))
+    half_w = (7.5 + 12.0 * swell) * keep
+    seam = 1.0 - smoothstep(half_w - 1.5, half_w + 0.5, dist_px)
+    # nuggets: a handful of rounded lumps, a bit larger than the seam width
+    nugget = smoothstep(1.0, 1.25, fbm(35, 8.0, 2))
+    cover = np.clip(np.maximum(seam, nugget), 0.0, 1.0)
+    # gold: smooth, warm, with soft shading across the seams and a few small glints
+    shade = np.clip(0.55 + 0.20 * fbm(27, 14.0, 3) + 0.10 * fbm(28, 60.0, 2), 0.0, 1.0)
+    core = np.clip(blur(cover, 5.0) * 1.6, 0.0, 1.0)
+    shade = np.clip(shade * 0.65 + 0.45 * core, 0.0, 1.0)
     gold_rgb = GOLD_DARK[None, None, :] * (1.0 - shade[..., None]) + GOLD_MID[None, None, :] * shade[..., None]
-    glint = smoothstep(1.3, 1.9, fbm(29, 60.0, 2)) * cover
+    glint = smoothstep(1.7, 2.2, fbm(29, 45.0, 2)) * cover
     gold_rgb = gold_rgb * (1.0 - glint[..., None]) + GOLD_GLINT[None, None, :] * glint[..., None]
     rim = np.clip(blur(cover, 1.6), 0, 1)
     rgb = rock * (1.0 - cover[..., None]) + gold_rgb * cover[..., None]
-    rgb = rgb * (1.0 - 0.35 * (rim * (1.0 - rim) * 4.0)[..., None])
-    height = 1.0 * blur(cover, 1.2) + 0.30 * fbm(30, 40.0, 3) - 0.6 * cracks
+    rgb = rgb * (1.0 - 0.30 * (rim * (1.0 - rim) * 4.0 * cover)[..., None])
+    height = 2.0 * blur(cover, 1.5) + 0.20 * fbm(30, 40.0, 3) - 0.5 * cracks
     return rgb, normal_map(height, 1.0) * 255.0
 
 

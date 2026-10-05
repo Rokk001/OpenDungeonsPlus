@@ -238,9 +238,21 @@ public:
             case SpellType::creatureStrength: key = "CreatureStrengthPrice"; break;
             case SpellType::creatureWeak: key = "CreatureWeakPrice"; break;
             case SpellType::eyeEvil: key = "EyeEvilPrice"; break;
+            case SpellType::createGold: key = "CreateGoldPrice"; break;
+            case SpellType::lightning: key = "LightningPrice"; break;
+            case SpellType::tremor: key = "TremorPrice"; break;
+            case SpellType::defector: key = "DefectorPrice"; break;
+            case SpellType::hexenHen: key = "HexenHenPrice"; break;
+            case SpellType::inferno: key = "InfernoPrice"; break;
+            case SpellType::possess: key = "PossessPrice"; break;
+            case SpellType::summonChampion: key = "SummonChampionPrice"; break;
             default: return "";
         }
-        const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil) ?
+        const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
+            mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
+            mSpellType == SpellType::tremor || mSpellType == SpellType::defector ||
+            mSpellType == SpellType::hexenHen || mSpellType == SpellType::inferno ||
+            mSpellType == SpellType::possess || mSpellType == SpellType::summonChampion) ?
             " mana" : " mana per creature";
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
@@ -401,6 +413,24 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl4depends.push_back(skill);
 
+    resType = SkillType::spellLightning;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("AttackSkills/", "LightningButton", skill, SpellType::lightning);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
+    resType = SkillType::spellTremor;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("AttackSkills/", "TremorButton", skill, SpellType::tremor);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
     // Tech Skills
     lvl1depends.clear();
     lvl2depends.clear();
@@ -441,6 +471,15 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl2depends.push_back(skill);
 
+    resType = SkillType::roomGuardRoom;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl1depends);
+    def = new SkillDefRoom("TacticSkills/", "GuardRoomButton", skill, RoomType::guardRoom);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl2depends.push_back(skill);
+
     resType = SkillType::trapDoorWooden;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
@@ -449,6 +488,62 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
     lvl2depends.push_back(skill);
+    const Skill* woodenDoorSkill = skill;
+
+    // Stronger doors. Each one requires the previous door
+    std::vector<const Skill*> doorDepends;
+    doorDepends.push_back(skill);
+    resType = SkillType::trapDoorIronbound;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "IronboundDoorTrapButton", skill, TrapType::doorIronbound);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    doorDepends.clear();
+    doorDepends.push_back(skill);
+    resType = SkillType::trapDoorSteel;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "SteelDoorTrapButton", skill, TrapType::doorSteel);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    const Skill* steelDoorSkill = skill;
+
+    // The barricade only requires the wooden door
+    doorDepends.clear();
+    doorDepends.push_back(woodenDoorSkill);
+    resType = SkillType::trapDoorBarricade;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "BarricadeTrapButton", skill, TrapType::doorBarricade);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // The secret door only requires the wooden door
+    doorDepends.clear();
+    doorDepends.push_back(woodenDoorSkill);
+    resType = SkillType::trapDoorSecret;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "SecretDoorTrapButton", skill, TrapType::doorSecret);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // The runed door requires the steel door
+    doorDepends.clear();
+    doorDepends.push_back(steelDoorSkill);
+    resType = SkillType::trapDoorRuned;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, doorDepends);
+    def = new SkillDefTrap("TacticSkills/", "RunedDoorTrapButton", skill, TrapType::doorRuned);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
 
     // Lvl 3 skills
     resType = SkillType::trapCannon;
@@ -469,12 +564,109 @@ SkillManager::SkillManager() :
     mSkills[index] = def;
     lvl3depends.push_back(skill);
 
+    // The tactic tree row after the wooden door has no room left for a fifth node
+    // (cannon, spike, ironbound door, barricade), so the alarm trap follows cannon and spike
+    resType = SkillType::trapAlarm;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefTrap("TacticSkills/", "AlarmTrapButton", skill, TrapType::alarm);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
     // Lvl 4 research
     resType = SkillType::trapBoulder;
     index = static_cast<uint32_t>(resType);
     points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
     skill = new Skill(resType, points, lvl3depends);
     def = new SkillDefTrap("TacticSkills/", "BoulderTrapButton", skill, TrapType::boulder);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
+    resType = SkillType::trapFear;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefTrap("TacticSkills/", "FearTrapButton", skill, TrapType::fear);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    resType = SkillType::trapGas;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefTrap("TacticSkills/", "GasTrapButton", skill, TrapType::gas);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // Lvl 5 research
+    resType = SkillType::trapLightning;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl4depends);
+    def = new SkillDefTrap("TacticSkills/", "LightningTrapButton", skill, TrapType::lightning);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    std::vector<const Skill*> lvl5depends;
+    lvl5depends.push_back(skill);
+
+    // Lvl 6 research
+    resType = SkillType::trapFireburst;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl5depends);
+    def = new SkillDefTrap("TacticSkills/", "FireburstTrapButton", skill, TrapType::fireburst);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    std::vector<const Skill*> lvl6depends;
+    lvl6depends.push_back(skill);
+
+    // Lvl 7 research: the trigger trap only makes sense with other traps to set off,
+    // provisional position below the fireburst trap (research tree is full)
+    resType = SkillType::trapTrigger;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl6depends);
+    def = new SkillDefTrap("TacticSkills/", "TriggerTrapButton", skill, TrapType::trigger);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // The freeze trap follows the lightning trap, in the free slot of the lightning row
+    resType = SkillType::trapFreeze;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl5depends);
+    def = new SkillDefTrap("TacticSkills/", "FreezeTrapButton", skill, TrapType::freeze);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    resType = SkillType::trapWatchBanner;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefTrap("TacticSkills/", "WatchBannerTrapButton", skill, TrapType::watchBanner);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    resType = SkillType::spellDefector;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    // The tactic row after cannon and spike trap is full, so Defector follows the boulder trap
+    skill = new Skill(resType, points, lvl4depends);
+    def = new SkillDefSpell("TacticSkills/", "DefectorButton", skill, SpellType::defector);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+
+    // The tactic rows after cannon and spike trap and after the boulder trap are full,
+    // so Hexen Hen follows Defector
+    std::vector<const Skill*> defectorDepends;
+    defectorDepends.push_back(skill);
+    resType = SkillType::spellHexenHen;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, defectorDepends);
+    def = new SkillDefSpell("TacticSkills/", "HexenHenButton", skill, SpellType::hexenHen);
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
 
@@ -575,6 +767,51 @@ SkillManager::SkillManager() :
     def->mapSkill(mSkillsFamily);
     mSkills[index] = def;
     lvl4depends.push_back(skill);
+
+    resType = SkillType::spellCreateGold;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("MagicSkills/", "CreateGoldButton", skill, SpellType::createGold);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
+    resType = SkillType::roomTemple;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefRoom("MagicSkills/", "PrayerTempleButton", skill, RoomType::temple);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
+    resType = SkillType::spellInferno;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("MagicSkills/", "InfernoButton", skill, SpellType::inferno);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
+    resType = SkillType::spellPossess;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, lvl3depends);
+    def = new SkillDefSpell("MagicSkills/", "PossessButton", skill, SpellType::possess);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
+    lvl4depends.push_back(skill);
+
+    // Not researchable: the campaign Heartstone unlocks it. It has no dependency and no node in the skill tree window
+    resType = SkillType::spellSummonChampion;
+    index = static_cast<uint32_t>(resType);
+    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
+    skill = new Skill(resType, points, emptyDepends);
+    def = new SkillDefSpell("MagicSkills/", "SummonChampionButton", skill, SpellType::summonChampion);
+    def->mapSkill(mSkillsFamily);
+    mSkills[index] = def;
 }
 
 SkillManager::~SkillManager()
@@ -615,7 +852,27 @@ bool SkillManager::isSpellAvailable(SpellType type, const Seat* seat)
         return false;
     }
     SkillType resType = family.at(index);
+    // The spells researched in a library cannot be cast while that library is lost.
+    // Summoning a worker needs no research in the game this one follows, so it stays.
+    // Reward skills (Summon champion) are unlocked by a Heartstone, not researched, so they stay too.
+    if(seat->isLibraryLost() && (type != SpellType::summonWorker) && !Skills::isRewardSkill(resType))
+        return false;
+
     return seat->isSkillDone(resType);
+}
+
+bool SkillManager::isLockedByLostLibrary(SkillType type, const Seat* seat)
+{
+    if(!seat->isLibraryLost() || (type == SkillType::spellSummonWorker) || Skills::isRewardSkill(type))
+        return false;
+
+    for(const SkillDef* skill : getSkillManager().mSkills)
+    {
+        if((skill != nullptr) && (skill->mSkill->getType() == type))
+            return skill->getSkillFamily() == SkillFamily::spells;
+    }
+
+    return false;
 }
 
 bool SkillManager::isTrapAvailable(TrapType type, const Seat* seat)
@@ -640,6 +897,8 @@ bool SkillManager::isAllSkillsDoneForSeat(const Seat* seat)
     for(const SkillDef* skill : getSkillManager().mSkills)
     {
         if(skill == nullptr)
+            continue;
+        if(Skills::isRewardSkill(skill->mSkill->getType()))
             continue;
         if(seat->getSkillLevel(skill->mSkill->getType()) >= 3)
             continue;
@@ -747,7 +1006,7 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::roomPrison: return "New converted creatures start at level " + value(1) + ".";
         case SkillType::roomArena: return "Arena training cap: level " + value(config.getRoomConfigUInt32("ArenaMaxTrainingLevel")) + ".";
         case SkillType::roomCasino: return "Keeper share of bets: " + value(config.getRoomConfigDouble("CasinoFee") * 100) + "%.";
-        case SkillType::roomTorture: return "Conversion chance per session: " + value(config.getRoomConfigDouble("TortureRallyPercent") * 100) + "%.";
+        case SkillType::roomTorture: return "Conversion speed: x" + value(1) + ".";
         case SkillType::trapDoorWooden: return "Door health: " + value(10) + ".";
         case SkillType::trapCannon:
         case SkillType::trapSpike:
@@ -758,7 +1017,7 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             return "Damage: " + value(config.getTrapConfigDouble(prefix + "DamagePerHitMin")) + "-" +
                 Helper::toString(getResearchValue(type, level, config.getTrapConfigDouble(prefix + "DamagePerHitMax"), true)) + ".";
         }
-        case SkillType::spellSummonWorker: return "Paid-worker base cost: " + spell("SummonWorkerBasePrice") + " mana; existing price growth retained.";
+        case SkillType::spellSummonWorker: return "Paid-worker base cost: " + spell("SummonWorkerBasePrice") + " mana, plus one more base cost for every worker above the heart's four.";
         case SkillType::spellCallToWar: return "Maximum lifetime: " + spell("CallToWarNbTurnsMax") + " turns.";
         case SkillType::spellCreatureDefense: return "Added physical defense: " + spell("CreatureDefenseValue") + ".";
         case SkillType::spellCreatureExplosion: return "Damage per turn: " + spell("CreatureExplosionValue") + ".";
@@ -768,6 +1027,48 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
         case SkillType::spellCreatureStrength: return "Strength: x" + spell("CreatureStrengthValue") + ".";
         case SkillType::spellCreatureWeak: return "Target strength: x" + spell("CreatureWeakValue") + ".";
         case SkillType::spellEyeEvil: return "Revealed-area lifetime: " + spell("EyeEvilNbTurns") + " turns.";
+        case SkillType::spellCreateGold: return "Gold per cast: " + spell("CreateGoldValue") + ".";
+        // The health of every door type grows with the wooden door research level (TrapDoor::getHP)
+        case SkillType::trapDoorIronbound: return "Door health: " + value(config.getTrapConfigDouble("IronboundDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapDoorSteel: return "Door health: " + value(config.getTrapConfigDouble("SteelDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapDoorBarricade: return "Barricade health: " + value(config.getTrapConfigDouble("BarricadeDoorHP")) + " before Wooden door upgrades.";
+        case SkillType::trapDoorSecret: return "Door health: " + value(config.getTrapConfigDouble("SecretDoorHP")) +
+            " before Wooden door upgrades; enemies see a wall until they see one of your creatures pass.";
+        case SkillType::trapDoorRuned: return "Door health: " + value(config.getTrapConfigDouble("RunedDoorHP")) +
+            " before Wooden door upgrades; deals " + value(config.getTrapConfigDouble("RunedDoorDamage")) +
+            " fire damage to enemies on the door every " + value(config.getTrapConfigDouble("RunedDoorReloadTurns")) + " turns.";
+        case SkillType::roomGuardRoom: return "Wakefulness cost per duty turn: " + room("GuardRoomWakefulnessPerDuty") + ".";
+        case SkillType::roomTemple: return "Default prayer mana per second: " + room("TemplePrayerManaPerSecond") + "; most creature types have their own value.";
+        case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
+        case SkillType::trapFear: return "Enemies within " + value(config.getTrapConfigDouble("FearRadius")) +
+            " tiles run away for " + value(config.getTrapConfigDouble("FearDurationTurns")) + " turns.";
+        case SkillType::trapGas: return "Damage: " + value(config.getTrapConfigDouble("GasDamagePerHitMin")) +
+            " to every creature nearby (radius " + value(config.getTrapConfigDouble("GasRadius")) + ").";
+        case SkillType::trapLightning: return "Damage: " + value(config.getTrapConfigDouble("LightningDamagePerHitMin")) +
+            " to one enemy within " + value(config.getTrapConfigDouble("LightningRange")) + " tiles, stunned for " +
+            value(config.getTrapConfigDouble("LightningStunTurns")) + " turns.";
+        case SkillType::trapFireburst: return "Damage: " + value(config.getTrapConfigDouble("FireburstDamagePerHitMin")) +
+            " to every creature nearby (radius " + value(config.getTrapConfigDouble("FireburstRadius")) + ").";
+        case SkillType::trapFreeze: return "Enemies on the tile are paralysed for " + value(config.getTrapConfigDouble("FreezeDurationTurns")) +
+            " turns; those below " + value(config.getTrapConfigDouble("FreezeShatterHpPercent")) + "% health shatter.";
+        case SkillType::spellLightning: return "Damage: " + spell("LightningDamage") + " to one enemy creature, which is stunned.";
+        case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
+            " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";
+        case SkillType::trapWatchBanner: return "One idle fighter stands guard on each post and returns to it after a fight.";
+        case SkillType::trapTrigger: return "Sets off every trap and door weapon of yours on the eight surrounding tiles, "
+            "and any trigger trap next to it, when an enemy steps on it. No damage.";
+        case SkillType::spellDefector: return "One enemy creature on your claimed land fights for you for " +
+            spell("DefectorNbTurns") + " turns.";
+        case SkillType::spellHexenHen: return "One enemy creature becomes a harmless chicken for " +
+            spell("HexenHenNbTurns") + " turns.";
+        case SkillType::spellInferno: return "Damage: " + spell("InfernoDamagePerTurn") + " per turn to enemy creatures within " +
+            spell("InfernoRadiusTiles") + " tiles, which burn for " + spell("InfernoNbTurns") + " turns.";
+        case SkillType::spellSummonChampion: return "Summons one champion that cannot be hurt and charges at the enemies. Costs " +
+            spell("SummonChampionPrice") + " mana, free for " + Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
+            config.getSpellConfigDouble("SummonChampionDrainPerSecond")) + " seconds, then " + spell("SummonChampionDrainPerSecond") +
+            " mana per second. Unlocked by the complete Heartstone.";
+        case SkillType::spellPossess: return "Control one of your creatures in first person; free for " +
+            spell("PossessFreeSeconds") + " seconds after the cast, then a mana drain per second that depends on the creature.";
         default: return "";
     }
 }
@@ -789,6 +1090,8 @@ void SkillManager::buildRandomPendingSkillsForSeat(std::vector<SkillType>& skill
             continue;
 
         SkillType resType = skill->mSkill->getType();
+        if(Skills::isRewardSkill(resType))
+            continue;
         // We do not consider skills already pending or done
         if(seat->getSkillLevel(resType) >= 3 || std::find(skills.begin(), skills.end(), resType) != skills.end())
             continue;

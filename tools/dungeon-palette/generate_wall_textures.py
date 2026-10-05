@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Generates the darker, muted wall textures of the dungeon palette (materials/textures/).
 
-  - DirtWall.png / DirtWallNormal.png: rock-like earth for the earth wall (dirtFull) tiles and their fog of war
+  - DirtWall.png / DirtWallNormal.png: warm dark brown, rough natural earth (no regular cells) for the earth wall (dirtFull) tiles and their fog of war
     mesh. 256x256, truly periodic (FFT noise and a wrapping cell pattern), so it stays seam free with the world
     space UV of DirtTile.vert (one repeat per tile on upward facing surfaces).
   - DungeonClaimedWall*.png: the existing atlases of the reinforced wall are regraded in place. Bricks and stone caps
-    keep their painted structure (mortar, cracks, relief) but become darker and greyer, and the flat brown earth
+    keep their painted structure (mortar, cracks, relief) but become darker and a cool blue-grey (clearly different from the warm earth wall), and the flat brown earth
     path on top is replaced by a mottled slate surface. The normal maps and the ownership mask are not touched.
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
@@ -98,29 +98,33 @@ def cells_on_torus(n, seed, count, warp_amp, warp_seed):
 
 
 # Screen values are about 1.2x the texture luminance and 1.25x the texture saturation (room shader gain and
-# saturation boost, cursor light); the means below come from docs/internal/STYLE-GUIDE.md and were calibrated
+# saturation boost, cursor light); the means below were calibrated
 # with the overview render.
-EARTH_MEAN = np.array([43.0, 38.0, 35.0]) / 255.0
+EARTH_MEAN = np.array([46.0, 36.0, 27.0]) / 255.0   # warm dark brown, hue about 28 degrees
+
+
+def ridged(n, seed, fx, octaves=3):
+    """Periodic ridged noise in 0..1 (bright thin ridges), used for the rough natural rock of the earth wall."""
+    return 1.0 - np.abs(np.tanh(0.9 * fbm(n, seed, fx, octaves)))
 
 
 def earth_wall():
     n = 256
-    idx, edge, off = cells_on_torus(n, 101, 16, 9.0, 111)
-    rng = np.random.RandomState(102)
-    tone = rng.uniform(-1.0, 1.0, idx.max() + 1)[idx]
-    warm = rng.uniform(-1.0, 1.0, idx.max() + 1)[idx]
-    tilt = (off[..., 0] * np.cos(idx * 2.1) + off[..., 1] * np.sin(idx * 2.1)) / 40.0
-    crev = 1.0 - smoothstep(0.0, 3.2, edge)
-    chip = 1.0 - smoothstep(3.0, 9.0, edge)
-    mott = fbm(n, 103, 5.0, 3)
+    # natural rock and packed earth: no regular cells, only warped broad patches, ridged crevices and grit
+    patch = fbm(n, 103, 3.5, 3)
+    patch2 = fbm(n, 106, 9.0, 3)
+    ridge = ridged(n, 107, 8.0, 3)
+    ridge2 = ridged(n, 108, 20.0, 2)
     grain = fbm(n, 104, 60.0, 2)
-    lum = 1.0 + 0.11 * tone + 0.07 * tilt + 0.09 * mott + 0.05 * grain - 0.30 * crev - 0.08 * chip
-    hair = fbm(n, 105, 18.0, 1)
-    lum *= 1.0 - 0.18 * smoothstep(1.35, 1.9, np.abs(hair))   # faint hairline cracks across the cells
+    pits = smoothstep(1.5, 2.3, fbm(n, 109, 14.0, 2))
+    crev = smoothstep(0.80, 0.97, ridge)
+    crev2 = smoothstep(0.88, 0.99, ridge2)
+    lum = 1.0 + 0.20 * patch + 0.12 * patch2 + 0.09 * grain - 0.38 * crev - 0.20 * crev2 - 0.30 * pits
+    warm = fbm(n, 110, 4.0, 2)
     col = EARTH_MEAN[None, None, :] * lum[..., None]
-    col *= (1.0 + 0.05 * warm[..., None] * np.array([1.0, 0.0, -1.0])[None, None, :])
-    height = 0.55 * (1.0 - crev) + 0.25 * tilt + 0.12 * mott + 0.06 * grain - 0.20 * chip
-    return col, normal_map(height, 2.4)
+    col *= (1.0 + 0.10 * warm[..., None] * np.array([1.0, 0.0, -1.0])[None, None, :])
+    height = 0.50 * ridge + 0.20 * ridge2 + 0.25 * patch + 0.12 * patch2 + 0.08 * grain - 0.35 * pits
+    return col, normal_map(height, 3.2)
 
 
 def rgb_to_sat(a):
@@ -131,9 +135,9 @@ def rgb_to_sat(a):
 
 # Reinforced wall regrade. Regions are separated by saturation and position in the atlas: high saturation above
 # row 300 is the brown earth path on top, saturated pixels below it are brick, the rest is the stone of the caps.
-BRICK = dict(mean=np.array([48.0, 45.0, 46.0]) / 255.0, keep=0.15, contrast=1.3)
-STONE = dict(mean=np.array([37.0, 35.0, 35.0]) / 255.0, keep=0.12, contrast=1.15)
-TOP_MEAN = np.array([38.0, 35.0, 35.0]) / 255.0
+BRICK = dict(mean=np.array([44.0, 48.0, 60.0]) / 255.0, keep=0.04, contrast=1.7)
+STONE = dict(mean=np.array([50.0, 53.0, 62.0]) / 255.0, keep=0.04, contrast=1.3)
+TOP_MEAN = np.array([40.0, 43.0, 52.0]) / 255.0
 
 
 def regrade(old, weight, p):

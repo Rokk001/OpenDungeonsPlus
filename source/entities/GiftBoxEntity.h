@@ -32,6 +32,18 @@ class ODPacket;
 enum class GiftBoxType
 {
     skill,
+    mana,
+    gold,
+    revealMap,
+    levelUp,
+    healAll,
+    makeSafe,
+    weakenWalls,
+    stunImps,
+    receiveImps,
+    makeHappy,
+    makeUnhappy,
+    killCreatures,
     nbTypes
 };
 std::ostream& operator<<(std::ostream& os, const GiftBoxType& type);
@@ -42,6 +54,8 @@ class GiftBoxEntity: public RenderedMovableEntity
 public:
     GiftBoxEntity(GameMap* gameMap, const std::string& baseName, const std::string& meshName, GiftBoxType type);
     GiftBoxEntity(GameMap* gameMap);
+    //! \brief Used when the type is already known, for example when loading a level
+    GiftBoxEntity(GameMap* gameMap, GiftBoxType type);
 
     virtual GameEntityType getObjectType() const override;
 
@@ -51,11 +65,21 @@ public:
     virtual void notifyEntityCarryOn(Creature* carrier) override;
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
 
+    //! \brief Gift boxes can be picked up, dropped and slapped by the editor only. In game,
+    //! they are carried by workers
+    virtual bool tryPickup(Seat* seat) override;
+    virtual bool tryDrop(Seat* seat, Tile* tile) override;
+    virtual bool canSlap(Seat* seat) override;
+    virtual void slap() override;
+
     //! \brief Server side function that will be called when the gift box is carried to the dungeon temple. It should be
     //! called by the overriding classes to do what they need. However, this function is not pure virtual because on client side,
     //! we don't want to make a difference
     virtual void applyEffect()
     {}
+
+    inline GiftBoxType getGiftBoxType() const
+    { return mGiftBoxType; }
 
     static GiftBoxEntity* getGiftBoxEntityFromStream(GameMap* gameMap, std::istream& is);
     static GiftBoxEntity* getGiftBoxEntityFromPacket(GameMap* gameMap, ODPacket& is);

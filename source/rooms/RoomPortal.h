@@ -36,12 +36,8 @@ public:
     { return mRoomType; }
 
     void absorbRoom(Room *r) override;
-    bool removeCoveredTile(Tile* t) override;
 
-    //! Room portal is claimable by enemy seats
-    virtual bool isClaimable(Seat* seat) const override;
-    virtual void claimForSeat(Seat* seat, Tile* tile, double danceRate) override;
-
+    //! Room portal can be taken over by enemy workers, like any other room but the dungeon heart
     //! Room portal cannot be destroyed
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     { return false; }
@@ -66,6 +62,9 @@ public:
 
     virtual void restoreInitialEntityState() override;
 
+    //! \brief An own creature dropped into its portal is sacked: it leaves the dungeon
+    void creatureDropped(Creature& creature) override;
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
 
@@ -75,6 +74,9 @@ protected:
     virtual bool importFromStream(std::istream& is) override;
 
     void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
+
+    //! \brief The portal changes seat as it is and starts producing for the new owner
+    virtual void changeOwner(Seat* seat) override;
 
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override
     {
@@ -86,8 +88,6 @@ private:
     //! \brief Stores the number of turns before spawning the next creature.
     int mSpawnCreatureCountdown;
     BuildingObject* mPortalObject;
-
-    double mClaimedValue;
 
     uint32_t mNbCreatureMaxIncrease;
 

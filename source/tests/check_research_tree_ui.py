@@ -29,18 +29,22 @@ def function(signature):
 # Read the actual constructor's ordered dependency lists, not diagram row guesses.
 dependencies = {'emptyDepends': []}
 model = {}
+aliases = {}
 for line in manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')].splitlines():
-    if match := re.search(r'(lvl\ddepends)\.clear\(\)', line):
+    if match := re.search(r'(lvl\ddepends|\w+Depends)\.clear\(\)', line):
         dependencies[match[1]] = []
     if match := re.search(r'resType = SkillType::(\w+);', line):
         current = match[1]
     if match := re.search(r'new Skill\(resType, .*, (\w+)\)', line):
         parents = list(dependencies.get(match[1], []))
     if match := re.search(r'new SkillDef\w+\("([^"]+)", "([^"]+)"', line):
-        model[current] = (match[1] + match[2], parents)
-    if match := re.search(r'(lvl\ddepends)\.push_back\(skill\)', line):
-        dependencies.setdefault(match[1], []).append(current)
-assert len(model) == 27
+        if current != 'spellSummonChampion':  # the reward skill has no node in the tree
+            model[current] = (match[1] + match[2], parents)
+    if match := re.search(r'const Skill\* (\w+) = skill;', line):
+        aliases[match[1]] = current
+    if match := re.search(r'(lvl\ddepends|\w+Depends)\.push_back\((\w+)\)', line):
+        dependencies.setdefault(match[1], []).append(current if match[2] == 'skill' else aliases[match[2]])
+assert len(model) == 49
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents))
     for key, (path, parents) in model.items())
@@ -74,6 +78,7 @@ struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;
 struct SkillManager {static std::map<SkillType,Skill> data;
  static const Skill* getSkill(SkillType t){return &data.at(t);}
  static std::string getResearchDescription(SkillType,uint32_t){return "Test research description";}
+ static bool isLockedByLostLibrary(SkillType,const Seat*){return false;}
  template<class F>static void listAllSkills(F f){for(auto& p:data)f(p.second.path,"cast"+std::to_string(int(p.first)),p.second.path+"/"+p.second.path.substr(p.second.path.find('/')+1)+"ProgressBar",p.first);}};
 std::map<SkillType,Skill> SkillManager::data;
 namespace Skills {NAMES}

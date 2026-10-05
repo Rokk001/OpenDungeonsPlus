@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the imp and spider beds (Ogre XML meshes + atlas textures) and the
+"""Generate the worker and spider beds (Ogre XML meshes + atlas textures) and the
 restyled standard bed textures.  Original work, CC0.
 
 Usage: generate_beds.py OUT_DIR

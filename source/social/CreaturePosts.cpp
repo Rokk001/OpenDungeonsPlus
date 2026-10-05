@@ -107,6 +107,10 @@ std::string CreaturePosts::getRoomName(int32_t roomType)
             return "casino";
         case RoomType::torture:
             return "torture chamber";
+        case RoomType::guardRoom:
+            return "guard room";
+        case RoomType::temple:
+            return "temple";
         default:
             return "dungeon";
     }
@@ -152,6 +156,53 @@ void CreaturePosts::reportUpdate(int64_t turn, const std::string& creature, cons
     if(newCategory == PostCategory::Payday)
         argument = level;
     log.addPost(turn, creature, className, isWorker, newCategory, argument);
+}
+
+void CreaturePosts::reportRelationshipChange(int64_t turn, const std::string& creatureA, const std::string& classA,
+    const std::string& nameA, const std::string& creatureB, const std::string& classB,
+    const std::string& nameB, RelationshipTier oldTier, RelationshipTier newTier)
+{
+    if(oldTier == newTier)
+        return;
+
+    PostCategory category = PostCategory::Nb;
+    bool wasLovers = (oldTier == RelationshipTier::lovers);
+    bool isLovers = (newTier == RelationshipTier::lovers);
+    bool wasFriends = (oldTier == RelationshipTier::friends) || (oldTier == RelationshipTier::bestFriends) ||
+        (oldTier == RelationshipTier::lovers);
+    bool isFriends = (newTier == RelationshipTier::friends) || (newTier == RelationshipTier::bestFriends) ||
+        (newTier == RelationshipTier::lovers);
+    if(isLovers && !wasLovers)
+        category = PostCategory::Couple;
+    else if(wasLovers && !isLovers)
+        category = PostCategory::SplitUp;
+    else if(isFriends && !wasFriends)
+        category = PostCategory::Friendship;
+    else if(wasFriends && !isFriends)
+        category = PostCategory::Breakup;
+    else if(newTier == RelationshipTier::nemesis)
+        category = PostCategory::Nemesis;
+    else if((newTier == RelationshipTier::hated) && (oldTier != RelationshipTier::nemesis))
+        category = PostCategory::Hatred;
+
+    if(category == PostCategory::Nb)
+        return;
+
+    if((turn % 2) == 0)
+        PostLog::getSingleton().addPost(turn, creatureA, classA, false, category, 0, nameB);
+    else
+        PostLog::getSingleton().addPost(turn, creatureB, classB, false, category, 0, nameA);
+}
+
+std::string CreaturePosts::getRelationshipStatus(bool hasPartner, bool hasFriends, bool hasHated, bool hasNemesis)
+{
+    if(hasPartner)
+        return "In a relationship";
+    if(hasNemesis && !hasFriends)
+        return "Sworn enemies";
+    if(hasFriends && (hasHated || hasNemesis))
+        return "It's complicated";
+    return "Single";
 }
 
 void CreaturePosts::reportRemoval(int64_t turn, const std::string& creature, const std::string& className,

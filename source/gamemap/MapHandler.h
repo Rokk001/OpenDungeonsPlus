@@ -28,7 +28,8 @@ enum class GameEntityType;
 //! \brief A small structure storing level info for the player
 struct LevelInfo
 {
-    LevelInfo()
+    LevelInfo() :
+        mIsSandbox(false)
     {}
 
     //! \brief The level visible name
@@ -36,6 +37,13 @@ struct LevelInfo
 
     //! \brief The level description, player's slot, size, ...
     std::string mLevelDescription;
+
+    //! \brief True for a sandbox level (no goals, hero toolbox and invasions)
+    bool mIsSandbox;
+
+    //! \brief The name of a sandbox realm (empty for a sandbox level that is not one) and the level file of the realm after it
+    std::string mSandboxRealm;
+    std::string mSandboxNext;
 };
 
 namespace MapHandler

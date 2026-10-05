@@ -18,11 +18,13 @@
 #include "entities/Creature.h"
 #include "entities/CreatureProgression.h"
 
+#include "ODApplication.h"
 #include "creatureaction/CreatureAction.h"
 #include "creatureaction/CreatureActionClaimGroundTile.h"
 #include "creatureaction/CreatureActionClaimWallTile.h"
 #include "creatureaction/CreatureActionDigTile.h"
 #include "creatureaction/CreatureActionFight.h"
+#include "creatureaction/CreatureActionFightFriendly.h"
 #include "creatureaction/CreatureActionFindHome.h"
 #include "creatureaction/CreatureActionFlee.h"
 #include "creatureaction/CreatureActionGetFee.h"
@@ -31,6 +33,7 @@
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
+#include "creatureaction/CreatureActionPossessed.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -39,6 +42,7 @@
 #include "creatureaction/CreatureActionSearchWallTileToClaim.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionStealFreeGold.h"
+#include "creatureaction/CreatureActionTunnel.h"
 #include "creatureaction/CreatureActionUseRoom.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturebehaviour/CreatureBehaviour.h"
@@ -61,11 +65,15 @@
 
 
 
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
+#include "gamemap/LevelScriptRunner.h"
+#include "gamemap/SandboxMode.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
 #include "giftboxes/GiftBoxSkill.h"
@@ -81,6 +89,7 @@
 #include "render/CreaturePortrait.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
+#include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -123,6 +132,31 @@
 
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
+
+// Target selection by combat class: the distance to an enemy support creature is multiplied by this
+// factor for blitzers and flankers, so they prefer it over closer enemies
+static const double COMBAT_CLASS_SUPPORT_TARGET_FACTOR = 0.5;
+
+//! \brief Returns the factor applied to the squared distance of a potential target. Lower means preferred.
+//! Blockers and support creatures attack the nearest enemy. Blitzers and flankers prefer enemy support creatures.
+static double getTargetDistanceFactor(const Creature& attacker, const GameEntity& target)
+{
+    if(target.getObjectType() != GameEntityType::creature)
+        return 1.0;
+
+    const CreatureDefinition::CombatClass attackerClass = attacker.getDefinition()->getCombatClass();
+    if((attackerClass != CreatureDefinition::CombatBlitzer) && (attackerClass != CreatureDefinition::CombatFlanker))
+        return 1.0;
+
+    const Creature& targetCreature = static_cast<const Creature&>(target);
+    if(targetCreature.getDefinition()->isWorker())
+        return 1.0;
+
+    if(targetCreature.getDefinition()->getCombatClass() == CreatureDefinition::CombatSupport)
+        return COMBAT_CLASS_SUPPORT_TARGET_FACTOR;
+
+    return 1.0;
+}
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
@@ -232,6 +266,83 @@ std::string getProfileNameOfCreature(GameMap* gameMap, const std::string& creatu
         definition->isWorker()).getFullName();
 }
 
+//! \brief The relationships of a creature as the client knows them (tiers sent by the server).
+struct ProfileRelations
+{
+    ProfileRelations() :
+        mHasPartner(false),
+        mHasHated(false),
+        mHasNemesis(false)
+    {
+    }
+
+    //! Friends, best friends and partners, the strongest first
+    std::vector<std::string> mClose;
+    //! Hated creatures and nemeses, the worst first
+    std::vector<std::string> mAgainst;
+    //! Shown text per creature name, e.g. "Name (best friend)"
+    std::map<std::string, std::string> mTierText;
+    bool mHasPartner;
+    bool mHasHated;
+    bool mHasNemesis;
+};
+
+bool isStrongerRelationship(const std::pair<std::string, int32_t>& a, const std::pair<std::string, int32_t>& b)
+{
+    if(a.second != b.second)
+        return a.second > b.second;
+
+    return a.first < b.first;
+}
+
+void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationships, const std::string& name,
+    ProfileRelations& result)
+{
+    std::vector<std::pair<std::string, int32_t> > partners;
+    relationships.getPartners(name, partners);
+    std::sort(partners.begin(), partners.end(), isStrongerRelationship);
+
+    for(const std::pair<std::string, int32_t>& partner : partners)
+    {
+        std::string partnerName = getProfileNameOfCreature(gameMap, partner.first);
+        if(partnerName.empty())
+            continue;
+
+        RelationshipTier tier = relationships.tierOf(name, partner.first, true);
+        const char* label = nullptr;
+        switch(tier)
+        {
+            case RelationshipTier::lovers:
+                label = "partner";
+                result.mHasPartner = true;
+                result.mClose.push_back(partner.first);
+                break;
+            case RelationshipTier::bestFriends:
+                label = "best friend";
+                result.mClose.push_back(partner.first);
+                break;
+            case RelationshipTier::friends:
+                label = "friend";
+                result.mClose.push_back(partner.first);
+                break;
+            case RelationshipTier::hated:
+                label = "dislikes";
+                result.mHasHated = true;
+                result.mAgainst.insert(result.mAgainst.begin(), partner.first);
+                break;
+            case RelationshipTier::nemesis:
+                label = "nemesis";
+                result.mHasNemesis = true;
+                result.mAgainst.insert(result.mAgainst.begin(), partner.first);
+                break;
+            default:
+                break;
+        }
+        if(label != nullptr)
+            result.mTierText[partner.first] = partnerName + " (" + label + ")";
+    }
+}
+
 std::string joinProfileList(const std::vector<std::string>& values)
 {
     std::string result;
@@ -301,6 +412,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
@@ -308,10 +420,13 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
+    mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
+    mPrayerRelief            (0),
+    mSpecialMood             (0),
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (CreatureMoodValues::Nothing),
@@ -323,7 +438,18 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mSeatPrison              (nullptr),
     mNbTurnsTorture          (0),
     mNbTurnsPrison           (0),
-    mActiveSlapsCount        (0)
+    mActiveSlapsCount        (0),
+    mNbTurnsInHand           (0),
+    mIsInHand                (false),
+    mNbTurnsOutOfWork        (0),
+    mNbTurnsTortureMood      (0),
+    mNbTurnsRested           (0),
+    mTorturedThisTurn        (false),
+    mRestedThisTurn          (false),
+    mNbTurnsHatedCompany     (0),
+    mPitMood                 (0.0),
+    mIsHexenHen               (false),
+    mHexenHenMeshShown        (false)
 {
     //TODO: This should be set in initialiser list in parent classes
     setSeat(seat);
@@ -386,6 +512,7 @@ Creature::Creature(GameMap* gameMap) :
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
@@ -393,10 +520,13 @@ Creature::Creature(GameMap* gameMap) :
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
+    mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
+    mPrayerRelief            (0),
+    mSpecialMood             (0),
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (0),
@@ -408,7 +538,18 @@ Creature::Creature(GameMap* gameMap) :
     mSeatPrison              (nullptr),
     mNbTurnsTorture          (0),
     mNbTurnsPrison           (0),
-    mActiveSlapsCount        (0)
+    mActiveSlapsCount        (0),
+    mNbTurnsInHand           (0),
+    mIsInHand                (false),
+    mNbTurnsOutOfWork        (0),
+    mNbTurnsTortureMood      (0),
+    mNbTurnsRested           (0),
+    mTorturedThisTurn        (false),
+    mRestedThisTurn          (false),
+    mNbTurnsHatedCompany     (0),
+    mPitMood                 (0.0),
+    mIsHexenHen               (false),
+    mHexenHenMeshShown        (false)
 {
     if(!getIsOnServerMap())
     {
@@ -436,6 +577,7 @@ void Creature::createMeshLocal(NodeType nt)
     MovableGameEntity::createMeshLocal(nt);
     if(!getIsOnServerMap())
     {
+        mHexenHenMeshShown = isHexenHen();
         RenderManager::getSingleton().rrCreateCreature(this);
 
         // By default, we set the creature in idle state
@@ -461,6 +603,9 @@ void Creature::createMeshWeapons()
     if(getIsOnServerMap())
         return;
 
+    if(mHexenHenMeshShown)
+        return;
+
     if(mWeaponL != nullptr)
         RenderManager::getSingleton().rrCreateWeapon(this, mWeaponL, "L");
 
@@ -471,6 +616,9 @@ void Creature::createMeshWeapons()
 void Creature::destroyMeshWeapons()
 {
     if(getIsOnServerMap())
+        return;
+
+    if(mHexenHenMeshShown)
         return;
 
     if(mWeaponL != nullptr)
@@ -504,6 +652,10 @@ void Creature::removeFromGameMap(GameMap* gameMap)
     getGameMap()->removeCreature(this);
     getGameMap()->removeAnimatedObject(this);
     getGameMap()->removeClientUpkeepEntity(this);
+
+    // Relationships only exist between creatures of the same keeper that are on the map
+    if(getGameMap()->isRelationshipsEnabled())
+        getGameMap()->getCreatureRelationships()->removeCreature(getName());
 
     if(!getIsOnServerMap())
         return;
@@ -747,6 +899,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     else
         os << "none";
 
+    os << isHexenHen();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -802,6 +955,7 @@ void Creature::importFromPacket(ODPacket& is)
         }
     }
 
+    OD_ASSERT_TRUE(is >> mIsHexenHen);
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
@@ -840,6 +994,10 @@ void Creature::setPosition(const Ogre::Vector3& v, GameMap *gameMap )
                     }
                     inputManager.mHighlightedCreature = closestCreature;
                     closestCreature->maxAmbient();
+
+                    // The creature notices the hand that comes over it
+                    if(CreatureReactions::getSingletonPtr() != nullptr)
+                        CreatureReactions::getSingleton().noteHandHover(closestCreature);
                 }
             }
         }
@@ -977,6 +1135,10 @@ void Creature::dropCarriedEquipment()
 
 void Creature::doUpkeep()
 {
+    // A creature that cannot be controlled anymore is given back to the AI
+    if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))
+        endPossession();
+
     // If the creature is in jail, we check if it is still standing on it (if not picked up). If
     // not, it is free
     if((mSeatPrison != nullptr) &&
@@ -1050,9 +1212,43 @@ void Creature::doUpkeep()
         it = mEntityParticleEffects.erase(it);
     }
 
+    // The creature resents being held in the hand for long periods. The resentment fades once dropped
+    if(mIsInHand)
+        ++mNbTurnsInHand;
+    else if(mNbTurnsInHand > 0)
+        --mNbTurnsInHand;
+
+    // Torture weighs on the mood while it lasts, sleeping in the lair relieves it. Both fade afterwards
+    if(mTorturedThisTurn)
+        ++mNbTurnsTortureMood;
+    else if(mNbTurnsTortureMood > 0)
+        --mNbTurnsTortureMood;
+
+    if(mRestedThisTurn)
+        ++mNbTurnsRested;
+    else if(mNbTurnsRested > 0)
+        --mNbTurnsRested;
+
+    // Staying near a creature of the opposite alignment annoys, the annoyance fades afterwards
+    if(isHatedCompanyNear())
+        ++mNbTurnsHatedCompany;
+    else if(mNbTurnsHatedCompany > 0)
+        --mNbTurnsHatedCompany;
+
+    mTorturedThisTurn = false;
+    mRestedThisTurn = false;
+
     // if creature is not on map (picked up or being carried), we do nothing
     if(!getIsOnMap())
         return;
+
+    // The champion costs mana and leaves when the owner cannot pay it
+    if(getDefinition()->isChampion() && handleChampionUpkeep())
+        return;
+
+    // A creature that is working is not frustrated anymore
+    if(isActionInList(CreatureActionType::useRoom))
+        mNbTurnsOutOfWork = 0;
 
     // If the creature is temporary KO, it should do nothing
     if(mKoTurnCounter > 0)
@@ -1123,6 +1319,9 @@ void Creature::doUpkeep()
             OD_LOG_INF("Creature=" + getName() + " RIP");
 
             dropCarriedEquipment();
+
+            if(getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
+                getSeat()->getPlayer()->notifyCreatureKilled(*this);
         }
         else if ((getDefinition()->isWorker() && mDeathCounter == 1) || mDeathCounter >= ConfigManager::getSingleton().getCreatureDeathCounter())
         {
@@ -1184,6 +1383,40 @@ void Creature::doUpkeep()
     mVisibleAlliedObjects        = getVisibleAlliedObjects();
     mReachableAlliedObjects      = getReachableAttackableObjects(mVisibleAlliedObjects);
 
+    // The relief from praying fades
+    if(mPrayerRelief > 0)
+    {
+        mPrayerRelief -= ConfigManager::getSingleton().getRoomConfigInt32("TemplePrayerReliefDecayPerTurn");
+        if(mPrayerRelief < 0)
+            mPrayerRelief = 0;
+    }
+
+    // A nemesis brawl may end
+    if(!mBrawlOpponent.empty())
+        updateBrawl();
+
+    // The mood from relationship events fades
+    if(mRelationshipTempMood != 0)
+    {
+        CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+        int32_t decay = (relationships == nullptr) ? std::abs(mRelationshipTempMood) :
+            relationships->getSettings().mTempMoodDecayPerTurn;
+        if(mRelationshipTempMood > 0)
+            mRelationshipTempMood = std::max(0, mRelationshipTempMood - decay);
+        else
+            mRelationshipTempMood = std::min(0, mRelationshipTempMood + decay);
+    }
+
+    // The mood set by the specials fades
+    if(mSpecialMood != 0)
+    {
+        int32_t decay = ConfigManager::getSingleton().getRoomConfigInt32("SpecialMoodDecayPerTurn");
+        if(mSpecialMood > 0)
+            mSpecialMood = std::max(0, mSpecialMood - decay);
+        else
+            mSpecialMood = std::min(0, mSpecialMood + decay);
+    }
+
     // Check if we should compute mood
     if(mMoodCooldownTurns > 0)
     {
@@ -1220,6 +1453,72 @@ void Creature::doUpkeep()
     }
 
     ++mNbTurnsWithoutBattle;
+
+    // The pit mood fades towards 0
+    if(mPitMood != 0.0)
+    {
+        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodDecay", 3.0)
+            / ODApplication::turnsPerSecond;
+        if(mPitMood > 0.0)
+            mPitMood = std::max(0.0, mPitMood - decay);
+        else
+            mPitMood = std::min(0.0, mPitMood + decay);
+    }
+
+    // The casino mood fades towards 0
+    if(mCasinoMood != 0.0)
+    {
+        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodDecay", 3.0)
+            / ODApplication::turnsPerSecond;
+        if(mCasinoMood > 0.0)
+            mCasinoMood = std::max(0.0, mCasinoMood - decay);
+        else
+            mCasinoMood = std::min(0.0, mCasinoMood + decay);
+    }
+
+    // A frozen creature can neither move nor fight
+    if(isFrozen())
+    {
+        if(!mActions.empty())
+        {
+            clearActionQueue();
+            clearDestinations(EntityAnimation::idle_anim, true, true);
+        }
+        else if(isMoving())
+        {
+            clearDestinations(EntityAnimation::idle_anim, true, true);
+        }
+        return;
+    }
+
+    // A chicken cannot fight, use skills or work. It only wanders around
+    if(isHexenHen())
+    {
+        handleHexenHenUpkeep();
+        return;
+    }
+
+    // If a player controls the creature, its other actions are paused. Only the possessed
+    // action runs and the movement comes from the player input
+    if(isPossessed())
+    {
+        if(mActions.empty() || (mActions.back()->getType() != CreatureActionType::possessed))
+            pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
+
+        // The creature skills keep recovering while the player controls the creature
+        for(CreatureSkillData& skillData : mSkillData)
+        {
+            if(skillData.mWarmup > 0)
+                --skillData.mWarmup;
+
+            if(skillData.mCooldown > 0)
+                --skillData.mCooldown;
+        }
+
+        std::function<bool()> possessedFunc = mActions.back()->action();
+        possessedFunc();
+        return;
+    }
 
     bool isWarmUp = false;
     if(mAttackRecoveryTurns > 0)
@@ -1364,6 +1663,22 @@ bool Creature::handleIdleAction()
         }
     }
 
+    // A standing order of the level script (go to a point, attack a dungeon, wait, ...) comes first
+    if(LevelScriptRunner::doCreatureOrder(*this))
+        return false;
+
+    // The champion has no needs. It charges at the enemies and waits when there is none
+    if(mDefinition->isChampion())
+    {
+        handleChampionIdle();
+        return false;
+    }
+
+    // A creature in the group of a possessed creature follows it. Fights are handled by the
+    // prioritary actions as usual
+    if(isInPossessionGroup() && followPossessionLeader())
+        return false;
+
     // We check if we are looking for our fee
     if(!mDefinition->isWorker() &&
        !hasActionBeenTried(CreatureActionType::getFee) &&
@@ -1442,14 +1757,24 @@ bool Creature::handleIdleAction()
         return true;
     }
 
-    // We try to steal some gold if there is some on the ground
-    // Later, we might want to add a creature definition parameter to make some
-    // creatures more likely to steal gold than others
+    // We try to steal some gold if there is some on the ground. Only creatures
+    // with a StealGold amount in their definition (thieves) do that
     if (!mDefinition->isWorker() &&
+        (mDefinition->getStealGold() > 0) &&
         !hasActionBeenTried(CreatureActionType::stealFreeGold) &&
         (Random::Uint(0, 10) > 8))
     {
         pushAction(Utils::make_unique<CreatureActionStealFreeGold>(*this));
+        return true;
+    }
+
+    // Creatures with a dig rate (tunnellers) dig their way to an enemy heart they cannot reach on foot
+    if (!mDefinition->isWorker() &&
+        (getDigRate() > 0.0) &&
+        !hasActionBeenTried(CreatureActionType::tunnel) &&
+        (Random::Uint(0, 10) > 6))
+    {
+        pushAction(Utils::make_unique<CreatureActionTunnel>(*this));
         return true;
     }
 
@@ -1570,22 +1895,40 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
     Tile* tileAttack = nullptr;
     CreatureSkillData* skillData = nullptr;
     Tile* tilePosition = nullptr;
-    int closestDist = -1;
+    // Distance to the target, divided by its threat factor and weighted by its combat class (see below)
+    double closestDistWeighted = -1.0;
+    double ownThreat = getThreat();
     // We try to attack creatures first
     for(GameEntity* entity : listObjects)
     {
+        // Invisible creatures cannot be seen by the enemy and are not targeted
+        if((entity->getObjectType() == GameEntityType::creature) &&
+           static_cast<Creature*>(entity)->isInvisible())
+        {
+            continue;
+        }
+
+        // Strong enemy creatures are targeted first: the more threatening a creature is compared to us,
+        // the closer it appears to be. Other entities are not weighted.
+        double threatFactor = 1.0;
+        if((entity->getObjectType() == GameEntityType::creature) && (ownThreat > 0.0))
+        {
+            threatFactor = static_cast<Creature*>(entity)->getThreat() / ownThreat;
+            threatFactor = std::max(0.5, std::min(2.0, threatFactor));
+        }
+
         GameEntity* entityAttackCheck = nullptr;
         Tile* tileAttackCheck = nullptr;
         CreatureSkillData* skillDataCheck = nullptr;
-        int closestDistCheck = closestDist;
-        // We check if this creature is closer than the other one (if any)
+        int closestDistCheck = -1;
+        // We check the closest tile of this entity
         std::vector<Tile*> coveredTiles = entity->getCoveredTiles();
         for(Tile* tile : coveredTiles)
         {
             if(std::find(mVisibleTiles.begin(), mVisibleTiles.end(), tile) == mVisibleTiles.end())
                 continue;
 
-            int dist = Pathfinding::squaredDistanceTile(*tile, *myTile);
+            int dist = static_cast<int>(Pathfinding::squaredDistanceTile(*tile, *myTile) / threatFactor);
             if((closestDistCheck != -1) && (dist >= closestDistCheck))
                 continue;
 
@@ -1598,6 +1941,11 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
         }
 
         if((entityAttackCheck == nullptr) || (tileAttackCheck == nullptr))
+            continue;
+
+        // We check if this entity is closer than the other one (if any), weighted by the combat class
+        double closestDistCheckWeighted = static_cast<double>(closestDistCheck) * getTargetDistanceFactor(*this, *entityAttackCheck);
+        if((closestDistWeighted >= 0.0) && (closestDistCheckWeighted >= closestDistWeighted))
             continue;
 
         // We check if we are supposed to flee from this entity
@@ -1631,14 +1979,11 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
         if(rangeTarget <= (skillRangeMax * skillRangeMax))
         {
              // We can attack
-             if((closestDist == -1) || (rangeTarget < closestDist))
-             {
-                tilePosition = myTile;
-                entityAttack = entityAttackCheck;
-                tileAttack = tileAttackCheck;
-                skillData = skillDataCheck;
-                closestDist = rangeTarget;
-             }
+             tilePosition = myTile;
+             entityAttack = entityAttackCheck;
+             tileAttack = tileAttackCheck;
+             skillData = skillDataCheck;
+             closestDistWeighted = closestDistCheckWeighted;
              continue;
         }
 
@@ -1675,6 +2020,17 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             // We compute a score for each tile. We will choose the best one. Note that we try to be as close as possible
             // from the fightIdleDist but by walking the less possible. We need to find a compromise
             int scoreAttack = std::abs(skillRangeMaxIntSquared - distFoeTmp) * 2 + distAttackTmp;
+            // Support creatures keep their distance, flankers prefer to get behind the target
+            CreatureDefinition::CombatClass combatClass = getDefinition()->getCombatClass();
+            if((combatClass == CreatureDefinition::CombatSupport) && (distFoeTmp < skillRangeMaxIntSquared))
+                scoreAttack += (skillRangeMaxIntSquared - distFoeTmp) * 2;
+            else if(combatClass == CreatureDefinition::CombatFlanker)
+            {
+                int behindTarget = (tile->getX() - tileAttackCheck->getX()) * (myTile->getX() - tileAttackCheck->getX()) +
+                    (tile->getY() - tileAttackCheck->getY()) * (myTile->getY() - tileAttackCheck->getY());
+                if(behindTarget < 0)
+                    scoreAttack /= 2;
+            }
             if((bestScoreAttack != -1) && (bestScoreAttack <= scoreAttack))
                 continue;
 
@@ -1684,7 +2040,7 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             entityAttack = entityAttackCheck;
             tileAttack = tileAttackCheck;
             skillData = skillDataCheck;
-            closestDist = closestDistCheck;
+            closestDistWeighted = closestDistCheckWeighted;
             // We don't break because there might be a better spot
         }
     }
@@ -1820,7 +2176,7 @@ double Creature::getPhysicalDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getPhysicalDefense();
 
-    return defense;
+    return std::max(0.0, defense + getRelationshipCombatModifier());
 }
 
 double Creature::getMagicalDefense() const
@@ -1831,7 +2187,7 @@ double Creature::getMagicalDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getMagicalDefense();
 
-    return defense;
+    return std::max(0.0, defense + getRelationshipCombatModifier());
 }
 
 double Creature::getElementDefense() const
@@ -1842,7 +2198,7 @@ double Creature::getElementDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getElementDefense();
 
-    return defense;
+    return std::max(0.0, defense + getRelationshipCombatModifier());
 }
 
 void Creature::checkLevelUp()
@@ -1897,6 +2253,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         seatPrisonId = mSeatPrison->getId();
 
     os << seatPrisonId;
+    os << isHexenHen();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -1914,6 +2271,11 @@ void Creature::updateFromPacket(ODPacket& is)
     MovableGameEntity::updateFromPacket(is);
 
     int seatId;
+    unsigned int oldLevel = mLevel;
+    uint32_t oldMoodValue = mOverlayMoodValue;
+    uint32_t oldHealthValue = mOverlayHealthValue;
+    Seat* oldSeat = getSeat();
+    Seat* oldSeatPrison = mSeatPrison;
     OD_ASSERT_TRUE(is >> mLevel);
     OD_ASSERT_TRUE(is >> seatId);
     OD_ASSERT_TRUE(is >> mOverlayHealthValue);
@@ -1937,8 +2299,16 @@ void Creature::updateFromPacket(ODPacket& is)
         }
         else
         {
+            Seat* oldSeat = getSeat();
             setSeat(seat);
             social::PostLog::getSingleton().rosterChanged();
+            // A creature that joins the local keeper from another seat was converted
+            Player* localPlayer = getGameMap()->getLocalPlayer();
+            if(getGameMap()->isRelationshipsEnabled() && (oldSeat != nullptr) && !oldSeat->isRogueSeat()
+               && (localPlayer != nullptr) && (seat == localPlayer->getSeat()))
+            {
+                socialEvent(social::PostCategory::Converted);
+            }
         }
     }
 
@@ -1954,6 +2324,9 @@ void Creature::updateFromPacket(ODPacket& is)
         }
     }
 
+    OD_ASSERT_TRUE(is >> mIsHexenHen);
+    updateHexenHenMesh();
+
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
@@ -1965,6 +2338,10 @@ void Creature::updateFromPacket(ODPacket& is)
         social::CreaturePosts::reportUpdate(getGameMap()->getTurnNumber(), getName(),
             getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
     }
+
+    // Level up and payday are shown as cosmetic reactions of the creature
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+        CreatureReactions::getSingleton().noteCreatureUpdate(this, oldLevel, oldMoodValue, oldHealthValue, oldSeat, oldSeatPrison);
 }
 
 bool Creature::isSocialFeedSource() const
@@ -2484,6 +2861,11 @@ void Creature::refreshProfilePage()
     fillProfilePage(mStatsWindow->getChild("ProfilePage/Content"));
 }
 
+std::string Creature::getGender() const
+{
+    return social::SocialProfileCache::getCreatureGender(getName(), getDefinition()->getClassName());
+}
+
 float Creature::fillProfilePage(CEGUI::Window* page)
 {
     const CreatureDefinition* definition = getDefinition();
@@ -2498,7 +2880,7 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
 
     page->getChild("Portrait")->setProperty("Image",
-        getCreatureProfilePortraitImage(getName(), definition->getMeshName()).getName());
+        getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender).getName());
     page->getChild("NameText")->setText(profile.getFullName());
 
     std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
@@ -2509,7 +2891,22 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     if(!profile.mGender.empty())
         age += " - " + profile.mGender;
     page->getChild("AgeText")->setText(age);
-    page->getChild("RelationText")->setText("Relationship: " + profile.mRelationship);
+    // With the relationship option the status of the own creatures comes from the real relationships
+    // and nothing changes for other creatures or with the option off
+    ProfileRelations relations;
+    bool showRelations = isAllied && getGameMap()->isRelationshipsEnabled() &&
+        (getGameMap()->getCreatureRelationships() != nullptr);
+    if(showRelations)
+        collectProfileRelations(getGameMap(), *getGameMap()->getCreatureRelationships(), getName(), relations);
+    if(showRelations)
+    {
+        page->getChild("RelationText")->setText("Relationship: " + social::CreaturePosts::getRelationshipStatus(
+            relations.mHasPartner, !relations.mClose.empty(), relations.mHasHated, relations.mHasNemesis));
+    }
+    else
+    {
+        page->getChild("RelationText")->setText("Relationship: " + profile.mRelationship);
+    }
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
@@ -2538,6 +2935,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     CEGUI::Window* foeLink = page->getChild("FoeLink");
     CEGUI::Window* statusText = page->getChild("StatusText");
     CEGUI::Window* latestText = page->getChild("LatestText");
+    CEGUI::Window* relationsText = page->getChild("RelationsText");
+    relationsText->setVisible(showRelations);
     friendsLabel->setVisible(isAllied);
     foeLabel->setVisible(isAllied);
     for(CEGUI::Window* friendLink : friendLinks)
@@ -2550,15 +2949,41 @@ float Creature::fillProfilePage(CEGUI::Window* page)
 
     // The friends only change when a creature is added, removed or changes seat, so they are
     // computed again only when the roster version of the post log changed
-    uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
-    const social::SocialProfileCache::FriendsAndFoe* cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
-    if(cachedFriends == nullptr)
+    social::SocialProfileCache::FriendsAndFoe relationFriends;
+    const social::SocialProfileCache::FriendsAndFoe* cachedFriends = nullptr;
+    if(showRelations)
     {
-        social::SocialProfileCache::FriendsAndFoe computed;
-        computed.mRosterVersion = rosterVersion;
-        findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), computed.mFriends, computed.mFoe);
-        cache.storeFriendsAndFoe(getName(), computed);
+        // The real friends and the worst enemy replace the ones derived from the names
+        relationFriends.mFriends = relations.mClose;
+        if(!relations.mAgainst.empty())
+            relationFriends.mFoe = relations.mAgainst[0];
+        cachedFriends = &relationFriends;
+
+        // The web: everybody the creature has a friendship or a grudge with
+        std::string web = "Close: ";
+        for(std::size_t i = 0; i < relations.mClose.size(); ++i)
+            web += (i > 0 ? ", " : "") + relations.mTierText[relations.mClose[i]];
+        if(relations.mClose.empty())
+            web += "nobody yet";
+        web += "\nAgainst: ";
+        for(std::size_t i = 0; i < relations.mAgainst.size(); ++i)
+            web += (i > 0 ? ", " : "") + relations.mTierText[relations.mAgainst[i]];
+        if(relations.mAgainst.empty())
+            web += "nobody";
+        relationsText->setText(web);
+    }
+    else
+    {
+        uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
         cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+        if(cachedFriends == nullptr)
+        {
+            social::SocialProfileCache::FriendsAndFoe computed;
+            computed.mRosterVersion = rosterVersion;
+            findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), computed.mFriends, computed.mFoe);
+            cache.storeFriendsAndFoe(getName(), computed);
+            cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+        }
     }
     // Each name is a button of its own, so no name is cut off; the label shares the first line with the first name
     std::size_t nbFriendLinks = 0;
@@ -2600,6 +3025,28 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     std::string latestLine = SocialWindow::describeLatestPost(getName(), getGameMap()->getTurnNumber());
     latestText->setText(latestLine.empty() ? std::string("Latest: nothing posted yet") : latestLine);
     return gui.layoutCreatureProfilePage(page);
+}
+
+std::string Creature::getRelationshipTooltip()
+{
+    GameMap* gameMap = getGameMap();
+    Player* localPlayer = gameMap->getLocalPlayer();
+    if(getIsOnServerMap() || !gameMap->isRelationshipsEnabled() || (gameMap->getCreatureRelationships() == nullptr)
+       || (localPlayer == nullptr) || !getSeat()->isAlliedSeat(localPlayer->getSeat()) || isInPrison())
+        return std::string();
+
+    ProfileRelations relations;
+    collectProfileRelations(gameMap, *gameMap->getCreatureRelationships(), getName(), relations);
+    std::string line;
+    if(!relations.mClose.empty())
+        line += "Closest: " + relations.mTierText[relations.mClose[0]];
+    if(!relations.mAgainst.empty())
+    {
+        if(!line.empty())
+            line += " - ";
+        line += "Against: " + relations.mTierText[relations.mAgainst[0]];
+    }
+    return line;
 }
 
 std::string Creature::getStatsText()
@@ -2669,26 +3116,525 @@ std::string Creature::getStatsText()
     return tempSS.str();
 }
 
+double Creature::getPitDamageFactor(GameEntity* attacker)
+{
+    // Fights between creatures inside an arena only hurt a fraction of normal combat
+    if((attacker == nullptr) || (attacker->getObjectType() != GameEntityType::creature))
+        return 1.0;
+
+    Tile* tileVictim = getPositionTile();
+    Tile* tileAttacker = attacker->getPositionTile();
+    if((tileVictim == nullptr) || (tileAttacker == nullptr) ||
+       (tileVictim->getCoveringRoom() == nullptr) || (tileAttacker->getCoveringRoom() == nullptr))
+        return 1.0;
+
+    if((tileVictim->getCoveringRoom()->getType() != RoomType::arena) ||
+       (tileAttacker->getCoveringRoom()->getType() != RoomType::arena))
+        return 1.0;
+
+    return ConfigManager::getSingleton().getRoomConfigDouble("ArenaDamageTakenPercent");
+}
+
+bool Creature::canHaveRelationships() const
+{
+    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled())
+        return false;
+
+    if((getSeat() == nullptr) || getSeat()->isRogueSeat() || (getSeat()->getFaction() == "Hero"))
+        return false;
+
+    return !getDefinition()->isWorker() && !isInPrison();
+}
+
+double Creature::getRelationshipCombatModifier() const
+{
+    if(!canHaveRelationships())
+        return 0.0;
+
+    GameMap* gameMap = getGameMap();
+    int64_t turn = gameMap->getTurnNumber();
+    if(mCombatModifierTurn == turn)
+        return mCombatModifier;
+
+    mCombatModifierTurn = turn;
+    mCombatModifier = 0.0;
+    // Only creatures that fight get a bonus or a penalty
+    Tile* myTile = getPositionTile();
+    if((myTile == nullptr) || !isAlive() || !isActionInList(CreatureActionType::fight))
+        return 0.0;
+
+    CreatureRelationships* relationships = gameMap->getCreatureRelationships();
+    double radius = relationships->getSettings().mCombatRadiusTiles;
+    std::vector<std::pair<std::string, int32_t> > partners;
+    relationships->getPartners(getName(), partners);
+    std::vector<std::string> nearbyFighters;
+    for(size_t i = 0; i < partners.size(); ++i)
+    {
+        Creature* partner = gameMap->getCreature(partners[i].first);
+        if((partner == nullptr) || (partner->getSeat() != getSeat()) || !partner->isAlive() || partner->isKo()
+           || !partner->getIsOnMap() || !partner->isActionInList(CreatureActionType::fight))
+        {
+            continue;
+        }
+
+        Tile* partnerTile = partner->getPositionTile();
+        if(partnerTile == nullptr)
+            continue;
+
+        double dx = static_cast<double>(partnerTile->getX() - myTile->getX());
+        double dy = static_cast<double>(partnerTile->getY() - myTile->getY());
+        if((dx * dx + dy * dy) > (radius * radius))
+            continue;
+
+        nearbyFighters.push_back(partner->getName());
+    }
+
+    mCombatModifier = relationships->combatModifier(getName(), nearbyFighters);
+    return mCombatModifier;
+}
+
+int32_t Creature::getRelationshipMood() const
+{
+    if(!canHaveRelationships())
+        return 0;
+
+    return getGameMap()->getCreatureRelationships()->moodModifier(getName()) + mRelationshipTempMood;
+}
+
+void Creature::addRelationshipMood(int32_t points)
+{
+    if(!canHaveRelationships() || (points == 0))
+        return;
+
+    int32_t maxMood = getGameMap()->getCreatureRelationships()->getSettings().mTempMoodMax;
+    mRelationshipTempMood = std::max(-maxMood, std::min(maxMood, mRelationshipTempMood + points));
+    // The mood is computed again soon
+    mMoodCooldownTurns = 0;
+}
+
+void Creature::reportDeathToFriends(GameEntity* killer)
+{
+    if(!canHaveRelationships())
+        return;
+
+    GameMap* gameMap = getGameMap();
+    CreatureRelationships* relationships = gameMap->getCreatureRelationships();
+    const RelationshipSettings& settings = relationships->getSettings();
+    int64_t turn = gameMap->getTurnNumber();
+    std::vector<std::string> friends;
+    relationships->getFriends(getName(), friends);
+    for(size_t i = 0; i < friends.size(); ++i)
+    {
+        Creature* mourner = gameMap->getCreature(friends[i]);
+        if((mourner == nullptr) || (mourner == this) || (mourner->getSeat() != getSeat()) || !mourner->isAlive()
+           || !mourner->canHaveRelationships())
+        {
+            continue;
+        }
+
+        // The partner grieves more than a friend
+        int32_t penalty = relationships->isLovers(getName(), mourner->getName()) ?
+            settings.mPartnerGriefMoodPenalty : settings.mGriefMoodPenalty;
+        mourner->addRelationshipMood(-penalty);
+        if((killer != nullptr) && (killer->getSeat() != nullptr) && (killer->getSeat() != getSeat()))
+        {
+            mourner->mRageUntilTurn = turn + settings.mGriefRageTurns;
+            mourner->mRageSeatId = killer->getSeat()->getId();
+        }
+    }
+}
+
+bool Creature::hasFriendDoing(CreatureActionType action, double maxTiles, bool useHomeTile) const
+{
+    Tile* myTile = useHomeTile ? getHomeTile() : getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    std::vector<std::string> friends;
+    getGameMap()->getCreatureRelationships()->getFriends(getName(), friends);
+    for(size_t i = 0; i < friends.size(); ++i)
+    {
+        Creature* friendCreature = getGameMap()->getCreature(friends[i]);
+        if((friendCreature == nullptr) || (friendCreature->getSeat() != getSeat()) || !friendCreature->isAlive()
+           || friendCreature->isKo() || !friendCreature->getIsOnMap() || !friendCreature->canHaveRelationships()
+           || !friendCreature->isActionInList(action))
+        {
+            continue;
+        }
+
+        Tile* friendTile = useHomeTile ? friendCreature->getHomeTile() : friendCreature->getPositionTile();
+        // A sleeping friend lies in its bed
+        if((friendTile == nullptr) || (useHomeTile && (friendCreature->getPositionTile() != friendTile)))
+            continue;
+
+        double dx = static_cast<double>(friendTile->getX() - myTile->getX());
+        double dy = static_cast<double>(friendTile->getY() - myTile->getY());
+        if((dx * dx + dy * dy) <= (maxTiles * maxTiles))
+            return true;
+    }
+
+    return false;
+}
+
+void Creature::reportSlapToFriends()
+{
+    if(!canHaveRelationships())
+        return;
+
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    int32_t penalty = relationships->getSettings().mSlapFriendsMoodPenalty;
+    // Only the friends that can see the slapped creature care
+    std::vector<GameEntity*> seers = getGameMap()->getVisibleCreatures(getVisibleTiles(), getSeat(), false);
+    for(GameEntity* seer : seers)
+    {
+        if((seer == this) || (seer->getObjectType() != GameEntityType::creature))
+            continue;
+
+        Creature* friendCreature = static_cast<Creature*>(seer);
+        if((friendCreature->getSeat() == getSeat()) && friendCreature->isAlive()
+           && relationships->isFriend(getName(), friendCreature->getName()))
+        {
+            friendCreature->addRelationshipMood(-penalty);
+        }
+    }
+}
+
+void Creature::reportSleepingNextToFriends()
+{
+    if(!canHaveRelationships())
+        return;
+
+    const RelationshipSettings& settings = getGameMap()->getCreatureRelationships()->getSettings();
+    if(hasFriendDoing(CreatureActionType::sleep, static_cast<double>(settings.mNeighbourBedTiles), true))
+        addRelationshipMood(settings.mSleepNextToFriendMood);
+}
+
+void Creature::reportEatingWithFriends()
+{
+    if(!canHaveRelationships())
+        return;
+
+    const RelationshipSettings& settings = getGameMap()->getCreatureRelationships()->getSettings();
+    if(hasFriendDoing(CreatureActionType::eatChicken, static_cast<double>(settings.mEatTogetherTiles), false))
+        addRelationshipMood(settings.mEatTogetherMood);
+}
+
+void Creature::reportLeavingToBestFriend()
+{
+    if(!canHaveRelationships())
+        return;
+
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    // The partner comes first, then the best friend
+    std::string bestFriend = relationships->getPartner(getName());
+    bool isPartner = !bestFriend.empty();
+    if(!isPartner)
+        bestFriend = relationships->getBestFriend(getName());
+    if(bestFriend.empty())
+        return;
+
+    Creature* friendCreature = getGameMap()->getCreature(bestFriend);
+    if((friendCreature == nullptr) || (friendCreature->getSeat() != getSeat()) || !friendCreature->isAlive()
+       || friendCreature->isKo() || !friendCreature->getIsOnMap() || friendCreature->isPossessed()
+       || !friendCreature->canHaveRelationships()
+       || friendCreature->isActionInList(CreatureActionType::leaveDungeon))
+    {
+        return;
+    }
+
+    int32_t chance = isPartner ? relationships->getSettings().mLeavePartnerChancePercent :
+        relationships->getSettings().mLeaveTogetherChancePercent;
+    if(Random::Int(0, 99) >= chance)
+        return;
+
+    OD_LOG_INF("creature=" + friendCreature->getName() + " leaves its dungeon together with its " +
+        (isPartner ? "partner " : "best friend ") + getName());
+    friendCreature->leaveDungeon();
+}
+
+double Creature::getRelationshipRageFactor(const Seat* victimSeat) const
+{
+    if((mRageUntilTurn <= 0) || (victimSeat == nullptr) || (victimSeat->getId() != mRageSeatId)
+       || !canHaveRelationships())
+    {
+        return 1.0;
+    }
+
+    if(getGameMap()->getTurnNumber() >= mRageUntilTurn)
+        return 1.0;
+
+    return 1.0 + static_cast<double>(getGameMap()->getCreatureRelationships()->getSettings().mGriefRageBonusPercent) / 100.0;
+}
+
+bool Creature::canStartBrawl() const
+{
+    if(!canHaveRelationships() || !getIsOnMap() || !isAlive() || isKo() || isPossessed() || isBrawling())
+        return false;
+
+    if(getPositionTile() == nullptr)
+        return false;
+
+    // Not while fighting, in the arena or the casino, and not when badly hurt
+    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly))
+        return false;
+
+    Room* room = getPositionTile()->getCoveringRoom();
+    if((room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino)))
+        return false;
+
+    int32_t stopPercent = getGameMap()->getCreatureRelationships()->getSettings().mBrawlStopHealthPercent;
+    return (getHP() * 100.0) > (mMaxHP * static_cast<double>(stopPercent + 25));
+}
+
+void Creature::startBrawl(Creature& opponent)
+{
+    if(!canStartBrawl() || !opponent.canStartBrawl())
+        return;
+
+    int64_t turn = getGameMap()->getTurnNumber();
+    mBrawlOpponent = opponent.getName();
+    mBrawlStartTurn = turn;
+    opponent.mBrawlOpponent = getName();
+    opponent.mBrawlStartTurn = turn;
+
+    // Both fight to knock the other one out, the fight never kills
+    Creature* creatures[2] = {this, &opponent};
+    Creature* targets[2] = {&opponent, this};
+    for(int i = 0; i < 2; ++i)
+    {
+        creatures[i]->clearDestinations(EntityAnimation::idle_anim, true, true);
+        creatures[i]->clearActionQueue();
+        creatures[i]->pushAction(Utils::make_unique<CreatureActionFightFriendly>(*creatures[i], targets[i], true,
+            std::vector<Tile*>(), false));
+    }
+}
+
+void Creature::updateBrawl()
+{
+    if(mBrawlOpponent.empty())
+        return;
+
+    Creature* opponent = getGameMap()->getCreature(mBrawlOpponent);
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    if((opponent == nullptr) || (relationships == nullptr) || (opponent->mBrawlOpponent != getName()))
+    {
+        // The opponent is gone (or has already stopped): nothing to end for it
+        mBrawlOpponent.clear();
+        return;
+    }
+
+    const RelationshipSettings& settings = relationships->getSettings();
+    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
+    bool stop = !isAlive() || !opponent->isAlive() || isKo() || opponent->isKo()
+        || isPossessed() || opponent->isPossessed()
+        || (getHP() <= (mMaxHP * stopRatio)) || (opponent->getHP() <= (opponent->mMaxHP * stopRatio))
+        || ((getGameMap()->getTurnNumber() - mBrawlStartTurn) >= settings.mBrawlMaxTurns)
+        || !isActionInList(CreatureActionType::fightFriendly);
+    if(stop)
+        endBrawl();
+}
+
+void Creature::endBrawl()
+{
+    if(mBrawlOpponent.empty())
+        return;
+
+    std::string opponentName = mBrawlOpponent;
+    mBrawlOpponent.clear();
+    Creature* opponent = getGameMap()->getCreature(opponentName);
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+
+    Creature* creatures[2] = {this, nullptr};
+    if((opponent != nullptr) && (opponent->mBrawlOpponent == getName()))
+    {
+        opponent->mBrawlOpponent.clear();
+        creatures[1] = opponent;
+    }
+
+    for(int i = 0; i < 2; ++i)
+    {
+        Creature* creature = creatures[i];
+        if((creature == nullptr) || !creature->isAlive())
+            continue;
+
+        // The fight stops (unless the creature already got something else to do), both stay angry
+        if(creature->isActionInList(CreatureActionType::fightFriendly))
+        {
+            creature->clearDestinations(EntityAnimation::idle_anim, true, true);
+            creature->clearActionQueue();
+        }
+        creature->makeUnhappy();
+    }
+
+    if(relationships != nullptr)
+    {
+        relationships->changeValue(getName(), opponentName, relationships->getSettings().mBrawlValueChange,
+            getGameMap()->getTurnNumber());
+    }
+}
+
+void Creature::reportRelationshipEvent(RelationshipEvent event, Creature& creatureA, Creature& creatureB)
+{
+    if(!creatureA.canHaveRelationships() || !creatureB.canHaveRelationships())
+        return;
+
+    if(creatureA.getSeat() != creatureB.getSeat())
+        return;
+
+    GameMap* gameMap = creatureA.getGameMap();
+    gameMap->getCreatureRelationships()->onRelationshipEvent(event, creatureA.getName(), creatureB.getName(),
+        gameMap->getTurnNumber(), creatureA.getDefinition()->getClassName(), creatureB.getDefinition()->getClassName());
+}
+
+void Creature::startConvertedRelationships()
+{
+    std::vector<std::string> captors;
+    captors.swap(mCaptors);
+    // The prison seat of the converted creature is only cleared later, so canHaveRelationships() cannot be used
+    if(!getIsOnServerMap() || !getGameMap()->isRelationshipsEnabled() || (getSeat() == nullptr)
+       || getSeat()->isRogueSeat() || getDefinition()->isWorker())
+        return;
+
+    GameMap* gameMap = getGameMap();
+    std::vector<std::string> sameKeeper;
+    for(size_t i = 0; i < captors.size(); ++i)
+    {
+        Creature* captor = gameMap->getCreature(captors[i]);
+        if((captor != nullptr) && (captor->getSeat() == getSeat()) && captor->canHaveRelationships())
+            sameKeeper.push_back(captors[i]);
+    }
+    gameMap->getCreatureRelationships()->startConverted(getName(), sameKeeper, gameMap->getTurnNumber());
+}
+
+void Creature::reportFightParticipants(Creature& killer)
+{
+    if(getDefinition()->isWorker() || !killer.canHaveRelationships() || (killer.getSeat() == getSeat()) || killer.getSeat()->isAlliedSeat(getSeat()))
+        return;
+
+    static const size_t MAX_PARTICIPANTS = 8;
+    int64_t turn = getGameMap()->getTurnNumber();
+    int64_t window = getGameMap()->getCreatureRelationships()->getSettings().mFightParticipantTurns;
+    std::vector<Creature*> participants;
+    participants.push_back(&killer);
+    for(std::map<std::string, int64_t>::const_iterator it = mRecentAttackers.begin(); it != mRecentAttackers.end(); ++it)
+    {
+        if(participants.size() >= MAX_PARTICIPANTS)
+            break;
+
+        if((turn - it->second) > window)
+            continue;
+
+        Creature* participant = getGameMap()->getCreature(it->first);
+        if((participant == nullptr) || (participant == &killer) || !participant->isAlive()
+           || (participant->getSeat() != killer.getSeat()) || !participant->canHaveRelationships())
+        {
+            continue;
+        }
+
+        participants.push_back(participant);
+    }
+    mRecentAttackers.clear();
+
+    for(size_t i = 0; i < participants.size(); ++i)
+    {
+        for(size_t j = i + 1; j < participants.size(); ++j)
+            reportRelationshipEvent(RelationshipEvent::defeatedEnemiesTogether, *participants[i], *participants[j]);
+    }
+}
+
+namespace
+{
+//! Counts an event of the creature for the conditions of the level script (server only)
+void recordScriptEvent(const Creature& creature, const std::string& eventName)
+{
+    if(!creature.getIsOnServerMap())
+        return;
+
+    creature.getGameMap()->getLevelScript().recordEvent(creature.getName(), eventName);
+}
+} // namespace
+
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
     bool wasAlive = isAlive();
+    bool wasKo = isKo();
     mNbTurnsWithoutBattle = 0;
+    // The champion cannot be hurt
+    if(getDefinition()->isChampion())
+        return 0.0;
+
+    // Remember who hurt us, to know who took part in the fight if we are defeated
+    Creature* creatureAttacking = nullptr;
+    if((attacker != nullptr) && (attacker->getObjectType() == GameEntityType::creature))
+        creatureAttacking = static_cast<Creature*>(attacker);
+    if((creatureAttacking != nullptr) && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled()
+       && (creatureAttacking != this) && creatureAttacking->canHaveRelationships())
+    {
+        int64_t turn = getGameMap()->getTurnNumber();
+        int64_t window = getGameMap()->getCreatureRelationships()->getSettings().mFightParticipantTurns;
+        std::map<std::string, int64_t>::iterator itAttacker = mRecentAttackers.begin();
+        while(itAttacker != mRecentAttackers.end())
+        {
+            if((turn - itAttacker->second) > window)
+                itAttacker = mRecentAttackers.erase(itAttacker);
+            else
+                ++itAttacker;
+        }
+        mRecentAttackers[creatureAttacking->getName()] = turn;
+    }
     physicalDamage = std::max(physicalDamage - getPhysicalDefense(), 0.0);
     magicalDamage = std::max(magicalDamage - getMagicalDefense(), 0.0);
     elementDamage = std::max(elementDamage - getElementDefense(), 0.0);
-    double damageDone = std::min(mHp, absoluteDamage + physicalDamage + magicalDamage + elementDamage);
+    double totalDamage = (absoluteDamage + physicalDamage + magicalDamage + elementDamage) * getPitDamageFactor(attacker);
+    // A creature that grieves for a friend hits harder against the side that killed it
+    if(creatureAttacking != nullptr)
+        totalDamage *= creatureAttacking->getRelationshipRageFactor(getSeat());
+    double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
+    if(wasAlive && (damageDone > 0.0))
+        recordScriptEvent(*this, "attacked");
+
     if(mHp <= 0)
     {
+        // A possessed creature is not knocked out, it dies and the keeper loses mana
+        if(isPossessed())
+        {
+            if(wasAlive && (getSeat() != nullptr))
+            {
+                double manaLoss = ConfigManager::getSingleton().getSpellConfigDouble("PossessDeathManaLoss");
+                getSeat()->addMana(-manaLoss);
+            }
+        }
         // If the attacking entity is a creature and its seat is configured to KO creatures
         // instead of killing, we KO
-        if(ko && !getDefinition()->isWorker())
+        else if(ko && !getDefinition()->isWorker())
         {
             mHp = 1.0;
+            recordScriptEvent(*this, "incapacitated");
             mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
             dropCarriedEquipment();
+
+            // Enemies that knock this creature out are remembered in case it is converted later
+            static const size_t MAX_CAPTORS = 8;
+            if((creatureAttacking != nullptr) && (creatureAttacking->getSeat() != getSeat()) && (mCaptors.size() < MAX_CAPTORS)
+               && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled() && creatureAttacking->canHaveRelationships()
+               && (std::find(mCaptors.begin(), mCaptors.end(), creatureAttacking->getName()) == mCaptors.end()))
+            {
+                mCaptors.push_back(creatureAttacking->getName());
+            }
+
+            // The loser of a fight in the arena gets a worse relationship with the winner
+            if(!wasKo && (creatureAttacking != nullptr) && (getPositionTile() != nullptr)
+               && (creatureAttacking->getPositionTile() != nullptr)
+               && (getPositionTile()->getCoveringRoom() != nullptr)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom() != nullptr)
+               && (getPositionTile()->getCoveringRoom()->getType() == RoomType::arena)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom()->getType() == RoomType::arena))
+            {
+                reportRelationshipEvent(RelationshipEvent::arenaLoss, *this, *creatureAttacking);
+            }
         }
     }
 
@@ -2700,6 +3646,18 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         // The killing blow counts once for the debriefing (a KO does not get here)
         if(wasAlive && (attacker != nullptr) && (attacker->getSeat() != nullptr))
             attacker->getSeat()->recordCreatureKill(getSeat());
+        if(wasAlive && (getSeat() != nullptr))
+            ++getSeat()->getStatistics().mCreaturesLost;
+        if(wasAlive && (creatureAttacking != nullptr) && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled())
+            reportFightParticipants(*creatureAttacking);
+        if(wasAlive && getIsOnServerMap() && getGameMap()->isRelationshipsEnabled())
+            reportDeathToFriends(attacker);
+
+        if(wasAlive)
+        {
+            recordScriptEvent(*this, "killed");
+            recordScriptEvent(*this, "incapacitated");
+        }
         fireEntityDead();
     }
 
@@ -2826,6 +3784,20 @@ void Creature::popAction()
     mActions.pop_back();
 }
 
+bool Creature::isSandboxHeroFor(const Seat* seat) const
+{
+    if(!getGameMap()->isSandbox())
+        return false;
+
+    if(seat == nullptr)
+        return false;
+
+    if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+        return false;
+
+    return SandboxMode::isHeroSeat(getSeat()) && !SandboxMode::isHeroSeat(seat);
+}
+
 bool Creature::tryPickup(Seat* seat)
 {
     if(!getIsOnMap())
@@ -2835,14 +3807,25 @@ bool Creature::tryPickup(Seat* seat)
     if (!getGameMap()->isInEditorMode() && !isAlive())
         return false;
 
-    if(!getGameMap()->isInEditorMode() && (mSeatPrison == nullptr) && !getSeat()->canOwnedCreatureBePickedUpBy(seat))
+    if(!getGameMap()->isInEditorMode() && (mSeatPrison == nullptr) && !getSeat()->canOwnedCreatureBePickedUpBy(seat) &&
+       !isSandboxHeroFor(seat))
+    {
         return false;
+    }
 
     if(!getGameMap()->isInEditorMode() && (mSeatPrison != nullptr) && !mSeatPrison->canOwnedCreatureBePickedUpBy(seat))
         return false;
 
     // KO creatures cannot be picked up
     if(isKo())
+        return false;
+
+    // A creature controlled by a player cannot be picked up
+    if(isPossessed())
+        return false;
+
+    // The champion cannot be held in the hand
+    if(getDefinition()->isChampion())
         return false;
 
     return true;
@@ -2862,7 +3845,26 @@ void Creature::pickup()
     if(getHasVisualDebuggingEntities())
         computeVisualDebugEntities();
 
+    mIsInHand = true;
+    if(getSeat() != nullptr)
+        ++getSeat()->getStatistics().mCreaturesPickedUp;
+
+    recordScriptEvent(*this, "pickedup");
+
     fireCreatureSound(CreatureSound::Pickup);
+}
+
+int32_t Creature::getNbRecentSlaps(int32_t nbTurns) const
+{
+    int64_t turnNumber = getGameMap()->getTurnNumber();
+    int32_t nbSlaps = 0;
+    for(int64_t slapTurn : mSlapTurns)
+    {
+        if(turnNumber - slapTurn <= nbTurns)
+            ++nbSlaps;
+    }
+
+    return nbSlaps;
 }
 
 bool Creature::canGoThroughTile(Tile* tile) const
@@ -2886,6 +3888,10 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
     // we cannot drop a creature on a tile we don't see
     if(!seat->hasVisionOnTile(tile))
         return false;
+
+    // In the sandbox, the heroes taken from the toolbox can be dropped on any ground the seat sees
+    if(isSandboxHeroFor(seat) && canGoThroughTile(tile))
+        return true;
 
     // If it is a worker, he can be dropped on dirt
     if (getDefinition()->isWorker() && (tile->getTileVisual() == TileVisual::dirtGround || tile->getTileVisual() == TileVisual::goldGround))
@@ -2916,6 +3922,7 @@ void Creature::drop(const Ogre::Vector3& v)
     if(!getIsOnServerMap())
     {
         mDropCooldown = 2;
+        updateHexenHenMesh();
         return;
     }
 
@@ -2923,6 +3930,10 @@ void Creature::drop(const Ogre::Vector3& v)
         computeVisualDebugEntities();
 
     fireCreatureSound(CreatureSound::Drop);
+
+    mIsInHand = false;
+    if(getSeat() != nullptr)
+        ++getSeat()->getStatistics().mCreaturesDropped;
 
     // The creature is temporary KO
     mKoTurnCounter = mDefinition->getTurnsStunDropped();
@@ -3255,6 +4266,10 @@ bool Creature::canSlap(Seat* seat)
     if(getHP() <= 0.0)
         return false;
 
+    // A creature controlled by a player cannot be slapped
+    if(isPossessed())
+        return false;
+
     // If the creature is in prison, it can be slapped by the jail owner only
     if(mSeatPrison != nullptr)
         return (mSeatPrison == seat);
@@ -3281,9 +4296,34 @@ void Creature::slap()
         return;
     }
 
+    // A slap sends the champion away
+    if(getDefinition()->isChampion())
+    {
+        dismissChampion();
+        return;
+    }
+
+    // A slap stops a brawl
+    if(!mBrawlOpponent.empty())
+        endBrawl();
+
+    if(getSeat() != nullptr)
+        ++getSeat()->getStatistics().mCreaturesSlapped;
+
+    recordScriptEvent(*this, "slapped");
+
     CreatureEffectSlap* effect = new CreatureEffectSlap(
         ConfigManager::getSingleton().getSlapEffectDuration(), "");
     addCreatureEffect(effect);
+
+    // We remember the slap to compute the mood. Only the latest ones are kept
+    mSlapTurns.push_back(getGameMap()->getTurnNumber());
+    if(mSlapTurns.size() > 10)
+        mSlapTurns.erase(mSlapTurns.begin());
+
+    // The friends that see the slap are upset
+    reportSlapToFriends();
+
     mHp -= mMaxHP * ConfigManager::getSingleton().getSlapDamagePercent() / 100.0;
     computeCreatureOverlayHealthValue();
 }
@@ -3650,6 +4690,94 @@ void Creature::decreaseWakefulness(double value)
     mWakefulness = std::max(0.0, mWakefulness - value);
 }
 
+void Creature::addCasinoMood(double points)
+{
+    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1500.0);
+    mCasinoMood = std::max(-maxPoints, std::min(maxPoints, mCasinoMood + points));
+}
+
+void Creature::addPitMood(double points)
+{
+    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodMax", 1500.0);
+    mPitMood = std::max(-maxPoints, std::min(maxPoints, mPitMood + points));
+}
+
+bool Creature::isGoodAligned() const
+{
+    const std::vector<std::string>& heroClasses = ConfigManager::getSingleton().getFactionSpawnPool("Hero");
+    return std::find(heroClasses.begin(), heroClasses.end(), mDefinition->getClassName()) != heroClasses.end();
+}
+
+bool Creature::isHatedCompanyNear() const
+{
+    // Only creatures that have moods can be annoyed
+    if(mDefinition->getCreatureMoods().empty() || !getIsOnMap() || !isAlive())
+        return false;
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    bool isGood = isGoodAligned();
+    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatedCompanyRadius", 5.0);
+    double squaredRadius = radius * radius;
+    const std::vector<Creature*>& creatures = getGameMap()->getCreatures();
+    for(Creature* other : creatures)
+    {
+        if((other == this) || !other->isAlive() || !other->getIsOnMap())
+            continue;
+
+        // Workers have no alignment
+        if(other->getDefinition()->isWorker())
+            continue;
+
+        if(!getSeat()->isAlliedSeat(other->getSeat()))
+            continue;
+
+        if(other->isGoodAligned() == isGood)
+            continue;
+
+        Tile* otherTile = other->getPositionTile();
+        if(otherTile == nullptr)
+            continue;
+
+        if(Pathfinding::squaredDistanceTile(*myTile, *otherTile) <= squaredRadius)
+            return true;
+    }
+    return false;
+}
+
+void Creature::addPrayerRelief(int32_t relief, int32_t maxRelief)
+{
+    mPrayerRelief = std::min(mPrayerRelief + relief, maxRelief);
+}
+
+void Creature::removeAnnoyance()
+{
+    mNbTurnsInHand = 0;
+    mNbTurnsOutOfWork = 0;
+    mNbTurnsTortureMood = 0;
+    mNbTurnsWithoutBattle = 0;
+    mSlapTurns.clear();
+    mSpecialMood = 0;
+    // What is left (hunger, tiredness, wounds, unpaid wage) is cancelled for a while, it builds up again
+    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    mSpecialMood = std::max(0, -points);
+    mMoodCooldownTurns = 0;
+}
+
+void Creature::makeUnhappy()
+{
+    mSpecialMood = 0;
+    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    // The middle of the angry level
+    int32_t target = (ConfigManager::getSingleton().getCreatureMoodAngry()
+        + ConfigManager::getSingleton().getCreatureMoodFurious()) / 2;
+    int32_t wanted = target - ConfigManager::getSingleton().getCreatureBaseMood() - points;
+    mSpecialMood = std::min(0, wanted);
+    mMoodCooldownTurns = 0;
+}
+
 void Creature::computeMood()
 {
     mMoodPoints = CreatureMoodManager::computeCreatureMoodModifiers(*this);
@@ -3793,6 +4921,141 @@ bool Creature::removeCreatureEffect(CreatureEffect* effectForDeletion)
     return false;
 }
 
+bool Creature::isDefector() const
+{
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "Defector") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Creature::isHexenHen() const
+{
+    if(!getIsOnServerMap())
+        return mIsHexenHen;
+
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "HexenHen") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Creature::isFrozen() const
+{
+    if(!getIsOnServerMap())
+        return false;
+
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "Frozen") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Creature::isInvisible() const
+{
+    if(!getIsOnServerMap())
+        return false;
+
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == "Invisible") &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const std::string& Creature::getCurrentMeshName() const
+{
+    static const std::string chickenMeshName = "Chicken.mesh";
+    if(isHexenHen())
+        return chickenMeshName;
+
+    return getDefinition()->getMeshName();
+}
+
+void Creature::updateHexenHenMesh()
+{
+    if(getIsOnServerMap() || !isMeshExisting() || !getIsOnMap())
+        return;
+
+    if(mHexenHenMeshShown == mIsHexenHen)
+        return;
+
+    destroyMeshWeapons();
+    mHexenHenMeshShown = mIsHexenHen;
+    RenderManager::getSingleton().rrChangeCreatureMesh(this);
+    createMeshWeapons();
+    RenderManager::getSingleton().rrScaleCreature(*this);
+}
+
+void Creature::handleHexenHenUpkeep()
+{
+    if(!mActions.empty())
+    {
+        clearActionQueue();
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+    }
+
+    if(isMoving())
+        return;
+
+    if(Random::Int(0, 3) != 0)
+        return;
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    Tile* destTile = getGameMap()->getTile(myTile->getX() + Random::Int(-2, 2), myTile->getY() + Random::Int(-2, 2));
+    if((destTile == nullptr) || (destTile == myTile) || !canGoThroughTile(destTile))
+        return;
+
+    std::list<Tile*> tempPath = getGameMap()->path(this, destTile);
+    if(tempPath.empty())
+        return;
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(tempPath, path, true, 0.0);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+}
 
 bool Creature::isHurt() const
 {
@@ -3910,6 +5173,29 @@ void Creature::resetKoTurns()
     mNeedFireRefresh = true;
 }
 
+void Creature::knockOutToDeath()
+{
+    if(mKoTurnCounter < 0)
+        return;
+
+    mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
+    OD_LOG_INF("creature=" + getName() + " has been knocked out");
+    dropCarriedEquipment();
+    computeCreatureOverlayMoodValue();
+    mNeedFireRefresh = true;
+}
+
+void Creature::stun(int32_t nbTurns)
+{
+    if(!isAlive() || (nbTurns <= 0) || (mKoTurnCounter < 0))
+        return;
+
+    mKoTurnCounter = std::max(mKoTurnCounter, nbTurns);
+    computeCreatureOverlayMoodValue();
+    clearActionQueue();
+    mNeedFireRefresh = true;
+}
+
 void Creature::setInJail(Room* prison)
 {
     if(prison == nullptr)
@@ -3930,9 +5216,27 @@ void Creature::setInJail(Room* prison)
     mNeedFireRefresh = true;
 }
 
+double Creature::getThreat() const
+{
+    // Threat multiplier in percent for the levels 1 to 10. Above level 10 the last
+    // step of the table (100 percent per level) is continued.
+    static const double THREAT_PERCENT_BY_LEVEL[10] = {100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 300.0, 400.0, 500.0};
+    unsigned int level = (mLevel < 1) ? 1 : mLevel;
+    double percent;
+    if(level <= 10)
+        percent = THREAT_PERCENT_BY_LEVEL[level - 1];
+    else
+        percent = THREAT_PERCENT_BY_LEVEL[9] + 100.0 * static_cast<double>(level - 10);
+
+    return mHp * percent / 100.0;
+}
+
 bool Creature::isDangerous(const Creature* creature, int distance) const
 {
     if(getDefinition()->isWorker())
+        return false;
+
+    if(isHexenHen())
         return false;
 
     return true;
@@ -4038,9 +5342,34 @@ void Creature::fightCreature(Creature& creature, bool ko, bool notifyPlayerIfHit
 
 void Creature::flee()
 {
+    recordScriptEvent(*this, "afraid");
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
+}
+
+void Creature::fleeFromTile(Tile* fearTile, int32_t nbTurns)
+{
+    // Fear breaks the possession of the creature
+    if(isPossessed())
+        endPossession();
+
+    recordScriptEvent(*this, "afraid");
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    clearActionQueue();
+    pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
+}
+
+void Creature::stunForTurns(int32_t nbTurns)
+{
+    // Only living creatures that are not already KO can be stunned
+    if(!isAlive() || (mKoTurnCounter != 0))
+        return;
+
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    clearActionQueue();
+    mKoTurnCounter = nbTurns;
+    computeCreatureOverlayMoodValue();
 }
 
 void Creature::sleep()
@@ -4061,14 +5390,35 @@ void Creature::changeSeat(Seat* newSeat)
 {
     OD_LOG_INF("creature=" + getName() + " changes side from seatId=" + Helper::toString(getSeat()->getId()) + " to seatId=" + Helper::toString(newSeat->getId()));
     OD_ASSERT_TRUE_MSG(getSeat() != newSeat, "creature=" + getName() + ", seatId=" + Helper::toString(newSeat->getId()));
+    // A neutral creature that joins a keeper is claimed
+    if(getSeat()->isRogueSeat() && !newSeat->isRogueSeat())
+        recordScriptEvent(*this, "claimed");
+
     setSeat(newSeat);
+    if(getGameMap()->isRelationshipsEnabled())
+        getGameMap()->getCreatureRelationships()->removeCreature(getName());
     mMoodValue = CreatureMoodLevel::Neutral;
     mMoodPoints = 0;
+    mPrayerRelief = 0;
+    mSpecialMood = 0;
+    mRelationshipTempMood = 0;
+    mRageUntilTurn = 0;
     mWakefulness = 100;
     mHunger = 0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;
     mActiveSlapsCount = 0;
+    mNbTurnsInHand = 0;
+    mIsInHand = false;
+    mNbTurnsOutOfWork = 0;
+    mNbTurnsTortureMood = 0;
+    mNbTurnsRested = 0;
+    mNbTurnsHatedCompany = 0;
+    mPitMood = 0.0;
+    mTorturedThisTurn = false;
+    mRestedThisTurn = false;
+    mSlapTurns.clear();
+    mCasinoMood = 0.0;
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     mNeedFireRefresh = true;
@@ -4084,6 +5434,59 @@ void Creature::stopWalking()
     if(parkingBit)
         parkedBit = true;
     MovableGameEntity::stopWalking();
+}
+
+void Creature::teleportTo(Tile* tile)
+{
+    if((tile == nullptr) || !getIsOnServerMap() || !getIsOnMap())
+        return;
+
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+
+    Ogre::Vector3 dest = tile->getPosition();
+    setPosition(dest);
+
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr)
+            continue;
+        if(!seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::entityTeleported, seat->getPlayer());
+        serverNotification->mPacket << getName() << dest;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+
+    if(getHasVisualDebuggingEntities())
+        computeVisualDebugEntities();
+    mNeedFireRefresh = true;
+}
+
+Tile* Creature::getWalkDestinationTile() const
+{
+    if(mWalkQueue.empty())
+        return nullptr;
+
+    const Ogre::Vector2& destination = mWalkQueue.back();
+    return getGameMap()->getTile(Helper::round(destination.x), Helper::round(destination.y));
+}
+
+bool Creature::takeCorpse()
+{
+    if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker())
+        return false;
+
+    // The counter is 0 until the death was handled (items dropped, owner told). Once the body is gone
+    // (it is removed from the map when the counter is over), it cannot be raised
+    uint32_t deathCounterMax = ConfigManager::getSingleton().getCreatureDeathCounter();
+    if((mDeathCounter == 0) || (mDeathCounter >= deathCounterMax))
+        return false;
+
+    // The body is removed by the next upkeep
+    mDeathCounter = deathCounterMax;
+    return true;
 }
 
 
@@ -4111,4 +5514,494 @@ void Creature::normalizeAmbient()
 
     RenderManager::getSingleton().rrNormalizeAmbient(this);
 
+}
+
+namespace
+{
+//! \brief Computes where the possessed creature can walk from the given position in the given
+//! direction (unit vector). Returns false if it cannot move at all in this direction.
+bool computePossessedDestination(const Creature& creature, const Ogre::Vector2& position,
+    const Ogre::Vector2& direction, Ogre::Vector2& destination)
+{
+    const Ogre::Real stepLength = 0.25f;
+    const Ogre::Real maxLength = 2.0f;
+    destination = position;
+    for(Ogre::Real length = stepLength; length <= maxLength; length += stepLength)
+    {
+        Ogre::Vector2 next = position + direction * length;
+        Tile* nextTile = creature.getGameMap()->getTile(Helper::round(next.x), Helper::round(next.y));
+        if(!creature.canGoThroughTile(nextTile))
+            break;
+
+        destination = next;
+    }
+
+    return (destination != position);
+}
+}
+
+void Creature::startPossession(Player& player)
+{
+    mPossessor = &player;
+    mPossessionTurns = 0;
+    player.setPossessedCreatureName(getName());
+
+    // The creature stops what it is doing. Its actions are kept and will go on after the possession
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
+
+    // Nearby fighting creatures of the player follow the possessed one
+    formPossessionGroup();
+
+    if(!player.getIsHuman())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::possessionStart, &player);
+    const std::string& name = getName();
+    serverNotification->mPacket << name;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+bool Creature::handleChampionUpkeep()
+{
+    ++mChampionTurns;
+
+    // The cast price covers the first seconds (price divided by the drain per second). After that
+    // the owner pays each turn the share of the drain per second and the champion leaves when the
+    // mana cannot pay one second of it
+    double price = ConfigManager::getSingleton().getSpellConfigDouble("SummonChampionPrice");
+    double drainPerSecond = ConfigManager::getSingleton().getSpellConfigDouble("SummonChampionDrainPerSecond");
+    if(drainPerSecond <= 0.0)
+        return false;
+
+    double freeSeconds = price / drainPerSecond;
+    if(static_cast<double>(mChampionTurns) <= (freeSeconds * ODApplication::turnsPerSecond))
+        return false;
+
+    double drainPerTurn = drainPerSecond / ODApplication::turnsPerSecond;
+    if((getSeat()->getMana() < drainPerSecond) || !getSeat()->takeMana(drainPerTurn))
+    {
+        dismissChampion();
+        return true;
+    }
+
+    return false;
+}
+
+bool Creature::handleChampionIdle()
+{
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    // Enemy creatures first, the nearest reachable one. The dungeon hearts of the enemies come after
+    std::vector<std::pair<int, Tile*>> targets;
+    for(Creature* creature : getGameMap()->getCreatures())
+    {
+        if(creature->getSeat()->isAlliedSeat(getSeat()) || !creature->isAlive() || !creature->getIsOnMap() ||
+           creature->isInPrison())
+        {
+            continue;
+        }
+
+        Tile* tile = creature->getPositionTile();
+        if(tile == nullptr)
+            continue;
+
+        int distX = tile->getX() - myTile->getX();
+        int distY = tile->getY() - myTile->getY();
+        targets.push_back(std::make_pair(distX * distX + distY * distY, tile));
+    }
+    std::sort(targets.begin(), targets.end());
+
+    std::vector<std::pair<int, Tile*>> heartTargets;
+    for(Room* heart : getGameMap()->getRoomsByType(RoomType::dungeonTemple))
+    {
+        if(heart->getSeat()->isAlliedSeat(getSeat()))
+            continue;
+
+        std::vector<Tile*> heartTiles = heart->getCoveredTiles();
+        if(heartTiles.empty())
+            continue;
+
+        int distX = heartTiles.front()->getX() - myTile->getX();
+        int distY = heartTiles.front()->getY() - myTile->getY();
+        heartTargets.push_back(std::make_pair(distX * distX + distY * distY, heartTiles.front()));
+    }
+    std::sort(heartTargets.begin(), heartTargets.end());
+    targets.insert(targets.end(), heartTargets.begin(), heartTargets.end());
+
+    // The path check is costly, so only the closest few targets are tried
+    uint32_t nbTries = 0;
+    for(const std::pair<int, Tile*>& target : targets)
+    {
+        if(nbTries >= 5)
+            break;
+        ++nbTries;
+
+        if(!getGameMap()->pathExists(this, myTile, target.second))
+            continue;
+
+        if(setDestination(target.second))
+            return true;
+    }
+
+    return false;
+}
+
+void Creature::dismissChampion()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    OD_LOG_INF("The champion " + getName() + " leaves");
+    if((getSeat()->getPlayer() != nullptr) && getSeat()->getPlayer()->getIsHuman() &&
+       !getSeat()->getPlayer()->getHasLost())
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, getSeat()->getPlayer());
+        std::string msg = "The champion leaves your dungeon";
+        serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    removeFromGameMap();
+    deleteYourself();
+}
+
+void Creature::endPossession()
+{
+    if(mPossessor == nullptr)
+        return;
+
+    Player* player = mPossessor;
+    mPossessor = nullptr;
+    player->setPossessedCreatureName(std::string());
+
+    // The group does not follow anymore and goes back to its normal behaviour
+    for(const std::string& memberName : mGroupMemberNames)
+    {
+        Creature* member = getGameMap()->getCreature(memberName);
+        if((member != nullptr) && (member->mGroupLeaderName == getName()))
+            member->leavePossessionGroup();
+    }
+    mGroupMemberNames.clear();
+
+    for(std::vector<std::unique_ptr<CreatureAction>>::iterator it = mActions.begin(); it != mActions.end();)
+    {
+        if((*it)->getType() == CreatureActionType::possessed)
+            it = mActions.erase(it);
+        else
+            ++it;
+    }
+
+    if(isAlive() && getIsOnMap())
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+
+    if(!player->getIsHuman())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::possessionEnd, player);
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+void Creature::formPossessionGroup()
+{
+    mGroupMemberNames.clear();
+
+    uint32_t maxSize = ConfigManager::getSingleton().getSpellConfigUInt32("PossessGroupSize");
+    int32_t radius = ConfigManager::getSingleton().getSpellConfigInt32("PossessGroupRadiusTiles");
+    int32_t radiusSquared = radius * radius;
+    Tile* myTile = getPositionTile();
+    if((maxSize == 0) || (myTile == nullptr))
+        return;
+
+    std::vector<std::pair<int, Creature*>> candidates;
+    for(Creature* creature : getGameMap()->getCreaturesBySeat(getSeat()))
+    {
+        if((creature == this) || creature->getDefinition()->isWorker() || !creature->isAlive() ||
+           creature->isKo() || !creature->getIsOnMap() || creature->isInPrison() ||
+           creature->isPossessed() || creature->isInPossessionGroup())
+        {
+            continue;
+        }
+
+        Tile* tile = creature->getPositionTile();
+        if(tile == nullptr)
+            continue;
+
+        int distance = Pathfinding::squaredDistanceTile(*tile, *myTile);
+        if(distance > radiusSquared)
+            continue;
+
+        candidates.push_back(std::make_pair(distance, creature));
+    }
+
+    std::sort(candidates.begin(), candidates.end());
+    for(const std::pair<int, Creature*>& candidate : candidates)
+    {
+        if(mGroupMemberNames.size() >= maxSize)
+            break;
+
+        candidate.second->joinPossessionGroup(getName());
+        mGroupMemberNames.push_back(candidate.second->getName());
+    }
+}
+
+void Creature::joinPossessionGroup(const std::string& leaderName)
+{
+    mGroupLeaderName = leaderName;
+
+    // The creature leaves what it was doing. The group behaviour is handled when it is idle
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    clearActionQueue();
+}
+
+void Creature::leavePossessionGroup()
+{
+    mGroupLeaderName.clear();
+}
+
+bool Creature::followPossessionLeader()
+{
+    Creature* leader = getGameMap()->getCreature(mGroupLeaderName);
+    if((leader == nullptr) || !leader->isPossessed() || !leader->getIsOnMap())
+    {
+        leavePossessionGroup();
+        return false;
+    }
+
+    Tile* myTile = getPositionTile();
+    Tile* leaderTile = leader->getPositionTile();
+    if((myTile == nullptr) || (leaderTile == nullptr))
+        return true;
+
+    // The creature stays around the leader. If it is further than 3 tiles, it walks to him
+    if(Pathfinding::squaredDistanceTile(*myTile, *leaderTile) <= 9)
+        return true;
+
+    if(!getGameMap()->pathExists(this, myTile, leaderTile))
+        return true;
+
+    std::list<Tile*> tempPath = getGameMap()->path(this, leaderTile);
+    // The group does not stand on the leader
+    for(int i = 0; (i < 2) && (tempPath.size() > 1); ++i)
+        tempPath.pop_back();
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(tempPath, path, true, 0.0);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+    pushAction(Utils::make_unique<CreatureActionGoCallToWar>(*this));
+    return true;
+}
+
+void Creature::possessedMove(const Ogre::Vector2& direction)
+{
+    if(!isPossessed() || !getIsOnMap() || isFrozen())
+        return;
+
+    Ogre::Vector2 position(mPosition.x, mPosition.y);
+    Ogre::Vector2 destination = position;
+    bool canMove = false;
+    if(direction.squaredLength() > 0.0001f)
+    {
+        Ogre::Vector2 dir = direction;
+        dir.normalise();
+        // If the creature is blocked, it tries to slide along the obstacle
+        canMove = computePossessedDestination(*this, position, dir, destination);
+        if(!canMove)
+            canMove = computePossessedDestination(*this, position, Ogre::Vector2(dir.x, 0.0f), destination);
+        if(!canMove)
+            canMove = computePossessedDestination(*this, position, Ogre::Vector2(0.0f, dir.y), destination);
+    }
+
+    if(!canMove)
+    {
+        if(isMoving())
+            clearDestinations(EntityAnimation::idle_anim, true, true);
+
+        return;
+    }
+
+    std::vector<Ogre::Vector2> path;
+    path.push_back(destination);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+}
+
+namespace
+{
+//! \brief The attacks used with the left mouse button while possessing (melee and ranged).
+//! The other skills of the creature are used with the number keys.
+bool isPossessedBasicAttack(const CreatureSkill& skill)
+{
+    return (skill.getSkillName() == "Melee") || (skill.getSkillName() == "MissileLaunch");
+}
+
+bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
+{
+    return (skillData.mCooldown == 0) && (skillData.mWarmup == 0) &&
+        skillData.mSkill->canBeUsedBy(&creature);
+}
+}
+
+bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkillData& skillData,
+    GameEntity*& entityAttack, Tile*& tileAttack)
+{
+    entityAttack = nullptr;
+    tileAttack = nullptr;
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    if(aim.squaredLength() < 0.0001f)
+        return false;
+
+    Ogre::Vector2 aimDir = aim;
+    aimDir.normalise();
+
+    // The target has to be in front of the creature (45 degrees to each side)
+    const Ogre::Real minCos = 0.7f;
+    bool bestIsCreature = false;
+    Ogre::Real bestDist = 0.0f;
+    for(GameEntity* entity : mVisibleEnemyObjects)
+    {
+        bool isCreature = (entity->getObjectType() == GameEntityType::creature);
+        if(isCreature)
+        {
+            Creature* enemy = static_cast<Creature*>(entity);
+            if(!enemy->isAlive())
+                continue;
+
+            // Workers attack workers only
+            if(getDefinition()->isWorker() && !enemy->getDefinition()->isWorker())
+                continue;
+        }
+        else if(getDefinition()->isWorker())
+            continue;
+
+        if(entity->getHP(nullptr) <= 0)
+            continue;
+
+        double skillRange = skillData.mSkill->getRangeMax(this, entity);
+        if(skillRange <= 0.0)
+            continue;
+
+        for(Tile* tile : entity->getCoveredTiles())
+        {
+            if(!entity->isAttackable(tile, getSeat()))
+                continue;
+
+            // Same range check as in a normal fight
+            int squaredDist = Pathfinding::squaredDistanceTile(*tile, *myTile);
+            if(static_cast<double>(squaredDist) > (skillRange * skillRange))
+                continue;
+
+            Ogre::Vector2 toTile(tile->getX() - mPosition.x, tile->getY() - mPosition.y);
+            Ogre::Real dist = toTile.length();
+            if(dist > 0.5f)
+            {
+                toTile /= dist;
+                if(toTile.dotProduct(aimDir) < minCos)
+                    continue;
+            }
+
+            // Creatures are attacked before the other objects, then the closest one
+            if((entityAttack != nullptr) && ((bestIsCreature && !isCreature) ||
+               ((bestIsCreature == isCreature) && (dist >= bestDist))))
+                continue;
+
+            entityAttack = entity;
+            tileAttack = tile;
+            bestIsCreature = isCreature;
+            bestDist = dist;
+        }
+    }
+
+    return (entityAttack != nullptr);
+}
+
+void Creature::possessedAttack(const Ogre::Vector2& aim)
+{
+    if(!isPossessed() || !getIsOnMap() || !isAlive() || isKo() || isFrozen())
+        return;
+
+    // The melee attack is preferred. The ranged attack is used if no enemy is within melee range
+    CreatureSkillData* bestSkill = nullptr;
+    GameEntity* bestEntity = nullptr;
+    Tile* bestTile = nullptr;
+    double bestRange = 0.0;
+    for(CreatureSkillData& skillData : mSkillData)
+    {
+        if(!isPossessedBasicAttack(*skillData.mSkill))
+            continue;
+
+        if(!isPossessedSkillReady(*this, skillData))
+            continue;
+
+        GameEntity* entity = nullptr;
+        Tile* tile = nullptr;
+        if(!possessedFindTarget(aim, skillData, entity, tile))
+            continue;
+
+        double range = skillData.mSkill->getRangeMax(this, entity);
+        if((bestSkill != nullptr) && (range >= bestRange))
+            continue;
+
+        bestSkill = &skillData;
+        bestEntity = entity;
+        bestTile = tile;
+        bestRange = range;
+    }
+
+    if(bestSkill == nullptr)
+        return;
+
+    useAttack(*bestSkill, *bestEntity, *bestTile, false, true);
+}
+
+void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
+{
+    if(!isPossessed() || !getIsOnMap() || !isAlive() || isKo() || isFrozen())
+        return;
+
+    uint32_t index = 0;
+    for(CreatureSkillData& skillData : mSkillData)
+    {
+        if(isPossessedBasicAttack(*skillData.mSkill))
+            continue;
+
+        if(!skillData.mSkill->canBeUsedBy(this))
+            continue;
+
+        if(index != slot)
+        {
+            ++index;
+            continue;
+        }
+
+        if(!isPossessedSkillReady(*this, skillData))
+            return;
+
+        // Skills without range (haste, heal, ...) are used on the creature itself
+        if(skillData.mSkill->getRangeMax(this, this) <= 0.0)
+        {
+            if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
+                return;
+
+            skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
+            skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            return;
+        }
+
+        GameEntity* entity = nullptr;
+        Tile* tile = nullptr;
+        if(!possessedFindTarget(aim, skillData, entity, tile))
+            return;
+
+        useAttack(skillData, *entity, *tile, false, true);
+        return;
+    }
 }

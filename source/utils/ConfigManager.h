@@ -68,8 +68,11 @@ const std::string NICKNAME = "Nickname";
 const std::string KEEPERVOICE = "KeeperVoice";
 const std::string MINIMAP_TYPE = "MinimapType";
 const std::string LIGHT_FACTOR = "LightFactor";
+const std::string CREATURE_REACTIONS = "CreatureReactions";
 const std::string UI_SCALE = "UI Scale";
 const std::string BLOOD_EFFECTS = "Blood Effects";
+const std::string ROOM_AMBIENCE = "RoomAmbience";
+const std::string TREASURY_DETAIL = "TreasuryDetail";
 }
 
 typedef std::map<TileVisual,std::map<int,float>> HighMap;
@@ -94,6 +97,7 @@ public:
     static const std::string DEFAULT_KEEPER_VOICE;
 
     const Ogre::ColourValue& getColorFromId(const std::string& id) const;
+
     inline const std::map<std::string, CreatureDefinition*>& getCreatureDefinitions() const
     { return mCreatureDefs; }
     const CreatureDefinition* getCreatureDefinition(const std::string& name) const;
@@ -150,6 +154,9 @@ public:
     inline double getMaxManaPerSeat() const
     { return mMaxManaPerSeat; }
 
+    inline double getManaWellBonusPerTile() const
+    { return mManaWellBonusPerTile; }
+
     inline double getClaimingWallPenalty() const
     { return mClaimingWallPenalty; }
 
@@ -197,6 +204,10 @@ public:
     //! logging an error when the parameter is not in the configuration file.
     //! Useful for newly introduced parameters older config files do not have.
     double getRoomConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
+
+    //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
+    const std::map<std::string, std::string>& getRelationshipsConfig() const
+    { return mRelationshipsConfig; }
 
     //! Traps configuration
     const std::string& getTrapConfigString(const std::string& param) const;
@@ -290,6 +301,9 @@ private:
     bool loadTilesets(const std::string& fileName);
     bool loadTilesetValues(std::istream& defFile, TileVisual tileVisual, std::vector<std::vector<TileSetValue>>& tileValues, std::map<TileVisual,std::map<int,float>>& highMap);
     bool loadEditorSettings(const std::string& fileName);
+    //! \brief Reads config/relationships.cfg. A missing file is not an error: the relationship
+    //! system then uses the defaults from the code.
+    void loadRelationships(const std::string& fileName);
     //! \brief Loads the user configuration values, and use default ones if it cannot do it.
     void loadUserConfig(const std::string& fileName);
 
@@ -336,6 +350,7 @@ private:
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
+    double mManaWellBonusPerTile;
     double mClaimingWallPenalty;
     double mDigCoefGold;
     double mDigCoefGem;
@@ -352,6 +367,7 @@ private:
 
     std::vector<std::string> mFactions;
     std::map<const std::string, std::string> mRoomsConfig;
+    std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;
     std::map<const std::string, int32_t> mSkillPoints;

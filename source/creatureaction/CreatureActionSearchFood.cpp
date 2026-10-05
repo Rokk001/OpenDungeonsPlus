@@ -76,7 +76,9 @@ bool CreatureActionSearchFood::handleSearchFood(Creature& creature, bool forced)
         for(GameEntity* chickenEnt : chickens)
         {
             ChickenEntity* chicken = static_cast<ChickenEntity*>(chickenEnt);
-            if(chicken->getLockEat(creature))
+            if(!chicken->isEdible())
+                continue;
+            if(chicken->getLockEat(creature) && !chicken->canSnatch(creature))
                 continue;
 
             chickenClosest = chicken;

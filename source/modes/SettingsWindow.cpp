@@ -20,8 +20,11 @@
 #include "gamemap/MiniMap.h"
 #include "network/ODClient.h"
 #include "camera/CameraManager.h"
+#include "render/CreatureReactions.h"
+#include "render/TreasuryGoldMesh.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
+#include "render/RoomAmbience.h"
 #include "render/RenderManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -292,10 +295,76 @@ void SettingsWindow::initConfig()
     float lightFactor = lightStr.empty() ? 0.0f : Helper::toFloat(lightStr);
     setLightFactorValue(lightFactor);
 
+    CEGUI::Combobox* creatureReactions = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/CreatureReactions"));
+    creatureReactions->resetList();
+    std::string reactionsCurrent = CreatureReactions::modeToString(CreatureReactions::modeFromString(
+        config.getGameValue(Config::CREATURE_REACTIONS, "full", false)));
+    std::vector<std::string> reactionModes;
+    reactionModes.push_back("full");
+    reactionModes.push_back("reduced");
+    reactionModes.push_back("off");
+    uint32_t cptReactionMode = 0;
+    for(const std::string& reactionMode : reactionModes)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(reactionMode, cptReactionMode);
+        item->setSelectionBrushImage(selImg);
+        creatureReactions->addItem(item);
+        if(reactionMode == reactionsCurrent)
+        {
+            creatureReactions->setText(item->getText());
+            creatureReactions->setItemSelectState(item, true);
+        }
+        ++cptReactionMode;
+    }
+    CEGUI::Combobox* treasuryDetail = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/TreasuryDetail"));
+    treasuryDetail->resetList();
+    std::string treasuryDetailCurrent = TreasuryGoldMesh::detailToString(TreasuryGoldMesh::detailFromString(
+        config.getGameValue(Config::TREASURY_DETAIL, "full", false)));
+    std::vector<std::string> treasuryDetailModes;
+    treasuryDetailModes.push_back("full");
+    treasuryDetailModes.push_back("reduced");
+    treasuryDetailModes.push_back("off");
+    uint32_t cptTreasuryDetail = 0;
+    for(const std::string& treasuryDetailMode : treasuryDetailModes)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(treasuryDetailMode, cptTreasuryDetail);
+        item->setSelectionBrushImage(selImg);
+        treasuryDetail->addItem(item);
+        if(treasuryDetailMode == treasuryDetailCurrent)
+        {
+            treasuryDetail->setText(item->getText());
+            treasuryDetail->setItemSelectState(item, true);
+        }
+        ++cptTreasuryDetail;
+    }
     CEGUI::ToggleButton* bloodEffectsCheckbox = static_cast<CEGUI::ToggleButton*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
     bloodEffectsCheckbox->setSelected(
         config.getGameValue(Config::BLOOD_EFFECTS, "Yes", false) == "Yes");
+    CEGUI::Combobox* roomAmbience = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"));
+    roomAmbience->resetList();
+    std::string ambienceCurrent = RoomAmbience::modeToString(RoomAmbience::modeFromString(
+        config.getGameValue(Config::ROOM_AMBIENCE, "full", false)));
+    std::vector<std::string> ambienceModes;
+    ambienceModes.push_back("full");
+    ambienceModes.push_back("reduced");
+    ambienceModes.push_back("off");
+    uint32_t cptAmbienceMode = 0;
+    for(const std::string& ambienceMode : ambienceModes)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(ambienceMode, cptAmbienceMode);
+        item->setSelectionBrushImage(selImg);
+        roomAmbience->addItem(item);
+        if(ambienceMode == ambienceCurrent)
+        {
+            roomAmbience->setText(item->getText());
+            roomAmbience->setItemSelectState(item, true);
+        }
+        ++cptAmbienceMode;
+    }
 
     std::string panSpeedStr = config.getInputValue(Config::PAN_SPEED, "100", false);
     float panSpeedPercent = panSpeedStr.empty() ? 100.0f : Helper::toFloat(panSpeedStr);
@@ -533,10 +602,33 @@ bool SettingsWindow::saveConfig()
             mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/LightSlider"));
     config.setGameValue(Config::LIGHT_FACTOR, Helper::toString(lightSlider->getCurrentValue()));
 
+    CEGUI::Combobox* creatureReactions = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/CreatureReactions"));
+    CEGUI::ListboxItem* creatureReactionsItem = creatureReactions->getSelectedItem();
+    std::string reactionMode = (creatureReactionsItem != nullptr) ?
+        std::string(creatureReactionsItem->getText().c_str()) : std::string("full");
+    config.setGameValue(Config::CREATURE_REACTIONS, reactionMode);
+    if(CreatureReactions::getSingletonPtr() != nullptr)
+        CreatureReactions::getSingleton().setMode(CreatureReactions::modeFromString(reactionMode));
+    CEGUI::Combobox* treasuryDetail = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/TreasuryDetail"));
+    CEGUI::ListboxItem* treasuryDetailItem = treasuryDetail->getSelectedItem();
+    std::string treasuryDetailMode = (treasuryDetailItem != nullptr) ?
+        std::string(treasuryDetailItem->getText().c_str()) : std::string("full");
+    config.setGameValue(Config::TREASURY_DETAIL, treasuryDetailMode);
+    TreasuryGoldMesh::setDetail(TreasuryGoldMesh::detailFromString(treasuryDetailMode));
     CEGUI::ToggleButton* bloodEffectsCheckbox = static_cast<CEGUI::ToggleButton*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
     config.setGameValue(Config::BLOOD_EFFECTS,
         bloodEffectsCheckbox->isSelected() ? "Yes" : "No");
+    CEGUI::Combobox* roomAmbience = static_cast<CEGUI::Combobox*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"));
+    CEGUI::ListboxItem* roomAmbienceItem = roomAmbience->getSelectedItem();
+    std::string ambienceMode = (roomAmbienceItem != nullptr) ?
+        std::string(roomAmbienceItem->getText().c_str()) : std::string("full");
+    config.setGameValue(Config::ROOM_AMBIENCE, ambienceMode);
+    if(RoomAmbience::getSingletonPtr() != nullptr)
+        RoomAmbience::getSingleton().setMode(RoomAmbience::modeFromString(ambienceMode));
 
     CEGUI::Slider* panSpeedSlider = static_cast<CEGUI::Slider*>(
         mRootWindow->getChild("SettingsWindow/MainTabControl/Input/InputSP/PanSpeedSlider"));

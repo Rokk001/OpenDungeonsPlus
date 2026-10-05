@@ -18,6 +18,7 @@
 #include "network/ODClient.h"
 #include "camera/CullingManager.h"
 #include "entities/Building.h"
+#include "entities/ChickenEntity.h"
 #include "entities/Creature.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -27,6 +28,8 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "game/Campaign.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/CreaturePanelData.h"
 #include "game/Seat.h"
@@ -43,10 +46,13 @@
 #include "network/ODPacket.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
+#include "render/CreatureReactions.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "rooms/RoomPortalWave.h"
+#include "social/CreaturePosts.h"
 #include "social/PostLog.h"
+#include "social/SocialProfileCache.h"
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/SpellType.h"
@@ -66,10 +72,36 @@
 
 template<> ODClient* Ogre::Singleton<ODClient>::msSingleton = nullptr;
 
+namespace
+{
+//! \brief Dungeonbook post for a tier change of two creatures of the local player.
+void reportRelationshipPost(GameMap* gameMap, const std::string& creatureA, const std::string& creatureB,
+    RelationshipTier oldTier, RelationshipTier newTier)
+{
+    if(!social::PostLog::getSingleton().isActive())
+        return;
+
+    Creature* a = gameMap->getCreature(creatureA);
+    Creature* b = gameMap->getCreature(creatureB);
+    if((a == nullptr) || (b == nullptr))
+        return;
+
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const std::string& classA = a->getDefinition()->getClassName();
+    const std::string& classB = b->getDefinition()->getClassName();
+    std::string nameA = cache.getProfile(creatureA, classA, false).getFullName();
+    std::string nameB = cache.getProfile(creatureB, classB, false).getFullName();
+    social::CreaturePosts::reportRelationshipChange(gameMap->getTurnNumber(), creatureA, classA, nameA,
+        creatureB, classB, nameB, oldTier, newTier);
+}
+}
+
 ODClient::ODClient() :
     ODSocketClient(),
     mIsPlayerConfig(false),
-    mHasLevelStatistics(false)
+    mHasLevelStatistics(false),
+    mTimeLimitSeconds(-1),
+    mHasSandboxRealmComplete(false)
 {
 }
 
@@ -132,6 +164,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 str = ConfigManager::DEFAULT_TILESET_NAME;
 
             gameMap->setTileSetName(str);
+
+            bool isSandbox;
+            OD_ASSERT_TRUE(packetReceived >> isSandbox);
+            gameMap->setSandbox(isSandbox);
 
             int32_t nb;
             // Seats
@@ -213,6 +249,15 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 Tile* tile = gameMap->tileFromPacket(packetReceived);
                 tile->setType(TileType::lava);
                 tile->setTileVisualIfArgNotNull(TileVisual::lavaGround);
+            }
+            // Mana well
+            OD_ASSERT_TRUE(packetReceived >> nb);
+            while(nb > 0)
+            {
+                --nb;
+                Tile* tile = gameMap->tileFromPacket(packetReceived);
+                tile->setType(TileType::manaWell);
+                tile->setTileVisualIfArgNotNull(TileVisual::manaWellGround);
             }
 
             
@@ -410,7 +455,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> ODApplication::turnsPerSecond);
             mHasLevelStatistics = false;
             mLevelStatistics = LevelStatistics();
+            mTimeLimitSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
+            mSandboxStatus = SandboxStatus();
+            mHasSandboxRealmComplete = false;
 
             OD_ASSERT_TRUE(packetReceived >> nbPlayers);
             for(int i = 0; i < nbPlayers; ++i)
@@ -488,6 +536,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> creatureProgress);
             setSupportsCreatureProgress(creatureProgress);
+
+            bool relationships = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> relationships);
+            gameMap->setRelationshipsEnabled(relationships);
 
             // Now that the we have received all needed information, we can launch the requested mode
             OD_LOG_INF("Starting game map");
@@ -597,6 +650,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(entity->getObjectType() == GameEntityType::creature)
                 static_cast<Creature*>(entity)->socialCreatureAdded();
 
+            if((nt == NodeType::MTILES_NODE) && (CreatureReactions::getSingletonPtr() != nullptr))
+                CreatureReactions::getSingleton().noteEntityAdded(entity);
+
             break;
         }
 
@@ -631,6 +687,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             Ogre::SceneNode* entityNode = entity->getEntityNode();
             if(entityNode != nullptr && entityNode->getParentSceneNode() != nullptr)
                 entityNode->getParentSceneNode()->removeChild(entityNode);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteEntityRemoved(entity);
 
             entity->removeEntityFromPositionTile(gameMapPointer);
             entity->removeFromGameMap(gameMapPointer);
@@ -865,7 +924,81 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 mLevelStatistics = statistics;
                 mHasLevelStatistics = true;
+                // A won campaign level shows its numbers in the campaign menu
+                if(statistics.mLevelWon && (gameMap->getLocalPlayer() != nullptr))
+                {
+                    Campaign::getSingleton().setLevelSummary(
+                        debriefingSeatSummary(statistics, gameMap->getLocalPlayer()->getSeat()->getId()));
+                }
             }
+            break;
+        }
+
+        case ServerNotificationType::timeLimit:
+        {
+            OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
+            break;
+        }
+
+        case ServerNotificationType::relationshipTier:
+        {
+            std::string creatureA;
+            std::string creatureB;
+            int32_t tier;
+            bool replay;
+            OD_ASSERT_TRUE(packetReceived >> creatureA >> creatureB >> tier >> replay);
+            CreatureRelationships* relationships = gameMap->getCreatureRelationships();
+            if((relationships != nullptr) && (tier >= static_cast<int32_t>(RelationshipTier::nemesis))
+                && (tier <= static_cast<int32_t>(RelationshipTier::lovers)))
+            {
+                RelationshipTier oldTier = relationships->tierOf(creatureA, creatureB, true);
+                relationships->setTier(creatureA, creatureB, static_cast<RelationshipTier>(tier));
+                if(!replay)
+                {
+                    reportRelationshipPost(gameMap, creatureA, creatureB, oldTier, static_cast<RelationshipTier>(tier));
+                    if(CreatureReactions::getSingletonPtr() != nullptr)
+                    {
+                        CreatureReactions::getSingleton().noteRelationshipTier(gameMap->getCreature(creatureA),
+                            gameMap->getCreature(creatureB), oldTier, static_cast<RelationshipTier>(tier));
+                    }
+                }
+            }
+            break;
+        }
+
+        case ServerNotificationType::seatTeam:
+        {
+            int32_t seatId;
+            int32_t teamId;
+            OD_ASSERT_TRUE(packetReceived >> seatId >> teamId);
+            Seat* seat = gameMap->getSeatById(seatId);
+            if(seat != nullptr)
+                seat->setTeamId(teamId);
+
+            break;
+        }
+
+        case ServerNotificationType::sandboxStatus:
+        {
+            SandboxStatus status;
+            uint32_t nbBonuses;
+            OD_ASSERT_TRUE(packetReceived >> status.mScore >> status.mTarget >> status.mNextRoom
+                >> status.mSecondsLeft >> nbBonuses);
+            for(uint32_t i = 0; i < nbBonuses; ++i)
+            {
+                SandboxBonusStatus bonus;
+                OD_ASSERT_TRUE(packetReceived >> bonus.mText >> bonus.mPoints >> bonus.mAwarded);
+                status.mBonuses.push_back(bonus);
+            }
+            status.mIsReceived = true;
+            mSandboxStatus = status;
+            break;
+        }
+
+        case ServerNotificationType::sandboxRealmComplete:
+        {
+            OD_ASSERT_TRUE(packetReceived >> mSandboxRealmId >> mSandboxNextLevel >> mSandboxRealmText);
+            mHasSandboxRealmComplete = true;
             break;
         }
 
@@ -916,7 +1049,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             MovableGameEntity* entity = gameMap->getRenderedMovableEntity(entityName);
             if(entity == nullptr)
             {
-                OD_LOG_ERR("MovableGameEntity pointer equal to nullptr: entityName=" + entityName);
+                // The entity can already be gone on the client when the order arrives (for example a trap rebuilt in the meantime)
+                OD_LOG_WRN("MovableGameEntity pointer equal to nullptr: entityName=" + entityName);
                 break;
             }
 
@@ -1211,6 +1345,22 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 RenderManager::getSingleton().rrSetFeedingChicken(creature,
                     gameMap->getAnimatedObject(chickenName), chickenPosition);
+                if(CreatureReactions::getSingletonPtr() != nullptr)
+                    CreatureReactions::getSingleton().noteChickenFeeding(creature, chickenName);
+            }
+            break;
+        }
+
+        case ServerNotificationType::chickenKindChanged:
+        {
+            std::string chickenName;
+            uint32_t kind;
+            OD_ASSERT_TRUE(packetReceived >> chickenName >> kind);
+            GameEntity* entity = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, chickenName);
+            if((entity != nullptr) && (entity->getObjectType() == GameEntityType::chickenEntity) &&
+               (kind <= static_cast<uint32_t>(ChickenKind::egg)))
+            {
+                static_cast<ChickenEntity*>(entity)->setKindFromServer(static_cast<ChickenKind>(kind));
             }
             break;
         }
@@ -1488,6 +1638,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             carried->removeEntityFromPositionTile();
 
             RenderManager::getSingleton().rrCarryEntity(carrier, carried);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteCarry(carrier, carried);
             break;
         }
 
@@ -1514,6 +1667,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             RenderManager::getSingleton().rrReleaseCarriedEntity(carrier, carried);
             carried->setPosition(pos);
+
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().noteRelease(carrier, carried);
             break;
         }
 
@@ -1620,6 +1776,23 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         }
 
+        case ServerNotificationType::casinoPayout:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int xx;
+            int yy;
+            uint32_t level;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> level);
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setCasinoPayoutShown(xx, yy, level);
+            break;
+        }
+
         case ServerNotificationType::editorPortalWaveData:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::EDITOR)
@@ -1633,6 +1806,54 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             EditorMode* editorMode = static_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode());
             editorMode->showPortalWaveWindow(roomName, config);
+            break;
+        }
+
+        case ServerNotificationType::possessionStart:
+        {
+            std::string creatureName;
+            OD_ASSERT_TRUE(packetReceived >> creatureName);
+            getPlayer()->setPossessedCreatureName(creatureName);
+            frameListener->getCameraManager()->startPossession(creatureName);
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+            {
+                GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+                gm->notifyPossessionStarted();
+            }
+            break;
+        }
+
+        case ServerNotificationType::editorRegionData:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::EDITOR)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            uint32_t nbRegions;
+            OD_ASSERT_TRUE(packetReceived >> nbRegions);
+            std::vector<LevelScriptRegion> regions;
+            for(uint32_t i = 0; i < nbRegions; ++i)
+            {
+                LevelScriptRegion region;
+                OD_ASSERT_TRUE(packetReceived >> region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2);
+                regions.push_back(region);
+            }
+
+            EditorMode* editorMode = static_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode());
+            editorMode->setRegions(regions);
+            break;
+        }
+
+        case ServerNotificationType::possessionEnd:
+        {
+            getPlayer()->setPossessedCreatureName(std::string());
+            frameListener->getCameraManager()->stopPossession();
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+            {
+                GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+                gm->notifyPossessionEnded();
+            }
             break;
         }
 

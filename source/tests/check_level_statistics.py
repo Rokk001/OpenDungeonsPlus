@@ -1,5 +1,6 @@
 """Exercise the production level statistics counting hooks and the levelStatistics notification without a game."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import time
@@ -53,15 +54,17 @@ take_damage_kill_part = take_damage[:cut] + '    return damageDone;\n}\n'
 
 # Production statements that are one-liners inside larger functions
 capture_start = room_source.index('    // Counts as captured when the claimer takes the last tile')
-capture_end = room_source.index('    mCoveredTilesDestroyed.push_back(tile);', capture_start)
+capture_end = room_source.index('    for(Tile* tile : tiles)\n    {\n        mCoveredTilesDestroyed.push_back(tile);', capture_start)
 capture_statement = room_source[capture_start:capture_end]
 convert_line = line_with(torture_source, 'mCreaturesConverted++')
 craft_line = line_with(workshop_source, 'mItemsMade++')
 heart_line = line_with(temple_source, 'mKeepersDefeated++')
 
 kills_probe = r'''
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 #define OD_LOG_INF(x)
@@ -84,25 +87,57 @@ struct SeatStatistics
     uint32_t mRoomsCaptured = 0;
     uint32_t mItemsMade = 0;
     uint32_t mCreaturesConverted = 0;
+    uint32_t mCreaturesLost = 0;
 };
 struct Seat
 {
     Seat(int id, int team, const std::string& faction) : mId(id), mTeamId(team), mFaction(faction) {}
+    struct CompletedGoal { std::string getName() const { return std::string(); } };
+    unsigned int numCompletedGoals() const { return 0; }
+    CompletedGoal* getCompletedGoal(unsigned int) { return nullptr; }
     int getTeamId() const { return mTeamId; }
     const std::string& getFaction() const { return mFaction; }
     bool isAlliedSeat(const Seat* seat) const { return getTeamId() == seat->getTeamId(); }
     SeatStatistics& getStatistics() { return mStatistics; }
     void recordCreatureKill(const Seat* victimSeat);
+    void addMana(double) {}
     int mId;
     int mTeamId;
     std::string mFaction;
     SeatStatistics mStatistics;
 };
 KILL_METHOD
-struct Tile {};
+enum class RoomType { arena, other };
+enum class RelationshipEvent { arenaLoss };
+enum class GameEntityType { creature, other };
+struct Room
+{
+    RoomType getType() const { return RoomType::other; }
+};
+struct Tile
+{
+    Room* getCoveringRoom() { return nullptr; }
+};
+struct RelationshipSettings
+{
+    int64_t mFightParticipantTurns = 0;
+};
+struct CreatureRelationships
+{
+    const RelationshipSettings& getSettings() const { return mSettings; }
+    RelationshipSettings mSettings;
+};
+struct GameMap
+{
+    bool isRelationshipsEnabled() const { return false; }
+    int64_t getTurnNumber() const { return 0; }
+    CreatureRelationships* getCreatureRelationships() { return nullptr; }
+};
 struct GameEntity
 {
     GameEntity(Seat* seat) : mSeat(seat) {}
+    GameEntityType getObjectType() const { return GameEntityType::other; }
+    GameMap* getGameMap() { return nullptr; }
     Seat* getSeat() { return mSeat; }
     std::string getName() { return "entity"; }
     Seat* mSeat;
@@ -110,12 +145,14 @@ struct GameEntity
 struct CreatureDefinition
 {
     bool isWorker() const { return mWorker; }
+    bool isChampion() const { return false; }
     bool mWorker = false;
 };
 struct ConfigManager
 {
     static ConfigManager& getSingleton() { static ConfigManager config; return config; }
     int getNbTurnsKoCreatureAttacked() { return 5; }
+    double getSpellConfigDouble(const std::string&) { return 100.0; }
 };
 struct Creature : public GameEntity
 {
@@ -129,6 +166,18 @@ struct Creature : public GameEntity
     void computeCreatureOverlayHealthValue() {}
     void computeCreatureOverlayMoodValue() {}
     void fireEntityDead() { ++mDeaths; }
+    double getPitDamageFactor(GameEntity*) { return 1.0; }
+    bool isPossessed() const { return false; }
+    bool isKo() const { return false; }
+    bool getIsOnServerMap() const { return false; }
+    bool canHaveRelationships() const { return false; }
+    Tile* getPositionTile() { return nullptr; }
+    void reportRelationshipEvent(RelationshipEvent, Creature&, Creature&) {}
+    void reportFightParticipants(Creature&) {}
+    void reportDeathToFriends(GameEntity*) {}
+    double getRelationshipRageFactor(const Seat*) const { return 1.0; }
+    std::map<std::string, int64_t> mRecentAttackers;
+    std::vector<std::string> mCaptors;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,
         double elementDamage, Tile* tileTakingDamage, bool ko);
     double mHp;
@@ -137,6 +186,7 @@ struct Creature : public GameEntity
     int mDeaths;
     CreatureDefinition mDefinition;
 };
+void recordScriptEvent(const Creature&, const std::string&) {}
 TAKE_DAMAGE
 struct MockRoom
 {
@@ -295,6 +345,8 @@ kills_probe = (kills_probe.replace('KILL_METHOD', kill_method)
 # Probe 2: the real Player::notifyNoMoreDungeonTemple packet content and order.
 # ---------------------------------------------------------------------------
 notify_method = function(player_source, 'void Player::notifyNoMoreDungeonTemple(')
+notify_method += function(player_source, 'void Player::notifyDefeat(')
+notify_method += function(player_source, 'void Player::sendLevelStatistics(')
 
 notify_probe = r'''
 #include <cstdint>
@@ -356,6 +408,8 @@ struct Player
     Seat* getSeat() { return mSeat; }
     bool getIsHuman() const { return mIsHuman; }
     void notifyNoMoreDungeonTemple();
+    void notifyDefeat(bool hasTeamLost);
+    void sendLevelStatistics(bool levelWon);
     Seat* mSeat;
     bool mIsHuman;
     bool mHasLost;
@@ -367,6 +421,9 @@ struct Player
 struct Seat
 {
     Seat(int i, int t) : id(i), team(t), player(nullptr) {}
+    struct CompletedGoal { std::string getName() const { return std::string(); } };
+    unsigned int numCompletedGoals() const { return 0; }
+    CompletedGoal* getCompletedGoal(unsigned int) { return nullptr; }
     int getId() const { return id; }
     Player* getPlayer() { return player; }
     bool isAlliedSeat(Seat* s) { return s && team == s->team; }
@@ -523,17 +580,22 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and enum_body.rstrip().endswith('heartHealth')
+assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*$', enum_body, re.M)[-2:] == ['timeLimit', 'chickenKindChanged']
+assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
+assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')
 assert 'return "levelStatistics";' in notification_source
 wiring_checks += 3
 
 # The one-line hooks sit in the intended place of their functions
-handover = function(room_source, 'Room* Room::handTileOverToSeat(')
+handover = function(room_source, 'Room* Room::handTilesOverToSeat(')
 assert 'mRoomsCaptured++' in handover
 assert handover.index('mCoveredTiles.erase(itTile)') < handover.index('mRoomsCaptured++') < handover.index('newRoom->mCoveredTiles.push_back(tile)')
-assert 'handTileOverToSeat(seat, tile);' in function(room_source, 'void Room::claimForSeat(')
-wiring_checks += 2
+assert 'handTilesOverToSeat(seat, tiles)' in function(room_source, 'void Room::changeOwner(')
+assert 'changeOwner(seat);' in function(room_source, 'void Room::claimForSeat(')
+assert 'handTilesOverToSeat(seat, std::vector<Tile*>(1, tile))' in function(room_source, 'Room* Room::handTileOverToSeat(')
+assert 'mRoomsCaptured++' in function(read('source/rooms/RoomPortal.cpp'), 'void RoomPortal::changeOwner(')
+wiring_checks += 5
 
 change_seat = torture_source.index('creature.changeSeat(getSeat());')
 assert change_seat < torture_source.index('mCreaturesConverted++') < torture_source.index('creature.clearActionQueue();', change_seat)

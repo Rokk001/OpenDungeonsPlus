@@ -86,7 +86,31 @@ enum class ClientNotificationType
     askHandDropAll,
 
     askTrapProductionQueue,
-    askMoveTrapProductionOrder
+    askMoveTrapProductionOrder,
+
+    //! \brief Asks for the payout level of the casino on a tile and optionally sets it
+    askCasinoPayout,
+
+    //! \brief Editor: creates a special gift box on a tile
+    editorCreateGiftBox,
+
+    // Sandbox mode
+    askSandboxTakeHero,
+    askSandboxInvasion,
+    //! Possession: the direction the possessed creature should walk (Vector2, zero to stop)
+    askPossessMove,
+    //! Possession: the player wants to leave the possessed creature
+    askPossessExit,
+    //! Possession: left click attack, the direction the creature looks at (Vector2)
+    askPossessAttack,
+    //! Possession: use the creature skill of the given slot (uint32_t, 0 to 3) in the given direction (Vector2)
+    askPossessSkill,
+    //! Editor: change or list the region markers of the level script:
+    //! + int32_t operation (0 list, 1 set, 2 remove), string name, 4 int32_t (corners, set only).
+    //! The server always answers with editorRegionData.
+    editorRegionEdit,
+    //! Use a stored special (the button of the special was pressed): + int32_t giftBoxType
+    askUseSpecial
 };
 
 ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt);

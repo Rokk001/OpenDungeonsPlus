@@ -11,6 +11,7 @@ end = source.index('\nbool Creature::isActionInList(', start)
 method = source[start:end]
 probe = r'''
 #include <OgreVector.h>
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -36,6 +37,7 @@ struct CreatureSkillData {Skill* mSkill;int mWarmup=0,mCooldown=0;};
 struct Creature {
     Ogre::Vector3 position=Ogre::Vector3::ZERO,direction;Tile tile{0,0};GameMap map;
     std::string animation;int sounds=0,turns=-1;double tired=0,xp=0;
+    int mAttackRecoveryDuration=0,mAttackRecoveryTurns=0,mAttackRecoverySerial=0;bool mNeedFireRefresh=false;
     const Ogre::Vector3& getPosition()const{return position;}
     Tile* getPositionTile(){return &tile;}GameMap* getGameMap(){return &map;}
     void setAnimationState(const std::string& a,bool,const Ogre::Vector3& d,bool){animation=a;direction=d;}
@@ -53,6 +55,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool v){++checks;if(!v)++failu
     check(c.direction==Ogre::Vector3::UNIT_X);
     check(skill.calls==1 && skill.distance==distance && skill.ko && !skill.notify);
     check(data.mWarmup==2 && data.mCooldown==3);
+    check(c.mAttackRecoveryDuration==3 && c.mAttackRecoveryTurns==3 && c.mAttackRecoverySerial==1 && c.mNeedFireRefresh);
     check(c.sounds==1 && c.turns==0 && c.tired==.5 && c.xp==1.5);
  }
  for(double maximum:{1.,7.})for(const Ogre::Vector3 offset:{Ogre::Vector3(.3f,.2f,0),Ogre::Vector3(-.3f,-.2f,0)}){

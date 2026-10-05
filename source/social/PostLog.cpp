@@ -59,6 +59,20 @@ std::string getPostCategoryName(PostCategory category)
             return "left";
         case PostCategory::Died:
             return "died";
+        case PostCategory::Friendship:
+            return "friendship";
+        case PostCategory::Hatred:
+            return "hatred";
+        case PostCategory::Nemesis:
+            return "nemesis";
+        case PostCategory::Breakup:
+            return "breakup";
+        case PostCategory::Converted:
+            return "converted";
+        case PostCategory::Couple:
+            return "couple";
+        case PostCategory::SplitUp:
+            return "splitup";
         default:
             return "";
     }
@@ -117,7 +131,7 @@ const Post* PostLog::findLatestPost(const std::string& creature) const
 }
 
 bool PostLog::addPost(int64_t turn, const std::string& creature, const std::string& className,
-    bool isWorker, PostCategory category, int32_t argument)
+    bool isWorker, PostCategory category, int32_t argument, const std::string& other)
 {
     if(!mActive || (turn < mEnabledFromTurn) || (category == PostCategory::Nb))
         return false;
@@ -160,6 +174,7 @@ bool PostLog::addPost(int64_t turn, const std::string& creature, const std::stri
     post.mCategory = category;
     post.mVariant = static_cast<uint32_t>(fnv1a64(variantStream.str()) & 0xFFFFFFFFULL);
     post.mArgument = argument;
+    post.mOther = other;
     post.mCreature = creature;
     post.mClassName = className;
     post.mIsWorker = isWorker;

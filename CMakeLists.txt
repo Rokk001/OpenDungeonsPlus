@@ -257,6 +257,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionGetFee.cpp
     ${SRC}/creatureaction/CreatureActionGoCallToWar.cpp
     ${SRC}/creatureaction/CreatureActionGoDefendHeart.cpp
+    ${SRC}/creatureaction/CreatureActionWatchBanner.cpp
     ${SRC}/creatureaction/CreatureActionGrabEntity.cpp
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
@@ -268,12 +269,15 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
+    ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
+    ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
     ${SRC}/creaturebehaviour/CreatureBehaviour.cpp
     ${SRC}/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp
     ${SRC}/creaturebehaviour/CreatureBehaviourEngageNaturalEnemy.cpp
+    ${SRC}/creaturebehaviour/CreatureBehaviourFleeWhenOutmatched.cpp
     ${SRC}/creaturebehaviour/CreatureBehaviourFleeWhenWeak.cpp
     ${SRC}/creaturebehaviour/CreatureBehaviourLeaveDungeonWhenFurious.cpp
     ${SRC}/creaturebehaviour/CreatureBehaviourManager.cpp
@@ -286,6 +290,13 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectManager.cpp
     ${SRC}/creatureeffect/CreatureEffectSlap.cpp
     ${SRC}/creatureeffect/CreatureEffectSpeedChange.cpp
+    ${SRC}/creatureeffect/CreatureEffectDefector.cpp
+    ${SRC}/creatureeffect/CreatureEffectHexenHen.cpp
+    ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
+    ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
+    ${SRC}/creatureeffect/CreatureEffectBurn.cpp
+    ${SRC}/creatureeffect/CreatureEffectTemporary.cpp
+    ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
@@ -293,7 +304,14 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMoodCreature.cpp
     ${SRC}/creaturemood/CreatureMoodFee.cpp
     ${SRC}/creaturemood/CreatureMoodHunger.cpp
+    ${SRC}/creaturemood/CreatureMoodHeldInHand.cpp
     ${SRC}/creaturemood/CreatureMoodHpLoss.cpp
+    ${SRC}/creaturemood/CreatureMoodNoLair.cpp
+    ${SRC}/creaturemood/CreatureMoodOutOfWork.cpp
+    ${SRC}/creaturemood/CreatureMoodSlapped.cpp
+    ${SRC}/creaturemood/CreatureMoodTortured.cpp
+    ${SRC}/creaturemood/CreatureMoodRested.cpp
+    ${SRC}/creaturemood/CreatureMoodHatedCompany.cpp
     ${SRC}/creaturemood/CreatureMoodManager.cpp
     ${SRC}/creaturemood/CreatureMoodTurnsWithoutFight.cpp
 
@@ -306,8 +324,19 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillMeleeFight.cpp
     ${SRC}/creatureskill/CreatureSkillMissileLaunch.cpp
     ${SRC}/creatureskill/CreatureSkillSlow.cpp
+    ${SRC}/creatureskill/CreatureSkillFreeze.cpp
+    ${SRC}/creatureskill/CreatureSkillDrain.cpp
+    ${SRC}/creatureskill/CreatureSkillInvisible.cpp
     ${SRC}/creatureskill/CreatureSkillStrengthSelf.cpp
     ${SRC}/creatureskill/CreatureSkillWeak.cpp
+    ${SRC}/creatureskill/CreatureSkillWhirlwind.cpp
+    ${SRC}/creatureskill/CreatureSkillTeleport.cpp
+    ${SRC}/creatureskill/CreatureSkillAreaDamage.cpp
+    ${SRC}/creatureskill/CreatureSkillGuidedBolt.cpp
+    ${SRC}/creatureskill/CreatureSkillGrenade.cpp
+    ${SRC}/creatureskill/CreatureSkillSummon.cpp
+    ${SRC}/creatureskill/CreatureSkillRaiseDead.cpp
+    ${SRC}/creatureskill/CreatureSkillSkeletonArmy.cpp
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
@@ -322,6 +351,8 @@ set(OD_SOURCEFILES
     ${SRC}/entities/GiftBoxEntity.cpp
     ${SRC}/entities/MapLight.cpp
     ${SRC}/entities/MissileBoulder.cpp
+    ${SRC}/entities/MissileBlast.cpp
+    ${SRC}/entities/MissileStone.cpp
     ${SRC}/entities/MissileObject.cpp
     ${SRC}/entities/MissileOneHit.cpp
     ${SRC}/entities/MovableGameEntity.cpp
@@ -342,8 +373,11 @@ set(OD_SOURCEFILES
 	${SRC}/eventsystem/EventHandler.cpp		
 	${SRC}/eventsystem/Subject.cpp		
 	
+    ${SRC}/game/Campaign.cpp
+    ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/CreaturePanelData.cpp
+    ${SRC}/game/CreatureRelationships.cpp
     ${SRC}/game/TrapProductionData.cpp
     ${SRC}/game/PlayerSelection.cpp
     ${SRC}/game/Skill.cpp
@@ -354,15 +388,19 @@ set(OD_SOURCEFILES
 
     ${SRC}/gamemap/DraggableTileContainer.cpp
     ${SRC}/gamemap/GameMap.cpp
+    ${SRC}/gamemap/LevelScript.cpp
+    ${SRC}/gamemap/LevelScriptRunner.cpp
     ${SRC}/gamemap/RoomObjectNavigation.cpp
     ${SRC}/gamemap/MapHandler.cpp
     ${SRC}/gamemap/MiniMap.cpp
     ${SRC}/gamemap/MiniMapDrawn.cpp
     ${SRC}/gamemap/MiniMapDrawnFull.cpp
+    ${SRC}/gamemap/SandboxMode.cpp
     ${SRC}/gamemap/MiniMapCamera.cpp
     ${SRC}/gamemap/TileContainer.cpp
     ${SRC}/gamemap/TileSet.cpp
 
+    ${SRC}/giftboxes/GiftBoxBonus.cpp
     ${SRC}/giftboxes/GiftBoxSkill.cpp
 
     ${SRC}/goals/Goal.cpp
@@ -386,6 +424,7 @@ set(OD_SOURCEFILES
     ${SRC}/modes/InputBridge.cpp
     ${SRC}/modes/InputManager.cpp
     ${SRC}/modes/Keyboard.cpp
+    ${SRC}/modes/MenuModeCampaign.cpp
     ${SRC}/modes/MenuModeMain.cpp
     ${SRC}/modes/MenuModeConfigureSeats.cpp
     ${SRC}/modes/MenuModeEditorLoad.cpp
@@ -411,6 +450,9 @@ set(OD_SOURCEFILES
     ${SRC}/network/ServerNotification.cpp
 
     ${SRC}/render/CreatureOverlayStatus.cpp
+    ${SRC}/render/CreatureReactionConfig.cpp
+    ${SRC}/render/CreatureReactions.cpp
+    ${SRC}/render/CreatureCombatReactions.cpp
     ${SRC}/render/DebugDrawer.cpp    
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
@@ -418,8 +460,12 @@ set(OD_SOURCEFILES
     ${SRC}/render/CreaturePanel.cpp
     ${SRC}/render/SocialWindow.cpp
     ${SRC}/render/MovableTextOverlay.cpp
+    ${SRC}/render/RoomAmbience.cpp
+    ${SRC}/render/RoomAmbienceConfig.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
+    ${SRC}/render/RenderManagerChickens.cpp
+    ${SRC}/render/TreasuryGoldMesh.cpp
     ${SRC}/render/TextRenderer.cpp
 
     ${SRC}/social/CreaturePosts.cpp
@@ -450,6 +496,8 @@ set(OD_SOURCEFILES
     
     ${SRC}/rooms/FencedRoom.cpp
     ${SRC}/rooms/HeartHealthTier.cpp
+    ${SRC}/rooms/HatcheryCycle.cpp
+    ${SRC}/rooms/HatcheryRooster.cpp
     ${SRC}/rooms/Room.cpp
     ${SRC}/rooms/RoomArena.cpp
     ${SRC}/rooms/RoomBridge.cpp
@@ -466,6 +514,8 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomPortalWave.cpp
     ${SRC}/rooms/RoomPrison.cpp
     ${SRC}/rooms/RoomTorture.cpp
+    ${SRC}/rooms/RoomGuardRoom.cpp
+    ${SRC}/rooms/RoomTemple.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp
@@ -481,6 +531,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/spells/Spell.cpp
     ${SRC}/spells/SpellCallToWar.cpp
+    ${SRC}/spells/SpellCreateGold.cpp
     ${SRC}/spells/SpellCreatureDefense.cpp
     ${SRC}/spells/SpellCreatureExplosion.cpp
     ${SRC}/spells/SpellCreatureHaste.cpp
@@ -489,16 +540,31 @@ set(OD_SOURCEFILES
     ${SRC}/spells/SpellCreatureStrength.cpp
     ${SRC}/spells/SpellCreatureWeak.cpp
     ${SRC}/spells/SpellEyeEvil.cpp
+    ${SRC}/spells/SpellLightning.cpp
+    ${SRC}/spells/SpellTremor.cpp
+    ${SRC}/spells/SpellDefector.cpp
+    ${SRC}/spells/SpellHexenHen.cpp
+    ${SRC}/spells/SpellInferno.cpp
+    ${SRC}/spells/SpellPossess.cpp
     ${SRC}/spells/SpellManager.cpp
+    ${SRC}/spells/SpellSummonChampion.cpp
     ${SRC}/spells/SpellSummonWorker.cpp
     ${SRC}/spells/SpellType.cpp
 
     ${SRC}/traps/Trap.cpp
+    ${SRC}/traps/TrapAlarm.cpp
     ${SRC}/traps/TrapBoulder.cpp
     ${SRC}/traps/TrapCannon.cpp
     ${SRC}/traps/TrapDoor.cpp
+    ${SRC}/traps/TrapFear.cpp
+    ${SRC}/traps/TrapFireburst.cpp
+    ${SRC}/traps/TrapFreeze.cpp
+    ${SRC}/traps/TrapGas.cpp
+    ${SRC}/traps/TrapWatchBanner.cpp
+    ${SRC}/traps/TrapLightning.cpp
     ${SRC}/traps/TrapManager.cpp
     ${SRC}/traps/TrapSpike.cpp
+    ${SRC}/traps/TrapTrigger.cpp
     ${SRC}/traps/TrapType.cpp
 
     ${SRC}/utils/ConfigManager.cpp
@@ -509,8 +575,10 @@ set(OD_SOURCEFILES
     ${SRC}/utils/LogSinkFile.cpp
     ${SRC}/utils/LogSinkOgre.cpp
     ${SRC}/utils/MasterServer.cpp
+    ${SRC}/utils/NameAliases.cpp
     ${SRC}/utils/Random.cpp
     ${SRC}/utils/ResourceManager.cpp
+    ${SRC}/utils/RunLevelTest.cpp
     ${SRC}/utils/VectorInt64.cpp
 
     ${SRC}/ODApplication.cpp

@@ -19,6 +19,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 
+#include "ODApplication.h"
 #include "entities/BuildingObject.h"
 #include "gamemap/RoomObjectNavigation.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
@@ -26,7 +27,9 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "game/CreatureRelationships.h"
 #include "game/Player.h"
+#include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
@@ -128,7 +131,8 @@ static const Ogre::Real OFFSET_DUMMY = 0.3;
 
 RoomTrainingHall::RoomTrainingHall(GameMap* gameMap) :
     Room(gameMap),
-    nbTurnsNoChangeDummies(0)
+    nbTurnsNoChangeDummies(0),
+    mTrainingGoldDue(0.0)
 {
     setMeshName("Dojo");
 }
@@ -288,6 +292,10 @@ bool RoomTrainingHall::hasOpenCreatureSpot(Creature* c)
     if (c->getLevel() >= ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallMaxTrainingLevel"))
         return false;
 
+    // Training costs gold, so nobody trains when the treasury is empty
+    if(getSeat()->getGold() <= 0)
+        return false;
+
     // We accept all creatures as soon as there are free dummies
     return mUnusedDummies.size() > 0;
 }
@@ -354,6 +362,35 @@ void RoomTrainingHall::doUpkeep()
     if (mCoveredTiles.empty())
         return;
 
+    // Every creature in training costs gold for each second. When the treasury cannot pay, the
+    // training stops until there is gold again
+    if(!mCreaturesUsingRoom.empty())
+    {
+        double costPerSecond = ConfigManager::getSingleton().getRoomConfigDouble("TrainHallCostPerSecond");
+        mTrainingGoldDue += costPerSecond * static_cast<double>(mCreaturesUsingRoom.size())
+            / ODApplication::turnsPerSecond;
+        int32_t goldDue = static_cast<int32_t>(mTrainingGoldDue);
+        if(goldDue > 0)
+        {
+            if(getGameMap()->withdrawFromTreasuries(goldDue, getSeat()))
+            {
+                mTrainingGoldDue -= static_cast<double>(goldDue);
+            }
+            else
+            {
+                mTrainingGoldDue = 0.0;
+                // clearActionQueue releases the creature from the room, so we work on a copy
+                std::vector<Creature*> creatures = mCreaturesUsingRoom;
+                for(Creature* creature : creatures)
+                    creature->clearActionQueue();
+            }
+        }
+    }
+    else
+    {
+        mTrainingGoldDue = 0.0;
+    }
+
     // We add a probability to change dummies so that creatures do not use the same during too much time
     if(mCreaturesDummies.size() > 0 && Random::Int(50,150) < ++nbTurnsNoChangeDummies)
         refreshCreaturesDummies();
@@ -412,10 +449,33 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
         getSeat(), SkillType::roomTrainingHall, ConfigManager::getSingleton().getRoomConfigDouble("TrainHallXpPerAttack"));
     expReceived *= coef;
 
+    // A higher level friend training in the same room teaches the creature
+    if(getGameMap()->isRelationshipsEnabled() && creature.canHaveRelationships())
+    {
+        std::vector<std::pair<std::string, uint32_t> > trainees;
+        for(Creature* other : mCreaturesUsingRoom)
+        {
+            if((other != &creature) && (other->getSeat() == creature.getSeat()) && other->canHaveRelationships())
+                trainees.push_back(std::pair<std::string, uint32_t>(other->getName(), other->getLevel()));
+        }
+        expReceived *= getGameMap()->getCreatureRelationships()->mentoringFactor(creature.getName(),
+            creature.getLevel(), trainees);
+    }
+
     creature.receiveExp(expReceived);
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("TrainHallWakefulnessPerAttack"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMax")));
+
+    // Creatures of the same keeper training at the same time grow closer
+    if(getGameMap()->isRelationshipsEnabled())
+    {
+        for(Creature* other : mCreaturesUsingRoom)
+        {
+            if(other != &creature)
+                Creature::reportRelationshipEvent(RelationshipEvent::trainingTogether, creature, *other);
+        }
+    }
 
     return false;
 }
