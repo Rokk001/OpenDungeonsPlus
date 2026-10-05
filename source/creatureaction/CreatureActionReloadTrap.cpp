@@ -20,6 +20,7 @@
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
@@ -49,6 +50,9 @@ CreatureActionReloadTrap::CreatureActionReloadTrap(Creature& creature, Tile& til
     mTileReload(tileReload),
     mWorkTurns(0)
 {
+    // Counts in the worker share rules of the player
+    mCreature.getSeat()->getPlayer()->notifyWorkerAction(mCreature, getType());
+
     // One worker per tile
     Trap* trap = getTrapOnTile(mTileReload);
     if(trap != nullptr)
@@ -57,6 +61,8 @@ CreatureActionReloadTrap::CreatureActionReloadTrap(Creature& creature, Tile& til
 
 CreatureActionReloadTrap::~CreatureActionReloadTrap()
 {
+    mCreature.getSeat()->getPlayer()->notifyWorkerStopsAction(mCreature, getType());
+
     Trap* trap = getTrapOnTile(mTileReload);
     if((trap != nullptr) && (trap->getReloadWorker(&mTileReload) == &mCreature))
         trap->setReloadWorker(&mTileReload, nullptr);

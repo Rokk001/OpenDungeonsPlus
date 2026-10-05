@@ -1849,7 +1849,8 @@ bool Creature::handleIdleAction()
     if (mDefinition->isWorker())
     {
         // A trap of the keeper that used up its shots is armed again before the other jobs
-        if(!hasActionBeenTried(CreatureActionType::reloadTrap) && CreatureActionReloadTrap::tryStart(*this))
+        if(!hasActionBeenTried(CreatureActionType::reloadTrap) && getSeat()->getPlayer()->isWorkerReloadShareOpen() &&
+           CreatureActionReloadTrap::tryStart(*this))
             return true;
 
         // Decide what to do

@@ -23,7 +23,7 @@
 class Tile;
 
 //! \brief (worker only) Walks to a trap tile of its seat that used up its shots and arms it again
-//! with a short work, for a share of the build price (configuration: TrapReload...).
+//! with a short work, for a price per trap type (configuration: TrapReload..., <Trap>ReloadCost).
 class CreatureActionReloadTrap : public CreatureAction
 {
 public:

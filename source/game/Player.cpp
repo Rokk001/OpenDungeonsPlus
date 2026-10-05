@@ -1148,10 +1148,12 @@ std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& work
     uint32_t nbWorkersClaimingGround = getNbWorkersDoing(CreatureActionType::searchGroundTileToClaim);
     uint32_t nbWorkersClaimingWall = getNbWorkersDoing(CreatureActionType::searchWallTileToClaim);
     uint32_t nbWorkersCarrying = getNbWorkersDoing(CreatureActionType::searchEntityToCarry);
+    // Workers reloading traps are counted in the total (own share, see isWorkerReloadShareOpen)
+    uint32_t nbWorkersReloading = getNbWorkersDoing(CreatureActionType::reloadTrap);
     // For the total number of workers, we consider only those doing something in the wanted list (and not
     // the ones fighting or having nothing to do) + the one we are considering
     uint32_t nbWorkersTotal = nbWorkersDigging + nbWorkersClaimingGround
-            + nbWorkersClaimingWall + nbWorkersCarrying + 1;
+            + nbWorkersClaimingWall + nbWorkersCarrying + nbWorkersReloading + 1;
 
     double percent;
     bool isCarryAdded = false;
@@ -1193,4 +1195,20 @@ std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& work
         ret.push_back(CreatureActionType::searchEntityToCarry);
 
     return ret;
+}
+
+bool Player::isWorkerReloadShareOpen() const
+{
+    // Same counting as in getWorkerPreferredActions: the workers reloading traps may be at most the
+    // configured share (default 20%) of the workers doing the listed jobs + the one we are considering
+    uint32_t nbWorkersReloading = getNbWorkersDoing(CreatureActionType::reloadTrap);
+    uint32_t nbWorkersTotal = getNbWorkersDoing(CreatureActionType::searchTileToDig)
+            + getNbWorkersDoing(CreatureActionType::searchGroundTileToClaim)
+            + getNbWorkersDoing(CreatureActionType::searchWallTileToClaim)
+            + getNbWorkersDoing(CreatureActionType::searchEntityToCarry)
+            + nbWorkersReloading + 1;
+
+    double share = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadWorkerSharePercent", 20.0) / 100.0;
+    double percent = static_cast<double>(nbWorkersReloading) / static_cast<double>(nbWorkersTotal);
+    return percent <= share;
 }

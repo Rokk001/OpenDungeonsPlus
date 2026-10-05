@@ -33,13 +33,42 @@ worker = read('source/render/WorkerReactions.cpp')
 config_h = read('source/utils/ConfigManager.h')
 
 # Every value is in the configuration: documented, set, read with a default
-keys = ['TrapReloadByWorkers', 'TrapReloadWorkTurns', 'TrapReloadCostPercent', 'TrapReloadSearchRadius',
-        'TrapReloadRetryTurns', 'TrapReloadExperience']
+keys = ['TrapReloadByWorkers', 'TrapReloadWorkTurns', 'TrapReloadCostDefault', 'TrapReloadSearchRadius',
+        'TrapReloadRetryTurns', 'TrapReloadExperience', 'TrapReloadWorkerSharePercent']
+player = read('source/game/Player.cpp')
 for key in keys:
     assert re.search(r'^# ' + key + r'\s', traps_cfg, re.M), key + ' not documented'
     assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
-    assert re.search(r'getTrapConfigDoubleOrDefault\(\s*"' + key + '"', trap + action), key + ' not read'
+    assert re.search(r'getTrapConfigDoubleOrDefault\(\s*"' + key + '"', trap + action + player), key + ' not read'
 assert 'getTrapConfigDoubleOrDefault' in config_h
+
+# The old percentage of the build price is gone; every trap type with shots has its own price in the configuration
+assert 'TrapReloadCostPercent' not in traps_cfg + trap + action + player
+price = function_body(trap, 'int32_t Trap::getReloadPrice()')
+doc_start = traps_cfg.index('# <Trap>ReloadCost')
+doc_block = traps_cfg[doc_start:traps_cfg.index('# TrapReloadWorkerSharePercent')]
+assert 'costPerTile' not in price
+type_keys = {'cannon': 'Cannon', 'spike': 'Spike', 'boulder': 'Boulder', 'fear': 'Fear', 'gas': 'Gas',
+             'lightning': 'Lightning', 'fireburst': 'Fireburst', 'freeze': 'Freeze', 'watchBanner': 'WatchBanner',
+             'alarm': 'Alarm', 'trigger': 'Trigger'}
+for trap_type, prefix in type_keys.items():
+    key = prefix + 'ReloadCost'
+    assert prefix in doc_block, prefix + ' not documented'
+    assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
+    assert 'case TrapType::' + trap_type + ':' in price, trap_type + ' not priced'
+    assert re.search(r'getTrapConfigDoubleOrDefault\("' + key + '", defaultPrice\)', price), key + ' not read'
+# Every trap type that has a shot count in the configuration has a reload price
+for prefix in re.findall(r'^    (\w+)NbShootsBeforeDeactivation\t', traps_cfg, re.M):
+    assert re.search(r'^    ' + prefix + r'ReloadCost\t\d+', traps_cfg, re.M), prefix + ' has no reload price'
+
+# Reloading counts in the worker share rules: counted by the action, part of the total, own share, gate in the idle choice
+assert 'notifyWorkerAction(mCreature, getType())' in action.split('CreatureActionReloadTrap::~')[0]
+assert 'notifyWorkerStopsAction(mCreature, getType())' in action.split('CreatureActionReloadTrap::~')[1].split('}')[0]
+prefs = function_body(player, 'std::vector<CreatureActionType> Player::getWorkerPreferredActions(')
+assert 'getNbWorkersDoing(CreatureActionType::reloadTrap)' in prefs and 'nbWorkersReloading + 1' in prefs
+share = function_body(player, 'bool Player::isWorkerReloadShareOpen()')
+assert 'CreatureActionType::reloadTrap' in share and 'TrapReloadWorkerSharePercent' in share
+assert 'isWorkerReloadShareOpen' in read('source/game/Player.h')
 
 # The action exists, is named, built and chosen by idle workers before the other jobs
 assert 'reloadTrap,' in action_enum and 'case CreatureActionType::reloadTrap:' in action_names
@@ -47,6 +76,7 @@ assert 'CreatureActionReloadTrap.cpp' in cmake
 idle = function_body(creature, 'bool Creature::handleIdleAction()')
 assert 'CreatureActionReloadTrap::tryStart(*this)' in idle
 assert idle.index('CreatureActionReloadTrap::tryStart') < idle.index('getWorkerPreferredActions')
+assert idle.index('isWorkerReloadShareOpen()') < idle.index('CreatureActionReloadTrap::tryStart')
 
 # Server only, own seat, price from the config, paid when the work is done, one worker per tile
 start = function_body(action, 'bool CreatureActionReloadTrap::tryStart(')

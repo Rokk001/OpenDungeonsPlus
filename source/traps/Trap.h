@@ -273,7 +273,7 @@ public:
     //! \brief No worker reloads the tile before the given turn number
     void postponeReload(Tile* tile, int64_t untilTurn);
 
-    //! \brief Gold a worker needs to reload one tile (share of the build price, from the configuration)
+    //! \brief Gold a worker needs to reload one tile (per trap type from the configuration)
     int32_t getReloadPrice() const;
 
     //! \brief Sets the name, seat and associates the given tiles with the trap

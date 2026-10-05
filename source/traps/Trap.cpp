@@ -492,9 +492,50 @@ void Trap::postponeReload(Tile* tile, int64_t untilTurn)
 
 int32_t Trap::getReloadPrice() const
 {
-    double percent = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadCostPercent", 40.0);
-    double price = static_cast<double>(TrapManager::costPerTile(getType())) * std::max(0.0, percent) / 100.0;
-    return static_cast<int32_t>(price);
+    // Price per trap type (<Trap>ReloadCost), a type without an entry pays TrapReloadCostDefault
+    ConfigManager& config = ConfigManager::getSingleton();
+    double defaultPrice = config.getTrapConfigDoubleOrDefault("TrapReloadCostDefault", 150.0);
+    double price = defaultPrice;
+    switch(getType())
+    {
+        case TrapType::cannon:
+            price = config.getTrapConfigDoubleOrDefault("CannonReloadCost", defaultPrice);
+            break;
+        case TrapType::spike:
+            price = config.getTrapConfigDoubleOrDefault("SpikeReloadCost", defaultPrice);
+            break;
+        case TrapType::boulder:
+            price = config.getTrapConfigDoubleOrDefault("BoulderReloadCost", defaultPrice);
+            break;
+        case TrapType::fear:
+            price = config.getTrapConfigDoubleOrDefault("FearReloadCost", defaultPrice);
+            break;
+        case TrapType::gas:
+            price = config.getTrapConfigDoubleOrDefault("GasReloadCost", defaultPrice);
+            break;
+        case TrapType::lightning:
+            price = config.getTrapConfigDoubleOrDefault("LightningReloadCost", defaultPrice);
+            break;
+        case TrapType::fireburst:
+            price = config.getTrapConfigDoubleOrDefault("FireburstReloadCost", defaultPrice);
+            break;
+        case TrapType::freeze:
+            price = config.getTrapConfigDoubleOrDefault("FreezeReloadCost", defaultPrice);
+            break;
+        case TrapType::watchBanner:
+            price = config.getTrapConfigDoubleOrDefault("WatchBannerReloadCost", defaultPrice);
+            break;
+        case TrapType::alarm:
+            price = config.getTrapConfigDoubleOrDefault("AlarmReloadCost", defaultPrice);
+            break;
+        case TrapType::trigger:
+            price = config.getTrapConfigDoubleOrDefault("TriggerReloadCost", defaultPrice);
+            break;
+        default:
+            break;
+    }
+
+    return static_cast<int32_t>(std::max(0.0, price));
 }
 
 void Trap::setupTrap(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)
