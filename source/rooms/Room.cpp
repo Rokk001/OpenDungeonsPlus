@@ -258,6 +258,10 @@ void Room::fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Til
         if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
             continue;
 
+        // The new owners of the tiles go out first (the messages of a client keep their order), so the
+        // client already knows the new owner when the event arrives. Otherwise they would follow only
+        // at the end of the turn, after the event.
+        seat->notifyChangedVisibleTiles();
         ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
     }
 }

@@ -4688,7 +4688,11 @@ bool Creature::isKoToDeathForBedPull() const
     }
 
     // Only to its own bed: without one it is not picked up, not moved and dies where it lies. The percent of
-    // health, the radius, the pause and the fights do not matter here, the counter to death is running
+    // health and the fights do not matter here, the counter to death is running. Only the pause after a pull
+    // that ended counts (DormitoryWoundedKoDeathCooldown, set in notifyDragEnd): the counter goes on meanwhile
+    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
+        return false;
+
     if(!hasOwnBedInDormitory())
         return false;
 
@@ -4761,7 +4765,10 @@ void Creature::notifyDragEnd()
         return;
 
     // The pause before it can be pulled again, whatever the end of the drag was
+    // (a creature knocked out to death has its own, usually longer, pause)
     double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", 150.0);
+    if(mKoTurnCounter < 0)
+        cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedKoDeathCooldown", 150.0);
     mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
 }
 

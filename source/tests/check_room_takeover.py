@@ -155,6 +155,17 @@ assert fire.index('CosmeticEvent event(') < fire.index('for(Seat* seat : seats)'
 assert 'fireTakeoverEvent(oldSeat, seat, tiles);' in function_body(room, 'void Room::changeOwner(')
 assert 'fireTakeoverEvent(oldSeat, seat, mCoveredTiles);' in function_body(read('source/rooms/RoomPortal.cpp'), 'void RoomPortal::changeOwner(')
 assert room.count('fireTakeoverEvent(') == 2 and 'fireTakeoverEvent' not in tile, 'not sent per tile'
+# Order: the tile updates (new owners of the tiles) of a recipient are sent before the event, so the client knows
+# the new owner when the event arrives (the messages of one client keep their order)
+assert 'seat->notifyChangedVisibleTiles();' in fire
+assert fire.index('seat->notifyChangedVisibleTiles();') < fire.index('sendCosmeticEvent(seat->getPlayer(), event)')
+assert fire.index('->getIsHuman())') < fire.index('seat->notifyChangedVisibleTiles();')
+# and the owner of the tiles is set before the event in both callers
+portal_change = function_body(read('source/rooms/RoomPortal.cpp'), 'void RoomPortal::changeOwner(')
+assert function_body(room, 'void Room::changeOwner(').index('handTilesOverToSeat(') < function_body(room, 'void Room::changeOwner(').index('fireTakeoverEvent(')
+assert portal_change.index('tile->claimTile(seat)') < portal_change.index('fireTakeoverEvent(')
+seat_cpp = read('source/game/Seat.cpp')
+assert 'refreshTiles' in function_body(seat_cpp, 'void Seat::notifyChangedVisibleTiles(')
 assert 'fireTakeoverEvent' in room_h
 # Client: one reaction per room. The event ends the dancing of every worker that took the room and the worker
 # nearest to the room celebrates; the old per worker path only remains as the fallback for a server without it

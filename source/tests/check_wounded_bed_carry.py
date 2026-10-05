@@ -36,7 +36,7 @@ config_manager = read('source/utils/ConfigManager.cpp')
 
 # Every number is in the configuration: documented, set, read with a default
 number_keys = ['DormitoryWoundedCarryHpPercent', 'DormitoryWoundedCarryRadius', 'DormitoryWoundedCarryPriority',
-               'DormitoryWoundedCarryCooldown', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurns',
+               'DormitoryWoundedCarryCooldown', 'DormitoryWoundedKoDeathCooldown', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurns',
                'DormitoryWoundedCarryTempKo', 'DormitoryWoundedDragGap', 'DormitoryWoundedDragWorkerSpeedFactor',
                'DormitoryWoundedDragFollowSpeedFactor', 'DormitoryWoundedDragMaxDistance',
                'DormitoryWoundedDragLayTurns']
@@ -202,7 +202,17 @@ ko_pull = function_body(creature, 'bool Creature::isKoToDeathForBedPull() const'
 for needle in ('getIsOnServerMap()', 'isAlive()', 'mKoTurnCounter >= 0', 'mIsBeingDragged', 'isPossessed()',
                'isInPrison()', 'isWorker()', 'hasOwnBedInDormitory()', 'isHostileNear('):
     assert needle in ko_pull, needle
-assert 'mWoundedCarryNextTurn' not in ko_pull and 'DormitoryWoundedCarryHpPercent' not in ko_pull, 'the counter is running'
+# 13m: one pause for the pull, shared with the other hurt ones (mWoundedCarryNextTurn, set in notifyDragEnd after every
+# end of a pull); a creature knocked out to death has its own config value, the counter to death is never touched
+assert 'DormitoryWoundedCarryHpPercent' not in ko_pull
+assert 'getTurnNumber() < mWoundedCarryNextTurn' in ko_pull
+assert ko_pull.index('getTurnNumber() < mWoundedCarryNextTurn') < ko_pull.index('hasOwnBedInDormitory()')
+drag_end = function_body(creature, 'void Creature::notifyDragEnd(')
+assert '"DormitoryWoundedKoDeathCooldown"' in drag_end and '"DormitoryWoundedCarryCooldown"' in drag_end
+assert 'mKoTurnCounter < 0' in drag_end and 'mWoundedCarryNextTurn = ' in drag_end and 'mKoTurnCounter =' not in drag_end
+assert re.search(r'^    DormitoryWoundedKoDeathCooldown	150\s*$', rooms_cfg, re.M)
+assert re.search(r'^# DormitoryWoundedKoDeathCooldown\s', rooms_cfg, re.M), 'documented'
+assert 'DormitoryWoundedKoDeathCooldown' not in function_body(creature, 'bool Creature::isWoundedForBedCarry() const')
 assert re.search(r'if\(mKoTurnCounter < 0\)\s*\{\s*if\(\(carrier != nullptr\) && \(carrier->getSeat\(\) == getSeat\(\)\)\)\s*'
                  r'return isKoToDeathForBedPull\(\) \? EntityCarryType::koCreature : EntityCarryType::notCarryable;',
                  carry_type), 'own KO to death: pulled to the own bed or not touched'
