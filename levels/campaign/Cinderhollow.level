@@ -5142,6 +5142,7 @@ Name	waveOne
 Mode	once
 Cond	time	420
 Action	message	1	The first wave is coming down through the north-west gate.
+Action	wavecountdown	480
 Action	spawn	3	15	14	1	Adventurer:2	Dwarf1:2	Elf:2	Monk:2	Adventurer:2
 [/Trigger]
 [Trigger]
@@ -5149,6 +5150,7 @@ Name	waveTwo
 Mode	once
 Cond	time	900
 Action	message	1	The second wave has entered the hollow at the east gate.
+Action	wavecountdown	450
 Action	spawn	3	70	50	1	Knight:3	Elf:3	Monk:2	Adventurer:3	Dwarf2:3	Knight:2
 [/Trigger]
 [Trigger]
@@ -5162,6 +5164,7 @@ Name	waveThree
 Mode	once
 Cond	time	1350
 Action	message	1	The last wave is on both roads at once, from the north-west gate and the east gate.
+Action	wavecountdown	0
 Action	spawn	3	15	14	1	Knight:4	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
 Action	spawn	3	70	50	1	Knight:4	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
 [/Trigger]
@@ -5197,6 +5200,7 @@ Mode	once
 Cond	time	3
 Action	timer	dawnClock
 Action	countdown	1797
+Action	wavecountdown	417
 [/Trigger]
 [Trigger]
 Name	lavaBridge

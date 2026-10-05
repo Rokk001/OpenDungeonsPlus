@@ -56,6 +56,10 @@ assert 'TileType::manaWell' in runner and 'kind == "manawell"' in runner
 assert 'case LevelScriptActionType::countdown:' in runner and 'setScriptCountdown(' in runner
 assert 'TIME_LIMIT_COUNTDOWN_FLAG' in read('source/modes/GameMode.cpp') and 'TIME_LIMIT_COUNTDOWN_FLAG' in read('source/gamemap/GameMap.cpp')
 assert 'type == "countdown"' in script and 'os << "countdown' in script and 'key == "Countdown"' in script
+assert 'case LevelScriptActionType::waveCountdown:' in runner and 'setScriptWaveCountdown(' in runner
+assert 'type == "wavecountdown"' in script and 'os << "wavecountdown' in script and 'key == "WaveCountdown"' in script
+assert 'mWaveCountdownSeconds' in read('source/network/ODClient.cpp') and 'mWaveCountdownToSend' in read('source/gamemap/GameMap.cpp')
+assert 'WaveCountdownDisplay' in read('source/modes/GameMode.cpp') and 'WaveCountdownDisplay' in read('gui/ModeGame.layout')
 assert 'startPossession(' in runner and 'newCreature->setName(' in runner
 assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
 assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')

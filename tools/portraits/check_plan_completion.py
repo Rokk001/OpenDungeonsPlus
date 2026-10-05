@@ -49,7 +49,9 @@ for line in cfg:
     else:
         assert parts[0] == 'Region' and len(parts) == 7
         blocks[identifier].append(parts)
-assert len(blocks) == len(measurements) == 34
+assert len(measurements) == 34
+measured_ids = {item['portrait'] for item in measurements}
+assert set(blocks) == measured_ids
 for item in measurements:
     assert hashlib.sha256((ROOT/item['source']).read_bytes()).hexdigest() == item['source_sha256']
     regions = blocks[item['portrait']]

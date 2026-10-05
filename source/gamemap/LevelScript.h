@@ -41,6 +41,7 @@
 //!   Event   <tag> <eventName> <count>         # written by the game: events of creatures and parties counted so far
 //!   Member  <creatureName> <partyTag>         # written by the game: a creature that a spawn action created for a party
 //!   Countdown <seconds>                       # written by the game: the HUD countdown set by an action, in level seconds
+//!   WaveCountdown <seconds>                   # written by the game: the HUD wave countdown set by an action, in level seconds
 //!   TimeLimit <seconds>                       # written by the game: the time limit set by an action, in level seconds (-2: removed)
 //!   SlapLimit <count>                         # written by the game: the number of slaps a player may do (action slaplimit)
 //!   Slaps   <seatId> <count>                  # written by the game: slaps a player has tried so far
@@ -121,6 +122,7 @@
 //!   Action  reveal <seatId> <regionName>      # the tiles of the region stay visible to the seat
 //!   Action  make <seatId> <skillName>         # room, trap, door or spell becomes available (skill type name such as roomHatchery); seat -1: every human player
 //!   Action  countdown <seconds>               # shows a countdown on the HUD that ends without a defeat (0 removes it); a running time limit is shown instead of it
+//!   Action  wavecountdown <seconds>           # shows "Next wave in mm:ss" on the HUD, beside the other countdown; it has no effect when it ends (0 removes it)
 //!   Action  timelimit <seconds>               # the level is lost for every keeper when that many seconds have passed from now (0: removes any time limit); the remaining time is shown on the HUD
 //!   Action  golfball <seatId> <x> <y>         # a boulder lies on the tile; the seat rolls it by slapping it. A region named by a "boulder" condition is a hole: the ball stops in it
 //!   Action  stonecreate <x> <y>                 # a portal stone lies on the tile
@@ -220,6 +222,7 @@ enum class LevelScriptActionType
     make,
     timeLimit,
     countdown,
+    waveCountdown,
     startTimer,
     alterTerrain,
     portalStatus,
@@ -397,6 +400,7 @@ public:
         mWatchedValid(false),
         mTimeLimitSeconds(TIME_LIMIT_NOT_SET),
         mCountdownSeconds(COUNTDOWN_NOT_SET),
+        mWaveCountdownSeconds(COUNTDOWN_NOT_SET),
         mSlapLimit(-1)
     {}
 
@@ -410,7 +414,7 @@ public:
     void clear();
 
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
@@ -546,6 +550,14 @@ public:
     inline void setCountdownSeconds(int64_t seconds)
     { mCountdownSeconds = seconds; }
 
+    //! \brief The HUD wave countdown set by a script action, as the level second at which it ends.
+    //! COUNTDOWN_NOT_SET if there is none. Running out has no effect.
+    inline int64_t getWaveCountdownSeconds() const
+    { return mWaveCountdownSeconds; }
+
+    inline void setWaveCountdownSeconds(int64_t seconds)
+    { mWaveCountdownSeconds = seconds; }
+
     //! \brief Moves a time limit and a countdown that are set so that it counts from a new level start, which is
     //! elapsedSeconds later than the current one. Used when a game is saved: the turn counter
     //! starts at 0 again when it is loaded.
@@ -567,6 +579,7 @@ private:
     std::vector<LevelScriptRegion> mRegions;
     int64_t mTimeLimitSeconds;
     int64_t mCountdownSeconds;
+    int64_t mWaveCountdownSeconds;
     std::map<std::string, LevelScriptOrder> mOrders;
     std::map<int32_t, int64_t> mSlaps;
     int64_t mSlapLimit;

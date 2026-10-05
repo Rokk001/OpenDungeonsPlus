@@ -96,3 +96,12 @@ writes normalized skin bounds to `config/dungeonbook-base-tints.cfg`, and record
 pixel bounds and source hashes in `base-tint-measurements.json`. All inspected
 bases have blank faces and no hair or beard; absent regions are recorded without
 inventing boxes from feature placement. Tint shifts remain neutral.
+
+Completion checks read the delivered manifests in `materials/portraits/variants/`
+and their canonical references in `materials/portraits/neutral-bases/`, not local
+preparation copies. They retain source SHA-256 checks against the saved inventory,
+reconstruct all twelve composites, compare the committed 50x100 sheet pixel for
+pixel, and validate native evidence dimensions and complete option coverage.
+The two additional tint blocks are checked against the tracked test bases;
+all 34 measured production rectangles remain mandatory. These checks run with
+tracked repository files alone; generator-cache paths are provenance only.

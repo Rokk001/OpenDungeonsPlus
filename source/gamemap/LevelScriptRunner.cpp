@@ -1163,6 +1163,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::countdown:
             gameMap.setScriptCountdown(action.mNumber);
             break;
+        case LevelScriptActionType::waveCountdown:
+            gameMap.setScriptWaveCountdown(action.mNumber);
+            break;
         case LevelScriptActionType::startTimer:
             script.startTimer(action.mText, secondsToTurns(action.mNumber));
             break;

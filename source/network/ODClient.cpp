@@ -105,6 +105,7 @@ ODClient::ODClient() :
     mIsPlayerConfig(false),
     mHasLevelStatistics(false),
     mTimeLimitSeconds(-1),
+    mWaveCountdownSeconds(-1),
     mHasSandboxRealmComplete(false)
 {
 }
@@ -475,6 +476,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             mHasLevelStatistics = false;
             mLevelStatistics = LevelStatistics();
             mTimeLimitSeconds = -1;
+            mWaveCountdownSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
             mHeartStageFractions.clear();
             mSandboxStatus = SandboxStatus();
@@ -960,6 +962,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::timeLimit:
         {
             OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
+            OD_ASSERT_TRUE(packetReceived >> mWaveCountdownSeconds);
             break;
         }
 

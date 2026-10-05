@@ -7,6 +7,13 @@ ROOT = Path(__file__).resolve().parents[2]
 catalog = json.loads((ROOT/'tools/portraits/feature-catalog.json').read_text(encoding='utf-8-sig'))
 base_hashes = json.loads((ROOT/'tools/portraits/feature-base-hashes.json').read_text())
 counts = dict(preview_portraits=0,existing_features=0,neutral_bases=0,helmets=0,outfits=0)
+inventory = json.loads((ROOT/'materials/portraits/generation-inventory.json').read_text(encoding='utf-8'))
+saved_hashes = {}
+for creature in inventory['creatures']:
+    for record in creature['helmets']+creature['outfit_options']:
+        saved_hashes[record['asset']['file']] = record['asset']['sha256']
+    for record in creature['outfit_attempt_images']:
+        saved_hashes[record['file']] = record['sha256']
 for creature in catalog:
     identifier = creature['id']
     assert hashlib.sha256((ROOT/creature['reference']).read_bytes()).hexdigest()==base_hashes[identifier]
@@ -37,15 +44,17 @@ for identifier,expected_hash in baseline.items():
     counts['neutral_bases'] += 1
 for record in json.loads((ROOT/'materials/portraits/generated-helmets/catalog.json').read_text()):
     source = ROOT/'materials/portraits/generated-helmets'/record['id']/record['file']
-    original = Path(record['original'])
-    assert original.suffix.lower()=='.png' and source.read_bytes()==original.read_bytes()
+    assert Path(record['original']).suffix.lower()==source.suffix.lower()=='.png'
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==saved_hashes[source.relative_to(ROOT).as_posix()]
     counts['helmets'] += 1
 for metadata in (ROOT/'materials/portraits/generated-outfits').glob('*/outfit-*.json'):
     record = json.loads(metadata.read_text())
-    original = Path(record['original'])
-    assert original.suffix.lower()=='.png' and (metadata.parent/record['file']).read_bytes()==original.read_bytes()
+    source = metadata.parent/record['file']
+    assert Path(record['original']).suffix.lower()==source.suffix.lower()=='.png'
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==saved_hashes[source.relative_to(ROOT).as_posix()]
     if record.get('initial_file'):
-        assert (metadata.parent/record['initial_file']).read_bytes()==Path(record['initial_original']).read_bytes()
+        source = metadata.parent/record['initial_file']
+        assert hashlib.sha256(source.read_bytes()).hexdigest()==saved_hashes[source.relative_to(ROOT).as_posix()]
     counts['outfits'] += 1
-assert counts['preview_portraits']==34 and counts['existing_features']==632 and counts['neutral_bases']==34 and counts['helmets']==16
+assert counts['preview_portraits']==34 and counts['existing_features']==632 and counts['neutral_bases']==34 and counts['helmets']==16 and counts['outfits']==40
 print(json.dumps(dict(**counts,source_preservation='passed'),indent=2))

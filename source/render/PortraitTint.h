@@ -27,10 +27,22 @@ public:
     //! \brief True if the portrait of this mesh has at least one region.
     bool hasMesh(const std::string& meshName) const;
 
+    //! \brief Reads the shift amplitude (hue, saturation, value) of the first shifting region called regionName
+    //! in the portrait block meshName. Returns false if there is none.
+    bool getRegionShift(const std::string& meshName, const std::string& regionName, float shift[3]) const;
+
+    //! \brief Gives every region called regionName that only shifts colours and has a shift of exactly zero
+    //! the given amplitude (used for the skin of the neutral bases, whose regions are delivered with the
+    //! artwork without an amplitude). Regions with their own amplitude and palette regions stay as they are.
+    void setShiftWhereNone(const std::string& regionName, const float shift[3]);
+
     //! \brief Recolours the regions of the portrait of meshName for the creature creatureName.
     //! rgb holds width * height pixels with three floats (0 to 1) each, row by row.
+    //! coverage (optional, width * height values 0 to 1) scales how strongly each pixel takes part, and
+    //! the mean brightness of a palette region is taken over the covered pixels only. It is used for the
+    //! parts of the Dungeonbook pictures, where transparent pixels must not count.
     void apply(const std::string& meshName, const std::string& creatureName, std::vector<float>& rgb,
-        uint32_t width, uint32_t height) const;
+        uint32_t width, uint32_t height, const std::vector<float>* coverage = nullptr) const;
 
 private:
     struct Colour
@@ -49,12 +61,16 @@ private:
     struct Region
     {
         Region() :
-            mPalette(-1)
+            mPalette(-1),
+            mHasEllipse(false)
         {
             for(int i = 0; i < 3; ++i)
                 mShift[i] = 0.0f;
             for(int i = 0; i < 4; ++i)
+            {
                 mBox[i] = 0.0f;
+                mEllipse[i] = 0.0f;
+            }
             for(int i = 0; i < 2; ++i)
             {
                 mHue[i] = 0.0f;
@@ -68,6 +84,10 @@ private:
         int mPalette;
         float mShift[3];
         float mBox[4];
+        //! ellipse=cx,cy,rx,ry replaces the box: centre as fractions of width and height, both radii as fractions
+        //! of the width (so the ellipse is measured in pixels like the image)
+        bool mHasEllipse;
+        float mEllipse[4];
         std::vector<float> mCutOut;
         float mHue[2];
         float mSaturation[2];
