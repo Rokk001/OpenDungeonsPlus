@@ -459,6 +459,9 @@ private:
         Ogre::Bone* mSpine = nullptr;
         CreatureFeedingLimb mArms[2] = {};
         CreatureFeedingLimb mLegs[2] = {};
+        Ogre::Bone* mJaw = nullptr;
+        Ogre::Real mMouthForward = 0.0f;
+        Ogre::Quaternion mChickenOrientation = Ogre::Quaternion::IDENTITY;
     };
     std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
 
@@ -634,7 +637,10 @@ private:
     void clearCreatureCombatEffects(Creature* creature = nullptr);
     void startCreatureFeedingAnimation(Creature* creature, Ogre::Entity* entity);
     void prepareCreatureFeedingReach(CreatureFeedingAnimation& feeding);
-    Ogre::Vector3 updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress);
+    Ogre::Vector3 updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress,
+        Ogre::Real reach, Ogre::Real lift, Ogre::Real release, Ogre::Real dip, Ogre::Real biteLean);
+    Ogre::Vector3 getCreatureFeedingMouth(const CreatureFeedingAnimation& feeding, Ogre::Real height,
+        Ogre::Real chickenHeight, bool withoutHands) const;
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName = "ChickenFeathers");
     void updateChickenLooks(Ogre::Real timeSinceLastFrame);

@@ -146,4 +146,94 @@ assert 'SniffAndShrug' not in gift_event               # the sniffing is shown o
 assert cfg_reactions.count('Name    SniffAndShrug') == 1
 assert 'cosmetic' not in sniff_meal.lower()            # no new network message: the clip name is the existing animation message
 
+# Batch 13n: the chicken meal (E05) is grab, hold in front of the mouth, exactly two bites, struggling, gone after the second bite
+import math
+meal_keys = {}
+for key in re.findall(r'^# (ChickenMeal\w+)\s', rooms_cfg, re.M):
+    meal_keys[key] = float(re.search(r'^    ' + key + r'\t([\d.]+)\s*$', rooms_cfg, re.M)[1])
+assert len(meal_keys) == 22, len(meal_keys)
+settings = function_body(render, 'ChickenMealSettings getChickenMealSettings()')
+for key, value in meal_keys.items():
+    read = re.search(r'getChickenMealValue\("' + key + r'", ([\d.]+)\)', settings)
+    assert read is not None, key + ' not read by the renderer'
+    assert float(read[1]) == value, key + ' default differs from the configuration'
+assert 'getRoomConfigDoubleOrDefault(key, defaultValue)' in function_body(render, 'Ogre::Real getChickenMealValue(')
+grab, hold, bite, pause, swallow = [meal_keys['ChickenMeal' + n + 'Seconds'] for n in ('Grab', 'Hold', 'Bite', 'Pause', 'Swallow')]
+first_bite = grab + hold
+second_bite = first_bite + bite + pause
+total = second_bite + bite + swallow
+# the whole meal ends before the creature is allowed to do anything else (1.4 turns per second)
+assert total <= float(re.search(r'^    HatcheryCooldownChickenMin\t(\d+)', rooms_cfg, re.M)[1]) / 1.4, total
+assert 'meal.mTotal = meal.mSecondBite + meal.mBite + meal.mSwallow;' in settings
+assert 'meal.mFirstBite = meal.mGrab + meal.mHold;' in settings
+assert 'meal.mSecondBite = meal.mFirstBite + meal.mBite + meal.mPause;' in settings
+
+
+def smooth(value):
+    value = max(0.0, min(1.0, value))
+    return value * value * (3.0 - 2.0 * value)
+
+
+def bite_wave(time, start):
+    progress = (time - start) / bite
+    return 0.0 if progress <= 0.0 or progress >= 1.0 else math.sin(math.pi * progress) ** 2
+
+
+def phase(time):
+    after = second_bite + bite + 0.1 * swallow
+    first_chunk = smooth((time - (first_bite + 0.4 * bite)) / (0.2 * bite))
+    rest = smooth((time - (second_bite + 0.4 * bite)) / (0.3 * bite))
+    return dict(reach=smooth(time / (0.55 * grab)),
+                lift=smooth((time - 0.5 * grab) / (first_bite - 0.5 * grab - 0.3 * hold)),
+                release=smooth((time - after) / (0.6 * swallow)),
+                dip=bite_wave(time, first_bite) + bite_wave(time, second_bite),
+                size=1.0 - 0.25 * first_chunk - 0.75 * rest,
+                struggle=smooth((time - 0.45 * grab) / (0.25 * grab)) * (1.0 - 0.35 * first_chunk) * (1.0 - rest))
+
+
+# the C++ phase function is the one simulated here
+phase_src = function_body(render, 'ChickenMealPhase getChickenMealPhase(')
+for text in ('phase.mReach = chickenMealSmooth(time / (0.55f * meal.mGrab));',
+             '(meal.mFirstBite - 0.5f * meal.mGrab - 0.3f * meal.mHold)',
+             'phase.mRelease = chickenMealSmooth((time - afterMeal) / (0.6f * meal.mSwallow));',
+             'const Ogre::Real afterMeal = secondEnd + 0.1f * meal.mSwallow;',
+             'phase.mSize = 1.0f - 0.25f * firstChunk - 0.75f * rest;',
+             '(1.0f - 0.35f * firstChunk) * (1.0f - rest);',
+             'chickenMealBite(time, meal.mFirstBite, meal.mBite) +', 'chickenMealBite(time, meal.mSecondBite, meal.mBite);'):
+    assert text in phase_src, text
+steps = int(total * 1000)
+dips = [phase(i / 1000.0)['dip'] for i in range(steps + 1)]
+assert len([i for i in range(1, steps) if dips[i - 1] <= 0.0 < dips[i]]) == 2      # exactly two bites
+assert abs(max(dips[:int((first_bite + bite) * 1000)]) - 1.0) < 0.01 and abs(max(dips[int(second_bite * 1000):]) - 1.0) < 0.01
+assert phase(first_bite)['lift'] > 0.999 and phase(first_bite)['struggle'] > 0.9   # held at the mouth and struggling before bite 1
+assert phase(0.0)['size'] == 1.0 and 0.74 < phase(second_bite - 0.01)['size'] < 0.76  # three quarters left after the first bite
+assert phase(second_bite + bite)['size'] < 0.001 and phase(second_bite + bite)['struggle'] < 0.001   # gone, still, after the second
+assert phase(second_bite)['release'] == 0.0 and phase(total)['release'] > 0.999          # hands let go after the meal
+struggle_times = [i / 1000.0 for i in range(steps + 1) if phase(i / 1000.0)['struggle'] > 0.5]
+assert min(struggle_times) < first_bite - 0.2 and max(struggle_times) < second_bite + bite   # struggles from the grab to the second bite
+
+# the clip, the hands and the chicken all follow the same phase function (no second timeline)
+start_src = function_body(render, 'void RenderManager::startCreatureFeedingAnimation(')
+assert 'getChickenMealPhase(progress * duration, meal)' in start_src and 'const Ogre::Real duration = meal.mTotal;' in start_src
+assert 'Real bites' not in start_src and '2.2f' not in start_src and 'chew' not in start_src       # no seven pecks, no old timeline
+assert 'meal.mLookAngle * phase.mPresent + meal.mBiteAngle * phase.mDip' in start_src and '-meal.mJawAngle * phase.mJaw' in start_src
+loop_src = render[render.index('for(CreatureFeedingAnimation& feeding : mCreatureFeedingAnimations)\n    {\n        const ChickenMealSettings'):]
+loop_src = loop_src[:loop_src.index('for(Creature* creature : finishedFeeding)')]
+assert 'getChickenMealPhase(time, meal)' in loop_src and 'phase.mStruggle' in loop_src and 'phase.mSize' in loop_src
+assert 'setVisible(phase.mSize > 0.03f)' in loop_src                                       # the chicken is gone after the second bite
+assert 'if(feeding.mFeatherBursts < 2 && time >= meal.mFirstBite + 0.45f * meal.mBite +' in loop_src   # feather bursts only moved to the bites
+assert loop_src.count('createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth));') == 1
+assert 'updateCreatureFeedingReach(feeding, progress, phase.mReach, phase.mLift,' in loop_src
+reach_src = function_body(render, 'Ogre::Vector3 RenderManager::updateCreatureFeedingReach(')
+assert 'std::function' not in reach_src and 'Degree(35.0f * crouch + biteLean)' in reach_src
+assert 'Ogre::Vector3(side == 0 ? spread : -spread, 0, -drop)' in reach_src                 # fists below the chicken, seen from above
+prepare_src = function_body(render, 'void RenderManager::prepareCreatureFeedingReach(')
+assert 'holdAtRest.distance(shoulders) > armLength * meal.mReachRatio' in prepare_src      # short arms: chicken into the jaws
+assert prepare_src.index('holdAtRest.distance(shoulders)') < prepare_src.index('retain(feeding.mSpine)')
+mouth_src = function_body(render, 'Ogre::Vector3 RenderManager::getCreatureFeedingMouth(')
+assert 'mouth.y = std::min(mouth.y, feeding.mJaw->_getDerivedPosition().y - 0.04f);' in mouth_src
+# server side nothing changes: the chicken is taken and the meal paid at once, only the picture is longer
+assert 'creature.fireChickenFeeding(chicken->getName(), chicken->getPosition());' in eat
+assert 'chicken->eatChicken(&creature)' in eat
+
 print('check_gift_chicken_tired_walk: ok')
