@@ -161,7 +161,7 @@ public:
     static bool walkFits(uint32_t walk, const HatcheryCycleSettings& settings);
 
     //! Percent by which the laying times are shorter: nothing unless all tiles are claimed, then mCareLightPercent
-    //! while a light is close plus mCareCalmPercent while no enemy stands in the hatchery (at most 90).
+    //! while a light or wall torch is close plus mCareCalmPercent while no enemy stands in the hatchery (at most 90).
     static uint32_t carePercent(const HatcheryCycleSettings& settings, const HatcheryCare& care);
 
     //! True if the wall torch of the room ambience (client side, config/roomAmbienceDeferred.cfg) is drawn on the tile:

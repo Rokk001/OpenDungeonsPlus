@@ -660,25 +660,70 @@ void RoomHatchery::collectEnemies(std::vector<Creature*>& enemies) const
     }
 }
 
+//! The rooms that carry wall torches: the Match list of the WallTorch effects in config/roomAmbienceDeferred.cfg
+static bool hasTorchRoomType(RoomType type)
+{
+    switch(type)
+    {
+        case RoomType::dormitory:
+        case RoomType::library:
+        case RoomType::workshop:
+        case RoomType::trainingHall:
+        case RoomType::treasury:
+        case RoomType::hatchery:
+        case RoomType::prison:
+        case RoomType::torture:
+        case RoomType::crypt:
+        case RoomType::arena:
+        case RoomType::casino:
+        case RoomType::guardRoom:
+        case RoomType::temple:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool RoomHatchery::isLit() const
 {
-    // A wall torch (drawn by the room ambience on the tiles that touch a wall) is on a tile of the hatchery itself,
-    // so it is always in range: it counts when the tile has the torch and touches a wall reinforced by the keeper
+    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCareLightRadius", 8.0);
+    double radiusSquared = radius * radius;
+
+    // Every wall torch in range counts, also the ones of other rooms: the room ambience draws a torch on one tile in
+    // HatcheryTorchSpacing of the tiles of such a room, and here it counts when that tile touches a wall reinforced by the keeper
     uint32_t torchSpacing = static_cast<uint32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryTorchSpacing", 6.0));
-    for(Tile* tile : mCoveredTiles)
+    for(Room* room : getGameMap()->getRooms())
     {
-        if(!HatcheryCycle::hasWallTorch(tile->getX(), tile->getY(), torchSpacing))
+        if(!hasTorchRoomType(room->getType()))
             continue;
 
-        for(Tile* neighbor : tile->getAllNeighbors())
+        for(Tile* tile : room->getCoveredTiles())
         {
-            if((neighbor != nullptr) && neighbor->isWallClaimedForSeat(getSeat()))
-                return true;
+            if(!HatcheryCycle::hasWallTorch(tile->getX(), tile->getY(), torchSpacing))
+                continue;
+
+            bool reinforced = false;
+            for(Tile* neighbor : tile->getAllNeighbors())
+            {
+                if((neighbor != nullptr) && neighbor->isWallClaimedForSeat(getSeat()))
+                {
+                    reinforced = true;
+                    break;
+                }
+            }
+            if(!reinforced)
+                continue;
+
+            for(Tile* own : mCoveredTiles)
+            {
+                double dx = static_cast<double>(tile->getX() - own->getX());
+                double dy = static_cast<double>(tile->getY() - own->getY());
+                if((dx * dx + dy * dy) <= radiusSquared)
+                    return true;
+            }
         }
     }
 
-    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCareLightRadius", 8.0);
-    double radiusSquared = radius * radius;
     for(MapLight* light : getGameMap()->getMapLights())
     {
         for(Tile* tile : mCoveredTiles)
