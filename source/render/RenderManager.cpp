@@ -3385,11 +3385,31 @@ void RenderManager::rrOrientEntityToward(MovableGameEntity* gameEntity, const Og
             sleeping.mBaseOrientation = node->getOrientation();
 }
 
-void RenderManager::rrOrientEntityTowardSmoothly(MovableGameEntity* gameEntity, const Ogre::Vector3& direction)
+void RenderManager::rrNoteAttackTurn(const std::string& creatureName, const Ogre::Vector3& direction)
 {
+    mAttackTurnNotes[creatureName] = direction;
+}
+
+bool RenderManager::rrTakeAttackTurn(const std::string& creatureName, Ogre::Vector3& direction)
+{
+    std::map<std::string, Ogre::Vector3>::iterator it = mAttackTurnNotes.find(creatureName);
+    if(it == mAttackTurnNotes.end())
+        return false;
+
+    direction = it->second;
+    mAttackTurnNotes.erase(it);
+    return true;
+}
+
+Ogre::Real RenderManager::rrOrientEntityTowardSmoothly(MovableGameEntity* gameEntity, const Ogre::Vector3& direction)
+{
+    // A turn that the server announced (event attackTurn) aims at the announced direction and runs with the
+    // configured angular speed; without it the old short fixed turn is used
+    Ogre::Vector3 aim = direction;
+    const bool announced = rrTakeAttackTurn(gameEntity->getName(), aim);
     Ogre::SceneNode* node = mSceneManager->getSceneNode(gameEntity->getOgreNamePrefix() + gameEntity->getName() + "_node");
     const Ogre::Quaternion before = node->getOrientation();
-    rrOrientEntityToward(gameEntity, direction);
+    rrOrientEntityToward(gameEntity, aim);
     const Ogre::Quaternion after = node->getOrientation();
     Creature* creature = static_cast<Creature*>(gameEntity);
     for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end(); ++it)
@@ -3408,13 +3428,25 @@ void RenderManager::rrOrientEntityTowardSmoothly(MovableGameEntity* gameEntity, 
     if(turn > Ogre::Math::PI)
         turn = Ogre::Math::TWO_PI - turn;
     if(turn < 0.05f)
-        return;
+        return 0.0f;
     for(const CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
         if(sleeping.mCreature == gameEntity)
-            return;
+            return 0.0f;
     node->setOrientation(before);
-    CreatureTurn entry = {creature, node, before, after, before, 0.0f, 0.12f + 0.14f * turn / Ogre::Math::PI};
+    Ogre::Real duration = 0.12f + 0.14f * turn / Ogre::Math::PI;
+    if(announced)
+    {
+        const Ogre::Real radiansPerSecond = Ogre::Degree(static_cast<Ogre::Real>(
+            ConfigManager::getSingleton().getAttackTurnSpeed())).valueRadians();
+        duration = std::max(0.05f, turn / radiansPerSecond);
+    }
+    CreatureTurn entry = {creature, node, before, after, before, 0.0f, duration};
     mCreatureTurns.push_back(entry);
+    if(!announced)
+        return 0.0f;
+
+    // The strike clip waits for the turn, but a long turn runs over the wind-up instead of holding the blow back
+    return std::min(duration, static_cast<Ogre::Real>(ConfigManager::getSingleton().getAttackTurnMaxDelay()));
 }
 
 void RenderManager::updateCreatureTurns(Ogre::Real timeSinceLastFrame)

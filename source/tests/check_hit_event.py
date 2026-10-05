@@ -44,8 +44,8 @@ enum_body = event_h.split('enum class CosmeticEventType')[1].split('};')[0]
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', enum_body, re.M)
 numbers = [int(number) for _, number in kinds]
 names = [name for name, _ in kinds]
-assert names[-2:] == ['roomTakeover', 'hitResult'], names[-2:]
-assert numbers[:15] == list(range(15)) and numbers[15] == 16 and len(numbers) == 16, numbers
+assert names[-3:] == ['roomTakeover', 'hitResult', 'attackTurn'], names[-3:]
+assert numbers[:15] == list(range(15)) and numbers[15] == 16 and numbers[16] == 17 and len(numbers) == 17, numbers
 assert dict(kinds)['hitResult'] == '16' and dict(kinds)['roomTakeover'] == '14' and dict(kinds)['meleeResult'] == '5'
 assert 'return "hitResult";' in event_cpp
 known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')
