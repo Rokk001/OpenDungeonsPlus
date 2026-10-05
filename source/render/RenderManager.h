@@ -170,6 +170,8 @@ public:
     void rrRotateHand(Player* localPlayer);
     void rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer);
     bool isKeeperHandVisible() const { return mHandKeeperHandVisibility == 0; }
+    //! \brief Where the keeper's hand is in the world (the light that follows it). False if there is no hand yet
+    bool getKeeperHandPosition(Ogre::Vector3& position) const;
     void rrAddOutliner(Creature* creature);
     void rrRemoveOutliner(Creature* creature);
     void rrIncreaseAmbient(Creature* creature);

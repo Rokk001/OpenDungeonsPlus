@@ -9,6 +9,13 @@ Files go to
     sounds/Spatial/Rooms/Casino/Win/FxCasinoWin01.ogg      a bright run of chimes and coins
     sounds/Spatial/Rooms/Casino/Loss/FxCasinoLoss01.ogg    a falling groan of a few voices
     sounds/Spatial/Rooms/Arena/Cheer/FxArenaCheer01.ogg    a crowd shouting and clapping
+    sounds/Spatial/Rooms/Prison/Clang/FxPrisonClang01.ogg  an iron door falling shut, bars ringing
+    sounds/Spatial/Rooms/Torture/Shackles/FxTortureShackles01.ogg  a flash crack and chains falling
+    sounds/Spatial/Rooms/Crypt/Raise/FxCryptRaise01.ogg    earth shifting and a rising spirit tone
+    sounds/Spatial/Rooms/WavePortal/Surge/FxWavePortalSurge01.ogg  a deep boom and a rising shockwave
+    sounds/Spatial/Rooms/Heart/Hit/FxHeartHit01.ogg        a hard double heartbeat
+
+With room names as arguments (for example "Prison Crypt") only the sounds of those rooms are written.
 """
 
 import math
@@ -135,10 +142,104 @@ def arena_cheer():
     return render(length, f)
 
 
+def thump(t, start, freq, rate):
+    """A short low knock that falls in pitch."""
+    if t < start:
+        return 0.0
+    local = t - start
+    return math.sin(TAU * (freq + 40.0 * decay(local, 30.0)) * local) * decay(local, rate) * min(1.0, local / 0.002)
+
+
+def metal_ring(t, start, freq, rate):
+    """A struck piece of iron: inharmonic partials that die away."""
+    if t < start:
+        return 0.0
+    local = t - start
+    value = math.sin(TAU * freq * local) + 0.6 * math.sin(TAU * freq * 2.32 * local) + 0.4 * math.sin(TAU * freq * 4.1 * local)
+    return value * decay(local, rate) * min(1.0, local / 0.001)
+
+
+def prison_clang():
+    length = 1.4
+    noise = Noise(331)
+
+    def f(t):
+        value = metal_ring(t, 0.0, 520.0, 5.0) * 0.8 + metal_ring(t, 0.03, 870.0, 7.0) * 0.5
+        value += metal_ring(t, 0.45, 640.0, 9.0) * 0.25
+        value += thump(t, 0.0, 90.0, 12.0) * 0.9
+        value += noise.white() * decay(t, 40.0) * 0.4
+        return value
+    return render(length, f)
+
+
+def torture_shackles():
+    length = 1.5
+    noise = Noise(341)
+    rng = random.Random(342)
+    links = sorted(rng.uniform(0.12, 1.1) for _ in range(12))
+    freqs = [rng.uniform(1500.0, 3200.0) for _ in links]
+
+    def f(t):
+        crack = noise.white() * decay(t, 70.0) * 0.9 + math.sin(TAU * 1800.0 * t) * decay(t, 50.0) * 0.5
+        value = crack
+        for start, freq in zip(links, freqs):
+            value += metal_ring(t, start, freq, 28.0) * 0.18
+        value += thump(t, 0.9, 110.0, 14.0) * 0.5 + metal_ring(t, 0.9, 700.0, 12.0) * 0.3
+        return value
+    return render(length, f)
+
+
+def crypt_raise():
+    length = 2.0
+    noise = Noise(351)
+
+    def f(t):
+        rumble = noise.lowpass(0.97) * 4.0 * swell(t, length) ** 0.8
+        grind = math.sin(TAU * 48.0 * t) * 0.5 * swell(t, length)
+        rise = 0.0
+        if t > 0.5:
+            local = t - 0.5
+            rise = math.sin(sweep_phase_local(300.0, 880.0, 1.4, min(local, 1.4))) * swell(local, 1.5) * 0.35
+            rise += math.sin(sweep_phase_local(450.0, 1320.0, 1.4, min(local, 1.4))) * swell(local, 1.5) * 0.15
+        return rumble + grind + rise
+    return render(length, f)
+
+
+def sweep_phase_local(f0, f1, length, t):
+    k = (f1 - f0) / length
+    return TAU * (f0 * t + 0.5 * k * t * t)
+
+
+def wave_portal_surge():
+    length = 1.8
+    noise = Noise(361)
+
+    def f(t):
+        boom = thump(t, 0.0, 55.0, 3.2) * 1.2 + thump(t, 0.0, 85.0, 5.0) * 0.6
+        wave = math.sin(sweep_phase_local(140.0, 620.0, 1.2, min(t, 1.2))) * swell(t, 1.4) * 0.35
+        wash = noise.lowpass(0.9) * 2.5 * decay(t, 2.2) * min(1.0, t / 0.01)
+        return boom + wave + wash
+    return render(length, f)
+
+
+def heart_hit():
+    length = 0.9
+
+    def f(t):
+        return (thump(t, 0.0, 70.0, 11.0) * 1.0 + thump(t, 0.22, 60.0, 12.0) * 0.8 +
+                math.sin(TAU * 140.0 * t) * decay(t, 14.0) * 0.3)
+    return render(length, f)
+
+
 SOUNDS = (
     ("Casino", "Win", casino_win),
     ("Casino", "Loss", casino_loss),
     ("Arena", "Cheer", arena_cheer),
+    ("Prison", "Clang", prison_clang),
+    ("Torture", "Shackles", torture_shackles),
+    ("Crypt", "Raise", crypt_raise),
+    ("WavePortal", "Surge", wave_portal_surge),
+    ("Heart", "Hit", heart_hit),
 )
 
 
@@ -150,6 +251,8 @@ def main():
     folder = tempfile.mkdtemp()
     try:
         for room, role, make in SOUNDS:
+            if len(sys.argv) > 1 and room not in sys.argv[1:]:
+                continue
             wav_path = os.path.join(folder, room + role + ".wav")
             write_wav(wav_path, make())
             target_dir = os.path.join(ROOT, "sounds", "Spatial", "Rooms", room, role)

@@ -30,6 +30,7 @@
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "sound/SoundEffectsManager.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -166,7 +167,8 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mRandom(12345),
     mCreaturesInitialized(false),
     mGeneration(0),
-    mEntitiesInitialized(false)
+    mEntitiesInitialized(false),
+    mLastHeartHP(-1.0)
 {
     reloadConfig();
 }
@@ -498,6 +500,8 @@ void RoomAmbience::stopAll()
     mKnownCreatures.clear();
     mCreaturesInitialized = false;
     mEntitiesInitialized = false;
+    mLastHeartHP = -1.0;
+    mBannerAlertUntil.clear();
     mScanTimer = 0.0;
 }
 
@@ -563,10 +567,13 @@ void RoomAmbience::scan()
         }
     }
 
+    // Before the objects, so that the hit pulse of the heart starts in the same scan
+    scanHeartHit();
     scanObjects(camera, cameraPosition);
     scanTiles(camera, cameraPosition, lookPoint);
     scanEntityEvents(camera, cameraPosition);
     scanCreatureEvents();
+    scanBannerAlerts();
     reconcile();
     playClips();
 
@@ -968,6 +975,13 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
             Change change;
             change.mEvent = "CreatureArrived";
             change.mPosition = snapshot.mPosition;
+            // A creature that appears on a tile of a crypt of its own keeper was raised there
+            Tile* arrivalTile = creature->getPositionTile();
+            if((arrivalTile != nullptr) && (arrivalTile->getTileVisual() == TileVisual::cryptRoom) &&
+               (arrivalTile->getSeat() == creature->getSeat()))
+            {
+                change.mEvent = "CryptRaised";
+            }
             changes.push_back(change);
         }
     }
@@ -1071,11 +1085,15 @@ void RoomAmbience::scanCreatureEvents()
         }
 
         double hp = creature->getHP();
+        bool prisoner = creature->isInContainment();
+        Seat* creatureSeat = creature->getSeat();
         std::map<std::string, CreatureSnapshot>::iterator it = mKnownCreatures.find(key);
         if(it == mKnownCreatures.end())
         {
             CreatureSnapshot snapshot;
             snapshot.mHp = hp;
+            snapshot.mPrisoner = prisoner;
+            snapshot.mSeat = creatureSeat;
             snapshot.mSleeping = sleeping;
             snapshot.mAttacking = attacking;
             snapshot.mEnemyInGuardRoom = enemyInGuardRoom;
@@ -1111,6 +1129,20 @@ void RoomAmbience::scanCreatureEvents()
                 changes.push_back(change);
             }
 
+            if(prisoner && !snapshot.mPrisoner && (visual == "prisonRoom"))
+            {
+                change.mEvent = "PrisonerArrived";
+                changes.push_back(change);
+            }
+
+            // A creature that changes its seat in a torture chamber has been converted
+            if((snapshot.mSeat != nullptr) && (creatureSeat != nullptr) && (snapshot.mSeat != creatureSeat) &&
+               (visual == "tortureRoom"))
+            {
+                change.mEvent = "TortureConverted";
+                changes.push_back(change);
+            }
+
             if((visual == "templeRoom") && (hp >= (snapshot.mHp + MIN_HEAL)) &&
                ((mClock - snapshot.mLastHealed) >= HEAL_SPACING))
             {
@@ -1121,6 +1153,8 @@ void RoomAmbience::scanCreatureEvents()
         }
 
         snapshot.mHp = hp;
+        snapshot.mPrisoner = prisoner;
+        snapshot.mSeat = creatureSeat;
         snapshot.mSleeping = sleeping;
         snapshot.mAttacking = attacking;
         snapshot.mEnemyInGuardRoom = enemyInGuardRoom;
@@ -1190,6 +1224,92 @@ void RoomAmbience::scanCreatureEvents()
 
     for(const Change& change : changes)
         triggerEvent(change.mEvent, change.mPosition, false, change.mVisual);
+}
+
+void RoomAmbience::scanHeartHit()
+{
+    // How long the heart counts as hit, for the effects "When Hit"
+    const double HEART_HIT_SECONDS = 1.2;
+
+    ODClient* client = ODClient::getSingletonPtr();
+    Player* localPlayer = mGameMap->getLocalPlayer();
+    if((client == nullptr) || (localPlayer == nullptr) || (localPlayer->getSeat() == nullptr))
+        return;
+
+    // Only the health of the own heart is known to the client (the heart badge)
+    double hp = client->getHeartBadge().mHP;
+    double previous = mLastHeartHP;
+    mLastHeartHP = hp;
+    // Before the first message of the server the health is not known; a map that is still loading is no hit
+    if((hp < 0.0) || (previous < 0.0) || (hp >= previous) || (mClock <= 3.0))
+        return;
+
+    const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
+    for(RenderedMovableEntity* entity : entities)
+    {
+        if(entity->getMeshName() != "DungeonTempleObject")
+            continue;
+
+        const Ogre::Vector3& position = entity->getPosition();
+        int32_t tileX = static_cast<int32_t>(std::floor(position.x + 0.5f));
+        int32_t tileY = static_cast<int32_t>(std::floor(position.y + 0.5f));
+        Tile* tile = mGameMap->getTile(tileX, tileY);
+        if((tile == nullptr) || (tile->getSeat() != localPlayer->getSeat()))
+            continue;
+
+        mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + HEART_HIT_SECONDS;
+        triggerEvent("HeartHit", position, false, "dungeonTempleRoom");
+    }
+}
+
+void RoomAmbience::scanBannerAlerts()
+{
+    if(mCreatureSpots.empty() || !mEntitiesInitialized || (mClock <= 3.0))
+        return;
+
+    ConfigManager& configManager = ConfigManager::getSingleton();
+    double aura = static_cast<double>(configManager.getTrapConfigInt32("WatchBannerAuraTiles"));
+    double distressSeconds = configManager.getRoomConfigDoubleOrDefault("GuardRoomDistressSeconds", 5.0);
+    const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
+    for(RenderedMovableEntity* entity : entities)
+    {
+        if(entity->getObjectType() != GameEntityType::trapEntity)
+            continue;
+
+        const std::string& name = entity->getName();
+        if(name.compare(0, 12, "WatchBanner_") != 0)
+            continue;
+
+        Seat* bannerSeat = entity->getSeat();
+        if(bannerSeat == nullptr)
+            continue;
+
+        std::map<std::string, double>::const_iterator untilIt = mBannerAlertUntil.find(name);
+        if((untilIt != mBannerAlertUntil.end()) && (untilIt->second > mClock))
+            continue;
+
+        // The post notices an enemy within its aura, like the server (the creatures the client sees)
+        const Ogre::Vector3& position = entity->getPosition();
+        for(const CreatureSpot& spot : mCreatureSpots)
+        {
+            if((spot.mSeat == nullptr) || bannerSeat->isAlliedSeat(spot.mSeat))
+                continue;
+
+            double dx = static_cast<double>(spot.mPosition.x - position.x);
+            double dy = static_cast<double>(spot.mPosition.y - position.y);
+            if((dx * dx + dy * dy) > (aura * aura))
+                continue;
+
+            mBannerAlertUntil[name] = mClock + distressSeconds;
+            triggerEvent("BannerAlert", position, false, "WatchBanner");
+            break;
+        }
+    }
+}
+
+void RoomAmbience::noteHandCast(const Ogre::Vector3& handPosition)
+{
+    triggerEvent("SpellFxHandCast", handPosition, false, std::string(), true);
 }
 
 void RoomAmbience::reconcile()

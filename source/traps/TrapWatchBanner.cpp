@@ -54,7 +54,8 @@ class TrapWatchBannerFactory : public TrapFactory
 
     const std::string& getMeshName() const override
     {
-        static const std::string meshName = "Spiketrap";
+        // The post is a flag; its Loop clip is played by the room ambience (config/roomAmbienceFixEffects.cfg)
+        static const std::string meshName = "WarBanner";
         return meshName;
     }
 
