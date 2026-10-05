@@ -100,6 +100,12 @@ def inline_body(source, signature):
 assert 'secondsPerTile * static_cast<double>(numTiles)' in inline_body(claim_h, 'inline double takeoverSeconds(')
 for rule in ('inline double healthLostPerDance(', 'inline double healthRepairedPerDance('):
     assert 'takeoverSeconds(secondsPerTile, numTiles)' in inline_body(claim_h, rule), rule + ' uses the pool size'
+# The pool is saved for every kind of room (first tile line, optional, only when worn down); the portal and the
+# bridge keep their own old number as well
+assert 'RoomClaim::writeClaimPool(os, mClaimHealth)' in function_body(room, 'void Room::exportTileDataToStream(')
+assert 'mClaimHealth = RoomClaim::readClaimPool(is, mClaimHealth)' in function_body(room, 'bool Room::importTileDataFromStream(')
+assert 'inline void writeClaimPool(' in claim_h and 'inline double readClaimPool(' in claim_h
+assert 'Saved with the first tile' in room_h
 # One duration value in the config (no second key with the same meaning), documented with the pool formula
 assert len(re.findall(r'^\s+RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one set value'
 assert len(re.findall(r'^\s+# RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one documented value'

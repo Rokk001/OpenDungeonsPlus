@@ -1049,6 +1049,11 @@ void Room::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileDa
     os << "\t" << nbSeatsVision;
     for(Seat* seat : seatsToSave)
         os << "\t" << seat->getId();
+
+    // The pool of the whole room against being taken over, with its first tile and only while an enemy has
+    // worn it down. Older versions ignore the rest of the line, a save without it loads a full pool
+    if(!mCoveredTiles.empty() && (mCoveredTiles.front() == tile))
+        RoomClaim::writeClaimPool(os, mClaimHealth);
 }
 
 bool Room::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tileData)
@@ -1096,6 +1101,9 @@ bool Room::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tile
 
         tileData->mSeatsVision.push_back(seat);
     }
+
+    // The takeover pool of a worn down room (on the first tile line of the room only); without it the pool is full
+    mClaimHealth = RoomClaim::readClaimPool(is, mClaimHealth);
 
     return true;
 }
