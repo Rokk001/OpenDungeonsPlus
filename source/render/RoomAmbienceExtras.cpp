@@ -45,6 +45,8 @@ const double CROW_MIN_PAUSE = 55.0;
 const double CROW_MAX_PAUSE = 120.0;
 //! Below this heart health fraction the heart shows its wounds
 const double HEART_HURT_FRACTION = 0.5;
+// Below this part of the heart health every beat is also heard (the flare starts at the same limit)
+const double HEART_LOW_FRACTION = 0.35;
 
 int32_t toTileCoordinate(double value)
 {
@@ -221,6 +223,8 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
                 {
                     mNextHeartBeat = clock + 0.7 + 0.8 * fraction;
                     ambience.triggerEvent("HeartHurt", position, false);
+                    if(fraction < HEART_LOW_FRACTION)
+                        ambience.triggerEvent("HeartLowBeat", position, false);
                 }
             }
         }

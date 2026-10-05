@@ -118,6 +118,17 @@ cheer = [e for e in fx if e.get("Event") == ["ArenaCheer"]]
 need(any(e.get("Kind") == ["Particle"] for e in cheer), "ArenaCheer has no particles")
 need(any(e.get("Kind") == ["Sound"] for e in cheer), "ArenaCheer has no sound")
 
+# --- heart: the low health is heard, casino result gives emotes
+extras = read("source", "render", "RoomAmbienceExtras.cpp")
+need("HEART_LOW_FRACTION = 0.35" in extras and '"HeartLowBeat"' in extras, "the low heart health raises no HeartLowBeat")
+beat = [e for e in effects(("config", "roomAmbienceDeferred.cfg")) if e.get("Event") == ["HeartLowBeat"]]
+need(any(e.get("Kind") == ["Sound"] for e in beat), "HeartLowBeat has no sound")
+reactions = read("source", "render", "CreatureReactions.cpp")
+need('event.is(CosmeticEventType::casinoResult)' in reactions and '"CasinoWin"' in reactions and '"CasinoLoss"' in reactions,
+     "the casino result gives no emotes")
+cfg = read("config", "creatureReactions.cfg")
+need("Name        CasinoWin" in cfg and "Name        CasinoLoss" in cfg, "no CasinoWin/CasinoLoss reaction events")
+
 # --- sounds and credits
 families = set(e["Family"][0] for e in fx if e.get("Kind") == ["Sound"])
 need(families == {"Rooms/Casino/Win", "Rooms/Casino/Loss", "Rooms/Arena/Cheer"}, "unexpected sound families %s" % families)
