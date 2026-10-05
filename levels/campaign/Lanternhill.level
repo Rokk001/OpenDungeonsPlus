@@ -3008,6 +3008,9 @@ ProtectDungeonTemple	NULL
 3	HillWatch6	Adventurer.mesh	48	44	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HillWatch7	Elf.mesh	17	24	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HillWatch8	Knight.mesh	52	24	0	Knight	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray1	Goblin.mesh	10	36	0	Goblin	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Spider.mesh	8	38	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Rat.mesh	10	35	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -3092,6 +3095,7 @@ Mode	once
 Cond	region	1	LampRoom
 Action	message	1	The lamp chamber holds the great lantern, and a strong brew of mana comes off it. Your creatures feel bolder.
 Action	gold	1	500
+Action	terrain	40	34	40	34	manawell	1
 [/Trigger]
 [Trigger]
 Name	mined1
