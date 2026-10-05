@@ -630,6 +630,8 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
         "Action\talliance\t4\t5\tbreak\n"
         "Action\tgenerate\t2\tGoblin:3\n"
         "Action\tspawn\t3\t9\t9\t-1\tparty=Raid\tKnight:2@LordTitus\tArcher:1\n"
+        "Action\tterrain\t9\t9\t9\t9\tmanawell\t1\n"
+        "Action\tcountdown\t1800\n"
         "[/Trigger]\n"
         "[/Triggers]\n";
     LevelScript script;
@@ -657,7 +659,7 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
     BOOST_CHECK(trigger.mConditions[4].mType == LevelScriptConditionType::possessedInRegion);
     BOOST_CHECK_EQUAL(trigger.mConditions[5].mName2, "Wyvern");
     BOOST_CHECK(trigger.mConditions[6].mType == LevelScriptConditionType::boulderInRegion);
-    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 12u);
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 14u);
     BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::alterTerrain);
     BOOST_CHECK_EQUAL(trigger.mActions[0].mX2, 7);
     BOOST_CHECK_EQUAL(trigger.mActions[0].mSeatId, -1);
@@ -672,6 +674,11 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
     BOOST_CHECK_EQUAL(trigger.mActions[11].mCreatureNames.size(), 2u);
     BOOST_CHECK_EQUAL(trigger.mActions[11].mCreatureNames[0], "LordTitus");
     BOOST_CHECK(trigger.mActions[11].mCreatureNames[1].empty());
+    BOOST_CHECK(trigger.mActions[12].mType == LevelScriptActionType::alterTerrain);
+    BOOST_CHECK_EQUAL(trigger.mActions[12].mText, "manawell");
+    BOOST_CHECK_EQUAL(trigger.mActions[12].mSeatId, 1);
+    BOOST_CHECK(trigger.mActions[13].mType == LevelScriptActionType::countdown);
+    BOOST_CHECK_EQUAL(trigger.mActions[13].mNumber, 1800);
 
     std::ostringstream os;
     script.exportToStream(os);

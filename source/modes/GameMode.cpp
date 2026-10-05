@@ -2110,8 +2110,11 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 
     // The countdown of a level with a time limit (the server sends -1 when there is none)
     CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
-    const int32_t timeLimitSeconds = ODClient::getSingleton().getTimeLimitSeconds();
-    if(timeLimitSeconds < 0)
+    // A countdown of the level script carries a flag: it is a wait, not a limit, so it is never red
+    const int32_t timeLimitReceived = ODClient::getSingleton().getTimeLimitSeconds();
+    const bool isCountdown = (timeLimitReceived >= 0) && ((timeLimitReceived & GameMap::TIME_LIMIT_COUNTDOWN_FLAG) != 0);
+    const int32_t timeLimitSeconds = isCountdown ? (timeLimitReceived & ~GameMap::TIME_LIMIT_COUNTDOWN_FLAG) : timeLimitReceived;
+    if(timeLimitReceived < 0)
     {
         if(mTimeLimitShown >= 0)
         {
@@ -2119,12 +2122,13 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
             mTimeLimitShown = -1;
         }
     }
-    else if(timeLimitSeconds != mTimeLimitShown)
+    else if(timeLimitReceived != mTimeLimitShown)
     {
-        mTimeLimitShown = timeLimitSeconds;
+        mTimeLimitShown = timeLimitReceived;
         timeLimitDisplay->setText(formatDebriefingTime(timeLimitSeconds));
-        // The last minute is shown in red
-        timeLimitDisplay->setProperty("TextColours", timeLimitSeconds <= 60 ? "FFE05A4A" : "FFF6CB62");
+        // The last minute of a time limit is shown in red
+        timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= 60) ? "FFE05A4A" : "FFF6CB62");
+        timeLimitDisplay->setTooltipText(isCountdown ? "Time left until the next stage of the level" : "Time left until the level is lost");
         timeLimitDisplay->show();
     }
 

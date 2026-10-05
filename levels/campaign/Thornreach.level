@@ -5938,6 +5938,7 @@ Mode	once
 Cond	region	1	WellCave
 Action	message	1	The east well cave brims with mana and gold. A cache of creatures was left behind, so use them.
 Action	gold	1	1000
+Action	terrain	90	33	90	33	manawell
 [/Trigger]
 [Trigger]
 Name	mined1

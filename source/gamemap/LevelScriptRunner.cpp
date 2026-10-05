@@ -106,6 +106,8 @@ bool isTileOfKind(const Tile* tile, const std::string& kind)
         return visual == TileVisual::lavaGround;
     if(kind == "impenetrable")
         return (visual == TileVisual::rockFull) || (visual == TileVisual::rockGround);
+    if(kind == "manawell")
+        return tile->getType() == TileType::manaWell;
 
     Room* room = tile->getCoveringRoom();
     if(room == nullptr)
@@ -828,6 +830,12 @@ void alterTerrain(GameMap& gameMap, const LevelScriptAction& action)
         type = TileType::rock;
         fullness = 100.0;
     }
+    else if(action.mText == "manawell")
+    {
+        // A mana well is open ground. With a seat it starts claimed and feeds that seat's mana
+        type = TileType::manaWell;
+        claim = (action.mSeatId >= 0);
+    }
     else
     {
         OD_LOG_ERR("Level script: unknown terrain kind=" + action.mText);
@@ -1151,6 +1159,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             break;
         case LevelScriptActionType::timeLimit:
             gameMap.setScriptTimeLimit(action.mNumber);
+            break;
+        case LevelScriptActionType::countdown:
+            gameMap.setScriptCountdown(action.mNumber);
             break;
         case LevelScriptActionType::startTimer:
             script.startTimer(action.mText, secondsToTurns(action.mNumber));

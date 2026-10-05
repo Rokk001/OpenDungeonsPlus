@@ -3803,6 +3803,18 @@ void GameMap::setScriptTimeLimit(int64_t seconds)
     mGameDurationAnnounced = false;
 }
 
+void GameMap::setScriptCountdown(int64_t seconds)
+{
+    if(seconds <= 0)
+    {
+        mLevelScript->setCountdownSeconds(LevelScript::COUNTDOWN_NOT_SET);
+        return;
+    }
+
+    int64_t elapsedSeconds = static_cast<int64_t>(static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond);
+    mLevelScript->setCountdownSeconds(elapsedSeconds + seconds);
+}
+
 void GameMap::sendTimeLimit(int32_t remainingSeconds)
 {
     if(remainingSeconds == mTimeLimitSentSeconds)
@@ -3834,7 +3846,18 @@ void GameMap::checkGameDuration()
 
     if(endTurn < 0.0)
     {
-        sendTimeLimit(-1);
+        // Without a limit, a countdown of the script is shown until it ends
+        const int64_t countdown = mLevelScript->getCountdownSeconds();
+        double countdownLeft = -1.0;
+        if(countdown >= 0)
+        {
+            countdownLeft = static_cast<double>(countdown)
+                - static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond;
+        }
+        if(countdownLeft > 0.0)
+            sendTimeLimit(static_cast<int32_t>(std::ceil(countdownLeft)) | TIME_LIMIT_COUNTDOWN_FLAG);
+        else
+            sendTimeLimit(-1);
         return;
     }
 

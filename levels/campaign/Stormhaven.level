@@ -4022,6 +4022,8 @@ Action	message	1	The storm is breaking on Stormhaven, master. Captain Ivo Strand
 Action	objective	1	Destroy the heart of every rival keeper.
 Action	objective	1	Cross the inlet by the stone spans.
 Action	objective	1	Do not let the keepers join their strength against you.
+Action	portal	2	off
+Action	portal	3	off
 [/Trigger]
 [Trigger]
 Name	coveHeld
@@ -4037,6 +4039,7 @@ Mode	once
 Cond	region	1	EastQuay
 Action	message	1	The east quay. Its keeper has called on the north-east cliff for help, and a squad is already on the road.
 Action	alliance	3	5	make
+Action	portal	3	on
 Action	reveal	1	Basin
 Action	spawn	3	51	39	1	Orc:3	Troll:3	Spider:3	Goblin:3
 [/Trigger]
@@ -4046,6 +4049,7 @@ Mode	once
 Cond	region	1	WestDock
 Action	message	1	The west dock. The keeper here has sent a runner across the south span to the quay.
 Action	alliance	2	4	make
+Action	portal	2	on
 Action	reveal	1	SouthSpan
 Action	spawn	5	37	71	1	Orc:3	Troll:3	Goblin:3
 [/Trigger]
@@ -4079,6 +4083,7 @@ Cond	region	1	Lighthouse
 Action	message	1	Below the old lighthouse the earth is soft. Something is walled up in the north.
 Action	reveal	1	GaleCave
 Action	gold	1	600
+Action	terrain	30	15	30	15	manawell
 [/Trigger]
 [Trigger]
 Name	gale
@@ -4189,5 +4194,13 @@ Cond	time	3300
 Action	message	1	The last pact is breaking. The north-west keeper has left the dock keeper and joins the quay keeper against your cove.
 Action	alliance	2	4	break
 Action	alliance	2	5	make
+[/Trigger]
+[Trigger]
+Name	northPortals
+Mode	once
+Cond	time	1500
+Action	message	1	The northern keepers have thrown their portals open and are calling every recruit in the harbour.
+Action	portal	2	on
+Action	portal	3	on
 [/Trigger]
 [/Triggers]

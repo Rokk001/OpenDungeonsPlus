@@ -3811,6 +3811,7 @@ Action	message	1	Bellwick stands over its own dead, master. The abbey bells call
 Action	objective	1	Destroy the heart of the undead keeper in the north undercroft.
 Action	objective	1	Hold the nave against the faithful.
 Action	objective	1	Hold out until the two north gates of the nave are unsealed.
+Action	portal	2	off
 [/Trigger]
 [Trigger]
 Name	yardHeld
@@ -3961,6 +3962,7 @@ Action	message	1	The masons of the north gates have fled the bells. Both gates o
 Action	terrain	24	29	26	31	path
 Action	terrain	48	29	48	31	path
 Action	setflag	gatesOpen	1
+Action	portal	2	on
 [/Trigger]
 [Trigger]
 Name	naveGatesLate
@@ -3971,5 +3973,13 @@ Action	message	1	The seals of the north gates have given way. The road to the un
 Action	terrain	24	29	26	31	path
 Action	terrain	48	29	48	31	path
 Action	setflag	gatesOpen	1
+Action	portal	2	on
+[/Trigger]
+[Trigger]
+Name	cryptWell
+Mode	once
+Cond	slabs	1	Nave	claimed	>=	30
+Action	message	1	The nave is yours, and the stones below it answer. A spring of mana has risen in the crypt cells.
+Action	terrain	16	71	16	71	manawell
 [/Trigger]
 [/Triggers]
