@@ -262,6 +262,11 @@ bool CreatureActionCarryEntity::handleDragCreature()
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
     ConfigManager& config = ConfigManager::getSingleton();
 
+    // The bed is the own bed of the creature and nothing else: when it is gone, destroyed or given to someone
+    // else on the way, the worker lets go and the creature lies where it is (its death is not held back)
+    if((dragged->getSeat() != mBuildingDest->getSeat()) || (mBuildingDest->askSpotForCarriedEntity(dragged) != mTileDest))
+        return stopDragging(true);
+
     if(mDragPhase == 1)
     {
         // The creature slides the last steps into its bed. Once it is there (or when that takes too long) the

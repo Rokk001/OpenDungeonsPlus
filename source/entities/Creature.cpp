@@ -1450,8 +1450,9 @@ void Creature::doUpkeep()
         return;
     }
 
-    // A creature a worker pulls to its bed does nothing on its own (a KO to death one goes on below)
-    if(mIsBeingDragged && (mKoTurnCounter == 0))
+    // A creature a worker pulls to its bed does nothing on its own (a KO to death one and a dead one go on below,
+    // nothing here holds back a death)
+    if(mIsBeingDragged && (mKoTurnCounter == 0) && isAlive())
         return;
 
     if(mKoTurnCounter < 0)

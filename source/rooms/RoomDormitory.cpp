@@ -548,6 +548,10 @@ bool RoomDormitory::hasCarryEntitySpot(GameEntity* carriedEntity)
     if(homeTile->getCoveringRoom() != this)
         return false;
 
+    // Only the own bed counts, a creature without a bed of its own in here is not brought anywhere
+    if(askSpotForCarriedEntity(carriedEntity) == nullptr)
+        return false;
+
     return true;
 }
 
