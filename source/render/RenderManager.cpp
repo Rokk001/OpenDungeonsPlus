@@ -566,19 +566,25 @@ bool isLeftForearmBone(const std::string& lowerName)
     return lowerName == "forearm_l" || lowerName == "forearm.l";
 }
 
+//! Name suffix of the mirrored clip of a blow (the left-hand twin of the clip, e.g. Attack1Left)
+const std::string MIRRORED_CLIP_SUFFIX = "Left";
+
 //! blow is the sword blow: 1 cut from above, 2 cut from the side, 3 thrust, 0 the plain strike. leftHand: the blow is
-//! struck with the left arm (only with blow != 0, the creature carries a weapon in each hand); armScale scales the
-//! arm movement of the blow.
+//! struck with the left arm (only with blow != 0, the creature carries a weapon in each hand). If the skeleton has
+//! the mirrored clip of the source (original + "Left"), that clip is the source of a left-hand blow; only without it
+//! the left arm is deformed on top of the right-hand source clip, and armScale scales that arm movement.
 std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate, int blow,
     bool leftHand, Ogre::Real armScale)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
     if(!skeleton->hasAnimation(original)) return original;
+    const bool mirroredClip = leftHand && blow != 0 && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX);
+    if(mirroredClip) armScale = 1.0f;
     const std::string name = "AttackCombat_" + original +
-        (blow != 0 ? "_Sword" + Helper::toString(blow) + (leftHand ? "L" : "") +
+        (blow != 0 ? "_Sword" + Helper::toString(blow) + (leftHand ? (mirroredClip ? "M" : "L") : "") +
         (armScale != 1.0f ? "S" + Helper::toString(static_cast<int>(armScale * 100.0f)) : std::string()) :
         (alternate ? "_B" : "_A"));
-    const Ogre::Animation* source = skeleton->getAnimation(original);
+    const Ogre::Animation* source = skeleton->getAnimation(mirroredClip ? original + MIRRORED_CLIP_SUFFIX : original);
     const CombatMotion style = getCombatMotion(entity->getMesh()->getName());
     const Ogre::Real duration = std::min(source->getLength(), style == CombatMotion::heavy ? 1.45f :
         (style == CombatMotion::bite || style == CombatMotion::crawler ? 0.95f : 1.15f));
@@ -3302,6 +3308,12 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     rrSetObjectAnimationState(curCreature, animName, animLoop);
 }
 
+bool RenderManager::isLastBlowLeftHanded(const Creature* creature) const
+{
+    std::map<const Creature*, bool>::const_iterator it = mCreatureLastBlowLeft.find(creature);
+    return it != mCreatureLastBlowLeft.end() && it->second;
+}
+
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
     clearCreatureDecay(curCreature);
@@ -3312,6 +3324,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     clearCreatureCombatEffects(curCreature);
     mCreatureAttackVariants.erase(curCreature);
     mCreatureAttackSides.erase(curCreature);
+    mCreatureLastBlowLeft.erase(curCreature);
     for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
     {
         if(it->mCreature == curCreature)
@@ -4085,6 +4098,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             const bool leftHand = twoWeapons && TwoWeaponStrike::isLeftBlow(twoWeaponMode, nextSide);
             if(twoWeapons)
                 ++nextSide;
+            mCreatureLastBlowLeft[dropCreature] = leftHand;
             anim = createCreatureCombatAttack(objectEntity, anim, (nextVariant % 2) != 0, blow, leftHand,
                 twoWeapons ? twoWeaponStrength : 1.0f);
             ++nextVariant;
@@ -4991,6 +5005,7 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
     {
         mCreatureAttackVariants.clear();
         mCreatureAttackSides.clear();
+        mCreatureLastBlowLeft.clear();
         mCreatureTurns.clear();
         mCreatureDeathVariants.clear();
     }
