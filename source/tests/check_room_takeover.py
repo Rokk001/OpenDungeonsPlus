@@ -130,8 +130,40 @@ bridge_import = function_body(bridge, 'bool RoomBridge::importFromStream(')
 assert 'mClaimHealth = std::min(1.0, std::max(0.0, claimedValue / static_cast<double>(numCoveredTiles())))' in bridge_import
 # The portal changes hands as a whole and restarts at a full pool
 assert 'mClaimHealth = 1.0;' in function_body(read('source/rooms/RoomPortal.cpp'), 'void RoomPortal::changeOwner(')
-# Client: one reaction per worker when the danced tile (and with it the whole room) changed owner, none per tile
-assert worker.count('"TakeoverDone"') == 1 and 'at once' in function_body(worker, 'void WorkerReactions::tickWorker(')
+# The end of a takeover is one small cosmetic event per room (roomTakeover, the last kind, appended): the server
+# sends it from the one place where the whole room changes owner (Room::changeOwner, also the portal's own
+# changeOwner), never per tile and never per worker; level scripts and the heart reward reach it through
+# Room::claimForSeat, so they report too
+event_h = read('source/network/CosmeticEvent.h')
+event_cpp = read('source/network/CosmeticEvent.cpp')
+assert 'roomTakeover = 14' in event_h and 'hatcheryGrain = 13,' in event_h
+assert 'CosmeticEventType::roomTakeover));' in event_cpp and 'return "roomTakeover";' in event_cpp
+fire = function_body(room, 'void Room::fireTakeoverEvent(')
+for needle in ('isServerGameMap()', 'CosmeticEventType::roomTakeover', 'event.mValue = newSeat->getId()', 'event.mValue2 = static_cast<int32_t>(tiles.size())',
+               'event.mObject = RoomManager::getRoomReadableName(getType())', 'event.mText = getName()', 'getSeatsWithVision()',
+               'seats.push_back(newSeat)', 'seats.push_back(oldSeat)', 'std::find(seats.begin(), seats.end(), seat) == seats.end()',
+               'sendCosmeticEvent(seat->getPlayer(), event)', 'getIsHuman()'):
+    assert needle in fire, needle
+assert 'sendCosmeticEvent' in fire and fire.count('sendCosmeticEvent(') == 1, 'one event per player'
+assert fire.index('CosmeticEvent event(') < fire.index('for(Seat* seat : seats)'), 'the event is made once and sent to each seat'
+assert 'fireTakeoverEvent(oldSeat, seat, tiles);' in function_body(room, 'void Room::changeOwner(')
+assert 'fireTakeoverEvent(oldSeat, seat, mCoveredTiles);' in function_body(read('source/rooms/RoomPortal.cpp'), 'void RoomPortal::changeOwner(')
+assert room.count('fireTakeoverEvent(') == 2 and 'fireTakeoverEvent' not in tile, 'not sent per tile'
+assert 'fireTakeoverEvent' in room_h
+# Client: one reaction per room. The event ends the dancing of every worker that took the room and the worker
+# nearest to the room celebrates; the old per worker path only remains as the fallback for a server without it
+assert worker.count('"TakeoverDone"') == 2 and 'at once' in function_body(worker, 'void WorkerReactions::tickWorker(')
+noted = function_body(worker, 'void WorkerReactions::noteRoomTakeover(')
+for needle in ('sServerTellsTakeover = true', 'getSeatById(event.mValue)', 'getCoveringRoom() == room', 'event.mValue2',
+               'celebrant', 'show(reactions, celebrant, "TakeoverDone")', 'mTakeoverTile = nullptr'):
+    assert needle in noted, needle
+assert noted.count('"TakeoverDone"') == 1 and noted.index('mTakeoverTile = nullptr') < noted.index('show(reactions, celebrant')
+assert 'CosmeticEventType::roomTakeover' in function_body(worker, 'void WorkerReactions::noteCosmeticEvent(')
+assert function_body(worker, 'void WorkerReactions::noteCosmeticEvent(').index('roomTakeover') < function_body(worker, 'void WorkerReactions::noteCosmeticEvent(').index('isWorker(worker)'), 'the event has no worker subject'
+tick_done = function_body(worker, 'void WorkerReactions::tickWorker(')
+assert 'if(!sServerTellsTakeover)' in tick_done and tick_done.index('TAKEOVER_EVENT_WAIT') < tick_done.index('if(!sServerTellsTakeover)'), 'fallback only without the event, after a short wait'
+assert tick_done.count('"TakeoverDone"') == 1
+assert 'sServerTellsTakeover = false' in function_body(worker, 'void WorkerReactions::stopAll(')
 
 # Client: reactions while dancing on a tile of an enemy room and when the tile is ours
 for name in ('TakeoverWork', 'TakeoverDone'):

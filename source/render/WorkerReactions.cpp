@@ -31,6 +31,7 @@
 #include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "render/WorkerExtras.h"
+#include "rooms/Room.h"
 #include "traps/TrapType.h"
 #include "utils/Helper.h"
 
@@ -43,6 +44,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <random>
 #include <vector>
@@ -64,6 +66,9 @@ const double CLAIM_MIN = 3.0;
 const double CLAIM_MAX = 5.0;
 //! A takeover of a room tile that does not end with a change of owner is forgotten after this many seconds
 const double TAKEOVER_FORGET = 30.0;
+//! After the danced tile changed owner the client waits this many seconds for the roomTakeover event of the server
+//! before it shows the triumph by itself (a server from before the event never sends it)
+const double TAKEOVER_EVENT_WAIT = 1.5;
 //! A worker that stands idle this long may start a habit
 const double IDLE_AFTER = 9.0;
 //! Seconds between two repeats of the heavy gait
@@ -122,6 +127,7 @@ struct WorkerState
         mNextClaim(0.0),
         mTakeoverTile(nullptr),
         mTakeoverLast(-1.0),
+        mTakeoverChangedAt(-1.0),
         mIdleSince(-1.0),
         mNextGait(0.0),
         mNextDanger(0.0),
@@ -139,6 +145,8 @@ struct WorkerState
     //! The tile of an enemy room the worker is dancing on and when it last did (-1: none)
     Tile* mTakeoverTile;
     double mTakeoverLast;
+    //! When the client saw the danced tile change to the owner of the worker (-1: not yet)
+    double mTakeoverChangedAt;
     double mIdleSince;
     double mNextGait;
     double mNextDanger;
@@ -173,6 +181,8 @@ std::vector<Spot> sVeins;
 //! Where a creature died lately
 std::vector<Spot> sDeaths;
 double sTickTimer = 0.0;
+//! True once the server has sent a roomTakeover event: it then tells the end of every takeover once per room
+bool sServerTellsTakeover = false;
 
 WorkerState& getState(const std::string& name)
 {
@@ -389,6 +399,12 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
     if(!isActive(reactions))
         return;
 
+    if(event.is(CosmeticEventType::roomTakeover))
+    {
+        noteRoomTakeover(reactions, event);
+        return;
+    }
+
     double now = reactions.mTime;
     Creature* worker = reactions.mGameMap->getCreature(event.mSubject);
     if(!isWorker(worker))
@@ -428,6 +444,69 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
         else if((event.mValue == 0) && (oldGold > 0) && (reactions.getRoomName(worker) != "Treasury"))
             later(reactions, worker, "GoldCloud", 0.1);
     }
+}
+
+void WorkerReactions::noteRoomTakeover(CreatureReactions& reactions, const CosmeticEvent& event)
+{
+    // From now on the end of a takeover comes from the server, once per room
+    sServerTellsTakeover = true;
+
+    Seat* newSeat = reactions.mGameMap->getSeatById(event.mValue);
+    if(newSeat == nullptr)
+        return;
+
+    int32_t roomX = static_cast<int32_t>(event.mPosition.x + 0.5f);
+    int32_t roomY = static_cast<int32_t>(event.mPosition.y + 0.5f);
+    Tile* roomTile = reactions.mGameMap->getTile(roomX, roomY);
+    Room* room = (roomTile != nullptr) ? roomTile->getCoveringRoom() : nullptr;
+
+    // The workers that were dancing on this room: on the same room, or, if the client does not know the room
+    // yet, no further from its tile than the room has tiles. All of them are done now, the one nearest to the
+    // tile celebrates (one reaction per room, not one per worker)
+    Creature* celebrant = nullptr;
+    double celebrantDistance = 0.0;
+    for(std::map<std::string, WorkerState>::iterator it = sStates.begin(); it != sStates.end(); ++it)
+    {
+        WorkerState& state = it->second;
+        if(state.mTakeoverTile == nullptr)
+            continue;
+
+        Creature* worker = reactions.mGameMap->getCreature(it->first);
+        if((worker == nullptr) || (worker->getSeat() == nullptr) || !worker->getSeat()->isAlliedSeat(newSeat))
+            continue;
+
+        bool sameRoom;
+        if(room != nullptr)
+        {
+            sameRoom = (state.mTakeoverTile->getCoveringRoom() == room);
+        }
+        else
+        {
+            int32_t dx = std::abs(state.mTakeoverTile->getX() - roomX);
+            int32_t dy = std::abs(state.mTakeoverTile->getY() - roomY);
+            sameRoom = (std::max(dx, dy) <= event.mValue2);
+        }
+        if(!sameRoom)
+            continue;
+
+        state.mTakeoverTile = nullptr;
+        state.mTakeoverChangedAt = -1.0;
+
+        if(!worker->isAlive() || !worker->getIsOnMap())
+            continue;
+
+        Ogre::Vector3 difference = worker->getPosition() - event.mPosition;
+        difference.z = 0.0f;
+        double distance = difference.length();
+        if((celebrant == nullptr) || (distance < celebrantDistance))
+        {
+            celebrant = worker;
+            celebrantDistance = distance;
+        }
+    }
+
+    if(celebrant != nullptr)
+        show(reactions, celebrant, "TakeoverDone");
 }
 
 void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier, GameEntity* carried)
@@ -594,6 +673,7 @@ void WorkerReactions::showClaim(CreatureReactions& reactions, Creature* worker)
         WorkerState& state = getState(worker->getName());
         state.mTakeoverTile = tile;
         state.mTakeoverLast = reactions.mTime;
+        state.mTakeoverChangedAt = -1.0;
         show(reactions, worker, "TakeoverWork");
         return;
     }
@@ -675,19 +755,30 @@ void WorkerReactions::tickWorker(CreatureReactions& reactions, Creature* worker)
     }
 
     // The room the worker was taking over is its own now (every tile of it changed owner at once, so one
-    // check of the danced tile covers the whole room): a short triumph. Without a change of owner
+    // check of the danced tile covers the whole room). The triumph comes from the roomTakeover event of the
+    // server (noteRoomTakeover), once per room. Only without that event (a server from before it) the worker
+    // shows it by itself, once the tile owner changed and no event followed. Without a change of owner
     // the takeover is forgotten after a while (the worker was chased off or the room is guarded)
     if(state.mTakeoverTile != nullptr)
     {
         Seat* tileOwner = state.mTakeoverTile->getSeat();
         if((tileOwner != nullptr) && (worker->getSeat() != nullptr) && worker->getSeat()->isAlliedSeat(tileOwner))
         {
-            state.mTakeoverTile = nullptr;
-            show(reactions, worker, "TakeoverDone");
+            if(state.mTakeoverChangedAt < 0.0)
+                state.mTakeoverChangedAt = now;
+
+            if((now - state.mTakeoverChangedAt) >= TAKEOVER_EVENT_WAIT)
+            {
+                state.mTakeoverTile = nullptr;
+                state.mTakeoverChangedAt = -1.0;
+                if(!sServerTellsTakeover)
+                    show(reactions, worker, "TakeoverDone");
+            }
         }
         else if((now - state.mTakeoverLast) > TAKEOVER_FORGET)
         {
             state.mTakeoverTile = nullptr;
+            state.mTakeoverChangedAt = -1.0;
         }
     }
 
@@ -928,4 +1019,5 @@ void WorkerReactions::stopAll(CreatureReactions& reactions)
     sVeins.clear();
     sDeaths.clear();
     sTickTimer = 0.0;
+    sServerTellsTakeover = false;
 }

@@ -91,7 +91,14 @@ enum class CosmeticEventType : int32_t
     //! (a tile that is not in the list is full; an empty text: all full), mPosition the first tile of the room.
     //! Sent to the keepers that see a tile of the hatchery when the grain changed and now and then again while a
     //! tile is not full. Only shows the grain decals; the game never depends on it.
-    hatcheryGrain = 13
+    hatcheryGrain = 13,
+    //! A room has just changed hands (a takeover by workers or any other change of its owner). Sent once per room
+    //! when the owner changes, never per tile or per worker. mObject name of the room type (the readable
+    //! name), mText name of the room that was lost, mValue seat id of the new owner, mValue2 number of tiles
+    //! (squares) that changed hands, mPosition one tile of the room (the one nearest its middle). Sent to the
+    //! keepers that see a tile of the room and to the old and the new owner. Only ends the dancing of the
+    //! workers that took the room; the game never depends on it.
+    roomTakeover = 14
 };
 
 //! \brief The data of one cosmetic event. Every kind uses the same layout on the wire, so a

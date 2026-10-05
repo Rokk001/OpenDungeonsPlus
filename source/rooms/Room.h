@@ -250,6 +250,11 @@ protected:
     //! nullptr when the room was nobody's.
     void notifyOwnerChanged(Seat* oldSeat, Seat* newSeat);
 
+    //! \brief Server only. Tells the players that see the tiles of the room (and both owners) with one
+    //! cosmetic event (roomTakeover) that the room has just changed hands: once per room, not once per tile
+    //! or per worker. tiles are the tiles that went over, this room is the one that lost them.
+    void fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Tile*>& tiles) const;
+
     //! \brief 1.0 when full. Saved with the first tile of the room only while it is worn down (a room
     //! that was never touched writes nothing extra, and a save without it loads full); portals and
     //! bridges also keep the value their files always had.

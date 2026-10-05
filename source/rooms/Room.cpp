@@ -199,6 +199,67 @@ void Room::changeOwner(Seat* seat)
     }
 
     notifyOwnerChanged(oldSeat, seat);
+    fireTakeoverEvent(oldSeat, seat, tiles);
+}
+
+void Room::fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Tile*>& tiles) const
+{
+    if(!getGameMap()->isServerGameMap() || tiles.empty())
+        return;
+
+    // One tile of the room: the one nearest its middle
+    double sumX = 0.0;
+    double sumY = 0.0;
+    for(Tile* tile : tiles)
+    {
+        sumX += static_cast<double>(tile->getX());
+        sumY += static_cast<double>(tile->getY());
+    }
+    double middleX = sumX / static_cast<double>(tiles.size());
+    double middleY = sumY / static_cast<double>(tiles.size());
+    Tile* nearest = tiles.front();
+    double nearestDistance = -1.0;
+    for(Tile* tile : tiles)
+    {
+        double dx = static_cast<double>(tile->getX()) - middleX;
+        double dy = static_cast<double>(tile->getY()) - middleY;
+        double distance = dx * dx + dy * dy;
+        if((nearestDistance < 0.0) || (distance < nearestDistance))
+        {
+            nearest = tile;
+            nearestDistance = distance;
+        }
+    }
+
+    CosmeticEvent event(CosmeticEventType::roomTakeover);
+    event.mObject = RoomManager::getRoomReadableName(getType());
+    event.mText = getName();
+    event.mValue = newSeat->getId();
+    event.mValue2 = static_cast<int32_t>(tiles.size());
+    event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(nearest->getX()),
+        static_cast<Ogre::Real>(nearest->getY()), 0.0f);
+
+    // The seats that see any tile of the room and both owners, each told once
+    std::vector<Seat*> seats;
+    seats.push_back(newSeat);
+    if(oldSeat != nullptr)
+        seats.push_back(oldSeat);
+    for(Tile* tile : tiles)
+    {
+        for(Seat* seat : tile->getSeatsWithVision())
+        {
+            if(std::find(seats.begin(), seats.end(), seat) == seats.end())
+                seats.push_back(seat);
+        }
+    }
+
+    for(Seat* seat : seats)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
 }
 
 void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)

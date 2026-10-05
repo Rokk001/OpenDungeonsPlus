@@ -47,10 +47,10 @@ kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class Cosmeti
 numbers = [int(number) for _, number in kinds]
 assert numbers == list(range(len(numbers))), 'cosmetic event kinds must stay numbered without gaps'
 names = [name for name, _ in kinds]
-assert names[-3:] == ['bedStatus', 'heartHealthStage', 'hatcheryGrain'], names[-3:]
-assert dict(kinds)['heartHealthStage'] == '12' and dict(kinds)['hatcheryGrain'] == '13'
-assert 'CosmeticEventType::hatcheryGrain));' in event_cpp
-for name in ('heartHealthStage', 'hatcheryGrain'):
+assert names[-4:] == ['bedStatus', 'heartHealthStage', 'hatcheryGrain', 'roomTakeover'], names[-4:]
+assert dict(kinds)['heartHealthStage'] == '12' and dict(kinds)['hatcheryGrain'] == '13' and dict(kinds)['roomTakeover'] == '14'
+assert 'CosmeticEventType::roomTakeover));' in event_cpp
+for name in ('heartHealthStage', 'hatcheryGrain', 'roomTakeover'):
     assert 'return "' + name + '";' in event_cpp, name
 
 # Heart steps: server decides, only for cosmetic-event clients, own and allied hearts always, others when seen
