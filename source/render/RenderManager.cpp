@@ -4251,6 +4251,14 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if((dropCreature != nullptr) && ((anim == EntityAnimation::drag_anim) || (anim == EntityAnimation::dragged_anim)))
         anim = chooseDragClip(objectEntity, anim == EntityAnimation::dragged_anim, freezeOnLastFrame);
 
+    // A creature that carries something walks with raised arms when the skeleton has the clip. The entity state
+    // stays Walk, so the speed factors of the walk clip (tired, badly hurt) apply unchanged
+    if((dropCreature != nullptr) && (anim == EntityAnimation::walk_anim) && dropCreature->getClientCarrying() &&
+       objectEntity->getSkeleton()->hasAnimation(EntityAnimation::carry_walk_anim))
+    {
+        anim = EntityAnimation::carry_walk_anim;
+    }
+
     // Handle the case where this entity does not have the requested animation.
     while (!objectEntity->getSkeleton()->hasAnimation(anim))
     {
@@ -6164,6 +6172,10 @@ void RenderManager::rrCarryEntity(Creature* carrier, GameEntity* carried)
     }
     carriedNode->setPosition(Ogre::Vector3(0, 0, carrySpotZ));
 
+    // The carrier that already walks changes to the carrying walk clip
+    if(carrier->getAnimationStateName() == EntityAnimation::walk_anim)
+        rrSetObjectAnimationState(carrier, EntityAnimation::walk_anim, true);
+
     // Carried gold is shown as a sack with coins, its size follows the amount
     if(carried->getObjectType() == GameEntityType::treasuryObject)
     {
@@ -6197,6 +6209,10 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
         mSceneManager->destroyEntity(sack);
         carriedEnt->setVisible(true);
     }
+
+    // The carrier that still walks changes back to the plain walk clip
+    if(carrier->getAnimationStateName() == EntityAnimation::walk_anim)
+        rrSetObjectAnimationState(carrier, EntityAnimation::walk_anim, true);
 }
 
 void RenderManager::clearCreatureDecay(Creature* creature)

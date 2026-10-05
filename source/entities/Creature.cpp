@@ -482,6 +482,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mNbTurnsWithoutBattle    (0),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
+    mClientCarrying          (false),
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
@@ -591,6 +592,7 @@ Creature::Creature(GameMap* gameMap) :
     mNbTurnsWithoutBattle    (0),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
+    mClientCarrying          (false),
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
@@ -2430,6 +2432,10 @@ double Creature::getLowHealthWalkFactor() const
     double firstStage = std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0;
     if(static_cast<double>(mOverlayHealthValue) < firstStage)
         return 1.0;
+
+    // A creature type can have its own factor (same limits as the global one), the global one is the default
+    if((mDefinition != nullptr) && (mDefinition->getLowHealthWalkSpeedFactor() >= 0.0))
+        return std::max(0.2, std::min(1.0, mDefinition->getLowHealthWalkSpeedFactor()));
 
     return ConfigManager::getSingleton().getLowHealthWalkSpeedFactor();
 }

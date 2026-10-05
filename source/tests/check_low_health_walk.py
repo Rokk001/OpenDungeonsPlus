@@ -73,4 +73,24 @@ assert 'getLowHealthWalk' not in render and 'getLowHealthWalk' not in movable   
 # Matching clip: the normal walk clip at that speed plus the existing hurt walk reaction (E15)
 assert re.search(r'Name\s+HurtWalk\b', reactions_cfg) and re.search(r'Name\s+Limp\b', reactions_cfg)
 
+# Optional factor per creature type: parsed, copied, sent to the clients, saved, documented, absent = global value
+definition = read('source/entities/CreatureDefinition.cpp')
+definition_h = read('source/entities/CreatureDefinition.h')
+creatures_cfg = read('config/creatures.cfg')
+assert 'mLowHealthWalkSpeedFactor (-1.0)' in definition
+assert 'mLowHealthWalkSpeedFactor(def.mLowHealthWalkSpeedFactor)' in definition
+assert 'os << c->mLowHealthWalkSpeedFactor;' in definition and 'is >> c->mLowHealthWalkSpeedFactor;' in definition
+assert definition.index('os << c->mTortureTimeToConvert;') < definition.index('os << c->mLowHealthWalkSpeedFactor;') < definition.index('os << c->mXPTable')     if 'os << c->mXPTable' in definition else True
+assert definition.index('is >> c->mTortureTimeToConvert;') < definition.index('is >> c->mLowHealthWalkSpeedFactor;')
+assert 'nextParam == "LowHealthWalkSpeedFactor"' in definition and '"    LowHealthWalkSpeedFactor' in definition
+assert 'double mLowHealthWalkSpeedFactor;' in definition_h and 'getLowHealthWalkSpeedFactor () const' in definition_h
+assert re.search(r'^# LowHealthWalkSpeedFactor \(Optional', creatures_cfg, re.M)
+assert not re.search(r'^\s+LowHealthWalkSpeedFactor\s', creatures_cfg, re.M), 'no value set yet'
+assert 'mDefinition->getLowHealthWalkSpeedFactor() >= 0.0' in rule
+assert 'std::max(0.2, std::min(1.0, mDefinition->getLowHealthWalkSpeedFactor()))' in rule
+assert rule.index('mDefinition->getLowHealthWalkSpeedFactor()') < rule.index('ConfigManager::getSingleton().getLowHealthWalkSpeedFactor()')
+# Server speed and client clip both go through the one function, nothing else reads the factor
+assert 'getLowHealthWalkFactor' in speed and pose.count('getLowHealthWalkFactor()') == 1
+assert creature.count('getLowHealthWalkSpeedFactor()') == 3   # definition twice (test and clamp), global once
+
 print('check_low_health_walk: ok')
