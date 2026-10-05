@@ -1751,7 +1751,8 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
         if(feeding.mFeatherBursts < 2 && progress >= (feeding.mReachBones.empty() ?
             0.38f + feeding.mFeatherBursts * 0.24f : 0.58f + feeding.mFeatherBursts * 0.14f))
         {
-            createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth));
+            createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth),
+                feeding.mRoosterFeathers ? "ChickenFeathersRooster" : "ChickenFeathers");
             ++feeding.mFeatherBursts;
         }
         if(progress >= 1.0f)
@@ -4340,6 +4341,9 @@ void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* c
 
         const std::string name = "FeedingChicken_" + Helper::toString(++mChickenFeatherEffectNumber);
         feeding.mChickenEntity = mSceneManager->createEntity(name, "Chicken.mesh");
+        // The feathers have the plumage of the animal that is eaten
+        feeding.mRoosterFeathers = (dynamic_cast<ChickenEntity*>(chicken) != nullptr) &&
+            (static_cast<ChickenEntity*>(chicken)->getKind() == ChickenKind::rooster);
         feeding.mChickenNode = feeding.mNode->createChildSceneNode(name + "_node");
         feeding.mChickenNode->attachObject(feeding.mChickenEntity);
         feeding.mChickenEntity->setQueryFlags(0);
@@ -4505,7 +4509,7 @@ void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, co
     Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, particleName);
     node->attachObject(particles);
     particles->setQueryFlags(0);
-    mChickenFeatherEffects.push_back({node, particles, 1.5f});
+    mChickenFeatherEffects.push_back({node, particles, 2.6f});
 }
 
 void RenderManager::clearChickenFeatherEffects()

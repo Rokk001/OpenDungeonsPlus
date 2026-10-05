@@ -1482,7 +1482,7 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
             // Caught: he jumps on her for a moment, feathers fly and she cackles
             if(nearestDistance < static_cast<float>(settings.mCatchDistance * settings.mCatchDistance))
             {
-                rooster->playPose(ChickenPose::mount, 2);
+                rooster->playPose(ChickenPose::mount, 3);
                 target->playPose(ChickenPose::cackle, 3);
                 fireAnimalSound(*target, "Hatchery/Cluck");
                 rooster->setMood(RoosterMood::strut, 0);

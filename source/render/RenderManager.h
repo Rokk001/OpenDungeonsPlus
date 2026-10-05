@@ -434,6 +434,8 @@ private:
         Ogre::Bone* mSpine = nullptr;
         CreatureFeedingLimb mArms[2] = {};
         CreatureFeedingLimb mLegs[2] = {};
+        //! The eaten animal is a rooster: its feathers have the colours of the rooster
+        bool mRoosterFeathers = false;
     };
     std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
 
