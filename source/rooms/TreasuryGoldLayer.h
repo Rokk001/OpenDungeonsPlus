@@ -179,23 +179,33 @@ inline float hash01(int a, int b)
     return static_cast<float>(h & 0xFFFFu) / 65535.0f;
 }
 
-//! Single coins on top of the heap: none on a thin layer, up to maxTopCoins on a deep one
+//! Single coins on top of the heap: none on a thin layer, then growing evenly up to maxTopCoins on a full one
+//! (a sea of coins on the fullest piles)
 inline int topCoinCount(const PileShape& shape)
 {
-    if(shape.mLevel < 2)
+    const int first = TreasurySettings::current().topCoinMinLevel;
+    const int most = TreasurySettings::current().maxTopCoins;
+    if(shape.mLevel < first || most <= 0)
         return 0;
-    const int count = 1 + shape.mLevel / 3;
-    return count > maxTopCoins ? maxTopCoins : count;
+    if(shape.mLevel >= maxLevel)
+        return most;
+    // From a few coins on the first covered step in even steps to the full number
+    const int span = maxLevel - first;
+    const int count = 1 + (most - 1) * (shape.mLevel - first + 1) / (span + 1);
+    return count > most ? most : count;
 }
 
-//! Gems scattered in rich piles: none below level 5, one in some level 5 and 6 piles, up to maxGems in full ones
+//! Gems scattered in rich piles: none below level 5, one in some level 5 piles, one or two in level 6 ones, one
+//! up to maxGems in full ones (the variant of the pile decides, so rich rooms show several gems)
 inline int gemCount(const PileShape& shape)
 {
     if(shape.mLevel < 5)
         return 0;
-    if(shape.mLevel < maxLevel)
+    if(shape.mLevel < maxLevel - 1)
         return (shape.mVariant % 2 == 0) ? 1 : 0;
-    return 1 + (shape.mVariant % 2);
+    if(shape.mLevel < maxLevel)
+        return 1 + (shape.mVariant % 2);
+    return 1 + (shape.mVariant % TreasurySettings::current().maxGems);
 }
 
 //! Edge 0 north, 1 east, 2 south, 3 west. It is open when both of its corners are lower than the pile

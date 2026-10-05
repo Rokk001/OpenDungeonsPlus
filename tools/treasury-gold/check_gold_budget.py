@@ -16,10 +16,14 @@ import sys
 REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 # Budget
-MAX_TRIANGLES_PER_PILE = 150
+# A full pile carries up to 16 coins (6 triangles each), 4 gems (8) and 8 spilled coins (4) on top of its 6x6 surface
+# (72 triangles): 232 triangles. The limit was raised from 150 on purpose for the "sea of coins" of the plan. It
+# stays cheap because the piles of a room are one static batch (two draw calls), the coins only exist at the detail
+# full, and piles far from the camera use the reduced mesh (8 triangles).
+MAX_TRIANGLES_PER_PILE = 250
 MAX_TRIANGLES_PER_HEAP = 150
 MAX_TRIANGLES_PER_SACK = 400
-MAX_TRIANGLES_100_TILE_ROOM = 15000
+MAX_TRIANGLES_100_TILE_ROOM = 25000
 # Draw calls: settled piles are drawn by one static batch per room (two materials per batch)
 MAX_DRAW_CALLS_100_TILE_ROOM = 2
 MAX_DRAW_CALLS_400_TILE_ROOM = 2
@@ -114,6 +118,8 @@ def main():
     print('mesh                 triangles  vertices')
     print('pile (full)          %9d  %8d  (of that %d triangles of coins and gems in a second section)' % (
         pile_tris['full'], pile_verts['full'], detail_tris))
+    print('                     = %d surface + %d top coins * %d + %d gems * %d + %d spilled coins * %d' % (
+        2 * full_divisions ** 2, max_top_coins, coin_sides, max_gems, gem_faces, max_spill_coins, spill_sides))
     print('empty tile scatter   %9d' % scatter_tris)
     print('pile (reduced)       %9d  %8d' % (pile_tris['reduced'], pile_verts['reduced']))
     print('floor heap           %9d  %8d' % (heap_tris, heap_verts))

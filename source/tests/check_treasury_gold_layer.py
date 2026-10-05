@@ -164,6 +164,29 @@ int main()
     check(std::string(classicMeshForLevel(1)) == "GoldstackLv1", "level 1 falls back to the small stack");
     check(std::string(classicMeshForLevel(7)) == "GoldstackLv4", "level 7 falls back to the big stack");
 
+    // Coins on top: a sea of coins on a full pile, growing with the level, none on a thin layer
+    int previousCoins = 0;
+    bool coinsGrow = true;
+    for(int level = 0; level <= maxLevel; ++level)
+    {
+        int coins = topCoinCount(flatShape(level, 0));
+        if(coins < previousCoins || coins > TreasurySettings::current().maxTopCoins)
+            coinsGrow = false;
+        previousCoins = coins;
+    }
+    check(coinsGrow, "top coins never drop with the level and never exceed the maximum");
+    check(topCoinCount(flatShape(1, 0)) == 0, "a thin layer carries no coins on top");
+    check(topCoinCount(flatShape(maxLevel, 0)) >= 12, "a full pile carries a sea of coins");
+    check(topCoinCount(flatShape(maxLevel, 0)) > 3 * topCoinCount(flatShape(2, 0)) / 2, "coins grow in several steps");
+    check(gemCount(flatShape(4, 3)) == 0 && gemCount(flatShape(maxLevel, 3)) == 4, "rich piles carry up to four gems");
+    int gemsMax = 0;
+    for(int variant = 0; variant < variantCount; ++variant)
+        for(int level = 0; level <= maxLevel; ++level)
+            if(gemCount(flatShape(level, variant)) > gemsMax)
+                gemsMax = gemCount(flatShape(level, variant));
+    check(gemsMax <= TreasurySettings::current().maxGems, "gems never exceed the maximum");
+    check(maxSpillCoins() == 8, "eight spilled coins by default");
+
     std::cout << "CHECKS=" << checks << " FAILURES=" << failures << '\n';
     return failures == 0 ? 0 : 1;
 }
