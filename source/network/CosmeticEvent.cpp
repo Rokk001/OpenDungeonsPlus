@@ -20,7 +20,7 @@
 bool CosmeticEvent::isKnownType() const
 {
     return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
-           (mType <= static_cast<int32_t>(CosmeticEventType::chickenFlee));
+           (mType <= static_cast<int32_t>(CosmeticEventType::bedStatus));
 }
 
 std::string CosmeticEvent::typeString() const
@@ -47,6 +47,10 @@ std::string CosmeticEvent::typeString() const
             return "portalArrival";
         case static_cast<int32_t>(CosmeticEventType::chickenFlee):
             return "chickenFlee";
+        case static_cast<int32_t>(CosmeticEventType::calmed):
+            return "calmed";
+        case static_cast<int32_t>(CosmeticEventType::bedStatus):
+            return "bedStatus";
         default:
             break;
     }

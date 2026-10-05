@@ -143,6 +143,8 @@ const double ARRIVAL_QUIET_TIME = 3.0;
 const double ARRIVAL_MOOD_MEMORY = 30.0;
 const double FULL_DELIVERY_MEMORY = 6.0;
 const double FULL_TREASURY_RADIUS = 3.0;
+//! Distance (tiles) up to which a creature of the keeper catches a chicken that the keeper drops
+const double CHICKEN_CATCH_RADIUS = 3.0;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -2100,6 +2102,35 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     drop.mTime = mTime;
     mHandDrops[entity->getName()] = drop;
 
+    // A creature of the keeper close to the chicken that falls catches it: a short grab before the meal
+    if(type == GameEntityType::chickenEntity)
+    {
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        Creature* nearest = nullptr;
+        double nearestDistance = CHICKEN_CATCH_RADIUS;
+        for(Creature* creature : mGameMap->getCreatures())
+        {
+            if((localPlayer == nullptr) || (creature->getSeat() != localPlayer->getSeat()) ||
+               !creature->getIsOnMap() || !creature->isAlive() || creature->getDefinition()->isWorker())
+            {
+                continue;
+            }
+
+            Ogre::Vector3 difference = creature->getPosition() -
+                Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()), 0.0f);
+            difference.z = 0.0f;
+            double distance = difference.length();
+            if(distance >= nearestDistance)
+                continue;
+
+            nearestDistance = distance;
+            nearest = creature;
+        }
+
+        if(nearest != nullptr)
+            trigger(nearest, "ChickenCatch");
+    }
+
     // The creatures that stand around look at the gold that falls
     if(type == GameEntityType::treasuryObject)
     {
@@ -2440,6 +2471,15 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
     {
         queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, 0.3);
     }
+    else if(event.is(CosmeticEventType::calmed))
+    {
+        // The prayer in the temple took the anger away: soft light and relaxed shoulders
+        queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+    }
+    else if(event.is(CosmeticEventType::bedStatus))
+    {
+        mHasBed[event.mSubject] = (event.mValue != 0);
+    }
 }
 
 void CreatureReactions::endForCreature(Creature* creature)
@@ -2681,8 +2721,10 @@ void CreatureReactions::examineMood(Creature* creature)
         events.push_back("MoodContent");
     }
 
-    // A long rest: sits down, and lies down if it goes on, in the open
-    if(idle && (idleFor >= mConfig.getLieAfter()) && (getRoomName(creature) != "Dormitory"))
+    // A long rest: sits down, and lies down if it goes on and the creature has no bed (the server said so)
+    std::map<std::string, bool>::const_iterator itBed = mHasBed.find(creature->getName());
+    bool hasNoBed = (itBed != mHasBed.end()) && !itBed->second;
+    if(idle && (idleFor >= mConfig.getLieAfter()) && hasNoBed)
         events.push_back("AmbientLieDown");
     else if(idle && (idleFor >= mConfig.getSitAfter()))
         events.push_back("AmbientSitDown");

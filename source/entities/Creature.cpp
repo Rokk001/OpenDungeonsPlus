@@ -170,6 +170,8 @@ namespace
 {
 //! Turns between two tries to assign a missing appearance
 const uint32_t APPEARANCE_RETRY_TURNS = 200;
+//! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
+const int64_t BED_STATUS_REPEAT_TURNS = 200;
 
 //! \brief Server side registry of the portrait manifests used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
@@ -471,6 +473,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mGoldCarried             (0),
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
+    mBedNotified             (-1),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
@@ -577,6 +580,7 @@ Creature::Creature(GameMap* gameMap) :
     mGoldCarried             (0),
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
+    mBedNotified             (-1),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
@@ -1602,6 +1606,19 @@ void Creature::doUpkeep()
         mGoldCarriedCosmeticNotified = mGoldCarried;
         fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::carriedGold), mGoldCarried,
             getDefinition()->getMaxGoldCarryable(), false);
+    }
+
+    // The clients show a creature without a bed lying down in the open. They are told when that changes and, for a
+    // creature without a bed, now and then again (cosmetic only).
+    if(!mDefinition->isWorker())
+    {
+        int32_t hasBed = (mHomeTile != nullptr) ? 1 : 0;
+        if((hasBed != mBedNotified) ||
+           ((hasBed == 0) && ((getGameMap()->getTurnNumber() % BED_STATUS_REPEAT_TURNS) == 0)))
+        {
+            mBedNotified = hasBed;
+            fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::bedStatus), hasBed, 0, true);
+        }
     }
 
     // Check if we should compute mood
@@ -5196,6 +5213,14 @@ void Creature::computeMood()
 
     fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::moodStage), static_cast<int32_t>(mMoodValue),
         static_cast<int32_t>(oldMoodValue), true);
+
+    // The anger fell below the angry level while the relief of a prayer in the temple was working: calmed
+    if((oldMoodValue >= CreatureMoodLevel::Angry) && (mMoodValue < CreatureMoodLevel::Angry) &&
+       (mMoodValue != CreatureMoodLevel::Unknown) && (mPrayerRelief > 0))
+    {
+        fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::calmed), static_cast<int32_t>(mMoodValue),
+            static_cast<int32_t>(oldMoodValue), true);
+    }
 
     if((mMoodValue >= CreatureMoodLevel::Furious) &&
        (oldMoodValue < CreatureMoodLevel::Furious))

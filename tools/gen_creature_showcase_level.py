@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Writes levels/skirmish/TestCreatureShowcase.level (run from the repository root).
 
-A test map for the creature reactions: one claimed 5x5 hall per room type (the portal takes
-3x3), corridors between them, and a line-up hall at the bottom with one creature of every
-creature type from config/creatures.cfg. Every hall also gets a few creatures, chosen so that
-all types stand next to some room.
+A test map for the creature reactions and the room effects: one claimed 7x7 hall per room type
+(the portal takes 3x3 in the middle), corridors between them, and in every hall one creature of
+every creature type from config/creatures.cfg, so that every type stands next to every room.
 """
 import re
 import sys
@@ -14,15 +13,15 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "levels" / "skirmish" / "TestCreatureShowcase.level"
 
 COLUMNS = 5
-CELL = 7
-HALL = 5
+CELL = 9
+HALL = 7
 ORIGIN = 2
 
 # (room type number, name prefix, size). Numbers follow RoomType in source/rooms/RoomType.h.
 HALLS = [
-    (1, "DungeonTemple", 5), (2, "Dormitory", 5), (3, "Treasury", 5), (4, "Portal", 3), (5, "Workshop", 5),
-    (6, "TrainingHall", 5), (7, "Library", 5), (8, "Hatchery", 5), (9, "Crypt", 5), (11, "Prison", 5),
-    (14, "Arena", 5), (15, "Casino", 5), (16, "Torture", 5), (17, "GuardRoom", 5), (18, "Temple", 5),
+    (1, "DungeonTemple", 7), (2, "Dormitory", 7), (3, "Treasury", 7), (4, "Portal", 3), (5, "Workshop", 7),
+    (6, "TrainingHall", 7), (7, "Library", 7), (8, "Hatchery", 7), (9, "Crypt", 7), (11, "Prison", 7),
+    (14, "Arena", 7), (15, "Casino", 7), (16, "Torture", 7), (17, "GuardRoom", 7), (18, "Temple", 7),
 ]
 
 # Data a room type reads after its tiles (beds, claimed value, points, held creatures).
@@ -68,8 +67,10 @@ def main():
         x0 = ORIGIN + col * CELL + (HALL - size) // 2
         y0 = ORIGIN + row * CELL + (HALL - size) // 2
         tiles = [(x, y) for x in range(x0, x0 + size) for y in range(y0, y0 + size)]
-        floor.update(tiles)
-        halls.append((number, "%s%d" % (prefix, index + 1), tiles, x0, y0, size))
+        # The whole hall is floor; the room covers its middle (all of it, except for the portal)
+        hall_x, hall_y = ORIGIN + col * CELL, ORIGIN + row * CELL
+        floor.update((x, y) for x in range(hall_x, hall_x + HALL) for y in range(hall_y, hall_y + HALL))
+        halls.append((number, "%s%d" % (prefix, index + 1), tiles, hall_x, hall_y, size))
         # Corridor to the right neighbour and to the row below (or to the line-up hall).
         cell_x, cell_y = ORIGIN + col * CELL, ORIGIN + row * CELL
         if col + 1 < COLUMNS and index + 1 < len(HALLS):
@@ -121,18 +122,14 @@ def main():
         out.append("1\t%s%d\t%s\t%d\t%d\t0\t%s\t1\t0\tmax\t100\t0\t0\t%s\t%s\tnullSkillType\tnone\t0\n"
                    % (name, counter[0], mesh, x, y, name, left, right))
 
-    # Line-up hall: every creature type once, one tile apart.
-    for i, entry in enumerate(creatures):
-        creature(entry, ORIGIN + i, line_y)
-    # Three creatures inside every hall (not the heart), cycling through the types so that
-    # every type stands next to some room.
-    cursor = 0
-    for number, _name, _tiles, x0, y0, size in halls:
-        if number == 1:
-            continue
-        for k in range(3):
-            creature(creatures[cursor % len(creatures)], x0 + 1 + k, y0 + size // 2)
-            cursor += 1
+    # Every hall (the heart hall too): one creature of every type, one per tile, on the floor around the
+    # room first and then on the room
+    for _number, _name, tiles, hall_x, hall_y, _size in halls:
+        room = set(tiles)
+        spots = [(x, y) for y in range(hall_y, hall_y + HALL) for x in range(hall_x, hall_x + HALL)]
+        spots = [spot for spot in spots if spot not in room] + [spot for spot in spots if spot in room]
+        for entry, (x, y) in zip(creatures, spots):
+            creature(entry, x, y)
     out.append("[/Creatures]\n")
     for section, header in (
             ("Spells", "# typeSpell\tSeatId\tName\tMeshName\tPosX\tPosY\tPosZ\topacity\trotationAngle\toptionalData"),

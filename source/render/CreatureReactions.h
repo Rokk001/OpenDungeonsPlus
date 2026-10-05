@@ -519,6 +519,9 @@ private:
     std::map<std::string, double> mLastDelivery;
     //! The mood level the server told for an arrival through a portal ("creature" -> level and time)
     std::map<std::string, std::pair<int32_t, double> > mArrivalMoods;
+    //! Whether the server said that a creature has a bed ("creature" -> true: it has one). A creature that is not
+    //! in the map is not known to have none, so it does not lie down in the open.
+    std::map<std::string, bool> mHasBed;
     //! Creatures that were told to eat a chicken: time at which the meal counts as over if no meal clip said so
     std::map<std::string, double> mMealEnds;
     //! Time the meal clip was last seen for each creature (the clip, when there is one, shows the done moment)

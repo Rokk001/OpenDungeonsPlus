@@ -1078,6 +1078,9 @@ private:
     int32_t         mGoldCarriedNotified;
     //! \brief Server side. The gold carried that the clients were told last (cosmetic events only, not saved)
     int32_t         mGoldCarriedCosmeticNotified;
+    //! \brief Server side. Whether the clients were told that the creature has a bed: -1 not yet, 0 no, 1 yes
+    //! (cosmetic events only, not saved)
+    int32_t         mBedNotified;
 
     //! Skill type that will be dropped when the creature dies
     SkillType       mSkillTypeDropDeath;

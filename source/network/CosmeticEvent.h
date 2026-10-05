@@ -67,7 +67,17 @@ enum class CosmeticEventType : int32_t
     portalArrival = 8,
     //! A chicken of a hatchery hopped away from a hungry creature that came to eat it. mSubject chicken,
     //! mObject the creature, mPosition where the chicken was. The hop itself is the normal chicken movement.
-    chickenFlee = 9
+    chickenFlee = 9,
+    //! A creature that had prayed in a temple is no longer angry: its mood level fell from angry or worse to
+    //! upset or better while the relief of the prayer was still working. mSubject creature, mValue new
+    //! CreatureMoodLevel, mValue2 old CreatureMoodLevel. Sent for the creatures of the receiving keeper and of
+    //! its allies.
+    calmed = 10,
+    //! Whether a creature has a bed (a home tile in a dormitory). mSubject creature, mValue 1: it has one,
+    //! 0: it has none. Sent when this changes and, for a creature without a bed, now and then again, so that a
+    //! keeper who only sees the creature later learns it too. Only the creatures of the receiving keeper and of
+    //! its allies.
+    bedStatus = 11
 };
 
 //! \brief The data of one cosmetic event. Every kind uses the same layout on the wire, so a

@@ -4234,8 +4234,8 @@ void RenderManager::startCreatureFeedingAnimation(Creature* creature, Ogre::Enti
 
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
     const Ogre::Real duration = 2.2f;
-    const Ogre::Real bites = style == CreatureFeedingStyle::peck ? 7.0f :
-        (style == CreatureFeedingStyle::heavy ? 2.0f : 4.0f);
+    // A chicken is gobbled in two bites; small biting creatures peck at it
+    const Ogre::Real bites = style == CreatureFeedingStyle::peck ? 7.0f : 2.0f;
     if(!skeleton->hasAnimation(EntityAnimation::eat_chicken_anim))
     {
         const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
