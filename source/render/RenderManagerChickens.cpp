@@ -1003,7 +1003,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 if(hen != mChickenLooks.end())
                 {
                     // The back of the hen is as high as she is when she is ducked; he jumps up in an arc
-                    const Ogre::Real henHeight = hen->second.mEntity->getBoundingBox().getMax().z *
+                    const Ogre::Real henHeight = hen->second.mEntity->getBoundingBox().getMaximum().z *
                         kindScale(ChickenKind::hen) * values.mMountCrouch;
                     lift += henHeight * values.mMountHeight * on + 0.08f * std::sin(std::min(upRatio, 1.0f) * pi) *
                         (p < climb ? 1.0f : 0.0f);
