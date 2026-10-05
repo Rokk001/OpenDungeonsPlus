@@ -3966,6 +3966,9 @@ ProtectDungeonTemple	NULL
 5	Harbourfolk5_5	Rat.mesh	58	52	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Docker5_1	Kobold.mesh	48	54	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Docker5_2	Kobold.mesh	59	61	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray1	Goblin.mesh	32	91	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Spider.mesh	31	91	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Rat.mesh	33	91	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
