@@ -52,6 +52,7 @@
 #include "render/ODFrameListener.h"
 #include "render/LooseGoldMesh.h"
 #include "render/TreasuryCreatureRules.h"
+#include "render/TwoWeaponStrike.h"
 #include "render/TreasuryGoldMesh.h"
 #include "sound/SoundEffectsManager.h"
 #include "rooms/Room.h"
@@ -553,13 +554,29 @@ bool isRightForearmBone(const std::string& lowerName)
     return lowerName == "forearm_r" || lowerName == "forearm.r";
 }
 
-//! blow is the sword blow: 1 cut from above, 2 cut from the side, 3 thrust, 0 the plain strike
-std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate, int blow)
+//! The same bones of the left arm, for the blows of a creature with a weapon in each hand
+bool isLeftArmBone(const std::string& lowerName)
+{
+    return lowerName == "arm_l" || lowerName == "upper_arm.l" || lowerName == "upperarm_l";
+}
+
+bool isLeftForearmBone(const std::string& lowerName)
+{
+    return lowerName == "forearm_l" || lowerName == "forearm.l";
+}
+
+//! blow is the sword blow: 1 cut from above, 2 cut from the side, 3 thrust, 0 the plain strike. leftHand: the blow is
+//! struck with the left arm (only with blow != 0, the creature carries a weapon in each hand); armScale scales the
+//! arm movement of the blow.
+std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate, int blow,
+    bool leftHand, Ogre::Real armScale)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
     if(!skeleton->hasAnimation(original)) return original;
     const std::string name = "AttackCombat_" + original +
-        (blow != 0 ? "_Sword" + Helper::toString(blow) : (alternate ? "_B" : "_A"));
+        (blow != 0 ? "_Sword" + Helper::toString(blow) + (leftHand ? "L" : "") +
+        (armScale != 1.0f ? "S" + Helper::toString(static_cast<int>(armScale * 100.0f)) : std::string()) :
+        (alternate ? "_B" : "_A"));
     const Ogre::Animation* source = skeleton->getAnimation(original);
     const CombatMotion style = getCombatMotion(entity->getMesh()->getName());
     const Ogre::Real duration = std::min(source->getLength(), style == CombatMotion::heavy ? 1.45f :
@@ -606,23 +623,26 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
                 if(blow != 0)
                 {
                     // Added on top of the strike of the source clip, so the sword hand still follows its own path
-                    const bool rightArm = isRightArmBone(boneName), rightForearm = isRightForearmBone(boneName);
+                    const bool rightArm = leftHand ? isLeftArmBone(boneName) : isRightArmBone(boneName);
+                    const bool rightForearm = leftHand ? isLeftForearmBone(boneName) : isRightForearmBone(boneName);
+                    // The cut from the side runs the other way round with the left arm
+                    const Ogre::Real side = leftHand ? -1.0f : 1.0f;
                     if(blow == 1)
                     {
-                        if(rightArm) pitch += -48.0f * windup + 26.0f * strike;
-                        if(rightForearm) pitch += -22.0f * windup + 12.0f * strike;
+                        if(rightArm) pitch += (-48.0f * windup + 26.0f * strike) * armScale;
+                        if(rightForearm) pitch += (-22.0f * windup + 12.0f * strike) * armScale;
                         if(bone == body) pitch += -5.0f * windup + 9.0f * strike;
                     }
                     else if(blow == 2)
                     {
-                        if(rightArm) twist += 38.0f * windup - 58.0f * strike;
-                        if(rightForearm) pitch += -8.0f * strike;
-                        if(bone == body) twist += 16.0f * (strike - windup);
+                        if(rightArm) twist += side * (38.0f * windup - 58.0f * strike) * armScale;
+                        if(rightForearm) pitch += -8.0f * strike * armScale;
+                        if(bone == body) twist += side * 16.0f * (strike - windup);
                     }
                     else
                     {
-                        if(rightArm) pitch += 22.0f * windup - 30.0f * strike;
-                        if(rightForearm) pitch += 30.0f * windup - 38.0f * strike;
+                        if(rightArm) pitch += (22.0f * windup - 30.0f * strike) * armScale;
+                        if(rightForearm) pitch += (30.0f * windup - 38.0f * strike) * armScale;
                         if(bone == body) pitch += 4.0f * windup + 6.0f * strike;
                         if(bone->getParent() == nullptr) offset.y += 0.02f * windup - 0.04f * strike;
                     }
@@ -3290,6 +3310,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     cancelCreatureFeedingAnimation(curCreature);
     clearCreatureCombatEffects(curCreature);
     mCreatureAttackVariants.erase(curCreature);
+    mCreatureAttackSides.erase(curCreature);
     for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
     {
         if(it->mCreature == curCreature)
@@ -4044,9 +4065,27 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             uint32_t& nextVariant = mCreatureAttackVariants[dropCreature];
             anim = attackVariants[nextVariant % attackVariants.size()];
             // A creature with a sword cuts from above, from the side and thrusts in turn
-            const int blow = (getCombatMotion(objectEntity->getMesh()->getName()) == CombatMotion::humanoid &&
-                CreatureCombatReactions::carriesSword(dropCreature)) ? static_cast<int>(nextVariant % 3) + 1 : 0;
-            anim = createCreatureCombatAttack(objectEntity, anim, (nextVariant % 2) != 0, blow);
+            const bool humanoid = getCombatMotion(objectEntity->getMesh()->getName()) == CombatMotion::humanoid;
+            // A creature with an attack weapon in each hand strikes with the arms in turn (client side only,
+            // the counter is per creature and nothing of it reaches the server or the timing)
+            uint32_t twoWeaponMode = TwoWeaponStrike::MODE_ALTERNATE;
+            Ogre::Real twoWeaponStrength = 1.0f;
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+            {
+                twoWeaponMode = CreatureReactions::getSingleton().getConfig().getTwoWeaponMode();
+                twoWeaponStrength = static_cast<Ogre::Real>(
+                    CreatureReactions::getSingleton().getConfig().getTwoWeaponArmStrength());
+            }
+            const bool twoWeapons = humanoid && (twoWeaponMode != TwoWeaponStrike::MODE_OFF) &&
+                CreatureCombatReactions::carriesTwoAttackWeapons(dropCreature);
+            const int blow = (humanoid && (twoWeapons || CreatureCombatReactions::carriesSword(dropCreature))) ?
+                static_cast<int>(nextVariant % 3) + 1 : 0;
+            uint32_t& nextSide = mCreatureAttackSides[dropCreature];
+            const bool leftHand = twoWeapons && TwoWeaponStrike::isLeftBlow(twoWeaponMode, nextSide);
+            if(twoWeapons)
+                ++nextSide;
+            anim = createCreatureCombatAttack(objectEntity, anim, (nextVariant % 2) != 0, blow, leftHand,
+                twoWeapons ? twoWeaponStrength : 1.0f);
             ++nextVariant;
         }
     }
@@ -4948,6 +4987,7 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
     if(creature == nullptr)
     {
         mCreatureAttackVariants.clear();
+        mCreatureAttackSides.clear();
         mCreatureTurns.clear();
         mCreatureDeathVariants.clear();
     }

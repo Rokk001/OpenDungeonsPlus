@@ -47,6 +47,10 @@ public:
     //! moment the blow lands, or staggers if the hit was a strong one. Replaces the guess made from the attack animation.
     static void noteHitEvent(CreatureReactions& reactions, Creature* attacker, Creature* target, bool strong, bool missile);
 
+    //! \brief True if the creature carries an attack weapon in each hand (two swords, two axes ...). A shield, a
+    //! bow, a staff or a missing weapon in either hand make it false.
+    static bool carriesTwoAttackWeapons(const Creature* creature);
+
     //! \brief The creature runs from a fight: it draws its weapon
     static void noteAlarm(CreatureReactions& reactions, Creature* creature);
 

@@ -350,6 +350,14 @@ public:
     inline double getInteractionPause() const
     { return mInteractionPause; }
 
+    //! Which arm shows the blow of a creature with an attack weapon in each hand (TwoWeaponStrike::MODE_*)
+    inline uint32_t getTwoWeaponMode() const
+    { return mTwoWeaponMode; }
+
+    //! Strength of the arm movement of the blows of a creature with two weapons (1 = like one weapon)
+    inline double getTwoWeaponArmStrength() const
+    { return mTwoWeaponArmStrength; }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -374,6 +382,8 @@ private:
     double mInteractionChance;
     double mInteractionRadius;
     double mInteractionPause;
+    uint32_t mTwoWeaponMode;
+    double mTwoWeaponArmStrength;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;

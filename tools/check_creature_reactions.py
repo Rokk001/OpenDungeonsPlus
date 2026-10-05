@@ -22,7 +22,7 @@ ROOMS = ("Hatchery", "Treasury", "Portal", "Dormitory", "Library", "Workshop", "
 SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupStaggerMax", "DefaultGroup",
             "MoodInterval", "MoodPerTick", "MoodWalkingChance", "ImpatientAfter", "ProudSeconds", "BoredAfter",
             "AmbientAfter", "SitAfter", "LieAfter", "LookRadius", "InteractionChance", "InteractionRadius",
-            "InteractionPause")
+            "InteractionPause", "TwoWeaponMode", "TwoWeaponArmStrength")
 DRAG_EVENTS = ("DragWounded", "DraggedGroan", "PutWoundedDown")
 RELATION_EVENTS = ("RelationFriend", "RelationBestFriend", "RelationLovers", "RelationNemesis", "RelationHated",
                    "RelationBreakUp")

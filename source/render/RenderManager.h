@@ -376,6 +376,8 @@ private:
     std::vector<CreatureCombatReaction> mCreatureCombatReactions;
     uint64_t mCreatureCombatEffectNumber = 0;
     std::map<Creature*, uint32_t> mCreatureAttackVariants;
+    //! Blows struck by a creature with a weapon in each hand, to alternate left and right (client side only)
+    std::map<Creature*, uint32_t> mCreatureAttackSides;
 
     //! A smooth turn of a creature towards its target before a blow (cosmetic, ends by itself)
     struct CreatureTurn
