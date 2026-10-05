@@ -650,6 +650,15 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             if(!isEffectUsable(effect))
                 continue;
 
+            // Only the keeper the object belongs to sees it (the glint of a secret door must not give it away)
+            if(effect.mOwnerOnly)
+            {
+                Player* localPlayer = mGameMap->getLocalPlayer();
+                if((localPlayer == nullptr) || (localPlayer->getSeat() == nullptr) ||
+                   (entity->getSeat() != localPlayer->getSeat()))
+                    continue;
+            }
+
             // An effect that already runs is kept a bit beyond its distance
             double limit = getDistanceLimit(effect) * 1.2;
             if(distance > limit)

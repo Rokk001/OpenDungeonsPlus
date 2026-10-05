@@ -98,8 +98,18 @@ if "startCollapse(tileX, tileY, typeName)" not in wrecked or 'typeName == "DoorB
 if "std::string mClip;" not in read("source", "render", "RoomAmbience.h"):
     problems.append("Collapse does not remember its clip")
 
-# The sold sounds
+# The glint of a secret door is shown to its keeper only (it must not give the door away to the enemy)
 config = read("config", "roomAmbienceTraps.cfg")
+glint = re.search(r"Name\s+SecretDoorGlint\s(.*?)\[/Effect\]", config, re.S)
+if glint is None or not re.search(r"^\s*OwnerOnly\s+yes\s*$", glint.group(1), re.M):
+    problems.append("the effect SecretDoorGlint is not OwnerOnly")
+ambience = read("source", "render", "RoomAmbience.cpp")
+if "effect.mOwnerOnly" not in ambience or "entity->getSeat() != localPlayer->getSeat()" not in ambience:
+    problems.append("scanObjects does not filter OwnerOnly effects by the seat")
+if "effect.mOwnerOnly" not in read("source", "render", "RoomAmbienceConfig.cpp"):
+    problems.append("the config parser does not read OwnerOnly")
+
+# The sold sounds
 for family, names in (("Doors/Door/Sold", "DoorWooden"), ("Traps/Trap/Sold", "Spike")):
     block = re.search(r"\[Effect\]((?:(?!\[/Effect\]).)*?Family\s+%s\s(?:(?!\[/Effect\]).)*)\[/Effect\]" % re.escape(family), config, re.S)
     if block is None:

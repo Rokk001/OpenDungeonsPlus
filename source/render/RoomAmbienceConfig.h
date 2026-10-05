@@ -131,7 +131,8 @@ struct AmbienceEffect
         mReduced(false),
         mNeedWall(false),
         mWallSide(false),
-        mHeartRate(false)
+        mHeartRate(false),
+        mOwnerOnly(false)
     {}
 
     std::string mName;
@@ -190,6 +191,8 @@ struct AmbienceEffect
     bool mWallSide;
     //! The speed follows the beat of the player's dungeon heart (faster when it is hurt)
     bool mHeartRate;
+    //! Object targets: shown only to the keeper the object belongs to (the glint of a secret door must not give it away)
+    bool mOwnerOnly;
     //! Sound family played when an event effect starts (only in the mode "full")
     std::string mSound;
 };
