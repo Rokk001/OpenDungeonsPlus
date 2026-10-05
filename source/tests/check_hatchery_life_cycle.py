@@ -55,7 +55,11 @@ assert 'carePercent' in cycle and 'canHatch' in cycle
 torches = (root / 'source/rooms/RoomTorches.cpp').read_text()
 assert 'isTorchSpot' in torches and 'hasTorchRoomType' in torches
 assert 'hasTorchOn' in (root / 'source/rooms/Room.cpp').read_text() and 'hasTorchOn' in room_cpp
-assert 'hasTorchOn' in (root / 'source/render/RoomAmbience.cpp').read_text()
+ambience_cpp = (root / 'source/render/RoomAmbience.cpp').read_text()
+assert 'hasTorchOn' in ambience_cpp
+# The torch sits at the wall reinforced by the keeper, not at the first wall beside the tile
+assert 'torchShift' in ambience_cpp and 'isClaimedForSeat(torchRoom->getSeat())' in ambience_cpp
+assert 'effect.mTorch ? torchShift : wallShift' in ambience_cpp
 ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
 assert ambience_cfg.count('Torch       yes') == 4
 assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp

@@ -100,13 +100,29 @@ if "std::string mClip;" not in read("source", "render", "RoomAmbience.h"):
 
 # The glint of a secret door is shown to its keeper only (it must not give the door away to the enemy)
 config = read("config", "roomAmbienceTraps.cfg")
-for secret_effect in ("SecretDoorGlint", "SecretDoorDust"):
+# (the lock glow and the opening and closing sounds too; the hit dust and the wrecking stay for everybody)
+for secret_effect in ("SecretDoorGlint", "SecretDoorDust", "SecretDoorLockGlow", "DoorSecretOpenSound", "DoorSecretCloseSound"):
     found = re.search(r"Name\s+" + secret_effect + r"\s(.*?)\[/Effect\]", config, re.S)
     if found is None or not re.search(r"^\s*OwnerOnly\s+yes\s*$", found.group(1), re.M):
         problems.append("the effect " + secret_effect + " is not OwnerOnly")
+for open_effect in ("DoorLockGlow", "DoorHitDust", "DoorSecretHitSound", "DoorSecretBreakSound", "SecretDoorRevealed"):
+    found = re.search(r"Name\s+" + open_effect + r"\s(.*?)\[/Effect\]", config, re.S)
+    if found is not None and re.search(r"^\s*OwnerOnly\s", found.group(1), re.M):
+        problems.append("the effect " + open_effect + " must stay visible to everybody")
+lock = re.search(r"Name\s+DoorLockGlow\s(.*?)\[/Effect\]", config, re.S)
+if lock is None or "trap:DoorSecret" in lock.group(1) or "trap:DoorRuned" not in lock.group(1):
+    problems.append("DoorLockGlow must keep the other doors and not the secret door")
+split = re.search(r"Name\s+SecretDoorLockGlow\s(.*?)\[/Effect\]", config, re.S)
+if split is None or "Match       trap:DoorSecret\n" not in split.group(1) or "When        Locked" not in split.group(1):
+    problems.append("SecretDoorLockGlow is not the locked glow of the secret door")
 ambience = read("source", "render", "RoomAmbience.cpp")
 if "effect.mOwnerOnly" not in ambience or "entity->getSeat() != localPlayer->getSeat()" not in ambience:
     problems.append("scanObjects does not filter OwnerOnly effects by the seat")
+if "const Seat* owner" not in ambience or "localPlayer->getSeat() != owner" not in ambience or "(owner == nullptr)" not in ambience:
+    problems.append("triggerEvent does not filter OwnerOnly effects by the owner")
+door_entity = read("source", "entities", "DoorEntity.cpp")
+if door_entity.count("false, getSeat())") != 2:
+    problems.append("the door open and close events do not pass the owner")
 if "effect.mOwnerOnly" not in read("source", "render", "RoomAmbienceConfig.cpp"):
     problems.append("the config parser does not read OwnerOnly")
 

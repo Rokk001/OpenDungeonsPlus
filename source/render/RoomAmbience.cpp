@@ -856,12 +856,30 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 if(distance > limit)
                     continue;
 
+                // Where a torch sits: on the edge of the tile that touches the wall reinforced by the keeper
+                Ogre::Vector3 torchShift = Ogre::Vector3::ZERO;
                 if(effect.mTorch)
                 {
                     // The torches are the ones the game counts as light (the server decides with the same rule)
                     Room* torchRoom = tile->getCoveringRoom();
                     if((torchRoom == nullptr) || !torchRoom->hasTorchOn(tile))
                         continue;
+
+                    for(Tile* neighbor : tile->getAllNeighbors())
+                    {
+                        if((neighbor == nullptr) || (neighbor->getFullness() <= 0.0) || !neighbor->isClaimedForSeat(torchRoom->getSeat()))
+                            continue;
+
+                        // A reinforced wall straight beside the tile is preferred, on a corner the torch stays in the middle
+                        int32_t stepX = neighbor->getX() - x;
+                        int32_t stepY = neighbor->getY() - y;
+                        if((stepX == 0) || (stepY == 0))
+                        {
+                            torchShift = Ogre::Vector3(static_cast<Ogre::Real>(stepX) * 0.45f,
+                                static_cast<Ogre::Real>(stepY) * 0.45f, 0.0f);
+                            break;
+                        }
+                    }
                 }
                 else if(effect.mSpacing > 1)
                 {
@@ -907,7 +925,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 candidate.mTarget = key;
                 candidate.mPosition = position + effect.mOffset;
                 if(effect.mWallSide)
-                    candidate.mPosition += wallShift;
+                    candidate.mPosition += effect.mTorch ? torchShift : wallShift;
                 candidate.mDistance = distance;
                 candidate.mPriority = effect.mPriority;
                 if(effect.mWhen == AmbienceWhen::always)
@@ -1817,7 +1835,7 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
 }
 
 uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
-        const std::string& visualName, bool noThrottle)
+        const std::string& visualName, bool noThrottle, const Seat* owner)
 {
     if((mMode == Mode::off) || (RenderManager::getSingletonPtr() == nullptr))
         return 0;
@@ -1862,6 +1880,15 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
         const AmbienceEffect& effect = effects[index];
         if(!effect.mMatch.empty() && (std::find(effect.mMatch.begin(), effect.mMatch.end(), visual) == effect.mMatch.end()))
             continue;
+
+        // Only the keeper the thing belongs to sees or hears it (the sound of a secret door must not give it away);
+        // without a known owner nobody does, except for the debug command (forced)
+        if(effect.mOwnerOnly && !forced)
+        {
+            Player* localPlayer = (mGameMap != nullptr) ? mGameMap->getLocalPlayer() : nullptr;
+            if((owner == nullptr) || (localPlayer == nullptr) || (localPlayer->getSeat() != owner))
+                continue;
+        }
 
         bool isShake = (effect.mKind == AmbienceKind::shake);
         bool isMark = (effect.mKind == AmbienceKind::mark);
