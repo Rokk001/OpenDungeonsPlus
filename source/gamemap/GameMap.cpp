@@ -242,6 +242,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mGameDurationAnnounced(false),
         mTimeLimitSentSeconds(-1),
         mWaveCountdownSentSeconds(-1),
+        mWaveCountdownToSend(-1),
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
@@ -417,6 +418,7 @@ void GameMap::clearAll()
         mGameDurationAnnounced = false;
         mTimeLimitSentSeconds = -1;
         mWaveCountdownSentSeconds = -1;
+        mWaveCountdownToSend = -1;
         mCreatureClassLimits.clear();
         mSkirmishSkillStates.clear();
         mSkirmishSkillStatesLevel.clear();
@@ -3829,30 +3831,13 @@ void GameMap::setScriptWaveCountdown(int64_t seconds)
     mLevelScript->setWaveCountdownSeconds(elapsedSeconds + seconds);
 }
 
-void GameMap::sendWaveCountdown(int32_t remainingSeconds)
-{
-    if(remainingSeconds == mWaveCountdownSentSeconds)
-        return;
-
-    mWaveCountdownSentSeconds = remainingSeconds;
-    for(Player* player : getPlayers())
-    {
-        if(!player->getIsHuman())
-            continue;
-
-        ServerNotification* serverNotification = new ServerNotification(
-            ServerNotificationType::waveCountdown, player);
-        serverNotification->mPacket << remainingSeconds;
-        ODServer::getSingleton().queueServerNotification(serverNotification);
-    }
-}
-
 void GameMap::sendTimeLimit(int32_t remainingSeconds)
 {
-    if(remainingSeconds == mTimeLimitSentSeconds)
+    if((remainingSeconds == mTimeLimitSentSeconds) && (mWaveCountdownToSend == mWaveCountdownSentSeconds))
         return;
 
     mTimeLimitSentSeconds = remainingSeconds;
+    mWaveCountdownSentSeconds = mWaveCountdownToSend;
     for(Player* player : getPlayers())
     {
         if(!player->getIsHuman())
@@ -3861,13 +3846,15 @@ void GameMap::sendTimeLimit(int32_t remainingSeconds)
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::timeLimit, player);
         serverNotification->mPacket << remainingSeconds;
+        serverNotification->mPacket << mWaveCountdownToSend;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
 
 void GameMap::checkGameDuration()
 {
-    // The wave countdown of the script is shown beside the other displays, whatever else runs
+    // The wave countdown of the script is shown beside the other displays, whatever else runs;
+    // sendTimeLimit below sends it together with the time limit
     const int64_t waveCountdown = mLevelScript->getWaveCountdownSeconds();
     double waveCountdownLeft = -1.0;
     if(waveCountdown >= 0)
@@ -3875,7 +3862,7 @@ void GameMap::checkGameDuration()
         waveCountdownLeft = static_cast<double>(waveCountdown)
             - static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond;
     }
-    sendWaveCountdown(waveCountdownLeft > 0.0 ? static_cast<int32_t>(std::ceil(waveCountdownLeft)) : -1);
+    mWaveCountdownToSend = (waveCountdownLeft > 0.0) ? static_cast<int32_t>(std::ceil(waveCountdownLeft)) : -1;
 
     // The limit of a script action wins over the game duration of the game settings.
     // Both count game time, not real time, so the game speed does not change them.

@@ -181,15 +181,13 @@ enum class ServerNotificationType
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
     //! Inserted before timeLimit; timeLimit and chickenKindChanged stay the last values.
     trapEffect,
-    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit)
+    //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit), then an
+    //! int32_t with the seconds left until the next hero wave of a level script (-1: none is shown)
     timeLimit,
     //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
     //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
     //! Appended last so that no existing numeric value changes.
-    chickenKindChanged,
-    //! The time left until the next hero wave, set by a level script: + int32_t seconds (-1: none is shown).
-    //! Appended last so that no existing numeric value changes.
-    waveCountdown
+    chickenKindChanged
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

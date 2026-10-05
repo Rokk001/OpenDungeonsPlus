@@ -660,7 +660,7 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
     BOOST_CHECK(trigger.mConditions[4].mType == LevelScriptConditionType::possessedInRegion);
     BOOST_CHECK_EQUAL(trigger.mConditions[5].mName2, "Wyvern");
     BOOST_CHECK(trigger.mConditions[6].mType == LevelScriptConditionType::boulderInRegion);
-    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 14u);
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 15u);
     BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::alterTerrain);
     BOOST_CHECK_EQUAL(trigger.mActions[0].mX2, 7);
     BOOST_CHECK_EQUAL(trigger.mActions[0].mSeatId, -1);

@@ -172,8 +172,6 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "editorRegionData";
         case ServerNotificationType::timeLimit:
             return "timeLimit";
-        case ServerNotificationType::waveCountdown:
-            return "waveCountdown";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
         case ServerNotificationType::trapEffect:

@@ -953,11 +953,6 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::timeLimit:
         {
             OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
-            break;
-        }
-
-        case ServerNotificationType::waveCountdown:
-        {
             OD_ASSERT_TRUE(packetReceived >> mWaveCountdownSeconds);
             break;
         }
