@@ -365,6 +365,8 @@ private:
     //! \brief The bout in the arena is over because the creature was knocked out: the one that fought it
     //! cheers as the winner and the others in the arena cheer as spectators
     void celebrateBout(Creature* loser);
+    //! Shows the done moment of the meals whose time has come
+    void updateMealEnds();
     //! \brief Name of the room the creature stands in ("Arena", "Dormitory", ...), empty if in none
     std::string getRoomName(const Creature* creature) const;
     //! \brief The event that is shown now and then while the creature goes on with what the animation
@@ -509,6 +511,10 @@ private:
     std::map<std::string, double> mLastDelivery;
     //! The mood level the server told for an arrival through a portal ("creature" -> level and time)
     std::map<std::string, std::pair<int32_t, double> > mArrivalMoods;
+    //! Creatures that were told to eat a chicken: time at which the meal counts as over if no meal clip said so
+    std::map<std::string, double> mMealEnds;
+    //! Time the meal clip was last seen for each creature (the clip, when there is one, shows the done moment)
+    std::map<std::string, double> mMealClipSeen;
 };
 
 #endif // CREATUREREACTIONS_H
