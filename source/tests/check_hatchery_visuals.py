@@ -145,4 +145,29 @@ assert 'hasAnimation("Lay")' in looks and 'hasAnimation("Flutter")' in looks
 assert 'stretch = Ogre::Vector3(1.14f, 1.1f' in looks and 'lift = 0.14f * rise' in looks
 for name in ('hen_lay_flutter.py', 'coop_house.py'):
     assert (root / 'tools/blender-assets' / name).exists(), name
+# Lay and Flutter keep their translations in the parent frame (the frame fix tool says why ogre_fix must not touch them)
+fix_tool = (root / 'tools/blender-assets/chicken_frame_fix.py').read_text()
+assert 'ogre_fix.py must NOT be applied' in fix_tool and 'T_new = q_bind * T_old' in fix_tool
+import shutil
+import subprocess
+import sys
+import tempfile
+if shutil.which('OgreXMLConverter') is not None:
+    sys.path.insert(0, str(root / 'tools/blender-assets'))
+    import chicken_frame_fix as frame_fix
+    import xml.etree.ElementTree as ET
+    with tempfile.TemporaryDirectory() as tmp:
+        out_xml = str(Path(tmp) / 'Chicken.xml')
+        subprocess.check_call(['OgreXMLConverter', '-q', str(models / 'Chicken.skeleton'), out_xml],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        skeleton_xml = ET.parse(out_xml).getroot()
+    assert len(frame_fix.structure(skeleton_xml)[0]) == frame_fix.BONE_COUNT
+    assert frame_fix.structure(skeleton_xml)[2] == sorted(frame_fix.CLIP_NAMES)
+    lay_hip = frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'z')
+    flutter_root = frame_fix.track_values(skeleton_xml, 'Flutter', 'Root', 'z')
+    assert abs(min(lay_hip) + 0.05) < 0.002, min(lay_hip)
+    assert abs(max(flutter_root) - 0.075) < 0.002, max(flutter_root)
+    assert max(abs(v) for v in frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'y')) < 0.002
+else:
+    print('OgreXMLConverter not on the PATH: skeleton frame check skipped')
 print('hatchery coop and hen clip checks passed')
