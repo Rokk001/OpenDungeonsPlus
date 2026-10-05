@@ -2138,6 +2138,24 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         timeLimitDisplay->show();
     }
 
+    // The wave countdown of the level script (the server sends -1 when none is shown)
+    CEGUI::Window* waveCountdownDisplay = mRootWindow->getChild("HorizontalPipe/WaveCountdownDisplay");
+    const int32_t waveCountdownReceived = ODClient::getSingleton().getWaveCountdownSeconds();
+    if(waveCountdownReceived < 0)
+    {
+        if(mWaveCountdownShown >= 0)
+        {
+            waveCountdownDisplay->hide();
+            mWaveCountdownShown = -1;
+        }
+    }
+    else if(waveCountdownReceived != mWaveCountdownShown)
+    {
+        mWaveCountdownShown = waveCountdownReceived;
+        waveCountdownDisplay->setText("Next wave in " + formatDebriefingTime(waveCountdownReceived));
+        waveCountdownDisplay->show();
+    }
+
     updateSandboxStatus();
 
     updatePossessionInput(evt.timeSinceLastFrame);
