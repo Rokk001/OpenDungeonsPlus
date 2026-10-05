@@ -922,8 +922,6 @@ ProtectDungeonTemple	NULL
 28	10	1	0
 28	18	1	0
 28	19	1	0
-28	33	1	0	3
-28	34	1	0	3
 28	47	1	0
 28	48	1	0
 28	59	2	100
@@ -937,8 +935,8 @@ ProtectDungeonTemple	NULL
 29	18	1	0
 29	19	1	0
 29	20	1	0
-29	33	1	0	3
-29	34	1	0	3
+29	23	1	0	3
+29	24	1	0	3
 29	47	1	0
 29	60	2	100
 29	61	2	100
@@ -948,8 +946,8 @@ ProtectDungeonTemple	NULL
 30	9	1	0
 30	19	1	0
 30	20	1	0
-30	33	1	0	3
-30	34	1	0	3
+30	23	1	0	3
+30	24	1	0	3
 30	46	1	0
 30	47	1	0
 30	65	3	100
@@ -959,6 +957,8 @@ ProtectDungeonTemple	NULL
 31	19	1	0
 31	20	1	0
 31	21	1	0
+31	23	1	0	3
+31	24	1	0	3
 31	46	1	100
 31	47	1	0
 31	65	3	100
@@ -3958,12 +3958,12 @@ ProtectDungeonTemple	NULL
 [/Room]
 [Room]
 6	TrainingHall3	3	6
-28	33
-28	34
-29	33
-29	34
-30	33
-30	34
+29	23
+29	24
+30	23
+30	24
+31	23
+31	24
 [/Room]
 [/Rooms]
 
@@ -3981,7 +3981,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 4	DoorWooden3	3	1
-34	46	1
+40	46	1
 0
 [/Trap]
 [Trap]
@@ -4117,7 +4117,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 2	Spike2	3	1
-35	46	1
+42	46	1
 [/Trap]
 [Trap]
 2	Spike3	2	1
