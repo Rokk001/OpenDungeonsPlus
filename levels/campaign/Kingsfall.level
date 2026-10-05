@@ -3779,6 +3779,9 @@ ProtectDungeonTemple	NULL
 3	Courtier10	Knight.mesh	49	35	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier11	Dwarf2.mesh	47	21	0	Dwarf2	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier12	Adventurer.mesh	43	14	0	Adventurer	4	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray1	Goblin.mesh	7	43	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Spider.mesh	7	44	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Rat.mesh	8	43	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -3824,6 +3827,7 @@ Region	WestLodge	4	18	24	34
 Region	EastLodge	74	18	94	34
 Region	Keep	34	4	64	22
 Region	Cache	84	2	94	10
+Region	CacheGate	85	19	91	21
 [Trigger]
 Name	hunt
 Mode	once
@@ -4040,8 +4044,7 @@ Name	cacheOpensSlain
 Mode	once
 Cond	alive	HuntsmanBrann	0
 Cond	time	5
-Action	message	1	The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
-Action	terrain	89	10	89	19	path
+Action	message	1	Huntsman Brann is down and the cache key he wore lies where he fell. Carry it to the cache wall at the foot of the east lodge to break it open.
 [/Trigger]
 [Trigger]
 Name	cacheOpensYours
@@ -4049,6 +4052,7 @@ Mode	once
 Cond	owns	1	HuntsmanBrann
 Action	message	1	The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
 Action	terrain	89	10	89	19	path
+Action	setflag	cacheOpen	1
 [/Trigger]
 [Trigger]
 Name	championFalconerEdda
@@ -4094,5 +4098,29 @@ Mode	once
 Cond	slabs	1	Centre	claimed	>=	25
 Action	message	1	The royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a worker.
 Action	terrain	49	35	49	35	manawell
+[/Trigger]
+[Trigger]
+Name	cacheKey
+Mode	once
+Cond	time	4
+Action	stoneattach	HuntsmanBrann
+[/Trigger]
+[Trigger]
+Name	cacheKeyUsed
+Mode	once
+Cond	flag	cacheOpen	0
+Cond	stone	CacheGate	>=	1
+Action	message	1	The key turns in the old lock. The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
+Action	terrain	89	10	89	19	path
+Action	setflag	cacheOpen	1
+[/Trigger]
+[Trigger]
+Name	cacheLate
+Mode	once
+Cond	time	3000
+Cond	flag	cacheOpen	0
+Action	message	1	The masons have given up guarding the cache and broken the wall open from inside. A passage runs up from the east lodge to the prince's hunting purse.
+Action	terrain	89	10	89	19	path
+Action	setflag	cacheOpen	1
 [/Trigger]
 [/Triggers]

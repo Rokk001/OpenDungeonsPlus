@@ -5610,6 +5610,9 @@ ProtectDungeonTemple	NULL
 3	Gatewarden19	Monk.mesh	102	20	0	Monk	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Gatewarden20	Dwarf1.mesh	13	69	0	Dwarf1	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Gatewarden21	Adventurer.mesh	105	67	0	Adventurer	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray1	Goblin.mesh	14	32	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Spider.mesh	14	31	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Rat.mesh	13	32	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -5717,7 +5720,7 @@ Action	gold	1	1500
 Name	secondGate
 Mode	once
 Cond	region	1	SecondGate
-Action	message	1	The second gate is sealed shut. It opens once both lower towers are yours.
+Action	message	1	The second gate is sealed shut. It opens once both lower towers are yours, or when the gatewarden of the lower court falls with its key.
 Action	reveal	1	GreatCourt
 Action	spawn	4	57	59	1	Knight:5	Knight:5	Elf:5	Monk:5	Dwarf2:4
 [/Trigger]
@@ -5742,7 +5745,7 @@ Action	gold	1	2000
 Name	thirdGate
 Mode	once
 Cond	region	1	ThirdGate
-Action	message	1	The last gate is sealed, and above it lies the throne hall. The guard is gathering.
+Action	message	1	The last gate is sealed, and above it lies the throne hall. Its key hangs on the gatewarden of the great court. The guard is gathering.
 Action	reveal	1	ThroneHall
 Action	spawn	3	58	30	1	Knight:6	Knight:6	Elf:5	Monk:5	Dwarf2:5	Adventurer:5
 [/Trigger]
@@ -6066,6 +6069,7 @@ Action	message	-1	The seal of the second gate cracks and the gate stands open.
 Action	terrain	56	57	59	57	path
 Action	terrain	14	57	15	57	path
 Action	terrain	101	57	103	57	path
+Action	setflag	gate2Open	1
 [/Trigger]
 [Trigger]
 Name	gate2Late
@@ -6075,6 +6079,7 @@ Action	message	-1	The masons of the second gate have been called away. The seal 
 Action	terrain	56	57	59	57	path
 Action	terrain	14	57	15	57	path
 Action	terrain	101	57	103	57	path
+Action	setflag	gate2Open	1
 [/Trigger]
 [Trigger]
 Name	gate3Open
@@ -6085,6 +6090,7 @@ Action	message	-1	The seal of the last gate cracks and the way to the throne hal
 Action	terrain	56	29	59	29	path
 Action	terrain	13	29	15	29	path
 Action	terrain	102	29	103	29	path
+Action	setflag	gate3Open	1
 [/Trigger]
 [Trigger]
 Name	gate3Late
@@ -6094,6 +6100,7 @@ Action	message	-1	The seal of the last gate gives way under the weight of the si
 Action	terrain	56	29	59	29	path
 Action	terrain	13	29	15	29	path
 Action	terrain	102	29	103	29	path
+Action	setflag	gate3Open	1
 [/Trigger]
 [Trigger]
 Name	markLowerWest
@@ -6125,5 +6132,36 @@ Mode	once
 Cond	slabs	1	GateCourt	claimed	>=	40
 Action	message	1	The gate court is yours and a spring of mana has opened in its west yard. Claim it with a worker.
 Action	terrain	42	74	42	74	manawell
+[/Trigger]
+[Trigger]
+Name	gateKeys
+Mode	once
+Cond	time	4
+Action	stoneattach	Gatewarden13
+Action	stoneattach	Gatewarden8
+[/Trigger]
+[Trigger]
+Name	gate2KeyFalls
+Mode	once
+Cond	time	5
+Cond	alive	Gatewarden13	0
+Cond	flag	gate2Open	0
+Action	message	1	The gatewarden of the lower court is down and the key of the second gate lies where he fell. It turns in the seal and the second gate stands open.
+Action	terrain	56	57	59	57	path
+Action	terrain	14	57	15	57	path
+Action	terrain	101	57	103	57	path
+Action	setflag	gate2Open	1
+[/Trigger]
+[Trigger]
+Name	gate3KeyFalls
+Mode	once
+Cond	time	5
+Cond	alive	Gatewarden8	0
+Cond	flag	gate3Open	0
+Action	message	1	The gatewarden of the great court is down and the key of the third gate lies where he fell. It turns in the seal and the third gate stands open.
+Action	terrain	56	29	59	29	path
+Action	terrain	13	29	15	29	path
+Action	terrain	102	29	103	29	path
+Action	setflag	gate3Open	1
 [/Trigger]
 [/Triggers]

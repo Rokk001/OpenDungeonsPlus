@@ -5677,6 +5677,9 @@ ProtectDungeonTemple	NULL
 3	WatchG3	Elf.mesh	47	18	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchG4	Adventurer.mesh	53	21	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchG5	Monk.mesh	41	21	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray1	Goblin.mesh	13	89	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Spider.mesh	13	90	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Rat.mesh	13	88	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
