@@ -328,7 +328,17 @@ struct ChickenLookSettings
         mEggRollSpeed(configValue("HatcheryLookEggRollSpeed", 17.0f)),
         mEggPitch(configValue("HatcheryLookEggPitch", 7.0f)),
         mEggPitchSpeed(configValue("HatcheryLookEggPitchSpeed", 13.0f)),
-        mEggLift(configValue("HatcheryLookEggLift", 0.004f))
+        mEggLift(configValue("HatcheryLookEggLift", 0.004f)),
+        mProtestPuff(configValue("HatcheryLookProtestPuff", 1.25f)),
+        mProtestPuffWobble(configValue("HatcheryLookProtestPuffWobble", 0.05f)),
+        mProtestPuffSpeed(configValue("HatcheryLookProtestPuffSpeed", 24.0f)),
+        mProtestWing(configValue("HatcheryLookProtestWing", 0.3f)),
+        mProtestWingSpeed(configValue("HatcheryLookProtestWingSpeed", 21.0f)),
+        mProtestRoll(configValue("HatcheryLookProtestRoll", 14.0f)),
+        mProtestRollSpeed(configValue("HatcheryLookProtestRollSpeed", 22.0f)),
+        mProtestPitch(configValue("HatcheryLookProtestPitch", -12.0f)),
+        mProtestLift(configValue("HatcheryLookProtestLift", 0.03f)),
+        mProtestLiftSpeed(configValue("HatcheryLookProtestLiftSpeed", 14.0f))
     {}
 
     float mCoopCheckSeconds;
@@ -426,6 +436,16 @@ struct ChickenLookSettings
     float mEggPitch;
     float mEggPitchSpeed;
     float mEggLift;
+    float mProtestPuff;
+    float mProtestPuffWobble;
+    float mProtestPuffSpeed;
+    float mProtestWing;
+    float mProtestWingSpeed;
+    float mProtestRoll;
+    float mProtestRollSpeed;
+    float mProtestPitch;
+    float mProtestLift;
+    float mProtestLiftSpeed;
 };
 
 //! The look numbers, read from the config at the first use
@@ -625,6 +645,8 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
     else if(pose == ChickenPose::fight)
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.15f));
+    else if(pose == ChickenPose::protest)
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.2f));
     else if(pose == ChickenPose::emerge)
     {
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
@@ -864,6 +886,15 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 pitch = values.mFightPitch + values.mFightPitchSwing * std::sin(t * values.mFightPitchSpeed);
                 roll = values.mFightRoll * std::sin(t * values.mFightRollSpeed);
                 lift = values.mFightLift * std::fabs(std::sin(t * values.mFightLiftSpeed));
+            }
+            else if(pose == ChickenPose::protest)
+            {
+                // Held in the hand: puffed up, wings beating, kicking and rolling about
+                const Ogre::Real puff = values.mProtestPuff + values.mProtestPuffWobble * std::sin(t * values.mProtestPuffSpeed);
+                stretch = Ogre::Vector3(puff + values.mProtestWing * std::fabs(std::sin(t * values.mProtestWingSpeed)), puff, puff);
+                pitch = values.mProtestPitch;
+                roll = values.mProtestRoll * std::sin(t * values.mProtestRollSpeed);
+                lift = values.mProtestLift * std::fabs(std::sin(t * values.mProtestLiftSpeed));
             }
             else if(pose == ChickenPose::lay)
             {

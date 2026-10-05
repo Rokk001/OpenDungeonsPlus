@@ -172,7 +172,7 @@ void RoomHatchery::fireAnimalSound(const ChickenEntity& animal, const std::strin
 
 void RoomHatchery::fireProtest(Tile& tile)
 {
-    fireRoomSound(tile, "Hatchery/Cluck");
+    fireRoomSound(tile, "Hatchery/Protest");
 }
 
 void RoomHatchery::exportToStream(std::ostream& os) const

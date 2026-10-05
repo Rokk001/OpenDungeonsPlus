@@ -40,6 +40,7 @@ namespace ChickenPose
     static const std::string scratch = "Scratch";
     static const std::string flutter = "Flutter";
     static const std::string fight = "Fight";
+    static const std::string protest = "Protest";
 
     //! \brief Clip of the chick breaking out of the egg, played once by the client when the egg hatches (not a pose).
     static const std::string hatchClip = "Hatch";
@@ -50,7 +51,8 @@ namespace ChickenPose
         return (name == strut) || (name == chase) || (name == flee) || (name == mount) ||
             (name == cackle) || (name == perch) || (name == crow) || (name == guard) ||
             (name == lead) || (name == roost) || (name == lay) || (name == wobble) ||
-            (name == emerge) || (name == scratch) || (name == flutter) || (name == fight);
+            (name == emerge) || (name == scratch) || (name == flutter) || (name == fight) ||
+            (name == protest);
     }
 
     //! \brief True if the pose is a way of walking.
@@ -88,7 +90,8 @@ namespace ChickenPose
         // The rooster guarding the flock pecks at the creature in front of him, the lunge is added by the client
         if(name == guard)
             return "Pick";
-        if((name == chase) || (name == flee))
+        // The rooster in the keeper's hand kicks and flaps (the puffing up is added by the client)
+        if((name == chase) || (name == flee) || (name == protest))
             return "Run";
         if(isChick && (name == "Idle"))
             return "Peep";

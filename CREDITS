@@ -964,7 +964,7 @@ tools/blender-assets/odp_*.py, splice_anims.py OD Team                 GPLv3+   
 tools/blender-assets/hatchery_*.py     OD Team                 GPLv3+                  Blender scripts that build the hatchery meshes and clips (AI-generated, original work)
 
 =======================================================
-==  Hatchery animal sounds: crow, cluck, call, peep, egg crack  ==
+==  Hatchery animal sounds: crow, protest, cluck, call, peep, egg crack  ==
 =======================================================
 
 Name                                   Author                  License                 Source URL
@@ -979,6 +979,8 @@ sounds/Spatial/Rooms/Hatchery/Peep/Peep01.ogg   OD Team                 GPLv3+  
 sounds/Spatial/Rooms/Hatchery/Peep/Peep02.ogg   OD Team                 GPLv3+                  Synthesized (chick peep) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
 sounds/Spatial/Rooms/Hatchery/EggCrack/EggCrack01.ogg   OD Team                 GPLv3+                  Synthesized (egg shell cracking) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
 sounds/Spatial/Rooms/Hatchery/EggCrack/EggCrack02.ogg   OD Team                 GPLv3+                  Synthesized (egg shell cracking) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Protest/Protest01.ogg   OD Team                 GPLv3+                  Synthesized (angry rooster protest when picked up) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
+sounds/Spatial/Rooms/Hatchery/Protest/Protest02.ogg   OD Team                 GPLv3+                  Synthesized (angry rooster protest when picked up) from harmonic tones and noise by tools/hatchery/gen_hatchery_sounds.py (script generated, original work, not AI generated)
 tools/hatchery/gen_hatchery_sounds.py  OD Team                 GPLv3+                  Original work, not AI generated
 
 =============================================================

@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[2]
 credits = (root / 'CREDITS').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text() if (root / 'source/rooms/RoomHatchery.cpp').exists() else ''
 
-families = ('Crow', 'Cluck', 'FoodCall', 'Peep', 'EggCrack')
+families = ('Crow', 'Protest', 'Cluck', 'FoodCall', 'Peep', 'EggCrack')
 for family in families:
     folder = root / 'sounds/Spatial/Rooms/Hatchery' / family
     files = sorted(folder.glob('*.ogg'))
@@ -21,4 +21,6 @@ assert (root / 'tools/hatchery/gen_hatchery_sounds.py').exists()
 # The server plays them through the room sound message (family "Rooms/Hatchery/<Family>")
 for family in families:
     assert '"Hatchery/%s"' % family in room, family
+# the rooster in the keeper's hand protests with a family of his own, not with the hen cackle
+assert 'fireRoomSound(tile, "Hatchery/Protest")' in room
 print('hatchery sounds ok')

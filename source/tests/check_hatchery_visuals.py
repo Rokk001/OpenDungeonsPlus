@@ -28,7 +28,7 @@ assert 'destroyMesh()' in body(chicken, 'void ChickenEntity::setKindFromServer')
 assert 'rrChickenHatched' in body(chicken, 'void ChickenEntity::setKindFromServer')
 
 # Poses reach the client as animation names and are turned into skeleton animations plus motion.
-for name in ('strut', 'chase', 'flee', 'mount', 'cackle', 'perch', 'crow', 'guard', 'lead', 'roost', 'lay', 'wobble', 'emerge', 'scratch', 'flutter'):
+for name in ('strut', 'chase', 'flee', 'mount', 'cackle', 'perch', 'crow', 'guard', 'lead', 'roost', 'lay', 'wobble', 'emerge', 'scratch', 'flutter', 'protest'):
     assert 'static const std::string %s =' % name in pose, name
 hook = body(render, 'void RenderManager::rrSetObjectAnimationState')
 assert 'ChickenPose::isPose(animation)' in hook and 'rrSetChickenPose' in hook
@@ -172,4 +172,7 @@ else:
     print('OgreXMLConverter not on the PATH: skeleton frame check skipped')
 # The rooster that guards the flock pecks (Pick clip and a lunge of the head)
 assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'HatcheryLookGuardPeckSpeed' in config
+# the rooster protests in the hand: pose, clip and look
+assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
+assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
 print('hatchery coop and hen clip checks passed')
