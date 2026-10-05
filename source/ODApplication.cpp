@@ -333,6 +333,7 @@ void ODApplication::startClient()
         // If renderOneFrame returns false, it indicates that an exit has been requested
         running = ogreRoot.renderOneFrame();
         sfmlWindow.display();
+        RunLevelTest::onFrameRendered(*renderWindow);
     }
 #else /* OD_USE_SFML_WINDOW */
     // NOTE: Ogre::Root::startRendering() does not pump window events (Ogre::Bites does
@@ -355,6 +356,7 @@ void ODApplication::startClient()
         // renderOneFrame() returns false once an exit has been requested.
         if (!ogreRoot.renderOneFrame())
             break;
+        RunLevelTest::onFrameRendered(*renderWindow);
     }
 #endif /* OD_USE_SFML_WINDOW */
 

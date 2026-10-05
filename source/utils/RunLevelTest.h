@@ -23,6 +23,11 @@
 
 class GameMap;
 
+namespace Ogre
+{
+class RenderTarget;
+}
+
 //! \brief Debug mode for automated level load tests (command line: --run-level <file> --seconds <N>).
 //! The game starts a local single player game on the level, lets it run for N seconds of game time,
 //! then fires the win of the human seat and checks that it is reported. One result line (PASS/FAIL
@@ -61,6 +66,11 @@ public:
 
     //! \brief Called by the server thread after every turn of the game.
     static void onServerTurn(GameMap& gameMap);
+
+    //! \brief Called by the render loop after every frame. Once the game runs, it appends one line per
+    //! second to run-level-frames.txt in the user data folder (average fps, worst and best frame time
+    //! in ms of that second), so that frame times can be compared between runs.
+    static void onFrameRendered(Ogre::RenderTarget& target);
 };
 
 #endif // RUNLEVELTEST_H

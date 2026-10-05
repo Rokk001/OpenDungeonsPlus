@@ -93,6 +93,11 @@ def main():
     out.append("[Tiles]\n# Map Size\n%d # MapSizeX\n%d # MapSizeY\n# posX\tposY\ttype\tfullness\tseatId(optional)\n" % (size_x, size_y))
     for x, y in sorted(floor):
         out.append("%d\t%d\t1\t0\t1\n" % (x, y))
+    # Solid rock around the halls: workers have no wall to claim, so nobody walks out of a hall for it.
+    for x in range(size_x):
+        for y in range(size_y):
+            if (x, y) not in floor:
+                out.append("%d\t%d\t2\t100\n" % (x, y))
     out.append("[/Tiles]\n")
     out.append("[Rooms]\n# typeRoom\tname\tseatId\tnumTiles\t\tSubsequent Lines: tileX\ttileY\n")
     for number, name, tiles, _x0, _y0, _size in halls:

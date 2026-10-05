@@ -25,6 +25,8 @@
 #include "utils/ResourceManager.h"
 #include "ODApplication.h"
 
+#include <OgreRenderTarget.h>
+
 #include <boost/filesystem.hpp>
 
 #include <atomic>
@@ -45,6 +47,9 @@ namespace
     std::atomic<bool> sGameStarted(false);
     std::atomic<int> sExitCode(0);
     std::mutex sResultMutex;
+    //! Render thread only: start of the current one second frame statistics window
+    std::chrono::steady_clock::time_point sFrameWindowStart;
+    bool sFrameWindowStarted = false;
     std::string sLevelFile;
     std::string sLevelName;
     int32_t sSeconds = 120;
@@ -196,4 +201,30 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
         return;
     }
     emitResult(codePass, "PASS " + sLevelName + " : level loaded, ran " + played + ", no errors, triggered win reported");
+}
+
+void RunLevelTest::onFrameRendered(Ogre::RenderTarget& target)
+{
+    if(!sActive.load() || !sGameStarted.load() || sFinished.load())
+        return;
+
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    if(!sFrameWindowStarted)
+    {
+        sFrameWindowStarted = true;
+        sFrameWindowStart = now;
+        target.resetStatistics();
+        return;
+    }
+
+    if(now - sFrameWindowStart < std::chrono::seconds(1))
+        return;
+
+    sFrameWindowStart = now;
+    const Ogre::RenderTarget::FrameStats& stats = target.getStatistics();
+    std::ofstream out((ResourceManager::getSingleton().getUserDataPath() + "run-level-frames.txt").c_str(),
+        std::ios::app);
+    out << "frames avgFps " << stats.avgFPS << " worstFrameMs " << stats.worstFrameTime
+        << " bestFrameMs " << stats.bestFrameTime << "\n";
+    target.resetStatistics();
 }
