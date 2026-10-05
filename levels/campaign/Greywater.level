@@ -2980,6 +2980,7 @@ Action	reveal	1	NorthBank
 Action	terrain	38	17	42	17	path
 Action	setflag	sluiceOpen	1
 Action	portal	0	on
+Action	generate	1	Spider:1
 [/Trigger]
 [Trigger]
 Name	wharfSeen
