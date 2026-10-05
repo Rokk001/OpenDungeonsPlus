@@ -106,6 +106,12 @@ for name in textures:
         problems.append("no particle system uses %s" % name)
 if "tools/gen_spell_marks.py" not in credits:
     problems.append("CREDITS has no entry for tools/gen_spell_marks.py")
+# The ring textures are white where they are transparent: plain "add" ignores the alpha and draws a bright square
+for name in ("RoomAmbRing", "RoomAmbRingRunes"):
+    start = materials.find("material %s\n" % name)
+    block = materials[start:materials.find("\nmaterial ", start + 1)] if start >= 0 else ""
+    if "scene_blend src_alpha one" not in block:
+        problems.append("material %s has to blend with src_alpha one (no bright square)" % name)
 
 # 6. The limit of one-shot systems is unchanged and the marks have their own limit
 settings = read("config", "roomAmbience.cfg")
