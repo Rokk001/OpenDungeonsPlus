@@ -31,6 +31,7 @@ bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const Creat
     const bool working = worker && (activity.task == CreatureActionType::digTile ||
         activity.task == CreatureActionType::claimGroundTile ||
         activity.task == CreatureActionType::claimWallTile ||
+        activity.task == CreatureActionType::reloadTrap ||
         activity.task == CreatureActionType::grabEntity ||
         activity.task == CreatureActionType::carryEntity);
     const bool usingRoom = activity.action == CreatureActionType::useRoom && activity.inAssignedRoom;

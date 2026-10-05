@@ -56,6 +56,7 @@ enum class CreatureActionType
     watchBanner, // (fighters only) Stand guard on a watch banner
     tunnel, // (fighters with a dig rate) Dig through walls towards an enemy dungeon heart that cannot be reached on foot
     possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
+    reloadTrap, // (worker only) Walks to a trap tile that used up its shots and arms it again
     nb // Must be the last value of this enum
 };
 

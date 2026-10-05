@@ -17,6 +17,8 @@
 
 #include "render/WorkerReactions.h"
 
+#include "entities/Building.h"
+#include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntity.h"
@@ -29,6 +31,7 @@
 #include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "render/WorkerExtras.h"
+#include "traps/TrapType.h"
 #include "utils/Helper.h"
 
 #include <OgreAnimationState.h>
@@ -193,6 +196,13 @@ bool isSpotNear(const std::vector<Spot>& spots, double x, double y, double now, 
             return true;
     }
     return false;
+}
+
+//! True for the crafted traps that are doors
+bool isDoorType(TrapType type)
+{
+    return (type == TrapType::doorWooden) || (type == TrapType::doorIronbound) || (type == TrapType::doorSteel) ||
+        (type == TrapType::doorBarricade) || (type == TrapType::doorSecret) || (type == TrapType::doorRuned);
 }
 
 //! The model of gold that shows how much a worker carries: 0 if none
@@ -424,6 +434,10 @@ void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier,
                 WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
         }
     }
+    else if((type == GameEntityType::craftedTrap) && isDoorType(static_cast<CraftedTrap*>(carried)->getTrapType()))
+    {
+        show(reactions, carrier, "PickDoor");
+    }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity) ||
             (type == GameEntityType::skillEntity))
     {
@@ -457,6 +471,10 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
         else if(!body->isAlive() && (room == "Crypt"))
             later(reactions, carrier, "CorpseLookBack", 0.6);
     }
+    else if((type == GameEntityType::craftedTrap) && isDoorType(static_cast<CraftedTrap*>(carried)->getTrapType()))
+    {
+        later(reactions, carrier, "DoorPlace", 0.4);
+    }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity))
     {
         later(reactions, carrier, "TrapKnock", 0.4);
@@ -487,6 +505,14 @@ void WorkerReactions::showDigHit(CreatureReactions& reactions, Creature* worker)
     Tile* tile = worker->getPositionTile();
     if(tile == nullptr)
         return;
+
+    // The work clip on a trap tile is the reload of the trap, not digging
+    Building* building = tile->getCoveringBuilding();
+    if((building != nullptr) && (building->getObjectType() == GameEntityType::trap))
+    {
+        show(reactions, worker, "TrapReload");
+        return;
+    }
 
     Player* localPlayer = reactions.mGameMap->getLocalPlayer();
 

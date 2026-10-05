@@ -173,7 +173,11 @@ bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
     if((mReloadTime > 0) && !isDoor())
         fireTrapEffect(TrapEffectKind::reloading, tile, 1.0);
     if(!trapTileData->decreaseShoot())
+    {
+        // All shots used up: only a new load (crafted trap or a worker) arms the tile again
+        trapTileData->setExhausted(true);
         deactivate(tile);
+    }
 
     const std::vector<Seat*>& seats = tile->getSeatsWithVision();
     trapTileData->seatsSawTriggering(seats);
@@ -388,6 +392,7 @@ void Trap::activate(Tile* tile)
 
     TrapTileData* trapTileData = static_cast<TrapTileData*>(mTileData[tile]);
     trapTileData->setActivated(true);
+    trapTileData->setExhausted(false);
     trapTileData->setNbShootsBeforeDeactivation(mNbShootsBeforeDeactivation);
     trapTileData->setReloadTime(0);
     // A trap that was empty is loaded again
@@ -424,6 +429,72 @@ bool Trap::isActivated(Tile* tile) const
 
     TrapTileData* trapTileData = static_cast<TrapTileData*>(it->second);
     return trapTileData->isActivated();
+}
+
+bool Trap::canBeReloadedByWorker(Tile* tile, const Creature* worker) const
+{
+    if(isDoor() || !getGameMap()->isServerGameMap() || getGameMap()->isInEditorMode())
+        return false;
+
+    if(ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadByWorkers", 1.0) <= 0.0)
+        return false;
+
+    if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), tile) == mCoveredTiles.end())
+        return false;
+
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return false;
+
+    const TrapTileData* trapTileData = static_cast<const TrapTileData*>(it->second);
+    if(trapTileData->mHP <= 0.0)
+        return false;
+
+    // Only a tile that really used up its shots is reloaded, a newly placed trap waits for its crafted trap
+    if(!trapTileData->isExhausted() || trapTileData->isActivated())
+        return false;
+
+    if(trapTileData->getCarriedCraftedTrap() != nullptr)
+        return false;
+
+    if((trapTileData->getReloadWorker() != nullptr) && (trapTileData->getReloadWorker() != worker))
+        return false;
+
+    return getGameMap()->getTurnNumber() >= trapTileData->getReloadNextTurn();
+}
+
+Creature* Trap::getReloadWorker(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return nullptr;
+
+    return static_cast<TrapTileData*>(it->second)->getReloadWorker();
+}
+
+void Trap::setReloadWorker(Tile* tile, Creature* worker)
+{
+    std::map<Tile*, TileData*>::iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return;
+
+    static_cast<TrapTileData*>(it->second)->setReloadWorker(worker);
+}
+
+void Trap::postponeReload(Tile* tile, int64_t untilTurn)
+{
+    std::map<Tile*, TileData*>::iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return;
+
+    static_cast<TrapTileData*>(it->second)->setReloadNextTurn(untilTurn);
+}
+
+int32_t Trap::getReloadPrice() const
+{
+    double percent = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadCostPercent", 40.0);
+    double price = static_cast<double>(TrapManager::costPerTile(getType())) * std::max(0.0, percent) / 100.0;
+    return static_cast<int32_t>(price);
 }
 
 void Trap::setupTrap(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)
@@ -628,6 +699,9 @@ void Trap::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileDa
     os << "\t" << nbSeatsVision;
     for(Seat* seat : seatsToSave)
         os << "\t" << seat->getId();
+
+    // Appended later: whether the tile used up its shots (old saves end before it)
+    os << "\t" << (trapTileData->isExhausted() ? 1 : 0);
 }
 
 bool Trap::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tileData)
@@ -698,6 +772,11 @@ bool Trap::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tile
         }
         trapTileData->seatSawTriggering(seat);
     }
+
+    // Optional: saves from before the worker reload end here
+    int exhausted;
+    if((is >> exhausted) && (exhausted != 0) && !trapTileData->isActivated())
+        trapTileData->setExhausted(true);
 
     return true;
 }
