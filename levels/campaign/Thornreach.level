@@ -5811,7 +5811,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 2	Spike6	3	1
-32	43	1
+32	44	1
 [/Trap]
 [Trap]
 2	Spike7	4	1
