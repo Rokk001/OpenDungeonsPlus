@@ -29,11 +29,13 @@
 #include "entities/ChickenPose.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "rooms/HatcheryCoopHouse.h"
 #include "rooms/Room.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <OgreAnimationState.h>
 #include <OgreEntity.h>
 #include <OgreManualObject.h>
 #include <OgreMesh.h>
@@ -41,6 +43,7 @@
 #include <OgreParticleSystem.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
+#include <OgreSubEntity.h>
 #include <OgreSkeletonInstance.h>
 
 #include <algorithm>
@@ -227,6 +230,251 @@ float configValue(const std::string& key, float defaultValue)
     return static_cast<float>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(key, defaultValue));
 }
 
+//! Poses of the hatchery animals (look only): the numbers of the procedural motion, read once from the room config (HatcheryLook<Name>).
+struct ChickenLookSettings
+{
+    ChickenLookSettings() :
+        mCoopCheckSeconds(configValue("HatcheryLookCoopCheckSeconds", 1.5f)),
+        mCoopShakeSeconds(configValue("HatcheryLookCoopShakeSeconds", 0.8f)),
+        mCoopShakeSwing(configValue("HatcheryLookCoopShakeSwing", 3.0f)),
+        mCoopShakeSpeed(configValue("HatcheryLookCoopShakeSpeed", 40.0f)),
+        mStrutPitch(configValue("HatcheryLookStrutPitch", -8.0f)),
+        mStrutStretchX(configValue("HatcheryLookStrutStretchX", 1.06f)),
+        mStrutStretchZ(configValue("HatcheryLookStrutStretchZ", 1.05f)),
+        mStrutLift(configValue("HatcheryLookStrutLift", 0.012f)),
+        mStrutSpeed(configValue("HatcheryLookStrutSpeed", 9.0f)),
+        mRunLift(configValue("HatcheryLookRunLift", 0.022f)),
+        mRunLiftSpeed(configValue("HatcheryLookRunLiftSpeed", 16.0f)),
+        mRunRoll(configValue("HatcheryLookRunRoll", 6.0f)),
+        mRunRollSpeed(configValue("HatcheryLookRunRollSpeed", 8.0f)),
+        mRunPitch(configValue("HatcheryLookRunPitch", 14.0f)),
+        mRunStretch(configValue("HatcheryLookRunStretch", 0.2f)),
+        mRunStretchSpeed(configValue("HatcheryLookRunStretchSpeed", 22.0f)),
+        mCrowRamp(configValue("HatcheryLookCrowRamp", 4.0f)),
+        mCrowLift(configValue("HatcheryLookCrowLift", 0.01f)),
+        mCrowPitch(configValue("HatcheryLookCrowPitch", -38.0f)),
+        mCrowStretch(configValue("HatcheryLookCrowStretch", 0.3f)),
+        mCrowStretchSpeed(configValue("HatcheryLookCrowStretchSpeed", 14.0f)),
+        mCrowStretchHeight(configValue("HatcheryLookCrowStretchHeight", 0.14f)),
+        mPerchPitch(configValue("HatcheryLookPerchPitch", -6.0f)),
+        mRoostBreath(configValue("HatcheryLookRoostBreath", 0.025f)),
+        mRoostBreathSpeed(configValue("HatcheryLookRoostBreathSpeed", 1.8f)),
+        mRoostStretchX(configValue("HatcheryLookRoostStretchX", 1.12f)),
+        mRoostStretchY(configValue("HatcheryLookRoostStretchY", 1.08f)),
+        mRoostStretchZ(configValue("HatcheryLookRoostStretchZ", 0.68f)),
+        mRoostLift(configValue("HatcheryLookRoostLift", -0.004f)),
+        mChickUnderRadius(configValue("HatcheryLookChickUnderRadius", 0.4f)),
+        mChickUnderOffset(configValue("HatcheryLookChickUnderOffset", 0.05f)),
+        mChickUnderLift(configValue("HatcheryLookChickUnderLift", -0.02f)),
+        mChickUnderStretchZ(configValue("HatcheryLookChickUnderStretchZ", 0.8f)),
+        mGuardPuff(configValue("HatcheryLookGuardPuff", 1.28f)),
+        mGuardPuffWobble(configValue("HatcheryLookGuardPuffWobble", 0.03f)),
+        mGuardPuffSpeed(configValue("HatcheryLookGuardPuffSpeed", 20.0f)),
+        mGuardWing(configValue("HatcheryLookGuardWing", 0.15f)),
+        mGuardWingSpeed(configValue("HatcheryLookGuardWingSpeed", 18.0f)),
+        mGuardPitch(configValue("HatcheryLookGuardPitch", 10.0f)),
+        mGuardPeckPitch(configValue("HatcheryLookGuardPeckPitch", 24.0f)),
+        mGuardPeckSpeed(configValue("HatcheryLookGuardPeckSpeed", 7.0f)),
+        mLeadPitch(configValue("HatcheryLookLeadPitch", 18.0f)),
+        mLeadPitchSwing(configValue("HatcheryLookLeadPitchSwing", 12.0f)),
+        mLeadSpeed(configValue("HatcheryLookLeadSpeed", 9.0f)),
+        mLeadLift(configValue("HatcheryLookLeadLift", 0.004f)),
+        mScratchPitch(configValue("HatcheryLookScratchPitch", 14.0f)),
+        mScratchSwing(configValue("HatcheryLookScratchSwing", 10.0f)),
+        mScratchSpeed(configValue("HatcheryLookScratchSpeed", 12.0f)),
+        mScratchLift(configValue("HatcheryLookScratchLift", 0.003f)),
+        mFlutterRiseRate(configValue("HatcheryLookFlutterRiseRate", 1.4f)),
+        mFlutterLift(configValue("HatcheryLookFlutterLift", 0.14f)),
+        mFlutterStretch(configValue("HatcheryLookFlutterStretch", 0.25f)),
+        mFlutterSpeed(configValue("HatcheryLookFlutterSpeed", 30.0f)),
+        mFlutterPitch(configValue("HatcheryLookFlutterPitch", -10.0f)),
+        mFightPuff(configValue("HatcheryLookFightPuff", 1.15f)),
+        mFightPuffWobble(configValue("HatcheryLookFightPuffWobble", 0.03f)),
+        mFightPuffSpeed(configValue("HatcheryLookFightPuffSpeed", 20.0f)),
+        mFightWing(configValue("HatcheryLookFightWing", 0.2f)),
+        mFightWingSpeed(configValue("HatcheryLookFightWingSpeed", 19.0f)),
+        mFightPitch(configValue("HatcheryLookFightPitch", 12.0f)),
+        mFightPitchSwing(configValue("HatcheryLookFightPitchSwing", 16.0f)),
+        mFightPitchSpeed(configValue("HatcheryLookFightPitchSpeed", 11.0f)),
+        mFightRoll(configValue("HatcheryLookFightRoll", 9.0f)),
+        mFightRollSpeed(configValue("HatcheryLookFightRollSpeed", 7.0f)),
+        mFightLift(configValue("HatcheryLookFightLift", 0.035f)),
+        mFightLiftSpeed(configValue("HatcheryLookFightLiftSpeed", 8.0f)),
+        mLayFlatSeconds(configValue("HatcheryLookLayFlatSeconds", 1.2f)),
+        mLayStretchX(configValue("HatcheryLookLayStretchX", 1.14f)),
+        mLayStretchY(configValue("HatcheryLookLayStretchY", 1.1f)),
+        mLayStretchZ(configValue("HatcheryLookLayStretchZ", 0.78f)),
+        mLayWobble(configValue("HatcheryLookLayWobble", 0.03f)),
+        mLayWobbleSpeed(configValue("HatcheryLookLayWobbleSpeed", 25.0f)),
+        mLayRiseStretch(configValue("HatcheryLookLayRiseStretch", 1.12f)),
+        mCackleRoll(configValue("HatcheryLookCackleRoll", 9.0f)),
+        mCackleRollSpeed(configValue("HatcheryLookCackleRollSpeed", 28.0f)),
+        mCackleLift(configValue("HatcheryLookCackleLift", 0.025f)),
+        mCackleLiftSpeed(configValue("HatcheryLookCackleLiftSpeed", 11.0f)),
+        mMountPitch(configValue("HatcheryLookMountPitch", 40.0f)),
+        mMountLift(configValue("HatcheryLookMountLift", 0.07f)),
+        mMountSpeed(configValue("HatcheryLookMountSpeed", 8.0f)),
+        mMountBurstSeconds(configValue("HatcheryLookMountBurstSeconds", 1.0f)),
+        mMountClimbSeconds(configValue("HatcheryLookMountClimbSeconds", 0.4f)),
+        mMountSeconds(configValue("HatcheryLookMountSeconds", 1.9f)),
+        mMountHeight(configValue("HatcheryLookMountHeight", 0.85f)),
+        mMountCrouch(configValue("HatcheryLookMountCrouch", 0.6f)),
+        mMountWing(configValue("HatcheryLookMountWing", 0.3f)),
+        mMountWingSpeed(configValue("HatcheryLookMountWingSpeed", 20.0f)),
+        mEmergeRate(configValue("HatcheryLookEmergeRate", 2.0f)),
+        mEmergeStart(configValue("HatcheryLookEmergeStart", 0.5f)),
+        mEmergeLift(configValue("HatcheryLookEmergeLift", 0.03f)),
+        mWalkSpeedChick(configValue("HatcheryLookWalkSpeedChick", 14.0f)),
+        mWalkSpeedAdult(configValue("HatcheryLookWalkSpeedAdult", 9.0f)),
+        mWalkLiftChick(configValue("HatcheryLookWalkLiftChick", 0.01f)),
+        mWalkLiftAdult(configValue("HatcheryLookWalkLiftAdult", 0.006f)),
+        mWalkPitch(configValue("HatcheryLookWalkPitch", 3.0f)),
+        mPeepSpeed(configValue("HatcheryLookPeepSpeed", 2.1f)),
+        mPeepLift(configValue("HatcheryLookPeepLift", 0.012f)),
+        mPeepSharpness(configValue("HatcheryLookPeepSharpness", 12.0f)),
+        mEggCrackSeconds(configValue("HatcheryLookEggCrackSeconds", 0.8f)),
+        mEggWobbleRate(configValue("HatcheryLookEggWobbleRate", 2.5f)),
+        mEggRoll(configValue("HatcheryLookEggRoll", 11.0f)),
+        mEggRollSpeed(configValue("HatcheryLookEggRollSpeed", 17.0f)),
+        mEggPitch(configValue("HatcheryLookEggPitch", 7.0f)),
+        mEggPitchSpeed(configValue("HatcheryLookEggPitchSpeed", 13.0f)),
+        mEggLift(configValue("HatcheryLookEggLift", 0.004f)),
+        mProtestPuff(configValue("HatcheryLookProtestPuff", 1.25f)),
+        mProtestPuffWobble(configValue("HatcheryLookProtestPuffWobble", 0.05f)),
+        mProtestPuffSpeed(configValue("HatcheryLookProtestPuffSpeed", 24.0f)),
+        mProtestWing(configValue("HatcheryLookProtestWing", 0.3f)),
+        mProtestWingSpeed(configValue("HatcheryLookProtestWingSpeed", 21.0f)),
+        mProtestRoll(configValue("HatcheryLookProtestRoll", 14.0f)),
+        mProtestRollSpeed(configValue("HatcheryLookProtestRollSpeed", 22.0f)),
+        mProtestPitch(configValue("HatcheryLookProtestPitch", -12.0f)),
+        mProtestLift(configValue("HatcheryLookProtestLift", 0.03f)),
+        mProtestLiftSpeed(configValue("HatcheryLookProtestLiftSpeed", 14.0f))
+    {}
+
+    float mCoopCheckSeconds;
+    float mCoopShakeSeconds;
+    float mCoopShakeSwing;
+    float mCoopShakeSpeed;
+    float mStrutPitch;
+    float mStrutStretchX;
+    float mStrutStretchZ;
+    float mStrutLift;
+    float mStrutSpeed;
+    float mRunLift;
+    float mRunLiftSpeed;
+    float mRunRoll;
+    float mRunRollSpeed;
+    float mRunPitch;
+    float mRunStretch;
+    float mRunStretchSpeed;
+    float mCrowRamp;
+    float mCrowLift;
+    float mCrowPitch;
+    float mCrowStretch;
+    float mCrowStretchSpeed;
+    float mCrowStretchHeight;
+    float mPerchPitch;
+    float mRoostBreath;
+    float mRoostBreathSpeed;
+    float mRoostStretchX;
+    float mRoostStretchY;
+    float mRoostStretchZ;
+    float mRoostLift;
+    float mChickUnderRadius;
+    float mChickUnderOffset;
+    float mChickUnderLift;
+    float mChickUnderStretchZ;
+    float mGuardPuff;
+    float mGuardPuffWobble;
+    float mGuardPuffSpeed;
+    float mGuardWing;
+    float mGuardWingSpeed;
+    float mGuardPitch;
+    float mGuardPeckPitch;
+    float mGuardPeckSpeed;
+    float mLeadPitch;
+    float mLeadPitchSwing;
+    float mLeadSpeed;
+    float mLeadLift;
+    float mScratchPitch;
+    float mScratchSwing;
+    float mScratchSpeed;
+    float mScratchLift;
+    float mFlutterRiseRate;
+    float mFlutterLift;
+    float mFlutterStretch;
+    float mFlutterSpeed;
+    float mFlutterPitch;
+    float mFightPuff;
+    float mFightPuffWobble;
+    float mFightPuffSpeed;
+    float mFightWing;
+    float mFightWingSpeed;
+    float mFightPitch;
+    float mFightPitchSwing;
+    float mFightPitchSpeed;
+    float mFightRoll;
+    float mFightRollSpeed;
+    float mFightLift;
+    float mFightLiftSpeed;
+    float mLayFlatSeconds;
+    float mLayStretchX;
+    float mLayStretchY;
+    float mLayStretchZ;
+    float mLayWobble;
+    float mLayWobbleSpeed;
+    float mLayRiseStretch;
+    float mCackleRoll;
+    float mCackleRollSpeed;
+    float mCackleLift;
+    float mCackleLiftSpeed;
+    float mMountPitch;
+    float mMountLift;
+    float mMountSpeed;
+    float mMountBurstSeconds;
+    float mMountClimbSeconds;
+    float mMountSeconds;
+    float mMountHeight;
+    float mMountCrouch;
+    float mMountWing;
+    float mMountWingSpeed;
+    float mEmergeRate;
+    float mEmergeStart;
+    float mEmergeLift;
+    float mWalkSpeedChick;
+    float mWalkSpeedAdult;
+    float mWalkLiftChick;
+    float mWalkLiftAdult;
+    float mWalkPitch;
+    float mPeepSpeed;
+    float mPeepLift;
+    float mPeepSharpness;
+    float mEggCrackSeconds;
+    float mEggWobbleRate;
+    float mEggRoll;
+    float mEggRollSpeed;
+    float mEggPitch;
+    float mEggPitchSpeed;
+    float mEggLift;
+    float mProtestPuff;
+    float mProtestPuffWobble;
+    float mProtestPuffSpeed;
+    float mProtestWing;
+    float mProtestWingSpeed;
+    float mProtestRoll;
+    float mProtestRollSpeed;
+    float mProtestPitch;
+    float mProtestLift;
+    float mProtestLiftSpeed;
+};
+
+//! The look numbers, read from the config at the first use
+const ChickenLookSettings& lookSettings()
+{
+    static const ChickenLookSettings settings;
+    return settings;
+}
+
 //! Scale of the animal by kind
 float kindScale(ChickenKind kind)
 {
@@ -238,6 +486,25 @@ float kindScale(ChickenKind kind)
             return configValue("HatcheryRoosterScale", 1.25f);
         default:
             return 1.0f;
+    }
+}
+
+//! The particle system of the feathers of an animal: the colours of its plumage
+const std::string& featherSystem(ChickenKind kind)
+{
+    static const std::string rooster = "ChickenFeathersRooster";
+    static const std::string hen = "ChickenFeathers";
+    return (kind == ChickenKind::rooster) ? rooster : hen;
+}
+
+//! An egg in a nest of the coop mesh lies on the straw of the nest: the straw of the egg mesh is hidden
+void hideEggStraw(Ogre::Entity* entity)
+{
+    for(unsigned int i = 0; i < entity->getNumSubEntities(); ++i)
+    {
+        Ogre::SubEntity* part = entity->getSubEntity(i);
+        if(part->getMaterialName() == "ChickenStraw")
+            part->setVisible(false);
     }
 }
 
@@ -272,6 +539,13 @@ void RenderManager::rrCreateChickenLook(ChickenEntity* chicken)
     look.mPoseTime = 0.0f;
     look.mPhase = static_cast<Ogre::Real>(++mChickenLookNumber % 97) * 0.37f;
     look.mFeatherBursts = 0;
+    look.mFightPartner = nullptr;
+    look.mFightLeader = false;
+    look.mFightTimer = 0.0f;
+    look.mMountPartner = nullptr;
+    look.mMountCrouch = 0.0f;
+    look.mMountPhase = 0;
+    look.mNestEgg = false;
     mChickenLooks[chicken] = look;
     applyChickenKindLook(chicken);
 }
@@ -283,6 +557,13 @@ void RenderManager::rrDestroyChickenLook(ChickenEntity* chicken)
         return;
 
     ChickenLook& look = it->second;
+    for(std::map<ChickenEntity*, ChickenLook>::iterator other = mChickenLooks.begin(); other != mChickenLooks.end(); ++other)
+    {
+        if(other->second.mFightPartner == chicken)
+            other->second.mFightPartner = nullptr;
+        if(other->second.mMountPartner == chicken)
+            other->second.mMountPartner = nullptr;
+    }
     for(Ogre::Entity* accessory : look.mAccessories)
     {
         look.mNode->detachObject(accessory);
@@ -336,6 +617,39 @@ void RenderManager::rrChickenHatched(ChickenEntity* chicken)
     createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.05f), "ChickenEggShell");
 }
 
+void RenderManager::rrEggTrampled(const Ogre::Vector3& position)
+{
+    // Shell pieces and yolk (one system with two emitters), and the feathers of a hen that is startled by it
+    createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.04f), "ChickenEggTrample");
+    createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
+}
+
+void RenderManager::rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase)
+{
+    std::map<ChickenEntity*, ChickenLook>::iterator firstLook = mChickenLooks.find(first);
+    std::map<ChickenEntity*, ChickenLook>::iterator secondLook = mChickenLooks.find(second);
+    if(firstLook != mChickenLooks.end())
+    {
+        firstLook->second.mFightPartner = (phase == 0) ? second : nullptr;
+        firstLook->second.mFightLeader = true;
+        firstLook->second.mFightTimer = 0.0f;
+    }
+    if(secondLook != mChickenLooks.end())
+    {
+        secondLook->second.mFightPartner = (phase == 0) ? first : nullptr;
+        secondLook->second.mFightLeader = false;
+        secondLook->second.mFightTimer = 0.0f;
+    }
+
+    // The fight is over: the loser goes down in a last cloud of feathers
+    if(phase == 1)
+    {
+        const Ogre::Vector3 middle = (first->getPosition() + second->getPosition()) * 0.5f;
+        createChickenFeatherEffect(middle + Ogre::Vector3(0.0f, 0.0f, 0.15f), featherSystem(first->getKind()));
+        createChickenFeatherEffect(second->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.1f), featherSystem(second->getKind()));
+    }
+}
+
 void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& pose)
 {
     std::map<ChickenEntity*, ChickenLook>::iterator it = mChickenLooks.find(chicken);
@@ -351,20 +665,41 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
     look.mFeatherBursts = 0;
     const Ogre::Vector3 position = chicken->getPosition();
 
+    look.mMountPartner = nullptr;
+    look.mMountPhase = 0;
     if(pose == ChickenPose::mount)
-        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.2f));
-    else if(pose == ChickenPose::cackle)
-        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.12f));
+    {
+        // The Mount clip is started with the pose
+        look.mMountPhase = 1;
+        // The hen he caught is the nearest one; he climbs on her back (the feathers fly when he is up)
+        Ogre::Real nearestDistance = 2.25f;
+        for(std::map<ChickenEntity*, ChickenLook>::iterator other = mChickenLooks.begin(); other != mChickenLooks.end(); ++other)
+        {
+            if((other->first == chicken) || (other->first->getKind() != ChickenKind::hen))
+                continue;
+
+            const Ogre::Real distance = other->first->getPosition().squaredDistance(position);
+            if(distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                look.mMountPartner = other->first;
+            }
+        }
+    }
     else if((pose == ChickenPose::flee) && (chicken->getKind() == ChickenKind::hen))
     {
         // A hen scatters from a hungry creature: a few feathers fly
         createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.12f));
     }
     else if(pose == ChickenPose::flutter)
-        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f), featherSystem(chicken->getKind()));
+    else if(pose == ChickenPose::fight)
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.15f), featherSystem(chicken->getKind()));
+    else if(pose == ChickenPose::protest)
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.2f), featherSystem(chicken->getKind()));
     else if(pose == ChickenPose::emerge)
     {
-        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f));
+        createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.1f), featherSystem(chicken->getKind()));
 
         // The door of the closest coop swings
         std::map<BuildingObject*, CoopDecor>::iterator nearest = mCoopDecors.end();
@@ -379,7 +714,17 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
             }
         }
         if(nearest != mCoopDecors.end())
-            nearest->second.mShake = 0.8f;
+        {
+            if(nearest->second.mDoor != nullptr)
+            {
+                // The door of the coop mesh swings once
+                nearest->second.mDoor->setTimePosition(0.0f);
+                nearest->second.mDoor->setLoop(false);
+                nearest->second.mDoor->setEnabled(true);
+            }
+            else
+                nearest->second.mShake = lookSettings().mCoopShakeSeconds;
+        }
     }
 }
 
@@ -392,16 +737,34 @@ void RenderManager::rrCreateCoopDecor(BuildingObject* coop)
     const std::string name = coop->getOgreNamePrefix() + coop->getName() + "_decor";
     CoopDecor decor;
     decor.mShake = 0.0f;
+    decor.mNest = nullptr;
+    decor.mDoor = nullptr;
+
+    // The coop mesh with a skeleton has nests and a door of its own, the old mesh gets a nest beside it and shakes
+    if((node->numAttachedObjects() > 0) && (node->getAttachedObject(0)->getMovableType() == "Entity"))
+    {
+        Ogre::Entity* body = static_cast<Ogre::Entity*>(node->getAttachedObject(0));
+        if(body->hasSkeleton() && body->getSkeleton()->hasAnimation(HatcheryCoopHouse::doorClip))
+        {
+            decor.mDoor = body->getAnimationState(HatcheryCoopHouse::doorClip);
+            decor.mDoor->setLoop(false);
+            decor.mDoor->setEnabled(false);
+        }
+    }
+
     decor.mNode = node->createChildSceneNode(name + "_node", Ogre::Vector3(0.9f, 0.0f, 0.0f));
-    rrEnsureChickenMesh(MeshNest);
     rrEnsureChickenMesh(MeshFeathers);
-    decor.mNest = mSceneManager->createEntity(name + "_nest", MeshNest + ".mesh");
+    if(decor.mDoor == nullptr)
+    {
+        rrEnsureChickenMesh(MeshNest);
+        decor.mNest = mSceneManager->createEntity(name + "_nest", MeshNest + ".mesh");
+        decor.mNest->setQueryFlags(0);
+        decor.mNode->attachObject(decor.mNest);
+        decor.mNest->setVisible(false);
+    }
     decor.mFeathers = mSceneManager->createEntity(name + "_feathers", MeshFeathers + ".mesh");
-    decor.mNest->setQueryFlags(0);
     decor.mFeathers->setQueryFlags(0);
-    decor.mNode->attachObject(decor.mNest);
     decor.mNode->attachObject(decor.mFeathers);
-    decor.mNest->setVisible(false);
     decor.mFeathers->setVisible(false);
     mCoopDecors[coop] = decor;
     // The first check is done at once
@@ -415,9 +778,12 @@ void RenderManager::rrDestroyCoopDecor(BuildingObject* coop)
         return;
 
     CoopDecor& decor = it->second;
-    decor.mNode->detachObject(decor.mNest);
+    if(decor.mNest != nullptr)
+    {
+        decor.mNode->detachObject(decor.mNest);
+        mSceneManager->destroyEntity(decor.mNest);
+    }
     decor.mNode->detachObject(decor.mFeathers);
-    mSceneManager->destroyEntity(decor.mNest);
     mSceneManager->destroyEntity(decor.mFeathers);
     if(coop->getEntityNode() != nullptr)
     {
@@ -429,6 +795,7 @@ void RenderManager::rrDestroyCoopDecor(BuildingObject* coop)
 void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
 {
     const Ogre::Real pi = Ogre::Math::PI;
+    const ChickenLookSettings& values = lookSettings();
     for(std::map<ChickenEntity*, ChickenLook>::iterator it = mChickenLooks.begin(); it != mChickenLooks.end(); ++it)
     {
         ChickenEntity* chicken = it->first;
@@ -443,27 +810,37 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
         Ogre::Real lift = 0.0f;
         Ogre::Real pitch = 0.0f;
         Ogre::Real roll = 0.0f;
+        Ogre::Vector3 shift = Ogre::Vector3::ZERO;
         Ogre::Vector3 stretch = Ogre::Vector3::UNIT_SCALE;
 
         if(kind == ChickenKind::egg)
         {
+            // An egg a little above the ground lies in a nest of a coop (the server puts it there)
+            if(!look.mNestEgg && (chicken->getPosition().z > 0.01f))
+            {
+                look.mNestEgg = true;
+                hideEggStraw(look.mEntity);
+            }
+
             // The egg rocks from side to side and gets more restless until it breaks
             if(pose == ChickenPose::wobble)
             {
                 // Shortly before it hatches the shell shows its cracks
-                if(look.mAccessories.empty() && (p > 0.8f))
+                if(look.mAccessories.empty() && (p > values.mEggCrackSeconds))
                 {
                     Ogre::Entity* cracked = mSceneManager->createEntity(
                         look.mNode->getName() + "_" + MeshEggCracked, MeshEggCracked + ".mesh");
                     cracked->setQueryFlags(0);
+                    if(look.mNestEgg)
+                        hideEggStraw(cracked);
                     look.mNode->attachObject(cracked);
                     look.mAccessories.push_back(cracked);
                     look.mEntity->setVisible(false);
                 }
-                const Ogre::Real strength = std::min(1.0f, p * 2.5f);
-                roll = 11.0f * strength * std::sin(p * 17.0f);
-                pitch = 7.0f * strength * std::cos(p * 13.0f);
-                lift = 0.004f * strength * std::fabs(std::sin(p * 17.0f));
+                const Ogre::Real strength = std::min(1.0f, p * values.mEggWobbleRate);
+                roll = values.mEggRoll * strength * std::sin(p * values.mEggRollSpeed);
+                pitch = values.mEggPitch * strength * std::cos(p * values.mEggPitchSpeed);
+                lift = values.mEggLift * strength * std::fabs(std::sin(p * values.mEggRollSpeed));
             }
         }
         else
@@ -472,126 +849,273 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             if(pose == ChickenPose::strut)
             {
                 // Chest out, head up, a proud little bounce with each step
-                pitch = -8.0f;
-                stretch = Ogre::Vector3(1.06f, 1.0f, 1.05f);
-                lift = 0.012f * std::fabs(std::sin(t * 9.0f));
+                pitch = values.mStrutPitch;
+                stretch = Ogre::Vector3(values.mStrutStretchX, 1.0f, values.mStrutStretchZ);
+                lift = values.mStrutLift * std::fabs(std::sin(t * values.mStrutSpeed));
             }
             else if(pose == ChickenPose::chase || pose == ChickenPose::flee)
             {
                 if(look.mEntity->getSkeleton()->hasAnimation("Run"))
                 {
                     // The run clip leans forward and spreads the wings, only the hops are added
-                    lift = 0.022f * std::fabs(std::sin(t * 16.0f));
-                    roll = 6.0f * std::sin(t * 8.0f);
+                    lift = values.mRunLift * std::fabs(std::sin(t * values.mRunLiftSpeed));
+                    roll = values.mRunRoll * std::sin(t * values.mRunRollSpeed);
                 }
                 else
                 {
                     // Head forward, wings out, quick hops
-                    pitch = 14.0f;
-                    stretch = Ogre::Vector3(1.0f + 0.2f * std::fabs(std::sin(t * 22.0f)), 1.0f, 1.0f);
-                    lift = 0.022f * std::fabs(std::sin(t * 16.0f));
-                    roll = 6.0f * std::sin(t * 8.0f);
+                    pitch = values.mRunPitch;
+                    stretch = Ogre::Vector3(1.0f + values.mRunStretch * std::fabs(std::sin(t * values.mRunStretchSpeed)), 1.0f, 1.0f);
+                    lift = values.mRunLift * std::fabs(std::sin(t * values.mRunLiftSpeed));
+                    roll = values.mRunRoll * std::sin(t * values.mRunRollSpeed);
                 }
             }
             else if(pose == ChickenPose::crow)
             {
-                const Ogre::Real strength = std::min(1.0f, p * 4.0f);
+                const Ogre::Real strength = std::min(1.0f, p * values.mCrowRamp);
                 if(look.mEntity->getSkeleton()->hasAnimation("Crow"))
                 {
                     // The crow clip throws the head back and beats the wings, the body only rises a little
-                    lift = 0.01f * strength;
+                    lift = values.mCrowLift * strength;
                 }
                 else
                 {
                     // Head thrown back, the body stretches, the wings beat
-                    pitch = -38.0f * strength;
-                    stretch = Ogre::Vector3(1.0f + 0.3f * std::fabs(std::sin(t * 14.0f)) * strength, 1.0f, 1.0f + 0.14f * strength);
-                    lift = 0.01f * strength;
+                    pitch = values.mCrowPitch * strength;
+                    stretch = Ogre::Vector3(1.0f + values.mCrowStretch * std::fabs(std::sin(t * values.mCrowStretchSpeed)) * strength,
+                        1.0f, 1.0f + values.mCrowStretchHeight * strength);
+                    lift = values.mCrowLift * strength;
                 }
             }
             else if(pose == ChickenPose::perch)
-                pitch = -6.0f;
+                pitch = values.mPerchPitch;
             else if(pose == ChickenPose::roost)
             {
                 // Asleep: sunk down, rounded, breathing
-                const Ogre::Real breath = 0.025f * std::sin(t * 1.8f);
-                stretch = Ogre::Vector3(1.12f + breath, 1.08f + breath, 0.68f + breath * 2.0f);
-                lift = -0.004f;
+                const Ogre::Real breath = values.mRoostBreath * std::sin(t * values.mRoostBreathSpeed);
+                stretch = Ogre::Vector3(values.mRoostStretchX + breath, values.mRoostStretchY + breath,
+                    values.mRoostStretchZ + breath * 2.0f);
+                lift = values.mRoostLift;
+
+                // A sleeping chick tucks in under the nearest hen (look only, the server position stays)
+                Ogre::SceneNode* parent = look.mNode->getParentSceneNode();
+                if((kind == ChickenKind::chick) && (parent != nullptr))
+                {
+                    std::map<ChickenEntity*, ChickenLook>::iterator nearestHen = mChickenLooks.end();
+                    Ogre::Real nearestDistance = values.mChickUnderRadius * values.mChickUnderRadius;
+                    for(std::map<ChickenEntity*, ChickenLook>::iterator other = mChickenLooks.begin(); other != mChickenLooks.end(); ++other)
+                    {
+                        if(other->first->getKind() != ChickenKind::hen)
+                            continue;
+                        Ogre::SceneNode* otherParent = other->second.mNode->getParentSceneNode();
+                        if(otherParent == nullptr)
+                            continue;
+                        Ogre::Vector3 way = otherParent->_getDerivedPosition() - parent->_getDerivedPosition();
+                        way.z = 0.0f;
+                        if(way.squaredLength() <= nearestDistance)
+                        {
+                            nearestDistance = way.squaredLength();
+                            nearestHen = other;
+                        }
+                    }
+                    if(nearestHen != mChickenLooks.end())
+                    {
+                        // Under the hen: to her middle, a little to the side (each chick on its own side), sunk down
+                        Ogre::Vector3 toHen = parent->convertWorldToLocalPosition(
+                            nearestHen->second.mNode->getParentSceneNode()->_getDerivedPosition());
+                        toHen.z = 0.0f;
+                        shift = toHen + Ogre::Vector3(std::cos(look.mPhase), std::sin(look.mPhase), 0.0f) * values.mChickUnderOffset;
+                        lift = values.mChickUnderLift;
+                        stretch.z *= values.mChickUnderStretchZ;
+                    }
+                }
             }
             else if(pose == ChickenPose::guard)
             {
                 // Puffed up and flapping
-                const Ogre::Real puff = 1.28f + 0.03f * std::sin(t * 20.0f);
-                stretch = Ogre::Vector3(puff + 0.15f * std::fabs(std::sin(t * 18.0f)), puff, puff);
-                pitch = 10.0f;
+                const Ogre::Real puff = values.mGuardPuff + values.mGuardPuffWobble * std::sin(t * values.mGuardPuffSpeed);
+                stretch = Ogre::Vector3(puff + values.mGuardWing * std::fabs(std::sin(t * values.mGuardWingSpeed)), puff, puff);
+                // He pecks at the creature in front of him: a lunge of the head, then back
+                pitch = values.mGuardPitch + values.mGuardPeckPitch * std::max(0.0f, std::sin(t * values.mGuardPeckSpeed));
             }
             else if(pose == ChickenPose::lead)
             {
                 // Scratches the ground
-                pitch = 18.0f + 12.0f * std::sin(t * 9.0f);
-                lift = 0.004f * std::fabs(std::sin(t * 9.0f));
+                pitch = values.mLeadPitch + values.mLeadPitchSwing * std::sin(t * values.mLeadSpeed);
+                lift = values.mLeadLift * std::fabs(std::sin(t * values.mLeadSpeed));
             }
             else if(pose == ChickenPose::scratch)
             {
                 // A hen scratches the ground with quick strokes, then pecks
-                pitch = 14.0f + 10.0f * std::sin(p * 12.0f);
-                lift = 0.003f * std::fabs(std::sin(p * 12.0f));
+                pitch = values.mScratchPitch + values.mScratchSwing * std::sin(p * values.mScratchSpeed);
+                lift = values.mScratchLift * std::fabs(std::sin(p * values.mScratchSpeed));
             }
             else if(pose == ChickenPose::flutter)
             {
-                // Flaps up for a moment with the wings out and settles down again
-                const Ogre::Real rise = std::sin(std::min(1.0f, p * 1.4f) * pi);
-                lift = 0.14f * rise;
-                stretch = Ogre::Vector3(1.0f + 0.25f * std::fabs(std::sin(p * 30.0f)) * rise, 1.0f, 1.0f);
-                pitch = -10.0f * rise;
+                // The flutter clip lifts the hen and beats the wings, without it she is stretched and lifted here
+                if(!look.mEntity->getSkeleton()->hasAnimation("Flutter"))
+                {
+                    // Flaps up for a moment with the wings out and settles down again
+                    const Ogre::Real rise = std::sin(std::min(1.0f, p * values.mFlutterRiseRate) * pi);
+                    lift = values.mFlutterLift * rise;
+                    stretch = Ogre::Vector3(1.0f + values.mFlutterStretch * std::fabs(std::sin(p * values.mFlutterSpeed)) * rise, 1.0f, 1.0f);
+                    pitch = values.mFlutterPitch * rise;
+                }
+            }
+            else if(pose == ChickenPose::fight)
+            {
+                // Puffed up, wings beating, pecking and lunging at the other rooster, little hops
+                const Ogre::Real puff = values.mFightPuff + values.mFightPuffWobble * std::sin(t * values.mFightPuffSpeed);
+                stretch = Ogre::Vector3(puff + values.mFightWing * std::fabs(std::sin(t * values.mFightWingSpeed)), puff, puff);
+                pitch = values.mFightPitch + values.mFightPitchSwing * std::sin(t * values.mFightPitchSpeed);
+                roll = values.mFightRoll * std::sin(t * values.mFightRollSpeed);
+                lift = values.mFightLift * std::fabs(std::sin(t * values.mFightLiftSpeed));
+            }
+            else if(pose == ChickenPose::protest)
+            {
+                // Held in the hand: puffed up, wings beating, kicking and rolling about
+                const Ogre::Real puff = values.mProtestPuff + values.mProtestPuffWobble * std::sin(t * values.mProtestPuffSpeed);
+                stretch = Ogre::Vector3(puff + values.mProtestWing * std::fabs(std::sin(t * values.mProtestWingSpeed)), puff, puff);
+                pitch = values.mProtestPitch;
+                roll = values.mProtestRoll * std::sin(t * values.mProtestRollSpeed);
+                lift = values.mProtestLift * std::fabs(std::sin(t * values.mProtestLiftSpeed));
             }
             else if(pose == ChickenPose::lay)
             {
-                // Sits down and fluffs up, then stands up proudly
-                if(p < 1.2f)
-                    stretch = Ogre::Vector3(1.14f, 1.1f, 0.78f + 0.03f * std::sin(p * 25.0f));
+                // The lay clip sits down, fluffs up and stands up, without it the body is squashed here
+                if(look.mEntity->getSkeleton()->hasAnimation("Lay"))
+                {
+                    // Nothing to add
+                }
+                else if(p < values.mLayFlatSeconds)
+                    stretch = Ogre::Vector3(values.mLayStretchX, values.mLayStretchY,
+                        values.mLayStretchZ + values.mLayWobble * std::sin(p * values.mLayWobbleSpeed));
                 else
-                    stretch = Ogre::Vector3(1.0f, 1.0f, 1.12f);
+                    stretch = Ogre::Vector3(1.0f, 1.0f, values.mLayRiseStretch);
             }
             else if(pose == ChickenPose::cackle)
             {
-                roll = 9.0f * std::sin(p * 28.0f);
-                lift = 0.025f * std::fabs(std::sin(p * 11.0f));
+                if((look.mMountCrouch > 0.0f) && look.mEntity->getSkeleton()->hasAnimation("Duck"))
+                {
+                    // The duck clip ducks her under him, nothing is added
+                }
+                else if(look.mMountCrouch > 0.0f)
+                {
+                    // The rooster sits on her: she ducks down under him and quivers
+                    stretch = Ogre::Vector3(1.0f + 0.1f * look.mMountCrouch, 1.0f + 0.1f * look.mMountCrouch,
+                        1.0f - (1.0f - values.mMountCrouch) * look.mMountCrouch);
+                    roll = values.mCackleRoll * 0.4f * look.mMountCrouch * std::sin(p * values.mCackleRollSpeed);
+                }
+                else
+                {
+                    roll = values.mCackleRoll * std::sin(p * values.mCackleRollSpeed);
+                    lift = values.mCackleLift * std::fabs(std::sin(p * values.mCackleLiftSpeed));
+                }
             }
             else if(pose == ChickenPose::mount)
             {
-                // Leans forward and bounces on the hen, a second burst of feathers flies
-                pitch = 40.0f;
-                lift = 0.07f * std::fabs(std::sin(p * 8.0f));
-                if((look.mFeatherBursts == 0) && (p > 0.5f))
+                // He climbs on the back of the hen he caught, treads and beats his wings there, and climbs down
+                std::map<ChickenEntity*, ChickenLook>::iterator hen = (look.mMountPartner != nullptr) ?
+                    mChickenLooks.find(look.mMountPartner) : mChickenLooks.end();
+                const Ogre::Real climb = std::max(0.05f, values.mMountClimbSeconds);
+                const Ogre::Real upRatio = std::min(1.0f, p / climb);
+                const Ogre::Real downRatio = std::min(1.0f, std::max(0.0f, (values.mMountSeconds - p) / climb));
+                const Ogre::Real on = std::min(upRatio * upRatio * (3.0f - 2.0f * upRatio),
+                    downRatio * downRatio * (3.0f - 2.0f * downRatio));
+                if(look.mEntity->getSkeleton()->hasAnimation("Tread"))
                 {
+                    // The clips follow the phases: Mount (climb), Tread (looped), Dismount (climb down); their lengths
+                    // are the climb time and the rest of the 1.9 s of the pose. Tread follows 0.05 s before the Mount
+                    // clip ends: an ended clip would send the animal to idle and end the pose
+                    const int phase = (p < climb - 0.05f) ? 1 : ((p < values.mMountSeconds - climb) ? 2 : 3);
+                    if(phase != look.mMountPhase)
+                    {
+                        look.mMountPhase = phase;
+                        const char* const clips[3] = {"Mount", "Tread", "Dismount"};
+                        chicken->setAnimationState(setEntityAnimation(look.mEntity, clips[phase - 1], phase == 2));
+                    }
+                }
+                // Beating the wings and treading only while he sits on her
+                const Ogre::Real sitting = std::max(0.0f, on * 2.0f - 1.0f);
+                pitch = values.mMountPitch * on;
+                stretch = Ogre::Vector3(1.0f + values.mMountWing * std::fabs(std::sin(p * values.mMountWingSpeed)) * sitting,
+                    1.0f, 1.0f);
+                lift = values.mMountLift * std::fabs(std::sin(p * values.mMountSpeed)) * sitting;
+                if(hen != mChickenLooks.end())
+                {
+                    // The back of the hen is as high as she is when she is ducked; he jumps up in an arc
+                    const Ogre::Real henHeight = hen->second.mEntity->getBoundingBox().getMaximum().z *
+                        kindScale(ChickenKind::hen) * values.mMountCrouch;
+                    lift += henHeight * values.mMountHeight * on + 0.08f * std::sin(std::min(upRatio, 1.0f) * pi) *
+                        (p < climb ? 1.0f : 0.0f);
+                    hen->second.mMountCrouch = on;
+
+                    // He moves over her: the way from his place to hers in the frame of his node
+                    Ogre::SceneNode* parent = look.mNode->getParentSceneNode();
+                    Ogre::SceneNode* henParent = hen->second.mNode->getParentSceneNode();
+                    if((parent != nullptr) && (henParent != nullptr))
+                    {
+                        Ogre::Vector3 toHen = parent->convertWorldToLocalPosition(henParent->_getDerivedPosition());
+                        toHen.z = 0.0f;
+                        shift = toHen * on;
+                    }
+                }
+                if((look.mFeatherBursts == 0) && (p > climb))
+                {
+                    // He has landed: the feathers of both fly
                     look.mFeatherBursts = 1;
-                    createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.2f));
+                    createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.25f), featherSystem(kind));
+                    if(look.mMountPartner != nullptr)
+                    {
+                        createChickenFeatherEffect(look.mMountPartner->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.15f),
+                            featherSystem(ChickenKind::hen));
+                    }
+                }
+                else if((look.mFeatherBursts == 1) && (p > values.mMountBurstSeconds) && (look.mMountPartner != nullptr))
+                {
+                    look.mFeatherBursts = 2;
+                    createChickenFeatherEffect(look.mMountPartner->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.2f),
+                        featherSystem(ChickenKind::hen));
                 }
             }
             else if(pose == ChickenPose::emerge)
             {
                 // Pops out of the coop
-                const Ogre::Real grow = std::min(1.0f, p * 2.0f);
-                stretch = Ogre::Vector3::UNIT_SCALE * (0.5f + 0.5f * grow);
-                lift = 0.03f * std::sin(std::min(1.0f, p * 2.0f) * pi);
+                const Ogre::Real grow = std::min(1.0f, p * values.mEmergeRate);
+                stretch = Ogre::Vector3::UNIT_SCALE * (values.mEmergeStart + (1.0f - values.mEmergeStart) * grow);
+                lift = values.mEmergeLift * std::sin(grow * pi);
             }
             else if(moving)
             {
                 // Walking: a small bob, chicks hop more
-                const Ogre::Real speed = (kind == ChickenKind::chick) ? 14.0f : 9.0f;
-                lift = ((kind == ChickenKind::chick) ? 0.01f : 0.006f) * std::fabs(std::sin(t * speed));
-                pitch = 3.0f * std::sin(t * speed);
+                const Ogre::Real speed = (kind == ChickenKind::chick) ? values.mWalkSpeedChick : values.mWalkSpeedAdult;
+                lift = ((kind == ChickenKind::chick) ? values.mWalkLiftChick : values.mWalkLiftAdult) * std::fabs(std::sin(t * speed));
+                pitch = values.mWalkPitch * std::sin(t * speed);
             }
             else if(kind == ChickenKind::chick)
             {
                 // A chick peeps now and then with a little hop
-                const Ogre::Real peep = std::max(0.0f, std::sin(t * 2.1f));
-                lift = 0.012f * std::pow(peep, 12.0f);
+                const Ogre::Real peep = std::max(0.0f, std::sin(t * values.mPeepSpeed));
+                lift = values.mPeepLift * std::pow(peep, values.mPeepSharpness);
             }
         }
 
-        look.mNode->setPosition(0.0f, 0.0f, lift);
+        // Feather clouds between two fighting roosters, made by the first of the two
+        if((look.mFightPartner != nullptr) && look.mFightLeader && (pose == ChickenPose::fight) &&
+           (mChickenLooks.count(look.mFightPartner) > 0))
+        {
+            look.mFightTimer += timeSinceLastFrame;
+            if(look.mFightTimer >= configValue("HatcheryFightFeatherSeconds", 0.7f))
+            {
+                look.mFightTimer = 0.0f;
+                const Ogre::Vector3 middle = (chicken->getPosition() + look.mFightPartner->getPosition()) * 0.5f;
+                createChickenFeatherEffect(middle + Ogre::Vector3(0.0f, 0.0f, 0.15f), featherSystem(ChickenKind::rooster));
+            }
+        }
+
+        // The duck of a hen under a rooster is set again by him in every frame
+        look.mMountCrouch = 0.0f;
+        look.mNode->setPosition(shift.x, shift.y, lift);
         look.mNode->setScale(Ogre::Vector3::UNIT_SCALE * kindScale(kind) * stretch);
         look.mNode->setOrientation(Ogre::Quaternion(Ogre::Degree(pitch), Ogre::Vector3::UNIT_X) *
             Ogre::Quaternion(Ogre::Degree(roll), Ogre::Vector3::UNIT_Y));
@@ -599,7 +1123,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
 
     // Coops: a nest with eggs while the hatchery lives, a few loose feathers when it is empty, a shaking door
     mCoopDecorTimer += timeSinceLastFrame;
-    const bool check = mCoopDecorTimer >= 1.5f;
+    const bool check = mCoopDecorTimer >= values.mCoopCheckSeconds;
     if(check)
         mCoopDecorTimer = 0.0f;
     for(std::map<BuildingObject*, CoopDecor>::iterator it = mCoopDecors.begin(); it != mCoopDecors.end(); ++it)
@@ -613,11 +1137,35 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
             if(room != nullptr)
             {
+                // The rooster alone does not keep a hatchery alive: hens, chicks and eggs do
                 for(Tile* roomTile : room->getCoveredTiles())
-                    animals += roomTile->countEntitiesOnTile(GameEntityType::chickenEntity);
+                {
+                    for(GameEntity* entity : roomTile->getEntitiesInTile())
+                    {
+                        if((entity == nullptr) || (entity->getObjectType() != GameEntityType::chickenEntity))
+                            continue;
+
+                        ChickenEntity* animal = static_cast<ChickenEntity*>(entity);
+                        if(animal->getKind() != ChickenKind::rooster)
+                            ++animals;
+                    }
+                }
             }
-            decor.mNest->setVisible(animals > 0);
+            if(decor.mNest != nullptr)
+                decor.mNest->setVisible(animals > 0);
             decor.mFeathers->setVisible(animals == 0);
+        }
+
+        // The door clip of the coop mesh plays once and then rests closed
+        if((decor.mDoor != nullptr) && decor.mDoor->getEnabled())
+        {
+            decor.mDoor->addTime(timeSinceLastFrame);
+            if(decor.mDoor->hasEnded())
+            {
+                decor.mDoor->setEnabled(false);
+                decor.mDoor->setTimePosition(0.0f);
+            }
+            continue;
         }
 
         // The coop shakes for a moment when an animal comes out
@@ -629,7 +1177,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
         if(decor.mShake > 0.0f)
         {
             decor.mShake = std::max(0.0f, decor.mShake - timeSinceLastFrame);
-            const Ogre::Real swing = 3.0f * decor.mShake * std::sin(decor.mShake * 40.0f);
+            const Ogre::Real swing = values.mCoopShakeSwing * decor.mShake * std::sin(decor.mShake * values.mCoopShakeSpeed);
             node->setOrientation(base * Ogre::Quaternion(Ogre::Degree(swing), Ogre::Vector3::UNIT_X));
         }
         else if(decor.mShake == 0.0f)

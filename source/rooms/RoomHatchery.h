@@ -71,27 +71,63 @@ private:
     void updateFlock(const std::vector<ChickenEntity*>& hens, bool night);
     //! Creatures of an enemy seat that stand on a tile of the hatchery.
     void collectEnemies(std::vector<Creature*>& enemies) const;
-    //! True if a map light is within HatcheryCareLightRadius tiles of the hatchery.
+    //! True if a map light or a wall torch (of any room, on a tile that touches a wall reinforced by the keeper) is
+    //! within HatcheryCareLightRadius tiles of the hatchery.
     bool isLit() const;
-    //! Claimed by the keeper, lit and free of enemies (see HatcheryCycle::wellCared).
+    //! Claimed by the keeper, lit and free of enemies (see HatcheryCycle::carePercent).
     HatcheryCare getCare(const std::vector<Creature*>& enemies) const;
     //! Settings of the life cycle from the config, laying times scaled by the research.
     HatcheryCycleSettings getCycleSettings() const;
     //! Creates a hatchery animal at the given position.
     ChickenEntity* spawnAnimal(ChickenKind kind, const Ogre::Vector3& position, const HatcheryCycleSettings& settings);
+    //! A free egg place in the nests of the coops, the coop closest to the hen first. eggPositions are the places
+    //! of the eggs that lie in the hatchery. False if all nests are full (or there is no coop): the egg then lies
+    //! at the hen.
+    bool findNestSpot(const Ogre::Vector3& henPosition, const std::vector<Ogre::Vector2>& eggPositions,
+        Ogre::Vector3& spot) const;
+    //! A chick that hatched in a nest stands next to the coop (the coop itself is in its way).
+    void leaveNest(ChickenEntity* chick);
+    //! An egg is trampled: shell pieces, yolk and feathers fly where it lay (the clients show it).
+    void fireEggTrample(const ChickenEntity& egg);
+    //! Lets the eggs appear whose laying timer has run out and whose hen has shown herself laying (see mPendingEggs).
+    //! A late egg gets the age it would have had on time. The new eggs are added to eggs.
+    void releasePendingEggs(const HatcheryCycleSettings& settings, std::vector<ChickenEntity*>& eggs);
+    //! A free place next to the nest where a hen can stand (the nests lie inside the footprint of the coop).
+    bool getNestStandPoint(const Ogre::Vector3& nestSpot, Ogre::Vector2& standing) const;
+    //! Turns the hen needs to walk from where she is to the place next to the nest: the real distance at her walking
+    //! speed, and a turn for setting off. 0 when she is there already.
+    uint32_t nestWalkTurns(ChickenEntity& hen, const Ogre::Vector2& standing) const;
+    //! True from the moment the hen sets off for the nest until her egg appears (see PendingEgg::mHen).
+    bool isOnNestTrip(const ChickenEntity& hen) const;
+    struct PendingEgg;
+    //! The planned egg of a hen (set off or not), nullptr if she has none.
+    PendingEgg* findPendingEgg(const ChickenEntity& hen);
+    //! Hens with a planned egg: one sets off when the turns left until the egg are as many as the walk and the Lay
+    //! pose, waits at the nest until the pose has to start, and sits down. A hen that is gone loses an egg that is not
+    //! due yet, a due egg still appears.
+    void updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings);
     //! Lets a hen or a rooster come out of a coop. Returns false if no coop has a free place.
     bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count = 1);
 
     //! Settings of the rooster, the day and the chick line from the config.
     RoosterSettings getRoosterSettings() const;
+    //! A hatchery has room for one rooster: when it has two or more, two of them fight until one is dead. The
+    //! server draws the winner when the fight starts. Fighters are moved here, not by updateRooster. The loser
+    //! is taken out of the roosters list when the fight is over.
+    void updateFight(std::vector<ChickenEntity*>& roosters, const HatcheryCycleSettings& settings,
+        HatcheryCounts& counts);
+    //! Ends the fight: the one that won stays and crows, the other one dies. Without a winner (one of them was
+    //! picked up or is gone) the fight is called off and the survivor goes on as before.
+    void endFight(ChickenEntity* first, ChickenEntity* second, bool finished, HatcheryCounts& counts);
     //! Moves the rooster: perching, crowing, chasing a hen, guarding the flock, leading the chicks, sleeping.
     void updateRooster(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
         const std::vector<ChickenEntity*>& chicks, const RoosterSettings& settings);
     void beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& plan);
     void actRoosterMood(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
         const RoosterSettings& settings, const Ogre::Vector2& threat);
-    //! Sits the rooster on the roof of the nearest coop with the pose. Without coop he stays on the ground.
-    void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar);
+    //! Sits the rooster on the roof of the nearest coop with the pose (when sleeping: of the highest coop). Without
+    //! coop he stays on the ground.
+    void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar, bool highest = false);
     void climbDown(ChickenEntity* rooster);
     //! The chicks follow the hen (or the rooster when he leads) in a line, at night they huddle under the hen.
     void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks,
@@ -99,16 +135,82 @@ private:
     //! A creature inside the hatchery that wants to eat chickens or is an enemy, close to the rooster.
     bool findThreat(const ChickenEntity& rooster, double radius, Ogre::Vector2& position) const;
     Tile* getNearestCoop(const Ogre::Vector2& position) const;
+    //! Height of the roof of the coop above the floor (the same for every coop mesh, from the config).
+    double getRoofHeight(const Tile& coopTile) const;
+    //! The coop with the highest roof; the nearest one among equally high ones (all coops are equally high now).
+    Tile* getHighestCoop(const Ogre::Vector2& position) const;
+    //! True if the hen sits on a seat of a coop (the center of a nest).
+    bool isAtCoopSeat(const ChickenEntity& hen) const;
+    //! A free seat (center of a nest inside the hatchery) in a coop, the one closest to the hen first. False if
+    //! every seat is taken by another hen or there is no coop.
+    bool findCoopSeat(const Ogre::Vector2& henPosition, const std::vector<ChickenEntity*>& hens, Ogre::Vector3& seat) const;
+    //! In a full hatchery the hens sit in the coops (a free seat each), when it is not full they come out again.
+    void updateCoopSitting(const std::vector<ChickenEntity*>& hens, bool sit);
     Ogre::Vector2 getPerchSpot(const Tile& coopTile) const;
     //! A free place next to a coop, where an animal can stand after jumping down.
     bool getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const;
 
+    //! The rooster settings of the current upkeep (read from the config once per turn, not saved)
+    RoosterSettings mRoosterSettings;
     //! Turns until the rooster crows next
     uint32_t mCrowInterval;
+    //! Number of the last day the rooster crowed for (HatcheryRooster::dayNumber), -1 until he is first seen
+    int64_t mLastCrowDay;
+    //! An egg that a hen is going to lay. The egg is laid when the laying timer of the hen runs out (it is due then,
+    //! counts as an egg for the capacity and is saved in the "HatcheryLays" line). Before that the hen has planned it:
+    //! she chose the place in a nest, sets off when the turns left are as many as the walk and the Lay pose, waits at the
+    //! nest and shows herself sitting (Lay pose) for HatcheryLayShowTurns turns, so that the egg appears just when the
+    //! timer runs out. A hen that is late (a long walk) lets the egg appear later, it then gets the age it would have had.
+    struct PendingEgg
+    {
+        PendingEgg(const Ogre::Vector3& spot, uint32_t turns) :
+            mSpot(spot),
+            mTurns(turns),
+            mStand(0.0f, 0.0f),
+            mWalk(0),
+            mWalked(0),
+            mNest(false),
+            mStarted(false),
+            mPosing(false),
+            mDue(true),
+            mLate(0)
+        {}
+
+        Ogre::Vector3 mSpot;
+        //! Turns until the egg may appear (counts down while the hen sits, or at once without a hen).
+        uint32_t mTurns;
+        //! Not empty while the egg is planned by a hen: her name and the place next to the nest where she stands to lay.
+        //! Not saved: a save in between lets a due egg appear after mTurns, a planned one is planned again.
+        std::string mHen;
+        Ogre::Vector2 mStand;
+        //! Turns the walk to mStand takes (real distance and walking speed), turns she has been walking.
+        uint32_t mWalk;
+        uint32_t mWalked;
+        //! The egg lies in a nest (she walks to mStand). Otherwise it lies where she sits down.
+        bool mNest;
+        //! She has set off / sits and shows herself laying.
+        bool mStarted;
+        bool mPosing;
+        //! The laying timer has run out: the egg exists for the capacity. mLate counts the turns since then.
+        bool mDue;
+        uint32_t mLate;
+    };
+    std::vector<PendingEgg> mPendingEggs;
     //! Turns the hatchery has been empty (no hen, chick or egg)
     uint32_t mCoopHenWait;
     //! Turns the hatchery has been without rooster
     uint32_t mCoopRoosterWait;
+
+    //! A fight of two roosters is going on (not saved: after loading, two roosters start a new one)
+    bool mFightActive;
+    //! The two fighters by name and who wins (drawn by the server when the fight starts)
+    std::string mFightFirst;
+    std::string mFightSecond;
+    bool mFightFirstWins;
+    //! They walk up to each other first, then they brawl for mFightTurnsLeft turns
+    bool mFightBrawling;
+    uint32_t mFightApproach;
+    uint32_t mFightTurnsLeft;
 };
 
 #endif // ROOMHATCHERY_H

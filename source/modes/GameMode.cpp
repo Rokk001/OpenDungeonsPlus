@@ -72,6 +72,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/SelectionSize.h"
 #include "ODApplication.h"
 
 #include <CEGUI/CEGUI.h>
@@ -1658,10 +1659,10 @@ void GameMode::refreshMainUI()
     // the net of both
     tempSS.str("");
     tempSS << "+" << static_cast<long>(mySeat->getManaIncomePerSecond())
-        << " / -" << static_cast<long>(mySeat->getManaUpkeepPerSecond());
+        << " / -" << static_cast<long>(mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond());
     widget->getChild("Change")->setText(tempSS.str());
     widget->getChild("Change")->setProperty("TextColours",
-        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() ? "FF7FE3A6" : "FFFF4848");
+        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond() ? "FF7FE3A6" : "FFFF4848");
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
@@ -4153,8 +4154,10 @@ void GameMode::refreshSelectionSizeLabel()
         action == SelectedAction::buildRoom || action == SelectedAction::buildTrap ||
         action == SelectedAction::destroyRoom || action == SelectedAction::destroyTrap ||
         action == SelectedAction::sellBuilding;
-    const int width = std::abs(inputManager.mXPos - inputManager.mLStartDragX) + 1;
-    const int height = std::abs(inputManager.mYPos - inputManager.mLStartDragY) + 1;
+    // Size of the tiles actually marked, which can be smaller than the dragged rectangle
+    int width = 0;
+    int height = 0;
+    getSelectionSize(mPreviewTiles, width, height);
     // Only while a drag marks more than one tile; a single tile click shows nothing
     const bool show = areaAction && inputManager.mLMouseDown && !isMouseDownOnCEGUIWindow() &&
         !mGameMap->getGamePaused() && mGameMap->getLocalPlayer()->numObjectsInHand() == 0 &&
@@ -4618,7 +4621,7 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, text);
                 }
             }
-            else if(tile->getEverVisible() && tile->isDiggable(player->getSeat()))
+            else if(tile->isDiggable(player->getSeat()))
             {
                 displayText(Ogre::ColourValue::White, tile->getMarkedForDigging(player) ?
                     "Marked wall. Click or drag to remove digging marks." : "Wall. Click or drag to mark for digging.");
@@ -4679,7 +4682,8 @@ void GameMode::handlePlayerActionSelectTile()
     std::vector<Tile*> diggableTiles;
     for(Tile* tile : tiles)
     {
-        if(mDigSetBool ? tile->isDiggable(player->getSeat()) : tile->getMarkedForDigging(player))
+        // Unexplored tiles cannot be marked: the mark would show which walls are gold or dirt
+        if(mDigSetBool ? (tile->getEverVisible() && tile->isDiggable(player->getSeat())) : tile->getMarkedForDigging(player))
             diggableTiles.push_back(tile);
     }
     if(diggableTiles.empty())

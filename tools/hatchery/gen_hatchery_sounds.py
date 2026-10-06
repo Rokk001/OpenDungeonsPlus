@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Synthesizes the sounds of the hatchery animals and writes them as .ogg files.
 
-    python tools/hatchery/gen_hatchery_sounds.py
+    python tools/hatchery/gen_hatchery_sounds.py [Family ...]
 
-Rooster crow, hen cluck, food call, chick peep and egg crack are made from harmonic tones with a simple
+Without a family name all families are written, otherwise only the named ones (e.g. Protest).
+
+Rooster crow, protest, hen cluck, food call, chick peep and egg crack are made from harmonic tones with a simple
 vowel-like spectrum, noise bursts and envelopes only (no recordings, no samples). A fixed random seed
 makes the same files come out every time. The .wav files are written with the standard library and
 converted by ffmpeg (libvorbis), which must be in the PATH. Files go to
@@ -219,8 +221,38 @@ def make_egg_crack(variant):
     return render(length, f, 0.7)
 
 
+def make_protest(variant):
+    # The rooster in the keeper's hand: loud, hoarse, angry squawks in a row, each one falling in pitch, with a
+    # rough rattle (fast amplitude modulation) and noise in the voice.
+    length = 1.45 + 0.15 * variant
+    noise = Noise(70 + variant)
+    voice = Voice(((1100.0, 700.0, 1.0), (2300.0, 900.0, 0.8), (3600.0, 1100.0, 0.35)), count=30)
+    count = 4 + variant
+    gap = (length - 0.1) / count
+    base = 640.0 * (1.0 + 0.12 * variant)
+
+    def f(t):
+        index = int(t / gap)
+        if index >= count:
+            return 0.0
+        local = t - index * gap
+        squawk = gap * 0.78
+        if local > squawk:
+            voice.sample(base * 0.5)
+            return 0.0
+        x = local / squawk
+        # each squawk starts high, falls fast and the whole row gets a little lower
+        pitch = base * (1.35 - 0.7 * x) * (1.0 - 0.04 * index)
+        rattle = 1.0 + 0.45 * math.sin(TAU * 85.0 * t) + 0.2 * math.sin(TAU * 143.0 * t)
+        env = smooth(local, 0.0, 0.012) * (1.0 - smooth(local, squawk * 0.7, squawk))
+        tone = voice.sample(pitch) * rattle
+        return (tone + noise.lowpass(0.35) * 0.22) * env
+    return render(length, f, 0.95)
+
+
 FAMILIES = (
     ("Crow", make_crow),
+    ("Protest", make_protest),
     ("Cluck", make_cluck),
     ("FoodCall", make_food_call),
     ("Peep", make_peep),
@@ -241,9 +273,12 @@ def main():
     if ffmpeg is None:
         print("ffmpeg not found in PATH")
         return 1
+    wanted = sys.argv[1:]
     folder = tempfile.mkdtemp()
     try:
         for family, make in FAMILIES:
+            if wanted and (family not in wanted):
+                continue
             target_dir = os.path.join(ROOT, "sounds", "Spatial", "Rooms", "Hatchery", family)
             os.makedirs(target_dir, exist_ok=True)
             for variant in range(2):

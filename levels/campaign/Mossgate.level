@@ -484,6 +484,9 @@ ProtectDungeonTemple	NULL
 30	25	1	0	1
 30	26	1	0	1
 30	27	1	0	1
+30	29	1	0
+30	30	1	0
+30	31	1	0
 30	33	3	100
 31	0	3	100
 31	6	1	0
@@ -495,6 +498,9 @@ ProtectDungeonTemple	NULL
 31	25	1	0	1
 31	26	1	0	1
 31	27	1	0	1
+31	29	1	0
+31	30	1	0
+31	31	1	0
 31	33	3	100
 32	0	3	100
 32	6	1	0
@@ -508,6 +514,8 @@ ProtectDungeonTemple	NULL
 32	27	1	0	1
 32	28	1	0
 32	29	1	0
+32	30	1	0
+32	31	1	0
 32	33	3	100
 33	0	3	100
 33	6	1	0
@@ -634,15 +642,15 @@ ProtectDungeonTemple	NULL
 [/Room]
 [Room]
 4	Portal1	0	9
-8	28
-8	29
-8	30
-9	28
-9	29
-9	30
-10	28
-10	29
-10	30
+30	29
+30	30
+30	31
+31	29
+31	30
+31	31
+32	29
+32	30
+32	31
 9	5
 [/Room]
 [/Rooms]
@@ -735,7 +743,7 @@ Action	generate	1	Goblin:1
 Name	meadowOurs
 Mode	once
 Cond	claimed	1	Meadow	18
-Action	message	1	The meadow cave is ours. Two cave roads lead to the village now, one over the moss and one past the old portal.
+Action	message	1	The meadow cave is ours. Two cave roads lead to the village now, one over the moss and one past the old stones.
 Action	reveal	1	Yard
 Action	objective	1	Defeat the watch post in the village yard.
 [/Trigger]

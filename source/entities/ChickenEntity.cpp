@@ -59,6 +59,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mScatterTurns(0),
     mCalm(false),
     mRoomDriven(false),
+    mFighting(false),
     mOnRoof(false),
     mFollowing(false),
     mFollowTarget(Ogre::Vector2::ZERO),
@@ -85,6 +86,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mScatterTurns(0),
     mCalm(false),
     mRoomDriven(false),
+    mFighting(false),
     mOnRoof(false),
     mFollowing(false),
     mFollowTarget(Ogre::Vector2::ZERO),
@@ -234,8 +236,9 @@ void ChickenEntity::doUpkeep()
     if(isMoving())
         return;
 
-    // A hungry creature that comes to eat this chicken makes it hop away (short, rare, limited)
-    if(tryFlee(tile, currentHatchery))
+    // A hungry creature that comes to eat this chicken makes it hop away (short, rare, limited);
+    // not while the hatchery scatters the hen, which is its own flight
+    if((mScatterTurns == 0) && tryFlee(tile, currentHatchery))
         return;
 
     // Chicks stay in line behind the animal in front of them, hens run to the rooster when he calls them
@@ -606,11 +609,17 @@ void ChickenEntity::pickup()
     }
     mScatterTurns = 0;
     mOnRoof = false;
+    mFighting = false;
+    mRoomDriven = false;
     mBusyTurns = 0;
     mFollowing = false;
     mReturningHome = false;
     removeEntityFromPositionTile();
     RenderedMovableEntity::pickup();
+
+    // In the hand he puffs up and flaps until he is put down (the pose ends with the next animation he gets)
+    if(getIsOnServerMap() && (mKind == ChickenKind::rooster))
+        clearDestinations(ChickenPose::protest, true, false);
 }
 
 bool ChickenEntity::tryDrop(Seat* seat, Tile* tile)
@@ -776,6 +785,40 @@ bool ChickenEntity::trample(Creature* creature)
     mChickenState = ChickenState::eaten;
     clearDestinations(EntityAnimation::idle_anim, true, true);
     return true;
+}
+
+bool ChickenEntity::loseFight()
+{
+    if(!isFree() || (mKind != ChickenKind::rooster))
+        return false;
+
+    OD_LOG_INF("rooster=" + getName() + " lost a fight");
+
+    mFighting = false;
+    mRoomDriven = false;
+    mOnRoof = false;
+    mBusyTurns = 0;
+    mNbTurnDie = 0;
+    mChickenState = ChickenState::dying;
+    clearDestinations(EntityAnimation::die_anim, false, false);
+    return true;
+}
+
+void ChickenEntity::notifyFight(const std::string& partnerName, uint32_t phase)
+{
+    if(!getIsOnServerMap())
+        return;
+
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::chickenFight, seat->getPlayer());
+        notification->mPacket << getName() << partnerName << phase;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
 }
 
 bool ChickenEntity::canSlap(Seat* seat)

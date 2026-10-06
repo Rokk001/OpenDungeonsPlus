@@ -42,7 +42,7 @@ assert 'new ChickenEntity' not in doUpkeep
 
 # Values come from the config.
 for key in ('HatcheryLayMin', 'HatcheryLayMax', 'HatcheryHatchTurns', 'HatcheryGrowTurns',
-            'HatcheryRoosterSpawnRate', 'HatcheryTilesPerChicken', 'HatcheryChickenSpawnRate'):
+            'HatcheryTilesPerChicken', 'HatcheryChickenSpawnRate'):
     assert key in config and key in room, key
 
 print('hatchery life cycle checks passed')
@@ -51,9 +51,23 @@ print('hatchery life cycle checks passed')
 cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 cfg = (root / 'config/rooms.cfg').read_text()
-assert 'wellCared' in cycle and 'canHatch' in cycle
+assert 'carePercent' in cycle and 'canHatch' in cycle
+torches = (root / 'source/rooms/RoomTorches.cpp').read_text()
+assert 'isTorchSpot' in torches and 'hasTorchRoomType' in torches
+assert 'hasTorchOn' in (root / 'source/rooms/Room.cpp').read_text() and 'hasTorchOn' in room_cpp
+ambience_cpp = (root / 'source/render/RoomAmbience.cpp').read_text()
+assert 'hasTorchOn' in ambience_cpp
+# Light is light: torches and lights of every owner count, the lit check never looks at seats
+lit = body(room_cpp, 'bool RoomHatchery::isLit')
+assert 'getSeat' not in lit and 'isAlliedSeat' not in lit and 'getMapLights' in lit
+# The torch sits at the wall reinforced by the keeper, not at the first wall beside the tile
+assert 'torchShift' in ambience_cpp and 'isClaimedForSeat(torchRoom->getSeat())' in ambience_cpp
+assert 'effect.mTorch ? torchShift : wallShift' in ambience_cpp
+ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
+assert ambience_cfg.count('Torch       yes') == 4
 assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp
-assert 'HatcheryCareLayPercent' in cfg and 'HatcheryCareLightRadius' in cfg
+assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
+assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' not in cfg
 
 # Enemies trample eggs, own creatures never eat them
 cycle_h = (root / 'source/rooms/HatcheryCycle.h').read_text()
@@ -71,3 +85,153 @@ assert 'HatcheryWaits' in exp and 'mCoopHenWait' in exp and 'mCoopRoosterWait' i
 imported = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:900]
 assert 'seekg(pos)' in imported and 'HatcheryWaits' in imported
 assert 'coopHenCount' in room_cpp and 'HatcheryCoopBatch' in cfg
+
+# The new rooster comes after the same wait as a hen (HatcheryChickenSpawnRate); the own rooster wait is gone,
+# the saved counter stays so that old saves still load
+assert 'HatcheryRoosterSpawnRate' not in config and 'HatcheryRoosterSpawnRate' not in room_cpp
+assert 'mRoosterWait' not in room_cpp and 'mRoosterWait' not in cycle_h
+assert 'mCoopRoosterWait >= settings.mCoopWait' in room_cpp
+assert 'needCoopRooster(counts, mNumActiveSpots) && !mFightActive' in room_cpp
+spawn_rooster = room_cpp[room_cpp.index('needCoopRooster(counts, mNumActiveSpots)'):][:400]
+assert 'capacity' not in spawn_rooster
+
+# Only one rooster per hatchery: two fight, the server draws the winner, the clients get a small event
+assert 'needFight' in cycle_h and 'fightWinner' in cycle_h and 'fightContinues' in cycle_h
+fight = room_cpp[room_cpp.index('void RoomHatchery::updateFight'):room_cpp.index('RoosterSettings RoomHatchery::getRoosterSettings')]
+assert 'HatcheryCycle::fightWinner(Random::Uint(' in fight, 'winner is drawn by the server RNG'
+assert fight.count('fightWinner(') == 1, 'drawn once per fight, never per client'
+assert 'notifyFight(' in fight and 'loseFight()' in fight and 'ChickenPose::fight' in fight and 'ChickenPose::crow' in fight
+assert 'climbDown' in fight and 'fightContinues' in fight
+assert 'updateFight(roosters, settings, counts)' in room_cpp
+assert 'if(!oneRooster->isFighting())' in room_cpp
+for key in ('HatcheryFightTurns', 'HatcheryFightApproachTurns', 'HatcheryFightReach', 'HatcheryFightFeatherSeconds'):
+    assert key in config, key
+for key in ('HatcheryFightTurns', 'HatcheryFightApproachTurns', 'HatcheryFightReach'):
+    assert key in room_cpp, key
+render = (root / 'source/render/RenderManagerChickens.cpp').read_text()
+assert 'HatcheryFightFeatherSeconds' in render and 'rrChickenFight' in render
+assert 'bool ChickenEntity::loseFight' in chicken and 'ChickenState::dying' in body(chicken, 'bool ChickenEntity::loseFight')
+pick = body(chicken, 'void ChickenEntity::pickup')
+assert 'mFighting = false' in pick, 'a picked up rooster leaves the fight'
+# the event is inserted before timeLimit (which stays the last value) and after chickenKindChanged
+enum_body = notif[notif.index('enum class ServerNotificationType'):notif.index('};')]
+enum_names = [line.split(',')[0].strip() for line in enum_body.splitlines()
+              if line.strip() and not line.strip().startswith(('//', 'enum', '{'))]
+assert enum_names.index('chickenKindChanged') < enum_names.index('chickenFight') < enum_names.index('timeLimit')
+assert enum_body.rstrip().endswith('timeLimit')
+assert 'ServerNotificationType::chickenFight' in chicken and 'ServerNotificationType::chickenFight' in client
+assert 'case ServerNotificationType::chickenFight' in (root / 'source/network/ServerNotification.cpp').read_text()
+print('hatchery rooster fight checks passed')
+
+# Eggs are laid in a free place of a coop nest (closest coop first), the place rules are the pure pickNestPlace
+cycle_cpp = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
+coop_h = (root / 'source/rooms/HatcheryCoopHouse.h').read_text()
+assert 'pickNestPlace' in cycle_h and 'int32_t HatcheryCycle::pickNestPlace' in cycle_cpp
+nest = body(room_cpp, 'bool RoomHatchery::findNestSpot')
+assert 'HatcheryCoopHouse::nestEggSpotWorld' in nest and 'HatcheryCycle::pickNestPlace' in nest
+assert 'getCoveringRoom() != this' in nest, 'a nest place outside of the hatchery is not used'
+assert 'mCentralActiveSpotTiles' in nest and 'squaredDistance' in nest, 'closest coop first'
+assert 'HatcheryNestEggs' in nest and 'HatcheryNestSameRadius' in nest
+assert 'HatcheryNestEggs' in cfg and 'HatcheryNestSameRadius' in cfg
+assert 'nestEggSpot' in coop_h and 'nestCount' in coop_h and 'eggsPerNest' in coop_h
+lay = doUpkeep[doUpkeep.index('Hens lay eggs while the hatchery is not full'):doUpkeep.index('Eggs hatch while there is a rooster')]
+assert 'findNestSpot(' in lay and 'eggs.push_back(spawnAnimal(ChickenKind::egg, eggSpot, settings))' in lay
+assert 'eggPositions.push_back' in lay, 'an egg laid this turn takes its place at once'
+assert 'HatcheryCycle::canLay(counts, capacity)' in lay, 'capacity still limits the eggs'
+assert 'ChickenPose::lay' in lay, 'the hen sits down where she is when the egg has no nest'
+# The hen plans her egg early, walks to the place next to the nest (real distance, real walking speed) and lays there
+assert 'getNestStandPoint(eggSpot, standing)' in lay and 'plan.mHen = hen->getName()' in lay
+walk_body = body(room_cpp, 'uint32_t RoomHatchery::nestWalkTurns')
+assert 'HatcheryCycle::walkTurns(' in walk_body and 'getMoveSpeed()' in walk_body and 'ODApplication::turnsPerSecond' in walk_body, 'the walk window follows the real distance and speed'
+assert 'nestWalkTurns(*hen, standing)' in lay and 'HatcheryCycle::walkFits(walk, hen->getLayTimer(), settings)' in lay
+assert 'leadTurns' not in room_cpp and 'mNestWalkTurns' not in room_cpp and 'mNestWalkTurns' not in cycle
+assert 'planned->mDue = true' in lay, 'the egg is laid when the laying timer runs out, not when the hen arrives'
+trips = body(room_cpp, 'void RoomHatchery::updateNestTrips')
+assert 'HatcheryNestArrive' in trips and 'ChickenPose::lay' in trips and 'HatcheryCycle::tripDue(' in trips, 'she sets off when the turns left are as many as walk and pose'
+assert 'setFollowTarget(it->mStand' in trips and 'hen == nullptr' in trips and 'it->mDue' in trips, 'a hen that is gone takes a planned egg with her, a laid one still appears'
+assert 'uint32_t HatcheryCycle::walkTurns' in cycle_cpp and 'bool HatcheryCycle::tripDue' in cycle_cpp and 'layDelay' not in cycle_cpp
+assert 'standingPosition' in body(room_cpp, 'bool RoomHatchery::getNestStandPoint')
+assert doUpkeep.index('updateNestTrips(hens, settings)') < doUpkeep.index('hen->countDownLay()') < doUpkeep.index('releasePendingEggs(settings, eggs)')
+assert 'HatcheryNestWalkTurns' not in cfg and 'HatcheryNestArrive' in cfg and 'HatcheryLayFactor' in cfg and 'HatcheryLayFactor' in room_cpp
+# A late egg (the walk was longer than the time left) gets the age it would have had, and so does the chick: the rhythm
+# of the cycle does not depend on the way to the nest. The parity test in the unit tests models exactly this.
+assert 'egg->setAge(it->mLate)' in body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+assert 'setAge(eggAge - settings.mHatchTurns)' in doUpkeep and 'chicks.push_back(egg)' in doUpkeep
+assert 'void setAge' in chicken_h or 'inline void setAge' in chicken_h
+assert 'eggs.erase(eggIt)' in doUpkeep and doUpkeep.index('eggs.erase(eggIt)') < doUpkeep.index('eggPositions.push_back'),     'trampled eggs free their place'
+# The chick from a nest stands next to the coop, the nest lies in the footprint of the coop
+assert 'leaveNest(egg)' in doUpkeep and 'chick->teleport(' in body(room_cpp, 'void RoomHatchery::leaveNest')
+assert 'standingPosition' in body(room_cpp, 'void RoomHatchery::leaveNest')
+teleport_pos = chicken_h.index('void teleport(')
+assert 'private:' not in chicken_h[chicken_h.index('void hopDown('):teleport_pos], 'teleport is public'
+# Egg save/load: the position (with the height) is saved by the entity, nothing new is saved
+assert 'mPosition.z' in body(chicken, 'void ChickenEntity::exportToStream') or 'mPosition.z' in chicken
+# Client: the egg in a nest has no straw of its own, the coop mesh has the nests
+render = (root / 'source/render/RenderManagerChickens.cpp').read_text()
+assert 'hideEggStraw' in render and 'mNestEgg' in render and 'ChickenStraw' in render
+
+# Trampling: shell pieces, yolk and feathers, shown by the clients, no new network value
+assert 'fireEggTrample(*egg)' in doUpkeep
+fx = body(room_cpp, 'void RoomHatchery::fireEggTrample')
+assert 'HatcheryFx/EggTrample' in fx and 'ServerNotificationType::playSpatialSound' in fx
+assert 'HatcheryFx/EggTrample' in client and 'rrEggTrampled' in client
+assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' in render
+particles = (root / 'particles/ChickenEggShell.particle').read_text()
+trample = particles[particles.index('particle_system ChickenEggTrample'):]
+assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
+assert 'enum class ServerNotificationType' in notif and notif[notif.index('enum class ServerNotificationType'):notif.index('};')].rstrip().endswith('timeLimit')
+print('hatchery nest egg and trample checks passed')
+
+# The numbers of the rooster and the flock are settings read from the config, not fixed numbers in the room code
+rooster_h = (root / 'source/rooms/HatcheryRooster.h').read_text()
+rooster_cpp = (root / 'source/rooms/HatcheryRooster.cpp').read_text()
+for member in ('mCrowTurns', 'mRoostDivisor', 'mGuardFar', 'mGuardNear', 'mGuardApproachGap', 'mCatchDistance',
+               'mWalkGap', 'mHopDistance', 'mCallFollowGap', 'mSnuggleGap', 'mLeadScratchChance',
+               'mCallScratchChance', 'mChickPeepChance', 'mScatterAttempts', 'mScatterMargin', 'mFightStandFactor'):
+    assert member in rooster_h and ('settings.' + member in room_cpp or 'Settings.' + member in room_cpp), member
+assert 'settings.mCrowTurns' in rooster_cpp and 'settings.mRoostDivisor' in rooster_cpp
+assert 'mTurns = 4;' not in rooster_cpp and '/ 10)' not in rooster_cpp
+acting = room_cpp[room_cpp.index('void RoomHatchery::actRoosterMood'):room_cpp.index('void RoomHatchery::updateRooster')]
+for number in ('2.2', '0.9', '1.8', '0.55f', 'Random::Int(1, 3)', 'Random::Int(1, 2)'):
+    assert number not in acting, number
+assert 'Random::Int(1, 12)' not in room_cpp
+print('hatchery rooster settings checks passed')
+
+# The new day crow is remembered as a state (the day he crowed for), it is saved, and old saves still load
+assert 'newDayCrowOwed' in rooster_cpp and 'isNewDay(context.mTurn' not in rooster_cpp
+assert 'int64_t mCrowDay' in rooster_h
+assert 'context.mCrowDay = mLastCrowDay' in room_cpp
+assert 'mLastCrowDay = std::max(mLastCrowDay' in body(room_cpp, 'void RoomHatchery::beginRoosterMood')
+assert '"HatcheryDay "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:400]
+imp_day = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:1800]
+assert 'HatcheryDay' in imp_day and 'seekg(pos)' in imp_day
+assert 'test_RoosterNewDayCrow' in (root / 'source/tests/test_HatcheryCycle.cpp').read_text()
+print('hatchery new day crow checks passed')
+
+# The hen shows herself laying: the egg appears after HatcheryLayShowTurns turns, a pending egg is saved and counted
+assert 'mLayShowTurns' in (root / 'source/rooms/HatcheryCycle.h').read_text()
+assert 'HatcheryLayShowTurns' in room_cpp and 'HatcheryLayShowTurns' in config
+laying = body(room_cpp, 'void RoomHatchery::doUpkeep')
+assert 'mPendingEggs.push_back(PendingEgg(eggSpot, settings.mLayShowTurns))' in laying
+assert 'releasePendingEggs(settings, eggs)' in laying and 'if(pending.mDue)' in laying
+assert laying.index('hen->countDownLay()') < laying.index('releasePendingEggs(settings, eggs)')
+release = body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+assert 'spawnAnimal(ChickenKind::egg' in release and 'erase(it)' in release
+# the egg is created in one place only (here or at once without delay), never in both
+assert laying.count('spawnAnimal(ChickenKind::egg') == 1
+assert '"HatcheryLays "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:900]
+assert 'tag == "HatcheryLays"' in room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:2600]
+print('hatchery delayed egg checks passed')
+
+# Full hatchery: the hens sit in the coops. The sleeping rooster takes the highest roof (the nearest one among equals).
+assert 'updateCoopSitting(hens, full)' in room_cpp
+sitting = body(room_cpp, 'void RoomHatchery::updateCoopSitting')
+assert 'hen->teleport(seat)' in sitting and 'leaveNest(hen)' in sitting and 'findCoopSeat' in sitting
+assert 'getCoveringRoom() != this' in body(room_cpp, 'bool RoomHatchery::findCoopSeat')
+assert 'HatcheryCoopSit' in config and 'HatcheryCoopSeatRadius' in config
+assert '!night && !full' in room_cpp, 'a sitting hen does not run to the calling rooster'
+high = body(room_cpp, 'Tile* RoomHatchery::getHighestCoop')
+assert 'roof > highestRoof' in high and 'distance < highestDistance' in high
+assert 'roostOnRoof(rooster, ChickenPose::roost, false, true)' in room_cpp
+assert 'highest ? getHighestCoop(position) : getNearestCoop(position)' in room_cpp
+print('hatchery coop seat and roof checks passed')

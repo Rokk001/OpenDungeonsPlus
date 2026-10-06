@@ -350,6 +350,14 @@ public:
     inline double getInteractionPause() const
     { return mInteractionPause; }
 
+    //! Seconds between two looks for creatures that watch a fight in an arena from outside
+    inline double getArenaSpectatorInterval() const
+    { return mArenaSpectatorInterval; }
+
+    //! Seconds between two cheers of the crowd (confetti and shouting) of the same arena
+    inline double getArenaCheerPause() const
+    { return mArenaCheerPause; }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -374,6 +382,8 @@ private:
     double mInteractionChance;
     double mInteractionRadius;
     double mInteractionPause;
+    double mArenaSpectatorInterval;
+    double mArenaCheerPause;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;

@@ -28,7 +28,7 @@ assert 'destroyMesh()' in body(chicken, 'void ChickenEntity::setKindFromServer')
 assert 'rrChickenHatched' in body(chicken, 'void ChickenEntity::setKindFromServer')
 
 # Poses reach the client as animation names and are turned into skeleton animations plus motion.
-for name in ('strut', 'chase', 'flee', 'mount', 'cackle', 'perch', 'crow', 'guard', 'lead', 'roost', 'lay', 'wobble', 'emerge', 'scratch', 'flutter'):
+for name in ('strut', 'chase', 'flee', 'mount', 'cackle', 'perch', 'crow', 'guard', 'lead', 'roost', 'lay', 'wobble', 'emerge', 'scratch', 'flutter', 'protest'):
     assert 'static const std::string %s =' % name in pose, name
 hook = body(render, 'void RenderManager::rrSetObjectAnimationState')
 assert 'ChickenPose::isPose(animation)' in hook and 'rrSetChickenPose' in hook
@@ -110,3 +110,116 @@ assert 'ChickenPose::scratch' in looks and 'ChickenPose::flutter' in looks
 assert 'fireProtest' in body(chicken, 'void ChickenEntity::pickup')
 # Eggs and chicks dropped outside a hatchery are lost
 assert 'HatcheryYoungLostTurns' in chickUpkeep and 'HatcheryYoungLostTurns' in config
+
+# Coop mesh with nests, door clip and roof lookout, and the real hen clips Lay and Flutter (text checks only)
+coop_h = (root / 'source/rooms/HatcheryCoopHouse.h').read_text()
+for name in ('meshName = "ChickenCoopHouse"', 'oldMeshName = "ChickenCoop"', 'doorClip = "Door"', 'roofPerchHeight',
+             'roofPerchOffset', 'nestCenter', 'nestEggSpot', 'nestEggSpotWorld', 'isCoopMesh'):
+    assert name in coop_h, name
+assert 'HatcheryCoopHouse::meshName' in body(room, 'BuildingObject* RoomHatchery::notifyActiveSpotCreated')
+assert 'HatcheryCoopHouse::roofPerchHeight' in room and 'HatcheryCoopHouse::roofPerchOffset' in room
+assert 'ChickenCoop"' not in room
+assert render.count('HatcheryCoopHouse::isCoopMesh') == 2
+coop_mesh = (models / 'ChickenCoopHouse.mesh').read_bytes()
+assert b'ChickenCoopHouse.skeleton' in coop_mesh and b'ChickenCoop' in coop_mesh and b'ChickenStraw' in coop_mesh
+coop_skeleton = (models / 'ChickenCoopHouse.skeleton').read_bytes()
+for name in (b'Root', b'Door', b'Lookout', b'Idle'):
+    assert name in coop_skeleton, name
+assert (models / 'ChickenCoop.mesh').exists()
+bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
+assert '{"ChickenCoopHouse", -.203275f, -.4f, .796725f, .4f}' in bounds
+assert 'ChickenCoop ChickenCoopHouse' in (root / 'config/roomAmbienceProduction.cfg').read_text()
+assert 'ChickenCoopHouse.mesh' in credits and 'ChickenCoopHouse.skeleton' in credits and 'clips Lay, Flutter' in credits
+# The door of the coop swings with the animal that comes out, the old mesh shakes as before
+assert 'mDoor' in looks and 'HatcheryCoopHouse::doorClip' in body(looks, 'void RenderManager::rrCreateCoopDecor')
+assert 'mDoor->setEnabled(true)' in body(looks, 'void RenderManager::rrSetChickenPose')
+assert 'mShake = lookSettings().mCoopShakeSeconds' in body(looks, 'void RenderManager::rrSetChickenPose')
+assert 'mDoor->addTime' in body(looks, 'void RenderManager::updateChickenLooks')
+assert 'decor.mNest != nullptr' in body(looks, 'void RenderManager::rrDestroyCoopDecor')
+# Hen clips: used when the skeleton has them, procedural motion stays as fallback
+for name in (b'Lay', b'Flutter', b'Peep', b'Run', b'Crow', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep', b'Walk', b'Idle'):
+    assert name in skeleton, name
+assert 'return "Lay"' in pose and 'return "Flutter"' in pose and 'isOneShotClip' in pose
+# Mating clips: the rooster plays Mount, Tread (looped) and Dismount by the phase of the pose, the hen ducks, once
+for name in (b'MountCycle', b'Mount', b'Tread', b'Dismount', b'Duck'):
+    assert name in skeleton, name
+assert 'return "Mount"' in pose and 'return "Duck"' in pose and '(clip == "Mount")' in pose and '(clip == "Dismount")' in pose
+assert '(clip == "Tread")' not in pose
+update = body(looks, 'void RenderManager::updateChickenLooks')
+assert 'hasAnimation("Tread")' in update and '{"Mount", "Tread", "Dismount"}' in update and 'phase == 2' in update
+# The phases fit the clips: Mount 0.4 s, Tread 2 x 0.55 s, Dismount 0.4 s = the 1.9 s of the pose and of the Duck clip
+clips = (root / 'tools/blender-assets/hatchery_clips.py').read_text()
+for line in ('MOUNT_SECONDS = 0.4', 'TREAD_SECONDS = 0.55', 'DISMOUNT_SECONDS = 0.4', 'DUCK_SECONDS = 1.9', 'TREAD_CYCLES = 2'):
+    assert line in clips, line
+assert 'HatcheryLookMountClimbSeconds	0.4' in config and 'HatcheryLookMountSeconds	1.9' in config
+# With the Duck clip the procedural duck of the hen (HatcheryLookMountCrouch) is not added again
+assert 'look.mMountCrouch > 0.0f) && look.mEntity->getSkeleton()->hasAnimation("Duck")' in update
+assert 'ChickenPose::isOneShotClip(clip)' in hook and 'hasAnimation(clip)' in hook
+assert 'hasAnimation("Lay")' in looks and 'hasAnimation("Flutter")' in looks
+assert 'values.mLayStretchX, values.mLayStretchY' in looks and 'lift = values.mFlutterLift * rise' in looks
+for name in ('hen_lay_flutter.py', 'coop_house.py'):
+    assert (root / 'tools/blender-assets' / name).exists(), name
+# Lay and Flutter keep their translations in the parent frame (the frame fix tool says why ogre_fix must not touch them)
+fix_tool = (root / 'tools/blender-assets/chicken_frame_fix.py').read_text()
+assert 'ogre_fix.py must NOT be applied' in fix_tool and 'T_new = q_bind * T_old' in fix_tool
+import shutil
+import subprocess
+import sys
+import tempfile
+if shutil.which('OgreXMLConverter') is not None:
+    sys.path.insert(0, str(root / 'tools/blender-assets'))
+    import chicken_frame_fix as frame_fix
+    import xml.etree.ElementTree as ET
+    with tempfile.TemporaryDirectory() as tmp:
+        out_xml = str(Path(tmp) / 'Chicken.xml')
+        subprocess.check_call(['OgreXMLConverter', '-q', str(models / 'Chicken.skeleton'), out_xml],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        skeleton_xml = ET.parse(out_xml).getroot()
+    assert len(frame_fix.structure(skeleton_xml)[0]) == frame_fix.BONE_COUNT
+    assert frame_fix.structure(skeleton_xml)[2] == sorted(frame_fix.CLIP_NAMES)
+    lay_hip = frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'z')
+    flutter_root = frame_fix.track_values(skeleton_xml, 'Flutter', 'Root', 'z')
+    assert abs(min(lay_hip) + 0.05) < 0.002, min(lay_hip)
+    assert abs(max(flutter_root) - 0.075) < 0.002, max(flutter_root)
+    assert max(abs(v) for v in frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'y')) < 0.002
+    # The Lay clip is as long as the Lay pose of the server (HatcheryLayShowTurns turns of 1 / turnsPerSecond seconds)
+    import re
+    show_turns = max(2, int(re.search(r'^\s*HatcheryLayShowTurns\s+(\d+)', config, re.M).group(1)))
+    turns_per_second = float(re.search(r'turnsPerSecond = ([0-9.]+);', (root / 'source/ODApplication.cpp').read_text()).group(1))
+    lay = [a for a in skeleton_xml.find('animations').findall('animation') if a.get('name') == 'Lay'][0]
+    assert abs(float(lay.get('length')) - show_turns / turns_per_second) < 0.01, lay.get('length')
+    last_times = set()
+    for track in lay.find('tracks').findall('track'):
+        last_times.add(round(float(track.find('keyframes').findall('keyframe')[-1].get('time')), 3))
+    assert last_times == {round(float(lay.get('length')), 3)}, last_times
+    # Idle starts on the pose of its second frame (the first frame used to be a one frame glitch with the hip sunk)
+    idle = [a for a in skeleton_xml.find('animations').findall('animation') if a.get('name') == 'Idle'][0]
+    for track in idle.find('tracks').findall('track'):
+        first, second = track.find('keyframes').findall('keyframe')[:2]
+        assert first.get('time') == '0', track.get('bone')
+        for tag in ('translate', 'rotate'):
+            assert first.find(tag).attrib == second.find(tag).attrib, (track.get('bone'), tag)
+else:
+    print('OgreXMLConverter not on the PATH: skeleton frame check skipped')
+# The rooster that guards the flock pecks (Pick clip and a lunge of the head)
+assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'HatcheryLookGuardPeckSpeed' in config
+# the rooster protests in the hand: pose, clip and look
+assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
+assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
+# A hatchery with only the rooster looks abandoned: loose feathers, no nest. The rooster is not counted.
+decor = body(looks, 'const bool check = mCoopDecorTimer')
+assert 'ChickenKind::rooster' in decor and 'getEntitiesInTile' in decor
+assert 'decor.mFeathers->setVisible(animals == 0)' in decor and 'decor.mNest->setVisible(animals > 0)' in decor
+# counter-proof: the old count over all chicken entities would keep a rooster-only hatchery looking alive
+assert 'countEntitiesOnTile(GameEntityType::chickenEntity)' not in decor
+# at night each chick goes to the hen nearest to it and sleeps tucked in under her (client offset, server position stays)
+chick_line = body(room, 'void RoomHatchery::updateChickLine')
+night_part = chick_line[chick_line.index('if(night)'):chick_line.index('Each chick follows the one in front')]
+assert 'for(ChickenEntity* hen : hens)' in night_part and 'mSnuggleGap' in night_part
+roost_part = looks[looks.index('pose == ChickenPose::roost'):looks.index('pose == ChickenPose::guard')]
+assert 'ChickenKind::chick' in roost_part and 'ChickenKind::hen' in roost_part and 'values.mChickUnderRadius' in roost_part
+assert 'values.mChickUnderOffset' in roost_part and 'values.mChickUnderLift' in roost_part and 'values.mChickUnderStretchZ' in roost_part
+for key in ('Radius', 'Offset', 'Lift', 'StretchZ'):
+    assert ('HatcheryLookChickUnder%s' % key) in looks and ('    HatcheryLookChickUnder%s\t' % key) in config, key
+    assert ('# HatcheryLookChickUnder%s' % key) in config, key
+print('hatchery coop and hen clip checks passed')

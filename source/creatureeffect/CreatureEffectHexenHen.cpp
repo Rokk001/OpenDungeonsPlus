@@ -57,7 +57,7 @@ void CreatureEffectHexenHen::applyEffect(Creature& creature)
 
     Tile* posTile = creature.getPositionTile();
     if(posTile != nullptr)
-        Spell::fireSpellEffect(*posTile, "Hen", "Hen");
+        Spell::fireSpellEffect(*posTile, "HenEnd", "HexenHenEnd");
 }
 
 CreatureEffectHexenHen* CreatureEffectHexenHen::load(std::istream& is)

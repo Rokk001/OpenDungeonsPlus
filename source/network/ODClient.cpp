@@ -1005,6 +1005,26 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             }
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+               event.is(CosmeticEventType::keeperWealth) && (RenderManager::getSingletonPtr() != nullptr))
+            {
+                // The heart or portal of a rich keeper is in view: the gold dust above it (tier only, no gold)
+                RenderManager::getSingleton().noteKeeperWealth(event.mObject, event.mValue, event.mValue2);
+            }
+
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+               event.is(CosmeticEventType::casinoResult) && (RoomAmbience::getSingletonPtr() != nullptr))
+            {
+                // A game of the casino ended: the coins at the winner, the grey smoke and the groan at the loser
+                Ogre::Vector3 loserPosition = event.mPosition;
+                Creature* loser = gameMap->getCreature(event.mObject);
+                if(loser != nullptr)
+                    loserPosition = loser->getPosition();
+
+                RoomAmbience::getSingleton().triggerEvent("CasinoWin", event.mPosition, false, "casinoRoom");
+                RoomAmbience::getSingleton().triggerEvent("CasinoLoss", loserPosition, false, "casinoRoom");
+            }
+
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
                CreatureReactions::getSingletonPtr() != nullptr)
             {
                 CreatureReactions::getSingleton().noteCosmeticEvent(event);
@@ -1157,6 +1177,15 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             int yPos;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
             static const std::string spellEffectPrefix = "SpellFx/";
+            if(family == "SpellFx/HandCast")
+            {
+                // The server accepted a spell of this keeper: the hand throws a spark (cosmetic)
+                Ogre::Vector3 handPosition;
+                if((RoomAmbience::getSingletonPtr() != nullptr) && (RenderManager::getSingletonPtr() != nullptr) &&
+                   RenderManager::getSingleton().getKeeperHandPosition(handPosition))
+                    RoomAmbience::getSingleton().noteHandCast(handPosition);
+                break;
+            }
             if(family.compare(0, spellEffectPrefix.size(), spellEffectPrefix) == 0)
             {
                 // Cosmetic spell effect, no sound belongs to it
@@ -1167,6 +1196,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                     ambience->triggerEvent("SpellFx" + family.substr(spellEffectPrefix.size()), position, false,
                         std::string(), true);
                 }
+                break;
+            }
+            if(family == "HatcheryFx/EggTrample")
+            {
+                // Cosmetic effect of a trampled egg, no sound belongs to it. The numbers are the place of the egg
+                // in hundredths of a tile.
+                RenderManager::getSingleton().rrEggTrampled(Ogre::Vector3(
+                    static_cast<Ogre::Real>(xPos) / 100.0f, static_cast<Ogre::Real>(yPos) / 100.0f, 0.0f));
                 break;
             }
             SoundEffectsManager::getSingleton().playSpatialSound(family, xPos, yPos);
@@ -1444,6 +1481,24 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                (kind <= static_cast<uint32_t>(ChickenKind::egg)))
             {
                 static_cast<ChickenEntity*>(entity)->setKindFromServer(static_cast<ChickenKind>(kind));
+            }
+            break;
+        }
+
+        case ServerNotificationType::chickenFight:
+        {
+            std::string firstName;
+            std::string secondName;
+            uint32_t phase;
+            OD_ASSERT_TRUE(packetReceived >> firstName >> secondName >> phase);
+            GameEntity* first = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, firstName);
+            GameEntity* second = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, secondName);
+            if((first != nullptr) && (second != nullptr) &&
+               (first->getObjectType() == GameEntityType::chickenEntity) &&
+               (second->getObjectType() == GameEntityType::chickenEntity))
+            {
+                RenderManager::getSingleton().rrChickenFight(static_cast<ChickenEntity*>(first),
+                    static_cast<ChickenEntity*>(second), phase);
             }
             break;
         }
@@ -1942,14 +1997,20 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::possessionEnd:
         {
-            // The creature the keeper returns from shows a short flash of light where it stands
+            // The creature the keeper returns from loses its aura and shows a short flash of light where it
+            // stands. A creature that fell (the server says so: dead, knocked out or gone) shows another effect
+            bool creatureLost;
+            OD_ASSERT_TRUE(packetReceived >> creatureLost);
             Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
             RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
+            if(possessed != nullptr)
+                possessed->endParticleEffectsByScript("SpellCreaturePossess");
             if((possessed != nullptr) && possessed->getIsOnMap() && (ambience != nullptr))
             {
                 Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),
                     static_cast<Ogre::Real>(possessed->getPosition().y), 0.0f);
-                ambience->triggerEvent("SpellFxPossessEnd", position, false, std::string(), true);
+                ambience->triggerEvent(creatureLost ? "SpellFxPossessLost" : "SpellFxPossessEnd", position, false,
+                    std::string(), true);
             }
             getPlayer()->setPossessedCreatureName(std::string());
             frameListener->getCameraManager()->stopPossession();
@@ -1957,7 +2018,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
                 gm->notifyPossessionEnded();
-                gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
+                if(creatureLost)
+                    gm->displayText(Ogre::ColourValue(1.0f, 0.55f, 0.5f), "Your creature fell. Your mind is torn back to the keeper's view.");
+                else
+                    gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
             }
             break;
         }

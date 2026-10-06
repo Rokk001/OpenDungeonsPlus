@@ -57,6 +57,7 @@ RoomAmbienceConfig::RoomAmbienceConfig() :
     mMaxMotions(40),
     mMaxOneShots(8),
     mMaxMarks(6),
+    mMaxFlights(6),
     mOccupiedRadius(2.2),
     mReducedDistanceFactor(0.55)
 {
@@ -78,8 +79,12 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::reloading;
     else if(text == "Ready")
         when = AmbienceWhen::ready;
+    else if(text == "LowHealth")
+        when = AmbienceWhen::lowHealth;
     else if(text == "Vacated")
         when = AmbienceWhen::vacated;
+    else if(text == "Sleeping")
+        when = AmbienceWhen::sleeping;
     else
         return false;
 
@@ -194,6 +199,8 @@ bool RoomAmbienceConfig::loadSettings(std::istream& file)
             mMaxOneShots = Helper::toUInt32(words[1]);
         else if(words[0] == "MaxMarks")
             mMaxMarks = Helper::toUInt32(words[1]);
+        else if(words[0] == "MaxFlights")
+            mMaxFlights = Helper::toUInt32(words[1]);
         else if(words[0] == "OccupiedRadius")
             mOccupiedRadius = Helper::toDouble(words[1]);
         else if(words[0] == "ReducedDistanceFactor")
@@ -301,6 +308,16 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::mark;
             else if(words[1] == "Sound")
                 effect.mKind = AmbienceKind::sound;
+            else if(words[1] == "Roll")
+                effect.mKind = AmbienceKind::roll;
+            else if(words[1] == "Turn")
+                effect.mKind = AmbienceKind::turn;
+            else if(words[1] == "Beam")
+                effect.mKind = AmbienceKind::beam;
+            else if(words[1] == "Projectile")
+                effect.mKind = AmbienceKind::projectile;
+            else if(words[1] == "CreatureClip")
+                effect.mKind = AmbienceKind::creatureClip;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);
@@ -311,6 +328,22 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         {
             effect.mSystem = words[1];
         }
+        else if(key == "Mesh")
+        {
+            effect.mMesh = words[1];
+        }
+        else if(key == "EndSystem")
+        {
+            effect.mEndSystem = words[1];
+        }
+        else if(key == "Land")
+        {
+            effect.mLand = words[1];
+        }
+        else if((key == "From") && (words.size() >= 4))
+        {
+            effect.mFrom = Ogre::Vector3(Helper::toFloat(words[1]), Helper::toFloat(words[2]), Helper::toFloat(words[3]));
+        }
         else if(key == "Family")
         {
             effect.mFamily = words[1];
@@ -319,10 +352,23 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         {
             effect.mDelay = Helper::toDouble(words[1]);
         }
+        else if(key == "Below")
+        {
+            effect.mBelow = Helper::toDouble(words[1]);
+        }
         else if(key == "Clips")
         {
             for(uint32_t i = 1; i < words.size(); ++i)
                 effect.mClips.push_back(words[i]);
+        }
+        else if(key == "Object")
+        {
+            for(uint32_t i = 1; i < words.size(); ++i)
+                effect.mObjects.push_back(words[i]);
+        }
+        else if(key == "Loop")
+        {
+            effect.mLoop = toBool(words[1]);
         }
         else if(key == "Every")
         {
@@ -399,6 +445,14 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "HeartRate")
         {
             effect.mHeartRate = toBool(words[1]);
+        }
+        else if(key == "OwnerOnly")
+        {
+            effect.mOwnerOnly = toBool(words[1]);
+        }
+        else if(key == "Torch")
+        {
+            effect.mTorch = toBool(words[1]);
         }
         else if(key == "Sound")
         {

@@ -747,7 +747,7 @@ public:
     void addCreatureEffect(CreatureEffect* effect);
 
     //! Called on server side to add a finite presentation-only particle effect.
-    void addParticleEffect(const std::string& effectScript, uint32_t nbTurns);
+    void addParticleEffect(const std::string& effectScript, int32_t nbTurns);
 
     bool removeCreatureEffect(CreatureEffect* effectForDeletion);
 

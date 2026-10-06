@@ -82,7 +82,7 @@ struct Room:Building {
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 99;}
  virtual bool removeCoveredTile(Tile* tile){++removed;
   mCoveredTiles.erase(std::remove(mCoveredTiles.begin(),mCoveredTiles.end(),tile),mCoveredTiles.end());return true;}
- virtual void doUpkeep(){++upkeep;}
+ virtual void doUpkeep(){++upkeep;}void announceKeeperWealth(Tile*){}
  virtual void exportToStream(std::ostream& os)const{os<<floorHP<<'\n';}
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}
 };
@@ -92,7 +92,7 @@ struct RoomDungeonTemple:Room {
  HeartHealthTier mCurrentHeartTier=HeartHealthTier::healthy;int templeRebuilds=0;
  bool getIsOnServerMap()const{return true;}void updateTemplePosition(){++templeRebuilds;}
  double getHeartHealthFraction()const;HeartHealthTier computeHeartHealthTier()const;void checkHeartHealthTier();
- bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);
+ bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);Tile* getHeartTile()const;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
  static const double HEART_MAX_HP;static const double HEART_HEAL_PER_SECOND;double getHeartMaxHP()const;
@@ -109,6 +109,7 @@ METHODS
 HEART_OBJECT;
 bool RoomDungeonTemple::isTreasuryTile(Tile*)const{return false;}
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*){}
+Tile* RoomDungeonTemple::getHeartTile()const{return nullptr;}
 int main(){int checks=0,failures=0;
  auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};

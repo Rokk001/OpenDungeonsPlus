@@ -5553,7 +5553,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 8	Alarm1	3	1
-32	112	1
+46	108	1
 [/Trap]
 [Trap]
 1	Cannon1	3	1

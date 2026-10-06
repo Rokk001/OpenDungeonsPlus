@@ -39,6 +39,8 @@ namespace ChickenPose
     static const std::string emerge = "Emerge";
     static const std::string scratch = "Scratch";
     static const std::string flutter = "Flutter";
+    static const std::string fight = "Fight";
+    static const std::string protest = "Protest";
 
     //! \brief Clip of the chick breaking out of the egg, played once by the client when the egg hatches (not a pose).
     static const std::string hatchClip = "Hatch";
@@ -49,7 +51,8 @@ namespace ChickenPose
         return (name == strut) || (name == chase) || (name == flee) || (name == mount) ||
             (name == cackle) || (name == perch) || (name == crow) || (name == guard) ||
             (name == lead) || (name == roost) || (name == lay) || (name == wobble) ||
-            (name == emerge) || (name == scratch) || (name == flutter);
+            (name == emerge) || (name == scratch) || (name == flutter) || (name == fight) ||
+            (name == protest);
     }
 
     //! \brief True if the pose is a way of walking.
@@ -64,13 +67,37 @@ namespace ChickenPose
         return isWalkPose(name) ? "Walk" : "Idle";
     }
 
-    //! \brief The own clip of the hatchery skeleton for an animation name of the server ("Crow", "Run" or "Peep"),
+    //! \brief True for the clips that play once ("Lay", "Flutter", "Mount", "Dismount", "Duck"); "Tread" loops.
+    inline bool isOneShotClip(const std::string& clip)
+    {
+        return (clip == "Lay") || (clip == "Flutter") || (clip == "Mount") || (clip == "Dismount") || (clip == "Duck");
+    }
+
+    //! \brief The own clip of the hatchery skeleton for an animation name of the server ("Crow", "Run", "Peep", "Lay", "Flutter", "Mount" or "Duck"),
     //! empty if the walk or idle clip is right. A chick peeps while it stands.
     inline std::string skeletonClip(const std::string& name, bool isChick)
     {
         if(name == crow)
             return "Crow";
-        if((name == chase) || (name == flee))
+        // A hen laying sits down, fluffs up and stands up again, a flutter is a short flap up
+        if(name == lay)
+            return "Lay";
+        if(name == flutter)
+            return "Flutter";
+        // The rooster climbs on the hen (Mount), treads and beats his wings (Tread, looped) and climbs down
+        // (Dismount); the client switches the three by the time of the pose (1.9 s). The hen ducks under him for as long
+        if(name == mount)
+            return "Mount";
+        if(name == cackle)
+            return "Duck";
+        // Two roosters fighting peck at each other, the wings and the lunges are added by the client
+        if(name == fight)
+            return "Pick";
+        // The rooster guarding the flock pecks at the creature in front of him, the lunge is added by the client
+        if(name == guard)
+            return "Pick";
+        // The rooster in the keeper's hand kicks and flaps (the puffing up is added by the client)
+        if((name == chase) || (name == flee) || (name == protest))
             return "Run";
         if(isChick && (name == "Idle"))
             return "Peep";

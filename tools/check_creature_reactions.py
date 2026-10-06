@@ -22,7 +22,7 @@ ROOMS = ("Hatchery", "Treasury", "Portal", "Dormitory", "Library", "Workshop", "
 SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupStaggerMax", "DefaultGroup",
             "MoodInterval", "MoodPerTick", "MoodWalkingChance", "ImpatientAfter", "ProudSeconds", "BoredAfter",
             "AmbientAfter", "SitAfter", "LieAfter", "LookRadius", "InteractionChance", "InteractionRadius",
-            "InteractionPause")
+            "InteractionPause", "ArenaSpectatorInterval", "ArenaCheerPause")
 RELATION_EVENTS = ("RelationFriend", "RelationBestFriend", "RelationLovers", "RelationNemesis", "RelationHated",
                    "RelationBreakUp")
 EVENT_KEYS = ("Name", "Priority", "Cooldown", "Probability", "GroupMax", "WhileWorking", "InHand", "Dying")

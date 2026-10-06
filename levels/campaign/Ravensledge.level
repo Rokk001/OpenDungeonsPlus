@@ -2234,7 +2234,7 @@ Name	firstRaid
 Mode	once
 Cond	time	600
 Action	message	1	Raiders are crossing the lower bridge from the shelf above.
-Action	spawn	3	36	38	1	Adventurer:2	Adventurer:2	Elf:2
+Action	spawn	3	47	37	1	Adventurer:2	Adventurer:2	Elf:2
 [/Trigger]
 [Trigger]
 Name	secondRaid
@@ -2248,7 +2248,7 @@ Name	thirdRaid
 Mode	once
 Cond	time	2100
 Action	message	1	Vane is pulling in every archer he has. Do not let them reach your heart.
-Action	spawn	3	36	40	1	Knight:3	Elf:3	Elf:2	Adventurer:3	Monk:2
+Action	spawn	3	47	36	1	Knight:3	Elf:3	Elf:2	Adventurer:3	Monk:2
 [/Trigger]
 [Trigger]
 Name	captainDown

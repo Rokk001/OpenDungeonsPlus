@@ -22,6 +22,12 @@ in mat3 TBN;
  
 out vec4 color;
 
+// Cheap 3D hash for the sparkle cells
+float goldHash(vec3 p)
+{
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
 void main (void)  
 {  
     vec3 texelColor = texture(decalmap, out_UV0.st).rgb;
@@ -30,9 +36,10 @@ void main (void)
     Normal.xyz = 2 * Normal.xyz - (1.0,1.0,1.0);
     Normal =  normalize(TBN * Normal); 
     
-    
+    // The texture is dark rock with gold veins. The vein mask tells the two apart.
+    float vein = smoothstep(0.10, 0.28, texelColor.r - texelColor.b);
+
     vec3 result;
-    
     
     // precompute the lighting term
     vec4 shadow = vec4(1.0);
@@ -40,17 +47,27 @@ void main (void)
         shadow = vec4(sampleShadow(shadowmap, VertexPos));
     vec3 lightingTerm = getLocalLighting(FragPos, Normal, cameraPosition.xyz, shadow.r) + ambientLightColour.rgb;
     
+    // A digging mark tints the rock only, the veins keep their own colour so a marked wall does not
+    // turn into a flat bright yellow block.
+    vec3 baseColor = texelColor;
     if(diffuseSurface.rgb != vec3(1.0,1.0,1.0))
-        result =  lightingTerm * mix(texelColor, diffuseSurface.rgb,0.5);
-    else
-        result =  lightingTerm * texelColor;
+        baseColor = mix(texelColor, diffuseSurface.rgb * texelColor, 0.6 * (1.0 - vein));
+    result = lightingTerm * baseColor;
 
-    // Brighter gold veins with a slow glint that wanders over the bright flecks
-    float luma = dot(texelColor, vec3(0.299, 0.587, 0.114));
-    float wave = sin(FragPos.x * 9.0 + FragPos.y * 7.0 + FragPos.z * 11.0 + veinTime * 1.7)
-               * sin(FragPos.x * 5.0 - FragPos.y * 6.0 + FragPos.z * 8.0 - veinTime * 1.1);
-    float glint = pow(max(wave, 0.0), 10.0) * smoothstep(0.4, 0.75, luma);
-    result = result * veinGain + glint * vec3(1.0, 0.86, 0.45);
-    color = vec4(result.xyz,  1.0);
-       
+    // Metallic sheen on the veins, strongest where the surface turns away from the viewer
+    vec3 viewDir = normalize(cameraPosition.xyz - FragPos);
+    float sheen = pow(1.0 - abs(dot(Normal, viewDir)), 3.0);
+    result += vein * veinGain * sheen * 0.12 * vec3(1.0, 0.8, 0.4);
+
+    // Sparse glitter points inside the veins that flash up and fade, no area glow
+    vec3 cellPos = FragPos * 16.0;
+    vec3 cell = floor(cellPos);
+    float cellRand = goldHash(cell);
+    float phase = fract(cellRand * 7.3 + veinTime * 0.25);
+    float flash = pow(sin(phase * 3.14159), 12.0);
+    float dotShape = smoothstep(0.30, 0.0, length(fract(cellPos) - 0.5));
+    float glitter = step(0.90, cellRand) * flash * dotShape * vein;
+    result += glitter * veinGain * vec3(1.0, 0.88, 0.55);
+
+    color = vec4(min(result, vec3(1.0)), 1.0);
 }    

@@ -42,6 +42,7 @@ probe = r'''
 #include <sstream>
 #include <string>
 #include <vector>
+#include "rooms/TreasuryGoldLayer.h"
 int errorsLogged = 0;
 #define OD_LOG_ERR(x) ++errorsLogged
 #define OD_LOG_INF(x)
@@ -80,7 +81,7 @@ struct ConfigManager {static double maxManaPerSeat;
 double ConfigManager::maxManaPerSeat=200000.0;
 struct Seat {
  int team;int id;Player* mPlayer=nullptr;GameMap* mGameMap=nullptr;void* mCurrentSkill=nullptr;SeatStatistics stats;
- double mMana=0.0;bool mHadLibrary=false;double getMana()const{return mMana;}void addMana(double mana);
+ double mManaOneOffPending=0.0;double mMana=0.0;bool mHadLibrary=false;double getMana()const{return mMana;}void addMana(double mana);
  std::vector<uint32_t> mNbRooms=std::vector<uint32_t>(static_cast<uint32_t>(RoomType::nbRooms),0);
  Seat(int t,int i):team(t),id(i){}
  void addSkillPoints(int){}
@@ -122,7 +123,7 @@ struct Room:Building {
  virtual double takeDamage(GameEntity*,double,double,double,double,Tile*,bool){return 99;}
  virtual bool removeCoveredTile(Tile* t){
   mCoveredTiles.erase(std::remove(mCoveredTiles.begin(),mCoveredTiles.end(),t),mCoveredTiles.end());mCoveredTilesDestroyed.push_back(t);return true;}
- virtual void doUpkeep(){++doUpkeeps;}
+ virtual void doUpkeep(){++doUpkeeps;}void announceKeeperWealth(Tile*){}
  virtual void restoreInitialEntityState(){++restored;}
  virtual void exportToStream(std::ostream& os)const{os<<floorHP<<'\n';}
  virtual bool importFromStream(std::istream& is){return bool(is>>floorHP);}
@@ -339,5 +340,5 @@ print('WIRING OK: platform look follows the covering room, dead rooms are skippe
 with tempfile.TemporaryDirectory(prefix='odp-heart-ruin-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

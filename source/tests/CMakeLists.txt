@@ -16,6 +16,11 @@ add_boost_test(00-SocialGenerator
         ${SRC}/social/SocialGenerator.h
         ${SRC}/social/SocialGenerator.cpp)
 
+add_boost_test(00-SelectionSize
+        SOURCES
+        test_SelectionSize.cpp
+        ${SRC}/utils/SelectionSize.h)
+
 add_boost_test(00-PostLog
         SOURCES
         test_PostLog.cpp
@@ -174,7 +179,9 @@ add_boost_test(00-HatcheryCycle
         ${SRC}/rooms/HatcheryCycle.h
         ${SRC}/rooms/HatcheryCycle.cpp
         ${SRC}/rooms/HatcheryRooster.h
-        ${SRC}/rooms/HatcheryRooster.cpp)
+        ${SRC}/rooms/HatcheryRooster.cpp
+        ${SRC}/rooms/RoomTorches.h
+        ${SRC}/rooms/RoomTorches.cpp)
 
 add_boost_test(aa-LaunchGame
         SOURCES

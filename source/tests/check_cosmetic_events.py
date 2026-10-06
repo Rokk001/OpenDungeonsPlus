@@ -18,8 +18,9 @@ body = notification_h[notification_h.index('enum class ServerNotificationType'):
 body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
-# The new kind sits before creatureAppearance; trapEffect, timeLimit and chickenKindChanged stay the last values
-assert names[-6:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'trapEffect', 'timeLimit', 'chickenKindChanged'], names[-7:]
+# The new kind sits before creatureAppearance; trapEffect and timeLimit stay the last values
+assert names[-7:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                      'trapEffect', 'timeLimit'], names[-8:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')
@@ -84,8 +85,12 @@ static bool oldClientProcess(int32_t cmd, ODPacket& packet, int& handled)
 int main()
 {
     // Round trip of every kind, with the sentinel behind it to prove nothing is left over or missing
-    for(int32_t type = 0; type <= 9; ++type)
+    for(int32_t type = 0; type <= 16; ++type)
     {
+        // 10 to 14 are kept free for kinds of another branch
+        if((type > 9) && (type != 15) && (type != 16))
+            continue;
+
         CosmeticEvent event;
         event.mType = type;
         event.mSubject = "Orc_3";

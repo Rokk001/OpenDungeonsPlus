@@ -479,6 +479,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/RenderManagerChickens.cpp
+    ${SRC}/render/TreasuryGoldBatch.cpp
     ${SRC}/render/TreasuryGoldMesh.cpp
     ${SRC}/render/TextRenderer.cpp
 
@@ -514,6 +515,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/HatcheryRooster.cpp
     ${SRC}/rooms/Room.cpp
     ${SRC}/rooms/RoomArena.cpp
+    ${SRC}/rooms/RoomTorches.cpp
     ${SRC}/rooms/RoomBridge.cpp
     ${SRC}/rooms/RoomBridgeStone.cpp
     ${SRC}/rooms/RoomBridgeWooden.cpp
