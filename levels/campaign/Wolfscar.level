@@ -4709,7 +4709,7 @@ Name	pack2
 Mode	once
 Cond	time	600
 Action	message	1	A pack is running down from the east hold.
-Action	spawn	5	35	66	1	Orc:2	Goblin:2	Spider:2	Troll:2
+Action	spawn	5	52	50	1	Orc:2	Goblin:2	Spider:2	Troll:2
 [/Trigger]
 [Trigger]
 Name	pack3
@@ -4723,7 +4723,7 @@ Name	pack4
 Mode	once
 Cond	time	1400
 Action	message	1	Wolves are streaming out of the west hold.
-Action	spawn	4	35	66	1	Troll:3	Orc:3	Spider:3
+Action	spawn	4	12	50	1	Troll:3	Orc:3	Spider:3
 [/Trigger]
 [Trigger]
 Name	pack5
@@ -4745,14 +4745,14 @@ Name	pack7
 Mode	once
 Cond	time	3000
 Action	message	1	The east keeper has loosed everything he has.
-Action	spawn	5	35	70	1	Troll:4	Orc:3	Goblin:3	Spider:3	Orc:3
+Action	spawn	5	52	50	1	Troll:4	Orc:3	Goblin:3	Spider:3	Orc:3
 [/Trigger]
 [Trigger]
 Name	pack8
 Mode	once
 Cond	time	3700
 Action	message	1	The last hunters are coming for your heart.
-Action	spawn	4	35	70	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
+Action	spawn	4	52	50	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	huntersGone

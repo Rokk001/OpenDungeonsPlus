@@ -4127,7 +4127,7 @@ Name	surf2
 Mode	once
 Cond	time	2500
 Action	message	1	A heavy column marches out of the north-east.
-Action	spawn	3	51	69	1	Troll:3	Troll:3	Orc:3	Spider:3	Goblin:3
+Action	spawn	3	51	39	1	Troll:3	Troll:3	Orc:3	Spider:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	swell1
@@ -4148,21 +4148,21 @@ Name	gale1
 Mode	once
 Cond	time	700
 Action	message	1	The quay keeper is sending his packs south.
-Action	spawn	5	51	75	1	Orc:3	Troll:2	Spider:2
+Action	spawn	5	37	71	1	Orc:3	Troll:2	Spider:2
 [/Trigger]
 [Trigger]
 Name	gale2
 Mode	once
 Cond	time	2000
 Action	message	1	A storm of rats and spiders is coming off the quay.
-Action	spawn	5	49	77	1	Spider:3	Goblin:3	Orc:3	Troll:3
+Action	spawn	5	37	71	1	Spider:3	Goblin:3	Orc:3	Troll:3
 [/Trigger]
 [Trigger]
 Name	gale3
 Mode	once
 Cond	time	3400
 Action	message	1	The east quay has thrown its last guard against you.
-Action	spawn	5	49	77	1	Troll:4	Troll:3	Orc:4	Goblin:3
+Action	spawn	5	37	71	1	Troll:4	Troll:3	Orc:4	Goblin:3
 [/Trigger]
 [Trigger]
 Name	stormEnds

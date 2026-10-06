@@ -4321,7 +4321,7 @@ ProtectDungeonTemple	NULL
 # typeTrap	name	seatId	numTiles		Subsequent Lines: tileX	tileY	isActivated(0/1)		Subsequent Lines: optional specific data
 [Trap]
 4	DoorWooden1	5	1
-52	22	1
+52	24	1
 0
 [/Trap]
 [Trap]
@@ -4656,7 +4656,7 @@ Name	torch5
 Mode	once
 Cond	time	1120
 Action	message	1	The warden has called out his guard.
-Action	spawn	5	65	19	1	Knight:3	Elf:3	Monk:3	Adventurer:3
+Action	spawn	5	81	39	1	Knight:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	torch6
@@ -4698,7 +4698,7 @@ Name	torch11
 Mode	once
 Cond	time	2260
 Action	message	1	The warden has called out his guard.
-Action	spawn	5	65	19	1	Knight:4	Elf:4	Monk:4	Adventurer:3	Dwarf2:3
+Action	spawn	5	81	39	1	Knight:4	Elf:4	Monk:4	Adventurer:3	Dwarf2:3
 [/Trigger]
 [Trigger]
 Name	torch12
@@ -4740,7 +4740,7 @@ Name	torch17
 Mode	once
 Cond	time	3400
 Action	message	1	The warden has called out his guard.
-Action	spawn	5	65	19	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4	Adventurer:4
+Action	spawn	5	81	39	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4	Adventurer:4
 [/Trigger]
 [Trigger]
 Name	torch18
