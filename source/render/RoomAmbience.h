@@ -34,6 +34,9 @@
 #include <vector>
 
 class GameMap;
+class MovableGameEntity;
+class RenderedMovableEntity;
+class Seat;
 class Tile;
 
 /*! \brief Cosmetic life in the rooms (dust, glow, sparks, moving objects), client side only.
@@ -80,9 +83,13 @@ public:
     //! forced ignores the chance, the view test and the mode "reduced". visualName is the tile visual
     //! (room) the event is about; empty = the one of the tile at the position. noThrottle lets the same event
     //! start again within a tenth of a second (a spell cast on several creatures at once).
+    //! owner is the seat the thing of the event belongs to: effects with OwnerOnly are only shown to the keeper of
+    //! that seat (never when the owner is not given).
+    //! creatureName is the creature the event is about (empty = none); only the effects of kind CreatureClip use it.
     //! Returns the number of effects started
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
-        const std::string& visualName = std::string(), bool noThrottle = false);
+        const std::string& visualName = std::string(), bool noThrottle = false, const Seat* owner = nullptr,
+        const std::string& creatureName = std::string());
 
     //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
@@ -90,6 +97,9 @@ public:
     //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
+
+    //! \brief The local keeper has sent a spell cast: shows the event SpellFxHandCast at the place of the keeper's hand
+    void noteHandCast(const Ogre::Vector3& handPosition);
 
     //! \brief Plays the sound of the family (a folder below sounds/Spatial) at the position
     void playSound(const std::string& family, const Ogre::Vector3& position);
@@ -102,7 +112,7 @@ public:
     inline uint32_t getNbParticleSystems() const
     { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size() + mMarks.size()); }
     inline uint32_t getNbMovedObjects() const
-    { return static_cast<uint32_t>(mMotionNodes.size()); }
+    { return static_cast<uint32_t>(mMotionNodes.size() + mTurrets.size()); }
 
     //! \brief Speed factor of the effects marked "HeartRate" (1 = calm heart, more = hurt heart)
     inline void setHeartRateFactor(double factor)
@@ -140,7 +150,8 @@ private:
         double mLife;
     };
 
-    //! \brief The remains of a destroyed barricade, which plays the clip Collapse and then sinks into the floor
+    //! \brief The remains of a destroyed door, which plays the clip Collapse (barricade) or Destroyed (every other
+    //! door) and then sinks into the floor
     struct Collapse
     {
         Collapse() :
@@ -151,6 +162,79 @@ private:
         Ogre::Entity* mEntity;
         double mAge;
         double mBaseHeight;
+        std::string mClip;
+    };
+
+    //! \brief A cannon (or another object of an effect of kind turn) that follows creatures in range with its barrel
+    struct Turret
+    {
+        Turret() :
+            mEffect(0), mPosition(Ogre::Vector3::ZERO), mRestFront(Ogre::Vector3::NEGATIVE_UNIT_Y), mSeat(nullptr),
+            mGeneration(0)
+        {}
+
+        std::string mNodeName;
+        uint32_t mEffect;
+        Ogre::Vector3 mPosition;
+        //! Direction (flat) the object looked in when it was first seen, where it turns back to
+        Ogre::Vector3 mRestFront;
+        Seat* mSeat;
+        uint32_t mGeneration;
+    };
+
+    //! \brief A rolling object (kind roll) with its dust trail, which breaks up at the end of its way
+    struct Roller
+    {
+        Roller() :
+            mNode(nullptr), mEntity(nullptr), mTrailNode(nullptr), mTrail(nullptr), mEffect(0), mStart(Ogre::Vector3::ZERO),
+            mDirection(Ogre::Vector3::UNIT_X), mAge(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::SceneNode* mTrailNode;
+        Ogre::ParticleSystem* mTrail;
+        uint32_t mEffect;
+        Ogre::Vector3 mStart;
+        Ogre::Vector3 mDirection;
+        double mAge;
+    };
+
+    //! \brief Where a creature was at the last scan and whose it is
+    struct CreatureSpot
+    {
+        CreatureSpot() :
+            mPosition(Ogre::Vector3::ZERO), mSeat(nullptr)
+        {}
+
+        Ogre::Vector3 mPosition;
+        Seat* mSeat;
+    };
+
+    //! \brief A bolt (kind beam) or a flying object (kind projectile) on its way to the target
+    struct Flight
+    {
+        Flight() :
+            mNode(nullptr), mEntity(nullptr), mTrailNode(nullptr), mTrailSystem(nullptr), mBeam(false),
+            mStart(Ogre::Vector3::ZERO), mEnd(Ogre::Vector3::ZERO), mAge(0.0), mDuration(0.4), mWidth(1.0),
+            mArc(0.0), mFlickerRate(20.0), mFlickerClock(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::SceneNode* mTrailNode;
+        Ogre::ParticleSystem* mTrailSystem;
+        bool mBeam;
+        Ogre::Vector3 mStart;
+        Ogre::Vector3 mEnd;
+        double mAge;
+        double mDuration;
+        double mWidth;
+        double mArc;
+        double mFlickerRate;
+        double mFlickerClock;
+        //! Event raised at the target on arrival (projectile)
+        std::string mLand;
     };
 
     //! \brief A sound that waits for its time (Delay of an event effect)
@@ -236,17 +320,32 @@ private:
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanCreatureEvents();
+    //! \brief Raises HeartHit (and the state for "When Hit") when the health of the own dungeon heart, as the heart badge
+    //! shows it, has gone down since the last scan
+    void scanHeartHit();
     void reconcile();
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
     void updatePendingSounds();
-    //! \brief Lets a destroyed barricade (the door entity on the tile, which the server is about to remove)
-    //! fall into a heap with the clip Collapse of its skeleton
-    void startCollapse(int32_t tileX, int32_t tileY);
+    //! \brief Lets a destroyed door (the door entity of the given type on the tile, which the server is about to
+    //! remove) play the clip Collapse (barricade) or Destroyed (every other door) of its skeleton on a ghost copy
+    void startCollapse(int32_t tileX, int32_t tileY, const std::string& typeName);
     void updateCollapses(double timeSinceLastFrame);
     void destroyCollapse(Collapse& collapse);
+    //! \brief Lets the objects of effects of kind turn follow the creatures near them, or go back to rest
+    void updateTurrets(double timeSinceLastFrame);
+    void restoreTurret(const Turret& turret);
+    //! \brief Starts a rolling object of the effect (kind roll) at the given place; true if it was started
+    bool startRoll(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position);
+    void updateRollers(double timeSinceLastFrame);
+    //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
+    void finishRoller(Roller& roller, bool leaveEffects);
     void updateShake(double timeSinceLastFrame);
+    //! \brief Starts a beam or a projectile (effect kinds beam and projectile) for an event at the given place
+    void startFlight(const AmbienceEffect& effect, const Ogre::Vector3& position);
+    void updateFlights(double timeSinceLastFrame);
+    void destroyFlight(Flight& flight);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
     void updateMotions(double timeSinceLastFrame);
@@ -254,6 +353,22 @@ private:
     void restoreMotionNode(MotionNode& motionNode);
 
     bool isCreatureNear(double x, double y, double radius) const;
+    //! \brief True if a creature that sleeps is within the radius of the point
+    bool isSleeperNear(double x, double y, double radius) const;
+    //! \brief True if the skeleton of the entity has the clip (remembered per mesh, so a missing clip costs nothing)
+    bool hasClip(MovableGameEntity* entity, const std::string& clip);
+    //! \brief Plays the clip of an event effect (kind clip) once on the nearest object of Object within Amount tiles of
+    //! the position; false when there is none or it has no such clip
+    bool playEventClip(const AmbienceEffect& effect, const Ogre::Vector3& position);
+    //! \brief Plays the clip of an event effect (kind creatureClip) once on the creature; false when it is on its way,
+    //! unknown or has no such clip
+    bool playCreatureClip(const AmbienceEffect& effect, const std::string& creatureName);
+    //! \brief Lets an object that loops the clip of the effect (kind clip with Loop) finish on the last pose of the clip,
+    //! which is its pose at rest
+    void stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect);
+    //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
+    //! heart badge shows it) is below the given value
+    bool isLocalHeartBelow(const Ogre::Vector3& position, double below) const;
     //! \brief Updates and returns the state "no creature for a while" of a target
     bool isIdleLongEnough(const std::string& key, bool busy, double after);
     //! \brief The state "Empty" or "Vacated" of a target, depending on the effect
@@ -295,6 +410,12 @@ private:
     //! Ground marks (kind mark), oldest first
     std::vector<OneShot> mMarks;
     std::map<std::string, MotionNode> mMotionNodes;
+    //! Objects that follow creatures (kind turn), per entity name
+    std::map<std::string, Turret> mTurrets;
+    //! Time until which a trap (key "x,y" of its tile) keeps its turn, because the server aims it for a shot
+    std::map<std::string, double> mTurretHoldUntil;
+    std::vector<Roller> mRollers;
+    std::vector<CreatureSpot> mCreatureSpots;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;
     //! View shake: seconds left and in total, strength in world units at the start, shakes per second, phase
@@ -314,14 +435,21 @@ private:
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
     std::vector<Collapse> mCollapses;
+    std::vector<Flight> mFlights;
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;
+    //! Positions of the creatures that sleep at the last scan
+    std::vector<Ogre::Vector3> mSleeperPositions;
     std::vector<Candidate> mParticleCandidates;
     std::vector<Candidate> mMotionCandidates;
     std::vector<Candidate> mClipCandidates;
     //! Time at which an object plays its next clip (kind clip)
     std::map<std::string, double> mClipTimers;
+    //! Time until which an object plays a clip of an event (a bed that wakes up) and must not be restarted by a looping clip
+    std::map<std::string, double> mClipHoldUntil;
+    //! Clips that a mesh has (key "mesh|clip"), so that the skeleton is asked only once
+    std::map<std::string, bool> mClipKnown;
     //! Dice of its own, so the game random sequence is untouched
     std::mt19937 mRandom;
 
@@ -345,11 +473,16 @@ private:
     struct CreatureSnapshot
     {
         CreatureSnapshot() :
-            mHp(0.0), mSleeping(false), mEnemyInGuardRoom(false), mLastHealed(-100.0), mGeneration(0)
+            mHp(0.0), mSleeping(false), mPrisoner(false), mSeat(nullptr), mEnemyInGuardRoom(false),
+            mLastHealed(-100.0), mGeneration(0)
         {}
 
         double mHp;
         bool mSleeping;
+        //! Is in jail (a prison or a torture chamber)
+        bool mPrisoner;
+        //! The seat the creature belonged to (a change in a torture chamber is a conversion)
+        Seat* mSeat;
         bool mEnemyInGuardRoom;
         double mLastHealed;
         uint32_t mGeneration;
@@ -359,6 +492,8 @@ private:
     std::map<std::string, EntitySnapshot> mKnownEntities;
     uint32_t mGeneration;
     bool mEntitiesInitialized;
+    //! Heart health (points) of the badge at the last scan, negative while unknown
+    double mLastHeartHP;
 };
 
 #endif // ROOMAMBIENCE_H

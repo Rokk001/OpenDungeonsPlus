@@ -89,7 +89,7 @@ material RoomAmbFeather
 
             texture_unit
             {
-                texture RoomAmbFeather.png
+                texture ChickenFeather.png
             }
         }
     }

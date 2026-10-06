@@ -67,7 +67,14 @@ enum class CosmeticEventType : int32_t
     portalArrival = 8,
     //! A chicken of a hatchery hopped away from a hungry creature that came to eat it. mSubject chicken,
     //! mObject the creature, mPosition where the chicken was. The hop itself is the normal chicken movement.
-    chickenFlee = 9
+    chickenFlee = 9,
+    //! A game in a casino ended. mSubject winner creature, mObject loser creature, mPosition where the winner
+    //! stands. Sent to the keepers who see the tile. The numbers 10 to 14 are kept free for kinds of another branch.
+    casinoResult = 15,
+    //! The heart or the portal of a rich keeper (see KeeperWealth). mObject name of the room, mValue id of the
+    //! seat that owns it, mValue2 the wealth tier (0: not rich, 1: rich), mPosition the tile that has to be in
+    //! view. Sent about every 2 s to the keepers who see that tile, never the amount of gold.
+    keeperWealth = 16
 };
 
 //! \brief The data of one cosmetic event. Every kind uses the same layout on the wire, so a

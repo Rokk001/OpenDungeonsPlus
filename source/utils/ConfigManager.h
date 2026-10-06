@@ -308,6 +308,9 @@ private:
     //! \brief Reads config/relationships.cfg. A missing file is not an error: the relationship
     //! system then uses the defaults from the code.
     void loadRelationships(const std::string& fileName);
+    //! \brief Reads config/treasury.cfg into the treasury settings. A missing file is not an error:
+    //! the treasury then uses the defaults from the code (see rooms/TreasurySettings.h).
+    void loadTreasury(const std::string& fileName);
     //! \brief Loads the user configuration values, and use default ones if it cannot do it.
     void loadUserConfig(const std::string& fileName);
 

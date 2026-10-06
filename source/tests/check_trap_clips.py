@@ -37,7 +37,7 @@ if 'setAnimationState("Triggered", false)' not in shoot:
     problems.append("the cannon does not play its clip when it fires")
 
 ambience = read("source", "render", "RoomAmbience.cpp")
-if 'startCollapse(tileX, tileY)' not in ambience or '"Collapse"' not in ambience or "updateCollapses(dt)" not in ambience:
+if 'startCollapse(tileX, tileY, typeName)' not in ambience or '"Collapse"' not in ambience or "updateCollapses(dt)" not in ambience:
     problems.append("the client does not let a destroyed barricade collapse")
 if "destroyCollapse(collapse)" not in ambience[ambience.index("void RoomAmbience::stopAll"):ambience.index("void RoomAmbience::update(")]:
     problems.append("stopAll does not remove the collapsing barricades")

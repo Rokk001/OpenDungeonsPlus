@@ -4448,7 +4448,10 @@ bool Creature::parkToWallTile(Tile* wallTile, Tile* nTile)
         return false;
 
     Ogre::Vector2 parkingPoint;
-    parkingPoint = (wallTile->getPosition2d() - nTile->getPosition2d())*0.4 + nTile->getPosition2d() ;
+    // Stay well in front of the wall: the dig animation reaches forward, and 0.4 left only a tenth of a tile
+    // to the edge, so the worker stood half inside the block
+    static const double parkingShare = 0.2;
+    parkingPoint = (wallTile->getPosition2d() - nTile->getPosition2d())*parkingShare + nTile->getPosition2d() ;
 
     
     std::list<Tile*> result = getGameMap()->path(this, nTile);
@@ -5344,7 +5347,7 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
     mNeedFireRefresh = true;
 }
 
-void Creature::addParticleEffect(const std::string& effectScript, uint32_t nbTurns)
+void Creature::addParticleEffect(const std::string& effectScript, int32_t nbTurns)
 {
     EntityParticleEffect* effect = new EntityParticleEffect(
         nextParticleSystemsName(), effectScript, nbTurns);
@@ -6130,6 +6133,14 @@ void Creature::endPossession()
     Player* player = mPossessor;
     mPossessor = nullptr;
     player->setPossessedCreatureName(std::string());
+    // Whether the creature fell (dead, knocked out or gone), so the client does not have to guess it
+    const bool lost = !isAlive() || isKo() || !getIsOnMap();
+    endParticleEffectsByScript("SpellCreaturePossess");
+    // The aura is permanent on the clients and a refresh never removes an effect that is missing from it. The turn
+    // deletes the ended effect before the refresh of the turn is built, so the clients are told now, while the effect
+    // is still there with no turns left
+    mNeedFireRefresh = true;
+    fireCreatureRefreshIfNeeded();
 
     // The group does not follow anymore and goes back to its normal behaviour
     for(const std::string& memberName : mGroupMemberNames)
@@ -6156,6 +6167,7 @@ void Creature::endPossession()
 
     ServerNotification* serverNotification = new ServerNotification(
         ServerNotificationType::possessionEnd, player);
+    serverNotification->mPacket << lost;
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 

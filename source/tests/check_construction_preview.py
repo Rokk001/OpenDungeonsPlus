@@ -6,7 +6,7 @@ import tempfile
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/RenderManager.cpp').read_text()
 method = source[source.index('void RenderManager::rrDrawTilePreview('):
-                source.index('\nvoid RenderManager::entitySlapped(')]
+                source.index('\nbool RenderManager::getKeeperHandPosition(')]
 code = r'''
 #include <functional>
 #include <vector>

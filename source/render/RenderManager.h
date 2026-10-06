@@ -33,6 +33,7 @@
 #include <cstdint>
 #include "entities/GameEntity.h"
 #include "render/TreasuryCreatureRules.h"
+#include "render/TreasuryGoldBatch.h"
 #include <OgreVector2.h>
 
 class DraggableTileContainer;
@@ -54,6 +55,8 @@ class Weapon;
 namespace Ogre
 {
 class AnimationState;
+class Entity;
+class ManualObject;
 class OverlaySystem;
 class SceneManager;
 class SceneNode;
@@ -122,6 +125,10 @@ public:
     void moveWorldCoords(Ogre::Real x, Ogre::Real y);
     void entitySlapped();
 
+    //! \brief The server said that the keeper owning the heart or portal room is rich (keeperWealth event): the
+    //! gold dust shows over it while its tile is in view of the local keeper, tier 0 removes it
+    void noteKeeperWealth(const std::string& roomName, int seatId, int tier);
+
     static const Ogre::Real BLENDER_UNITS_PER_OGRE_UNIT;
     static const Ogre::Real KEEPER_HAND_WORLD_Z;
     static const Ogre::Real DRAGGABLE_NODE_HEIGHT;
@@ -152,6 +159,9 @@ public:
     void rrDestroyCreature(Creature* curCreature);
     //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)
     void rrRefreshCreatureGoldSack(Creature* creature);
+    //! The "Treasury detail" option changed: every pile, floor gold heap and thief sack is drawn again for the new
+    //! setting (the piles and heaps a few per frame, see updateTreasuryRebuild)
+    void rrTreasuryDetailChanged();
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
@@ -178,6 +188,8 @@ public:
     void rrRotateHand(Player* localPlayer);
     void rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer);
     bool isKeeperHandVisible() const { return mHandKeeperHandVisibility == 0; }
+    //! \brief Where the keeper's hand is in the world (the light that follows it). False if there is no hand yet
+    bool getKeeperHandPosition(Ogre::Vector3& position) const;
     void rrAddOutliner(Creature* creature);
     void rrRemoveOutliner(Creature* creature);
     void rrIncreaseAmbient(Creature* creature);
@@ -187,6 +199,9 @@ public:
     void rrCreateSeatVisionVisualDebug(int seatId, Tile* tile);
     void rrDestroySeatVisionVisualDebug(int seatId, Tile* tile);
     void rrSetObjectAnimationState(MovableGameEntity* curAnimatedObject, const std::string& animation, bool loop);
+    //! True when the skeleton of the entity has a clip of that name (false without skeleton or entity)
+    //! (entityFound tells whether the entity is drawn, an answer for an entity that is not can change later)
+    bool rrHasObjectClip(MovableGameEntity* animatedObject, const std::string& clip, bool& entityFound);
     void rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position);
     //! A worker poured gold onto the treasury tile (x, y): coins fall onto the top of the pile
     void rrTreasuryDeposit(GameMap* gameMap, int x, int y);
@@ -238,6 +253,11 @@ public:
     void rrUpdateChickenLook(ChickenEntity* chicken);
     //! \brief The egg hatched: shell pieces fly.
     void rrChickenHatched(ChickenEntity* chicken);
+    //! \brief An egg was trampled at the position: shell pieces and yolk fly, a few feathers of a startled hen.
+    void rrEggTrampled(const Ogre::Vector3& position);
+    //! \brief Two roosters fight (phase as in ServerNotificationType::chickenFight): while they brawl, feather
+    //! clouds fly between them at the configured interval, when it is over a last cloud flies.
+    void rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase);
     //! \brief The server set a pose (see ChickenPose.h), an empty pose is the normal walking and idling.
     void rrSetChickenPose(ChickenEntity* chicken, const std::string& pose);
     //! \brief Nest with eggs or loose feathers next to a coop of the hatchery
@@ -421,6 +441,8 @@ private:
         Ogre::Bone* mSpine = nullptr;
         CreatureFeedingLimb mArms[2] = {};
         CreatureFeedingLimb mLegs[2] = {};
+        //! The eaten animal is a rooster: its feathers have the colours of the rooster
+        bool mRoosterFeathers = false;
     };
     std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
 
@@ -443,15 +465,30 @@ private:
         Ogre::Real mPoseTime;
         Ogre::Real mPhase;
         int mFeatherBursts;
+        //! The rooster this one fights (set by the server event), the first of the two makes the feather clouds
+        ChickenEntity* mFightPartner;
+        bool mFightLeader;
+        Ogre::Real mFightTimer;
+        //! The hen the rooster climbs on while he mounts (set when the pose starts, null when none is near)
+        ChickenEntity* mMountPartner;
+        //! How far the hen is ducked down under the rooster (0 to 1), set by the rooster every frame
+        Ogre::Real mMountCrouch;
+        //! The clip phase of the rooster while he mounts: 1 climbing on, 2 treading, 3 climbing down (0 when not mounting)
+        int mMountPhase;
+        //! The egg lies in a nest of a coop: its own straw is hidden, the nest has straw
+        bool mNestEgg;
     };
     std::map<ChickenEntity*, ChickenLook> mChickenLooks;
 
     struct CoopDecor
     {
         Ogre::SceneNode* mNode;
+        //! The nest decoration, null for the coop mesh that has nests of its own
         Ogre::Entity* mNest;
         Ogre::Entity* mFeathers;
         Ogre::Real mShake;
+        //! The door clip of the coop mesh, null for the old coop mesh (the coop shakes then)
+        Ogre::AnimationState* mDoor;
     };
     std::map<BuildingObject*, CoopDecor> mCoopDecors;
     Ogre::Real mCoopDecorTimer = 0.0f;
@@ -495,10 +532,29 @@ private:
     Ogre::Real mTreasuryDustTimer = 0.0f;
     size_t mTreasuryDustCursor = 0;
     size_t mTreasuryPortalDustCursor = 0;
+    //! Rich keepers other than the local one: name of the heart or portal room -> seconds the news of the server
+    //! still counts. The server only tells the seats that see the tile, so this holds nothing about hidden buildings.
+    std::map<std::string, Ogre::Real> mForeignWealth;
     //! Set while a game is shown; the portal dust looks up the portals of the local keeper there
     GameMap* mGameMap = nullptr;
     Ogre::Real mTreasuryAmbientTimer = 0.0f;
     size_t mTreasuryAmbientCursor = 0;
+
+    //! The gold piles of this client (also the classic stacks that are drawn as piles) with the node type they were
+    //! created for and whether they use the reduced mesh because they are far from the camera. The level of detail
+    //! switches piles by creating their mesh again; the option change does the same for all of them.
+    struct TreasuryPileInfo
+    {
+        NodeType mNodeType;
+        bool mFar;
+    };
+    std::map<RenderedMovableEntity*, TreasuryPileInfo> mTreasuryPiles;
+    //! While a pile is created again for the level of detail: 1 reduced, 0 full (-1 when not, the distance decides)
+    int mTreasuryPileFarOverride = -1;
+    //! Piles (true) and floor gold heaps (false) waiting to be drawn again after the detail option changed
+    std::vector<std::pair<RenderedMovableEntity*, bool> > mTreasuryRebuildQueue;
+    size_t mTreasuryRebuildIndex = 0;
+    Ogre::Real mTreasuryLodTimer = 0.0f;
 
     //! A pile that grows or sinks: its node settles to the new height over a short time
     struct TreasuryPileSettle
@@ -508,8 +564,37 @@ private:
         Ogre::Real mElapsed;
         float mFrom;
         bool mTaken;
+        //! True when the taken pile does not dip as a whole but shows a local dent (see TreasuryPileDent)
+        bool mLocalDent;
     };
     std::vector<TreasuryPileSettle> mTreasuryPileSettles;
+    //! The dent where gold was taken: while it lasts a dynamic copy of the pile is drawn in place of its entity
+    //! (the entity is detached from its node and does not take part in the room batch), and given back afterwards
+    struct TreasuryPileDent
+    {
+        std::string mEntityName;
+        std::string mOgreName;
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        Ogre::ManualObject* mObject;
+        std::string mMeshName;
+        float mU;
+        float mV;
+        Ogre::Real mElapsed;
+    };
+    std::vector<TreasuryPileDent> mTreasuryPileDents;
+    int mTreasuryDentNumber = 0;
+    //! The settled piles of a treasury are drawn as one batch per room
+    TreasuryGoldBatch mTreasuryBatch;
+
+    //! An object standing in the gold of a treasury, drawn partly buried: only its node is lifted by mCurrent
+    struct TreasuryBuriedObject
+    {
+        float mHeight;
+        float mCurrent;
+        float mTarget;
+    };
+    std::map<RenderedMovableEntity*, TreasuryBuriedObject> mTreasuryBuriedObjects;
 
     //! A thief carrying gold shows a sack of coins, its size follows the amount the server sends
     struct TreasuryThiefSack
@@ -520,8 +605,20 @@ private:
     };
     std::vector<TreasuryThiefSack> mTreasuryThiefSacks;
 
-    //! Names of the warm lights over rich treasuries (one per patch of tiles)
+    //! Names of the warm lights over rich treasuries (one per patch of tiles) that have a light at the moment
     std::set<std::string> mTreasuryGlowLights;
+    //! Every patch of tiles with glow, by light name; only the ones near the camera and within the limits of
+    //! their room and of the game get a light (see applyTreasuryGlowLights)
+    struct TreasuryGlowPatch
+    {
+        float mStrength;
+        float mX;
+        float mY;
+        const void* mRoom;
+    };
+    std::map<std::string, TreasuryGlowPatch> mTreasuryGlowPatches;
+    bool mTreasuryGlowDirty = false;
+    Ogre::Real mTreasuryGlowTimer = 0.0f;
     //! Where a creature last splashed coins, to space the splashes along its way
     std::map<Creature*, Ogre::Vector2> mTreasuryLastSplash;
     int mTreasuryEffectNumber = 0;
@@ -613,13 +710,31 @@ private:
         TreasuryEffectKind kind = TreasuryEffectKind::splash);
     void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
     void startTreasuryPortalDust();
+    void startTreasuryHeartDust();
+    void startForeignWealthDust();
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
-        int newLevel);
+        int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);
+    void updateTreasuryDents(Ogre::Real timeSinceLastFrame);
+    //! Distance of a point to the camera in tiles (0 without a camera)
+    float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
+    void updateTreasuryLod(Ogre::Real timeSinceLastFrame);
+    void updateTreasuryRebuild();
+    //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
+    void finishTreasuryDent(const std::string& entityName);
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPileSettle(const std::string& entityName);
+    bool isTreasuryPileSettling(const std::string& entityName) const;
+    void registerBuriedObject(RenderedMovableEntity* entity, float objectHeight);
+    void refreshBuriedObjectsOnTile(Tile* tile);
+    void updateTreasuryBuriedObjects(Ogre::Real timeSinceLastFrame);
+    float getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce);
     void removeTreasuryThiefSack(Creature* creature);
     void refreshTreasuryGlow(int x, int y);
+    void updateTreasuryGlow(Ogre::Real timeSinceLastFrame);
+    void applyTreasuryGlowLights();
+    void setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch);
+    void destroyTreasuryGlowLight(const std::string& name);
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     void startTreasuryPour(Tile* tile, int level);
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);

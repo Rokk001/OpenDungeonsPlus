@@ -72,6 +72,21 @@ public:
     //! \brief Name of the mesh for a kind (the egg has a mesh of its own).
     static std::string getMeshNameForKind(ChickenKind kind);
 
+    //! \brief The rooster lost a fight with another rooster: he dies like a chicken that is slapped. Only a free
+    //! rooster can lose. Server side.
+    bool loseFight();
+
+    //! \brief True while the rooster fights another one. The hatchery then moves him itself.
+    inline bool isFighting() const
+    { return mFighting; }
+
+    inline void setFighting(bool fighting)
+    { mFighting = fighting; }
+
+    //! \brief Server side: tells the human players that see the animal how the fight with the partner goes
+    //! (phase as in ServerNotificationType::chickenFight, this animal is the first one named).
+    void notifyFight(const std::string& partnerName, uint32_t phase);
+
     //! \brief Changes the kind (egg hatches, chick grows). On the server, the clients are told.
     void setKind(ChickenKind kind);
 
@@ -93,8 +108,17 @@ public:
     inline uint32_t incrementAge()
     { return ++mAge; }
 
+    //! \brief Server side: an egg that appeared late (its hen was late at the nest) or a chick that hatched late gets
+    //! the age it would have had on time, so the cycle keeps its rhythm.
+    inline void setAge(uint32_t age)
+    { mAge = age; }
+
     inline void setLayTimer(uint32_t turns)
     { mNbTurnLay = turns; }
+
+    //! \brief Turns until the next egg, the turn in which the timer runs out counts as 1.
+    inline uint32_t getLayTimer() const
+    { return mNbTurnLay; }
 
     //! \brief Counts down the turns to the next egg. Returns true when the hen has to lay now.
     bool countDownLay();
@@ -160,6 +184,9 @@ public:
     //! \brief Jumps down from a coop roof.
     void hopDown(const Ogre::Vector2& position);
 
+    //! \brief Server side: puts the animal somewhere else at once and tells the clients.
+    void teleport(const Ogre::Vector3& position);
+
     //! \brief The seat of the hatchery the animal lives in. A rooster that is dropped elsewhere runs back to
     //! the nearest hatchery of this seat.
     inline void setHomeSeat(Seat* seat)
@@ -217,6 +244,7 @@ private:
     uint32_t mScatterTurns;
     bool mCalm;
     bool mRoomDriven;
+    bool mFighting;
     bool mOnRoof;
     bool mFollowing;
     Ogre::Vector2 mFollowTarget;
@@ -243,9 +271,6 @@ private:
     //! \brief Server side: the rooster is outside of any hatchery. Walks to the nearest hatchery of its seat.
     //! Returns true if he is on his way.
     bool runBackToHatchery(Tile* tile);
-
-    //! \brief Server side: puts the animal somewhere else at once and tells the clients.
-    void teleport(const Ogre::Vector3& position);
 
     //! \brief Server side: one random step inside the hatchery (or around if outside).
     void wander(Tile* tile, Room* currentHatchery);

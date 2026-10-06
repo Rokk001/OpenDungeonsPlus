@@ -176,10 +176,11 @@ bool SpellPossess::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         return false;
 
     creature->startPossession(*player);
-    creature->addParticleEffect("SpellCreaturePossess", 20);
+    // The aura stays until the possession ends (Creature::endPossession and the client end it)
+    creature->addParticleEffect("SpellCreaturePossess", -1);
     Tile* pos = creature->getPositionTile();
     if(pos != nullptr)
-        fireSpellEffect(*pos, "Possess", "Dark");
+        fireSpellEffect(*pos, "Possess", "PossessCast");
     return true;
 }
 

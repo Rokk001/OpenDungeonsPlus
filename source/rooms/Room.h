@@ -68,6 +68,11 @@ public:
 
     virtual RoomType getType() const = 0;
 
+    //! True if the tile of this room carries a wall torch: the room type has torches, the tile is one of the torch
+    //! spots (RoomTorches) and touches a wall reinforced by the keeper of the room. The server (light of the
+    //! hatchery) and the client (the torches the room ambience draws) both ask this.
+    bool hasTorchOn(Tile* tile) const;
+
     //! \brief What enemies can do to a room, read from RoomsClaimableByEnemies
     //! in the room configuration file.
     enum class ClaimMode
@@ -216,6 +221,9 @@ protected:
     static void fireRoomSound(Tile& tile, const std::string& soundFamily);
     //! \brief Sends a cosmetic event to the human players that see the tile (and negotiated cosmetic events)
     static void fireRoomCosmeticEvent(Tile& tile, const CosmeticEvent& event);
+    //! \brief Every few turns tells the other keepers who see the tile that the owner of this room is rich
+    //! (tier only, no gold amount). Used by the heart and the portal; nothing is sent while the owner is not rich.
+    void announceKeeperWealth(Tile* tile);
 
     //! \brief Hands the given tile of this room over to a room of the same type
     //! owned by the claiming seat, merging it with an adjacent room of theirs

@@ -21,8 +21,9 @@
 #include "Trap.h"
 #include "traps/TrapType.h"
 
-//! \brief A post that never fires. Guards of the owner's guard rooms patrol to it, and it calls them
-//! when it notices an enemy within its aura.
+//! \brief A post that shoots nothing. Guards of the owner's guard rooms patrol to it, and it calls them
+//! when it notices an enemy within its aura. Calling the guards is its "shot": the clients are told (flag flares), and
+//! the post then reloads for GuardRoomDistressSeconds (the flag hangs) until it may call again.
 class TrapWatchBanner : public Trap
 {
 public:
@@ -56,6 +57,8 @@ public:
 private:
     //! \brief Turn from which the post may call the guards again
     int64_t mNextDistressTurn;
+    //! \brief The post has called the guards and is reloading (not saved: a loaded post starts loaded)
+    bool mReloading;
 };
 
 #endif // TRAPWATCHBANNER_H

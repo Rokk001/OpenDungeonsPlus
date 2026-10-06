@@ -83,7 +83,7 @@ private:
     int getCostPerTile() const override
     { return ConfigManager::getSingleton().getTrapConfigInt32(mConfigPrefix + "DoorCostPerTile"); }
 
-    // All door models share the skeleton of the wooden door (clips Open, Close and Destroyed)
+    // The wooden door has its own skeleton, so has every other door model (clips Open, Close and Destroyed, the barricade Collapse and Destroyed)
     const std::string& getMeshName() const override
     {
         static const std::string meshWooden = "WoodenDoor";

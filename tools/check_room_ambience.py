@@ -15,14 +15,15 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "OccupiedRadius",
+SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "MaxFlights", "OccupiedRadius",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
-               "NeedWall", "Clips", "Every", "Family", "Delay", "WallSide", "HeartRate", "Sound")
+               "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below", "Land", "From",
+               "WallSide", "HeartRate", "Sound", "OwnerOnly", "Torch", "Object", "Loop")
 TARGETS = ("Object", "Tile", "Event")
-WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "Vacated")
-KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound")
+WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth", "Vacated", "Sleeping")
+KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile", "CreatureClip")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
@@ -154,6 +155,46 @@ def mesh_exists(name):
     return os.path.exists(os.path.join(ROOT, "models", name + ".mesh"))
 
 
+# The piles of a treasury are meshes built at run time from their names (source/rooms/TreasuryGoldLayer.h):
+# TreasuryGold_<level>_<four corner levels>_<variant>. A pattern with a trailing "*" matches a name that starts
+# with it, as in the game.
+PILE_PREFIX = "TreasuryGold_"
+# Systems of the effects that the client starts itself on treasury piles (see TreasuryCreatureRules.h): sparkle from
+# glintLevel on, sliding coins from slideLevel on. An idle effect with the same system on such a pile would double them.
+PILE_OWN_SPARKLE_SYSTEMS = ("RoomAmbGoldGlint", "RoomAmbGoldGlintRich", "RoomAmbGoldShine")
+PILE_OWN_SLIDE_SYSTEMS = ("RoomAmbCoinSlide",)
+_pile_names = []
+
+
+def pile_names():
+    if not _pile_names:
+        with open(os.path.join(ROOT, "source", "rooms", "TreasuryGoldLayer.h"), encoding="utf-8") as handle:
+            layer = handle.read()
+        max_level = int(re.search(r"maxLevel = (\d+);", layer).group(1))
+        variants = int(re.search(r"variantCount = (\d+);", layer).group(1))
+        for level in range(max_level + 1):
+            for corners in range((max_level + 1) ** 4):
+                digits = "".join(str((corners // (max_level + 1) ** i) % (max_level + 1)) for i in range(4))
+                for variant in range(variants):
+                    _pile_names.append("%s%d_%s_%d" % (PILE_PREFIX, level, digits, variant))
+    return _pile_names
+
+
+def pile_setting(name):
+    with open(os.path.join(ROOT, "source", "rooms", "TreasurySettings.h"), encoding="utf-8") as handle:
+        return int(re.search(r"int " + name + r" = (\d+);", handle.read()).group(1))
+
+
+def pile_levels(match):
+    """Levels of the piles a pattern matches, empty when it matches none"""
+    if match.endswith("*"):
+        head = match[:-1]
+        names = [n for n in pile_names() if n.startswith(head)]
+    else:
+        names = [n for n in pile_names() if n == match]
+    return set(int(n[len(PILE_PREFIX)]) for n in names)
+
+
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
     for key in effect:
         if key not in EFFECT_KEYS:
@@ -176,8 +217,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: event effect without Event" % where)
         else:
             counts["names"].add(effect["Event"][0])
-        if kind not in ("Particle", "Shake", "Mark", "Sound"):
-            problems.append("%s: event effects must be particles, shakes, marks or sounds" % where)
+        if kind not in ("Particle", "Shake", "Mark", "Sound", "Roll", "Beam", "Projectile", "Clip", "CreatureClip"):
+            problems.append("%s: event effects must be particles, shakes, marks, sounds, rolls, beams, projectiles or clips" % where)
     else:
         if "Match" not in effect:
             problems.append("%s: no Match" % where)
@@ -197,10 +238,47 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: a sound on an object needs Every" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
-    if when in ("Locked", "Reloading", "Ready") and target != "Object":
+    if when in ("Locked", "Reloading", "Ready", "LowHealth", "Sleeping") and target != "Object":
         problems.append("%s: When %s only works on objects" % (where, when))
-    if kind in ("Shake", "Mark") and target != "Event":
-        problems.append("%s: shakes and marks only work as events" % where)
+    if when == "LowHealth":
+        below = effect.get("Below", [None])[0]
+        if below is None or not is_number(below) or not 0.0 < float(below) <= 1.0:
+            problems.append("%s: When LowHealth needs Below between 0 and 1" % where)
+        if "Match" in effect and effect["Match"] != ["DungeonTempleObject"]:
+            problems.append("%s: When LowHealth only works on the dungeon heart (DungeonTempleObject)" % where)
+    elif "Below" in effect:
+        problems.append("%s: Below only belongs to When LowHealth" % where)
+    if kind in ("Shake", "Mark", "Beam", "Projectile") and target != "Event":
+        problems.append("%s: shakes, marks, beams and projectiles only work as events" % where)
+    if kind in ("Beam", "Projectile"):
+        mesh = effect.get("Mesh", [None])[0]
+        system = effect.get("System", [None])[0]
+        if mesh is not None and not mesh_exists(mesh):
+            problems.append("%s: no mesh %s" % (where, mesh))
+        if kind == "Beam" and mesh is None:
+            problems.append("%s: a beam needs a Mesh" % where)
+        if kind == "Projectile" and mesh is None and system is None:
+            problems.append("%s: a projectile needs a Mesh or a System" % where)
+        if system is not None and system not in systems:
+            problems.append("%s: unknown particle system %s" % (where, system))
+        for key in ("From", "Duration", "Amount"):
+            if key not in effect:
+                problems.append("%s: %s without %s" % (where, kind.lower(), key))
+        if "Duration" in effect and is_number(effect["Duration"][0]) and not 0.05 <= float(effect["Duration"][0]) <= 1.5:
+            problems.append("%s: Duration of a flight must be between 0.05 and 1.5 seconds" % where)
+        if "Amount" in effect and is_number(effect["Amount"][0]) and not 0.0 <= float(effect["Amount"][0]) <= 6.0:
+            problems.append("%s: Amount of a flight must be between 0 and 6" % where)
+        if "From" in effect and len(effect["From"]) == 3 and all(is_number(v) for v in effect["From"]):
+            if max(abs(float(v)) for v in effect["From"]) > 20.0:
+                problems.append("%s: From is more than 20 units away" % where)
+        if kind == "Beam" and "Speed" not in effect:
+            problems.append("%s: a beam needs Speed (flickers per second)" % where)
+        if "Land" in effect:
+            counts["lands"].append((where, effect["Land"][0]))
+        if kind == "Beam" and "Land" in effect:
+            problems.append("%s: only projectiles have Land" % where)
+    elif "Land" in effect or "From" in effect or ("Mesh" in effect and kind != "Roll"):
+        problems.append("%s: Mesh, Land and From only belong to beams and projectiles (Mesh also to rolls)" % where)
     if kind == "Shake":
         for key in ("Amount", "Duration", "Speed", "MaxDistance"):
             if key not in effect:
@@ -209,6 +287,36 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: shake Amount above 0.5 is too strong" % where)
         if "Duration" in effect and is_number(effect["Duration"][0]) and float(effect["Duration"][0]) > 2.0:
             problems.append("%s: shake Duration above 2 seconds" % where)
+    if kind == "Roll":
+        if target != "Event":
+            problems.append("%s: rolls only work as events" % where)
+        mesh = effect.get("Mesh", [None])[0]
+        if mesh is None or not mesh_exists(mesh):
+            problems.append("%s: roll without an existing Mesh (%s)" % (where, mesh))
+        for key in ("Amount", "Speed", "Duration", "System", "EndSystem"):
+            if key not in effect:
+                problems.append("%s: roll without %s" % (where, key))
+        if "Amount" in effect and is_number(effect["Amount"][0]) and float(effect["Amount"][0]) > 6.0:
+            problems.append("%s: roll Amount above 6 tiles" % where)
+        if "Duration" in effect and is_number(effect["Duration"][0]) and float(effect["Duration"][0]) > 3.0:
+            problems.append("%s: roll Duration above 3 seconds" % where)
+        for key in ("System", "EndSystem"):
+            name_ = effect.get(key, [None])[0]
+            if name_ is not None:
+                if name_ not in systems:
+                    problems.append("%s: unknown particle system %s" % (where, name_))
+                elif systems[name_] not in mats:
+                    problems.append("%s: particle system %s uses unknown material %s" % (where, name_, systems[name_]))
+    elif kind == "Turn":
+        if target != "Object":
+            problems.append("%s: turns only work on objects" % where)
+        for key in ("Amount", "Speed"):
+            if key not in effect:
+                problems.append("%s: turn without %s" % (where, key))
+        if "Speed" in effect and is_number(effect["Speed"][0]) and not 0.0 < float(effect["Speed"][0]) <= 90.0:
+            problems.append("%s: turn Speed must be above 0 and at most 90 degrees per second" % where)
+        if "Amount" in effect and is_number(effect["Amount"][0]) and not 0.0 < float(effect["Amount"][0]) <= 14.0:
+            problems.append("%s: turn range (Amount) must be above 0 and at most 14 tiles" % where)
     if kind in ("Particle", "Mark"):
         system = effect.get("System", [None])[0]
         if system is None:
@@ -231,18 +339,48 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if motion not in MOTIONS:
             problems.append("%s: bad Motion %s" % (where, motion))
     elif kind == "Clip":
-        if target != "Object":
-            problems.append("%s: clips only work on objects" % where)
+        if target == "Tile":
+            problems.append("%s: clips only work on objects and events" % where)
         if not effect.get("Clips"):
             problems.append("%s: clip effect without Clips" % where)
+        if target == "Event":
+            # The clip is played on the nearest of the objects named in Object, within Amount tiles of the event
+            if not effect.get("Object"):
+                problems.append("%s: an event clip needs Object (the meshes that play it)" % where)
+            if "Amount" not in effect:
+                problems.append("%s: an event clip needs Amount (radius in tiles)" % where)
+            elif is_number(effect["Amount"][0]) and not 0.0 < float(effect["Amount"][0]) <= 6.0:
+                problems.append("%s: the radius (Amount) of an event clip must be above 0 and at most 6 tiles" % where)
+            if "Loop" in effect:
+                problems.append("%s: Loop only belongs to clips of objects" % where)
+        elif "Every" not in effect and effect.get("Loop", ["no"])[0] not in ("yes", "true", "1"):
+            problems.append("%s: a clip on an object needs Every (or Loop yes)" % where)
+    elif kind == "CreatureClip":
+        if target != "Event":
+            problems.append("%s: creature clips only work as events" % where)
+        if not effect.get("Clips"):
+            problems.append("%s: creature clip without Clips" % where)
+        if "Object" in effect or "Loop" in effect:
+            problems.append("%s: Object and Loop do not belong to creature clips" % where)
     for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority",
-                "Delay"):
+                "Delay", "Below"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
-    for key in ("Offset", "Axis"):
+    for key in ("Offset", "Axis", "From"):
         if key in effect and (len(effect[key]) != 3 or not all(is_number(v) for v in effect[key])):
             problems.append("%s: %s needs three numbers" % (where, key))
-    for key in ("Reduced", "NeedWall", "WallSide", "HeartRate"):
+    if "Object" in effect and not (kind == "Clip" and target == "Event"):
+        problems.append("%s: Object only belongs to clips of events" % where)
+    if "Loop" in effect and kind != "Clip":
+        problems.append("%s: Loop only belongs to clips" % where)
+    for pattern in effect.get("Object", []):
+        if "*" not in pattern and not mesh_exists(pattern):
+            problems.append("%s: no mesh %s" % (where, pattern))
+        elif "*" in pattern:
+            part = pattern.replace("*", "")
+            if not any(f.startswith(part) or f.endswith(part + ".mesh") for f in os.listdir(os.path.join(ROOT, "models"))):
+                problems.append("%s: wildcard %s matches no mesh" % (where, pattern))
+    for key in ("Reduced", "NeedWall", "WallSide", "HeartRate", "OwnerOnly", "Torch", "Loop"):
         if key in effect and effect[key][0] not in ("yes", "no", "true", "false", "1", "0"):
             problems.append("%s: %s needs yes or no" % (where, key))
     if "Sound" in effect:
@@ -257,6 +395,18 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if target == "Object" and match.startswith("trap:"):
             if not re.match(r"^[A-Za-z*]+$", match[len("trap:"):]):
                 problems.append("%s: bad trap type %s" % (where, match))
+        elif target == "Object" and match.startswith(PILE_PREFIX):
+            levels = pile_levels(match) if "*" not in match[:-1] else set()
+            if not levels:
+                problems.append("%s: %s matches no treasury pile name" % (where, match))
+            elif effect.get("When", ["Always"])[0] == "Always" and effect.get("Kind", [""])[0] == "Particle":
+                system = effect.get("System", [""])[0]
+                if system in PILE_OWN_SPARKLE_SYSTEMS and max(levels) >= pile_setting("glintLevel"):
+                    problems.append("%s: %s doubles the sparkle that the client starts on piles of level %d and up"
+                                    % (where, system, pile_setting("glintLevel")))
+                if system in PILE_OWN_SLIDE_SYSTEMS and max(levels) >= pile_setting("slideLevel"):
+                    problems.append("%s: %s doubles the sliding coins that the client starts on piles of level %d and up"
+                                    % (where, system, pile_setting("slideLevel")))
         elif target == "Object":
             if "*" not in match and not mesh_exists(match):
                 problems.append("%s: no mesh %s" % (where, match))
@@ -336,10 +486,13 @@ def check_started_events(problems, names):
 
 def main():
     problems = []
-    counts = {"effects": 0, "events": 0, "names": set()}
+    counts = {"effects": 0, "events": 0, "lands": [], "names": set()}
     check_file(os.path.join(ROOT, "config", "roomAmbience.cfg"), problems, tile_visuals(), particle_systems(),
                materials(), counts)
     check_particle_files(problems)
+    for where, land in counts["lands"]:
+        if land not in counts["names"]:
+            problems.append("%s: Land event %s has no effect" % (where, land))
     check_started_events(problems, counts["names"])
     if problems:
         for problem in problems:

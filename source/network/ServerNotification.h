@@ -156,38 +156,41 @@ enum class ServerNotificationType
     casinoPayout,
     //! The player now possesses the creature: + string creatureName
     possessionStart,
-    //! The player no longer possesses a creature
+    //! The player no longer possesses a creature: + bool lost (the creature fell: dead, knocked out or gone)
     possessionEnd,
     //! Answer to editorRegionEdit, all the region markers of the level script:
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
     editorRegionData,
     //! A short cosmetic note that something happened (a mood change, a full treasury, a blow, a missile
     //! launch): + a CosmeticEvent (see network/CosmeticEvent.h). Only sent to clients that negotiated
-    //! cosmetic events; an older client never gets it. Inserted before creatureAppearance; trapEffect,
-    //! timeLimit and chickenKindChanged stay the last values.
+    //! cosmetic events; an older client never gets it. Inserted before creatureAppearance; trapEffect
+    //! and timeLimit stay the last values.
     cosmeticEvent,
     //! The server assigned a Dungeonbook appearance to a creature after it spawned (the portrait manifest
     //! was not available before): + string creature name, string appearance token. Sent once to the
     //! human players that see the creature; clients that see it later get it with the creature data.
-    //! Inserted before relationshipTier; trapEffect, timeLimit and chickenKindChanged stay the last values.
+    //! Inserted before relationshipTier; trapEffect and timeLimit stay the last values.
     creatureAppearance,
     //! Owner-only tier of a creature pair that changed (or the current tier, sent once when a
     //! client joins or a game is loaded): + string creatureA, string creatureB, int32_t tier
     //! (RelationshipTier), bool replay (true: replay of the current tier, no Dungeonbook post).
     //! Only sent when the creature relationships option is on.
     relationshipTier,
+    //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
+    //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
+    chickenKindChanged,
+    //! Two roosters of one hatchery fight: + string first rooster, string second rooster, uint32_t phase
+    //! (0 = the fight starts, 1 = it is over and the first rooster won, 2 = it was called off). The server draws
+    //! the winner. Sent to the human players that see the first rooster, only when the phase changes.
+    chickenFight,
     //! Presentation-only effect of a trap or door, sent to the human seats that see the tile:
     //! + int32_t kind (TrapEffectKind), int32_t tileX, int32_t tileY, string type name of the trap or door
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
-    //! Inserted before timeLimit; timeLimit and chickenKindChanged stay the last values.
+    //! Inserted before timeLimit, which stays the last value.
     trapEffect,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit), then an
     //! int32_t with the seconds left until the next hero wave of a level script (-1: none is shown)
-    timeLimit,
-    //! A hatchery animal changed its kind (egg hatched, chick grew up): + string name, uint32_t kind
-    //! (ChickenKind). Sent to the human players that see it, only when the kind changes.
-    //! Appended last so that no existing numeric value changes.
-    chickenKindChanged
+    timeLimit
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

@@ -121,7 +121,8 @@ material RoomAmbSoftRing
         pass
         {
             lighting off
-            scene_blend add
+            // Added to the picture, weighted by the alpha (see RoomAmbRing)
+            scene_blend src_alpha one
             depth_write off
             diffuse vertexcolour
 

@@ -18,6 +18,8 @@
 #ifndef TREASURYGOLDLAYER_H
 #define TREASURYGOLDLAYER_H
 
+#include "rooms/TreasurySettings.h"
+
 #include <cmath>
 #include <cstdlib>
 #include <string>
@@ -41,7 +43,7 @@ inline float levelHeight(int level)
         return 0.0f;
     if(level > maxLevel)
         level = maxLevel;
-    return 0.055f * static_cast<float>(level);
+    return TreasurySettings::current().levelHeight * static_cast<float>(level);
 }
 
 //! Fill step of a tile: 0 when empty, else 1..maxLevel by the share of the capacity stored.
@@ -121,8 +123,64 @@ inline bool parseMeshName(const std::string& name, PileShape& shape)
     return true;
 }
 
+//! The shape of a pile on a tile of a single-row ring (the treasury ring of the dungeon heart). The tile has no
+//! neighbours on its other sides, so the rule of the treasury (lowest level of the four tiles that meet at a
+//! corner) would leave every corner on the floor. Here a corner is raised when the tile has a ring neighbour
+//! next to that corner: it takes the lowest level of the ring tiles that meet there (an empty ring tile counts
+//! as 0), so two neighbouring piles share the heights along their common edge and run into each other, while
+//! the open sides run out on the floor.
+//! around[dx + 1][dy + 1] is the level of the ring tile at that offset (0 for an empty one), -1 for a tile that
+//! is not part of the ring; around[1][1] is the tile itself.
+inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
+{
+    PileShape shape;
+    shape.mLevel = around[1][1];
+    shape.mVariant = (x * 7 + y * 13) % variantCount;
+    // North is towards +y: north-west, north-east, south-east, south-west
+    const int dx[4] = {-1, 1, 1, -1};
+    const int dy[4] = {1, 1, -1, -1};
+    for(int i = 0; i < 4; ++i)
+    {
+        const int sideX = around[dx[i] + 1][1];
+        const int sideY = around[1][dy[i] + 1];
+        // Only a ring neighbour beside the tile raises the corner, a diagonal one alone does not
+        if(sideX < 0 && sideY < 0)
+            continue;
+
+        int corner = shape.mLevel;
+        const int meeting[3] = {sideX, sideY, around[dx[i] + 1][dy[i] + 1]};
+        for(int j = 0; j < 3; ++j)
+        {
+            if(meeting[j] >= 0 && meeting[j] < corner)
+                corner = meeting[j];
+        }
+        shape.mCorner[i] = corner;
+    }
+    return shape;
+}
+
+//! Radius (tile units, the tile is 1 wide) of the round heap of a pile: a little gold is a small heap in the middle
+//! of the tile, a full tile reaches its edges (never beyond them, so the heap never ends in a cut edge)
+inline float pileRadius(int level)
+{
+    if(level <= 1)
+        return 0.16f;
+    if(level >= maxLevel)
+        return 0.5f;
+    return 0.16f + 0.34f * static_cast<float>(level - 1) / static_cast<float>(maxLevel - 1);
+}
+
+//! Radius of the heap of the shape in the direction of (u, v) seen from the middle of the tile: slightly uneven,
+//! never above pileRadius()
+inline float pileRadiusAt(const PileShape& shape, float u, float v)
+{
+    const float angle = std::atan2(v - 0.5f, u - 0.5f);
+    return pileRadius(shape.mLevel) * (0.92f + 0.08f * std::sin(3.0f * angle + 1.7f * static_cast<float>(shape.mVariant)));
+}
+
 //! Surface height of a pile at (u, v), both 0..1 across the tile (u towards +x, v towards +y).
-//! The edges only depend on the corners; the middle rises to the level of the tile itself.
+//! The edges only depend on the corners; a round heap rises from the middle of the tile to the level of the
+//! tile itself and runs out flat at its radius, so a small amount of gold is a small heap, not a block.
 inline float heightAt(const PileShape& shape, float u, float v)
 {
     if(shape.mLevel <= 0)
@@ -135,17 +193,29 @@ inline float heightAt(const PileShape& shape, float u, float v)
     // v grows to the north: top row is north
     const float base = (1.0f - u) * ((1.0f - v) * sw + v * nw) + u * ((1.0f - v) * se + v * ne);
 
-    // 0 on the four edges, 1 in the middle
-    const float bump = 16.0f * u * (1.0f - u) * v * (1.0f - v);
+    // 1 in the middle, 0 at and beyond the radius of the heap (which never exceeds the tile edges)
+    const float du = u - 0.5f;
+    const float dv = v - 0.5f;
+    const float ratio = std::sqrt(du * du + dv * dv) / pileRadiusAt(shape, u, v);
+    float bump = 0.0f;
+    if(ratio < 1.0f)
+    {
+        const float rest = 1.0f - ratio * ratio;
+        bump = rest * std::sqrt(rest);
+    }
     const float peak = levelHeight(shape.mLevel);
-    float height = base + (peak - base) * std::sqrt(bump);
+    // The rise starts flat at the foot of the heap, so a pile runs out on the floor and next to the piles of its
+    // neighbours (which share the heights along the edge through the corners) without a visible tile border
+    float height = base;
+    if(peak > base)
+        height += (peak - base) * bump;
 
     // A few lumps, only on fuller piles, fading out towards the edges
     if(shape.mLevel >= 3)
     {
         const float phase = 1.7f * static_cast<float>(shape.mVariant);
         const float lumps = std::sin(9.0f * u + phase) * std::sin(8.0f * v + 2.0f * phase);
-        height += 0.012f * static_cast<float>(shape.mLevel) * bump * lumps;
+        height += 0.005f * static_cast<float>(shape.mLevel) * bump * lumps;
     }
 
     // Keep the layer a hair above the floor so it never flickers against it
@@ -156,12 +226,16 @@ inline float heightAt(const PileShape& shape, float u, float v)
 
 //! Small details lying on a pile (coins, gems, spilled coins at open edges). Their number and place follow
 //! from the shape alone, so every client builds the same pile from its name.
-static const int maxTopCoins = 3;
-static const int maxGems = 2;
-//! Coins lying at the foot of the pile on every open edge of a full pile (two per edge, four edges)
-static const int maxSpillCoins = 8;
+//! The numbers come from config/treasury.cfg (see TreasurySettings.h); the references follow the live values.
+static const int& maxTopCoins = TreasurySettings::current().maxTopCoins;
+static const int& maxGems = TreasurySettings::current().maxGems;
+//! Coins lying at the foot of the pile on every open edge of a full pile (per edge, four edges)
+inline int maxSpillCoins()
+{
+    return 4 * TreasurySettings::current().spillCoinsFull;
+}
 //! Coins scattered on the bare floor of a tile without gold
-static const int scatterCoins = 3;
+static const int& scatterCoins = TreasurySettings::current().scatterCoins;
 
 //! Pseudo random number 0..1 from two integers (the same everywhere, no random state)
 inline float hash01(int a, int b)
@@ -173,22 +247,33 @@ inline float hash01(int a, int b)
     return static_cast<float>(h & 0xFFFFu) / 65535.0f;
 }
 
-//! Single coins on top of the heap: none on a thin layer, up to maxTopCoins on a deep one
+//! Single coins on top of the heap: none on a thin layer, then growing evenly up to maxTopCoins on a full one
+//! (a sea of coins on the fullest piles)
 inline int topCoinCount(const PileShape& shape)
 {
-    if(shape.mLevel < 2)
+    const int first = TreasurySettings::current().topCoinMinLevel;
+    const int most = TreasurySettings::current().maxTopCoins;
+    if(shape.mLevel < first || most <= 0)
         return 0;
-    return 1 + shape.mLevel / 3;
+    if(shape.mLevel >= maxLevel)
+        return most;
+    // From a few coins on the first covered step in even steps to the full number
+    const int span = maxLevel - first;
+    const int count = 1 + (most - 1) * (shape.mLevel - first + 1) / (span + 1);
+    return count > most ? most : count;
 }
 
-//! Gems scattered in rich piles: none below level 5, one in some level 5 and 6 piles, up to maxGems in full ones
+//! Gems scattered in rich piles: none below level 5, one in some level 5 piles, one or two in level 6 ones, one
+//! up to maxGems in full ones (the variant of the pile decides, so rich rooms show several gems)
 inline int gemCount(const PileShape& shape)
 {
     if(shape.mLevel < 5)
         return 0;
-    if(shape.mLevel < maxLevel)
+    if(shape.mLevel < maxLevel - 1)
         return (shape.mVariant % 2 == 0) ? 1 : 0;
-    return 1 + (shape.mVariant % 2);
+    if(shape.mLevel < maxLevel)
+        return 1 + (shape.mVariant % 2);
+    return 1 + (shape.mVariant % TreasurySettings::current().maxGems);
 }
 
 //! Edge 0 north, 1 east, 2 south, 3 west. It is open when both of its corners are lower than the pile
@@ -198,11 +283,11 @@ inline bool edgeOpen(const PileShape& shape, int edge)
     return shape.mCorner[edge] < shape.mLevel && shape.mCorner[(edge + 1) % 4] < shape.mLevel;
 }
 
-//! Slight overflow of a nearly full pile at its open edges: one coin (level 6) or two (full) per open edge
+//! Slight overflow of a nearly full pile at its open edges: one coin (level 6) or spillCoinsFull (full) per open edge
 inline int spillCoinsPerEdge(const PileShape& shape)
 {
     if(shape.mLevel >= maxLevel)
-        return 2;
+        return TreasurySettings::current().spillCoinsFull;
     return shape.mLevel == maxLevel - 1 ? 1 : 0;
 }
 
@@ -241,8 +326,8 @@ inline float glowWeight(int level)
     if(level < 5)
         return 0.0f;
     if(level == 5)
-        return 0.25f;
-    return level == 6 ? 0.5f : 1.0f;
+        return TreasurySettings::current().glowWeight5;
+    return level == 6 ? TreasurySettings::current().glowWeight6 : TreasurySettings::current().glowWeightFull;
 }
 
 //! The pot mesh used when the treasury detail option is off (one of the four classic stacks)

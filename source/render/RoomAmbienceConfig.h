@@ -53,8 +53,12 @@ enum class AmbienceWhen
     reloading,
     //! The target (a trap) is loaded and ready, the opposite of reloading
     ready,
+    //! The target (the dungeon heart of the local keeper) has less health than the fraction given in mBelow
+    lowHealth,
     //! A creature was close at some time while the target was in view and none has been for mAfter seconds (a bed after the sleeper left)
-    vacated
+    vacated,
+    //! A creature that sleeps is close to the target (a bed with a sleeper in it)
+    sleeping
 };
 
 enum class AmbienceKind
@@ -72,7 +76,22 @@ enum class AmbienceKind
     //! when there are more than MaxMarks
     mark,
     //! A sound of the family given by Family: played at the event, or now and then (Every) at an object
-    sound
+    sound,
+    //! A mesh (Mesh) that rolls Amount tiles in Duration seconds from the place of an event, spinning at Speed degrees
+    //! per second, with the particle system System as a trail and EndSystem where it breaks up (events only)
+    roll,
+    //! Slowly turns an object (a cannon) toward creatures within Amount tiles and back to where it stood when none
+    //! is near, at Speed degrees per second (objects only)
+    turn,
+    //! A mesh (Mesh) that is stretched from the point From to the target for a moment and flickers: a lightning bolt
+    //! (events only). Amount = width, Speed = flickers per second, Duration in seconds
+    beam,
+    //! An object (Mesh and/or particle system System as trail) that flies from From to the target in Duration seconds
+    //! on an arc of height Amount (events only); Land = event raised at the target when it arrives
+    projectile,
+    //! Events only: plays a clip of Clips once on the creature the event is about (the stretch of a creature that woke);
+    //! nothing happens when the creature has no such clip
+    creatureClip
 };
 
 enum class AmbienceMotion
@@ -98,6 +117,7 @@ struct AmbienceEffect
         mTarget(AmbienceTarget::object),
         mWhen(AmbienceWhen::always),
         mKind(AmbienceKind::particle),
+        mLoop(false),
         mMotion(AmbienceMotion::sway),
         mAfter(30.0),
         mOffset(Ogre::Vector3::ZERO),
@@ -106,7 +126,9 @@ struct AmbienceEffect
         mSpeed(1.0),
         mFlicker(0.0),
         mDuration(3.0),
+        mFrom(Ogre::Vector3(0.0f, 0.0f, 8.0f)),
         mDelay(0.0),
+        mBelow(0.35),
         mEvery(10.0),
         mChance(1.0),
         mSpacing(1),
@@ -115,7 +137,9 @@ struct AmbienceEffect
         mReduced(false),
         mNeedWall(false),
         mWallSide(false),
-        mHeartRate(false)
+        mHeartRate(false),
+        mOwnerOnly(false),
+        mTorch(false)
     {}
 
     std::string mName;
@@ -128,8 +152,17 @@ struct AmbienceEffect
     AmbienceKind mKind;
     //! Particle system template (kind particle)
     std::string mSystem;
+    //! Mesh name without extension (kinds roll, beam and projectile) and particle system where a rolling object
+    //! breaks up (kind roll)
+    std::string mMesh;
+    std::string mEndSystem;
     //! Clips to choose from (kind clip)
     std::vector<std::string> mClips;
+    //! Event clips: mesh names (* as first or last character as wildcard) of the objects that play the clip, the nearest
+    //! one within Amount tiles of the event is used
+    std::vector<std::string> mObjects;
+    //! Object clips: the clip runs in a loop as long as the condition holds (and stops at its last pose when it ends)
+    bool mLoop;
     AmbienceMotion mMotion;
     //! Seconds without a creature before an empty room effect starts
     double mAfter;
@@ -143,10 +176,16 @@ struct AmbienceEffect
     double mFlicker;
     //! Seconds a one-shot effect is kept
     double mDuration;
+    //! Event raised at the target when a projectile arrives
+    std::string mLand;
+    //! Where a beam or projectile starts, relative to the target
+    Ogre::Vector3 mFrom;
     //! Sound family, as in the folders below sounds/Spatial (kind sound)
     std::string mFamily;
     //! Seconds after the event until the sound is played (kind sound, events only)
     double mDelay;
+    //! Health fraction (0 to 1) under which a lowHealth effect runs
+    double mBelow;
     //! Average seconds between two clips (kind clip)
     double mEvery;
     //! Chance that an event effect is shown
@@ -164,6 +203,11 @@ struct AmbienceEffect
     bool mWallSide;
     //! The speed follows the beat of the player's dungeon heart (faster when it is hurt)
     bool mHeartRate;
+    //! Object targets: shown only to the keeper the object belongs to (the glint of a secret door must not give it away)
+    bool mOwnerOnly;
+    //! Tile targets: only the tiles that carry a wall torch by the rule of the game (Room::hasTorchOn), which is the
+    //! same rule that makes a torch light a hatchery; replaces Spacing for the torches
+    bool mTorch;
     //! Sound family played when an event effect starts (only in the mode "full")
     std::string mSound;
 };
@@ -192,6 +236,8 @@ public:
     { return mMaxMotions; }
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
+    uint32_t getMaxFlights() const
+    { return mMaxFlights; }
     uint32_t getMaxMarks() const
     { return mMaxMarks; }
     double getOccupiedRadius() const
@@ -215,6 +261,7 @@ private:
     uint32_t mMaxMotions;
     uint32_t mMaxOneShots;
     uint32_t mMaxMarks;
+    uint32_t mMaxFlights;
     double mOccupiedRadius;
     double mReducedDistanceFactor;
 };

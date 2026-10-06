@@ -3,8 +3,8 @@
 
     python source/tests/check_trap_effect_notification.py
 
-Checks that the new server notification is inserted before timeLimit (timeLimit and chickenKindChanged
-stay the last values), that the packet fields are written and read in the same order, that the
+Checks that the new server notification is inserted before timeLimit (which stays the last value, so
+no existing value changes), that the packet fields are written and read in the same order, that the
 trap effect kinds only grew at the end, and that every event the client raises has a handler in the
 config and every event of the config is raised.
 """
@@ -26,12 +26,19 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-2:] != ["timeLimit", "chickenKindChanged"]:
-    problems.append("timeLimit and chickenKindChanged are not the last server notifications")
-if "trapEffect" not in names or names.index("trapEffect") != len(names) - 3:
+if names[-1] != "timeLimit":
+    problems.append("timeLimit is not the last server notification")
+if "trapEffect" not in names or names.index("trapEffect") != len(names) - 2:
     problems.append("trapEffect must be right before timeLimit")
-if names[-4] != "relationshipTier":
+# Only the chicken notifications of the hatchery may sit between relationshipTier and trapEffect, in this order
+BETWEEN_RELATIONSHIP_AND_TRAP = ["chickenKindChanged", "chickenFight"]
+if "relationshipTier" not in names:
     problems.append("trapEffect must follow relationshipTier")
+else:
+    between = names[names.index("relationshipTier") + 1:-2]
+    if between != [name for name in BETWEEN_RELATIONSHIP_AND_TRAP if name in between]:
+        problems.append("trapEffect must follow relationshipTier (only %s may be between them, in this order): %s"
+                        % (", ".join(BETWEEN_RELATIONSHIP_AND_TRAP), between))
 
 if '"trapEffect"' not in read("source", "network", "ServerNotification.cpp"):
     problems.append("trapEffect has no name in ServerNotification.cpp")
