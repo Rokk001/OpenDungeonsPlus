@@ -567,6 +567,12 @@ public:
     //! \brief Walk clips keep up with the slower speed of tired and badly hurt creatures, hurt creatures breathe a little slower when standing (clients only)
     virtual double getClientPoseSpeedFactor() const override;
 
+    //! \brief Clients only: blends the tile speed ratio of the walk clips (see mClientTileSpeedRatio)
+    virtual void updateClientPose(double timeSinceLastFrame) override;
+
+    //! \brief Speed of the tile under the creature divided by its ground speed (1 when unknown), client side, no tired or hurt factor
+    double getTileSpeedRatio() const;
+
     inline void jobDone(double val)
     {
         mWakefulness -= val;
@@ -1234,6 +1240,11 @@ private:
 
     //! \brief Represents the mood of the creature. It is a bit array
     uint32_t                        mOverlayMoodValue;
+
+    //! \brief Clients only (cosmetic): ratio between the speed of the tile the creature walks on and its ground speed,
+    //! blended over a short time when the tile changes, so that the walk clips keep up with the real ground speed. Negative
+    //! while no walk clip plays (the next value is taken over without blending)
+    double                          mClientTileSpeedRatio;
 
     //! Used by the renderer to save this entity's overlay. It is its responsibility
     //! to allocate/delete this pointer
