@@ -16,6 +16,11 @@ add_boost_test(00-SocialGenerator
         ${SRC}/social/SocialGenerator.h
         ${SRC}/social/SocialGenerator.cpp)
 
+add_boost_test(00-SelectionSize
+        SOURCES
+        test_SelectionSize.cpp
+        ${SRC}/utils/SelectionSize.h)
+
 add_boost_test(00-PostLog
         SOURCES
         test_PostLog.cpp

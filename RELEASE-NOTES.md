@@ -14,6 +14,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * Level scripts gained the conditions portal, alive, reached and stone (portal state, named creatures, reaching a region or a heart, portal stones on the ground); existing levels load unchanged
 * Level scripts gained the action wavecountdown, which shows the time until the next hero wave on the HUD beside the other countdown; existing levels load unchanged
 * Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
+* The size shown beside a multi-tile selection now matches the width and height of the marked tiles
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
 
 ### Version 0.7.3 - 20 September 2026

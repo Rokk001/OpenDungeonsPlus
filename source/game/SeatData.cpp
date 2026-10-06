@@ -33,6 +33,7 @@ SeatData::SeatData() :
     mManaDelta(0),
     mManaIncomePerSecond(0.0),
     mManaUpkeepPerSecond(0.0),
+    mManaOneOffPerSecond(0.0),
     mStartingX(0),
     mStartingY(0),
     mNumCreaturesFighters(0),
@@ -96,6 +97,7 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
     OD_ASSERT_TRUE(is >> mManaDelta);
     OD_ASSERT_TRUE(is >> mManaIncomePerSecond);
     OD_ASSERT_TRUE(is >> mManaUpkeepPerSecond);
+    OD_ASSERT_TRUE(is >> mManaOneOffPerSecond);
     OD_ASSERT_TRUE(is >> mNumClaimedTiles);
     OD_ASSERT_TRUE(is >> mNumCreaturesFighters);
     OD_ASSERT_TRUE(is >> mNumCreaturesFightersMax);
@@ -135,6 +137,7 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     os << mManaDelta;
     os << mManaIncomePerSecond;
     os << mManaUpkeepPerSecond;
+    os << mManaOneOffPerSecond;
     os << mNumClaimedTiles;
     os << mNumCreaturesFighters;
     os << mNumCreaturesFightersMax;
@@ -160,7 +163,7 @@ void SeatData::exportToPacket(ODPacket& os) const
        << mStartingY;
     os << mColorId;
     os << mGold << mGoldMax;
-    os << mMana << mManaDelta << mManaIncomePerSecond << mManaUpkeepPerSecond << mNumClaimedTiles;
+    os << mMana << mManaDelta << mManaIncomePerSecond << mManaUpkeepPerSecond << mManaOneOffPerSecond << mNumClaimedTiles;
     os << mNumCreaturesFighters << mNumCreaturesFightersMax;
     os << mNumCreaturesWorkers;
     os << mHasGoalsChanged;
@@ -188,7 +191,7 @@ bool SeatData::importFromPacket(ODPacket& is)
     is >> mFaction >> mStartingX >> mStartingY;
     is >> mColorId;
     is >> mGold >> mGoldMax;
-    is >> mMana >> mManaDelta >> mManaIncomePerSecond >> mManaUpkeepPerSecond >> mNumClaimedTiles;
+    is >> mMana >> mManaDelta >> mManaIncomePerSecond >> mManaUpkeepPerSecond >> mManaOneOffPerSecond >> mNumClaimedTiles;
     is >> mNumCreaturesFighters >> mNumCreaturesFightersMax;
     is >> mNumCreaturesWorkers;
     is >> mHasGoalsChanged;
