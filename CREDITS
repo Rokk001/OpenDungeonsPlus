@@ -306,6 +306,7 @@ Name                                   Author                  License          
 ------------------------------------------------------------------------------------------------------------------------
 Adventurer.*                           Danimal                 CC-BY-SA 3.0
 AdventurerBed.mesh                     PantherOne              CC0                     http://opengameart.org/content/tent-pack
+AdventurerBed.skeleton                  OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of AdventurerBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Anvil.mesh                             Daniel74                CC0                     http://forum.freegamedev.net/viewtopic.php?p=59714#p59714
 Arena.mesh                             Danimal, hwoarangmy     CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
 ArrowProjectile	                       YD                      CC0                     http://opengameart.org/content/archery-set
@@ -314,6 +315,7 @@ BasicHammer                            YD                      CC0              
 BasicShield                            YD                      CC0                     http://opengameart.org/content/shield-sword
 Basicsword                             YD                      CC0                     http://opengameart.org/content/shield-sword
 Bed.mesh                               Clint Bellanger         CC0                     http://opengameart.org/content/bed-low-poly
+Bed.skeleton                            OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of Bed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Bookcase.mesh                          Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058
 Bookshelf.mesh                         Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058
 Boulder.*                              Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59832#p59832
@@ -340,6 +342,7 @@ Dojo.mesh                              p0ss                    CC-BY-SA 3.0
 Dormitory.mesh                         Skorpio                 CC-BY-SA 3.0, GPLv3+
 Dragon.*                               Andrew Buck, Skorpio    CC-BY-SA 3.0, GPLv3+
 DragonBed.mesh                         Dm3d                    GPL 2.0/GPLv3+/CC-BY-SA 3.0  http://opengameart.org/content/goldpile
+DragonBed.skeleton                      OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of DragonBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 DungeonTemple*.*                       Skorpio                 CC-BY-SA 3.0, GPLv3+
 DungeonHeartPedestal.png               Skorpio (derived)       CC-BY-SA 3.0, GPLv3+
 Dwarf1.*                               Skorpio                 CC-BY-SA 3.0, GPLv3+
@@ -355,11 +358,13 @@ Goblin.*                               xGhostx7                CC0              
  -> Animation                          Danimal
 Knife model                            Wind astella            CC-BY 3.0               http://opengameart.org/content/wind-weapon-pack-1
 GoblinBed.mesh                         Eugeneloza              CC0                     http://forum.freegamedev.net/viewtopic.php?p=62027#p62027
+GoblinBed.skeleton                      OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of GoblinBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 GoldstackLv*.mesh                      Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058
 Grimoire.*                             Danimal                 CC-BY-SA 3.0            http://opengameart.org/users/danimal
 Grindstone.mesh                        Daniel74                CC0                     http://forum.freegamedev.net/viewtopic.php?p=59775#p59775
 Hammock.mesh                           eugeneloza              CC0                     http://forum.freegamedev.net/viewtopic.php?p=59983#p59983
 ImpBed.mesh                         OD Plus project     CC0                     tools/room-objects/generate_beds.py (original, procedural)
+ImpBed.skeleton                         OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of ImpBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Keeperhand.*                           Skorpio                 CC-BY-SA 3.0, GPLv3+
 Knight.*                               surt                    CC0                     http://opengameart.org/forumtopic/cc0-scraps
 KnightCoffin.mesh                      YD                      CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
@@ -379,18 +384,21 @@ Library.mesh                           Danimal                 CC-BY-SA 3.0     
 Lich.*                                 SummoningWars           CC-BY-SA 3.0            http://sumwars.org
 Lizardman.*                            Andrew Buck, Skorpio    CC-BY-SA 3.0, GPLv3+
 LizardmanBed.mesh                      Eugeneloza              CC0                     http://forum.freegamedev.net/viewtopic.php?p=60197#p60197
+LizardmanBed.skeleton                   OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of LizardmanBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Longsword.mesh                         Andrew Buck, Skorpio    CC-BY-SA 3.0, GPLv3+
 Monk.*                                 CDmir, hwoarangmy       CC-BY-SA 3.0            http://opengameart.org/content/monk-animated
 MysteryBox.mesh                        Danimal                 CC-BY 3.0               http://opengameart.org/users/danimal
 NatureMonster.*                        CDmir                   CC0                     http://opengameart.org/content/forest-monster
 Orc.*                                  Skorpio                 CC-BY-SA 3.0, GPLv3+
 OrcBed.mesh                            Eugeneloza              CC0                     http://forum.freegamedev.net/viewtopic.php?p=60191#p60191
+OrcBed.skeleton                         OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of OrcBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 PitDemon.*                             Skorpio                 CC-BY-SA 3.0, GPLv3+
 Podium.mesh                            DM3d                    CC-BY-SA 3.0, GPLv3+    http://opengameart.org/content/podium
 PortalObject.*                         Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=60904#p60904
 Portal.mesh                            Skorpio                 CC-BY-SA 3.0
 PrisonGround.mesh                      Hwoarangmy              CC-BY-SA 3.0
 RangerBed.mesh                         PantherOne              CC0                     http://opengameart.org/content/tent-pack
+RangerBed.skeleton                      OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of RangerBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Rat.*                                  CDmir                   CC0                     http://opengameart.org/content/evil-giant-rat
 Roach                                  Danimal, Atmostatic     CC-BY-SA 3.0            http://opengameart.org/content/roach-game-ready-and-animated
 Roulette.*                             hwoarangmy              CC-BY-SA 3.0
@@ -405,6 +413,7 @@ Slime.*                                Grefuntor, D3dm         CC-BY 3.0, CC-BY-
 SmallSpider.*                          Skorpio                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=60887#p60851
 Spider.*                               DennisH2010, Danimal    CC-BY 3.0               http://www.blendswap.com/blends/view/26798 - http://forum.freegamedev.net/viewtopic.php?p=60530#p60530
 SpiderBed.mesh                      OD Plus project     CC0                     tools/room-objects/generate_beds.py (original, procedural)
+SpiderBed.skeleton                      OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of SpiderBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Spiketrap.*                            Danimal                 CC-BY 3.0               http://opengameart.org/content/spyke-trap-low-poly
 SquareSelector.mesh                    OD Team                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59066#p59066
 Staff.*                                Skorpio                 CC-BY-SA 3.0, GPLv3+
@@ -422,6 +431,7 @@ T2SwordGood                            Quandtum                CC0              
 T3SwordGood                            XAHE                    CC-BY                   https://sketchfab.com/models/516d7439ad9c49eebb12deda51894b61
 T4SwordGood                            GESY                    CC-BY                   https://sketchfab.com/models/c2b290ab390f41609362cba70d367bc0
 TentacleBed.mesh                       Eugeneloza              CC0                     http://forum.freegamedev.net/viewtopic.php?p=60091#p60091
+TentacleBed.skeleton                    OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of TentacleBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Tentacle*.*                            Skorpio                 CC-BY-SA 3.0, GPLv3+
 Tileset                                Skorpio, Danimal        CC-BY-SA 3.0            http://opengameart.org/content/3d-dungeon-tileset
 TortureObject                          Danimal, Nobiax         CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59239#p59239
@@ -432,6 +442,7 @@ TrainingDummy4.*                       Danimal                 CC-BY-SA 3.0     
 Treasury.mesh                          Skorpio                 CC-BY-SA 3.0, GPLv3+
 Troll.*                                Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/rock-golem
 TrollBed.mesh                          Eugeneloza              CC0                     http://forum.freegamedev.net/viewtopic.php?f=38&t=5866&p=62444#p62444
+TrollBed.skeleton                       OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of TrollBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 TrollRock.mesh                         Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/rock-golem
 WarBanner.*                            Danimal, Atmostatic     CC-BY 3.0               https://github.com/OpenDungeons/OpenDungeons/pull/838#issuecomment-118964220
 Water*                                 Skorpio                 CC-BY-SA 3.0, GPLv3+
