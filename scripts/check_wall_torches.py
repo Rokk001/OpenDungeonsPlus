@@ -89,6 +89,24 @@ check("getWallTorchesVersion()" in body(ambience, "void RoomAmbience::syncWallTo
       "RoomAmbience does not pass the torch list on")
 check("syncWallTorches();" in body(ambience, "void RoomAmbience::update"), "RoomAmbience::update does not sync the torches")
 check("mWallTorches.update(" in ambience, "RoomAmbience does not update the wall torch view")
+# The client shows exactly the list of the server: it stores what it receives and derives nothing
+game_map_cpp = read("source", "gamemap", "GameMap.cpp")
+received = body(game_map_cpp, "void GameMap::updateWallTorchesFromPacket")
+check("WallTorches::compute(" not in received and "getTile(" not in received and "isServerGameMap" not in received,
+      "the client derives torches from the map instead of taking the server list")
+check("mWallTorches[WallTorches::getKey(torch.mX, torch.mY, torch.mDir, sizeX)] = torch;" in received
+      and "mWallTorches.erase(" in received and "mWallTorches.clear();" in received,
+      "updateWallTorchesFromPacket does not store the received list as it is")
+check(game_map_cpp.count("WallTorches::compute(") == 1, "the torches are computed in more than one place")
+check(game_map_cpp.count("mWallTorches[") == 2, "mWallTorches is written in an unexpected place")
+sync = body(ambience, "void RoomAmbience::syncWallTorches")
+check("getWallTorches()" in sync and "WallTorches::compute(" not in sync and "getTile(" not in sync
+      and sync.count("spots.push_back(") == 1, "RoomAmbience::syncWallTorches does not pass on the list one to one")
+# Recomputation at most once per turn: a flag, cleared when the list is computed
+update = body(game_map_cpp, "void GameMap::updateWallTorches")
+check("if(mWallTorchesDirty)" in update and "mWallTorchesDirty = false;" in update,
+      "updateWallTorches does not compute only when the dirty flag is set")
+check(game_map_cpp.count("updateWallTorches();") == 1, "updateWallTorches is called more than once per turn")
 view = read("source", "render", "WallTorchView.cpp")
 check("WallTorchConfig::load()" in view, "WallTorchView does not read WallTorchConfig")
 for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"):
