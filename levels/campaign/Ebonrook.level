@@ -5136,12 +5136,12 @@ ProtectDungeonTemple	NULL
 # typeTrap	name	seatId	numTiles		Subsequent Lines: tileX	tileY	isActivated(0/1)		Subsequent Lines: optional specific data
 [Trap]
 4	DoorWooden1	3	1
-64	28	1
+62	38	1
 0
 [/Trap]
 [Trap]
 4	DoorWooden2	3	1
-64	34	1
+66	38	1
 0
 [/Trap]
 [Trap]
@@ -5389,7 +5389,7 @@ Action	message	1	The north hub is yours. Glades open to the west and the east, a
 Action	reveal	1	NorthWest
 Action	reveal	1	NorthEast
 Action	reveal	1	Ford
-Action	spawn	3	63	35	1	Knight:3	Elf:3	Monk:2	Adventurer:2
+Action	spawn	3	64	38	1	Knight:3	Elf:3	Monk:2	Adventurer:2
 [/Trigger]
 [Trigger]
 Name	westMarch
@@ -5463,7 +5463,7 @@ Name	flock1
 Mode	once
 Cond	time	160
 Action	message	1	The rooks are wheeling and soldiers follow.
-Action	spawn	3	63	29	1	Knight:3	Elf:3	Monk:3	Adventurer:3
+Action	spawn	3	64	38	1	Knight:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	flock2
@@ -5505,7 +5505,7 @@ Name	flock7
 Mode	once
 Cond	time	1180
 Action	message	1	The rooks are wheeling and soldiers follow.
-Action	spawn	3	63	29	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3
+Action	spawn	3	64	38	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3
 [/Trigger]
 [Trigger]
 Name	flock8
@@ -5547,7 +5547,7 @@ Name	flock13
 Mode	once
 Cond	time	2200
 Action	message	1	The rooks are wheeling and soldiers follow.
-Action	spawn	3	63	29	1	Knight:4	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
+Action	spawn	3	64	38	1	Knight:4	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	flock14
@@ -5589,7 +5589,7 @@ Name	flock19
 Mode	once
 Cond	time	3220
 Action	message	1	The rooks are wheeling and soldiers follow.
-Action	spawn	3	63	29	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4	Adventurer:3
+Action	spawn	3	64	38	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	flock20

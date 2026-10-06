@@ -5337,12 +5337,12 @@ ProtectDungeonTemple	NULL
 # typeTrap	name	seatId	numTiles		Subsequent Lines: tileX	tileY	isActivated(0/1)		Subsequent Lines: optional specific data
 [Trap]
 4	DoorWooden1	3	1
-58	88	1
+60	77	1
 0
 [/Trap]
 [Trap]
 4	DoorWooden2	3	1
-58	80	1
+53	80	1
 0
 [/Trap]
 [Trap]
@@ -5437,12 +5437,12 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 4	DoorWooden21	3	1
-46	98	1
+47	79	1
 0
 [/Trap]
 [Trap]
 4	DoorWooden22	3	1
-70	98	1
+69	79	1
 0
 [/Trap]
 [Trap]
@@ -5555,11 +5555,11 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 2	Spike5	3	1
-56	82	1
+54	79	1
 [/Trap]
 [Trap]
 2	Spike6	3	1
-60	82	1
+62	78	1
 [/Trap]
 [Trap]
 2	Spike7	3	1

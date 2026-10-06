@@ -3773,7 +3773,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 4	DoorWooden5	2	1
-72	88	1
+61	80	1
 0
 [/Trap]
 [Trap]
