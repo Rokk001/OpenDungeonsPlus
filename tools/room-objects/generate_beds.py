@@ -3,7 +3,7 @@
 restyled standard bed textures.  Original work, CC0.
 
 Usage: generate_beds.py OUT_DIR
-Writes ImpBed.xml, SpiderBed.xml (convert with OgreXMLConverter), ImpBed.png,
+Writes WorkerBed.xml, SpiderBed.xml (convert with OgreXMLConverter), WorkerBed.png,
 SpiderBed.png, BedWood.png, BedBlanket.png, BedLinen.png into OUT_DIR.
 Meshes keep the 1x1 footprint (x, y within +-0.42) of the old meshes; head end at +y.
 """
@@ -180,7 +180,7 @@ def imp_bed(out):
     y0 = int(bands[2][0] * n)
     for x in range(0, n, 32):
         tex[y0 + 4:y0 + 8, x:x + 16] = (150, 70, 40)
-    save(tex, os.path.join(out, "ImpBed.png"))
+    save(tex, os.path.join(out, "WorkerBed.png"))
     m = Mesh()
     for sx in (-0.26, 0.26):
         for sy in (-0.38, 0.38):
@@ -196,7 +196,7 @@ def imp_bed(out):
     bl = Mesh()
     bl.box((0, -0.12, 0.31), (0.54, 0.50, 0.06), bands[2])
     bl.box((0, 0.27, 0.31), (0.36, 0.16, 0.06), bands[1])
-    write_xml([("ImpBedFrame", m), ("ImpBedStraw", mat), ("ImpBedBlanket", bl)], os.path.join(out, "ImpBed.xml"))
+    write_xml([("WorkerBedFrame", m), ("WorkerBedStraw", mat), ("WorkerBedBlanket", bl)], os.path.join(out, "WorkerBed.xml"))
 
 
 def spider_bed(out):

@@ -41,7 +41,6 @@ static const MeshBounds meshBounds[] = {
     {"GoldstackLv3", -.331379f, -.301391f, .290679f, .182552f},
     {"GoldstackLv4", -.331379f, -.301391f, .290679f, .282221f},
     {"Grindstone", -.329974f, -.215496f, .329974f, .371096f},
-    {"ImpBed", -.3f, -.425f, .3f, .445f},
     {"KnightCoffin", -.254848f, -.627449f, .517051f, .632155f},
     {"KnightStatue", -.293943f, -.32853f, .295722f, .325329f},
     {"KnightStatue2", -.323145f, -.358743f, .332038f, .367767f},
@@ -61,6 +60,7 @@ static const MeshBounds meshBounds[] = {
     {"TrainingDummy3", -.263341f, -.228943f, .30858f, .121115f},
     {"TrainingDummy4", -.462458f, -.248657f, .462458f, .248657f},
     {"TrollBed", -.787227f, -.794584f, .954702f, .813162f},
+    {"WorkerBed", -.3f, -.425f, .3f, .445f},
     {"WorkshopMachine1", -.5376f, -.506479f, .761215f, .337512f},
     {"WorkshopMachine2", -.730786f, -.336f, .5376f, .338177f}
 };
