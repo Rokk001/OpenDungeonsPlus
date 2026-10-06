@@ -202,8 +202,8 @@ for family, name in (("Prison/Clang", "FxPrisonClang01"), ("Torture/Shackles", "
     need(os.path.exists(path) and os.path.getsize(path) > 1000, "sound %s missing" % family)
     need("sounds/Spatial/Rooms/%s/%s.ogg" % (family, name) in credits, "CREDITS entry for %s missing" % name)
     need(any(e.get("Family") == ["Rooms/" + family] for e in fx.values()), "no effect plays Rooms/%s" % family)
-need(re.search(r"AI-assisted", credits[credits.index("FxHeartHit01"):credits.index("FxHeartHit01") + 400]) is not None,
-     "the new sounds must be marked as AI-assisted in CREDITS")
+need(re.search(r"Real recording", credits[credits.index("FxHeartHit01"):credits.index("FxHeartHit01") + 400]) is not None,
+     "the new sounds must be marked as real recordings in CREDITS")
 generator = read("tools", "gen_room_effect_sounds.py")
 for function in ("prison_clang", "torture_shackles", "crypt_raise", "wave_portal_surge", "heart_hit"):
     need("def %s(" % function in generator, "tools/gen_room_effect_sounds.py lacks %s" % function)
