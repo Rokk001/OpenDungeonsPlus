@@ -2883,7 +2883,7 @@ ProtectDungeonTemple	NULL
 3	SiegeHand1	Adventurer.mesh	38	35	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	SiegeHand2	Dwarf1.mesh	37	37	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	SiegeHand3	Adventurer.mesh	35	36	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	BankWatch1	Dwarf1.mesh	19	40	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	BankWatch1	Dwarf1.mesh	19	37	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	BankWatch2	Adventurer.mesh	35	30	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	SluiceWarden	Dwarf1.mesh	40	22	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
