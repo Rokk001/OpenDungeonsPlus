@@ -570,12 +570,12 @@ Spatial/Rooms/Hatchery/RoosterCrow/
 -> RoosterCrow*.ogg                    alys                    Public domain           Real recording "Medium rooster crowing" by alys (public domain, https://commons.wikimedia.org/wiki/File:Medium_rooster_crowing.ogg, original http://www.pdsounds.org/sounds/medium_rooster_crowing); cut, faded, normalised, pitch lowered and low-passed, converted to mono Ogg Vorbis
 
 Spatial/Rooms/Temple/Gong/
--> Gong*.ogg                           OD Team                 GPLv3+                  Synthesised by tools/gen_room_effects_sound.py from sine waves and noise (script generated, original work, not AI generated)
+-> Gong*.ogg                           Stephan (PDSounds)      CC0                     https://commons.wikimedia.org/wiki/File:Gong_or_bell_vibrant_(short).ogg (Real recording of a gong by Stephan, CC0 1.0); cut, faded, mono, volume adjusted
 
 Spatial/Rooms/Treasury/DepositGold/
 -> DepositGold*.ogg                    jalastram               CC-BY 3.0               http://opengameart.org/content/coins-sounds
 Spatial/Rooms/Treasury/CoinStep/
--> CoinStep*.ogg                       OD Team                 CC0                     Synthesised by tools/treasury-gold/generate_coin_step.py (script generated, original work, not AI generated)
+-> CoinStep*.ogg                       StarNinjas              CC0                     https://opengameart.org/content/12-coin-sound-effects (Real recordings of coins in the hand (coin.5.ogg, coin.11.ogg, coin.9.ogg, one per file); cut, faded, mono, volume adjusted)
 
 Spatial/Spells/Heal/
 -> healspell*.ogg                      DoKashiteru             CC-BY-SA 3.0            http://opengameart.org/content/3-heal-spells
@@ -673,7 +673,6 @@ materials/textures/RoomAmb*.png        OD Team                 GPLv3+           
 tools/gen_room_ambience_art.py         OD Team                 GPLv3+
 materials/textures/RoomAmbFlame.png, RoomAmbBracket.png, RoomAmbGear.png, RoomAmbRat.png, RoomAmbRatL.png, RoomAmbRumple.png, RoomAmbSoftRing.png   OD Team   GPLv3+   Drawn from simple shapes and gradients by tools/gen_room_effects_art.py (script generated, original work, not AI generated)
 tools/gen_room_effects_art.py          OD Team                 GPLv3+
-tools/gen_room_effects_sound.py        OD Team                 GPLv3+
 tools/check_room_ambience.py           OD Team                 GPLv3+
 materials/textures/RoomAmbRing.png      OD Team                 GPLv3+                  Thin glowing ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
 materials/textures/RoomAmbRingRunes.png  OD Team                 GPLv3+                  Double ring with tick marks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work, not AI generated)
@@ -1097,14 +1096,14 @@ tools/hatchery/gen_hatchery_sounds.py  OD Team                 GPLv3+           
 
 Name                                   Author                  License                 Source URL
 ------------------------------------------------------------------------------------------------------------------------
-sounds/Spatial/Rooms/Casino/Win/FxCasinoWin01.ogg   OD Team   GPLv3+   Synthesized (chimes and coins) from sine waves and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/Casino/Loss/FxCasinoLoss01.ogg   OD Team   GPLv3+   Synthesized (groan of a few voices) from harmonic tones and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/Arena/Cheer/FxArenaCheer01.ogg   OD Team   GPLv3+   Synthesized (cheering crowd and clapping) from harmonic tones and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/Prison/Clang/FxPrisonClang01.ogg   OD Team   GPLv3+   Synthesized (an iron door falling shut and ringing bars) from noise and inharmonic partials by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/Torture/Shackles/FxTortureShackles01.ogg   OD Team   GPLv3+   Synthesized (a flash crack and falling chains) from noise and inharmonic partials by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/Crypt/Raise/FxCryptRaise01.ogg   OD Team   GPLv3+   Synthesized (earth shifting and a rising spirit tone) from dark noise and sine sweeps by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/WavePortal/Surge/FxWavePortalSurge01.ogg   OD Team   GPLv3+   Synthesized (a deep boom with a rising shockwave) from sine waves and noise by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
-sounds/Spatial/Rooms/Heart/Hit/FxHeartHit01.ogg   OD Team   GPLv3+   Synthesized (a hard double heartbeat) from sine waves by tools/gen_room_effect_sounds.py (script generated, original work, AI-assisted: script written with an AI assistant, no samples)
+sounds/Spatial/Rooms/Casino/Win/FxCasinoWin01.ogg                                     StarNinjas       CC0        https://opengameart.org/content/12-coin-sound-effects (Real recording of coins in the hand (coin.1, coin.6, coin.8, coin.2 and coin.4 mixed with short offsets); cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Casino/Loss/FxCasinoLoss01.ogg                                   bluszcz          CC-BY 3.0  https://opengameart.org/content/aww-scream (Real voice recordings (aw03, aw04 and aw01 mixed with short offsets); cut, faded, mono, volume adjusted). Attribution: bluszcz, OpenGameArt
+sounds/Spatial/Rooms/Arena/Cheer/FxArenaCheer01.ogg                                   Gregor Quendel   CC-BY 4.0  https://opengameart.org/content/free-crowd-cheering-sounds (Real recording "Strong cheering - II - Short", mixed with the CC0 recording https://opengameart.org/content/applause-in-a-large-hall-or-church by eXpl0it3r); cut, faded, mono, volume adjusted. Attribution: Gregor Quendel, www.gregorquendel.com
+sounds/Spatial/Rooms/Prison/Clang/FxPrisonClang01.ogg                                 rubberduck       CC0        https://opengameart.org/content/80-cc0-rpg-sfx (Real recordings (metal_02, metal_01 and metal_03 mixed with short offsets); cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Torture/Shackles/FxTortureShackles01.ogg                         rubberduck       CC0        https://opengameart.org/content/80-cc0-rpg-sfx (Real recordings (chain_03, chain_01 and chain_02 mixed with short offsets); cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Crypt/Raise/FxCryptRaise01.ogg                                   rubberduck, Nocturnal_Vanguard CC0        https://opengameart.org/content/80-cc0-rpg-sfx (Real stone recordings item_stone_03, stones_03, stones_02) mixed with a real voice recording from https://opengameart.org/content/oooooooooooooo; cut, faded, mono, volume adjusted
+sounds/Spatial/Rooms/WavePortal/Surge/FxWavePortalSurge01.ogg                         InspectorJ       CC-BY 3.0  https://opengameart.org/content/thunder-very-close-rain-01 (Real field recording of a close thunder strike); cut, faded, mono, volume adjusted. Attribution: InspectorJ, OpenGameArt
+sounds/Spatial/Rooms/Heart/Hit/FxHeartHit01.ogg                                       Independent.nu   CC0        https://opengameart.org/content/heartbeat-single-sound (Real recording of a heartbeat, submitted by qubodup); cut, faded, mono, volume adjusted
 tools/gen_room_effect_sounds.py        OD Team                 GPLv3+                  Original work, AI-assisted: script written with an AI assistant
 
 ====================================
