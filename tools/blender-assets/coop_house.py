@@ -1,3 +1,5 @@
+# Note: the two straw rings next to the ramp that this script adds were cut from the shipped mesh afterwards (the
+# nests are now the separate mesh ChickenNest); the shipped mesh no longer has them.
 # Builds the hatchery coop mesh ChickenCoopHouse (skeleton with the clips Door and Idle) in Blender from the
 # old coop mesh: the door leaf gets its own bone, a lookout platform on the roof ridge and two straw nests next
 # to the ramp are added. Needs odp_ogre_io, the old mesh as XML (ChickenCoop.mesh.xml) and a skeleton XML with the
