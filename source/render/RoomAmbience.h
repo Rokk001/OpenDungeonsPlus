@@ -20,6 +20,7 @@
 
 #include "render/RoomAmbienceConfig.h"
 #include "render/RoomAmbienceExtras.h"
+#include "render/WallTorchView.h"
 
 #include <OgrePrerequisites.h>
 #include <OgreQuaternion.h>
@@ -97,6 +98,10 @@ public:
     //! Shows the events TrapFired, TrapLinked, DoorHit, DoorHurt (health at half or less) or DoorWrecked
     //! at the tile; the type name is matched like a tile visual in "Match" of the event effects.
     void notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, const std::string& typeName, float fraction);
+
+    //! \brief Replaces the wall torches that are shown by the list the server sent. The client
+    //! derives nothing; the torches are drawn as they are listed (see WallTorchView)
+    void setWallTorchSpots(const std::vector<WallTorchSpot>& spots);
 
     //! \brief The local keeper has sent a spell cast: shows the event SpellFxHandCast at the place of the keeper's hand
     void noteHandCast(const Ogre::Vector3& handPosition);
@@ -316,6 +321,8 @@ private:
 
     void buildIndex();
     void scan();
+    //! \brief Hands the torch list of the client map to mWallTorches when it has changed
+    void syncWallTorches();
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
@@ -404,6 +411,9 @@ private:
     double mScanRadius;
     double mHeartRateFactor;
     RoomAmbienceExtras mExtras;
+    WallTorchView mWallTorches;
+    //! Version of GameMap::getWallTorches() that was handed to mWallTorches last
+    uint32_t mWallTorchesVersion;
 
     std::map<std::string, Emitter> mEmitters;
     std::vector<OneShot> mOneShots;

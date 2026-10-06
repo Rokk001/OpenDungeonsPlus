@@ -157,6 +157,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mUniqueNumber(0),
     mScanRadius(30.0),
     mHeartRateFactor(1.0),
+    mWallTorchesVersion(0),
     mSeenSizeX(0),
     mSeenSizeY(0),
     mEventsThisScan(0),
@@ -488,6 +489,7 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
 
 void RoomAmbience::stopAll()
 {
+    mWallTorches.stopAll();
     if(RenderManager::getSingletonPtr() != nullptr)
     {
         for(std::map<std::string, Emitter>::iterator it = mEmitters.begin(); it != mEmitters.end(); ++it)
@@ -553,11 +555,42 @@ void RoomAmbience::stopAll()
     mHeartRateFactor = 1.0;
 }
 
+void RoomAmbience::setWallTorchSpots(const std::vector<WallTorchSpot>& spots)
+{
+    mWallTorches.setSpots(spots);
+}
+
+void RoomAmbience::syncWallTorches()
+{
+    if((mGameMap == nullptr) || (mGameMap->getWallTorchesVersion() == mWallTorchesVersion))
+        return;
+
+    mWallTorchesVersion = mGameMap->getWallTorchesVersion();
+    std::vector<WallTorchSpot> spots;
+    const std::map<uint32_t, WallTorch>& torches = mGameMap->getWallTorches();
+    for(const std::pair<const uint32_t, WallTorch>& p : torches)
+    {
+        const WallTorch& torch = p.second;
+        // The direction is the one from the wall tile to the open tile, the same as WallTorchSide
+        WallTorchSide side = WallTorchSide::west;
+        if(WallTorches::getDirY(torch.mDir) > 0)
+            side = WallTorchSide::north;
+        else if(WallTorches::getDirY(torch.mDir) < 0)
+            side = WallTorchSide::south;
+        else if(WallTorches::getDirX(torch.mDir) > 0)
+            side = WallTorchSide::east;
+
+        spots.push_back(WallTorchSpot(torch.mX, torch.mY, side));
+    }
+    setWallTorchSpots(spots);
+}
+
 void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
 {
     if(mMode == Mode::off)
         return;
 
+    syncWallTorches();
     double dt = static_cast<double>(timeSinceLastFrame);
     mClock += dt;
     mScanTimer += dt;
@@ -577,6 +610,12 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     updateMotions(dt);
     updateTurrets(dt);
     updateRollers(dt);
+
+    Ogre::Camera* camera = nullptr;
+    ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
+    if(frameListener != nullptr)
+        camera = frameListener->getCameraManager()->getActiveCamera();
+    mWallTorches.update(dt, (mMode == Mode::reduced) ? WallTorchView::Mode::reduced : WallTorchView::Mode::full, camera);
 }
 
 void RoomAmbience::scan()
@@ -905,32 +944,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 if(distance > limit)
                     continue;
 
-                // Where a torch sits: on the edge of the tile that touches the wall reinforced by the keeper
-                Ogre::Vector3 torchShift = Ogre::Vector3::ZERO;
-                if(effect.mTorch)
-                {
-                    // The torches are the ones the game counts as light (the server decides with the same rule)
-                    Room* torchRoom = tile->getCoveringRoom();
-                    if((torchRoom == nullptr) || !torchRoom->hasTorchOn(tile))
-                        continue;
-
-                    for(Tile* neighbor : tile->getAllNeighbors())
-                    {
-                        if((neighbor == nullptr) || (neighbor->getFullness() <= 0.0) || !neighbor->isClaimedForSeat(torchRoom->getSeat()))
-                            continue;
-
-                        // A reinforced wall straight beside the tile is preferred, on a corner the torch stays in the middle
-                        int32_t stepX = neighbor->getX() - x;
-                        int32_t stepY = neighbor->getY() - y;
-                        if((stepX == 0) || (stepY == 0))
-                        {
-                            torchShift = Ogre::Vector3(static_cast<Ogre::Real>(stepX) * 0.45f,
-                                static_cast<Ogre::Real>(stepY) * 0.45f, 0.0f);
-                            break;
-                        }
-                    }
-                }
-                else if(effect.mSpacing > 1)
+                if(effect.mSpacing > 1)
                 {
                     uint32_t hash = static_cast<uint32_t>(x * 73856093) ^ static_cast<uint32_t>(y * 19349663);
                     if(((hash >> 3) % effect.mSpacing) != 0)
@@ -974,7 +988,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 candidate.mTarget = key;
                 candidate.mPosition = position + effect.mOffset;
                 if(effect.mWallSide)
-                    candidate.mPosition += effect.mTorch ? torchShift : wallShift;
+                    candidate.mPosition += wallShift;
                 candidate.mDistance = distance;
                 candidate.mPriority = effect.mPriority;
                 if(effect.mWhen == AmbienceWhen::always)

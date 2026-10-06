@@ -22,7 +22,6 @@
 
 #include "rooms/HatcheryCycle.h"
 #include "rooms/HatcheryRooster.h"
-#include "rooms/RoomTorches.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -575,44 +574,6 @@ BOOST_AUTO_TEST_CASE(test_Care)
     BOOST_CHECK(!HatcheryCycle::canHatch(counts, true));
     counts.mRoosters = 0;
     BOOST_CHECK(!HatcheryCycle::canHatch(counts, false));
-}
-
-BOOST_AUTO_TEST_CASE(test_Torches)
-{
-    // The rooms that carry wall torches: the thirteen rooms of the room ambience, no heart, portals or bridges
-    const RoomType torchRooms[] = {RoomType::dormitory, RoomType::library, RoomType::workshop, RoomType::trainingHall,
-        RoomType::treasury, RoomType::hatchery, RoomType::prison, RoomType::torture, RoomType::crypt, RoomType::arena,
-        RoomType::casino, RoomType::guardRoom, RoomType::temple};
-    for(RoomType type : torchRooms)
-        BOOST_CHECK(RoomTorches::hasTorchRoomType(type));
-    const RoomType noTorchRooms[] = {RoomType::nullRoomType, RoomType::dungeonTemple, RoomType::portal,
-        RoomType::portalWave, RoomType::bridgeWooden, RoomType::bridgeStone};
-    for(RoomType type : noTorchRooms)
-        BOOST_CHECK(!RoomTorches::hasTorchRoomType(type));
-
-    // The torch spots are a fixed pick over the coordinates (pinned values, the same on server and client)
-    BOOST_CHECK(RoomTorches::isTorchSpot(0, 0));
-    BOOST_CHECK(RoomTorches::isTorchSpot(17, 40));
-    BOOST_CHECK(!RoomTorches::isTorchSpot(1, 0));
-    BOOST_CHECK(!RoomTorches::isTorchSpot(0, 1));
-    BOOST_CHECK(!RoomTorches::isTorchSpot(5, 7));
-    BOOST_CHECK(!RoomTorches::isTorchSpot(12, 3));
-    BOOST_CHECK(!RoomTorches::isTorchSpot(30, 30));
-    BOOST_CHECK(!RoomTorches::isTorchSpot(59, 2));
-
-    // One tile in six, and the same answer every time
-    uint32_t torches = 0;
-    for(int32_t x = 0; x < 60; ++x)
-    {
-        for(int32_t y = 0; y < 60; ++y)
-        {
-            const bool spot = RoomTorches::isTorchSpot(x, y);
-            BOOST_CHECK_EQUAL(spot, RoomTorches::isTorchSpot(x, y));
-            if(spot)
-                ++torches;
-        }
-    }
-    BOOST_CHECK_EQUAL(torches, 590u);
 }
 
 BOOST_AUTO_TEST_CASE(test_Trample)

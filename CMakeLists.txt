@@ -475,6 +475,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/RoomAmbience.cpp
     ${SRC}/render/RoomAmbienceConfig.cpp
     ${SRC}/render/RoomAmbienceExtras.cpp
+    ${SRC}/render/WallTorchView.cpp
     ${SRC}/render/ODFrameListener.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/RenderManagerChickens.cpp
@@ -514,7 +515,6 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/HatcheryRooster.cpp
     ${SRC}/rooms/Room.cpp
     ${SRC}/rooms/RoomArena.cpp
-    ${SRC}/rooms/RoomTorches.cpp
     ${SRC}/rooms/RoomBridge.cpp
     ${SRC}/rooms/RoomBridgeStone.cpp
     ${SRC}/rooms/RoomBridgeWooden.cpp
@@ -535,6 +535,8 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp
     ${SRC}/rooms/RoomWorkshop.cpp
+    ${SRC}/rooms/WallTorchConfig.cpp
+    ${SRC}/rooms/WallTorches.cpp
 
     ${SRC}/sound/MusicPlayer.cpp
     ${SRC}/sound/SoundEffectsManager.cpp

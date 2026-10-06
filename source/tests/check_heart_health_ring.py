@@ -551,10 +551,12 @@ enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
-assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'editorRegionData', enumerators[-4:]
-assert enumerators[-3] == 'possessionEnd' and enumerators[-4] == 'possessionStart', enumerators[-6:]
-assert enumerators[-5] == 'casinoPayout' and enumerators[-6] == 'heartHealth', enumerators[-8:]
-assert enumerators[-7] == 'levelStatistics' and enumerators[-8] == 'playerDefeated'
+# wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
+assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
+assert enumerators.count('wallTorches') == 1
+assert enumerators[-4] == 'possessionEnd' and enumerators[-5] == 'possessionStart', enumerators[-6:]
+assert enumerators[-6] == 'casinoPayout' and enumerators[-7] == 'heartHealth', enumerators[-8:]
+assert enumerators[-8] == 'levelStatistics' and enumerators[-9] == 'playerDefeated'
 assert enumerators.count('heartHealth') == 1
 assert 'case ServerNotificationType::heartHealth:\n            return "heartHealth";' in notification_source
 case = client[client.index('case ServerNotificationType::heartHealth:'):]

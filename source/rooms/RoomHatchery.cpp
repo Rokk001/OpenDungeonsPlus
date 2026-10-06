@@ -39,7 +39,7 @@
 #include "network/ServerNotification.h"
 #include "rooms/HatcheryCoopHouse.h"
 #include "rooms/RoomManager.h"
-#include "rooms/RoomTorches.h"
+#include "rooms/WallTorches.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -687,27 +687,13 @@ bool RoomHatchery::isLit() const
     double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCareLightRadius", 8.0);
     double radiusSquared = radius * radius;
 
-    // Every wall torch in range counts, also the ones of other rooms. Room::hasTorchOn is the rule the room ambience
-    // uses to draw the torches, so a torch that is drawn lights the hatchery
-    for(Room* room : getGameMap()->getRooms())
-    {
-        if(!RoomTorches::hasTorchRoomType(room->getType()))
-            continue;
-
-        for(Tile* tile : room->getCoveredTiles())
-        {
-            if(!room->hasTorchOn(tile))
-                continue;
-
-            for(Tile* own : mCoveredTiles)
-            {
-                double dx = static_cast<double>(tile->getX() - own->getX());
-                double dy = static_cast<double>(tile->getY() - own->getY());
-                if((dx * dx + dy * dy) <= radiusSquared)
-                    return true;
-            }
-        }
-    }
+    // Every wall torch in range counts, whoever owns the wall and whether or not anybody sees it. The server list of
+    // the wall torches is asked for the box around the hatchery only
+    std::vector<std::pair<int32_t, int32_t> > ownTiles;
+    for(Tile* tile : mCoveredTiles)
+        ownTiles.push_back(std::pair<int32_t, int32_t>(tile->getX(), tile->getY()));
+    if(WallTorches::hasTorchWithin(getGameMap()->getWallTorches(), getGameMap()->getMapSizeX(), ownTiles, radius))
+        return true;
 
     for(MapLight* light : getGameMap()->getMapLights())
     {

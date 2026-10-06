@@ -20,7 +20,7 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
                "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below", "Land", "From",
-               "WallSide", "HeartRate", "Sound", "OwnerOnly", "Torch", "Object", "Loop")
+               "WallSide", "HeartRate", "Sound", "OwnerOnly", "Object", "Loop")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth", "Vacated", "Sleeping")
 KINDS = ("Particle", "Motion", "Clip", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile", "CreatureClip")
@@ -380,7 +380,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             part = pattern.replace("*", "")
             if not any(f.startswith(part) or f.endswith(part + ".mesh") for f in os.listdir(os.path.join(ROOT, "models"))):
                 problems.append("%s: wildcard %s matches no mesh" % (where, pattern))
-    for key in ("Reduced", "NeedWall", "WallSide", "HeartRate", "OwnerOnly", "Torch", "Loop"):
+    for key in ("Reduced", "NeedWall", "WallSide", "HeartRate", "OwnerOnly", "Loop"):
         if key in effect and effect[key][0] not in ("yes", "no", "true", "false", "1", "0"):
             problems.append("%s: %s needs yes or no" % (where, key))
     if "Sound" in effect:

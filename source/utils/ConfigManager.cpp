@@ -1644,6 +1644,11 @@ const std::string ConfigManager::getUserValue(Config::Ctg category,
     return it->second;
 }
 
+bool ConfigManager::hasRoomConfig(const std::string& param) const
+{
+    return mRoomsConfig.find(param) != mRoomsConfig.end();
+}
+
 const std::string& ConfigManager::getRoomConfigString(const std::string& param) const
 {
     std::map<const std::string, std::string>::const_iterator it = mRoomsConfig.find(param);

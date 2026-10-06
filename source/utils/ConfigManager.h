@@ -208,6 +208,8 @@ public:
     //! logging an error when the parameter is not in the configuration file.
     //! Useful for newly introduced parameters older config files do not have.
     double getRoomConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
+    //! \brief Tells whether the parameter is in the rooms configuration
+    bool hasRoomConfig(const std::string& param) const;
 
     //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
     const std::map<std::string, std::string>& getRelationshipsConfig() const

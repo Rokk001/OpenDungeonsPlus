@@ -52,19 +52,17 @@ cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 cfg = (root / 'config/rooms.cfg').read_text()
 assert 'carePercent' in cycle and 'canHatch' in cycle
-torches = (root / 'source/rooms/RoomTorches.cpp').read_text()
-assert 'isTorchSpot' in torches and 'hasTorchRoomType' in torches
-assert 'hasTorchOn' in (root / 'source/rooms/Room.cpp').read_text() and 'hasTorchOn' in room_cpp
+# The old room torches are gone: only the wall torches of the server light the hatchery
+assert not (root / 'source/rooms/RoomTorches.cpp').exists() and not (root / 'source/rooms/RoomTorches.h').exists()
+assert 'hasTorchOn' not in (root / 'source/rooms/Room.cpp').read_text() and 'hasTorchOn' not in room_cpp
 ambience_cpp = (root / 'source/render/RoomAmbience.cpp').read_text()
-assert 'hasTorchOn' in ambience_cpp
+assert 'hasTorchOn' not in ambience_cpp and 'torchShift' not in ambience_cpp
 # Light is light: torches and lights of every owner count, the lit check never looks at seats
 lit = body(room_cpp, 'bool RoomHatchery::isLit')
 assert 'getSeat' not in lit and 'isAlliedSeat' not in lit and 'getMapLights' in lit
-# The torch sits at the wall reinforced by the keeper, not at the first wall beside the tile
-assert 'torchShift' in ambience_cpp and 'isClaimedForSeat(torchRoom->getSeat())' in ambience_cpp
-assert 'effect.mTorch ? torchShift : wallShift' in ambience_cpp
+assert 'WallTorches::hasTorchWithin(getGameMap()->getWallTorches()' in lit
 ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
-assert ambience_cfg.count('Torch       yes') == 4
+assert 'Torch       yes' not in ambience_cfg
 assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp
 assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
 assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' not in cfg

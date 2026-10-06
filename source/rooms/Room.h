@@ -68,11 +68,6 @@ public:
 
     virtual RoomType getType() const = 0;
 
-    //! True if the tile of this room carries a wall torch: the room type has torches, the tile is one of the torch
-    //! spots (RoomTorches) and touches a wall reinforced by the keeper of the room. The server (light of the
-    //! hatchery) and the client (the torches the room ambience draws) both ask this.
-    bool hasTorchOn(Tile* tile) const;
-
     //! \brief What enemies can do to a room, read from RoomsClaimableByEnemies
     //! in the room configuration file.
     enum class ClaimMode

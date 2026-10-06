@@ -161,6 +161,14 @@ enum class ServerNotificationType
     //! Answer to editorRegionEdit, all the region markers of the level script:
     //! + uint32_t count, then per region: string name and 4 int32_t (the corners).
     editorRegionData,
+    //! The wall torches the receiving player may see (see GameMap::getWallTorches): + bool full (true: the
+    //! list replaces all torches), uint32_t number of removed torches, then per torch int32_t x, int32_t y,
+    //! int32_t direction; uint32_t number of added torches, then per torch int32_t x, int32_t y,
+    //! int32_t direction (WallTorches::getDirX/getDirY: where the open tile is, seen from the wall),
+    //! int32_t seatId of the wall owner. Sent once when a client joins or loads (the whole list) and when
+    //! the torches or the tiles the player sees change. Inserted before cosmeticEvent; trapEffect and
+    //! timeLimit stay the last values.
+    wallTorches,
     //! A short cosmetic note that something happened (a mood change, a full treasury, a blow, a missile
     //! launch): + a CosmeticEvent (see network/CosmeticEvent.h). Only sent to clients that negotiated
     //! cosmetic events; an older client never gets it. Inserted before creatureAppearance; trapEffect
