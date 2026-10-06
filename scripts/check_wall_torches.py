@@ -46,7 +46,7 @@ for key, default in reads:
         check(float(match.group(1)) == float(default), "%s: rooms.cfg %s differs from the default %s of the code"
               % (key, match.group(1), default))
 for key in ("WallTorchRoomSideDivisor", "WallTorchCorridorSpacing", "WallTorchMinDistance", "WallTorchActiveLights",
-            "WallTorchActiveLightsReduced", "WallTorchLightRadius", "WallTorchLightIntensity",
+            "WallTorchActiveLightsReduced", "WallTorchSoundLoops", "WallTorchLightRadius", "WallTorchLightIntensity",
             "WallTorchFlickerStrength", "WallTorchFlickerSpeed"):
     check(key in dict(reads), "WallTorchConfig does not read " + key)
 check("HatcheryCareLightRadius" in rooms_cfg, "HatcheryCareLightRadius is missing in rooms.cfg")
@@ -142,6 +142,18 @@ check("add_boost_test(00-WallTorches" in tests_cmake and "test_WallTorches.cpp" 
       "the unit test 00-WallTorches is not registered")
 check("RoomTorches" not in tests_cmake, "source/tests/CMakeLists.txt still names RoomTorches")
 
+# Crackling loop: nearest N torches, loop family from the real recording, stopped on removal / stopAll / hide
+sounds = read("source", "sound", "SoundEffectsManager.cpp")
+check("startSpatialLoop" in sounds and "stopSpatialLoop" in sounds and "setLoop(true)" in sounds,
+      "SoundEffectsManager has no start/stop for positioned loops")
+check(os.path.exists(os.path.join(ROOT, "sounds", "Spatial", "Rooms", "Torch", "Loop", "FxWallTorchLoop01.ogg")),
+      "the torch loop recording is missing")
+check('"Rooms/Torch/Loop"' in view and "startSpatialLoop(LOOP_FAMILY" in view and "mSettings.mSoundLoops" in view,
+      "WallTorchView does not start the loop for the nearest torches")
+check("stopSound(torch);" in body(view, "void WallTorchView::destroyTorch")
+      and "stopSound(torch);" in body(view, "void WallTorchView::refresh"),
+      "the loop is not stopped when a torch is removed or hidden")
+check("destroyTorch(it->second);" in body(view, "void WallTorchView::stopAll"), "stopAll does not free the loops")
 if problems:
     print("\n".join("PROBLEM: " + p for p in problems))
     sys.exit(1)
