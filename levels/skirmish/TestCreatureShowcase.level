@@ -1733,56 +1733,32 @@ spellEyeEvil
 [Rooms]
 # typeRoom	name	seatId	numTiles		Subsequent Lines: tileX	tileY
 [Room]
-1	DungeonTemple1	1	49
-2	2
-2	3
-2	4
-2	5
-2	6
-2	7
-2	8
-3	2
+1	DungeonTemple1	1	25
 3	3
 3	4
 3	5
 3	6
 3	7
-3	8
-4	2
 4	3
 4	4
 4	5
 4	6
 4	7
-4	8
-5	2
 5	3
 5	4
 5	5
 5	6
 5	7
-5	8
-6	2
 6	3
 6	4
 6	5
 6	6
 6	7
-6	8
-7	2
 7	3
 7	4
 7	5
 7	6
 7	7
-7	8
-8	2
-8	3
-8	4
-8	5
-8	6
-8	7
-8	8
 [/Room]
 [Room]
 2	Dormitory2	1	49
@@ -2498,42 +2474,42 @@ spellEyeEvil
 1	Orc4	Orc.mesh	5	2	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn5	LavaSpawn.mesh	6	2	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan6	Lizardman.mesh	7	2	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin7	Goblin.mesh	8	2	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin7	Goblin.mesh	8	2	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon8	PitDemon.mesh	2	3	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Roach9	Roach.mesh	3	3	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Spider10	Spider.mesh	4	3	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Troll11	Troll.mesh	5	3	0	Troll	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Cultist12	Cultist.mesh	6	3	0	Cultist	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	CaveHornet13	CaveHornet.mesh	7	3	0	CaveHornet	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Slime14	Slime.mesh	8	3	0	Slime	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Skeleton15	skeleton.mesh	2	4	0	Skeleton	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Lich16	lich.mesh	3	4	0	Lich	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Scarab17	Scarab.mesh	4	4	0	Scarab	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Adventurer18	Adventurer.mesh	5	4	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Monk19	Monk.mesh	6	4	0	Monk	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
-1	Dwarf120	Dwarf1.mesh	7	4	0	Dwarf1	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Dwarf221	Dwarf2.mesh	8	4	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Knight22	Knight.mesh	2	5	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
-1	Wizard23	Wizard.mesh	3	5	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf24	DarkElf.mesh	4	5	0	DarkElf	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
-1	Elf25	Elf.mesh	5	5	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
-1	RunelordDwarf26	RunelordDwarf.mesh	6	5	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
-1	NatureMonster27	NatureMonster.mesh	7	5	0	NatureMonster	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
-1	Defender28	Defender.mesh	8	5	0	Defender	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Wyvern29	Wyvern.mesh	2	6	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Gnome30	Gnome.mesh	3	6	0	Gnome	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	TentacleAlbine31	TentacleAlbine.mesh	4	6	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	TentacleGreen32	TentacleGreen.mesh	5	6	0	TentacleGreen	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Dragon33	Dragon.mesh	6	6	0	Dragon	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Kreatur34	Kreatur.mesh	7	6	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Champion35	Dragon.mesh	8	6	0	Champion	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Roach9	Roach.mesh	8	3	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Spider10	Spider.mesh	2	4	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Troll11	Troll.mesh	8	4	0	Troll	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Cultist12	Cultist.mesh	2	5	0	Cultist	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	CaveHornet13	CaveHornet.mesh	8	5	0	CaveHornet	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Slime14	Slime.mesh	2	6	0	Slime	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Skeleton15	skeleton.mesh	8	6	0	Skeleton	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Lich16	lich.mesh	2	7	0	Lich	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Scarab17	Scarab.mesh	8	7	0	Scarab	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Adventurer18	Adventurer.mesh	2	8	0	Adventurer	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Monk19	Monk.mesh	3	8	0	Monk	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
+1	Dwarf120	Dwarf1.mesh	4	8	0	Dwarf1	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Dwarf221	Dwarf2.mesh	5	8	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Knight22	Knight.mesh	6	8	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
+1	Wizard23	Wizard.mesh	7	8	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DarkElf24	DarkElf.mesh	8	8	0	DarkElf	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	Elf25	Elf.mesh	3	3	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
+1	RunelordDwarf26	RunelordDwarf.mesh	4	3	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
+1	NatureMonster27	NatureMonster.mesh	5	3	0	NatureMonster	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
+1	Defender28	Defender.mesh	6	3	0	Defender	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Wyvern29	Wyvern.mesh	7	3	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Gnome30	Gnome.mesh	3	4	0	Gnome	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	TentacleAlbine31	TentacleAlbine.mesh	4	4	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	TentacleGreen32	TentacleGreen.mesh	5	4	0	TentacleGreen	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Dragon33	Dragon.mesh	6	4	0	Dragon	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Kreatur34	Kreatur.mesh	7	4	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Champion35	Dragon.mesh	3	5	0	Champion	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Kobold36	Kobold.mesh	11	2	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DwarfWorker37	Dwarf1.mesh	12	2	0	DwarfWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rat38	Rat.mesh	13	2	0	Rat	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Orc39	Orc.mesh	14	2	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn40	LavaSpawn.mesh	15	2	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan41	Lizardman.mesh	16	2	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin42	Goblin.mesh	17	2	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin42	Goblin.mesh	17	2	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon43	PitDemon.mesh	11	3	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach44	Roach.mesh	12	3	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider45	Spider.mesh	13	3	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2568,7 +2544,7 @@ spellEyeEvil
 1	Orc74	Orc.mesh	23	2	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn75	LavaSpawn.mesh	24	2	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan76	Lizardman.mesh	25	2	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin77	Goblin.mesh	26	2	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin77	Goblin.mesh	26	2	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon78	PitDemon.mesh	20	3	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach79	Roach.mesh	21	3	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider80	Spider.mesh	22	3	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2603,7 +2579,7 @@ spellEyeEvil
 1	Orc109	Orc.mesh	32	2	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn110	LavaSpawn.mesh	33	2	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan111	Lizardman.mesh	34	2	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin112	Goblin.mesh	35	2	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin112	Goblin.mesh	35	2	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon113	PitDemon.mesh	29	3	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach114	Roach.mesh	30	3	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider115	Spider.mesh	31	3	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2638,7 +2614,7 @@ spellEyeEvil
 1	Orc144	Orc.mesh	41	2	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn145	LavaSpawn.mesh	42	2	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan146	Lizardman.mesh	43	2	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin147	Goblin.mesh	44	2	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin147	Goblin.mesh	44	2	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon148	PitDemon.mesh	38	3	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach149	Roach.mesh	39	3	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider150	Spider.mesh	40	3	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2673,7 +2649,7 @@ spellEyeEvil
 1	Orc179	Orc.mesh	5	11	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn180	LavaSpawn.mesh	6	11	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan181	Lizardman.mesh	7	11	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin182	Goblin.mesh	8	11	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin182	Goblin.mesh	8	11	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon183	PitDemon.mesh	2	12	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach184	Roach.mesh	3	12	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider185	Spider.mesh	4	12	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2708,7 +2684,7 @@ spellEyeEvil
 1	Orc214	Orc.mesh	14	11	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn215	LavaSpawn.mesh	15	11	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan216	Lizardman.mesh	16	11	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin217	Goblin.mesh	17	11	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin217	Goblin.mesh	17	11	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon218	PitDemon.mesh	11	12	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach219	Roach.mesh	12	12	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider220	Spider.mesh	13	12	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2743,7 +2719,7 @@ spellEyeEvil
 1	Orc249	Orc.mesh	23	11	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn250	LavaSpawn.mesh	24	11	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan251	Lizardman.mesh	25	11	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin252	Goblin.mesh	26	11	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin252	Goblin.mesh	26	11	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon253	PitDemon.mesh	20	12	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach254	Roach.mesh	21	12	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider255	Spider.mesh	22	12	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2778,7 +2754,7 @@ spellEyeEvil
 1	Orc284	Orc.mesh	32	11	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn285	LavaSpawn.mesh	33	11	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan286	Lizardman.mesh	34	11	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin287	Goblin.mesh	35	11	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin287	Goblin.mesh	35	11	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon288	PitDemon.mesh	29	12	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach289	Roach.mesh	30	12	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider290	Spider.mesh	31	12	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2813,7 +2789,7 @@ spellEyeEvil
 1	Orc319	Orc.mesh	41	11	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn320	LavaSpawn.mesh	42	11	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan321	Lizardman.mesh	43	11	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin322	Goblin.mesh	44	11	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin322	Goblin.mesh	44	11	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon323	PitDemon.mesh	38	12	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach324	Roach.mesh	39	12	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider325	Spider.mesh	40	12	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2848,7 +2824,7 @@ spellEyeEvil
 1	Orc354	Orc.mesh	5	20	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn355	LavaSpawn.mesh	6	20	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan356	Lizardman.mesh	7	20	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin357	Goblin.mesh	8	20	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin357	Goblin.mesh	8	20	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon358	PitDemon.mesh	2	21	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach359	Roach.mesh	3	21	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider360	Spider.mesh	4	21	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2883,7 +2859,7 @@ spellEyeEvil
 1	Orc389	Orc.mesh	14	20	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn390	LavaSpawn.mesh	15	20	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan391	Lizardman.mesh	16	20	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin392	Goblin.mesh	17	20	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin392	Goblin.mesh	17	20	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon393	PitDemon.mesh	11	21	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach394	Roach.mesh	12	21	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider395	Spider.mesh	13	21	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2918,7 +2894,7 @@ spellEyeEvil
 1	Orc424	Orc.mesh	23	20	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn425	LavaSpawn.mesh	24	20	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan426	Lizardman.mesh	25	20	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin427	Goblin.mesh	26	20	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin427	Goblin.mesh	26	20	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon428	PitDemon.mesh	20	21	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach429	Roach.mesh	21	21	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider430	Spider.mesh	22	21	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2953,7 +2929,7 @@ spellEyeEvil
 1	Orc459	Orc.mesh	32	20	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn460	LavaSpawn.mesh	33	20	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan461	Lizardman.mesh	34	20	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin462	Goblin.mesh	35	20	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin462	Goblin.mesh	35	20	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon463	PitDemon.mesh	29	21	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach464	Roach.mesh	30	21	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider465	Spider.mesh	31	21	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2988,7 +2964,7 @@ spellEyeEvil
 1	Orc494	Orc.mesh	41	20	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	LavaSpawn495	LavaSpawn.mesh	42	20	0	LavaSpawn	1	0	max	100	0	0	RustyShield	Sabre	nullSkillType	none	0
 1	LizardMan496	Lizardman.mesh	43	20	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Goblin497	Goblin.mesh	44	20	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Goblin497	Goblin.mesh	44	20	0	Goblin	1	0	max	100	0	0	none	ShortSword	nullSkillType	none	0
 1	PitDemon498	PitDemon.mesh	38	21	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Roach499	Roach.mesh	39	21	0	Roach	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Spider500	Spider.mesh	40	21	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0

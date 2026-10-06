@@ -19,7 +19,7 @@ ORIGIN = 2
 
 # (room type number, name prefix, size). Numbers follow RoomType in source/rooms/RoomType.h.
 HALLS = [
-    (1, "DungeonTemple", 7), (2, "Dormitory", 7), (3, "Treasury", 7), (4, "Portal", 3), (5, "Workshop", 7),
+    (1, "DungeonTemple", 5), (2, "Dormitory", 7), (3, "Treasury", 7), (4, "Portal", 3), (5, "Workshop", 7),
     (6, "TrainingHall", 7), (7, "Library", 7), (8, "Hatchery", 7), (9, "Crypt", 7), (11, "Prison", 7),
     (14, "Arena", 7), (15, "Casino", 7), (16, "Torture", 7), (17, "GuardRoom", 7), (18, "Temple", 7),
 ]
