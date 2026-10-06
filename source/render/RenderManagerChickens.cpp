@@ -1096,8 +1096,19 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
             if(room != nullptr)
             {
+                // The rooster alone does not keep a hatchery alive: hens, chicks and eggs do
                 for(Tile* roomTile : room->getCoveredTiles())
-                    animals += roomTile->countEntitiesOnTile(GameEntityType::chickenEntity);
+                {
+                    for(GameEntity* entity : roomTile->getEntitiesInTile())
+                    {
+                        if((entity == nullptr) || (entity->getObjectType() != GameEntityType::chickenEntity))
+                            continue;
+
+                        ChickenEntity* animal = static_cast<ChickenEntity*>(entity);
+                        if(animal->getKind() != ChickenKind::rooster)
+                            ++animals;
+                    }
+                }
             }
             if(decor.mNest != nullptr)
                 decor.mNest->setVisible(animals > 0);

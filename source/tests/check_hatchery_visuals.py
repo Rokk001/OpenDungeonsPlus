@@ -206,4 +206,10 @@ assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'Ha
 # the rooster protests in the hand: pose, clip and look
 assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
 assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
+# A hatchery with only the rooster looks abandoned: loose feathers, no nest. The rooster is not counted.
+decor = body(looks, 'const bool check = mCoopDecorTimer')
+assert 'ChickenKind::rooster' in decor and 'getEntitiesInTile' in decor
+assert 'decor.mFeathers->setVisible(animals == 0)' in decor and 'decor.mNest->setVisible(animals > 0)' in decor
+# counter-proof: the old count over all chicken entities would keep a rooster-only hatchery looking alive
+assert 'countEntitiesOnTile(GameEntityType::chickenEntity)' not in decor
 print('hatchery coop and hen clip checks passed')
