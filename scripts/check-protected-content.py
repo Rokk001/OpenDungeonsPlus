@@ -26,6 +26,9 @@ before. An older copy of this script that does not know "word:" reads the whole 
 substring that practically never occurs, so it blocks nothing extra. If the term list is
 not configured, missing or empty the push is blocked as well (fail safe).
 
+Without ref lines on stdin (a terminal, an empty stdin or no data within 5 seconds) the
+script ends with exit code 1 instead of waiting.
+
 Usage:
   check-protected-content.py [--terms <file>] [<remote> [<url>]] < ref-lines
   check-protected-content.py --self-test
@@ -38,8 +41,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 
 ZERO_SHA = "0" * 40
+
+# Seconds to wait for the ref lines on stdin before the check gives up.
+STDIN_TIMEOUT_SECONDS = 5
+NO_REF_LINES_MESSAGE = ("keine Ref-Zeilen auf stdin, als Pre-Push-Hook mit Ref-Zeilen "
+                        "aufrufen")
 
 TERMS_CONFIG_KEY = "protectedcontent.terms"
 PATH_DIRECTIVE = "path:"
@@ -691,6 +701,61 @@ def self_test():
         expect("rebase with many commits", work, ["refs/heads/rebased %s refs/heads/rebased %s"
                                                   % (rebased, old)], terms, False)
 
+        # run as a pre-push hook: stdin without ref lines must fail fast, with ref lines
+        # the normal check runs
+        work, git, commit_files, base = new_repo()
+        hook_terms = os.path.join(work, "hook-terms.txt")
+        with open(hook_terms, "w") as handle:
+            handle.write("zzterm\n")
+        hook_command = [sys.executable, os.path.abspath(__file__), "--terms", hook_terms,
+                        "origin"]
+
+        def run_hook(stdin_mode):
+            """stdin_mode is "devnull", "open" (a pipe that stays open without data) or
+            the text to send on stdin. Returns (exit code, stderr, seconds) or None."""
+            stdin_target = subprocess.DEVNULL if stdin_mode == "devnull" else subprocess.PIPE
+            started = time.time()
+            proc = subprocess.Popen(hook_command, cwd=work, stdin=stdin_target,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if stdin_mode not in ("devnull", "open"):
+                proc.stdin.write(stdin_mode.encode("utf-8"))
+                proc.stdin.close()
+            try:
+                proc.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                failures.append("hook with stdin '%s' did not end" % stdin_mode[:20])
+                return None
+            finally:
+                if proc.stdin is not None and not proc.stdin.closed:
+                    proc.stdin.close()
+            seconds = time.time() - started
+            error = proc.stderr.read().decode("utf-8", errors="replace")
+            proc.stdout.close()
+            proc.stderr.close()
+            return proc.returncode, error, seconds
+
+        for mode, limit in (("devnull", STDIN_TIMEOUT_SECONDS),
+                            ("open", STDIN_TIMEOUT_SECONDS + 10)):
+            result = run_hook(mode)
+            if result is None:
+                continue
+            code, error, seconds = result
+            if code == 0 or NO_REF_LINES_MESSAGE not in error or seconds >= limit:
+                failures.append("hook without ref lines (%s): exit=%s seconds=%.1f stderr=%r"
+                                % (mode, code, seconds, error))
+        clean = commit_files({"hook-a.txt": "fine\n"}, "clean change")
+        result = run_hook("refs/heads/topic %s refs/heads/topic %s\n" % (clean, base))
+        if result is not None and result[0] != 0:
+            failures.append("hook with a clean ref line: exit=%s stderr=%r"
+                            % (result[0], result[1]))
+        dirty = commit_files({"hook-b.txt": "line with zzterm inside\n"}, "add b")
+        result = run_hook("refs/heads/topic %s refs/heads/topic %s\n" % (dirty, base))
+        if result is not None and (result[0] != 1 or "Push blocked" not in result[1]):
+            failures.append("hook with a dirty ref line: exit=%s stderr=%r"
+                            % (result[0], result[1]))
+
         # fail safe on the term list
         empty = os.path.join(work, "empty-terms.txt")
         with open(empty, "w") as handle:
@@ -711,6 +776,30 @@ def self_test():
         return 1
     print("self-test passed")
     return 0
+
+
+def read_ref_lines(stream, timeout):
+    """Returns the ref lines from stream, or None if there are none.
+
+    None means: stream is a terminal, nothing arrived within timeout seconds (the stream
+    stays open without data) or the stream held no ref line at all."""
+    if stream.isatty():
+        return None
+    collected = []
+
+    def read_all():
+        collected.append(stream.read())
+
+    reader = threading.Thread(target=read_all)
+    reader.daemon = True
+    reader.start()
+    reader.join(timeout)
+    if reader.is_alive() or len(collected) == 0:
+        return None
+    ref_lines = [line for line in collected[0].split("\n") if line.strip() != ""]
+    if len(ref_lines) == 0:
+        return None
+    return ref_lines
 
 
 def main(argv):
@@ -734,7 +823,12 @@ def main(argv):
         sys.stderr.write("check-protected-content: %s\n" % error)
         return 1
 
-    ref_lines = [line for line in sys.stdin.read().split("\n") if line.strip() != ""]
+    ref_lines = read_ref_lines(sys.stdin, STDIN_TIMEOUT_SECONDS)
+    if ref_lines is None:
+        sys.stderr.write("check-protected-content: %s\n" % NO_REF_LINES_MESSAGE)
+        sys.stderr.flush()
+        # the reader thread may still block on stdin, a normal exit could hang on it
+        os._exit(1)
     problems = check_push(ref_lines, terms, remote_name, cwd)
     check_level_similarity(ref_lines, remote_name, cwd, problems)
     check_campaign_progression(ref_lines, remote_name, cwd, problems)
