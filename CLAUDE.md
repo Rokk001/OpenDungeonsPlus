@@ -61,3 +61,7 @@ These instructions apply to every change made to this repository with an AI assi
 - cmake.exe: `C:\Users\mario\od-deps\tools\cmake-3.31.8-windows-x86_64\bin\cmake.exe`
 
 Diese Pfade direkt verwenden, nie danach suchen.
+
+## Builds
+
+- Kein Release- oder Abschlussbuild ohne ausdrueckliche Build-Freigabe durch Mario in der unmittelbar vorhergehenden Nachricht. Vorher muss die Vollstaendigkeitsfrage im Format "Offene Anforderungen: <Anzahl>" mit Liste aller offenen und teilweise erledigten Punkte beantwortet sein. Ein Plan-Schritt "Abschlussbuild" ersetzt diese Freigabe nicht. Ohne Freigabe: warten und melden.
