@@ -48,4 +48,32 @@ names = [m.group(1) for m in re.finditer(r'\[Creature\].*?^\s*Name\s+(\S+)', cre
 assert len(names) == 35, len(names)
 for name in names:
     assert (name in rates) != (name in no_feet), name
+# WalkHurtClipRate: own optional key for the clip WalkHurt only, fallback WalkClipRate, same limits, streamed right after WalkClipRate
+assert 'mWalkHurtClipRate (-1.0)' in definition and 'mWalkHurtClipRate(def.mWalkHurtClipRate)' in definition
+assert definition.index('os << c->mWalkClipRate;') < definition.index('os << c->mWalkHurtClipRate;')
+assert definition.index('os << c->mWalkHurtClipRate;') < definition.index('os << c->mXPTable')
+assert definition.index('is >> c->mWalkClipRate;') < definition.index('is >> c->mWalkHurtClipRate;')
+assert 'nextParam == "WalkHurtClipRate"' in definition and 'creatureDef->mWalkHurtClipRate = Helper::toDouble(nextParam);' in definition
+assert '"    WalkHurtClipRate' in definition and 'mWalkHurtClipRate >= 0.0' in definition
+hurt_getter = definition_h[definition_h.index('getWalkHurtClipRate ()'):]
+hurt_getter = hurt_getter[:hurt_getter.index('}') + 1]
+assert 'if(mWalkHurtClipRate < 0.0)' in hurt_getter and 'return getWalkClipRate();' in hurt_getter
+assert 'std::max(0.2, std::min(8.0, mWalkHurtClipRate))' in hurt_getter
+BS = chr(92)
+assert '//! ' + BS + 'brief Optional (WalkHurtClipRate)' in definition_h and '//! ' + BS + 'brief Speed factor of the WalkHurt clip' in definition_h
+# no control character in the header (a backspace once replaced a backslash)
+assert chr(8) not in definition_h
+# Applied only while the clip WalkHurt plays (follows the playing clip), Walk and CarryWalk keep WalkClipRate
+assert 'getAnimationName() == EntityAnimation::walk_hurt_anim' in pose
+assert 'playsHurtClip ? mDefinition->getWalkHurtClipRate() : mDefinition->getWalkClipRate()' in pose
+assert 'getWalkHurtClipRate' not in creature[:creature.index('double Creature::getClientPoseSpeedFactor')]
+assert 'getWalkHurtClipRate' not in read('source/entities/MovableGameEntity.cpp')
+# Header documentation of the cfg: key, limits and fallback chain; a value is optional and, when set, inside the limits
+assert re.search(r'^# WalkHurtClipRate\s', creatures_cfg, re.M)
+header = creatures_cfg[creatures_cfg.index('# WalkHurtClipRate'):][:900]
+assert '0.2 - 8.0' in header and 'Fallback chain' in header and 'else WalkClipRate' in header
+for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
+    hurt_rate = re.search(r'^\s*WalkHurtClipRate\s+(\S+)', match.group(1), re.M)
+    if hurt_rate:
+        assert 0.2 <= float(hurt_rate.group(1)) <= 8.0
 print('check_walk_clip_rate: ok')

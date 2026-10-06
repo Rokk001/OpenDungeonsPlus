@@ -2501,10 +2501,17 @@ double Creature::getClientPoseSpeedFactor() const
         factor *= getDragWorkerSpeedFactor();
 
     // The walk clips (Walk, WalkHurt, CarryWalk) of a type can run faster or slower than the move speed so that the
-    // feet do not slide (WalkClipRate). Only the shown clip, the move speed is not touched. The rate is measured on the
-    // unscaled model: a bigger creature (see RenderManager::rrScaleCreature) takes longer strides, so the scale is divided out
+    // feet do not slide (WalkClipRate, WalkHurtClipRate for the clip WalkHurt). Only the shown clip, the move speed is not
+    // touched. The rate follows the clip that plays (the client switches it when the health stage crosses the threshold).
+    // The rate is measured on the unscaled model: a bigger creature (see RenderManager::rrScaleCreature) takes longer
+    // strides, so the scale is divided out
     if((getAnimationStateName() == EntityAnimation::walk_anim) && (mDefinition != nullptr))
-        factor *= mDefinition->getWalkClipRate() / (1.0 + 0.02 * static_cast<double>(getLevel()));
+    {
+        Ogre::AnimationState* clipState = getAnimationState();
+        bool playsHurtClip = (clipState != nullptr) && (clipState->getAnimationName() == EntityAnimation::walk_hurt_anim);
+        double clipRate = playsHurtClip ? mDefinition->getWalkHurtClipRate() : mDefinition->getWalkClipRate();
+        factor *= clipRate / (1.0 + 0.02 * static_cast<double>(getLevel()));
+    }
     return factor;
 }
 

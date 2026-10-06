@@ -42,7 +42,8 @@ assert render.index('while (!objectEntity->getSkeleton()->hasAnimation(anim))') 
 # Speed: the entity state stays Walk, the clip time uses the Walk factors, nothing is added for WalkHurt
 movable = read('source/entities/MovableGameEntity.cpp')
 assert 'walk_hurt_anim' not in movable
-assert 'walk_hurt_anim' not in creature.replace('EntityAnimation::walk_anim', '')
+# (the clip rate WalkHurtClipRate follows the playing clip by its name, see check_walk_clip_rate.py)
+assert creature.count('walk_hurt_anim') == 1 and 'getAnimationName() == EntityAnimation::walk_hurt_anim' in creature
 
 # The clip is switched when the health stage crosses the threshold while walking
 update = creature[creature.index('void Creature::updateFromPacket'):]

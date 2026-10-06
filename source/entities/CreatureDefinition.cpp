@@ -79,6 +79,7 @@ CreatureDefinition::CreatureDefinition(
         mTortureTimeToConvert (120.0),
         mLowHealthWalkSpeedFactor (-1.0),
         mWalkClipRate (1.0),
+        mWalkHurtClipRate (-1.0),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -137,6 +138,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mTortureTimeToConvert(def.mTortureTimeToConvert),
         mLowHealthWalkSpeedFactor(def.mLowHealthWalkSpeedFactor),
         mWalkClipRate(def.mWalkClipRate),
+        mWalkHurtClipRate(def.mWalkHurtClipRate),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -354,6 +356,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mTortureTimeToConvert;
     os << c->mLowHealthWalkSpeedFactor;
     os << c->mWalkClipRate;
+    os << c->mWalkHurtClipRate;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -401,6 +404,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mTortureTimeToConvert;
     is >> c->mLowHealthWalkSpeedFactor;
     is >> c->mWalkClipRate;
+    is >> c->mWalkHurtClipRate;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -573,6 +577,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mWalkClipRate = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "WalkHurtClipRate")
+            {
+                defFile >> nextParam;
+                creatureDef->mWalkHurtClipRate = Helper::toDouble(nextParam);
                 continue;
             }
             else if (nextParam == "MeshName")
@@ -880,6 +890,12 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if((def1 == nullptr) ? (def2->mWalkClipRate != 1.0) : (def1->mWalkClipRate != def2->mWalkClipRate))
         file << "    WalkClipRate	" << def2->mWalkClipRate << std::endl;
+
+    if((def1 == nullptr) ? (def2->mWalkHurtClipRate >= 0.0) : (def1->mWalkHurtClipRate != def2->mWalkHurtClipRate))
+    {
+        if(def2->mWalkHurtClipRate >= 0.0)
+            file << "    WalkHurtClipRate	" << def2->mWalkHurtClipRate << std::endl;
+    }
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))
         file << "    MeshName\t" << def2->mMeshName << std::endl;
