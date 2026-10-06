@@ -43,7 +43,7 @@ for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S)
         rates[name.group(1)] = float(rate.group(1))
 for name, value in rates.items():
     assert 0.2 <= value <= 8.0, (name, value)
-no_feet = ('LavaSpawn', 'CaveHornet', 'Slime', 'Wyvern')
+no_feet = ('LavaSpawn', 'CaveHornet', 'Slime', 'Wyvern', 'TentacleAlbine', 'TentacleGreen')  # blobs, fliers and gliders: no planted foot, rate 1
 names = [m.group(1) for m in re.finditer(r'\[Creature\].*?^\s*Name\s+(\S+)', creatures_cfg, re.S | re.M)]
 assert len(names) == 35, len(names)
 for name in names:
