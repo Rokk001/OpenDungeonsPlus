@@ -54,8 +54,8 @@ struct TreasurySettings
     float pourDuration = 1.4f;
     int splashBudgetFull = 6;
     int splashBudgetReduced = 2;
-    int dustBudgetFull = 3;
-    int dustBudgetReduced = 1;
+    int dustBudgetFull = 0;
+    int dustBudgetReduced = 0;
     float dustInterval = 0.7f;
     float dustLifetime = 3.0f;
     float portalRichShare = 0.5f;
