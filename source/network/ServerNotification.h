@@ -191,6 +191,11 @@ enum class ServerNotificationType
     //! (0 = the fight starts, 1 = it is over and the first rooster won, 2 = it was called off). The server draws
     //! the winner. Sent to the human players that see the first rooster, only when the phase changes.
     chickenFight,
+    //! The places of the straw nests of a hatchery (the server alone computes them, the clients only draw them):
+    //! + string room name, uint32_t count, then per nest: float x, float y, float angle in degrees. Sent to the
+    //! human players when the places of the hatchery change and once to a client that joined or loaded.
+    //! Inserted before trapEffect; trapEffect and timeLimit stay the last values.
+    hatcheryNests,
     //! Presentation-only effect of a trap or door, sent to the human seats that see the tile:
     //! + int32_t kind (TrapEffectKind), int32_t tileX, int32_t tileY, string type name of the trap or door
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).

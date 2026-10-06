@@ -57,7 +57,6 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mAge(0),
     mBusyTurns(0),
     mScatterTurns(0),
-    mCalm(false),
     mRoomDriven(false),
     mFighting(false),
     mOnRoof(false),
@@ -84,7 +83,6 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mAge(0),
     mBusyTurns(0),
     mScatterTurns(0),
-    mCalm(false),
     mRoomDriven(false),
     mFighting(false),
     mOnRoof(false),
@@ -241,7 +239,7 @@ void ChickenEntity::doUpkeep()
     if((mScatterTurns == 0) && tryFlee(tile, currentHatchery))
         return;
 
-    // Chicks stay in line behind the animal in front of them, hens run to the rooster when he calls them
+    // Chicks stay in line behind the animal in front of them, a hen walks to her nest when the hatchery sends her
     if(((mKind == ChickenKind::chick) || (mKind == ChickenKind::hen)) && mFollowing)
     {
         if(walkToward(mFollowTarget, mFollowGap, EntityAnimation::walk_anim))
@@ -253,70 +251,37 @@ void ChickenEntity::doUpkeep()
             if(mKind == ChickenKind::hen)
                 setAnimationState("Pick", true);
             else
-                setAnimationState(mCalm ? ChickenPose::roost : EntityAnimation::idle_anim, true);
+                setAnimationState(EntityAnimation::idle_anim, true);
             return;
         }
     }
 
-    // Sleeping hens and chicks (night, full hatchery) sit still
-    if(mCalm && (mKind != ChickenKind::rooster))
-    {
-        setAnimationState(ChickenPose::roost, true);
-        return;
-    }
-
-    wander(tile, currentHatchery);
+    wander(currentHatchery);
 }
 
-void ChickenEntity::wander(Tile* tile, Room* currentHatchery)
+void ChickenEntity::wander(Room* currentHatchery)
 {
-    // We might not move
-    if(Random::Int(1,2) == 1)
+    // Short pauses: the animal pecks instead of walking
+    const uint32_t pausePercent = static_cast<uint32_t>(
+        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryWanderPausePercent", 50.0));
+    if(Random::Uint(0, 99) < pausePercent)
     {
         setAnimationState("Pick");
         return;
     }
 
-    const Ogre::Vector2 start(getPosition().x, getPosition().y);
-    std::vector<Ogre::Vector2> positions;
-    collectMovePositions(tile, currentHatchery, positions);
-    if(positions.empty())
+    // Outside of a hatchery the animal does not roam
+    if((currentHatchery == nullptr) || (currentHatchery->getType() != RoomType::hatchery))
         return;
-    const Ogre::Vector2 v = positions[Random::Uint(0, positions.size() - 1)];
+
+    // Free points anywhere in the room (not bound to the tiles), reached over one soft curve. No walk distortion:
+    // the way already keeps its distance to the walls
+    const Ogre::Vector2 start(getPosition().x, getPosition().y);
     std::vector<Ogre::Vector2> path;
-    path.push_back(v);
-    const bool distortion = RoomObjectPath::clearSegment(
-        RoomObjectNavigation::collect(*getGameMap(), 0.525f), start, v);
-    const std::string& walkAnim = (mKind == ChickenKind::rooster) ? ChickenPose::strut : EntityAnimation::walk_anim;
-    setWalkPath(walkAnim, EntityAnimation::idle_anim, true, true, path, distortion);
-}
-
-void ChickenEntity::collectMovePositions(Tile* tile, Room* currentHatchery, std::vector<Ogre::Vector2>& positions)
-{
-    int posChickenX = tile->getX();
-    int posChickenY = tile->getY();
-    std::vector<Tile*> possibleTileMove;
-    // We move chickens from 1 tile only to avoid slow creatures from running
-    // for ages when the hatchery is big
-    addTileToListIfPossible(posChickenX - 1, posChickenY, currentHatchery, possibleTileMove);
-    addTileToListIfPossible(posChickenX + 1, posChickenY, currentHatchery, possibleTileMove);
-    addTileToListIfPossible(posChickenX, posChickenY - 1, currentHatchery, possibleTileMove);
-    addTileToListIfPossible(posChickenX, posChickenY + 1, currentHatchery, possibleTileMove);
-
-    // We cannot move. That can happen if all the nearby tiles have been destroyed
-    if(possibleTileMove.empty())
+    if(!static_cast<RoomHatchery*>(currentHatchery)->planWanderPath(start, path))
         return;
-
-    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
-    const Ogre::Vector2 start(getPosition().x, getPosition().y);
-    for(Tile* candidate : possibleTileMove)
-    {
-        Ogre::Vector2 point;
-        if(RoomObjectNavigation::standingPosition(obstacles,
-            Ogre::Vector2(candidate->getX(), candidate->getY()), point) &&
-            RoomObjectPath::clearSegment(obstacles, start, point, true))
-            positions.push_back(point);
-    }
+    const std::string& walkAnim = (mKind == ChickenKind::rooster) ? ChickenPose::strut : EntityAnimation::walk_anim;
+    setWalkPath(walkAnim, EntityAnimation::idle_anim, true, true, path, false);
 }
 
 bool ChickenEntity::tryFlee(Tile* tile, Room* currentHatchery)
@@ -332,32 +297,18 @@ bool ChickenEntity::tryFlee(Tile* tile, Room* currentHatchery)
     const Ogre::Vector2 eaterPosition(eater->getPosition().x, eater->getPosition().y);
     const Ogre::Vector2 start(getPosition().x, getPosition().y);
     const double distance = (eaterPosition - start).length();
-    std::vector<Ogre::Vector2> positions;
-    collectMovePositions(tile, currentHatchery, positions);
-    if(!ChickenFlight::shouldFlee(mFlight, distance, !positions.empty()))
+    if(!ChickenFlight::shouldFlee(mFlight, distance, true))
         return false;
 
-    // The farthest place, and only one that is really farther from the creature than we are now
-    const Ogre::Vector2* best = nullptr;
-    double bestDistance = distance + 0.3;
-    for(const Ogre::Vector2& position : positions)
-    {
-        double candidateDistance = (eaterPosition - position).length();
-        if(candidateDistance > bestDistance)
-        {
-            bestDistance = candidateDistance;
-            best = &position;
-        }
-    }
-    if(best == nullptr)
+    // A short hop to a free point of the room (no step from tile to tile), away from the creature
+    if(currentHatchery->getType() != RoomType::hatchery)
         return false;
 
-    const Ogre::Vector2 target = *best;
     std::vector<Ogre::Vector2> path;
-    path.push_back(target);
-    const bool distortion = RoomObjectPath::clearSegment(
-        RoomObjectNavigation::collect(*getGameMap(), 0.525f), start, target);
-    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, distortion);
+    if(!static_cast<RoomHatchery*>(currentHatchery)->planFleePath(start, eaterPosition, path))
+        return false;
+
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, false);
     ChickenFlight::registerFlight(mFlight, ODApplication::turnsPerSecond);
 
     // Tell the keepers who see the tile so that they can hear and see the fright (report only)

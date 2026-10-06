@@ -55,6 +55,7 @@ class ODSocketClient
             mHeartMessageTurn(-1),
             mRelationshipsSynced(false),
             mWallTorchesSynced(false),
+            mNestsSynced(false),
             mPendingTimestamp(-1),
             mSupportsLiveNickname(false),
             mSupportsCreatureMood(false),
@@ -100,6 +101,8 @@ class ODSocketClient
         void setRelationshipsSynced(bool synced) { mRelationshipsSynced = synced; }
         bool getWallTorchesSynced() const { return mWallTorchesSynced; }
         void setWallTorchesSynced(bool synced) { mWallTorchesSynced = synced; }
+        bool getNestsSynced() const { return mNestsSynced; }
+        void setNestsSynced(bool synced) { mNestsSynced = synced; }
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
         double getHeartHPSent() const { return mHeartHPSent; }
         void setHeartHPSent(double hp) { mHeartHPSent = hp; }
@@ -166,6 +169,8 @@ class ODSocketClient
         bool mRelationshipsSynced;
         //! True once the client got the whole list of wall torches
         bool mWallTorchesSynced;
+        //! True once the client got the nest places of the hatcheries
+        bool mNestsSynced;
         std::string mState;
 
 

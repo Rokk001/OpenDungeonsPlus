@@ -34,12 +34,12 @@ struct TreasurySettings
     //! Height of a pile corner per fill step, in tile units
     float levelHeight = 0.055f;
     //! Coins lying on top of a full pile, and the lowest fill step that carries any
-    int maxTopCoins = 16;
+    int maxTopCoins = 8;
     int topCoinMinLevel = 2;
     //! Gems in the fullest piles (1..4, the pile has four variants)
-    int maxGems = 4;
+    int maxGems = 2;
     //! Coins spilled per open edge of a full pile
-    int spillCoinsFull = 2;
+    int spillCoinsFull = 1;
     //! Coins scattered on the bare floor of an empty tile
     int scatterCoins = 3;
     //! Share of the glow of a full pile that a pile of step 5, 6 and 7 contributes
@@ -54,8 +54,8 @@ struct TreasurySettings
     float pourDuration = 1.4f;
     int splashBudgetFull = 6;
     int splashBudgetReduced = 2;
-    int dustBudgetFull = 3;
-    int dustBudgetReduced = 1;
+    int dustBudgetFull = 0;
+    int dustBudgetReduced = 0;
     float dustInterval = 0.7f;
     float dustLifetime = 3.0f;
     float portalRichShare = 0.5f;

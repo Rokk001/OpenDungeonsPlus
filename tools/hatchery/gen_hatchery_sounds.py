@@ -5,7 +5,7 @@
 
 Without a family name all families are written, otherwise only the named ones (e.g. Protest).
 
-Rooster crow, protest, hen cluck, food call, chick peep and egg crack are made from harmonic tones with a simple
+Rooster crow, protest, hen cluck, chick peep and egg crack are made from harmonic tones with a simple
 vowel-like spectrum, noise bursts and envelopes only (no recordings, no samples). A fixed random seed
 makes the same files come out every time. The .wav files are written with the standard library and
 converted by ffmpeg (libvorbis), which must be in the PATH. Files go to
@@ -160,26 +160,6 @@ def make_cluck(variant):
     return render(length, f)
 
 
-def make_food_call(variant):
-    # Quick soft clucks in a row, getting a little higher, as the rooster calls the hens to a find.
-    length = 1.2
-    noise = Noise(30 + variant)
-    voice = Voice(((800.0, 350.0, 1.0), (1800.0, 600.0, 0.5)))
-    count = 7 + variant
-    gap = 0.14
-
-    def f(t):
-        index = int(t / gap)
-        if index >= count:
-            return 0.0
-        local = t - index * gap
-        if local > 0.09:
-            return 0.0
-        f0 = 380.0 * (1.0 + 0.045 * index) * (1.0 + 0.06 * variant)
-        return cluck_sample(voice, noise, local, f0, 0.09) * (0.7 + 0.3 * (index == count - 1))
-    return render(length, f)
-
-
 def make_peep(variant):
     length = 0.7
     voice = Voice(((3000.0, 900.0, 1.0), (4500.0, 700.0, 0.3)), count=6)
@@ -254,7 +234,6 @@ FAMILIES = (
     ("Crow", make_crow),
     ("Protest", make_protest),
     ("Cluck", make_cluck),
-    ("FoodCall", make_food_call),
     ("Peep", make_peep),
     ("EggCrack", make_egg_crack),
 )

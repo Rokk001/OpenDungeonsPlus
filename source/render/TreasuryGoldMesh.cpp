@@ -41,11 +41,11 @@ const std::string DetailMaterial = "TreasuryGoldDetail";
 const std::string ReducedSuffix = "_r";
 // Texture repeats per tile, so the coins stay small
 const float TextureRepeat = 2.0f;
-// Corners of a coin lying on top (a flat fan) and of a coin spilled at the edge
-const int CoinSides = 6;
-const int SpillSides = 4;
-// Faces of a gem (an octahedron)
-const int GemFaces = 8;
+// Corners of a coin lying on top (a round fan) and of a coin spilled at the edge
+const int CoinSides = 12;
+const int SpillSides = 8;
+// Corners of the girdle of a cut gem
+const int GemSides = 5;
 // A coin: the middle rises by CoinDome, the rim is darker (CoinRimShade) and its normal leans outward (CoinRound)
 const float CoinDome = 0.008f;
 const float CoinRimShade = 0.7f;
@@ -268,32 +268,50 @@ void addCoin(Ogre::ManualObject* object, const Ogre::Vector3& centre, const Ogre
         object->triangle(baseIndex, baseIndex + 1 + i, baseIndex + 1 + (i + 1) % sides);
 }
 
-//! A small cut gem (an octahedron)
+//! A small cut gem: a flat table on top, a crown down to the girdle and a pavilion down to a point
 void addGem(Ogre::ManualObject* object, const Ogre::Vector3& centre, float size, const Ogre::ColourValue& colour)
 {
-    const Ogre::Vector3 corners[6] = {
-        Ogre::Vector3(0.0f, 0.0f, 1.3f), Ogre::Vector3(0.0f, 0.0f, -0.6f),
-        Ogre::Vector3(1.0f, 0.0f, 0.0f), Ogre::Vector3(0.0f, 1.0f, 0.0f),
-        Ogre::Vector3(-1.0f, 0.0f, 0.0f), Ogre::Vector3(0.0f, -1.0f, 0.0f)};
+    const float tableRadius = 0.55f;
+    const float tableHeight = 0.7f;
+    const float girdleHeight = 0.25f;
+    const float tipHeight = -1.0f;
     const int baseIndex = static_cast<int>(object->getCurrentVertexCount());
-    for(int i = 0; i < 6; ++i)
+    // Vertices: table middle, table ring, girdle ring, tip
+    std::vector<Ogre::Vector3> corners;
+    corners.push_back(Ogre::Vector3(0.0f, 0.0f, tableHeight));
+    for(int i = 0; i < GemSides; ++i)
+    {
+        const float angle = 6.2831853f * static_cast<float>(i) / static_cast<float>(GemSides);
+        corners.push_back(Ogre::Vector3(tableRadius * std::cos(angle), tableRadius * std::sin(angle), tableHeight));
+    }
+    for(int i = 0; i < GemSides; ++i)
+    {
+        const float angle = 6.2831853f * static_cast<float>(i) / static_cast<float>(GemSides);
+        corners.push_back(Ogre::Vector3(std::cos(angle), std::sin(angle), girdleHeight));
+    }
+    corners.push_back(Ogre::Vector3(0.0f, 0.0f, tipHeight));
+    for(std::size_t i = 0; i < corners.size(); ++i)
     {
         Ogre::Vector3 normal = corners[i];
+        if(i == 0)
+            normal = Ogre::Vector3::UNIT_Z;
         normal.normalise();
         object->position(centre + corners[i] * size);
         object->normal(normal);
         object->textureCoord(0.0f, 0.0f);
         object->colour(colour);
     }
-    // Top, bottom, then the four side corners; counter-clockwise seen from outside
-    const int top = baseIndex;
-    const int bottom = baseIndex + 1;
-    for(int i = 0; i < 4; ++i)
+    // Counter-clockwise seen from outside: the table, the crown, the pavilion
+    const int table = baseIndex + 1;
+    const int girdle = baseIndex + 1 + GemSides;
+    const int tip = baseIndex + 1 + 2 * GemSides;
+    for(int i = 0; i < GemSides; ++i)
     {
-        const int current = baseIndex + 2 + i;
-        const int next = baseIndex + 2 + (i + 1) % 4;
-        object->triangle(top, current, next);
-        object->triangle(bottom, next, current);
+        const int next = (i + 1) % GemSides;
+        object->triangle(baseIndex, table + i, table + next);
+        object->triangle(table + i, girdle + i, girdle + next);
+        object->triangle(table + i, girdle + next, table + next);
+        object->triangle(tip, girdle + next, girdle + i);
     }
 }
 
