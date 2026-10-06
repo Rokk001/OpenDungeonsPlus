@@ -56,7 +56,9 @@ enum class AmbienceWhen
     //! The target (the dungeon heart of the local keeper) has less health than the fraction given in mBelow
     lowHealth,
     //! A creature was close at some time while the target was in view and none has been for mAfter seconds (a bed after the sleeper left)
-    vacated
+    vacated,
+    //! A creature that sleeps is close to the target (a bed with a sleeper in it)
+    sleeping
 };
 
 enum class AmbienceKind
@@ -86,7 +88,10 @@ enum class AmbienceKind
     beam,
     //! An object (Mesh and/or particle system System as trail) that flies from From to the target in Duration seconds
     //! on an arc of height Amount (events only); Land = event raised at the target when it arrives
-    projectile
+    projectile,
+    //! Events only: plays a clip of Clips once on the creature the event is about (the stretch of a creature that woke);
+    //! nothing happens when the creature has no such clip
+    creatureClip
 };
 
 enum class AmbienceMotion
@@ -112,6 +117,7 @@ struct AmbienceEffect
         mTarget(AmbienceTarget::object),
         mWhen(AmbienceWhen::always),
         mKind(AmbienceKind::particle),
+        mLoop(false),
         mMotion(AmbienceMotion::sway),
         mAfter(30.0),
         mOffset(Ogre::Vector3::ZERO),
@@ -152,6 +158,11 @@ struct AmbienceEffect
     std::string mEndSystem;
     //! Clips to choose from (kind clip)
     std::vector<std::string> mClips;
+    //! Event clips: mesh names (* as first or last character as wildcard) of the objects that play the clip, the nearest
+    //! one within Amount tiles of the event is used
+    std::vector<std::string> mObjects;
+    //! Object clips: the clip runs in a loop as long as the condition holds (and stops at its last pose when it ends)
+    bool mLoop;
     AmbienceMotion mMotion;
     //! Seconds without a creature before an empty room effect starts
     double mAfter;

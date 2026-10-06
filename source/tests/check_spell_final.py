@@ -37,8 +37,8 @@ config_h = read("source", "render", "RoomAmbienceConfig.h")
 config_cpp = read("source", "render", "RoomAmbienceConfig.cpp")
 kinds = re.search(r"enum class AmbienceKind\s*\{(.*?)\};", config_h, re.S).group(1)
 order = re.findall(r"^\s*(\w+),?\s*$", re.sub(r"//.*", "", kinds), re.M)
-# roll and turn come from the rolling and turning objects, which were added beside the flights
-if order != ["particle", "motion", "clip", "shake", "mark", "sound", "roll", "turn", "beam", "projectile"]:
+# roll and turn come from the rolling and turning objects, which were added beside the flights; creatureClip comes with the wake clips
+if order != ["particle", "motion", "clip", "shake", "mark", "sound", "roll", "turn", "beam", "projectile", "creatureClip"]:
     problems.append("AmbienceKind order changed: %s" % order)
 for word in ("Beam", "Projectile", "Mesh", "Land", "From", "MaxFlights"):
     if '"%s"' % word not in config_cpp:

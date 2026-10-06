@@ -34,6 +34,8 @@
 #include <vector>
 
 class GameMap;
+class MovableGameEntity;
+class RenderedMovableEntity;
 class Seat;
 class Tile;
 
@@ -83,9 +85,11 @@ public:
     //! start again within a tenth of a second (a spell cast on several creatures at once).
     //! owner is the seat the thing of the event belongs to: effects with OwnerOnly are only shown to the keeper of
     //! that seat (never when the owner is not given).
+    //! creatureName is the creature the event is about (empty = none); only the effects of kind CreatureClip use it.
     //! Returns the number of effects started
     uint32_t triggerEvent(const std::string& eventName, const Ogre::Vector3& position, bool forced,
-        const std::string& visualName = std::string(), bool noThrottle = false, const Seat* owner = nullptr);
+        const std::string& visualName = std::string(), bool noThrottle = false, const Seat* owner = nullptr,
+        const std::string& creatureName = std::string());
 
     //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
@@ -349,6 +353,19 @@ private:
     void restoreMotionNode(MotionNode& motionNode);
 
     bool isCreatureNear(double x, double y, double radius) const;
+    //! brief True if a creature that sleeps is within the radius of the point
+    bool isSleeperNear(double x, double y, double radius) const;
+    //! brief True if the skeleton of the entity has the clip (remembered per mesh, so a missing clip costs nothing)
+    bool hasClip(MovableGameEntity* entity, const std::string& clip);
+    //! brief Plays the clip of an event effect (kind clip) once on the nearest object of Object within Amount tiles of
+    //! the position; false when there is none or it has no such clip
+    bool playEventClip(const AmbienceEffect& effect, const Ogre::Vector3& position);
+    //! brief Plays the clip of an event effect (kind creatureClip) once on the creature; false when it is on its way,
+    //! unknown or has no such clip
+    bool playCreatureClip(const AmbienceEffect& effect, const std::string& creatureName);
+    //! brief Lets an object that loops the clip of the effect (kind clip with Loop) finish on the last pose of the clip,
+    //! which is its pose at rest
+    void stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect);
     //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
     //! heart badge shows it) is below the given value
     bool isLocalHeartBelow(const Ogre::Vector3& position, double below) const;
@@ -422,11 +439,17 @@ private:
 
     //! Positions of the creatures on the map at the last scan
     std::vector<Ogre::Vector3> mCreaturePositions;
+    //! Positions of the creatures that sleep at the last scan
+    std::vector<Ogre::Vector3> mSleeperPositions;
     std::vector<Candidate> mParticleCandidates;
     std::vector<Candidate> mMotionCandidates;
     std::vector<Candidate> mClipCandidates;
     //! Time at which an object plays its next clip (kind clip)
     std::map<std::string, double> mClipTimers;
+    //! Time until which an object plays a clip of an event (a bed that wakes up) and must not be restarted by a looping clip
+    std::map<std::string, double> mClipHoldUntil;
+    //! Clips that a mesh has (key "mesh|clip"), so that the skeleton is asked only once
+    std::map<std::string, bool> mClipKnown;
     //! Dice of its own, so the game random sequence is untouched
     std::mt19937 mRandom;
 

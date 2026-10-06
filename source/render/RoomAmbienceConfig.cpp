@@ -83,6 +83,8 @@ bool RoomAmbienceConfig::whenFromString(const std::string& text, AmbienceWhen& w
         when = AmbienceWhen::lowHealth;
     else if(text == "Vacated")
         when = AmbienceWhen::vacated;
+    else if(text == "Sleeping")
+        when = AmbienceWhen::sleeping;
     else
         return false;
 
@@ -314,6 +316,8 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::beam;
             else if(words[1] == "Projectile")
                 effect.mKind = AmbienceKind::projectile;
+            else if(words[1] == "CreatureClip")
+                effect.mKind = AmbienceKind::creatureClip;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);
@@ -356,6 +360,15 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         {
             for(uint32_t i = 1; i < words.size(); ++i)
                 effect.mClips.push_back(words[i]);
+        }
+        else if(key == "Object")
+        {
+            for(uint32_t i = 1; i < words.size(); ++i)
+                effect.mObjects.push_back(words[i]);
+        }
+        else if(key == "Loop")
+        {
+            effect.mLoop = toBool(words[1]);
         }
         else if(key == "Every")
         {
