@@ -307,6 +307,7 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
         else
         {
             double shownTime = addedTime;
+            updateClientPose(static_cast<double>(timeSinceLastFrame));
             if(mPrevAnimationState == EntityAnimation::walk_anim || mPrevAnimationState == EntityAnimation::idle_anim ||
                mPrevAnimationState == EntityAnimation::drag_anim)
                 shownTime *= getClientPoseSpeedFactor();
