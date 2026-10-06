@@ -280,11 +280,12 @@ ProtectDungeonTemple	NULL
 1	7	2	100
 1	8	2	100
 1	22	2	100
-1	24	2	100
+1	24	3	100
 1	46	2	100
 1	47	2	100
 1	48	2	100
 1	49	2	100
+1	57	2	100
 1	71	3	100
 2	0	3	100
 2	7	2	100
@@ -292,6 +293,7 @@ ProtectDungeonTemple	NULL
 2	21	2	100
 2	22	2	100
 2	23	2	100
+2	24	3	100
 2	46	2	100
 2	47	2	100
 2	48	2	100
@@ -303,9 +305,10 @@ ProtectDungeonTemple	NULL
 3	8	2	100
 3	9	2	100
 3	23	2	100
-3	24	2	100
+3	24	3	100
 3	46	2	100
 3	48	2	100
+3	57	2	100
 3	68	2	100
 3	71	3	100
 4	0	3	100
@@ -316,8 +319,9 @@ ProtectDungeonTemple	NULL
 4	8	1	0
 4	9	2	100
 4	23	2	100
-4	24	2	100
+4	24	3	100
 4	25	2	100
+4	57	2	100
 4	62	1	0
 4	63	1	0
 4	64	1	0
@@ -337,7 +341,7 @@ ProtectDungeonTemple	NULL
 5	13	1	0	2
 5	14	1	0	2
 5	15	1	0	2
-5	24	2	100
+5	24	3	100
 5	33	1	100
 5	34	1	100
 5	35	1	100
@@ -347,6 +351,7 @@ ProtectDungeonTemple	NULL
 5	40	1	0	1
 5	41	1	0	1
 5	46	2	100
+5	57	2	100
 5	58	1	0	3
 5	59	1	0	3
 5	60	1	0	3
@@ -372,6 +377,7 @@ ProtectDungeonTemple	NULL
 6	13	1	0	2
 6	14	1	0	2
 6	15	1	0	2
+6	24	3	100
 6	31	1	0	1
 6	32	1	0	1
 6	33	1	100
@@ -409,7 +415,7 @@ ProtectDungeonTemple	NULL
 7	12	1	0
 7	13	1	0
 7	14	1	0
-7	24	2	100
+7	24	3	100
 7	27	1	0
 7	28	1	0
 7	29	1	0
@@ -427,6 +433,7 @@ ProtectDungeonTemple	NULL
 7	41	1	0	1
 7	42	1	100
 7	46	2	100
+7	57	2	100
 7	58	1	0
 7	59	1	0
 7	60	1	0
@@ -454,6 +461,7 @@ ProtectDungeonTemple	NULL
 8	14	1	0
 8	15	1	0
 8	20	1	0
+8	24	3	100
 8	27	1	0
 8	28	1	0
 8	29	1	0
@@ -500,6 +508,7 @@ ProtectDungeonTemple	NULL
 9	13	1	0
 9	14	1	0
 9	15	1	0
+9	24	3	100
 9	27	1	0
 9	28	1	0
 9	29	1	0
@@ -544,6 +553,7 @@ ProtectDungeonTemple	NULL
 10	13	1	0
 10	14	1	0
 10	15	1	0
+10	24	3	100
 10	28	1	100
 10	29	1	100
 10	30	1	100
@@ -588,6 +598,7 @@ ProtectDungeonTemple	NULL
 11	13	1	0
 11	14	1	0
 11	15	1	0
+11	24	3	100
 11	28	1	100
 11	29	1	100
 11	30	1	100
@@ -639,7 +650,7 @@ ProtectDungeonTemple	NULL
 12	21	1	0
 12	22	1	0
 12	23	1	0
-12	24	1	0
+12	24	3	100
 12	25	1	0
 12	26	1	0
 12	27	1	0
@@ -700,6 +711,7 @@ ProtectDungeonTemple	NULL
 13	13	1	0
 13	14	1	0
 13	15	1	0
+13	24	3	100
 13	28	1	100
 13	29	1	100
 13	30	1	100
@@ -746,6 +758,7 @@ ProtectDungeonTemple	NULL
 14	13	1	0
 14	14	1	0
 14	15	1	0
+14	24	3	100
 14	28	1	100
 14	29	1	100
 14	30	1	100
@@ -792,6 +805,7 @@ ProtectDungeonTemple	NULL
 15	12	1	0	2
 15	13	1	0	2
 15	14	1	0
+15	24	3	100
 15	29	1	100
 15	30	1	100
 15	31	1	0	1
@@ -831,6 +845,7 @@ ProtectDungeonTemple	NULL
 16	11	1	0
 16	12	1	0	2
 16	13	1	0	2
+16	24	3	100
 16	30	1	100
 16	31	1	0	1
 16	32	1	0	1
@@ -866,6 +881,7 @@ ProtectDungeonTemple	NULL
 17	11	1	0
 17	12	1	0	2
 17	13	1	0	2
+17	24	3	100
 17	30	1	100
 17	31	1	0	1
 17	32	1	0	1
@@ -899,6 +915,7 @@ ProtectDungeonTemple	NULL
 18	10	1	0
 18	11	1	0
 18	12	1	0
+18	24	3	100
 18	29	1	100
 18	30	1	0
 18	31	1	0
@@ -923,6 +940,7 @@ ProtectDungeonTemple	NULL
 19	0	3	100
 19	11	1	0
 19	12	1	0
+19	24	3	100
 19	29	1	100
 19	30	1	0
 19	35	1	100
@@ -941,6 +959,7 @@ ProtectDungeonTemple	NULL
 20	0	3	100
 20	11	1	0
 20	12	1	0
+20	24	3	100
 20	29	1	100
 20	30	1	0
 20	42	1	0
@@ -956,6 +975,7 @@ ProtectDungeonTemple	NULL
 21	12	1	0
 21	18	2	100
 21	22	2	100
+21	24	3	100
 21	29	1	100
 21	30	1	0
 21	41	1	100
@@ -976,6 +996,7 @@ ProtectDungeonTemple	NULL
 22	21	2	100
 22	22	2	100
 22	23	2	100
+22	24	3	100
 22	29	1	100
 22	30	1	0
 22	42	1	0
@@ -992,6 +1013,7 @@ ProtectDungeonTemple	NULL
 23	18	2	100
 23	19	2	100
 23	22	2	100
+23	24	3	100
 23	29	1	100
 23	30	1	0
 23	31	1	100
@@ -1004,6 +1026,7 @@ ProtectDungeonTemple	NULL
 24	0	3	100
 24	11	1	0
 24	12	1	0
+24	24	3	100
 24	29	1	100
 24	30	1	0
 24	42	1	100
@@ -5713,11 +5736,11 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 3	Boulder1	2	1
-22	29	1
+33	29	1
 [/Trap]
 [Trap]
 3	Boulder2	3	1
-22	43	1
+33	44	1
 [/Trap]
 [Trap]
 1	Cannon1	2	1
@@ -5793,7 +5816,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 2	Spike6	3	1
-8	54	1
+32	44	1
 [/Trap]
 [Trap]
 2	Spike7	4	1
@@ -5967,63 +5990,65 @@ Name	hunt1
 Mode	once
 Cond	time	260
 Action	message	1	Thorn hunters are riding out of the north-west.
-Action	spawn	2	27	29	1	Orc:2	Goblin:2	Spider:2
+Action	terrain	28	29	28	29	path
+Action	spawn	2	31	29	1	Orc:2	Goblin:2	Spider:2
 [/Trigger]
 [Trigger]
 Name	hunt2
 Mode	once
 Cond	time	560
 Action	message	1	A pack from the south-east is crossing the maze.
-Action	spawn	5	27	44	1	Orc:2	Spider:2	Troll:2
+Action	terrain	28	44	28	44	path
+Action	spawn	5	30	44	1	Orc:2	Spider:2	Troll:2
 [/Trigger]
 [Trigger]
 Name	hunt3
 Mode	once
 Cond	time	900
 Action	message	1	The north-east keeper sends hounds.
-Action	spawn	4	27	29	1	Goblin:3	Orc:3	Spider:2
+Action	spawn	4	31	29	1	Goblin:3	Orc:3	Spider:2
 [/Trigger]
 [Trigger]
 Name	hunt4
 Mode	once
 Cond	time	1300
 Action	message	1	Wolves from the south-west are in the hedges.
-Action	spawn	3	27	44	1	Troll:3	Orc:3	Spider:3
+Action	spawn	3	30	44	1	Troll:3	Orc:3	Spider:3
 [/Trigger]
 [Trigger]
 Name	hunt5
 Mode	once
 Cond	time	1750
 Action	message	1	Two keepers have joined their packs against you.
-Action	spawn	2	27	29	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	spawn	2	31	29	1	Orc:3	Troll:3	Goblin:3	Spider:3
 [/Trigger]
 [Trigger]
 Name	hunt6
 Mode	once
 Cond	time	2250
 Action	message	1	The thorn guard marches in force.
-Action	spawn	5	27	44	1	Troll:3	Orc:3	Orc:3	Spider:3
+Action	spawn	5	30	44	1	Troll:3	Orc:3	Orc:3	Spider:3
 [/Trigger]
 [Trigger]
 Name	hunt7
 Mode	once
 Cond	time	2800
 Action	message	1	The last reserves of the north-east are coming.
-Action	spawn	4	27	29	1	Troll:4	Orc:3	Goblin:3	Spider:3	Orc:3
+Action	spawn	4	31	29	1	Troll:4	Orc:3	Goblin:3	Spider:3	Orc:3
 [/Trigger]
 [Trigger]
 Name	hunt8
 Mode	once
 Cond	time	3400
 Action	message	1	Cassia Thorne has called every keeper to arms.
-Action	spawn	3	27	44	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
+Action	spawn	3	30	44	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	hunt9
 Mode	once
 Cond	time	4100
 Action	message	1	The final pack is on the road.
-Action	spawn	2	27	29	1	Troll:4	Troll:4	Orc:4	Spider:4	Goblin:3
+Action	spawn	2	31	29	1	Troll:4	Troll:4	Orc:4	Spider:4	Goblin:3
 [/Trigger]
 [Trigger]
 Name	keepersGone

@@ -4249,7 +4249,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 4	DoorWooden9	4	1
-24	84	1
+24	48	1
 0
 [/Trap]
 [Trap]

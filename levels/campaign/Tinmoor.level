@@ -1776,7 +1776,7 @@ Name	firstShift
 Mode	once
 Cond	time	500
 Action	message	1	The mine bell is ringing. Miners with picks and shields are on their way.
-Action	spawn	3	20	46	1	Dwarf1:2	Dwarf1:2	Adventurer:2	Adventurer:2
+Action	spawn	3	40	46	1	Dwarf1:2	Dwarf1:2	Adventurer:2	Adventurer:2
 [/Trigger]
 [Trigger]
 Name	secondShift

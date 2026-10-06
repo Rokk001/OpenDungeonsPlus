@@ -3371,7 +3371,7 @@ ProtectDungeonTemple	NULL
 3	WardGuard3	Elf.mesh	73	55	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard4	Monk.mesh	61	70	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard5	Adventurer.mesh	74	68	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	FenWatch1	Adventurer.mesh	26	36	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	FenWatch1	Adventurer.mesh	37	38	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	FenWatch2	Dwarf1.mesh	46	38	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	FenWatch3	Adventurer.mesh	41	44	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	RidgeWatch	Elf.mesh	42	9	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -3506,15 +3506,15 @@ Action	spawn	3	38	14	1	Adventurer:2	Adventurer:2	Dwarf1:2	Elf:2
 Name	patrol2
 Mode	once
 Cond	time	560
-Action	message	1	Sisters in armour are coming up the west bank.
-Action	spawn	3	14	30	1	Knight:2	Monk:2	Adventurer:2	Elf:2
+Action	message	1	Sisters in armour are coming up through the fen.
+Action	spawn	3	44	30	1	Knight:2	Monk:2	Adventurer:2	Elf:2
 [/Trigger]
 [Trigger]
 Name	patrol3
 Mode	once
 Cond	time	900
 Action	message	1	A heavy squad is marching along the northern ridge.
-Action	spawn	3	29	12	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
+Action	spawn	3	40	8	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
 [/Trigger]
 [Trigger]
 Name	patrol4
@@ -3527,22 +3527,22 @@ Action	spawn	3	40	24	1	Knight:3	Elf:2	Adventurer:3	Monk:2	Dwarf2:2
 Name	patrol5
 Mode	once
 Cond	time	1650
-Action	message	1	Agathe keeps feeding soldiers into the bog. Watch the west bank.
-Action	spawn	3	20	36	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
+Action	message	1	Agathe keeps feeding soldiers into the bog. Watch the fen.
+Action	spawn	3	42	40	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
 [/Trigger]
 [Trigger]
 Name	patrol6
 Mode	once
 Cond	time	2100
 Action	message	1	Another column is on the ridge, and this one has banners.
-Action	spawn	3	29	12	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
+Action	spawn	3	40	8	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	patrol7
 Mode	once
 Cond	time	2600
 Action	message	1	The convent is emptying its barracks.
-Action	spawn	3	20	38	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
+Action	spawn	3	42	42	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	wardenSlain

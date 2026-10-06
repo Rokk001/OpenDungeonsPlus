@@ -3602,7 +3602,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 4	DoorWooden4	3	1
-29	79	1
+31	79	1
 0
 [/Trap]
 [Trap]
@@ -3617,7 +3617,7 @@ ProtectDungeonTemple	NULL
 [/Trap]
 [Trap]
 4	DoorWooden7	3	1
-21	91	1
+32	79	1
 0
 [/Trap]
 [Trap]
