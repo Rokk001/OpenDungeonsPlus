@@ -71,6 +71,12 @@ public:
     //! Server side: a free point anywhere in the room (rules as for planWanderPath, without the reach).
     bool pickFreePoint(Ogre::Vector2& point) const;
 
+    //! Server side: plans a short hop of a chicken that is at from away from a hungry creature at threat: a free point
+    //! (rules as for planWanderPath) at most HatcheryFleeReach and at least HatcheryFleeMinLeg from the chicken, within
+    //! HatcheryFleeSpread degrees of the direction away from the creature and HatcheryFleeGain tiles farther from it than
+    //! the chicken is now. False when no such point was found in HatcheryFleeAttempts tries.
+    bool planFleePath(const Ogre::Vector2& from, const Ogre::Vector2& threat, std::vector<Ogre::Vector2>& path) const;
+
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 
@@ -157,9 +163,9 @@ private:
     //! Ends the fight: the one that won stays and crows, the other one dies. Without a winner (one of them was
     //! picked up or is gone) the fight is called off and the survivor goes on as before.
     void endFight(ChickenEntity* first, ChickenEntity* second, bool finished, HatcheryCounts& counts);
-    //! Moves the rooster: perching, crowing, chasing a hen, guarding the flock, leading the chicks.
+    //! Moves the rooster: perching, crowing, chasing a hen, guarding the flock.
     void updateRooster(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
-        const std::vector<ChickenEntity*>& chicks, const RoosterSettings& settings);
+        const RoosterSettings& settings);
     void beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& plan);
     void actRoosterMood(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
         const RoosterSettings& settings, const Ogre::Vector2& threat);
@@ -167,9 +173,8 @@ private:
     //! coop he stays on the ground.
     void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar);
     void climbDown(ChickenEntity* rooster);
-    //! The chicks follow the hen (or the rooster when he leads) in a line.
-    void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks,
-        ChickenEntity* rooster);
+    //! The chicks follow the nearest hen in a line, never the rooster.
+    void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks);
     //! A creature inside the hatchery that wants to eat chickens or is an enemy, close to the rooster.
     bool findThreat(const ChickenEntity& rooster, double radius, Ogre::Vector2& position) const;
     Tile* getNearestCoop(const Ogre::Vector2& position) const;

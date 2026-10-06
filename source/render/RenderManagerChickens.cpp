@@ -191,10 +191,6 @@ struct ChickenLookSettings
         mGuardPitch(configValue("HatcheryLookGuardPitch", 10.0f)),
         mGuardPeckPitch(configValue("HatcheryLookGuardPeckPitch", 24.0f)),
         mGuardPeckSpeed(configValue("HatcheryLookGuardPeckSpeed", 7.0f)),
-        mLeadPitch(configValue("HatcheryLookLeadPitch", 18.0f)),
-        mLeadPitchSwing(configValue("HatcheryLookLeadPitchSwing", 12.0f)),
-        mLeadSpeed(configValue("HatcheryLookLeadSpeed", 9.0f)),
-        mLeadLift(configValue("HatcheryLookLeadLift", 0.004f)),
         mScratchPitch(configValue("HatcheryLookScratchPitch", 14.0f)),
         mScratchSwing(configValue("HatcheryLookScratchSwing", 10.0f)),
         mScratchSpeed(configValue("HatcheryLookScratchSpeed", 12.0f)),
@@ -298,10 +294,6 @@ struct ChickenLookSettings
     float mGuardPitch;
     float mGuardPeckPitch;
     float mGuardPeckSpeed;
-    float mLeadPitch;
-    float mLeadPitchSwing;
-    float mLeadSpeed;
-    float mLeadLift;
     float mScratchPitch;
     float mScratchSwing;
     float mScratchSpeed;
@@ -790,12 +782,6 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 stretch = Ogre::Vector3(puff + values.mGuardWing * std::fabs(std::sin(t * values.mGuardWingSpeed)), puff, puff);
                 // He pecks at the creature in front of him: a lunge of the head, then back
                 pitch = values.mGuardPitch + values.mGuardPeckPitch * std::max(0.0f, std::sin(t * values.mGuardPeckSpeed));
-            }
-            else if(pose == ChickenPose::lead)
-            {
-                // Scratches the ground
-                pitch = values.mLeadPitch + values.mLeadPitchSwing * std::sin(t * values.mLeadSpeed);
-                lift = values.mLeadLift * std::fabs(std::sin(t * values.mLeadSpeed));
             }
             else if(pose == ChickenPose::scratch)
             {

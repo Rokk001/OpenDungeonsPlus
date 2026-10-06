@@ -28,7 +28,7 @@ assert 'destroyMesh()' in body(chicken, 'void ChickenEntity::setKindFromServer')
 assert 'rrChickenHatched' in body(chicken, 'void ChickenEntity::setKindFromServer')
 
 # Poses reach the client as animation names and are turned into skeleton animations plus motion.
-for name in ('strut', 'chase', 'flee', 'mount', 'cackle', 'perch', 'crow', 'guard', 'lead', 'lay', 'wobble', 'emerge', 'scratch', 'flutter', 'protest'):
+for name in ('strut', 'chase', 'flee', 'mount', 'cackle', 'perch', 'crow', 'guard', 'lay', 'wobble', 'emerge', 'scratch', 'flutter', 'protest'):
     assert 'static const std::string %s =' % name in pose, name
 hook = body(render, 'void RenderManager::rrSetObjectAnimationState')
 assert 'ChickenPose::isPose(animation)' in hook and 'rrSetChickenPose' in hook
@@ -58,7 +58,7 @@ assert 'RenderManagerChickens.cpp' in cmake and 'HatcheryRooster.cpp' in cmake
 
 # Values come from the config.
 for key in ('HatcheryRoosterCrowMin', 'HatcheryRoosterCrowMax',
-            'HatcheryRoosterChasePercent', 'HatcheryRoosterLeadPercent',
+            'HatcheryRoosterChasePercent',
             'HatcheryRoosterGuardRadius', 'HatcheryCoopRoofHeight', 'HatcheryChickGap'):
     assert key in config and key in room, key
 for key in ('HatcheryChickScale', 'HatcheryRoosterScale'):
@@ -123,11 +123,14 @@ assert 'ChickenEggCracked' in looks
 
 print('hatchery visuals checks passed')
 
-# The rooster calls the hens to food: mood, config, hens follow him, sound
+# The rooster does not call the hens or chicks: no call mood, no call settings, no sound; the crow stays (pose, sound)
 rooster_h = (root / 'source/rooms/HatcheryRooster.h').read_text()
-assert 'call ' in rooster_h and 'mCallPercent' in rooster_h
-assert 'RoosterMood::call' in room and 'Hatchery/FoodCall' in room
-assert 'HatcheryRoosterCallPercent' in config and 'HatcheryRoosterCallTurns' in config
+rooster_cpp = (root / 'source/rooms/HatcheryRooster.cpp').read_text()
+for text in (rooster_h, rooster_cpp, room):
+    assert 'RoosterMood::call' not in text and 'mCallPercent' not in text and 'mCallTurns' not in text and 'mCallScratchChance' not in text
+assert 'HatcheryRoosterCall' not in config and 'HatcheryRoosterCall' not in room
+assert 'Hatchery/FoodCall' not in room
+assert 'RoosterMood::crow' in rooster_cpp and 'ChickenPose::crow' in room and 'Hatchery/Crow' in room
 assert 'ChickenKind::hen' in body(chicken, 'void ChickenEntity::doUpkeep')
 
 # Flocking of the hens: scratching, fluttering and scattering from a hungry creature, the rooster protests when held
@@ -274,5 +277,8 @@ assert 'countEntitiesOnTile(GameEntityType::chickenEntity)' not in decor
 # there is no night: no sleeping pose, no chick tucked in under a hen, the chicks always walk in a line behind the hen
 chick_line = body(room, 'void RoomHatchery::updateChickLine')
 assert 'night' not in chick_line.lower() and 'Each chick follows the one in front' in chick_line
+# the rooster (leading, calling or crowing) is never the front of the line: the chicks follow the hen only
+assert 'rooster' not in chick_line and 'RoosterMood' not in chick_line
+assert 'lead' not in pose.lower() and 'LookLead' not in looks and 'HatcheryLookLead' not in config
 assert 'ChickenPose::roost' not in looks and 'mChickUnder' not in looks and 'mRoost' not in looks
 print('hatchery coop and hen clip checks passed')
