@@ -263,6 +263,10 @@ struct ChickenLookSettings
         mRoostStretchY(configValue("HatcheryLookRoostStretchY", 1.08f)),
         mRoostStretchZ(configValue("HatcheryLookRoostStretchZ", 0.68f)),
         mRoostLift(configValue("HatcheryLookRoostLift", -0.004f)),
+        mChickUnderRadius(configValue("HatcheryLookChickUnderRadius", 0.4f)),
+        mChickUnderOffset(configValue("HatcheryLookChickUnderOffset", 0.05f)),
+        mChickUnderLift(configValue("HatcheryLookChickUnderLift", -0.02f)),
+        mChickUnderStretchZ(configValue("HatcheryLookChickUnderStretchZ", 0.8f)),
         mGuardPuff(configValue("HatcheryLookGuardPuff", 1.28f)),
         mGuardPuffWobble(configValue("HatcheryLookGuardPuffWobble", 0.03f)),
         mGuardPuffSpeed(configValue("HatcheryLookGuardPuffSpeed", 20.0f)),
@@ -376,6 +380,10 @@ struct ChickenLookSettings
     float mRoostStretchY;
     float mRoostStretchZ;
     float mRoostLift;
+    float mChickUnderRadius;
+    float mChickUnderOffset;
+    float mChickUnderLift;
+    float mChickUnderStretchZ;
     float mGuardPuff;
     float mGuardPuffWobble;
     float mGuardPuffSpeed;
@@ -888,6 +896,39 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 stretch = Ogre::Vector3(values.mRoostStretchX + breath, values.mRoostStretchY + breath,
                     values.mRoostStretchZ + breath * 2.0f);
                 lift = values.mRoostLift;
+
+                // A sleeping chick tucks in under the nearest hen (look only, the server position stays)
+                Ogre::SceneNode* parent = look.mNode->getParentSceneNode();
+                if((kind == ChickenKind::chick) && (parent != nullptr))
+                {
+                    std::map<ChickenEntity*, ChickenLook>::iterator nearestHen = mChickenLooks.end();
+                    Ogre::Real nearestDistance = values.mChickUnderRadius * values.mChickUnderRadius;
+                    for(std::map<ChickenEntity*, ChickenLook>::iterator other = mChickenLooks.begin(); other != mChickenLooks.end(); ++other)
+                    {
+                        if(other->first->getKind() != ChickenKind::hen)
+                            continue;
+                        Ogre::SceneNode* otherParent = other->second.mNode->getParentSceneNode();
+                        if(otherParent == nullptr)
+                            continue;
+                        Ogre::Vector3 way = otherParent->_getDerivedPosition() - parent->_getDerivedPosition();
+                        way.z = 0.0f;
+                        if(way.squaredLength() <= nearestDistance)
+                        {
+                            nearestDistance = way.squaredLength();
+                            nearestHen = other;
+                        }
+                    }
+                    if(nearestHen != mChickenLooks.end())
+                    {
+                        // Under the hen: to her middle, a little to the side (each chick on its own side), sunk down
+                        Ogre::Vector3 toHen = parent->convertWorldToLocalPosition(
+                            nearestHen->second.mNode->getParentSceneNode()->_getDerivedPosition());
+                        toHen.z = 0.0f;
+                        shift = toHen + Ogre::Vector3(std::cos(look.mPhase), std::sin(look.mPhase), 0.0f) * values.mChickUnderOffset;
+                        lift = values.mChickUnderLift;
+                        stretch.z *= values.mChickUnderStretchZ;
+                    }
+                }
             }
             else if(pose == ChickenPose::guard)
             {

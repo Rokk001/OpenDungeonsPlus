@@ -212,4 +212,14 @@ assert 'ChickenKind::rooster' in decor and 'getEntitiesInTile' in decor
 assert 'decor.mFeathers->setVisible(animals == 0)' in decor and 'decor.mNest->setVisible(animals > 0)' in decor
 # counter-proof: the old count over all chicken entities would keep a rooster-only hatchery looking alive
 assert 'countEntitiesOnTile(GameEntityType::chickenEntity)' not in decor
+# at night each chick goes to the hen nearest to it and sleeps tucked in under her (client offset, server position stays)
+chick_line = body(room, 'void RoomHatchery::updateChickLine')
+night_part = chick_line[chick_line.index('if(night)'):chick_line.index('Each chick follows the one in front')]
+assert 'for(ChickenEntity* hen : hens)' in night_part and 'mSnuggleGap' in night_part
+roost_part = looks[looks.index('pose == ChickenPose::roost'):looks.index('pose == ChickenPose::guard')]
+assert 'ChickenKind::chick' in roost_part and 'ChickenKind::hen' in roost_part and 'values.mChickUnderRadius' in roost_part
+assert 'values.mChickUnderOffset' in roost_part and 'values.mChickUnderLift' in roost_part and 'values.mChickUnderStretchZ' in roost_part
+for key in ('Radius', 'Offset', 'Lift', 'StretchZ'):
+    assert ('HatcheryLookChickUnder%s' % key) in looks and ('    HatcheryLookChickUnder%s\t' % key) in config, key
+    assert ('# HatcheryLookChickUnder%s' % key) in config, key
 print('hatchery coop and hen clip checks passed')
