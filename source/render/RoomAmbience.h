@@ -353,17 +353,17 @@ private:
     void restoreMotionNode(MotionNode& motionNode);
 
     bool isCreatureNear(double x, double y, double radius) const;
-    //! brief True if a creature that sleeps is within the radius of the point
+    //! \brief True if a creature that sleeps is within the radius of the point
     bool isSleeperNear(double x, double y, double radius) const;
-    //! brief True if the skeleton of the entity has the clip (remembered per mesh, so a missing clip costs nothing)
+    //! \brief True if the skeleton of the entity has the clip (remembered per mesh, so a missing clip costs nothing)
     bool hasClip(MovableGameEntity* entity, const std::string& clip);
-    //! brief Plays the clip of an event effect (kind clip) once on the nearest object of Object within Amount tiles of
+    //! \brief Plays the clip of an event effect (kind clip) once on the nearest object of Object within Amount tiles of
     //! the position; false when there is none or it has no such clip
     bool playEventClip(const AmbienceEffect& effect, const Ogre::Vector3& position);
-    //! brief Plays the clip of an event effect (kind creatureClip) once on the creature; false when it is on its way,
+    //! \brief Plays the clip of an event effect (kind creatureClip) once on the creature; false when it is on its way,
     //! unknown or has no such clip
     bool playCreatureClip(const AmbienceEffect& effect, const std::string& creatureName);
-    //! brief Lets an object that loops the clip of the effect (kind clip with Loop) finish on the last pose of the clip,
+    //! \brief Lets an object that loops the clip of the effect (kind clip with Loop) finish on the last pose of the clip,
     //! which is its pose at rest
     void stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect);
     //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
