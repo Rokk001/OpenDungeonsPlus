@@ -337,6 +337,9 @@ class FootPath(object):
                 runs.append((s, ln))
             if len(runs) > 1:
                 runs = [max(runs, key=lambda r: r[1])]
+        if runs:
+            mx = max(r[1] for r in runs)
+            runs = [r for r in runs if r[1] >= 0.25 * mx]
         self.runs = runs
 
 
@@ -605,7 +608,46 @@ def smooth_up(x, w):
     return np.mean([np.roll(mf, s) for s in range(-w, w + 1)], axis=0)
 
 
-def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, wr=0.6, maxdrop=None, iters=30, duty=1.0, extcap=0.95):
+def stance_weight(fp, taus, L, ramp=0.15):
+    """1 inside the stance windows of the foot (original clock), falling to 0 over `ramp` of the window length outside"""
+    w = np.zeros(len(taus))
+    for (s, ln) in fp.runs:
+        a = s * fp.dt
+        T = ln * fp.dt
+        x = np.mod(taus - a, L)
+        dist = np.where(x <= T, 0.0, np.minimum(x - T, L - x))
+        w = np.maximum(w, np.clip(1.0 - dist / (ramp * T), 0.0, 1.0))
+    return w
+
+
+def sole_prep(skel, sole):
+    """per sole vertex the bone weights with the vertex in the rest frame of each bone"""
+    lr = [(skel.rest_pos[i][None], skel.rest_q[i][None], skel.rest_s[i][None]) for i in range(len(skel.names))]
+    Wr = skel.fk(lr)
+    prep = []
+    for sv in sole:
+        x = np.array(sv['p'])
+        terms = []
+        for b, w in sv['w'].items():
+            i = skel.idx[b]
+            p0, R0, s0 = Wr[i]
+            terms.append((i, w, (R0[0].T @ (x - p0[0])) / s0[0]))
+        prep.append(terms)
+    return prep
+
+
+def sole_mean(Wt, prep):
+    """mean position (N,3) of the skinned sole vertices for the world transforms Wt of all bones"""
+    N = Wt[0][0].shape[0]
+    acc = np.zeros((N, 3))
+    for terms in prep:
+        for (i, w, xl) in terms:
+            pt, Rt, st = Wt[i]
+            acc += w * (pt + np.einsum('nij,nj->ni', Rt, st * xl[None]))
+    return acc / len(prep)
+
+
+def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, wr=0.6, maxdrop=None, iters=30, duty=1.0, extcap=0.95, refine=0):
     clip = skel.clips[clipname]
     A = foot_paths(skel, cfg, clip)
     m = measure(skel, cfg, clipname)
@@ -638,6 +680,8 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
     W_o = skel.fk(loc_o)
     zground = min(fp.zmin for fp in A['fps'] if fp.runs)
     feet = []
+    path_of = {}
+    corr = {}
     for k, f in enumerate(cfg['feet']):
         fp = A['fps'][k]
         if not fp.runs:
@@ -650,6 +694,7 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
         p0, R0, s0_ = W_o[u0.ids[-1]]
         P0 = p0 + np.einsum('nij,nj->ni', R0, s0_ * u0.eff_off)
         feet.append((k, f, Pn - P0))
+        path_of[k] = Pn
     body = body_bone(skel, cfg, clip)
     bi = skel.idx[body] if body else None
     n = len(taus_p)
@@ -694,7 +739,10 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
         for (k, ui, un, target, Re) in units:
             base = [(loc[i][0], loc[i][1], loc[i][2]) for i in un.ids]
             Wp = W[un.par] if un.par >= 0 else None
-            delta, err, locs = solve_unit(un, base, Wp, target[idx], Re[idx], H, wo=wo, wr=wr, iters=iters)
+            tgt = target[idx] + (corr[k][idx] if k in corr else 0.0)
+            delta, err, locs = solve_unit(un, base, Wp, tgt, Re[idx], H, wo=wo, wr=wr, iters=iters)
+            for b_, i_ in enumerate(un.ids):
+                loc[i_] = locs[b_]
             viol = err
             if not any(un.trans) and extcap < 1.0:
                 # a leg that is stretched out more than the cap counts like a position error (lowers the body)
@@ -703,7 +751,7 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
                 for a_, b_ in zip(Wc[:-1], Wc[1:]):
                     Lc += np.linalg.norm(b_[0] - a_[0], axis=1)
                 Lc += np.linalg.norm(Wc[-1][2] * un.eff_off[None], axis=1)
-                extn = np.linalg.norm(target[idx] - Wc[0][0], axis=1) / np.maximum(Lc, 1e-9)
+                extn = np.linalg.norm(tgt - Wc[0][0], axis=1) / np.maximum(Lc, 1e-9)
                 cap_u = cap_of[(k, ui)]
                 viol = err + np.maximum(0.0, extn - cap_u) * Lc
             errs.append((k, ui, viol))
@@ -716,19 +764,19 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
             p, q, s = loc[bi]
             Q = qmul(np.tile(qconj(skel.rest_q[bi]), (len(q), 1)), q)
             tracks[body] = (p - skel.rest_pos[bi], Q, s / skel.rest_s[bi])
-        return tracks, errs
+        return tracks, errs, loc
     tol = 0.0015 * H
     allidx = np.arange(n)
     cands = [0.0] + [H * x for x in (0.005, 0.01, 0.02, 0.03, 0.045, 0.06, 0.08, 0.1, 0.12) if x <= maxdrop + 1e-12]
     need = np.zeros(n)
-    tracks, errs = run(np.zeros(n), allidx)
+    tracks, errs, _ = run(np.zeros(n), allidx)
     ok = np.all([e[2] <= tol for e in errs], axis=0)
     pending = ~ok
     for dv in cands[1:]:
         if not pending.any():
             break
         pidx = np.where(pending)[0]
-        tr, er = run(np.full(len(pidx), dv), pidx)
+        tr, er, _ = run(np.full(len(pidx), dv), pidx)
         ok2 = np.all([e[2] <= tol for e in er], axis=0)
         need[pidx[ok2]] = dv
         pending[pidx[ok2]] = False
@@ -738,7 +786,22 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
         w = max(2, int(0.08 / (Ln / M)))
         drop = smooth_up(need[:-1], w)
         drop = np.concatenate([drop, drop[:1]])
-        tracks, errs = run(drop, allidx)
+        tracks, errs, _ = run(drop, allidx)
+    if refine > 0:
+        # final passes: keep the skinned sole (mean of the sole vertices) on the designed stance line
+        preps = {}
+        for (k, f, Delta) in feet:
+            if f.get('sole'):
+                preps[k] = sole_prep(skel, f['sole'])
+        for _ in range(refine):
+            tracks, errs, loc_f = run(drop, allidx)
+            W_f = skel.fk(loc_f)
+            for k, prep in preps.items():
+                E = sole_mean(W_f, prep) - path_of[k]
+                E[-1] = E[0]
+                E = E * stance_weight(A['fps'][k], taus_p, L)[:, None] * 0.8
+                corr[k] = corr[k] - E if k in corr else -E
+        tracks, errs, loc_f = run(drop, allidx)
     stats = [(k, ui, float(e.max() / H), float(e.mean() / H)) for (k, ui, e) in errs]
     return dict(kappa=kappa, Ln=Ln, tn=tn, tracks=tracks, stats=stats, s_star=s_star, rate=rate, A=A, drop=drop / H, body=body)
 
@@ -960,6 +1023,7 @@ def main():
     ap.add_argument('--wo', type=float, default=2.0)
     ap.add_argument('--duty', type=float, default=1.0)
     ap.add_argument('--extcap', type=float, default=0.95)
+    ap.add_argument('--refine', type=int, default=3)
     ap.add_argument('--maxdrop', type=float, default=None)
     ap.add_argument('--maxerr', type=float, default=0.004)
     ap.add_argument('--lo', type=float, default=0.5)
@@ -981,8 +1045,10 @@ def main():
         if fx is None:
             print('no feasible stride')
             return
+        if a.refine > 0:
+            fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=rho, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, refine=a.refine)
     else:
-        fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=a.rho, kappa=a.kappa, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap)
+        fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=a.rho, kappa=a.kappa, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, refine=a.refine)
     write_xml(a.xml, a.out, skel, a.clip, fx)
     sk2 = Skel(a.out)
     vf = verify_fix(sk2, cfg, fx, a.clip)
