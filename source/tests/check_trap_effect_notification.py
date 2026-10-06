@@ -31,7 +31,7 @@ if names[-1] != "timeLimit":
 if "trapEffect" not in names or names.index("trapEffect") != len(names) - 2:
     problems.append("trapEffect must be right before timeLimit")
 # Only the chicken notifications of the hatchery may sit between relationshipTier and trapEffect, in this order
-BETWEEN_RELATIONSHIP_AND_TRAP = ["chickenKindChanged", "chickenFight"]
+BETWEEN_RELATIONSHIP_AND_TRAP = ["chickenKindChanged", "chickenFight", "hatcheryNests"]
 if "relationshipTier" not in names:
     problems.append("trapEffect must follow relationshipTier")
 else:

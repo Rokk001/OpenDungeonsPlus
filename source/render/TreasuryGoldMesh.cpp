@@ -42,10 +42,10 @@ const std::string ReducedSuffix = "_r";
 // Texture repeats per tile, so the coins stay small
 const float TextureRepeat = 2.0f;
 // Corners of a coin lying on top (a round fan) and of a coin spilled at the edge
-const int CoinSides = 14;
-const int SpillSides = 10;
+const int CoinSides = 12;
+const int SpillSides = 8;
 // Corners of the girdle of a cut gem
-const int GemSides = 6;
+const int GemSides = 5;
 // A coin: the middle rises by CoinDome, the rim is darker (CoinRimShade) and its normal leans outward (CoinRound)
 const float CoinDome = 0.008f;
 const float CoinRimShade = 0.7f;

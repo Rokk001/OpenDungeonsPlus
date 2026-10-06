@@ -157,8 +157,8 @@ namespace HatcheryNestField
     //! Squared distance from a point to a rectangle (0 inside).
     inline double rectDistanceSquared(double x, double y, double minX, double minY, double maxX, double maxY)
     {
-        const double dx = std::max(std::max(minX - x, 0.0), x - maxX);
-        const double dy = std::max(std::max(minY - y, 0.0), y - maxY);
+        const double dx = (std::max)((std::max)(minX - x, 0.0), x - maxX);
+        const double dy = (std::max)((std::max)(minY - y, 0.0), y - maxY);
         return dx * dx + dy * dy;
     }
 
@@ -170,7 +170,7 @@ namespace HatcheryNestField
         const double lengthSquared = sx * sx + sy * sy;
         double t = 0.0;
         if(lengthSquared > 0.0)
-            t = std::min(1.0, std::max(0.0, ((x - ax) * sx + (y - ay) * sy) / lengthSquared));
+            t = (std::min)(1.0, (std::max)(0.0, ((x - ax) * sx + (y - ay) * sy) / lengthSquared));
         const double dx = x - (ax + t * sx);
         const double dy = y - (ay + t * sy);
         return dx * dx + dy * dy;
@@ -247,9 +247,9 @@ namespace HatcheryNestField
         std::sort(entrances.begin(), entrances.end());
         entrances.erase(std::unique(entrances.begin(), entrances.end()), entrances.end());
 
-        const uint32_t perNest = std::max<uint32_t>(1, settings.mTilesPerNest);
-        uint32_t wanted = std::min(static_cast<uint32_t>(roomTiles.size()) / perNest, settings.mMaxNests);
-        wanted = std::max(wanted, static_cast<uint32_t>(coops.size()));
+        const uint32_t perNest = (std::max<uint32_t>)(1, settings.mTilesPerNest);
+        uint32_t wanted = (std::min)(static_cast<uint32_t>(roomTiles.size()) / perNest, settings.mMaxNests);
+        wanted = (std::max)(wanted, static_cast<uint32_t>(coops.size()));
 
         // Each round (attempt) goes over the tiles in the order of their hash and tries one place on each tile (the place on
         // the tile is moved by up to 0.4 tiles each way, by the hash). More rounds try other places on the same tiles.
@@ -297,9 +297,9 @@ namespace HatcheryNestField
         std::sort(entrances.begin(), entrances.end());
         entrances.erase(std::unique(entrances.begin(), entrances.end()), entrances.end());
 
-        const uint32_t perFeather = std::max<uint32_t>(1, settings.mTilesPerFeather);
+        const uint32_t perFeather = (std::max<uint32_t>)(1, settings.mTilesPerFeather);
         uint32_t wanted = static_cast<uint32_t>(roomTiles.size()) / perFeather;
-        wanted = std::min(std::max(wanted, settings.mMinFeathers), settings.mMaxFeathers);
+        wanted = (std::min)((std::max)(wanted, settings.mMinFeathers), settings.mMaxFeathers);
 
         // The hash attempts start at 100, so the places differ from those of the nests on the same tiles
         const uint32_t rounds = 8;
