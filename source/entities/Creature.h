@@ -192,6 +192,10 @@ public:
     inline unsigned int getLevel() const
     { return mLevel; }
 
+    //! \brief Shown size of the creature relative to its base size: 1 at level 1, growing linearly with the level to
+    //! 1 + CreatureLevelGrowthMax (global.cfg) at the highest level
+    double getLevelScale() const;
+
     inline double getHP(Tile *tile) const override
     { return mHp; }
 

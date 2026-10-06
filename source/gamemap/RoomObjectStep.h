@@ -12,7 +12,7 @@ inline float prepareLowStep(Obstacle& obstacle, const std::string& mesh,
     float scale, float groundZ)
 {
     const float height = obstacle.maximumHeight - groundZ;
-    if(height <= 0.0f || height > lowWalkingHeight * 1.02f || height > lowWalkingHeight * scale)
+    if(height <= 0.0f || height > lowWalkingHeight || height > lowWalkingHeight * scale)
         return 0.0f;
     for(const LowWalkingBounds& body : lowWalkingBounds)
         if(mesh == body.name && !body.empty)

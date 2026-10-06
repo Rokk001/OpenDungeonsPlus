@@ -149,6 +149,10 @@ public:
     inline double getTiredWalkSpeedFactor() const
     { return std::max(0.2, std::min(1.0, mTiredWalkSpeedFactor)); }
 
+    //! \brief How much bigger than its base size a creature of the highest level is shown (0.10 = 10 percent), limited to 0 - 1
+    inline double getCreatureLevelGrowthMax() const
+    { return std::max(0.0, std::min(1.0, mCreatureLevelGrowthMax)); }
+
     //! \brief Factor on the walking speed of a badly hurt creature (1 = no slowdown), limited to 0.2 - 1
     inline double getLowHealthWalkSpeedFactor() const
     { return std::max(0.2, std::min(1.0, mLowHealthWalkSpeedFactor)); }
@@ -449,6 +453,7 @@ private:
     double mTiredWakefulness;
     double mTiredWalkSpeedFactor;
     double mLowHealthWalkSpeedFactor;
+    double mCreatureLevelGrowthMax;
     double mLowHealthWalkThresholdPercent;
     int32_t mHeartHealthStages;
     bool mHeartHealthStageEvents;

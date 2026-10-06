@@ -1226,6 +1226,12 @@ void Creature::heal(double hp)
     computeCreatureOverlayHealthValue();
 }
 
+double Creature::getLevelScale() const
+{
+    const double levelSteps = static_cast<double>(std::max(1u, std::min(MAX_LEVEL, getLevel())) - 1u);
+    return 1.0 + ConfigManager::getSingleton().getCreatureLevelGrowthMax() * levelSteps / static_cast<double>(MAX_LEVEL - 1u);
+}
+
 bool Creature::isAlive() const
 {
     if(!getIsOnServerMap())
@@ -2551,7 +2557,7 @@ double Creature::getClientPoseSpeedFactor() const
         Ogre::AnimationState* clipState = getAnimationState();
         bool playsHurtClip = (clipState != nullptr) && (clipState->getAnimationName() == EntityAnimation::walk_hurt_anim);
         double clipRate = playsHurtClip ? mDefinition->getWalkHurtClipRate() : mDefinition->getWalkClipRate();
-        factor *= clipRate / (1.0 + 0.02 * static_cast<double>(getLevel()));
+        factor *= clipRate / getLevelScale();
 
         // The creature moves with the speed of the tile it stands on (water, lava, ...) while the clip rate is fitted
         // to the ground speed: the clip keeps up with the ratio (tired and hurt factors above are already in both)

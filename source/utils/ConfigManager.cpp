@@ -62,6 +62,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTiredWakefulness(20.0),
     mTiredWalkSpeedFactor(0.8),
     mLowHealthWalkSpeedFactor(0.7),
+    mCreatureLevelGrowthMax(0.10),
     mLowHealthWalkThresholdPercent(50.0),
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
@@ -678,6 +679,13 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mLowHealthWalkSpeedFactor = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureLevelGrowthMax")
+        {
+            configFile >> nextParam;
+            mCreatureLevelGrowthMax = Helper::toDouble(nextParam);
             // Not mandatory
         }
 

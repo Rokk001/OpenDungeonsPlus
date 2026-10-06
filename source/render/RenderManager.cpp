@@ -3554,8 +3554,7 @@ void RenderManager::rrScaleCreature(Creature& creature)
         return;
     }
 
-    Ogre::Real scaleFactor = static_cast<Ogre::Real>(
-        1.0 + 0.02 * static_cast<double>(creature.getLevel()));
+    Ogre::Real scaleFactor = static_cast<Ogre::Real>(creature.getLevelScale());
     creature.getEntityNode()->setScale(Ogre::Vector3::UNIT_SCALE * scaleFactor);
 }
 
@@ -5141,7 +5140,7 @@ void RenderManager::updateCreatureStep(Creature* creature)
                 {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};
             obstacle.maximumHeight = candidate->getPosition().z + bounds.maxZ;
             const float rise = RoomObjectPath::prepareLowStep(obstacle, creature->getMeshName(),
-                1.0f + 0.02f * creature->getLevel(), position.z);
+                static_cast<float>(creature->getLevelScale()), position.z);
             if(!creature->isMoving() && !obstacle.contains(point, direction))
                 continue;
             lift = std::max(lift, RoomObjectPath::lowStepElevation(obstacle, point, direction, rise));
