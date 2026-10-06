@@ -67,7 +67,7 @@ for key in ('HatcheryChickScale', 'HatcheryRoosterScale'):
 # Every material the code asks for exists and the new assets have a credit.
 for name in ('ChickenEgg', 'ChickenEggInside', 'ChickenStraw', 'ChickenRoosterComb', 'ChickenRoosterTail', 'ChickenFeatherDecor', 'ChickenEggShell'):
     assert 'material %s\n' % name in materials, name
-for name in ('ChickenEgg', 'ChickenStraw', 'ChickenFeatherDecor', 'ChickenEggShell'):
+for name in ('ChickenStraw', 'ChickenFeatherDecor', 'ChickenEggShell'):
     assert '"%s"' % name in looks, name
 assert 'particles/ChickenEggShell.particle' in credits and 'ChickenHatchery.material' in credits
 
@@ -111,17 +111,17 @@ assert 'fireProtest' in body(chicken, 'void ChickenEntity::pickup')
 # Eggs and chicks dropped outside a hatchery are lost
 assert 'HatcheryYoungLostTurns' in chickUpkeep and 'HatcheryYoungLostTurns' in config
 
-# Coop mesh with nests, door clip and roof lookout, and the real hen clips Lay and Flutter (text checks only)
+# Coop mesh with door clip and roof lookout, and the real hen clips Lay and Flutter (text checks only)
 coop_h = (root / 'source/rooms/HatcheryCoopHouse.h').read_text()
 for name in ('meshName = "ChickenCoopHouse"', 'oldMeshName = "ChickenCoop"', 'doorClip = "Door"', 'roofPerchHeight',
-             'roofPerchOffset', 'nestCenter', 'nestEggSpot', 'nestEggSpotWorld', 'isCoopMesh'):
+             'roofPerchOffset', 'nestCenter', 'isCoopMesh'):
     assert name in coop_h, name
 assert 'HatcheryCoopHouse::meshName' in body(room, 'BuildingObject* RoomHatchery::notifyActiveSpotCreated')
 assert 'HatcheryCoopHouse::roofPerchHeight' in room and 'HatcheryCoopHouse::roofPerchOffset' in room
 assert 'ChickenCoop"' not in room
 assert render.count('HatcheryCoopHouse::isCoopMesh') == 2
 coop_mesh = (models / 'ChickenCoopHouse.mesh').read_bytes()
-assert b'ChickenCoopHouse.skeleton' in coop_mesh and b'ChickenCoop' in coop_mesh and b'ChickenStraw' in coop_mesh
+assert b'ChickenCoopHouse.skeleton' in coop_mesh and b'ChickenCoop' in coop_mesh
 coop_skeleton = (models / 'ChickenCoopHouse.skeleton').read_bytes()
 for name in (b'Root', b'Door', b'Lookout', b'Idle'):
     assert name in coop_skeleton, name
@@ -135,7 +135,7 @@ assert 'mDoor' in looks and 'HatcheryCoopHouse::doorClip' in body(looks, 'void R
 assert 'mDoor->setEnabled(true)' in body(looks, 'void RenderManager::rrSetChickenPose')
 assert 'mShake = lookSettings().mCoopShakeSeconds' in body(looks, 'void RenderManager::rrSetChickenPose')
 assert 'mDoor->addTime' in body(looks, 'void RenderManager::updateChickenLooks')
-assert 'decor.mNest != nullptr' in body(looks, 'void RenderManager::rrDestroyCoopDecor')
+assert 'mNest' not in body(looks, 'void RenderManager::rrDestroyCoopDecor'), 'the nests belong to the hatchery, not to a coop'
 # Hen clips: used when the skeleton has them, procedural motion stays as fallback
 for name in (b'Lay', b'Flutter', b'Peep', b'Run', b'Crow', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep', b'Walk', b'Idle'):
     assert name in skeleton, name
@@ -206,10 +206,11 @@ assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'Ha
 # the rooster protests in the hand: pose, clip and look
 assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
 assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
-# A hatchery with only the rooster looks abandoned: loose feathers, no nest. The rooster is not counted.
+# A hatchery with only the rooster looks abandoned: loose feathers, no nests. The rooster is not counted.
 decor = body(looks, 'const bool check = mCoopDecorTimer')
 assert 'ChickenKind::rooster' in decor and 'getEntitiesInTile' in decor
-assert 'decor.mFeathers->setVisible(animals == 0)' in decor and 'decor.mNest->setVisible(animals > 0)' in decor
+assert 'decor.mFeathers->setVisible(animals == 0)' in decor and 'roomAnimals[room] = animals' in decor
+assert '(animals->second > 0)' in body(looks, 'void RenderManager::updateNestFields')
 # counter-proof: the old count over all chicken entities would keep a rooster-only hatchery looking alive
 assert 'countEntitiesOnTile(GameEntityType::chickenEntity)' not in decor
 # at night each chick goes to the hen nearest to it and sleeps tucked in under her (client offset, server position stays)

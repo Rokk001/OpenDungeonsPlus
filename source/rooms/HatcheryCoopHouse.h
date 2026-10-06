@@ -25,7 +25,7 @@
 
 //! \brief Fixed points of the coop mesh ChickenCoopHouse (models/ChickenCoopHouse.mesh, skeleton with the clips
 //! Door and Idle). All offsets are in the frame of the coop: x and y from the center of the coop tile, z from the
-//! floor, the coop is not rotated. The two nests lie on the ground next to the ramp, the roof lookout is a plank
+//! floor, the coop is not rotated. The two hen seats lie on the ground next to the ramp, the roof lookout is a plank
 //! over the roof ridge.
 namespace HatcheryCoopHouse
 {
@@ -46,28 +46,14 @@ namespace HatcheryCoopHouse
     static const double roofPerchOffset = 0.3;
     static const double roofPerchHeight = 0.975;
 
+    //! Seats of the hens in a full hatchery: two on the ground next to the ramp (the eggs do not lie here, they lie in
+    //! the nests scattered over the hatchery, see HatcheryNestField.h).
     static const uint32_t nestCount = 2;
-    static const uint32_t eggsPerNest = 3;
 
-    //! Center of a nest (straw ring) on the floor, relative to the coop tile center.
+    //! Center of a seat on the floor, relative to the coop tile center.
     inline Ogre::Vector3 nestCenter(uint32_t nest)
     {
         return Ogre::Vector3(0.66f, (nest % nestCount == 0) ? -0.272f : 0.272f, 0.0f);
-    }
-
-    //! Where an egg lies in a nest (egg 0 .. eggsPerNest - 1), relative to the coop tile center. The height is the
-    //! middle of an egg on the straw. The eggs of the hatchery can be put here.
-    inline Ogre::Vector3 nestEggSpot(uint32_t nest, uint32_t egg)
-    {
-        static const float offsets[3][2] = {{-0.035f, -0.025f}, {0.04f, -0.02f}, {0.0f, 0.04f}};
-        const uint32_t slot = egg % eggsPerNest;
-        return nestCenter(nest) + Ogre::Vector3(offsets[slot][0], offsets[slot][1], 0.03f);
-    }
-
-    //! Same as nestEggSpot, in the world, for the coop on the tile at (tileX, tileY).
-    inline Ogre::Vector3 nestEggSpotWorld(int tileX, int tileY, uint32_t nest, uint32_t egg)
-    {
-        return Ogre::Vector3(static_cast<Ogre::Real>(tileX), static_cast<Ogre::Real>(tileY), 0.0f) + nestEggSpot(nest, egg);
     }
 }
 
