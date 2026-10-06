@@ -31,7 +31,7 @@ struct Creature {
  Ogre::Vector3 pos{2,5,0},direction{1,0,0};bool moving=true,onMap=true;
  auto* getEntityNode(){return node;}bool getIsOnMap(){return onMap;}bool isMoving(){return moving;}
  auto* getGameMap(){return map;}const auto& getPosition(){return pos;}const auto& getWalkDirection(){return direction;}
- const auto& getMeshName(){return mesh;}int getLevel(){return level;}
+ const auto& getMeshName(){return mesh;}int getLevel(){return level;}double getLevelScale()const{return 1.0+.10*(level-1)/29.0;}
 };
 namespace TreasuryGoldMesh {float surfaceHeight(float,float,int& level){level=0;return 0;}bool replacesClassicStack(float,float){return false;}}
 struct RenderManager {
@@ -79,7 +79,7 @@ int main(int argc,char** argv){
  using namespace RoomObjectPath;
  for(const auto& body:lowWalkingBounds)for(int level:{1,30})for(float angle:{0.f,.07f,1.5707963f}){
   Obstacle bed{{-.35f,-.35f},{.35f,.35f},{5,5},std::cos(angle),std::sin(angle)};bed.maximumHeight=.073802f;
-  const float scale=1+.02f*level;const float rise=prepareLowStep(bed,body.name,scale,0);
+  const float scale=1.f+.10f*(level-1)/29.f;const float rise=prepareLowStep(bed,body.name,scale,0);
   check(body.empty?rise==0:rise>0,"only known ground bodies require a step");
   for(int heading=0;heading<8;++heading){
    const Ogre::Vector2 direction(std::cos(heading*.785398163f),std::sin(heading*.785398163f));

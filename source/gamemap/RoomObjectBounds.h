@@ -192,10 +192,10 @@ static const WalkingRadius walkingRadii[] = {
     {"skeleton.mesh", .59f, -.248051f, -.586067f, .279937f, .440293f}
 };
 
-// Skinned Walk triangles clipped below the low nest's top at level-one scale.
+// Skinned Walk triangles clipped below the low nest's top at level-one scale (1.0, the unit size).
 // Higher levels keep this conservative band, not a narrower guessed footprint.
 // XY interpolation clearance matches the full walking catalog above.
-constexpr float lowWalkingHeight = .073802f / 1.02f;
+constexpr float lowWalkingHeight = .073802f;
 constexpr float lowWalkingMargin = .010001f;
 struct LowWalkingBounds
 {
@@ -209,7 +209,7 @@ static const LowWalkingBounds lowWalkingBounds[] = {
     {"CaveHornet.mesh", 0, 0, 0, 0, true},
     {"Cultist.mesh", -.121249f, -.427019f, .121249f, .353293f, false, -.0803785f},
     {"DarkElf.mesh", -.0761223f, -.202566f, .117178f, .291945f, false, -.078719f},
-    {"Defender.mesh", -.248247f, -.882141f, .130284f, .315504f, false, -.0750461f},
+    {"Defender.mesh", -.248247f, -.894867f, .130284f, .315504f, false, -.0750461f},
     {"Dragon.mesh", -.289082f, -.427237f, .243504f, .430807f, false, -.0395859f},
     {"Dwarf1.mesh", -.122944f, -.309074f, .122842f, .227622f, false, -.0573753f},
     {"Dwarf2.mesh", -.124180f, -.302233f, .124005f, .213686f, false, -.0344137f},
@@ -217,7 +217,7 @@ static const LowWalkingBounds lowWalkingBounds[] = {
     {"Gnome.mesh", -.0707926f, -.214375f, .0707784f, .206508f, false, -.042925f},
     {"Goblin.mesh", -.0912782f, -.216901f, .111977f, .252987f, false, -.0653404f},
     {"Knight.mesh", -.218932f, -.418838f, .262491f, .347083f, false, -.0758987f},
-    {"Kobold.mesh", -.137907f, -.155409f, .0846171f, .161936f, false, -.0262964f},
+    {"Kobold.mesh", -.190148f, -.155409f, .0846171f, .161936f, false, -.0262964f},
     {"Kreatur.mesh", -.468494f, -.686044f, .475000f, .590146f, false, -.0270431f},
     {"LavaSpawn.mesh", -.794633f, -.627326f, .789448f, 1.118940f, false, -.052282f},
     {"Lizardman.mesh", -.108072f, -.484859f, .108144f, .37595f, false, -.00666064f},

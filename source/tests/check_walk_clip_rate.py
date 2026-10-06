@@ -27,7 +27,16 @@ assert 'std::max(0.2, std::min(8.0, mWalkClipRate))' in definition_h and '#inclu
 # Applied only to the client clip speed of the walk state, not to the move speed
 pose = creature[creature.index('double Creature::getClientPoseSpeedFactor'):creature.index('double Creature::getPhysicalDefense')]
 assert '(getAnimationStateName() == EntityAnimation::walk_anim)' in pose and 'getWalkClipRate()' in pose
-assert '(1.0 + 0.02 * static_cast<double>(getLevel()))' in pose
+assert 'clipRate / getLevelScale()' in pose and '0.02' not in pose
+# The scale: 1 at level 1, linear to 1 + CreatureLevelGrowthMax at MAX_LEVEL, the value read from global.cfg (default 0.10, limits 0 - 1)
+scale_fn = creature[creature.index('double Creature::getLevelScale() const'):][:400]
+assert 'getCreatureLevelGrowthMax() * levelSteps / static_cast<double>(MAX_LEVEL - 1u)' in scale_fn and 'std::max(1u, std::min(MAX_LEVEL, getLevel())) - 1u' in scale_fn
+config_h = read('source/utils/ConfigManager.h')
+config_cpp = read('source/utils/ConfigManager.cpp')
+assert 'std::max(0.0, std::min(1.0, mCreatureLevelGrowthMax))' in config_h and 'mCreatureLevelGrowthMax(0.10)' in config_cpp
+assert 'nextParam == "CreatureLevelGrowthMax"' in config_cpp and re.search(r'^\s+CreatureLevelGrowthMax\s+0\.10\s*$', read('config/global.cfg'), re.M)
+assert 'static const uint32_t MAX_LEVEL = 30;' in definition_h
+assert '0.02' not in read('source/gamemap/RoomObjectNavigation.cpp') and '0.02' not in read('source/render/RenderManager.cpp').split('void RenderManager::rrScaleCreature')[1][:400]
 assert '//! \\brief Speed factor of the walk clips' in definition_h and '//! \\brief Optional (WalkClipRate)' in definition_h
 assert 'getWalkClipRate' not in creature[:creature.index('double Creature::getClientPoseSpeedFactor')]
 assert 'getWalkClipRate' not in read('source/entities/MovableGameEntity.cpp')

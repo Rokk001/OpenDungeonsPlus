@@ -107,7 +107,7 @@ struct Creature {
  std::vector<Ogre::Vector2> walk;bool distortion=true,alreadyRefined=false;std::string animation;
  GameMap* getGameMap(){return map;}const Ogre::Vector3& getPosition()const{return pos;}
  Tile* getHomeTile()const{return home;}bool isActionInList(CreatureActionType a)const{return actions.count(a)>0;}
- int getLevel()const{return level;}bool canGoThroughTile(Tile* t)const{return t&&t->walkable;}
+ int getLevel()const{return level;}double getLevelScale()const{return 1.0+.10*(level-1)/29.0;}bool canGoThroughTile(Tile* t)const{return t&&t->walkable;}
  Tile* getPositionTile(){return map->getTile(Helper::round(pos.x),Helper::round(pos.y));}
  static void tileToVector2(const std::list<Tile*>& tiles,std::vector<Ogre::Vector2>& path,bool skip,float){
   for(auto* tile:tiles){if(skip){skip=false;continue;}path.push_back({float(tile->x),float(tile->y)});}
@@ -232,17 +232,8 @@ int main(){
   creature=Creature{&map};creature.mesh=model.name;creature.level=level;creature.pos={8,5,0};
   std::vector<Ogre::Vector2> approach;
   bool found=RoomObjectNavigation::foodApproach(creature,spawn,approach);
-  // At maximum size these forward walking envelopes cannot fit anywhere in
-  // the existing five-tile eating reach while facing food against the coop.
-  // Extending eating range or shrinking their measured bodies is not this fix.
-  const bool tooClose=level==30&&(creature.mesh=="Defender.mesh"||creature.mesh=="Dragon.mesh");
-  check(found!=tooClose,"food against coop is reached only when the body fits within existing eating reach");
+  check(found,"food against coop is reached by every model at every endpoint level within the existing eating reach");
   check(!RoomObjectNavigation::blocked(creature,approach),"body-sized food approach has no furniture crossing");
-  if(tooClose){
-   ChickenEntity tight{&map,{spawn.x,spawn.y,0}};
-   CreatureActionEatChicken::handleEatChicken(creature,&tight);
-   check(tight.consumed==0&&creature.popped==1&&creature.food==0&&creature.feeding==0,"oversized eater releases inaccessible wall-side chicken without reward or animation");
-  }
   approach.clear();
   check(RoomObjectNavigation::foodApproach(creature,{4,5},approach),"all models and endpoint levels reach food once it wanders clear of the coop");
   check(!approach.empty()&&!RoomObjectNavigation::blocked(creature,approach),"free-food approach preserves full measured body clearance");
@@ -485,7 +476,7 @@ probe = probe.replace('PACKED_BEDS', r'''
     for(const auto& point:path){
      bool clear=true;
      for(auto obstacle:obstacles)if(obstacle.intersects(previous,point)){
-      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,1+.02f*walker.level,walker.pos.z);
+      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,float(walker.getLevelScale()),walker.pos.z);
       if(rise<=0){clear=false;break;}
       for(int sample=0;sample<=64;++sample){
        const auto at=previous+(point-previous)*(sample/64.f);
@@ -804,9 +795,6 @@ probe = probe.replace('CRYPT_DELIVERY', r'''
     for(const char* mesh:{"Kobold.mesh","Dwarf1.mesh"})for(int level:{1,30}){
      Creature worker{&map};worker.mesh=mesh;worker.level=level;auto entrance=rotate({1,5});worker.pos={entrance.x,entrance.y,0};
      std::vector<Ogre::Vector2> path;Creature::tileToVector2(map.path(&worker,delivery),path,true,0);RoomObjectNavigation::refine(worker,path);
-     if(std::string(mesh)=="Dwarf1.mesh"&&level==30){
-      check(path.empty(),"oversized dwarf cannot squeeze through the narrower coffin lane");continue;
-     }
      check(!path.empty(),"crypt delivery has a collision-safe approach");
      if(path.empty())continue;
      check(!RoomObjectNavigation::blocked(worker,path),"crypt approach never crosses furniture");
