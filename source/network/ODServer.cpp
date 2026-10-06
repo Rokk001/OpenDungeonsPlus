@@ -49,6 +49,7 @@
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomDungeonTemple.h"
+#include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
 #include "rooms/RoomWorkshop.h"
@@ -508,6 +509,14 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         {
             sock->setRelationshipsSynced(true);
             gameMap->sendRelationshipTiers(seat);
+        }
+
+        // A client that joined or loaded gets the nest places of the hatcheries once
+        if(!sock->getNestsSynced())
+        {
+            sock->setNestsSynced(true);
+            for(Room* room : gameMap->getRoomsByType(RoomType::hatchery))
+                static_cast<RoomHatchery*>(room)->sendNestPlaces(player);
         }
 
         // Here, the creature list is pulled. It could be possible that the creature dies before the stat window is

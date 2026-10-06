@@ -53,6 +53,7 @@
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "render/RoomAmbience.h"
+#include "rooms/HatcheryNestField.h"
 #include "rooms/RoomPortalWave.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -1476,6 +1477,35 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 static_cast<ChickenEntity*>(entity)->setKindFromServer(static_cast<ChickenKind>(kind));
             }
+            break;
+        }
+
+        case ServerNotificationType::hatcheryNests:
+        {
+            std::string roomName;
+            uint32_t count;
+            OD_ASSERT_TRUE(packetReceived >> roomName >> count);
+            std::vector<HatcheryNestField::Place> places;
+            for(uint32_t i = 0; i < count; ++i)
+            {
+                float x;
+                float y;
+                float angle;
+                OD_ASSERT_TRUE(packetReceived >> x >> y >> angle);
+                places.push_back(HatcheryNestField::Place(x, y, angle));
+            }
+            uint32_t featherCount;
+            OD_ASSERT_TRUE(packetReceived >> featherCount);
+            std::vector<HatcheryNestField::Place> feathers;
+            for(uint32_t i = 0; i < featherCount; ++i)
+            {
+                float x;
+                float y;
+                float angle;
+                OD_ASSERT_TRUE(packetReceived >> x >> y >> angle);
+                feathers.push_back(HatcheryNestField::Place(x, y, angle));
+            }
+            RenderManager::getSingleton().rrSetHatcheryNests(roomName, places, feathers);
             break;
         }
 

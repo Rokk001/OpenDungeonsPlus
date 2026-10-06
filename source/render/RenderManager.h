@@ -34,6 +34,7 @@
 #include "entities/GameEntity.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TreasuryGoldBatch.h"
+#include "rooms/HatcheryNestField.h"
 #include <OgreVector2.h>
 
 class DraggableTileContainer;
@@ -259,9 +260,13 @@ public:
     //! \brief Two roosters fight (phase as in ServerNotificationType::chickenFight): while they brawl, feather
     //! clouds fly between them at the configured interval, when it is over a last cloud flies.
     void rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase);
+    //! \brief The server sent the nest places and the places of the loose feathers of a hatchery (by room name); the
+    //! nests are drawn at the places, the feathers show while the hatchery is empty.
+    void rrSetHatcheryNests(const std::string& roomName, const std::vector<HatcheryNestField::Place>& places,
+        const std::vector<HatcheryNestField::Place>& feathers);
     //! \brief The server set a pose (see ChickenPose.h), an empty pose is the normal walking and idling.
     void rrSetChickenPose(ChickenEntity* chicken, const std::string& pose);
-    //! \brief Loose feathers next to a coop of the hatchery (the straw nests lie scattered over the hatchery, see updateNestFields)
+    //! \brief Decor of a coop of the hatchery (the straw nests and the loose feathers lie scattered over the hatchery, see updateNestFields)
     void rrCreateCoopDecor(BuildingObject* coop);
     void rrDestroyCoopDecor(BuildingObject* coop);
     //! \brief Makes the procedural meshes of the hatchery (egg in straw, comb, tail, feathers) if needed
@@ -484,25 +489,35 @@ private:
     struct CoopDecor
     {
         Ogre::SceneNode* mNode;
-        Ogre::Entity* mFeathers;
         Ogre::Real mShake;
         //! The door clip of the coop mesh, null for the old coop mesh (the coop shakes then)
         Ogre::AnimationState* mDoor;
     };
     std::map<BuildingObject*, CoopDecor> mCoopDecors;
-    //! The straw nests of one hatchery (one entity each, at the places of HatcheryNestField). mKey is the fingerprint
-    //! of the tiles and coops they were made for.
+    //! The nest places the server sent, by room name (the clients compute nothing). mVersion counts the messages.
+    struct ServerNests
+    {
+        std::vector<HatcheryNestField::Place> mPlaces;
+        std::vector<HatcheryNestField::Place> mFeathers;
+        uint32_t mVersion;
+    };
+    std::map<std::string, ServerNests> mServerNests;
+    //! The straw nests of one hatchery (one entity each, at the places the server sent). mKey is the version of
+    //! the places they were made for.
     struct NestField
     {
         std::vector<Ogre::SceneNode*> mNodes;
         std::vector<Ogre::Entity*> mEntities;
+        //! The loose feathers (shown while the hatchery is empty), at the places the server sent
+        std::vector<Ogre::SceneNode*> mFeatherNodes;
+        std::vector<Ogre::Entity*> mFeatherEntities;
         uint32_t mKey;
     };
     std::map<Room*, NestField> mNestFields;
     //! Makes, updates and removes the nests of the hatcheries that have coops (roomCoops: their coop tiles). The nests
-    //! show while the hatchery has hens, chicks or eggs (roomAnimals).
-    void updateNestFields(const std::map<Room*, std::vector<Tile*> >& roomCoops,
-        const std::map<Room*, uint32_t>& roomAnimals);
+    //! always show, also in an empty hatchery; the loose feathers show while the hatchery has no animal
+    //! (roomAnimals: the count of the animals by room, the rooster does not count).
+    void updateNestFields(const std::map<Room*, std::vector<Tile*> >& roomCoops, const std::map<Room*, uint32_t>& roomAnimals);
     void destroyNestField(NestField& field);
     Ogre::Real mCoopDecorTimer = 0.0f;
     uint64_t mChickenLookNumber = 0;

@@ -45,16 +45,6 @@ namespace HatcheryCoopHouse
     //! The rooster's spot on the roof lookout: distance along the tile from the center and height above the floor.
     static const double roofPerchOffset = 0.3;
     static const double roofPerchHeight = 0.975;
-
-    //! Seats of the hens in a full hatchery: two on the ground next to the ramp (the eggs do not lie here, they lie in
-    //! the nests scattered over the hatchery, see HatcheryNestField.h).
-    static const uint32_t nestCount = 2;
-
-    //! Center of a seat on the floor, relative to the coop tile center.
-    inline Ogre::Vector3 nestCenter(uint32_t nest)
-    {
-        return Ogre::Vector3(0.66f, (nest % nestCount == 0) ? -0.272f : 0.272f, 0.0f);
-    }
 }
 
 #endif // HATCHERYCOOPHOUSE_H

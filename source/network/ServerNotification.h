@@ -188,6 +188,11 @@ enum class ServerNotificationType
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
     //! Inserted before timeLimit, which stays the last value.
     trapEffect,
+    //! The places of the straw nests of a hatchery (the server alone computes them, the clients only draw them):
+    //! + string room name, uint32_t count, then per nest: float x, float y, float angle in degrees. Sent to the
+    //! human players when the places of the hatchery change and once to a client that joined or loaded.
+    //! Inserted before timeLimit, which stays the last value.
+    hatcheryNests,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit), then an
     //! int32_t with the seconds left until the next hero wave of a level script (-1: none is shown)
     timeLimit

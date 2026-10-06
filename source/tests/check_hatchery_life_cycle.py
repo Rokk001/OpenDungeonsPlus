@@ -133,7 +133,7 @@ assert 'getNestPlaces()' in nest and 'HatcheryCycle::pickNestPlace(occupied, 1)'
 assert 'squaredDistance' in nest, 'closest nest first'
 assert 'HatcheryNestEggs' in nest and 'HatcheryNestSameRadius' in nest
 assert 'HatcheryNestEggs' in cfg and 'HatcheryNestSameRadius' in cfg
-assert 'nestCount' in coop_h and 'nestCenter' in coop_h, 'the coop seats stay'
+assert 'nestCount' not in coop_h and 'nestCenter' not in coop_h, 'no seats in the coops'
 assert (root / 'source/rooms/HatcheryNestField.h').exists()
 lay = doUpkeep[doUpkeep.index('Hens lay eggs while the hatchery is not full'):doUpkeep.index('Eggs hatch while there is a rooster')]
 assert 'findNestSpot(' in lay and 'eggs.push_back(spawnAnimal(ChickenKind::egg, eggSpot, settings))' in lay
@@ -186,11 +186,11 @@ print('hatchery nest egg and trample checks passed')
 # The numbers of the rooster and the flock are settings read from the config, not fixed numbers in the room code
 rooster_h = (root / 'source/rooms/HatcheryRooster.h').read_text()
 rooster_cpp = (root / 'source/rooms/HatcheryRooster.cpp').read_text()
-for member in ('mCrowTurns', 'mRoostDivisor', 'mGuardFar', 'mGuardNear', 'mGuardApproachGap', 'mCatchDistance',
-               'mWalkGap', 'mHopDistance', 'mCallFollowGap', 'mSnuggleGap', 'mLeadScratchChance',
+for member in ('mCrowTurns', 'mGuardFar', 'mGuardNear', 'mGuardApproachGap', 'mCatchDistance',
+               'mWalkGap', 'mHopDistance', 'mLeadScratchChance',
                'mCallScratchChance', 'mChickPeepChance', 'mScatterAttempts', 'mScatterMargin', 'mFightStandFactor'):
     assert member in rooster_h and ('settings.' + member in room_cpp or 'Settings.' + member in room_cpp), member
-assert 'settings.mCrowTurns' in rooster_cpp and 'settings.mRoostDivisor' in rooster_cpp
+assert 'settings.mCrowTurns' in rooster_cpp
 assert 'mTurns = 4;' not in rooster_cpp and '/ 10)' not in rooster_cpp
 acting = room_cpp[room_cpp.index('void RoomHatchery::actRoosterMood'):room_cpp.index('void RoomHatchery::updateRooster')]
 for number in ('2.2', '0.9', '1.8', '0.55f', 'Random::Int(1, 3)', 'Random::Int(1, 2)'):
@@ -198,16 +198,31 @@ for number in ('2.2', '0.9', '1.8', '0.55f', 'Random::Int(1, 3)', 'Random::Int(1
 assert 'Random::Int(1, 12)' not in room_cpp
 print('hatchery rooster settings checks passed')
 
-# The new day crow is remembered as a state (the day he crowed for), it is saved, and old saves still load
-assert 'newDayCrowOwed' in rooster_cpp and 'isNewDay(context.mTurn' not in rooster_cpp
-assert 'int64_t mCrowDay' in rooster_h
-assert 'context.mCrowDay = mLastCrowDay' in room_cpp
-assert 'mLastCrowDay = std::max(mLastCrowDay' in body(room_cpp, 'void RoomHatchery::beginRoosterMood')
-assert '"HatcheryDay "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:400]
-imp_day = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:1800]
-assert 'HatcheryDay' in imp_day and 'seekg(pos)' in imp_day
-assert 'test_RoosterNewDayCrow' in (root / 'source/tests/test_HatcheryCycle.cpp').read_text()
-print('hatchery new day crow checks passed')
+# There is no day and night: no day length, night share, sleep mood or day state in the rooster rules, the room, the
+# config, the entities, the client and the unit tests. Old saves with the day line still load (the number is dropped).
+night_terms = ('isNight', 'isNewDay', 'dayNumber', 'newDayCrowOwed', 'mDayTurns', 'mNightPercent', 'mRoostDivisor',
+               'mCrowDay', 'mLastCrowDay', 'HatcheryNightPercent', 'HatcheryDayTurns', 'HatcheryRoosterRoostDivisor',
+               'HatcheryChickSnuggleGap', 'mSnuggleGap', 'setCalm', 'mCalm', 'RoosterMood::roost', 'ChickenPose::roost')
+for path in ('source/rooms/HatcheryRooster.h', 'source/rooms/HatcheryRooster.cpp', 'source/rooms/RoomHatchery.h',
+             'source/rooms/RoomHatchery.cpp', 'source/rooms/HatcheryCycle.h', 'source/rooms/HatcheryCycle.cpp',
+             'source/entities/ChickenEntity.h', 'source/entities/ChickenEntity.cpp', 'source/entities/ChickenPose.h',
+             'source/render/RenderManagerChickens.cpp', 'config/rooms.cfg', 'source/tests/test_HatcheryCycle.cpp'):
+    text = (root / path).read_text()
+    for term in night_terms:
+        assert term not in text, (path, term)
+assert 'night' not in room_cpp.lower() and 'night' not in rooster_cpp.lower() and 'HatcheryLookRoost' not in config
+assert 'HatcheryLookChickUnder' not in config and 'HatcheryLookChickUnder' not in (root / 'source/render/RenderManagerChickens.cpp').read_text()
+# the egg plan runs on its own turn counters and does not look at the time of day
+cycle_cpp = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
+assert 'getTurnNumber' not in cycle_cpp and 'getTurnNumber' not in (root / 'source/rooms/HatcheryCycle.h').read_text()
+assert 'getTurnNumber' not in room_cpp[room_cpp.index('void RoomHatchery::doUpkeep'):room_cpp.index('void RoomHatchery::updateFight')]
+# a save of an older version has the day line after the waiting counters: it is read, dropped and not written again
+exp = room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:900]
+assert '"HatcheryDay' not in exp and '"HatcheryWaits "' in exp
+imp_day = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:2600]
+assert 'tag == "HatcheryDay"' in imp_day and 'seekg(pos)' in imp_day
+assert 'test_RoosterCrowTimer' in (root / 'source/tests/test_HatcheryCycle.cpp').read_text()
+print('hatchery no day and night checks passed')
 
 # The hen shows herself laying: the egg appears after HatcheryLayShowTurns turns, a pending egg is saved and counted
 assert 'mLayShowTurns' in (root / 'source/rooms/HatcheryCycle.h').read_text()
@@ -224,15 +239,9 @@ assert '"HatcheryLays "' in room_cpp[room_cpp.index('void RoomHatchery::exportTo
 assert 'tag == "HatcheryLays"' in room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:2600]
 print('hatchery delayed egg checks passed')
 
-# Full hatchery: the hens sit in the coops. The sleeping rooster takes the highest roof (the nearest one among equals).
-assert 'updateCoopSitting(hens, full)' in room_cpp
-sitting = body(room_cpp, 'void RoomHatchery::updateCoopSitting')
-assert 'hen->teleport(seat)' in sitting and 'leaveNest(hen)' in sitting and 'findCoopSeat' in sitting
-assert 'getCoveringRoom() != this' in body(room_cpp, 'bool RoomHatchery::findCoopSeat')
-assert 'HatcheryCoopSit' in config and 'HatcheryCoopSeatRadius' in config
-assert '!night && !full' in room_cpp, 'a sitting hen does not run to the calling rooster'
-high = body(room_cpp, 'Tile* RoomHatchery::getHighestCoop')
-assert 'roof > highestRoof' in high and 'distance < highestDistance' in high
-assert 'roostOnRoof(rooster, ChickenPose::roost, false, true)' in room_cpp
-assert 'highest ? getHighestCoop(position) : getNearestCoop(position)' in room_cpp
+# The hens do not sit in the coops: a full hatchery does not calm them, they wander all day. The rooster sits on the roof of the nearest coop.
+assert 'updateCoopSitting' not in room_cpp and 'findCoopSeat' not in room_cpp and 'isAtCoopSeat' not in room_cpp
+assert 'HatcheryCoopSit' not in config and 'HatcheryCoopSeatRadius' not in config
+assert 'updateFlock(hens);' in room_cpp and 'getHighestCoop' not in room_cpp
+assert 'Tile* coopTile = getNearestCoop(position);' in room_cpp
 print('hatchery coop seat and roof checks passed')
