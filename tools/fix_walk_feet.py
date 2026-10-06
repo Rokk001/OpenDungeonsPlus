@@ -406,11 +406,11 @@ def body_height(skel):
     return float(zs.max() - zs.min())
 
 
-def foot_paths(skel, cfg, clip):
+def foot_paths(skel, cfg, clip, d_fix=None):
     taus, loc, W, P = analyse(skel, cfg, clip)
     L = clip.length
     tmp = [FootPath(p, np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), L) for p in P]
-    d = walk_axis(tmp)
+    d = walk_axis(tmp) if d_fix is None else np.array(d_fix, float)
     if d is None:
         return None
     d3 = np.array([d[0], d[1], 0.0])
@@ -465,7 +465,7 @@ def measure(skel, cfg, clipname='Walk'):
 # ----------------------------------------------------------------------------- new foot paths
 
 
-def new_path(fp, uc, latc, s_tau, taus, zground):
+def new_path(fp, uc, latc, s_tau, taus, zground, lift=1.0):
     """new contact path (len(taus),3: u, lat, z in the walk frame) of one foot on the original clock tau"""
     L = fp.L
     runs = sorted(((s * fp.dt), ln * fp.dt) for (s, ln) in fp.runs)
@@ -515,7 +515,7 @@ def new_path(fp, uc, latc, s_tau, taus, zground):
         lat = lat0 + (latc - orig(fp.lat, tE)) * (1 - w) + (latc - orig(fp.lat, tS)) * w
         z0 = orig(fp.z, tau) - fp.zmin
         zb = (orig(fp.z, tE) - fp.zmin) * (1 - w) + (orig(fp.z, tS) - fp.zmin) * w
-        z = zground + max(0.0, z0 - zb)
+        z = zground + lift * max(0.0, z0 - zb)
         out[j] = (u, lat, z)
     return out
 
@@ -523,7 +523,7 @@ def new_path(fp, uc, latc, s_tau, taus, zground):
 # ----------------------------------------------------------------------------- IK
 
 
-def solve_unit(unit, base, Wp, target, Rhold, H, wo=2.0, wr=0.6, iters=60, tol=0.0005):
+def solve_unit(unit, base, Wp, target, Rhold, H, wo=2.0, wr=0.6, iters=60, tol=0.0005, delta0=None):
     """batched damped least squares: returns delta (M,nparam), the final position error (M,) and the new locals"""
     M = target.shape[0]
     npar = unit.nparam
@@ -551,7 +551,7 @@ def solve_unit(unit, base, Wp, target, Rhold, H, wo=2.0, wr=0.6, iters=60, tol=0
             parts.append(err_rv(R, Rhold) * wo)
         parts.append(delta * wr)
         return np.concatenate(parts, axis=1), x
-    delta = np.zeros((M, npar))
+    delta = np.zeros((M, npar)) if delta0 is None else delta0.copy()
     r, x = resid(delta)
     cost = np.sum(r * r, axis=1)
     mu = np.full(M, 1e-2)
@@ -647,9 +647,75 @@ def sole_mean(Wt, prep):
     return acc / len(prep)
 
 
-def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, wr=0.6, maxdrop=None, iters=30, duty=1.0, extcap=0.95, refine=0):
+def trim_runs(runs, N, f):
+    """stance windows shortened to the fraction f of their length, around their centre"""
+    out = []
+    for (s, ln) in runs:
+        ln2 = max(6, int(round(ln * f)))
+        out.append(((s + (ln - ln2) // 2) % N, ln2))
+    return out
+
+
+def stance_mask(fp):
+    m = np.zeros(fp.N, bool)
+    for (s, ln) in fp.runs:
+        m[[(s + q) % fp.N for q in range(ln)]] = True
+    return m
+
+
+def repair_jumps(un, base, Wp, tgt, Rhold, H, wo, wr, iters, locs, err, rounds=8):
+    """keys of a chain solution that break the continuity of their neighbours (single keys that landed on a different leg
+    configuration) are solved again with the middle of the neighbouring solutions as the prior. Returns locs, err"""
+    n = len(tgt)
+    for _ in range(rounds):
+        dev = np.zeros(n)
+        mids = []
+        for (p, q, s) in locs:
+            q = q.copy()
+            for i in range(1, n):
+                if np.dot(q[i], q[i - 1]) < 0:
+                    q[i] = -q[i]
+            nb = qnorm(np.roll(q, 1, axis=0) + np.roll(q, -1, axis=0))
+            c = np.clip(np.abs(np.sum(nb * q, axis=1)), 0, 1)
+            dev = np.maximum(dev, 2 * np.degrees(np.arccos(c)))
+            mids.append(nb)
+        med = float(np.median(dev))
+        bad = dev > max(4.0, 8.0 * med)
+        bad[0] = bad[-1] = False
+        if not bad.any():
+            break
+        ib = np.where(bad)[0]
+        base2 = []
+        for b, (p, q, s) in enumerate(base):
+            q2 = q.copy()
+            qm = mids[b][ib]
+            sg = np.sign(np.sum(qm * locs[b][1][ib], axis=1, keepdims=True))
+            sg[sg == 0] = 1.0
+            q2[ib] = qm * sg
+            base2.append((p, q2, s))
+        d2, e2, l2 = solve_unit(un, [(b_[0][ib], b_[1][ib], b_[2][ib]) for b_ in base2], Wp[0][ib:ib + 0] if False else _sel(Wp, ib), tgt[ib], Rhold[ib], H, wo=wo, wr=wr, iters=iters)
+        locs = [(np.where(bad[:, None], _put(p1, ib, p2), p1), np.where(bad[:, None], _put(q1, ib, q2_), q1), s1)
+                for (p1, q1, s1), (p2, q2_, s2) in zip(locs, l2)]
+        err = err.copy()
+        err[ib] = e2
+    return locs, err
+
+
+def _sel(Wp, ib):
+    if Wp is None:
+        return None
+    return (Wp[0][ib], Wp[1][ib], Wp[2][ib])
+
+
+def _put(full, ib, part):
+    out = full.copy()
+    out[ib] = part
+    return out
+
+
+def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, wr=0.6, maxdrop=None, iters=30, duty=1.0, extcap=0.95, refine=0, hurt=None, pre=None, runs_fix=None, d_fix=None, homotopy=False, repair=False):
     clip = skel.clips[clipname]
-    A = foot_paths(skel, cfg, clip)
+    A = foot_paths(skel, cfg, clip, d_fix)
     m = measure(skel, cfg, clipname)
     v = cfg['v']
     L = clip.length
@@ -665,6 +731,35 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
                 ln2 = max(6, int(round(ln * duty)))
                 nr.append(((s + (ln - ln2) // 2) % fp.N, ln2))
             fp.runs = nr
+    if runs_fix:
+        # stance windows (start, length in clip seconds) of a clip that was authored with exact windows: no detection
+        for k, fpk in enumerate(A['fps']):
+            if k in runs_fix:
+                fpk.runs = [(int(round(a_ / fpk.dt)) % fpk.N, int(round(T_ / fpk.dt))) for (a_, T_) in runs_fix[k]]
+    lift_of = {}
+    if hurt:
+        # limping feet (fix_walk_hurt_feet.py): the stance window of the foot is shortened around its centre as far as the
+        # other feet still cover the same part of the cycle as before, and the swing arc is lowered (lift)
+        for k, h in hurt.items():
+            if k >= len(A['fps']):
+                continue
+            lift_of[k] = h.get('lift', 1.0)
+            fpk = A['fps'][k]
+            if not fpk.runs or h.get('carry'):
+                continue
+            base = list(fpk.runs)
+            c0 = np.any([stance_mask(f_) for f_ in A['fps']], axis=0).mean()
+            best = 1.0
+            tt = 1.0
+            while tt > 0.3:
+                tt -= 0.02
+                fpk.runs = trim_runs(base, fpk.N, tt)
+                if np.any([stance_mask(f_) for f_ in A['fps']], axis=0).mean() < c0 - 0.002:
+                    break
+                best = tt
+            use = max(best, h.get('trim', 1.0))
+            fpk.runs = trim_runs(base, fpk.N, use)
+            h['used'] = use
     if kappa is None:
         kappa = rho * s0 / s_star / duty    # time stretch so that the stride becomes rho times the original
     Ln = L * kappa
@@ -677,6 +772,19 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
     d3 = A['d']
     e3 = A['e']
     loc_o = skel.locals_at(clip, taus_p)
+    if repair and not pre:
+        # the other tracks are written time scaled and closed to a loop (close_track): the legs are solved on those values, so
+        # that a pop spread over the end of the clip cannot move the hips under the planted feet
+        ik_names = set(b for f in cfg['feet'] for u in f['units'] for b in u['chain'])
+        for i, nm in enumerate(skel.names):
+            tr = clip.tracks.get(nm)
+            if tr is None or nm in ik_names:
+                continue
+            t_, T_, Q_, S_ = close_track(tr, kappa, Ln)
+            T2, Q2, S2 = Track(t_, T_, Q_, S_, tr.has_scale).sample(tn)
+            loc_o[i] = (skel.rest_pos[i][None] + T2, qmul(np.tile(skel.rest_q[i], (len(tn), 1)), Q2), skel.rest_s[i][None] * S2)
+    W_o0 = skel.fk(loc_o) if pre else None     # the feet keep the world orientation of the clip before the pose changes
+    touched = pre(loc_o, taus_p, tn) if pre else set()
     W_o = skel.fk(loc_o)
     zground = min(fp.zmin for fp in A['fps'] if fp.runs)
     feet = []
@@ -688,7 +796,15 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
             continue
         uc = float(np.mean([np.mean(fp.u[[(s + q) % fp.N for q in range(ln)]]) for (s, ln) in fp.runs]))
         latc = float(np.mean([np.mean(fp.lat[[(s + q) % fp.N for q in range(ln)]]) for (s, ln) in fp.runs]))
-        npth = new_path(fp, uc, latc, s_tau, taus_p, zground)
+        cr = hurt[k].get('carry') if hurt and k in hurt else None
+        if cr:
+            # a limb that is carried: it hangs in the air and paddles a little with the gait, it never touches the ground
+            ph = 2.0 * np.pi * taus_p / L
+            npth = np.stack([uc + cr['amp'] * H * np.sin(ph), np.full(len(taus_p), latc),
+                             zground + cr['h'] * H * (1.0 + 0.25 * np.cos(2.0 * ph))], axis=1)
+            fp.runs = []
+        else:
+            npth = new_path(fp, uc, latc, s_tau, taus_p, zground, lift_of.get(k, 1.0))
         Pn = npth[:, 0:1] * d3[None] + npth[:, 1:2] * e3[None] + npth[:, 2:3] * np.array([0, 0, 1.0])[None]
         u0 = Unit(skel, f['units'][0])
         p0, R0, s0_ = W_o[u0.ids[-1]]
@@ -705,7 +821,7 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
             un = Unit(skel, us)
             pe, Re, se = W_o[un.ids[-1]]
             xe = pe + np.einsum('nij,nj->ni', Re, se * un.eff_off)
-            units.append((k, ui, un, xe + Delta, Re))
+            units.append((k, ui, un, xe + Delta, W_o0[un.ids[-1]][1] if pre else Re))
             Delta_of[(k, ui)] = Delta
 
     cap_of = {}
@@ -740,7 +856,16 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
             base = [(loc[i][0], loc[i][1], loc[i][2]) for i in un.ids]
             Wp = W[un.par] if un.par >= 0 else None
             tgt = target[idx] + (corr[k][idx] if k in corr else 0.0)
-            delta, err, locs = solve_unit(un, base, Wp, tgt, Re[idx], H, wo=wo, wr=wr, iters=iters)
+            if homotopy:
+                # homotopy from a stiff to the normal regularisation: every key stays on the leg configuration nearest to the
+                # clip it is derived from (no jump to the mirrored knee configuration at single keys)
+                delta = None
+                for wr_k in (4.0, 1.5, wr):
+                    delta, err, locs = solve_unit(un, base, Wp, tgt, Re[idx], H, wo=wo, wr=wr_k, iters=iters, delta0=delta)
+            else:
+                delta, err, locs = solve_unit(un, base, Wp, tgt, Re[idx], H, wo=wo, wr=wr, iters=iters)
+            if repair and len(idx) == n:
+                locs, err = repair_jumps(un, base, Wp, tgt, Re[idx], H, wo, wr, iters, locs, err)
             for b_, i_ in enumerate(un.ids):
                 loc[i_] = locs[b_]
             viol = err
@@ -764,6 +889,12 @@ def fix_clip(skel, cfg, clipname='Walk', rate=1.0, rho=1.0, kappa=None, wo=2.0, 
             p, q, s = loc[bi]
             Q = qmul(np.tile(qconj(skel.rest_q[bi]), (len(q), 1)), q)
             tracks[body] = (p - skel.rest_pos[bi], Q, s / skel.rest_s[bi])
+        for name in touched:
+            if name not in tracks:
+                i = skel.idx[name]
+                p, q, s = loc[i]
+                Q = qmul(np.tile(qconj(skel.rest_q[i]), (len(q), 1)), q)
+                tracks[name] = (p - skel.rest_pos[i], Q, s / skel.rest_s[i])
         return tracks, errs, loc
     tol = 0.0015 * H
     allidx = np.arange(n)
@@ -1026,9 +1157,14 @@ def main():
     ap.add_argument('--refine', type=int, default=3)
     ap.add_argument('--maxdrop', type=float, default=None)
     ap.add_argument('--maxerr', type=float, default=0.004)
+    ap.add_argument('--keydt', type=float, default=None)
+    ap.add_argument('--repair', action='store_true')
     ap.add_argument('--lo', type=float, default=0.5)
     ap.add_argument('--hi', type=float, default=3.5)
     a = ap.parse_args()
+    global KEYDT
+    if a.keydt:
+        KEYDT = a.keydt
     if a.cmd == 'carry':
         make_carry(a.xml, a.rig, a.out)
         return
@@ -1040,15 +1176,15 @@ def main():
         print(json.dumps(r, default=lambda o: o.tolist() if hasattr(o, 'tolist') else str(o), indent=1))
         return
     if a.search:
-        rho, fx = search(skel, cfg, a.clip, a.rate, lo=a.lo, hi=a.hi, maxerr=a.maxerr, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap)
+        rho, fx = search(skel, cfg, a.clip, a.rate, lo=a.lo, hi=a.hi, maxerr=a.maxerr, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, homotopy=a.repair, repair=a.repair)
         print('chosen rho', rho)
         if fx is None:
             print('no feasible stride')
             return
         if a.refine > 0:
-            fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=rho, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, refine=a.refine)
+            fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=rho, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, refine=a.refine, homotopy=a.repair, repair=a.repair)
     else:
-        fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=a.rho, kappa=a.kappa, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, refine=a.refine)
+        fx = fix_clip(skel, cfg, a.clip, rate=a.rate, rho=a.rho, kappa=a.kappa, wo=a.wo, maxdrop=a.maxdrop, duty=a.duty, extcap=a.extcap, refine=a.refine, homotopy=a.repair, repair=a.repair)
     write_xml(a.xml, a.out, skel, a.clip, fx)
     sk2 = Skel(a.out)
     vf = verify_fix(sk2, cfg, fx, a.clip)

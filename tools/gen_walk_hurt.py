@@ -434,9 +434,15 @@ def press_arm(P, chain, press, i, wob):
             P.T[dsc][i] = (0.0, 0.0, 0.0)
 
 
-def build(S, rigs, cfg):
+def build(S, rigs, cfg, grid=None, skip=()):
+    """Authors the limp on the Walk clip. grid: key times to sample (default: the union of the Walk key times);
+    skip: bones of limbs that are planted feet solved elsewhere (fix_walk_hurt_feet.py): the swing damping and the
+    lift of these limbs are left out, the body, spine, head, arm and tail changes stay. Returns the length, the grid,
+    the pose and the unchanged Walk pose."""
     length, tracks = S.clips["Walk"]
-    grid = time_grid(tracks, length)
+    if grid is None:
+        grid = time_grid(tracks, length)
+    skip = set(skip)
     P = Pose(S, tracks, grid)
     base_pose = Pose(S, tracks, grid)
     for rig in rigs:
@@ -467,9 +473,11 @@ def build(S, rigs, cfg):
         head = rig.get("head")
         # swing of the limbs
         for chain in rig.get("hurt", []):
-            P.damp(chain, c["k_hurt"])
+            if not skip.intersection(chain):
+                P.damp(chain, c["k_hurt"])
         for chain in rig.get("second", []):
-            P.damp(chain, c["k_second"])
+            if not skip.intersection(chain):
+                P.damp(chain, c["k_second"])
         for chain in rig.get("hang", []):
             P.damp(chain, c["k_arm"])
         for chain in rig.get("tail", []):
@@ -479,10 +487,12 @@ def build(S, rigs, cfg):
         for i in range(P.n):
             s = sig[i]
             for chain in rig.get("hurt", []):
-                if c["lift"]:
+                if c["lift"] and not skip.intersection(chain):
                     lift_limb(P, chain, c["lift"], i)
             for b in body:
-                P.move_world(b, (0.0, 0.0, -c["dip"] * leg_len * (0.4 + 0.6 * s)), i)
+                if skip and set(S.ancestors(b)).intersection(body):
+                    continue    # a body bone below another one follows it
+                P.move_world(b, (0.0, 0.0, -c["dip"] * leg_len * (1.0 - c.get("bob", 0.6) + c.get("bob", 0.6) * s)), i)
             spine_lean(P, spine, c["lean"] + 2.0 * s, i)
             spine_roll(P, spine, c["roll"] * (0.35 + 0.65 * s), i)
             if head:
@@ -506,7 +516,7 @@ def build(S, rigs, cfg):
             d0, d1 = c["press"]
             wob = sig[i]
             press_arm(P, chain, ((d0[0] + 0.06 * wob, d0[1], d0[2]), (d1[0], d1[1] + 0.05 * wob, d1[2])), i, wob)
-    return length, grid, P
+    return length, grid, P, base_pose
 
 
 KIND_DEFAULTS = {
@@ -759,7 +769,7 @@ def main(argv):
         if isinstance(rigs, str):
             print("SKIP", name, rigs)
             continue
-        length, grid, P = build(S, rigs, None)
+        length, grid, P, _base = build(S, rigs, None)
         tracks = closed_tracks(P, length, grid, S)
         text = append_clip(S.text, anim_xml(CLIP, length, tracks))
         with open(os.path.join(dst, name + ".skeleton.xml"), "w", encoding="utf-8", newline="\n") as f:
