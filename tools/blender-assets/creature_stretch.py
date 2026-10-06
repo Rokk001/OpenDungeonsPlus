@@ -46,7 +46,7 @@ TABLE = {
     "RunelordDwarf": {"spine": ["spine.01", "spine.02", "spine.03", "spine.cr.01", "spine.cr.02", "spine.cr.03"],
                       "head": ["neck", "head", "neck.cr", "head.cr"],
                       "arms": ["upper_arm.L", "upper_arm.R", "upper_arm.cr.L", "upper_arm.cr.R"]},
-    "lich": {"spine": ["spine1", "spine2", "spine3"], "head": ["neckBase", "crown"], "arms": ["shoulderLeft", "shoulderRight"]},
+    "lich": {"spine": ["spine1", "spine2", "spine3"], "head": ["neckBase", "crown"], "arms": ["shoulderLeft", "shoulderRight"], "counter": ["capeBase"]},
     "skeleton": {"spine": ["hip", "belly", "breast"], "head": ["neckbase", "crown"], "arms": ["shoulderLeft", "shoulderRight"]},
     "Kobold": {"spine": ["TorsoLower", "TorsoUpper"], "head": ["Neck", "Head"], "arms": ["ArmUpper.L", "ArmUpper.R"]},
     "LavaSpawn": {"spine": ["spine", "chest"], "head": ["neck", "head"], "arms": ["arm1.L", "arm1.R"]},
@@ -148,6 +148,9 @@ def build(name, skeleton_xml, work, preview):
             spec = {}
             for b in spine:
                 spec[b] = {"rot": [((1, 0, 0), ARCH * (28.0 / count) * s)]}
+            for b in cfg.get("counter", []):  # a rigid cape would swing out with the arched back, so it keeps hanging
+                if b in rig.rest:
+                    spec[b] = {"rot": [((1, 0, 0), -ARCH * 28.0 * s)]}
             for b in head:
                 spec[b] = {"rot": [((1, 0, 0), ARCH * (22.0 / max(1, len(head))) * s)]}
             for b, (axis, degrees) in targets.items():
