@@ -3371,7 +3371,7 @@ ProtectDungeonTemple	NULL
 3	WardGuard3	Elf.mesh	73	55	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard4	Monk.mesh	61	70	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard5	Adventurer.mesh	74	68	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	FenWatch1	Adventurer.mesh	40	37	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	FenWatch1	Adventurer.mesh	37	38	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	FenWatch2	Dwarf1.mesh	46	38	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	FenWatch3	Adventurer.mesh	41	44	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	RidgeWatch	Elf.mesh	42	9	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
