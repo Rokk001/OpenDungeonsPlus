@@ -179,9 +179,13 @@ add_boost_test(00-HatcheryCycle
         ${SRC}/rooms/HatcheryCycle.h
         ${SRC}/rooms/HatcheryCycle.cpp
         ${SRC}/rooms/HatcheryRooster.h
-        ${SRC}/rooms/HatcheryRooster.cpp
-        ${SRC}/rooms/RoomTorches.h
-        ${SRC}/rooms/RoomTorches.cpp)
+        ${SRC}/rooms/HatcheryRooster.cpp)
+
+add_boost_test(00-WallTorches
+        SOURCES
+        test_WallTorches.cpp
+        ${SRC}/rooms/WallTorches.h
+        ${SRC}/rooms/WallTorches.cpp)
 
 add_boost_test(aa-LaunchGame
         SOURCES
