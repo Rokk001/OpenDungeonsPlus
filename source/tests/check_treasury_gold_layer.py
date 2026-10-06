@@ -177,6 +177,7 @@ int main()
     check(coinsGrow, "top coins never drop with the level and never exceed the maximum");
     check(topCoinCount(flatShape(1, 0)) == 0, "a thin layer carries no coins on top");
     check(topCoinCount(flatShape(maxLevel, 0)) == 8, "a full pile carries eight coins (the triangle budget of round coins)");
+    check(topCoinCount(flatShape(maxLevel, 0)) == TreasurySettings::current().maxTopCoins, "a full pile carries every coin the setting allows, none fewer");
     check(topCoinCount(flatShape(maxLevel, 0)) > 3 * topCoinCount(flatShape(2, 0)) / 2, "coins grow in several steps");
     check(gemCount(flatShape(4, 3)) == 0 && gemCount(flatShape(maxLevel, 3)) == 2, "rich piles carry up to two gems");
     int gemsMax = 0;
