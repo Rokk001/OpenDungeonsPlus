@@ -70,19 +70,19 @@ particle_system ChickenFeathers
     }
 }
 
-// The same for the rooster: orange and brown with the green and red of the tail and the neck
+// The same for the rooster: small feathers, white and rust brown, a few dark tail feathers
 particle_system ChickenFeathersRooster
 {
     material ChickenFeathers
-    particle_width 0.19
-    particle_height 0.19
+    particle_width 0.11
+    particle_height 0.11
     quota 20
     billboard_type point
     emitter Point
     {
         angle 80
-        colour_range_start 0.95 0.45 0.12 1.0
-        colour_range_end 0.8 0.32 0.08 1.0
+        colour_range_start 1.0 0.98 0.94 1.0
+        colour_range_end 0.93 0.9 0.84 1.0
         emission_rate 36
         time_to_live_min 1.6
         time_to_live_max 2.3
@@ -94,8 +94,8 @@ particle_system ChickenFeathersRooster
     emitter Point
     {
         angle 80
-        colour_range_start 0.5 0.24 0.1 1.0
-        colour_range_end 0.38 0.17 0.07 1.0
+        colour_range_start 0.62 0.3 0.12 1.0
+        colour_range_end 0.48 0.22 0.09 1.0
         emission_rate 24
         time_to_live_min 1.6
         time_to_live_max 2.3
@@ -107,9 +107,9 @@ particle_system ChickenFeathersRooster
     emitter Point
     {
         angle 80
-        colour_range_start 0.1 0.6 0.42 1.0
-        colour_range_end 0.05 0.4 0.35 1.0
-        emission_rate 18
+        colour_range_start 0.2 0.14 0.1 1.0
+        colour_range_end 0.1 0.08 0.07 1.0
+        emission_rate 6
         time_to_live_min 1.6
         time_to_live_max 2.3
         direction 0 0 1
@@ -120,9 +120,9 @@ particle_system ChickenFeathersRooster
     emitter Point
     {
         angle 80
-        colour_range_start 0.8 0.12 0.1 1.0
-        colour_range_end 0.65 0.08 0.08 1.0
-        emission_rate 10
+        colour_range_start 0.42 0.2 0.1 1.0
+        colour_range_end 0.33 0.16 0.08 1.0
+        emission_rate 14
         time_to_live_min 1.6
         time_to_live_max 2.3
         direction 0 0 1

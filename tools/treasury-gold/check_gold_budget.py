@@ -80,7 +80,10 @@ def main():
     layer = read('source/rooms/TreasuryGoldLayer.h')
     coin_sides = constant(pile, 'CoinSides')
     spill_sides = constant(pile, 'SpillSides')
-    gem_faces = constant(pile, 'GemFaces')
+    gem_sides = constant(pile, 'GemSides')
+    # A cut gem: a table fan, a crown of two triangles per side and a pavilion of one per side
+    gem_faces = 4 * gem_sides
+    gem_verts = 2 * gem_sides + 2
     max_top_coins = int(setting(settings, 'maxTopCoins'))
     max_gems = int(setting(settings, 'maxGems'))
     max_spill_coins = 4 * int(setting(settings, 'spillCoinsFull'))
@@ -88,7 +91,7 @@ def main():
 
     # Coins on top, gems and spilled coins lie in a second section (a second draw call) of the full pile mesh
     detail_tris = max_top_coins * coin_sides + max_gems * gem_faces + max_spill_coins * spill_sides
-    detail_verts = max_top_coins * (coin_sides + 1) + max_gems * 6 + max_spill_coins * (spill_sides + 1)
+    detail_verts = max_top_coins * (coin_sides + 1) + max_gems * gem_verts + max_spill_coins * (spill_sides + 1)
     scatter_tris = scatter_coins * coin_sides
 
     pile_tris = {'full': full_surface_tris + detail_tris, 'reduced': reduced_surface_tris}

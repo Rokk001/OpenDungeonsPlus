@@ -69,7 +69,8 @@ struct PileShape
 {
     PileShape() :
         mLevel(0),
-        mVariant(0)
+        mVariant(0),
+        mRing(false)
     {
         for(int i = 0; i < 4; ++i)
             mCorner[i] = 0;
@@ -80,6 +81,11 @@ struct PileShape
     int mCorner[4];
     //! Selects one of a few lumpy variants so neighbouring piles do not look alike
     int mVariant;
+    //! A pile of a single-row ring. mCorner then holds the level of the ridge along each edge (north, east, south,
+    //! west; 0 when no ring tile lies there) instead of the levels of the corners; the ridge is highest in the
+    //! middle of the edge and the corners stay on the floor, so the row is a chain of heaps joined by saddles and
+    //! never a plateau with cut edges.
+    bool mRing;
 };
 
 static const int variantCount = 4;
@@ -95,6 +101,8 @@ inline std::string meshName(const PileShape& shape)
         name += static_cast<char>('0' + shape.mCorner[i]);
     name += '_';
     name += static_cast<char>('0' + shape.mVariant);
+    if(shape.mRing)
+        name += 'R';
     return name;
 }
 
@@ -103,7 +111,9 @@ inline bool parseMeshName(const std::string& name, PileShape& shape)
 {
     const std::string prefix = meshNamePrefix;
     // prefix + level + '_' + four corners + '_' + variant
-    if(name.size() != prefix.size() + 8 || name.compare(0, prefix.size(), prefix) != 0)
+    // A ring pile has an 'R' after the variant
+    const bool ring = name.size() == prefix.size() + 9 && name[name.size() - 1] == 'R';
+    if((name.size() != prefix.size() + 8 && !ring) || name.compare(0, prefix.size(), prefix) != 0)
         return false;
     const char* text = name.c_str() + prefix.size();
     if(text[1] != '_' || text[6] != '_')
@@ -120,15 +130,14 @@ inline bool parseMeshName(const std::string& name, PileShape& shape)
     for(int i = 0; i < 4; ++i)
         shape.mCorner[i] = values[1 + i];
     shape.mVariant = values[5];
+    shape.mRing = ring;
     return true;
 }
 
 //! The shape of a pile on a tile of a single-row ring (the treasury ring of the dungeon heart). The tile has no
-//! neighbours on its other sides, so the rule of the treasury (lowest level of the four tiles that meet at a
-//! corner) would leave every corner on the floor. Here a corner is raised when the tile has a ring neighbour
-//! next to that corner: it takes the lowest level of the ring tiles that meet there (an empty ring tile counts
-//! as 0), so two neighbouring piles share the heights along their common edge and run into each other, while
-//! the open sides run out on the floor.
+//! neighbours on its other sides, so the corners stay on the floor and the heap runs out flat towards the wall and
+//! the heart. Towards a ring neighbour a ridge joins the two heaps: its level is the lower of the two tiles, so
+//! two neighbouring piles share the heights along their common edge.
 //! around[dx + 1][dy + 1] is the level of the ring tile at that offset (0 for an empty one), -1 for a tile that
 //! is not part of the ring; around[1][1] is the tile itself.
 inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
@@ -136,25 +145,15 @@ inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
     PileShape shape;
     shape.mLevel = around[1][1];
     shape.mVariant = (x * 7 + y * 13) % variantCount;
-    // North is towards +y: north-west, north-east, south-east, south-west
-    const int dx[4] = {-1, 1, 1, -1};
-    const int dy[4] = {1, 1, -1, -1};
+    shape.mRing = true;
+    // North is towards +y: north, east, south, west
+    const int sideX[4] = {0, 1, 0, -1};
+    const int sideY[4] = {1, 0, -1, 0};
     for(int i = 0; i < 4; ++i)
     {
-        const int sideX = around[dx[i] + 1][1];
-        const int sideY = around[1][dy[i] + 1];
-        // Only a ring neighbour beside the tile raises the corner, a diagonal one alone does not
-        if(sideX < 0 && sideY < 0)
-            continue;
-
-        int corner = shape.mLevel;
-        const int meeting[3] = {sideX, sideY, around[dx[i] + 1][dy[i] + 1]};
-        for(int j = 0; j < 3; ++j)
-        {
-            if(meeting[j] >= 0 && meeting[j] < corner)
-                corner = meeting[j];
-        }
-        shape.mCorner[i] = corner;
+        const int neighbour = around[sideX[i] + 1][sideY[i] + 1];
+        if(neighbour > 0)
+            shape.mCorner[i] = neighbour < shape.mLevel ? neighbour : shape.mLevel;
     }
     return shape;
 }
@@ -186,12 +185,32 @@ inline float heightAt(const PileShape& shape, float u, float v)
     if(shape.mLevel <= 0)
         return 0.0f;
 
-    const float nw = levelHeight(shape.mCorner[0]);
-    const float ne = levelHeight(shape.mCorner[1]);
-    const float se = levelHeight(shape.mCorner[2]);
-    const float sw = levelHeight(shape.mCorner[3]);
-    // v grows to the north: top row is north
-    const float base = (1.0f - u) * ((1.0f - v) * sw + v * nw) + u * ((1.0f - v) * se + v * ne);
+    float base = 0.0f;
+    if(shape.mRing)
+    {
+        // A ridge along every edge that touches a ring neighbour: highest in the middle of the edge, none at the
+        // corners, fading out towards the middle of the tile
+        const float distance[4] = {1.0f - v, 1.0f - u, v, u};
+        const float along[4] = {u, v, u, v};
+        for(int edge = 0; edge < 4; ++edge)
+        {
+            if(shape.mCorner[edge] <= 0 || distance[edge] >= 0.5f)
+                continue;
+            const float fall = 0.5f * (1.0f + std::cos(6.2831853f * distance[edge]));
+            const float ridge = levelHeight(shape.mCorner[edge]) * std::sin(3.1415927f * along[edge]) * fall;
+            if(ridge > base)
+                base = ridge;
+        }
+    }
+    else
+    {
+        const float nw = levelHeight(shape.mCorner[0]);
+        const float ne = levelHeight(shape.mCorner[1]);
+        const float se = levelHeight(shape.mCorner[2]);
+        const float sw = levelHeight(shape.mCorner[3]);
+        // v grows to the north: top row is north
+        base = (1.0f - u) * ((1.0f - v) * sw + v * nw) + u * ((1.0f - v) * se + v * ne);
+    }
 
     // 1 in the middle, 0 at and beyond the radius of the heap (which never exceeds the tile edges)
     const float du = u - 0.5f;
@@ -280,6 +299,8 @@ inline int gemCount(const PileShape& shape)
 //! itself, i.e. it faces a wall, the outside of the room or a lower pile.
 inline bool edgeOpen(const PileShape& shape, int edge)
 {
+    if(shape.mRing)
+        return shape.mCorner[edge] < shape.mLevel;
     return shape.mCorner[edge] < shape.mLevel && shape.mCorner[(edge + 1) % 4] < shape.mLevel;
 }
 

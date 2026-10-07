@@ -549,7 +549,7 @@ probe = (probe.replace('RULES_HEADER', rules.as_posix())
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
-enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'trapEffect',
+enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]

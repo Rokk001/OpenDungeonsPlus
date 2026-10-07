@@ -21,6 +21,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include "rooms/HatcheryCycle.h"
+#include "rooms/HatcheryNestField.h"
 #include "rooms/HatcheryRooster.h"
 
 #include <cmath>
@@ -629,27 +630,222 @@ BOOST_AUTO_TEST_CASE(test_NestPlace)
     BOOST_CHECK_EQUAL(HatcheryCycle::pickNestPlace(last, 3), 2);
 }
 
-BOOST_AUTO_TEST_CASE(test_RoosterDay)
+BOOST_AUTO_TEST_CASE(test_NestPlaceSingleSlot)
 {
-    RoosterSettings settings;
-    settings.mDayTurns = 100;
-    settings.mNightPercent = 30;
-    BOOST_CHECK(!HatcheryRooster::isNight(0, settings));
-    BOOST_CHECK(!HatcheryRooster::isNight(69, settings));
-    BOOST_CHECK(HatcheryRooster::isNight(70, settings));
-    BOOST_CHECK(HatcheryRooster::isNight(99, settings));
-    BOOST_CHECK(!HatcheryRooster::isNight(100, settings));
-    BOOST_CHECK(HatcheryRooster::isNewDay(0, settings));
-    BOOST_CHECK(HatcheryRooster::isNewDay(300, settings));
-    BOOST_CHECK(!HatcheryRooster::isNewDay(301, settings));
+    // The nests of the nest field hold one egg each: the first free one (the list is ordered by the distance to the hen)
+    std::vector<bool> occupied(4, false);
+    BOOST_CHECK_EQUAL(HatcheryCycle::pickNestPlace(occupied, 1), 0);
+    occupied[0] = true;
+    BOOST_CHECK_EQUAL(HatcheryCycle::pickNestPlace(occupied, 1), 1);
+    occupied[1] = true;
+    occupied[2] = true;
+    BOOST_CHECK_EQUAL(HatcheryCycle::pickNestPlace(occupied, 1), 3);
+    occupied[3] = true;
+    BOOST_CHECK_EQUAL(HatcheryCycle::pickNestPlace(occupied, 1), -1);
+}
 
-    // No night and no day length: never night
-    settings.mNightPercent = 0;
-    BOOST_CHECK(!HatcheryRooster::isNight(99, settings));
-    settings.mNightPercent = 30;
-    settings.mDayTurns = 0;
-    BOOST_CHECK(!HatcheryRooster::isNight(99, settings));
-    BOOST_CHECK(!HatcheryRooster::isNewDay(0, settings));
+//! A block of tiles for the nest field tests
+static std::vector<HatcheryNestField::TileCoord> nestTestBlock(int x0, int y0, int width, int height)
+{
+    std::vector<HatcheryNestField::TileCoord> tiles;
+    for(int x = x0; x < x0 + width; ++x)
+    {
+        for(int y = y0; y < y0 + height; ++y)
+            tiles.push_back(HatcheryNestField::TileCoord(x, y));
+    }
+    return tiles;
+}
+
+BOOST_AUTO_TEST_CASE(test_NestField)
+{
+    const HatcheryNestField::Settings settings;
+    const std::vector<HatcheryNestField::TileCoord> tiles = nestTestBlock(0, 0, 5, 5);
+    std::vector<HatcheryNestField::TileCoord> coops;
+    coops.push_back(HatcheryNestField::TileCoord(1, 2));
+    coops.push_back(HatcheryNestField::TileCoord(3, 2));
+    // Two entrances (the middle of the west and of the east edge), the way to the coops must stay free of nests
+    std::vector<HatcheryNestField::TileCoord> entrances;
+    entrances.push_back(HatcheryNestField::TileCoord(0, 2));
+    entrances.push_back(HatcheryNestField::TileCoord(4, 2));
+    const std::vector<HatcheryNestField::Place> places = HatcheryNestField::compute(tiles, coops, entrances, settings);
+
+    // One nest per coop at least, about one per three tiles, never more than the size asks for
+    BOOST_CHECK(places.size() >= coops.size());
+    BOOST_CHECK(places.size() <= tiles.size() / settings.mTilesPerNest);
+
+    for(uint32_t i = 0; i < places.size(); ++i)
+    {
+        const double x = places[i].mX;
+        const double y = places[i].mY;
+
+        // On a tile of the hatchery, away from the edge to the tiles outside of it (the block is 0..4)
+        BOOST_CHECK(x >= -0.5 + settings.mEdge - 1e-9);
+        BOOST_CHECK(x <= 4.5 - settings.mEdge + 1e-9);
+        BOOST_CHECK(y >= -0.5 + settings.mEdge - 1e-9);
+        BOOST_CHECK(y <= 4.5 - settings.mEdge + 1e-9);
+
+        // Away from the coops and their aprons
+        for(uint32_t c = 0; c < coops.size(); ++c)
+        {
+            const double cx = coops[c].first;
+            const double cy = coops[c].second;
+            BOOST_CHECK(HatcheryNestField::rectDistanceSquared(x, y, cx + HatcheryNestField::coopMinX,
+                cy + HatcheryNestField::coopMinY, cx + HatcheryNestField::coopMaxX, cy + HatcheryNestField::coopMaxY) >=
+                settings.mCoopClearance * settings.mCoopClearance - 1e-9);
+            BOOST_CHECK(HatcheryNestField::rectDistanceSquared(x, y, cx + HatcheryNestField::coopMaxX,
+                cy - settings.mLaneHalfWidth, cx + HatcheryNestField::coopMaxX + settings.mLaneLength,
+                cy + settings.mLaneHalfWidth) >= settings.mLaneClearance * settings.mLaneClearance - 1e-9);
+
+            // Away from the walking strips from the entrances to the middle of the apron
+            const double clear = settings.mPathHalfWidth + settings.mPathClearance;
+            for(uint32_t e = 0; e < entrances.size(); ++e)
+            {
+                BOOST_CHECK(HatcheryNestField::segmentDistanceSquared(x, y, entrances[e].first, entrances[e].second,
+                    cx + HatcheryNestField::coopMaxX + settings.mLaneLength * 0.5, cy) >= clear * clear - 1e-9);
+            }
+        }
+
+        // Away from each other
+        for(uint32_t j = 0; j < i; ++j)
+        {
+            const double dx = places[j].mX - x;
+            const double dy = places[j].mY - y;
+            BOOST_CHECK(dx * dx + dy * dy >= settings.mSpacing * settings.mSpacing - 1e-9);
+        }
+    }
+
+    // The places depend on the tiles only, not on their order (the server lists the tiles in the order of the room, which changes when rooms merge)
+    std::vector<HatcheryNestField::TileCoord> reversedTiles(tiles.rbegin(), tiles.rend());
+    std::vector<HatcheryNestField::TileCoord> reversedCoops(coops.rbegin(), coops.rend());
+    std::vector<HatcheryNestField::TileCoord> reversedEntrances(entrances.rbegin(), entrances.rend());
+    const std::vector<HatcheryNestField::Place> again = HatcheryNestField::compute(reversedTiles, reversedCoops,
+        reversedEntrances, settings);
+    BOOST_REQUIRE_EQUAL(again.size(), places.size());
+    for(uint32_t i = 0; i < places.size(); ++i)
+    {
+        BOOST_CHECK_EQUAL(again[i].mX, places[i].mX);
+        BOOST_CHECK_EQUAL(again[i].mY, places[i].mY);
+    }
+    BOOST_CHECK_EQUAL(HatcheryNestField::fingerprint(tiles, coops, entrances),
+        HatcheryNestField::fingerprint(reversedTiles, reversedCoops, reversedEntrances));
+
+    // A change of the tiles changes the fingerprint, so the places are computed again
+    std::vector<HatcheryNestField::TileCoord> moreTiles = tiles;
+    moreTiles.push_back(HatcheryNestField::TileCoord(5, 2));
+    BOOST_CHECK(HatcheryNestField::fingerprint(moreTiles, coops, entrances) != HatcheryNestField::fingerprint(tiles, coops, entrances));
+
+    // A new entrance (a dug corridor, a door) changes the fingerprint too, and the places are computed again
+    std::vector<HatcheryNestField::TileCoord> moreEntrances = entrances;
+    moreEntrances.push_back(HatcheryNestField::TileCoord(2, 0));
+    BOOST_CHECK(HatcheryNestField::fingerprint(tiles, coops, moreEntrances) != HatcheryNestField::fingerprint(tiles, coops, entrances));
+    BOOST_CHECK(HatcheryNestField::fingerprint(tiles, coops, std::vector<HatcheryNestField::TileCoord>()) !=
+        HatcheryNestField::fingerprint(tiles, coops, entrances));
+
+    // Without an entrance the strips do not exist, so the entrances change the places (a door at the west wall of a
+    // 5x5 hatchery with a coop at (3, 2) lies on the way to its apron)
+    std::vector<HatcheryNestField::TileCoord> westDoor;
+    westDoor.push_back(HatcheryNestField::TileCoord(0, 2));
+    std::vector<HatcheryNestField::TileCoord> oneCoop;
+    oneCoop.push_back(HatcheryNestField::TileCoord(3, 2));
+    const std::vector<HatcheryNestField::Place> withoutDoor = HatcheryNestField::compute(tiles, oneCoop,
+        std::vector<HatcheryNestField::TileCoord>(), settings);
+    const std::vector<HatcheryNestField::Place> withDoor = HatcheryNestField::compute(tiles, oneCoop, westDoor, settings);
+    BOOST_CHECK(!withoutDoor.empty());
+    BOOST_CHECK(!withDoor.empty());
+    for(uint32_t i = 0; i < withDoor.size(); ++i)
+    {
+        const double clear = settings.mPathHalfWidth + settings.mPathClearance;
+        BOOST_CHECK(HatcheryNestField::segmentDistanceSquared(withDoor[i].mX, withDoor[i].mY, 0.0, 2.0,
+            3.0 + HatcheryNestField::coopMaxX + settings.mLaneLength * 0.5, 2.0) >= clear * clear - 1e-9);
+    }
+
+    // The size caps the number of nests, the coops come on top
+    HatcheryNestField::Settings capped = settings;
+    capped.mMaxNests = 2;
+    BOOST_CHECK(HatcheryNestField::compute(nestTestBlock(0, 0, 9, 9), std::vector<HatcheryNestField::TileCoord>(),
+        std::vector<HatcheryNestField::TileCoord>(), capped).size() <= 2u);
+
+    // A hatchery without a tile has no nest
+    BOOST_CHECK(HatcheryNestField::compute(std::vector<HatcheryNestField::TileCoord>(), coops, entrances, settings).empty());
+}
+
+BOOST_AUTO_TEST_CASE(test_NestFieldFeathers)
+{
+    const HatcheryNestField::Settings settings;
+    const std::vector<HatcheryNestField::TileCoord> tiles = nestTestBlock(0, 0, 7, 7);
+    std::vector<HatcheryNestField::TileCoord> coops;
+    coops.push_back(HatcheryNestField::TileCoord(1, 3));
+    coops.push_back(HatcheryNestField::TileCoord(4, 3));
+    std::vector<HatcheryNestField::TileCoord> entrances;
+    entrances.push_back(HatcheryNestField::TileCoord(0, 3));
+    const std::vector<HatcheryNestField::Place> nests = HatcheryNestField::compute(tiles, coops, entrances, settings);
+    const std::vector<HatcheryNestField::Place> feathers = HatcheryNestField::computeFeathers(tiles, coops, entrances,
+        nests, settings);
+
+    // About one place per six tiles, at least two, at most eight
+    BOOST_CHECK(feathers.size() >= settings.mMinFeathers);
+    BOOST_CHECK(feathers.size() <= settings.mMaxFeathers);
+    BOOST_CHECK(feathers.size() <= std::max<uint32_t>(tiles.size() / settings.mTilesPerFeather, settings.mMinFeathers));
+
+    for(uint32_t i = 0; i < feathers.size(); ++i)
+    {
+        const double x = feathers[i].mX;
+        const double y = feathers[i].mY;
+
+        // On the hatchery (the block is 0..6), away from the walls
+        BOOST_CHECK(x >= -0.5 + settings.mEdge - 1e-9);
+        BOOST_CHECK(x <= 6.5 - settings.mEdge + 1e-9);
+        BOOST_CHECK(y >= -0.5 + settings.mEdge - 1e-9);
+        BOOST_CHECK(y <= 6.5 - settings.mEdge + 1e-9);
+
+        // Not at the coops, their aprons or the walking strip from the entrance
+        for(uint32_t c = 0; c < coops.size(); ++c)
+        {
+            const double cx = coops[c].first;
+            const double cy = coops[c].second;
+            BOOST_CHECK(HatcheryNestField::rectDistanceSquared(x, y, cx + HatcheryNestField::coopMinX,
+                cy + HatcheryNestField::coopMinY, cx + HatcheryNestField::coopMaxX, cy + HatcheryNestField::coopMaxY) >=
+                settings.mCoopClearance * settings.mCoopClearance - 1e-9);
+            BOOST_CHECK(HatcheryNestField::rectDistanceSquared(x, y, cx + HatcheryNestField::coopMaxX,
+                cy - settings.mLaneHalfWidth, cx + HatcheryNestField::coopMaxX + settings.mLaneLength,
+                cy + settings.mLaneHalfWidth) >= settings.mLaneClearance * settings.mLaneClearance - 1e-9);
+            const double clear = settings.mPathHalfWidth + settings.mPathClearance;
+            BOOST_CHECK(HatcheryNestField::segmentDistanceSquared(x, y, entrances[0].first, entrances[0].second,
+                cx + HatcheryNestField::coopMaxX + settings.mLaneLength * 0.5, cy) >= clear * clear - 1e-9);
+        }
+
+        // Away from the nests and from each other
+        for(uint32_t n = 0; n < nests.size(); ++n)
+        {
+            const double dx = nests[n].mX - x;
+            const double dy = nests[n].mY - y;
+            BOOST_CHECK(dx * dx + dy * dy >= settings.mFeatherNestClearance * settings.mFeatherNestClearance - 1e-9);
+        }
+        for(uint32_t j = 0; j < i; ++j)
+        {
+            const double dx = feathers[j].mX - x;
+            const double dy = feathers[j].mY - y;
+            BOOST_CHECK(dx * dx + dy * dy >= settings.mFeatherSpacing * settings.mFeatherSpacing - 1e-9);
+        }
+    }
+
+    // The places do not depend on the order of the tiles
+    std::vector<HatcheryNestField::TileCoord> reversedTiles(tiles.rbegin(), tiles.rend());
+    std::vector<HatcheryNestField::TileCoord> reversedCoops(coops.rbegin(), coops.rend());
+    const std::vector<HatcheryNestField::Place> again = HatcheryNestField::computeFeathers(reversedTiles, reversedCoops,
+        entrances, nests, settings);
+    BOOST_REQUIRE_EQUAL(again.size(), feathers.size());
+    for(uint32_t i = 0; i < feathers.size(); ++i)
+    {
+        BOOST_CHECK_EQUAL(again[i].mX, feathers[i].mX);
+        BOOST_CHECK_EQUAL(again[i].mY, feathers[i].mY);
+    }
+
+    // A hatchery without a tile has no feathers, one without a coop has them all the same
+    BOOST_CHECK(HatcheryNestField::computeFeathers(std::vector<HatcheryNestField::TileCoord>(), coops, entrances, nests,
+        settings).empty());
+    BOOST_CHECK(HatcheryNestField::computeFeathers(tiles, std::vector<HatcheryNestField::TileCoord>(),
+        std::vector<HatcheryNestField::TileCoord>(), std::vector<HatcheryNestField::Place>(), settings).size() >= 2u);
 }
 
 BOOST_AUTO_TEST_CASE(test_RoosterCrowInterval)
@@ -670,15 +866,10 @@ BOOST_AUTO_TEST_CASE(test_RoosterCrowInterval)
 BOOST_AUTO_TEST_CASE(test_RoosterDecide)
 {
     RoosterSettings settings;
-    settings.mDayTurns = 1000;
-    settings.mNightPercent = 30;
     RoosterContext context;
     context.mTurn = 100;
-    // He has crowed for the first day already
-    context.mCrowDay = 0;
     context.mHasCoop = true;
     context.mHasHen = true;
-    context.mHasChick = true;
     context.mCrowInterval = 60;
     context.mRoll = 99;
 
@@ -686,47 +877,38 @@ BOOST_AUTO_TEST_CASE(test_RoosterDecide)
     RoosterPlan plan = HatcheryRooster::decide(context, settings);
     BOOST_CHECK(plan.mMood == RoosterMood::strut);
 
-    // The dice decide what comes to his mind: chase, lead, perch
+    // The dice decide what comes to his mind: chase (no roof sitting by chance, no calling of the hens, no leading of the chicks)
     context.mRoll = 0;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::chase);
+    // Past the chase chance he only struts: the rooster never calls the hens or chicks to him
     context.mRoll = settings.mChasePercent;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::lead);
-    context.mRoll = settings.mChasePercent + settings.mLeadPercent;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
-    // He calls the hens to food, only when there is a hen
-    context.mRoll = settings.mChasePercent + settings.mLeadPercent + settings.mPerchPercent;
-    plan = HatcheryRooster::decide(context, settings);
-    BOOST_CHECK(plan.mMood == RoosterMood::call);
-    BOOST_CHECK_EQUAL(plan.mTurns, settings.mCallTurns);
-    context.mHasHen = false;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
-    context.mHasHen = true;
-    context.mRoll = settings.mChasePercent + settings.mLeadPercent + settings.mPerchPercent + settings.mCallPercent;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+    for(uint32_t roll = settings.mChasePercent; roll < 100; ++roll)
+    {
+        context.mRoll = roll;
+        BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+    }
 
-    // Without a hen, chick or coop those moods are not chosen
+    // Without a hen that mood is not chosen
     context.mHasHen = false;
     context.mRoll = 0;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
     context.mHasHen = true;
 
-    // A crow when the time is up, then he sits on the roof for a while
+    // A crow when the time is up, then he goes on strutting (he does not stay on the roof)
     context.mRoll = 99;
     context.mSinceCrow = 60;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
     context.mSinceCrow = 0;
     context.mMood = RoosterMood::crow;
     context.mMoodTurns = 0;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
-    context.mHasCoop = false;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
-    context.mHasCoop = true;
 
     // A mood with turns left goes on
-    context.mMood = RoosterMood::perch;
+    context.mMood = RoosterMood::crow;
     context.mMoodTurns = 5;
     context.mRoll = 0;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::perch);
+    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
 
     // A threat always wins, also against the mood in progress
     context.mThreat = true;
@@ -740,96 +922,38 @@ BOOST_AUTO_TEST_CASE(test_RoosterDecide)
     BOOST_CHECK_EQUAL(plan.mTurns, 3u);
     context.mThreat = false;
 
-    // Night: he sleeps, even in the middle of a chase. A new day starts with a crow.
+    // A mood that is over (no turns left) is followed by strutting, whatever the turn is
     context.mMood = RoosterMood::chase;
-    context.mMoodTurns = 5;
+    context.mMoodTurns = 0;
     context.mTurn = 800;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::roost);
-    context.mMood = RoosterMood::roost;
-    context.mTurn = 2000;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
-    // After the night he gets up (he has crowed for the new day by now)
-    context.mCrowDay = 2;
-    context.mTurn = 2100;
     context.mRoll = 99;
+    context.mSinceCrow = 0;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
 }
 
-BOOST_AUTO_TEST_CASE(test_RoosterNewDayCrow)
+BOOST_AUTO_TEST_CASE(test_RoosterCrowTimer)
 {
     RoosterSettings settings;
-    settings.mDayTurns = 1000;
-    settings.mNightPercent = 30;
-
-    // The day of a turn, none without a day length
-    BOOST_CHECK_EQUAL(HatcheryRooster::dayNumber(0, settings), 0);
-    BOOST_CHECK_EQUAL(HatcheryRooster::dayNumber(999, settings), 0);
-    BOOST_CHECK_EQUAL(HatcheryRooster::dayNumber(1000, settings), 1);
-    BOOST_CHECK_EQUAL(HatcheryRooster::dayNumber(2500, settings), 2);
-    BOOST_CHECK_EQUAL(HatcheryRooster::dayNumber(-1, settings), -1);
-    RoosterSettings noDay = settings;
-    noDay.mDayTurns = 0;
-    BOOST_CHECK_EQUAL(HatcheryRooster::dayNumber(500, noDay), -1);
-    BOOST_CHECK(!HatcheryRooster::newDayCrowOwed(500, -1, noDay));
-
-    // The crow is owed from the first turn of a new day until he has crowed for it, not only on that turn
-    BOOST_CHECK(!HatcheryRooster::newDayCrowOwed(999, 0, settings));
-    BOOST_CHECK(HatcheryRooster::newDayCrowOwed(1000, 0, settings));
-    BOOST_CHECK(HatcheryRooster::newDayCrowOwed(1001, 0, settings));
-    BOOST_CHECK(HatcheryRooster::newDayCrowOwed(1400, 0, settings));
-    BOOST_CHECK(!HatcheryRooster::newDayCrowOwed(1400, 1, settings));
-    // Several days missed (the hatchery was not looked at): one crow settles it
-    BOOST_CHECK(HatcheryRooster::newDayCrowOwed(3500, 0, settings));
-    BOOST_CHECK(!HatcheryRooster::newDayCrowOwed(3500, 3, settings));
-
+    settings.mCrowTurns = 7;
     RoosterContext context;
-    context.mTurn = 1001;
-    context.mCrowDay = 0;
     context.mCrowInterval = 60;
     context.mRoll = 99;
 
-    // He was busy on the first turn of the day: he crows as soon as he is free
-    RoosterPlan plan = HatcheryRooster::decide(context, settings);
-    BOOST_CHECK(plan.mMood == RoosterMood::crow);
-    BOOST_CHECK_EQUAL(plan.mTurns, settings.mCrowTurns);
-    context.mTurn = 1350;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
-
-    // Having crowed for the day, he does not crow again for it
-    context.mCrowDay = 1;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
-
-    // A threat comes first, the crow follows when it is gone (the day is still owed)
-    context.mCrowDay = 0;
-    context.mThreat = true;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::guard);
-    context.mThreat = false;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
-
-    // The crow also interrupts a mood that still has turns left
-    context.mMood = RoosterMood::chase;
-    context.mMoodTurns = 5;
-    BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
+    // The time of the day does not matter: only the crow timer starts a crow
+    for(int64_t turn = 0; turn < 5000; turn += 250)
+    {
+        context.mTurn = turn;
+        context.mSinceCrow = 0;
+        BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::strut);
+        context.mSinceCrow = 60;
+        RoosterPlan plan = HatcheryRooster::decide(context, settings);
+        BOOST_CHECK(plan.mMood == RoosterMood::crow);
+        BOOST_CHECK_EQUAL(plan.mTurns, 7u);
+    }
 
     // A crow in progress is not started again
     context.mMood = RoosterMood::crow;
     context.mMoodTurns = 2;
     BOOST_CHECK(HatcheryRooster::decide(context, settings).mMood == RoosterMood::crow);
     BOOST_CHECK_EQUAL(HatcheryRooster::decide(context, settings).mTurns, 2u);
-
-    // The sleep period is the day divided by the divisor, the crow length comes from the settings
-    settings.mCrowTurns = 7;
-    settings.mRoostDivisor = 20;
-    context.mMood = RoosterMood::strut;
-    context.mMoodTurns = 0;
-    context.mCrowDay = 1;
-    context.mTurn = 1800;
-    plan = HatcheryRooster::decide(context, settings);
-    BOOST_CHECK(plan.mMood == RoosterMood::roost);
-    BOOST_CHECK_EQUAL(plan.mTurns, 50u);
-    context.mTurn = 1400;
-    context.mSinceCrow = 60;
-    plan = HatcheryRooster::decide(context, settings);
-    BOOST_CHECK(plan.mMood == RoosterMood::crow);
-    BOOST_CHECK_EQUAL(plan.mTurns, 7u);
 }

@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[2]
 credits = (root / 'CREDITS').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text() if (root / 'source/rooms/RoomHatchery.cpp').exists() else ''
 
-families = ('Crow', 'Protest', 'Cluck', 'FoodCall', 'Peep', 'EggCrack')
+families = ('Crow', 'Protest', 'Cluck', 'Peep', 'EggCrack')
 for family in families:
     folder = root / 'sounds/Spatial/Rooms/Hatchery' / family
     files = sorted(folder.glob('*.ogg'))
@@ -23,4 +23,20 @@ for family in families:
     assert '"Hatchery/%s"' % family in room, family
 # the rooster in the keeper's hand protests with a family of his own, not with the hen cackle
 assert 'fireRoomSound(tile, "Hatchery/Protest")' in room
+# the crow on the roof keeps its sound: it is fired when the rooster starts the crow mood, and only then
+begin = room[room.index('void RoomHatchery::beginRoosterMood('):]
+begin = begin[:begin.index('\n}\n')]
+assert 'if(plan.mMood == RoosterMood::crow)' in begin and 'fireAnimalSound(*rooster, "Hatchery/Crow")' in begin
+assert room.count('fireAnimalSound(*rooster, "Hatchery/Crow")') == 1, 'the roof crow is the only mood that crows'
+assert 'fireAnimalSound(*winner, "Hatchery/Crow")' in room, 'the winner of a fight crows'
+# the rooster no longer calls the hens: the food call sound is gone for good (files, credits, generator, code)
+gen = (root / 'tools/hatchery/gen_hatchery_sounds.py').read_text()
+assert not (root / 'sounds/Spatial/Rooms/Hatchery/FoodCall').exists(), 'FoodCall files are removed'
+assert 'FoodCall' not in credits, 'no credits entry for the food call'
+assert 'FoodCall' not in gen and 'make_food_call' not in gen, 'the generator no longer makes the food call'
+assert 'FoodCall' not in room and 'Hatchery/FoodCall' not in room, 'the rooster does not call the hens'
+for source_file in (root / 'source').rglob('*'):
+    if source_file.suffix in ('.cpp', '.h') and 'FoodCall' in source_file.read_text(errors='ignore'):
+        raise AssertionError('FoodCall still used in ' + str(source_file))
+assert 'FoodCall' not in (root / 'config/rooms.cfg').read_text()
 print('hatchery sounds ok')
