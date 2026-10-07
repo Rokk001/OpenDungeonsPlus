@@ -39,7 +39,7 @@ assert 'TreasuryGoldLayer::ringPileShape(' in temple and 'inline PileShape ringP
 assert 'getMeshNameForGold' not in temple.split('void RoomDungeonTemple::updateTreasuryMeshesForTile')[1].split(chr(10) + '}' + chr(10))[0]
 
 # Look of the gold: a metal sheen from the lights only (no self-lighting, no additive blending), moderate specular,
-# a gentle glow light, and a ring pile that runs out on the floor at its edges (no plateau with a cut edge).
+# a gentle glow light, and a ring pile that runs out on the floor inside its tile.
 assert 'emissive' not in material.replace('no emissive term', '')
 assert 'scene_blend' not in material
 for line in material.splitlines():
@@ -47,9 +47,10 @@ for line in material.splitlines():
         assert float(line.split()[1]) <= 0.6, line
 ring = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
 assert 'mCorner[i] = level' not in ring and 'mCorner' not in ring
-assert 'height += (peak - base) * bump;' in layer and 'rest * std::sqrt(rest)' in layer
-# A little gold is a small round heap in the middle of the tile, a full tile reaches the edges
-assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'return 0.5f;' in layer
+assert 'float height = peak * bump;' in layer and 'rest * std::sqrt(rest)' in layer
+# A little gold is a small round heap in the middle of the tile; a full pile leaves an uneven floor margin
+assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'return 0.46f;' in layer
+assert 'pileRadius(shape.mLevel) * (0.92f + 0.08f * std::sin(' in layer
 assert 'pileRadius(shape.mLevel)' in mesh.split('void addDetail')[1]
 assert '(0.5f * patch.mStrength)' in render.split('void RenderManager::setTreasuryGlowLight')[1].split('void RenderManager::destroyTreasuryGlowLight')[0]
 # Coins and gems stay readable: rounded coins with a lighter middle, a radius of at least 0.05 on top of the gold

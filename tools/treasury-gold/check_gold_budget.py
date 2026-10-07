@@ -17,9 +17,9 @@ REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 # Budget
 # A full pile carries up to 16 coins (6 triangles each), 4 gems (8) and 8 spilled coins (4) on top of its round
-# surface (a fan of 16 sectors with 2 rings, 80 triangles): 240 triangles. The limit was raised from 150 on purpose for the "sea of coins" of the plan. It
+# surface (a fan of 16 sectors with 2 rings, 48 triangles): 216 triangles. The limit was raised from 150 on purpose for the "sea of coins" of the plan. It
 # stays cheap because the piles of a room are one static batch (two draw calls), the coins only exist at the detail
-# full, and piles far from the camera use the reduced mesh (8 triangles).
+# full, and piles far from the camera use the reduced mesh (16 triangles).
 MAX_TRIANGLES_PER_PILE = 250
 MAX_TRIANGLES_PER_HEAP = 150
 MAX_TRIANGLES_PER_SACK = 400
@@ -65,13 +65,12 @@ def main():
     sectors = constant(pile, 'PileSectors')
     full_rings = constant(pile, 'FullRings')
     reduced_rings = constant(pile, 'ReducedRings')
-    # The round surface: a fan of one triangle per sector in the middle, a band of two triangles per sector between
-    # two rings, and a band of two triangles per sector from the last ring to the tile border (the border points
-    # are as many as the sectors)
-    full_surface_tris = sectors * (1 + 2 * (full_rings - 1) + 2)
-    reduced_surface_tris = sectors * (1 + 2 * (reduced_rings - 1) + 2)
-    full_surface_verts = 1 + sectors * full_rings + sectors
-    reduced_surface_verts = 1 + sectors * reduced_rings + sectors
+    # The round surface: a fan of one triangle per sector in the middle and a band of two triangles per sector
+    # between each pair of rings. The outer ring is the irregular foot; there is no tile-border band.
+    full_surface_tris = sectors * (1 + 2 * (full_rings - 1))
+    reduced_surface_tris = sectors * (1 + 2 * (reduced_rings - 1))
+    full_surface_verts = 1 + sectors * full_rings
+    reduced_surface_verts = 1 + sectors * reduced_rings
     heap_rings = constant(loose, 'HeapRings')
     heap_sectors = constant(loose, 'HeapSectors')
     sack_sectors = constant(loose, 'SackSectors')
