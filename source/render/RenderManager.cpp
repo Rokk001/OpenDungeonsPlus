@@ -3032,7 +3032,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     // Level of the pile this entity shows (-1 when it is no pile) and the level its tile had before
     int pileLevel = -1;
     int previousPileLevel = -1;
-    // Treasury gold piles are built here from their name (or swapped for the classic stacks)
+    // Treasury gold piles are built here from their name at every detail setting
     const bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
     // True when the entity is itself a gold pile, so it is not an object standing in the gold
     bool isPileEntity = false;
@@ -5879,7 +5879,7 @@ void RenderManager::updateTreasuryLod(Ogre::Real timeSinceLastFrame)
         return;
 
     mTreasuryLodTimer = 0.0f;
-    // Only the full detail has a level of detail: reduced is coarse everywhere, off draws the classic stacks
+    // Only full detail changes with distance; reduced and off use the coarse round surface everywhere
     if(TreasuryGoldMesh::getDetail() != TreasuryGoldMesh::Detail::full || mViewport == nullptr
         || mViewport->getCamera() == nullptr)
         return;

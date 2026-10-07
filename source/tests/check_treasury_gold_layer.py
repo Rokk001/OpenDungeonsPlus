@@ -26,7 +26,7 @@ assert 'static_cast<double>(x), static_cast<double>(y), 0.0, 0.0, false' in trea
 assert 'The piles next to the removed tile lose a neighbour' in treasury
 # The renderer builds the pile from its name, and the option reaches it.
 assert 'TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar)' in render
-assert 'classicMeshForLevel' in mesh and 'Detail::off' in mesh
+assert 'classicMeshForLevel' not in mesh and 'const bool reduced = (currentDetail != Detail::full)' in mesh
 assert 'TREASURY_DETAIL' in read('source/utils/ConfigManager.h')
 assert 'TreasuryDetail' in read('gui/WindowSettings.layout')
 assert 'TreasuryGoldPile' in read('materials/scripts/TreasuryGoldPile.material')
@@ -35,7 +35,7 @@ assert 'TreasuryGoldPile.png' in read('CREDITS')
 assert 'TreasuryGoldMesh.cpp' in read('CMakeLists.txt')
 assert 'addBand(surface, 1 + (rings - 1) * PileSectors, 1 + rings * PileSectors)' not in mesh
 assert 'buildRoundSurface(shape, divisions, dent, roundSurface)' in mesh
-# The classic stacks stay for free gold on the floor and for the 'off' setting.
+# The classic stack names stay for free gold on the floor; room storage always uses round piles.
 assert 'GoldstackLv1' in read('source/entities/TreasuryObject.cpp')
 
 probe = r"""

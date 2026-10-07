@@ -495,10 +495,8 @@ std::string prepareMesh(Ogre::SceneManager* sceneManager, const std::string& mes
     if(shape.mLevel == 0 && (currentDetail != Detail::full || farAway))
         return std::string();
 
-    if(currentDetail == Detail::off)
-        return TreasuryGoldLayer::classicMeshForLevel(shape.mLevel);
-
-    const bool reduced = (currentDetail == Detail::reduced) || (farAway && currentDetail == Detail::full);
+    // Off keeps the round pile surface, without decorative coins or gems.
+    const bool reduced = (currentDetail != Detail::full) || (farAway && currentDetail == Detail::full);
     const std::string name = reduced ? meshName + ReducedSuffix : meshName;
     if(!Ogre::MeshManager::getSingleton().resourceExists(name + ".mesh", "Graphics"))
         buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? ReducedRings : FullRings, !reduced);
@@ -542,9 +540,6 @@ void updateDentedPile(Ogre::ManualObject* object, const std::string& meshName, f
 
 std::string pileNameForClassicStack(const std::string& meshName, float x, float y)
 {
-    if(currentDetail == Detail::off)
-        return meshName;
-
     const int level = TreasuryGoldLayer::levelForClassicName(meshName);
     if(level <= 0)
         return meshName;
