@@ -1858,6 +1858,11 @@ void RoomHatchery::updateRooster(ChickenEntity* rooster, const std::vector<Chick
     if(rooster->isBusy())
         return;
 
+    // The roof is only for the crow: a rooster that sits there without crowing (the mood is not saved, so after
+    // loading he may still be on the roof) jumps down
+    if(rooster->isOnRoof() && (rooster->getMood() != RoosterMood::crow))
+        climbDown(rooster);
+
     double guardRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterGuardRadius", 4.0);
     Ogre::Vector2 threat(0.0f, 0.0f);
     RoosterContext context;
