@@ -242,7 +242,7 @@ public:
     bool rrIsIdleHandAnimationPlaying() const;
     void rrCancelIdleHandAnimation();
     void rrPlayDigAnimation();
-    void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false);
+    void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
 
     //! \brief Creates a free-standing particle effect that stays until rrDestroyFreeParticleEffect().
