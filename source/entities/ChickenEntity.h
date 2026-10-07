@@ -137,9 +137,14 @@ public:
     //! \brief Plays a pose (see ChickenPose.h) and holds the animal still for the number of turns.
     void playPose(const std::string& pose, uint32_t turns);
 
-    //! A busy animal stays in its pose or in its flight to or from a roof
+    //! Plays the coop entrance pose, then walks through its door to the hatchery floor.
+    void emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit);
+    inline bool isLeavingCoop() const
+    { return mLeavingCoop; }
+
+    //! A busy animal stays in its pose, in its flight to or from a roof, or in its coop exit
     inline bool isBusy() const
-    { return (mBusyTurns > 0) || (mHopTurnsLeft > 0); }
+    { return (mBusyTurns > 0) || (mHopTurnsLeft > 0) || mLeavingCoop; }
 
     inline bool isHopping() const
     { return mHopTurnsLeft > 0; }
@@ -265,6 +270,9 @@ private:
     uint32_t mNbTurnLay;
     uint32_t mAge;
     uint32_t mBusyTurns;
+    bool mLeavingCoop;
+    Ogre::Vector2 mCoopDoor;
+    Ogre::Vector2 mCoopExit;
     uint32_t mScatterTurns;
     bool mRoomDriven;
     bool mFighting;

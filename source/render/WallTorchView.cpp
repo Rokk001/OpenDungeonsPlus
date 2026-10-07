@@ -60,21 +60,21 @@ const double LIGHT_HEIGHT = 1.6;
 const char* const LOOP_FAMILY = "Rooms/Torch/Loop";
 
 //! Bracket model: mesh name, height of its origin (the contact point with the wall) and the shift of
-//! flame, glow and smoke from the wall towards the open tile (the cup of the model)
+//! flame and smoke from the wall towards the open tile (the cup of the model)
 const char* const MODEL_MESH = "WallTorch.mesh";
 const double MODEL_HEIGHT = 0.85;
 const double FLAME_WALL_OFFSET = 0.2;
 
-//! The parts of a torch: bracket, flame, glow, smoke
-const uint32_t NB_PARTS = 4;
-const char* const PART_SYSTEMS[NB_PARTS] = {"RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"};
-const double PART_HEIGHTS[NB_PARTS] = {1.25, 1.4, 1.4, 1.4};
-const double PART_DISTANCES[NB_PARTS] = {16.0, 16.0, 14.0, 12.0};
+//! The parts of a torch: bracket, flame, smoke
+const uint32_t NB_PARTS = 3;
+const char* const PART_SYSTEMS[NB_PARTS] = {"RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchSmoke"};
+const double PART_HEIGHTS[NB_PARTS] = {1.25, 1.4, 1.4};
+const double PART_DISTANCES[NB_PARTS] = {16.0, 16.0, 12.0};
 //! The mode "reduced" shows only the bracket and the flame
 const uint32_t NB_REDUCED_PARTS = 2;
-//! Flicker of the flame and the glow (the glow flickers a little more and slower)
-const double PART_FLICKER_FACTORS[NB_PARTS] = {0.0, 1.0, 1.2, 0.0};
-const double PART_SPEED_FACTORS[NB_PARTS] = {0.0, 1.0, 0.74, 0.0};
+//! Flicker of the flame
+const double PART_FLICKER_FACTORS[NB_PARTS] = {0.0, 1.0, 0.0};
+const double PART_SPEED_FACTORS[NB_PARTS] = {0.0, 1.0, 0.0};
 
 uint64_t makeKey(int32_t x, int32_t y)
 {
@@ -386,7 +386,7 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
         nbLights = mSettings.mActiveLightsReduced;
     }
 
-    // Flame and glow for what is close to the camera and in view
+    // Flame for what is close to the camera and in view
     std::vector<std::map<uint64_t, Torch>::iterator> shown;
     std::vector<double> lookDistances;
     for(std::map<uint64_t, Torch>::iterator it = mTorches.begin(); it != mTorches.end(); ++it)
@@ -403,15 +403,6 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
                 camera->isVisible(Ogre::AxisAlignedBox(center - extent, center + extent));
         }
 
-        for(uint32_t i = 0; i < NB_PARTS; ++i)
-        {
-            bool wanted = torch.mShown && (i < nbParts) && (torch.mDistance <= PART_DISTANCES[i] * distanceFactor);
-            if(wanted && (torch.mParts[i].mNode == nullptr))
-                createPart(torch, i, "WallTorch_" + keyToString(it->first) + "_" + Helper::toString(++mUniqueNumber));
-            else if(!wanted && (torch.mParts[i].mNode != nullptr))
-                destroyPart(torch.mParts[i]);
-        }
-
         if(torch.mShown)
         {
             shown.push_back(it);
@@ -419,6 +410,8 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
         }
         else
         {
+            for(uint32_t i = 0; i < NB_PARTS; ++i)
+                destroyPart(torch.mParts[i]);
             destroyLight(torch);
             stopSound(torch);
         }
@@ -449,6 +442,17 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
         }
         else
             destroyLight(torch);
+
+        // Without a real light, keep only the holder and flame.
+        for(uint32_t part = 0; part < NB_PARTS; ++part)
+        {
+            bool wanted = (part < nbParts) && (torch.mDistance <= PART_DISTANCES[part] * distanceFactor) &&
+                ((part < NB_REDUCED_PARTS) || (torch.mLight != nullptr));
+            if(wanted && (torch.mParts[part].mNode == nullptr))
+                createPart(torch, part, "WallTorch_" + keyToString(shown[i]->first) + "_" + Helper::toString(++mUniqueNumber));
+            else if(!wanted && (torch.mParts[part].mNode != nullptr))
+                destroyPart(torch.mParts[part]);
+        }
     }
 
     // The crackling loop for the nearest few to the camera (refresh is not called with the setting off)

@@ -31,6 +31,18 @@ assert 'hasFloorScatter(tile->getX(), tile->getY())' in treasury
 assert 'mGoldChanged = true;\n    return new RoomTreasuryTileData' in treasury.replace('\r\n', '\n')
 assert 'shape.mLevel == 0 && (currentDetail != Detail::full || farAway)' in mesh
 
+# Off keeps the same irregular round surface as reduced, with no decorative detail or empty-floor scatter.
+prepare = mesh.split('std::string prepareMesh(')[1].split('Ogre::ManualObject* createDentedPile')[0]
+assert 'classicMeshForLevel' not in prepare
+assert 'const bool reduced = (currentDetail != Detail::full)' in prepare
+assert 'reduced ? ReducedRings : FullRings, !reduced' in prepare
+assert 'shape.mLevel == 0 && (currentDetail != Detail::full || farAway)' in prepare
+classic = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
+assert 'Detail::off' not in classic and 'TreasuryGoldLayer::meshName(shape)' in classic
+# Off retains the existing disabled effects and surface interaction registration.
+register = mesh.split('int registerPile(')[1].split('void unregisterPile')[0]
+assert 'if(currentDetail == Detail::off)' in register and 'return -1;' in register
+
 # Dungeon heart ring: the classic stacks are drawn as piles on the client (server names and tests untouched).
 assert 'pileNameForClassicStack' in render and 'replacesClassicStack' in render
 # The server names the heart ring piles with the levels of the ring neighbours, so the piles run into each other
@@ -39,7 +51,7 @@ assert 'TreasuryGoldLayer::ringPileShape(' in temple and 'inline PileShape ringP
 assert 'getMeshNameForGold' not in temple.split('void RoomDungeonTemple::updateTreasuryMeshesForTile')[1].split(chr(10) + '}' + chr(10))[0]
 
 # Look of the gold: a metal sheen from the lights only (no self-lighting, no additive blending), moderate specular,
-# a gentle glow light, and a ring pile that runs out on the floor at its edges (no plateau with a cut edge).
+# a gentle glow light, and a ring pile that runs out on the floor inside its tile.
 assert 'emissive' not in material.replace('no emissive term', '')
 assert 'scene_blend' not in material
 for line in material.splitlines():
@@ -47,9 +59,10 @@ for line in material.splitlines():
         assert float(line.split()[1]) <= 0.6, line
 ring = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
 assert 'mCorner[i] = level' not in ring and 'mCorner' not in ring
-assert 'height += (peak - base) * bump;' in layer and 'rest * std::sqrt(rest)' in layer
-# A little gold is a small round heap in the middle of the tile, a full tile reaches the edges
-assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'return 0.5f;' in layer
+assert 'float height = peak * bump;' in layer and 'rest * std::sqrt(rest)' in layer
+# A little gold is a small round heap in the middle of the tile; a full pile leaves an uneven floor margin
+assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'return 0.46f;' in layer
+assert 'pileRadius(shape.mLevel) * (0.92f + 0.08f * std::sin(' in layer
 assert 'pileRadius(shape.mLevel)' in mesh.split('void addDetail')[1]
 assert '(0.5f * patch.mStrength)' in render.split('void RenderManager::setTreasuryGlowLight')[1].split('void RenderManager::destroyTreasuryGlowLight')[0]
 # Coins and gems stay readable: rounded coins with a lighter middle, a radius of at least 0.05 on top of the gold
@@ -126,7 +139,7 @@ assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render
 assert 'removeTreasuryThiefSack(curCreature)' in render
 assert 'refreshTreasuryGlow' in render and 'glowOfPatch' in render and 'ROOM_LIGHT_MASK' in render
 
-# Option and budgets: every new effect goes through the view test and a per-room budget; off draws nothing.
+# Option and budgets: every new effect goes through the view test and a per-room budget; off has no effects.
 assert 'TreasuryEffectKind::ambient' in render and 'ambientBudget(TreasuryGoldMesh::getDetail())' in render
 assert 'case TreasuryGoldMesh::Detail::full:' in rules.split('inline int ambientBudget')[1]
 assert 'camera->isVisible' in render.split('void RenderManager::startTreasuryPileChange')[1].split('void RenderManager::updateTreasuryPileSettles')[0]

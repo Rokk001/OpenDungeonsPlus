@@ -666,6 +666,12 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
             continue;
         }
 
+        if(hen->isLeavingCoop())
+        {
+            ++it;
+            continue;
+        }
+
         if(it->mPosing)
         {
             if(it->mTurns > 0)
@@ -737,13 +743,23 @@ bool RoomHatchery::spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& 
     for(uint32_t i = 0; (i < mCentralActiveSpotTiles.size()) && (spawned < count); ++i)
     {
         Tile* coopTile = mCentralActiveSpotTiles[(first + i) % mCentralActiveSpotTiles.size()];
-        Ogre::Vector2 freePosition;
-        if(!RoomObjectNavigation::standingPosition(obstacles,
-            Ogre::Vector2(coopTile->getX(), coopTile->getY()), freePosition))
+        Tile* floorTile = getGameMap()->getTile(coopTile->getX() + 1, coopTile->getY());
+        if((floorTile == nullptr) || (floorTile->getCoveringRoom() != this))
             continue;
 
-        ChickenEntity* animal = spawnAnimal(kind, Ogre::Vector3(freePosition.x, freePosition.y, 0.0f), settings);
-        animal->playPose(ChickenPose::emerge, 2);
+        const Ogre::Vector2 inside(coopTile->getX() + 0.3f, coopTile->getY());
+        const Ogre::Vector2 door(coopTile->getX() + 0.9f, coopTile->getY());
+        Ogre::Vector2 freePosition;
+        if(!RoomObjectNavigation::standingPosition(obstacles,
+            Ogre::Vector2(coopTile->getX() + 1.1f, coopTile->getY()), freePosition) ||
+           (freePosition.x <= coopTile->getX() + 0.9f) ||
+           (getGameMap()->getTile(Helper::round(freePosition.x), Helper::round(freePosition.y)) != floorTile) ||
+           !RoomObjectPath::clearSegment(obstacles, inside, door, true) ||
+           !RoomObjectPath::clearSegment(obstacles, door, freePosition))
+            continue;
+
+        ChickenEntity* animal = spawnAnimal(kind, Ogre::Vector3(inside.x, inside.y, 0.0f), settings);
+        animal->emergeFromCoop(door, freePosition);
         ++spawned;
     }
     return spawned > 0;
@@ -958,7 +974,7 @@ void RoomHatchery::updateFlock(const std::vector<ChickenEntity*>& hens)
     collectHungry(hungry);
     for(ChickenEntity* hen : hens)
     {
-        if(hen->isBusy() || hen->isScattering() || isOnNestTrip(*hen))
+        if(hen->isBusy() || hen->isLeavingCoop() || hen->isScattering() || isOnNestTrip(*hen))
             continue;
 
         // A hungry creature comes close: the hen runs off cackling to another part of the hatchery
@@ -1314,7 +1330,8 @@ void RoomHatchery::doUpkeep()
     uint32_t capacity = HatcheryCycle::capacity(mCoveredTiles.size(), mNumActiveSpots, settings);
     for(ChickenEntity* hen : hens)
     {
-        if((findPendingEgg(*hen) == nullptr) && (settings.mLayShowTurns > 0) && HatcheryCycle::canLay(counts, capacity))
+        if(!hen->isLeavingCoop() && (findPendingEgg(*hen) == nullptr) &&
+           (settings.mLayShowTurns > 0) && HatcheryCycle::canLay(counts, capacity))
         {
             // The egg lies in a free nest (the closest one first), she walks to the place next to it (she does not
             // stand in the nest). Without a free nest, or when the way to it does not fit into the time left, she
@@ -1352,6 +1369,8 @@ void RoomHatchery::doUpkeep()
 
     for(ChickenEntity* hen : hens)
     {
+        if(hen->isLeavingCoop())
+            continue;
         PendingEgg* planned = findPendingEgg(*hen);
         if(!hen->countDownLay())
             continue;
@@ -1892,7 +1911,7 @@ void RoomHatchery::updateRooster(ChickenEntity* rooster, const std::vector<Chick
         rooster->countDownMood();
 
     // He stays in his pose while it lasts
-    if(rooster->isBusy())
+    if(rooster->isBusy() || rooster->isLeavingCoop())
         return;
 
     // The roof is only for the crow: a rooster that sits there without crowing (the mood is not saved, so after

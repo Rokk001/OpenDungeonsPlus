@@ -505,7 +505,11 @@ void Tile::setMarkedForDigging(bool ss, const Player *pp)
     /* If we are trying to mark a tile that is not dirt or gold
      * or is already dug out, ignore the request.
      */
-    if (ss && !isDiggable(pp->getSeat()))
+    const bool unexplored = pp->getIsHuman() &&
+        (getGameMap()->isServerGameMap() ?
+            !getGameMap()->everVisitedFlagPool[getX()][getY()][pp->getSeat()->getId()] :
+            (!getEverVisible() || getHasFogOfWar()));
+    if (ss && !unexplored && !isDiggable(pp->getSeat()))
         return;
 
     // If the tile was already in the given state, we can return
@@ -2595,7 +2599,7 @@ void Tile::setFogOfWarMesh(Ogre::InstancedEntity* instancedEntity, bool isMarked
     mFogOfWarDirtMesh = instancedEntity;
     if(mFogOfWarDirtMesh!=nullptr)
         if(isMarked)
-            mFogOfWarDirtMesh->setCustomParam(0, Ogre::Vector4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow color
+            mFogOfWarDirtMesh->setCustomParam(0, Ogre::Vector4(0.65f, 0.45f, 1.0f, 0.5f));
         else
             mFogOfWarDirtMesh->setCustomParam(0, Ogre::Vector4(1.0f, 1.0f, 0.0f, 0.0f)); // 0 in alpha sygnalize the shader to use the orginal color from the texture
 }

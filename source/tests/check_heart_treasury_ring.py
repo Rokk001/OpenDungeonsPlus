@@ -351,14 +351,14 @@ probe += r"""
  check(heart.mBuildingObjects.empty(),"every gold stack object is removed");
  check(dataOf(heart,ringA)->mMeshOfTile.empty()&&dataOf(heart,ringB)->mMeshOfTile.empty(),"the tile data forgets its stack");
 
- // Neighbouring ring tiles with gold run into each other: a ridge along their common edge takes the lower level
+ // Neighbouring ring tiles record each other's level in their stable mesh names
  Tile* ringN=tileAt(heart,12,11);
  check(heart.isTreasuryTile(ringN),"the tile north of ringA is a ring tile");
  heart.depositGold(1000,ringA);
  heart.depositGold(500,ringN);
  heart.doUpkeep();
- check(dataOf(heart,ringA)->mMeshOfTile=="TreasuryGold_7_4000_2R","a full pile meets its lower neighbour with a north ridge at the lower level");
- check(dataOf(heart,ringN)->mMeshOfTile=="TreasuryGold_4_0040_3R","the neighbour meets it with a south ridge");
+ check(dataOf(heart,ringA)->mMeshOfTile=="TreasuryGold_7_4000_2R","a full pile records its lower north neighbour");
+ check(dataOf(heart,ringN)->mMeshOfTile=="TreasuryGold_4_0040_3R","the neighbour records the full pile to its south");
  check(heart.withdrawGold(9999999)==1500,"draining the pair takes the 1500 stored");
  heart.doUpkeep();
  check(heart.mBuildingObjects.empty(),"the pair of piles is removed");

@@ -242,7 +242,7 @@ public:
     bool rrIsIdleHandAnimationPlaying() const;
     void rrCancelIdleHandAnimation();
     void rrPlayDigAnimation();
-    void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false);
+    void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
 
     //! \brief Creates a free-standing particle effect that stays until rrDestroyFreeParticleEffect().
@@ -534,6 +534,9 @@ private:
         Ogre::Real mPoseTime;
         Ogre::Real mPhase;
         int mFeatherBursts;
+        bool mEmergeFeathersPending;
+        bool mCoopDoorReplayPending;
+        bool mCoopExitWalking;
         //! The rooster this one fights (set by the server event), the first of the two makes the feather clouds
         ChickenEntity* mFightPartner;
         bool mFightLeader;
@@ -790,6 +793,7 @@ private:
         Ogre::Real chickenHeight, bool withoutHands) const;
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName = "ChickenFeathers");
+    bool chickenClipVisible(ChickenEntity* chicken, const std::string& clip) const;
     void updateChickenLooks(Ogre::Real timeSinceLastFrame);
     void applyChickenKindLook(ChickenEntity* chicken);
     void clearChickenLooks();

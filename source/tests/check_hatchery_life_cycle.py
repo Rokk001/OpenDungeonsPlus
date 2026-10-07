@@ -107,7 +107,9 @@ for key in ('HatcheryFightTurns', 'HatcheryFightApproachTurns', 'HatcheryFightRe
 for key in ('HatcheryFightTurns', 'HatcheryFightApproachTurns', 'HatcheryFightReach'):
     assert key in room_cpp, key
 render = (root / 'source/render/RenderManagerChickens.cpp').read_text()
-assert 'HatcheryFightFeatherSeconds' in render and 'rrChickenFight' in render
+# Fighting has no permitted feather trigger; the fight event itself remains wired.
+assert 'rrChickenFight' in render and 'HatcheryFightFeatherSeconds' not in render
+assert 'createChickenFeatherEffect' not in body(render, 'void RenderManager::rrChickenFight')
 assert 'bool ChickenEntity::loseFight' in chicken and 'ChickenState::dying' in body(chicken, 'bool ChickenEntity::loseFight')
 pick = body(chicken, 'void ChickenEntity::pickup')
 assert 'mFighting = false' in pick, 'a picked up rooster leaves the fight'

@@ -1992,7 +1992,11 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
                 feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * 3.0f);
         }
         if(feeding.mFeatherBursts < 2 && time >= meal.mFirstBite + 0.45f * meal.mBite +
-            feeding.mFeatherBursts * (meal.mSecondBite - meal.mFirstBite))
+            feeding.mFeatherBursts * (meal.mSecondBite - meal.mFirstBite) &&
+            feeding.mAnimation != nullptr && feeding.mAnimation->getEnabled() && !feeding.mAnimation->hasEnded() &&
+            feeding.mEntity->isVisible() && feeding.mChickenNode != nullptr &&
+            feeding.mChickenNode->isInSceneGraph() && feeding.mChickenEntity != nullptr &&
+            feeding.mChickenEntity->isVisible())
         {
             createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth),
                 feeding.mRoosterFeathers ? "ChickenFeathersRooster" : "ChickenFeathers");
@@ -2715,7 +2719,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         else if ( !tile.getEverVisible() && !tile.getHasFogOfWar())
         {
 
-            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), false);
+            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), isMarked);
             tile.setFogOfWarCloud( mInstanceManagerCloud->createInstancedEntity("Fog"));
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
             tileMeshNode->attachObject(tile.getFogOfWarCloud());
@@ -2749,7 +2753,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
             tile.setFogOfWarMesh(nullptr, isMarked);  
             tile.setHasFogOfWar(false);  
-            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), false);
+            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
             tile.getFogOfWarMesh()->setPosition(tile.getPosition());
            
@@ -2763,6 +2767,9 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         
 
     }
+    if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)
+        tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
+
     // We rescale and set the orientation that may have changed
     if(tileMeshNode != nullptr)
     {
@@ -3025,7 +3032,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     // Level of the pile this entity shows (-1 when it is no pile) and the level its tile had before
     int pileLevel = -1;
     int previousPileLevel = -1;
-    // Treasury gold piles are built here from their name (or swapped for the classic stacks)
+    // Treasury gold piles are built here from their name at every detail setting
     const bool isBuildingObject = (renderedMovableEntity->getObjectType() == GameEntityType::buildingObject);
     // True when the entity is itself a gold pile, so it is not an object standing in the gold
     bool isPileEntity = false;
@@ -5073,6 +5080,9 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
 
 void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName)
 {
+    if((particleName == "ChickenFeathers" || particleName == "ChickenFeathersRooster") &&
+       (mViewport == nullptr || mViewport->getCamera() == nullptr || !mViewport->getCamera()->isVisible(position)))
+        return;
     const std::string name = particleName + "_" + Helper::toString(++mChickenFeatherEffectNumber);
     Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(name + "_node", position);
     Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, particleName);
@@ -5869,7 +5879,7 @@ void RenderManager::updateTreasuryLod(Ogre::Real timeSinceLastFrame)
         return;
 
     mTreasuryLodTimer = 0.0f;
-    // Only the full detail has a level of detail: reduced is coarse everywhere, off draws the classic stacks
+    // Only full detail changes with distance; reduced and off use the coarse round surface everywhere
     if(TreasuryGoldMesh::getDetail() != TreasuryGoldMesh::Detail::full || mViewport == nullptr
         || mViewport->getCamera() == nullptr)
         return;
@@ -6448,21 +6458,7 @@ std::string RenderManager::colourizeMaterial(const std::string& materialName, co
         if (technique->getNumPasses() == 0 || techniqueName.find("ZPrePassScheme") != Ogre::String::npos)
             continue;
 
-        if (markedForDigging)
-        {
-            // Color the material with yellow on the latest pass
-            // so we're sure to see the taint.
-            Ogre::ColourValue color(1.0, 1.0, 0.0, 1.0);
-            for (uint16_t i = 0; i < technique->getNumPasses(); ++i)
-            {
-                Ogre::Pass* pass = technique->getPass(i);
-                pass->setSpecular(color);
-                pass->setAmbient(color);
-                pass->setDiffuse(color);
-                pass->setEmissive(color);
-            }
-        }
-        else if(!playerHasVision)
+        if (!markedForDigging && !playerHasVision)
         {
             // Color the material with dark color on the latest pass
             // so we're sure to see the taint.
@@ -6498,6 +6494,24 @@ std::string RenderManager::colourizeMaterial(const std::string& materialName, co
 
             
 
+        }
+        if(markedForDigging)
+        {
+            Ogre::Pass* markPass = technique->createPass();
+            *markPass = *technique->getPass(0);
+            Ogre::HighLevelGpuProgramManager& programManager = Ogre::HighLevelGpuProgramManager::getSingleton();
+            if(!programManager.resourceExists("Custom_color", "Graphics"))
+            {
+                Ogre::HighLevelGpuProgramPtr fragmentProgram = programManager.createProgram("Custom_color", "Graphics", "glsl", Ogre::GpuProgramType::GPT_FRAGMENT_PROGRAM);
+                fragmentProgram->setSourceFile("Custom_color.frag");
+            }
+            markPass->setFragmentProgram("Custom_color", "Graphics");
+            Ogre::ColourValue markColor(0.65f, 0.45f, 1.0f, 0.5f);
+            markPass->getFragmentProgramParameters()->setNamedConstant("color", markColor);
+            markPass->getFragmentProgramParameters()->setNamedConstant("ambient", markColor);
+            markPass->setLightingEnabled(false);
+            markPass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA);
+            markPass->setDepthWriteEnabled(false);
         }
     }
 
@@ -7103,8 +7117,62 @@ void RenderManager::rrPlayDigAnimation()
     mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "DigSwing", false);
 }
 
-void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging)
+void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
 {
+    if(singleRectangle)
+    {
+        if(mTilePreview == nullptr)
+        {
+            if(tiles.empty())
+                return;
+            mTilePreview = mSceneManager->createManualObject("KeeperTilePreview");
+            mTilePreview->setDynamic(true);
+            mTilePreview->setCastShadows(false);
+            mSceneManager->getRootSceneNode()->createChildSceneNode("KeeperTilePreviewNode")->attachObject(mTilePreview);
+        }
+        mTilePreview->clear();
+        if(tiles.empty())
+            return;
+
+        int minX = tiles.front()->getX();
+        int maxX = minX;
+        int minY = tiles.front()->getY();
+        int maxY = minY;
+        float z = 0.04f;
+        for(Tile* tile : tiles)
+        {
+            minX = std::min(minX, tile->getX());
+            maxX = std::max(maxX, tile->getX());
+            minY = std::min(minY, tile->getY());
+            maxY = std::max(maxY, tile->getY());
+            Ogre::MovableObject* surface = tile->getFogOfWarMesh();
+            if(tile->getEverVisible() && !tile->getHasFogOfWar())
+            {
+                const std::string meshName = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
+                if(mSceneManager->hasEntity(meshName))
+                    surface = mSceneManager->getEntity(meshName);
+            }
+            if(surface != nullptr)
+                z = std::max(z, surface->getWorldBoundingBox(true).getMaximum().z + 0.02f);
+        }
+        const Ogre::Vector3 corners[] = {
+            Ogre::Vector3(minX - 0.5f, minY - 0.5f, z),
+            Ogre::Vector3(maxX + 0.5f, minY - 0.5f, z),
+            Ogre::Vector3(maxX + 0.5f, maxY + 0.5f, z),
+            Ogre::Vector3(minX - 0.5f, maxY + 0.5f, z)
+        };
+        mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_LINE_LIST, "Graphics");
+        for(int i = 0; i < 4; ++i)
+        {
+            mTilePreview->position(corners[i]);
+            mTilePreview->colour(colour);
+            mTilePreview->position(corners[(i + 1) % 4]);
+            mTilePreview->colour(colour);
+        }
+        mTilePreview->end();
+        return;
+    }
+
     if(mTilePreview == nullptr)
     {
         if(tiles.empty())
