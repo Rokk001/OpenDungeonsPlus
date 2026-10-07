@@ -26,9 +26,27 @@ assert 'Random::Uint(0, 1000)' in body(room, 'void RoomHatchery::beginRoosterMoo
 assert 'mSinceCrow >= context.mCrowInterval' in rooster_cpp and 'settings.mCrowTurns' in rooster_cpp
 
 # The server computes the roof place, the client only shows the position it gets
-roost = body(room, 'void RoomHatchery::roostOnRoof(')
+roost = body(room, 'bool RoomHatchery::roostOnRoof(')
 assert 'getNearestCoop(' in roost and 'getPerchSpot(' in roost and 'getRoofHeight(' in roost and 'hopToRoof(' in roost
 assert 'if(coopTile == nullptr)' in roost, 'a hatchery without a coop does not crash'
+# Walk to the ground next to the coop first, flutter up only from there (no flight from far away), time limit on the way
+assert 'getGroundSpot(*coopTile, approach)' in roost and 'rooster->walkToward(approach' in roost
+assert 'if(position.distance(approach) < mRoosterSettings.mHopDistance)' in roost, 'hop only from next to the coop'
+assert roost.index('if(position.distance(approach) < mRoosterSettings.mHopDistance)') < roost.index('rooster->hopToRoof('), 'up only after the arrival test'
+assert 'hopFromFar' not in room + (root / 'source/rooms/RoomHatchery.h').read_text()
+assert re.search(r'^\s+HatcheryRoosterHopDistance\s', config, re.M), 'distance for the hop from the config'
+update_body = body(room, 'void RoomHatchery::updateRooster(')
+assert 'countApproachTurn()' in update_body and '"HatcheryRoosterApproachTurns", 15.0' in update_body, 'time limit on the way, from the config'
+assert re.search(r'^# HatcheryRoosterApproachTurns\s', config, re.M) and re.search(r'^\s+HatcheryRoosterApproachTurns\s+15$', config, re.M)
+assert 'resetApproachTurns()' in body(room, 'void RoomHatchery::beginRoosterMood(')
+limit_part = update_body[update_body.index('countApproachTurn()'):]
+assert 'setMood(RoosterMood::strut, 0)' in limit_part[:300] and 'setRoomDriven(false)' in limit_part[:300], 'he gives up the crow when the limit is over'
+assert 'if(roostOnRoof(rooster, ChickenPose::crow))' in room, 'the crow pose only where he crows, not while he walks or flutters'
+assert roost.count('setAnimationState(pose, true)') == 2, 'the crow pose never overwrites the flutter or the walk'
+# Landing right next to the coop (distance from the config)
+ground = body(room, 'bool RoomHatchery::getGroundSpot(')
+assert '"HatcheryRoosterLandReach", 1.0' in ground and 'spot.distance(coopCenter) <= reach' in ground
+assert re.search(r'^# HatcheryRoosterLandReach\s', config, re.M) and re.search(r'^\s+HatcheryRoosterLandReach\s+1$', config, re.M)
 nearest = body(room, 'Tile* RoomHatchery::getNearestCoop(')
 assert 'mCentralActiveSpotTiles' in nearest, 'only a coop of the own hatchery'
 assert 'RoosterMood::crow' in room and 'ChickenPose::crow' in room and 'Hatchery/Crow' in room

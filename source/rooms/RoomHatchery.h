@@ -182,9 +182,10 @@ private:
     void beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& plan);
     void actRoosterMood(ChickenEntity* rooster, const std::vector<ChickenEntity*>& hens,
         const RoosterSettings& settings, const Ogre::Vector2& threat);
-    //! Sits the rooster on the roof of the nearest coop with the pose. Without
-    //! coop he stays on the ground.
-    void roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar);
+    //! Walks the rooster to the ground next to the nearest coop, flutters him up from there and sits him on the
+    //! roof with the pose. Without coop he stays on the ground. True when he is where he crows (on the roof, or on
+    //! the ground without coop), false while he is on his way.
+    bool roostOnRoof(ChickenEntity* rooster, const std::string& pose);
     void climbDown(ChickenEntity* rooster);
     //! The chicks follow the nearest hen in a line, never the rooster.
     void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks);
