@@ -137,8 +137,12 @@ public:
     //! \brief Plays a pose (see ChickenPose.h) and holds the animal still for the number of turns.
     void playPose(const std::string& pose, uint32_t turns);
 
+    //! A busy animal stays in its pose or in its flight to or from a roof
     inline bool isBusy() const
-    { return mBusyTurns > 0; }
+    { return (mBusyTurns > 0) || (mHopTurnsLeft > 0); }
+
+    inline bool isHopping() const
+    { return mHopTurnsLeft > 0; }
 
     //! \brief A hen runs away to the spot (a hungry creature comes close) and does not scatter again for a while.
     bool scatterTo(const Ogre::Vector2& spot, uint32_t turns);
@@ -243,6 +247,12 @@ private:
         eaten,
         dying
     };
+    //! Starts the flutter flight to the goal (HatcheryRoosterHopTurns turns), one step per turn in doUpkeep
+    void startHop(const Ogre::Vector3& target);
+    void continueHop();
+    //! Puts the animal at the position and tells the clients, without touching the animation
+    void moveTo(const Ogre::Vector3& position);
+
     ChickenState mChickenState;
     ChickenKind mKind;
     uint32_t mNbTurnLay;
@@ -252,6 +262,11 @@ private:
     bool mRoomDriven;
     bool mFighting;
     bool mOnRoof;
+    //! Server side, not saved: the flight to or from a roof (start, goal, turns in all and turns left)
+    Ogre::Vector3 mHopFrom;
+    Ogre::Vector3 mHopTo;
+    uint32_t mHopTurns;
+    uint32_t mHopTurnsLeft;
     bool mFollowing;
     Ogre::Vector2 mFollowTarget;
     double mFollowGap;

@@ -63,6 +63,10 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mRoomDriven(false),
     mFighting(false),
     mOnRoof(false),
+    mHopFrom(Ogre::Vector3::ZERO),
+    mHopTo(Ogre::Vector3::ZERO),
+    mHopTurns(0),
+    mHopTurnsLeft(0),
     mFollowing(false),
     mFollowTarget(Ogre::Vector2::ZERO),
     mFollowGap(0.0),
@@ -93,6 +97,10 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mRoomDriven(false),
     mFighting(false),
     mOnRoof(false),
+    mHopFrom(Ogre::Vector3::ZERO),
+    mHopTo(Ogre::Vector3::ZERO),
+    mHopTurns(0),
+    mHopTurnsLeft(0),
     mFollowing(false),
     mFollowTarget(Ogre::Vector2::ZERO),
     mFollowGap(0.0),
@@ -236,6 +244,13 @@ void ChickenEntity::doUpkeep()
     // An egg does not move
     if(mKind == ChickenKind::egg)
         return;
+
+    // The flight from the floor to a roof and back: a step every turn, nothing else meanwhile
+    if(mHopTurnsLeft > 0)
+    {
+        continueHop();
+        return;
+    }
 
     if(mScatterTurns > 0)
         --mScatterTurns;
@@ -429,10 +444,38 @@ void ChickenEntity::clearFollowTarget()
     mFollowing = false;
 }
 
+void ChickenEntity::startHop(const Ogre::Vector3& target)
+{
+    // A short flight with the flutter pose: the server moves the animal a bit every turn and tells the clients
+    // (the clients only show the positions), the flight is over after a few turns at the latest
+    const uint32_t turns = static_cast<uint32_t>(std::max(1.0,
+        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterHopTurns", 4.0)));
+    mBusyTurns = 0;
+    mHopFrom = getPosition();
+    mHopTo = target;
+    mHopTurns = turns;
+    mHopTurnsLeft = turns;
+    clearDestinations(ChickenPose::flutter, true, false);
+}
+
+void ChickenEntity::continueHop()
+{
+    --mHopTurnsLeft;
+    if(mHopTurnsLeft == 0)
+    {
+        moveTo(mHopTo);
+        setAnimationState(EntityAnimation::idle_anim, true);
+        return;
+    }
+
+    const Ogre::Real done = static_cast<Ogre::Real>(mHopTurns - mHopTurnsLeft) / static_cast<Ogre::Real>(mHopTurns);
+    moveTo(mHopFrom + (mHopTo - mHopFrom) * done);
+}
+
 void ChickenEntity::hopToRoof(const Ogre::Vector3& position)
 {
     mOnRoof = true;
-    teleport(position);
+    startHop(position);
 }
 
 void ChickenEntity::hopDown(const Ogre::Vector2& position)
@@ -441,13 +484,19 @@ void ChickenEntity::hopDown(const Ogre::Vector2& position)
         return;
 
     mOnRoof = false;
-    teleport(Ogre::Vector3(position.x, position.y, 0.0f));
+    startHop(Ogre::Vector3(position.x, position.y, 0.0f));
 }
 
 void ChickenEntity::teleport(const Ogre::Vector3& position)
 {
     mBusyTurns = 0;
+    mHopTurnsLeft = 0;
     clearDestinations(EntityAnimation::idle_anim, true, false);
+    moveTo(position);
+}
+
+void ChickenEntity::moveTo(const Ogre::Vector3& position)
+{
     setPosition(position);
     if(!getIsOnServerMap())
         return;
@@ -648,6 +697,7 @@ void ChickenEntity::pickup()
     }
     mScatterTurns = 0;
     mOnRoof = false;
+    mHopTurnsLeft = 0;
     mFighting = false;
     mRoomDriven = false;
     mBusyTurns = 0;
@@ -894,6 +944,7 @@ bool ChickenEntity::loseFight()
     mFighting = false;
     mRoomDriven = false;
     mOnRoof = false;
+    mHopTurnsLeft = 0;
     mBusyTurns = 0;
     mNbTurnDie = 0;
     mChickenState = ChickenState::dying;
