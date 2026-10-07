@@ -1672,7 +1672,13 @@ Ogre::Vector2 RoomHatchery::getPerchSpot(const Tile& coopTile) const
 bool RoomHatchery::getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const
 {
     const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
-    return RoomObjectNavigation::standingPosition(obstacles, Ogre::Vector2(coopTile.getX(), coopTile.getY()), spot);
+    const Ogre::Vector2 coopCenter(coopTile.getX(), coopTile.getY());
+    if(!RoomObjectNavigation::standingPosition(obstacles, coopCenter, spot))
+        return false;
+
+    // Right next to the coop, not far away
+    double reach = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterLandReach", 1.0);
+    return spot.distance(coopCenter) <= reach;
 }
 
 bool RoomHatchery::findThreat(const ChickenEntity& rooster, double radius, Ogre::Vector2& position) const
@@ -1717,7 +1723,7 @@ void RoomHatchery::climbDown(ChickenEntity* rooster)
     rooster->hopDown(spot);
 }
 
-void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, bool hopFromFar)
+bool RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose)
 {
     const Ogre::Vector2 position(rooster->getPosition().x, rooster->getPosition().y);
     Tile* coopTile = getNearestCoop(position);
@@ -1725,30 +1731,40 @@ void RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose, 
     {
         // No coop: he sits on the ground
         rooster->setAnimationState(pose, true);
-        return;
+        return true;
     }
 
     if(rooster->isOnRoof())
     {
         rooster->setAnimationState(pose, true);
-        return;
+        return true;
     }
 
-    const Ogre::Vector2 spot = getPerchSpot(*coopTile);
-    if(hopFromFar || (position.distance(spot) < mRoosterSettings.mHopDistance))
+    // He first walks to the ground next to the coop and only flutters up from there, never from far away
+    Ogre::Vector2 approach(position);
+    if(!getGroundSpot(*coopTile, approach))
     {
+        // No free place next to the coop: forget about the roof
+        rooster->setMood(RoosterMood::strut, 0);
+        rooster->setRoomDriven(false);
+        return false;
+    }
+
+    if(position.distance(approach) < mRoosterSettings.mHopDistance)
+    {
+        const Ogre::Vector2 spot = getPerchSpot(*coopTile);
         double roofHeight = getRoofHeight(*coopTile);
         rooster->hopToRoof(Ogre::Vector3(spot.x, spot.y, static_cast<Ogre::Real>(roofHeight)));
-        rooster->setAnimationState(pose, true);
-        return;
+        return false;
     }
 
-    if(!rooster->isMoving() && !rooster->walkToward(spot, mRoosterSettings.mWalkGap, ChickenPose::strut))
+    if(!rooster->isMoving() && !rooster->walkToward(approach, mRoosterSettings.mWalkGap, ChickenPose::strut))
     {
         // No way to the coop: forget about the roof
         rooster->setMood(RoosterMood::strut, 0);
         rooster->setRoomDriven(false);
     }
+    return false;
 }
 
 void RoomHatchery::beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& plan)
@@ -1762,6 +1778,7 @@ void RoomHatchery::beginRoosterMood(ChickenEntity* rooster, const RoosterPlan& p
     if(plan.mMood == RoosterMood::crow)
     {
         rooster->resetSinceCrow();
+        rooster->resetApproachTurns();
         fireAnimalSound(*rooster, "Hatchery/Crow");
         mCrowInterval = HatcheryRooster::crowInterval(getRoosterSettings(), Random::Uint(0, 1000));
     }
@@ -1776,9 +1793,9 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
         case RoosterMood::strut:
             break;
         case RoosterMood::crow:
-            // He crows from the roof when it is close
-            roostOnRoof(rooster, ChickenPose::crow, true);
-            rooster->playPose(ChickenPose::crow, 2);
+            // He crows from the roof; on the way (walking, fluttering up) he does not stand still for the pose
+            if(roostOnRoof(rooster, ChickenPose::crow))
+                rooster->playPose(ChickenPose::crow, 2);
             break;
         case RoosterMood::chase:
         {
@@ -1852,11 +1869,36 @@ void RoomHatchery::updateRooster(ChickenEntity* rooster, const std::vector<Chick
 {
     rooster->setHomeSeat(getSeat());
     rooster->incrementSinceCrow();
-    rooster->countDownMood();
+
+    // The flight to or from a roof is not part of the crow: the mood only counts down once he has landed
+    if(rooster->isHopping())
+        return;
+
+    // On his way to the coop he has a time limit of his own; when it is over (blocked or too long a way) he gives up
+    // the crow and strolls on. The crow time starts on the roof.
+    bool onTheWay = (rooster->getMood() == RoosterMood::crow) && !rooster->isOnRoof() && !mCentralActiveSpotTiles.empty();
+    if(onTheWay)
+    {
+        uint32_t limit = static_cast<uint32_t>(std::max(1.0,
+            ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterApproachTurns", 15.0)));
+        if(rooster->countApproachTurn() > limit)
+        {
+            rooster->setMood(RoosterMood::strut, 0);
+            rooster->setRoomDriven(false);
+            return;
+        }
+    }
+    else
+        rooster->countDownMood();
 
     // He stays in his pose while it lasts
     if(rooster->isBusy())
         return;
+
+    // The roof is only for the crow: a rooster that sits there without crowing (the mood is not saved, so after
+    // loading he may still be on the roof) jumps down
+    if(rooster->isOnRoof() && (rooster->getMood() != RoosterMood::crow))
+        climbDown(rooster);
 
     double guardRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterGuardRadius", 4.0);
     Ogre::Vector2 threat(0.0f, 0.0f);

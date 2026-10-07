@@ -123,6 +123,24 @@ float ODClient::getHeartStageFraction(int32_t seatId) const
     return it->second;
 }
 
+bool ODClient::isHeartStageHit(int32_t seatId) const
+{
+    return mHeartStageHitRemaining.find(seatId) != mHeartStageHitRemaining.end();
+}
+
+void ODClient::updateHeartStageHits(float timeSinceLastFrame)
+{
+    std::map<int32_t, float>::iterator it = mHeartStageHitRemaining.begin();
+    while(it != mHeartStageHitRemaining.end())
+    {
+        it->second -= timeSinceLastFrame;
+        if(it->second <= 0.0f)
+            mHeartStageHitRemaining.erase(it++);
+        else
+            ++it;
+    }
+}
+
 void ODClient::playerDisconnected()
 {
     std::string message = getPlayer() ? getPlayer()->getNick() + " disconnected from the server." : "A player disconnected.";
@@ -480,6 +498,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             mWaveCountdownSeconds = -1;
             mHeartBadge = HeartHealthRing::BadgeState();
             mHeartStageFractions.clear();
+            mHeartStageHitRemaining.clear();
             mSandboxStatus = SandboxStatus();
             mHasSandboxRealmComplete = false;
 
@@ -1026,7 +1045,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 // The coarse health of a heart that this keeper sees; only the beat of that heart follows it
                 int32_t stages = Helper::toInt(event.mText);
-                mHeartStageFractions[event.mValue] = HeartHealthRing::stageFraction(event.mValue2, stages);
+                float previous = getHeartStageFraction(event.mValue);
+                float fraction = HeartHealthRing::stageFraction(event.mValue2, stages);
+                mHeartStageFractions[event.mValue] = fraction;
+                if(HeartHealthRing::isStageHit(previous, fraction))
+                    mHeartStageHitRemaining[event.mValue] = HeartHealthRing::ATTACK_GLOW_SECONDS;
                 break;
             }
 

@@ -229,6 +229,7 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
                 if(stageFraction < 0.0f)
                     continue;
                 fraction = static_cast<double>(stageFraction);
+                attacked = ODClient::getSingleton().isHeartStageHit(tile->getSeat()->getId());
             }
 
             // The beat gets faster the more the heart is hurt, and a bit faster again while it is attacked

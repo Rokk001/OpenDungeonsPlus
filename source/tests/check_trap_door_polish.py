@@ -44,6 +44,10 @@ for name in ("Spike", "Boulder", "Alarm", "Fear", "Gas", "Lightning", "Fireburst
     for role in ("Fire", "Idle", "Reload"):
         if "Traps/%s/%s" % (name, role) not in families:
             problems.append("trap %s has no %s sound in the config" % (name, role))
+if "Traps/Lightning/Crackle" not in families:
+    problems.append("the lightning trap has no crackle sound in the config")
+if not re.search(r"Traps/Lightning/Fire.*?Traps/Lightning/Crackle", config, re.S):
+    problems.append("the crackle of the lightning trap is not an effect after the spark")
 for name in ("Wooden", "Ironbound", "Steel", "Secret", "Runed"):
     for role in ("Open", "Close", "Hit", "Break"):
         if "Doors/%s/%s" % (name, role) not in families:

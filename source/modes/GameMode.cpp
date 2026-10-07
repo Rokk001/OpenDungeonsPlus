@@ -2102,6 +2102,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 
     HeartHealthRing::BadgeState& heartBadge = ODClient::getSingleton().getHeartBadge();
     heartBadge.update(evt.timeSinceLastFrame);
+    ODClient::getSingleton().updateHeartStageHits(evt.timeSinceLastFrame);
     if(heartBadge.takeDirty())
         mModeManager->getGui().updateHeartBadge(heartBadge.mFraction, heartBadge.mGlow);
     // Every frame, so that the text also survives the GUI being rebuilt
