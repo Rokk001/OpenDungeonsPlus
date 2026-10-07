@@ -142,9 +142,9 @@ public:
     inline bool isLeavingCoop() const
     { return mLeavingCoop; }
 
-    //! A busy animal stays in its pose or in its flight to or from a roof
+    //! A busy animal stays in its pose, in its flight to or from a roof, or in its coop exit
     inline bool isBusy() const
-    { return (mBusyTurns > 0) || (mHopTurnsLeft > 0); }
+    { return (mBusyTurns > 0) || (mHopTurnsLeft > 0) || mLeavingCoop; }
 
     inline bool isHopping() const
     { return mHopTurnsLeft > 0; }

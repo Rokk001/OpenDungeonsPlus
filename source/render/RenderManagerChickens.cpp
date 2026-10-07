@@ -439,6 +439,7 @@ void RenderManager::rrCreateChickenLook(ChickenEntity* chicken)
     look.mFeatherBursts = 0;
     look.mEmergeFeathersPending = false;
     look.mCoopDoorReplayPending = false;
+    look.mCoopExitWalking = false;
     look.mFightPartner = nullptr;
     look.mFightLeader = false;
     look.mFightTimer = 0.0f;
@@ -578,6 +579,12 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
     look.mPose = pose;
     look.mPoseTime = 0.0f;
     look.mFeatherBursts = 0;
+    if((pose != ChickenPose::emerge) && !pose.empty())
+    {
+        look.mEmergeFeathersPending = false;
+        look.mCoopDoorReplayPending = false;
+        look.mCoopExitWalking = false;
+    }
     const Ogre::Vector3 position = chicken->getPosition();
 
     look.mMountPartner = nullptr;
@@ -605,6 +612,7 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
     {
         look.mEmergeFeathersPending = true;
         look.mCoopDoorReplayPending = true;
+        look.mCoopExitWalking = false;
         // The door of the closest coop swings
         std::map<BuildingObject*, CoopDecor>::iterator nearest = mCoopDecors.end();
         Ogre::Real nearestDistance = 4.0f;
@@ -950,6 +958,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
         }
         if((look.mEmergeFeathersPending || look.mCoopDoorReplayPending) && moving)
         {
+            look.mCoopExitWalking = true;
             for(std::map<BuildingObject*, CoopDecor>::iterator coop = mCoopDecors.begin(); coop != mCoopDecors.end(); ++coop)
             {
                 const Ogre::Vector3 door = coop->first->getPosition() + Ogre::Vector3(0.9f, 0.0f, 0.0f);
@@ -973,6 +982,13 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 if(!look.mEmergeFeathersPending && !look.mCoopDoorReplayPending)
                     break;
             }
+        }
+
+        if(look.mCoopExitWalking && !moving)
+        {
+            look.mEmergeFeathersPending = false;
+            look.mCoopDoorReplayPending = false;
+            look.mCoopExitWalking = false;
         }
 
         // The duck of a hen under a rooster is set again by him in every frame

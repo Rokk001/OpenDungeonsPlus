@@ -536,6 +536,7 @@ private:
         int mFeatherBursts;
         bool mEmergeFeathersPending;
         bool mCoopDoorReplayPending;
+        bool mCoopExitWalking;
         //! The rooster this one fights (set by the server event), the first of the two makes the feather clouds
         ChickenEntity* mFightPartner;
         bool mFightLeader;

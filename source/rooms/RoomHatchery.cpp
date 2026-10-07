@@ -666,6 +666,12 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
             continue;
         }
 
+        if(hen->isLeavingCoop())
+        {
+            ++it;
+            continue;
+        }
+
         if(it->mPosing)
         {
             if(it->mTurns > 0)
@@ -1324,7 +1330,8 @@ void RoomHatchery::doUpkeep()
     uint32_t capacity = HatcheryCycle::capacity(mCoveredTiles.size(), mNumActiveSpots, settings);
     for(ChickenEntity* hen : hens)
     {
-        if((findPendingEgg(*hen) == nullptr) && (settings.mLayShowTurns > 0) && HatcheryCycle::canLay(counts, capacity))
+        if(!hen->isLeavingCoop() && (findPendingEgg(*hen) == nullptr) &&
+           (settings.mLayShowTurns > 0) && HatcheryCycle::canLay(counts, capacity))
         {
             // The egg lies in a free nest (the closest one first), she walks to the place next to it (she does not
             // stand in the nest). Without a free nest, or when the way to it does not fit into the time left, she
@@ -1362,6 +1369,8 @@ void RoomHatchery::doUpkeep()
 
     for(ChickenEntity* hen : hens)
     {
+        if(hen->isLeavingCoop())
+            continue;
         PendingEgg* planned = findPendingEgg(*hen);
         if(!hen->countDownLay())
             continue;
