@@ -114,6 +114,12 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! upper end of the step), -1 if no step is known (event not negotiated, heart never seen)
     float getHeartStageFraction(int32_t seatId) const;
 
+    //! \brief True while the heart of a seat counts as hit: its step just fell (glows ATTACK_GLOW_SECONDS)
+    bool isHeartStageHit(int32_t seatId) const;
+
+    //! \brief Frame update: lets the hit glow of the foreign hearts run out
+    void updateHeartStageHits(float timeSinceLastFrame);
+
     //! \brief A bonus objective of a sandbox realm as the server last told it
     struct SandboxBonusStatus
     {
@@ -192,6 +198,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
 
     // Steps of the hearts received with the cosmetic event heartHealthStage: seat id -> fraction of the step
     std::map<int32_t, float> mHeartStageFractions;
+
+    // Seconds the hit glow of the heart of a seat still lasts, set when its step falls: seat id -> seconds
+    std::map<int32_t, float> mHeartStageHitRemaining;
 
     // Received with sandboxStatus and sandboxRealmComplete
     SandboxStatus mSandboxStatus;

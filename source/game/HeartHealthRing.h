@@ -134,6 +134,14 @@ namespace HeartHealthRing
         return clampFraction(static_cast<float>(stage) / static_cast<float>(stages));
     }
 
+    //! \brief Client side: does a new health step of a foreign heart count as a hit? Only a step that is lower
+    //! than the one before does. The first step that is told (previous negative) and a step that stays or
+    //! rises (healing) never count.
+    inline bool isStageHit(float previousFraction, float newFraction)
+    {
+        return previousFraction >= 0.0f && newFraction < previousFraction;
+    }
+
     //! \brief Client side: what the badge shows and whether it has to be redrawn.
     struct BadgeState
     {
