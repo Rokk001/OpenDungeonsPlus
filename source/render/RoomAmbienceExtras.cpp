@@ -239,7 +239,7 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
             {
                 nextBeat = clock + 0.7 + 0.8 * fraction;
                 ambience.triggerEvent("HeartHurt", position, false);
-                if(fraction < HEART_LOW_FRACTION)
+                if((tile->getSeat() == localSeat) && (fraction < HEART_LOW_FRACTION))
                     ambience.triggerEvent("HeartLowBeat", position, false);
             }
         }
