@@ -66,10 +66,16 @@ ROOM_RULE = (
     ("guardRoom", ("guardRoom",), ()),
     ("temple", ("templeRoom",), ()),
 )
-# Room types that are exempt from the rule, with the reason
-RULE_EXCEPTIONS = {
-    "treasury": "the client draws the sparkle, the sliding coins, the glow and the gold dust of the piles itself "
-                "(TreasuryCreatureRules.h); the config only adds the glitter of the middle piles",
+# Idle effects that the client draws itself instead of reading them from the configuration: room -> (name, pattern
+# that must be found in source/render/RenderManager.cpp). Such an effect counts for the room only while its drawing
+# code is there, so removing it from the code makes the room rule fail again.
+CLIENT_IDLE_EFFECTS = {
+    "treasury": (
+        ("sparkle of rich piles", r"TreasuryCreatureRules::glintLevel"),
+        ("sliding coins on piles", r"TreasuryCreatureRules::slideLevel"),
+        ("gold dust over full piles", r'createTreasuryEffect\(pile\.mRoom, "TreasuryGoldDust"'),
+        ("glow lights over rich piles", r"^\s+applyTreasuryGlowLights\(\);"),
+    ),
 }
 OPERATION_WHENS = ("Occupied", "Vacated", "Hit", "Locked", "Reloading", "Ready")
 
@@ -553,6 +559,24 @@ def collect_effects(path, found):
                     collect_effects(included, found)
 
 
+def client_idle_effects(room):
+    """Where-strings of the idle effects of a room that the client draws itself and that are found in the code, and
+    the names of those that are missing"""
+    found = []
+    missing = []
+    path = os.path.join(ROOT, "source", "render", "RenderManager.cpp")
+    with open(path, encoding="utf-8") as handle:
+        lines = handle.read().splitlines()
+    for name, pattern in CLIENT_IDLE_EFFECTS.get(room, ()):
+        for number, line in enumerate(lines, 1):
+            if re.search(pattern, line):
+                found.append("RenderManager.cpp:%d (%s)" % (number, name))
+                break
+        else:
+            missing.append(name)
+    return found, missing
+
+
 def count_rooms(effects):
     """Returns {room: (idle effects, operation effects)}, each a list of where-strings."""
     result = {}
@@ -571,6 +595,7 @@ def count_rooms(effects):
                     idle.append(effect["_where"])
                 elif when in OPERATION_WHENS:
                     operation.append(effect["_where"])
+        idle.extend(client_idle_effects(room)[0])
         result[room] = (idle, operation)
     return result
 
@@ -583,8 +608,8 @@ def check_room_rule(problems, table):
         if table:
             print("%-14s idle %2d | operation %2d | %s | %s" % (room, len(idle), len(operation), ", ".join(idle),
                                                                ", ".join(operation)))
-        if room in RULE_EXCEPTIONS:
-            continue
+        for name in client_idle_effects(room)[1]:
+            problems.append("room %s: the client effect \"%s\" is not found in source/render/RenderManager.cpp" % (room, name))
         if len(idle) < MIN_IDLE:
             problems.append("room %s has %d idle effects, needs %d" % (room, len(idle), MIN_IDLE))
         if len(operation) < MIN_OPERATION:
