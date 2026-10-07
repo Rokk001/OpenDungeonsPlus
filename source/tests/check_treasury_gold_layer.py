@@ -1,5 +1,5 @@
 """Exercise the treasury gold layer: fill steps, the pile names that carry the level to the clients
-(old names keep working), seamless edges between neighbouring piles, and the wiring of the server,
+(old names keep working), rounded pile footprints, and the wiring of the server,
 the renderer and the 'Treasury detail' option."""
 from pathlib import Path
 import subprocess
@@ -17,7 +17,7 @@ render = read('source/render/RenderManager.cpp')
 mesh = read('source/render/TreasuryGoldMesh.cpp')
 
 # The server names the pile after the level and the corners, and builds it at the tile centre without
-# the old random offset or rotation, so neighbouring piles join up.
+# the old random offset or rotation.
 assert 'TreasuryGoldLayer::meshName(shape)' in treasury
 assert 'TreasuryObject::getMeshNameForGold' not in treasury
 assert 'Random::Double' not in treasury
@@ -33,6 +33,8 @@ assert 'TreasuryGoldPile' in read('materials/scripts/TreasuryGoldPile.material')
 assert (repo / 'materials/textures/TreasuryGoldPile.png').exists()
 assert 'TreasuryGoldPile.png' in read('CREDITS')
 assert 'TreasuryGoldMesh.cpp' in read('CMakeLists.txt')
+assert 'addBand(surface, 1 + (rings - 1) * PileSectors, 1 + rings * PileSectors)' not in mesh
+assert 'buildRoundSurface(shape, divisions, dent, roundSurface)' in mesh
 # The classic stacks stay for free gold on the floor and for the 'off' setting.
 assert 'GoldstackLv1' in read('source/entities/TreasuryObject.cpp')
 
@@ -117,7 +119,7 @@ int main()
     sample.mLevel = 5;
     check(meshName(sample) == "TreasuryGold_5_0000_0", "name format is stable");
 
-    // Heights: taller with more gold, and two tiles share the height along their common edge
+    // Heights and footprints: taller and wider with more gold, with the tile border left bare
     for(int level = 1; level <= maxLevel; ++level)
     {
         float center = heightAt(flatShape(level, 0), 0.5f, 0.5f);
@@ -126,25 +128,15 @@ int main()
             check(center > heightAt(flatShape(level - 1, 0), 0.5f, 0.5f), "each step is higher than the one below");
     }
 
-    PileShape left;
-    PileShape right;
-    left.mLevel = 7;
-    right.mLevel = 3;
-    left.mVariant = 1;
-    right.mVariant = 2;
-    // left tile is west of right tile: left NE and SE corners are right NW and SW corners
-    left.mCorner[0] = 7; left.mCorner[1] = 3; left.mCorner[2] = 3; left.mCorner[3] = 7;
-    right.mCorner[0] = 3; right.mCorner[1] = 3; right.mCorner[2] = 3; right.mCorner[3] = 3;
-    bool seamless = true;
-    for(int i = 0; i <= 20; ++i)
-    {
-        float v = static_cast<float>(i) / 20.0f;
-        float a = heightAt(left, 1.0f, v);
-        float b = heightAt(right, 0.0f, v);
-        if(a < b - 0.0001f || a > b + 0.0001f)
-            seamless = false;
-    }
-    check(seamless, "piles of different level meet without a step at their shared edge");
+    check(pileRadius(1) < pileRadius(maxLevel), "a full pile has a wider footprint");
+    check(pileRadius(maxLevel) < 0.5f, "a full pile stays inside its tile");
+    PileShape full = flatShape(maxLevel, 0);
+    check(heightAt(full, 0.0f, 0.5f) < 0.01f && heightAt(full, 1.0f, 0.5f) < 0.01f,
+        "a full pile leaves both tile edges bare");
+    check(heightAt(flatShape(1, 0), 0.75f, 0.5f) < 0.01f && heightAt(full, 0.75f, 0.5f) > 0.01f,
+        "a small pile exposes floor that a full pile covers");
+    check(pileRadiusAt(full, 1.0f, 0.5f) != pileRadiusAt(full, 0.5f, 1.0f),
+        "a full pile has an uneven outline");
 
     PileShape wall;
     wall.mLevel = 7;
