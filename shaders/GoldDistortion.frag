@@ -10,7 +10,6 @@ uniform sampler2D shadowmap;
 
 uniform vec4 ambientLightColour;
 uniform vec4 cameraPosition;
-uniform vec4 diffuseSurface;
 uniform bool shadowingEnabled;
 uniform float veinTime;
 uniform float veinGain;
@@ -47,12 +46,7 @@ void main (void)
         shadow = vec4(sampleShadow(shadowmap, VertexPos));
     vec3 lightingTerm = getLocalLighting(FragPos, Normal, cameraPosition.xyz, shadow.r) + ambientLightColour.rgb;
     
-    // A digging mark tints the rock only, the veins keep their own colour so a marked wall does not
-    // turn into a flat bright yellow block.
-    vec3 baseColor = texelColor;
-    if(diffuseSurface.rgb != vec3(1.0,1.0,1.0))
-        baseColor = mix(texelColor, diffuseSurface.rgb * texelColor, 0.6 * (1.0 - vein));
-    result = lightingTerm * baseColor;
+    result = lightingTerm * texelColor;
 
     // Metallic sheen on the veins, strongest where the surface turns away from the viewer
     vec3 viewDir = normalize(cameraPosition.xyz - FragPos);

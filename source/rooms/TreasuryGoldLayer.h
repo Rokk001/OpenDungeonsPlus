@@ -25,7 +25,7 @@
 #include <string>
 
 //! \brief The gold layer of a treasury: one pile per tile whose height follows the gold stored
-//! on it, in TreasuryGoldLayer::maxLevel steps, blending into the piles of the neighbouring tiles.
+//! on it, in TreasuryGoldLayer::maxLevel steps.
 //!
 //! Nothing here depends on the renderer. The server turns the gold of a tile and of its
 //! neighbours into a mesh name (the name of the pile object it already replicates to the
@@ -62,9 +62,8 @@ inline int levelForGold(int gold, int capacity)
     return level;
 }
 
-//! The part of the pile that does not depend on where it lies in the room. The corners hold the
-//! level of the pile at that corner (the lowest level of the up to four tiles that meet there), so
-//! two tiles sharing an edge share the heights along it and no tile border is visible.
+//! The part of the pile that does not depend on where it lies in the room. The corner levels
+//! remain in mesh names so existing room updates and saved pile objects keep their format.
 struct PileShape
 {
     PileShape() :
@@ -81,10 +80,8 @@ struct PileShape
     int mCorner[4];
     //! Selects one of a few lumpy variants so neighbouring piles do not look alike
     int mVariant;
-    //! A pile of a single-row ring. mCorner then holds the level of the ridge along each edge (north, east, south,
-    //! west; 0 when no ring tile lies there) instead of the levels of the corners; the ridge is highest in the
-    //! middle of the edge and the corners stay on the floor, so the row is a chain of heaps joined by saddles and
-    //! never a plateau with cut edges.
+    //! A pile of a single-row ring. mCorner then records the level of each adjacent ring tile
+    //! (north, east, south, west; 0 when no ring tile lies there).
     bool mRing;
 };
 
@@ -134,10 +131,7 @@ inline bool parseMeshName(const std::string& name, PileShape& shape)
     return true;
 }
 
-//! The shape of a pile on a tile of a single-row ring (the treasury ring of the dungeon heart). The tile has no
-//! neighbours on its other sides, so the corners stay on the floor and the heap runs out flat towards the wall and
-//! the heart. Towards a ring neighbour a ridge joins the two heaps: its level is the lower of the two tiles, so
-//! two neighbouring piles share the heights along their common edge.
+//! The shape of a pile on a tile of a single-row ring (the treasury ring of the dungeon heart).
 //! around[dx + 1][dy + 1] is the level of the ring tile at that offset (0 for an empty one), -1 for a tile that
 //! is not part of the ring; around[1][1] is the tile itself.
 inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
@@ -159,14 +153,14 @@ inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
 }
 
 //! Radius (tile units, the tile is 1 wide) of the round heap of a pile: a little gold is a small heap in the middle
-//! of the tile, a full tile reaches its edges (never beyond them, so the heap never ends in a cut edge)
+//! of the tile; even a full tile leaves floor visible around its uneven edge
 inline float pileRadius(int level)
 {
     if(level <= 1)
         return 0.16f;
     if(level >= maxLevel)
-        return 0.5f;
-    return 0.16f + 0.34f * static_cast<float>(level - 1) / static_cast<float>(maxLevel - 1);
+        return 0.46f;
+    return 0.16f + 0.30f * static_cast<float>(level - 1) / static_cast<float>(maxLevel - 1);
 }
 
 //! Radius of the heap of the shape in the direction of (u, v) seen from the middle of the tile: slightly uneven,
@@ -178,39 +172,11 @@ inline float pileRadiusAt(const PileShape& shape, float u, float v)
 }
 
 //! Surface height of a pile at (u, v), both 0..1 across the tile (u towards +x, v towards +y).
-//! The edges only depend on the corners; a round heap rises from the middle of the tile to the level of the
-//! tile itself and runs out flat at its radius, so a small amount of gold is a small heap, not a block.
+//! The heap rises from the middle of the tile and runs out flat at its irregular radius.
 inline float heightAt(const PileShape& shape, float u, float v)
 {
     if(shape.mLevel <= 0)
         return 0.0f;
-
-    float base = 0.0f;
-    if(shape.mRing)
-    {
-        // A ridge along every edge that touches a ring neighbour: highest in the middle of the edge, none at the
-        // corners, fading out towards the middle of the tile
-        const float distance[4] = {1.0f - v, 1.0f - u, v, u};
-        const float along[4] = {u, v, u, v};
-        for(int edge = 0; edge < 4; ++edge)
-        {
-            if(shape.mCorner[edge] <= 0 || distance[edge] >= 0.5f)
-                continue;
-            const float fall = 0.5f * (1.0f + std::cos(6.2831853f * distance[edge]));
-            const float ridge = levelHeight(shape.mCorner[edge]) * std::sin(3.1415927f * along[edge]) * fall;
-            if(ridge > base)
-                base = ridge;
-        }
-    }
-    else
-    {
-        const float nw = levelHeight(shape.mCorner[0]);
-        const float ne = levelHeight(shape.mCorner[1]);
-        const float se = levelHeight(shape.mCorner[2]);
-        const float sw = levelHeight(shape.mCorner[3]);
-        // v grows to the north: top row is north
-        base = (1.0f - u) * ((1.0f - v) * sw + v * nw) + u * ((1.0f - v) * se + v * ne);
-    }
 
     // 1 in the middle, 0 at and beyond the radius of the heap (which never exceeds the tile edges)
     const float du = u - 0.5f;
@@ -223,11 +189,8 @@ inline float heightAt(const PileShape& shape, float u, float v)
         bump = rest * std::sqrt(rest);
     }
     const float peak = levelHeight(shape.mLevel);
-    // The rise starts flat at the foot of the heap, so a pile runs out on the floor and next to the piles of its
-    // neighbours (which share the heights along the edge through the corners) without a visible tile border
-    float height = base;
-    if(peak > base)
-        height += (peak - base) * bump;
+    // The rise starts flat at the foot of the heap.
+    float height = peak * bump;
 
     // A few lumps, only on fuller piles, fading out towards the edges
     if(shape.mLevel >= 3)
