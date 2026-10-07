@@ -186,6 +186,13 @@ public:
     inline void resetSinceCrow()
     { mSinceCrow = 0; }
 
+    //! Turns the rooster has been on his way to a coop roof (not saved)
+    inline uint32_t countApproachTurn()
+    { return ++mApproachTurns; }
+
+    inline void resetApproachTurns()
+    { mApproachTurns = 0; }
+
     inline bool isOnRoof() const
     { return mOnRoof; }
 
@@ -273,6 +280,7 @@ private:
     RoosterMood mMood;
     uint32_t mMoodTurns;
     uint32_t mSinceCrow;
+    uint32_t mApproachTurns;
     Seat* mHomeSeat;
     bool mReturningHome;
     uint32_t mReturnTurns;
