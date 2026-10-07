@@ -50,29 +50,6 @@ particle_system RoomAmbTorchFlame
     }
 }
 
-// The warm light around the torch
-particle_system RoomAmbTorchGlow
-{
-    material        RoomAmbGlow
-    point_rendering false
-    particle_width  1.5
-    particle_height 1.5
-    cull_each       false
-    quota           1
-    billboard_type  point
-
-    emitter Point
-    {
-        angle               0
-        colour              1.0 0.55 0.2 0.3
-        emission_rate       2
-        time_to_live        100000
-        direction           0 0 1
-        velocity            0
-        position            0 0 0.2
-    }
-}
-
 // A thin thread of smoke from the torch
 particle_system RoomAmbTorchSmoke
 {

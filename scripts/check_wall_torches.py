@@ -109,9 +109,11 @@ check("if(mWallTorchesDirty)" in update and "mWallTorchesDirty = false;" in upda
 check(game_map_cpp.count("updateWallTorches();") == 1, "updateWallTorches is called more than once per turn")
 view = read("source", "render", "WallTorchView.cpp")
 check("WallTorchConfig::load()" in view, "WallTorchView does not read WallTorchConfig")
-for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"):
+for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchSmoke"):
     check(system in view, "WallTorchView does not use " + system)
     check(system in read("particles", "RoomAmbienceDeferred.particle"), "particle system %s is missing" % system)
+check("RoomAmbTorchGlow" not in view and "RoomAmbTorchGlow" not in read("particles", "RoomAmbienceDeferred.particle"),
+      "the torch glow sprite is still present")
 
 # Hatchery: torches of every owner within HatcheryCareLightRadius, asked for the box around the hatchery
 lit = body(read("source", "rooms", "RoomHatchery.cpp"), "bool RoomHatchery::isLit")
