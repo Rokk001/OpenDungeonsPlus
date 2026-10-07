@@ -1852,6 +1852,11 @@ void RoomHatchery::updateRooster(ChickenEntity* rooster, const std::vector<Chick
 {
     rooster->setHomeSeat(getSeat());
     rooster->incrementSinceCrow();
+
+    // The flight to or from a roof is not part of the crow: the mood only counts down once he has landed
+    if(rooster->isHopping())
+        return;
+
     rooster->countDownMood();
 
     // He stays in his pose while it lasts

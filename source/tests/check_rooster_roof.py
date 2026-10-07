@@ -48,6 +48,30 @@ assert update.index(guard) < update.index('HatcheryRooster::decide('), 'checked 
 assert 'mOnRoof = (mPosition.z > 0.3);' in chicken, 'the roof state is rebuilt after loading'
 assert chicken.count('mOnRoof = false;') >= 3, 'picked up, lost a fight and jumped down reset the roof state'
 
+# Up and down are a short visible flight with the existing Flutter clip, not a jump in one tick
+chicken_h = (root / 'source/entities/ChickenEntity.h').read_text()
+pose_h = (root / 'source/entities/ChickenPose.h').read_text()
+assert 'static const std::string flutter = "Flutter";' in pose_h
+start_hop = body(chicken, 'void ChickenEntity::startHop(')
+assert 'clearDestinations(ChickenPose::flutter, true, false)' in start_hop, 'flutter pose on the way up and down'
+assert 'getRoomConfigDoubleOrDefault("HatcheryRoosterHopTurns", 4.0)' in start_hop and 'std::max(1.0' in start_hop, 'duration from the config, at least one turn'
+assert re.search(r'^# HatcheryRoosterHopTurns\s', config, re.M) and re.search(r'^\s+HatcheryRoosterHopTurns\s+4$', config, re.M)
+up = body(chicken, 'void ChickenEntity::hopToRoof(')
+dn = body(chicken, 'void ChickenEntity::hopDown(')
+assert 'startHop(' in up and 'startHop(' in dn and 'teleport(' not in up + dn, 'no instant change of place'
+step = body(chicken, 'void ChickenEntity::continueHop(')
+assert '--mHopTurnsLeft;' in step and 'mHopFrom + (mHopTo - mHopFrom) * done' in step and 'moveTo(' in step, 'one step per turn'
+assert 'moveTo(mHopTo);' in step, 'the flight ends at the goal'
+upkeep = body(chicken, 'void ChickenEntity::doUpkeep(')
+assert 'continueHop();' in upkeep and upkeep.index('mHopTurnsLeft > 0') < upkeep.index('mBusyTurns > 0'), 'the flight is stepped before the pose wait'
+# Time limit and reset: the flight counts down on the server every turn; teleport, pick up and a lost fight end it
+assert 'mHopTurnsLeft = 0;' in body(chicken, 'void ChickenEntity::teleport(')
+assert 'mHopTurnsLeft = 0;' in body(chicken, 'void ChickenEntity::pickup(') and 'mHopTurnsLeft = 0;' in body(chicken, 'bool ChickenEntity::loseFight(')
+assert 'mHopTurnsLeft > 0' in chicken_h and 'isHopping()' in update
+assert update.index('isHopping()') < update.index('countDownMood()'), 'the crow only counts down after landing'
+# The sound stays at the start of the crow mood (see the sound check)
+assert 'fireAnimalSound(*rooster, "Hatchery/Crow")' in begin
+
 # Not wanted any more: night, sleep, crow at a new day
 for text in (rooster_h, rooster_cpp, room):
     for needle in ('isNight', 'newDayCrowOwed', 'RoosterMood::sleep', 'RoosterMood::call', 'RoosterMood::lead'):
