@@ -64,6 +64,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
     mManaWellBonusPerTile(10.0),
+    mBedStepMaxHeight(0.09),
     mClaimingWallPenalty(0.8),
     mDigCoefGold(5.0),
     mDigCoefGem(1.0),
@@ -539,6 +540,13 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mManaWellBonusPerTile = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "BedStepMaxHeight")
+        {
+            configFile >> nextParam;
+            mBedStepMaxHeight = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
