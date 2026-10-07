@@ -697,6 +697,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
         const Ogre::Real p = look.mPoseTime;
         const ChickenKind kind = chicken->getKind();
         const std::string& pose = look.mPose;
+        const bool moving = chicken->isMoving();
 
         Ogre::Real lift = 0.0f;
         Ogre::Real pitch = 0.0f;
@@ -736,7 +737,6 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
         }
         else
         {
-            const bool moving = chicken->isMoving();
             if(pose == ChickenPose::strut)
             {
                 // Chest out, head up, a proud little bounce with each step
