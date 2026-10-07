@@ -21,6 +21,10 @@ assert 'mPlayer->markTilesForDigging(false, std::vector<Tile*>(1, tile), false)'
 render = read('source/render/RenderManager.cpp')
 assert render.count('createInstancedEntity("DirtInstanced"), isMarked)') == 2
 assert 'tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked)' in render
+tile = read('source/entities/Tile.cpp')
+fog_shader = read('shaders/DirtTileInstanced.frag')
+assert 'Ogre::Vector4(0.65f, 0.45f, 1.0f, 0.5f)' in tile
+assert 'mix(texelColor, outputColor.rgb, outputColor.a)' in fog_shader
 preview = render[render.index('void RenderManager::rrDrawTilePreview('):render.index('bool RenderManager::getKeeperHandPosition')]
 rectangle = preview[preview.index('if(singleRectangle)'):preview.index('    return;\n    }')]
 assert 'OT_TRIANGLE_LIST' not in rectangle
