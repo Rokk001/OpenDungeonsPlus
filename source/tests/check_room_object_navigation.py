@@ -211,7 +211,7 @@ int main(){
   const float crossingY=5+std::sin(angle)*(row.minX+row.maxX)*.5f+std::cos(angle)*(row.minY+row.maxY)*.5f;
   creature.pos={1,crossingY,0};
   std::vector<Ogre::Vector2> path;for(int x=2;x<=10;++x)path.push_back({float(x),crossingY});
-  check(RoomObjectNavigation::blocked(creature,path)!=(row.maxZ<=ConfigManager::getSingleton().getBedStepMaxHeight()),"straight crossing is permitted only over beds not higher than the configured step height");
+  check(RoomObjectNavigation::blocked(creature,path)!=std::isfinite(row.maxZ),"straight crossing is permitted only over measured beds (this worker is wider than the lane between beds)");
   check(RoomObjectNavigation::refine(creature,path),"furniture routes suppress independent client jitter");
   if(path.empty())std::cout<<"NO_ROUTE "<<row.name<<" rotation="<<rotation<<'\n';
   check(!path.empty()&&path.back()==Ogre::Vector2(10,crossingY),"route keeps accessible destination");
@@ -311,7 +311,9 @@ int main(){
  room.objects.clear();std::vector<Ogre::Vector2> restored{{2,5},{3,5},{4,5},{5,5}};
  check(!RoomObjectNavigation::refine(creature,restored),"removing furniture immediately reopens original route");
  room.objects[map.getTile(5,5)]=&object;
+ object.mesh="Anvil";
  check(RoomObjectNavigation::blocked(creature,restored),"placing furniture invalidates existing crossing route");
+ object.mesh="Bed";
  // A previously jittered path can overlap a newly placed object even when the
  // server's centerline is clear. Placement must invalidate that larger envelope.
  creature.pos={1,6.4f,0};restored={{9,6.4f}};object.angle=45;
@@ -436,8 +438,16 @@ probe = probe.replace('PACKED_BEDS', r'''
     auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
     for(const auto& point:transit){
      check(terrainClear(walker,previous,point),"packed-bed transit cannot escape through the surrounding walls");
-     check(RoomObjectPath::clearSegment(RoomObjectNavigation::bodyObstacles(walker),previous,point),
-      "packed-bed transit keeps the full walking body outside visible furniture");
+     bool clear=true;
+     for(auto obstacle:RoomObjectNavigation::bodyObstacles(walker))if(obstacle.intersects(previous,point)){
+      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,1+.02f*walker.level,walker.pos.z,ConfigManager::getSingleton().getBedStepMaxHeight());
+      if(rise<=0){clear=false;break;}
+      for(int sample=0;sample<=64;++sample){
+       const auto at=previous+(point-previous)*(sample/64.f);
+       if(obstacle.contains(at,point-previous)&&RoomObjectPath::lowStepElevation(obstacle,at,point-previous,rise)<rise-.00001f)clear=false;
+      }
+     }
+     check(clear,"packed-bed transit keeps the full walking body outside visible furniture or visibly above a bed it steps over");
      previous=point;
     }
    }
@@ -535,7 +545,7 @@ probe = probe.replace('ROOM_LAYOUTS', r'''
   Creature walker{&packed};walker.level=30;walker.pos={reverse?8.f:2.f,5,0};
   const Ogre::Vector2 food(reverse?2.f:8.f,5);std::vector<Ogre::Vector2> approach;
   const bool reached=RoomObjectNavigation::foodApproach(walker,food,approach);
-  check(reached==lowNest,"food approach can cross low nests but not higher bed parts");
+  check(reached,"food approach crosses low and higher beds when the walker is wider than the bed lane");
   if(reached){
    check(!approach.empty()&&!RoomObjectNavigation::blocked(walker,approach),"food transit uses the same server step permission");
    check(RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(walker),approach.back(),food-approach.back()),"food interaction still stands outside the bed");
@@ -805,9 +815,6 @@ probe = probe.replace('CRYPT_DELIVERY', r'''
     for(const char* mesh:{"Kobold.mesh","Dwarf1.mesh"})for(int level:{1,30}){
      Creature worker{&map};worker.mesh=mesh;worker.level=level;auto entrance=rotate({1,5});worker.pos={entrance.x,entrance.y,0};
      std::vector<Ogre::Vector2> path;Creature::tileToVector2(map.path(&worker,delivery),path,true,0);RoomObjectNavigation::refine(worker,path);
-     if(std::string(mesh)=="Dwarf1.mesh"&&level==30){
-      check(path.empty(),"oversized dwarf cannot squeeze through the narrower coffin lane");continue;
-     }
      check(!path.empty(),"crypt delivery has a collision-safe approach");
      if(path.empty())continue;
      check(!RoomObjectNavigation::blocked(worker,path),"crypt approach never crosses furniture");
