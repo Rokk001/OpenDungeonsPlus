@@ -2715,7 +2715,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         else if ( !tile.getEverVisible() && !tile.getHasFogOfWar())
         {
 
-            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), false);
+            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), isMarked);
             tile.setFogOfWarCloud( mInstanceManagerCloud->createInstancedEntity("Fog"));
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
             tileMeshNode->attachObject(tile.getFogOfWarCloud());
@@ -2749,7 +2749,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
             tile.setFogOfWarMesh(nullptr, isMarked);  
             tile.setHasFogOfWar(false);  
-            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), false);
+            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
             tile.getFogOfWarMesh()->setPosition(tile.getPosition());
            
@@ -2763,6 +2763,9 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         
 
     }
+    if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)
+        tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
+
     // We rescale and set the orientation that may have changed
     if(tileMeshNode != nullptr)
     {
@@ -7103,8 +7106,62 @@ void RenderManager::rrPlayDigAnimation()
     mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "DigSwing", false);
 }
 
-void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging)
+void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
 {
+    if(singleRectangle)
+    {
+        if(mTilePreview == nullptr)
+        {
+            if(tiles.empty())
+                return;
+            mTilePreview = mSceneManager->createManualObject("KeeperTilePreview");
+            mTilePreview->setDynamic(true);
+            mTilePreview->setCastShadows(false);
+            mSceneManager->getRootSceneNode()->createChildSceneNode("KeeperTilePreviewNode")->attachObject(mTilePreview);
+        }
+        mTilePreview->clear();
+        if(tiles.empty())
+            return;
+
+        int minX = tiles.front()->getX();
+        int maxX = minX;
+        int minY = tiles.front()->getY();
+        int maxY = minY;
+        float z = 0.04f;
+        for(Tile* tile : tiles)
+        {
+            minX = std::min(minX, tile->getX());
+            maxX = std::max(maxX, tile->getX());
+            minY = std::min(minY, tile->getY());
+            maxY = std::max(maxY, tile->getY());
+            Ogre::MovableObject* surface = tile->getFogOfWarMesh();
+            if(tile->getEverVisible() && !tile->getHasFogOfWar())
+            {
+                const std::string meshName = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
+                if(mSceneManager->hasEntity(meshName))
+                    surface = mSceneManager->getEntity(meshName);
+            }
+            if(surface != nullptr)
+                z = std::max(z, surface->getWorldBoundingBox(true).getMaximum().z + 0.02f);
+        }
+        const Ogre::Vector3 corners[] = {
+            Ogre::Vector3(minX - 0.5f, minY - 0.5f, z),
+            Ogre::Vector3(maxX + 0.5f, minY - 0.5f, z),
+            Ogre::Vector3(maxX + 0.5f, maxY + 0.5f, z),
+            Ogre::Vector3(minX - 0.5f, maxY + 0.5f, z)
+        };
+        mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_LINE_LIST, "Graphics");
+        for(int i = 0; i < 4; ++i)
+        {
+            mTilePreview->position(corners[i]);
+            mTilePreview->colour(colour);
+            mTilePreview->position(corners[(i + 1) % 4]);
+            mTilePreview->colour(colour);
+        }
+        mTilePreview->end();
+        return;
+    }
+
     if(mTilePreview == nullptr)
     {
         if(tiles.empty())

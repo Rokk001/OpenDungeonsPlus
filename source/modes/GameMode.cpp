@@ -4214,20 +4214,29 @@ void GameMode::updateSelectedTiles()
          std::any_of(mPreviewTiles.begin(), mPreviewTiles.end(), [](Tile* tile) { return tile->getIsRoom(); }));
     const bool digging = mPlayerSelection.getCurrentAction() == SelectedAction::none ||
         mPlayerSelection.getCurrentAction() == SelectedAction::selectTile;
+    const bool rectangle = mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
+        mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
+        mPlayerSelection.getCurrentAction() == SelectedAction::destroyRoom ||
+        mPlayerSelection.getCurrentAction() == SelectedAction::destroyTrap ||
+        mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding;
     if(!mActionTargetValid && !building)
         mPreviewTiles.clear();
     const Ogre::ColourValue colour = mActionTargetValid ? Ogre::ColourValue(0.35f, 0.3f, 1.0f) :
         Ogre::ColourValue(1.0f, 0.15f, 0.1f);
+    const InputManager& inputManager = mModeManager->getInputManager();
+    const std::vector<Tile*> outlineTiles = rectangle && inputManager.mLMouseDown ?
+        mGameMap->rectangularRegion(inputManager.mXPos, inputManager.mYPos,
+            inputManager.mLStartDragX, inputManager.mLStartDragY) : mPreviewTiles;
     if(mPreviewTiles == mSelectedTiles)
     {
-        RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition, digging);
+        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || roomDemolition, digging, rectangle);
         return;
     }
     Player* player = mGameMap->getLocalPlayer();
     for(Tile* tile : mSelectedTiles)
         tile->setSelected(false, player);
     mSelectedTiles = mPreviewTiles;
-    RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, colour, building || roomDemolition, digging);
+    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || roomDemolition, digging, rectangle);
 }
 
 void GameMode::unselectAllTiles()
@@ -4586,6 +4595,18 @@ void GameMode::handlePlayerActionNone()
     if(player->numObjectsInHand() == 0)
     {
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+        if(tile != nullptr && (!tile->getEverVisible() || tile->getHasFogOfWar()))
+        {
+            displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
+            selectSquaredTiles(tile->getX(), tile->getY(), tile->getX(), tile->getY());
+            InputManager& mutableInput = mModeManager->getInputManager();
+            if(mutableInput.mHighlightedCreature != nullptr)
+            {
+                mutableInput.mHighlightedCreature->normalizeAmbient();
+                mutableInput.mHighlightedCreature = nullptr;
+            }
+            return;
+        }
         GameEntity* closest = nullptr;
         double distance = 0.0;
         if(tile != nullptr)
@@ -4683,8 +4704,7 @@ void GameMode::handlePlayerActionSelectTile()
     std::vector<Tile*> diggableTiles;
     for(Tile* tile : tiles)
     {
-        // Unexplored tiles cannot be marked: the mark would show which walls are gold or dirt
-        if(mDigSetBool ? (tile->getEverVisible() && tile->isDiggable(player->getSeat())) : tile->getMarkedForDigging(player))
+        if(mDigSetBool ? (!tile->getEverVisible() || tile->getHasFogOfWar() || tile->isDiggable(player->getSeat())) : tile->getMarkedForDigging(player))
             diggableTiles.push_back(tile);
     }
     if(diggableTiles.empty())
@@ -4692,8 +4712,6 @@ void GameMode::handlePlayerActionSelectTile()
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(!mDigSetBool)
             displayText(Ogre::ColourValue::Red, "No marked walls in this selection.");
-        else if(tile != nullptr && !tile->getEverVisible())
-            displayText(Ogre::ColourValue::Red, "This wall cannot be dug out.");
         else if(tile != nullptr && !tile->isFullTile())
             displayText(Ogre::ColourValue::Red, "This ground is already dug out.");
         else if(tile != nullptr && tile->isClaimed() && !tile->isClaimedForSeat(player->getSeat()))
