@@ -742,17 +742,18 @@ bool RoomHatchery::spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& 
             continue;
 
         const Ogre::Vector2 inside(coopTile->getX() + 0.3f, coopTile->getY());
+        const Ogre::Vector2 door(coopTile->getX() + 0.9f, coopTile->getY());
         Ogre::Vector2 freePosition;
         if(!RoomObjectNavigation::standingPosition(obstacles,
             Ogre::Vector2(coopTile->getX() + 1.1f, coopTile->getY()), freePosition) ||
            (freePosition.x <= coopTile->getX() + 0.9f) ||
            (getGameMap()->getTile(Helper::round(freePosition.x), Helper::round(freePosition.y)) != floorTile) ||
-           !RoomObjectPath::clearSegment(obstacles,
-               Ogre::Vector2(coopTile->getX() + 0.9f, coopTile->getY()), freePosition))
+           !RoomObjectPath::clearSegment(obstacles, inside, door, true) ||
+           !RoomObjectPath::clearSegment(obstacles, door, freePosition))
             continue;
 
         ChickenEntity* animal = spawnAnimal(kind, Ogre::Vector3(inside.x, inside.y, 0.0f), settings);
-        animal->emergeFromCoop(freePosition);
+        animal->emergeFromCoop(door, freePosition);
         ++spawned;
     }
     return spawned > 0;

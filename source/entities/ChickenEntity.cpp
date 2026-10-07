@@ -60,6 +60,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mAge(0),
     mBusyTurns(0),
     mLeavingCoop(false),
+    mCoopDoor(Ogre::Vector2::ZERO),
     mCoopExit(Ogre::Vector2::ZERO),
     mScatterTurns(0),
     mRoomDriven(false),
@@ -97,6 +98,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mAge(0),
     mBusyTurns(0),
     mLeavingCoop(false),
+    mCoopDoor(Ogre::Vector2::ZERO),
     mCoopExit(Ogre::Vector2::ZERO),
     mScatterTurns(0),
     mRoomDriven(false),
@@ -269,7 +271,10 @@ void ChickenEntity::doUpkeep()
         {
             if(mLeavingCoop)
             {
-                std::vector<Ogre::Vector2> path(1, mCoopExit);
+                std::vector<Ogre::Vector2> path;
+                if(getPosition().x < mCoopDoor.x)
+                    path.push_back(mCoopDoor);
+                path.push_back(mCoopExit);
                 setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, false);
             }
             else
@@ -442,8 +447,9 @@ void ChickenEntity::playPose(const std::string& pose, uint32_t turns)
     clearDestinations(pose, true, false);
 }
 
-void ChickenEntity::emergeFromCoop(const Ogre::Vector2& exit)
+void ChickenEntity::emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit)
 {
+    mCoopDoor = door;
     mCoopExit = exit;
     mLeavingCoop = true;
     playPose(ChickenPose::emerge, 1);
@@ -1067,7 +1073,8 @@ void ChickenEntity::exportToStream(std::ostream& os) const
     os << static_cast<uint32_t>(mKind) << "\t" << mNbTurnLay << "\t" << mAge << "\t";
     // Appended later: turns the keeper's gift is still offered to a creature that is not hungry
     os << mGiftTurns << "\t";
-    os << mLeavingCoop << "\t" << mCoopExit.x << "\t" << mCoopExit.y << "\t";
+    os << mLeavingCoop << "\t" << mCoopExit.x << "\t" << mCoopExit.y << "\t"
+       << mCoopDoor.x << "\t" << mCoopDoor.y << "\t";
 }
 
 bool ChickenEntity::importFromStream(std::istream& is)
@@ -1105,8 +1112,17 @@ bool ChickenEntity::importFromStream(std::istream& is)
         {
             mLeavingCoop = leavingCoop;
             mCoopExit = coopExit;
+            if(!(is >> mCoopDoor.x >> mCoopDoor.y))
+            {
+                is.clear();
+                mCoopDoor = mCoopExit;
+            }
             if(mLeavingCoop)
+            {
                 mBusyTurns = 1;
+                mPrevAnimationState = ChickenPose::emerge;
+                mPrevAnimationStateLoop = false;
+            }
         }
         else
             is.clear();
@@ -1123,7 +1139,7 @@ std::string ChickenEntity::getChickenEntityStreamFormat()
     if(!format.empty())
         format += "\t";
 
-    format += "PosX\tPosY\tPosZ\tKind\tLayTimer\tAge\tGiftTurns\tLeavingCoop\tCoopExitX\tCoopExitY";
+    format += "PosX\tPosY\tPosZ\tKind\tLayTimer\tAge\tGiftTurns\tLeavingCoop\tCoopExitX\tCoopExitY\tCoopDoorX\tCoopDoorY";
 
     return format;
 }

@@ -40,7 +40,8 @@ for call in ('updateChickLine', 'updateRooster', 'ChickenPose::lay', 'ChickenPos
     assert call in upkeep, call
 coop_spawn = body(room, 'bool RoomHatchery::spawnFromCoop')
 assert 'spawnAnimal(kind, Ogre::Vector3(inside.x, inside.y, 0.0f), settings)' in coop_spawn
-assert 'animal->emergeFromCoop(freePosition)' in coop_spawn
+assert 'animal->emergeFromCoop(door, freePosition)' in coop_spawn
+assert 'clearSegment(obstacles, inside, door, true)' in coop_spawn
 assert 'getX() + 1' in coop_spawn and 'clearSegment(obstacles' in coop_spawn
 assert 'playPose(ChickenPose::emerge, 1)' in body(chicken, 'void ChickenEntity::emergeFromCoop')
 assert 'setWalkPath(EntityAnimation::walk_anim' in body(chicken, 'void ChickenEntity::doUpkeep')
@@ -269,14 +270,17 @@ assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'Ha
 # the rooster protests in the hand: pose, clip and look
 assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
 assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
-# A hatchery with only the rooster looks abandoned: loose feathers lie scattered over it (at the places the server sent,
-# not at the coops). The rooster is not counted.
+# A hatchery with only the rooster keeps the existing empty-room count.
 decor = body(looks, 'const bool check = mCoopDecorTimer')
 assert 'ChickenKind::rooster' in decor and 'getEntitiesInTile' in decor
 assert 'roomAnimals[room] = animals' in decor and 'mFeathers' not in decor, 'no feathers entity at the coops'
 nest_update = body(looks, 'void RenderManager::updateNestFields')
-assert '(animals->second == 0)' in nest_update and 'mFeatherEntities[i]->setVisible(empty)' in nest_update
-assert 'sent->second.mFeathers' in nest_update
+assert 'HatcheryFeathers_' not in nest_update, 'loose feather decor must not appear without an action'
+assert 'mFeatherEntities[i]->setVisible(empty)' not in nest_update
+assert 'chickenClipVisible(chicken, "Flutter")' in looks
+assert 'chickenClipVisible(chicken, "Tread")' in looks
+assert 'chickenClipVisible(chicken, EntityAnimation::walk_anim)' in looks
+assert 'feeding.mAnimation->getEnabled()' in render
 # counter-proof: the old count over all chicken entities would keep a rooster-only hatchery looking alive
 assert 'countEntitiesOnTile(GameEntityType::chickenEntity)' not in decor
 # there is no night: no sleeping pose, no chick tucked in under a hen, the chicks always walk in a line behind the hen

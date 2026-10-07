@@ -138,7 +138,7 @@ public:
     void playPose(const std::string& pose, uint32_t turns);
 
     //! Plays the coop entrance pose, then walks through its door to the hatchery floor.
-    void emergeFromCoop(const Ogre::Vector2& exit);
+    void emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit);
     inline bool isLeavingCoop() const
     { return mLeavingCoop; }
 
@@ -271,6 +271,7 @@ private:
     uint32_t mAge;
     uint32_t mBusyTurns;
     bool mLeavingCoop;
+    Ogre::Vector2 mCoopDoor;
     Ogre::Vector2 mCoopExit;
     uint32_t mScatterTurns;
     bool mRoomDriven;

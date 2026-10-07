@@ -1992,7 +1992,11 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
                 feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * 3.0f);
         }
         if(feeding.mFeatherBursts < 2 && time >= meal.mFirstBite + 0.45f * meal.mBite +
-            feeding.mFeatherBursts * (meal.mSecondBite - meal.mFirstBite))
+            feeding.mFeatherBursts * (meal.mSecondBite - meal.mFirstBite) &&
+            feeding.mAnimation != nullptr && feeding.mAnimation->getEnabled() && !feeding.mAnimation->hasEnded() &&
+            feeding.mEntity->isVisible() && feeding.mChickenNode != nullptr &&
+            feeding.mChickenNode->isInSceneGraph() && feeding.mChickenEntity != nullptr &&
+            feeding.mChickenEntity->isVisible())
         {
             createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth),
                 feeding.mRoosterFeathers ? "ChickenFeathersRooster" : "ChickenFeathers");
@@ -5073,6 +5077,9 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
 
 void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName)
 {
+    if((particleName == "ChickenFeathers" || particleName == "ChickenFeathersRooster") &&
+       (mViewport == nullptr || mViewport->getCamera() == nullptr || !mViewport->getCamera()->isVisible(position)))
+        return;
     const std::string name = particleName + "_" + Helper::toString(++mChickenFeatherEffectNumber);
     Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(name + "_node", position);
     Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, particleName);
