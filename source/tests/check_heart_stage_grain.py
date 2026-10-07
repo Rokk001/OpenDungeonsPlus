@@ -115,7 +115,7 @@ assert 'CosmeticEventType::hatcheryGrain' in function_body(hatchery, 'CosmeticEv
 export = function_body(hatchery, 'void RoomHatchery::exportToStream(')
 assert export.index('HatcheryWaits') < export.index('HatcheryGrain') and 'if(!mGrain.empty())' in export
 load = function_body(hatchery, 'bool RoomHatchery::importFromStream(')
-assert load.count('is.seekg(pos);') == 2 and 'tag != "HatcheryGrain"' in load
+assert 'tag == "HatcheryGrain"' in load and 'mGrainDirty = !mGrain.empty();' in load
 assert load.index('HatcheryWaits') < load.index('"HatcheryGrain"')
 
 # Client: levels from the event, decals by level, a peck shows a small cloud; stale lists are dropped
@@ -147,7 +147,7 @@ assert chicken.count('setAnimationState("Pick"') == 2, 'every Pick animation of 
 for call in re.finditer(r'setAnimationState\("Pick"[^;]*;', chicken):
     assert 'peckGround(currentHatchery);' in chicken[call.end():call.end() + 120], 'Pick without a peck'
 follow = chicken[chicken.index('(a hen pecks at the food)'):]
-assert follow.index('setAnimationState("Pick", true);') < follow.index('peckGround(currentHatchery);') < follow.index('mCalm ? ChickenPose::roost')
+assert follow.index('setAnimationState("Pick", true);') < follow.index('peckGround(currentHatchery);') < follow.index('setAnimationState(EntityAnimation::idle_anim, true);')
 assert 'peckGround(currentHatchery);' in function_body(chicken, 'void ChickenEntity::wander(')
 start_peck = function_body(chicken, 'bool ChickenEntity::startPeck(')
 assert 'mKind != ChickenKind::hen' in start_peck and 'mPeckWait > 0' in start_peck

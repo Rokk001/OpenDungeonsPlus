@@ -66,8 +66,11 @@ ROOM_RULE = (
     ("guardRoom", ("guardRoom",), ()),
     ("temple", ("templeRoom",), ()),
 )
-# Room types that are exempt from the rule, with the reason (none at the moment)
-RULE_EXCEPTIONS = {}
+# Room types that are exempt from the rule, with the reason
+RULE_EXCEPTIONS = {
+    "treasury": "the client draws the sparkle, the sliding coins, the glow and the gold dust of the piles itself "
+                "(TreasuryCreatureRules.h); the config only adds the glitter of the middle piles",
+}
 OPERATION_WHENS = ("Occupied", "Vacated", "Hit", "Locked", "Reloading", "Ready")
 
 
@@ -312,8 +315,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             counts["lands"].append((where, effect["Land"][0]))
         if kind == "Beam" and "Land" in effect:
             problems.append("%s: only projectiles have Land" % where)
-    elif "Land" in effect or "From" in effect or ("Mesh" in effect and kind != "Roll"):
-        problems.append("%s: Mesh, Land and From only belong to beams and projectiles (Mesh also to rolls)" % where)
+    elif "Land" in effect or "From" in effect or ("Mesh" in effect and kind not in ("Roll", "Model")):
+        problems.append("%s: Mesh, Land and From only belong to beams and projectiles (Mesh also to rolls and models)" % where)
     if kind == "Shake":
         for key in ("Amount", "Duration", "Speed", "MaxDistance"):
             if key not in effect:
