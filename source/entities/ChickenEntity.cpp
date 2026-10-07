@@ -59,6 +59,8 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mNbTurnLay(0),
     mAge(0),
     mBusyTurns(0),
+    mLeavingCoop(false),
+    mCoopExit(Ogre::Vector2::ZERO),
     mScatterTurns(0),
     mRoomDriven(false),
     mFighting(false),
@@ -94,6 +96,8 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mNbTurnLay(0),
     mAge(0),
     mBusyTurns(0),
+    mLeavingCoop(false),
+    mCoopExit(Ogre::Vector2::ZERO),
     mScatterTurns(0),
     mRoomDriven(false),
     mFighting(false),
@@ -262,8 +266,23 @@ void ChickenEntity::doUpkeep()
     {
         --mBusyTurns;
         if(mBusyTurns == 0)
-            setAnimationState(EntityAnimation::idle_anim, true);
+        {
+            if(mLeavingCoop)
+            {
+                std::vector<Ogre::Vector2> path(1, mCoopExit);
+                setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, false);
+            }
+            else
+                setAnimationState(EntityAnimation::idle_anim, true);
+        }
         return;
+    }
+
+    if(mLeavingCoop)
+    {
+        if(isMoving())
+            return;
+        mLeavingCoop = false;
     }
 
     // The hatchery moves the rooster itself for the moods that need it
@@ -421,6 +440,13 @@ void ChickenEntity::playPose(const std::string& pose, uint32_t turns)
 {
     mBusyTurns = turns;
     clearDestinations(pose, true, false);
+}
+
+void ChickenEntity::emergeFromCoop(const Ogre::Vector2& exit)
+{
+    mCoopExit = exit;
+    mLeavingCoop = true;
+    playPose(ChickenPose::emerge, 1);
 }
 
 bool ChickenEntity::scatterTo(const Ogre::Vector2& spot, uint32_t turns)
@@ -703,6 +729,7 @@ void ChickenEntity::pickup()
     mFighting = false;
     mRoomDriven = false;
     mBusyTurns = 0;
+    mLeavingCoop = false;
     mFollowing = false;
     mReturningHome = false;
     mGiftTurns = 0;
@@ -1040,6 +1067,7 @@ void ChickenEntity::exportToStream(std::ostream& os) const
     os << static_cast<uint32_t>(mKind) << "\t" << mNbTurnLay << "\t" << mAge << "\t";
     // Appended later: turns the keeper's gift is still offered to a creature that is not hungry
     os << mGiftTurns << "\t";
+    os << mLeavingCoop << "\t" << mCoopExit.x << "\t" << mCoopExit.y << "\t";
 }
 
 bool ChickenEntity::importFromStream(std::istream& is)
@@ -1070,6 +1098,18 @@ bool ChickenEntity::importFromStream(std::istream& is)
             mGiftTurns = giftTurns;
         else
             is.clear();
+
+        bool leavingCoop = false;
+        Ogre::Vector2 coopExit;
+        if(is >> leavingCoop >> coopExit.x >> coopExit.y)
+        {
+            mLeavingCoop = leavingCoop;
+            mCoopExit = coopExit;
+            if(mLeavingCoop)
+                mBusyTurns = 1;
+        }
+        else
+            is.clear();
     }
     else
         is.clear();
@@ -1083,9 +1123,7 @@ std::string ChickenEntity::getChickenEntityStreamFormat()
     if(!format.empty())
         format += "\t";
 
-    format += "PosX\tPosY\tPosZ\tKind\tLayTimer\tAge\tGiftTurns";
+    format += "PosX\tPosY\tPosZ\tKind\tLayTimer\tAge\tGiftTurns\tLeavingCoop\tCoopExitX\tCoopExitY";
 
     return format;
 }
-
-

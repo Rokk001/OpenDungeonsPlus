@@ -38,7 +38,12 @@ assert hook.index('rrSetChickenPose') < hook.index('hasSkeleton')
 upkeep = body(room, 'void RoomHatchery::doUpkeep')
 for call in ('updateChickLine', 'updateRooster', 'ChickenPose::lay', 'ChickenPose::wobble'):
     assert call in upkeep, call
-assert 'ChickenPose::emerge' in body(room, 'bool RoomHatchery::spawnFromCoop')
+coop_spawn = body(room, 'bool RoomHatchery::spawnFromCoop')
+assert 'spawnAnimal(kind, Ogre::Vector3(inside.x, inside.y, 0.0f), settings)' in coop_spawn
+assert 'animal->emergeFromCoop(freePosition)' in coop_spawn
+assert 'getX() + 1' in coop_spawn and 'clearSegment(obstacles' in coop_spawn
+assert 'playPose(ChickenPose::emerge, 1)' in body(chicken, 'void ChickenEntity::emergeFromCoop')
+assert 'setWalkPath(EntityAnimation::walk_anim' in body(chicken, 'void ChickenEntity::doUpkeep')
 assert 'new ChickenEntity' not in upkeep
 
 # Chicks follow, the rooster that is dropped outside runs back to a hatchery of his keeper.
