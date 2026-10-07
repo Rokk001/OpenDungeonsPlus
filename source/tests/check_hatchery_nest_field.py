@@ -322,12 +322,11 @@ assert 'getNestFieldSettings' not in client_cpp and 'HatcheryNestField::compute'
 for path in sorted((root / 'source/render').glob('*')) + [root / 'source/network/ODClient.cpp']:
     if path.suffix in ('.cpp', '.h'):
         assert 'computeFeathers' not in path.read_text(errors='replace'), (path.name, 'the client must not compute feathers')
-# Client: the feathers are entities at the places the server sent, shown only while the hatchery is empty, and there is
-# no feathers entity at the coops any more
+# Client: the server's old decorative feather places cannot show without an action.
 assert 'mFeathers' not in looks.replace('nests.mFeathers', '').replace('sent->second.mFeathers', '')
 assert 'mFeathers' not in render_h.replace('std::vector<HatcheryNestField::Place> mFeathers;', '')
-assert 'sent->second.mFeathers' in looks and 'mFeatherEntities[i]->setVisible(empty)' in looks
+assert 'sent->second.mFeathers' not in looks and 'mFeatherEntities[i]->setVisible(empty)' not in looks
 upd = looks[looks.index('void RenderManager::updateNestFields'):]
-assert '(animals->second == 0)' in upd and 'roomAnimals' in upd
+assert 'HatcheryFeathers_' not in upd
 assert 'MeshFeathers' not in looks[looks.index('void RenderManager::rrCreateCoopDecor'):looks.index('void RenderManager::updateChickenLooks')]
 print('hatchery nest field checks passed')

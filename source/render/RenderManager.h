@@ -534,6 +534,8 @@ private:
         Ogre::Real mPoseTime;
         Ogre::Real mPhase;
         int mFeatherBursts;
+        bool mEmergeFeathersPending;
+        bool mCoopDoorReplayPending;
         //! The rooster this one fights (set by the server event), the first of the two makes the feather clouds
         ChickenEntity* mFightPartner;
         bool mFightLeader;
@@ -790,6 +792,7 @@ private:
         Ogre::Real chickenHeight, bool withoutHands) const;
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName = "ChickenFeathers");
+    bool chickenClipVisible(ChickenEntity* chicken, const std::string& clip) const;
     void updateChickenLooks(Ogre::Real timeSinceLastFrame);
     void applyChickenKindLook(ChickenEntity* chicken);
     void clearChickenLooks();
