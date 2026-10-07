@@ -254,6 +254,9 @@ public:
     inline double getManaWellBonusPerTile() const
     { return mManaWellBonusPerTile; }
 
+    inline double getBedStepMaxHeight() const
+    { return mBedStepMaxHeight; }
+
     inline double getClaimingWallPenalty() const
     { return mClaimingWallPenalty; }
 
@@ -482,6 +485,7 @@ private:
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
     double mManaWellBonusPerTile;
+    double mBedStepMaxHeight;
     double mClaimingWallPenalty;
     double mDigCoefGold;
     double mDigCoefGem;

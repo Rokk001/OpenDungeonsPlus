@@ -1,6 +1,6 @@
-// ImpBed: procedural bed, see tools/room-objects/generate_beds.py
+// WorkerBed: procedural bed, see tools/room-objects/generate_beds.py
 import RTSS/PerPixel_SinglePass from "RTShaderSystem.material"
-material ImpBedFrame : RTSS/PerPixel_SinglePass
+material WorkerBedFrame : RTSS/PerPixel_SinglePass
 {
     technique
     {
@@ -9,13 +9,13 @@ material ImpBedFrame : RTSS/PerPixel_SinglePass
             specular 0.0 0.0 0.0 0.0 1.0
             texture_unit
             {
-                texture ImpBed.png
+                texture WorkerBed.png
             }
         }
     }
 }
 
-material ImpBedStraw : RTSS/PerPixel_SinglePass
+material WorkerBedStraw : RTSS/PerPixel_SinglePass
 {
     technique
     {
@@ -24,13 +24,13 @@ material ImpBedStraw : RTSS/PerPixel_SinglePass
             specular 0.0 0.0 0.0 0.0 1.0
             texture_unit
             {
-                texture ImpBed.png
+                texture WorkerBed.png
             }
         }
     }
 }
 
-material ImpBedBlanket : RTSS/PerPixel_SinglePass
+material WorkerBedBlanket : RTSS/PerPixel_SinglePass
 {
     technique
     {
@@ -39,7 +39,7 @@ material ImpBedBlanket : RTSS/PerPixel_SinglePass
             specular 0.0 0.0 0.0 0.0 1.0
             texture_unit
             {
-                texture ImpBed.png
+                texture WorkerBed.png
             }
         }
     }

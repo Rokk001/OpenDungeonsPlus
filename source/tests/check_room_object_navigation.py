@@ -148,6 +148,11 @@ std::list<Tile*> GameMap::path(Creature* creature,Tile* target){
   }
  }return {};
 }
+struct ConfigManager {
+ static ConfigManager& getSingleton(){static ConfigManager config;return config;}
+ double getBedStepMaxHeight()const{return STEP_MAX;}
+ double getRoomConfigDouble(const char*){return 10;}unsigned getRoomConfigUInt32(const char*){return 1;}
+};
 SOURCE
 void Creature::setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& path,bool jitter,bool refined){
  walk=path;alreadyRefined=refined;distortion=jitter&&!refined;if(!refined&&RoomObjectNavigation::refine(*this,walk))distortion=false;
@@ -161,10 +166,6 @@ struct ChickenEntity {
 };
 struct CreatureActionWalkToTile {CreatureActionWalkToTile(Creature&){}};
 struct CreatureActionEatChicken {static bool handleEatChicken(Creature&,ChickenEntity*);};
-struct ConfigManager {
- static ConfigManager& getSingleton(){static ConfigManager config;return config;}
- double getRoomConfigDouble(const char*){return 10;}unsigned getRoomConfigUInt32(const char*){return 1;}
-};
 namespace Random {int Int(int first,int){return first;}}
 namespace Utils {using std::make_unique;}
 namespace EntityAnimation {const std::string walk_anim="Walk",idle_anim="Idle",eat_chicken_anim="EatChicken";}
@@ -223,7 +224,7 @@ int main(){
   const float crossingY=5+std::sin(angle)*(row.minX+row.maxX)*.5f+std::cos(angle)*(row.minY+row.maxY)*.5f;
   creature.pos={1,crossingY,0};
   std::vector<Ogre::Vector2> path;for(int x=2;x<=10;++x)path.push_back({float(x),crossingY});
-  check(RoomObjectNavigation::blocked(creature,path)!=(std::string(row.name)=="GoblinBed"),"straight crossing is permitted only over the measured low nest");
+  check(RoomObjectNavigation::blocked(creature,path)!=std::isfinite(row.maxZ),"straight crossing is permitted only over measured beds (this worker is wider than the lane between beds)");
   check(RoomObjectNavigation::refine(creature,path),"furniture routes suppress independent client jitter");
   if(path.empty())std::cout<<"NO_ROUTE "<<row.name<<" rotation="<<rotation<<'\n';
   check(!path.empty()&&path.back()==Ogre::Vector2(10,crossingY),"route keeps accessible destination");
@@ -331,7 +332,9 @@ int main(){
  room.objects.clear();std::vector<Ogre::Vector2> restored{{2,5},{3,5},{4,5},{5,5}};
  check(!RoomObjectNavigation::refine(creature,restored),"removing furniture immediately reopens original route");
  room.objects[map.getTile(5,5)]=&object;
+ object.mesh="Anvil";
  check(RoomObjectNavigation::blocked(creature,restored),"placing furniture invalidates existing crossing route");
+ object.mesh="Bed";
  // A previously jittered path can overlap a newly placed object even when the
  // server's centerline is clear. Placement must invalidate that larger envelope.
  creature.pos={1,6.4f,0};restored={{9,6.4f}};object.angle=45;
@@ -425,7 +428,7 @@ int main(){
  CRYPT_DELIVERY
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
-'''.replace('SOURCE', source).replace('FOOD_HANDLER', food_handler).replace('WORK_GATES', '\n'.join(work_gates))
+'''.replace('STEP_MAX', re.search(r'^\s*BedStepMaxHeight\s+(\S+)', (repo / 'config/global.cfg').read_text(), re.M)[1]).replace('SOURCE', source).replace('FOOD_HANDLER', food_handler).replace('WORK_GATES', '\n'.join(work_gates))
 probe = probe.replace('PACKED_BEDS', r'''
  {
   // A completely furnished room with two opposing doorways: an open-map
@@ -436,7 +439,7 @@ probe = probe.replace('PACKED_BEDS', r'''
   std::vector<BuildingObject> beds(9);
   for(int y=4;y<=6;++y)for(int x=4;x<=6;++x){
    auto* tile=packed.getTile(x,y);tile->walkable=true;tile->room=&dormitory;
-   auto& bed=beds[(y-4)*3+x-4];bed.mesh="ImpBed";bed.pos={float(x),float(y),0};
+   auto& bed=beds[(y-4)*3+x-4];bed.mesh="WorkerBed";bed.pos={float(x),float(y),0};
    placeBed(bed,x,y,1,1,0,"Creature"+std::to_string((y-4)*3+x-4));
    dormitory.objects[tile]=&bed;
   }
@@ -456,8 +459,16 @@ probe = probe.replace('PACKED_BEDS', r'''
     auto previous=Ogre::Vector2(walker.pos.x,walker.pos.y);
     for(const auto& point:transit){
      check(terrainClear(walker,previous,point),"packed-bed transit cannot escape through the surrounding walls");
-     check(RoomObjectPath::clearSegment(RoomObjectNavigation::bodyObstacles(walker),previous,point),
-      "packed-bed transit keeps the full walking body outside visible furniture");
+     bool clear=true;
+     for(auto obstacle:RoomObjectNavigation::bodyObstacles(walker))if(obstacle.intersects(previous,point)){
+      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,float(walker.getLevelScale()),walker.pos.z,ConfigManager::getSingleton().getBedStepMaxHeight());
+      if(rise<=0){clear=false;break;}
+      for(int sample=0;sample<=64;++sample){
+       const auto at=previous+(point-previous)*(sample/64.f);
+       if(obstacle.contains(at,point-previous)&&RoomObjectPath::lowStepElevation(obstacle,at,point-previous,rise)<rise-.00001f)clear=false;
+      }
+     }
+     check(clear,"packed-bed transit keeps the full walking body outside visible furniture or visibly above a bed it steps over");
      previous=point;
     }
    }
@@ -467,7 +478,7 @@ probe = probe.replace('PACKED_BEDS', r'''
  {
   struct BedLayout{const char* name;int width,height;};
   const BedLayout layouts[]={
-   {"Bed",1,2},{"ImpBed",1,1},{"GoblinBed",1,1},{"SpiderBed",1,1},
+   {"Bed",1,2},{"WorkerBed",1,1},{"GoblinBed",1,1},{"SpiderBed",1,1},
    {"TentacleBed",1,1},{"KnightCoffin",1,2},{"StoneCoffin",1,2},
    {"LizardmanBed",1,2},{"OrcBed",1,2},{"RangerBed",1,2},
    {"DragonBed",2,2},{"TrollBed",2,2}
@@ -506,7 +517,7 @@ probe = probe.replace('PACKED_BEDS', r'''
     for(const auto& point:path){
      bool clear=true;
      for(auto obstacle:obstacles)if(obstacle.intersects(previous,point)){
-      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,float(walker.getLevelScale()),walker.pos.z);
+      const float rise=RoomObjectPath::prepareLowStep(obstacle,walker.mesh,float(walker.getLevelScale()),walker.pos.z,ConfigManager::getSingleton().getBedStepMaxHeight());
       if(rise<=0){clear=false;break;}
       for(int sample=0;sample<=64;++sample){
        const auto at=previous+(point-previous)*(sample/64.f);
@@ -530,7 +541,7 @@ probe = probe.replace('ROOM_LAYOUTS', r'''
   for(int i:{2,3,7,8})packed.getTile(vertical?5:i,vertical?i:5)->walkable=true;
   std::vector<BuildingObject> beds(9);
   for(int y=0;y<3;++y)for(int x=0;x<3;++x){
-   auto& bed=beds[y*3+x];bed.mesh="ImpBed";
+   auto& bed=beds[y*3+x];bed.mesh="WorkerBed";
    placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
   }
   Creature walker{&packed};walker.mesh="Rat.mesh";walker.level=2;
@@ -549,13 +560,13 @@ probe = probe.replace('ROOM_LAYOUTS', r'''
   for(int x:{2,3,7,8})packed.getTile(x,5)->walkable=true;
   std::vector<BuildingObject> beds(9);
   for(int y=0;y<3;++y)for(int x=0;x<3;++x){
-   auto& bed=beds[y*3+x];bed.mesh=lowNest?"GoblinBed":"ImpBed";
+   auto& bed=beds[y*3+x];bed.mesh=lowNest?"GoblinBed":"WorkerBed";
    placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
   }
   Creature walker{&packed};walker.level=30;walker.pos={reverse?8.f:2.f,5,0};
   const Ogre::Vector2 food(reverse?2.f:8.f,5);std::vector<Ogre::Vector2> approach;
   const bool reached=RoomObjectNavigation::foodApproach(walker,food,approach);
-  check(reached==lowNest,"food approach can cross low nests but not higher bed parts");
+  check(reached,"food approach crosses low and higher beds when the walker is wider than the bed lane");
   if(reached){
    check(!approach.empty()&&!RoomObjectNavigation::blocked(walker,approach),"food transit uses the same server step permission");
    check(RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(walker),approach.back(),food-approach.back()),"food interaction still stands outside the bed");
@@ -570,7 +581,7 @@ probe = probe.replace('ROOM_LAYOUTS', r'''
   packed.rooms={&dormitory};for(auto& tile:packed.tiles)tile.room=&dormitory;
   std::vector<BuildingObject> beds(9);
   for(int y=0;y<3;++y)for(int x=0;x<3;++x){
-   auto& bed=beds[y*3+x];bed.mesh=lowNest?"GoblinBed":"ImpBed";
+   auto& bed=beds[y*3+x];bed.mesh=lowNest?"GoblinBed":"WorkerBed";
    placeBed(bed,4+x,4+y,1,1,0,"Creature"+std::to_string(y*3+x));
    dormitory.objects[packed.getTile(4+x,4+y)]=&bed;
   }
