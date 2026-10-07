@@ -19,10 +19,12 @@
 
 bool CosmeticEvent::isKnownType() const
 {
-    return ((mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
-            (mType <= static_cast<int32_t>(CosmeticEventType::chickenFlee))) ||
-           (mType == static_cast<int32_t>(CosmeticEventType::casinoResult)) ||
-           (mType == static_cast<int32_t>(CosmeticEventType::keeperWealth));
+    return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
+           ((mType <= static_cast<int32_t>(CosmeticEventType::roomTakeover)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::casinoResult)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::keeperWealth)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::hitResult)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)));
 }
 
 std::string CosmeticEvent::typeString() const
@@ -49,10 +51,24 @@ std::string CosmeticEvent::typeString() const
             return "portalArrival";
         case static_cast<int32_t>(CosmeticEventType::chickenFlee):
             return "chickenFlee";
+        case static_cast<int32_t>(CosmeticEventType::calmed):
+            return "calmed";
+        case static_cast<int32_t>(CosmeticEventType::bedStatus):
+            return "bedStatus";
+        case static_cast<int32_t>(CosmeticEventType::heartHealthStage):
+            return "heartHealthStage";
+        case static_cast<int32_t>(CosmeticEventType::hatcheryGrain):
+            return "hatcheryGrain";
+        case static_cast<int32_t>(CosmeticEventType::roomTakeover):
+            return "roomTakeover";
         case static_cast<int32_t>(CosmeticEventType::casinoResult):
             return "casinoResult";
         case static_cast<int32_t>(CosmeticEventType::keeperWealth):
             return "keeperWealth";
+        case static_cast<int32_t>(CosmeticEventType::hitResult):
+            return "hitResult";
+        case static_cast<int32_t>(CosmeticEventType::attackTurn):
+            return "attackTurn";
         default:
             break;
     }

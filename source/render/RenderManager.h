@@ -87,6 +87,10 @@ public:
     inline Ogre::SceneNode* getLightSceneNode() const
     { return mLightSceneNode; }
 
+    //! True if the last melee blow shown for the creature was struck with its left hand (only a creature with an
+    //! attack weapon in each hand strikes with the left; false for every other creature and before any blow)
+    bool isLastBlowLeftHanded(const Creature* creature) const;
+
     //! \brief Loop through the render requests in the queue and process them
     void updateRenderAnimations(Ogre::Real timeSinceLastFrame);
 
@@ -170,6 +174,17 @@ public:
     void rrTreasuryDetailChanged();
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
+
+    //! \brief Like rrOrientEntityToward but a creature turns in a short smooth movement (clients, before a blow).
+    //! Returns how many seconds the strike clip should wait for the turn (0 = start at once). With a turn that the
+    //! server announced (rrNoteAttackTurn) the turn runs with the configured angular speed and the clip waits for it,
+    //! but at most the configured delay; without one the turn takes a short fixed time and the clip starts at once.
+    Ogre::Real rrOrientEntityTowardSmoothly(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
+    //! \brief The server announced that the creature turns to a target before its next blow (event attackTurn). The
+    //! announcement is used by the next blow of that creature and then forgotten.
+    void rrNoteAttackTurn(const std::string& creatureName, const Ogre::Vector3& direction);
+    //! \brief Takes the announced direction of the creature (and forgets it). False if none was announced.
+    bool rrTakeAttackTurn(const std::string& creatureName, Ogre::Vector3& direction);
     void rrPitchAroundAxis(RenderedMovableEntity* gameEntity, Ogre::Degree dd);
     void rrScaleCreature(Creature& creature);
     //! Where a weapon model sits on a skeleton: the bone, the offset on it and the rotation of the model
@@ -186,6 +201,9 @@ public:
         const std::string& meshName, WeaponMount& mount);
     void rrCreateWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand);
     void rrDestroyWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand);
+    //! \brief A worker whose model has no pick of its own and no weapon in the right hand carries a pickaxe model
+    void rrCreateWorkerTool(Creature* curCreature);
+    void rrDestroyWorkerTool(Creature* curCreature);
     void rrCreateMapLight(MapLight* curMapLight, bool displayVisual);
     void rrDestroyMapLight(MapLight* curMapLight);
     void rrDestroyMapLightVisualIndicator(MapLight* curMapLight);
@@ -400,6 +418,44 @@ private:
     std::vector<CreatureCombatReaction> mCreatureCombatReactions;
     uint64_t mCreatureCombatEffectNumber = 0;
     std::map<Creature*, uint32_t> mCreatureAttackVariants;
+    //! Blows struck by a creature with a weapon in each hand, to alternate left and right (client side only)
+    std::map<Creature*, uint32_t> mCreatureAttackSides;
+    //! The side of the blow shown last per creature (true: left hand), for the weapon trail
+    std::map<const Creature*, bool> mCreatureLastBlowLeft;
+
+    //! A smooth turn of a creature towards its target before a blow (cosmetic, ends by itself)
+    struct CreatureTurn
+    {
+        Creature* mCreature;
+        Ogre::SceneNode* mNode;
+        Ogre::Quaternion mFrom;
+        Ogre::Quaternion mTo;
+        Ogre::Quaternion mLast;
+        Ogre::Real mElapsed;
+        Ogre::Real mDuration;
+    };
+    std::vector<CreatureTurn> mCreatureTurns;
+    //! Turns announced by the server (event attackTurn): creature name -> direction to the target
+    std::map<std::string, Ogre::Vector3> mAttackTurnNotes;
+    void updateCreatureTurns(Ogre::Real timeSinceLastFrame);
+
+    //! A small body variant of a death (falls back, sinks aside) laid over the Die clip on the creature node
+    //! (cosmetic, chosen from the creature name, ends by itself and leaves the final pose)
+    struct CreatureDeathVariant
+    {
+        Creature* mCreature;
+        Ogre::SceneNode* mNode;
+        Ogre::Quaternion mBaseOrientation;
+        Ogre::Vector3 mBasePosition;
+        Ogre::Quaternion mLastOrientation;
+        Ogre::Vector3 mLastPosition;
+        int mVariant;
+        Ogre::Real mElapsed;
+        Ogre::Real mDuration;
+    };
+    std::vector<CreatureDeathVariant> mCreatureDeathVariants;
+    void updateCreatureDeathVariants(Ogre::Real timeSinceLastFrame);
+    void startCreatureDeathVariant(Creature* creature, Ogre::Entity* entity);
 
     enum class CreatureFeedingStyle
     {
@@ -453,6 +509,9 @@ private:
         CreatureFeedingLimb mLegs[2] = {};
         //! The eaten animal is a rooster: its feathers have the colours of the rooster
         bool mRoosterFeathers = false;
+        Ogre::Bone* mJaw = nullptr;
+        Ogre::Real mMouthForward = 0.0f;
+        Ogre::Quaternion mChickenOrientation = Ogre::Quaternion::IDENTITY;
     };
     std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
 
@@ -725,7 +784,10 @@ private:
     void clearCreatureCombatEffects(Creature* creature = nullptr);
     void startCreatureFeedingAnimation(Creature* creature, Ogre::Entity* entity);
     void prepareCreatureFeedingReach(CreatureFeedingAnimation& feeding);
-    Ogre::Vector3 updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress);
+    Ogre::Vector3 updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress,
+        Ogre::Real reach, Ogre::Real lift, Ogre::Real release, Ogre::Real dip, Ogre::Real biteLean);
+    Ogre::Vector3 getCreatureFeedingMouth(const CreatureFeedingAnimation& feeding, Ogre::Real height,
+        Ogre::Real chickenHeight, bool withoutHands) const;
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName = "ChickenFeathers");
     void updateChickenLooks(Ogre::Real timeSinceLastFrame);

@@ -26,6 +26,7 @@
 #include <OgreSingleton.h>
 
 #include <deque>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -109,6 +110,10 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline HeartHealthRing::BadgeState& getHeartBadge()
     { return mHeartBadge; }
 
+    //! \brief Health fraction of the heart of a seat as the heartHealthStage events last told it (the
+    //! upper end of the step), -1 if no step is known (event not negotiated, heart never seen)
+    float getHeartStageFraction(int32_t seatId) const;
+
     //! \brief A bonus objective of a sandbox realm as the server last told it
     struct SandboxBonusStatus
     {
@@ -184,6 +189,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
 
     // Heart health received with heartHealth
     HeartHealthRing::BadgeState mHeartBadge;
+
+    // Steps of the hearts received with the cosmetic event heartHealthStage: seat id -> fraction of the step
+    std::map<int32_t, float> mHeartStageFractions;
 
     // Received with sandboxStatus and sandboxRealmComplete
     SandboxStatus mSandboxStatus;

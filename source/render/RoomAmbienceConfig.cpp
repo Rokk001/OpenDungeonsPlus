@@ -302,6 +302,8 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::motion;
             else if(words[1] == "Clip")
                 effect.mKind = AmbienceKind::clip;
+            else if(words[1] == "Model")
+                effect.mKind = AmbienceKind::model;
             else if(words[1] == "Shake")
                 effect.mKind = AmbienceKind::shake;
             else if(words[1] == "Mark")
@@ -421,6 +423,10 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if(key == "Spacing")
         {
             effect.mSpacing = std::max<uint32_t>(1, Helper::toUInt32(words[1]));
+        }
+        else if(key == "GrainMin")
+        {
+            effect.mGrainMin = Helper::toUInt32(words[1]);
         }
         else if(key == "MaxDistance")
         {

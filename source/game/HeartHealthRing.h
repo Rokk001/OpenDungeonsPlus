@@ -112,6 +112,28 @@ namespace HeartHealthRing
             || static_cast<double>(turnsSinceLastMessage) >= turnsPerSecond;
     }
 
+    //! \brief The coarse step of a heart health fraction for the heartHealthStage cosmetic event:
+    //! 0 only for a destroyed heart, otherwise 1 to stages (stages = unhurt, a heart that is alive
+    //! never reports 0). A number of steps below 1 counts as 1.
+    inline int healthStage(float fraction, int stages)
+    {
+        if(stages < 1)
+            stages = 1;
+        const float clamped = clampFraction(fraction);
+        if(clamped <= 0.0f)
+            return 0;
+        const int stage = static_cast<int>(std::ceil(clamped * stages - 0.0001f));
+        return std::max(1, std::min(stages, stage));
+    }
+
+    //! \brief The fraction that a step stands for (the upper end of its range), 0 to 1.
+    inline float stageFraction(int stage, int stages)
+    {
+        if(stages < 1)
+            return 1.0f;
+        return clampFraction(static_cast<float>(stage) / static_cast<float>(stages));
+    }
+
     //! \brief Client side: what the badge shows and whether it has to be redrawn.
     struct BadgeState
     {

@@ -43,7 +43,8 @@ MovableGameEntity::MovableGameEntity(GameMap* gameMap) :
     mDestinationPlayIdleWhenAnimationEnds(false),
     mDestinationAnimationDirection(Ogre::Vector3::ZERO),
     mWalkDirection(Ogre::Vector3::ZERO),
-    mAnimationTime(0.0)
+    mAnimationTime(0.0),
+    mBlowStartDelay(0.0)
 {
 }
 
@@ -228,15 +229,42 @@ void MovableGameEntity::setAnimationState(const std::string& state, bool loop, c
     mAnimationTime = 0;
     mPrevAnimationState = state;
     mPrevAnimationStateLoop = loop;
+    // A strike clip that still waits for the turn is replaced by this state
+    mBlowStartDelay = 0.0;
+    Ogre::Real blowDelay = 0.0f;
 
     if(direction != Ogre::Vector3::ZERO)
-        setWalkDirection(direction);
+    {
+        // Before a blow the creature turns to its target in a short smooth movement instead of snapping round
+        const bool blow = (state == EntityAnimation::combat_attack_anim) || (state == EntityAnimation::ranged_attack_anim) ||
+            (state == EntityAnimation::attack_anim);
+        if(blow && getObjectType() == GameEntityType::creature)
+        {
+            mWalkDirection = direction;
+            blowDelay = RenderManager::getSingleton().rrOrientEntityTowardSmoothly(this, direction);
+        }
+        else
+            setWalkDirection(direction);
+    }
 
-    RenderManager::getSingleton().rrSetObjectAnimationState(this, state, loop);
+    // When the server announced the turn to the target, the strike clip starts when the turn is done
+    // (see update); the clip played so far goes on until then
+    if(blowDelay > 0.0f)
+    {
+        mBlowStartDelay = blowDelay;
+        return;
+    }
+
+    startAnimationClip();
+}
+
+void MovableGameEntity::startAnimationClip()
+{
+    RenderManager::getSingleton().rrSetObjectAnimationState(this, mPrevAnimationState, mPrevAnimationStateLoop);
 
     // The reactions of the creatures (cheering winners) look at what the creatures do
     if(CreatureReactions::getSingletonPtr() != nullptr)
-        CreatureReactions::getSingleton().noteAnimation(this, state);
+        CreatureReactions::getSingleton().noteAnimation(this, mPrevAnimationState);
 }
 
 void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
@@ -244,6 +272,19 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     // On the server, the elapsed time already is game time. On the clients, the game speed setting
     // changes how fast the game time runs compared to the real time
     const double gameSpeedFactor = getIsOnServerMap() ? 1.0 : getGameMap()->getGameSpeedFactor();
+
+    // The strike clip that waited for the turn to the target starts now (clients only; the damage was never
+    // tied to it)
+    if(mBlowStartDelay > 0.0)
+    {
+        mBlowStartDelay -= static_cast<double>(timeSinceLastFrame);
+        if(mBlowStartDelay <= 0.0)
+        {
+            mBlowStartDelay = 0.0;
+            if(mWalkQueue.empty())
+                startAnimationClip();
+        }
+    }
 
     // Advance the animation
     double addedTime = static_cast<Ogre::Real>(ODApplication::turnsPerSecond
@@ -264,7 +305,14 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
         if(mDestinationPlayIdleWhenAnimationEnds && getAnimationState()->hasEnded())
             RenderManager::getSingleton().rrSetObjectAnimationState(this, EntityAnimation::idle_anim, true);
         else
-            getAnimationState()->addTime(static_cast<Ogre::Real>(addedTime));
+        {
+            double shownTime = addedTime;
+            updateClientPose(static_cast<double>(timeSinceLastFrame));
+            if(mPrevAnimationState == EntityAnimation::walk_anim || mPrevAnimationState == EntityAnimation::idle_anim ||
+               mPrevAnimationState == EntityAnimation::drag_anim)
+                shownTime *= getClientPoseSpeedFactor();
+            getAnimationState()->addTime(static_cast<Ogre::Real>(shownTime));
+        }
     }
 
     if (mWalkQueue.empty())
@@ -282,6 +330,11 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     Ogre::Vector2 nextDest = mWalkQueue.front();
     Ogre::Vector2 walkDirection = nextDest - newPosition;
     walkDirection.normalise();
+
+    // The worker that pulls a hurt creature walks backwards and the creature that is pulled lies with its
+    // head to the rear: both look against the way they move (server and clients, by the clip they play)
+    const Ogre::Real facing = ((mPrevAnimationState == EntityAnimation::drag_anim) ||
+        (mPrevAnimationState == EntityAnimation::dragged_anim)) ? -1.0f : 1.0f;
 
     while(moveDist > 0.0)
     {
@@ -301,7 +354,7 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
             {
                 // Apply travel facing before the queued end animation can turn
                 // toward its target; do not overwrite that facing afterwards.
-                setWalkDirection(Ogre::Vector3(walkDirection.x,walkDirection.y,0));
+                setWalkDirection(Ogre::Vector3(walkDirection.x * facing,walkDirection.y * facing,0));
                 stopWalking();
                 break;
             }
@@ -313,7 +366,7 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     }
 
     if(!mWalkQueue.empty())
-        setWalkDirection(Ogre::Vector3(walkDirection.x,walkDirection.y,0));
+        setWalkDirection(Ogre::Vector3(walkDirection.x * facing,walkDirection.y * facing,0));
     setPosition(Ogre::Vector3(newPosition.x,newPosition.y,newPosition3f.z));
 }
 

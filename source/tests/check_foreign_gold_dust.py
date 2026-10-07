@@ -20,8 +20,8 @@ client = read('source/network/ODClient.cpp')
 render = read('source/render/RenderManager.cpp')
 rules = read('source/render/TreasuryCreatureRules.h')
 
-# Event number: appended after the casino result (10 to 14 stay free), known to isKnownType and named
-assert re.search(r'casinoResult = 15,.*?keeperWealth = 16\s*\};', event_h, re.S)
+# Event number: appended after the casino result, known to isKnownType and named
+assert re.search(r'roomTakeover = 14,.*?casinoResult = 15,.*?keeperWealth = 16,', event_h, re.S)
 assert 'CosmeticEventType::keeperWealth)' in event_cpp and 'return "keeperWealth";' in event_cpp
 
 # One rule for "rich" on both sides; the tier is small, the amount is not part of the event

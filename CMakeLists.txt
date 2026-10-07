@@ -261,6 +261,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionGrabEntity.cpp
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
+    ${SRC}/creatureaction/CreatureActionReloadTrap.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
@@ -456,6 +457,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/CreatureReactions.cpp
     ${SRC}/render/CreatureCombatReactions.cpp
     ${SRC}/render/CreatureWeaponVisuals.cpp
+    ${SRC}/render/WeaponTrail.cpp
     ${SRC}/render/WorkerReactions.cpp
     ${SRC}/render/WorkerExtras.cpp
     ${SRC}/render/DebugDrawer.cpp    

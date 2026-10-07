@@ -17,6 +17,8 @@
 
 #include "render/WorkerReactions.h"
 
+#include "entities/Building.h"
+#include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntity.h"
@@ -29,6 +31,8 @@
 #include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
 #include "render/WorkerExtras.h"
+#include "rooms/Room.h"
+#include "traps/TrapType.h"
 #include "utils/Helper.h"
 
 #include <OgreAnimationState.h>
@@ -40,6 +44,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <random>
 #include <vector>
@@ -59,6 +64,11 @@ const double DIG_HIT_MAX = 3.5;
 //! Seconds between two claiming reactions of a claimer, least and most
 const double CLAIM_MIN = 3.0;
 const double CLAIM_MAX = 5.0;
+//! A takeover of a room tile that does not end with a change of owner is forgotten after this many seconds
+const double TAKEOVER_FORGET = 30.0;
+//! After the danced tile changed owner the client waits this many seconds for the roomTakeover event of the server
+//! before it shows the triumph by itself (a server from before the event never sends it)
+const double TAKEOVER_EVENT_WAIT = 1.5;
 //! A worker that stands idle this long may start a habit
 const double IDLE_AFTER = 9.0;
 //! Seconds between two repeats of the heavy gait
@@ -115,6 +125,9 @@ struct WorkerState
         mDigLast(-1.0),
         mNextHit(0.0),
         mNextClaim(0.0),
+        mTakeoverTile(nullptr),
+        mTakeoverLast(-1.0),
+        mTakeoverChangedAt(-1.0),
         mIdleSince(-1.0),
         mNextGait(0.0),
         mNextDanger(0.0),
@@ -129,6 +142,11 @@ struct WorkerState
     double mDigLast;
     double mNextHit;
     double mNextClaim;
+    //! The tile of an enemy room the worker is dancing on and when it last did (-1: none)
+    Tile* mTakeoverTile;
+    double mTakeoverLast;
+    //! When the client saw the danced tile change to the owner of the worker (-1: not yet)
+    double mTakeoverChangedAt;
     double mIdleSince;
     double mNextGait;
     double mNextDanger;
@@ -163,6 +181,8 @@ std::vector<Spot> sVeins;
 //! Where a creature died lately
 std::vector<Spot> sDeaths;
 double sTickTimer = 0.0;
+//! True once the server has sent a roomTakeover event: it then tells the end of every takeover once per room
+bool sServerTellsTakeover = false;
 
 WorkerState& getState(const std::string& name)
 {
@@ -193,6 +213,13 @@ bool isSpotNear(const std::vector<Spot>& spots, double x, double y, double now, 
             return true;
     }
     return false;
+}
+
+//! True for the crafted traps that are doors
+bool isDoorType(TrapType type)
+{
+    return (type == TrapType::doorWooden) || (type == TrapType::doorIronbound) || (type == TrapType::doorSteel) ||
+        (type == TrapType::doorBarricade) || (type == TrapType::doorSecret) || (type == TrapType::doorRuned);
 }
 
 //! The model of gold that shows how much a worker carries: 0 if none
@@ -310,11 +337,33 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
         return;
     }
 
+    // The hurt creature that a worker pulls over the ground groans: the server sets its clip (not a reaction of
+    // its own, so this is the only place that shows it). It happens once when the pulling starts.
+    if(clip == EntityAnimation::dragged_anim)
+    {
+        show(reactions, creature, "DraggedGroan");
+        return;
+    }
+
     if(!isWorker(creature))
         return;
 
     WorkerState& state = getState(creature->getName());
+    std::string previousClip = state.mClip;
     state.mClip = clip;
+
+    // A worker that pulls a hurt creature to its bed: it takes the legs when the clip starts, it lets go
+    // when the clip ends in the dormitory (the server walks it there and only there it stops pulling)
+    if(clip == EntityAnimation::drag_anim)
+    {
+        if(previousClip != clip)
+            show(reactions, creature, "DragWounded");
+    }
+    else if(previousClip == EntityAnimation::drag_anim)
+    {
+        if(reactions.getRoomName(creature) == "Dormitory")
+            later(reactions, creature, "PutWoundedDown", 0.2);
+    }
 
     if(clip == "Claim")
     {
@@ -349,6 +398,12 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
 {
     if(!isActive(reactions))
         return;
+
+    if(event.is(CosmeticEventType::roomTakeover))
+    {
+        noteRoomTakeover(reactions, event);
+        return;
+    }
 
     double now = reactions.mTime;
     Creature* worker = reactions.mGameMap->getCreature(event.mSubject);
@@ -391,6 +446,69 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
     }
 }
 
+void WorkerReactions::noteRoomTakeover(CreatureReactions& reactions, const CosmeticEvent& event)
+{
+    // From now on the end of a takeover comes from the server, once per room
+    sServerTellsTakeover = true;
+
+    Seat* newSeat = reactions.mGameMap->getSeatById(event.mValue);
+    if(newSeat == nullptr)
+        return;
+
+    int32_t roomX = static_cast<int32_t>(event.mPosition.x + 0.5f);
+    int32_t roomY = static_cast<int32_t>(event.mPosition.y + 0.5f);
+    Tile* roomTile = reactions.mGameMap->getTile(roomX, roomY);
+    Room* room = (roomTile != nullptr) ? roomTile->getCoveringRoom() : nullptr;
+
+    // The workers that were dancing on this room: on the same room, or, if the client does not know the room
+    // yet, no further from its tile than the room has tiles. All of them are done now, the one nearest to the
+    // tile celebrates (one reaction per room, not one per worker)
+    Creature* celebrant = nullptr;
+    double celebrantDistance = 0.0;
+    for(std::map<std::string, WorkerState>::iterator it = sStates.begin(); it != sStates.end(); ++it)
+    {
+        WorkerState& state = it->second;
+        if(state.mTakeoverTile == nullptr)
+            continue;
+
+        Creature* worker = reactions.mGameMap->getCreature(it->first);
+        if((worker == nullptr) || (worker->getSeat() == nullptr) || !worker->getSeat()->isAlliedSeat(newSeat))
+            continue;
+
+        bool sameRoom;
+        if(room != nullptr)
+        {
+            sameRoom = (state.mTakeoverTile->getCoveringRoom() == room);
+        }
+        else
+        {
+            int32_t dx = std::abs(state.mTakeoverTile->getX() - roomX);
+            int32_t dy = std::abs(state.mTakeoverTile->getY() - roomY);
+            sameRoom = (std::max(dx, dy) <= event.mValue2);
+        }
+        if(!sameRoom)
+            continue;
+
+        state.mTakeoverTile = nullptr;
+        state.mTakeoverChangedAt = -1.0;
+
+        if(!worker->isAlive() || !worker->getIsOnMap())
+            continue;
+
+        Ogre::Vector3 difference = worker->getPosition() - event.mPosition;
+        difference.z = 0.0f;
+        double distance = difference.length();
+        if((celebrant == nullptr) || (distance < celebrantDistance))
+        {
+            celebrant = worker;
+            celebrantDistance = distance;
+        }
+    }
+
+    if(celebrant != nullptr)
+        show(reactions, celebrant, "TakeoverDone");
+}
+
 void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier, GameEntity* carried)
 {
     if(!isActive(reactions) || !isWorker(carrier))
@@ -414,6 +532,10 @@ void WorkerReactions::noteCarry(CreatureReactions& reactions, Creature* carrier,
         show(reactions, carrier, body->isAlive() ? "PickPrisoner" : "PickBody");
         if(body->isAlive())
             WorkerExtras::startStruggle(reactions.mGameMap, carrier, body);
+    }
+    else if((type == GameEntityType::craftedTrap) && isDoorType(static_cast<CraftedTrap*>(carried)->getTrapType()))
+    {
+        show(reactions, carrier, "PickDoor");
     }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity) ||
             (type == GameEntityType::skillEntity))
@@ -446,6 +568,10 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
         else if(!body->isAlive() && (room == "Crypt"))
             later(reactions, carrier, "CorpseLookBack", 0.6);
     }
+    else if((type == GameEntityType::craftedTrap) && isDoorType(static_cast<CraftedTrap*>(carried)->getTrapType()))
+    {
+        later(reactions, carrier, "DoorPlace", 0.4);
+    }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity))
     {
         later(reactions, carrier, "TrapKnock", 0.4);
@@ -476,6 +602,14 @@ void WorkerReactions::showDigHit(CreatureReactions& reactions, Creature* worker)
     Tile* tile = worker->getPositionTile();
     if(tile == nullptr)
         return;
+
+    // The work clip on a trap tile is the reload of the trap, not digging
+    Building* building = tile->getCoveringBuilding();
+    if((building != nullptr) && (building->getObjectType() == GameEntityType::trap))
+    {
+        show(reactions, worker, "TrapReload");
+        return;
+    }
 
     Player* localPlayer = reactions.mGameMap->getLocalPlayer();
 
@@ -527,6 +661,22 @@ void WorkerReactions::showClaim(CreatureReactions& reactions, Creature* worker)
     Tile* tile = worker->getPositionTile();
     if(tile == nullptr)
         return;
+
+    // Dancing on a tile of a room of an enemy: the room is being taken over. The tiles change owner
+    // on the server all at once (one pool for the whole room that every dancer lowers) and the client gets the
+    // new owner with the tiles, which ends the takeover for every worker of the room in the same moment
+    // (tickWorker). The work reaction repeats for as long as the worker dances, that is while the pool sinks
+    Seat* tileOwner = tile->getSeat();
+    if(tile->getIsRoom() && (tileOwner != nullptr) && (worker->getSeat() != nullptr) &&
+       !worker->getSeat()->isAlliedSeat(tileOwner))
+    {
+        WorkerState& state = getState(worker->getName());
+        state.mTakeoverTile = tile;
+        state.mTakeoverLast = reactions.mTime;
+        state.mTakeoverChangedAt = -1.0;
+        show(reactions, worker, "TakeoverWork");
+        return;
+    }
 
     bool enemyTile = false;
     bool wall = false;
@@ -602,6 +752,34 @@ void WorkerReactions::tickWorker(CreatureReactions& reactions, Creature* worker)
     {
         state.mNextClaim = now + workerRandom(CLAIM_MIN, CLAIM_MAX);
         showClaim(reactions, worker);
+    }
+
+    // The room the worker was taking over is its own now (every tile of it changed owner at once, so one
+    // check of the danced tile covers the whole room). The triumph comes from the roomTakeover event of the
+    // server (noteRoomTakeover), once per room. Only without that event (a server from before it) the worker
+    // shows it by itself, once the tile owner changed and no event followed. Without a change of owner
+    // the takeover is forgotten after a while (the worker was chased off or the room is guarded)
+    if(state.mTakeoverTile != nullptr)
+    {
+        Seat* tileOwner = state.mTakeoverTile->getSeat();
+        if((tileOwner != nullptr) && (worker->getSeat() != nullptr) && worker->getSeat()->isAlliedSeat(tileOwner))
+        {
+            if(state.mTakeoverChangedAt < 0.0)
+                state.mTakeoverChangedAt = now;
+
+            if((now - state.mTakeoverChangedAt) >= TAKEOVER_EVENT_WAIT)
+            {
+                state.mTakeoverTile = nullptr;
+                state.mTakeoverChangedAt = -1.0;
+                if(!sServerTellsTakeover)
+                    show(reactions, worker, "TakeoverDone");
+            }
+        }
+        else if((now - state.mTakeoverLast) > TAKEOVER_FORGET)
+        {
+            state.mTakeoverTile = nullptr;
+            state.mTakeoverChangedAt = -1.0;
+        }
     }
 
     // Walking with a load
@@ -841,4 +1019,5 @@ void WorkerReactions::stopAll(CreatureReactions& reactions)
     sVeins.clear();
     sDeaths.clear();
     sTickTimer = 0.0;
+    sServerTellsTakeover = false;
 }

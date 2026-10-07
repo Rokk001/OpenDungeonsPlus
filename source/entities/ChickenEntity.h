@@ -58,6 +58,12 @@ public:
     virtual bool tryPickup(Seat* seat) override;
     virtual void pickup() override;
     virtual bool tryDrop(Seat* seat, Tile* tile) override;
+    virtual void drop(const Ogre::Vector3& v) override;
+
+    //! \brief Turns left in which this chicken, dropped by the keeper outside a hatchery, is offered to
+    //! a creature that is not hungry (0 = not offered, see offerGift).
+    inline uint32_t getGiftTurns() const
+    { return mGiftTurns; }
 
     virtual void correctEntityMovePosition(Ogre::Vector2& position) override;
 
@@ -122,6 +128,11 @@ public:
 
     //! \brief Counts down the turns to the next egg. Returns true when the hen has to lay now.
     bool countDownLay();
+
+    //! \brief A hen is about to peck at the ground (scratch pose, "Pick" animation, picking at the rooster's call).
+    //! True if this peck counts: only hens peck, and at most once per HatcheryPeckIntervalTurns, however
+    //! many of her poses ask for it. Server side only, nothing of it is saved or sent.
+    bool startPeck();
 
     //! \brief Plays a pose (see ChickenPose.h) and holds the animal still for the number of turns.
     void playPose(const std::string& pose, uint32_t turns);
@@ -249,25 +260,40 @@ private:
     uint32_t mSinceCrow;
     Seat* mHomeSeat;
     bool mReturningHome;
+    uint32_t mReturnTurns;
+    uint32_t mReturnRetryTurns;
     int32_t mNbTurnOutsideHatchery;
     int32_t mNbTurnDie;
     bool mIsSlapped;
     bool mLockedEat;
+    uint32_t mGiftTurns;
+    //! Turns until the hen may peck (and take grain) again
+    uint32_t mPeckWait;
     std::string mLockOwner;
     std::string mSnatchedFrom;
     ChickenFlight::State mFlight;
+
+    //! \brief Server side: the chicken was dropped by the keeper. Offers it to the closest idle creature of
+    //! the keeper that is not hungry, which sniffs at it and eats it slowly anyway (see CreatureActionEatChicken).
+    void offerGift(Tile& tile);
 
     //! A hungry creature that locked this chicken comes close: hop away from it (see ChickenFlight.h).
     //! Returns true if the chicken started to hop.
     bool tryFlee(Tile* tile, Room* currentHatchery);
 
-    //! \brief Server side: the rooster is outside of any hatchery. Walks to the nearest hatchery of its seat.
-    //! Returns true if he is on his way.
+    //! \brief Server side: the rooster or a hen is outside of any hatchery. Walks to the nearest hatchery of its
+    //! seat (of any seat if it has none). Returns true if it is on its way, false if there is none to reach.
     bool runBackToHatchery(Tile* tile);
 
     //! \brief Server side: pecks for a moment or walks to a free point anywhere in the hatchery (see
     //! RoomHatchery::planWanderPath). Does nothing outside of a hatchery.
     void wander(Room* currentHatchery);
+
+    //! \brief The search for the way back found nothing: no new search for HatcheryReturnRetryTurns turns.
+    void failReturn();
+
+    //! \brief Server side: the hen pecks at the ground of the hatchery she is in (takes grain from the tile).
+    void peckGround(Room* currentHatchery);
 
     void addTileToListIfPossible(int x, int y, Room* currentHatchery, std::vector<Tile*>& possibleTileMove);
 };

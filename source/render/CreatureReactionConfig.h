@@ -18,6 +18,9 @@
 #ifndef CREATUREREACTIONCONFIG_H
 #define CREATUREREACTIONCONFIG_H
 
+#include <OgreVector3.h>
+
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -358,6 +361,80 @@ public:
     inline double getArenaCheerPause() const
     { return mArenaCheerPause; }
 
+    //! Which arm shows the blow of a creature with an attack weapon in each hand (TwoWeaponStrike::MODE_*)
+    inline uint32_t getTwoWeaponMode() const
+    { return mTwoWeaponMode; }
+
+    //! Strength of the arm movement of the blows of a creature with two weapons (1 = like one weapon)
+    inline double getTwoWeaponArmStrength() const
+    { return mTwoWeaponArmStrength; }
+
+    //! Archers take the arrow from the pulling hand and draw it with the hand (false: straight back on the bow)
+    inline bool getArrowFollowsHand() const
+    { return mArrowFollowsHand; }
+
+    //! Longest way (model units) the arrow is drawn from the string toward the hand
+    inline double getArrowPullDistance() const
+    { return std::max(0.0, mArrowPullDistance); }
+
+    //! Seconds the string takes to be drawn fully
+    inline double getArrowDrawTime() const
+    { return std::max(0.1, mArrowDrawTime); }
+
+    //! Seconds after a shot until the next arrow or bolt is taken
+    inline double getArrowRetakeGap() const
+    { return std::max(0.0, mArrowRetakeGap); }
+
+    //! Seconds a new arrow needs from the hand to the string
+    inline double getArrowReloadTime() const
+    { return std::max(0.05, mArrowReloadTime); }
+
+    //! Where the nock sits on the pulling hand, in the frame of the hand bone
+    inline const Ogre::Vector3& getArrowHandOffset() const
+    { return mArrowHandOffset; }
+
+    //! Seconds the visible reload of a crossbow takes
+    inline double getCrossbowReloadTime() const
+    { return std::max(0.1, mCrossbowReloadTime); }
+
+    //! Degrees the crossbow tips when the string is cocked
+    inline double getCrossbowReloadJolt() const
+    { return std::max(0.0, std::min(20.0, mCrossbowReloadJolt)); }
+    //! True if a strong melee blow leaves a short bright streak along the weapon tip
+    inline bool getWeaponTrail() const
+    { return mWeaponTrail; }
+
+    //! Seconds until the streak has faded away
+    inline double getWeaponTrailLife() const
+    { return std::max(0.05, std::min(2.0, mWeaponTrailLife)); }
+
+    //! Width of the streak in world units
+    inline double getWeaponTrailWidth() const
+    { return std::max(0.01, std::min(1.0, mWeaponTrailWidth)); }
+
+    //! Longest path of the weapon tip (world units) that the streak shows
+    inline double getWeaponTrailLength() const
+    { return std::max(0.1, std::min(10.0, mWeaponTrailLength)); }
+
+    //! Colour of the streak (red, green, blue, each 0 to 1) and its brightness at the start (0 to 1)
+    inline double getWeaponTrailRed() const
+    { return std::max(0.0, std::min(1.0, mWeaponTrailRed)); }
+    inline double getWeaponTrailGreen() const
+    { return std::max(0.0, std::min(1.0, mWeaponTrailGreen)); }
+    inline double getWeaponTrailBlue() const
+    { return std::max(0.0, std::min(1.0, mWeaponTrailBlue)); }
+    inline double getWeaponTrailBrightness() const
+    { return std::max(0.0, std::min(1.0, mWeaponTrailBrightness)); }
+
+    //! Smallest damage (share of the maximum health of the target) of a blow that gets a streak. The blow has to be
+    //! a strong one (global.cfg HitStrongShare) as well, so a value below that share changes nothing.
+    inline double getWeaponTrailMinShare() const
+    { return std::max(0.0, std::min(1.0, mWeaponTrailMinShare)); }
+
+    //! Number of streaks at the same time (over all creatures)
+    inline uint32_t getWeaponTrailMax() const
+    { return std::min<uint32_t>(16, mWeaponTrailMax); }
+
 private:
     bool loadSettings(std::istream& file);
     bool loadGroups(std::istream& file);
@@ -384,6 +461,26 @@ private:
     double mInteractionPause;
     double mArenaSpectatorInterval;
     double mArenaCheerPause;
+    uint32_t mTwoWeaponMode;
+    double mTwoWeaponArmStrength;
+    bool mArrowFollowsHand;
+    double mArrowPullDistance;
+    double mArrowDrawTime;
+    double mArrowRetakeGap;
+    double mArrowReloadTime;
+    Ogre::Vector3 mArrowHandOffset;
+    double mCrossbowReloadTime;
+    double mCrossbowReloadJolt;
+    bool mWeaponTrail;
+    double mWeaponTrailLife;
+    double mWeaponTrailWidth;
+    double mWeaponTrailLength;
+    double mWeaponTrailRed;
+    double mWeaponTrailGreen;
+    double mWeaponTrailBlue;
+    double mWeaponTrailBrightness;
+    double mWeaponTrailMinShare;
+    uint32_t mWeaponTrailMax;
     std::string mDefaultGroup;
     std::vector<ReactionGroup> mGroups;
     std::map<std::string, ReactionEvent> mEvents;

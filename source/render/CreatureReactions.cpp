@@ -145,6 +145,8 @@ const double ARRIVAL_QUIET_TIME = 3.0;
 const double ARRIVAL_MOOD_MEMORY = 30.0;
 const double FULL_DELIVERY_MEMORY = 6.0;
 const double FULL_TREASURY_RADIUS = 3.0;
+//! Distance (tiles) up to which a creature of the keeper catches a chicken that the keeper drops
+const double CHICKEN_CATCH_RADIUS = 3.0;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -799,8 +801,11 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
 
     if(mMode == Mode::full)
     {
-        // Tier C / B: a clip, only while the creature stands still (it must not slide while posing)
-        if(!creature->isMoving() && !event.mWhileWorking && !event.mDying && startClip(reaction, creature, variant))
+        // Tier C / B: a clip, only while the creature stands still (it must not slide while posing).
+        // An event that decorates the work animation plays a clip only when its variant names one: the clip is laid
+        // over the running work clip (which keeps its time with weight 0) and the work clip is shown again afterwards.
+        bool clipAllowed = !event.mDying && (!event.mWhileWorking || !variant.mClip.empty());
+        if(!creature->isMoving() && clipAllowed && startClip(reaction, creature, variant))
             shown = true;
 
         for(const ReactionEffect& effect : variant.mEffects)
@@ -824,8 +829,12 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
         Ogre::SceneNode* node = creature->getEntityNode();
         // Turning and squashing look wrong on a creature that walks
         bool standingMotion = isStandingMotion(variant.mMotion.mType);
+        // The hurt walk of a skeleton with the clip WalkHurt already limps: no second limp (shake or hop) on top
+        Ogre::AnimationState* walkState = creature->getAnimationState();
+        bool playsHurtWalk = (event.mName == "HurtWalk") && (walkState != nullptr) &&
+            (walkState->getAnimationName() == EntityAnimation::walk_hurt_anim);
         if((variant.mMotion.mType != ReactionMotion::Type::none) && (variant.mMotion.mDuration > 0.0) &&
-           (node != nullptr) && !(standingMotion && creature->isMoving()))
+           (node != nullptr) && !(standingMotion && creature->isMoving()) && !playsHurtWalk)
         {
             reaction.mMotion = variant.mMotion;
             reaction.mMotionLastPosition = node->getPosition();
@@ -1526,6 +1535,12 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         noteDigging(creature);
     }
+    else if(clip == EntityAnimation::sniff_anim)
+    {
+        // The server action state of a creature that sniffs at a chicken the keeper gave it. This is the only
+        // place that shows the sniffing: the reaction after the meal (ChickenGift) has no sniffing of its own
+        queueReaction(creature, "ChickenSniff", DONE_WAIT_MAX, 0.2);
+    }
     else if((clip == "EatChicken") && (getRoomName(creature) == "Hatchery"))
     {
         // The meal in the hatchery is over when the animation is: then the creature shows how it liked it
@@ -2191,6 +2206,35 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     drop.mTime = mTime;
     mHandDrops[entity->getName()] = drop;
 
+    // A creature of the keeper close to the chicken that falls catches it: a short grab before the meal
+    if(type == GameEntityType::chickenEntity)
+    {
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        Creature* nearest = nullptr;
+        double nearestDistance = CHICKEN_CATCH_RADIUS;
+        for(Creature* creature : mGameMap->getCreatures())
+        {
+            if((localPlayer == nullptr) || (creature->getSeat() != localPlayer->getSeat()) ||
+               !creature->getIsOnMap() || !creature->isAlive() || creature->getDefinition()->isWorker())
+            {
+                continue;
+            }
+
+            Ogre::Vector3 difference = creature->getPosition() -
+                Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()), 0.0f);
+            difference.z = 0.0f;
+            double distance = difference.length();
+            if(distance >= nearestDistance)
+                continue;
+
+            nearestDistance = distance;
+            nearest = creature;
+        }
+
+        if(nearest != nullptr)
+            trigger(nearest, "ChickenCatch");
+    }
+
     // The creatures that stand around look at the gold that falls
     if(type == GameEntityType::treasuryObject)
     {
@@ -2545,6 +2589,15 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
     {
         queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, 0.3);
     }
+    else if(event.is(CosmeticEventType::calmed))
+    {
+        // The prayer in the temple took the anger away: soft light and relaxed shoulders
+        queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+    }
+    else if(event.is(CosmeticEventType::bedStatus))
+    {
+        mHasBed[event.mSubject] = (event.mValue != 0);
+    }
 }
 
 void CreatureReactions::endForCreature(Creature* creature)
@@ -2786,8 +2839,10 @@ void CreatureReactions::examineMood(Creature* creature)
         events.push_back("MoodContent");
     }
 
-    // A long rest: sits down, and lies down if it goes on, in the open
-    if(idle && (idleFor >= mConfig.getLieAfter()) && (getRoomName(creature) != "Dormitory"))
+    // A long rest: sits down, and lies down if it goes on and the creature has no bed (the server said so)
+    std::map<std::string, bool>::const_iterator itBed = mHasBed.find(creature->getName());
+    bool hasNoBed = (itBed != mHasBed.end()) && !itBed->second;
+    if(idle && (idleFor >= mConfig.getLieAfter()) && hasNoBed)
         events.push_back("AmbientLieDown");
     else if(idle && (idleFor >= mConfig.getSitAfter()))
         events.push_back("AmbientSitDown");

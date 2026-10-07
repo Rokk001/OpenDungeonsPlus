@@ -53,6 +53,17 @@ for signature in ('void Creature::fireCosmeticEvent(const CosmeticEvent& event',
     function = function[:function.index('\n}\n')]
     assert 'mActivity' not in function and 'mNeedFireRefresh' not in function and 'fireCreatureRefreshIfNeeded' not in function, signature
 
+# The temple calming and the bed status: server emitters and client handlers
+event_h = read('source/network/CosmeticEvent.h')
+assert 'calmed = 10,' in event_h and 'bedStatus = 11' in event_h
+assert 'return "calmed";' in read('source/network/CosmeticEvent.cpp') and 'return "bedStatus";' in read('source/network/CosmeticEvent.cpp')
+mood = creature[creature.index('void Creature::computeMood()'):]
+mood = mood[:mood.index('\n}\n')]
+assert 'CosmeticEventType::calmed' in mood and 'mPrayerRelief > 0' in mood and 'CreatureMoodLevel::Angry' in mood
+assert 'CosmeticEventType::bedStatus' in creature and 'mBedNotified' in creature
+reactions = read('source/render/CreatureReactions.cpp')
+assert 'CosmeticEventType::calmed' in reactions and 'CosmeticEventType::bedStatus' in reactions and 'hasNoBed' in reactions
+
 probe = r'''
 #include "network/CosmeticEvent.h"
 #include <iostream>
@@ -85,12 +96,8 @@ static bool oldClientProcess(int32_t cmd, ODPacket& packet, int& handled)
 int main()
 {
     // Round trip of every kind, with the sentinel behind it to prove nothing is left over or missing
-    for(int32_t type = 0; type <= 16; ++type)
+    for(int32_t type = 0; type <= 18; ++type)
     {
-        // 10 to 14 are kept free for kinds of another branch
-        if((type > 9) && (type != 15) && (type != 16))
-            continue;
-
         CosmeticEvent event;
         event.mType = type;
         event.mSubject = "Orc_3";

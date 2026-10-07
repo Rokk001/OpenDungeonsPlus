@@ -76,7 +76,7 @@ public:
         destructibleOnly = 0,
         //! Workers can dance room tiles away and fighters can still destroy them.
         claimableAndDestructible = 1,
-        //! Only workers can take a room, tile by tile; fighters leave rooms alone.
+        //! Only workers can take a room, all of it at once; fighters leave rooms alone.
         claimableOnly = 2
     };
 
@@ -86,12 +86,26 @@ public:
 
     //! \brief Rooms can be taken over by enemy workers when the RoomsClaimableByEnemies
     //! switch is set in the room configuration file. The whole room has one health
-    //! pool (mClaimHealth) that every dance on any of its tiles lowers; when it is
-    //! empty all the tiles change hands at once (changeOwner). The dungeon temple is
-    //! never claimable: it can only be destroyed. Bridges override this pair with
-    //! their own claiming rules (square by square).
+    //! pool (mClaimHealth, a fraction of tiles times RoomConvertSecondsPerTile) that
+    //! every dance on any of its tiles lowers; when it is empty all the tiles change
+    //! hands at once (changeOwner). The dungeon temple is
+    //! never claimable: it can only be destroyed. A bridge is one room like any other
+    //! (all its squares together make the pool); it only scales the dance by the research
+    //! of its owner and decides on its own who may claim it.
     virtual bool isClaimable(Seat* seat) const override;
     virtual void claimForSeat(Seat* seat, Tile* tile, double danceRate) override;
+
+    //! \brief Server only. True when the seat may not dance on the tile of this
+    //! enemy room now: a defender that is no worker stands within
+    //! RoomTakeoverGuardRadius tiles of the tile, or the seat cannot pay the price.
+    //! Every kind of room can be taken over (the dungeon temple is excluded by
+    //! isClaimable and the guards in claimForSeat and handTilesOverToSeat).
+    //! Rooms of nobody are never blocked.
+    bool isTakeoverBlocked(const Seat* seat, const Tile* tile) const;
+
+    //! \brief The gold the taker pays when the room changes hands
+    //! (RoomTakeoverCostPercent of the build cost of the tiles taken, 0 by default).
+    int32_t getTakeoverPrice() const;
 
     //! \brief The health of the room against being taken over, 1.0 when full.
     inline double getClaimHealth() const
@@ -220,16 +234,13 @@ protected:
     //! (tier only, no gold amount). Used by the heart and the portal; nothing is sent while the owner is not rich.
     void announceKeeperWealth(Tile* tile);
 
-    //! \brief Hands the given tile of this room over to a room of the same type
+    //! \brief Hands the given tiles of this room over to a room of the same type
     //! owned by the claiming seat, merging it with an adjacent room of theirs
     //! when there is one and splitting this room when the loss cuts it in two.
     //! Room-level state gets shared out through splitRoom(), so e.g. a treasury
-    //! tile takes its share of the stored gold with it. Returns the room the
-    //! tile ended up in, or nullptr if no room could be created.
-    Room* handTileOverToSeat(Seat* seat, Tile* tile);
-
-    //! \brief Same as handTileOverToSeat for several tiles at once. Counts as a
-    //! captured room for the claimer when this room is left without a tile.
+    //! tile takes its share of the stored gold with it. Counts as a captured room
+    //! for the claimer when this room is left without a tile. Returns the room the
+    //! tiles ended up in, or nullptr if no room could be created.
     Room* handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles);
 
     //! \brief Called when the claim health of the room is used up. By default every
@@ -242,8 +253,14 @@ protected:
     //! nullptr when the room was nobody's.
     void notifyOwnerChanged(Seat* oldSeat, Seat* newSeat);
 
-    //! \brief 1.0 when full. Not saved (a room loaded from a file starts full), except
-    //! for the portal, which keeps the value its files always had.
+    //! \brief Server only. Tells the players that see the tiles of the room (and both owners) with one
+    //! cosmetic event (roomTakeover) that the room has just changed hands: once per room, not once per tile
+    //! or per worker. tiles are the tiles that went over, this room is the one that lost them.
+    void fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Tile*>& tiles) const;
+
+    //! \brief 1.0 when full. Saved with the first tile of the room only while it is worn down (a room
+    //! that was never touched writes nothing extra, and a save without it loads full); portals and
+    //! bridges also keep the value their files always had.
     double mClaimHealth;
 
     /*! \brief Exports the headers needed to recreate the Room. It allows to extend Room as much as wanted.

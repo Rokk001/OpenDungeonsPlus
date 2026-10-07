@@ -34,6 +34,7 @@
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
 #include "creatureaction/CreatureActionPossessed.h"
+#include "creatureaction/CreatureActionReloadTrap.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -136,6 +137,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <cctype>
 
 
 
@@ -170,6 +172,8 @@ namespace
 {
 //! Turns between two tries to assign a missing appearance
 const uint32_t APPEARANCE_RETRY_TURNS = 200;
+//! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
+const int64_t BED_STATUS_REPEAT_TURNS = 200;
 
 //! \brief Server side registry of the portrait manifests used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
@@ -471,12 +475,14 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mGoldCarried             (0),
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
+    mBedNotified             (-1),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
+    mClientCarrying          (false),
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
@@ -485,6 +491,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (CreatureMoodValues::Nothing),
+    mClientTileSpeedRatio    (-1.0),
     mOverlayStatus           (nullptr),
     mNeedFireRefresh         (false),
     mDropCooldown            (0),
@@ -496,6 +503,8 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
+    mIsBeingDragged          (false),
+    mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
     mNbTurnsRested           (0),
@@ -577,12 +586,14 @@ Creature::Creature(GameMap* gameMap) :
     mGoldCarried             (0),
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
+    mBedNotified             (-1),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
+    mClientCarrying          (false),
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
@@ -591,6 +602,7 @@ Creature::Creature(GameMap* gameMap) :
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (0),
+    mClientTileSpeedRatio    (-1.0),
     mOverlayStatus           (nullptr),
     mNeedFireRefresh         (false),
     mDropCooldown            (0),
@@ -602,6 +614,8 @@ Creature::Creature(GameMap* gameMap) :
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
+    mIsBeingDragged          (false),
+    mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
     mNbTurnsRested           (0),
@@ -672,6 +686,8 @@ void Creature::createMeshWeapons()
 
     if(mWeaponR != nullptr)
         RenderManager::getSingleton().rrCreateWeapon(this, mWeaponR, "R");
+
+    RenderManager::getSingleton().rrCreateWorkerTool(this);
 }
 
 void Creature::destroyMeshWeapons()
@@ -687,6 +703,8 @@ void Creature::destroyMeshWeapons()
 
     if(mWeaponR != nullptr)
         RenderManager::getSingleton().rrDestroyWeapon(this, mWeaponR, "R");
+
+    RenderManager::getSingleton().rrDestroyWorkerTool(this);
 }
 
 GameEntityType Creature::getObjectType() const
@@ -1208,6 +1226,12 @@ void Creature::heal(double hp)
     computeCreatureOverlayHealthValue();
 }
 
+double Creature::getLevelScale() const
+{
+    const double levelSteps = static_cast<double>(std::max(1u, std::min(MAX_LEVEL, getLevel())) - 1u);
+    return 1.0 + ConfigManager::getSingleton().getCreatureLevelGrowthMax() * levelSteps / static_cast<double>(MAX_LEVEL - 1u);
+}
+
 bool Creature::isAlive() const
 {
     if(!getIsOnServerMap())
@@ -1465,6 +1489,11 @@ void Creature::doUpkeep()
         return;
     }
 
+    // A creature a worker pulls to its bed does nothing on its own (a KO to death one and a dead one go on below,
+    // nothing here holds back a death)
+    if(mIsBeingDragged && (mKoTurnCounter == 0) && isAlive())
+        return;
+
     if(mKoTurnCounter < 0)
     {
 
@@ -1626,6 +1655,19 @@ void Creature::doUpkeep()
         mGoldCarriedCosmeticNotified = mGoldCarried;
         fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::carriedGold), mGoldCarried,
             getDefinition()->getMaxGoldCarryable(), false);
+    }
+
+    // The clients show a creature without a bed lying down in the open. They are told when that changes and, for a
+    // creature without a bed, now and then again (cosmetic only).
+    if(!mDefinition->isWorker())
+    {
+        int32_t hasBed = (mHomeTile != nullptr) ? 1 : 0;
+        if((hasBed != mBedNotified) ||
+           ((hasBed == 0) && ((getGameMap()->getTurnNumber() % BED_STATUS_REPEAT_TURNS) == 0)))
+        {
+            mBedNotified = hasBed;
+            fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::bedStatus), hasBed, 0, true);
+        }
     }
 
     // Check if we should compute mood
@@ -1846,6 +1888,11 @@ bool Creature::handleIdleAction()
 
     if (mDefinition->isWorker())
     {
+        // A trap of the keeper that used up its shots is armed again before the other jobs
+        if(!hasActionBeenTried(CreatureActionType::reloadTrap) && getSeat()->getPlayer()->isWorkerReloadShareOpen() &&
+           CreatureActionReloadTrap::tryStart(*this))
+            return true;
+
         // Decide what to do
         std::vector<CreatureActionType> workerActions = getSeat()->getPlayer()->getWorkerPreferredActions(*this);
         for(CreatureActionType actionType : workerActions)
@@ -2362,21 +2409,161 @@ double Creature::getMoveSpeed(Tile* tile) const
         return 1.0;
     }
 
+    // A tired creature drags its feet. Server and clients both use the mood bit Tired
+    // (see isTired), so both move it at the same slower speed
+    double tiredFactor = 1.0;
+    if(isTired())
+        tiredFactor = ConfigManager::getSingleton().getTiredWalkSpeedFactor();
+
+    // A badly hurt creature limps along: it moves slower too (tired and hurt add up, see getLowHealthWalkFactor)
+    tiredFactor *= getLowHealthWalkFactor();
+
+    // A worker that pulls a hurt creature is slower (clip drag_anim). The pulled creature does not walk
+    // by itself: it slides after the worker a bit faster than the worker pulls, so it never falls behind.
+    // Server and clients know both by the clip name, so both move them at the same speed
+    const std::string& clip = getAnimationStateName();
+    if(clip == EntityAnimation::drag_anim)
+    {
+        tiredFactor *= getDragWorkerSpeedFactor();
+    }
+    else if(clip == EntityAnimation::dragged_anim)
+    {
+        const CreatureDefinition* workerDefinition = ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker();
+        double workerSpeed = (workerDefinition != nullptr) ? workerDefinition->getMoveSpeedGround() : 1.0;
+        ConfigManager& config = ConfigManager::getSingleton();
+        return workerSpeed * getDragWorkerSpeedFactor() *
+            std::max(1.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragFollowSpeedFactor", 1.3));
+    }
+
     if(getIsOnServerMap())
     {
         // Check if the covering building allows this creature to go through
         if(tile->getCoveringBuilding() != nullptr)
-            return tile->getCoveringBuilding()->getCreatureSpeed(this, tile);
+            return tile->getCoveringBuilding()->getCreatureSpeed(this, tile) * tiredFactor;
         else
-            return tile->getCreatureSpeedDefault(this);
+            return tile->getCreatureSpeedDefault(this) * tiredFactor;
     }
     else
     {
         if(tile->getHasBridge())
-            return getMoveSpeedGround();
+            return getMoveSpeedGround() * tiredFactor;
         else
-            return tile->getCreatureSpeedDefault(this);
+            return tile->getCreatureSpeedDefault(this) * tiredFactor;
     }
+}
+
+double Creature::getDragWorkerSpeedFactor()
+{
+    double factor = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragWorkerSpeedFactor", 0.6);
+    return std::max(0.1, std::min(1.0, factor));
+}
+
+bool Creature::isLowHealthWalkStage(uint32_t healthStage)
+{
+    // The health stage (0 = unhurt, 1 to 6 = lost a sixth more each, 7 = no health left) is known on the
+    // server and on the clients. Stage s means the health is below 100 * (1 - (s - 1) / 6) percent, so
+    // a creature is badly hurt from the first stage that lies completely below the configured percent
+    const double nbSteps = static_cast<double>(NB_OVERLAY_HEALTH_VALUES - 2);
+    double thresholdPercent = ConfigManager::getSingleton().getLowHealthWalkThresholdPercent();
+    double firstStage = std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0;
+    return static_cast<double>(healthStage) >= firstStage;
+}
+
+double Creature::getLowHealthWalkFactor() const
+{
+    if(!isLowHealthWalking())
+        return 1.0;
+
+    // A creature type can have its own factor (same limits as the global one), the global one is the default
+    if((mDefinition != nullptr) && (mDefinition->getLowHealthWalkSpeedFactor() >= 0.0))
+        return std::max(0.2, std::min(1.0, mDefinition->getLowHealthWalkSpeedFactor()));
+
+    return ConfigManager::getSingleton().getLowHealthWalkSpeedFactor();
+}
+
+double Creature::getTileSpeedRatio() const
+{
+    // The same tile speed the client moves the creature with (see getMoveSpeed): no covering building on the client
+    Tile* tile = getPositionTile();
+    double groundSpeed = getMoveSpeedGround();
+    if((tile == nullptr) || (groundSpeed <= 0.0))
+        return 1.0;
+
+    double tileSpeed = tile->getHasBridge() ? groundSpeed : tile->getCreatureSpeedDefault(this);
+    if(tileSpeed <= 0.0)
+        return 1.0;
+
+    return std::max(0.2, std::min(4.0, tileSpeed / groundSpeed));
+}
+
+void Creature::updateClientPose(double timeSinceLastFrame)
+{
+    if(getAnimationStateName() != EntityAnimation::walk_anim)
+    {
+        mClientTileSpeedRatio = -1.0;
+        return;
+    }
+
+    double target = getTileSpeedRatio();
+    if(mClientTileSpeedRatio < 0.0)
+    {
+        mClientTileSpeedRatio = target;
+        return;
+    }
+
+    // The ratio changes by 4 per second at most, so a step between two tile types takes a fraction of a second
+    double maxStep = std::max(0.0, timeSinceLastFrame) * 4.0;
+    double diff = target - mClientTileSpeedRatio;
+    if(std::abs(diff) <= maxStep)
+        mClientTileSpeedRatio = target;
+    else
+        mClientTileSpeedRatio += (diff > 0.0) ? maxStep : -maxStep;
+}
+
+double Creature::getClientPoseSpeedFactor() const
+{
+    double factor = 1.0;
+    if(getAnimationStateName() == EntityAnimation::idle_anim)
+    {
+        // Hurt creatures breathe a little slower when they stand
+        if(mOverlayHealthValue >= 6)
+            factor = 0.78;
+        else if(mOverlayHealthValue == 5)
+            factor = 0.85;
+        else if(mOverlayHealthValue == 4)
+            factor = 0.92;
+    }
+    else
+    {
+        // The walk clip keeps up with the slower speed of a badly hurt creature (see getMoveSpeed)
+        factor = getLowHealthWalkFactor();
+    }
+
+    // A tired creature also walks slower on the server (see getMoveSpeed): the walk clip keeps up
+    if((mOverlayMoodValue & CreatureMoodValues::Tired) != 0)
+        factor *= ConfigManager::getSingleton().getTiredWalkSpeedFactor();
+
+    // The worker that pulls a hurt creature walks slower too (see getMoveSpeed)
+    if(getAnimationStateName() == EntityAnimation::drag_anim)
+        factor *= getDragWorkerSpeedFactor();
+
+    // The walk clips (Walk, WalkHurt, CarryWalk) of a type can run faster or slower than the move speed so that the
+    // feet do not slide (WalkClipRate, WalkHurtClipRate for the clip WalkHurt). Only the shown clip, the move speed is not
+    // touched. The rate follows the clip that plays (the client switches it when the health stage crosses the threshold).
+    // The rate is measured on the unscaled model: a bigger creature (see RenderManager::rrScaleCreature) takes longer
+    // strides, so the scale is divided out
+    if((getAnimationStateName() == EntityAnimation::walk_anim) && (mDefinition != nullptr))
+    {
+        Ogre::AnimationState* clipState = getAnimationState();
+        bool playsHurtClip = (clipState != nullptr) && (clipState->getAnimationName() == EntityAnimation::walk_hurt_anim);
+        double clipRate = playsHurtClip ? mDefinition->getWalkHurtClipRate() : mDefinition->getWalkClipRate();
+        factor *= clipRate / getLevelScale();
+
+        // The creature moves with the speed of the tile it stands on (water, lava, ...) while the clip rate is fitted
+        // to the ground speed: the clip keeps up with the ratio (tired and hurt factors above are already in both)
+        factor *= (mClientTileSpeedRatio >= 0.0) ? mClientTileSpeedRatio : getTileSpeedRatio();
+    }
+    return factor;
 }
 
 double Creature::getPhysicalDefense() const
@@ -2497,6 +2684,14 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mWaterSpeed);
     OD_ASSERT_TRUE(is >> mLavaSpeed);
     OD_ASSERT_TRUE(is >> mSpeedModifier);
+
+    // A creature that walks changes between the walk clip and the hurt walk clip when it becomes badly hurt or
+    // recovers (the clip is chosen in RenderManager::rrSetObjectAnimationState)
+    if(!getIsOnServerMap() && getIsOnMap() && (getAnimationStateName() == EntityAnimation::walk_anim) &&
+       (isLowHealthWalkStage(oldHealthValue) != isLowHealthWalking()))
+    {
+        RenderManager::getSingleton().rrSetObjectAnimationState(this, EntityAnimation::walk_anim, true);
+    }
 
     // We do not scale the creature if it is picked up (because it is already not at its normal size). It will be
     // resized anyway when dropped
@@ -4065,6 +4260,7 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         entityAttack.getPosition() : Ogre::Vector3(tileAttack.getX(), tileAttack.getY(), 0);
     Ogre::Vector3 walkDirection(target.x - pos.x, target.y - pos.y, 0);
     walkDirection.normalise();
+    fireAttackTurn(entityAttack.getName(), walkDirection);
     const bool ranged = skillData.mSkill->getRangeMax(this, &entityAttack) > 1.0;
     setAnimationState(ranged ? EntityAnimation::ranged_attack_anim :
         EntityAnimation::combat_attack_anim, false, walkDirection, true);
@@ -4547,15 +4743,149 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     if(getDefinition()->isWorker())
         return EntityCarryType::notCarryable;
 
-    // KO to death entities can be carried
+    // A creature knocked out to death is carried to a prison when it is an enemy. A creature of the seat of the
+    // carrier is not carried: it is pulled to its own bed (same priority as before), and without an own bed it is
+    // not touched and dies where it lies
     if(mKoTurnCounter < 0)
+    {
+        if((carrier != nullptr) && (carrier->getSeat() == getSeat()))
+            return isKoToDeathForBedPull() ? EntityCarryType::koCreature : EntityCarryType::notCarryable;
+
         return EntityCarryType::koCreature;
+    }
 
     // Dead creatures are carryable
     if(getHP() <= 0.0)
         return EntityCarryType::corpse;
 
+    // A hurt creature of the carrier's seat close enough is pulled to its bed (the worker takes it by the legs,
+    // see CreatureActionCarryEntity: it is not carried, but it takes the place of a carried thing in the search)
+    if((carrier != nullptr) && (carrier->getSeat() == getSeat()) && getIsOnServerMap() &&
+       isWoundedForBedCarry())
+    {
+        Tile* myTile = getPositionTile();
+        Tile* carrierTile = carrier->getPositionTile();
+        double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryRadius", 8.0);
+        if((myTile == nullptr) || (carrierTile == nullptr) ||
+           (Pathfinding::squaredDistanceTile(*myTile, *carrierTile) > (radius * radius)))
+        {
+            return EntityCarryType::notCarryable;
+        }
+
+        // The priority against the other things a worker can carry is configurable:
+        // 0 = lowest, 1 = like gold, 2 = like a creature knocked out to death
+        int32_t priority = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryPriority", 1.0));
+        if(priority <= 0)
+            return EntityCarryType::woundedCreature;
+        if(priority == 1)
+            return EntityCarryType::gold;
+        return EntityCarryType::koCreature;
+    }
+
     return EntityCarryType::notCarryable;
+}
+
+bool Creature::isWoundedForBedCarry() const
+{
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
+       isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
+    {
+        return false;
+    }
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    // 0 percent switches the whole behaviour off
+    double hpPercent = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryHpPercent", 35.0);
+    if((hpPercent <= 0.0) || (getMaxHp() <= 0.0) || ((getHP() * 100.0) >= (getMaxHp() * hpPercent)))
+        return false;
+
+    // A creature knocked out for a while may be carried too, unless the config says no
+    if((mKoTurnCounter != 0) && (config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryTempKo", 1.0) <= 0.0))
+        return false;
+
+    // Creatures knocked out to death are handled by isKoToDeathForBedPull
+    if(mKoTurnCounter < 0)
+        return false;
+
+    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
+        return false;
+
+    // It only goes to its own bed in a dormitory of its seat, and not when it already lies in it
+    if(!hasOwnBedInDormitory())
+        return false;
+
+    Tile* myTile = getPositionTile();
+    if((myTile == nullptr) || (myTile == mHomeTile))
+        return false;
+
+    // No fight, flight or call to war going on
+    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
+       isActionInList(CreatureActionType::flee) || isActionInList(CreatureActionType::goCallToWar) ||
+       isActionInList(CreatureActionType::leaveDungeon))
+    {
+        return false;
+    }
+
+    double enemyRadius = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", 6.0);
+    return !isHostileNear(enemyRadius);
+}
+
+bool Creature::hasOwnBedInDormitory() const
+{
+    return (mHomeTile != nullptr) && (mHomeTile->getCoveringRoom() != nullptr) &&
+        (mHomeTile->getCoveringRoom()->getType() == RoomType::dormitory) &&
+        (mHomeTile->getCoveringRoom()->getSeat() == getSeat());
+}
+
+bool Creature::isKoToDeathForBedPull() const
+{
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || (mKoTurnCounter >= 0) || mIsBeingDragged || mIsInHand ||
+       isPossessed() || isInPrison() || getDefinition()->isWorker())
+    {
+        return false;
+    }
+
+    // Only to its own bed: without one it is not picked up, not moved and dies where it lies. The percent of
+    // health and the fights do not matter here, the counter to death is running. Only the pause after a pull
+    // that ended counts (DormitoryWoundedKoDeathCooldown, set in notifyDragEnd): the counter goes on meanwhile
+    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
+        return false;
+
+    if(!hasOwnBedInDormitory())
+        return false;
+
+    double enemyRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", 6.0);
+    return !isHostileNear(enemyRadius);
+}
+
+bool Creature::isHostileNear(double radius) const
+{
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    double squaredRadius = radius * radius;
+    const std::vector<Creature*>& creatures = getGameMap()->getCreatures();
+    for(Creature* other : creatures)
+    {
+        if((other == this) || !other->isAlive() || !other->getIsOnMap() || other->isKo())
+            continue;
+
+        // Workers are no threat
+        if(other->getDefinition()->isWorker())
+            continue;
+
+        if(getSeat()->isAlliedSeat(other->getSeat()))
+            continue;
+
+        Tile* otherTile = other->getPositionTile();
+        if(otherTile == nullptr)
+            continue;
+
+        if(Pathfinding::squaredDistanceTile(*myTile, *otherTile) <= squaredRadius)
+            return true;
+    }
+    return false;
 }
 
 void Creature::notifyEntityCarryOn(Creature* carrier)
@@ -4567,6 +4897,54 @@ void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
 {
     mPosition = position;
     addEntityToPositionTile();
+}
+
+void Creature::notifyDragStart()
+{
+    mIsBeingDragged = true;
+
+    // A hurt creature stops what it did, it lies on the ground and the worker pulls it (one knocked out to death
+    // included: its counter goes on running). It stays on the map (it is not carried): the walk paths the worker
+    // gives it move it.
+    if(getIsOnServerMap())
+    {
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+        clearActionQueue();
+    }
+}
+
+void Creature::notifyDragEnd()
+{
+    if(!mIsBeingDragged)
+        return;
+
+    mIsBeingDragged = false;
+    if(!getIsOnServerMap())
+        return;
+
+    // The pause before it can be pulled again, whatever the end of the drag was
+    // (a creature knocked out to death has its own, usually longer, pause)
+    double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", 150.0);
+    if(mKoTurnCounter < 0)
+        cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedKoDeathCooldown", 150.0);
+    mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
+}
+
+bool Creature::setDragDestination(Tile* tile)
+{
+    if(tile == nullptr)
+        return false;
+
+    Tile* posTile = getPositionTile();
+    if(posTile == nullptr)
+        return false;
+
+    std::list<Tile*> result = getGameMap()->path(this, tile);
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(result, path, true, 0.0);
+    setWalkPath(EntityAnimation::drag_anim, EntityAnimation::idle_anim, true, true, path, true);
+    return isMoving() || (posTile == tile);
 }
 
 void Creature::carryEntity(GameEntity* carriedEntity)
@@ -5073,6 +5451,120 @@ void Creature::fireCosmeticEvent(int32_t type, int32_t value, int32_t value2, bo
     fireCosmeticEvent(event, alliedOnly);
 }
 
+void Creature::fireAttackTurn(const std::string& targetName, const Ogre::Vector3& direction)
+{
+    if(!ConfigManager::getSingleton().getAttackTurnEvents())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::attackTurn);
+    event.mSubject = getName();
+    event.mObject = targetName;
+    event.mPosition = direction;
+    fireCosmeticEvent(event, false);
+}
+
+void Creature::fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    // The share of the damage that got through the defense decides between a hit, a glancing blow and a blocked one
+    double share = (rawDamage > 0.0) ? damageDone / rawDamage : 0.0;
+    share = std::max(0.0, std::min(1.0, share));
+    CosmeticHitResult result = CosmeticHitResult::hit;
+    if(damageDone <= 0.0)
+        result = CosmeticHitResult::blocked;
+    else if(share < ConfigManager::getSingleton().getHitGlanceShare())
+        result = CosmeticHitResult::glanced;
+
+    // How hard it hit: the damage in per mille of the maximum health of this creature
+    double maxHp = getMaxHp();
+    double healthShare = (maxHp > 0.0) ? damageDone / maxHp : 0.0;
+    healthShare = std::max(0.0, std::min(1.0, healthShare));
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = attackerName;
+    event.mObject = getName();
+    event.mText = missile ? "missile" : "melee";
+    event.mValue = static_cast<int32_t>(result);
+    event.mValue2 = static_cast<int32_t>(healthShare * 1000.0 + 0.5);
+    event.mPosition = getPosition();
+    fireCosmeticEvent(event, false);
+}
+
+void Creature::fireHitMissed(const std::string& attackerName)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = attackerName;
+    event.mObject = getName();
+    event.mText = "missile";
+    event.mValue = static_cast<int32_t>(CosmeticHitResult::missed);
+    event.mValue2 = 0;
+    event.mPosition = getPosition();
+    fireCosmeticEvent(event, false);
+}
+
+void Creature::fireHitDefended(const std::string& attackerName, DefenceChance::Outcome outcome)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    if(outcome == DefenceChance::none)
+        return;
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = attackerName;
+    event.mObject = getName();
+    event.mText = "melee";
+    event.mValue = static_cast<int32_t>((outcome == DefenceChance::parried) ? CosmeticHitResult::parried : CosmeticHitResult::dodged);
+    event.mValue2 = 0;
+    event.mPosition = getPosition();
+    fireCosmeticEvent(event, false);
+}
+
+DefenceChance::Outcome Creature::rollMeleeDefence() const
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    if(!config.getMeleeDodgeParry())
+        return DefenceChance::none;
+
+    // Only a creature that can really move out of the way: alive, awake, on the map, not held or dragged and
+    // not possessed by a keeper
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || isKo() || mIsInHand || mIsBeingDragged || isPossessed())
+        return DefenceChance::none;
+
+    // A weapon that strikes parries, a shield makes the parry better; a shield alone does not parry
+    bool hasWeapon = false;
+    bool hasShield = false;
+    const Weapon* weapons[2] = {getWeaponL(), getWeaponR()};
+    for(uint32_t i = 0; i < 2; ++i)
+    {
+        if(weapons[i] == nullptr)
+            continue;
+
+        std::string mesh = weapons[i]->getMeshName();
+        std::transform(mesh.begin(), mesh.end(), mesh.begin(), ::tolower);
+        if(DefenceChance::isShieldMesh(mesh))
+            hasShield = true;
+        else if(DefenceChance::isParryWeaponMesh(mesh))
+            hasWeapon = true;
+    }
+
+    double dodge = DefenceChance::dodgeChance(getLevel(), config.getDodgeBase(), config.getDodgePerLevel(),
+        config.getDodgeMax());
+    double parry = DefenceChance::parryChance(getLevel(), hasWeapon, hasShield, config.getParryBase(),
+        config.getParryPerLevel(), config.getParryMax(), config.getParryShieldBase(),
+        config.getParryShieldPerLevel(), config.getParryShieldMax());
+
+    // Dodging is rolled first, parrying only if the creature did not dodge. The server draws the dice.
+    double dodgeRoll = Random::Double(0.0, 100.0);
+    double parryRoll = Random::Double(0.0, 100.0);
+    return DefenceChance::decide(dodge, parry, dodgeRoll, parryRoll);
+}
+
 void Creature::fireImpatientIfNeeded()
 {
     // The game counts a creature as frustrated from the turns its OutOfWork mood starts at. It is told then,
@@ -5239,6 +5731,14 @@ void Creature::computeMood()
 
     fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::moodStage), static_cast<int32_t>(mMoodValue),
         static_cast<int32_t>(oldMoodValue), true);
+
+    // The anger fell below the angry level while the relief of a prayer in the temple was working: calmed
+    if((oldMoodValue >= CreatureMoodLevel::Angry) && (mMoodValue < CreatureMoodLevel::Angry) &&
+       (mMoodValue != CreatureMoodLevel::Unknown) && (mPrayerRelief > 0))
+    {
+        fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::calmed), static_cast<int32_t>(mMoodValue),
+            static_cast<int32_t>(oldMoodValue), true);
+    }
 
     if((mMoodValue >= CreatureMoodLevel::Furious) &&
        (oldMoodValue < CreatureMoodLevel::Furious))
@@ -5605,7 +6105,7 @@ void Creature::setJobCooldown(int val)
 bool Creature::isTired() const
 {
     if(getIsOnServerMap())
-        return mWakefulness <= 20.0;
+        return mWakefulness <= ConfigManager::getSingleton().getTiredWakefulness();
 
     return (mOverlayMoodValue & CreatureMoodValues::Tired) != 0;
 }

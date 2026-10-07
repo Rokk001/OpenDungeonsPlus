@@ -22,7 +22,13 @@ ROOMS = ("Hatchery", "Treasury", "Portal", "Dormitory", "Library", "Workshop", "
 SETTINGS = ("MaxSimultaneous", "MaxCameraDistance", "GroupStaggerMin", "GroupStaggerMax", "DefaultGroup",
             "MoodInterval", "MoodPerTick", "MoodWalkingChance", "ImpatientAfter", "ProudSeconds", "BoredAfter",
             "AmbientAfter", "SitAfter", "LieAfter", "LookRadius", "InteractionChance", "InteractionRadius",
-            "InteractionPause", "ArenaSpectatorInterval", "ArenaCheerPause")
+            "InteractionPause", "ArenaSpectatorInterval", "ArenaCheerPause",
+            "TwoWeaponMode", "TwoWeaponArmStrength", "ArrowFollowsHand",
+            "ArrowPullDistance", "ArrowDrawTime", "ArrowRetakeGap", "ArrowReloadTime", "ArrowHandOffset",
+            "CrossbowReloadTime", "CrossbowReloadJolt", "WeaponTrail", "WeaponTrailLife",
+            "WeaponTrailWidth", "WeaponTrailLength", "WeaponTrailColour", "WeaponTrailBrightness",
+            "WeaponTrailMinShare", "WeaponTrailMax")
+DRAG_EVENTS = ("DragWounded", "DraggedGroan", "PutWoundedDown")
 RELATION_EVENTS = ("RelationFriend", "RelationBestFriend", "RelationLovers", "RelationNemesis", "RelationHated",
                    "RelationBreakUp")
 EVENT_KEYS = ("Name", "Priority", "Cooldown", "Probability", "GroupMax", "WhileWorking", "InHand", "Dying")
@@ -155,6 +161,8 @@ def main():
                 error("unknown setting %s" % key)
             elif len(words) < 2 or (key != "DefaultGroup" and not is_number(words[1])):
                 error("setting %s needs a value" % key)
+            elif key == "ArrowHandOffset" and not (len(words) == 4 and all(is_number(w) for w in words[1:])):
+                error("setting ArrowHandOffset needs three numbers")
         elif block == "[Groups]":
             if key == "[Group]":
                 group = {"Name": None, "Creatures": []}
@@ -228,6 +236,7 @@ def main():
                 error("event %s: Spreads names the unknown event %s" % (name, target[0]))
 
     check_relationship_events(events, error)
+    check_drag_events(events, error)
     check_catalogue(events, error)
 
     check_material_lookups(error)
@@ -258,6 +267,27 @@ def check_relationship_events(events, error):
         for found_variant in found["variants"]:
             if "Emote" not in found_variant:
                 error("event %s: variant %s has no Emote" % (name, found_variant.get("Name", ["?"])[0]))
+
+
+def check_drag_events(events, error):
+    """The worker that pulls a hurt creature by the legs and the creature that is pulled: the events that
+    WorkerReactions.cpp shows for the clips Drag and Dragged must exist, show an emote and be rare enough."""
+    with open(os.path.join(ROOT, "source", "render", "WorkerReactions.cpp"), encoding="utf-8") as handle:
+        text = handle.read()
+    for name in DRAG_EVENTS:
+        if '"%s"' % name not in text:
+            error("WorkerReactions.cpp does not show the drag event %s" % name)
+        found = events.get(name)
+        if found is None:
+            error("drag event %s is missing" % name)
+            continue
+        if float(found.get("Cooldown", "0")) < 4:
+            error("event %s: Cooldown must be at least 4 seconds" % name)
+        for found_variant in found["variants"]:
+            if "Emote" not in found_variant:
+                error("event %s: variant %s has no Emote" % (name, found_variant.get("Name", ["?"])[0]))
+    if "PickWounded" in text or "PickWounded" in events:
+        error("PickWounded is gone: wounded creatures are pulled, not lifted")
 
 
 def check_variant(key, words, variant, event, creatures, groups, materials, particles, error):

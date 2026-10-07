@@ -20,6 +20,7 @@
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
 #include "entities/CreatureProgression.h"
+#include "entities/GameEntityType.h"
 #include "entities/MissileOneHit.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
@@ -104,6 +105,15 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
 
     MissileOneHit* missile = createMissile(gameMap, creature, missileDirection, phyAtk, magAtk, eleAtk,
         attackedObject, ko, notifyPlayerIfHit);
+    // The plain missile tells the clients what the shot did (cosmetic event hitResult). Blast missiles do their own
+    // damage and report nothing.
+    if(missile->getMissileType() == MissileObjectType::oneHit)
+    {
+        std::string targetName;
+        if(attackedObject->getObjectType() == GameEntityType::creature)
+            targetName = attackedObject->getName();
+        missile->setShooter(creature->getName(), targetName);
+    }
     missile->addToGameMap();
     missile->createMesh();
     missile->setPosition(position);

@@ -155,6 +155,7 @@ void RoomPortal::changeOwner(Seat* seat)
         seat->getStatistics().mRoomsCaptured++;
 
     notifyOwnerChanged(oldSeat, seat);
+    fireTakeoverEvent(oldSeat, seat, mCoveredTiles);
 }
 
 void RoomPortal::updateActiveSpots(GameMap* gameMap)

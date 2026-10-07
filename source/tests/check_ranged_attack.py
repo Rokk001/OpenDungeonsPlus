@@ -22,6 +22,7 @@ struct GameEntity {
  GameEntityType type=GameEntityType::building;Ogre::Vector3 position;
  GameEntityType getObjectType()const{return type;}
  const Ogre::Vector3& getPosition()const{return position;}
+ std::string name;const std::string& getName()const{return name;}
 };
 struct Creature;
 namespace EntityAnimation {const std::string combat_attack_anim="CombatAttack",ranged_attack_anim="RangedAttack";}
@@ -41,6 +42,7 @@ struct Creature {
     const Ogre::Vector3& getPosition()const{return position;}
     Tile* getPositionTile(){return &tile;}GameMap* getGameMap(){return &map;}
     void setAnimationState(const std::string& a,bool,const Ogre::Vector3& d,bool){animation=a;direction=d;}
+    void fireAttackTurn(const std::string&,const Ogre::Vector3&){}
     void fireCreatureSound(int){++sounds;}void setNbTurnsWithoutBattle(int t){turns=t;}
     void decreaseWakefulness(double v){tired+=v;}void receiveExp(double v){xp+=v;}
     void useAttack(CreatureSkillData&,GameEntity&,Tile&,bool,bool);

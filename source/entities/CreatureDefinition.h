@@ -20,6 +20,7 @@
 
 #include <Ogre.h>
 
+#include <algorithm>
 #include <string>
 #include <iosfwd>
 #include <cstdint>
@@ -169,6 +170,18 @@ public:
     inline bool                 isChampion      () const    { return mChampion; }
     inline double               getPossessManaCost () const { return mPossessManaCost; }
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
+    //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
+    inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
+    //! \brief Speed factor of the walk clips of this type on the client (1 = as authored), limited to 0.2 - 8.0
+    inline double               getWalkClipRate () const    { return std::max(0.2, std::min(8.0, mWalkClipRate)); }
+    //! \brief Speed factor of the WalkHurt clip of this type on the client, limited to 0.2 - 8.0. Without an own value
+    //! (key WalkHurtClipRate not set) it is the walk clip rate
+    inline double               getWalkHurtClipRate () const
+    {
+        if(mWalkHurtClipRate < 0.0)
+            return getWalkClipRate();
+        return std::max(0.2, std::min(8.0, mWalkHurtClipRate));
+    }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -270,6 +283,18 @@ private:
     double mPossessManaCost;
     //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side
     double mTortureTimeToConvert;
+
+    //! \brief Optional (LowHealthWalkSpeedFactor): negative means the value of global.cfg is used
+    double mLowHealthWalkSpeedFactor;
+
+    //! \brief Optional (WalkClipRate): speed factor of the Walk and CarryWalk clips on the client (and of WalkHurt when
+    //! WalkHurtClipRate is not set), so that the feet of a creature type do not slide. Cosmetic: the move speed does not
+    //! change. 1 when not set
+    double mWalkClipRate;
+
+    //! \brief Optional (WalkHurtClipRate): speed factor of the WalkHurt clip only, matching its own stride length.
+    //! Negative when not set, then mWalkClipRate is used
+    double mWalkHurtClipRate;
 
     //! \brief The name of the creatures class
     std::string mClassName;

@@ -125,9 +125,9 @@ assert 'mFlight' not in cpp[cpp.index('void ChickenEntity::exportToStream'):]
 
 # Network: appended last, the layout is the shared one, old clients never get it
 event_h = read('source/network/CosmeticEvent.h')
-assert re.search(r'portalArrival = 8,.*?chickenFlee = 9,.*?casinoResult = 15,.*?keeperWealth = 16\s*\};', event_h, re.S)
+assert re.search(r'portalArrival = 8,.*?chickenFlee = 9,.*?calmed = 10,.*?bedStatus = 11,.*?casinoResult = 15,.*?keeperWealth = 16,.*?attackTurn = 18\s*\};', event_h, re.S)
 event_cpp = read('source/network/CosmeticEvent.cpp')
-assert 'CosmeticEventType::chickenFlee)))' in event_cpp and 'return "chickenFlee";' in event_cpp
+assert 'CosmeticEventType::attackTurn)));\n}' in event_cpp and 'return "chickenFlee";' in event_cpp
 server = read('source/network/ODServer.cpp')
 send = server[server.index('void ODServer::sendCosmeticEvent('):]
 send = send[:send.index('\n}\n')]

@@ -40,6 +40,17 @@ public:
     //! the creature that is in front of it flinches, and weapons are drawn.
     static void noteAttack(CreatureReactions& reactions, Creature* attacker, const std::string& clip);
 
+    //! \brief True if the weapon the creature strikes with is a sword (the sword blows of the attack clips)
+    static bool carriesSword(const Creature* creature);
+
+    //! \brief The server told that a blow or shot hit the target (event hitResult). The target flinches at the
+    //! moment the blow lands, or staggers if the hit was a strong one. Replaces the guess made from the attack animation.
+    static void noteHitEvent(CreatureReactions& reactions, Creature* attacker, Creature* target, bool strong, bool missile);
+
+    //! \brief True if the creature carries an attack weapon in each hand (two swords, two axes ...). A shield, a
+    //! bow, a staff or a missing weapon in either hand make it false.
+    static bool carriesTwoAttackWeapons(const Creature* creature);
+
     //! \brief The creature runs from a fight: it draws its weapon
     static void noteAlarm(CreatureReactions& reactions, Creature* creature);
 

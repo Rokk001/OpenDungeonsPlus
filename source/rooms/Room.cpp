@@ -20,6 +20,7 @@
 #include "creatureaction/CreatureActionSearchJob.h"
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/CreatureRelationships.h"
@@ -57,8 +58,6 @@ GameEntityType Room::getObjectType() const
     return GameEntityType::room;
 }
 
-const double CLAIMED_VALUE_PER_TILE = 1.0;
-
 Room::ClaimMode Room::getClaimMode()
 {
     ConfigManager& config = ConfigManager::getSingleton();
@@ -80,8 +79,66 @@ bool Room::isClaimable(Seat* seat) const
         getSeat()->isAlliedSeat(seat), getType() == RoomType::dungeonTemple);
 }
 
+int32_t Room::getTakeoverPrice() const
+{
+    if(getSeat()->isRogueSeat())
+        return 0;
+
+    // Every room changes hands as a whole, a bridge too
+    uint32_t nbTiles = static_cast<uint32_t>(numCoveredTiles());
+    double percent = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("RoomTakeoverCostPercent", 0.0);
+    return RoomClaim::takeoverPrice(RoomManager::costPerTile(getType()), nbTiles, percent);
+}
+
+bool Room::isTakeoverBlocked(const Seat* seat, const Tile* tile) const
+{
+    GameMap* gameMap = getGameMap();
+    if((gameMap == nullptr) || !gameMap->isServerGameMap() || (getSeat() == nullptr) || getSeat()->isRogueSeat())
+        return false;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    // A room is only taken while nobody defends it: a fighter of the owner (or of its
+    // allies) that is up and about close to the tile keeps the workers off
+    double guardRadius = config.getRoomConfigDoubleOrDefault("RoomTakeoverGuardRadius", 5.0);
+    if(guardRadius > 0.0)
+    {
+        for(Creature* creature : gameMap->getCreatures())
+        {
+            if(!creature->getIsOnMap() || !creature->isAlive() || creature->isKo() || creature->isInContainment())
+                continue;
+
+            if(creature->getDefinition()->isWorker())
+                continue;
+
+            if(!creature->getSeat()->isAlliedSeat(getSeat()) || creature->getSeat()->isAlliedSeat(seat))
+                continue;
+
+            Tile* guardTile = creature->getPositionTile();
+            if(guardTile == nullptr)
+                continue;
+
+            if(RoomClaim::isGuardClose(guardTile->getX() - tile->getX(), guardTile->getY() - tile->getY(), guardRadius))
+                return true;
+        }
+    }
+
+    // The seat has to be able to pay what the room costs it
+    int32_t price = getTakeoverPrice();
+    if((price > 0) && (seat->getGold() < price))
+        return true;
+
+    return false;
+}
+
 void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)
 {
+    // The dungeon heart is only ever destroyed, no caller may take it over
+    if(getType() == RoomType::dungeonTemple)
+    {
+        OD_LOG_WRN("The dungeon temple " + getName() + " cannot be claimed by seat id=" + Helper::toString(seat->getId()));
+        return;
+    }
+
     ConfigManager& config = ConfigManager::getSingleton();
     // A room nobody owns is taken five times faster than an enemy one
     double secondsPerTile;
@@ -91,6 +148,10 @@ void Room::claimForSeat(Seat* seat, Tile* tile, double danceRate)
         secondsPerTile = config.getRoomConfigDoubleOrDefault("RoomConvertSecondsPerTile", 2.5);
     double referenceClaimRate = config.getRoomConfigDoubleOrDefault("RoomConvertClaimRate", 0.42);
 
+    // The pool of the room is its number of tiles times the duration of one tile (RoomClaim::takeoverSeconds).
+    // It is kept as a fraction and the size is read at every dance, so a room that grows or shrinks
+    // meanwhile keeps its share. All the workers on any tile of the room lower the same pool and
+    // the whole room changes hands when it is empty.
     mClaimHealth -= RoomClaim::healthLostPerDance(danceRate, referenceClaimRate, secondsPerTile,
         ODApplication::turnsPerSecond, static_cast<uint32_t>(numCoveredTiles()));
 
@@ -122,6 +183,12 @@ void Room::repairClaimHealth(double danceRate)
 
 void Room::changeOwner(Seat* seat)
 {
+    if(getType() == RoomType::dungeonTemple)
+    {
+        OD_LOG_WRN("The dungeon temple " + getName() + " cannot change its owner to seat id=" + Helper::toString(seat->getId()));
+        return;
+    }
+
     Seat* oldSeat = getSeat();
     std::vector<Tile*> tiles = mCoveredTiles;
     Room* newRoom = handTilesOverToSeat(seat, tiles);
@@ -133,6 +200,71 @@ void Room::changeOwner(Seat* seat)
     }
 
     notifyOwnerChanged(oldSeat, seat);
+    fireTakeoverEvent(oldSeat, seat, tiles);
+}
+
+void Room::fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Tile*>& tiles) const
+{
+    if(!getGameMap()->isServerGameMap() || tiles.empty())
+        return;
+
+    // One tile of the room: the one nearest its middle
+    double sumX = 0.0;
+    double sumY = 0.0;
+    for(Tile* tile : tiles)
+    {
+        sumX += static_cast<double>(tile->getX());
+        sumY += static_cast<double>(tile->getY());
+    }
+    double middleX = sumX / static_cast<double>(tiles.size());
+    double middleY = sumY / static_cast<double>(tiles.size());
+    Tile* nearest = tiles.front();
+    double nearestDistance = -1.0;
+    for(Tile* tile : tiles)
+    {
+        double dx = static_cast<double>(tile->getX()) - middleX;
+        double dy = static_cast<double>(tile->getY()) - middleY;
+        double distance = dx * dx + dy * dy;
+        if((nearestDistance < 0.0) || (distance < nearestDistance))
+        {
+            nearest = tile;
+            nearestDistance = distance;
+        }
+    }
+
+    CosmeticEvent event(CosmeticEventType::roomTakeover);
+    event.mObject = RoomManager::getRoomReadableName(getType());
+    event.mText = getName();
+    event.mValue = newSeat->getId();
+    event.mValue2 = static_cast<int32_t>(tiles.size());
+    event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(nearest->getX()),
+        static_cast<Ogre::Real>(nearest->getY()), 0.0f);
+
+    // The seats that see any tile of the room and both owners, each told once
+    std::vector<Seat*> seats;
+    seats.push_back(newSeat);
+    if(oldSeat != nullptr)
+        seats.push_back(oldSeat);
+    for(Tile* tile : tiles)
+    {
+        for(Seat* seat : tile->getSeatsWithVision())
+        {
+            if(std::find(seats.begin(), seats.end(), seat) == seats.end())
+                seats.push_back(seat);
+        }
+    }
+
+    for(Seat* seat : seats)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        // The new owners of the tiles go out first (the messages of a client keep their order), so the
+        // client already knows the new owner when the event arrives. Otherwise they would follow only
+        // at the end of the turn, after the event.
+        seat->notifyChangedVisibleTiles();
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
 }
 
 void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
@@ -195,13 +327,15 @@ double Room::takeDamage(GameEntity* attacker, double absoluteDamage, double phys
     return Building::takeDamage(attacker, absoluteDamage, physicalDamage, magicalDamage, elementDamage, tileTakingDamage, ko);
 }
 
-Room* Room::handTileOverToSeat(Seat* seat, Tile* tile)
-{
-    return handTilesOverToSeat(seat, std::vector<Tile*>(1, tile));
-}
-
 Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
 {
+    // Lowest common point of every owner change of a room: the dungeon heart stays with its owner
+    if(getType() == RoomType::dungeonTemple)
+    {
+        OD_LOG_WRN("The dungeon temple " + getName() + " cannot hand tiles over to seat id=" + Helper::toString(seat->getId()));
+        return nullptr;
+    }
+
     GameMap* gameMap = getGameMap();
 
     OD_LOG_INF("Room=" + getName() + " " + Helper::toString(static_cast<int32_t>(tiles.size()))
@@ -224,11 +358,9 @@ Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
         std::map<Tile*, TileData*>::iterator itData = mTileData.find(tile);
         if(itData != mTileData.end())
         {
-            TileData* newData = itData->second->cloneTileData();
-            // The new owner starts with the tile fully claimed, so it can be danced
-            // back just as it was danced away.
-            newData->mClaimedValue = CLAIMED_VALUE_PER_TILE;
-            newRoom->mTileData[tile] = newData;
+            // The new room starts with a full takeover pool (mClaimHealth), so it can be
+            // danced back just as it was danced away.
+            newRoom->mTileData[tile] = itData->second->cloneTileData();
             itData->second->mHP = 0.0;
         }
 
@@ -563,6 +695,9 @@ void Room::checkForSplit()
         newRoom->setIsOnMap(true);
         newRoom->setName(gameMap->nextUniqueNameRoom(newRoom->getType()));
         newRoom->setSeat(getSeat());
+        // The part that breaks off keeps the share of the takeover pool this room had worn down,
+        // so cutting a room in two does not give the owner a fresh pool
+        newRoom->mClaimHealth = mClaimHealth;
 
         OD_LOG_INF(gameMap->serverStr() + "room=" + getName() + " no longer holds together, "
             + Helper::toString(static_cast<int32_t>(group.size())) + " of its tiles become room="
@@ -919,6 +1054,11 @@ void Room::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileDa
     os << "\t" << nbSeatsVision;
     for(Seat* seat : seatsToSave)
         os << "\t" << seat->getId();
+
+    // The pool of the whole room against being taken over, with its first tile and only while an enemy has
+    // worn it down. Older versions ignore the rest of the line, a save without it loads a full pool
+    if(!mCoveredTiles.empty() && (mCoveredTiles.front() == tile))
+        RoomClaim::writeClaimPool(os, mClaimHealth);
 }
 
 bool Room::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tileData)
@@ -966,6 +1106,9 @@ bool Room::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tile
 
         tileData->mSeatsVision.push_back(seat);
     }
+
+    // The takeover pool of a worn down room (on the first tile line of the room only); without it the pool is full
+    mClaimHealth = RoomClaim::readClaimPool(is, mClaimHealth);
 
     return true;
 }

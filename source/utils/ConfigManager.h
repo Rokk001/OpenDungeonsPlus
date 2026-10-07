@@ -24,6 +24,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/circular_buffer.hpp>
 
+#include <algorithm>
 #include <cstdint>
 
 
@@ -140,6 +141,98 @@ public:
     inline uint32_t getSlapEffectDuration() const
     { return mSlapEffectDuration; }
 
+    //! \brief A creature whose wakefulness is at or below this value is tired (mood bit Tired)
+    inline double getTiredWakefulness() const
+    { return mTiredWakefulness; }
+
+    //! \brief Factor on the walking speed of a tired creature (1 = no slowdown), limited to 0.2 - 1
+    inline double getTiredWalkSpeedFactor() const
+    { return std::max(0.2, std::min(1.0, mTiredWalkSpeedFactor)); }
+
+    //! \brief How much bigger than its base size a creature of the highest level is shown (0.10 = 10 percent), limited to 0 - 1
+    inline double getCreatureLevelGrowthMax() const
+    { return std::max(0.0, std::min(1.0, mCreatureLevelGrowthMax)); }
+
+    //! \brief Factor on the walking speed of a badly hurt creature (1 = no slowdown), limited to 0.2 - 1
+    inline double getLowHealthWalkSpeedFactor() const
+    { return std::max(0.2, std::min(1.0, mLowHealthWalkSpeedFactor)); }
+
+    //! \brief A creature with less than this percent of its health is badly hurt and walks slower, limited to 1 - 100
+    inline double getLowHealthWalkThresholdPercent() const
+    { return std::max(1.0, std::min(100.0, mLowHealthWalkThresholdPercent)); }
+
+    //! \brief Number of steps of the heart health that the keepers who see a heart are told, limited to 2 - 20
+    inline int32_t getHeartHealthStages() const
+    { return std::max(2, std::min(20, mHeartHealthStages)); }
+
+    //! \brief True if the steps of the hearts are sent to the keepers who see them (cosmetic event heartHealthStage)
+    inline bool getHeartHealthStageEvents() const
+    { return mHeartHealthStageEvents; }
+
+    //! \brief True if the server tells the keepers what a blow or shot really did (cosmetic event hitResult)
+    inline bool getHitEvents() const
+    { return mHitEvents; }
+
+    //! \brief A blow that lets through less than this share of its damage counts as glancing (0.01 - 0.9)
+    inline double getHitGlanceShare() const
+    { return std::max(0.01, std::min(0.9, mHitGlanceShare)); }
+
+    //! \brief A hit that takes at least this share of the maximum health of its target is a strong one (0.01 - 1)
+    inline double getHitStrongShare() const
+    { return std::max(0.01, std::min(1.0, mHitStrongShare)); }
+
+    //! \brief True if the server tells the keepers that a creature turns to its target before a blow (cosmetic event attackTurn)
+    inline bool getAttackTurnEvents() const
+    { return mAttackTurnEvents; }
+
+    //! \brief Angular speed in degrees per second of the turn to the target before a blow (client, 90 - 1440)
+    inline double getAttackTurnSpeed() const
+    { return std::max(90.0, std::min(1440.0, mAttackTurnSpeed)); }
+
+    //! \brief The most seconds the strike clip waits for the turn to the target (client, 0 - 0.6, 0 = no waiting)
+    inline double getAttackTurnMaxDelay() const
+    { return std::max(0.0, std::min(0.6, mAttackTurnMaxDelay)); }
+
+    //! \brief True if melee blows can be dodged or parried (decided by the server, global.cfg MeleeDodgeParry)
+    inline bool getMeleeDodgeParry() const
+    { return mMeleeDodgeParry; }
+
+    //! \brief Dodge chance of every creature in percent, base value (0 - 100)
+    inline double getDodgeBase() const
+    { return std::max(0.0, std::min(100.0, mDodgeBase)); }
+
+    //! \brief Dodge chance in percent that every level adds (0 - 10)
+    inline double getDodgePerLevel() const
+    { return std::max(0.0, std::min(10.0, mDodgePerLevel)); }
+
+    //! \brief Highest dodge chance in percent (0 - 100)
+    inline double getDodgeMax() const
+    { return std::max(0.0, std::min(100.0, mDodgeMax)); }
+
+    //! \brief Parry chance with a weapon in percent, base value (0 - 100)
+    inline double getParryBase() const
+    { return std::max(0.0, std::min(100.0, mParryBase)); }
+
+    //! \brief Parry chance in percent that every level adds (0 - 10)
+    inline double getParryPerLevel() const
+    { return std::max(0.0, std::min(10.0, mParryPerLevel)); }
+
+    //! \brief Highest parry chance with a weapon in percent (0 - 100)
+    inline double getParryMax() const
+    { return std::max(0.0, std::min(100.0, mParryMax)); }
+
+    //! \brief Parry chance with weapon and shield in percent, base value (0 - 100)
+    inline double getParryShieldBase() const
+    { return std::max(0.0, std::min(100.0, mParryShieldBase)); }
+
+    //! \brief Parry chance with weapon and shield in percent that every level adds (0 - 10)
+    inline double getParryShieldPerLevel() const
+    { return std::max(0.0, std::min(10.0, mParryShieldPerLevel)); }
+
+    //! \brief Highest parry chance with weapon and shield in percent (0 - 100)
+    inline double getParryShieldMax() const
+    { return std::max(0.0, std::min(100.0, mParryShieldMax)); }
+
     inline int64_t getTimePayDay() const
     { return mTimePayDay; }
 
@@ -210,6 +303,9 @@ public:
     double getRoomConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
     //! \brief Tells whether the parameter is in the rooms configuration
     bool hasRoomConfig(const std::string& param) const;
+    //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
+    //! parameter is not in the configuration file (or has no value).
+    std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
 
     //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
     const std::map<std::string, std::string>& getRelationshipsConfig() const
@@ -220,6 +316,9 @@ public:
     uint32_t getTrapConfigUInt32(const std::string& param) const;
     int32_t getTrapConfigInt32(const std::string& param) const;
     double getTrapConfigDouble(const std::string& param) const;
+    //! \brief Same as getTrapConfigDouble but returns defaultValue instead of
+    //! logging an error when the parameter is not in the configuration file.
+    double getTrapConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
 
     //! Spells configuration
     const std::string& getSpellConfigString(const std::string& param) const;
@@ -356,6 +455,29 @@ private:
     int32_t mCreatureMoodFurious;
     double mSlapDamagePercent;
     uint32_t mSlapEffectDuration;
+    double mTiredWakefulness;
+    double mTiredWalkSpeedFactor;
+    double mLowHealthWalkSpeedFactor;
+    double mCreatureLevelGrowthMax;
+    double mLowHealthWalkThresholdPercent;
+    int32_t mHeartHealthStages;
+    bool mHeartHealthStageEvents;
+    bool mHitEvents;
+    double mHitGlanceShare;
+    double mHitStrongShare;
+    bool mAttackTurnEvents;
+    double mAttackTurnSpeed;
+    double mAttackTurnMaxDelay;
+    bool mMeleeDodgeParry;
+    double mDodgeBase;
+    double mDodgePerLevel;
+    double mDodgeMax;
+    double mParryBase;
+    double mParryPerLevel;
+    double mParryMax;
+    double mParryShieldBase;
+    double mParryShieldPerLevel;
+    double mParryShieldMax;
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;

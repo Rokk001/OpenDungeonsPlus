@@ -60,6 +60,29 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureMoodFurious(-2000),
     mSlapDamagePercent(15),
     mSlapEffectDuration(15),
+    mTiredWakefulness(20.0),
+    mTiredWalkSpeedFactor(0.8),
+    mLowHealthWalkSpeedFactor(0.7),
+    mCreatureLevelGrowthMax(0.10),
+    mLowHealthWalkThresholdPercent(50.0),
+    mHeartHealthStages(5),
+    mHeartHealthStageEvents(true),
+    mHitEvents(true),
+    mHitGlanceShare(0.34),
+    mHitStrongShare(0.15),
+    mAttackTurnEvents(true),
+    mAttackTurnSpeed(540.0),
+    mAttackTurnMaxDelay(0.25),
+    mMeleeDodgeParry(true),
+    mDodgeBase(3.0),
+    mDodgePerLevel(0.5),
+    mDodgeMax(15.0),
+    mParryBase(3.0),
+    mParryPerLevel(0.5),
+    mParryMax(15.0),
+    mParryShieldBase(6.0),
+    mParryShieldPerLevel(1.0),
+    mParryShieldMax(25.0),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
@@ -511,6 +534,167 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mSlapEffectDuration = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "TiredWakefulness")
+        {
+            configFile >> nextParam;
+            mTiredWakefulness = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "HeartHealthStages")
+        {
+            configFile >> nextParam;
+            mHeartHealthStages = Helper::toInt(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "HeartHealthStageEvents")
+        {
+            configFile >> nextParam;
+            mHeartHealthStageEvents = Helper::toInt(nextParam) != 0;
+            // Not mandatory
+        }
+
+        if(nextParam == "HitEvents")
+        {
+            configFile >> nextParam;
+            mHitEvents = Helper::toInt(nextParam) != 0;
+            // Not mandatory
+        }
+
+        if(nextParam == "HitGlanceShare")
+        {
+            configFile >> nextParam;
+            mHitGlanceShare = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "HitStrongShare")
+        {
+            configFile >> nextParam;
+            mHitStrongShare = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "AttackTurnEvents")
+        {
+            configFile >> nextParam;
+            mAttackTurnEvents = Helper::toInt(nextParam) != 0;
+            // Not mandatory
+        }
+
+        if(nextParam == "AttackTurnSpeed")
+        {
+            configFile >> nextParam;
+            mAttackTurnSpeed = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "AttackTurnMaxDelay")
+        {
+            configFile >> nextParam;
+            mAttackTurnMaxDelay = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "MeleeDodgeParry")
+        {
+            configFile >> nextParam;
+            mMeleeDodgeParry = Helper::toInt(nextParam) != 0;
+            // Not mandatory
+        }
+
+        if(nextParam == "DodgeBase")
+        {
+            configFile >> nextParam;
+            mDodgeBase = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "DodgePerLevel")
+        {
+            configFile >> nextParam;
+            mDodgePerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "DodgeMax")
+        {
+            configFile >> nextParam;
+            mDodgeMax = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ParryBase")
+        {
+            configFile >> nextParam;
+            mParryBase = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ParryPerLevel")
+        {
+            configFile >> nextParam;
+            mParryPerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ParryMax")
+        {
+            configFile >> nextParam;
+            mParryMax = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ParryShieldBase")
+        {
+            configFile >> nextParam;
+            mParryShieldBase = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ParryShieldPerLevel")
+        {
+            configFile >> nextParam;
+            mParryShieldPerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ParryShieldMax")
+        {
+            configFile >> nextParam;
+            mParryShieldMax = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "TiredWalkSpeedFactor")
+        {
+            configFile >> nextParam;
+            mTiredWalkSpeedFactor = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "LowHealthWalkSpeedFactor")
+        {
+            configFile >> nextParam;
+            mLowHealthWalkSpeedFactor = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureLevelGrowthMax")
+        {
+            configFile >> nextParam;
+            mCreatureLevelGrowthMax = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "LowHealthWalkThresholdPercent")
+        {
+            configFile >> nextParam;
+            mLowHealthWalkThresholdPercent = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -1706,6 +1890,15 @@ double ConfigManager::getRoomConfigDoubleOrDefault(const std::string& param, dou
     return Helper::toDouble(it->second);
 }
 
+std::string ConfigManager::getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const
+{
+    std::map<const std::string, std::string>::const_iterator it = mRoomsConfig.find(param);
+    if((it == mRoomsConfig.end()) || it->second.empty())
+        return defaultValue;
+
+    return it->second;
+}
+
 const std::string& ConfigManager::getTrapConfigString(const std::string& param) const
 {
     std::map<const std::string, std::string>::const_iterator it = mTrapsConfig.find(param);
@@ -1750,6 +1943,15 @@ double ConfigManager::getTrapConfigDouble(const std::string& param) const
         OD_LOG_ERR("Unknown parameter param=" + param);
         return 0.0;
     }
+
+    return Helper::toDouble(it->second);
+}
+
+double ConfigManager::getTrapConfigDoubleOrDefault(const std::string& param, double defaultValue) const
+{
+    std::map<const std::string, std::string>::const_iterator it = mTrapsConfig.find(param);
+    if(it == mTrapsConfig.end())
+        return defaultValue;
 
     return Helper::toDouble(it->second);
 }

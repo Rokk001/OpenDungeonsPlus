@@ -108,6 +108,8 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "tunnel";
     case CreatureActionType::possessed:
         return "possessed";
+    case CreatureActionType::reloadTrap:
+        return "reloadTrap";
 
     default:
         assert(false);

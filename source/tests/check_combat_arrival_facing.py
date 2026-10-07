@@ -14,10 +14,11 @@ probe = r'''
 #include <string>
 #include <iostream>
 namespace ODApplication {const float turnsPerSecond=1;}
+namespace EntityAnimation {const std::string drag_anim="Drag";const std::string dragged_anim="Dragged";}
 struct MovableGameEntity {
  Ogre::Vector3 position{0,0,0},mWalkDirection{0,-1,0},mDestinationAnimationDirection;
  std::deque<Ogre::Vector2> mWalkQueue;
- std::string mDestinationAnimationState,animation;
+ std::string mDestinationAnimationState,animation,mPrevAnimationState;
  bool mDestinationAnimationLoop=false,mDestinationPlayIdleWhenAnimationEnds=true;
  float getMoveSpeed(){return 1;} const Ogre::Vector3& getPosition(){return position;}
  void setPosition(const Ogre::Vector3& p){position=p;}

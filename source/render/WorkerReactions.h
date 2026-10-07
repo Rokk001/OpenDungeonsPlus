@@ -42,7 +42,7 @@ public:
     //! \brief The creature starts the animation. Digging, claiming, idling and fighting of workers are noted.
     static void noteAnimation(CreatureReactions& reactions, Creature* creature, const std::string& clip);
 
-    //! \brief The server sent a cosmetic event (digFinished and carriedGold are used here)
+    //! \brief The server sent a cosmetic event (digFinished, carriedGold and roomTakeover are used here)
     static void noteCosmeticEvent(CreatureReactions& reactions, const CosmeticEvent& event);
 
     //! \brief The worker picks up the entity
@@ -73,6 +73,7 @@ private:
     static void tickWorker(CreatureReactions& reactions, Creature* worker);
     static void showDigHit(CreatureReactions& reactions, Creature* worker);
     static void showClaim(CreatureReactions& reactions, Creature* worker);
+    static void noteRoomTakeover(CreatureReactions& reactions, const CosmeticEvent& event);
     static void updateGoldBody(CreatureReactions& reactions, Creature* worker, bool visible);
     static void removeGoldBody(const std::string& workerName);
     static void removeAllGoldBodies();

@@ -69,6 +69,8 @@ enum class AmbienceKind
     motion,
     //! Now and then a clip of the object's own mesh (a chicken scratching)
     clip,
+    //! A small static decoration mesh placed on a tile (a weapon rack, a banner), with an optional motion
+    model,
     //! A short shake of the view (events only): Amount = strength in world units, Speed = shakes per second,
     //! Duration in seconds, MaxDistance = distance of the event from the middle of the view beyond which it is not felt
     shake,
@@ -132,6 +134,7 @@ struct AmbienceEffect
         mEvery(10.0),
         mChance(1.0),
         mSpacing(1),
+        mGrainMin(0),
         mMaxDistance(28.0),
         mPriority(5),
         mReduced(false),
@@ -151,8 +154,9 @@ struct AmbienceEffect
     AmbienceKind mKind;
     //! Particle system template (kind particle)
     std::string mSystem;
-    //! Mesh name without extension (kinds roll, beam and projectile) and particle system where a rolling object
-    //! breaks up (kind roll)
+    //! Mesh name without extension (kinds roll, beam and projectile), mesh file of the decoration looking along the
+    //! Y axis (kind model, it is turned away from the wall) and particle system where a rolling object breaks up
+    //! (kind roll)
     std::string mMesh;
     std::string mEndSystem;
     //! Clips to choose from (kind clip)
@@ -191,6 +195,8 @@ struct AmbienceEffect
     double mChance;
     //! Tile targets: only every n-th tile gets the effect
     uint32_t mSpacing;
+    //! Tile targets: only shown while the grain level of the tile (hatchery floor) is at least this (0 = always)
+    uint32_t mGrainMin;
     double mMaxDistance;
     //! Higher priority effects are served first when the budget is used up
     int32_t mPriority;

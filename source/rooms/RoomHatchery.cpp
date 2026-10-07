@@ -19,6 +19,9 @@
 #include "ODApplication.h"
 #include <algorithm>
 #include <cmath>
+#include <set>
+#include <sstream>
+#include "ODApplication.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 
@@ -35,6 +38,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/RoomObjectNavigation.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/HatcheryCoopHouse.h"
@@ -147,7 +151,10 @@ RoomHatchery::RoomHatchery(GameMap* gameMap) :
     mFightFirstWins(true),
     mFightBrawling(false),
     mFightApproach(0),
-    mFightTurnsLeft(0)
+    mFightTurnsLeft(0),
+    mGrainDirty(false),
+    mGrainSyncWait(0),
+    mGrainResyncWait(0)
 {
     setMeshName("Farm");
 }
@@ -200,6 +207,14 @@ void RoomHatchery::exportToStream(std::ostream& os) const
             os << " " << egg.mSpot.x << " " << egg.mSpot.y << " " << egg.mSpot.z << " " << egg.mTurns;
     }
     os << std::endl;
+    // Only written when some grain is gone; saves without this line load with full grain
+    if(!mGrain.empty())
+    {
+        os << "HatcheryGrain " << mGrain.size();
+        for(std::map<Tile*, int32_t>::const_iterator it = mGrain.begin(); it != mGrain.end(); ++it)
+            os << " " << it->first->getX() << " " << it->first->getY() << " " << it->second;
+        os << std::endl;
+    }
 }
 
 bool RoomHatchery::importFromStream(std::istream& is)
@@ -264,6 +279,30 @@ bool RoomHatchery::importFromStream(std::istream& is)
 
                 mPendingEggs.push_back(PendingEgg(spot, turns));
             }
+            continue;
+        }
+
+        if(tag == "HatcheryGrain")
+        {
+            // Only written when some grain is gone; saves without this line load with full grain
+            uint32_t nbGrain;
+            if(!(is >> nbGrain))
+                return false;
+
+            const int32_t levels = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
+            for(uint32_t i = 0; i < nbGrain; ++i)
+            {
+                int32_t x;
+                int32_t y;
+                int32_t level;
+                if(!(is >> x >> y >> level))
+                    return false;
+
+                Tile* tile = getGameMap()->getTile(x, y);
+                if((tile != nullptr) && (level >= 0) && (level < levels))
+                    mGrain[tile] = level;
+            }
+            mGrainDirty = !mGrain.empty();
             continue;
         }
 
@@ -956,8 +995,165 @@ void RoomHatchery::updateFlock(const std::vector<ChickenEntity*>& hens)
         if(roll < flutterPercent)
             hen->playPose(ChickenPose::flutter, 1);
         else if(roll < flutterPercent + scratchPercent)
+        {
             hen->playPose(ChickenPose::scratch, 2);
+            henPecks(*hen);
+        }
     }
+}
+
+int32_t RoomHatchery::getGrainLevel(const Tile* tile) const
+{
+    const int32_t levels = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
+    std::map<Tile*, int32_t>::const_iterator it = mGrain.find(const_cast<Tile*>(tile));
+    if(it == mGrain.end())
+        return levels;
+
+    return std::min(levels, it->second);
+}
+
+void RoomHatchery::henPecks(ChickenEntity& hen)
+{
+    // The pecking rhythm is the hen's own (one peck per HatcheryPeckIntervalTurns, whatever she is doing)
+    if(!hen.startPeck())
+        return;
+
+    eatGrain(hen.getPositionTile());
+}
+
+bool RoomHatchery::isSeenBy(const Seat* seat) const
+{
+    for(Tile* tile : mCoveredTiles)
+    {
+        for(Seat* seeing : tile->getSeatsWithVision())
+        {
+            if(seeing == seat)
+                return true;
+        }
+    }
+    return false;
+}
+
+void RoomHatchery::eatGrain(Tile* tile)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    if((tile == nullptr) || (tile->getCoveringRoom() != this) || !(config.getRoomConfigDoubleOrDefault("HatcheryGrainReaction", 1.0) > 0.0))
+        return;
+
+    int32_t level = getGrainLevel(tile);
+    if(level <= 0)
+        return;
+
+    uint32_t eatPercent = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainEatPercent", 30.0));
+    if(Random::Uint(0, 99) >= eatPercent)
+        return;
+
+    mGrain[tile] = level - 1;
+    mGrainDirty = true;
+}
+
+void RoomHatchery::updateGrain()
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    // Without the reaction the grain is always full, which the keepers are told like any other state
+    if(!(config.getRoomConfigDoubleOrDefault("HatcheryGrainReaction", 1.0) > 0.0))
+        mGrain.clear();
+
+    // Regrowth: the same chance per turn for every tile that is not full. Care, light, research and the state of
+    // the room play no part in it (only the config value HatcheryGrainRegrowPermille).
+    const int32_t levels = static_cast<int32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
+    uint32_t regrowPermille = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainRegrowPermille", 8.0));
+    for(std::map<Tile*, int32_t>::iterator it = mGrain.begin(); it != mGrain.end();)
+    {
+        // A tile that left the room has no grain here any more
+        if(it->first->getCoveringRoom() != this)
+        {
+            mGrain.erase(it++);
+            mGrainDirty = true;
+            continue;
+        }
+
+        if(Random::Uint(0, 999) < regrowPermille)
+        {
+            ++it->second;
+            mGrainDirty = true;
+            if(it->second >= levels)
+            {
+                mGrain.erase(it++);
+                continue;
+            }
+        }
+        ++it;
+    }
+
+    ++mGrainSyncWait;
+    ++mGrainResyncWait;
+    uint32_t syncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainSyncTurns", 2.0));
+    uint32_t resyncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainResyncTurns", 14.0));
+    bool changed = mGrainDirty && (mGrainSyncWait >= syncTurns);
+    // The state is repeated even when every tile is full, so a message that got lost is made up for
+    bool again = (mGrainResyncWait >= resyncTurns);
+    if(!changed && !again)
+        return;
+
+    mGrainDirty = false;
+    mGrainSyncWait = 0;
+    mGrainResyncWait = 0;
+    sendGrain();
+}
+
+void RoomHatchery::sendGrain()
+{
+    // The keepers that see a tile of the hatchery
+    std::set<Seat*> seats;
+    for(Tile* tile : mCoveredTiles)
+    {
+        for(Seat* seat : tile->getSeatsWithVision())
+            seats.insert(seat);
+    }
+    if(seats.empty())
+        return;
+
+    const CosmeticEvent event = makeGrainEvent();
+    for(Seat* seat : seats)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
+}
+
+void RoomHatchery::sendGrainTo(Player* player)
+{
+    if((player == nullptr) || mCoveredTiles.empty())
+        return;
+
+    ODServer::getSingleton().sendCosmeticEvent(player, makeGrainEvent());
+}
+
+CosmeticEvent RoomHatchery::makeGrainEvent() const
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    uint32_t resyncTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainResyncTurns", 14.0));
+
+    std::ostringstream text;
+    for(std::map<Tile*, int32_t>::const_iterator it = mGrain.begin(); it != mGrain.end(); ++it)
+    {
+        if(it != mGrain.begin())
+            text << ";";
+        text << it->first->getX() << "," << it->first->getY() << "," << it->second;
+    }
+
+    CosmeticEvent event(CosmeticEventType::hatcheryGrain);
+    event.mObject = getName();
+    event.mValue = static_cast<int32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGrainLevels", 3.0));
+    // The message is repeated every resync, a client keeps the last state it was told (it is only used for the dust of a peck while it is fresh)
+    event.mValue2 = static_cast<int32_t>(std::ceil(3.0 * resyncTurns / ODApplication::turnsPerSecond));
+    event.mText = text.str();
+    event.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(mCoveredTiles.front()->getX()),
+        static_cast<Ogre::Real>(mCoveredTiles.front()->getY()), 0.0f);
+    return event;
 }
 
 void RoomHatchery::collectEnemies(std::vector<Creature*>& enemies) const
@@ -1250,6 +1446,7 @@ void RoomHatchery::doUpkeep()
     // only go to a nest to lay or brood)
     const RoosterSettings& roosterSettings = mRoosterSettings;
     updateFlock(hens);
+    updateGrain();
     // Now and then a chick peeps (at most one peep per turn and hatchery)
     if(!chicks.empty() && (Random::Uint(1, std::max<uint32_t>(1, roosterSettings.mChickPeepChance)) == 1))
         fireAnimalSound(*chicks[Random::Uint(0, chicks.size() - 1)], "Hatchery/Peep");

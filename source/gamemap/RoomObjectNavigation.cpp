@@ -49,7 +49,7 @@ RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
     if(direction.squaredLength() < 0.000001f)
         direction = {0, -1};
     direction.normalise();
-    const float scale = 1.0f + 0.02f * creature.getLevel();
+    const float scale = static_cast<float>(creature.getLevelScale());
     return {minimum * scale, maximum * scale, position, -direction.y, direction.x};
 }
 
@@ -155,7 +155,7 @@ bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obst
     obstacles.erase(std::remove_if(obstacles.begin(), obstacles.end(), [&](RoomObjectPath::Obstacle obstacle)
     {
         return RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
-            1.0f + 0.02f * creature.getLevel(), creature.getPosition().z) > 0.0f;
+            static_cast<float>(creature.getLevelScale()), creature.getPosition().z) > 0.0f;
     }), obstacles.end());
     return obstacles.size() != count;
 }
@@ -163,7 +163,7 @@ bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obst
 
 float RoomObjectNavigation::clearance(const Creature& creature)
 {
-    const float scale = 1.0f + 0.02f * creature.getLevel();
+    const float scale = static_cast<float>(creature.getLevelScale());
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
             return model.radius * scale;
@@ -218,7 +218,7 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
             maximum = Ogre::Vector2(model.maxX, model.maxY);
             break;
         }
-    const float scale = 1.0f + 0.02f * creature.getLevel();
+    const float scale = static_cast<float>(creature.getLevelScale());
     Ogre::Vector2 heading(creature.getWalkDirection().x, creature.getWalkDirection().y);
     if(heading.squaredLength() < 0.000001f)
         heading = Ogre::Vector2(0, -1);
@@ -350,7 +350,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     for(RoomObjectPath::Obstacle obstacle : obstacles)
     {
         const float rise = RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
-            1.0f + 0.02f * creature.getLevel(), creature.getPosition().z);
+            static_cast<float>(creature.getLevelScale()), creature.getPosition().z);
         if(rise <= 0.0f)
         {
             solid.push_back(obstacle);

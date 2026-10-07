@@ -72,7 +72,8 @@ private:
     //! Time at which a chicken was last startled, per chicken
     std::map<std::string, double> mChickenFlee;
     double mNextCrow;
-    double mNextHeartBeat;
+    //! Time of the next beat flare of a hurt heart, per seat id
+    std::map<int32_t, double> mNextHeartBeat;
     uint32_t mGeneration;
     bool mInitialized;
     std::mt19937 mRandom;

@@ -26,8 +26,12 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
+#include <map>
+
 class Creature;
 class Player;
+class Seat;
+struct CosmeticEvent;
 enum class TileVisual;
 
 class RoomHatchery: public Room
@@ -52,6 +56,15 @@ public:
     void handleCreatureUsingAbsorbedRoom(Creature& creature) override;
 
     void creatureDropped(Creature& creature) override;
+
+    //! A hen pecks at the ground (scratching, picking, picking at the rooster's call): with the chance
+    //! HatcheryGrainEatPercent the tile she stands on loses one level of grain. A hen pecks at most once per
+    //! HatcheryPeckIntervalTurns (see ChickenEntity::startPeck), so every pose of the hen is covered alike.
+    void henPecks(ChickenEntity& hen);
+    //! True if the seat has sight on a tile of the hatchery.
+    bool isSeenBy(const Seat* seat) const;
+    //! Sends the grain levels (cosmetic event hatcheryGrain) to one human player at once.
+    void sendGrainTo(Player* player);
 
     //! The rooster protests loudly (picked up by the keeper's hand): plays the angry cackle where he was.
     static void fireProtest(Tile& tile);
@@ -186,6 +199,19 @@ private:
 
     //! The rooster settings of the current upkeep (read from the config once per turn, not saved)
     RoosterSettings mRoosterSettings;
+
+    //! Grain on the floor: how full a tile is (0 = bare to HatcheryGrainLevels = full). Only tiles that are not full
+    //! are kept, a tile that is not in the map is full. Hens that scratch take grain, it grows back over time.
+    int32_t getGrainLevel(const Tile* tile) const;
+    //! A hen scratches on the tile: with the chance HatcheryGrainEatPercent one level of grain is gone.
+    void eatGrain(Tile* tile);
+    //! Lets bare tiles grow grain again and tells the clients that see the hatchery how full its tiles are.
+    void updateGrain();
+    //! Sends the grain levels (cosmetic event hatcheryGrain) to every human player with sight on a tile of the room.
+    void sendGrain();
+    //! The event with the current grain levels of the whole hatchery.
+    CosmeticEvent makeGrainEvent() const;
+
     //! Turns until the rooster crows next
     uint32_t mCrowInterval;
     //! An egg that a hen is going to lay. The egg is laid when the laying timer of the hen runs out (it is due then,
@@ -252,6 +278,13 @@ private:
     bool mFightBrawling;
     uint32_t mFightApproach;
     uint32_t mFightTurnsLeft;
+    //! Grain level of the tiles that are not full
+    std::map<Tile*, int32_t> mGrain;
+    //! The grain changed since the last message to the clients
+    bool mGrainDirty;
+    //! Turns since the last message because of a change, and since the last message of any kind
+    uint32_t mGrainSyncWait;
+    uint32_t mGrainResyncWait;
 };
 
 #endif // ROOMHATCHERY_H
