@@ -8,10 +8,17 @@ uniform vec4 lightPos[8];
 uniform vec4 lightAttenuation[8];
 uniform float firstLightCastsShadows;
 
+// Final colour grade for the world shaders: it moves each colour away from its grey value
+// by COLOUR_SATURATION and then brightens it by COLOUR_GAIN, so that neighbouring
+// materials stay apart.
+const vec3 LUMINANCE_WEIGHTS = vec3(0.2126, 0.7152, 0.0722);
+const float COLOUR_SATURATION = 1.3;
+const float COLOUR_GAIN = 1.12;
+
 vec3 enhanceDungeonColour(vec3 value)
 {
-    float luminance = dot(value, vec3(0.2126, 0.7152, 0.0722));
-    return mix(vec3(luminance), value, 1.3) * 1.12;
+    float luminance = dot(value, LUMINANCE_WEIGHTS);
+    return mix(vec3(luminance), value, COLOUR_SATURATION) * COLOUR_GAIN;
 }
 
 vec3 getLocalLighting(vec3 position, vec3 normal, vec3 camera, float shadow)
