@@ -47,7 +47,7 @@ for key in ('HatcheryLayMin', 'HatcheryLayMax', 'HatcheryHatchTurns', 'HatcheryG
 
 print('hatchery life cycle checks passed')
 
-# Breeding needs care: lay faster when claimed, lit and without enemies; eggs wait while enemies stand in the hatchery
+# Breeding needs care: room-wide calm affects laying; enemies pause hatching only on the egg tile.
 cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 cfg = (root / 'config/rooms.cfg').read_text()
@@ -63,7 +63,11 @@ assert 'getSeat' not in lit and 'isAlliedSeat' not in lit and 'getMapLights' in 
 assert 'WallTorches::hasTorchWithin(getGameMap()->getWallTorches()' in lit
 ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
 assert 'Torch       yes' not in ambience_cfg
-assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp
+assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, false)' in room_cpp
+hatching = room_cpp[room_cpp.index('// Eggs hatch while'):room_cpp.index('// Chicks grow up')]
+assert 'enemy->getPositionTile() == egg->getPositionTile()' in hatching
+assert 'if(enemyOnTile)\n                continue;' in hatching
+assert hatching.index('if(enemyOnTile)') < hatching.index('egg->incrementAge()')
 assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
 assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' not in cfg
 

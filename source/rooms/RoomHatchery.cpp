@@ -1440,11 +1440,22 @@ void RoomHatchery::doUpkeep()
     }
     releasePendingEggs(settings, eggs);
 
-    // Eggs hatch while there is a rooster and no enemy stands in the hatchery
-    if(HatcheryCycle::canHatch(counts, care.mEnemies))
+    // Eggs hatch while there is a rooster and no enemy stands on that egg's tile.
+    if(HatcheryCycle::canHatch(counts, false))
     {
         for(ChickenEntity* egg : eggs)
         {
+            bool enemyOnTile = false;
+            for(Creature* enemy : enemies)
+            {
+                if(enemy->getPositionTile() == egg->getPositionTile())
+                {
+                    enemyOnTile = true;
+                    break;
+                }
+            }
+            if(enemyOnTile)
+                continue;
             const uint32_t eggAge = egg->incrementAge();
             if(eggAge < settings.mHatchTurns)
             {
