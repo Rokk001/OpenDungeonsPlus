@@ -51,6 +51,8 @@ const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
+//! Grey level of the messages icon once its message has been read.
+const unsigned char READ_MESSAGE_ICON_GREY = 224;
 
 void createHandFeedbackImage()
 {
@@ -306,7 +308,7 @@ void createNavigationImages()
         if(utility == 2)
         {
             for(size_t i = 0; i < pixels.size(); i += 4)
-                pixels[i] = pixels[i + 1] = pixels[i + 2] = 224;
+                pixels[i] = pixels[i + 1] = pixels[i + 2] = READ_MESSAGE_ICON_GREY;
             CEGUI::Texture& readTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("NavigationMessagesRead");
             readTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
             CEGUI::BasicImage& readImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(

@@ -231,21 +231,39 @@ private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
     void refreshHeldCreatureIcons();
+    //! \brief Event messages stay until the player dismisses them.
     bool shouldExpireEventMessages() const override { return false; }
+    //! \brief Opens the message window without a selected message.
     void showEventMessages();
+    //! \brief Shows the text of the message and marks it as read.
+    //! \param raiseWindow Whether the message window is brought in front of the other windows.
     void showEventMessage(EventMessage* message, bool raiseWindow);
+    //! \brief Removes the message and its tab and deletes the message.
     void dismissEventMessage(EventMessage* message);
+    //! \brief Right-clicking a message tab dismisses its message.
     bool onEventMessagesClicked(const CEGUI::EventArgs& arg);
+    //! \brief Left-clicking a message tab shows its message. The message is the user data of the tab.
+    bool onEventMessageTabClicked(const CEGUI::EventArgs& arg);
+    bool onEventCloseClicked(const CEGUI::EventArgs& arg);
+    bool onEventDismissClicked(const CEGUI::EventArgs& arg);
+    //! \brief Slides the message tabs into place, hides those that do not fit and blinks the unread ones.
+    //! \param elapsed Time since the last call in seconds.
     void updateEventMessageIndicator(float elapsed);
+    //! \brief A pending event message and the tab that presents it in the message queue.
     struct MessageTab
     {
         EventMessage* message;
         CEGUI::Window* window;
+        //! \brief Whether the player has opened the message.
         bool read;
+        //! \brief Left edge of the tab in queue heights, or -1 while it is not placed yet.
         float position;
     };
+    //! \brief The pending messages in the order received.
     std::vector<MessageTab> mMessageTabs;
+    //! \brief The message shown in the message window, or nullptr.
     EventMessage* mSelectedEventMessage = nullptr;
+    //! \brief Time within the blink period of the unread message tabs, in seconds.
     float mEventMessageFlashTime = 0.0f;
 
     //! \brief Whether the pending exit confirmation should leave to the desktop

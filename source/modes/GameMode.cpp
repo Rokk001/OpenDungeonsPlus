@@ -82,6 +82,19 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 
+// Message tabs are laid out in units of the message queue height; the queue is designed
+// for tabs of this height in pixels.
+const float MESSAGE_QUEUE_DESIGN_HEIGHT = 52.0f;
+const float MESSAGE_TAB_DESIGN_WIDTH = 32.0f;
+const float MESSAGE_TAB_DESIGN_SPACING = 36.0f;
+//! Speed at which a new message tab slides in, in queue heights per second.
+const float MESSAGE_TAB_SLIDE_SPEED = 12.5f;
+//! Unread message tabs blink: one period in seconds, shown highlighted in its second half.
+const float MESSAGE_FLASH_PERIOD = 0.5f;
+const float MESSAGE_FLASH_HIGHLIGHT_START = 0.25f;
+const std::string MESSAGE_UNREAD_IMAGE = "OpenDungeonsIcons/NavigationMessages";
+const std::string MESSAGE_READ_IMAGE = "OpenDungeonsIcons/NavigationMessagesRead";
+
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
     if(screenSize <= 1)
@@ -157,17 +170,9 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(guiSheet->getChild("PanelToggleButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleControlPanel, this)));
     addEventConnection(guiSheet->getChild("GameEventText/Close")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        {
-            mRootWindow->getChild("GameEventText")->hide();
-            return true;
-        })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::onEventCloseClicked, this)));
     addEventConnection(guiSheet->getChild("GameEventText/Dismiss")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        {
-            dismissEventMessage(mSelectedEventMessage);
-            return true;
-        })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::onEventDismissClicked, this)));
     guiSheet->getChild("GameEventText")->hide();
 
     //Help window
@@ -1711,16 +1716,12 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     mEventMessages.emplace_back(event);
     CEGUI::Window* tab = CEGUI::WindowManager::getSingleton().createWindow("OD/GameTabButton");
     tab->setProperty("NavigationFrame", "True");
-    tab->setProperty("NormalImage", "OpenDungeonsIcons/NavigationMessages");
+    tab->setProperty("NormalImage", MESSAGE_UNREAD_IMAGE);
     tab->setTooltipText("Message: left-click to read, right-click to dismiss");
     tab->setRiseOnClickEnabled(false);
     tab->setUserData(event);
     tab->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([this, event](const CEGUI::EventArgs&)
-        {
-            showEventMessage(event, true);
-            return true;
-        }));
+        CEGUI::Event::Subscriber(&GameMode::onEventMessageTabClicked, this));
     tab->subscribeEvent(CEGUI::Window::EventMouseClick,
         CEGUI::Event::Subscriber(&GameMode::onEventMessagesClicked, this));
     mRootWindow->getChild("MessageQueue")->addChild(tab);
@@ -1798,9 +1799,9 @@ void GameMode::updateEventMessageIndicator(float elapsed)
         return;
     const float width = queue->getPixelSize().d_width;
     const float entry = (width - queue->getChild("Receiver")->getPixelSize().d_width) / height;
-    const float tabWidth = 32.0f / 52.0f;
-    const float spacing = 36.0f / 52.0f;
-    mEventMessageFlashTime = std::fmod(mEventMessageFlashTime + std::max(0.0f, elapsed), 0.5f);
+    const float tabWidth = MESSAGE_TAB_DESIGN_WIDTH / MESSAGE_QUEUE_DESIGN_HEIGHT;
+    const float spacing = MESSAGE_TAB_DESIGN_SPACING / MESSAGE_QUEUE_DESIGN_HEIGHT;
+    mEventMessageFlashTime = std::fmod(mEventMessageFlashTime + std::max(0.0f, elapsed), MESSAGE_FLASH_PERIOD);
     float precedingPosition = -spacing;
     for(size_t i = 0; i < mMessageTabs.size(); ++i)
     {
@@ -1815,14 +1816,33 @@ void GameMode::updateEventMessageIndicator(float elapsed)
         }
         if(tab.position < 0)
             tab.position = std::max(entry, precedingPosition + spacing);
-        tab.position = std::max(destination, tab.position - std::max(0.0f, elapsed) * 12.5f);
+        tab.position = std::max(destination, tab.position - std::max(0.0f, elapsed) * MESSAGE_TAB_SLIDE_SPEED);
         precedingPosition = tab.position;
         tab.window->setArea(CEGUI::UDim(0, tab.position * height), CEGUI::UDim(0, 0),
             CEGUI::UDim(0, tabWidth * height), CEGUI::UDim(1, 0));
-        tab.window->setProperty("NormalImage", !tab.read && mEventMessageFlashTime >= 0.25f
-            ? "OpenDungeonsIcons/NavigationMessages" : "OpenDungeonsIcons/NavigationMessagesRead");
+        const bool highlighted = !tab.read && mEventMessageFlashTime >= MESSAGE_FLASH_HIGHLIGHT_START;
+        tab.window->setProperty("NormalImage", highlighted ? MESSAGE_UNREAD_IMAGE : MESSAGE_READ_IMAGE);
         tab.window->show();
     }
+}
+
+bool GameMode::onEventMessageTabClicked(const CEGUI::EventArgs& arg)
+{
+    const CEGUI::WindowEventArgs& windowArgs = static_cast<const CEGUI::WindowEventArgs&>(arg);
+    showEventMessage(static_cast<EventMessage*>(windowArgs.window->getUserData()), true);
+    return true;
+}
+
+bool GameMode::onEventCloseClicked(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("GameEventText")->hide();
+    return true;
+}
+
+bool GameMode::onEventDismissClicked(const CEGUI::EventArgs&)
+{
+    dismissEventMessage(mSelectedEventMessage);
+    return true;
 }
 
 bool GameMode::showSettingsFromOptions(const CEGUI::EventArgs& /*e*/)
