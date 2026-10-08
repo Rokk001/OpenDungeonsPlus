@@ -102,6 +102,8 @@ public:
 
     //! \brief Game mode specific rendering methods.
     virtual void onFrameStarted(const Ogre::FrameEvent& evt) {};
+    //! \brief Called once per frame before onFrameStarted to sample continuous camera input.
+    //! \param elapsed Seconds since the last frame.
     virtual void updateCameraControls(float elapsed) {};
     virtual void onFrameEnded(const Ogre::FrameEvent& evt) {};
 
