@@ -70,6 +70,8 @@ METHODS
 namespace Ogre {using Real=float;}
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
 enum class CreatureOverlays {health,experience,recovery,status};
+const uint32_t PROGRESS_ATLAS_COLUMNS=8;
+const uint32_t PROGRESS_ATLAS_LAST_FRAME=PROGRESS_ATLAS_COLUMNS*PROGRESS_ATLAS_COLUMNS-1;
 struct MovableTextOverlay {
  unsigned frames[4]={};bool shown[4]={};
  void displayOverlay(uint32_t id,int t){shown[id]=t!=0;}
