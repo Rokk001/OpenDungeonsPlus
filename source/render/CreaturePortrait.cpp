@@ -16,8 +16,31 @@
 #include <CEGUI/System.h>
 #include <CEGUI/Texture.h>
 
+#include <algorithm>
+#include <string>
+#include <vector>
+
 namespace
 {
+//! Visible portrait height as a fraction of the mesh height, or of the mesh width if larger.
+const float PORTRAIT_HEIGHT_PER_MESH_HEIGHT = 0.65f;
+const float PORTRAIT_HEIGHT_PER_MESH_WIDTH = 0.35f;
+//! Height of the camera focus point inside the mesh bounds, as a fraction of the mesh height.
+const float PORTRAIT_FOCUS_HEIGHT_RATIO = 0.72f;
+//! Focus offset above a head bone, as a fraction of the mesh height.
+const float PORTRAIT_HEAD_OFFSET_RATIO = 0.05f;
+//! Camera distance as a multiple of the mesh diagonal, and its height offset as a fraction of the mesh height.
+const float PORTRAIT_CAMERA_DISTANCE_FACTOR = 2.0f;
+const float PORTRAIT_CAMERA_HEIGHT_RATIO = 0.1f;
+//! Far clip distance as a multiple of the mesh diagonal, with a lower limit.
+const float PORTRAIT_FAR_CLIP_FACTOR = 4.0f;
+const float PORTRAIT_FAR_CLIP_MINIMUM = 10.0f;
+//! Vertical position of the square hand icon crop inside the portrait texture
+//! (0 = top, 1 = bottom of the free space), for illustrated and rendered portraits.
+const float HAND_ICON_ILLUSTRATED_TOP_RATIO = 0.25f;
+const float HAND_ICON_RENDERED_TOP_RATIO = 0.5f;
+
+//! Owns the temporary scene manager and material copies of one portrait render.
 struct PortraitScene
 {
     Ogre::SceneManager* scene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager");
@@ -46,7 +69,8 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
     lightNode->setDirection(0.4f, 1.0f, -0.6f);
 
     Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
-    unsigned short src, dest;
+    unsigned short src = 0;
+    unsigned short dest = 0;
     if(!mesh->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
         mesh->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
     Ogre::Entity* entity = scene->createEntity(mesh);
@@ -81,9 +105,9 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
 
     const Ogre::AxisAlignedBox& bounds = mesh->getBounds();
     const Ogre::Vector3 size = bounds.getSize();
-    const float height = std::max(size.z * 0.65f, size.x * 0.35f);
+    const float height = std::max(size.z * PORTRAIT_HEIGHT_PER_MESH_HEIGHT, size.x * PORTRAIT_HEIGHT_PER_MESH_WIDTH);
     Ogre::Vector3 center = bounds.getCenter();
-    center.z = bounds.getMinimum().z + size.z * 0.72f;
+    center.z = bounds.getMinimum().z + size.z * PORTRAIT_FOCUS_HEIGHT_RATIO;
     if(size.z < size.y)
     {
         center = bounds.getCenter();
@@ -97,7 +121,7 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
                 if(name == "head" || Ogre::StringUtil::endsWith(name, "_head"))
                 {
                     center = bone->_getDerivedPosition();
-                    center.z += size.z * 0.05f;
+                    center.z += size.z * PORTRAIT_HEAD_OFFSET_RATIO;
                     break;
                 }
             }
@@ -106,17 +130,17 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
 
     Ogre::Camera* camera = scene->createCamera("PortraitCamera");
     camera->setNearClipDistance(0.01f);
-    camera->setFarClipDistance(std::max(10.0f, size.length() * 4.0f));
+    camera->setFarClipDistance(std::max(PORTRAIT_FAR_CLIP_MINIMUM, size.length() * PORTRAIT_FAR_CLIP_FACTOR));
     camera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);
     camera->setOrthoWindow(height * 0.5f, height);
     Ogre::SceneNode* cameraNode = scene->getRootSceneNode()->createChildSceneNode();
     cameraNode->setFixedYawAxis(true, Ogre::Vector3::UNIT_Z);
     cameraNode->attachObject(camera);
-    cameraNode->setPosition(center + Ogre::Vector3(0, -size.length() * 2.0f, size.z * 0.1f));
+    cameraNode->setPosition(center + Ogre::Vector3(0, -size.length() * PORTRAIT_CAMERA_DISTANCE_FACTOR, size.z * PORTRAIT_CAMERA_HEIGHT_RATIO));
     cameraNode->lookAt(center, Ogre::Node::TS_WORLD);
 
     Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().createManual(textureName, "General",
-        Ogre::TEX_TYPE_2D, 192, 384, 0, Ogre::PF_BYTE_RGBA, Ogre::TU_RENDERTARGET);
+        Ogre::TEX_TYPE_2D, CREATURE_PORTRAIT_WIDTH, CREATURE_PORTRAIT_HEIGHT, 0, Ogre::PF_BYTE_RGBA, Ogre::TU_RENDERTARGET);
     try
     {
         Ogre::RenderTexture* target = texture->getBuffer()->getRenderTarget();
@@ -153,7 +177,8 @@ const CEGUI::Image& getCreaturePortraitImage(const std::string& meshName)
         CEGUI::Texture& guiTexture = renderer.createTexture(name, texture, true);
         CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
         image.setTexture(&guiTexture);
-        image.setArea(CEGUI::Rectf(0.0f, 0.0f, 192.0f, 384.0f));
+        image.setArea(CEGUI::Rectf(0.0f, 0.0f,
+            static_cast<float>(CREATURE_PORTRAIT_WIDTH), static_cast<float>(CREATURE_PORTRAIT_HEIGHT)));
         image.setAutoScaled(CEGUI::ASM_Disabled);
         return image;
     }
@@ -218,7 +243,8 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName)
     const CEGUI::Sizef size = texture.getOriginalDataSize();
     const float side = std::min(size.d_width, size.d_height);
     const float left = (size.d_width - side) * 0.5f;
-    const float top = (size.d_height - side) * (illustrated ? 0.25f : 0.5f);
+    const float topRatio = illustrated ? HAND_ICON_ILLUSTRATED_TOP_RATIO : HAND_ICON_RENDERED_TOP_RATIO;
+    const float top = (size.d_height - side) * topRatio;
     CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(left, top, left + side, top + side));
