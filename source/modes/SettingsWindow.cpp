@@ -44,7 +44,6 @@
 #include <algorithm>
 #include <exception>
 #include <map>
-#include <sstream>
 
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui):
     mSettingsWindow(nullptr),
@@ -184,6 +183,18 @@ SettingsWindow::~SettingsWindow()
         CEGUI::WindowManager* wmgr = CEGUI::WindowManager::getSingletonPtr();
         wmgr->destroyWindow(mApplyWindow);
     }
+}
+
+namespace
+{
+//! \brief Top offset in pixels of the first renderer-specific option in the video tab.
+const uint32_t VIDEO_OPTIONS_TOP = 238;
+
+//! \brief Height in pixels of the label of a renderer-specific option.
+const float VIDEO_OPTION_LABEL_HEIGHT = 34.0f;
+
+//! \brief Distance in pixels between two renderer-specific options.
+const uint32_t VIDEO_OPTION_SPACING = 40;
 }
 
 void SettingsWindow::initConfig()
@@ -346,15 +357,11 @@ void SettingsWindow::initConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
     uiScaleCb->setReadOnly(true);
     uiScaleCb->resetList();
-    int configuredUiScale = 100;
-    std::istringstream uiScaleParser(config.getGameValue(Config::UI_SCALE, "100", false));
-    if(!(uiScaleParser >> configuredUiScale))
-        configuredUiScale = 100;
-    configuredUiScale = std::max(static_cast<int>(Gui::MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<int>(Gui::MAX_UI_SCALE_PERCENT), configuredUiScale));
-    configuredUiScale = (configuredUiScale + 5) / 10 * 10;
+    int configuredUiScale = static_cast<int>(Gui::getConfiguredUiScalePercent());
+    configuredUiScale = (configuredUiScale + Gui::UI_SCALE_STEP_PERCENT / 2)
+        / Gui::UI_SCALE_STEP_PERCENT * Gui::UI_SCALE_STEP_PERCENT;
     for(uint32_t uiScale = Gui::MIN_UI_SCALE_PERCENT;
-        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += 10)
+        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += Gui::UI_SCALE_STEP_PERCENT)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
             Helper::toString(uiScale) + "%", uiScale);
@@ -407,13 +414,13 @@ void SettingsWindow::initConfig()
 
         // The text next to the combobox
         CEGUI::DefaultWindow* videoCbText = static_cast<CEGUI::DefaultWindow*>(videoTab->createChild("OD/StaticText", optionName + "_Text"));
-        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 34));
+        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, VIDEO_OPTION_LABEL_HEIGHT));
         videoCbText->setText(optionName + ": ");
         videoCbText->setProperty("FrameEnabled", "False");
         videoCbText->setProperty("BackgroundEnabled", "False");
 
         CEGUI::Combobox* videoCb = static_cast<CEGUI::Combobox*>(videoTab->createChild("OD/Combobox", optionName));
-        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.5, -20),
+        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.5, -20),
                          CEGUI::UDim(0, config.possibleValues.size() * 17 + 30));
         videoCb->setReadOnly(true);
         videoCb->setSortingEnabled(true);
@@ -437,7 +444,7 @@ void SettingsWindow::initConfig()
             }
             ++cbIndex;
         }
-        offset += 40;
+        offset += VIDEO_OPTION_SPACING;
     }
 
     mGui.registerWindowHierarchy(mSettingsWindow);

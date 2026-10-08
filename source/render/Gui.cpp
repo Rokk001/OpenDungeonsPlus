@@ -40,6 +40,7 @@
 #include <CEGUI/Event.h>
 
 #include <algorithm>
+#include <cmath>
 #include <sstream>
 
 namespace
@@ -72,13 +73,18 @@ CEGUI::USize scaleSize(const CEGUI::USize& size, float scale)
     return scaled;
 }
 
+bool startsWith(const std::string& text, const std::string& prefix)
+{
+    return text.compare(0, prefix.size(), prefix) == 0;
+}
+
 bool shouldScaleImage(const CEGUI::String& ceguiName)
 {
     const std::string name(ceguiName.c_str());
-    return name.compare(0, 17, "OpenDungeonsSkin/") == 0
-        || name.compare(0, 18, "OpenDungeonsIcons/") == 0
-        || name.compare(0, 17, "ODMainMenuButton/") == 0
-        || name.compare(0, 7, "ODLogo/") == 0;
+    return startsWith(name, "OpenDungeonsSkin/")
+        || startsWith(name, "OpenDungeonsIcons/")
+        || startsWith(name, "ODMainMenuButton/")
+        || startsWith(name, "ODLogo/");
 }
 
 std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale)
@@ -138,13 +144,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
     OD_LOG_INF("CEGUI::SchemeManager created");
 
-    float configuredScalePercent = 100.0f;
-    std::istringstream scaleParser(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false));
-    if(!(scaleParser >> configuredScalePercent))
-        configuredScalePercent = 100.0f;
-    configuredScalePercent = std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), configuredScalePercent));
-    mUserScale = configuredScalePercent / 100.0f;
+    mUserScale = getConfiguredUiScalePercent() / static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
     updateResourceScaling(renderer.getDisplaySize());
 
     // We want Ogre overlays to be displayed in front of CEGUI. According to
@@ -265,14 +265,24 @@ void Gui::registerWindow(CEGUI::Window* window)
         registerWindow(window->getChildAtIdx(i));
 }
 
+float Gui::getConfiguredUiScalePercent()
+{
+    float scalePercent = static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
+    std::istringstream scaleParser(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false));
+    if(!(scaleParser >> scalePercent))
+        scalePercent = static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
+    return std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
+        std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), scalePercent));
+}
+
 void Gui::setUserScalePercent(float scalePercent)
 {
-    if(scalePercent != scalePercent)
-        scalePercent = 100.0f;
+    if(std::isnan(scalePercent))
+        scalePercent = static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
 
     scalePercent = std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
         std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), scalePercent));
-    mUserScale = scalePercent / 100.0f;
+    mUserScale = scalePercent / static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
