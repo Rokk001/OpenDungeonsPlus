@@ -178,6 +178,8 @@ public:
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
+    //! \brief Plays the hit reaction of a creature and, depending on the flags, sparks (weaponClash)
+    //! and blood (bodyDamage); the direction of the hit comes from the attacker position.
     void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
         bool bodyDamage, const Ogre::Vector3& attackerPosition);
 
@@ -280,24 +282,30 @@ private:
     Ogre::ManualObject* mHandPickaxe = nullptr;
     Ogre::ManualObject* mTilePreview = nullptr;
 
+    //! \brief Short particle effect shown at a creature that was hit.
     struct CreatureCombatImpactEffect
     {
         Creature* mCreature;
         Ogre::SceneNode* mNode;
         Ogre::ParticleSystem* mParticleSystem;
+        //! Seconds until the effect is destroyed.
         Ogre::Real mRemainingTime;
     };
     std::vector<CreatureCombatImpactEffect> mCreatureCombatImpactEffects;
 
+    //! \brief Running hit reaction of a creature; it is played on top of the current animation.
     struct CreatureCombatReaction
     {
         Creature* mCreature;
         Ogre::Entity* mEntity;
         Ogre::AnimationState* mAnimation;
+        //! Blend mode of the skeleton to restore when the reaction ends.
         Ogre::SkeletonAnimationBlendMode mPreviousBlendMode;
     };
     std::vector<CreatureCombatReaction> mCreatureCombatReactions;
+    //! Counter that makes the names of the combat impact scene objects unique.
     uint64_t mCreatureCombatEffectNumber = 0;
+    //! Index of the next attack variant to play, per creature, so that attacks alternate.
     std::map<Creature*, uint32_t> mCreatureAttackVariants;
 
     struct CreatureDropAnimation
@@ -352,7 +360,14 @@ private:
     std::vector<RoomConstructionEffect> mRoomConstructionEffects;
     uint64_t mRoomConstructionEffectNumber = 0;
 
+    //! \brief Destroys the combat effects and reactions of the given creature, or of all creatures if null.
     void clearCreatureCombatEffects(Creature* creature = nullptr);
+    //! \brief Destroys the effect at the iterator and returns the iterator of the following one.
+    std::vector<CreatureCombatImpactEffect>::iterator destroyCreatureCombatImpactEffect(
+        std::vector<CreatureCombatImpactEffect>::iterator it);
+    //! \brief Stops the reaction at the iterator, restores the blend mode and returns the iterator of the following one.
+    std::vector<CreatureCombatReaction>::iterator endCreatureCombatReaction(
+        std::vector<CreatureCombatReaction>::iterator it);
     void clearRoomConstructionEffects();
 
 

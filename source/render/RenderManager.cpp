@@ -272,8 +272,81 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
     }
 }
 
+//! \brief Body type of a creature mesh; it selects the shape of the generated combat poses.
 enum class CombatMotion { humanoid, bite, crawler, heavy, flying, fluid, tentacle };
 
+//! Number of keyframe intervals sampled for a generated attack animation.
+const unsigned int COMBAT_ATTACK_KEY_COUNT = 48;
+//! Attack progress at which the wind-up ends and the strike of the source animation starts.
+const Ogre::Real COMBAT_WINDUP_END = 0.22f;
+//! Attack progress at which the strike of the source animation ends.
+const Ogre::Real COMBAT_STRIKE_END = 0.38f;
+//! Fraction of the source animation reached at the end of the wind-up.
+const Ogre::Real COMBAT_SOURCE_AT_WINDUP_END = 0.32f;
+//! Fraction of the source animation reached at the end of the strike.
+const Ogre::Real COMBAT_SOURCE_AT_STRIKE_END = 0.66f;
+//! Attack progress up to which the body is drawn back before the strike.
+const Ogre::Real COMBAT_BODY_WINDUP_END = 0.28f;
+//! Attack progress at which the forward body movement of the strike starts.
+const Ogre::Real COMBAT_BODY_STRIKE_START = 0.18f;
+//! Attack progress at which the forward body movement of the strike ends.
+const Ogre::Real COMBAT_BODY_STRIKE_END = 0.78f;
+//! Length of the forward body movement, COMBAT_BODY_STRIKE_END - COMBAT_BODY_STRIKE_START.
+const Ogre::Real COMBAT_BODY_STRIKE_LENGTH = 0.60f;
+//! Longest generated attack in seconds for heavy bodies.
+const Ogre::Real COMBAT_ATTACK_DURATION_HEAVY = 1.45f;
+//! Longest generated attack in seconds for biting and crawling bodies.
+const Ogre::Real COMBAT_ATTACK_DURATION_QUICK = 0.95f;
+//! Longest generated attack in seconds for all other bodies.
+const Ogre::Real COMBAT_ATTACK_DURATION_DEFAULT = 1.15f;
+//! Distance the whole body moves forward during the strike, per body type.
+const Ogre::Real COMBAT_REACH_BITE = 0.12f;
+const Ogre::Real COMBAT_REACH_HEAVY = 0.09f;
+const Ogre::Real COMBAT_REACH_DEFAULT = 0.055f;
+//! Distance the whole body is drawn back during the wind-up.
+const Ogre::Real COMBAT_WINDUP_DRAW_BACK = 0.025f;
+//! Vertical body movement during the strike or wind-up, per body type.
+const Ogre::Real COMBAT_FLYING_RISE = 0.04f;
+const Ogre::Real COMBAT_CRAWLER_CROUCH = 0.025f;
+const Ogre::Real COMBAT_DEFAULT_DIP = 0.012f;
+//! Rotation in degrees of the body bone: lean into the strike and back during the wind-up.
+const Ogre::Real COMBAT_BODY_STRIKE_PITCH = 7.0f;
+const Ogre::Real COMBAT_BODY_WINDUP_PITCH = 4.0f;
+//! Head pitch in degrees during the strike; biting bodies thrust the head further.
+const Ogre::Real COMBAT_HEAD_PITCH_BITE = 14.0f;
+const Ogre::Real COMBAT_HEAD_PITCH_DEFAULT = 5.0f;
+//! Jaw opening in degrees during the strike; biting and heavy bodies open wider.
+const Ogre::Real COMBAT_JAW_PITCH_WIDE = 18.0f;
+const Ogre::Real COMBAT_JAW_PITCH_DEFAULT = 6.0f;
+//! Body twist in degrees; alternate attacks twist the other way.
+const Ogre::Real COMBAT_BODY_TWIST_TENTACLE = 14.0f;
+const Ogre::Real COMBAT_BODY_TWIST_DEFAULT = 7.0f;
+//! Stretch of a fluid body along its axis during the strike and compression during the wind-up.
+const Ogre::Real COMBAT_FLUID_STRIKE_STRETCH = 0.10f;
+const Ogre::Real COMBAT_FLUID_WINDUP_SQUASH = 0.06f;
+
+//! Number of keyframe intervals sampled for a generated impact reaction.
+const unsigned int COMBAT_REACTION_KEY_COUNT = 12;
+//! Length in seconds of a generated impact reaction.
+const Ogre::Real COMBAT_REACTION_DURATION = 0.28f;
+//! Reaction progress at which the recoil is strongest.
+const Ogre::Real COMBAT_REACTION_PEAK = 0.25f;
+//! Distance the body is pushed away from the attacker when it is hit or when it guards.
+const Ogre::Real COMBAT_RECOIL_HIT = 0.045f;
+const Ogre::Real COMBAT_RECOIL_GUARD = 0.018f;
+//! Crouch of a guarding crawler.
+const Ogre::Real COMBAT_REACTION_CRAWLER_CROUCH = 0.025f;
+//! Rotation in degrees of the body bone (heavy bodies and others) and of the head when hit.
+const Ogre::Real COMBAT_REACTION_BODY_PITCH_HEAVY = 6.0f;
+const Ogre::Real COMBAT_REACTION_BODY_PITCH_DEFAULT = 11.0f;
+const Ogre::Real COMBAT_REACTION_HEAD_PITCH = 7.0f;
+//! Raise in degrees of the forearms of an armed guard.
+const Ogre::Real COMBAT_REACTION_GUARD_ARM_PITCH = -22.0f;
+//! Squash of a fluid body when hit.
+const Ogre::Real COMBAT_REACTION_FLUID_WIDEN = 0.04f;
+const Ogre::Real COMBAT_REACTION_FLUID_FLATTEN = 0.08f;
+
+//! \brief Returns the body type of the creature mesh with the given name.
 CombatMotion getCombatMotion(const std::string& mesh)
 {
     if(mesh == "Rat.mesh" || mesh == "Lizardman.mesh") return CombatMotion::bite;
@@ -286,6 +359,7 @@ CombatMotion getCombatMotion(const std::string& mesh)
     return CombatMotion::humanoid;
 }
 
+//! \brief Returns the bone that carries the torso of the skeleton, or its first bone if none is known.
 Ogre::Bone* getCombatBodyBone(Ogre::Skeleton* skeleton)
 {
     for(const char* name : {"TorsoUpper", "chest", "Spine_3", "spine3", "Spine3", "Spine1", "Spine",
@@ -294,6 +368,65 @@ Ogre::Bone* getCombatBodyBone(Ogre::Skeleton* skeleton)
     return skeleton->getBone(0);
 }
 
+//! \brief Tells whether the lower-case bone name belongs to the head.
+bool isCombatHeadBone(const std::string& boneName)
+{
+    return boneName == "head" || boneName == "crown" || boneName == "slime_head";
+}
+
+//! \brief Tells whether the lower-case bone name belongs to the jaw.
+bool isCombatJawBone(const std::string& boneName)
+{
+    return boneName == "jaw" || boneName == "jaws" || boneName == "mouth" ||
+        boneName == "jawl" || boneName == "jawr" || boneName == "zahn_l" || boneName == "zahn_r";
+}
+
+//! \brief Returns the length in seconds of a generated attack, limited to the source animation.
+Ogre::Real getCombatAttackDuration(CombatMotion style, Ogre::Real sourceLength)
+{
+    Ogre::Real maxDuration = COMBAT_ATTACK_DURATION_DEFAULT;
+    if(style == CombatMotion::heavy)
+        maxDuration = COMBAT_ATTACK_DURATION_HEAVY;
+    else if(style == CombatMotion::bite || style == CombatMotion::crawler)
+        maxDuration = COMBAT_ATTACK_DURATION_QUICK;
+    return std::min(sourceLength, maxDuration);
+}
+
+//! \brief Returns which part (0 to 1) of the source animation is shown at the given progress (0 to 1)
+//! of a generated attack: quickly to the wind-up, through the strike, then slowly to the end.
+Ogre::Real getCombatSourceFraction(Ogre::Real progress)
+{
+    if(progress < COMBAT_WINDUP_END)
+        return progress * (COMBAT_SOURCE_AT_WINDUP_END / COMBAT_WINDUP_END);
+    if(progress < COMBAT_STRIKE_END)
+        return COMBAT_SOURCE_AT_WINDUP_END + (progress - COMBAT_WINDUP_END) *
+            ((COMBAT_SOURCE_AT_STRIKE_END - COMBAT_SOURCE_AT_WINDUP_END) / (COMBAT_STRIKE_END - COMBAT_WINDUP_END));
+    return COMBAT_SOURCE_AT_STRIKE_END + (progress - COMBAT_STRIKE_END) *
+        ((1.0f - COMBAT_SOURCE_AT_STRIKE_END) / (1.0f - COMBAT_STRIKE_END));
+}
+
+//! \brief Returns the offset of the root bone for the given draw-back and strike weights (0 to 1).
+Ogre::Vector3 getCombatRootOffset(CombatMotion style, Ogre::Real windup, Ogre::Real strike)
+{
+    Ogre::Real reach = COMBAT_REACH_DEFAULT;
+    if(style == CombatMotion::bite)
+        reach = COMBAT_REACH_BITE;
+    else if(style == CombatMotion::heavy)
+        reach = COMBAT_REACH_HEAVY;
+
+    Ogre::Vector3 offset = Ogre::Vector3::ZERO;
+    offset.y = COMBAT_WINDUP_DRAW_BACK * windup - reach * strike;
+    if(style == CombatMotion::flying)
+        offset.z = COMBAT_FLYING_RISE * strike;
+    else if(style == CombatMotion::crawler)
+        offset.z = -COMBAT_CRAWLER_CROUCH * windup;
+    else
+        offset.z = -COMBAT_DEFAULT_DIP * strike;
+    return offset;
+}
+
+//! \brief Creates (once per skeleton) a short melee attack derived from the given source animation
+//! and returns its name. Alternate attacks twist the other way.
 std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
@@ -301,8 +434,7 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
     const std::string name = "AttackCombat_" + original + (alternate ? "_B" : "_A");
     const Ogre::Animation* source = skeleton->getAnimation(original);
     const CombatMotion style = getCombatMotion(entity->getMesh()->getName());
-    const Ogre::Real duration = std::min(source->getLength(), style == CombatMotion::heavy ? 1.45f :
-        (style == CombatMotion::bite || style == CombatMotion::crawler ? 0.95f : 1.15f));
+    const Ogre::Real duration = getCombatAttackDuration(style, source->getLength());
     if(!skeleton->hasAnimation(name))
     {
         Ogre::Bone* body = getCombatBodyBone(skeleton);
@@ -311,41 +443,38 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
         {
             Ogre::Bone* bone = skeleton->getBone(boneIndex);
             std::string boneName = bone->getName(); Ogre::StringUtil::toLowerCase(boneName);
-            const bool head = boneName == "head" || boneName == "crown" || boneName == "slime_head";
-            const bool jaw = boneName == "jaw" || boneName == "jaws" || boneName == "mouth" ||
-                boneName == "jawl" || boneName == "jawr" || boneName == "zahn_l" || boneName == "zahn_r";
+            const bool head = isCombatHeadBone(boneName);
+            const bool jaw = isCombatJawBone(boneName);
             Ogre::NodeAnimationTrack* track = attack->createNodeTrack(boneIndex);
-            for(unsigned int key = 0; key <= 48; ++key)
+            for(unsigned int key = 0; key <= COMBAT_ATTACK_KEY_COUNT; ++key)
             {
-                const Ogre::Real p = key / 48.0f;
-                const Ogre::Real sample = p < 0.22f ? p * (0.32f / 0.22f) :
-                    (p < 0.38f ? 0.32f + (p - 0.22f) * (0.34f / 0.16f) :
-                    0.66f + (p - 0.38f) * (0.34f / 0.62f));
-                const Ogre::Real windup = p < 0.28f ? Ogre::Math::Sin(Ogre::Math::PI * p / 0.28f) : 0.0f;
-                const Ogre::Real strike = p > 0.18f && p < 0.78f ?
-                    Ogre::Math::Sin(Ogre::Math::PI * (p - 0.18f) / 0.60f) : 0.0f;
+                const Ogre::Real p = key / static_cast<Ogre::Real>(COMBAT_ATTACK_KEY_COUNT);
+                const Ogre::Real sample = getCombatSourceFraction(p);
+                const Ogre::Real windup = p < COMBAT_BODY_WINDUP_END ?
+                    Ogre::Math::Sin(Ogre::Math::PI * p / COMBAT_BODY_WINDUP_END) : 0.0f;
+                const Ogre::Real strike = p > COMBAT_BODY_STRIKE_START && p < COMBAT_BODY_STRIKE_END ?
+                    Ogre::Math::Sin(Ogre::Math::PI * (p - COMBAT_BODY_STRIKE_START) / COMBAT_BODY_STRIKE_LENGTH) : 0.0f;
                 Ogre::TransformKeyFrame pose(nullptr, 0);
                 if(source->hasNodeTrack(boneIndex))
                     source->getNodeTrack(boneIndex)->getInterpolatedKeyFrame(Ogre::TimeIndex(sample * source->getLength()), &pose);
                 Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(p * duration);
                 Ogre::Vector3 offset = Ogre::Vector3::ZERO;
                 if(bone->getParent() == nullptr)
-                {
-                    const Ogre::Real reach = style == CombatMotion::bite ? 0.12f :
-                        (style == CombatMotion::heavy ? 0.09f : 0.055f);
-                    offset.y = 0.025f * windup - reach * strike;
-                    offset.z = style == CombatMotion::flying ? 0.04f * strike :
-                        (style == CombatMotion::crawler ? -0.025f * windup : -0.012f * strike);
-                }
-                Ogre::Real pitch = bone == body ? 7.0f * strike - 4.0f * windup : 0.0f;
-                if(head) pitch += (style == CombatMotion::bite ? 14.0f : 5.0f) * strike;
-                if(jaw) pitch -= (style == CombatMotion::bite || style == CombatMotion::heavy ? 18.0f : 6.0f) * strike;
-                const Ogre::Real twist = bone == body ? (alternate ? -1.0f : 1.0f) *
-                    (style == CombatMotion::tentacle ? 14.0f : 7.0f) * (strike - windup) : 0.0f;
+                    offset = getCombatRootOffset(style, windup, strike);
+                Ogre::Real pitch = bone == body ? COMBAT_BODY_STRIKE_PITCH * strike - COMBAT_BODY_WINDUP_PITCH * windup : 0.0f;
+                if(head)
+                    pitch += (style == CombatMotion::bite ? COMBAT_HEAD_PITCH_BITE : COMBAT_HEAD_PITCH_DEFAULT) * strike;
+                if(jaw)
+                    pitch -= (style == CombatMotion::bite || style == CombatMotion::heavy ?
+                        COMBAT_JAW_PITCH_WIDE : COMBAT_JAW_PITCH_DEFAULT) * strike;
+                const Ogre::Real twistAmount = style == CombatMotion::tentacle ?
+                    COMBAT_BODY_TWIST_TENTACLE : COMBAT_BODY_TWIST_DEFAULT;
+                const Ogre::Real twist = bone == body ? (alternate ? -1.0f : 1.0f) * twistAmount * (strike - windup) : 0.0f;
                 const Ogre::Quaternion basis = bone->_getDerivedOrientation();
                 frame->setTranslate(pose.getTranslate() + offset);
-                const Ogre::Real stretch = style == CombatMotion::fluid && bone == body ?
-                    0.10f * strike - 0.06f * windup : 0.0f;
+                Ogre::Real stretch = 0.0f;
+                if(style == CombatMotion::fluid && bone == body)
+                    stretch = COMBAT_FLUID_STRIKE_STRETCH * strike - COMBAT_FLUID_WINDUP_SQUASH * windup;
                 frame->setScale(pose.getScale() * Ogre::Vector3(1 - stretch * 0.5f, 1 - stretch * 0.5f, 1 + stretch));
                 frame->setRotation(basis.Inverse() * Ogre::Quaternion(Ogre::Degree(pitch), Ogre::Vector3::UNIT_X) *
                     Ogre::Quaternion(Ogre::Degree(twist), Ogre::Vector3::UNIT_Z) * basis * pose.getRotation());
@@ -356,43 +485,81 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
     return name;
 }
 
+//! \brief Returns which side the attacker is on: 0 for +X, 1 for -X, 2 for +Y, 3 for -Y,
+//! according to the axis along which the direction is longest.
+int getCombatRecoilSector(const Ogre::Vector3& direction)
+{
+    if(std::abs(direction.x) > std::abs(direction.y))
+        return direction.x > 0 ? 0 : 1;
+    return direction.y > 0 ? 2 : 3;
+}
+
+//! \brief Returns the unit vector of a sector from getCombatRecoilSector().
+Ogre::Vector3 getCombatRecoilAxis(int sector)
+{
+    switch(sector)
+    {
+        case 0:
+            return Ogre::Vector3::UNIT_X;
+        case 1:
+            return Ogre::Vector3::NEGATIVE_UNIT_X;
+        case 2:
+            return Ogre::Vector3::UNIT_Y;
+        default:
+            return Ogre::Vector3::NEGATIVE_UNIT_Y;
+    }
+}
+
+//! \brief Creates (once per skeleton) the short reaction to a hit coming from the given direction
+//! and returns its animation state. A guard braces instead of recoiling; an armed guard raises its forearms.
 Ogre::AnimationState* createCreatureCombatReaction(Ogre::Entity* entity, bool guard, bool armed,
     const Ogre::Vector3& direction)
 {
-    const int sector = std::abs(direction.x) > std::abs(direction.y) ? (direction.x > 0 ? 0 : 1) : (direction.y > 0 ? 2 : 3);
-    const Ogre::Vector3 recoil = sector == 0 ? Ogre::Vector3::UNIT_X : (sector == 1 ? Ogre::Vector3::NEGATIVE_UNIT_X :
-        (sector == 2 ? Ogre::Vector3::UNIT_Y : Ogre::Vector3::NEGATIVE_UNIT_Y));
+    const int sector = getCombatRecoilSector(direction);
+    const Ogre::Vector3 recoil = getCombatRecoilAxis(sector);
     const std::string name = std::string(guard ? (armed ? "ImpactGuard" : "ImpactBrace") : "ImpactHit") + Helper::toString(sector);
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
-    const Ogre::Real duration = 0.28f;
+    const Ogre::Real duration = COMBAT_REACTION_DURATION;
     if(!skeleton->hasAnimation(name))
     {
         const CombatMotion style = getCombatMotion(entity->getMesh()->getName());
         Ogre::Bone* body = getCombatBodyBone(skeleton);
         Ogre::Animation* reaction = skeleton->createAnimation(name, duration);
+        const Ogre::Real recoilDistance = guard ? COMBAT_RECOIL_GUARD : COMBAT_RECOIL_HIT;
         for(unsigned short index = 0; index < skeleton->getNumBones(); ++index)
         {
             Ogre::Bone* bone = skeleton->getBone(index);
             std::string boneName = bone->getName(); Ogre::StringUtil::toLowerCase(boneName);
-            const bool head = boneName == "head" || boneName == "crown" || boneName == "slime_head";
+            const bool head = isCombatHeadBone(boneName);
             const bool arm = boneName.find("forearm") != std::string::npos || boneName.find("ellbow") != std::string::npos ||
                 boneName == "armlower.l" || boneName == "armlower.r";
             if(bone->getParent() != nullptr && bone != body && !head && !(guard && armed && arm)) continue;
             Ogre::NodeAnimationTrack* track = reaction->createNodeTrack(index);
-            for(unsigned int key = 0; key <= 12; ++key)
+            for(unsigned int key = 0; key <= COMBAT_REACTION_KEY_COUNT; ++key)
             {
-                const Ogre::Real p = key / 12.0f;
-                const Ogre::Real pulse = p < 0.25f ? p / 0.25f : (1.0f - p) / 0.75f;
+                const Ogre::Real p = key / static_cast<Ogre::Real>(COMBAT_REACTION_KEY_COUNT);
+                const Ogre::Real pulse = p < COMBAT_REACTION_PEAK ? p / COMBAT_REACTION_PEAK :
+                    (1.0f - p) / (1.0f - COMBAT_REACTION_PEAK);
                 Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(p * duration);
                 if(bone->getParent() == nullptr)
-                    frame->setTranslate(recoil * ((guard ? 0.018f : 0.045f) * pulse) +
-                        Ogre::Vector3(0, 0, style == CombatMotion::crawler && guard ? -0.025f * pulse : 0));
-                Ogre::Real angle = (bone == body ? (style == CombatMotion::heavy ? 6.0f : 11.0f) : (head ? 7.0f : 0.0f)) * pulse;
+                {
+                    Ogre::Real crouch = 0.0f;
+                    if(style == CombatMotion::crawler && guard)
+                        crouch = -COMBAT_REACTION_CRAWLER_CROUCH * pulse;
+                    frame->setTranslate(recoil * (recoilDistance * pulse) + Ogre::Vector3(0, 0, crouch));
+                }
+                Ogre::Real angle = 0.0f;
+                if(bone == body)
+                    angle = style == CombatMotion::heavy ? COMBAT_REACTION_BODY_PITCH_HEAVY : COMBAT_REACTION_BODY_PITCH_DEFAULT;
+                else if(head)
+                    angle = COMBAT_REACTION_HEAD_PITCH;
+                angle *= pulse;
                 const Ogre::Quaternion basis = bone->_getDerivedOrientation();
                 Ogre::Quaternion delta(Ogre::Degree(angle), Ogre::Vector3(-recoil.y, recoil.x, 0));
-                if(guard && armed && arm) delta = Ogre::Quaternion(Ogre::Degree(-22.0f * pulse), Ogre::Vector3::UNIT_X);
+                if(guard && armed && arm) delta = Ogre::Quaternion(Ogre::Degree(COMBAT_REACTION_GUARD_ARM_PITCH * pulse), Ogre::Vector3::UNIT_X);
                 if(style == CombatMotion::fluid && bone == body)
-                    frame->setScale(Ogre::Vector3(1 + 0.04f * pulse, 1 + 0.04f * pulse, 1 - 0.08f * pulse));
+                    frame->setScale(Ogre::Vector3(1 + COMBAT_REACTION_FLUID_WIDEN * pulse,
+                        1 + COMBAT_REACTION_FLUID_WIDEN * pulse, 1 - COMBAT_REACTION_FLUID_FLATTEN * pulse));
                 frame->setRotation(basis.Inverse() * delta * basis);
             }
         }
@@ -1136,13 +1303,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             continue;
         }
 
-        if(it->mNode != nullptr && it->mParticleSystem != nullptr)
-            it->mNode->detachObject(it->mParticleSystem);
-        if(it->mParticleSystem != nullptr)
-            mSceneManager->destroyParticleSystem(it->mParticleSystem);
-        if(it->mNode != nullptr)
-            mSceneManager->destroySceneNode(it->mNode);
-        it = mCreatureCombatImpactEffects.erase(it);
+        it = destroyCreatureCombatImpactEffect(it);
     }
 
     for(std::vector<CreatureCombatReaction>::iterator it = mCreatureCombatReactions.begin();
@@ -1155,9 +1316,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             continue;
         }
 
-        it->mAnimation->setEnabled(false);
-        it->mEntity->getSkeleton()->setBlendMode(it->mPreviousBlendMode);
-        it = mCreatureCombatReactions.erase(it);
+        it = endCreatureCombatReaction(it);
     }
 
     for(std::vector<CreatureDropAnimation>::iterator it = mCreatureDropAnimations.begin(); it != mCreatureDropAnimations.end();)
@@ -2755,9 +2914,7 @@ void RenderManager::rrCreateCreatureCombatImpact(Creature* creature,
             ++it;
             continue;
         }
-        it->mAnimation->setEnabled(false);
-        it->mEntity->getSkeleton()->setBlendMode(it->mPreviousBlendMode);
-        it = mCreatureCombatReactions.erase(it);
+        it = endCreatureCombatReaction(it);
     }
     Ogre::SceneNode* creatureNode = creature->getEntityNode();
     Ogre::Entity* entity = mSceneManager->getEntity(creature->getOgreNamePrefix() + creature->getName());
@@ -2806,6 +2963,26 @@ void RenderManager::rrCreateCreatureCombatImpact(Creature* creature,
     }
 }
 
+std::vector<RenderManager::CreatureCombatImpactEffect>::iterator RenderManager::destroyCreatureCombatImpactEffect(
+    std::vector<CreatureCombatImpactEffect>::iterator it)
+{
+    if(it->mNode != nullptr && it->mParticleSystem != nullptr)
+        it->mNode->detachObject(it->mParticleSystem);
+    if(it->mParticleSystem != nullptr)
+        mSceneManager->destroyParticleSystem(it->mParticleSystem);
+    if(it->mNode != nullptr)
+        mSceneManager->destroySceneNode(it->mNode);
+    return mCreatureCombatImpactEffects.erase(it);
+}
+
+std::vector<RenderManager::CreatureCombatReaction>::iterator RenderManager::endCreatureCombatReaction(
+    std::vector<CreatureCombatReaction>::iterator it)
+{
+    it->mAnimation->setEnabled(false);
+    it->mEntity->getSkeleton()->setBlendMode(it->mPreviousBlendMode);
+    return mCreatureCombatReactions.erase(it);
+}
+
 void RenderManager::clearCreatureCombatEffects(Creature* creature)
 {
     for(std::vector<CreatureCombatImpactEffect>::iterator it = mCreatureCombatImpactEffects.begin();
@@ -2816,13 +2993,7 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
             ++it;
             continue;
         }
-        if(it->mNode != nullptr && it->mParticleSystem != nullptr)
-            it->mNode->detachObject(it->mParticleSystem);
-        if(it->mParticleSystem != nullptr)
-            mSceneManager->destroyParticleSystem(it->mParticleSystem);
-        if(it->mNode != nullptr)
-            mSceneManager->destroySceneNode(it->mNode);
-        it = mCreatureCombatImpactEffects.erase(it);
+        it = destroyCreatureCombatImpactEffect(it);
     }
 
     for(std::vector<CreatureCombatReaction>::iterator it = mCreatureCombatReactions.begin();
@@ -2833,9 +3004,7 @@ void RenderManager::clearCreatureCombatEffects(Creature* creature)
             ++it;
             continue;
         }
-        it->mAnimation->setEnabled(false);
-        it->mEntity->getSkeleton()->setBlendMode(it->mPreviousBlendMode);
-        it = mCreatureCombatReactions.erase(it);
+        it = endCreatureCombatReaction(it);
     }
     if(creature == nullptr)
         mCreatureAttackVariants.clear();
