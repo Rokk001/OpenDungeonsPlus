@@ -29,6 +29,21 @@
 #include <Overlay/OgreOverlayManager.h>
 #include <Overlay/OgrePanelOverlayElement.h>
 
+namespace
+{
+    //! Number of copies of a caption drawn around it to make the outline.
+    const unsigned int CAPTION_OUTLINE_COPIES = 4;
+    //! Distance in pixels, at scale 1, between the outline copies and the caption.
+    const Ogre::Real CAPTION_OUTLINE_THICKNESS = 0.75f;
+    //! Direction of each outline copy: left, right, up, down.
+    const Ogre::Real CAPTION_OUTLINE_DIRECTIONS[CAPTION_OUTLINE_COPIES][2] =
+        {{-1.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, -1.0f}, {0.0f, 1.0f}};
+    //! Fraction of a tile that the camera-facing marker covers.
+    const Ogre::Real MARKER_TILE_FRACTION = 0.75f;
+    //! Size in pixels of the marker at scale 1, which is also its minimum size.
+    const Ogre::Real MARKER_BASE_SIZE = 64.0f;
+}
+
 ChildOverlay::ChildOverlay(const Ogre::String& fontName, Ogre::Real charHeight,
         const Ogre::ColourValue& color, const Ogre::String& materialName,
         bool stackWithPrevious) :
@@ -96,9 +111,13 @@ void ChildOverlay::centerCaption()
 
     mOverlayText->setPosition((-mTextWidth * 0.5f - 1.0f) * mScale,
         ((mForcedHeight - mTextHeight) * 0.5f + 2.0f) * mScale);
-    for(unsigned i = 0; i < mCaptionOutline.size(); ++i)
-        mCaptionOutline[i]->setPosition(mOverlayText->getLeft() + mScale * (i == 0 ? -0.75f : i == 1 ? 0.75f : 0.0f),
-            mOverlayText->getTop() + mScale * (i == 2 ? -0.75f : i == 3 ? 0.75f : 0.0f));
+    for(unsigned int i = 0; i < mCaptionOutline.size(); ++i)
+    {
+        const Ogre::Real offset = mScale * CAPTION_OUTLINE_THICKNESS;
+        mCaptionOutline[i]->setPosition(
+            mOverlayText->getLeft() + offset * CAPTION_OUTLINE_DIRECTIONS[i][0],
+            mOverlayText->getTop() + offset * CAPTION_OUTLINE_DIRECTIONS[i][1]);
+    }
 }
 
 void ChildOverlay::setScale(Ogre::Real scale)
@@ -302,7 +321,7 @@ void MovableTextOverlay::setCaptionOutline(uint32_t childOverlayId, const Ogre::
     ChildOverlay& child = mChildOverlays[childOverlayId];
     if(child.mCaptionOutline.empty())
     {
-        for(unsigned i = 0; i < 4; ++i)
+        for(unsigned int i = 0; i < CAPTION_OUTLINE_COPIES; ++i)
         {
             // Names sort before the foreground glyph in the container's Z-order.
             Ogre::OverlayElement* outline = Ogre::OverlayManager::getSingleton().createOverlayElement("TextArea",
@@ -406,10 +425,10 @@ bool MovableTextOverlay::computeOverlayPositionHead(Ogre::Vector2& position, Ogr
         return false;
     const Ogre::Vector3 screenPosition(projected.x / projected.w,
         projected.y / projected.w, projected.z / projected.w);
-    // A three-quarter-tile, camera-facing marker, with a readable distant minimum.
-    const Ogre::Real diameter = 0.75f * mCamera->getProjectionMatrix()[1][1] *
+    // A camera-facing marker covering part of a tile, with a readable distant minimum.
+    const Ogre::Real diameter = MARKER_TILE_FRACTION * mCamera->getProjectionMatrix()[1][1] *
         Ogre::OverlayManager::getSingleton().getViewportHeight() * 0.5f / projected.w;
-    scale = std::max(1.0f, diameter / 64.0f);
+    scale = std::max(1.0f, diameter / MARKER_BASE_SIZE);
 
     // We transform from coordinate space [-1, 1] to [0, 1]
     position.x = 0.5 + (screenPosition.x * 0.5);
