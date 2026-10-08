@@ -44,7 +44,24 @@
 #include <algorithm>
 #include <exception>
 #include <map>
-#include <sstream>
+#include <stdexcept>
+
+//! Top of the first custom video option in the video tab, in pixels below the standard widgets.
+const uint32_t CUSTOM_VIDEO_OPTIONS_TOP = 238;
+
+//! Height of the label of a custom video option and distance between two custom video options.
+const uint32_t CUSTOM_VIDEO_LABEL_HEIGHT = 34;
+const uint32_t CUSTOM_VIDEO_ROW_DISTANCE = 40;
+
+//! Whether a changed video option needs a new render window. The listed options apply to the open window.
+static bool requiresWindowRecreation(const std::string& optionName)
+{
+    return optionName != Config::VSYNC
+        && optionName != "VSync Interval"
+        && optionName != "Reversed Z-Buffer"
+        && optionName != "Separate Shader Objects"
+        && optionName != "Debug Layer";
+}
 
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui):
     mSettingsWindow(nullptr),
@@ -346,15 +363,12 @@ void SettingsWindow::initConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
     uiScaleCb->setReadOnly(true);
     uiScaleCb->resetList();
-    int configuredUiScale = 100;
-    std::istringstream uiScaleParser(config.getGameValue(Config::UI_SCALE, "100", false));
-    if(!(uiScaleParser >> configuredUiScale))
-        configuredUiScale = 100;
-    configuredUiScale = std::max(static_cast<int>(Gui::MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<int>(Gui::MAX_UI_SCALE_PERCENT), configuredUiScale));
-    configuredUiScale = (configuredUiScale + 5) / 10 * 10;
+    int configuredUiScale = static_cast<int>(Gui::parseScalePercent(config.getGameValue(Config::UI_SCALE, "100", false)));
+    // Round to the nearest selectable step.
+    configuredUiScale = (configuredUiScale + Gui::UI_SCALE_STEP_PERCENT / 2)
+        / Gui::UI_SCALE_STEP_PERCENT * Gui::UI_SCALE_STEP_PERCENT;
     for(uint32_t uiScale = Gui::MIN_UI_SCALE_PERCENT;
-        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += 10)
+        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += Gui::UI_SCALE_STEP_PERCENT)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
             Helper::toString(uiScale) + "%", uiScale);
@@ -407,13 +421,14 @@ void SettingsWindow::initConfig()
 
         // The text next to the combobox
         CEGUI::DefaultWindow* videoCbText = static_cast<CEGUI::DefaultWindow*>(videoTab->createChild("OD/StaticText", optionName + "_Text"));
-        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 34));
+        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, CUSTOM_VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.4, 0),
+                             CEGUI::UDim(0, CUSTOM_VIDEO_LABEL_HEIGHT));
         videoCbText->setText(optionName + ": ");
         videoCbText->setProperty("FrameEnabled", "False");
         videoCbText->setProperty("BackgroundEnabled", "False");
 
         CEGUI::Combobox* videoCb = static_cast<CEGUI::Combobox*>(videoTab->createChild("OD/Combobox", optionName));
-        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.5, -20),
+        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, CUSTOM_VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.5, -20),
                          CEGUI::UDim(0, config.possibleValues.size() * 17 + 30));
         videoCb->setReadOnly(true);
         videoCb->setSortingEnabled(true);
@@ -437,7 +452,7 @@ void SettingsWindow::initConfig()
             }
             ++cbIndex;
         }
-        offset += 40;
+        offset += CUSTOM_VIDEO_ROW_DISTANCE;
     }
 
     mGui.registerWindowHierarchy(mSettingsWindow);
@@ -556,12 +571,8 @@ bool SettingsWindow::saveConfig()
             resizeRenderWindow = true;
             continue;
         }
-        if(selected.first != Config::VSYNC && selected.first != "VSync Interval"
-            && selected.first != "Reversed Z-Buffer"
-            && selected.first != "Separate Shader Objects" && selected.first != "Debug Layer")
-        {
+        if(requiresWindowRecreation(selected.first))
             recreateRenderWindow = true;
-        }
     }
 
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
@@ -612,23 +623,7 @@ bool SettingsWindow::saveConfig()
     catch(const std::exception& error)
     {
         OD_LOG_ERR("Could not apply video settings: " + std::string(error.what()));
-        std::map<std::string, std::string>::const_iterator fullscreen =
-            previousRendererOptions.find(Config::FULL_SCREEN);
-        if(fullscreen != previousRendererOptions.end())
-            renderer->setConfigOption(fullscreen->first, fullscreen->second);
-        std::map<std::string, std::string>::const_iterator videoMode =
-            previousRendererOptions.find(Config::VIDEO_MODE);
-        if(videoMode != previousRendererOptions.end())
-            renderer->setConfigOption(videoMode->first, videoMode->second);
-        for(const std::pair<const std::string, std::string>& option : previousRendererOptions)
-        {
-            if(option.first == Config::FULL_SCREEN || option.first == Config::VIDEO_MODE)
-                continue;
-            renderer->setConfigOption(option.first, option.second);
-        }
-        for(const std::pair<const std::string, std::string>& option : previousVideoConfig)
-            config.setVideoValue(option.first, option.second);
-        config.saveUserConfig();
+        ODFrameListener::restoreVideoSettings(previousRendererOptions, previousVideoConfig);
         initConfig();
         return false;
     }

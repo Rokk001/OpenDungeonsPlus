@@ -67,6 +67,7 @@ private:
     //! \brief The root window.
     CEGUI::Window* mRootWindow;
 
+    //! \brief The gui the settings window belongs to. Used to scale the settings window and to apply the UI scale.
     Gui& mGui;
 
     //! \brief The temporary video comboboxes and texts created depending on the video settings.
