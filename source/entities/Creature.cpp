@@ -231,6 +231,11 @@ const uint32_t PROFILE_FRIEND_MIN_AFFINITY = 600;
 //! \brief The foe is the creature with an affinity below this value
 const uint32_t PROFILE_FOE_MAX_AFFINITY = 150;
 const uint32_t PROFILE_MAX_FRIENDS = 2;
+//! \brief The handle of the card gets a number from PROFILE_HANDLE_MIN_NUMBER to PROFILE_HANDLE_MIN_NUMBER + PROFILE_HANDLE_NUMBER_COUNT - 1
+const int PROFILE_HANDLE_MIN_NUMBER = 10;
+const int PROFILE_HANDLE_NUMBER_COUNT = 90;
+//! \brief Number of likes and of dislikes in a profile
+const std::size_t PROFILE_LIST_SIZE = 2;
 
 typedef std::pair<uint32_t, std::string> ProfileAffinity;
 
@@ -313,7 +318,8 @@ std::string makeProfileHandle(const social::CreatureProfile& profile)
         else if((c >= 'A') && (c <= 'Z'))
             handle += static_cast<char>(c - 'A' + 'a');
     }
-    handle += Helper::toString(10 + static_cast<int>(social::fnv1a64(profile.mCreatureName + "|handle") % 90));
+    handle += Helper::toString(PROFILE_HANDLE_MIN_NUMBER +
+        static_cast<int>(social::fnv1a64(profile.mCreatureName + "|handle") % PROFILE_HANDLE_NUMBER_COUNT));
     return handle;
 }
 
@@ -3399,8 +3405,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
-    std::vector<std::string> likes(profile.mLikes, profile.mLikes + 2);
-    std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + 2);
+    std::vector<std::string> likes(profile.mLikes, profile.mLikes + PROFILE_LIST_SIZE);
+    std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + PROFILE_LIST_SIZE);
     page->getChild("LikesText")->setText("Likes: " + joinProfileList(likes));
     page->getChild("DislikesText")->setText("Dislikes: " + joinProfileList(dislikes));
     // Remarks that match the parts of the picture, only for the composed picture
