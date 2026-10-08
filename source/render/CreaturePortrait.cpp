@@ -22,7 +22,6 @@
 #include <CEGUI/Texture.h>
 
 #include <algorithm>
-#include <cctype>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -62,6 +61,18 @@ PortraitTint& getPortraitTint()
         }
     }
     return tint;
+}
+
+//! \brief The text with its ASCII capital letters turned into small ones
+std::string toLowerAscii(const std::string& text)
+{
+    std::string result = text;
+    for(std::size_t i = 0; i < result.size(); ++i)
+    {
+        if((result[i] >= 'A') && (result[i] <= 'Z'))
+            result[i] = static_cast<char>(result[i] - 'A' + 'a');
+    }
+    return result;
 }
 
 std::set<std::string>& getTintedPortraitNames()
@@ -327,8 +338,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
     std::string portraitKey = meshName;
     if(!gender.empty())
     {
-        std::string lowerGender = gender;
-        std::transform(lowerGender.begin(), lowerGender.end(), lowerGender.begin(), ::tolower);
+        const std::string lowerGender = toLowerAscii(gender);
         if(Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics",
             "portrait-" + meshName + "-" + lowerGender + ".png"))
             portraitKey = meshName + "-" + lowerGender;
