@@ -296,9 +296,17 @@ private:
     bool clickMap(const CEGUI::EventArgs&);
     bool zoomMiniMap(const CEGUI::EventArgs&);
     void updateMapDetail();
+    //! \brief Moves the camera to the next room of the given type owned by the local player.
     void focusRoom(RoomType type);
+    //! \brief Right-clicking the build button of a room focuses the next room of that type.
+    //! The type is stored as the window id of the button.
+    void connectRoomButton(RoomType type, const std::string& buttonName);
+    bool onRoomButtonClicked(const CEGUI::EventArgs& args);
+    //! \brief Shows or hides the event message list.
+    bool toggleEventText(const CEGUI::EventArgs& e);
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
     int mSavedMiniMapZoom = 0;
+    //! \brief Per room type, the index of the room the camera jumped to last.
     std::map<RoomType, size_t> mRoomFocusIndices;
     bool mMapKeyDown = false;
 
@@ -312,10 +320,13 @@ private:
     void checkInputCommand();
     void handlePlayerActionNone();
     void handlePlayerActionSelectTile();
+    //! \brief Selects the given action, or deselects it when it is already the current one.
+    void toggleSelectedAction(SelectedAction action);
     bool toggleQuery(const CEGUI::EventArgs& e);
     GameEntity* getQueryTarget(Tile* tile) const;
     void handlePlayerActionQuery();
     bool toggleSell(const CEGUI::EventArgs& e);
+    //! \brief Shows what selling the room or trap on the hovered tile gives, and sells it on validation.
     void handlePlayerActionSell();
     void updateSelectedTiles();
 

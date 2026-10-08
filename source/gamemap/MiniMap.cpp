@@ -44,6 +44,24 @@
 
 namespace
 {
+// Layout of the round minimap frame in pixels of the unscaled 176 pixel map.
+const float FRAME_DESIGN_SIZE = 176.0f;
+const float FRAME_WIDTH = 7.0f;
+const float FRAME_RIM_OUTER_INSET = 2.0f;
+const float FRAME_RIM_INNER_INSET = 5.0f;
+const float FRAME_HIGHLIGHT_INNER_INSET = 3.0f;
+const float FRAME_SHADOW_OUTER_INSET = 5.0f;
+//! Distance of the north marker from the centre, as a fraction of the map size.
+const float NORTH_MARKER_RADIUS = 0.41f;
+const float NORTH_MARKER_HALF_WIDTH = 6.0f;
+const float NORTH_MARKER_HALF_HEIGHT = 5.0f;
+
+//! Colour from components in the range 0 to 255.
+CEGUI::Colour byteColour(float red, float green, float blue)
+{
+    return CEGUI::Colour(red / 255.0f, green / 255.0f, blue / 255.0f);
+}
+
 class MiniMapImage : public CEGUI::BasicImage
 {
 public:
@@ -99,12 +117,15 @@ private:
             const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const
     {
         const CEGUI::Font& font = CEGUI::FontManager::getSingleton().get("LiberationSans-10");
-        const CEGUI::Image& glyph = *font.getGlyphData('N')->getImage();
-        const float scale = std::min(area.getWidth(), area.getHeight()) / 176.0f;
-        const float x = area.left() + area.getWidth() * (0.5f + 0.41f * mNorthDirection.x);
-        const float y = area.top() + area.getHeight() * (0.5f + 0.41f * mNorthDirection.y);
-        CEGUI::Rectf letter(x - 6.0f * scale, y - 5.0f * scale,
-            x + 6.0f * scale, y + 5.0f * scale);
+        const CEGUI::FontGlyph* glyphData = font.getGlyphData('N');
+        if(glyphData == nullptr || glyphData->getImage() == nullptr)
+            return;
+        const CEGUI::Image& glyph = *glyphData->getImage();
+        const float scale = std::min(area.getWidth(), area.getHeight()) / FRAME_DESIGN_SIZE;
+        const float x = area.left() + area.getWidth() * (0.5f + NORTH_MARKER_RADIUS * mNorthDirection.x);
+        const float y = area.top() + area.getHeight() * (0.5f + NORTH_MARKER_RADIUS * mNorthDirection.y);
+        CEGUI::Rectf letter(x - NORTH_MARKER_HALF_WIDTH * scale, y - NORTH_MARKER_HALF_HEIGHT * scale,
+            x + NORTH_MARKER_HALF_WIDTH * scale, y + NORTH_MARKER_HALF_HEIGHT * scale);
         // Font images carry a baseline offset; place the visible glyph itself.
         const CEGUI::Vector2f& offset = glyph.getRenderedOffset();
         letter.offset(CEGUI::Vector2f(-offset.d_x, -offset.d_y));
@@ -153,11 +174,15 @@ private:
     void drawFrame(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
             const CEGUI::Rectf* clip) const
     {
-        const float scale = std::min(area.getWidth(), area.getHeight()) / 176.0f;
-        drawCircleBand(buffer, area, clip, 0.0f, 7.0f * scale, CEGUI::Colour(9.5f / 255.0f, 11.0f / 255.0f, 8.5f / 255.0f));
-        drawCircleBand(buffer, area, clip, 2.0f * scale, 5.0f * scale, CEGUI::Colour(78.0f / 255.0f, 79.5f / 255.0f, 77.0f / 255.0f));
-        drawCircleBand(buffer, area, clip, 2.0f * scale, 3.0f * scale, CEGUI::Colour(126.5f / 255.0f, 132.0f / 255.0f, 130.5f / 255.0f));
-        drawCircleBand(buffer, area, clip, 5.0f * scale, 7.0f * scale, CEGUI::Colour(35.0f / 255.0f, 36.0f / 255.0f, 36.0f / 255.0f));
+        const float scale = std::min(area.getWidth(), area.getHeight()) / FRAME_DESIGN_SIZE;
+        // Dark base, lighter rim, bright highlight on its outer edge and a shadow on the inner edge.
+        drawCircleBand(buffer, area, clip, 0.0f, FRAME_WIDTH * scale, byteColour(9.5f, 11.0f, 8.5f));
+        drawCircleBand(buffer, area, clip, FRAME_RIM_OUTER_INSET * scale, FRAME_RIM_INNER_INSET * scale,
+            byteColour(78.0f, 79.5f, 77.0f));
+        drawCircleBand(buffer, area, clip, FRAME_RIM_OUTER_INSET * scale, FRAME_HIGHLIGHT_INNER_INSET * scale,
+            byteColour(126.5f, 132.0f, 130.5f));
+        drawCircleBand(buffer, area, clip, FRAME_SHADOW_OUTER_INSET * scale, FRAME_WIDTH * scale,
+            byteColour(35.0f, 36.0f, 36.0f));
     }
 
     void drawLine(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,

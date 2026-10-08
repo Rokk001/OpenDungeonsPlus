@@ -103,6 +103,8 @@ public:
     //! \brief Sets the user-selected UI scale and applies it immediately.
     void setUserScalePercent(float scalePercent);
 
+    //! \brief Arranges the room, trap and spell buttons of the in game sheet.
+    void arrangeActionButtonPanels(CEGUI::Window* gameSheet);
     //! \brief Arranges visible gameplay actions and retains their scaled layout.
     void arrangeRoomButtons(CEGUI::Window* rooms);
     void arrangeTrapButtons(CEGUI::Window* traps);
@@ -175,6 +177,8 @@ public:
     bool playButtonClickSound(const CEGUI::EventArgs& e = {});
 
 private:
+    //! \brief Lays the visible named buttons of the panel out in one row of large buttons,
+    //! or in two rows of small ones when they do not fit.
     void arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names);
     struct WindowScaleData
     {
@@ -183,6 +187,7 @@ private:
         CEGUI::USize maxSize;
         CEGUI::String text;
         CEGUI::UDim tabHeight;
+        //! \brief Unscaled text padding of the tabs, for tab controls.
         CEGUI::UDim tabTextPadding;
         bool hasFormattedImageSize;
         bool hasTabHeight;
