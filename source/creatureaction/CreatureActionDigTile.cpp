@@ -91,7 +91,10 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
     if(!creature.parkedBit || current.squaredDistance(desired) > 0.0025f)
     {
         if(!creature.parkToWallTile(&tileDig, &tilePos))
+        {
             creature.popAction();
+            return false;
+        }
         return true;
     }
     // Dig out the tile by decreasing the tile's fullness.

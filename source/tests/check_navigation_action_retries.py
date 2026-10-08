@@ -13,9 +13,10 @@ for name in ('UseRoom', 'CarryEntity', 'ClaimWallTile', 'ClaimGroundTile', 'DigT
     path = f'source/creatureaction/CreatureAction{name}.cpp'
     source = (subprocess.check_output(['git', 'show', args.source_ref + ':' + path], cwd=repo, text=True)
               if args.source_ref else (repo / path).read_text())
-    start = source.index('if(!creature.setDestination(')
+    anchor = 'if(!creature.parkToWallTile(' if name == 'DigTile' else 'if(!creature.setDestination('
+    start = source.index(anchor)
     end = source.index('return true;', start) + len('return true;')
-    handlers.append(f'bool attempt{name}(Creature& creature){{Tile* dest=nullptr;Tile* tileDest=nullptr;Tile tileClaim,tilePos;\n' + source[start:end] + '\n}')
+    handlers.append(f'bool attempt{name}(Creature& creature){{Tile* dest=nullptr;Tile* tileDest=nullptr;Tile tileClaim,tilePos,tileDig;\n' + source[start:end] + '\n}')
 
 path = 'source/entities/Creature.cpp'
 source = (subprocess.check_output(['git', 'show', args.source_ref + ':' + path], cwd=repo, text=True)
@@ -32,6 +33,7 @@ struct Tile {};
 struct Creature {
  bool reachable=false;int requests=0,popped=0;
  bool setDestination(Tile*){++requests;return reachable;}
+ bool parkToWallTile(Tile*,Tile*){++requests;return reachable;}
  void popAction(){++popped;}
 };
 HANDLERS

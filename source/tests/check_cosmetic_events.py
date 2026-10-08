@@ -19,8 +19,8 @@ body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
 # The new kind sits before creatureAppearance; trapEffect and timeLimit stay the last values
-assert names[-8:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
-                      'hatcheryNests', 'trapEffect', 'timeLimit'], names[-9:]
+assert names[-10:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit'], names[-11:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')
