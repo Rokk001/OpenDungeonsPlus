@@ -42,7 +42,6 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
-#include <functional>
 
 //! The default zoom levels, used when the user config has no (valid) values.
 const int DEFAULT_ZOOM_LEVELS = 5;
@@ -60,6 +59,34 @@ const Ogre::Degree ROTATION_SPEED = Ogre::Degree(90);
 
 //! Default orientation on the X Axis
 const Ogre::Real DEFAULT_X_AXIS_VIEW = 25.0;
+
+//! Highest tilt of the camera in degrees; 0 looks along the ground.
+const Ogre::Real MAX_CAMERA_PITCH = 50.0f;
+
+//! Swivel speed of the rotation keys in degrees per second (1.3 times ROTATION_SPEED).
+const Ogre::Real KEY_SWIVEL_SPEED = 117.0f;
+
+//! Frame rate the panning speed was tuned for. The pan distance is scaled with the elapsed time relative to it.
+const Ogre::Real NOMINAL_FRAME_RATE = 60.0f;
+
+//! Factor on the pan speed while the fast key is held.
+const Ogre::Real FAST_PAN_FACTOR = 2.0f;
+
+//! A view needs a view direction that points at least this far down (negative z), otherwise
+//! the ground target of the camera is not defined.
+const Ogre::Real MAX_VIEW_DIRECTION_Z = -0.1f;
+
+//! \brief Limits a pitch change in degrees so that the resulting pitch stays between 0 and MAX_CAMERA_PITCH.
+static Ogre::Real limitPitchChange(Ogre::Real currentPitch, Ogre::Real pitchChange)
+{
+    return std::max(-currentPitch, std::min(MAX_CAMERA_PITCH - currentPitch, pitchChange));
+}
+
+//! \brief Whether a camera made of the given root and tilt orientations looks downwards enough.
+static bool looksDownwards(const Ogre::Quaternion& root, const Ogre::Quaternion& tilt)
+{
+    return (root * tilt * Ogre::Vector3::NEGATIVE_UNIT_Z).z < MAX_VIEW_DIRECTION_Z;
+}
 
 const Ogre::String BACKGROUND_RECT_NAME = "BackgroundRect";
 
@@ -268,7 +295,7 @@ void CameraManager::RotateTo(Ogre::Real pitch, Ogre::Real roll)
     move(fullStop);
     const Ogre::Real currentPitch = getActiveCameraNode()->getChild(0)->getOrientation().getPitch().valueDegrees();
     setViewOrientation(getActiveCameraNode()->getOrientation(),
-        Ogre::Quaternion(Ogre::Degree(std::max(0.0f, std::min(50.0f, currentPitch))), Ogre::Vector3::UNIT_X));
+        Ogre::Quaternion(Ogre::Degree(std::max(0.0f, std::min(MAX_CAMERA_PITCH, currentPitch))), Ogre::Vector3::UNIT_X));
     mCameraIsRotating = true;
     mCameraPitchDestination = pitch;
     mCameraRollDestination = roll;
@@ -447,7 +474,7 @@ void CameraManager::updateCameraFrameTime(const Ogre::Real frameTime)
 
     // Update the position for the other axices.
     // Retain the nominal 60 Hz speed while making distance elapsed-time based.
-    newPosition += (right * mTranslateVector.x + forward * mTranslateVector.y) * (60.0f * frameTime);
+    newPosition += (right * mTranslateVector.x + forward * mTranslateVector.y) * (NOMINAL_FRAME_RATE * frameTime);
 
     // Prevent camera from moving down into the tiles or too high.
     if (newPosition.z <= mZoomMinZ)
@@ -462,13 +489,13 @@ void CameraManager::updateCameraFrameTime(const Ogre::Real frameTime)
     Ogre::Real pitch = tilt->getOrientation().getPitch().valueDegrees();
     Ogre::Real pitchStep = mRotateLocalVector.x * frameTime;
     if(pitchStep != 0.0f)
-        pitchStep = std::max(-pitch, std::min(50.0f - pitch, pitchStep));
+        pitchStep = limitPitchChange(pitch, pitchStep);
     tilt->pitch(Ogre::Degree(pitchStep), Ogre::Node::TS_LOCAL);
     getActiveCameraNode()->rotate(Ogre::Vector3::UNIT_Z,
-        Ogre::Degree((mSwivelDegrees.valueDegrees() + mControlSwivel * 117.0f
+        Ogre::Degree((mSwivelDegrees.valueDegrees() + mControlSwivel * KEY_SWIVEL_SPEED
             + mRotateLocalVector.y) * frameTime), Ogre::Node::TS_WORLD);
+    // groundTarget keeps the camera height, because the ground offset has no z component.
     newPosition = groundTarget - getGroundOffset(newPosition.z);
-    // groundTarget includes the camera height; getGroundOffset has zero height.
     Ogre::Real radius = 0.0f;
 
     // If the camera is trying to fly toward a destination, move it in that direction.
@@ -709,7 +736,7 @@ void CameraManager::jumpToViewTarget(const Ogre::Vector2& pos)
 
 void CameraManager::setControls(const Ogre::Vector2& pan, Ogre::Real zoom, Ogre::Real swivel, bool fast)
 {
-    mFastPanFactor = fast ? 2.0f : 1.0f;
+    mFastPanFactor = fast ? FAST_PAN_FACTOR : 1.0f;
     mMoveSpeed = getActiveCameraNode()->getPosition().z / 16.0f * mPanSpeedFactor * mFastPanFactor;
     mMoveSpeedAcceleration = 2.0f * mMoveSpeed;
     mTranslateVectorAccel = Ogre::Vector3(pan.x, pan.y, 0.0f) * mMoveSpeedAcceleration;
@@ -800,7 +827,7 @@ void CameraManager::orbitBy(Ogre::Real swivel, Ogre::Real pitch)
     Ogre::Quaternion root = getActiveCameraNode()->getOrientation();
     Ogre::Quaternion tilt = getActiveCameraNode()->getChild(0)->getOrientation();
     Ogre::Real currentPitch = tilt.getPitch().valueDegrees();
-    pitch = std::max(-currentPitch, std::min(50.0f - currentPitch, pitch));
+    pitch = limitPitchChange(currentPitch, pitch);
     setViewOrientation(Ogre::Quaternion(Ogre::Degree(swivel), Ogre::Vector3::UNIT_Z) * root,
         tilt * Ogre::Quaternion(Ogre::Degree(pitch), Ogre::Vector3::UNIT_X));
 }
@@ -814,13 +841,13 @@ void CameraManager::adjustUserView(Ogre::Real roll, Ogre::Real yaw, Ogre::Real p
         * Ogre::Quaternion(Ogre::Degree(yaw), Ogre::Vector3::UNIT_Y)
         * Ogre::Quaternion(Ogre::Degree(pitch), Ogre::Vector3::UNIT_X);
     // Ground-target navigation requires the camera to keep looking downwards.
-    if((root * tilt * Ogre::Vector3::NEGATIVE_UNIT_Z).z < -0.1f)
+    if(looksDownwards(root, tilt))
         setViewOrientation(root, tilt);
 }
 
 void CameraManager::loadUserView(unsigned int slot)
 {
-    if(slot >= 3)
+    if(slot >= USER_VIEW_COUNT)
         return;
     std::istringstream values(ConfigManager::getSingleton().getInputValue(
         "UserCamera" + Helper::toString(slot + 1), "", false));
@@ -836,7 +863,7 @@ void CameraManager::loadUserView(unsigned int slot)
         return;
     root.normalise();
     tilt.normalise();
-    if((root * tilt * Ogre::Vector3::NEGATIVE_UNIT_Z).z >= -0.1f)
+    if(!looksDownwards(root, tilt))
         return;
     move(fullStop);
     setViewOrientation(root, tilt);
@@ -844,7 +871,7 @@ void CameraManager::loadUserView(unsigned int slot)
 
 bool CameraManager::storeUserView(unsigned int slot)
 {
-    if(slot >= 3)
+    if(slot >= USER_VIEW_COUNT)
         return false;
     const Ogre::Quaternion& root = getActiveCameraNode()->getOrientation();
     const Ogre::Quaternion& tilt = getActiveCameraNode()->getChild(0)->getOrientation();
@@ -961,17 +988,12 @@ void CameraManager::move(const Direction direction, double aux)
     const bool scaledPan = aux > 0.0;
     const Ogre::Real maxSpeedFactor = scaledPan ?
         static_cast<Ogre::Real>(std::min(aux, 1.0)) : 1.0f;
-    const std::function<void(Ogre::Real&, Ogre::Real)> applyPanAcceleration = [this](Ogre::Real& acceleration, Ogre::Real direction)
-    {
-        const Ogre::Real newAcceleration = direction * mMoveSpeedAcceleration;
-        acceleration = newAcceleration;
-    };
 
     switch (direction)
     {
     case moveRight:
         mTranslateMaxSpeedFactor.x = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.x, currentPitch <= 0.0f ? 1.0f : -1.0f);
+        mTranslateVectorAccel.x = (currentPitch <= 0.0f ? 1.0f : -1.0f) * mMoveSpeedAcceleration;
         break;
 
     case stopRight:
@@ -984,7 +1006,7 @@ void CameraManager::move(const Direction direction, double aux)
 
     case moveLeft:
         mTranslateMaxSpeedFactor.x = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.x, currentPitch <= 0.0f ? -1.0f : 1.0f);
+        mTranslateVectorAccel.x = (currentPitch <= 0.0f ? -1.0f : 1.0f) * mMoveSpeedAcceleration;
         break;
 
     case stopLeft:
@@ -997,7 +1019,7 @@ void CameraManager::move(const Direction direction, double aux)
 
     case moveBackward:
         mTranslateMaxSpeedFactor.y = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.y, currentPitch <= 0.0f ? -1.0f : 1.0f);
+        mTranslateVectorAccel.y = (currentPitch <= 0.0f ? -1.0f : 1.0f) * mMoveSpeedAcceleration;
         break;
 
     case stopBackward:
@@ -1010,7 +1032,7 @@ void CameraManager::move(const Direction direction, double aux)
 
     case moveForward:
         mTranslateMaxSpeedFactor.y = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.y, currentPitch <= 0.0f ? 1.0f : -1.0f);
+        mTranslateVectorAccel.y = (currentPitch <= 0.0f ? 1.0f : -1.0f) * mMoveSpeedAcceleration;
         break;
 
     case stopForward:
