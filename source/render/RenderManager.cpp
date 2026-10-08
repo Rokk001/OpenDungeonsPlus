@@ -95,6 +95,8 @@ const Ogre::Real KEEPER_HAND_CREATURE_PICKED_OFFSET = 0.05f;
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_SCALE = 0.05f;
 const Ogre::Real CREATURE_DROP_ANIMATION_DURATION = 0.35f;
 const Ogre::Real CREATURE_GET_UP_ANIMATION_DURATION = 0.35f;
+//! Rotation around the x axis that lays a standing creature on the ground.
+const float CREATURE_LIE_PITCH_DEGREES = -90.0f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
@@ -270,10 +272,27 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
     }
 }
 
+//! Creatures without a usable "Die" animation (the lich mesh has one that does not lay it
+//! down) are laid on the ground by rotating their scene node instead.
 bool needsCreatureDropFallback(Ogre::Entity* entity)
 {
     return !entity->getSkeleton()->hasAnimation("Die") ||
         entity->getMesh()->getName() == "lich.mesh";
+}
+
+//! Returns the lowest z of the entity bounding box once the given orientation and scale
+//! are applied. It is used to put a creature that was rotated onto the ground.
+Ogre::Real getLowestBoundingBoxZ(Ogre::Entity* entity, const Ogre::Quaternion& orientation,
+    const Ogre::Vector3& scale)
+{
+    const Ogre::AxisAlignedBox::Corners corners = entity->getBoundingBox().getAllCorners();
+    Ogre::Real minZ = (orientation * (scale * corners[0])).z;
+    for(unsigned int corner = 1; corner < 8; ++corner)
+    {
+        const Ogre::Real z = (orientation * (scale * corners[corner])).z;
+        minZ = std::min(minZ, z);
+    }
+    return minZ;
 }
 }
 
@@ -2212,16 +2231,9 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             if(dropAnimation.mUseFallbackLie)
             {
                 dropAnimation.mLieOrientation = dropAnimation.mStartOrientation *
-                    Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X);
-                const Ogre::Vector3 scale = dropAnimation.mNode->getScale();
-                const Ogre::AxisAlignedBox::Corners corners = objectEntity->getBoundingBox().getAllCorners();
-                Ogre::Real minZ = (dropAnimation.mLieOrientation * (scale * corners[0])).z;
-                for(unsigned int corner = 1; corner < 8; ++corner)
-                {
-                    const Ogre::Real z = (dropAnimation.mLieOrientation *
-                        (scale * corners[corner])).z;
-                    minZ = std::min(minZ, z);
-                }
+                    Ogre::Quaternion(Ogre::Degree(CREATURE_LIE_PITCH_DEGREES), Ogre::Vector3::UNIT_X);
+                const Ogre::Real minZ = getLowestBoundingBoxZ(objectEntity,
+                    dropAnimation.mLieOrientation, dropAnimation.mNode->getScale());
                 dropAnimation.mLiePosition = dropAnimation.mEnd;
                 dropAnimation.mLiePosition.z -= minZ;
             }
@@ -2237,15 +2249,9 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
                 Ogre::SceneNode* node = dropCreature->getEntityNode();
                 const Ogre::Quaternion standingOrientation = node->getOrientation();
                 const Ogre::Quaternion lieOrientation = standingOrientation *
-                    Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X);
-                const Ogre::Vector3 scale = node->getScale();
-                const Ogre::AxisAlignedBox::Corners corners = objectEntity->getBoundingBox().getAllCorners();
-                Ogre::Real minZ = (lieOrientation * (scale * corners[0])).z;
-                for(unsigned int corner = 1; corner < 8; ++corner)
-                {
-                    const Ogre::Real z = (lieOrientation * (scale * corners[corner])).z;
-                    minZ = std::min(minZ, z);
-                }
+                    Ogre::Quaternion(Ogre::Degree(CREATURE_LIE_PITCH_DEGREES), Ogre::Vector3::UNIT_X);
+                const Ogre::Real minZ = getLowestBoundingBoxZ(objectEntity,
+                    lieOrientation, node->getScale());
                 Ogre::Vector3 position = node->getPosition();
                 const Ogre::Real standingZ = position.z;
                 position.z -= minZ;
