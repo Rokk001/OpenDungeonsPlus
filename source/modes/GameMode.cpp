@@ -82,6 +82,7 @@ const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
 const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+//! Seconds the right mouse button must be held to drop all held creatures instead of one.
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)

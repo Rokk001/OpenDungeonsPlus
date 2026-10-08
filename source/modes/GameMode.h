@@ -345,11 +345,19 @@ private:
     void handlePlayerActionSell();
     void updateSelectedTiles();
 
+    //! \brief Asks the server to drop the pending hand entity on the pending tile or, if
+    //! dropAllCreatures is set and every held creature can be dropped there, all held
+    //! creatures at once. Falls back to the plain action when no request can be sent.
     void sendPendingHandDropRequest(bool dropAllCreatures);
+    //! True while the right mouse button is held after a drop was started. The drop is
+    //! sent on release, or for all creatures once the button is held long enough.
     bool mPendingHandDrop = false;
+    //! Seconds the right mouse button has been held for the pending drop.
     float mPendingHandDropTime = 0.0f;
+    //! Tile coordinates of the pending drop.
     int mPendingHandDropX = -1;
     int mPendingHandDropY = -1;
+    //! Type (as GameEntityType) and name of the first held entity when the drop started.
     int32_t mPendingHandDropEntityType = 0;
     std::string mPendingHandDropEntityName;
 

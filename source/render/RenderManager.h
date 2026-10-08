@@ -275,6 +275,9 @@ private:
     Ogre::ManualObject* mHandPickaxe = nullptr;
     Ogre::ManualObject* mTilePreview = nullptr;
 
+    //! \brief A creature falling from the hand to the ground. When the drop animation is
+    //! requested for the creature, it lies down at the end (by its own animation, or by
+    //! rotating the node to mLieOrientation at mLiePosition if mUseFallbackLie is set).
     struct CreatureDropAnimation
     {
         Creature* mCreature;
@@ -288,8 +291,11 @@ private:
         bool mLieOnGround;
         bool mUseFallbackLie;
     };
+    //! Drops that are currently falling, updated every frame.
     std::vector<CreatureDropAnimation> mCreatureDropAnimations;
 
+    //! \brief The standing orientation and height of a creature that was rotated to lie
+    //! on the ground, kept to restore it when it gets up or is picked up.
     struct CreatureGroundPose
     {
         Creature* mCreature;
@@ -297,8 +303,12 @@ private:
         Ogre::Quaternion mStandingOrientation;
         Ogre::Real mStandingZ;
     };
+    //! Creatures that currently lie on the ground by a rotated node.
     std::vector<CreatureGroundPose> mCreatureGroundPoses;
 
+    //! \brief A creature getting up after a drop. It either plays its "Die" animation
+    //! backwards (mAnimationState) or, if mUseFallback is set, blends the node back to
+    //! the end orientation and position.
     struct CreatureGetUpAnimation
     {
         Creature* mCreature;
@@ -311,12 +321,19 @@ private:
         Ogre::Real mElapsed;
         bool mUseFallback;
     };
+    //! Creatures that are currently getting up, updated every frame.
     std::vector<CreatureGetUpAnimation> mCreatureGetUpAnimations;
 
+    //! \brief Stops the drop and get-up animations of the creature and puts it back in
+    //! its standing pose.
     void cancelCreatureDropAnimation(Creature* creature);
+    //! \brief Stops the get-up animation of the creature and moves it to its final pose.
     void cancelCreatureGetUpAnimation(Creature* creature);
+    //! \brief Starts the get-up animation of a creature that lies on the ground.
     void startCreatureGetUpAnimation(Creature* creature);
+    //! \brief Restores the standing pose of a creature that was rotated to lie down.
     void restoreCreatureGroundPose(Creature* creature);
+    //! \brief Plays the animation the creature shows while it lies on the ground.
     void setCreatureDropGroundAnimation(Creature* creature);
 
     Ogre::TexturePtr m_texture;
