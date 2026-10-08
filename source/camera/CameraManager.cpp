@@ -39,7 +39,6 @@
 #include <OgreViewport.h>
 
 #include <algorithm>
-#include <functional>
 
 const Ogre::Real Z_MOVE_SPEED = 1.0;
 const Ogre::Real Z_MOVE_SPEED_ACCELERATION = 2.0f * Z_MOVE_SPEED;
@@ -57,6 +56,24 @@ const Ogre::Degree ROTATION_SPEED = Ogre::Degree(90);
 const Ogre::Real DEFAULT_X_AXIS_VIEW = 25.0;
 
 const Ogre::String BACKGROUND_RECT_NAME = "BackgroundRect";
+
+//! Limits a pan speed to the range [-maxSpeed, maxSpeed].
+static void clampPanSpeed(Ogre::Real& speed, Ogre::Real maxSpeed)
+{
+    if(speed > maxSpeed)
+        speed = maxSpeed;
+    else if(speed < -maxSpeed)
+        speed = -maxSpeed;
+}
+
+//! Sets (scaled pan from the mouse edge) or adds (keyboard pan) the acceleration of one pan axis.
+static void applyPanAcceleration(Ogre::Real& acceleration, Ogre::Real newAcceleration, bool scaledPan)
+{
+    if(scaledPan)
+        acceleration = newAcceleration;
+    else
+        acceleration += newAcceleration;
+}
 
 CameraManager::CameraManager(Ogre::SceneManager* sceneManager, GameMap* gm, Ogre::RenderWindow* renderWindow) :
     mCircleMode(false),
@@ -288,17 +305,8 @@ void CameraManager::updateCameraFrameTime(const Ogre::Real frameTime)
                         * mMoveSpeedAcceleration * frameTime));
     mTranslateVector += mTranslateVectorAccel * static_cast<Ogre::Real>(frameTime * 2.0f);
 
-    const Ogre::Real maxMoveSpeedX = mMoveSpeed * mTranslateMaxSpeedFactor.x;
-    if(mTranslateVector.x > maxMoveSpeedX)
-        mTranslateVector.x = maxMoveSpeedX;
-    else if(mTranslateVector.x < -maxMoveSpeedX)
-        mTranslateVector.x = -maxMoveSpeedX;
-
-    const Ogre::Real maxMoveSpeedY = mMoveSpeed * mTranslateMaxSpeedFactor.y;
-    if(mTranslateVector.y > maxMoveSpeedY)
-        mTranslateVector.y = maxMoveSpeedY;
-    else if(mTranslateVector.y < -maxMoveSpeedY)
-        mTranslateVector.y = -maxMoveSpeedY;
+    clampPanSpeed(mTranslateVector.x, mMoveSpeed * mTranslateMaxSpeedFactor.x);
+    clampPanSpeed(mTranslateVector.y, mMoveSpeed * mTranslateMaxSpeedFactor.y);
 
     // If we have sped up to more than the maximum moveSpeed then rescale the
     // vector to that length. We use the squaredLength() in this calculation
@@ -632,20 +640,12 @@ void CameraManager::move(const Direction direction, double aux)
     const bool scaledPan = aux > 0.0;
     const Ogre::Real maxSpeedFactor = scaledPan ?
         static_cast<Ogre::Real>(std::min(aux, 1.0)) : 1.0f;
-    const std::function<void(Ogre::Real&, Ogre::Real)> applyPanAcceleration = [this, scaledPan](Ogre::Real& acceleration, Ogre::Real direction)
-    {
-        const Ogre::Real newAcceleration = direction * mMoveSpeedAcceleration;
-        if(scaledPan)
-            acceleration = newAcceleration;
-        else
-            acceleration += newAcceleration;
-    };
 
     switch (direction)
     {
     case moveRight:
         mTranslateMaxSpeedFactor.x = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.x, currentPitch <= 0.0f ? 1.0f : -1.0f);
+        applyPanAcceleration(mTranslateVectorAccel.x, (currentPitch <= 0.0f ? 1.0f : -1.0f) * mMoveSpeedAcceleration, scaledPan);
         break;
 
     case stopRight:
@@ -658,7 +658,7 @@ void CameraManager::move(const Direction direction, double aux)
 
     case moveLeft:
         mTranslateMaxSpeedFactor.x = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.x, currentPitch <= 0.0f ? -1.0f : 1.0f);
+        applyPanAcceleration(mTranslateVectorAccel.x, (currentPitch <= 0.0f ? -1.0f : 1.0f) * mMoveSpeedAcceleration, scaledPan);
         break;
 
     case stopLeft:
@@ -671,7 +671,7 @@ void CameraManager::move(const Direction direction, double aux)
 
     case moveBackward:
         mTranslateMaxSpeedFactor.y = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.y, currentPitch <= 0.0f ? -1.0f : 1.0f);
+        applyPanAcceleration(mTranslateVectorAccel.y, (currentPitch <= 0.0f ? -1.0f : 1.0f) * mMoveSpeedAcceleration, scaledPan);
         break;
 
     case stopBackward:
@@ -684,7 +684,7 @@ void CameraManager::move(const Direction direction, double aux)
 
     case moveForward:
         mTranslateMaxSpeedFactor.y = maxSpeedFactor;
-        applyPanAcceleration(mTranslateVectorAccel.y, currentPitch <= 0.0f ? 1.0f : -1.0f);
+        applyPanAcceleration(mTranslateVectorAccel.y, (currentPitch <= 0.0f ? 1.0f : -1.0f) * mMoveSpeedAcceleration, scaledPan);
         break;
 
     case stopForward:
