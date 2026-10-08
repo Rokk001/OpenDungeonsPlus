@@ -16,26 +16,27 @@ probe = r'''
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include <iostream>
+#include <functional>
 int main(int argc,char** argv){try{
  Ogre::Root root("","","magic-projectile.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");root.loadPlugin("Plugin_ParticleFX");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList options;options["hidden"]="true";options["vsync"]="false";
- auto* window=root.createRenderWindow("Projectile check",256,128,false,&options);
- auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
+ Ogre::RenderWindow* window=root.createRenderWindow("Projectile check",256,128,false,&options);
+ Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  std::string repo=argv[1],prefix=argv[2];
- for(const auto& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})groups.addResourceLocation(path,"FileSystem","Graphics");
+ for(const std::string& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");groups.addResourceLocation(repo+"/particles","FileSystem","Graphics");
- auto& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("MissileMagic.material","Graphics"),"Graphics");
+ Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("MissileMagic.material","Graphics"),"Graphics");
  Ogre::ParticleSystemManager::getSingleton().parseScript(groups.openResource("MissileMagic.particle","Graphics"),"Graphics");
- auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
- auto* scene=root.createSceneManager();shaders->addSceneManager(scene);
- auto* camera=scene->createCamera("Camera");camera->setNearClipDistance(.01f);camera->setAspectRatio(2);camera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);camera->setOrthoWindow(6,3);
- auto* cameraNode=scene->getRootSceneNode()->createChildSceneNode(Ogre::Vector3(0,0,4));cameraNode->attachObject(camera);
- auto* viewport=window->addViewport(camera);viewport->setBackgroundColour(Ogre::ColourValue(.1f,.08f,.06f));viewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
- auto* node=scene->getRootSceneNode()->createChildSceneNode();auto* particles=scene->createParticleSystem("Bolt","MissileMagic");node->attachObject(particles);
+ Ogre::RTShader::ShaderGenerator* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
+ Ogre::SceneManager* scene=root.createSceneManager();shaders->addSceneManager(scene);
+ Ogre::Camera* camera=scene->createCamera("Camera");camera->setNearClipDistance(.01f);camera->setAspectRatio(2);camera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);camera->setOrthoWindow(6,3);
+ Ogre::SceneNode* cameraNode=scene->getRootSceneNode()->createChildSceneNode(Ogre::Vector3(0,0,4));cameraNode->attachObject(camera);
+ Ogre::Viewport* viewport=window->addViewport(camera);viewport->setBackgroundColour(Ogre::ColourValue(.1f,.08f,.06f));viewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+ Ogre::SceneNode* node=scene->getRootSceneNode()->createChildSceneNode();Ogre::ParticleSystem* particles=scene->createParticleSystem("Bolt","MissileMagic");node->attachObject(particles);
  int checks=0,failures=0;
- auto check=[&](bool v,const char* reason){++checks;if(!v){++failures;std::cout<<"FAIL "<<reason<<'\n';}};
+ std::function<void(bool,const char*)> check=[&](bool v,const char* reason){++checks;if(!v){++failures;std::cout<<"FAIL "<<reason<<'\n';}};
  for(int frame=0;frame<60;++frame){
     const float x=FLIGHT_SPEED*(frame/60.f-.5f);
     node->setPosition(x,0,0);node->_update(true,false);particles->_update(1.f/60);
@@ -43,7 +44,7 @@ int main(int argc,char** argv){try{
     Ogre::Image pixels;pixels.create(Ogre::PF_BYTE_RGBA,256,128);window->copyContentsToMemory(pixels.getPixelBox(),Ogre::RenderTarget::FB_BACK);
     int bright=0;const int center=int(128+x*256/6);
     int white=0;
-    for(int px=center-7;px<=center+7;++px)for(int py=57;py<=71;++py){auto c=pixels.getColourAt(px,py,0);if(c.r>.5f && c.r>c.g*1.35f && c.g>c.b*1.5f)++bright;if(c.r>.65f&&c.g>.65f&&c.b>.65f)++white;}
+    for(int px=center-7;px<=center+7;++px)for(int py=57;py<=71;++py){Ogre::ColourValue c=pixels.getColourAt(px,py,0);if(c.r>.5f && c.r>c.g*1.35f && c.g>c.b*1.5f)++bright;if(c.r>.65f&&c.g>.65f&&c.b>.65f)++white;}
     check(particles->getNumParticles()>0,"continuous emission never disappears");
     check(bright>=2,"warm fireball remains visible at its current position");
     check(white==0,"overlapping flames do not become white spots");

@@ -11,6 +11,7 @@ stop = source.split('void MovableGameEntity::stopWalking()\n', 1)[1].split('\nvo
 probe = r'''
 #include <OgreVector.h>
 #include <deque>
+#include <functional>
 #include <string>
 #include <iostream>
 namespace ODApplication {const float turnsPerSecond=1;}
@@ -27,7 +28,7 @@ struct MovableGameEntity {
 };
 void MovableGameEntity::update(Ogre::Real timeSinceLastFrame){MOVEMENT
 void MovableGameEntity::stopWalking()STOP
-int main(){int checks=0,failures=0;auto check=[&](bool v,const char* reason){++checks;if(!v){++failures;std::cout<<"FAIL "<<reason<<'\n';}};
+int main(){int checks=0,failures=0;std::function<void(bool,const char*)> check=[&](bool v,const char* reason){++checks;if(!v){++failures;std::cout<<"FAIL "<<reason<<'\n';}};
  for(const std::string state:{"CombatAttack","RangedAttack","Idle","Sleep"})
  for(float dt:{1.f,2.f})for(bool directed:{false,true}){
   MovableGameEntity c;c.mWalkQueue={{0,-.25f},{.25f,-.25f}};
