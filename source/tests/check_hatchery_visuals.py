@@ -36,8 +36,9 @@ assert hook.index('rrSetChickenPose') < hook.index('hasSkeleton')
 
 # The server drives the behaviour from the hatchery upkeep.
 upkeep = body(room, 'void RoomHatchery::doUpkeep')
-for call in ('updateChickLine', 'updateRooster', 'ChickenPose::lay', 'ChickenPose::wobble'):
+for call in ('updateChickLine', 'updateRooster', 'updateNestTrips', 'ChickenPose::wobble'):
     assert call in upkeep, call
+assert 'ChickenPose::lay' in body(room, 'void RoomHatchery::updateNestTrips')
 coop_spawn = body(room, 'bool RoomHatchery::spawnFromCoop')
 assert 'spawnAnimal(kind, Ogre::Vector3(inside.x, inside.y, 0.0f), settings)' in coop_spawn
 assert 'animal->emergeFromCoop(door, freePosition)' in coop_spawn
