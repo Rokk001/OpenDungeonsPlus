@@ -79,7 +79,7 @@ struct Room {
  RoomType type=RoomType::hatchery;std::map<Tile*,BuildingObject*> objects;std::vector<Creature*> users;
  struct InteractionPosition {const BuildingObject* object;Ogre::Vector2 position,direction;};
  std::map<Creature*,InteractionPosition> interactionPositions;
- const auto& getInteractionPositions()const{return interactionPositions;}
+ const std::map<Creature*,InteractionPosition>& getInteractionPositions()const{return interactionPositions;}
  void reserveInteractionPosition(Creature* c,const InteractionPosition& p){interactionPositions[c]=p;}
  void releaseInteractionPosition(Creature* c){interactionPositions.erase(c);}
  RoomType getType()const{return type;}const auto& getBuildingObjects()const{return objects;}
@@ -329,7 +329,7 @@ int main(){
  check(distant.consumed==0&&creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains original tile path and 80 percent truncation");
  {
   GameMap stations;Room workRoom;workRoom.type=RoomType::trainingHall;stations.rooms={&workRoom};
-  for(auto& tile:stations.tiles)tile.room=&workRoom;
+  for(Tile& tile:stations.tiles)tile.room=&workRoom;
   BuildingObject dummy;dummy.mesh="TrainingDummy1";dummy.pos={8,8.2f,0};
   workRoom.objects[stations.getTile(8,8)]=&dummy;
   Creature first{&stations},second{&stations},passing{&stations};
@@ -338,17 +338,17 @@ int main(){
   std::vector<Ogre::Vector2> route;
   check(RoomObjectNavigation::workApproach(first,dummy,wanted,{0,0},route)&&!route.empty(),"first station user obtains an endpoint");
   check(workRoom.interactionPositions.count(&first)==1,"endpoint is reserved while approaching");
-  const auto original=workRoom.interactionPositions.at(&first).position;
+  const Ogre::Vector2 original=workRoom.interactionPositions.at(&first).position;
   first.pos={original.x,original.y,0};
   check(RoomObjectNavigation::workApproach(second,dummy,wanted,{0,0},route)&&!route.empty(),"second user obtains a separate reachable endpoint");
-  const auto adjacent=workRoom.interactionPositions.at(&second).position;
+  const Ogre::Vector2 adjacent=workRoom.interactionPositions.at(&second).position;
   check(interactionPositionClear(second,adjacent,facing-adjacent),"oriented user footprints do not overlap");
   check(std::abs(adjacent.x-original.x)>.01f,"second user moves sideways, not onto the first");
   second.pos={adjacent.x,adjacent.y,0};
   check(RoomObjectNavigation::workApproach(first,dummy,wanted,{0,0},route)&&route.empty(),"first user's chosen endpoint remains stable");
   check(RoomObjectNavigation::workApproach(second,dummy,wanted,{0,0},route)&&route.empty(),"second user's chosen endpoint remains stable");
   passing.pos={original.x-2,original.y,0};
-  const auto occupiedGeometry=RoomObjectNavigation::bodyObstacles(passing);
+  const std::vector<RoomObjectPath::Obstacle> occupiedGeometry=RoomObjectNavigation::bodyObstacles(passing);
   std::vector<Ogre::Vector2> occupiedRoute{{original.x+2,original.y}},freeRoute=occupiedRoute;
   RoomObjectNavigation::refine(passing,occupiedRoute);
   workRoom.releaseInteractionPosition(&first);workRoom.releaseInteractionPosition(&second);
@@ -359,7 +359,7 @@ int main(){
  }
  {
   GameMap cells;Room torture;torture.type=RoomType::torture;cells.rooms={&torture};
-  for(auto& tile:cells.tiles)tile.room=&torture;
+  for(Tile& tile:cells.tiles)tile.room=&torture;
   BuildingObject apparatus;apparatus.mesh="TortureObject";apparatus.pos={7,7,0};
   torture.objects[cells.getTile(7,7)]=&apparatus;
   Creature victim{&cells};victim.pos={3,7,0};victim.actions.insert(CreatureActionType::useRoom);
