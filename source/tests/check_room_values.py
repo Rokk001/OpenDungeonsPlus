@@ -57,7 +57,7 @@ assert "RoomType::guardRoom" in read("source/ai/KeeperAI.cpp")
 # the default of the client look numbers is the value of the config
 hatchery_code = read("source/rooms/RoomHatchery.cpp") + read("source/render/RenderManagerChickens.cpp") +     read("source/entities/ChickenEntity.cpp")
 used = set(re.findall(r'"(Hatchery[A-Za-z0-9]+)"', hatchery_code))  # a name ending in "_" is the prefix of an entity name
-used -= {"HatcheryWaits", "HatcheryDay", "HatcheryLays", "HatcheryGrain"}  # tags of the save game, not config keys
+used -= {"HatcheryWaits", "HatcheryDay", "HatcheryLays", "HatcheryNestLays", "HatcheryGrain"}  # tags of the save game, not config keys
 assert len(used) > 100, len(used)
 documented = set(re.findall(r"^# (Hatchery\w+)\s", rooms, re.M))
 for key in sorted(used):

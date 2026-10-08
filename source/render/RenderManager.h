@@ -581,11 +581,10 @@ private:
         std::vector<Ogre::Entity*> mFeatherEntities;
         uint32_t mKey;
     };
-    std::map<Room*, NestField> mNestFields;
-    //! Makes, updates and removes the nests of the hatcheries that have coops (roomCoops: their coop tiles). The nests
-    //! always show, also in an empty hatchery; the loose feathers show while the hatchery has no animal
-    //! (roomAnimals: the count of the animals by room, the rooster does not count).
-    void updateNestFields(const std::map<Room*, std::vector<Tile*> >& roomCoops, const std::map<Room*, uint32_t>& roomAnimals);
+    std::map<std::string, NestField> mNestFields;
+    //! Draws server-provided nests by room name; clients have no Room objects. Nests remain visible
+    //! on visible hatchery floor tiles regardless of animals or coop presence.
+    void updateNestFields();
     void destroyNestField(NestField& field);
     Ogre::Real mCoopDecorTimer = 0.0f;
     uint64_t mChickenLookNumber = 0;

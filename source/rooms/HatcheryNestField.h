@@ -233,7 +233,7 @@ namespace HatcheryNestField
     //! The places of the nests of a hatchery with the given tiles and coop tiles. Without coop there are nests all the
     //! same (a coop that is not built yet does not take the eggs away), and without entrance there is no walking strip.
     //! The tiles can be in any order. When the strips leave room for fewer nests than wanted, there are fewer nests,
-    //! but more places are tried while there are fewer nests than coops.
+    //! but more places are tried while there are fewer nests than coops. mMaxNests remains the hard upper limit.
     inline std::vector<Place> compute(const std::vector<TileCoord>& roomTilesIn, const std::vector<TileCoord>& coopsIn,
         const std::vector<TileCoord>& entrancesIn, const Settings& settings)
     {
@@ -249,7 +249,7 @@ namespace HatcheryNestField
 
         const uint32_t perNest = (std::max<uint32_t>)(1, settings.mTilesPerNest);
         uint32_t wanted = (std::min)(static_cast<uint32_t>(roomTiles.size()) / perNest, settings.mMaxNests);
-        wanted = (std::max)(wanted, static_cast<uint32_t>(coops.size()));
+        wanted = (std::min)(settings.mMaxNests, (std::max)(wanted, static_cast<uint32_t>(coops.size())));
 
         // Each round (attempt) goes over the tiles in the order of their hash and tries one place on each tile (the place on
         // the tile is moved by up to 0.4 tiles each way, by the hash). More rounds try other places on the same tiles.
