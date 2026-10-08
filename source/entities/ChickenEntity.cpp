@@ -201,7 +201,9 @@ void ChickenEntity::doUpkeep()
         Room* room = tile->getCoveringRoom();
         if(room->getType() == RoomType::hatchery)
         {
-            currentHatchery = room;
+            if(((mKind != ChickenKind::egg) && (mKind != ChickenKind::chick)) ||
+               (mHomeSeat == nullptr) || (room->getSeat() == mHomeSeat))
+                currentHatchery = room;
         }
     }
 
@@ -722,6 +724,12 @@ bool ChickenEntity::tryPickup(Seat* seat)
 
 void ChickenEntity::pickup()
 {
+    if(getIsOnServerMap() && ((mKind == ChickenKind::egg) || (mKind == ChickenKind::chick)))
+    {
+        Tile* tile = getPositionTile();
+        if(tile != nullptr)
+            mHomeSeat = tile->getSeat();
+    }
     // The rooster protests loudly when the hand takes him
     if(getIsOnServerMap() && (mKind == ChickenKind::rooster))
     {

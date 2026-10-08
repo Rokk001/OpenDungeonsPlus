@@ -246,3 +246,14 @@ assert 'HatcheryCoopSit' not in config and 'HatcheryCoopSeatRadius' not in confi
 assert 'updateFlock(hens);' in room_cpp and 'getHighestCoop' not in room_cpp
 assert 'Tile* coopTile = getNearestCoop(position);' in room_cpp
 print('hatchery coop seat and roof checks passed')
+
+# Pickup captures the keeper before detach; allied hatcheries cannot adopt young animals.
+pickup = body(chicken, 'void ChickenEntity::pickup')
+assert 'mHomeSeat = tile->getSeat();' in pickup
+assert pickup.index('mHomeSeat = tile->getSeat();') < pickup.index('RenderedMovableEntity::pickup();')
+upkeep = body(chicken, 'void ChickenEntity::doUpkeep')
+assert '(room->getSeat() == mHomeSeat)' in upkeep and '(mHomeSeat == nullptr)' in upkeep
+assert 'HatcheryYoungLostTurns' in upkeep and '(currentHatchery == nullptr)' in upkeep
+assert 'chicken->getHomeSeat() != getSeat()' in doUpkeep
+assert doUpkeep.index('chicken->getHomeSeat() != getSeat()') < doUpkeep.index('switch(chicken->getKind())')
+print('young animal same-keeper lifecycle source contracts passed; C++ not executed')
