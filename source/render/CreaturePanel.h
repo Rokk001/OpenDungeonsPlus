@@ -25,11 +25,16 @@ public:
     void update();
 
 private:
+    //! \brief One column of the panel, showing a single creature type.
     struct Slot
     {
+        //! \brief Container of the column
         CEGUI::Window* window;
+        //! \brief Portrait image of the creature type
         CEGUI::Window* portrait;
+        //! \brief Count labels below each other, one per criterion of the selected view
         std::array<CEGUI::Window*, 4> counts;
+        //! \brief Creature class name currently shown in this column
         std::string type;
     };
 
