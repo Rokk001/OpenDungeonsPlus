@@ -451,6 +451,25 @@ void ChickenEntity::playPose(const std::string& pose, uint32_t turns)
     clearDestinations(pose, true, false);
 }
 
+void ChickenEntity::mountHen(ChickenEntity& hen)
+{
+    Ogre::Vector3 direction = hen.getWalkDirection();
+    if(direction.squaredLength() < 0.000001f)
+        direction = Ogre::Vector3::NEGATIVE_UNIT_Y;
+    setWalkDirection(direction);
+    mMountHenName = hen.getName();
+    hen.playPose(ChickenPose::cackle, 3);
+    playPose(ChickenPose::mount, 3);
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+        ServerNotification* notification = new ServerNotification(ServerNotificationType::chickenMount, seat->getPlayer());
+        notification->mPacket << getName() << hen.getName();
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
 void ChickenEntity::emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit)
 {
     mCoopDoor = door;
@@ -488,8 +507,31 @@ Ogre::Vector3 roofFlightPosition(const Ogre::Vector3& from, const Ogre::Vector3&
 {
     // Grounded during crouching and settled before the wings finish folding.
     const Ogre::Real travel = std::max(0.0f, std::min(1.0f, (progress - 0.12f) / 0.73f));
-    const Ogre::Real eased = travel * travel * (3.0f - 2.0f * travel);
-    return from + (to - from) * eased;
+    if(travel <= 0.0f)
+        return from;
+    if(travel >= 1.0f)
+        return to;
+    const Ogre::Real clearance = 0.4f * static_cast<Ogre::Real>(
+        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterScale", 1.25));
+    const Ogre::Real high = std::max(from.z, to.z) + clearance;
+    // Lift vertically outside the coop, cross above its ridge, then settle vertically on the perch.
+    // Exchanging the endpoints gives exactly the reverse safe route for descent.
+    const Ogre::Real lateral = std::max(0.0f, std::min(1.0f, (travel - 0.3f) / 0.4f));
+    const Ogre::Real across = lateral * lateral * (3.0f - 2.0f * lateral);
+    Ogre::Vector3 position = from + (to - from) * across;
+    if(travel < 0.3f)
+    {
+        const Ogre::Real lift = travel / 0.3f;
+        position.z = from.z + (high - from.z) * lift * lift * (3.0f - 2.0f * lift);
+    }
+    else if(travel > 0.7f)
+    {
+        const Ogre::Real land = (travel - 0.7f) / 0.3f;
+        position.z = high + (to.z - high) * land * land * (3.0f - 2.0f * land);
+    }
+    else
+        position.z = high;
+    return position;
 }
 }
 
@@ -1118,6 +1160,7 @@ void ChickenEntity::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mHopTurnsLeft;
     if(mHopTurnsLeft > 0)
         os << mHopFrom << mHopTo << mHopTurns << mHopElapsed;
+    os << ((mBusyTurns > 0 && mPrevAnimationState == ChickenPose::mount) ? mMountHenName : std::string());
 }
 
 void ChickenEntity::importFromPacket(ODPacket& is)
@@ -1130,6 +1173,7 @@ void ChickenEntity::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mHopTurnsLeft);
     if(mHopTurnsLeft > 0)
         OD_ASSERT_TRUE(is >> mHopFrom >> mHopTo >> mHopTurns >> mHopElapsed);
+    OD_ASSERT_TRUE(is >> mMountHenName);
 }
 
 void ChickenEntity::exportToStream(std::ostream& os) const

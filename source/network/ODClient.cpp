@@ -1531,6 +1531,21 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::chickenMount:
+        {
+            std::string roosterName;
+            std::string henName;
+            OD_ASSERT_TRUE(packetReceived >> roosterName >> henName);
+            GameEntity* rooster = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, roosterName);
+            GameEntity* hen = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, henName);
+            if(rooster != nullptr)
+            {
+                static_cast<ChickenEntity*>(rooster)->setMountHenFromServer(henName);
+                if(hen != nullptr)
+                    RenderManager::getSingleton().rrChickenMount(static_cast<ChickenEntity*>(rooster), static_cast<ChickenEntity*>(hen));
+            }
+            break;
+        }
         case ServerNotificationType::chickenRoofFlight:
         {
             std::string name;

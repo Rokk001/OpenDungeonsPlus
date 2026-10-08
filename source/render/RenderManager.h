@@ -279,6 +279,8 @@ public:
     void rrChickenHatched(ChickenEntity* chicken);
     //! \brief An egg was trampled at the position: shell pieces and yolk fly, a few feathers of a startled hen.
     void rrEggTrampled(const Ogre::Vector3& position);
+    //! The server-selected rooster/hen pair of the mounting pose.
+    void rrChickenMount(ChickenEntity* rooster, ChickenEntity* hen);
     //! \brief Two roosters fight (phase as in ServerNotificationType::chickenFight): while they brawl, feather
     //! clouds fly between them at the configured interval, when it is over a last cloud flies.
     void rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase);

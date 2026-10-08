@@ -31,8 +31,8 @@ assert 'getNearestCoop(' in roost and 'getPerchSpot(' in roost and 'getRoofHeigh
 assert 'if(coopTile == nullptr)' in roost, 'a hatchery without a coop does not crash'
 # Walk to the ground next to the coop first, flutter up only from there (no flight from far away), time limit on the way
 assert 'getGroundSpot(*coopTile, approach)' in roost and 'rooster->walkToward(approach' in roost
-assert 'if(position.distance(approach) < mRoosterSettings.mHopDistance)' in roost, 'hop only from next to the coop'
-assert roost.index('if(position.distance(approach) < mRoosterSettings.mHopDistance)') < roost.index('rooster->hopToRoof('), 'up only after the arrival test'
+assert 'if(position.distance(approach) < mRoosterSettings.mHopDistance && RoomObjectPath::clearPoint(obstacles, position))' in roost, 'hop only from next to the coop'
+assert roost.index('if(position.distance(approach) < mRoosterSettings.mHopDistance && RoomObjectPath::clearPoint(obstacles, position))') < roost.index('rooster->hopToRoof('), 'up only after the arrival test'
 assert 'hopFromFar' not in room + (root / 'source/rooms/RoomHatchery.h').read_text()
 assert re.search(r'^\s+HatcheryRoosterHopDistance\s', config, re.M), 'distance for the hop from the config'
 update_body = body(room, 'void RoomHatchery::updateRooster(')

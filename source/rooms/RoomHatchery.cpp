@@ -1690,14 +1690,28 @@ Ogre::Vector2 RoomHatchery::getPerchSpot(const Tile& coopTile) const
 
 bool RoomHatchery::getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const
 {
-    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), 0.1f);
+    // The long tail must clear the entire coop footprint before the vertical leg of the flight.
+    const Ogre::Real clearance = 0.4f * static_cast<Ogre::Real>(
+        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterScale", 1.25));
+    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), clearance);
     const Ogre::Vector2 coopCenter(coopTile.getX(), coopTile.getY());
-    if(!RoomObjectNavigation::standingPosition(obstacles, coopCenter, spot))
-        return false;
-
-    // Right next to the coop, not far away
-    double reach = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterLandReach", 1.0);
-    return spot.distance(coopCenter) <= reach;
+    const double reach = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterLandReach", 1.0);
+    const int steps = static_cast<int>(std::ceil(reach * 8.0));
+    Ogre::Real nearest = static_cast<Ogre::Real>(reach * reach);
+    bool found = false;
+    for(int y = -steps; y <= steps; ++y)
+        for(int x = -steps; x <= steps; ++x)
+        {
+            const Ogre::Vector2 candidate = coopCenter + Ogre::Vector2(x / 8.0f, y / 8.0f);
+            Tile* tile = getGameMap()->getTile(Helper::round(candidate.x), Helper::round(candidate.y));
+            if(tile == nullptr || tile->getCoveringRoom() != this || candidate.squaredDistance(coopCenter) > nearest ||
+                !RoomObjectPath::clearPoint(obstacles, candidate))
+                continue;
+            spot = candidate;
+            nearest = candidate.squaredDistance(coopCenter);
+            found = true;
+        }
+    return found && spot.distance(coopCenter) <= reach;
 }
 
 bool RoomHatchery::findThreat(const ChickenEntity& rooster, double radius, Ogre::Vector2& position) const
@@ -1738,7 +1752,10 @@ void RoomHatchery::climbDown(ChickenEntity* rooster)
     Tile* coopTile = getNearestCoop(Ogre::Vector2(rooster->getPosition().x, rooster->getPosition().y));
     Ogre::Vector2 spot(rooster->getPosition().x, rooster->getPosition().y);
     if(coopTile != nullptr)
-        getGroundSpot(*coopTile, spot);
+    {
+        if(!getGroundSpot(*coopTile, spot))
+            return;
+    }
     rooster->hopDown(spot);
 }
 
@@ -1769,7 +1786,10 @@ bool RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose)
         return false;
     }
 
-    if(position.distance(approach) < mRoosterSettings.mHopDistance)
+    const Ogre::Real clearance = 0.4f * static_cast<Ogre::Real>(
+        ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterScale", 1.25));
+    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), clearance);
+    if(position.distance(approach) < mRoosterSettings.mHopDistance && RoomObjectPath::clearPoint(obstacles, position))
     {
         const Ogre::Vector2 spot = getPerchSpot(*coopTile);
         double roofHeight = getRoofHeight(*coopTile);
@@ -1777,7 +1797,7 @@ bool RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose)
         return false;
     }
 
-    if(!rooster->isMoving() && !rooster->walkToward(approach, mRoosterSettings.mWalkGap, ChickenPose::strut))
+    if(!rooster->isMoving() && !rooster->walkToward(approach, 0.0, ChickenPose::strut))
     {
         // No way to the coop: forget about the roof
         rooster->setMood(RoosterMood::strut, 0);
@@ -1842,8 +1862,7 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
             // Caught: he jumps on her for a moment, feathers fly and she cackles
             if(nearestDistance < static_cast<float>(settings.mCatchDistance * settings.mCatchDistance))
             {
-                rooster->playPose(ChickenPose::mount, 3);
-                target->playPose(ChickenPose::cackle, 3);
+                rooster->mountHen(*target);
                 fireAnimalSound(*target, "Hatchery/Cluck");
                 rooster->setMood(RoosterMood::strut, 0);
                 rooster->setRoomDriven(false);

@@ -141,6 +141,11 @@ public:
 
     //! \brief Plays a pose (see ChickenPose.h) and holds the animal still for the number of turns.
     void playPose(const std::string& pose, uint32_t turns);
+    void mountHen(ChickenEntity& hen);
+    const std::string& getMountHenName() const
+    { return mMountHenName; }
+    void setMountHenFromServer(const std::string& name)
+    { mMountHenName = name; }
 
     //! Plays the coop entrance pose, then walks through its door to the hatchery floor.
     void emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit);
@@ -309,6 +314,7 @@ private:
     std::string mLockOwner;
     std::string mSnatchedFrom;
     ChickenFlight::State mFlight;
+    std::string mMountHenName;
 
     //! \brief Server side: the chicken was dropped by the keeper. Offers it to the closest idle creature of
     //! the keeper that is not hungry, which sniffs at it and eats it slowly anyway (see CreatureActionEatChicken).

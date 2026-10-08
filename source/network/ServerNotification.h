@@ -198,6 +198,8 @@ enum class ServerNotificationType
     hatcheryNests,
     //! Rooster flight: name, start and goal Vector3, total turns, elapsed turns.
     chickenRoofFlight,
+    //! Exact rooster/hen pair for the mounting pose: two animal names.
+    chickenMount,
     //! Presentation-only effect of a trap or door, sent to the human seats that see the tile:
     //! + int32_t kind (TrapEffectKind), int32_t tileX, int32_t tileY, string type name of the trap or door
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).

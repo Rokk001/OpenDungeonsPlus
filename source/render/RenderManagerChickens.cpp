@@ -39,6 +39,7 @@
 
 #include <OgreAnimationState.h>
 #include <OgreCamera.h>
+#include <OgreBone.h>
 #include <OgreEntity.h>
 #include <OgreManualObject.h>
 #include <OgreMesh.h>
@@ -548,6 +549,13 @@ void RenderManager::rrSetHatcheryNests(const std::string& roomName, const std::v
     ++nests.mVersion;
 }
 
+void RenderManager::rrChickenMount(ChickenEntity* rooster, ChickenEntity* hen)
+{
+    std::map<ChickenEntity*, ChickenLook>::iterator look = mChickenLooks.find(rooster);
+    if(look != mChickenLooks.end())
+        look->second.mMountPartner = hen;
+}
+
 void RenderManager::rrChickenFight(ChickenEntity* first, ChickenEntity* second, uint32_t phase)
 {
     std::map<ChickenEntity*, ChickenLook>::iterator firstLook = mChickenLooks.find(first);
@@ -600,6 +608,8 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
             if((other->first == chicken) || (other->first->getKind() != ChickenKind::hen))
                 continue;
 
+            if(!chicken->getMountHenName().empty() && other->first->getName() != chicken->getMountHenName())
+                continue;
             const Ogre::Real distance = other->first->getPosition().squaredDistance(position);
             if(distance < nearestDistance)
             {
@@ -858,6 +868,11 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             }
             else if(pose == ChickenPose::mount)
             {
+                // A hen that becomes visible later still resolves to the server-selected partner.
+                if(look.mMountPartner == nullptr && !chicken->getMountHenName().empty())
+                    for(std::map<ChickenEntity*, ChickenLook>::iterator other = mChickenLooks.begin(); other != mChickenLooks.end(); ++other)
+                        if(other->first->getName() == chicken->getMountHenName())
+                            look.mMountPartner = other->first;
                 // He climbs on the back of the hen he caught, treads and beats his wings there, and climbs down
                 std::map<ChickenEntity*, ChickenLook>::iterator hen = (look.mMountPartner != nullptr) ?
                     mChickenLooks.find(look.mMountPartner) : mChickenLooks.end();
@@ -899,9 +914,16 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                     Ogre::SceneNode* henParent = hen->second.mNode->getParentSceneNode();
                     if((parent != nullptr) && (henParent != nullptr))
                     {
-                        Ogre::Vector3 toHen = parent->convertWorldToLocalPosition(henParent->_getDerivedPosition());
-                        toHen.z = 0.0f;
-                        shift = toHen * on;
+                        look.mEntity->_updateAnimation();
+                        hen->second.mEntity->_updateAnimation();
+                        const Ogre::Vector3 henHead = hen->second.mEntity->getSkeleton()->getBone("Head")->_getDerivedPosition();
+                        const Ogre::Vector3 roosterHead = look.mEntity->getSkeleton()->getBone("Head")->_getDerivedPosition();
+                        const Ogre::Vector3 targetHead = parent->convertWorldToLocalPosition(
+                            hen->second.mNode->convertLocalToWorldPosition(henHead));
+                        const Ogre::Quaternion lean = Ogre::Quaternion(Ogre::Degree(pitch), Ogre::Vector3::UNIT_X);
+                        const Ogre::Vector3 headOffset = lean * (roosterHead * kindScale(kind) * stretch);
+                        shift = (targetHead - headOffset) * on;
+                        shift.z = 0.0f;
                     }
                 }
                 if((look.mFeatherBursts == 0) && (p > climb) && (look.mMountPartner != nullptr) &&
