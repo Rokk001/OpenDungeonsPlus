@@ -62,6 +62,7 @@ public:
 
         randomRotateX, zeroRandomRotateX,
         randomRotateY, zeroRandomRotateY,
+        //! Stops every movement and view animation of the camera at once.
         fullStop
     };
 
@@ -131,13 +132,22 @@ public:
     */
     void move(const Direction direction, double aux = 0.0);
 
+    //! The number of user views that can be stored and loaded.
+    static const unsigned int USER_VIEW_COUNT = 3;
+
     //! Continuous input is sampled once per frame, independent of key repeat.
     void setControls(const Ogre::Vector2& pan, Ogre::Real zoom, Ogre::Real swivel, bool fast);
     //! Pointer motion and wheel steps are distances, not persistent velocities.
     void zoomBy(Ogre::Real distance);
+    //! \brief Turns the camera around the point it looks at by the given degrees. The tilt is limited.
     void orbitBy(Ogre::Real swivel, Ogre::Real pitch);
+    //! \brief Changes the tilt of the current view by the given degrees around its own axes.
+    //! A change that would make the camera look up from the ground is ignored.
     void adjustUserView(Ogre::Real roll, Ogre::Real yaw, Ogre::Real pitch);
+    //! \brief Restores the stored view of the slot (0 to USER_VIEW_COUNT - 1). An empty slot selects the default tilt.
     void loadUserView(unsigned int slot);
+    //! \brief Stores the current view in the slot (0 to USER_VIEW_COUNT - 1) and saves the user config.
+    //! \return false if the slot is invalid or the config could not be saved.
     bool storeUserView(unsigned int slot);
 
     void createCameraNode(const std::string& name);
@@ -203,6 +213,8 @@ private:
     //! \brief Moves the position so that the ground point the camera looks at from it
     //! stays within the map.
     void clampToMap(Ogre::Vector3& position) const;
+    //! \brief Sets the orientation of the camera node (root) and of its tilt child node (tilt) while the
+    //! ground point the camera looks at stays where it is.
     void setViewOrientation(const Ogre::Quaternion& root, const Ogre::Quaternion& tilt);
 
     //! \brief HermiteCatmullSpline members for each axices.
@@ -285,8 +297,11 @@ private:
     //! \brief User-tunable multiplier on the keyboard/autoscroll pan speed
     //! (1.0 keeps the historic speed). Set from the settings window.
     Ogre::Real mPanSpeedFactor;
+    //! \brief Multiplier on the pan speed, raised while the fast key is held.
     Ogre::Real mFastPanFactor = 1.0f;
+    //! \brief Zoom direction (-1 to 1) of the continuous input.
     Ogre::Real mControlZoom = 0.0f;
+    //! \brief Swivel direction (-1 to 1) of the continuous input.
     Ogre::Real mControlSwivel = 0.0f;
 };
 
