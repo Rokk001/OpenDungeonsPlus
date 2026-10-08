@@ -127,6 +127,7 @@ const float OIS_WHEEL_UNITS_PER_NOTCH = 120.0f;
 //! Degrees per second the keys change the view in the user camera window.
 const float USER_VIEW_ADJUST_SPEED = 90.0f;
 
+//! Seconds the right mouse button must be held to drop all held creatures instead of one.
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
 //! The particle systems of the heart burst (particles/HeartExplosion.particle), all created at the burst
