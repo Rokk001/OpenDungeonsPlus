@@ -798,7 +798,7 @@ void SkillManager::updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow
         const std::string cost = skill->getCostText(gameMap);
         const CEGUI::String text = hoveredWindow->getUserString("CostBaseDescription") +
             (cost.empty() ? "" : " (" + cost + ")");
-        hoveredWindow->setUserString("ContextHelp", text);
+        hoveredWindow->setUserString(Gui::USER_STRING_CONTEXT_HELP, text);
         if(hoveredWindow->getTooltipText() != skill->getTooltipTitle())
             hoveredWindow->setTooltipText(skill->getTooltipTitle());
         return;
