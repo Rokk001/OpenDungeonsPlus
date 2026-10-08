@@ -10,6 +10,8 @@
 #include "creaturemood/CreatureMood.h"
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <string>
 
@@ -22,14 +24,20 @@ enum class CreaturePanelCriterion
     Guarding, OtherFighting, Happy, Unhappy, Angry, Count
 };
 
+//! Number of creatures per criterion, indexed by CreaturePanelCriterion.
 using CreaturePanelCounts = std::array<uint32_t, static_cast<size_t>(CreaturePanelCriterion::Count)>;
+//! Counts per creature class name.
 using CreaturePanelData = std::map<std::string, CreaturePanelCounts>;
 
+//! Whether a creature in the given state is counted for the criterion.
 bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const CreatureActivity& activity,
     CreatureMoodLevel mood, bool worker);
+//! Adds one creature to every criterion it matches.
 void addCreaturePanelCounts(CreaturePanelCounts& counts, const CreatureActivity& activity,
     CreatureMoodLevel mood, bool worker);
+//! Writes the snapshot to the packet.
 void exportCreaturePanelData(ODPacket& packet, const CreaturePanelData& data);
+//! Reads a snapshot from the packet. Returns false and leaves data untouched when the packet is malformed.
 bool importCreaturePanelData(ODPacket& packet, CreaturePanelData& data);
 
 #endif

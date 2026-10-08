@@ -478,6 +478,8 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
             if(!socket->supportsCreaturePanel())
                 continue;
             Player* player = socket->getPlayer();
+            if(player == nullptr)
+                continue;
             CreaturePanelData data;
             for(Creature* creature : gameMap->getCreaturesBySeat(player->getSeat()))
             {

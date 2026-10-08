@@ -6,6 +6,9 @@
 #include "game/CreaturePanelData.h"
 #include "network/ODPacket.h"
 
+#include <cstdint>
+#include <utility>
+
 bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const CreatureActivity& activity,
     CreatureMoodLevel mood, bool worker)
 {
@@ -74,7 +77,7 @@ void exportCreaturePanelData(ODPacket& packet, const CreaturePanelData& data)
 
 bool importCreaturePanelData(ODPacket& packet, CreaturePanelData& data)
 {
-    uint32_t size;
+    uint32_t size = 0;
     if(!(packet >> size))
         return false;
     CreaturePanelData received;

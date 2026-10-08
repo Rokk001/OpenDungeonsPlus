@@ -1846,7 +1846,9 @@ void Creature::importActivityFromPacket(ODPacket& is)
     if(!activity.known)
         return;
 
-    int32_t action, task, room;
+    int32_t action = 0;
+    int32_t task = 0;
+    int32_t room = 0;
     if(!(is >> action >> task >> room >> activity.inAssignedRoom))
     {
         OD_LOG_ERR("Incomplete creature activity for " + getName());
