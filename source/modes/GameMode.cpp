@@ -3782,9 +3782,17 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     }
     else
         description += "\nNo prerequisites.";
-    const std::string state = !isAllowed ? "Unavailable" : isDone ? "Complete" :
-        resType == curResType ? "Researching" : queueNumber > 0 ? "Queued" :
-        !prerequisitesReady ? "Locked" : "Available";
+    std::string state = "Available";
+    if(!isAllowed)
+        state = "Unavailable";
+    else if(isDone)
+        state = "Complete";
+    else if(resType == curResType)
+        state = "Researching";
+    else if(queueNumber > 0)
+        state = "Queued";
+    else if(!prerequisitesReady)
+        state = "Locked";
     description += "\nStatus: " + state + (mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
         " (Apply saves queue changes)." : ".");
     skillButton->setUserString("ResearchDetails", description);
@@ -3868,6 +3876,8 @@ void GameMode::refreshSkillConnections()
     SkillManager::listAllSkills([&](const std::string& name, const std::string&,
         const std::string&, SkillType type) { if(!Skills::isRewardSkill(type)) buttons[type] = skills->getChild(name); });
     Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    // The depth of a skill is the length of its longest chain of prerequisites. It sets the
+    // row of the node. One pass per skill is enough to settle all chains.
     std::map<SkillType, unsigned> depths;
     for(size_t pass = 0; pass < buttons.size(); ++pass)
         for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
@@ -3903,6 +3913,7 @@ void GameMode::refreshSkillConnections()
             CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
         if(button->isChild("ResearchLevel"))
         {
+            // The badge is sized for the widest text it can show and sits below the node
             CEGUI::Window* badge = button->getChild("ResearchLevel");
             // The nodes of a wide row are close together: use the smaller font when the
             // counter would otherwise touch the counter of the neighbouring node.
@@ -3928,8 +3939,12 @@ void GameMode::refreshSkillConnections()
         if(parentRect.getWidth() <= 0 || parentRect.getHeight() <= 0)
             continue;
         const std::vector<const Skill*>& required = SkillManager::getSkill(entry.first)->getDependencies();
-        const bool allReady = std::all_of(required.begin(), required.end(), [seat](const Skill* prerequisite)
-            { return seat->getSkillLevel(prerequisite->getType()) > 0; });
+        bool allReady = true;
+        for(const Skill* prerequisite : required)
+        {
+            if(seat->getSkillLevel(prerequisite->getType()) == 0)
+                allReady = false;
+        }
         for(const Skill* dependency : required)
         {
             const CEGUI::Rectf start = buttons.at(dependency->getType())->getUnclippedOuterRect().get();
@@ -3938,6 +3953,9 @@ void GameMode::refreshSkillConnections()
             const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight();
             const float y2 = (end.top() - parentRect.top()) / parentRect.getHeight();
             const float middle = (y1 + y2) * .5f;
+            // The path from a prerequisite to the skill has three bars: down from the
+            // prerequisite, across at half height and down into the skill. width is the
+            // bar thickness as a fraction of the graph width.
             const float width = .012f;
             const float height = width * parentRect.getWidth() / parentRect.getHeight();
             const float segments[][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
@@ -3988,6 +4006,7 @@ void GameMode::refreshSkillConnections()
             }
             const CEGUI::Rectf start = buttons.at(required.front()->getType())->getUnclippedOuterRect().get();
             const float middle = (start.bottom() + end.top() - 2 * parentRect.top()) / (2 * parentRect.getHeight());
+            // The junction is a square of .075 of the graph width, centred horizontally
             const float height = .075f * parentRect.getWidth() / parentRect.getHeight();
             junction->setArea(CEGUI::UVector2(CEGUI::UDim(.4625f, 0), CEGUI::UDim(middle - height * .5f, 0)),
                 CEGUI::USize(CEGUI::UDim(.075f, 0), CEGUI::UDim(height, 0)));
