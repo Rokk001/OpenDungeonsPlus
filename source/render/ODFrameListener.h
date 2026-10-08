@@ -134,6 +134,10 @@ public:
     //! returns true if the keeper hand position was successfully computed and false otherwise.
     //! If it returns false, keeperHand3DPos will stay unchanged
     bool findWorldPositionFromMouse(const OIS::MouseEvent &arg, Ogre::Vector3& keeperHand3DPos, Ogre::Real height);
+    //! \brief Finds the tile under the cursor, taking the rendered height of walls into account:
+    //! the position is the centre of the wall tile that is hit first, at the height of the hit,
+    //! or else the point on the floor. Returns false if the cursor is not over the map; in that
+    //! case position stays unchanged.
     bool findTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position);
     bool rayIntersectionGameMap(const OIS::MouseEvent &arg,Ogre::Vector3& keeperHand3DPos, DraggableTileContainer* draggableTileContainer);
     

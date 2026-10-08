@@ -440,7 +440,8 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     // and look for the first object which is actually a tile.
     if(!ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
     {
-        inputManager.mXPos = inputManager.mYPos = -1;
+        inputManager.mXPos = -1;
+        inputManager.mYPos = -1;
         return true;
     }
     RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);

@@ -50,7 +50,6 @@
 
 #include <OgreCamera.h>
 #include <OgreEntity.h>
-#include <OgreInstancedEntity.h>
 #include <OgreRenderWindow.h>
 #include <OgreRenderSystem.h>
 #include <OgreRoot.h>
@@ -72,6 +71,21 @@
 #include <signal.h>
 
 template<> ODFrameListener* Ogre::Singleton<ODFrameListener>::msSingleton = nullptr;
+
+//! Half the side of a tile; tile (x, y) covers x +/- this around its centre.
+static const float TILE_HALF_SIZE = 0.5f;
+//! Small step past the point where a picking ray enters the map, so that the first tile is the one entered.
+static const float RAY_ENTRY_EPSILON = 0.0001f;
+
+//! Returns the rendered wall of a full tile (its unrevealed representation when it has no
+//! own mesh), or nullptr when nothing is rendered for it.
+static Ogre::MovableObject* findTileWall(Tile* tile, Ogre::SceneManager* scene)
+{
+    const std::string name = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
+    if(scene->hasEntity(name))
+        return scene->getEntity(name);
+    return tile->getFogOfWarMesh();
+}
 
 
 
@@ -538,23 +552,25 @@ bool ODFrameListener::findTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre
 
     const int width = mGameMap->getMapSizeX();
     const int height = mGameMap->getMapSizeY();
-    const Ogre::AxisAlignedBox mapBounds(-0.5f, -0.5f, 0,
-        width - 0.5f, height - 0.5f, ray.getOrigin().z);
+    const Ogre::AxisAlignedBox mapBounds(-TILE_HALF_SIZE, -TILE_HALF_SIZE, 0,
+        width - TILE_HALF_SIZE, height - TILE_HALF_SIZE, ray.getOrigin().z);
     const Ogre::RayTestResult entry = ray.intersects(mapBounds);
     if(!entry.first)
         return false;
 
     // Visit only tile columns crossed by the ray, using the rendered wall height.
-    const Ogre::Vector3 start = ray.getPoint(entry.second + 0.0001f);
-    int x = std::max(0, std::min(width - 1, static_cast<int>(std::floor(start.x + 0.5f))));
-    int y = std::max(0, std::min(height - 1, static_cast<int>(std::floor(start.y + 0.5f))));
+    const Ogre::Vector3 start = ray.getPoint(entry.second + RAY_ENTRY_EPSILON);
+    int x = std::max(0, std::min(width - 1, static_cast<int>(std::floor(start.x + TILE_HALF_SIZE))));
+    int y = std::max(0, std::min(height - 1, static_cast<int>(std::floor(start.y + TILE_HALF_SIZE))));
     const int stepX = ray.getDirection().x > 0 ? 1 : -1;
     const int stepY = ray.getDirection().y > 0 ? 1 : -1;
     const float infinity = std::numeric_limits<float>::infinity();
     const float deltaX = ray.getDirection().x == 0 ? infinity : std::abs(1.0f / ray.getDirection().x);
     const float deltaY = ray.getDirection().y == 0 ? infinity : std::abs(1.0f / ray.getDirection().y);
-    float nextX = ray.getDirection().x == 0 ? infinity : (x + stepX * 0.5f - ray.getOrigin().x) / ray.getDirection().x;
-    float nextY = ray.getDirection().y == 0 ? infinity : (y + stepY * 0.5f - ray.getOrigin().y) / ray.getDirection().y;
+    float nextX = ray.getDirection().x == 0 ? infinity :
+        (x + stepX * TILE_HALF_SIZE - ray.getOrigin().x) / ray.getDirection().x;
+    float nextY = ray.getDirection().y == 0 ? infinity :
+        (y + stepY * TILE_HALF_SIZE - ray.getOrigin().y) / ray.getDirection().y;
     Ogre::SceneManager* scene = mRenderManager->getSceneManager();
     for(int visited = 0; visited < width + height + 1; ++visited)
     {
@@ -563,15 +579,12 @@ bool ODFrameListener::findTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre
             break;
         if(tile->isFullTile())
         {
-            Ogre::MovableObject* wall = tile->getFogOfWarMesh();
-            const std::string name = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
-            if(scene->hasEntity(name))
-                wall = scene->getEntity(name);
+            Ogre::MovableObject* wall = findTileWall(tile, scene);
             if(wall != nullptr)
             {
                 const float top = wall->getWorldBoundingBox(true).getMaximum().z;
-                const Ogre::RayTestResult hit = ray.intersects(Ogre::AxisAlignedBox(x - 0.5f, y - 0.5f, 0,
-                    x + 0.5f, y + 0.5f, top));
+                const Ogre::RayTestResult hit = ray.intersects(Ogre::AxisAlignedBox(
+                    x - TILE_HALF_SIZE, y - TILE_HALF_SIZE, 0, x + TILE_HALF_SIZE, y + TILE_HALF_SIZE, top));
                 if(hit.first && hit.second <= ground.second)
                 {
                     position = Ogre::Vector3(static_cast<float>(x), static_cast<float>(y), ray.getPoint(hit.second).z);
