@@ -37,7 +37,11 @@ The room shader has no specular term, so only a diffuse texture and a matching t
 Usage: python generate_room_floors.py [output folder] [--check] [--seamcheck=<folder for the rolled previews>]
 """
 
+import heapq
+import io
 import os
+import struct
+import subprocess
 import sys
 
 import numpy as np
@@ -877,8 +881,7 @@ def voronoi_slabs(seed, count, weight_amp, warp_amp, warp_seed):
 def route_joints(dd, a, b, lo, hi):
     """Cheapest 8-connected path from a to b (x, y pixels) that prefers the slab joints (small distance `dd` to the
     nearest slab edge), confined to the square lo..hi (A* with a straight-line heuristic)."""
-    import heapq
-    x0, x1 = max(lo, int(min(a[0], b[0])) - 60), min(hi, int(max(a[0], b[0])) + 60)
+    x0, x1 =max(lo, int(min(a[0], b[0])) - 60), min(hi, int(max(a[0], b[0])) + 60)
     y0, y1 = max(lo, int(min(a[1], b[1])) - 60), min(hi, int(max(a[1], b[1])) + 60)
     cost = (1.0 + 0.9 * np.minimum(dd[y0:y1 + 1, x0:x1 + 1], 12.0)).tolist()
     w = x1 - x0 + 1
@@ -1089,9 +1092,7 @@ def flagstone_field():
 # ---------------------------------------------------------------------------------------------------------------
 def git_source(path, commit):
     """Reads a file from git history (so the original does not have to be committed a second time)."""
-    import io
-    import subprocess
-    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+    root =os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
     data = subprocess.check_output(['git', 'show', '%s:%s' % (commit, path)], cwd=root)
     return Image.open(io.BytesIO(data)).convert('RGB')
 
@@ -1710,7 +1711,6 @@ def portal_wave_field():
 def mesh_uv_triangles(mesh_path):
     """Texture coordinates and triangle list of models/WoodBridge.mesh (OGRE binary mesh v1.8, one sub mesh, 48
     byte vertices with the texture coordinates at offset 24, 16 bit indices)."""
-    import struct
     with open(mesh_path, 'rb') as f:
         data = f.read()
     found = {}
@@ -2000,22 +2000,25 @@ def seam_image(result):
             return to_image(np.tile(np.roll(col, (N // 2, N // 2), (0, 1)), (2, 2, 1)))
 
 
+# Rooms whose floors are periodic and get the wrap seam ratio (--check) and the rolled preview (--seamcheck).
+SEAM_CHECK_ROOMS = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
+                    'torture', 'workshop', 'portal', 'portalWave')
+
+
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    args =[a for a in sys.argv[1:] if not a.startswith('--')]
     out = args[0] if args else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials',
                                             'textures')
     seam_dir = None
     for a in sys.argv[1:]:
         if a.startswith('--seamcheck='):
             seam_dir = a.split('=', 1)[1]
-    seam_rooms = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop', 'portal',
-                  'portalWave') if seam_dir else ()
+    seam_rooms = SEAM_CHECK_ROOMS if seam_dir else ()
     for room in ROOMS:
         result, strength = build(room)
         if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('library',)):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
-        if '--check' in sys.argv and room in ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena', 'torture', 'workshop',
-                                                          'portal', 'portalWave'):
+        if '--check' in sys.argv and room in SEAM_CHECK_ROOMS:
             print(room, 'wrap seam ratio (about 1 or less = no seam): %.2f' % wrap_check(result))
         if room in seam_rooms:
             seam_image(result).save(os.path.join(seam_dir, 'f2-%s-seamcheck.png' % room.lower()))
