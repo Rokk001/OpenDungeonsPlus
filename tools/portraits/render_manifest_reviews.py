@@ -15,6 +15,7 @@ for identifier in args.portrait:
     base = Image.open(folder/next(r[1] for r in rows if r[0]=='Base')).convert('RGBA')
     slots = {r[1]:tuple(map(int,r[2:])) for r in rows if r[0]=='Slot'}
     allowed = {r[4] for r in rows if r[0] in ['Option','Fitted']}
+    flips = {r[4] for r in rows if r[0]=='Option' and len(r)==6 and r[5]=='flip-x'}
     clips = [(r[1],r[2]) for r in rows if r[0]=='Clip']
     choices = json.loads((ROOT/'materials/portraits/neutral-variants'/identifier/'review/choices.json').read_text())
     review = folder/'review'
@@ -36,6 +37,8 @@ for identifier in args.portrait:
                 if target in selected:
                     target_alpha.paste(Image.open(folder/selected[target]).getchannel('A'),slots[target][:2])
                 patch.putalpha(ImageChops.multiply(patch.getchannel('A'),target_alpha.crop((x,y,x+w,y+h))))
+            if selected[slot] in flips:
+                patch = patch.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
             composite.alpha_composite(patch,(x,y))
         composite.save(review/f'combined-{number}.png',compress_level=1)
         small = composite.resize((50,100),Image.Resampling.LANCZOS)

@@ -80,7 +80,9 @@ dimensions, without granting visual acceptance.
 `materials/portraits/variants/` using only the Python standard library; optional repeated
 `--portrait` arguments limit it to pilot images. It requires neutral Base references,
 a full-canvas outfit slot with at least one option, the current draw order, and the
-four existing helmets for Knight/Cultist. Only Base, Slot and Option rows are allowed;
+four existing helmets for Knight/Cultist. An Option row may append `flip-x` to reflect
+that selected part horizontally inside its slot, after tinting. Other options retain
+their original orientation. Only Base, Slot and Option rows are allowed;
 helmet damage is clipped in the delivered scar alpha, not by an extra manifest row.
 Every source option must appear in the native and 50x100 composite checks.
 `prepare_outfit_variants.py` derives registration copies without modifying generator files;

@@ -36,7 +36,7 @@ def check(path):
             assert x>=0 and y>=0 and w>0 and h>0 and x+w<=887 and y+h<=1774, f'Out of bounds: {row}'
             slots[row[1]] = (x,y,w,h)
         elif kind=='Option':
-            assert len(row)==5 and int(row[2])>=1, f'Invalid option: {row}'
+            assert (len(row)==5 or (len(row)==6 and row[5]=='flip-x')) and int(row[2])>=1, f'Invalid option: {row}'
             key = (row[1],int(row[2]))
             assert key not in options, f'Duplicate option: {key}'
             options[key] = row[4]
