@@ -92,6 +92,12 @@ const float MIDDLE_CLICK_MAX_DRAG = 6.0f;
 const float MIDDLE_CLICK_PICK_RADIUS = 0.7f;
 //! \brief Height above the floor at which the pointer ray is checked against creatures and other entities
 const float MIDDLE_CLICK_BODY_HEIGHT = 0.4f;
+//! \brief Display height for which MIDDLE_CLICK_MAX_DRAG is meant, the allowed drag grows above it
+const float MIDDLE_CLICK_REFERENCE_DISPLAY_HEIGHT = 1080.0f;
+//! \brief Number of points after the first one at which the pointer ray is sampled to find the tiles it crosses
+const int MIDDLE_CLICK_RAY_STEPS = 6;
+//! \brief Distance in height between two of those points
+const float MIDDLE_CLICK_RAY_STEP_HEIGHT = 0.25f;
 
 GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
@@ -568,17 +574,24 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
 
     // The pointer ray is checked against the bodies of the entities. Intersecting it with a plane at a fixed
     // height misses a creature that is clicked on its body, because the ray reaches that plane in front of it.
+    if(mGameMap->getLocalPlayer() == nullptr)
+        return;
+
+    Ogre::Camera* camera = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera();
+    if(camera == nullptr)
+        return;
+
     const CEGUI::Vector2f mouse = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
-    const Ogre::Ray ray = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getCameraToViewportRay(
-        mouse.d_x / arg.state.width, mouse.d_y / arg.state.height);
+    const Ogre::Ray ray = camera->getCameraToViewportRay(mouse.d_x / arg.state.width, mouse.d_y / arg.state.height);
     if(ray.getDirection().z >= 0)
         return;
 
     // The tiles the ray crosses between the floor and above the creatures
     std::vector<Tile*> tiles;
-    for(int step = 0; step <= 6; ++step)
+    for(int step = 0; step <= MIDDLE_CLICK_RAY_STEPS; ++step)
     {
-        const Ogre::Vector3 point = ray.getPoint((ray.getOrigin().z - 0.25f * static_cast<float>(step)) / -ray.getDirection().z);
+        const float height = MIDDLE_CLICK_RAY_STEP_HEIGHT * static_cast<float>(step);
+        const Ogre::Vector3 point = ray.getPoint((ray.getOrigin().z - height) / -ray.getDirection().z);
         Tile* tile = mGameMap->getTile(Helper::round(point.x), Helper::round(point.y));
         if((tile != nullptr) && (std::find(tiles.begin(), tiles.end(), tile) == tiles.end()))
             tiles.push_back(tile);
@@ -838,7 +851,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     {
         // A middle click that did not move is a request for the stats window. mMMouseDown is only set when
         // the press was on the map, so a press on a GUI window never gets here as a click
-        float maxDrag = MIDDLE_CLICK_MAX_DRAG * std::max(1.0f, static_cast<float>(arg.state.height) / 1080.0f);
+        float maxDrag = MIDDLE_CLICK_MAX_DRAG * std::max(1.0f, static_cast<float>(arg.state.height) / MIDDLE_CLICK_REFERENCE_DISPLAY_HEIGHT);
         bool isClick = inputManager.mMMouseDown && (mMiddleDragDistance <= maxDrag);
         inputManager.mMMouseDown = false;
         ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);

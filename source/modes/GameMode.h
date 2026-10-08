@@ -264,6 +264,7 @@ private:
     //! \brief Pointer movement in pixels since the middle button was pressed. A middle click that moved
     //! is a camera rotation and must not open a stats window.
     float mMiddleDragDistance;
+    //! \brief Pointer position in pixels where the middle button went down
     float mMiddlePressX;
     float mMiddlePressY;
 
