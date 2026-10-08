@@ -51,6 +51,8 @@
 #include <cmath>
 #include <sstream>
 #include <functional>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -670,12 +672,50 @@ void navStore(unsigned char* pixel, const float* sum, float alphaSum, int sample
     pixel[3] = static_cast<unsigned char>(badgeClamp(alphaSum / samples, 0.0f, 1.0f) * 255.0f);
 }
 
+const float NAV_DEGREES_TO_RADIANS = 0.0174533f;
+const float NAV_RADIANS_TO_DEGREES = 57.29578f;
+const float NAV_SQRT_TWO = 1.414214f;
+
+//! \brief Direction of the light (from the top left) and of the half vector for the highlight.
+const float NAV_LIGHT_DIRECTION[3] = {-0.50f, -0.60f, 0.62f};
+const float NAV_HALFWAY_DIRECTION[3] = {-0.26f, -0.31f, 0.91f};
+
+//! \brief Diffuse lighting of a unit normal from the top left.
+float navDiffuse(const float* normal)
+{
+    return std::max(0.0f, normal[0] * NAV_LIGHT_DIRECTION[0] + normal[1] * NAV_LIGHT_DIRECTION[1]
+        + normal[2] * NAV_LIGHT_DIRECTION[2]);
+}
+
+//! \brief Specular term of a unit normal (cosine of the angle to the half vector).
+float navHalfway(const float* normal)
+{
+    return std::max(0.0f, normal[0] * NAV_HALFWAY_DIRECTION[0] + normal[1] * NAV_HALFWAY_DIRECTION[1]
+        + normal[2] * NAV_HALFWAY_DIRECTION[2]);
+}
+
+//! \brief Draws a domed bronze rivet at an offset from its centre: the dome inside the radius and
+//! a dark ring around it up to the outer radius.
+void navRivet(float* colour, float rivetX, float rivetY, float domeRadius, float outerRadius)
+{
+    const float rivet = std::sqrt(rivetX * rivetX + rivetY * rivetY);
+    if(rivet < domeRadius)
+    {
+        const float height = std::sqrt(std::max(0.0f, 1.0f - (rivet / domeRadius) * (rivet / domeRadius)));
+        const float normal[3] = {rivetX / domeRadius, rivetY / domeRadius, height};
+        badgeSet(colour, 200.0f, 140.0f, 72.0f, 0.34f + 0.92f * navDiffuse(normal));
+        badgeMix(colour, 255.0f, 236.0f, 190.0f, 0.85f * std::pow(navHalfway(normal), 18.0f));
+    }
+    else if(rivet < outerRadius)
+        badgeMix(colour, 6.0f, 3.0f, 2.0f, 0.65f);
+}
+
 //! \brief Forged metal lit from the top left: the colour runs from dark to bright with the light
 //! on the normal, with a hard glint. The occlusion darkens crevices.
 void navMetal(float* colour, const float* dark, const float* bright, const float* normal, float occlusion)
 {
-    const float diffuse = std::max(0.0f, normal[0] * -0.50f + normal[1] * -0.60f + normal[2] * 0.62f);
-    const float halfway = std::max(0.0f, normal[0] * -0.26f + normal[1] * -0.31f + normal[2] * 0.91f);
+    const float diffuse = navDiffuse(normal);
+    const float halfway = navHalfway(normal);
     const float tone = std::pow(std::min(1.0f, diffuse * 1.15f), 0.85f);
     const float reflection = 0.80f + 0.36f * badgeClamp(0.5f - 0.5f * normal[1] + 0.25f * normal[0], 0.0f, 1.0f);
     const float sharp = std::pow(halfway, 40.0f);
@@ -706,7 +746,7 @@ const float MINIMAP_NORTH_RADIUS = 8.5f;
 void navRimPoint(float* colour, float& alpha, float dx, float dy, int x, int y)
 {
     const float radius = std::sqrt(dx * dx + dy * dy);
-    const float light = -(dx + dy) / std::max(1.0f, radius * 1.414214f);
+    const float light = -(dx + dy) / std::max(1.0f, radius * NAV_SQRT_TWO);
     colour[0] = colour[1] = colour[2] = 0.0f;
     alpha = 0.0f;
     if(radius > MINIMAP_RIM_RADIUS)
@@ -729,23 +769,10 @@ void navRimPoint(float* colour, float& alpha, float dx, float dy, int x, int y)
         if(radius < 80.2f)
             badgeSet(colour, 10.0f, 6.0f, 4.0f, 1.0f);
         // Sixteen domed rivets
-        const float degrees = std::atan2(dx, -dy) * 57.29578f;
+        const float degrees = std::atan2(dx, -dy) * NAV_RADIANS_TO_DEGREES;
         const float index = std::floor((degrees - 11.25f) / 22.5f + 0.5f);
-        const float angle = (index * 22.5f + 11.25f) * 0.0174533f;
-        const float rivetX = dx - 83.7f * std::sin(angle);
-        const float rivetY = dy + 83.7f * std::cos(angle);
-        const float rivet = std::sqrt(rivetX * rivetX + rivetY * rivetY);
-        if(rivet < 1.7f)
-        {
-            const float height = std::sqrt(std::max(0.0f, 1.0f - (rivet / 1.7f) * (rivet / 1.7f)));
-            const float normal[3] = {rivetX / 1.7f, rivetY / 1.7f, height};
-            const float diffuse = std::max(0.0f, normal[0] * -0.50f + normal[1] * -0.60f + normal[2] * 0.62f);
-            const float halfway = std::max(0.0f, normal[0] * -0.26f + normal[1] * -0.31f + normal[2] * 0.91f);
-            badgeSet(colour, 200.0f, 140.0f, 72.0f, 0.34f + 0.92f * diffuse);
-            badgeMix(colour, 255.0f, 236.0f, 190.0f, 0.85f * std::pow(halfway, 18.0f));
-        }
-        else if(rivet < 2.4f)
-            badgeMix(colour, 6.0f, 3.0f, 2.0f, 0.65f);
+        const float angle = (index * 22.5f + 11.25f) * NAV_DEGREES_TO_RADIANS;
+        navRivet(colour, dx - 83.7f * std::sin(angle), dy + 83.7f * std::cos(angle), 1.7f, 2.4f);
         return;
     }
     const float stone = badgeFbm(dx * 0.30f + 40.0f, dy * 0.30f);
@@ -805,7 +832,7 @@ float navLetterHeight(float x, float y)
 void navNorthPoint(float* colour, float& alpha, float x, float y)
 {
     const float radius = std::sqrt(x * x + y * y);
-    const float light = -(x + y) / std::max(1.0f, radius * 1.414214f);
+    const float light = -(x + y) / std::max(1.0f, radius * NAV_SQRT_TWO);
     colour[0] = colour[1] = colour[2] = 0.0f;
     alpha = 0.0f;
     if(radius > MINIMAP_NORTH_RADIUS)
@@ -919,27 +946,14 @@ void navPlatePoint(float* colour, float& alpha, float u, float v, float flipX, f
     {
         const float rivetU = rivetIndex == 0 ? 39.0f : 5.2f;
         const float rivetV = rivetIndex == 0 ? 5.2f : 39.0f;
-        const float rivetX = flipX * (u - rivetU);
-        const float rivetY = flipY * (v - rivetV);
-        const float rivet = std::sqrt(rivetX * rivetX + rivetY * rivetY);
-        if(rivet < 1.6f)
-        {
-            const float height = std::sqrt(std::max(0.0f, 1.0f - (rivet / 1.6f) * (rivet / 1.6f)));
-            const float normal[3] = {rivetX / 1.6f, rivetY / 1.6f, height};
-            const float diffuse = std::max(0.0f, normal[0] * -0.50f + normal[1] * -0.60f + normal[2] * 0.62f);
-            const float halfway = std::max(0.0f, normal[0] * -0.26f + normal[1] * -0.31f + normal[2] * 0.91f);
-            badgeSet(colour, 200.0f, 140.0f, 72.0f, 0.34f + 0.92f * diffuse);
-            badgeMix(colour, 255.0f, 236.0f, 190.0f, 0.85f * std::pow(halfway, 18.0f));
-        }
-        else if(rivet < 2.3f)
-            badgeMix(colour, 6.0f, 3.0f, 2.0f, 0.65f);
+        navRivet(colour, flipX * (u - rivetU), flipY * (v - rivetV), 1.6f, 2.3f);
     }
     // The medallion: a bronze bezel around a dark well
     const float medallionX = flipX * (u - CORNER_MEDALLION);
     const float medallionY = flipY * (v - CORNER_MEDALLION);
     const float radius = std::sqrt(medallionX * medallionX + medallionY * medallionY);
     const float direction = state == 2 ? -1.0f : 1.0f;
-    const float mediumLight = -(medallionX + medallionY) / std::max(1.0f, radius * 1.414214f) * direction;
+    const float mediumLight = -(medallionX + medallionY) / std::max(1.0f, radius * NAV_SQRT_TWO) * direction;
     if(state == 1 && radius > 11.8f)
         badgeMix(colour, 255.0f, 150.0f, 50.0f, 0.45f * std::exp(-(radius - 11.8f) / 1.5f));
     if(radius > 11.8f)
@@ -1043,7 +1057,7 @@ float navHelpDistance(float x, float y)
     const int steps = 14;
     for(int step = 0; step <= steps; ++step)
     {
-        const float angle = (-200.0f + 280.0f * step / steps) * 0.0174533f;
+        const float angle = (-200.0f + 280.0f * step / steps) * NAV_DEGREES_TO_RADIANS;
         const float pointX = 12.0f * std::cos(angle);
         const float pointY = -8.0f + 12.0f * std::sin(angle);
         if(step > 0)
@@ -1098,7 +1112,7 @@ float navGearDistance(float x, float y)
     d = std::max(d, 6.6f - radius);
     for(int dot = 0; dot < 6; ++dot)
     {
-        const float angle = (dot * 60.0f + 30.0f) * 0.0174533f;
+        const float angle = (dot * 60.0f + 30.0f) * NAV_DEGREES_TO_RADIANS;
         d = std::max(d, 1.7f - badgeCircle(x, y, 12.4f * std::cos(angle), 12.4f * std::sin(angle), 0.0f));
     }
     return d;
@@ -1203,7 +1217,7 @@ void navMagnifierPoint(float* colour, float& alpha, float x, float y)
         colour[0] = 14.0f + 26.0f * (1.0f - depth);
         colour[1] = 44.0f + 52.0f * (1.0f - depth);
         colour[2] = 52.0f + 48.0f * (1.0f - depth);
-        const float towards = -(glassX + glassY) / std::max(1.0f, glassRadius * 1.414214f);
+        const float towards = -(glassX + glassY) / std::max(1.0f, glassRadius * NAV_SQRT_TWO);
         const float shade = badgeSmoothstep(0.7f, 1.0f, depth) * (0.5f + 0.5f * towards);
         badgeMix(colour, 2.0f, 6.0f, 8.0f, 0.75f * shade);
         const float streak = std::exp(-((glassRadius - 7.6f) / 1.1f) * ((glassRadius - 7.6f) / 1.1f)) * badgeSmoothstep(0.6f, 0.95f, towards);
