@@ -178,8 +178,11 @@ public:
     void rrToggleHandSelectorVisibility();
     void rrSetHandPose(bool pointing, bool digging, bool building = false);
     void rrPlayBuildAnimation();
+    //! Starts a random idle hand effect; returns false if the hand is hidden, holding or busy.
     bool rrPlayIdleHandAnimation();
+    //! Returns true while one of the idle hand effects is the current hand animation.
     bool rrIsIdleHandAnimationPlaying() const;
+    //! Stops a running idle hand effect and returns the hand to its contextual pose.
     void rrCancelIdleHandAnimation();
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
@@ -287,6 +290,7 @@ private:
     std::string mHandPose = "Idle";
     Ogre::ManualObject* mHandPickaxe = nullptr;
     Ogre::Entity* mHandHammer = nullptr;
+    //! Dynamic prop (watch or yo-yo) drawn on the hand during an idle hand effect.
     Ogre::ManualObject* mHandIdleProp = nullptr;
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     Ogre::ManualObject* mTilePreview = nullptr;

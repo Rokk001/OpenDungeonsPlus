@@ -2677,7 +2677,9 @@ void GameMode::updateIdleHand(float elapsed, bool eligible)
     if(renderer.rrIsIdleHandAnimationPlaying())
         return;
     mIdleHandElapsed += elapsed;
-    if(mIdleHandElapsed >= 30.0f && renderer.rrPlayIdleHandAnimation())
+    // Seconds without any input after which an idle hand effect may start.
+    const float idleDelay = 30.0f;
+    if(mIdleHandElapsed >= idleDelay && renderer.rrPlayIdleHandAnimation())
         mIdleHandElapsed = 0.0f;
 }
 

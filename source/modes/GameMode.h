@@ -322,9 +322,14 @@ private:
     bool storeUserCamera(const CEGUI::EventArgs&);
     unsigned int mUserCameraSlot = 0;
 
+    //! Restarts the inactivity timer and stops a running idle hand effect; called on every input event.
     void resetIdleHand();
+    //! Counts inactivity while the hand may idle (when eligible is true) and starts an idle hand effect once
+    //! the delay has passed; held keys and ineligible frames reset the timer.
     void updateIdleHand(float elapsed, bool eligible);
+    //! Seconds since the last input while the hand was eligible to idle.
     float mIdleHandElapsed = 0.0f;
+    //! Keys currently held down, so that a held key counts as input even without repeat events.
     std::set<OIS::KeyCode> mIdleHandKeys;
 
     bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
