@@ -91,6 +91,7 @@ public:
 
     virtual SkillFamily getSkillFamily() const = 0;
 
+    //! Short cost description shown in the button tooltip, or an empty string if there is none.
     virtual std::string getCostText(GameMap* gameMap) const = 0;
 
     virtual const std::string& getTooltipTitle() const = 0;
@@ -226,7 +227,7 @@ public:
             return Helper::toString(SpellSummonWorker::getNextWorkerPriceForPlayer(gameMap,
                 gameMap->getLocalPlayer())) + " mana for next worker";
 
-        const char* key;
+        const char* key = nullptr;
         switch(mSpellType)
         {
             case SpellType::callToWar: key = "CallToWarPrice"; break;
