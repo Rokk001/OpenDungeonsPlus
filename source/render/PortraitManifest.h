@@ -17,6 +17,9 @@
 //!   Base<TAB>path of the neutral base png, relative to the manifest
 //!   Slot<TAB>slot<TAB>x<TAB>y<TAB>w<TAB>h      (one per slot, in draw order)
 //!   Option<TAB>slot<TAB>n<TAB>name<TAB>file    (one per part, n starts at 1, never renumbered)
+//!   Rule<TAB>slot<TAB>n<TAB>x<TAB>y<TAB>w<TAB>h (optional destination rectangle)
+//!   SourcePolygonMask<TAB>slot<TAB>n<TAB>feather<TAB>x1<TAB>y1<TAB>... excludes a measured source contour
+//!   Mask<TAB>slot<TAB>n<TAB>earlier-slot protects the selected earlier part alpha
 //! Invalid entries are dropped and collected in getErrors() (the caller logs them once). If nothing
 //! usable is left, loadFromFile() returns false and the caller falls back to the preview portrait.
 class PortraitManifest
@@ -40,6 +43,14 @@ public:
         std::string mFile;
         //! Path of the file: directory of the manifest plus mFile
         std::string mPath;
+        Slot mPlacement;
+        std::string mMaskSlot;
+        std::vector<uint32_t> mSourcePolygon;
+        uint32_t mMaskFeather;
+        Option() : mMaskFeather(0)
+        {
+            mPlacement.mX = mPlacement.mY = mPlacement.mWidth = mPlacement.mHeight = 0;
+        }
     };
 
     PortraitManifest() :

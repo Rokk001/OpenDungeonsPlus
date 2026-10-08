@@ -80,7 +80,15 @@ dimensions, without granting visual acceptance.
 `materials/portraits/variants/` using only the Python standard library; optional repeated
 `--portrait` arguments limit it to pilot images. It requires neutral Base references,
 a full-canvas outfit slot with at least one option, the current draw order, and the
-four existing helmets for Knight/Cultist. Only Base, Slot and Option rows are allowed;
+four existing helmets for Knight/Cultist. Base, Slot and Option rows retain their delivered meanings and source dimensions.
+Optional `Rule<TAB>slot<TAB>n<TAB>x<TAB>y<TAB>w<TAB>h` sets only that option's destination rectangle;
+`Mask<TAB>slot<TAB>n<TAB>earlier-slot` protects the selected earlier part's alpha.
+`SourcePolygonMask<TAB>slot<TAB>n<TAB>feather<TAB>x1<TAB>y1<TAB>...` excludes a measured source contour;
+feather is the outside transition width in source pixels. No source colours are changed.
+Absent rules preserve the original pixels and slot placement. Scaling uses nearest
+source pixel centers without reflection or rotation. Option numbers and draw order
+stay unchanged. Derived reviews can be isolated with `render_manifest_reviews.py --out`;
+the frozen source and existing review rasters are never overwritten during these checks.
 helmet damage is clipped in the delivered scar alpha, not by an extra manifest row.
 Every source option must appear in the native and 50x100 composite checks.
 `prepare_outfit_variants.py` derives registration copies without modifying generator files;
