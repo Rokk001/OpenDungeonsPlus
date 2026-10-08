@@ -56,6 +56,12 @@ const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
+//! Name of the child window the tab control creates to hold its tab buttons
+const char* const TAB_BUTTONS_WINDOW_NAME = "__auto_TabPane__Buttons";
+//! Larger font used by the tooltips of the main tab buttons
+const char* const CATEGORY_TOOLTIP_FONT = "MedievalSharp-13";
+//! Space between the hand cursor and its tooltip, as a share of the tooltip font height
+const float TOOLTIP_HAND_GAP_FACTOR = 0.25f;
 
 void createHandFeedbackImage()
 {
@@ -532,9 +538,9 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
                 static_cast<const CEGUI::ElementEventArgs&>(e).element);
             const CEGUI::Window* target = tooltip->getTargetWindow();
             const CEGUI::Window* buttons = target == nullptr ? nullptr : target->getParent();
-            const bool category = buttons != nullptr && buttons->getName() == "__auto_TabPane__Buttons" &&
+            const bool category = buttons != nullptr && buttons->getName() == TAB_BUTTONS_WINDOW_NAME &&
                 buttons->getParent() != nullptr && buttons->getParent()->getName() == MAIN_TABCONTROL.c_str();
-            const CEGUI::Font* font = category ? &CEGUI::FontManager::getSingleton().get("MedievalSharp-13") : nullptr;
+            const CEGUI::Font* font = category ? &CEGUI::FontManager::getSingleton().get(CATEGORY_TOOLTIP_FONT) : nullptr;
             if(tooltip->getFont(false) != font)
             {
                 tooltip->setFont(font);
@@ -551,7 +557,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
                 hand = CEGUI::Rectf(area.left * screen.d_width, area.top * screen.d_height,
                     area.right * screen.d_width, area.bottom * screen.d_height);
             }
-            const float gap = tooltip->getFont()->getFontHeight() * 0.25f;
+            const float gap = tooltip->getFont()->getFontHeight() * TOOLTIP_HAND_GAP_FACTOR;
             float x = hand.right() + gap;
             float y = cursor.d_y - bounds.getHeight() * 0.5f;
             if(x + bounds.getWidth() > screen.d_width)
