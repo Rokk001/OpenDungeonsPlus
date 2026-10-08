@@ -37,6 +37,10 @@ const std::string BUTTON_MAPEDITOR = "MapEditorButton";
 const std::string BUTTON_MULTIPLAYER = "MultiplayerModeButton";
 const std::string BUTTON_SETTINGS = "SettingsButton";
 const std::string BUTTON_QUIT = "QuitButton";
+const std::string BUTTON_START_CAMPAIGN = "StartCampaignButton";
+
+//! Buttons of the settings sub menu are named like the settings page they open plus this suffix.
+const std::string SETTINGS_PAGE_BUTTON_SUFFIX = "Button";
 
 // Sub-menus windows & buttons
 const std::string WINDOW_SKIRMISH = "SkirmishSubMenuWindow";
@@ -135,9 +139,9 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
                            AbstractModeManager::ModeType::MENU_EDITOR_LOAD);
 
     for(const std::string& page : {std::string("Video"), std::string("Audio"), std::string("Input"), std::string("Game")})
-        addEventConnection(rootWin->getChild(WINDOW_SETTINGS + "/" + page + "Button")->subscribeEvent(
+        addEventConnection(rootWin->getChild(WINDOW_SETTINGS + "/" + page + SETTINGS_PAGE_BUTTON_SUFFIX)->subscribeEvent(
             CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber([this, page](const CEGUI::EventArgs&) { return openSettingsPage(page); })));
+            CEGUI::Event::Subscriber(&MenuModeMain::settingsPageButtonClicked, this)));
     addEventConnection(rootWin->getChild("SettingsWindow")->subscribeEvent(
         CEGUI::Window::EventHidden,
         CEGUI::Event::Subscriber(&MenuModeMain::settingsPageClosed, this)));
@@ -216,6 +220,13 @@ bool MenuModeMain::openSettingsPage(const std::string& name)
     return true;
 }
 
+bool MenuModeMain::settingsPageButtonClicked(const CEGUI::EventArgs& e)
+{
+    const CEGUI::WindowEventArgs& windowArgs = static_cast<const CEGUI::WindowEventArgs&>(e);
+    std::string buttonName = windowArgs.window->getName().c_str();
+    return openSettingsPage(buttonName.substr(0, buttonName.size() - SETTINGS_PAGE_BUTTON_SUFFIX.size()));
+}
+
 bool MenuModeMain::settingsPageClosed(const CEGUI::EventArgs&)
 {
     if(mSettingsPageOpen)
@@ -245,7 +256,7 @@ bool MenuModeMain::goBack(const CEGUI::EventArgs&)
 void MenuModeMain::showMainMenuButtons(bool visible)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
-    for(const std::string& name : {std::string("StartCampaignButton"), BUTTON_SKIRMISH,
+    for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH,
         BUTTON_MULTIPLAYER, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
         mainWin->getChild(name)->setVisible(visible);
 }

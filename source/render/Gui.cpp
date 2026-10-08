@@ -140,6 +140,42 @@ void createMiniMapCornerImages()
     }
 }
 
+//! \brief Creates the bent return arrow image shown on the menu back buttons.
+void createMenuReturnImage()
+{
+    const int size = 64;
+    const unsigned char arrowGrey = 232;
+    // Pixel ranges of the arrow head (a triangle pointing up), its stem and the arm leading to the left.
+    const int headTop = 10;
+    const int headBottom = 28;
+    const int headCentreX = 36;
+    const int stemLeft = 29;
+    const int stemRight = 43;
+    const int stemTop = 25;
+    const int stemBottom = 49;
+    const int armLeft = 11;
+    const int armTop = 37;
+    std::vector<unsigned char> pixels(size * size * 4, 0);
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            const bool arrowHead = y >= headTop && y <= headBottom && std::abs(x - headCentreX) <= y - headTop;
+            const bool arrowStem = x >= stemLeft && x <= stemRight && y >= stemTop && y <= stemBottom;
+            const bool returnArm = x >= armLeft && x <= stemRight && y >= armTop && y <= stemBottom;
+            const int i = (y * size + x) * 4;
+            pixels[i] = pixels[i + 1] = pixels[i + 2] = arrowGrey;
+            pixels[i + 3] = arrowHead || arrowStem || returnArm ? 255 : 0;
+        }
+    }
+    CEGUI::Texture& returnTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("MenuReturn");
+    returnTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& returnImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", "OpenDungeonsIcons/MenuReturn"));
+    returnImage.setTexture(&returnTexture);
+    returnImage.setArea(CEGUI::Rectf(0, 0, size, size));
+}
+
 void createNavigationImages()
 {
     createMiniMapCornerImages();
@@ -180,24 +216,7 @@ void createNavigationImages()
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 
-    for(int y = 0; y < size; ++y)
-    {
-        for(int x = 0; x < size; ++x)
-        {
-            const bool arrowHead = y >= 10 && y <= 28 && std::abs(x - 36) <= y - 10;
-            const bool arrowStem = x >= 29 && x <= 43 && y >= 25 && y <= 49;
-            const bool returnArm = x >= 11 && x <= 43 && y >= 37 && y <= 49;
-            const int i = (y * size + x) * 4;
-            pixels[i] = pixels[i + 1] = pixels[i + 2] = 232;
-            pixels[i + 3] = arrowHead || arrowStem || returnArm ? 255 : 0;
-        }
-    }
-    CEGUI::Texture& returnTexture = CEGUI::System::getSingleton().getRenderer()->createTexture("MenuReturn");
-    returnTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
-    CEGUI::BasicImage& returnImage = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
-        "BasicImage", "OpenDungeonsIcons/MenuReturn"));
-    returnImage.setTexture(&returnTexture);
-    returnImage.setArea(CEGUI::Rectf(0, 0, size, size));
+    createMenuReturnImage();
 
     const char* categories[] = {"NavigationCreatures", "NavigationRooms", "NavigationSpells", "NavigationWorkshop"};
     for(int category = 0; category < 4; ++category)

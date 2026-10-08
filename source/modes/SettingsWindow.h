@@ -43,6 +43,7 @@ public:
 
     void show();
 
+    //! \brief Shows the window with the settings tab of the given name (Video, Audio, Input or Game).
     void showPage(const std::string& name);
 
     void hide();
@@ -75,6 +76,9 @@ private:
     //! \brief The temporary video comboboxes and texts created depending on the video settings.
     std::vector<CEGUI::Window*> mCustomVideoComboBoxes;
     std::vector<CEGUI::Window*> mCustomVideoTexts;
+
+    //! \brief Updates the page title when another settings tab is selected (in game window).
+    bool onSelectedTabChanged(const CEGUI::EventArgs&);
 
     //! \brief Set the different widget values according to current config.
     void initConfig();

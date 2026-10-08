@@ -47,6 +47,42 @@
 #include <sstream>
 #include <functional>
 
+// Layout of the settings window when it is shown as a page of the main menu (pixels).
+static const float MENU_WINDOW_HALF_WIDTH = 400.0f;
+static const float MENU_WINDOW_TOP_OFFSET = 60.0f;
+static const float MENU_WINDOW_BOTTOM_MARGIN = 16.0f;
+static const float MENU_TABS_MARGIN = 10.0f;
+static const float MENU_TABS_TOP = 72.0f;
+static const float MENU_TITLE_HEIGHT = 60.0f;
+
+// Layout of the settings window when it is shown inside the game (pixels).
+static const float GAME_WINDOW_TOP = 64.0f;
+static const float GAME_WINDOW_BOTTOM_MARGIN = 192.0f;
+static const float GAME_PAGE_MARGIN = 8.0f;
+static const float GAME_TABS_TOP = 64.0f;
+static const float GAME_TITLE_BOTTOM = 48.0f;
+static const float GAME_MUSIC_CONTROL_LEFT = 32.0f;
+static const float GAME_MUSIC_CONTROL_RIGHT_MARGIN = 48.0f;
+static const float GAME_MUSIC_TEXT_TOP = 40.0f;
+static const float GAME_MUSIC_TEXT_BOTTOM = 66.0f;
+static const float GAME_MUSIC_SLIDER_TOP = 78.0f;
+static const float GAME_MUSIC_SLIDER_BOTTOM = 104.0f;
+
+//! Distance between the bottom of the tab control and the bottom of the settings window (pixels).
+static const float PAGE_TABS_BOTTOM_MARGIN = 108.0f;
+
+//! \brief Returns the title shown above the settings page with the given tab name.
+static std::string getPageTitle(const std::string& tabName)
+{
+    if(tabName == "Video")
+        return "Graphics Options";
+    if(tabName == "Audio")
+        return "Sound Options";
+    if(tabName == "Input")
+        return "Control Options";
+    return "Game Options";
+}
+
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages, bool gamePage):
     mSettingsWindow(nullptr),
     mApplyWindow(nullptr),
@@ -71,53 +107,49 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     if(menuPages)
     {
         mSettingsWindow->setLookNFeel("OD/MenuPageWindow");
-        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -400), CEGUI::UDim(0.5f, -60),
-            CEGUI::UDim(0.5f, 400), CEGUI::UDim(1, -16)));
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(0.5f, -MENU_WINDOW_TOP_OFFSET), CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(1, -MENU_WINDOW_BOTTOM_MARGIN)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
         tabs->setTabHeight(CEGUI::UDim(0, 0));
-        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 10), CEGUI::UDim(0, 72),
-            CEGUI::UDim(1, -10), CEGUI::UDim(1, -108)));
+        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, MENU_TABS_MARGIN), CEGUI::UDim(0, MENU_TABS_TOP),
+            CEGUI::UDim(1, -MENU_TABS_MARGIN), CEGUI::UDim(1, -PAGE_TABS_BOTTOM_MARGIN)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
         for(const char* page : {"Video", "Audio", "Input", "Game"})
             tabs->getChild(std::string(page) + "/" + page + "SP")->setUserString("TrimLeadingSpace", "true");
         CEGUI::Window* title = wmgr->createWindow("OD/MenuTitle", "PageTitle");
         title->setFont("MedievalSharp-20");
         title->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
-            CEGUI::UDim(1, 0), CEGUI::UDim(0, 60)));
+            CEGUI::UDim(1, 0), CEGUI::UDim(0, MENU_TITLE_HEIGHT)));
         title->setMousePassThroughEnabled(true);
         mSettingsWindow->addChild(title);
     }
     else if(gamePage)
     {
         mSettingsWindow->setLookNFeel("OD/GameSettingsWindow");
-        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 64),
-            CEGUI::UDim(1, 0), CEGUI::UDim(1, -192)));
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, GAME_WINDOW_TOP),
+            CEGUI::UDim(1, 0), CEGUI::UDim(1, -GAME_WINDOW_BOTTOM_MARGIN)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
-        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 8), CEGUI::UDim(0, 64),
-            CEGUI::UDim(1, -8), CEGUI::UDim(1, -108)));
+        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_TABS_TOP),
+            CEGUI::UDim(1, -GAME_PAGE_MARGIN), CEGUI::UDim(1, -PAGE_TABS_BOTTOM_MARGIN)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
         CEGUI::Window* title = wmgr->createWindow("OD/StaticText", "PageTitle");
         title->setFont("MedievalSharp-20");
         title->setProperty("FrameEnabled", "False");
         title->setProperty("BackgroundEnabled", "False");
-        title->setArea(CEGUI::URect(CEGUI::UDim(0, 8), CEGUI::UDim(0, 8),
-            CEGUI::UDim(1, -8), CEGUI::UDim(0, 48)));
+        title->setArea(CEGUI::URect(CEGUI::UDim(0, GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_PAGE_MARGIN),
+            CEGUI::UDim(1, -GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_TITLE_BOTTOM)));
         title->setMousePassThroughEnabled(true);
         mSettingsWindow->addChild(title);
-        std::function<bool(const CEGUI::EventArgs&)> updateTitle = [tabs, title](const CEGUI::EventArgs&)
-        {
-            const CEGUI::String& name = tabs->getTabContentsAtIndex(tabs->getSelectedTabIndex())->getName();
-            title->setText(name == "Video" ? "Graphics Options" : name == "Audio" ? "Sound Options" :
-                name == "Input" ? "Control Options" : "Game Options");
-            return true;
-        };
         addEventConnection(tabs->subscribeEvent(CEGUI::TabControl::EventSelectionChanged,
-            CEGUI::Event::Subscriber(updateTitle)));
-        updateTitle(CEGUI::EventArgs());
+            CEGUI::Event::Subscriber(&SettingsWindow::onSelectedTabChanged, this)));
+        onSelectedTabChanged(CEGUI::EventArgs());
         tabs->getChild("Audio/AudioSP/MusicText")->setArea(CEGUI::URect(
-            CEGUI::UDim(0.5f, 32), CEGUI::UDim(0, 40), CEGUI::UDim(1, -48), CEGUI::UDim(0, 66)));
+            CEGUI::UDim(0.5f, GAME_MUSIC_CONTROL_LEFT), CEGUI::UDim(0, GAME_MUSIC_TEXT_TOP),
+            CEGUI::UDim(1, -GAME_MUSIC_CONTROL_RIGHT_MARGIN), CEGUI::UDim(0, GAME_MUSIC_TEXT_BOTTOM)));
         tabs->getChild("Audio/AudioSP/MusicSlider")->setArea(CEGUI::URect(
-            CEGUI::UDim(0.5f, 32), CEGUI::UDim(0, 78), CEGUI::UDim(1, -48), CEGUI::UDim(0, 104)));
+            CEGUI::UDim(0.5f, GAME_MUSIC_CONTROL_LEFT), CEGUI::UDim(0, GAME_MUSIC_SLIDER_TOP),
+            CEGUI::UDim(1, -GAME_MUSIC_CONTROL_RIGHT_MARGIN), CEGUI::UDim(0, GAME_MUSIC_SLIDER_BOTTOM)));
     }
 
     mApplyWindow = wmgr->loadLayoutFromFile("WindowApplyChanges.layout");
@@ -701,11 +733,21 @@ void SettingsWindow::show()
 
 void SettingsWindow::showPage(const std::string& name)
 {
+    if(mSettingsWindow == nullptr)
+        return;
+
     show();
     static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"))->setSelectedTab(name);
-    mSettingsWindow->setText(name == "Video" ? "Graphics Options" :
-        name == "Audio" ? "Sound Options" : name == "Input" ? "Control Options" : "Game Options");
+    mSettingsWindow->setText(getPageTitle(name));
     mSettingsWindow->getChild("PageTitle")->setText(mSettingsWindow->getText());
+}
+
+bool SettingsWindow::onSelectedTabChanged(const CEGUI::EventArgs&)
+{
+    CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
+    const std::string name = tabs->getTabContentsAtIndex(tabs->getSelectedTabIndex())->getName().c_str();
+    mSettingsWindow->getChild("PageTitle")->setText(getPageTitle(name));
+    return true;
 }
 
 void SettingsWindow::hide()

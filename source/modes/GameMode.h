@@ -166,8 +166,11 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
     bool hideOptionsWindow(const CEGUI::EventArgs& = {});
     bool toggleOptionsWindow(const CEGUI::EventArgs& = {});
+    //! \brief Closing the options window goes back from the end game page, otherwise hides it.
     bool closeOptionsWindow(const CEGUI::EventArgs& = {});
+    //! \brief Switches the options window to the end game page.
     bool showEndGameFromOptions(const CEGUI::EventArgs& = {});
+    //! \brief Shows the buttons of the end game page (true) or of the options page (false).
     void setOptionsPage(bool endGame);
     bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
@@ -222,7 +225,20 @@ protected:
     bool saveGame(const CEGUI::EventArgs& e = {});
     bool loadGame(const CEGUI::EventArgs& e = {});
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
+    //! \brief Connects the buttons of the settings navigation window.
     void initializeSettingsNavigation();
+    //! \brief Closes the modal settings navigation window.
+    bool closeSettingsNavigation(const CEGUI::EventArgs& e = {});
+    //! \brief Opens the settings page named like the clicked navigation button.
+    bool openSettingsNavigationPage(const CEGUI::EventArgs& e);
+    //! \brief Opens the camera list from the settings navigation window.
+    bool openSettingsNavigationCameras(const CEGUI::EventArgs& e);
+    //! \brief Closes the settings navigation window and returns to the options window.
+    bool backFromSettingsNavigation(const CEGUI::EventArgs& e);
+    //! \brief Shows the settings navigation window again when a page opened from it was closed.
+    bool returnToSettingsNavigation(const CEGUI::EventArgs& e);
+    //! \brief Brings a dialog that was just shown above the HUD and older dialogs.
+    bool raiseShownDialog(const CEGUI::EventArgs& e);
 
     //! \brief Handle the keyboard input in normal mode
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
@@ -274,6 +290,8 @@ private:
 
     //! \brief The settings window.
     SettingsWindow mSettings;
+    //! \brief True while a settings page or the camera list was opened from the settings
+    //! navigation window, so that closing it shows the navigation window again.
     bool mReturningToSettingsNavigation = false;
 
     //! \brief Skills pending (Client side). This is copied from the seat for temporary changes while the

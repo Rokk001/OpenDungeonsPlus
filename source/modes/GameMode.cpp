@@ -126,12 +126,7 @@ GameMode::GameMode(ModeManager *modeManager):
         if(dynamic_cast<CEGUI::FrameWindow*>(window) == nullptr)
             continue;
         addEventConnection(window->subscribeEvent(CEGUI::Window::EventShown,
-            CEGUI::Event::Subscriber([window](const CEGUI::EventArgs&)
-            {
-                window->setAlwaysOnTop(true);
-                window->moveToFront();
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&GameMode::raiseShownDialog, this)));
     }
 
     addEventConnection(mRootWindow->getChild("MiniMapZoomButton")->subscribeEvent(
@@ -1913,6 +1908,14 @@ void GameMode::updateEventMessageIndicator(float elapsed)
     }
 }
 
+bool GameMode::raiseShownDialog(const CEGUI::EventArgs& e)
+{
+    CEGUI::Window* window = static_cast<const CEGUI::WindowEventArgs&>(e).window;
+    window->setAlwaysOnTop(true);
+    window->moveToFront();
+    return true;
+}
+
 bool GameMode::showSettingsFromOptions(const CEGUI::EventArgs& /*e*/)
 {
     mRootWindow->getChild("GameOptionsWindow")->hide();
@@ -1927,57 +1930,66 @@ void GameMode::initializeSettingsNavigation()
 {
     CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
     navigation->hide();
-    std::function<void()> closeNavigation = [navigation]()
-    {
-        navigation->setModalState(false);
-        navigation->hide();
-    };
-    for(const std::string& page : {"Video", "Audio", "Input", "Game"})
+    for(const char* page : {"Video", "Audio", "Input", "Game"})
     {
         addEventConnection(navigation->getChild(page)->subscribeEvent(CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber([this, closeNavigation, page](const CEGUI::EventArgs&)
-            {
-                closeNavigation();
-                mReturningToSettingsNavigation = true;
-                mSettings.showPage(page);
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&GameMode::openSettingsNavigationPage, this)));
     }
     addEventConnection(navigation->getChild("Cameras")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([this, closeNavigation](const CEGUI::EventArgs& e)
-        {
-            closeNavigation();
-            mReturningToSettingsNavigation = true;
-            return showUserCameras(e);
-        })));
+        CEGUI::Event::Subscriber(&GameMode::openSettingsNavigationCameras, this)));
     addEventConnection(navigation->getChild("Continue")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([closeNavigation](const CEGUI::EventArgs&)
-        {
-            closeNavigation();
-            return true;
-        })));
-    std::function<bool(const CEGUI::EventArgs&)> back = [this, closeNavigation](const CEGUI::EventArgs& e)
-    {
-        closeNavigation();
-        return showOptionsWindow(e);
-    };
+        CEGUI::Event::Subscriber(&GameMode::closeSettingsNavigation, this)));
     addEventConnection(navigation->getChild("Back")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(back)));
+        CEGUI::Event::Subscriber(&GameMode::backFromSettingsNavigation, this)));
     addEventConnection(navigation->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
-        CEGUI::Event::Subscriber(back)));
+        CEGUI::Event::Subscriber(&GameMode::backFromSettingsNavigation, this)));
     for(const char* name : {"SettingsWindow", "UserCamerasWindow"})
     {
         addEventConnection(mRootWindow->getChild(name)->subscribeEvent(CEGUI::Window::EventHidden,
-            CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-            {
-                if(mReturningToSettingsNavigation)
-                {
-                    mReturningToSettingsNavigation = false;
-                    showSettingsFromOptions();
-                }
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&GameMode::returnToSettingsNavigation, this)));
     }
+}
+
+bool GameMode::closeSettingsNavigation(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
+    navigation->setModalState(false);
+    navigation->hide();
+    return true;
+}
+
+bool GameMode::openSettingsNavigationPage(const CEGUI::EventArgs& e)
+{
+    // The navigation buttons are named like the settings pages they open.
+    const CEGUI::WindowEventArgs& windowArgs = static_cast<const CEGUI::WindowEventArgs&>(e);
+    const std::string page = windowArgs.window->getName().c_str();
+    closeSettingsNavigation(e);
+    mReturningToSettingsNavigation = true;
+    mSettings.showPage(page);
+    return true;
+}
+
+bool GameMode::openSettingsNavigationCameras(const CEGUI::EventArgs& e)
+{
+    closeSettingsNavigation(e);
+    mReturningToSettingsNavigation = true;
+    return showUserCameras(e);
+}
+
+bool GameMode::backFromSettingsNavigation(const CEGUI::EventArgs& e)
+{
+    closeSettingsNavigation(e);
+    return showOptionsWindow(e);
+}
+
+bool GameMode::returnToSettingsNavigation(const CEGUI::EventArgs&)
+{
+    if(mReturningToSettingsNavigation)
+    {
+        mReturningToSettingsNavigation = false;
+        showSettingsFromOptions();
+    }
+    return true;
 }
 
 bool GameMode::showHelpWindow(const CEGUI::EventArgs&)
