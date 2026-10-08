@@ -38,6 +38,8 @@ public:
     inline SkillType getType() const
     { return mType; }
 
+    //! \brief Returns the skills that must be done before this one, without the skills
+    //! they depend on themselves.
     const std::vector<const Skill*>& getDependencies() const
     { return mSkillDepends; }
 
