@@ -40,17 +40,24 @@ struct NameGroup
         mGenderWeights[2] = 1;
     }
 
+    //! Name of the group ("monster" is the fallback group)
     std::string mName;
+    //! Creature classes served by the group
     std::vector<std::string> mClasses;
+    //! Lowest age a creature of the group can get
     int32_t mAgeMin;
+    //! Highest age a creature of the group can get
     int32_t mAgeMax;
     //! Weights of female, male and unspecified
     uint32_t mGenderWeights[3];
     //! Given names for female, male and unspecified
     std::vector<std::string> mGiven[3];
+    //! Surnames, used for some creatures instead of a title
     std::vector<std::string> mSurnames;
+    //! Titles, used for some creatures instead of a surname
     std::vector<std::string> mTitles;
     std::vector<std::string> mHometowns;
+    //! Replacements of the age number for some creatures
     std::vector<std::string> mAgeJokes;
 };
 
@@ -113,10 +120,15 @@ private:
     bool parseNameGroupLine(const std::vector<std::string>& fields, NameGroup& group, std::string& error);
     void addError(const std::string& source, uint32_t lineNumber, const std::string& message);
 
+    //! All name groups in file order
     std::vector<NameGroup> mGroups;
+    //! Index into mGroups for every listed creature class
     std::map<std::string, std::size_t> mClassToGroup;
+    //! Texts by key, in file order
     std::map<std::string, std::vector<ScopedText> > mTexts;
+    //! Messages of everything that could not be read
     std::vector<std::string> mErrors;
+    //! Classes asked for that no group lists (filled by const lookups)
     mutable std::set<std::string> mUnmappedClasses;
 };
 

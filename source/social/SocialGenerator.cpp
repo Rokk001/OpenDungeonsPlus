@@ -31,6 +31,8 @@ const uint32_t SURNAME_PERCENT = 40;
 const uint32_t TITLE_PERCENT = 25;
 const uint32_t AGE_JOKE_PERCENT = 30;
 const uint32_t SPECIFIC_LIKE_PERCENT = 60;
+//! How often pickDifferent draws again while the text equals the excluded one
+const uint32_t PICK_DIFFERENT_MAX_TRIES = 8;
 
 const std::string& pickFrom(Rng& rng, const std::vector<std::string>& pool, const std::string& fallback)
 {
@@ -56,7 +58,7 @@ const std::string& pickDifferent(Rng& rng, const std::vector<std::string>& pool,
     const std::string& excluded, const std::string& fallback)
 {
     const std::string* result = &pickFrom(rng, pool, fallback);
-    for(uint32_t tries = 0; (tries < 8) && (*result == excluded); ++tries)
+    for(uint32_t tries = 0; (tries < PICK_DIFFERENT_MAX_TRIES) && (*result == excluded); ++tries)
         result = &pickFrom(rng, pool, fallback);
     return *result;
 }
