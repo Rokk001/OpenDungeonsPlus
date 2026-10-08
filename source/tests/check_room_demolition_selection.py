@@ -82,7 +82,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
  // Heart tiles must never be offered or sent for demolition.
  map.tiles[{0,0}]={0,0,true,false,map.player.getSeat(),TileVisual::dungeonTempleRoom};
  input.mXPos=0;input.mYPos=0;input.mLStartDragX=0;input.mLStartDragY=0;
- for(auto state:{InputCommandState::infoOnly,InputCommandState::building,InputCommandState::validated}){
+ for(InputCommandState state:{InputCommandState::infoOnly,InputCommandState::building,InputCommandState::validated}){
   input.mCommandState=state;sent.clear();game.handlePlayerActionSell();
   check(game.selected.empty());check(sent.empty());check(game.text=="Dungeon hearts cannot be sold.");}
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;}

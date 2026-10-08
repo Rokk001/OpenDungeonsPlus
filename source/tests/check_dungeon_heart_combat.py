@@ -21,6 +21,7 @@ def function(text, signature):
 probe = r'''
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -64,7 +65,8 @@ struct PersistentObject:BuildingObject {
 METHODS
 HEART_OBJECT;
 int main(){int checks=0,failures=0;
- auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
+ std::function<void(bool,const char*)> check=[&](bool ok,const char* msg){
+  ++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Seat owner{1},ally{1},enemy{2};Tile centre,floor;BuildingObject object{&centre};
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre);
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
