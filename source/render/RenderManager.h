@@ -226,6 +226,8 @@ public:
     void rrPickUpEntity(GameEntity* curEntity, Player* localPlayer);
     void rrDropHand(GameEntity* curEntity, Player* localPlayer);
     void rrRotateHand(Player* localPlayer);
+    //! \brief Shows the first held creature in the hand (enabled) or leaves it with the other held
+    //! entities. localPlayer may be nullptr, in which case only the flag changes.
     void rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer);
     bool isKeeperHandVisible() const { return mHandKeeperHandVisibility == 0; }
     //! \brief Where the keeper's hand is in the world (the light that follows it). False if there is no hand yet
@@ -262,6 +264,7 @@ public:
     bool rrIsIdleHandAnimationPlaying() const;
     //! Stops a running idle hand effect and returns the hand to its contextual pose.
     void rrCancelIdleHandAnimation();
+    //! \brief Plays the pickaxe swing once, then returns to the current pose.
     void rrPlayDigAnimation();
     //! \brief Draws tile previews with equally thick filled borders for construction and digging.
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false);
@@ -389,6 +392,7 @@ private:
     template<typename Manager> bool removeIfExists(std::string, std::string);
     //! \brief Correctly places entities in hand next to the keeper hand
     void rrOrderHand(Player* localPlayer);
+    //! \brief Places the held creature in the grip of the hand.
     void rrUpdateHeldCreature();
 
     //! \brief Colorize the material with the corresponding team id color.
@@ -425,7 +429,9 @@ private:
     Ogre::SceneNode* mMainMenuSceneNode;
 
     Ogre::AnimationState* mHandAnimationState;
+    //! \brief Animation of the hand that is wanted: Idle, Point, Dig or Hold.
     std::string mHandPose = "Idle";
+    //! \brief Pickaxe attached to the hand while digging.
     Ogre::ManualObject* mHandPickaxe = nullptr;
     //! Hammer shown in the hand while building; hidden otherwise.
     Ogre::Entity* mHandHammer = nullptr;
@@ -433,6 +439,7 @@ private:
     Ogre::ManualObject* mHandIdleProp = nullptr;
     //! Centre of the hammer's striking face in mesh space; the hand is aligned so it sits on the pointer.
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
+    //! \brief Outline of the tiles the current action would affect.
     Ogre::ManualObject* mTilePreview = nullptr;
 
     //! \brief Short particle effect shown at a creature that was hit.
@@ -972,7 +979,9 @@ private:
 
     //! For the keeper hand
     Ogre::SceneNode* mHandKeeperNode;
+    //! \brief Node in the hand holding the creature that is shown.
     Ogre::SceneNode* mHeldCreatureGrip = nullptr;
+    //! \brief Node holding the other held creatures, which are not shown.
     Ogre::SceneNode* mHeldCreatureStorage = nullptr;
     bool mHeldCreatureDisplayEnabled = false;
     Ogre::SceneNode* mDummyNode;

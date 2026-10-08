@@ -245,6 +245,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void unselectAllTiles() override;
 
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
+    //! \brief Displays the text next to the pointer (for example a price) rather than in the context line.
     void displayPointerText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
 
     //! \brief Called when the skill window is displayed. This function will call the Seat to get
@@ -328,6 +329,7 @@ private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::unique_ptr<SocialWindow> mSocialWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
+    //! \brief Creates, updates and places the held creature portraits.
     void refreshHeldCreatureIcons();
     //! \brief Label next to the hand showing the width x height of the area being dragged
     CEGUI::Window* mSelectionSizeLabel = nullptr;
@@ -386,9 +388,13 @@ private:
     //! this value is based on the first marked flag tile selected.
     bool mDigSetBool;
 
+    //! \brief Explanation of the current target shown in the context line.
     std::string mActionTargetText;
+    //! \brief Whether the current action can be executed on the current target.
     bool mActionTargetValid = false;
+    //! \brief Tiles the current action would affect, collected while checking the input.
     std::vector<Tile*> mPreviewTiles;
+    //! \brief Tiles currently outlined in the world.
     std::vector<Tile*> mSelectedTiles;
 
     //! \brief Index of the event in the game event queue (for zooming automatically)
@@ -608,6 +614,10 @@ private:
     void handlePlayerActionSell();
     //! \brief Draws eligible selection borders without including invalid room tiles.
     void updateSelectedTiles();
+    //! \brief Scale of the hand feedback (action icon, pointer text, held portraits) relative to its design size.
+    float getHandFeedbackScale() const;
+    //! \brief Highlights the given creature and restores the previously highlighted one.
+    void setHighlightedCreature(Creature* creature);
 
     //! \brief Asks the server to drop the pending hand entity on the pending tile or, if
     //! dropAllCreatures is set and every held creature can be dropped there, all held

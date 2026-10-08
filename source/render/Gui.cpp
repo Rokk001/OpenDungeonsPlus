@@ -121,10 +121,22 @@ const char* const CATEGORY_TOOLTIP_FONT = "MedievalSharp-13";
 //! Space between the hand cursor and its tooltip, as a share of the tooltip font height
 const float TOOLTIP_HAND_GAP_FACTOR = 0.25f;
 
+// Prohibition image, in pixels of its generated texture.
+const int PROHIBITION_IMAGE_SIZE = 64;
+const float PROHIBITION_RING_OUTER_RADIUS = 28.0f;
+const float PROHIBITION_RING_INNER_RADIUS = 21.0f;
+const float PROHIBITION_SLASH_LENGTH_RADIUS = 24.0f;
+const float PROHIBITION_SLASH_HALF_WIDTH = 3.5f;
+//! Scales the distance to the diagonal x == y (|dx - dy| / sqrt(2)).
+const float INVERSE_SQRT_TWO = 0.70710678f;
+const unsigned char PROHIBITION_RED = 210;
+const unsigned char PROHIBITION_GREEN = 32;
+const unsigned char PROHIBITION_BLUE = 48;
+
 void createHandFeedbackImage()
 {
     // Project artwork: a prohibition shape, without copied assets.
-    const int size = 64;
+    const int size = PROHIBITION_IMAGE_SIZE;
     std::vector<unsigned char> pixels(size * size * 4, 0);
     for(int y = 0; y < size; ++y)
     {
@@ -133,13 +145,14 @@ void createHandFeedbackImage()
             const float dx = x + 0.5f - size * 0.5f;
             const float dy = y + 0.5f - size * 0.5f;
             const float radius = std::sqrt(dx * dx + dy * dy);
-            const float ring = std::min(28.0f - radius, radius - 21.0f);
-            const float slash = std::min(24.0f - radius, 3.5f - std::abs(dx - dy) * 0.70710678f);
+            const float ring = std::min(PROHIBITION_RING_OUTER_RADIUS - radius, radius - PROHIBITION_RING_INNER_RADIUS);
+            const float slash = std::min(PROHIBITION_SLASH_LENGTH_RADIUS - radius,
+                PROHIBITION_SLASH_HALF_WIDTH - std::abs(dx - dy) * INVERSE_SQRT_TWO);
             const float coverage = std::max(0.0f, std::min(1.0f, std::max(ring, slash) + 0.5f));
             const int i = (y * size + x) * 4;
-            pixels[i] = 210;
-            pixels[i + 1] = 32;
-            pixels[i + 2] = 48;
+            pixels[i] = PROHIBITION_RED;
+            pixels[i + 1] = PROHIBITION_GREEN;
+            pixels[i + 2] = PROHIBITION_BLUE;
             pixels[i + 3] = static_cast<unsigned char>(coverage * 255.0f);
         }
     }

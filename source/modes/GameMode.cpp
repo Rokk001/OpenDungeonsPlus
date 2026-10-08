@@ -122,6 +122,17 @@ const float MESSAGE_FLASH_HIGHLIGHT_START = 0.25f;
 const std::string MESSAGE_UNREAD_IMAGE = "OpenDungeonsIcons/NavigationMessages";
 const std::string MESSAGE_READ_IMAGE = "OpenDungeonsIcons/NavigationMessagesRead";
 
+// The hand feedback is laid out for an action icon of this unscaled width; all offsets
+// below are in pixels at that size and scale with the icon.
+const float HAND_ACTION_ICON_DESIGN_SIZE = 50.0f;
+const float POINTER_TEXT_OFFSET_X = 145.0f;
+const float POINTER_TEXT_OFFSET_Y = 24.0f;
+const float ACTION_ICON_OFFSET_X = 90.0f;
+const float ACTION_ICON_OFFSET_Y = 8.0f;
+const float HELD_CREATURE_ICON_OFFSET_Y = 58.0f;
+const float HELD_CREATURE_ICON_SIZE = 32.0f;
+const size_t HELD_CREATURE_ICONS_PER_ROW = 4;
+
 //! Distance in pixels between the mouse cursor and the detail view shown next to it on the full map.
 const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
 
@@ -882,10 +893,10 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     // If we have a room/trap/spell selected, show it
     // TODO: This should be changed, or combined with an icon or something later.
     TextRenderer& textRenderer = TextRenderer::getSingleton();
-    const float pointerScale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
+    const float pointerScale = getHandFeedbackScale();
     textRenderer.moveText(ODApplication::POINTER_INFO_STRING,
-        static_cast<Ogre::Real>(mouseEvent.x + 145.0f * pointerScale),
-        static_cast<Ogre::Real>(mouseEvent.y + 24.0f * pointerScale));
+        static_cast<Ogre::Real>(mouseEvent.x + POINTER_TEXT_OFFSET_X * pointerScale),
+        static_cast<Ogre::Real>(mouseEvent.y + POINTER_TEXT_OFFSET_Y * pointerScale));
 
     handleMouseWheel(toSFMLMouseWheel(arg));
 
@@ -4104,6 +4115,24 @@ void GameMode::refreshSpellButtonCoolDowns()
     });
 }
 
+float GameMode::getHandFeedbackScale() const
+{
+    return mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / HAND_ACTION_ICON_DESIGN_SIZE;
+}
+
+void GameMode::setHighlightedCreature(Creature* creature)
+{
+    InputManager& inputManager = mModeManager->getInputManager();
+    if(inputManager.mHighlightedCreature == creature)
+        return;
+
+    if(inputManager.mHighlightedCreature != nullptr)
+        inputManager.mHighlightedCreature->normalizeAmbient();
+    inputManager.mHighlightedCreature = creature;
+    if(creature != nullptr)
+        creature->maxAmbient();
+}
+
 //! \brief Refreshes action feedback and the eligible pointer target without executing an action.
 void GameMode::refreshActionFeedback(float elapsed)
 {
@@ -4168,14 +4197,7 @@ void GameMode::refreshActionFeedback(float elapsed)
             Tile* hoveredTile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
             Creature* creature = hoveredTile != nullptr ?
                 hoveredTile->getClosestCreature(inputManager.mCreatureTypeForOutliner) : nullptr;
-            if(inputManager.mHighlightedCreature != creature)
-            {
-                if(inputManager.mHighlightedCreature != nullptr)
-                    inputManager.mHighlightedCreature->normalizeAmbient();
-                inputManager.mHighlightedCreature = creature;
-                if(creature != nullptr)
-                    creature->maxAmbient();
-            }
+            setHighlightedCreature(creature);
         }
         // A release leaves validated in the input manager: a frame must never repeat it.
         const InputCommandState previousState = inputManager.mCommandState;
@@ -4212,15 +4234,15 @@ void GameMode::refreshActionFeedback(float elapsed)
     {
         icon->setProperty("Image", prohibited ? "OpenDungeonsIcons/Prohibition" :
             mRootWindow->getChild(button)->getProperty("NormalImage"));
-        const float scale = icon->getPixelSize().d_width / 50.0f;
-        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale),
-            CEGUI::UDim(0, pointer.d_y + 8.0f * scale)));
+        const float scale = getHandFeedbackScale();
+        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + ACTION_ICON_OFFSET_X * scale),
+            CEGUI::UDim(0, pointer.d_y + ACTION_ICON_OFFSET_Y * scale)));
     }
-    const float pointerScale = icon->getPixelSize().d_width / 50.0f;
+    const float pointerScale = getHandFeedbackScale();
     TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING,
         POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
-        pointer.d_x + 145.0f * pointerScale, pointer.d_y + 24.0f * pointerScale);
+        pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
@@ -4286,7 +4308,7 @@ void GameMode::refreshHeldCreatureIcons()
             CEGUI::Window* icon = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage",
                 "HeldCreatureIcon" + std::to_string(count));
             icon->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
-                CEGUI::UDim(0, 32), CEGUI::UDim(0, 32)));
+                CEGUI::UDim(0, HELD_CREATURE_ICON_SIZE), CEGUI::UDim(0, HELD_CREATURE_ICON_SIZE)));
             icon->setAlwaysOnTop(true);
             icon->setMousePassThroughEnabled(true);
             icon->setProperty("ClippedByParent", "False");
@@ -4302,16 +4324,17 @@ void GameMode::refreshHeldCreatureIcons()
     }
 
     const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
-    const float scale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
-    const float side = 32.0f * scale;
+    const float scale = getHandFeedbackScale();
+    const float side = HELD_CREATURE_ICON_SIZE * scale;
     for(size_t i = 0; i < mHeldCreatureIcons.size(); ++i)
     {
         CEGUI::Window* icon = mHeldCreatureIcons[i];
         icon->setVisible(i < count && RenderManager::getSingleton().isKeeperHandVisible());
         icon->setSize(CEGUI::USize(CEGUI::UDim(0, side), CEGUI::UDim(0, side)));
         // Keep the existing action/prohibition area clear even when it is hidden.
-        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale + (i % 4) * side),
-            CEGUI::UDim(0, pointer.d_y + 58.0f * scale + (i / 4) * side)));
+        icon->setPosition(CEGUI::UVector2(
+            CEGUI::UDim(0, pointer.d_x + ACTION_ICON_OFFSET_X * scale + (i % HELD_CREATURE_ICONS_PER_ROW) * side),
+            CEGUI::UDim(0, pointer.d_y + HELD_CREATURE_ICON_OFFSET_Y * scale + (i / HELD_CREATURE_ICONS_PER_ROW) * side)));
     }
 }
 
@@ -4871,16 +4894,7 @@ void GameMode::handlePlayerActionNone()
                     mActionTargetText += ". Claim this ground before building.";
             }
         }
-        InputManager& mutableInput = mModeManager->getInputManager();
-        Creature* creature = dynamic_cast<Creature*>(closest);
-        if(mutableInput.mHighlightedCreature != creature)
-        {
-            if(mutableInput.mHighlightedCreature != nullptr)
-                mutableInput.mHighlightedCreature->normalizeAmbient();
-            mutableInput.mHighlightedCreature = creature;
-            if(creature != nullptr)
-                creature->maxAmbient();
-        }
+        setHighlightedCreature(dynamic_cast<Creature*>(closest));
         TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
         return;
     }
