@@ -66,6 +66,9 @@ const Ogre::String BACKGROUND_RECT_NAME = "BackgroundRect";
 //! The scripted main-menu scene and its GUI were authored on an 800x600 plane.
 const Ogre::Real MAIN_MENU_REFERENCE_ASPECT_RATIO = 4.0f / 3.0f;
 
+//! Vertical field of view in degrees used until the main menu projection stores the camera's own value.
+const float MAIN_MENU_DEFAULT_FOV_Y_DEGREES = 45.0f;
+
 CameraManager::CameraManager(Ogre::SceneManager* sceneManager, GameMap* gm, Ogre::RenderWindow* renderWindow) :
     mCircleMode(false),
     mCatmullSplineMode(false),
@@ -77,7 +80,7 @@ CameraManager::CameraManager(Ogre::SceneManager* sceneManager, GameMap* gm, Ogre
     mActiveCamera(nullptr),
     mActiveCameraNode(nullptr),
     mMainMenuProjection(false),
-    mMainMenuBaseFovY(Ogre::Degree(45.0f)),
+    mMainMenuBaseFovY(Ogre::Degree(MAIN_MENU_DEFAULT_FOV_Y_DEGREES)),
     mGameMap(gm),
     mCameraIsFlying(false),
     mCameraFlightDestination(Ogre::Vector3(0.0, 0.0, 0.0)),
@@ -352,6 +355,9 @@ void CameraManager::setViewportSize(unsigned int width, unsigned int height)
 
 void CameraManager::setMainMenuProjection(bool enabled)
 {
+    if(mActiveCamera == nullptr)
+        return;
+
     if(enabled && !mMainMenuProjection)
     {
         mMainMenuBaseFovY = mActiveCamera->getFOVy();
