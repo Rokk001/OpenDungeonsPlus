@@ -18,6 +18,23 @@ namespace
 const float HUE_FEATHER = 10.0f;
 const float SV_FEATHER = 0.08f;
 const float BOX_FEATHER = 0.02f;
+//! Degrees of the hue circle and of one sector of it
+const float HUE_DEGREES = 360.0f;
+const float HUE_SECTOR_DEGREES = 60.0f;
+//! The random shift of a region is drawn from 0 to SHIFT_STEPS and mapped to -1 to +1
+const uint32_t SHIFT_STEPS = 2000;
+const float SHIFT_HALF_STEPS = 1000.0f;
+//! Lower limits of the mean value of a region and of the value of a pixel when a palette colour is applied
+const float MIN_MEAN_VALUE = 0.05f;
+const float MIN_PIXEL_VALUE = 0.01f;
+//! How strongly the brightness pattern of the original pixels is kept in a palette colour
+const float PALETTE_CONTRAST = 0.85f;
+//! Lowest sum of the weights of a region for it to be recoloured
+const double MIN_REGION_WEIGHT = 1.0;
+//! Kinds of block the config file is in while it is read
+const int BLOCK_NONE = -1;
+const int BLOCK_PALETTE = 0;
+const int BLOCK_PORTRAIT = 1;
 
 float clamp01(float value)
 {
@@ -35,7 +52,7 @@ float ramp(float value, float lo, float hi, float feather)
 float circularDistance(float a, float b)
 {
     float distance = std::fabs(a - b);
-    return std::min(distance, 360.0f - distance);
+    return std::min(distance, HUE_DEGREES - distance);
 }
 
 float hueWeight(float hue, float lo, float hi)
@@ -65,9 +82,9 @@ void rgbToHsv(float r, float g, float b, float& h, float& s, float& v)
             h = (b - r) / d + 2.0f;
         else
             h = (r - g) / d + 4.0f;
-        h *= 60.0f;
+        h *= HUE_SECTOR_DEGREES;
         if(h < 0.0f)
-            h += 360.0f;
+            h += HUE_DEGREES;
     }
     s = (mx > 0.0f) ? d / mx : 0.0f;
     v = mx;
@@ -75,8 +92,8 @@ void rgbToHsv(float r, float g, float b, float& h, float& s, float& v)
 
 void hsvToRgb(float h, float s, float v, float& r, float& g, float& b)
 {
-    h = h - 360.0f * std::floor(h / 360.0f);
-    float hp = h / 60.0f;
+    h = h - HUE_DEGREES * std::floor(h / HUE_DEGREES);
+    float hp = h / HUE_SECTOR_DEGREES;
     float c = v * s;
     float x = c * (1.0f - std::fabs(std::fmod(hp, 2.0f) - 1.0f));
     float m = v - c;
@@ -260,8 +277,7 @@ bool PortraitTint::loadFromFile(const std::string& path)
         return false;
     }
 
-    // 0 inside a palette block, 1 inside a portrait block
-    int current = -1;
+    int current = BLOCK_NONE;
     std::string line;
     uint32_t lineNumber = 0;
     while(std::getline(file, line))
@@ -277,18 +293,18 @@ bool PortraitTint::loadFromFile(const std::string& path)
         if(key == "[Palette]")
         {
             mPalettes.push_back(Palette());
-            current = 0;
+            current = BLOCK_PALETTE;
         }
         else if(key == "[Portrait]")
         {
             mPortraits.push_back(Portrait());
-            current = 1;
+            current = BLOCK_PORTRAIT;
         }
-        else if((key == "Name") && (current == 0) && (columns.size() >= 2))
+        else if((key == "Name") && (current == BLOCK_PALETTE) && (columns.size() >= 2))
             mPalettes.back().mName = columns[1];
-        else if((key == "Colour") && (current == 0) && (columns.size() >= 5))
+        else if((key == "Colour") && (current == BLOCK_PALETTE) && (columns.size() >= 5))
         {
-            Colour colour;
+            Colour colour = {0.0f, 0.0f, 0.0f};
             if(!parseFloat(columns[2], colour.mHue) || !parseFloat(columns[3], colour.mSaturation) ||
                 !parseFloat(columns[4], colour.mValue))
             {
@@ -297,9 +313,9 @@ bool PortraitTint::loadFromFile(const std::string& path)
             }
             mPalettes.back().mColours.push_back(colour);
         }
-        else if((key == "Mesh") && (current == 1) && (columns.size() >= 2))
+        else if((key == "Mesh") && (current == BLOCK_PORTRAIT) && (columns.size() >= 2))
             mPortraits.back().mMesh = columns[1];
-        else if((key == "Region") && (current == 1))
+        else if((key == "Region") && (current == BLOCK_PORTRAIT))
         {
             Region region;
             std::string error;
@@ -389,12 +405,12 @@ void PortraitTint::apply(const std::string& meshName, const std::string& creatur
                 total += weights[i];
                 valueSum += weights[i] * value[i];
             }
-            if(total < 1.0)
+            if(total < MIN_REGION_WEIGHT)
                 continue;
 
             social::Rng rng = social::makeFieldRng(creatureName, "portrait:" + region.mName);
             Colour target = {0.0f, 0.0f, 0.0f};
-            float meanValue = 0.05f;
+            float meanValue = MIN_MEAN_VALUE;
             float shiftHue = 0.0f;
             float shiftSaturation = 1.0f;
             float shiftValue = 1.0f;
@@ -402,13 +418,13 @@ void PortraitTint::apply(const std::string& meshName, const std::string& creatur
             {
                 const std::vector<Colour>& colours = mPalettes[region.mPalette].mColours;
                 target = colours[rng.below(static_cast<uint32_t>(colours.size()))];
-                meanValue = std::max(0.05f, static_cast<float>(valueSum / total));
+                meanValue = std::max(MIN_MEAN_VALUE, static_cast<float>(valueSum / total));
             }
             else
             {
-                shiftHue = (rng.below(2001) / 1000.0f - 1.0f) * region.mShift[0];
-                shiftSaturation = 1.0f + (rng.below(2001) / 1000.0f - 1.0f) * region.mShift[1];
-                shiftValue = 1.0f + (rng.below(2001) / 1000.0f - 1.0f) * region.mShift[2];
+                shiftHue = (rng.below(SHIFT_STEPS + 1) / SHIFT_HALF_STEPS - 1.0f) * region.mShift[0];
+                shiftSaturation = 1.0f + (rng.below(SHIFT_STEPS + 1) / SHIFT_HALF_STEPS - 1.0f) * region.mShift[1];
+                shiftValue = 1.0f + (rng.below(SHIFT_STEPS + 1) / SHIFT_HALF_STEPS - 1.0f) * region.mShift[2];
             }
 
             for(size_t i = 0; i < pixels; ++i)
@@ -423,7 +439,7 @@ void PortraitTint::apply(const std::string& meshName, const std::string& creatur
                 {
                     newHue = target.mHue;
                     newSaturation = target.mSaturation;
-                    newValue = std::min(1.0f, target.mValue * std::pow(std::max(value[i], 0.01f) / meanValue, 0.85f));
+                    newValue = std::min(1.0f, target.mValue * std::pow(std::max(value[i], MIN_PIXEL_VALUE) / meanValue, PALETTE_CONTRAST));
                 }
                 else
                 {

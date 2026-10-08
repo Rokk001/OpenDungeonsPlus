@@ -29,6 +29,12 @@ namespace
 //! Illustrated portraits are shrunk by this factor before they are tinted: they are shown small
 //! and every creature gets an own texture
 const uint32_t TINT_DOWNSCALE = 4;
+//! Channels of the pixels read from the portrait image and of the texture that is created (RGBA)
+const size_t RGBA_CHANNELS = 4;
+//! Channels of the colour values the tint works on (RGB, floats from 0 to 1)
+const size_t RGB_CHANNELS = 3;
+//! Largest value of one 8 bit channel
+const float MAX_CHANNEL_VALUE = 255.0f;
 const std::string TINTED_PREFIX = "TintedCreaturePortrait/";
 
 PortraitTint& getPortraitTint()
@@ -298,13 +304,13 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
         if((width == 0) || (height == 0))
             throw std::runtime_error("portrait image too small");
 
-        std::vector<uint8_t> full(static_cast<size_t>(sourceWidth) * sourceHeight * 4);
+        std::vector<uint8_t> full(static_cast<size_t>(sourceWidth) * sourceHeight * RGBA_CHANNELS);
         Ogre::PixelBox fullBox(sourceWidth, sourceHeight, 1, Ogre::PF_BYTE_RGBA, &full[0]);
         Ogre::PixelUtil::bulkPixelConversion(source.getPixelBox(), fullBox);
 
         // Average each block of TINT_DOWNSCALE x TINT_DOWNSCALE pixels
-        std::vector<float> rgb(static_cast<size_t>(width) * height * 3);
-        const float blockSize = static_cast<float>(TINT_DOWNSCALE * TINT_DOWNSCALE) * 255.0f;
+        std::vector<float> rgb(static_cast<size_t>(width) * height * RGB_CHANNELS);
+        const float blockSize = static_cast<float>(TINT_DOWNSCALE * TINT_DOWNSCALE) * MAX_CHANNEL_VALUE;
         for(uint32_t y = 0; y < height; ++y)
         {
             for(uint32_t x = 0; x < width; ++x)
@@ -315,13 +321,13 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
                     for(uint32_t dx = 0; dx < TINT_DOWNSCALE; ++dx)
                     {
                         const uint8_t* pixel = &full[(static_cast<size_t>(y * TINT_DOWNSCALE + dy) * sourceWidth +
-                            x * TINT_DOWNSCALE + dx) * 4];
+                            x * TINT_DOWNSCALE + dx) * RGBA_CHANNELS];
                         sum[0] += pixel[0];
                         sum[1] += pixel[1];
                         sum[2] += pixel[2];
                     }
                 }
-                size_t index = (static_cast<size_t>(y) * width + x) * 3;
+                size_t index = (static_cast<size_t>(y) * width + x) * RGB_CHANNELS;
                 rgb[index] = sum[0] / blockSize;
                 rgb[index + 1] = sum[1] / blockSize;
                 rgb[index + 2] = sum[2] / blockSize;
@@ -331,13 +337,15 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
 
         tint.apply(meshName, creatureName, rgb, width, height);
 
-        std::vector<uint8_t> data(static_cast<size_t>(width) * height * 4);
+        std::vector<uint8_t> data(static_cast<size_t>(width) * height * RGBA_CHANNELS);
         for(size_t i = 0; i < static_cast<size_t>(width) * height; ++i)
         {
-            data[i * 4] = static_cast<uint8_t>(rgb[i * 3] * 255.0f + 0.5f);
-            data[i * 4 + 1] = static_cast<uint8_t>(rgb[i * 3 + 1] * 255.0f + 0.5f);
-            data[i * 4 + 2] = static_cast<uint8_t>(rgb[i * 3 + 2] * 255.0f + 0.5f);
-            data[i * 4 + 3] = 255;
+            for(size_t channel = 0; channel < RGB_CHANNELS; ++channel)
+            {
+                data[i * RGBA_CHANNELS + channel] =
+                    static_cast<uint8_t>(rgb[i * RGB_CHANNELS + channel] * MAX_CHANNEL_VALUE + 0.5f);
+            }
+            data[i * RGBA_CHANNELS + RGB_CHANNELS] = 255;
         }
 
         texture = Ogre::TextureManager::getSingleton().createManual(name, "General", Ogre::TEX_TYPE_2D,
