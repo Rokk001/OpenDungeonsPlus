@@ -52,6 +52,10 @@ def field_rng(name, field):
     return Rng(fnv1a64(name) ^ fnv1a64('field:' + field))
 
 
+# Kinds of block the config file is in while it is read (as in PortraitTint.cpp)
+BLOCK_NONE = -1
+BLOCK_PALETTE = 0
+BLOCK_PORTRAIT = 1
 NUMBER = re.compile(r'^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$')
 
 
@@ -106,39 +110,39 @@ def load_config(path):
     palettes = {}
     portraits = {}
     errors = []
-    current = -1
+    current = BLOCK_NONE
     palette = None
     portrait = None
     for number, raw in enumerate(Path(path).read_text().splitlines(), 1):
         line = raw.split('#', 1)[0]
         if not line.strip():
             continue
-        cols = [c.strip() for c in line.split('	')]
+        cols = [c.strip() for c in line.split('\t')]
         key = cols[0]
         where = '%s:%d: ' % (Path(path).name, number)
         if key == '[Palette]':
             palette = []
             palettes['?unnamed%d' % len(palettes)] = palette
-            current = 0
+            current = BLOCK_PALETTE
         elif key == '[Portrait]':
             portrait = []
             portraits['?unnamed%d' % len(portraits)] = portrait
-            current = 1
-        elif key == 'Name' and current == 0 and len(cols) >= 2:
+            current = BLOCK_PORTRAIT
+        elif key == 'Name' and current == BLOCK_PALETTE and len(cols) >= 2:
             if cols[1] in palettes:
                 errors.append(where + "duplicate palette '%s'" % cols[1])
             palettes = {(cols[1] if v is palette else k): v for k, v in palettes.items()}
-        elif key == 'Colour' and current == 0 and len(cols) >= 5:
+        elif key == 'Colour' and current == BLOCK_PALETTE and len(cols) >= 5:
             numbers = [parse_floats(c) for c in cols[2:5]]
             if any(n is None or len(n) != 1 for n in numbers):
                 errors.append(where + 'bad Colour numbers')
                 continue
             palette.append((cols[1], numbers[0][0], numbers[1][0], numbers[2][0]))
-        elif key == 'Mesh' and current == 1 and len(cols) >= 2:
+        elif key == 'Mesh' and current == BLOCK_PORTRAIT and len(cols) >= 2:
             if cols[1] in portraits:
                 errors.append(where + "duplicate portrait '%s'" % cols[1])
             portraits = {(cols[1] if v is portrait else k): v for k, v in portraits.items()}
-        elif key == 'Region' and current == 1:
+        elif key == 'Region' and current == BLOCK_PORTRAIT:
             region, error = parse_region(cols, palettes)
             if error:
                 errors.append(where + error)

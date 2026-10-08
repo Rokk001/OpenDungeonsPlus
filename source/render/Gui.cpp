@@ -307,6 +307,8 @@ const float PROFILE_LABEL_WIDTH = 88.0f;
 const float PROFILE_LINK_LEFT = 92.0f;
 const float PROFILE_ROW_GAP = 4.0f;
 const float PROFILE_LINE_PADDING = 4.0f;
+//! Width the rows of the profile page leave free next to the text: 16 design pixels on each side
+const float PROFILE_ROW_INSET_TOTAL = 32.0f;
 
 //! \brief Number of lines the window text occupies when CEGUI wraps it at the given pixel width
 std::size_t countWrappedLines(const CEGUI::Window* window, float width)
@@ -334,8 +336,9 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
 
     // The row spans the page minus 16 design pixels on each side; the text uses that whole width
     const CEGUI::Window* parent = window->getParent();
-    const float width = (parent != nullptr) ? parent->getPixelSize().d_width - 32.0f * scale :
-        window->getPixelSize().d_width;
+    float width = window->getPixelSize().d_width;
+    if(parent != nullptr)
+        width = parent->getPixelSize().d_width - PROFILE_ROW_INSET_TOTAL * scale;
     const std::size_t lines = countWrappedLines(window, width);
     const float height = getProfileLinesHeight(window, lines, scale);
     setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, 16), CEGUI::UDim(0, y),
