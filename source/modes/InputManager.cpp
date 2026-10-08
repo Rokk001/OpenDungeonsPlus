@@ -227,6 +227,9 @@ void InputManager::setWidthAndHeight(int width, int height)
 void InputManager::setMousePosition(int x, int y)
 {
 #ifndef OD_USE_SFML_WINDOW
+    if(mMouse == nullptr)
+        return;
+
     OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
     x = (std::max)(0, (std::min)(x, state.width - 1));
     y = (std::max)(0, (std::min)(y, state.height - 1));
