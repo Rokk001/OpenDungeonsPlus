@@ -41,6 +41,17 @@
 
 namespace
 {
+//! Names of the frame and compass images drawn by Gui.cpp.
+const CEGUI::String MINIMAP_RIM_IMAGE("OpenDungeonsIcons/MiniMapRim");
+const CEGUI::String MINIMAP_NORTH_IMAGE("OpenDungeonsIcons/MiniMapNorth");
+
+//! The minimap is laid out for a map area of this many pixels; sizes scale with the actual area.
+const float MINIMAP_REFERENCE_SIZE = 176.0f;
+//! Distance of the compass marker from the map centre as a fraction of the map area (the ring).
+const float MINIMAP_NORTH_RING_FRACTION = 0.449f;
+//! Half size of the compass marker in reference pixels.
+const float MINIMAP_NORTH_HALF_SIZE = 10.0f;
+
 class MiniMapImage : public CEGUI::BasicImage
 {
 public:
@@ -97,13 +108,14 @@ private:
             const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const
     {
         CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
-        if(!images.isDefined("OpenDungeonsIcons/MiniMapNorth"))
+        if(!images.isDefined(MINIMAP_NORTH_IMAGE))
             return;
-        const CEGUI::Image& marker = images.get("OpenDungeonsIcons/MiniMapNorth");
-        const float scale = std::min(area.getWidth(), area.getHeight()) / 176.0f;
-        const float x = area.left() + area.getWidth() * (0.5f + 0.449f * mNorthDirection.x);
-        const float y = area.top() + area.getHeight() * (0.5f + 0.449f * mNorthDirection.y);
-        const CEGUI::Rectf boss(x - 10.0f * scale, y - 10.0f * scale, x + 10.0f * scale, y + 10.0f * scale);
+        const CEGUI::Image& marker = images.get(MINIMAP_NORTH_IMAGE);
+        const float scale = std::min(area.getWidth(), area.getHeight()) / MINIMAP_REFERENCE_SIZE;
+        const float x = area.left() + area.getWidth() * (0.5f + MINIMAP_NORTH_RING_FRACTION * mNorthDirection.x);
+        const float y = area.top() + area.getHeight() * (0.5f + MINIMAP_NORTH_RING_FRACTION * mNorthDirection.y);
+        const float halfSize = MINIMAP_NORTH_HALF_SIZE * scale;
+        const CEGUI::Rectf boss(x - halfSize, y - halfSize, x + halfSize, y + halfSize);
         marker.render(buffer, boss, clip, colours);
     }
 
@@ -112,8 +124,8 @@ private:
             const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const
     {
         CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
-        if(images.isDefined("OpenDungeonsIcons/MiniMapRim"))
-            images.get("OpenDungeonsIcons/MiniMapRim").render(buffer, area, clip, colours);
+        if(images.isDefined(MINIMAP_RIM_IMAGE))
+            images.get(MINIMAP_RIM_IMAGE).render(buffer, area, clip, colours);
     }
 
     void drawLine(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
