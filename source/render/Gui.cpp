@@ -221,9 +221,22 @@ void colourNavigationAtlas()
     }
 }
 
+//! Returns true if the point (px, py) lies inside the ellipse with centre (cx, cy) and radii rx, ry
+bool insideEllipse(float px, float py, float cx, float cy, float rx, float ry)
+{
+    const float dx = (px - cx) / rx;
+    const float dy = (py - cy) / ry;
+    return dx * dx + dy * dy <= 1.0f;
+}
+
+//! Draws the summon-worker symbol (a round face with pointed ears, two eyes, a nose and a mouth) into a
+//! 64x64 texture and binds it to the existing summon button image. The shape is mirrored around the vertical
+//! axis at x = 28, every pixel is sampled 4x4 times for smooth edges and the result is tinted like the other
+//! navigation icons.
 void createSummonWorkerIcon()
 {
     const int size = 64;
+    const float axisX = 28.0f;
     std::vector<unsigned char> pixels(size * size * 4, 0);
     for(int y = 0; y < size; ++y)
     {
@@ -236,19 +249,13 @@ void createSummonWorkerIcon()
                 {
                     const float px = x + (sx + 0.5f) * 0.25f;
                     const float py = y + (sy + 0.5f) * 0.25f;
-                    const std::function<bool(float, float, float, float)> ellipse = [&](float cx, float cy, float rx, float ry)
-                    {
-                        const float dx = (px - cx) / rx;
-                        const float dy = (py - cy) / ry;
-                        return dx * dx + dy * dy <= 1.0f;
-                    };
-                    const float earX = std::abs(px - 28.0f);
+                    const float earX = std::abs(px - axisX);
                     const bool ears = earX <= 22.0f &&
                         py >= 31.0f - 0.55f * earX && py <= 45.0f - 1.15f * earX;
-                    const bool face = ellipse(28, 30, 16, 18) || ellipse(28, 43, 10, 11);
-                    const bool eyes = ellipse(21, 31, 5, 6) || ellipse(35, 31, 5, 6);
-                    const bool nose = std::abs(px - 28.0f) <= 2.5f && py >= 39 && py <= 43;
-                    const bool mouth = py >= 47 && py <= 49 && std::abs(px - 28.0f) <= 4;
+                    const bool face = insideEllipse(px, py, axisX, 30, 16, 18) || insideEllipse(px, py, axisX, 43, 10, 11);
+                    const bool eyes = insideEllipse(px, py, 21, 31, 5, 6) || insideEllipse(px, py, 35, 31, 5, 6);
+                    const bool nose = std::abs(px - axisX) <= 2.5f && py >= 39 && py <= 43;
+                    const bool mouth = py >= 47 && py <= 49 && std::abs(px - axisX) <= 4;
                     const bool worker = (face || ears) && !eyes && !nose && !mouth;
                     coverage += worker ? 1 : 0;
                 }

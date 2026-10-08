@@ -31,11 +31,12 @@ for filename, prop in [('WindowTabSpells.layout', 'NormalImage'), ('WindowSkillT
     assert button.find(f'Property[@name="{prop}"]').get('value') == 'OpenDungeonsIcons/SummonWorkerButton'
 assert 'colourNavigationAtlas();\n    createSummonWorkerIcon();' in gui
 shader = gui[gui.index('void shadeNavigationIcon('):gui.index('\nvoid colourNavigationAtlas(')]
-symbol = gui[gui.index('void createSummonWorkerIcon('):gui.index('\nvoid createNavigationImages(')]
+symbol = gui[gui.index('bool insideEllipse('):gui.index('\nvoid createNavigationImages(')]
 probe = r'''
 #include <Ogre.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <string>
@@ -45,7 +46,7 @@ struct Sizef {int width,height;Sizef(int w,int h):width(w),height(h){}};
 struct Rectf {int left,top,right,bottom;Rectf(int a=0,int b=0,int c=0,int d=0):left(a),top(b),right(c),bottom(d){}};
 struct Texture {enum PixelFormat{PF_RGBA};std::vector<unsigned char> pixels;int width=0,height=0;
  void loadFromMemory(const void* data,Sizef s,PixelFormat){width=s.width;height=s.height;
-  const auto* p=static_cast<const unsigned char*>(data);pixels.assign(p,p+width*height*4);}};
+  const unsigned char* p=static_cast<const unsigned char*>(data);pixels.assign(p,p+width*height*4);}};
 struct Renderer {std::map<std::string,Texture> textures;Texture& createTexture(const std::string& name){return textures[name];}};
 struct System {Renderer renderer;static System& getSingleton(){static System s;return s;}Renderer* getRenderer(){return &renderer;}};
 struct BasicImage {Texture* texture=nullptr;Rectf area;void setTexture(Texture* t){texture=t;}void setArea(Rectf a){area=a;}};
@@ -55,24 +56,24 @@ struct ImageManager {std::map<std::string,BasicImage> images;static ImageManager
 SHADER
 SYMBOL
 int main(int argc,char** argv){try{
- int checks=0,failures=0;auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cout<<"FAIL "<<why<<'\n';}};
- auto& images=CEGUI::ImageManager::getSingleton();CEGUI::Texture original;
+ int checks=0,failures=0;const std::function<void(bool,const char*)> check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cout<<"FAIL "<<why<<'\n';}};
+ CEGUI::ImageManager& images=CEGUI::ImageManager::getSingleton();CEGUI::Texture original;
  images.images["OpenDungeonsIcons/SummonWorkerButton"].texture=&original;
  images.images["OpenDungeonsIcons/Other"].texture=&original;createSummonWorkerIcon();
- auto& image=images.get("OpenDungeonsIcons/SummonWorkerButton");auto& texture=*image.texture;
+ CEGUI::BasicImage& image=images.get("OpenDungeonsIcons/SummonWorkerButton");CEGUI::Texture& texture=*image.texture;
  check(image.texture!=&original,"existing summon image replaced");
  check(images.get("OpenDungeonsIcons/Other").texture==&original,"other artwork untouched");
  check(texture.width==64&&texture.height==64,"normal icon dimensions");
  check(image.area.left==0&&image.area.top==0&&image.area.right==64&&image.area.bottom==64,"correct image rectangle");
- const auto& p=texture.pixels;auto alpha=[&](int x,int y){return p[(y*64+x)*4+3];};
+ const std::vector<unsigned char>& p=texture.pixels;const std::function<int(int,int)> alpha=[&](int x,int y){return int(p[(y*64+x)*4+3]);};
  int opaque=0,partial=0;for(int y=0;y<64;++y)for(int x=0;x<64;++x){
   int a=alpha(x,y);opaque+=a==255;partial+=a>0&&a<255;
   if(x<6||x>=58||y<5||y>=59)check(a==0,"transparent padding, no portrait background");}
  check(opaque>450&&opaque<1500,"compact silhouette");check(partial>80,"supersampled smooth edges");
- for(auto point:{std::pair<int,int>{28,18},{9,22},{46,22},{28,34},{28,51}})
+ for(std::pair<int,int> point:{std::pair<int,int>{28,18},{9,22},{46,22},{28,34},{28,51}})
   {if(alpha(point.first,point.second)<=200)std::cout<<"sample "<<point.first<<","<<point.second<<" alpha="<<int(alpha(point.first,point.second))<<'\n';
    check(alpha(point.first,point.second)>200,"round head pointed ears and face remain");}
- for(auto point:{std::pair<int,int>{21,31},{35,31},{28,41},{28,48},{44,46}})
+ for(std::pair<int,int> point:{std::pair<int,int>{21,31},{35,31},{28,41},{28,48},{44,46}})
   check(alpha(point.first,point.second)==0,"eyes nose mouth and surrounding space remain open");
  for(int y=0;y<12;++y)for(int x=0;x<64;++x)check(alpha(x,y)==0,"no crown tufts or horns above head");
  for(int y=38;y<59;++y)for(int x=46;x<58;++x)check(alpha(x,y)==0,"no magical sparkle beside worker");
@@ -83,7 +84,7 @@ int main(int argc,char** argv){try{
  const int width=512,height=192;std::vector<unsigned char> preview(width*height*4,255);
  for(int i=0;i<width*height;++i){preview[i*4]=20;preview[i*4+1]=23;preview[i*4+2]=28;}
  for(int n=0;n<4;++n){std::vector<unsigned char> icon=p;
-  if(n){for(int y=0;y<64;++y)for(int x=0;x<64;++x){auto c=atlas.getColourAt(n*64+x,320+y,0);int i=(y*64+x)*4;
+  if(n){for(int y=0;y<64;++y)for(int x=0;x<64;++x){Ogre::ColourValue c=atlas.getColourAt(n*64+x,320+y,0);int i=(y*64+x)*4;
    icon[i]=static_cast<unsigned char>(c.r*255+.5f);icon[i+1]=static_cast<unsigned char>(c.g*255+.5f);
    icon[i+2]=static_cast<unsigned char>(c.b*255+.5f);icon[i+3]=static_cast<unsigned char>(c.a*255+.5f);}
    const unsigned char colours[][3]={{234,137,80},{231,183,100},{248,206,88}};
