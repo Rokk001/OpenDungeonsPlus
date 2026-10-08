@@ -83,6 +83,9 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 
+//! Character height of the pointer info text at unscaled GUI size, as set when its text box is created.
+const float POINTER_TEXT_BASE_HEIGHT = 16.0f;
+
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
     if(screenSize <= 1)
@@ -377,7 +380,7 @@ GameMode::GameMode(ModeManager *modeManager):
 
 GameMode::~GameMode()
 {
-    TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, 16.0f);
+    TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, POINTER_TEXT_BASE_HEIGHT);
     for(const MessageTab& tab : mMessageTabs)
         CEGUI::WindowManager::getSingleton().destroyWindow(tab.window);
     mReturningToSettingsNavigation = false;
@@ -2341,7 +2344,7 @@ void GameMode::refreshActionFeedback(float elapsed)
     }
     const float pointerScale = icon->getPixelSize().d_width / 50.0f;
     TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING,
-        16.0f * pointerScale);
+        POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
         pointer.d_x + 145.0f * pointerScale, pointer.d_y + 24.0f * pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
