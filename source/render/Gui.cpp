@@ -1397,7 +1397,9 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     context.getMouseCursor().setDefaultImage("OpenDungeonsSkin/MouseArrow");
     context.getMouseCursor().setVisible(true);
     context.setDefaultTooltipType("OD/Tooltip");
-    context.getDefaultTooltipObject()->subscribeEvent(CEGUI::Window::EventMoved,
+    CEGUI::Tooltip* defaultTooltip = context.getDefaultTooltipObject();
+    if(defaultTooltip != nullptr)
+        defaultTooltip->subscribeEvent(CEGUI::Window::EventMoved,
         CEGUI::Event::Subscriber([](const CEGUI::EventArgs& e)
         {
             CEGUI::Tooltip* tooltip = static_cast<CEGUI::Tooltip*>(
