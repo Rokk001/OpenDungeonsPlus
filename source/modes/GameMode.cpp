@@ -104,6 +104,12 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 //! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 
+//! Distance in pixels between the mouse cursor and the detail view shown next to it on the full map.
+const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
+
+//! Elapsed time reported to the minimap when it is redrawn right after a zoom change.
+const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
+
 //! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
 const float MOUSE_ORBIT_DEGREES_PER_PIXEL = 0.25f;
 
@@ -1930,7 +1936,7 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
     if(dynamic_cast<MiniMapDrawnFull*>(mMiniMap) != nullptr)
         level = std::max(0, level);
     mMiniMap->setZoomLevel(level);
-    mMiniMap->update(0.5f, mCameraTilesIntersections);
+    mMiniMap->update(MINIMAP_ZOOM_REFRESH_SECONDS, mCameraTilesIntersections);
     return true;
 }
 
@@ -1961,8 +1967,8 @@ void GameMode::updateMapDetail()
     if(!detail->isVisible())
         return;
     const CEGUI::Sizef size = detail->getPixelSize();
-    const float x = std::max(0.0f, std::min(area.getWidth() - size.d_width, mouse.d_x - area.left() + 12.0f));
-    const float y = std::max(0.0f, std::min(area.getHeight() - size.d_height, mouse.d_y - area.top() + 12.0f));
+    const float x = std::max(0.0f, std::min(area.getWidth() - size.d_width, mouse.d_x - area.left() + MAP_DETAIL_CURSOR_OFFSET));
+    const float y = std::max(0.0f, std::min(area.getHeight() - size.d_height, mouse.d_y - area.top() + MAP_DETAIL_CURSOR_OFFSET));
     detail->setPosition(CEGUI::UVector2(CEGUI::UDim(0, x), CEGUI::UDim(0, y)));
     static_cast<MiniMapCamera*>(mMiniMap)->setViewCenter(mFullMap->camera_2dPositionFromClick(
         static_cast<int>(mouse.d_x), static_cast<int>(mouse.d_y)));

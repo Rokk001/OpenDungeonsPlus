@@ -461,18 +461,27 @@ private:
     float mProductionRefreshElapsed = 0.0f;
     bool mProductionRequestPending = false;
 
+    //! \brief Opens the full map window, or closes it when it is already open.
     bool toggleMap(const CEGUI::EventArgs& = {});
+    //! \brief Closes the full map window and restores the regular minimap.
     bool closeMap(const CEGUI::EventArgs& = {});
+    //! \brief Left click on the full map moves the camera there, right click closes the map.
     bool clickMap(const CEGUI::EventArgs&);
+    //! \brief Left click on the minimap zoom button zooms in, right click zooms out.
     bool zoomMiniMap(const CEGUI::EventArgs&);
     bool clickHeartBadge(const CEGUI::EventArgs&);
     //! \brief Sets the tooltip of the time limit display: a script countdown or a time limit
     void updateTimeLimitTooltip(bool isCountdown);
+    //! \brief Shows a detail view of the map area under the mouse cursor while the full map is open.
     void updateMapDetail();
+    //! \brief Moves the camera to a room of the given type owned by the local player.
     void focusRoom(RoomType type);
+    //! \brief The full map shown while the map window is open, nullptr otherwise.
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
+    //! \brief Zoom level of the minimap before the map window was opened.
     int mSavedMiniMapZoom = 0;
     std::map<RoomType, size_t> mRoomFocusIndices;
+    //! \brief True while the map key is held, so that key repeat does not toggle the map again.
     bool mMapKeyDown = false;
 
 
