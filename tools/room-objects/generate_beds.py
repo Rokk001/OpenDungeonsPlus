@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the imp and spider beds (Ogre XML meshes + atlas textures) and the
+"""Generate the worker and spider beds (Ogre XML meshes + atlas textures) and the
 restyled standard bed textures.  Original work, CC0.
 
 Usage: generate_beds.py OUT_DIR
@@ -175,7 +175,7 @@ def write_xml(meshes, path):
         xml_file.write("\n".join(L) + "\n")
 
 
-def imp_bed(out):
+def worker_bed(out):
     n = 512
     tex, bands = atlas([(0.34, iron(n, 1)), (0.33, straw(n, 2, (112, 92, 58))), (0.33, cloth(n, (92, 46, 38), 3))])
     y0 = int(bands[2][0] * n)
@@ -242,6 +242,6 @@ def standard_bed(out):
 if __name__ == "__main__":
     o = sys.argv[1]
     os.makedirs(o, exist_ok=True)
-    imp_bed(o)
+    worker_bed(o)
     spider_bed(o)
     standard_bed(o)
