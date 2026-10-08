@@ -70,6 +70,7 @@ public:
 
     //! \brief Request to load the previous mode type.
     void requestPreviousMode();
+    //! \brief Request to leave the current mode and launch the given saved game.
     void requestSavedGame(const std::string& filename);
 
     InputManager& getInputManager()
@@ -101,6 +102,7 @@ private:
     bool mStoreCurrentModeAtChange;
     //! Set by requestMainMenuWithSkirmishSubMenu, consumed by the main menu when it is activated
     bool mOpenSkirmishSubMenu = false;
+    //! \brief Saved game that the next load menu launches right away, empty if none.
     std::string mRequestedSavedGame;
 
     //! \brief Actually change the mode if needed
