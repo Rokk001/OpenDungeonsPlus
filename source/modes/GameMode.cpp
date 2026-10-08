@@ -85,6 +85,8 @@ const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
 const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+//! Seconds between two refreshes of the open trap production window.
+const float PRODUCTION_REFRESH_SECONDS = 1.0f;
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
@@ -149,11 +151,9 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(mRootWindow->getChild("ProductionWindow/Orders")->subscribeEvent(
         CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
     addEventConnection(mRootWindow->getChild("ProductionWindow/MoveUp")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        { return moveTrapProductionOrder(true); })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderEarlier, this)));
     addEventConnection(mRootWindow->getChild("ProductionWindow/MoveDown")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        { return moveTrapProductionOrder(false); })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderLater, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::closeMap, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
@@ -1450,9 +1450,7 @@ void GameMode::focusRoom(RoomType type)
 
 bool GameMode::showUserCameras(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     CEGUI::Window* window = mRootWindow->getChild("UserCamerasWindow");
     window->show();
@@ -1492,7 +1490,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(mRootWindow->getChild("ProductionWindow")->isVisible())
     {
         mProductionRefreshElapsed += evt.timeSinceLastFrame;
-        if(mProductionRefreshElapsed >= 1.0f)
+        if(mProductionRefreshElapsed >= PRODUCTION_REFRESH_SECONDS)
             requestTrapProductionQueue();
     }
     if(mFullMap)
@@ -1592,9 +1590,7 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     CEGUI::Window* objectives = mRootWindow->getChild("ObjectivesWindow");
     objectives->show();
     objectives->moveToFront();
@@ -1620,9 +1616,7 @@ bool GameMode::toggleObjectivesWindow(const CEGUI::EventArgs& e)
 
 bool GameMode::showPlayerSettingsWindow(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     // Before showing the player settings, we reset to the values in the seat. That's
     // because only the server can change them and the values in the Seat are the
@@ -1680,13 +1674,28 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
     return true;
 }
 
+bool GameMode::moveTrapProductionOrderEarlier(const CEGUI::EventArgs&)
+{
+    return moveTrapProductionOrder(true);
+}
+
+bool GameMode::moveTrapProductionOrderLater(const CEGUI::EventArgs&)
+{
+    return moveTrapProductionOrder(false);
+}
+
+void GameMode::closeAllTopWindows()
+{
+    while(closeTopWindow())
+    {
+    }
+}
+
 bool GameMode::showTrapProductionQueue(const CEGUI::EventArgs&)
 {
     CEGUI::Window* production = mRootWindow->getChild("ProductionWindow");
     const bool wasVisible = production->isVisible();
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     if(wasVisible)
         return true;
     production->show();
@@ -1831,9 +1840,7 @@ bool GameMode::toggleSkillWindow(const CEGUI::EventArgs& e)
 bool GameMode::showOptionsWindow(const CEGUI::EventArgs&)
 {
     setOptionsPage(false);
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
     options->show();
     options->moveToFront();
@@ -2071,9 +2078,7 @@ void GameMode::updateEventMessageIndicator(float elapsed)
 
 bool GameMode::showSettingsFromOptions(const CEGUI::EventArgs& /*e*/)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
     navigation->setModalState(true);
@@ -2141,9 +2146,7 @@ void GameMode::initializeSettingsNavigation()
 
 bool GameMode::showHelpWindow(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     mRootWindow->getChild("GameHelpWindow")->show();
     return true;

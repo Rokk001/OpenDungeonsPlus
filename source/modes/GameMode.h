@@ -162,6 +162,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool unselectAllSkillWindow(const CEGUI::EventArgs& = {});
     bool autoFillSkillWindow(const CEGUI::EventArgs& = {});
     void closeSkillWindow(bool saveSkill);
+    //! \brief Fills the production window from a snapshot sent by the server.
     void refreshTrapProductionQueue(const TrapProductionData& data);
 
     //! \brief Shows/hides/toggles the options window
@@ -318,13 +319,24 @@ private:
     bool storeUserCamera(const CEGUI::EventArgs&);
     unsigned int mUserCameraSlot = 0;
 
+    //! \brief Closes every open GUI layer, topmost first.
+    void closeAllTopWindows();
+    //! \brief Shows the trap production window and asks the server for its content.
     bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool closeTrapProductionQueue(const CEGUI::EventArgs& = {});
+    //! \brief Enables the move buttons according to the selected order.
     bool updateTrapProductionButtons(const CEGUI::EventArgs& = {});
+    //! \brief Button handlers: ask the server to move the selected order before or after its neighbour.
+    bool moveTrapProductionOrderEarlier(const CEGUI::EventArgs&);
+    bool moveTrapProductionOrderLater(const CEGUI::EventArgs&);
     bool moveTrapProductionOrder(bool earlier);
+    //! \brief Asks the server for the production snapshot unless a request is already pending.
     void requestTrapProductionQueue();
+    //! Last snapshot received from the server; list item ids index into its orders.
     TrapProductionData mTrapProductionData;
+    //! Seconds since the last request, used to refresh the open window.
     float mProductionRefreshElapsed = 0.0f;
+    //! True between sending a request and receiving the answer.
     bool mProductionRequestPending = false;
 
     bool toggleMap(const CEGUI::EventArgs& = {});
