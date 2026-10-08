@@ -42,6 +42,12 @@ namespace HeartHealthRing
     //! Seconds without a further message after which the "under attack" glow is switched off.
     const float ATTACK_GLOW_SECONDS = 3.0f;
 
+    const float PI = 3.14159265f;
+
+    //! Factors between degrees and radians, shared by the ring and the drawing of the badges.
+    const float DEGREES_TO_RADIANS = 0.0174533f;
+    const float RADIANS_TO_DEGREES = 57.29578f;
+
     inline float clampFraction(float fraction)
     {
         // Written so that a NaN ends up as 0
@@ -54,7 +60,7 @@ namespace HeartHealthRing
     //! centre (y pointing down), in [0, 360).
     inline float ringDegrees(float dx, float dy)
     {
-        float degrees = std::atan2(dx, -dy) * 180.0f / 3.14159265f;
+        float degrees = std::atan2(dx, -dy) * 180.0f / PI;
         if(degrees < 0.0f)
             degrees += 360.0f;
         if(degrees >= 360.0f)
