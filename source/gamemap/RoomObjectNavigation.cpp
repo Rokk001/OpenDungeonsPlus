@@ -35,6 +35,12 @@ const BuildingObject* interactionObject(Creature& creature, const Ogre::Vector2&
     return found == objects.end() ? nullptr : found->second;
 }
 
+//! Spacing of the candidate standing points tried around a workstation (an eighth of a tile)
+const float STANDING_POINT_SPACING = 0.125f;
+//! A creature closer than this (squared distance, 0.05 tile) to a candidate point already stands on it
+const float STANDING_POINT_REACHED_SQUARED = 0.0025f;
+
+//! Footprint (walking bounds scaled by creature level) of a creature standing at position and facing direction
 RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
     const Ogre::Vector2& position, Ogre::Vector2 direction)
 {
@@ -53,6 +59,8 @@ RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
     return {minimum * scale, maximum * scale, position, -direction.y, direction.x};
 }
 
+//! Returns false if the creature, standing at point and facing direction, would overlap another creature
+//! that has reserved an interaction position in any room
 bool interactionPositionClear(Creature& creature, const Ogre::Vector2& point,
     const Ogre::Vector2& direction)
 {
@@ -460,17 +468,17 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
     room->releaseInteractionPosition(&creature);
     // Keep the assigned side, but allow neighbouring users to stand side by side.
     const Ogre::Vector2 sideways(-away.y, away.x);
-    const int steps = int(std::ceil((2.0f * clearance(creature) + 1.0f) * 8.0f));
+    const int steps = int(std::ceil((2.0f * clearance(creature) + 1.0f) / STANDING_POINT_SPACING));
     for(int step = 0; step <= steps; ++step)
     {
-        const Ogre::Vector2 center = wanted + away * (step * 0.125f);
+        const Ogre::Vector2 center = wanted + away * (step * STANDING_POINT_SPACING);
         candidates.push_back(center);
         if(!RoomObjectPath::clearPoint(body, center, facing - center) ||
             interactionPositionClear(creature, center, facing - center))
             continue;
         for(int side = 1; side <= steps; ++side)
             for(float sign : {-1.0f, 1.0f})
-                candidates.push_back(center + sideways * (sign * side * 0.125f));
+                candidates.push_back(center + sideways * (sign * side * STANDING_POINT_SPACING));
     }
     for(const Ogre::Vector2& point : candidates)
     {
@@ -479,7 +487,7 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
             !RoomObjectPath::clearPoint(body, point, facing - point) ||
             !interactionPositionClear(creature, point, facing - point))
             continue;
-        if(start.squaredDistance(point) < 0.0025f &&
+        if(start.squaredDistance(point) < STANDING_POINT_REACHED_SQUARED &&
             RoomObjectPath::clearPoint(body, start, facing - start) &&
             interactionPositionClear(creature, start, facing - start))
         {
