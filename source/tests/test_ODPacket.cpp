@@ -63,6 +63,7 @@ BOOST_AUTO_TEST_CASE(test_optional_nickname_capability)
     std::string nickname;
     legacy >> nickname;
     BOOST_REQUIRE(legacy);
+    BOOST_CHECK_EQUAL(nickname, "Keeper");
     BOOST_CHECK(legacy.endOfPacket());
 
     // Updated peers append their capability after the unchanged nickname field.
