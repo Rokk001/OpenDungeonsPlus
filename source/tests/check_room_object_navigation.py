@@ -32,7 +32,7 @@ if args.source_ref:
 if args.trace_food:
     source = source.replace('std::stable_sort(candidates.begin()', 'std::cout << "CANDIDATES " << creature.getMeshName() << " level=" << creature.getLevel() << " count=" << candidates.size() << "\\n"; std::stable_sort(candidates.begin()')
 if args.trace_work:
-    source = source.replace('const auto tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const auto tiles = map.path(&creature, stagingTile);')
+    source = source.replace('const std::list<Tile*> tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const std::list<Tile*> tiles = map.path(&creature, stagingTile);')
     source = source.replace('path.clear();\n            return true;', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"BAD_LEG "<<previous<<" -> "<<target<<"\\n"; path.clear();\n            return true;')
 food_source = (subprocess.check_output(['git', 'show', args.food_source_ref + ':source/creatureaction/CreatureActionEatChicken.cpp'], cwd=repo, text=True)
                if args.food_source_ref else read_source('source/creatureaction/CreatureActionEatChicken.cpp'))

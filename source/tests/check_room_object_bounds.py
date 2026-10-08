@@ -33,18 +33,18 @@ int main(int argc,char** argv){try{
  Ogre::Root root("","","bounds.log");root.loadPlugin("RenderSystem_GL3Plus");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList opts;opts["hidden"]="true";root.createRenderWindow("Bounds",64,64,false,&opts);
- auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
+ Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
  int checks=0,failures=0;
- auto* scene=root.createSceneManager();
- auto* node=scene->getRootSceneNode()->createChildSceneNode();
+ Ogre::SceneManager* scene=root.createSceneManager();
+ Ogre::SceneNode* node=scene->getRootSceneNode()->createChildSceneNode();
  struct BedSize{const char* name;int width,height;};
  const BedSize beds[]={BED_SIZES};
  struct BuildingObject {Ogre::Vector2 scale=Ogre::Vector2::ZERO;Ogre::Vector2 getFurnitureScale()const{return scale;}} object;
- auto* renderedMovableEntity=&object;
- for(const auto& row:RoomObjectPath::meshBounds){
-  const auto mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
-  const auto& b=mesh->getBounds();
+ BuildingObject* renderedMovableEntity=&object;
+ for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds){
+  const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
+  const Ogre::AxisAlignedBox& b=mesh->getBounds();
   if(std::isfinite(row.maxZ)){
    ++checks;if(b.getMaximum().z>row.maxZ||row.maxZ-b.getMaximum().z>.00002f){++failures;std::cout<<"FAIL "<<row.name<<" low furniture height\n";}
   }
@@ -54,7 +54,7 @@ int main(int argc,char** argv){try{
   const std::string meshName(row.name);
   node->setScale(Ogre::Vector3::UNIT_SCALE);
   RENDER_SCALE
-  const auto scale=RoomObjectPath::furnitureScale(row);
+  const RoomObjectPath::FurnitureScale scale=RoomObjectPath::furnitureScale(row);
   ++checks;
   const bool bed=std::any_of(std::begin(beds),std::end(beds),[&](const BedSize& size){return meshName==size.name;});
   if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)||scale.x<=0||scale.y<=0||(!bed&&(scale.x>1||scale.y>1))){
@@ -79,17 +79,17 @@ int main(int argc,char** argv){try{
    }
   }
  }
- for(const auto& size:beds)for(const auto& row:RoomObjectPath::meshBounds)if(std::string(row.name)==size.name){
-  const auto mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
-  const auto& bounds=mesh->getBounds();const auto scale=RoomObjectPath::bedPlacement(row,5,7,size.width,size.height,0,"Creature1").scale;
+ for(const BedSize& size:beds)for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds)if(std::string(row.name)==size.name){
+  const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
+  const Ogre::AxisAlignedBox& bounds=mesh->getBounds();const RoomObjectPath::FurnitureScale scale=RoomObjectPath::bedPlacement(row,5,7,size.width,size.height,0,"Creature1").scale;
   const std::string meshName=row.name;object.scale={scale.x,scale.y};
   RENDER_SCALE
   ++checks;if(node->getScale()!=Ogre::Vector3(scale.x,scale.y,1)){++failures;std::cout<<"FAIL per-bed renderer scale\n";}
   for(float base:{0.f,90.f})for(int creature=0;creature<24;++creature){
    const int width=base==0?size.width:size.height,height=base==0?size.height:size.width;
    const std::string owner="Creature"+std::to_string(creature);
-   const auto placed=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
-   const auto restored=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
+   const RoomObjectPath::BedPlacement placed=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
+   const RoomObjectPath::BedPlacement restored=RoomObjectPath::bedPlacement(row,5,7,width,height,base,owner);
    node->setScale(placed.scale.x,placed.scale.y,1);node->setPosition(placed.x,placed.y,0);
    node->setOrientation(Ogre::Quaternion(Ogre::Degree(placed.angle),Ogre::Vector3::UNIT_Z));
    node->_update(true,false);Ogre::AxisAlignedBox actual;
@@ -116,13 +116,13 @@ int main(int argc,char** argv){try{
   }
  }
  for(const char* name:{"FenceCorner","FenceStraight","PortalObject","DungeonTempleObject","Bookcase","Podium"})
-  for(const auto& row:RoomObjectPath::meshBounds)if(std::string(row.name)==name){
-   const auto scale=RoomObjectPath::furnitureScale(row);
+  for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds)if(std::string(row.name)==name){
+   const RoomObjectPath::FurnitureScale scale=RoomObjectPath::furnitureScale(row);
    ++checks;if(scale.x!=1||scale.y!=1){++failures;std::cout<<"FAIL unchanged object "<<name<<'\n';}
   }
  // These decorations are attached high on a wall, not standing on the floor.
  for(const char* name:{"WeaponShield1.mesh","WeaponShield2.mesh"}){
-  const auto mesh=Ogre::MeshManager::getSingleton().load(name,"Graphics");++checks;
+  const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(name,"Graphics");++checks;
   if(mesh->getBounds().getMinimum().z<.8f){++failures;std::cout<<"FAIL wall decoration now occupies ground\n";}
  }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
