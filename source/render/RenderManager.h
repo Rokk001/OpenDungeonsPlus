@@ -117,11 +117,14 @@ public:
     //! \brief setup the scene
     void createScene(Ogre::Viewport*);
 
+    //! \brief Sets the viewport whose camera positions the keeper hand, after the camera viewport moved to a new window
     void setViewport(Ogre::Viewport* viewport)
     { mViewport = viewport; }
 
     //! \brief Sets/Updates the overall world lighting value with given factor.
     void setWorldAmbientLightingFactor(float lightFactor);
+    //! \brief Switches the dynamic shadows on or off for the scene and for all materials, including the
+    //! ones created after the game started
     void setDynamicShadowsEnabled(bool enabled);
 
     //! \brief Set the entity's opacity
