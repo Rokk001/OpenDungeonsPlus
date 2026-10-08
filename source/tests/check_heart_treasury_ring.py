@@ -50,7 +50,8 @@ mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameFo
 
 # The ring is part of the heart: fixed capacity, no treasury skill involved.
 assert 'static const int treasuryTileCapacity = 1000;' in temple
-assert 'dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1' in temple
+assert 'static const int HEART_CORE_RADIUS = 1;' in temple
+assert 'dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS' in temple
 assert 'center = getCentralTile();' in temple
 # The gold virtuals are declared in the header so the carry system sees them.
 for symbol in ('getTotalGoldStorage', 'getTotalGoldStored', 'depositGold', 'withdrawGold'):
