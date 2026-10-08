@@ -137,12 +137,17 @@ void createMiniMapCornerImages()
     }
 }
 
+//! \brief Colours a grey navigation icon in the given colour and gives it a raised look.
+//! pixels holds size x size RGBA pixels. Transparent pixels and pixels that already have
+//! a colour of their own (the channels differ by more than 40) are left unchanged.
 void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
         unsigned char red, unsigned char green, unsigned char blue)
 {
     const std::vector<unsigned char> original = pixels;
     const unsigned char colour[] = {red, green, blue};
+    // Width of the bevel, a sixteenth of the icon
     const int bevelWidth = std::max(1, size / 16);
+    // Opacity of the pixel, 0 outside of the icon
     const std::function<float(int, int)> alpha = [&](int x, int y)
     {
         return x >= 0 && y >= 0 && x < size && y < size ?
@@ -157,12 +162,18 @@ void shadeNavigationIcon(std::vector<unsigned char>& pixels, int size,
             const int darkest = std::min(original[i], std::min(original[i + 1], original[i + 2]));
             if(original[i + 3] == 0 || brightest - darkest > 40)
                 continue;
+            // Relief is positive on the edges that face the light (upper left) and
+            // negative on the opposite edges, from the opacity change across the bevel
+            // (wide) and across one pixel (fine).
             const float relief = 0.55f * (alpha(x + bevelWidth, y + bevelWidth) -
                 alpha(x - bevelWidth, y - bevelWidth)) +
                 0.25f * (alpha(x + 1, y + 1) - alpha(x - 1, y - 1));
+            // The face gets darker from top to bottom
             const float face = 0.98f - 0.42f * y / size;
+            // A faint diagonal band of light across the icon
             const float reflection = 0.12f * std::max(0.0f,
                 1.0f - std::abs((y + 0.35f * x) / size - 0.38f) / 0.09f);
+            // Shadow edges darken the face, light edges and the reflection mix in white
             const float light = std::max(0.0f, face + 0.65f * std::min(0.0f, relief));
             const float highlight = std::min(0.85f, std::max(0.0f, relief) + reflection);
             for(int channel = 0; channel < 3; ++channel)
@@ -193,6 +204,7 @@ void colourNavigationAtlas()
     const unsigned char palette[][3] = {
         {132, 186, 242}, {234, 137, 80}, {231, 183, 100}, {248, 206, 88},
         {192, 151, 236}, {148, 217, 151}, {214, 199, 156}, {217, 158, 91}};
+    const int paletteSize = static_cast<int>(sizeof(palette) / sizeof(palette[0]));
     for(int row = 0; row < height; row += 64)
     {
         const int size = row == 0 ? 32 : 64;
@@ -203,7 +215,7 @@ void colourNavigationAtlas()
             std::vector<unsigned char> icon(size * size * 4);
             for(int y = 0; y < size; ++y)
                 std::copy_n(pixels.begin() + ((row + y) * width + column) * 4, size * 4, icon.begin() + y * size * 4);
-            const unsigned char (&colour)[3] = palette[(column / size) % 8];
+            const unsigned char (&colour)[3] = palette[(column / size) % paletteSize];
             shadeNavigationIcon(icon, size, colour[0], colour[1], colour[2]);
             for(int y = 0; y < size; ++y)
                 std::copy_n(icon.begin() + y * size * 4, size * 4, pixels.begin() + ((row + y) * width + column) * 4);
