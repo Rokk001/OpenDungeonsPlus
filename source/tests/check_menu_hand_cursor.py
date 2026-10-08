@@ -35,8 +35,9 @@ struct RenderManager {
 };
 TOGGLE
 void resetMenu(RenderManager& renderManager){ENTRY}
-int main(){int checks=0;try{
- auto check=[&](bool value){++checks;if(!value)throw std::runtime_error("menu hand restoration failed");};
+int checks=0;
+void check(bool value){++checks;if(!value)throw std::runtime_error("menu hand restoration failed");}
+int main(){try{
  RenderManager r;
  for(int repeat=0;repeat<20;++repeat){
   r.rrToggleHandSelectorVisibility();check(!r.isKeeperHandVisible() && !r.hand.visible && !r.grip.parent);
