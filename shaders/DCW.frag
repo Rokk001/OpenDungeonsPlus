@@ -47,7 +47,9 @@ void main (void)
     vec3 surfaceColor = diffuseSurface == vec4(1.0, 1.0, 1.0, 1.0)
         ? texelColor
         : mix(texelColor, diffuseSurface.rgb, 0.5);
-    vec3 ownershipAccent = mix(surfaceColor, seatColor.rgb, 0.45);
+    // How strongly the owner colour tints the ownership studs.
+    const float ownershipTint = 0.45;
+    vec3 ownershipAccent = mix(surfaceColor, seatColor.rgb, ownershipTint);
     result = lightingTerm * mix(surfaceColor, ownershipAccent, crossMap.r);
     color  = vec4( result.xyz,  1.0);
 

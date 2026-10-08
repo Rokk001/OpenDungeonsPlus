@@ -1,18 +1,19 @@
 #include "LightAttenuation.glsl"
 
 // Match Ogre's default maximum number of lights per material pass.
+#define MAX_LOCAL_LIGHTS 8
 uniform float lightCount;
-uniform vec4 lightDiffuseColour[8];
-uniform vec4 lightSpecularColour[8];
-uniform vec4 lightPos[8];
-uniform vec4 lightAttenuation[8];
+uniform vec4 lightDiffuseColour[MAX_LOCAL_LIGHTS];
+uniform vec4 lightSpecularColour[MAX_LOCAL_LIGHTS];
+uniform vec4 lightPos[MAX_LOCAL_LIGHTS];
+uniform vec4 lightAttenuation[MAX_LOCAL_LIGHTS];
 uniform float firstLightCastsShadows;
 
 vec3 getLocalLighting(vec3 position, vec3 normal, vec3 camera, float shadow)
 {
     vec3 lighting = vec3(0.0);
     vec3 viewDirection = normalize(camera - position);
-    for(int i = 0; i < min(int(lightCount), 8); ++i)
+    for(int i = 0; i < min(int(lightCount), MAX_LOCAL_LIGHTS); ++i)
     {
         vec3 lightDirection = normalize(lightPos[i].xyz - position * lightPos[i].w);
         float diffuse = max(dot(lightDirection, normal), 0.0);
