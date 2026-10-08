@@ -44,8 +44,8 @@ struct ClientNotification {Packet mPacket;ClientNotification(ClientNotificationT
 struct ODClient {std::vector<Packet> sent;static ODClient& getSingleton(){static ODClient c;return c;}
  void queueClientNotification(ClientNotification* n){sent.push_back(n->mPacket);delete n;}};
 struct GameMap {Player player;std::map<std::pair<int,int>,Tile> tiles;Player* getLocalPlayer(){return &player;}
- Tile* getTile(int x,int y){auto i=tiles.find({x,y});return i==tiles.end()?nullptr:&i->second;}
- std::vector<Tile*> rectangularRegion(int x,int y,int a,int b){std::vector<Tile*> result;for(int i=std::min(x,a);i<=std::max(x,a);++i)for(int j=std::min(y,b);j<=std::max(y,b);++j)if(auto* t=getTile(i,j))result.push_back(t);return result;}
+ Tile* getTile(int x,int y){std::map<std::pair<int,int>,Tile>::iterator i=tiles.find({x,y});return i==tiles.end()?nullptr:&i->second;}
+ std::vector<Tile*> rectangularRegion(int x,int y,int a,int b){std::vector<Tile*> result;for(int i=std::min(x,a);i<=std::max(x,a);++i)for(int j=std::min(y,b);j<=std::max(y,b);++j){Tile* t=getTile(i,j);if(t!=nullptr)result.push_back(t);}return result;}
  void tileToPacket(Packet& p,Tile* t){p<<t->x<<t->y;}};
 struct InputManager {int mXPos=0,mYPos=0,mLStartDragX=0,mLStartDragY=0;InputCommandState mCommandState=InputCommandState::infoOnly;};
 struct ModeManager {InputManager input;InputManager& getInputManager(){return input;}};
@@ -59,8 +59,10 @@ struct TrapManager {static void checkSellTrapTiles(GameMap*,const InputManager&,
 struct GameMode:InputCommand {GameMap* mGameMap;ModeManager manager;ModeManager* mModeManager=&manager;
  void handlePlayerActionSell();};
 METHODS
-int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++failures;};
- GameMap map;GameMode game;game.mGameMap=&map;Seat enemy;auto& input=game.manager.input;auto& sent=ODClient::getSingleton().sent;
+int checks=0,failures=0;
+void check(bool ok){++checks;if(!ok)++failures;}
+int main(){
+ GameMap map;GameMode game;game.mGameMap=&map;Seat enemy;InputManager& input=game.manager.input;std::vector<Packet>& sent=ODClient::getSingleton().sent;
  for(int x=0;x<3;++x)for(int y=0;y<3;++y)map.tiles[{x,y}]={x,y,true,false,map.player.getSeat()};
  map.tiles[{1,1}].seat=&enemy;map.tiles[{2,1}].visual=TileVisual::portalRoom;map.tiles[{1,2}].room=false;
  for(int sx:{0,2})for(int sy:{0,2}){
@@ -77,7 +79,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
  input.mXPos=1;input.mYPos=1;game.handlePlayerActionSell();check(game.selected.size()==2); // Invalid endpoint still contains eligible rooms.
  map.tiles[{0,0}].trap=true;map.tiles[{2,2}].room=false;map.tiles[{2,2}].trap=true;
  input.mXPos=2;input.mYPos=2;game.handlePlayerActionSell();check(game.selected.size()==1&&game.text=="trap");
- for(auto action:{SelectedAction::none,SelectedAction::selectTile,SelectedAction::buildRoom,SelectedAction::buildTrap,SelectedAction::destroyRoom,SelectedAction::destroyTrap,SelectedAction::sellBuilding})
+ for(SelectedAction action:{SelectedAction::none,SelectedAction::selectTile,SelectedAction::buildRoom,SelectedAction::buildTrap,SelectedAction::destroyRoom,SelectedAction::destroyTrap,SelectedAction::sellBuilding})
  for(bool room:{false,true}){Tile t{0,0,room};check(thick({action},{&t})==(action==SelectedAction::buildRoom||action==SelectedAction::buildTrap||action==SelectedAction::destroyRoom||(action==SelectedAction::sellBuilding&&room)));}
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;}
 '''.replace('FLAGS', flags).replace('METHODS', function(game, 'void GameMode::handlePlayerActionSell(') + '\n' +
