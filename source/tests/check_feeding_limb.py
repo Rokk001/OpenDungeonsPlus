@@ -30,11 +30,11 @@ int main()
     try {
         Ogre::Root engine("", "", "");
         Ogre::Skeleton rig(nullptr, "feeding-limb-test", 0, "General");
-        auto* torso = rig.createBone("torso");
-        auto* upper = rig.createBone("upper");
-        auto* lower = rig.createBone("lower");
-        auto* hand = rig.createBone("hand");
-        auto* finger = rig.createBone("finger");
+        Ogre::Bone* torso = rig.createBone("torso");
+        Ogre::Bone* upper = rig.createBone("upper");
+        Ogre::Bone* lower = rig.createBone("lower");
+        Ogre::Bone* hand = rig.createBone("hand");
+        Ogre::Bone* finger = rig.createBone("finger");
         torso->addChild(upper); upper->addChild(lower); lower->addChild(hand);
         hand->addChild(finger);
         upper->setPosition(0, 0, .6f);
@@ -46,13 +46,13 @@ int main()
         check(findFeedingBone(&rig, {"absent"}) == nullptr, "missing limb is not invented");
         for(float angle : {0.f, 35.f, 90.f}) {
             torso->setOrientation(Ogre::Quaternion(Ogre::Degree(angle), Ogre::Vector3::UNIT_Z));
-            for(const auto& offset : {Ogre::Vector3(0, -.2f, -.2f),
+            for(const Ogre::Vector3& offset : {Ogre::Vector3(0, -.2f, -.2f),
                     Ogre::Vector3(.2f, -.1f, -.1f), Ogre::Vector3(-.2f, .1f, .1f),
                     Ogre::Vector3(0, 0, -.44f), Ogre::Vector3(0, 0, .4f)}) {
                 upper->setOrientation(Ogre::Quaternion::IDENTITY);
                 lower->setOrientation(Ogre::Quaternion::IDENTITY);
                 rig._updateTransforms();
-                const auto target = upper->_getDerivedPosition() + offset;
+                const Ogre::Vector3 target = upper->_getDerivedPosition() + offset;
                 solveFeedingLimb(upper, lower, hand->getPosition(), target);
                 check(hand->_getDerivedPosition().distance(target) < .0001f, "hand reaches target");
                 check(std::abs(upper->_getDerivedPosition().distance(lower->_getDerivedPosition()) - .25f) < .0001f, "upper limb does not stretch");
