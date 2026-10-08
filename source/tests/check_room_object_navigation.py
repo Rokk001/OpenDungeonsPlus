@@ -33,7 +33,7 @@ if args.source_ref:
 if args.trace_food:
     source = source.replace('std::stable_sort(candidates.begin()', 'std::cout << "CANDIDATES " << creature.getMeshName() << " level=" << creature.getLevel() << " count=" << candidates.size() << "\\n"; std::stable_sort(candidates.begin()')
 if args.trace_work:
-    source = source.replace('const auto tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const auto tiles = map.path(&creature, stagingTile);')
+    source = source.replace('const std::list<Tile*> tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const std::list<Tile*> tiles = map.path(&creature, stagingTile);')
     source = source.replace('path.clear();\n            return true;', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"BAD_LEG "<<previous<<" -> "<<target<<"\\n"; path.clear();\n            return true;')
 # Probe-only: the navigation code looks bodies up in the real table; additionally offer it an artificial
 # oversized test model. The shipped tables stay untouched and the model-wide loops below keep iterating them.
