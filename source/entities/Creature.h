@@ -411,7 +411,7 @@ public:
     void fireCreatureSound(CreatureSound sound);
     void fireCombatImpact(bool weaponClash, bool bodyDamage,
         const Ogre::Vector3& attackerPosition);
-    //! rief Tells the clients that see this creature that it starts to eat the given chicken.
+    //! \brief Tells the clients that see this creature that it starts to eat the given chicken.
     void fireChickenFeeding(const std::string& chickenName,
         const Ogre::Vector3& chickenPosition);
 
