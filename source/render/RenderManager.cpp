@@ -457,8 +457,6 @@ const Ogre::Real SLEEP_BREATH_WIDTH_RATIO = 0.4f;
 const Ogre::Real SLEEP_BED_MAX_SQUARED_DISTANCE = 1.0f;
 //! Gap between the mattress and the sleeping creature.
 const Ogre::Real SLEEP_BED_CLEARANCE = 0.01f;
-//! Height above the top of the bed mesh from which the mattress is searched.
-const Ogre::Real SLEEP_BED_RAY_HEIGHT = 1.0f;
 
 //! \brief Returns the bounds of the creature in its current animation pose after turning
 //! and scaling it. The skeletal animation is computed in software for this.
@@ -497,7 +495,8 @@ Ogre::Vector3 getBedSupportPoint(const Ogre::MeshPtr& mesh)
 {
     // A ray through the centre finds the mattress, not the tops of bed posts.
     Ogre::Vector3 point = mesh->getBounds().getCenter();
-    point.z = mesh->getBounds().getMaximum().z + SLEEP_BED_RAY_HEIGHT;
+    // Start the ray one unit above the mesh, outside of it.
+    point.z = mesh->getBounds().getMaximum().z + 1.0f;
     const Ogre::Ray ray(point, Ogre::Vector3::NEGATIVE_UNIT_Z);
     Ogre::Real nearest = Ogre::Math::POS_INFINITY;
     for(unsigned int sub = 0; sub < mesh->getNumSubMeshes(); ++sub)
