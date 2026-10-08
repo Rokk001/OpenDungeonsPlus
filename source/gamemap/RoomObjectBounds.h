@@ -64,11 +64,16 @@ static const MeshBounds meshBounds[] = {
     {"WorkshopMachine2", -.730786f, -.336f, .5376f, .338177f}
 };
 
-// The dungeon heart has one mesh per health tier (see RoomDungeonTemple.cpp).
+//! Names of the dungeon heart meshes, one per health tier (see RoomDungeonTemple.cpp).
+//! They have to match the entries of meshBounds.
+static const std::string HEART_MESH_HEALTHY = "DungeonHeartObjectHealthy";
+static const std::string HEART_MESH_DAMAGED = "DungeonHeartObjectDamaged";
+static const std::string HEART_MESH_CRITICAL = "DungeonHeartObjectCritical";
+
+//! Returns true if name is the mesh of the dungeon heart in any health tier.
 inline bool isDungeonHeartMesh(const std::string& name)
 {
-    return name == "DungeonHeartObjectHealthy" || name == "DungeonHeartObjectDamaged" ||
-        name == "DungeonHeartObjectCritical";
+    return name == HEART_MESH_HEALTHY || name == HEART_MESH_DAMAGED || name == HEART_MESH_CRITICAL;
 }
 
 // Narrow the visible furniture and its navigation bounds together. Leave Z
