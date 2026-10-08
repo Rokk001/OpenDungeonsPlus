@@ -8,11 +8,14 @@ namespace RoomObjectPath
 {
 // Only the completely measured low nest is traversable. Tall posts and
 // unknown furniture retain infinite height and cannot enter this path.
+// Returns the height that a creature of the given size has to climb to step onto the
+// obstacle and stores the body part that touches it in the obstacle; returns 0 if the
+// obstacle cannot be stepped onto.
 inline float prepareLowStep(Obstacle& obstacle, const std::string& mesh,
     float scale, float groundZ)
 {
     const float height = obstacle.maximumHeight - groundZ;
-    if(height <= 0.0f || height > lowWalkingHeight * 1.02f || height > lowWalkingHeight * scale)
+    if(height <= 0.0f || height > lowWalkingHeight * lowWalkingHeightTolerance || height > lowWalkingHeight * scale)
         return 0.0f;
     for(const LowWalkingBounds& body : lowWalkingBounds)
         if(mesh == body.name && !body.empty)
@@ -24,12 +27,20 @@ inline float prepareLowStep(Obstacle& obstacle, const std::string& mesh,
     return 0.0f;
 }
 
+// Number of halvings that locate where the body of a creature touches an obstacle.
+constexpr int lowStepSearchSteps = 12;
+// Directions shorter than this (squared) are replaced by the initial heading.
+constexpr float lowStepMinimumDirection = 0.000001f;
+
+// Returns how far a creature at the position, walking in the direction, is lifted
+// when it steps onto an obstacle with the given rise: 0 on the floor, the full rise on
+// top, a smooth transition in between.
 inline float lowStepElevation(const Obstacle& obstacle, Ogre::Vector2 position,
     Ogre::Vector2 direction, float rise)
 {
     if(rise <= 0.0f)
         return 0.0f;
-    if(direction.squaredLength() < 0.000001f)
+    if(direction.squaredLength() < lowStepMinimumDirection)
         direction = obstacle.initialHeading;
     direction.normalise();
     const Obstacle body = obstacle.forHeading(direction);
@@ -44,7 +55,7 @@ inline float lowStepElevation(const Obstacle& obstacle, Ogre::Vector2 position,
         if(!body.intersects(position, position + reach))
             continue;
         float low = 0.0f, high = 1.0f;
-        for(int i = 0; i < 12; ++i)
+        for(int i = 0; i < lowStepSearchSteps; ++i)
         {
             const float middle = (low + high) * 0.5f;
             if(body.intersects(position, position + reach * middle))

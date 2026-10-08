@@ -379,6 +379,7 @@ private:
         Ogre::Quaternion mBaseOrientation, mRestOrientation;
     };
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
+    //! Creatures that are currently lifted onto low furniture.
     std::set<Creature*> mSteppingCreatures;
 
     struct CreatureDropAnimation
@@ -443,7 +444,10 @@ private:
     void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
+    //! \brief Lifts the creature while it walks over low furniture, such as a nest, and lowers it again
+    //! afterwards.
     void updateCreatureStep(Creature* creature);
+    //! \brief Puts the given creature, or all lifted creatures if null, back on the floor.
     void cancelCreatureStep(Creature* creature = nullptr);
     void clearRoomConstructionEffects();
 

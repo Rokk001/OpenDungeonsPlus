@@ -14,6 +14,38 @@
 
 namespace
 {
+// Samples per tile when a straight line is tested against the terrain.
+const float TERRAIN_SAMPLES_PER_TILE = 16.0f;
+// Each client jitter coordinate is +/-0.3, so a rotated object needs the full diagonal
+// displacement (0.3 * sqrt(2), rounded up) as well as the creature's walking radius.
+const float WALK_DISTORTION_REACH = 0.425f;
+// Free standing points are searched on a grid of STANDING_GRID_SIZE x STANDING_GRID_SIZE
+// points per tile; the points are STANDING_GRID_STEP apart and centred on the tile.
+const int STANDING_GRID_SIZE = 8;
+const float STANDING_GRID_STEP = 0.125f;
+const float STANDING_GRID_START = -0.4375f;
+// Walking radius of a creature whose mesh is not in the catalog, before it is scaled by its level.
+const float DEFAULT_WALKING_RADIUS = 0.2f;
+// Squared distance below which a creature already stands at the wanted work position.
+const float WORK_POSITION_TOLERANCE = 0.0025f;
+
+// Returns the point of the standing grid in the tile centred on center.
+Ogre::Vector2 standingGridPoint(const Ogre::Vector2& center, int x, int y)
+{
+    return center + Ogre::Vector2(STANDING_GRID_START + x * STANDING_GRID_STEP,
+        STANDING_GRID_START + y * STANDING_GRID_STEP);
+}
+
+// Returns the biggest distance of a corner of the box from its origin.
+float farthestCorner(const Ogre::Vector2& low, const Ogre::Vector2& high)
+{
+    return std::hypot(std::max(std::abs(low.x), std::abs(high.x)),
+        std::max(std::abs(low.y), std::abs(high.y)));
+}
+
+// Returns the furniture of the room that a creature interacts with at the goal (its
+// own bed, the portal it leaves through, the torture device it uses), or null. That
+// furniture must not block the creature while it does so.
 const BuildingObject* interactionObject(Creature& creature, const Ogre::Vector2& goal)
 {
     Tile* tile = creature.getGameMap()->getTile(Helper::round(goal.x), Helper::round(goal.y));
@@ -46,7 +78,7 @@ bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vec
     int previousX = Helper::round(from.x), previousY = Helper::round(from.y);
     if(!passable(previousX, previousY))
         return false;
-    const int steps = std::max(1, int(std::ceil(from.distance(to) * 16.0f)));
+    const int steps = std::max(1, int(std::ceil(from.distance(to) * TERRAIN_SAMPLES_PER_TILE)));
     for(int i = 1; i <= steps; ++i)
     {
         const Ogre::Vector2 point = from + (to - from) * (float(i) / steps);
@@ -62,13 +94,14 @@ bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vec
     return true;
 }
 
+// Removes the obstacles that the creature can step onto and returns whether there were any.
 bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obstacle>& obstacles)
 {
     const size_t count = obstacles.size();
     obstacles.erase(std::remove_if(obstacles.begin(), obstacles.end(), [&](RoomObjectPath::Obstacle obstacle)
     {
         return RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
-            1.0f + 0.02f * creature.getLevel(), creature.getPosition().z) > 0.0f;
+            RoomObjectPath::creatureScale(creature.getLevel()), creature.getPosition().z) > 0.0f;
     }), obstacles.end());
     return obstacles.size() != count;
 }
@@ -76,11 +109,11 @@ bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obst
 
 float RoomObjectNavigation::clearance(const Creature& creature)
 {
-    const float scale = 1.0f + 0.02f * creature.getLevel();
+    const float scale = RoomObjectPath::creatureScale(creature.getLevel());
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
             return model.radius * scale;
-    return 0.2f * scale;
+    return DEFAULT_WALKING_RADIUS * scale;
 }
 
 std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map,
@@ -97,10 +130,9 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
         {
             if(object->getMeshName() != bounds.name)
                 continue;
-            const float angle = float(object->getRotationAngle()) * 0.01745329252f;
-            const Ogre::Vector2 placedScale = object->getFurnitureScale();
-            const RoomObjectPath::FurnitureScale scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
-                RoomObjectPath::FurnitureScale{placedScale.x, placedScale.y};
+            const float angle = float(object->getRotationAngle()) * RoomObjectPath::degreesToRadians;
+            const RoomObjectPath::FurnitureScale scale = RoomObjectPath::placedFurnitureScale(bounds,
+                object->getFurnitureScale());
             result.push_back({{bounds.minX * scale.x - clearance, bounds.minY * scale.y - clearance},
                 {bounds.maxX * scale.x + clearance, bounds.maxY * scale.y + clearance},
                 {object->getPosition().x, object->getPosition().y}, std::cos(angle), std::sin(angle)});
@@ -123,7 +155,7 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
     const BuildingObject* interaction)
 {
     std::vector<RoomObjectPath::Obstacle> result = collect(*creature.getGameMap(), 0.0f, interaction);
-    Ogre::Vector2 minimum(-0.2f), maximum(0.2f);
+    Ogre::Vector2 minimum(-DEFAULT_WALKING_RADIUS), maximum(DEFAULT_WALKING_RADIUS);
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
         {
@@ -131,7 +163,7 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
             maximum = Ogre::Vector2(model.maxX, model.maxY);
             break;
         }
-    const float scale = 1.0f + 0.02f * creature.getLevel();
+    const float scale = RoomObjectPath::creatureScale(creature.getLevel());
     Ogre::Vector2 heading(creature.getWalkDirection().x, creature.getWalkDirection().y);
     if(heading.squaredLength() < 0.000001f)
         heading = Ogre::Vector2(0, -1);
@@ -175,10 +207,10 @@ bool RoomObjectNavigation::standingPosition(const std::vector<RoomObjectPath::Ob
     }
     const Ogre::Vector2 center(float(Helper::round(wanted.x)), float(Helper::round(wanted.y)));
     float distance = std::numeric_limits<float>::infinity();
-    for(int y = 0; y < 8; ++y)
-        for(int x = 0; x < 8; ++x)
+    for(int y = 0; y < STANDING_GRID_SIZE; ++y)
+        for(int x = 0; x < STANDING_GRID_SIZE; ++x)
         {
-            const Ogre::Vector2 point = center + Ogre::Vector2(-0.4375f + x * 0.125f, -0.4375f + y * 0.125f);
+            const Ogre::Vector2 point = standingGridPoint(center, x, y);
             if(point.squaredDistance(wanted) >= distance || !RoomObjectPath::clearPoint(obstacles, point))
                 continue;
             distance = point.squaredDistance(wanted);
@@ -194,9 +226,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     GameMap& map = *creature.getGameMap();
     const BuildingObject* interaction = interactionObject(creature, path.back());
     const float radius = clearance(creature);
-    // Each client jitter coordinate is +/-0.3, so a rotated object needs the
-    // full diagonal displacement as well as the creature's walking radius.
-    std::vector<RoomObjectPath::Obstacle> obstacles = collect(map, radius + 0.425f, interaction);
+    std::vector<RoomObjectPath::Obstacle> obstacles = collect(map, radius + WALK_DISTORTION_REACH, interaction);
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     Ogre::Vector2 previous = start;
     bool nearby = !RoomObjectPath::clearSegment(obstacles, start, path.back());
@@ -239,17 +269,6 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
             RoomObjectPath::route(start, goal, solid, 0, 0,
                 map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, route);
     };
-    const std::function<float(const std::vector<Ogre::Vector2>&)> length = [&](const std::vector<Ogre::Vector2>& route)
-    {
-        float distance = 0.0f;
-        Ogre::Vector2 previous = start;
-        for(const Ogre::Vector2& point : route)
-        {
-            distance += previous.distance(point);
-            previous = point;
-        }
-        return distance;
-    };
     bool found = findRoute(obstacles, result);
     if(found && result.size() == 1)
     {
@@ -259,11 +278,11 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     }
     std::vector<RoomObjectPath::Obstacle> solid, steps;
     std::vector<float> rises;
-    const float bestCost = found ? length(result) : std::numeric_limits<float>::infinity();
+    const float bestCost = found ? RoomObjectPath::pathLength(start, result) : std::numeric_limits<float>::infinity();
     for(RoomObjectPath::Obstacle obstacle : obstacles)
     {
         const float rise = RoomObjectPath::prepareLowStep(obstacle, creature.getMeshName(),
-            1.0f + 0.02f * creature.getLevel(), creature.getPosition().z);
+            RoomObjectPath::creatureScale(creature.getLevel()), creature.getPosition().z);
         if(rise <= 0.0f)
         {
             solid.push_back(obstacle);
@@ -272,13 +291,8 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         // Every crossing must reach the expanded nest and pay its rise/fall.
         // Distant nests whose lower bound cannot beat the existing route stay
         // solid instead of causing another whole-map alternative search.
-        const std::function<float(const Ogre::Vector2&, const Ogre::Vector2&)> radius = [](const Ogre::Vector2& low, const Ogre::Vector2& high)
-        {
-            return std::hypot(std::max(std::abs(low.x), std::abs(high.x)),
-                std::max(std::abs(low.y), std::abs(high.y)));
-        };
-        const float reach = radius(obstacle.minimum, obstacle.maximum) +
-            radius(obstacle.bodyMinimum, obstacle.bodyMaximum);
+        const float reach = farthestCorner(obstacle.minimum, obstacle.maximum) +
+            farthestCorner(obstacle.bodyMinimum, obstacle.bodyMaximum);
         const float lowerBound = std::max(start.distance(goal),
             start.distance(obstacle.position) + goal.distance(obstacle.position) - 2.0f * reach) + 2.0f * rise;
         if(lowerBound >= bestCost)
@@ -292,7 +306,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     std::vector<Ogre::Vector2> crossing;
     if(!steps.empty() && findRoute(solid, crossing))
     {
-        float cost = length(crossing);
+        float cost = RoomObjectPath::pathLength(start, crossing);
         for(size_t i = 0; i < steps.size(); ++i)
         {
             Ogre::Vector2 previous = start;
@@ -306,7 +320,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
                 previous = point;
             }
         }
-        if(!found || cost < length(result))
+        if(!found || cost < RoomObjectPath::pathLength(start, result))
         {
             result.swap(crossing);
             found = true;
@@ -344,11 +358,10 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
             Tile* tile = map.getTile(foodX + dx, foodY + dy);
             if(!creature.canGoThroughTile(tile) || !map.pathExists(&creature, startTile, tile))
                 continue;
-            for(int y = 0; y < 8; ++y)
-                for(int x = 0; x < 8; ++x)
+            for(int y = 0; y < STANDING_GRID_SIZE; ++y)
+                for(int x = 0; x < STANDING_GRID_SIZE; ++x)
                 {
-                    const Ogre::Vector2 point(foodX + dx - 0.4375f + x * 0.125f,
-                        foodY + dy - 0.4375f + y * 0.125f);
+                    const Ogre::Vector2 point = standingGridPoint(Ogre::Vector2(float(foodX + dx), float(foodY + dy)), x, y);
                     if(RoomObjectPath::clearPoint(body, point, food - point) &&
                         RoomObjectPath::clearSegment(furniture, point, food))
                         candidates.push_back(point);
@@ -417,15 +430,15 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     // Preserve the assigned side of the workstation. Only increase its stand-
     // off enough for this creature; work cannot require standing inside it.
-    const int steps = int(std::ceil((2.0f * clearance(creature) + 1.0f) * 8.0f));
+    const int steps = int(std::ceil((2.0f * clearance(creature) + 1.0f) / STANDING_GRID_STEP));
     for(int step = 0; step <= steps; ++step)
     {
-        const Ogre::Vector2 point = wanted + away * (step * 0.125f);
+        const Ogre::Vector2 point = wanted + away * (step * STANDING_GRID_STEP);
         Tile* tile = map.getTile(Helper::round(point.x), Helper::round(point.y));
         if(!creature.canGoThroughTile(tile) || tile->getCoveringRoom() != room ||
             !RoomObjectPath::clearPoint(body, point, facing - point))
             continue;
-        if(start.squaredDistance(point) < 0.0025f &&
+        if(start.squaredDistance(point) < WORK_POSITION_TOLERANCE &&
             RoomObjectPath::clearPoint(body, start, facing - start))
             return true;
         for(float distance : {clearance(creature) + 0.5f, 0.5f})
@@ -461,7 +474,7 @@ bool RoomObjectNavigation::blocked(Creature& creature, const std::vector<Ogre::V
     if(path.empty())
         return false;
     const BuildingObject* interaction = interactionObject(creature, path.back());
-    std::vector<RoomObjectPath::Obstacle> obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + 0.425f, interaction) :
+    std::vector<RoomObjectPath::Obstacle> obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + WALK_DISTORTION_REACH, interaction) :
         bodyObstacles(creature, interaction);
     if(!includeWalkDistortion)
         removeLowStepObstacles(creature, obstacles);

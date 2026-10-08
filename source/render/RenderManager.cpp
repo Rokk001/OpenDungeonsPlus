@@ -2107,9 +2107,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
             if(meshName == bounds.name)
             {
-                const Ogre::Vector2 placedScale = static_cast<BuildingObject*>(renderedMovableEntity)->getFurnitureScale();
-                const RoomObjectPath::FurnitureScale scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
-                    RoomObjectPath::FurnitureScale{placedScale.x, placedScale.y};
+                const RoomObjectPath::FurnitureScale scale = RoomObjectPath::placedFurnitureScale(bounds,
+                    static_cast<BuildingObject*>(renderedMovableEntity)->getFurnitureScale());
                 node->setScale(scale.x, scale.y, 1.0f);
                 break;
             }
@@ -3657,16 +3656,15 @@ void RenderManager::updateCreatureStep(Creature* creature)
         {
             if(candidate->getMeshName() != bounds.name || !std::isfinite(bounds.maxZ))
                 continue;
-            const Ogre::Vector2 placed = static_cast<BuildingObject*>(candidate)->getFurnitureScale();
-            const RoomObjectPath::FurnitureScale scale = placed == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
-                RoomObjectPath::FurnitureScale{placed.x, placed.y};
-            const float angle = float(candidate->getRotationAngle()) * 0.01745329252f;
+            const RoomObjectPath::FurnitureScale scale = RoomObjectPath::placedFurnitureScale(bounds,
+                static_cast<BuildingObject*>(candidate)->getFurnitureScale());
+            const float angle = float(candidate->getRotationAngle()) * RoomObjectPath::degreesToRadians;
             RoomObjectPath::Obstacle obstacle{{bounds.minX * scale.x, bounds.minY * scale.y},
                 {bounds.maxX * scale.x, bounds.maxY * scale.y},
                 {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};
             obstacle.maximumHeight = candidate->getPosition().z + bounds.maxZ;
             const float rise = RoomObjectPath::prepareLowStep(obstacle, creature->getMeshName(),
-                1.0f + 0.02f * creature->getLevel(), position.z);
+                RoomObjectPath::creatureScale(creature->getLevel()), position.z);
             if(!creature->isMoving() && !obstacle.contains(point, direction))
                 continue;
             lift = std::max(lift, RoomObjectPath::lowStepElevation(obstacle, point, direction, rise));

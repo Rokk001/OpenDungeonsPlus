@@ -82,13 +82,12 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
 
     float dist = Pathfinding::squaredDistanceTile(*myTile, *chickenTile);
     const Ogre::Vector2 foodPosition(chicken->getPosition().x, chicken->getPosition().y);
+    const Ogre::Vector2 eaterPosition(creature.getPosition().x, creature.getPosition().y);
     const bool clearReach = RoomObjectPath::clearSegment(
-        RoomObjectNavigation::collect(*creature.getGameMap(), 0.0f),
-        Ogre::Vector2(creature.getPosition().x, creature.getPosition().y), foodPosition);
+        RoomObjectNavigation::collect(*creature.getGameMap(), 0.0f), eaterPosition, foodPosition);
     const std::vector<RoomObjectPath::Obstacle> bodyObstacles = RoomObjectNavigation::bodyObstacles(creature);
-    const bool clearBody = RoomObjectPath::clearPoint(bodyObstacles,
-        Ogre::Vector2(creature.getPosition().x, creature.getPosition().y),
-        foodPosition - Ogre::Vector2(creature.getPosition().x, creature.getPosition().y));
+    const bool clearBody = RoomObjectPath::clearPoint(bodyObstacles, eaterPosition,
+        foodPosition - eaterPosition);
     if(dist > 1 || !clearReach || !clearBody)
     {
         std::vector<Ogre::Vector2> path;
