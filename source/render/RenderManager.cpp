@@ -101,6 +101,8 @@ const Ogre::Real CREATURE_DROP_ANIMATION_DURATION = 0.35f;
 const Ogre::Real CREATURE_GET_UP_ANIMATION_DURATION = 0.35f;
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
 const Ogre::Real CREATURE_COMBAT_IMPACT_DURATION = 0.55f;
+//! Height above the corpse position at which its fly swarm hovers
+const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
@@ -744,6 +746,8 @@ bool needsCreatureDropFallback(Ogre::Entity* entity)
         entity->getMesh()->getName() == "Cultist.mesh";
 }
 
+//! Builds (once per skeleton) the "CorpseDecay" animation: it holds the final pose of poseName for the given
+//! duration while the root bone shrinks by 18% (the corpse settles), and returns its name.
 std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string& poseName, Ogre::Real duration)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
@@ -774,6 +778,7 @@ std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string
     return name;
 }
 
+//! Sets the corpseDecay shader parameter (0 = intact, 1 = fully decayed) on every sub-entity material that has it
 void setCreatureDecayProgress(Ogre::Entity* entity, Ogre::Real progress)
 {
     for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
@@ -3048,7 +3053,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         swarm->setCastShadows(false);
         swarm->setQueryFlags(0);
         Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(effectName + "_node",
-            dropCreature->getPosition() + Ogre::Vector3(0, 0, 0.35f));
+            dropCreature->getPosition() + Ogre::Vector3(0, 0, CORPSE_SWARM_HEIGHT));
         node->attachObject(swarm);
         return;
     }
@@ -3991,7 +3996,7 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
         }
         entity->getEntityNode()->setPosition(corpsePosition);
         mSceneManager->getParticleSystem(decayName)->getParentSceneNode()->setPosition(
-            position + Ogre::Vector3(0, 0, 0.35f));
+            position + Ogre::Vector3(0, 0, CORPSE_SWARM_HEIGHT));
         return;
     }
          
