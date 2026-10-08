@@ -11,6 +11,9 @@ uniform sampler2D dormitoryCorner;
 // UV boundaries: U=0, V=0, U=1, V=1; one denotes an exposed room edge.
 uniform vec4 dormitoryBorders;
 
+// Picks the carpet texture for a dormitory tile: a corner texture where two exposed
+// edges meet, an edge texture along one exposed edge, and the woven centre otherwise.
+// Each quarter of the tile is mirrored so that the border texture always faces outward.
 vec3 dormitoryFloor(vec2 uv)
 {
     bool right = uv.x > 0.5;
