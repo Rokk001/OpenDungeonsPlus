@@ -473,6 +473,23 @@ const Ogre::Real FEEDING_CROUCH_BEND = 35.0f;
 //! Distance of each hand from the chicken centre, as a fraction of the chicken width.
 const Ogre::Real FEEDING_GRIP_SPREAD_RATIO = 0.38f;
 
+//! \brief Smooth step from 0 to 1; values outside 0 to 1 are clamped first.
+Ogre::Real smoothFeedingStep(Ogre::Real value)
+{
+    value = std::max(0.0f, std::min(value, 1.0f));
+    return value * value * (3.0f - 2.0f * value);
+}
+
+//! \brief Returns the mouth position of a feeding creature in the space of its node.
+//! A creature without head bone is fed in front of its body.
+Ogre::Vector3 getFeedingMouthPosition(Ogre::Bone* head, Ogre::Real bodyHeight)
+{
+    if(head == nullptr)
+        return Ogre::Vector3(0, -FEEDING_NO_HEAD_FORWARD, bodyHeight * FEEDING_NO_HEAD_HEIGHT_RATIO);
+    return head->_getDerivedPosition() +
+        Ogre::Vector3(0, -FEEDING_MOUTH_FORWARD, -bodyHeight * FEEDING_MOUTH_DROP_RATIO);
+}
+
 //! \brief Returns the first bone of the skeleton that has one of the given names, or null.
 Ogre::Bone* findFeedingBone(Ogre::Skeleton* skeleton, std::initializer_list<const char*> names)
 {
@@ -518,23 +535,6 @@ void solveFeedingLimb(Ogre::Bone* upper, Ogre::Bone* lower,
     turnFeedingBone(upper, hinge - start, direction * along + bend * across);
     turnFeedingBone(lower, lower->_getDerivedOrientation() * (lower->_getDerivedScale() * tipOffset),
         target - lower->_getDerivedPosition());
-}
-
-//! \brief Smooth step from 0 to 1; values outside 0 to 1 are clamped first.
-Ogre::Real smoothFeedingStep(Ogre::Real value)
-{
-    value = std::max(0.0f, std::min(value, 1.0f));
-    return value * value * (3.0f - 2.0f * value);
-}
-
-//! \brief Returns the mouth position of a feeding creature in the space of its node.
-//! A creature without head bone is fed in front of its body.
-Ogre::Vector3 getFeedingMouthPosition(Ogre::Bone* head, Ogre::Real bodyHeight)
-{
-    if(head == nullptr)
-        return Ogre::Vector3(0, -FEEDING_NO_HEAD_FORWARD, bodyHeight * FEEDING_NO_HEAD_HEIGHT_RATIO);
-    return head->_getDerivedPosition() +
-        Ogre::Vector3(0, -FEEDING_MOUTH_FORWARD, -bodyHeight * FEEDING_MOUTH_DROP_RATIO);
 }
 
 bool needsCreatureDropFallback(Ogre::Entity* entity)
