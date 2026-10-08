@@ -21,6 +21,7 @@ probe = r'''
 #include "game/TrapProductionData.h"
 #include "network/ODPacket.h"
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
 struct Seat {};
@@ -66,8 +67,9 @@ int main() {
         check(!map.moveTrapProductionOrder(&own,"last",true),"first order cannot move earlier");
         check(map.moveTrapProductionOrder(&own,"last",false),"move later accepted");
         check(!map.moveTrapProductionOrder(&own,"last",false),"last order cannot move later");
-        for(const auto& name:{"foreign","done","missing"})
-            check(!map.moveTrapProductionOrder(&own,name,true),"foreign completed and stale targets rejected");
+        const char* const rejectedNames[3]={"foreign","done","missing"};
+        for(int index=0;index<3;++index)
+            check(!map.moveTrapProductionOrder(&own,rejectedNames[index],true),"foreign completed and stale targets rejected");
         check(!map.moveTrapProductionOrder(nullptr,"last",true),"missing owner rejected");
         map.server=false;check(!map.moveTrapProductionOrder(&own,"last",true),"client cannot mutate order");
         map.server=true;map.editor=true;check(!map.moveTrapProductionOrder(&own,"last",true),"editor cannot mutate gameplay order");
@@ -96,12 +98,12 @@ int main() {
         check(decoded.workshops.size()==2 && decoded.workshops[0].points==40 && decoded.workshops[0].required==100 && decoded.workshops[1].type==T::nullTrapType,"wire preserves current and idle workshops");
         ODPacket empty;exportTrapProductionData(empty,TrapProductionData{});
         check(importTrapProductionData(empty,decoded) && decoded.orders.empty() && decoded.workshops.empty(),"empty snapshot clears view");
-        auto reject=[&](const TrapProductionData& bad){
+        std::function<void(const TrapProductionData&)> reject=[&](const TrapProductionData& bad){
             ODPacket packet;exportTrapProductionData(packet,bad);decoded=original;
             check(!importTrapProductionData(packet,decoded),"invalid snapshot rejected");
             check(decoded.orders.size()==2 && decoded.orders[0].name=="first","failed parse preserves previous snapshot");
         };
-        auto bad=original;bad.orders[1].name="first";reject(bad);
+        TrapProductionData bad=original;bad.orders[1].name="first";reject(bad);
         bad=original;bad.orders[0].type=T::nullTrapType;reject(bad);
         bad=original;bad.orders[0].type=T::nbTraps;reject(bad);
         bad=original;bad.orders[0].needed=0;reject(bad);

@@ -2033,11 +2033,12 @@ bool GameMap::moveTrapProductionOrder(Seat* seat, const std::string& name, bool 
 {
     if(seat == nullptr || !isServerGameMap() || isInEditorMode())
         return false;
-    std::vector<Trap*>::iterator selected = std::find_if(mTraps.begin(), mTraps.end(), [&](Trap* trap)
+    std::vector<Trap*>::iterator selected = mTraps.begin();
+    while(selected != mTraps.end() && !((*selected)->getName() == name &&
+        (*selected)->getSeat() == seat && (*selected)->getNbNeededCraftedTrap() > 0))
     {
-        return trap->getName() == name && trap->getSeat() == seat &&
-            trap->getNbNeededCraftedTrap() > 0;
-    });
+        ++selected;
+    }
     if(selected == mTraps.end())
         return false;
     std::vector<Trap*>::iterator adjacent = selected;
