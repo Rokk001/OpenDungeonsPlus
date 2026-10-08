@@ -189,14 +189,15 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
     if(mCreature->getMoodValue() == CreatureMoodLevel::Upset)
         moodValue |= CreatureMoodValues::Upset;
 
-    uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)];
+    // The level caption belongs to the recovery overlay; it is cleared while a mood symbol is shown
+    uint32_t levelId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)];
     uint32_t statusId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::status)];
     if(moodValue == 0)
     {
         mStatus = 0;
         mTimeDisplayStatus = 0.0;
         mMovableTextOverlay->displayOverlay(statusId, 0);
-        mMovableTextOverlay->setCaption(healthId, Helper::toString(mLevel));
+        mMovableTextOverlay->setCaption(levelId, Helper::toString(mLevel));
         return;
     }
 
@@ -216,7 +217,7 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
         mStatus = 0;
         mTimeDisplayStatus = 1.0;
         mMovableTextOverlay->displayOverlay(statusId, 0);
-        mMovableTextOverlay->setCaption(healthId, Helper::toString(mLevel));
+        mMovableTextOverlay->setCaption(levelId, Helper::toString(mLevel));
         return;
     }
 
@@ -225,7 +226,7 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
     std::string material = CREATURE_OVERLAY_STATUS_PREFIX + Helper::toString(mStatus);
     mMovableTextOverlay->setMaterialName(statusId, material);
     mMovableTextOverlay->displayOverlay(statusId, -1);
-    mMovableTextOverlay->setCaption(healthId, "");
+    mMovableTextOverlay->setCaption(levelId, "");
 }
 
 void CreatureOverlayStatus::update(Ogre::Real timeSincelastFrame)

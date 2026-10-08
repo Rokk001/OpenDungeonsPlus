@@ -9,14 +9,17 @@
 bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const CreatureActivity& activity,
     CreatureMoodLevel mood, bool worker)
 {
+    // The goal behind the current action (see CreatureActivity) decides what the creature is doing.
     const bool fighting = activity.task == CreatureActionType::fight ||
         activity.task == CreatureActionType::fightFriendly;
-    const bool idle = activity.task == CreatureActionType::nb ||
-        activity.task == CreatureActionType::searchJob || (worker &&
+    // Only workers search for tiles and entities; for other creatures such a task is not idling.
+    const bool workerSearching = worker &&
         (activity.task == CreatureActionType::searchTileToDig ||
          activity.task == CreatureActionType::searchGroundTileToClaim ||
          activity.task == CreatureActionType::searchWallTileToClaim ||
-         activity.task == CreatureActionType::searchEntityToCarry));
+         activity.task == CreatureActionType::searchEntityToCarry);
+    const bool idle = activity.task == CreatureActionType::nb ||
+        activity.task == CreatureActionType::searchJob || workerSearching;
     const bool working = worker && (activity.task == CreatureActionType::digTile ||
         activity.task == CreatureActionType::claimGroundTile ||
         activity.task == CreatureActionType::claimWallTile ||
@@ -26,9 +29,12 @@ bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const Creat
     const bool usingRoom = activity.action == CreatureActionType::useRoom && activity.inAssignedRoom;
     const bool manufacturing = usingRoom && (activity.assignedRoom == RoomType::workshop ||
         activity.assignedRoom == RoomType::library);
-    const bool training = (usingRoom && (activity.assignedRoom == RoomType::trainingHall ||
-        activity.assignedRoom == RoomType::arena)) || (activity.inAssignedRoom &&
-        activity.assignedRoom == RoomType::arena && activity.task == CreatureActionType::fightFriendly);
+    const bool inTrainingRoom = usingRoom && (activity.assignedRoom == RoomType::trainingHall ||
+        activity.assignedRoom == RoomType::arena);
+    // Friendly fights in the arena are training as well.
+    const bool sparringInArena = activity.inAssignedRoom && activity.assignedRoom == RoomType::arena &&
+        activity.task == CreatureActionType::fightFriendly;
+    const bool training = inTrainingRoom || sparringInArena;
     // Mood criteria do not need a known activity; every activity criterion does.
     switch(criterion)
     {
@@ -44,6 +50,7 @@ bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const Creat
         case CreaturePanelCriterion::Manufacturing: return activity.known && manufacturing;
         case CreaturePanelCriterion::Training: return activity.known && training;
         case CreaturePanelCriterion::OtherJobs: return activity.known && !idle && !manufacturing && !training;
+        // The creature AI has no guarding action, so this criterion never matches.
         case CreaturePanelCriterion::Guarding: return false;
         case CreaturePanelCriterion::OtherFighting: return activity.known && !fighting;
         default: return false;

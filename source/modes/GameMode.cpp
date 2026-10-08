@@ -100,6 +100,7 @@ const std::string TEXT_SEAT_ID_PREFIX = "TextSeat";
 const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
 const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
+//! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
@@ -113,6 +114,8 @@ const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed
 const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
 const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
 
+//! Returns the autoscroll strength for one screen axis: 0 away from the border, growing linearly
+//! to 1 on the outermost pixel. minimumEdge selects the left/top border instead of the right/bottom one.
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
     if(screenSize <= 1)
