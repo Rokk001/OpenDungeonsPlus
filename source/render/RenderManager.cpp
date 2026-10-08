@@ -1051,6 +1051,40 @@ void setCreatureDecayProgress(Ogre::Entity* entity, Ogre::Real progress)
 }
 }
 
+namespace
+{
+//! Marked unknown tiles meet exactly at their edges, at the height of the neutral fog mesh.
+void createMarkedFogMesh(Ogre::SceneManager* sceneManager)
+{
+    Ogre::MeshPtr fog = Ogre::MeshManager::getSingleton().getByName("FogOfWarDirt.mesh", "Graphics");
+    const Ogre::Real height = fog->getBounds().getMaximum().z;
+    const Ogre::Vector3 corners[] = {
+        {-0.5f, -0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {-0.5f, 0.5f, 0.0f},
+        {-0.5f, -0.5f, height}, {0.5f, -0.5f, height}, {0.5f, 0.5f, height}, {-0.5f, 0.5f, height}
+    };
+    const int faces[6][4] = {{4, 5, 6, 7}, {3, 2, 1, 0}, {0, 1, 5, 4},
+        {1, 2, 6, 5}, {2, 3, 7, 6}, {3, 0, 4, 7}};
+    const Ogre::Vector2 uv[] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    Ogre::ManualObject* object = sceneManager->createManualObject();
+    object->begin("DirtInstanced", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+    for(uint32_t face = 0; face < 6; ++face)
+    {
+        const Ogre::Vector3 normal = (corners[faces[face][1]] - corners[faces[face][0]]).crossProduct(
+            corners[faces[face][2]] - corners[faces[face][0]]).normalisedCopy();
+        for(uint32_t vertex = 0; vertex < 4; ++vertex)
+        {
+            object->position(corners[faces[face][vertex]]);
+            object->normal(normal);
+            object->textureCoord(uv[vertex]);
+        }
+        object->quad(face * 4, face * 4 + 1, face * 4 + 2, face * 4 + 3);
+    }
+    object->end();
+    object->convertToMesh("FogOfWarMarked.mesh", "Graphics");
+    sceneManager->destroyManualObject(object);
+}
+}
+
 RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     mHandLight(nullptr),
     mRenderTarget(nullptr),
@@ -1105,6 +1139,13 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
         64,
         Ogre::IM_USEALL,
         0);
+
+    createMarkedFogMesh(mSceneManager);
+    mInstanceManagerMarkedFog = mSceneManager->createInstanceManager(
+        "InstanceManagerMarkedFog", "FogOfWarMarked.mesh", "Graphics",
+        Ogre::InstanceManager::HWInstancingBasic, 128, Ogre::IM_USEALL, 0);
+    mInstanceManagerMarkedFog->setNumCustomParams(1);
+    mInstanceManagerMarkedFog->defragmentBatches(true);
 
     mInstanceManagerDirt->setNumCustomParams(1); // Number of vec4 custom params
     
@@ -1183,6 +1224,7 @@ RenderManager::~RenderManager()
     clearTreasuryEffects();
     delete DebugDrawer::getSingletonPtr();
     mSceneManager->destroyInstanceManager(mInstanceManagerDirt);
+    mSceneManager->destroyInstanceManager(mInstanceManagerMarkedFog);
     // mSceneManager->destroyInstanceManager(mInstanceManagerCloud);
 }
 
@@ -2719,7 +2761,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         else if ( !tile.getEverVisible() && !tile.getHasFogOfWar())
         {
 
-            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), isMarked);
+            tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
             tile.setFogOfWarCloud( mInstanceManagerCloud->createInstancedEntity("Fog"));
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
             tileMeshNode->attachObject(tile.getFogOfWarCloud());
@@ -2753,7 +2795,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
             tile.setFogOfWarMesh(nullptr, isMarked);  
             tile.setHasFogOfWar(false);  
-            tile.setFogOfWarMesh( mInstanceManagerDirt->createInstancedEntity("DirtInstanced"), isMarked);
+            tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
             tile.getFogOfWarMesh()->setPosition(tile.getPosition());
            
@@ -2768,7 +2810,20 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
 
     }
     if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)
+    {
+        // Switch only the marked fog geometry; removing a mark restores the original unknown surface.
+        const bool wasMarked = tile.getFogOfWarMesh()->getCustomParam(0).w > 0.0f;
+        if(wasMarked != isMarked)
+        {
+            tileMeshNode->detachObject(tile.getFogOfWarMesh());
+            mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
+            tile.setFogOfWarMesh((isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->
+                createInstancedEntity("DirtInstanced"), isMarked);
+            tileMeshNode->attachObject(tile.getFogOfWarMesh());
+            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+        }
         tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
+    }
 
     // We rescale and set the orientation that may have changed
     if(tileMeshNode != nullptr)
@@ -7170,6 +7225,27 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             mTilePreview->colour(colour);
         }
         mTilePreview->end();
+        if(digging)
+        {
+            const Ogre::Vector3 inner[] = {
+                Ogre::Vector3(minX - 0.44f, minY - 0.44f, z),
+                Ogre::Vector3(maxX + 0.44f, minY - 0.44f, z),
+                Ogre::Vector3(maxX + 0.44f, maxY + 0.44f, z),
+                Ogre::Vector3(minX - 0.44f, maxY + 0.44f, z)
+            };
+            mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+            for(int i = 0; i < 4; ++i)
+            {
+                const int next = (i + 1) % 4;
+                for(const Ogre::Vector3& point : {corners[i], corners[next], inner[next],
+                    corners[i], inner[next], inner[i]})
+                {
+                    mTilePreview->position(point);
+                    mTilePreview->colour(colour);
+                }
+            }
+            mTilePreview->end();
+        }
         return;
     }
 
