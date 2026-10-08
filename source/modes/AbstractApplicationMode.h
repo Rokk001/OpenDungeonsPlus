@@ -127,7 +127,8 @@ public:
     {}
 
 protected:
-    //! Release the foreground Windows game window to the desktop.
+    //! Release the foreground Windows game window to the desktop. Returns true if the key is a Windows key
+    //! (and was consumed), which is only ever the case in Windows builds.
     bool handleDesktopKey(const OIS::KeyEvent& arg);
 
     //! Close the frontmost visible GUI window through its existing cancel handler.
