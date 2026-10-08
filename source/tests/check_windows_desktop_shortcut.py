@@ -27,6 +27,7 @@ for mode in ('AbstractApplicationMode', 'GameMode', 'EditorMode'):
 
 probe = r'''
 #include <cstddef>
+#include <functional>
 #include <iostream>
 namespace OIS {enum KeyCode{KC_LWIN,KC_RWIN,KC_A,KC_ESCAPE,KC_SYSRQ};struct KeyEvent{KeyCode key;};}
 using HWND=void*;const int SW_MINIMIZE=6;HWND foreground=nullptr;int calls=0;HWND target=nullptr;int action=0;
@@ -36,9 +37,9 @@ struct Window{size_t handle=42;int queries=0;void getCustomAttribute(const char*
 struct ODFrameListener{Window window;static ODFrameListener& getSingleton(){static ODFrameListener value;return value;}Window* getRenderWindow(){return &window;}};
 struct AbstractApplicationMode{bool handleDesktopKey(const OIS::KeyEvent&);};
 HANDLER
-int main(){AbstractApplicationMode mode;auto& window=ODFrameListener::getSingleton().window;int checks=0,failures=0;
- auto check=[&](bool ok){++checks;if(!ok)++failures;};
- for(auto key:{OIS::KC_LWIN,OIS::KC_RWIN,OIS::KC_A,OIS::KC_ESCAPE,OIS::KC_SYSRQ})
+int main(){AbstractApplicationMode mode;Window& window=ODFrameListener::getSingleton().window;int checks=0,failures=0;
+ const std::function<void(bool)> check=[&](bool ok){++checks;if(!ok)++failures;};
+ for(OIS::KeyCode key:{OIS::KC_LWIN,OIS::KC_RWIN,OIS::KC_A,OIS::KC_ESCAPE,OIS::KC_SYSRQ})
  for(size_t handle:{size_t(0),size_t(42),size_t(73)})for(size_t active:{size_t(0),size_t(42),size_t(73)}){
   window.handle=handle;window.queries=0;foreground=reinterpret_cast<HWND>(active);calls=0;target=nullptr;action=0;
   const bool winKey=key==OIS::KC_LWIN||key==OIS::KC_RWIN;
