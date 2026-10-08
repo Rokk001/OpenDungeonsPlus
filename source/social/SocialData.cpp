@@ -219,7 +219,11 @@ bool SocialData::parseNameGroupLine(const std::vector<std::string>& fields, Name
             error = "Given needs a gender (F, M or X) and names";
             return false;
         }
-        std::size_t index = (fields[1] == "F") ? 0 : ((fields[1] == "M") ? 1 : 2);
+        std::size_t index = 2;
+        if(fields[1] == "F")
+            index = 0;
+        else if(fields[1] == "M")
+            index = 1;
         for(std::size_t i = 2; i < fields.size(); ++i)
             group.mGiven[index].push_back(fields[i]);
         return true;
