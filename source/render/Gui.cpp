@@ -79,6 +79,38 @@ const std::string NAVIGATION_FRAME_NAME = "NavigationFrame";
 const std::string NAVIGATION_COLOUR_NAME = "NavigationColour";
 const std::string NAVIGATION_IMAGE_NAME = "NavigationImage";
 
+//! User string of a scrollable pane that limits its scrolling to the visible controls.
+const char* const VISIBLE_CONTROL_EXTENT_STRING = "VisibleControlExtent";
+//! Name of the edit box that every combobox creates automatically.
+const char* const COMBOBOX_EDITBOX_NAME = "__auto_editbox__";
+
+//! \brief Sets the scrollable area of the pane to the area covered by its visible controls.
+//! Only the closed part of a combobox counts, not its drop down list. A pane with the
+//! "TrimLeadingSpace" user string also starts at its first visible control.
+void limitScrollingToVisibleControls(CEGUI::ScrollablePane* pane)
+{
+    const CEGUI::ScrolledContainer* content = pane->getContentPane();
+    const CEGUI::Vector2f origin = content->getUnclippedOuterRect().get().getPosition();
+    CEGUI::Rectf extent(0, 0, 0, 0);
+    bool firstVisibleControl = true;
+    for(size_t i = 0; i < content->getChildCount(); ++i)
+    {
+        CEGUI::Window* child = content->getChildAtIdx(i);
+        if(!child->isVisible())
+            continue;
+        CEGUI::Rectf area = child->getUnclippedOuterRect().get();
+        if(dynamic_cast<CEGUI::Combobox*>(child) != nullptr)
+            area.d_max.d_y = child->getChild(COMBOBOX_EDITBOX_NAME)->getUnclippedOuterRect().get().bottom();
+        if(pane->isUserStringDefined("TrimLeadingSpace"))
+            extent.d_min.d_y = firstVisibleControl ? area.top() - origin.d_y :
+                std::min(extent.top(), area.top() - origin.d_y);
+        firstVisibleControl = false;
+        extent.d_max.d_x = std::max(extent.right(), area.right() - origin.d_x);
+        extent.d_max.d_y = std::max(extent.bottom(), area.bottom() - origin.d_y);
+    }
+    pane->setContentPaneArea(extent);
+}
+
 //! Resolution the fonts are designed for.
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
@@ -1968,28 +2000,9 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
     {
         CEGUI::ScrollablePane* pane = dynamic_cast<CEGUI::ScrollablePane*>(scaledWindow.first);
-        if(pane == nullptr || !pane->isUserStringDefined("VisibleControlExtent"))
+        if(pane == nullptr || !pane->isUserStringDefined(VISIBLE_CONTROL_EXTENT_STRING))
             continue;
-        const CEGUI::ScrolledContainer* content = pane->getContentPane();
-        const CEGUI::Vector2f origin = content->getUnclippedOuterRect().get().getPosition();
-        CEGUI::Rectf extent(0, 0, 0, 0);
-        bool firstVisibleControl = true;
-        for(size_t i = 0; i < content->getChildCount(); ++i)
-        {
-            CEGUI::Window* child = content->getChildAtIdx(i);
-            if(!child->isVisible())
-                continue;
-            CEGUI::Rectf area = child->getUnclippedOuterRect().get();
-            if(dynamic_cast<CEGUI::Combobox*>(child) != nullptr)
-                area.d_max.d_y = child->getChild("__auto_editbox__")->getUnclippedOuterRect().get().bottom();
-            if(pane->isUserStringDefined("TrimLeadingSpace"))
-                extent.d_min.d_y = firstVisibleControl ? area.top() - origin.d_y :
-                    std::min(extent.top(), area.top() - origin.d_y);
-            firstVisibleControl = false;
-            extent.d_max.d_x = std::max(extent.right(), area.right() - origin.d_x);
-            extent.d_max.d_y = std::max(extent.bottom(), area.bottom() - origin.d_y);
-        }
-        pane->setContentPaneArea(extent);
+        limitScrollingToVisibleControls(pane);
     }
 
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
