@@ -80,6 +80,27 @@ void ODClient::playerDisconnected()
     // TODO : try to reconnect to the server
 }
 
+//! \brief Tells whether a loaded saved game already fixes the human seat, the faction and the team
+//! of every seat, so that the seat configuration can be skipped. Requires exactly one human seat.
+static bool areSavedGameSeatsFixed(const GameMap& gameMap)
+{
+    uint32_t humanSeats = 0;
+    for(Seat* seat : gameMap.getSeats())
+    {
+        if(seat->isRogueSeat())
+            continue;
+        if(seat->getPlayerType() == Seat::PLAYER_TYPE_HUMAN)
+            ++humanSeats;
+        else if(seat->getPlayerType() != Seat::PLAYER_TYPE_AI &&
+                seat->getPlayerType() != Seat::PLAYER_TYPE_INACTIVE)
+            return false;
+        if(seat->getAvailableTeamIds().size() != 1 ||
+           seat->getFaction() == Seat::PLAYER_FACTION_CHOICE)
+            return false;
+    }
+    return humanSeats == 1;
+}
+
 bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)
 {
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
@@ -239,22 +260,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 case ServerMode::ModeGameLoaded:
                 {
                     // A saved skirmish already fixes its human side, faction and team.
-                    bool fixedSeats = getSource() != ODSource::file;
-                    uint32_t humanSeats = 0;
-                    for(Seat* seat : gameMap->getSeats())
-                    {
-                        if(seat->isRogueSeat())
-                            continue;
-                        if(seat->getPlayerType() == Seat::PLAYER_TYPE_HUMAN)
-                            ++humanSeats;
-                        else if(seat->getPlayerType() != Seat::PLAYER_TYPE_AI &&
-                                seat->getPlayerType() != Seat::PLAYER_TYPE_INACTIVE)
-                            fixedSeats = false;
-                        if(seat->getAvailableTeamIds().size() != 1 ||
-                           seat->getFaction() == Seat::PLAYER_FACTION_CHOICE)
-                            fixedSeats = false;
-                    }
-                    if(fixedSeats && humanSeats == 1)
+                    if(getSource() != ODSource::file && areSavedGameSeatsFixed(*gameMap))
                     {
                         ODPacket ready;
                         ready << ClientNotificationType::readyForSeatConfiguration;

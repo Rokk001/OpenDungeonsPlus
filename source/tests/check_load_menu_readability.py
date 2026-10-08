@@ -18,19 +18,20 @@ probe = r'''
 #include <OgreResourceGroupManager.h>
 #include <iostream>
 void apply(CEGUI::Window* sheet,bool mInGame){BLOCK}
+int checks=0,failures=0;
+void check(bool ok){++checks;if(!ok)++failures;}
 int main(int argc,char** argv){try{
  Ogre::Root ogre("","","load-menu-Ogre.log");ogre.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
- auto& resources=Ogre::ResourceGroupManager::getSingleton();
+ Ogre::ResourceGroupManager& resources=Ogre::ResourceGroupManager::getSingleton();
  for(const char* path:{"gui","gui/fonts","gui/schemas"})resources.addResourceLocation(std::string(argv[1])+"/"+path,"FileSystem","GUI");
  CEGUI::OgreResourceProvider provider;provider.setDefaultResourceGroup("GUI");CEGUI::OgreImageCodec codec;codec.setImageFileDataType("png");
- auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));
- auto& system=CEGUI::System::create(renderer,&provider,nullptr,&codec,nullptr,"","load-menu-CEGUI.log");
+ CEGUI::NullRenderer& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));
+ CEGUI::System& system=CEGUI::System::create(renderer,&provider,nullptr,&codec,nullptr,"","load-menu-CEGUI.log");
  CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
- auto& windows=CEGUI::WindowManager::getSingleton();auto* sheet=windows.loadLayoutFromFile("MenuLoad.layout");
+ CEGUI::WindowManager& windows=CEGUI::WindowManager::getSingleton();CEGUI::Window* sheet=windows.loadLayoutFromFile("MenuLoad.layout");
  system.getDefaultGUIContext().setRootWindow(sheet);
- int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++failures;};
- auto* frame=sheet->getChild("LevelWindowFrame");auto* loading=sheet->getChild("LoadingText");
- auto* list=static_cast<CEGUI::Listbox*>(frame->getChild("SaveGameSelect"));
+ CEGUI::Window* frame=sheet->getChild("LevelWindowFrame");CEGUI::Window* loading=sheet->getChild("LoadingText");
+ CEGUI::Listbox* list=static_cast<CEGUI::Listbox*>(frame->getChild("SaveGameSelect"));
  list->addItem(new CEGUI::ListboxTextItem("Saved dungeon"));
  for(bool game:{true,false,true,false}){
   apply(sheet,game);check(frame->getLookNFeel()==(game?"OD/GameSettingsWindow":"OD/FrameWindow"));
