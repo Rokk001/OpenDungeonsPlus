@@ -461,6 +461,23 @@ void RoomHatchery::sendNestPlaces(Player* player) const
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+void RoomHatchery::removeFromGameMap(GameMap* gameMap)
+{
+    GameMap* map = (gameMap == nullptr) ? getGameMap() : gameMap;
+    if(map->isServerGameMap())
+    {
+        for(Player* player : map->getPlayers())
+        {
+            if(!player->getIsHuman())
+                continue;
+            ServerNotification* notification = new ServerNotification(ServerNotificationType::hatcheryNests, player);
+            notification->mPacket << getName() << uint32_t(0) << uint32_t(0);
+            ODServer::getSingleton().queueServerNotification(notification);
+        }
+    }
+    Room::removeFromGameMap(gameMap);
+}
+
 void RoomHatchery::updateNestSync()
 {
     // The places are computed again when the tiles, the coops or the entrances changed; then the clients are told

@@ -270,10 +270,10 @@ assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'Ha
 # the rooster protests in the hand: pose, clip and look
 assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
 assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
-# A hatchery with only the rooster keeps the existing empty-room count.
+# Floor nests are not gated by client Room objects, coop presence or animal population.
 decor = body(looks, 'const bool check = mCoopDecorTimer')
-assert 'ChickenKind::rooster' in decor and 'getEntitiesInTile' in decor
-assert 'roomAnimals[room] = animals' in decor and 'mFeathers' not in decor, 'no feathers entity at the coops'
+assert 'updateNestFields();' in decor and 'getCoveringRoom' not in decor
+assert 'roomAnimals' not in decor and 'mFeathers' not in decor, 'no feathers entity at the coops'
 nest_update = body(looks, 'void RenderManager::updateNestFields')
 assert 'HatcheryFeathers_' not in nest_update, 'loose feather decor must not appear without an action'
 assert 'mFeatherEntities[i]->setVisible(empty)' not in nest_update

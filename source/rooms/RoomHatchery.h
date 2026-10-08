@@ -46,6 +46,7 @@ public:
     { return mRoomType; }
 
     void doUpkeep() override;
+    void removeFromGameMap(GameMap* gameMap = nullptr) override;
     bool hasOpenCreatureSpot(Creature* c) override;
     bool shouldStopUseIfHungrySleepy(Creature& creature, bool forced) override
     { return false; }
