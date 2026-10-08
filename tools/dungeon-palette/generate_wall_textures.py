@@ -98,7 +98,7 @@ def cells_on_torus(n, seed, count, warp_amp, warp_seed):
 
 
 # Screen values are about 1.2x the texture luminance and 1.25x the texture saturation (room shader gain and
-# saturation boost, cursor light); the means below come from docs/internal/STYLE-GUIDE.md and were calibrated
+# saturation boost, cursor light); the means below follow the project's dungeon palette and were calibrated
 # with the overview render.
 EARTH_MEAN = np.array([46.0, 36.0, 27.0]) / 255.0   # warm dark brown, hue about 28 degrees
 
@@ -170,7 +170,8 @@ def original_atlas(texdir, name):
         data = subprocess.check_output(['git', 'show', '%s:materials/textures/%s' % (ORIGINAL_COMMIT, name)],
                                        cwd=os.path.dirname(path), stderr=subprocess.DEVNULL)
         return Image.open(io.BytesIO(data))
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
+        # not a git checkout or commit unknown: fall back to the file as it is
         return Image.open(path)
 
 
