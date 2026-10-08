@@ -13,6 +13,7 @@ probe = r'''
 #include <OgreVector.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <string>
 struct GameMap {};
@@ -48,7 +49,7 @@ struct Creature {
     void useAttack(CreatureSkillData&,GameEntity&,Tile&,bool,bool);
 };
 METHOD
-int main(){int checks=0,failures=0;auto check=[&](bool v){++checks;if(!v)++failures;};
+int main(){int checks=0,failures=0;std::function<void(bool)> check=[&](bool v){++checks;if(!v)++failures;};
  for(double maximum:{1.,7.})for(int distance:{1,3}){
     if(maximum==1 && distance==3)continue;
     Creature c;Skill skill{maximum};CreatureSkillData data{&skill};GameEntity target;Tile tile{distance,0};
@@ -64,7 +65,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool v){++checks;if(!v)++failu
     Creature c;c.position={.1f,-.1f,0};Skill skill{maximum};CreatureSkillData data{&skill};
     GameEntity target;target.type=GameEntityType::creature;target.position=offset;Tile tile{0,0};
     c.useAttack(data,target,tile,true,false);
-    auto expected=target.position-c.position;expected.normalise();
+    Ogre::Vector3 expected=target.position-c.position;expected.normalise();
     check(c.direction==expected);
  }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;

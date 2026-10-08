@@ -17,36 +17,37 @@ probe = r'''
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include <iostream>
+#include <functional>
 int main(int argc,char** argv){try{
  Ogre::Root root("","","feather.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList options;options["hidden"]="true";options["vsync"]="false";
- auto* window=root.createRenderWindow("Feather check",128,128,false,&options);
- auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
+ Ogre::RenderWindow* window=root.createRenderWindow("Feather check",128,128,false,&options);
+ Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  std::string repo=argv[1],prefix=argv[2];
- for(const auto& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})
+ for(const std::string& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})
   groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");
- auto& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("ChickenFeathers.material","Graphics"),"Graphics");
- auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
- auto* scene=root.createSceneManager();shaders->addSceneManager(scene);
- auto* camera=scene->createCamera("Camera");camera->setNearClipDistance(.01f);camera->setAspectRatio(1);
- auto* cameraNode=scene->getRootSceneNode()->createChildSceneNode(Ogre::Vector3(0,0,4));cameraNode->attachObject(camera);
- auto* viewport=window->addViewport(camera);viewport->setBackgroundColour(Ogre::ColourValue(.15f,.25f,.2f));
+ Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("ChickenFeathers.material","Graphics"),"Graphics");
+ Ogre::RTShader::ShaderGenerator* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
+ Ogre::SceneManager* scene=root.createSceneManager();shaders->addSceneManager(scene);
+ Ogre::Camera* camera=scene->createCamera("Camera");camera->setNearClipDistance(.01f);camera->setAspectRatio(1);
+ Ogre::SceneNode* cameraNode=scene->getRootSceneNode()->createChildSceneNode(Ogre::Vector3(0,0,4));cameraNode->attachObject(camera);
+ Ogre::Viewport* viewport=window->addViewport(camera);viewport->setBackgroundColour(Ogre::ColourValue(.15f,.25f,.2f));
  viewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
- auto* billboards=scene->createBillboardSet("Feather",1);billboards->setMaterialName("ChickenFeathers","Graphics");billboards->setDefaultDimensions(2,2);
- auto* billboard=billboards->createBillboard(Ogre::Vector3::ZERO,Ogre::ColourValue(1,.95f,.82f,1));
+ Ogre::BillboardSet* billboards=scene->createBillboardSet("Feather",1);billboards->setMaterialName("ChickenFeathers","Graphics");billboards->setDefaultDimensions(2,2);
+ Ogre::Billboard* billboard=billboards->createBillboard(Ogre::Vector3::ZERO,Ogre::ColourValue(1,.95f,.82f,1));
  scene->getRootSceneNode()->createChildSceneNode()->attachObject(billboards);
  int checks=0;
- auto near=[&](Ogre::ColourValue a,Ogre::ColourValue b){return std::abs(a.r-b.r)<.02f && std::abs(a.g-b.g)<.02f && std::abs(a.b-b.b)<.02f;};
- auto check=[&](bool v,const char* text){++checks;if(!v)throw std::runtime_error(text);};
+ std::function<bool(Ogre::ColourValue,Ogre::ColourValue)> near=[&](Ogre::ColourValue a,Ogre::ColourValue b){return std::abs(a.r-b.r)<.02f && std::abs(a.g-b.g)<.02f && std::abs(a.b-b.b)<.02f;};
+ std::function<void(bool,const char*)> check=[&](bool v,const char* text){++checks;if(!v)throw std::runtime_error(text);};
  for(float alpha:{1.f,0.f}){
   billboard->setColour(Ogre::ColourValue(1,.95f,.82f,alpha));window->update(false);
   Ogre::Image image;image.create(Ogre::PF_BYTE_RGBA,128,128);window->copyContentsToMemory(image.getPixelBox(),Ogre::RenderTarget::FB_BACK);
-  auto background=image.getColourAt(2,2,0);int offset=static_cast<int>(.8f*128/(8*Ogre::Math::Tan(camera->getFOVy()*.5f)));
+  Ogre::ColourValue background=image.getColourAt(2,2,0);int offset=static_cast<int>(.8f*128/(8*Ogre::Math::Tan(camera->getFOVy()*.5f)));
   for(int x:{-1,1})for(int y:{-1,1})check(near(image.getColourAt(64+x*offset,64+y*offset,0),background),"opaque rectangle around feather");
-  auto center=image.getColourAt(64,64,0);check(alpha>0?center.r>background.r+.2f:near(center,background),"feather body or alpha fade incorrect");
+  Ogre::ColourValue center=image.getColourAt(64,64,0);check(alpha>0?center.r>background.r+.2f:near(center,background),"feather body or alpha fade incorrect");
   window->swapBuffers();
  }
  shaders->removeSceneManager(scene);root.destroySceneManager(scene);materials.removeListener(&resolver);Ogre::RTShader::ShaderGenerator::destroy();
