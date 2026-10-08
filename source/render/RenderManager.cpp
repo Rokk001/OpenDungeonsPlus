@@ -294,6 +294,25 @@ void createKeeperHandBuildAnimation(Ogre::Entity* hand)
 }
 
 const char* const IDLE_HAND_ANIMATIONS[] = {"IdleWatch", "IdleYoyo"};
+//! Length of the two idle hand effects in seconds.
+const float IDLE_WATCH_DURATION = 3.0f;
+const float IDLE_YOYO_DURATION = 4.2f;
+//! Seconds over which the idle prop grows in and out at the start and end of an effect.
+const float IDLE_PROP_FADE_TIME = 0.45f;
+//! The yo-yo waits this long before its first drop and then drops and returns this many times.
+const float YOYO_START_DELAY = 0.6f;
+const float YOYO_CYCLES = 3.0f;
+//! Spin speed of the yo-yo discs in radians per second.
+const float YOYO_SPIN_SPEED = 18.0f;
+//! Number of side segments used for the round prop parts.
+const int PROP_CIRCLE_SEGMENTS = 32;
+
+//! Returns how many full drop-and-return cycles of the yo-yo are complete at the given effect time,
+//! so that the finger pull and the yo-yo position stay in step.
+float getYoyoCycle(float time)
+{
+    return std::max(0.0f, std::min(YOYO_CYCLES, time - YOYO_START_DELAY));
+}
 
 void createKeeperHandIdleAnimations(Ogre::Entity* hand)
 {
@@ -302,7 +321,7 @@ void createKeeperHandIdleAnimations(Ogre::Entity* hand)
     for(const std::string name : IDLE_HAND_ANIMATIONS)
     {
         const bool watch = name == "IdleWatch";
-        const float duration = watch ? 3.0f : 4.2f;
+        const float duration = watch ? IDLE_WATCH_DURATION : IDLE_YOYO_DURATION;
         if(!skeleton->hasAnimation(name))
         {
             Ogre::Animation* animation = skeleton->createAnimation(name, duration);
@@ -334,7 +353,7 @@ void createKeeperHandIdleAnimations(Ogre::Entity* hand)
                     if(yoyoFinger)
                     {
                         // Pull as the existing yo-yo reaches full extension, then release.
-                        const float cycle = std::max(0.0f, std::min(3.0f, time - 0.6f));
+                        const float cycle = getYoyoCycle(time);
                         const float pull = std::max(0.0f, -std::cos(cycle * Ogre::Math::TWO_PI));
                         rotation = Ogre::Quaternion::Slerp(0.4f * weight * pull,
                             rotation, curled.getRotation(), true);
@@ -350,65 +369,88 @@ void createKeeperHandIdleAnimations(Ogre::Entity* hand)
     }
 }
 
+//! Appends one coloured triangle to the idle prop.
+void addPropTriangle(Ogre::ManualObject* prop, const Ogre::Vector3& a, const Ogre::Vector3& b,
+    const Ogre::Vector3& c, const Ogre::ColourValue& colour)
+{
+    prop->position(a);
+    prop->colour(colour);
+    prop->position(b);
+    prop->colour(colour);
+    prop->position(c);
+    prop->colour(colour);
+}
+
+//! Appends one coloured quad, given in order around its outline, to the idle prop.
+void addPropQuad(Ogre::ManualObject* prop, const Ogre::Vector3& a, const Ogre::Vector3& b,
+    const Ogre::Vector3& c, const Ogre::Vector3& d, const Ogre::ColourValue& colour)
+{
+    addPropTriangle(prop, a, b, c, colour);
+    addPropTriangle(prop, a, c, d, colour);
+}
+
+//! Appends a closed disc to the idle prop: the axis is the orientation's Z axis, the side is shaded
+//! by the angle around the axis, the front face uses the face colour and the back face the side colour.
+void addPropCylinder(Ogre::ManualObject* prop, const Ogre::Vector3& centre, const Ogre::Quaternion& orientation,
+    float radius, float depth, const Ogre::ColourValue& side, const Ogre::ColourValue& face)
+{
+    for(int i = 0; i < PROP_CIRCLE_SEGMENTS; ++i)
+    {
+        const float a = Ogre::Math::TWO_PI * i / PROP_CIRCLE_SEGMENTS;
+        const float b = Ogre::Math::TWO_PI * (i + 1) / PROP_CIRCLE_SEGMENTS;
+        const Ogre::Vector3 p = orientation * Ogre::Vector3(radius * std::cos(a), radius * std::sin(a), 0);
+        const Ogre::Vector3 q = orientation * Ogre::Vector3(radius * std::cos(b), radius * std::sin(b), 0);
+        const Ogre::Vector3 z = orientation * Ogre::Vector3(0, 0, depth);
+        addPropQuad(prop, centre + p - z, centre + q - z, centre + q + z, centre + p + z,
+            side * (0.7f + 0.3f * std::cos(a)));
+        addPropTriangle(prop, centre + z, centre + p + z, centre + q + z, face);
+        addPropTriangle(prop, centre - z, centre + q - z, centre + p - z, side);
+    }
+}
+
+//! Maps coordinates given in the watch prop's own space to hand space: the prop follows the wrist,
+//! grows with the effect envelope and sits slightly forward of the wrist bone.
+struct WatchPropFrame
+{
+    Ogre::Vector3 mOrigin;
+    Ogre::Quaternion mRotation;
+    float mEnvelope;
+
+    Ogre::Vector3 point(float x, float y, float z) const
+    {
+        return mOrigin + mRotation * (Ogre::Vector3(x, y, z) * mEnvelope + Ogre::Vector3(0,.0135f,0));
+    }
+};
+
+//! Rebuilds the dynamic prop of the running idle effect for the current animation time: a wrist
+//! watch for IdleWatch, a yo-yo hanging from the index fingertip otherwise.
 void updateKeeperHandIdleProp(Ogre::Entity* hand, const Ogre::AnimationState* animation, Ogre::ManualObject* prop)
 {
     hand->_updateAnimation();
     const float time = animation->getTimePosition();
     const float envelope = std::max(0.0f, std::min(1.0f,
-        std::min(time, animation->getLength() - time) / 0.45f));
+        std::min(time, animation->getLength() - time) / IDLE_PROP_FADE_TIME));
     prop->clear();
     prop->setVisible(envelope > 0.0f);
     if(envelope == 0.0f)
         return;
     prop->begin("HandTool/Idle", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    const std::function<void(const Ogre::Vector3&, const Ogre::Vector3&, const Ogre::Vector3&, const Ogre::ColourValue&)> triangle = [&](const Ogre::Vector3& a, const Ogre::Vector3& b,
-        const Ogre::Vector3& c, const Ogre::ColourValue& colour)
-    {
-        for(const Ogre::Vector3& position : {a, b, c})
-        {
-            prop->position(position);
-            prop->colour(colour);
-        }
-    };
-    const std::function<void(const Ogre::Vector3&, const Ogre::Vector3&, const Ogre::Vector3&, const Ogre::Vector3&, const Ogre::ColourValue&)> quad = [&](const Ogre::Vector3& a, const Ogre::Vector3& b, const Ogre::Vector3& c,
-        const Ogre::Vector3& d, const Ogre::ColourValue& colour)
-    {
-        triangle(a, b, c, colour);
-        triangle(a, c, d, colour);
-    };
-    const std::function<void(const Ogre::Vector3&, const Ogre::Quaternion&, float, float, const Ogre::ColourValue&, const Ogre::ColourValue&)> cylinder = [&](const Ogre::Vector3& centre, const Ogre::Quaternion& orientation,
-        float radius, float depth, const Ogre::ColourValue& side, const Ogre::ColourValue& face)
-    {
-        for(int i = 0; i < 32; ++i)
-        {
-            const float a = Ogre::Math::TWO_PI * i / 32.0f, b = Ogre::Math::TWO_PI * (i + 1) / 32.0f;
-            const Ogre::Vector3 p = orientation * Ogre::Vector3(radius * std::cos(a), radius * std::sin(a), 0);
-            const Ogre::Vector3 q = orientation * Ogre::Vector3(radius * std::cos(b), radius * std::sin(b), 0);
-            const Ogre::Vector3 z = orientation * Ogre::Vector3(0, 0, depth);
-            quad(centre + p - z, centre + q - z, centre + q + z, centre + p + z,
-                side * (0.7f + 0.3f * std::cos(a)));
-            triangle(centre + z, centre + p + z, centre + q + z, face);
-            triangle(centre - z, centre + q - z, centre + p - z, side);
-        }
-    };
     if(animation->getAnimationName() == "IdleWatch")
     {
         const Ogre::Bone* wrist = hand->getSkeleton()->getBone("Hand1");
         const Ogre::Quaternion rotation = wrist->_getDerivedOrientation();
         const Ogre::Vector3 origin = wrist->_getDerivedPosition();
-        const std::function<Ogre::Vector3(float, float, float)> point = [&](float x, float y, float z)
+        const WatchPropFrame frame = {origin, rotation, envelope};
+        for(int i = 0; i < PROP_CIRCLE_SEGMENTS; ++i)
         {
-            return origin + rotation * (Ogre::Vector3(x, y, z) * envelope + Ogre::Vector3(0,.0135f,0));
-        };
-        for(int i = 0; i < 32; ++i)
-        {
-            const float a = Ogre::Math::TWO_PI * i / 32.0f, b = Ogre::Math::TWO_PI * (i + 1) / 32.0f;
-            quad(point(.014f * std::cos(a), -.011f, .011f * std::sin(a)),
-                point(.014f * std::cos(b), -.011f, .011f * std::sin(b)),
-                point(.014f * std::cos(b), -.002f, .011f * std::sin(b)),
-                point(.014f * std::cos(a), -.002f, .011f * std::sin(a)), Ogre::ColourValue(.22f,.09f,.035f));
+            const float a = Ogre::Math::TWO_PI * i / PROP_CIRCLE_SEGMENTS,
+                b = Ogre::Math::TWO_PI * (i + 1) / PROP_CIRCLE_SEGMENTS;
+            addPropQuad(prop, frame.point(.014f * std::cos(a), -.011f, .011f * std::sin(a)),
+                frame.point(.014f * std::cos(b), -.011f, .011f * std::sin(b)),
+                frame.point(.014f * std::cos(b), -.002f, .011f * std::sin(b)),
+                frame.point(.014f * std::cos(a), -.002f, .011f * std::sin(a)), Ogre::ColourValue(.22f,.09f,.035f));
         }
-        cylinder(point(0,-.0065f,.013f), rotation, .012f * envelope, .002f * envelope,
+        addPropCylinder(prop, frame.point(0,-.0065f,.013f), rotation, .012f * envelope, .002f * envelope,
             Ogre::ColourValue(.65f,.42f,.12f), Ogre::ColourValue(.92f,.82f,.59f));
         for(int i = 0; i < 12; ++i)
         {
@@ -416,13 +458,13 @@ void updateKeeperHandIdleProp(Ogre::Entity* hand, const Ogre::AnimationState* an
             const Ogre::Vector2 radial = Ogre::Vector2(std::sin(angle), std::cos(angle));
             const Ogre::Vector2 tangent = Ogre::Vector2(radial.y, -radial.x) * .00045f;
             const Ogre::Vector2 a = radial * .0085f, b = radial * .0105f;
-            quad(point(a.x-tangent.x,a.y-.0065f-tangent.y,.0152f), point(a.x+tangent.x,a.y-.0065f+tangent.y,.0152f),
-                point(b.x+tangent.x,b.y-.0065f+tangent.y,.0152f), point(b.x-tangent.x,b.y-.0065f-tangent.y,.0152f),
+            addPropQuad(prop, frame.point(a.x-tangent.x,a.y-.0065f-tangent.y,.0152f), frame.point(a.x+tangent.x,a.y-.0065f+tangent.y,.0152f),
+                frame.point(b.x+tangent.x,b.y-.0065f+tangent.y,.0152f), frame.point(b.x-tangent.x,b.y-.0065f-tangent.y,.0152f),
                 Ogre::ColourValue(.1f,.06f,.025f));
         }
         for(const Ogre::Vector2& tip : {Ogre::Vector2(-.004f,.003f), Ogre::Vector2(.006f,.004f)})
-            triangle(point(-.0007f,-.0065f,.0155f), point(.0007f,-.0065f,.0155f),
-                point(tip.x,tip.y-.0065f,.0155f), Ogre::ColourValue(.08f,.035f,.015f));
+            addPropTriangle(prop, frame.point(-.0007f,-.0065f,.0155f), frame.point(.0007f,-.0065f,.0155f),
+                frame.point(tip.x,tip.y-.0065f,.0155f), Ogre::ColourValue(.08f,.035f,.015f));
     }
     else
     {
@@ -430,22 +472,22 @@ void updateKeeperHandIdleProp(Ogre::Entity* hand, const Ogre::AnimationState* an
         const Ogre::Vector3 anchor = finger->_getDerivedPosition() + finger->_getDerivedOrientation() *
             Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
         const Ogre::Quaternion view = hand->getParentSceneNode()->getOrientation().Inverse();
-        const float cycle = std::max(0.0f, std::min(3.0f, (time - .6f)));
+        const float cycle = getYoyoCycle(time);
         const float drop = .5f - .5f * std::cos(cycle * Ogre::Math::TWO_PI);
         const Ogre::Vector3 centre = anchor + view * Ogre::Vector3(0,-(.023f + .085f * drop) * envelope,0);
         const Ogre::Vector3 stringWidth = view * Ogre::Vector3(.00035f,0,0);
-        quad(anchor-stringWidth, anchor+stringWidth, centre+stringWidth, centre-stringWidth,
+        addPropQuad(prop, anchor-stringWidth, anchor+stringWidth, centre+stringWidth, centre-stringWidth,
             Ogre::ColourValue(.9f,.84f,.66f));
         const Ogre::Quaternion spin = view * Ogre::Quaternion(Ogre::Degree(35),Ogre::Vector3::UNIT_Y) *
-            Ogre::Quaternion(Ogre::Radian(time * 18.0f),Ogre::Vector3::UNIT_Z);
+            Ogre::Quaternion(Ogre::Radian(time * YOYO_SPIN_SPEED),Ogre::Vector3::UNIT_Z);
         const Ogre::Vector3 axle = spin * Ogre::Vector3(0,0,.0035f * envelope);
         const Ogre::ColourValue red = Ogre::ColourValue(.6f,.09f,.035f), gold = Ogre::ColourValue(.85f,.58f,.16f);
-        cylinder(centre, spin, .004f * envelope, .004f * envelope, gold, gold);
+        addPropCylinder(prop, centre, spin, .004f * envelope, .004f * envelope, gold, gold);
         for(float side : {-1.0f,1.0f})
-            cylinder(centre + axle * side, spin, .014f * envelope, .002f * envelope, gold, red);
+            addPropCylinder(prop, centre + axle * side, spin, .014f * envelope, .002f * envelope, gold, red);
         const Ogre::Vector3 cap = centre + spin * Ogre::Vector3(0,0,.0056f * envelope);
-        cylinder(cap, spin, .004f * envelope, .0003f * envelope, gold, gold);
-        triangle(cap + spin * Ogre::Vector3(0,0,.0004f),
+        addPropCylinder(prop, cap, spin, .004f * envelope, .0003f * envelope, gold, gold);
+        addPropTriangle(prop, cap + spin * Ogre::Vector3(0,0,.0004f),
             cap + spin * Ogre::Vector3(.009f,.002f,.0004f) * envelope,
             cap + spin * Ogre::Vector3(.009f,-.002f,.0004f) * envelope, gold);
     }
