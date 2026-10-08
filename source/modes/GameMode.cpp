@@ -110,6 +110,9 @@ const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
 //! Elapsed time reported to the minimap when it is redrawn right after a zoom change.
 const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
 
+//! Character height of the pointer info text at unscaled GUI size, as set when its text box is created.
+const float POINTER_TEXT_BASE_HEIGHT = 16.0f;
+
 //! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
 const float MOUSE_ORBIT_DEGREES_PER_PIXEL = 0.25f;
 
@@ -674,7 +677,7 @@ GameMode::~GameMode()
             RenderManager::getSingleton().rrToggleHandSelectorVisibility();
         CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
     }
-    TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, 16.0f);
+    TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, POINTER_TEXT_BASE_HEIGHT);
     for(const MessageTab& tab : mMessageTabs)
         CEGUI::WindowManager::getSingleton().destroyWindow(tab.window);
     mReturningToSettingsNavigation = false;
@@ -4176,7 +4179,7 @@ void GameMode::refreshActionFeedback(float elapsed)
     }
     const float pointerScale = icon->getPixelSize().d_width / 50.0f;
     TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING,
-        16.0f * pointerScale);
+        POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
         pointer.d_x + 145.0f * pointerScale, pointer.d_y + 24.0f * pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
