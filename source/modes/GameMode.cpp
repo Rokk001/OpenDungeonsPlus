@@ -1140,15 +1140,7 @@ bool GameMode::keyReleased(const OIS::KeyEvent &arg)
 
 bool GameMode::keyReleasedNormal(const OIS::KeyEvent &arg)
 {
-    ODFrameListener& frameListener = ODFrameListener::getSingleton();
-
-    switch (arg.key)
-    {
-
-    default:
-        break;
-    }
-
+    // The camera keys are polled every frame in updateCameraControls(), so releasing a key needs no handling.
     return true;
 }
 
