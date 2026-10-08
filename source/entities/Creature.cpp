@@ -2532,6 +2532,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         cache.storeFriendsAndFoe(getName(), computed);
         cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
     }
+    if(cachedFriends == nullptr)
+        return gui.layoutCreatureProfilePage(page);
     // Each name is a button of its own, so no name is cut off; the label shares the first line with the first name
     std::size_t nbFriendLinks = 0;
     for(std::size_t i = 0; (i < cachedFriends->mFriends.size()) && (nbFriendLinks < PROFILE_MAX_FRIENDS); ++i)
