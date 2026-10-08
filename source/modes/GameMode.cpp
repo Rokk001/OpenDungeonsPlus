@@ -2637,8 +2637,14 @@ void GameMode::handlePlayerActionNone()
                 // Terrain context must not turn idle ground into an actionable hand target.
                 mActionTargetText = Tile::tileTypeToString(tile->getType());
                 if(tile->isClaimed())
-                    mActionTargetText += tile->getSeat() == player->getSeat() ? ". Your territory." :
-                        (tile->isClaimedForSeat(player->getSeat()) ? ". Allied territory." : ". Enemy territory.");
+                {
+                    if(tile->getSeat() == player->getSeat())
+                        mActionTargetText += ". Your territory.";
+                    else if(tile->isClaimedForSeat(player->getSeat()))
+                        mActionTargetText += ". Allied territory.";
+                    else
+                        mActionTargetText += ". Enemy territory.";
+                }
                 if(tile->isBuildableUpon(player->getSeat()))
                     mActionTargetText += " You can build here.";
                 else if(tile->getType() == TileType::dirt && !tile->isFullTile() && !tile->isClaimed())
