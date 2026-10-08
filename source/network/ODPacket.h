@@ -122,6 +122,7 @@ class ODPacket
          */
         operator bool() const;
 
+        //! \brief Whether all data of the packet has been read.
         bool endOfPacket() const
         { return mPacket.endOfPacket(); }
 

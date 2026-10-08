@@ -69,6 +69,7 @@ class ODSocketClient
 
         Player* getPlayer() { return mPlayer; }
         void setPlayer(Player* player) { mPlayer = player; }
+        //! \brief Whether the other side agreed to nickname changes during the game.
         bool supportsLiveNickname() const { return mSupportsLiveNickname; }
         void setSupportsLiveNickname(bool supported) { mSupportsLiveNickname = supported; }
         int64_t getLastTurnAck() { return mLastTurnAck; }
@@ -133,6 +134,8 @@ class ODSocketClient
         std::ofstream mReplayOutputStream;
         ODPacket mPendingPacket;
         int32_t mPendingTimestamp;
+
+        //! \brief Set while connecting when the other side announces that it handles nickname changes during the game.
         bool mSupportsLiveNickname;
 
         //! \brief the replay filename being written. Used to later optionally delete it

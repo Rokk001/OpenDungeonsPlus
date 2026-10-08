@@ -233,6 +233,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             ODPacket packSend;
             const std::string& nick = gameMap->getLocalPlayerNick();
             packSend << ClientNotificationType::setNick << nick;
+            // Confirms that this client handles nickname changes during the game.
             if(liveNickname)
                 packSend << true;
             send(packSend);

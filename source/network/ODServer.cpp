@@ -896,6 +896,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             clientSocket->setState("nick");
             // Tell the client to give us their nickname
             ODPacket packetSend;
+            // The trailing flag tells the client that this server supports nickname changes during the game.
             packetSend << ServerNotificationType::pickNick << mServerMode << true;
             clientSocket->send(packetSend);
             break;
