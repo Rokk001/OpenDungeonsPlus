@@ -107,6 +107,8 @@ public:
     void setUserScalePercent(float scalePercent);
 
     // Access names of the GUI elements
+    //! Name of the text area inside the window created by createInfoWindow().
+    static const std::string INFO_WINDOW_TEXT;
     static const std::string ROOT;
     static const std::string DISPLAY_GOLD;
     static const std::string DISPLAY_MANA;

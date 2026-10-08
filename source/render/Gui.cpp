@@ -389,7 +389,8 @@ bool Gui::playButtonClickSound(const CEGUI::EventArgs&)
 /* These constants are used to access the GUI element
  * NOTE: when add/remove/rename a GUI element, don't forget to change it here
  */
-const std::string Gui::DISPLAY_GOLD = "HorizontalPipe/GoldDisplay";
+const std::string Gui::INFO_WINDOW_TEXT = "TextDisplay";
+const std::string Gui::DISPLAY_GOLD ="HorizontalPipe/GoldDisplay";
 const std::string Gui::DISPLAY_MANA = "HorizontalPipe/ManaDisplay";
 const std::string Gui::DISPLAY_TERRITORY = "HorizontalPipe/TerritoryDisplay";
 const std::string Gui::DISPLAY_CREATURES = "HorizontalPipe/CreaturesDisplay";

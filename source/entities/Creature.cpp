@@ -1998,7 +1998,7 @@ void Creature::updateStatsWindow(const std::string& txt)
     if (mStatsWindow == nullptr)
         return;
 
-    CEGUI::Window* textWindow = mStatsWindow->getChild("TextDisplay");
+    CEGUI::Window* textWindow = mStatsWindow->getChild(Gui::INFO_WINDOW_TEXT);
     textWindow->setText(txt);
 }
 
