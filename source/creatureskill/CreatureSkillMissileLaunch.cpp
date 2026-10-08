@@ -87,7 +87,7 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
     const uint32_t level = creature->getLevel();
     double phyAtk = CreatureProgression::stat(mPhyAtk + mPhyAtkPerLvl, mPhyAtkPerLvl, level);
     double magAtk = CreatureProgression::stat(mMagAtk + mMagAtkPerLvl, mMagAtkPerLvl, level);
-    double eleAtk = CreatureProgression::stat(mMagAtk + mEleAtkPerLvl, mEleAtkPerLvl, level);
+    double eleAtk = CreatureProgression::stat(mEleAtk + mEleAtkPerLvl, mEleAtkPerLvl, level);
     if(creature->getWeaponL() != nullptr)
     {
         phyAtk +=creature->getWeaponL()->getPhysicalDamage();
