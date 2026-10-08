@@ -103,6 +103,19 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 //! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+
+//! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
+const float MOUSE_ORBIT_DEGREES_PER_PIXEL = 0.25f;
+
+//! Zoom distance per pixel of vertical mouse movement while Z is held.
+const float MOUSE_ZOOM_PER_PIXEL = 0.025f;
+
+//! Wheel units OIS reports per notch.
+const float OIS_WHEEL_UNITS_PER_NOTCH = 120.0f;
+
+//! Degrees per second the keys change the view in the user camera window.
+const float USER_VIEW_ADJUST_SPEED = 90.0f;
+
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
 //! The particle systems of the heart burst (particles/HeartExplosion.particle), all created at the burst
@@ -127,6 +140,8 @@ static double getAutoscrollIntensity(int mousePosition, int screenSize, bool min
     return std::max(0.0, std::min(1.0, (edgeSize - distanceFromEdge) / edgeSize));
 }
 
+//! \brief Whether the window under the mouse stops edge scrolling. Windows opt out of this
+//! with the user string AllowEdgeScrolling set to true on themselves or on a parent.
 static bool blocksEdgeScrolling(CEGUI::Window* window)
 {
     if(window == nullptr || window->getName() == "Root")
@@ -850,11 +865,11 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     {
         CameraManager* camera = ODFrameListener::getSingleton().getCameraManager();
         if(getKeyboard()->isKeyDown(OIS::KC_X))
-            camera->orbitBy(mouseDelta.x * 0.25f, 0.0f);
+            camera->orbitBy(mouseDelta.x * MOUSE_ORBIT_DEGREES_PER_PIXEL, 0.0f);
         else if(getKeyboard()->isKeyDown(OIS::KC_Z))
-            camera->zoomBy(-mouseDelta.y * 0.025f);
+            camera->zoomBy(-mouseDelta.y * MOUSE_ZOOM_PER_PIXEL);
         else if(inputManager.mMMouseDown)
-            camera->orbitBy(mouseDelta.x * 0.25f, mouseDelta.y * 0.25f);
+            camera->orbitBy(mouseDelta.x * MOUSE_ORBIT_DEGREES_PER_PIXEL, mouseDelta.y * MOUSE_ORBIT_DEGREES_PER_PIXEL);
     }
 
     // If we have a room/trap/spell selected, show it
@@ -902,15 +917,13 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
     if(isMouseWheelOnCEGUIWindow())
         return;
 
-    ODFrameListener& frameListener = ODFrameListener::getSingleton();
-
     if(cameraInputBlocked())
         return;
 
-    // Native OIS reports 120 units per wheel notch; the SFML bridge reports notches.
+    // Native OIS reports OIS_WHEEL_UNITS_PER_NOTCH units per wheel notch; the SFML bridge reports notches.
     float wheelNotches = static_cast<float>(arg.delta);
 #ifndef OD_USE_SFML_WINDOW
-    wheelNotches /= 120.0f;
+    wheelNotches /= OIS_WHEEL_UNITS_PER_NOTCH;
 #endif
     // Every wheel notch is one zoom level.
     int wheelStepCount = std::max(1, static_cast<int>(std::floor(std::abs(wheelNotches) + 0.5f)));
@@ -1524,6 +1537,8 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
         break;
     case OIS::KC_F4:
     case OIS::KC_F6:
+        // F4 loads user camera 1 and F6 user camera 3; F5 saves the game. The key code distance
+        // from F4 is the slot.
         if(!cameraInputBlocked())
             frameListener.getCameraManager()->loadUserView(arg.key - OIS::KC_F4);
         break;
@@ -1818,9 +1833,9 @@ void GameMode::updateCameraControls(float elapsed)
             && ODFrameListener::getSingleton().getRenderWindow()->isActive()
             && getKeyboard()->isModifierDown(OIS::Keyboard::Ctrl))
         {
-            camera->adjustUserView((float(down(OIS::KC_INSERT)) - float(down(OIS::KC_DELETE))) * 90.0f * elapsed,
-                (float(down(OIS::KC_PGUP)) - float(down(OIS::KC_PGDOWN))) * 90.0f * elapsed,
-                (float(down(OIS::KC_HOME)) - float(down(OIS::KC_END))) * 90.0f * elapsed);
+            camera->adjustUserView((float(down(OIS::KC_INSERT)) - float(down(OIS::KC_DELETE))) * USER_VIEW_ADJUST_SPEED * elapsed,
+                (float(down(OIS::KC_PGUP)) - float(down(OIS::KC_PGDOWN))) * USER_VIEW_ADJUST_SPEED * elapsed,
+                (float(down(OIS::KC_HOME)) - float(down(OIS::KC_END))) * USER_VIEW_ADJUST_SPEED * elapsed);
         }
         return;
     }

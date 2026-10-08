@@ -418,10 +418,20 @@ private:
     bool isMouseDownOnCEGUIWindow();
     bool isMouseWheelOnCEGUIWindow();
 
+    //! \brief Reads the held camera keys and the mouse position (edge scrolling) once per frame
+    //! and hands them to the camera. Adjusts the user view while the user camera window is open.
     void updateCameraControls(float elapsed) override;
+
+    //! \brief Opens the window to define a user camera.
     bool showUserCameras(const CEGUI::EventArgs& = {});
+
+    //! \brief Closes the window to define a user camera.
     bool closeUserCameras(const CEGUI::EventArgs& = {});
+
+    //! \brief Selects the user camera whose button was clicked and shows its stored view.
     bool selectUserCamera(const CEGUI::EventArgs&);
+
+    //! \brief Stores the current view in the selected user camera.
     bool storeUserCamera(const CEGUI::EventArgs&);
     //! \brief The player pressed the button of a stored special: asks the server to use it
     bool useSpecial(const CEGUI::EventArgs& args);
@@ -429,6 +439,7 @@ private:
     void refreshSpecialButtons();
     //! \brief The number of stored specials the buttons show, indexed by gift box type
     std::vector<uint32_t> mSpecialCountsShown;
+    //! \brief The user camera (0 to 2) the window to define user cameras edits.
     unsigned int mUserCameraSlot = 0;
 
     //! Restarts the inactivity timer and stops a running idle hand effect; called on every input event.
