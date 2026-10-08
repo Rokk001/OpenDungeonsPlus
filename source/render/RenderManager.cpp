@@ -972,6 +972,16 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
 {
     // Share a light across a small patch, rather than allocating one per tile.
     const int patchSize = 3;
+    // Light range in tiles and its constant, linear and quadratic falloff terms.
+    const Ogre::Real lightRange = 6.0f;
+    const Ogre::Real lightConstantFalloff = 1.0f;
+    const Ogre::Real lightLinearFalloff = 0.09f;
+    const Ogre::Real lightQuadraticFalloff = 0.032f;
+    // Height above the floor at which the patch light hangs, its warm colour and its brightness
+    // for a completely filled patch.
+    const Ogre::Real lightHeight = 3.0f;
+    const Ogre::ColourValue lightColour(0.9f, 0.8f, 0.6f);
+    const Ogre::Real lightFullIntensity = 0.55f;
     const int originX = tile.getX() / patchSize * patchSize;
     const int originY = tile.getY() / patchSize * patchSize;
     const std::string name = "RoomLight_" + Helper::toString(originX) + "_" + Helper::toString(originY);
@@ -1015,16 +1025,16 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
         light->setType(Ogre::Light::LT_POINT);
         light->setCastShadows(false);
         // A local room fill complements the existing cursor and authored lights.
-        light->setAttenuation(6.0f, 1.0f, 0.09f, 0.032f);
+        light->setAttenuation(lightRange, lightConstantFalloff, lightLinearFalloff, lightQuadraticFalloff);
         light->setSpecularColour(Ogre::ColourValue::Black);
         Ogre::SceneNode* node = mLightSceneNode->createChildSceneNode(name + "_node");
         node->attachObject(light);
     }
     position /= static_cast<Ogre::Real>(count);
-    position.z = 3.0f;
+    position.z = lightHeight;
     light->getParentSceneNode()->setPosition(position);
     const Ogre::Real density = static_cast<Ogre::Real>(count) / (patchSize * patchSize);
-    light->setDiffuseColour(Ogre::ColourValue(0.9f, 0.8f, 0.6f) * (0.55f * density));
+    light->setDiffuseColour(lightColour * (lightFullIntensity * density));
 }
 
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
