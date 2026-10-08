@@ -204,6 +204,10 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! if a skill is done) and, if yes, refreshes accordingly.
     //! \param forceRefresh Refresh the gui even if no changes was declared by the local player Seat.
     void refreshGuiSkill(bool forceRefresh = false);
+
+    //! \brief Lays out the research nodes in rows by prerequisite depth and draws the paths
+    //! from each prerequisite to the skills that need it, coloured by whether they are done.
+    //! Called when the research is refreshed and when the size of the window changes.
     void refreshSkillConnections();
 
     //! \brief Called at each frame. Updates spell cooldowns.
