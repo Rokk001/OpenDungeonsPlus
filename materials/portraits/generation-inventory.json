@@ -47382,8 +47382,16 @@
               12
             ],
             "visible_pixels": 833628,
-            "status": "paused",
-            "observation": "Bright rectangular neckline transition at canvas x210..590,y825..865 remains unchanged; correction explicitly paused."
+            "status": "known-accepted-cosmetic",
+            "observation": "Known accepted cosmetic issue: bright rectangular neckline transition at canvas x210..590,y825..865 in the unchanged outfit source; no further composition or raster correction requested.",
+            "source_file": "materials/portraits/variants/DarkElf.mesh-male/outfit-1-tunic-build0.png",
+            "preview_file": "materials/portraits/variants/DarkElf.mesh-male/outfit-1-tunic-build0.png",
+            "preview_region_canvas": [
+              210,
+              825,
+              590,
+              865
+            ]
           }
         ]
       }
