@@ -259,6 +259,8 @@ private:
 
     //! \brief The renderer options and video config values to restore if replacing the render window fails.
     std::map<std::string, std::string> mPreviousRendererOptions;
+
+    //! \brief Video config values to restore if the pending window recreation fails.
     std::map<std::string, std::string> mPreviousVideoConfig;
 
     //! \brief Foreign reference to gui.

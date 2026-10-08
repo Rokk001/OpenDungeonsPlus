@@ -58,14 +58,20 @@ const uint32_t CUSTOM_VIDEO_OPTIONS_TOP = 238;
 const uint32_t CUSTOM_VIDEO_LABEL_HEIGHT = 34;
 const uint32_t CUSTOM_VIDEO_ROW_DISTANCE = 40;
 
+//! Names of the renderer options that do not need a new render window when changed.
+const std::string OPTION_VSYNC_INTERVAL = "VSync Interval";
+const std::string OPTION_REVERSED_Z_BUFFER = "Reversed Z-Buffer";
+const std::string OPTION_SEPARATE_SHADER_OBJECTS = "Separate Shader Objects";
+const std::string OPTION_DEBUG_LAYER = "Debug Layer";
+
 //! Whether a changed video option needs a new render window. The listed options apply to the open window.
 static bool requiresWindowRecreation(const std::string& optionName)
 {
     return optionName != Config::VSYNC
-        && optionName != "VSync Interval"
-        && optionName != "Reversed Z-Buffer"
-        && optionName != "Separate Shader Objects"
-        && optionName != "Debug Layer";
+        && optionName != OPTION_VSYNC_INTERVAL
+        && optionName != OPTION_REVERSED_Z_BUFFER
+        && optionName != OPTION_SEPARATE_SHADER_OBJECTS
+        && optionName != OPTION_DEBUG_LAYER;
 }
 
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages, bool gamePage):
@@ -778,7 +784,7 @@ bool SettingsWindow::saveConfig()
                 frameListener.windowResized(window);
             }
             window->setVSyncInterval(static_cast<unsigned int>(Helper::toInt(
-                config.getVideoValue("VSync Interval", "1", false))));
+                config.getVideoValue(OPTION_VSYNC_INTERVAL, "1", false))));
             window->setVSyncEnabled(vsCheckBox->isSelected());
         }
     }
