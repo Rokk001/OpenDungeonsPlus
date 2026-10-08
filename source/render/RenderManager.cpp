@@ -2698,26 +2698,40 @@ std::string RenderManager::setMaterialOpacity(const std::string& materialName, f
     return newMaterialName.str();
 }
 
+namespace
+{
+//! Unprojects the relative cursor position (0..1 from the top left) through the live
+//! projection matrix of the camera onto the plane of the keeper hand, in camera space.
+//! Returns false and leaves position untouched if the camera has no usable projection.
+bool unprojectHandCursor(const Ogre::Camera* camera, float relX, float relY, Ogre::Vector3& position)
+{
+    if(camera == nullptr)
+        return false;
+
+    const Ogre::Matrix4& projection = camera->getProjectionMatrix();
+    if(projection[0][0] == 0.0f || projection[1][1] == 0.0f)
+        return false;
+
+    const Ogre::Real depth = KEEPER_HAND_POS_Z;
+    position = Ogre::Vector3((2.0f * relX - 1.0f) * depth / projection[0][0],
+        (1.0f - 2.0f * relY) * depth / projection[1][1], -depth);
+    return true;
+}
+}
+
 void RenderManager::moveCursor(float relX, float relY)
 {
     if(mHandKeeperNode == nullptr || mViewport == nullptr)
         return;
 
-    Ogre::Camera* cam = mViewport->getCamera();
-    if(cam == nullptr)
-        return;
-
-    const Ogre::Matrix4& projection = cam->getProjectionMatrix();
-    if(projection[0][0] == 0.0f || projection[1][1] == 0.0f)
-        return;
-
     // Unproject the cursor pixel through the camera's live projection matrix so the
     // fingertip lands exactly on the cursor pixel for any FOV/aspect the scene
     // currently uses (the menu scene changes the camera FOV, so cached factors drift).
-    const Ogre::Real depth = KEEPER_HAND_POS_Z;
-    const Ogre::Real x = (2.0f * relX - 1.0f) * depth / projection[0][0];
-    const Ogre::Real y = (1.0f - 2.0f * relY) * depth / projection[1][1];
-    mHandKeeperNode->setPosition(x, y, -depth);
+    Ogre::Vector3 position = Ogre::Vector3::ZERO;
+    if(!unprojectHandCursor(mViewport->getCamera(), relX, relY, position))
+        return;
+
+    mHandKeeperNode->setPosition(position);
 }
 
 Ogre::FloatRect RenderManager::getHandCursorBounds(float relX, float relY) const
@@ -2729,12 +2743,9 @@ Ogre::FloatRect RenderManager::getHandCursorBounds(float relX, float relY) const
     Ogre::Entity* hand = mSceneManager->getEntity("keeperHandEnt");
     const Ogre::Camera* camera = mViewport->getCamera();
     // Same unprojection as moveCursor() so the bounds track the rendered hand exactly.
-    const Ogre::Matrix4& projection = camera->getProjectionMatrix();
-    if(projection[0][0] == 0.0f || projection[1][1] == 0.0f)
+    Ogre::Vector3 origin = Ogre::Vector3::ZERO;
+    if(!unprojectHandCursor(camera, relX, relY, origin))
         return bounds;
-    const Ogre::Real depth = KEEPER_HAND_POS_Z;
-    const Ogre::Vector3 origin((2.0f * relX - 1.0f) * depth / projection[0][0],
-        (1.0f - 2.0f * relY) * depth / projection[1][1], -depth);
     const Ogre::SceneNode* model = hand->getParentSceneNode();
     if(hand->getAnimationState("Point")->getEnabled())
     {
