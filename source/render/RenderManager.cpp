@@ -179,6 +179,43 @@ void RenderManager::saveTexture(Ogre::TexturePtr texture, const std::string& fil
 }
 
 
+// Switches the shadowingEnabled uniform of every fragment program that has a
+// shadow texture. Includes material clones and techniques created since the
+// game started.
+static void setShadowingEnabledParameters(bool enabled)
+{
+    Ogre::ResourceManager::ResourceMapIterator materials = Ogre::MaterialManager::getSingleton().getResourceIterator();
+    while(materials.hasMoreElements())
+    {
+        Ogre::MaterialPtr material = std::static_pointer_cast<Ogre::Material>(materials.getNext());
+        for(unsigned short techniqueIndex = 0; techniqueIndex < material->getNumTechniques(); ++techniqueIndex)
+        {
+            Ogre::Technique* technique = material->getTechnique(techniqueIndex);
+            for(unsigned short passIndex = 0; passIndex < technique->getNumPasses(); ++passIndex)
+            {
+                Ogre::Pass* pass = technique->getPass(passIndex);
+                if(!pass->hasFragmentProgram())
+                    continue;
+                Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
+                if(parameters->hasNamedParameters())
+                {
+                    const Ogre::GpuNamedConstants& constants = parameters->getConstantDefinitions();
+                    if(constants.map.find("shadowingEnabled") != constants.map.end())
+                    {
+                        bool hasShadowTexture = false;
+                        for(unsigned short unit = 0; unit < pass->getNumTextureUnitStates(); ++unit)
+                        {
+                            if(pass->getTextureUnitState(unit)->getContentType() == Ogre::TextureUnitState::CONTENT_SHADOW)
+                                hasShadowTexture = true;
+                        }
+                        parameters->setNamedConstant("shadowingEnabled", enabled && hasShadowTexture);
+                    }
+                }
+            }
+        }
+    }
+}
+
 void RenderManager::setDynamicShadowsEnabled(bool enabled)
 {
     // Custom shaders apply lighting and shadows in one pass; automatic
@@ -216,38 +253,7 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
 #endif
     }
     mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
-
-    // Include material clones and techniques created since the game started.
-    Ogre::ResourceManager::ResourceMapIterator materials = Ogre::MaterialManager::getSingleton().getResourceIterator();
-    while(materials.hasMoreElements())
-    {
-        Ogre::MaterialPtr material = std::static_pointer_cast<Ogre::Material>(materials.getNext());
-        for(unsigned short techniqueIndex = 0; techniqueIndex < material->getNumTechniques(); ++techniqueIndex)
-        {
-            Ogre::Technique* technique = material->getTechnique(techniqueIndex);
-            for(unsigned short passIndex = 0; passIndex < technique->getNumPasses(); ++passIndex)
-            {
-                Ogre::Pass* pass = technique->getPass(passIndex);
-                if(!pass->hasFragmentProgram())
-                    continue;
-                Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
-                if(parameters->hasNamedParameters())
-                {
-                    const Ogre::GpuNamedConstants& constants = parameters->getConstantDefinitions();
-                    if(constants.map.find("shadowingEnabled") != constants.map.end())
-                    {
-                        bool hasShadowTexture = false;
-                        for(unsigned short unit = 0; unit < pass->getNumTextureUnitStates(); ++unit)
-                        {
-                            if(pass->getTextureUnitState(unit)->getContentType() == Ogre::TextureUnitState::CONTENT_SHADOW)
-                                hasShadowTexture = true;
-                        }
-                        parameters->setNamedConstant("shadowingEnabled", enabled && hasShadowTexture);
-                    }
-                }
-            }
-        }
-    }
+    setShadowingEnabledParameters(enabled);
 }
 
 RenderManager::~RenderManager()
