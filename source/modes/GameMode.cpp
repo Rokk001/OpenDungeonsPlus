@@ -103,6 +103,8 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 //! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+//! Seconds between two refreshes of the open trap production window.
+const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
 
 //! Distance in pixels between the mouse cursor and the detail view shown next to it on the full map.
 const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
@@ -282,11 +284,9 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(mRootWindow->getChild("ProductionWindow/Orders")->subscribeEvent(
         CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
     addEventConnection(mRootWindow->getChild("ProductionWindow/MoveUp")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        { return moveTrapProductionOrder(true); })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderEarlier, this)));
     addEventConnection(mRootWindow->getChild("ProductionWindow/MoveDown")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        { return moveTrapProductionOrder(false); })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderLater, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::closeMap, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
@@ -2134,7 +2134,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(mRootWindow->getChild("ProductionWindow")->isVisible())
     {
         mProductionRefreshElapsed += evt.timeSinceLastFrame;
-        if(mProductionRefreshElapsed >= 1.0f)
+        if(mProductionRefreshElapsed >= TRAP_PRODUCTION_REFRESH_INTERVAL)
             requestTrapProductionQueue();
     }
     if(mFullMap)
@@ -3183,6 +3183,16 @@ void GameMode::fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows)
         }
     }
     area->show();
+}
+
+bool GameMode::moveTrapProductionOrderEarlier(const CEGUI::EventArgs&)
+{
+    return moveTrapProductionOrder(true);
+}
+
+bool GameMode::moveTrapProductionOrderLater(const CEGUI::EventArgs&)
+{
+    return moveTrapProductionOrder(false);
 }
 
 bool GameMode::hideSkillWindow(const CEGUI::EventArgs&)
