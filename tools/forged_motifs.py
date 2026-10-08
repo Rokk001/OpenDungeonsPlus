@@ -33,7 +33,7 @@ STONE = Mat((144, 126, 108), (98, 84, 72), spec=0.16, shin=12, mottle=0.18, grai
 STONE_DARK = Mat((96, 82, 70), (60, 50, 44), spec=0.12, shin=10, mottle=0.2, grain=0.10)
 BLOOD = Mat((160, 32, 30), (100, 16, 18), spec=0.5, shin=26, mottle=0.1)
 CONTOUR = Mat((16, 10, 8), spec=0.0, shin=4, mottle=0.0, grain=0.0)
-IMP = Mat((238, 120, 56), (164, 58, 26), spec=0.4, shin=20, mottle=0.14, emit=(30, 8, 0))
+WORKER_EMBLEM = Mat((238, 120, 56), (164, 58, 26), spec=0.4, shin=20, mottle=0.14, emit=(30, 8, 0))
 SKIN = Mat((232, 158, 108), (178, 104, 66), spec=0.3, shin=16, mottle=0.12)
 FLESH = Mat((214, 170, 120), (160, 116, 76), spec=0.25, shin=14, mottle=0.12)
 YELLOW = Mat((255, 222, 96), (240, 176, 50), spec=0.4, shin=16, mottle=0.08)
@@ -528,8 +528,8 @@ def m_worker_imp(c):
         c.add(c.seg(sx * 0.20, -0.16, sx * 0.40, -0.52, 0.075, 0.018), BONE, z=0.10, bevel=0.07, base=0.10, shadow=0.5)
     head = c.smooth_union(c.ellipse(0, 0.02, 0.34, 0.31), c.ellipse(0, 0.26, 0.20, 0.17), 0.10)
     ears = c.union(c.poly([(-0.28, -0.02), (-0.62, -0.20), (-0.34, 0.16)]), c.poly([(0.28, -0.02), (0.62, -0.20), (0.34, 0.16)]))
-    c.add(ears, IMP, z=0.06, bevel=0.06, base=0.08, shadow=0.5)
-    c.add(head, IMP, z=0.16, bevel=0.20, base=0.10, shadow=0.6)
+    c.add(ears, WORKER_EMBLEM, z=0.06, bevel=0.06, base=0.08, shadow=0.5)
+    c.add(head, WORKER_EMBLEM, z=0.16, bevel=0.20, base=0.10, shadow=0.6)
     for sx in (-1, 1):
         c.add(c.ellipse(sx * 0.15, 0.0, 0.085, 0.06, deg(sx * 18)), CONTOUR, z=0.02, bevel=0.03, base=0.24)
         c.add(c.ellipse(sx * 0.15, 0.0, 0.06, 0.04, deg(sx * 18)), EMBER_HOT, z=0.02, bevel=0.03, base=0.25)
@@ -779,7 +779,7 @@ def m_banner(c):
 def m_creatures(c):
     c.add(c.seg(-0.28, -0.20, -0.50, -0.70, 0.11, 0.03), BONE, z=0.10, bevel=0.07, base=0.10, shadow=0.5)
     c.add(c.seg(0.28, -0.20, 0.50, -0.70, 0.11, 0.03), BONE, z=0.10, bevel=0.07, base=0.10, shadow=0.5)
-    c.add(c.smooth_union(c.ellipse(0, 0.0, 0.52, 0.44), c.ellipse(0, 0.32, 0.30, 0.24), 0.12), IMP, z=0.18, bevel=0.22, base=0.10, shadow=0.6)
+    c.add(c.smooth_union(c.ellipse(0, 0.0, 0.52, 0.44), c.ellipse(0, 0.32, 0.30, 0.24), 0.12), WORKER_EMBLEM, z=0.18, bevel=0.22, base=0.10, shadow=0.6)
     for sx in (-1, 1):
         c.add(c.ellipse(sx * 0.23, -0.04, 0.13, 0.09, deg(sx * 20)), CONTOUR, z=0.02, bevel=0.04, base=0.28)
         c.add(c.ellipse(sx * 0.23, -0.04, 0.09, 0.055, deg(sx * 20)), EMBER_HOT, z=0.02, bevel=0.04, base=0.29)
