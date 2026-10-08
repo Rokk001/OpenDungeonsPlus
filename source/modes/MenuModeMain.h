@@ -37,6 +37,8 @@ public:
     //! \brief Opens the skirmish sub-menu once the flight into the menu (after the defeat debriefing) ended
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
+    //! \brief Escape in the main menu: closes the open sub menu (skirmish, multiplayer or editor)
+    //! instead of leaving the menu.
     bool goBack(const CEGUI::EventArgs& e = {}) override;
 
 private:
