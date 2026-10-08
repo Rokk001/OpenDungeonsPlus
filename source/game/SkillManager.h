@@ -102,6 +102,7 @@ public:
 
     static void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection);
 
+    //! Append the current cost of the hovered action-bar button to its tooltip. Does nothing for other windows.
     static void updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow, CEGUI::Window* hoveredWindow);
 
     //! Return the action-bar button corresponding to the current room, trap or spell.
