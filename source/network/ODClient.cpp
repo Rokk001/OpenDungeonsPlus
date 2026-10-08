@@ -1531,6 +1531,19 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::chickenRoofFlight:
+        {
+            std::string name;
+            Ogre::Vector3 from;
+            Ogre::Vector3 to;
+            uint32_t turns;
+            Ogre::Real elapsed;
+            OD_ASSERT_TRUE(packetReceived >> name >> from >> to >> turns >> elapsed);
+            GameEntity* entity = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, name);
+            if(entity != nullptr)
+                static_cast<ChickenEntity*>(entity)->startRoofFlightFromServer(from, to, turns, elapsed);
+            break;
+        }
         case ServerNotificationType::chickenKindChanged:
         {
             std::string chickenName;

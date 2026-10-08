@@ -49,6 +49,11 @@ public:
     ChickenEntity(GameMap* gameMap);
 
     virtual void doUpkeep() override;
+    virtual void update(Ogre::Real timeSinceLastFrame) override;
+    virtual double getAnimationSpeedFactor() const override;
+    void startRoofFlightFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to,
+        uint32_t turns, Ogre::Real elapsed);
+    virtual void setPosition(const Ogre::Vector3& position, GameMap* gameMap = nullptr) override;
 
     virtual double getMoveSpeed() const override
     { return 0.4; }
@@ -259,7 +264,7 @@ private:
         eaten,
         dying
     };
-    //! Starts the flutter flight to the goal (HatcheryRoosterHopTurns turns), one step per turn in doUpkeep
+    //! Starts the roof flight; server ticks and client frames sample the same continuous curve.
     void startHop(const Ogre::Vector3& target);
     void continueHop();
     //! Puts the animal at the position and tells the clients, without touching the animation
@@ -277,11 +282,12 @@ private:
     bool mRoomDriven;
     bool mFighting;
     bool mOnRoof;
-    //! Server side, not saved: the flight to or from a roof (start, goal, turns in all and turns left)
+    //! Not saved: the flight to or from a roof, replicated to clients including late arrivals.
     Ogre::Vector3 mHopFrom;
     Ogre::Vector3 mHopTo;
     uint32_t mHopTurns;
     uint32_t mHopTurnsLeft;
+    Ogre::Real mHopElapsed;
     bool mFollowing;
     Ogre::Vector2 mFollowTarget;
     double mFollowGap;

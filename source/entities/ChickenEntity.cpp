@@ -43,6 +43,8 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 
+#include <OgreAnimationState.h>
+
 #include <algorithm>
 #include <cmath>
 #include <deque>
@@ -70,6 +72,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, 
     mHopTo(Ogre::Vector3::ZERO),
     mHopTurns(0),
     mHopTurnsLeft(0),
+    mHopElapsed(0.0f),
     mFollowing(false),
     mFollowTarget(Ogre::Vector2::ZERO),
     mFollowGap(0.0),
@@ -108,6 +111,7 @@ ChickenEntity::ChickenEntity(GameMap* gameMap) :
     mHopTo(Ogre::Vector3::ZERO),
     mHopTurns(0),
     mHopTurnsLeft(0),
+    mHopElapsed(0.0f),
     mFollowing(false),
     mFollowTarget(Ogre::Vector2::ZERO),
     mFollowGap(0.0),
@@ -478,10 +482,19 @@ void ChickenEntity::clearFollowTarget()
     mFollowing = false;
 }
 
+namespace
+{
+Ogre::Vector3 roofFlightPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress)
+{
+    // Grounded during crouching and settled before the wings finish folding.
+    const Ogre::Real travel = std::max(0.0f, std::min(1.0f, (progress - 0.12f) / 0.73f));
+    const Ogre::Real eased = travel * travel * (3.0f - 2.0f * travel);
+    return from + (to - from) * eased;
+}
+}
+
 void ChickenEntity::startHop(const Ogre::Vector3& target)
 {
-    // A short flight with the flutter pose: the server moves the animal a bit every turn and tells the clients
-    // (the clients only show the positions), the flight is over after a few turns at the latest
     const uint32_t turns = static_cast<uint32_t>(std::max(1.0,
         ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterHopTurns", 4.0)));
     mBusyTurns = 0;
@@ -489,21 +502,68 @@ void ChickenEntity::startHop(const Ogre::Vector3& target)
     mHopTo = target;
     mHopTurns = turns;
     mHopTurnsLeft = turns;
-    clearDestinations(ChickenPose::flutter, true, false);
+    mHopElapsed = 0.0f;
+    clearDestinations(ChickenPose::roofFlight, false, false);
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::chickenRoofFlight, seat->getPlayer());
+        notification->mPacket << getName() << mHopFrom << mHopTo << turns << mHopElapsed;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
 }
 
 void ChickenEntity::continueHop()
 {
     --mHopTurnsLeft;
+    mHopElapsed = static_cast<Ogre::Real>(mHopTurns - mHopTurnsLeft);
+    RenderedMovableEntity::setPosition(roofFlightPosition(mHopFrom, mHopTo,
+        mHopElapsed / static_cast<Ogre::Real>(mHopTurns)));
     if(mHopTurnsLeft == 0)
-    {
-        moveTo(mHopTo);
         setAnimationState(EntityAnimation::idle_anim, true);
-        return;
-    }
+}
 
-    const Ogre::Real done = static_cast<Ogre::Real>(mHopTurns - mHopTurnsLeft) / static_cast<Ogre::Real>(mHopTurns);
-    moveTo(mHopFrom + (mHopTo - mHopFrom) * done);
+void ChickenEntity::startRoofFlightFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to,
+    uint32_t turns, Ogre::Real elapsed)
+{
+    mHopFrom = from;
+    mHopTo = to;
+    mHopTurns = std::max<uint32_t>(1, turns);
+    mHopElapsed = elapsed;
+    mHopTurnsLeft = 1;
+    setAnimationState(ChickenPose::roofFlight, false, Ogre::Vector3::ZERO, false);
+    RenderedMovableEntity::setPosition(roofFlightPosition(from, to, elapsed / mHopTurns));
+    if(getAnimationState() != nullptr)
+        getAnimationState()->setTimePosition(4.0f * elapsed / mHopTurns);
+}
+
+double ChickenEntity::getAnimationSpeedFactor() const
+{
+    return (!getIsOnServerMap() && mHopTurnsLeft > 0) ? 4.0 / mHopTurns : 1.0;
+}
+
+void ChickenEntity::update(Ogre::Real timeSinceLastFrame)
+{
+    RenderedMovableEntity::update(timeSinceLastFrame);
+    if(getIsOnServerMap() || mHopTurnsLeft == 0)
+        return;
+    mHopElapsed = std::min(static_cast<Ogre::Real>(mHopTurns), mHopElapsed +
+        static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
+    RenderedMovableEntity::setPosition(roofFlightPosition(mHopFrom, mHopTo, mHopElapsed / mHopTurns));
+    if(getAnimationState() != nullptr && getAnimationState()->getAnimationName() == "RoofFlight")
+        getAnimationState()->setTimePosition(4.0f * mHopElapsed / mHopTurns);
+    if(mHopElapsed >= mHopTurns)
+        mHopTurnsLeft = 0;
+}
+
+void ChickenEntity::setPosition(const Ogre::Vector3& position, GameMap* gameMap)
+{
+    // An authoritative teleport (pickup/drop or another action) cancels the cosmetic flight.
+    if(!getIsOnServerMap())
+        mHopTurnsLeft = 0;
+    RenderedMovableEntity::setPosition(position, gameMap);
 }
 
 void ChickenEntity::hopToRoof(const Ogre::Vector3& position)
@@ -1055,6 +1115,9 @@ void ChickenEntity::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     RenderedMovableEntity::exportToPacket(os, seat);
     os << static_cast<uint32_t>(mKind);
+    os << mHopTurnsLeft;
+    if(mHopTurnsLeft > 0)
+        os << mHopFrom << mHopTo << mHopTurns << mHopElapsed;
 }
 
 void ChickenEntity::importFromPacket(ODPacket& is)
@@ -1064,6 +1127,9 @@ void ChickenEntity::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> kind);
     mKind = static_cast<ChickenKind>(kind);
     setMeshName(getMeshNameForKind(mKind));
+    OD_ASSERT_TRUE(is >> mHopTurnsLeft);
+    if(mHopTurnsLeft > 0)
+        OD_ASSERT_TRUE(is >> mHopFrom >> mHopTo >> mHopTurns >> mHopElapsed);
 }
 
 void ChickenEntity::exportToStream(std::ostream& os) const
