@@ -60,6 +60,9 @@ const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
 namespace
 {
+//! Tiles from the centre of a heart to the edge of its whole 5x5 area (core and treasury ring).
+const int HEART_AREA_RADIUS = 2;
+
 //! \brief Distance in tiles from the heart centre to each of the four special objects
 const int HEART_REWARD_SPECIAL_DISTANCE = 2;
 
@@ -306,9 +309,9 @@ class RoomDungeonTempleFactory : public RoomFactory
         const int centreY = (inputManager.mYPos + inputManager.mLStartDragY) / 2;
 
         std::vector<Tile*> buildableTiles;
-        for(int x = centreX - 2; x <= centreX + 2; x++)
+        for(int x = centreX - HEART_AREA_RADIUS; x <= centreX + HEART_AREA_RADIUS; x++)
         {
-            for(int y = centreY - 2; y <= centreY + 2; y++)
+            for(int y = centreY - HEART_AREA_RADIUS; y <= centreY + HEART_AREA_RADIUS; y++)
             {
                 Tile* tile = gameMap->getTile(x, y);
                 if(tile == nullptr)
@@ -379,6 +382,9 @@ const double RoomDungeonTemple::HEART_CRITICAL_FRACTION = 0.11;
 // (H6/R8). Unlike a treasury room this is not raised by the treasury skill:
 // the ring is part of the heart, not a buildable treasury.
 static const int treasuryTileCapacity = 1000;
+
+// Tiles from the heart tile to the edge of the 3x3 core; everything beyond it is the ring.
+static const int HEART_CORE_RADIUS = 1;
 
 RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
@@ -622,7 +628,8 @@ bool RoomDungeonTemple::isTreasuryTile(Tile* tile) const
     // only the outer ring of a 5x5 heart stores gold.
     const int dx = tile->getX() - center->getX();
     const int dy = tile->getY() - center->getY();
-    if(dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1)
+    if(dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS
+        && dy >= -HEART_CORE_RADIUS && dy <= HEART_CORE_RADIUS)
         return false;
 
     for(Tile* covered : mCoveredTiles)
