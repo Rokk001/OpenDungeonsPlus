@@ -34,6 +34,7 @@ override = function(header, 'void checkForSplit()') if 'void checkForSplit()' in
 probe = r'''
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <set>
@@ -51,24 +52,29 @@ struct BuildingObject {Tile* tile;};
 struct GameMap {bool editor=false,server=true;int created=0;
  std::map<std::pair<int,int>,Tile> tiles;std::vector<Room*> rooms;
  bool isInEditorMode(){return editor;}bool isServerGameMap(){return server;}
- Tile* getTile(int x,int y){auto it=tiles.find({x,y});return it==tiles.end()?nullptr:&it->second;}
+ Tile* getTile(int x,int y){std::map<std::pair<int,int>,Tile>::iterator it=tiles.find(std::make_pair(x,y));
+  return it==tiles.end()?nullptr:&it->second;}
  std::string nextUniqueNameRoom(int){return "split";}};
 struct Room {
  GameMap* map;bool temple=false;std::vector<Tile*> mCoveredTiles,mCoveredTilesDestroyed;
  std::map<Tile*,TileData*> mTileData;std::map<Tile*,BuildingObject*> mBuildingObjects;
  std::vector<Creature*> mCreaturesUsingRoom;
- Room(GameMap* m):map(m){}virtual ~Room(){for(auto& p:mTileData)delete p.second;removeAllBuildingObjects();}
+ Room(GameMap* m):map(m){}
+ virtual ~Room(){for(std::map<Tile*,TileData*>::iterator it=mTileData.begin();it!=mTileData.end();++it)delete it->second;
+  removeAllBuildingObjects();}
  GameMap* getGameMap(){return map;}bool getIsOnServerMap(){return map->server;}
  int getType(){return temple?1:0;}int getSeat(){return 1;}
  void setIsOnMap(bool){}void setName(const std::string&){}void setSeat(int){}
  void createMesh(){}void splitRoom(Room&,const std::vector<Tile*>&){}
  void addToGameMap(GameMap* m){m->rooms.push_back(this);}
  void removeCreatureUsingRoom(Creature*){}void handleCreatureUsingAbsorbedRoom(Creature&){}
- static void reorderRoomTiles(std::vector<Tile*>& tiles){std::sort(tiles.begin(),tiles.end(),
- [](Tile* a,Tile* b){return a->x==b->x?a->y<b->y:a->x<b->x;});}
+ static bool tileBefore(Tile* a,Tile* b){return a->x==b->x?a->y<b->y:a->x<b->x;}
+ static void reorderRoomTiles(std::vector<Tile*>& tiles){std::sort(tiles.begin(),tiles.end(),tileBefore);}
  virtual void checkForSplit();virtual void updateActiveSpots(GameMap* =nullptr){}
  Tile* getCentralTile();
- void removeAllBuildingObjects(){for(auto& p:mBuildingObjects)delete p.second;mBuildingObjects.clear();}
+ void removeAllBuildingObjects(){
+  for(std::map<Tile*,BuildingObject*>::iterator it=mBuildingObjects.begin();it!=mBuildingObjects.end();++it)delete it->second;
+  mBuildingObjects.clear();}
  void addBuildingObject(Tile* t,BuildingObject* b){mBuildingObjects[t]=b;}
 };
 struct PersistentObject:BuildingObject {
@@ -87,23 +93,27 @@ CENTRE
 ACTIVE
 POSITION
 int main(){int checks=0,failures=0;
- auto check=[&](bool ok,const char* label){++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}};
+ std::function<void(bool,const char*)> check=[&](bool ok,const char* label){
+  ++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}};
  // Cut a 5x5 floor down its centre, leaving two disconnected islands, then
  // cut again: exercise virtual dispatch through Room just as upkeep does.
  for(bool editor:{false,true})for(bool isTemple:{false,true})for(int axis:{0,1}){
   GameMap map;map.editor=editor;
   Room* room=RoomManager::createRoom(&map,isTemple?1:0);map.rooms.push_back(room);
   for(int x=0;x<5;++x)for(int y=0;y<5;++y)map.tiles.emplace(std::make_pair(x,y),Tile{x,y});
-  for(auto& entry:map.tiles){Tile* t=&entry.second;t->owner=room;
-   for(auto delta:{std::make_pair(1,0),{-1,0},{0,1},{0,-1}}){
-    if(auto* n=map.getTile(t->x+delta.first,t->y+delta.second))t->neighbors.push_back(n);}
+  for(std::map<std::pair<int,int>,Tile>::iterator entry=map.tiles.begin();entry!=map.tiles.end();++entry){
+   Tile* t=&entry->second;t->owner=room;
+   const int deltas[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
+   for(int d=0;d<4;++d){
+    Tile* n=map.getTile(t->x+deltas[d][0],t->y+deltas[d][1]);
+    if(n!=nullptr)t->neighbors.push_back(n);}
    room->mCoveredTiles.push_back(t);room->mTileData[t]=new TileData;}
   room->updateActiveSpots(&map);
   BuildingObject* original=isTemple?room->mBuildingObjects.begin()->second:nullptr;
   check(map.created==(isTemple?1:0),"initial object count");
   for(int cut:{2,1}){
-   auto rooms=map.rooms;
-   for(Room* r:rooms){auto tiles=r->mCoveredTiles;
+   std::vector<Room*> rooms=map.rooms;
+   for(Room* r:rooms){std::vector<Tile*> tiles=r->mCoveredTiles;
     for(Tile* t:tiles)if((axis?t->y:t->x)==cut){
      r->mCoveredTiles.erase(std::find(r->mCoveredTiles.begin(),r->mCoveredTiles.end(),t));
      r->mCoveredTilesDestroyed.push_back(t);r->mTileData[t]->mHP=0;t->owner=nullptr;}
