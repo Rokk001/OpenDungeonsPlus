@@ -649,8 +649,11 @@ private:
         Ogre::SceneNode* mNode;
         Ogre::Vector3 mBaseScale;
         Ogre::AnimationState* mAnimation;
+        //! Seconds since the creature started to lie down.
         Ogre::Real mElapsed;
+        //! True if the mesh has its own sleep entry animation, false if one is generated.
         bool mNativeEntry;
+        //! Position and orientation of the node before sleeping and when lying in the bed.
         Ogre::Vector3 mBasePosition, mRestPosition;
         Ogre::Quaternion mBaseOrientation, mRestOrientation;
         //! Waking reverses the entry unless the model supplies its own Sleep_End clip.
@@ -897,6 +900,7 @@ private:
     void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
     //! \brief Starts a cosmetic wake transition only when this creature has a stored sleep pose.
     bool startCreatureWakeAnimation(Creature* creature, Ogre::Entity* entity);
+    //! \brief Finds the nearest bed and computes where the creature has to lie on it.
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     //! \brief Restores the standing transform and removes any retained native wake blend.
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
