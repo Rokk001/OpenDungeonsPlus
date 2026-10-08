@@ -5581,7 +5581,7 @@ void RenderManager::updateCreatureStep(Creature* creature)
             const Ogre::Vector2 placed = static_cast<BuildingObject*>(candidate)->getFurnitureScale();
             const RoomObjectPath::FurnitureScale scale = placed == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
                 RoomObjectPath::FurnitureScale{placed.x, placed.y};
-            const float angle = float(candidate->getRotationAngle()) * 0.01745329252f;
+            const float angle = float(candidate->getRotationAngle()) * RoomObjectPath::degreesToRadians;
             RoomObjectPath::Obstacle obstacle{{bounds.minX * scale.x, bounds.minY * scale.y},
                 {bounds.maxX * scale.x, bounds.maxY * scale.y},
                 {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};

@@ -9,6 +9,9 @@
 
 namespace RoomObjectPath
 {
+// Factor that converts degrees to radians.
+constexpr float degreesToRadians = 0.01745329252f;
+
 struct MeshBounds
 {
     const char* name;
@@ -87,6 +90,15 @@ struct FurnitureScale
     float x, y;
 };
 
+// Footprint (in tiles) that furniture is narrowed to. Beds that are not assigned
+// to a creature use the smaller one, large beds the larger one.
+constexpr float furnitureFootprint = 0.6f;
+constexpr float unassignedBedFootprint = 0.4f;
+constexpr float largeBedFootprint = 1.2f;
+// Longest diagonal (in tiles) of a treasury pile.
+constexpr float treasuryPileDiagonal = 0.4f;
+
+// Returns how much the mesh is narrowed so that it fits the footprint of its kind.
 inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 {
     const std::string name(bounds.name);
@@ -97,22 +109,22 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
     // diagonal, not just their unrotated width, so rotation retains the margin.
     if(name.compare(0, 9, "Goldstack") == 0)
     {
-        const float scale = std::min(1.0f, 0.4f / std::hypot(
+        const float scale = std::min(1.0f, treasuryPileDiagonal / std::hypot(
             bounds.maxX - bounds.minX, bounds.maxY - bounds.minY));
         return {scale, scale};
     }
-    float width = 0.6f, depth = 0.6f;
+    float width = furnitureFootprint, depth = furnitureFootprint;
     const bool bed = name == "Bed" || name == "KnightCoffin" || name == "StoneCoffin" ||
         (name.size() >= 3 && name.compare(name.size() - 3, 3, "Bed") == 0);
     // This fallback also covers unassigned decorative instances. Actual beds
     // override it with the owning creature's allocated dimensions below.
     if(bed)
-        width = depth = 0.4f;
+        width = depth = unassignedBedFootprint;
     if(name == "DragonBed" || name == "TrollBed")
-        width = depth = 1.2f;
+        width = depth = largeBedFootprint;
     else if(name == "Bed" || name == "KnightCoffin" || name == "LizardmanBed" ||
             name == "OrcBed" || name == "RangerBed" || name == "StoneCoffin")
-        depth = 1.2f;
+        depth = largeBedFootprint;
     const float x = std::min(1.0f, width / (bounds.maxX - bounds.minX));
     const float y = std::min(1.0f, depth / (bounds.maxY - bounds.minY));
     if(bed)
@@ -126,21 +138,35 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 constexpr float bedTileFill = 0.70f;
 constexpr float bedLaneWidth = 1.0f - bedTileFill;
 
+// Position of the mesh origin, angle in degrees and scale of a bed.
 struct BedPlacement
 {
     float x, y, angle;
     FurnitureScale scale;
 };
 
+// FNV-1a hash parameters, used to derive a stable angle from the creature name.
+constexpr std::uint32_t bedHashBasis = 2166136261u;
+constexpr std::uint32_t bedHashPrime = 16777619u;
+// The angle of a bed differs from the allocated angle by up to bedAngleJitter degrees,
+// in bedAngleSteps equal steps.
+constexpr std::uint32_t bedAngleSteps = 8001u;
+constexpr float bedAngleStep = 0.001f;
+constexpr float bedAngleJitter = 4.0f;
+// Start values for the search of the corner of the rotated bed.
+constexpr float bedCornerSentinel = 1.0e10f;
+
+// Returns where a bed for the given creature is placed in the allocated area of
+// width x height tiles whose lower left tile is (x, y); the angle is the allocated one.
 inline BedPlacement bedPlacement(const MeshBounds& bounds, int x, int y,
     int width, int height, float allocationAngle, const std::string& creatureName)
 {
     // Stable across save/load and platforms, without consuming gameplay RNG.
-    std::uint32_t hash = 2166136261u;
+    std::uint32_t hash = bedHashBasis;
     for(unsigned char character : creatureName)
-        hash = (hash ^ character) * 16777619u;
-    const float angle = allocationAngle + float(hash % 8001u) * 0.001f - 4.0f;
-    const float radians = angle * 0.01745329252f;
+        hash = (hash ^ character) * bedHashPrime;
+    const float angle = allocationAngle + float(hash % bedAngleSteps) * bedAngleStep - bedAngleJitter;
+    const float radians = angle * degreesToRadians;
     const float cosine = std::cos(radians), sine = std::sin(radians);
     // Fit the rotated footprint, keeping the right and bottom 30% lanes clear.
     const float c = std::abs(cosine), s = std::abs(sine);
@@ -149,7 +175,7 @@ inline BedPlacement bedPlacement(const MeshBounds& bounds, int x, int y,
             (determinant * (bounds.maxX - bounds.minX)),
         bedTileFill * (height * c - width * s) /
             (determinant * (bounds.maxY - bounds.minY))};
-    float left = 1.0e10f, top = -1.0e10f;
+    float left = bedCornerSentinel, top = -bedCornerSentinel;
     for(float px : {bounds.minX * scale.x, bounds.maxX * scale.x})
         for(float py : {bounds.minY * scale.y, bounds.maxY * scale.y})
         {

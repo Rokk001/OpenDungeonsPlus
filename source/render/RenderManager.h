@@ -664,6 +664,7 @@ private:
         Ogre::AnimationState* mWakeFromAnimation;
     };
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
+    //! Creatures that are currently lifted onto low furniture.
     std::set<Creature*> mSteppingCreatures;
 
     //! The kinds of treasury effect; each has a budget per room of its own
@@ -899,6 +900,8 @@ private:
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     //! \brief Restores the standing transform and removes any retained native wake blend.
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
+    //! \brief Lifts the creature while it walks over low furniture, such as a nest, and lowers it again
+    //! afterwards.
     void updateCreatureStep(Creature* creature);
     void refreshCreaturesOnTile(Tile* tile);
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
@@ -937,6 +940,7 @@ private:
     void cancelTreasuryPour(Creature* creature);
     float getTreasuryPourRise(Creature* creature) const;
     void clearTreasuryEffects();
+    //! \brief Puts the given creature, or all lifted creatures if null, back on the floor.
     void cancelCreatureStep(Creature* creature = nullptr);
     //! \brief Destroys all running room construction bursts.
     void clearRoomConstructionEffects();
