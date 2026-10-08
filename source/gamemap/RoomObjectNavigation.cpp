@@ -62,6 +62,18 @@ bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vec
     return true;
 }
 
+//! Squared step length below which two consecutive path points count as the same point
+const float SAME_POINT_SQUARED_DISTANCE = 0.000001f;
+//! Tolerance for treating a step as axis-aligned and two directions as parallel
+const float AXIS_ALIGNED_TOLERANCE = 0.00001f;
+//! A smoothed path must be at least this much shorter than the original to replace it
+const float MIN_PATH_LENGTH_GAIN = 0.0001f;
+//! Axis-aligned paths with fewer 90 degree turns are left alone: only a staircase of turns benefits
+const unsigned MIN_CORRIDOR_TURNS = 2;
+
+//! Replaces a tile-by-tile staircase path through a diagonal corridor by a short chain of straight legs
+//! (greedy, over tile centres and the midpoints between them) that stays on passable terrain and clear of
+//! furniture. Returns true and rewrites path only if the result is shorter than the original.
 bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstacle>& obstacles,
     std::vector<Ogre::Vector2>& path)
 {
@@ -74,10 +86,10 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
     for(const Ogre::Vector2& point : path)
     {
         const Ogre::Vector2 direction = point - previous;
-        if(direction.squaredLength() < 0.000001f)
+        if(direction.squaredLength() < SAME_POINT_SQUARED_DISTANCE)
             continue;
-        const bool cardinal = std::abs(direction.x) < 0.00001f || std::abs(direction.y) < 0.00001f;
-        if(cardinal && std::abs(lastDirection.crossProduct(direction)) > 0.00001f)
+        const bool cardinal = std::abs(direction.x) < AXIS_ALIGNED_TOLERANCE || std::abs(direction.y) < AXIS_ALIGNED_TOLERANCE;
+        if(cardinal && std::abs(lastDirection.crossProduct(direction)) > AXIS_ALIGNED_TOLERANCE)
             ++turns;
         lastDirection = cardinal ? direction : Ogre::Vector2::ZERO;
         candidates.push_back((previous + point) * 0.5f);
@@ -85,7 +97,7 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
         originalLength += direction.length();
         previous = point;
     }
-    if(turns < 2)
+    if(turns < MIN_CORRIDOR_TURNS)
         return false;
     const std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)> clear = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
     {
@@ -107,7 +119,7 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
         previous = candidates[next];
         first = next + 1;
     }
-    if(length >= originalLength - 0.0001f)
+    if(length >= originalLength - MIN_PATH_LENGTH_GAIN)
         return false;
     path.swap(result);
     return true;
