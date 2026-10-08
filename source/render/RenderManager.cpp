@@ -171,11 +171,15 @@ void createKeeperHandPoses(Ogre::Entity* hand)
         hand->getAllAnimationStates()->createAnimationState("PointTransition", 0, duration);
 }
 
+//! \brief Shifts the hand model so that the fingertip, not the wrist, sits on the cursor position.
+//! The shift is blended in with the pointing transition and is zero for every other pose.
 void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* animation)
 {
-    const float weight = animation->getAnimationName() == "Point" ? 1.0f :
-        (animation->getAnimationName() == "PointTransition" ?
-            animation->getTimePosition() / animation->getLength() : 0.0f);
+    float weight = 0.0f;
+    if(animation->getAnimationName() == "Point")
+        weight = 1.0f;
+    else if(animation->getAnimationName() == "PointTransition")
+        weight = animation->getTimePosition() / animation->getLength();
     Ogre::SceneNode* model = hand->getParentSceneNode();
     model->setPosition(Ogre::Vector3::ZERO);
     if(weight == 0.0f)
@@ -188,6 +192,23 @@ void alignKeeperHandPointer(Ogre::Entity* hand, const Ogre::AnimationState* anim
     const Ogre::Vector3 tip = index->_getDerivedPosition() +
         index->_getDerivedOrientation() * (index->_getDerivedScale() * tipLocal);
     model->setPosition(-(model->getOrientation() * tip) * weight);
+}
+
+//! \brief Projects a point given in the hand model space to the screen and grows the bounds to contain it.
+//! \param origin Position of the cursor in the camera space
+//! \param handNode The node holding the hand model
+void extendHandCursorBounds(Ogre::FloatRect& bounds, const Ogre::Camera* camera, const Ogre::Vector3& origin,
+        const Ogre::SceneNode* handNode, const Ogre::SceneNode* model, const Ogre::Vector3& point)
+{
+    const Ogre::Vector3 local = model->getPosition() + model->getOrientation() * (model->getScale() * point);
+    const Ogre::Vector3 projected = camera->getProjectionMatrix() * (origin +
+        handNode->getOrientation() * (handNode->getScale() * local));
+    const float x = (projected.x + 1.0f) * 0.5f;
+    const float y = (1.0f - projected.y) * 0.5f;
+    bounds.left = std::min(bounds.left, x);
+    bounds.top = std::min(bounds.top, y);
+    bounds.right = std::max(bounds.right, x);
+    bounds.bottom = std::max(bounds.bottom, y);
 }
 
 void createKeeperHandDigAnimation(Ogre::Entity* hand)
@@ -2761,16 +2782,8 @@ Ogre::FloatRect RenderManager::getHandCursorBounds(float relX, float relY) const
                 float* vertex = nullptr;
                 element->baseVertexPointerToElement(bytes +
                     (data->vertexStart + i) * buffer->getVertexSize(), &vertex);
-                const Ogre::Vector3 local = model->getPosition() + model->getOrientation() *
-                    (model->getScale() * Ogre::Vector3(vertex[0], vertex[1], vertex[2]));
-                const Ogre::Vector3 projected = camera->getProjectionMatrix() * (origin +
-                    mHandKeeperNode->getOrientation() * (mHandKeeperNode->getScale() * local));
-                const float x = (projected.x + 1.0f) * 0.5f;
-                const float y = (1.0f - projected.y) * 0.5f;
-                bounds.left = std::min(bounds.left, x);
-                bounds.top = std::min(bounds.top, y);
-                bounds.right = std::max(bounds.right, x);
-                bounds.bottom = std::max(bounds.bottom, y);
+                extendHandCursorBounds(bounds, camera, origin, mHandKeeperNode, model,
+                    Ogre::Vector3(vertex[0], vertex[1], vertex[2]));
             }
         }
         return bounds;
@@ -2779,16 +2792,7 @@ Ogre::FloatRect RenderManager::getHandCursorBounds(float relX, float relY) const
     for(int i = 0; i < 8; ++i)
     {
         // Overlay's parent already follows the world camera; use camera-local transforms.
-        const Ogre::Vector3 local = model->getPosition() +
-            model->getOrientation() * (model->getScale() * corners[i]);
-        const Ogre::Vector3 projected = camera->getProjectionMatrix() * (origin +
-            mHandKeeperNode->getOrientation() * (mHandKeeperNode->getScale() * local));
-        const float x = (projected.x + 1.0f) * 0.5f;
-        const float y = (1.0f - projected.y) * 0.5f;
-        bounds.left = std::min(bounds.left, x);
-        bounds.top = std::min(bounds.top, y);
-        bounds.right = std::max(bounds.right, x);
-        bounds.bottom = std::max(bounds.bottom, y);
+        extendHandCursorBounds(bounds, camera, origin, mHandKeeperNode, model, corners[i]);
     }
     return bounds;
 }
