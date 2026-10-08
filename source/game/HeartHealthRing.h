@@ -34,6 +34,11 @@ namespace HeartHealthRing
     //! The server only tells the owner about changes of at least one percentage point.
     const float NOTIFY_STEP = 0.01f;
 
+    //! A change of exactly NOTIFY_STEP must count although float rounding can leave it a little short.
+    const float NOTIFY_TOLERANCE = 0.0001f;
+
+    const float PI = 3.14159265f;
+
     //! Seconds without a further message after which the "under attack" glow is switched off.
     const float ATTACK_GLOW_SECONDS = 3.0f;
 
@@ -59,7 +64,7 @@ namespace HeartHealthRing
         if(span <= 0.0f)
             return false;
 
-        float degrees = std::atan2(dx, -dy) * 180.0f / 3.14159265f;
+        float degrees = std::atan2(dx, -dy) * 180.0f / PI;
         if(degrees < 0.0f)
             degrees += 360.0f;
         return degrees >= RING_START_DEGREES && degrees <= RING_START_DEGREES + span;
@@ -74,7 +79,7 @@ namespace HeartHealthRing
         // A destroyed heart is always announced
         if(fraction <= 0.0f)
             return lastSent > 0.0f;
-        return std::abs(fraction - lastSent) >= NOTIFY_STEP - 0.0001f;
+        return std::abs(fraction - lastSent) >= NOTIFY_STEP - NOTIFY_TOLERANCE;
     }
 
     //! \brief Client side: what the badge shows and whether it has to be redrawn.
