@@ -40,6 +40,22 @@
 #include <algorithm>
 #include <cmath>
 
+//! Scene node holding the full screen background rectangle created by the render manager.
+static const std::string BACKGROUND_NODE_NAME = "Background";
+//! Material used by the background rectangle outside of the menus.
+static const std::string DEFAULT_BACKGROUND_MATERIAL = "Background";
+//! Material and texture of the static menu background.
+static const std::string MENU_BACKGROUND_MATERIAL = "MainMenuBackground";
+static const std::string MENU_BACKGROUND_TEXTURE = "MainMenuBackground.png";
+static const std::string BACKGROUND_RESOURCE_GROUP = "Graphics";
+
+//! \brief Returns the full screen background rectangle of the scene.
+static Ogre::Rectangle2D* getBackgroundRectangle(RenderManager& renderManager)
+{
+    return static_cast<Ogre::Rectangle2D*>(
+        renderManager.getSceneManager()->getSceneNode(BACKGROUND_NODE_NAME)->getAttachedObject(0));
+}
+
 RenderSceneMenu::RenderSceneMenu()
 {
 }
@@ -63,10 +79,10 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
 {
     if(!renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
-    Ogre::Rectangle2D* background = static_cast<Ogre::Rectangle2D*>(
-        renderManager.getSceneManager()->getSceneNode("Background")->getAttachedObject(0));
-    Ogre::TextureManager::getSingleton().load("MainMenuBackground.png", "Graphics");
-    background->setMaterial(Ogre::MaterialManager::getSingleton().getByName("MainMenuBackground", "Graphics"));
+    Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);
+    Ogre::TextureManager::getSingleton().load(MENU_BACKGROUND_TEXTURE, BACKGROUND_RESOURCE_GROUP);
+    background->setMaterial(Ogre::MaterialManager::getSingleton().getByName(MENU_BACKGROUND_MATERIAL,
+        BACKGROUND_RESOURCE_GROUP));
     createAtmosphere(renderManager);
     updateMenu(cameraManager, renderManager, 0.0f);
 }
@@ -76,9 +92,9 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
     mFlight.reset();
     renderManager.rrSetHandPose(false, false);
     clearAtmosphere();
-    Ogre::Rectangle2D* background = static_cast<Ogre::Rectangle2D*>(
-        renderManager.getSceneManager()->getSceneNode("Background")->getAttachedObject(0));
-    background->setMaterial(Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics"));
+    Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);
+    background->setMaterial(Ogre::MaterialManager::getSingleton().getByName(DEFAULT_BACKGROUND_MATERIAL,
+        BACKGROUND_RESOURCE_GROUP));
     background->setCorners(-1.0f, 1.0f, 1.0f, -1.0f);
 }
 
@@ -107,7 +123,10 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     Ogre::Viewport* viewport = cameraManager.getViewport();
     if(viewport->getActualWidth() == 0 || viewport->getActualHeight() == 0)
         return;
-    const Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().getByName("MainMenuBackground.png", "Graphics");
+    const Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().getByName(MENU_BACKGROUND_TEXTURE,
+        BACKGROUND_RESOURCE_GROUP);
+    if(texture.isNull() || texture->getHeight() == 0)
+        return;
     const Ogre::Real imageAspect = static_cast<Ogre::Real>(texture->getWidth()) / texture->getHeight();
     const Ogre::Real viewportAspect = static_cast<Ogre::Real>(viewport->getActualWidth()) / viewport->getActualHeight();
     // During the flight the picture is zoomed around its centre
@@ -115,8 +134,7 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     const Ogre::Real flightScale = mFlight.getScale();
     const Ogre::Real halfWidth = std::min(1.0f, imageAspect / viewportAspect) * flightScale;
     const Ogre::Real halfHeight = std::min(1.0f, viewportAspect / imageAspect) * flightScale;
-    Ogre::Rectangle2D* background = static_cast<Ogre::Rectangle2D*>(
-        renderManager.getSceneManager()->getSceneNode("Background")->getAttachedObject(0));
+    Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);
     background->setCorners(-halfWidth, halfHeight, halfWidth, -halfHeight);
 
     mAtmosphereTime += std::min(timeSinceLastFrame, 0.1f);
