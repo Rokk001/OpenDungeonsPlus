@@ -139,6 +139,7 @@ protected:
 
     //! \brief Update the chat and event messages seen.
     void updateMessages(Ogre::Real update_time);
+    //! \brief Whether event messages are removed once they are too old to be displayed.
     virtual bool shouldExpireEventMessages() const { return true; }
 
     //! \brief The main CEGUI window.
