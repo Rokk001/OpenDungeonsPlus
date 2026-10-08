@@ -44,7 +44,22 @@
 #include <algorithm>
 #include <exception>
 #include <map>
-#include <sstream>
+
+namespace
+{
+//! \brief Tells if a renderer option can be changed on the open render window. Changing any other
+//! renderer option needs a new render window.
+bool canChangeWithoutNewRenderWindow(const std::string& optionName)
+{
+    return optionName == Config::VSYNC || optionName == "VSync Interval" ||
+        optionName == "Reversed Z-Buffer" || optionName == "Separate Shader Objects" ||
+        optionName == "Debug Layer";
+}
+
+//! \brief Distance in pixels from the top of the video tab to the first generated renderer option row,
+//! below the controls that are part of the layout
+const float RENDERER_OPTIONS_TOP = 238.0f;
+}
 
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui):
     mSettingsWindow(nullptr),
@@ -346,12 +361,8 @@ void SettingsWindow::initConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
     uiScaleCb->setReadOnly(true);
     uiScaleCb->resetList();
-    int configuredUiScale = 100;
-    std::istringstream uiScaleParser(config.getGameValue(Config::UI_SCALE, "100", false));
-    if(!(uiScaleParser >> configuredUiScale))
-        configuredUiScale = 100;
-    configuredUiScale = std::max(static_cast<int>(Gui::MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<int>(Gui::MAX_UI_SCALE_PERCENT), configuredUiScale));
+    // The list offers steps of 10 percent
+    int configuredUiScale = static_cast<int>(Gui::getConfiguredUserScalePercent());
     configuredUiScale = (configuredUiScale + 5) / 10 * 10;
     for(uint32_t uiScale = Gui::MIN_UI_SCALE_PERCENT;
         uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += 10)
@@ -407,13 +418,13 @@ void SettingsWindow::initConfig()
 
         // The text next to the combobox
         CEGUI::DefaultWindow* videoCbText = static_cast<CEGUI::DefaultWindow*>(videoTab->createChild("OD/StaticText", optionName + "_Text"));
-        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 34));
+        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, RENDERER_OPTIONS_TOP + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 34));
         videoCbText->setText(optionName + ": ");
         videoCbText->setProperty("FrameEnabled", "False");
         videoCbText->setProperty("BackgroundEnabled", "False");
 
         CEGUI::Combobox* videoCb = static_cast<CEGUI::Combobox*>(videoTab->createChild("OD/Combobox", optionName));
-        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.5, -20),
+        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, RENDERER_OPTIONS_TOP + offset), CEGUI::UDim(0.5, -20),
                          CEGUI::UDim(0, config.possibleValues.size() * 17 + 30));
         videoCb->setReadOnly(true);
         videoCb->setSortingEnabled(true);
@@ -556,12 +567,8 @@ bool SettingsWindow::saveConfig()
             resizeRenderWindow = true;
             continue;
         }
-        if(selected.first != Config::VSYNC && selected.first != "VSync Interval"
-            && selected.first != "Reversed Z-Buffer"
-            && selected.first != "Separate Shader Objects" && selected.first != "Debug Layer")
-        {
+        if(!canChangeWithoutNewRenderWindow(selected.first))
             recreateRenderWindow = true;
-        }
     }
 
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
@@ -612,23 +619,7 @@ bool SettingsWindow::saveConfig()
     catch(const std::exception& error)
     {
         OD_LOG_ERR("Could not apply video settings: " + std::string(error.what()));
-        std::map<std::string, std::string>::const_iterator fullscreen =
-            previousRendererOptions.find(Config::FULL_SCREEN);
-        if(fullscreen != previousRendererOptions.end())
-            renderer->setConfigOption(fullscreen->first, fullscreen->second);
-        std::map<std::string, std::string>::const_iterator videoMode =
-            previousRendererOptions.find(Config::VIDEO_MODE);
-        if(videoMode != previousRendererOptions.end())
-            renderer->setConfigOption(videoMode->first, videoMode->second);
-        for(const std::pair<const std::string, std::string>& option : previousRendererOptions)
-        {
-            if(option.first == Config::FULL_SCREEN || option.first == Config::VIDEO_MODE)
-                continue;
-            renderer->setConfigOption(option.first, option.second);
-        }
-        for(const std::pair<const std::string, std::string>& option : previousVideoConfig)
-            config.setVideoValue(option.first, option.second);
-        config.saveUserConfig();
+        frameListener.restoreVideoSettings(previousRendererOptions, previousVideoConfig);
         initConfig();
         return false;
     }

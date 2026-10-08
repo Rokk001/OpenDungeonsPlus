@@ -90,11 +90,16 @@ public:
     //! \brief Move CEGUI rendering to another Ogre render target.
     void setRenderTarget(Ogre::RenderTarget& renderTarget);
 
+    //! \brief Range of the UI scale the user can choose, in percent
     enum
     {
         MIN_UI_SCALE_PERCENT = 80,
         MAX_UI_SCALE_PERCENT = 120
     };
+
+    //! \brief Returns the UI scale saved in the user configuration in percent, limited to the supported
+    //! range. Returns 100 if the saved value is not a number.
+    static float getConfiguredUserScalePercent();
 
     //! \brief Registers a window tree for resolution-independent scaling.
     void registerWindowHierarchy(CEGUI::Window* window);
