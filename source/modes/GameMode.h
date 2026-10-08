@@ -456,12 +456,15 @@ private:
     //! Keys currently held down, so that a held key counts as input even without repeat events.
     std::set<OIS::KeyCode> mIdleHandKeys;
 
+    //! \brief Closes every open GUI layer, topmost first.
+    void closeAllTopWindows();
     bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool closeTrapProductionQueue(const CEGUI::EventArgs& = {});
     //! \brief Enables the move buttons according to the selected order.
     bool updateTrapProductionButtons(const CEGUI::EventArgs& = {});
     //! \brief Asks the server to move the selected order one place earlier or later.
     bool moveTrapProductionOrder(bool earlier);
+    //! \brief Button handlers: ask the server to move the selected order before or after its neighbour.
     bool moveTrapProductionOrderEarlier(const CEGUI::EventArgs&);
     bool moveTrapProductionOrderLater(const CEGUI::EventArgs&);
     //! \brief Asks the server for the production data, unless a request is still open.
