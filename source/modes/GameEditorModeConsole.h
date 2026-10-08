@@ -77,9 +77,8 @@ public:
 
     
 private:
-    std::unique_ptr<pybind11::gil_scoped_release> mMainThreadGilRelease;
-    
-    pybind11::scoped_interpreter guard;
+    pybind11::object mScriptScope;
+    pybind11::object mScriptState;
     // Thread loop for executing Python commands
     void interpreterLoop();
 
