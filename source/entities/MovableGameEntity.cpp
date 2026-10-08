@@ -35,6 +35,11 @@
 
 #include <OgreAnimationState.h>
 
+//! Playback speed factor of the combat attack animation, so that strikes look quick.
+const double COMBAT_ATTACK_SPEED_FACTOR = 1.35;
+//! Playback speed factor of the die animation.
+const double DIE_ANIMATION_SPEED_FACTOR = 1.15;
+
 MovableGameEntity::MovableGameEntity(GameMap* gameMap) :
     GameEntity(gameMap),
     mAnimationState(nullptr),
@@ -291,9 +296,9 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
          * static_cast<double>(timeSinceLastFrame) * gameSpeedFactor
          * getAnimationSpeedFactor());
     if(mPrevAnimationState == EntityAnimation::combat_attack_anim)
-        addedTime *= 1.35;
+        addedTime *= COMBAT_ATTACK_SPEED_FACTOR;
     else if(mPrevAnimationState == EntityAnimation::die_anim)
-        addedTime *= 1.15;
+        addedTime *= DIE_ANIMATION_SPEED_FACTOR;
     mAnimationTime += addedTime;
     if (!getIsOnServerMap() && getAnimationState() != nullptr &&
         mPrevAnimationState != EntityAnimation::getup_anim &&

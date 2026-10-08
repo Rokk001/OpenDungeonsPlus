@@ -47,6 +47,12 @@ class CreatureSkillMeleeFightFactory : public CreatureSkillFactory
 
 // Register the factory
 static CreatureSkillRegister reg(new CreatureSkillMeleeFightFactory);
+
+//! Tells whether the creature carries a weapon in either hand.
+bool hasWeapon(Creature* creature)
+{
+    return creature->getWeaponL() != nullptr || creature->getWeaponR() != nullptr;
+}
 }
 
 const std::string& CreatureSkillMeleeFight::getSkillName() const
@@ -106,11 +112,7 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
     if(attackedObject->getObjectType() == GameEntityType::creature)
     {
         Creature* target = static_cast<Creature*>(attackedObject);
-        const bool attackerArmed = creature->getWeaponL() != nullptr ||
-            creature->getWeaponR() != nullptr;
-        const bool targetArmed = target->getWeaponL() != nullptr ||
-            target->getWeaponR() != nullptr;
-        target->fireCombatImpact(attackerArmed && targetArmed,
+        target->fireCombatImpact(hasWeapon(creature) && hasWeapon(target),
             damageDone > 0.0, creature->getPosition());
 
         // Tell the clients how much of the blow got through, so that they can show a hit, a glancing blow
