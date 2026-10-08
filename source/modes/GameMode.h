@@ -488,8 +488,16 @@ private:
     void checkInputCommand();
     void handlePlayerActionNone();
     void handlePlayerActionSelectTile();
+    //! \brief Button handler: switches the query mode (SelectedAction::queryEntity) on or off.
+    //! While it is on, the next click shows information about the pointed entity instead of
+    //! selecting tiles. Does nothing when not connected or while the game is paused.
     bool toggleQuery(const CEGUI::EventArgs& e);
+    //! \brief Returns the entity on the given tile that can show a stats window and is nearest to
+    //! the keeper hand position, or nullptr if there is none (or the tile is null).
+    //! Used by the query mode and by the middle mouse button.
     GameEntity* getQueryTarget(Tile* tile) const;
+    //! \brief Handles the query mode in checkInputCommand(): shows the name of the entity under the
+    //! pointer and, once the click is validated, opens its stats window.
     void handlePlayerActionQuery();
     bool toggleSell(const CEGUI::EventArgs& e);
     void handlePlayerActionSell();
