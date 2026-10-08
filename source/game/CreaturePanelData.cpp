@@ -9,17 +9,6 @@
 bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const CreatureActivity& activity,
     CreatureMoodLevel mood, bool worker)
 {
-    if(criterion == CreaturePanelCriterion::Total)
-        return true;
-    if(criterion == CreaturePanelCriterion::Happy)
-        return mood == CreatureMoodLevel::Happy || mood == CreatureMoodLevel::Neutral;
-    if(criterion == CreaturePanelCriterion::Unhappy)
-        return mood == CreatureMoodLevel::Upset || mood == CreatureMoodLevel::Angry;
-    if(criterion == CreaturePanelCriterion::Angry)
-        return mood == CreatureMoodLevel::Furious;
-    if(!activity.known)
-        return false;
-
     const bool fighting = activity.task == CreatureActionType::fight ||
         activity.task == CreatureActionType::fightFriendly;
     const bool idle = activity.task == CreatureActionType::nb ||
@@ -40,16 +29,23 @@ bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const Creat
     const bool training = (usingRoom && (activity.assignedRoom == RoomType::trainingHall ||
         activity.assignedRoom == RoomType::arena)) || (activity.inAssignedRoom &&
         activity.assignedRoom == RoomType::arena && activity.task == CreatureActionType::fightFriendly);
+    // Mood criteria do not need a known activity; every activity criterion does.
     switch(criterion)
     {
-        case CreaturePanelCriterion::Idle: return idle;
-        case CreaturePanelCriterion::Working: return working;
-        case CreaturePanelCriterion::Fighting: return fighting;
-        case CreaturePanelCriterion::Manufacturing: return manufacturing;
-        case CreaturePanelCriterion::Training: return training;
-        case CreaturePanelCriterion::OtherJobs: return !idle && !manufacturing && !training;
+        case CreaturePanelCriterion::Total: return true;
+        case CreaturePanelCriterion::Happy:
+            return mood == CreatureMoodLevel::Happy || mood == CreatureMoodLevel::Neutral;
+        case CreaturePanelCriterion::Unhappy:
+            return mood == CreatureMoodLevel::Upset || mood == CreatureMoodLevel::Angry;
+        case CreaturePanelCriterion::Angry: return mood == CreatureMoodLevel::Furious;
+        case CreaturePanelCriterion::Idle: return activity.known && idle;
+        case CreaturePanelCriterion::Working: return activity.known && working;
+        case CreaturePanelCriterion::Fighting: return activity.known && fighting;
+        case CreaturePanelCriterion::Manufacturing: return activity.known && manufacturing;
+        case CreaturePanelCriterion::Training: return activity.known && training;
+        case CreaturePanelCriterion::OtherJobs: return activity.known && !idle && !manufacturing && !training;
         case CreaturePanelCriterion::Guarding: return false;
-        case CreaturePanelCriterion::OtherFighting: return !fighting;
+        case CreaturePanelCriterion::OtherFighting: return activity.known && !fighting;
         default: return false;
     }
 }
