@@ -10716,7 +10716,10 @@
           825,
           590,
           865
-        ]
+        ],
+        "preview_type": "outfit-part-only",
+        "composite_preview": "materials/portraits/variants/DarkElf.mesh-male/review/native-face-check.jpg",
+        "composite_preview_note": "Existing unchanged native face composite panels include the neckline defect; original canvas face crop [80,190,780,955], combinations 1,2,3,4,7,8."
       },
       {
         "portrait": "DarkElf.mesh",
