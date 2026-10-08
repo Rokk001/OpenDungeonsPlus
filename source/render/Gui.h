@@ -92,11 +92,17 @@ public:
     //! \brief Move CEGUI rendering to another Ogre render target.
     void setRenderTarget(Ogre::RenderTarget& renderTarget);
 
+    //! \brief Limits, default and step (in percent) of the user-selectable UI scale.
     enum
     {
         MIN_UI_SCALE_PERCENT = 80,
-        MAX_UI_SCALE_PERCENT = 120
+        MAX_UI_SCALE_PERCENT = 120,
+        DEFAULT_UI_SCALE_PERCENT = 100,
+        UI_SCALE_STEP_PERCENT = 10
     };
+
+    //! \brief Returns the UI scale in percent from the user config, limited to the allowed range.
+    static float getConfiguredUiScalePercent();
 
     //! \brief Registers a window tree for resolution-independent scaling.
     void registerWindowHierarchy(CEGUI::Window* window);
@@ -262,11 +268,22 @@ private:
     //! \brief Used to play the button click sound.
     SoundEffectsManager* mSoundEffectsManager;
 
+    //! \brief Rescales all registered windows when the display size changes.
     bool onDisplaySizeChanged(const CEGUI::EventArgs& e);
+
+    //! \brief Forgets a window that was destroyed.
     bool onWindowDestroyed(const CEGUI::EventArgs& e);
+
+    //! \brief Stores the unscaled layout of the window and its children.
     void registerWindow(CEGUI::Window* window);
+
+    //! \brief Scales all registered windows and the fonts and images for the given display size.
     void applyScale(const CEGUI::Sizef& displaySize);
+
+    //! \brief Scales one window from its stored unscaled layout.
     void applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale);
+
+    //! \brief Sets the native resolution of fonts and skin images from the user scale.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 

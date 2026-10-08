@@ -496,15 +496,11 @@ void SettingsWindow::initConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
     uiScaleCb->setReadOnly(true);
     uiScaleCb->resetList();
-    int configuredUiScale = 100;
-    std::istringstream uiScaleParser(config.getGameValue(Config::UI_SCALE, "100", false));
-    if(!(uiScaleParser >> configuredUiScale))
-        configuredUiScale = 100;
-    configuredUiScale = std::max(static_cast<int>(Gui::MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<int>(Gui::MAX_UI_SCALE_PERCENT), configuredUiScale));
-    configuredUiScale = (configuredUiScale + 5) / 10 * 10;
+    int configuredUiScale = static_cast<int>(Gui::getConfiguredUiScalePercent());
+    configuredUiScale = (configuredUiScale + Gui::UI_SCALE_STEP_PERCENT / 2)
+        / Gui::UI_SCALE_STEP_PERCENT * Gui::UI_SCALE_STEP_PERCENT;
     for(uint32_t uiScale = Gui::MIN_UI_SCALE_PERCENT;
-        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += 10)
+        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += Gui::UI_SCALE_STEP_PERCENT)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
             Helper::toString(uiScale) + "%", uiScale);
