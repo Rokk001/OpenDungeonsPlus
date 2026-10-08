@@ -90,6 +90,7 @@ class ODSocketClient
         void setSupportsCreatureActivity(bool supported) { mSupportsCreatureActivity = supported; }
         bool supportsCreaturePanel() const { return mSupportsCreaturePanel; }
         void setSupportsCreaturePanel(bool supported) { mSupportsCreaturePanel = supported; }
+        //! Whether the other side sends and understands experience and attack recovery in creature data
         bool supportsCreatureProgress() const { return mSupportsCreatureProgress; }
         void setSupportsCreatureProgress(bool supported) { mSupportsCreatureProgress = supported; }
         bool supportsCosmeticEvents() const { return mSupportsCosmeticEvents; }
