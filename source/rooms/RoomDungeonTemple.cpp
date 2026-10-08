@@ -31,6 +31,7 @@
 #include "game/Seat.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectBounds.h"
 #include "giftboxes/GiftBoxBonus.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -219,9 +220,7 @@ void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSea
 //! \brief The heart's three health-tier mesh variants. Each has its own rig and
 //! a baked "Pulse" animation running at a tier-specific speed (see assets-src/DungeonHeartObject.blend).
 //! Every mesh also holds the temple's pedestal the heart stands on (see tools/heart-on-temple).
-const std::string HeartMeshNameHealthy = "DungeonHeartObjectHealthy";
-const std::string HeartMeshNameDamaged = "DungeonHeartObjectDamaged";
-const std::string HeartMeshNameCritical = "DungeonHeartObjectCritical";
+//! The mesh names are RoomObjectPath::HEART_MESH_HEALTHY, HEART_MESH_DAMAGED and HEART_MESH_CRITICAL.
 
 class DungeonHeartObject : public PersistentObject
 {
@@ -897,12 +896,12 @@ const std::string& RoomDungeonTemple::getMeshNameForHeartTier(HeartHealthTier ti
     switch(tier)
     {
         case HeartHealthTier::damaged:
-            return HeartMeshNameDamaged;
+            return RoomObjectPath::HEART_MESH_DAMAGED;
         case HeartHealthTier::critical:
-            return HeartMeshNameCritical;
+            return RoomObjectPath::HEART_MESH_CRITICAL;
         case HeartHealthTier::healthy:
         default:
-            return HeartMeshNameHealthy;
+            return RoomObjectPath::HEART_MESH_HEALTHY;
     }
 }
 
