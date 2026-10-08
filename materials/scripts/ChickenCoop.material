@@ -74,3 +74,21 @@ material ChickenCoop //: RTSS/NormalMapping_MultiPass
 
     }
 }
+
+material ChickenCoopInterior
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.22 0.18 0.14 1.0
+            diffuse 0.32 0.28 0.22 1.0
+            specular 0.0 0.0 0.0 1.0 1
+            texture_unit
+            {
+                texture ChickenCoop.png
+            }
+        }
+    }
+}
