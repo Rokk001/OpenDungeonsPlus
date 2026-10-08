@@ -93,7 +93,7 @@ def compute(room_tiles, coops_in, entrances_in=(), s=DEFAULTS):
     room = set(room_tiles)
     coops = sorted(set(coops_in))
     entrances = sorted(set(entrances_in))
-    wanted = max(min(len(room) // max(1, s['mTilesPerNest']), s['mMaxNests']), len(coops))
+    wanted = min(s['mMaxNests'], max(min(len(room) // max(1, s['mTilesPerNest']), s['mMaxNests']), len(coops)))
     for rnd in range(24):
         if len(places) >= wanted:
             break
@@ -330,3 +330,18 @@ upd = looks[looks.index('void RenderManager::updateNestFields'):]
 assert 'HatcheryFeathers_' not in upd
 assert 'MeshFeathers' not in looks[looks.index('void RenderManager::rrCreateCoopDecor'):looks.index('void RenderManager::updateChickenLooks')]
 print('hatchery nest field checks passed')
+
+# Hard limit survives more than sixteen coops; a coop-free empty room still has nests.
+assert len(compute(rect(0, 0, 40, 40), [(x*2, 2) for x in range(20)])) == 16
+assert len(compute(rect(0, 0, 6, 6), [])) == 12
+upd = looks[looks.index('void RenderManager::updateNestFields'):]
+assert 'std::map<std::string, NestField>' in render_h
+assert 'mServerNests.begin()' in upd and 'mNestFields.find(sent->first)' in upd
+assert 'getCoveringRoom' not in upd and 'roomCoops' not in looks and 'roomAnimals' not in looks
+assert 'getLocalPlayerHasVision()' in upd and 'TileVisual::hatcheryRoom' in upd
+assert 'room->getName()' not in upd
+remove = room_cpp[room_cpp.index('void RoomHatchery::removeFromGameMap'):room_cpp.index('void RoomHatchery::updateNestSync')]
+assert 'ServerNotificationType::hatcheryNests' in remove and 'uint32_t(0) << uint32_t(0)' in remove
+recv = looks[looks.index('void RenderManager::rrSetHatcheryNests'):looks.index('void RenderManager::rrChickenFight')]
+assert 'places.empty()' in recv and 'destroyNestField' in recv and 'mServerNests.erase(roomName)' in recv
+print('client room-name nests, visibility, removal and hard max regressions passed (C++ not executed)')

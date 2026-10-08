@@ -12,6 +12,7 @@
 #include "render/PortraitManifest.h"
 #include "render/PortraitManifestRegistry.h"
 #include "render/PortraitTint.h"
+#include "render/ProfilePortraitCrop.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
@@ -243,6 +244,16 @@ const CEGUI::Image* buildPicture(PictureState& state, const std::string& creatur
         part.mSlot = it->mName;
         part.mX = it->mX;
         part.mY = it->mY;
+        if(option->mPlacement.mWidth != 0)
+        {
+            part.mX = option->mPlacement.mX;
+            part.mY = option->mPlacement.mY;
+            part.mWidth = option->mPlacement.mWidth;
+            part.mHeight = option->mPlacement.mHeight;
+        }
+        part.mMaskSlot = option->mMaskSlot;
+        part.mSourcePolygon = option->mSourcePolygon;
+        part.mMaskFeather = option->mMaskFeather;
         if(!loadRgbaImage(option->mPath, it->mWidth, it->mHeight, part.mImage, error))
             return nullptr;
 
@@ -277,7 +288,7 @@ const CEGUI::Image* buildPicture(PictureState& state, const std::string& creatur
         CEGUI::Texture& guiTexture = renderer.createTexture(name, texture, true);
         CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
         image.setTexture(&guiTexture);
-        image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)));
+        image.setArea(getProfilePortraitArea(static_cast<float>(width), static_cast<float>(height)));
         image.setAutoScaled(CEGUI::ASM_Disabled);
         bytes = static_cast<uint64_t>(width) * height * 4;
         return &image;

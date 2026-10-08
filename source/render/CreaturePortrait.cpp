@@ -6,6 +6,7 @@
 #include "render/CreaturePortrait.h"
 
 #include "render/PortraitTint.h"
+#include "render/ProfilePortraitCrop.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
@@ -67,6 +68,25 @@ std::set<std::string>& getFailedTintedPortraitNames()
 {
     static std::set<std::string> names;
     return names;
+}
+
+const CEGUI::Image& getProfileFallbackImage(const std::string& portraitKey)
+{
+    const std::string name = "ProfileCreaturePortrait/" + portraitKey;
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    if(images.isDefined(name))
+        return images.get(name);
+
+    const CEGUI::Image& source = getCreaturePanelPortraitImage(portraitKey);
+    CEGUI::Renderer& renderer = *CEGUI::System::getSingleton().getRenderer();
+    CEGUI::Texture& texture = renderer.getTexture(source.getName());
+    const CEGUI::Sizef size = texture.getOriginalDataSize();
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
+    image.setTexture(&texture);
+    image.setArea(getProfilePortraitArea(size.d_width, size.d_height));
+    image.setAutoScaled(CEGUI::ASM_Disabled);
+    getTintedPortraitNames().insert(name);
+    return image;
 }
 
 struct PortraitScene
@@ -312,7 +332,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
     PortraitTint& tint = getPortraitTint();
     if(!tint.hasMesh(portraitKey) || (getFailedTintedPortraitNames().count(name) != 0) ||
         !Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", filename))
-        return getCreaturePanelPortraitImage(portraitKey);
+        return getProfileFallbackImage(portraitKey);
 
     CEGUI::OgreRenderer& renderer = static_cast<CEGUI::OgreRenderer&>(
         *CEGUI::System::getSingleton().getRenderer());
@@ -377,7 +397,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
         CEGUI::Texture& guiTexture = renderer.createTexture(name, texture, true);
         CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
         image.setTexture(&guiTexture);
-        image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)));
+        image.setArea(getProfilePortraitArea(static_cast<float>(width), static_cast<float>(height)));
         image.setAutoScaled(CEGUI::ASM_Disabled);
         getTintedPortraitNames().insert(name);
         return image;
@@ -393,7 +413,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
         renderer.destroyTexture(name);
     else if(texture)
         Ogre::TextureManager::getSingleton().remove(texture->getHandle());
-    return getCreaturePanelPortraitImage(portraitKey);
+    return getProfileFallbackImage(portraitKey);
 }
 
 void clearCreatureProfilePortraits()

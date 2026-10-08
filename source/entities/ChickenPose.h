@@ -37,6 +37,7 @@ namespace ChickenPose
     static const std::string emerge = "Emerge";
     static const std::string scratch = "Scratch";
     static const std::string flutter = "Flutter";
+    static const std::string roofFlight = "RoofFlight";
     static const std::string fight = "Fight";
     static const std::string protest = "Protest";
 
@@ -50,7 +51,7 @@ namespace ChickenPose
             (name == cackle) || (name == perch) || (name == crow) || (name == guard) ||
             (name == lay) || (name == wobble) ||
             (name == emerge) || (name == scratch) || (name == flutter) || (name == fight) ||
-            (name == protest);
+            (name == protest) || (name == roofFlight);
     }
 
     //! \brief True if the pose is a way of walking.
@@ -68,7 +69,7 @@ namespace ChickenPose
     //! \brief True for the clips that play once ("Lay", "Flutter", "Mount", "Dismount", "Duck"); "Tread" loops.
     inline bool isOneShotClip(const std::string& clip)
     {
-        return (clip == "Lay") || (clip == "Flutter") || (clip == "Mount") || (clip == "Dismount") || (clip == "Duck");
+        return (clip == "Lay") || (clip == "Flutter") || (clip == "Mount") || (clip == "Dismount") || (clip == "Duck") || (clip == "RoofFlight");
     }
 
     //! \brief The own clip of the hatchery skeleton for an animation name of the server ("Crow", "Run", "Peep", "Lay", "Flutter", "Mount" or "Duck"),
@@ -82,6 +83,8 @@ namespace ChickenPose
             return "Lay";
         if(name == flutter)
             return "Flutter";
+        if(name == roofFlight)
+            return "RoofFlight";
         // The rooster climbs on the hen (Mount), treads and beats his wings (Tread, looped) and climbs down
         // (Dismount); the client switches the three by the time of the pose (1.9 s). The hen ducks under him for as long
         if(name == mount)

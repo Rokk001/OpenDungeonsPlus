@@ -172,6 +172,10 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "possessionEnd";
         case ServerNotificationType::editorRegionData:
             return "editorRegionData";
+        case ServerNotificationType::chickenMount:
+            return "chickenMount";
+        case ServerNotificationType::chickenRoofFlight:
+            return "chickenRoofFlight";
         case ServerNotificationType::hatcheryNests:
             return "hatcheryNests";
         case ServerNotificationType::timeLimit:

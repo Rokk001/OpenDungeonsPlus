@@ -40,6 +40,12 @@ def check(path):
             key = (row[1],int(row[2]))
             assert key not in options, f'Duplicate option: {key}'
             options[key] = row[4]
+        elif kind=='SourcePolygonMask':
+            assert len(row)>=10 and len(row)%2==0 and all(v.isdigit() for v in row[2:]), f'Invalid source contour: {row}'
+        elif kind=='Mask':
+            assert len(row)==4 and row[2].isdigit(), f'Invalid mask: {row}'
+        elif kind=='Rule':
+            assert len(row)==7 and all(v.isdigit() for v in row[2:]), f'Invalid geometry: {row}'
         else:
             raise AssertionError(f'Unknown row: {row}')
     assert list(slots)==[s for s in ORDER if s in slots], 'Incorrect draw order'
@@ -52,6 +58,33 @@ def check(path):
         assert asset.is_relative_to(path.parent.resolve()), 'Option escapes its portrait folder'
         size,colour = png_size(asset)
         assert size==slots[slot][2:] and colour==6, f'Option must be slot-sized RGBA: {filename}'
+    seen = set()
+    for row in rows:
+        if row[0]=='SourcePolygonMask':
+            key = ('SourcePolygonMask',row[1],int(row[2]))
+            assert key not in seen and (row[1],int(row[2])) in options
+            seen.add(key)
+            width,height = slots[row[1]][2:]
+            feather = int(row[3])
+            coords = list(map(int,row[4:]))
+            assert feather<=max(width,height)
+            assert all(v<=width if i%2==0 else v<=height for i,v in enumerate(coords))
+            continue
+        if row[0]=='Mask':
+            key = ('Mask',row[1],int(row[2]))
+            assert key not in seen and (row[1],int(row[2])) in options
+            assert row[3] in slots and ORDER.index(row[3])<ORDER.index(row[1])
+            seen.add(key)
+            continue
+        if row[0]!='Rule':
+            continue
+        kind,slot,number = row[:3]
+        key = (kind,slot,int(number))
+        assert key not in seen and (slot,int(number)) in options, f'Duplicate/missing option geometry: {row}'
+        seen.add(key)
+        x,y,w,h = map(int,row[3:])
+        width,height = (887,1774)
+        assert w>0 and h>0 and x+w<=width and y+h<=height, f'Out of bounds geometry: {row}'
     if path.parent.name.startswith(('Knight.mesh','Cultist.mesh')):
         assert sorted(n for s,n in options if s=='helmet')==[1,2,3,4], 'Existing four helmets are required'
     return len(options),len(fitted)

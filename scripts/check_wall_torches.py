@@ -11,6 +11,8 @@ The placement rules themselves are covered by the unit test 00-WallTorches.
 import os
 import re
 import sys
+import struct
+import math
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -114,6 +116,52 @@ for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchSmoke"):
     check(system in read("particles", "RoomAmbienceDeferred.particle"), "particle system %s is missing" % system)
 check("RoomAmbTorchGlow" not in view and "RoomAmbTorchGlow" not in read("particles", "RoomAmbienceDeferred.particle"),
       "the torch glow sprite is still present")
+
+# The visible flame emitter must start at the actual mesh head, on all sides.
+# Read the shared position buffer directly; no converter, compiler or game needed.
+with open(os.path.join(ROOT, "models", "WallTorch.mesh"), "rb") as handle:
+    mesh = handle.read()
+vertices = []
+def mesh_chunks(start, end, count=0, binding=-1, stride=0):
+    while start + 6 <= end:
+        chunk, length = struct.unpack_from("<HI", mesh, start)
+        data, stop = start + 6, start + length
+        if length < 6 or stop > len(mesh):
+            raise ValueError("Invalid wall torch mesh chunk")
+        if chunk == 0x3000:
+            mesh_chunks(data + 1, stop)
+        elif chunk == 0x5000:
+            mesh_chunks(data + 4, stop, struct.unpack_from("<I", mesh, data)[0])
+        elif chunk == 0x5200:
+            binding, stride = struct.unpack_from("<HH", mesh, data)
+            mesh_chunks(data + 4, stop, count, binding, stride)
+        elif chunk == 0x5210 and binding == 0:
+            vertices.extend(struct.unpack_from("<fff", mesh, data + i * stride) for i in range(count))
+        start = stop
+mesh_chunks(mesh.index(b"\n") + 1, len(mesh))
+# The head's tilted top ring has the mesh's highest vertices; its center is the
+# midpoint of that ring's front/back and highest/lowest extrema.
+top = max(vertex[2] for vertex in vertices)
+head = [vertex for vertex in vertices if vertex[2] > top - 0.004]
+head_y = (min(vertex[1] for vertex in head) + max(vertex[1] for vertex in head)) / 2
+head_z = (min(vertex[2] for vertex in head) + max(vertex[2] for vertex in head)) / 2
+model_height = float(re.search(r"MODEL_HEIGHT = ([0-9.]+)", view).group(1))
+flame_offset = float(re.search(r"FLAME_WALL_OFFSET = ([0-9.]+)", view).group(1))
+heights = [float(number) for number in re.search(r"PART_HEIGHTS\[NB_PARTS\] = \{([^}]+)", view).group(1).split(",")]
+particle = read("particles", "RoomAmbienceDeferred.particle")
+flame = particle[particle.index("particle_system RoomAmbTorchFlame"):particle.index("particle_system RoomAmbTorchSmoke")]
+emitter = tuple(float(number) for number in re.search(r"position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)", flame).groups())
+check("billboard_origin bottom_center" in flame, "torch flame is not anchored at its bottom")
+check(emitter == (0, 0, 0), "torch flame emitter adds an offset above the torch head")
+check(abs(flame_offset - head_y) < 0.00001, "flame forward offset does not match the torch head")
+check(abs(heights[1] - (model_height + head_z)) < 0.00001, "flame height does not match the torch head")
+check("position += torch.mDirection" in body(view, "void WallTorchView::createPart"), "flame offset does not follow wall side")
+check("std::atan2(-torch.mDirection.x, torch.mDirection.y)" in body(view, "bool WallTorchView::createModel"), "holder orientation does not follow wall side")
+for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+    angle = math.atan2(-dx, dy)
+    rotated = (-math.sin(angle) * head_y, math.cos(angle) * head_y, model_height + head_z)
+    emitted = (dx * flame_offset, dy * flame_offset, heights[1])
+    check(all(abs(a - b) < 0.00001 for a, b in zip(rotated, emitted)), "flame misses head for wall side %s" % ((dx, dy),))
 
 refresh = body(view, "void WallTorchView::refresh")
 check("((part < NB_REDUCED_PARTS) || (torch.mLight != nullptr))" in refresh,

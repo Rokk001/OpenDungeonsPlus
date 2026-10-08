@@ -49,6 +49,11 @@ public:
     ChickenEntity(GameMap* gameMap);
 
     virtual void doUpkeep() override;
+    virtual void update(Ogre::Real timeSinceLastFrame) override;
+    virtual double getAnimationSpeedFactor() const override;
+    void startRoofFlightFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to,
+        uint32_t turns, Ogre::Real elapsed);
+    virtual void setPosition(const Ogre::Vector3& position, GameMap* gameMap = nullptr) override;
 
     virtual double getMoveSpeed() const override
     { return 0.4; }
@@ -136,6 +141,11 @@ public:
 
     //! \brief Plays a pose (see ChickenPose.h) and holds the animal still for the number of turns.
     void playPose(const std::string& pose, uint32_t turns);
+    void mountHen(ChickenEntity& hen);
+    const std::string& getMountHenName() const
+    { return mMountHenName; }
+    void setMountHenFromServer(const std::string& name)
+    { mMountHenName = name; }
 
     //! Plays the coop entrance pose, then walks through its door to the hatchery floor.
     void emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit);
@@ -214,6 +224,8 @@ public:
     //! the nearest hatchery of this seat.
     inline void setHomeSeat(Seat* seat)
     { mHomeSeat = seat; }
+    inline const Seat* getHomeSeat() const
+    { return mHomeSeat; }
 
     //! \brief Walks toward a point and stops stopDistance before it. False if there is no way.
     bool walkToward(const Ogre::Vector2& target, double stopDistance, const std::string& walkAnim);
@@ -259,7 +271,7 @@ private:
         eaten,
         dying
     };
-    //! Starts the flutter flight to the goal (HatcheryRoosterHopTurns turns), one step per turn in doUpkeep
+    //! Starts the roof flight; server ticks and client frames sample the same continuous curve.
     void startHop(const Ogre::Vector3& target);
     void continueHop();
     //! Puts the animal at the position and tells the clients, without touching the animation
@@ -277,11 +289,12 @@ private:
     bool mRoomDriven;
     bool mFighting;
     bool mOnRoof;
-    //! Server side, not saved: the flight to or from a roof (start, goal, turns in all and turns left)
+    //! Not saved: the flight to or from a roof, replicated to clients including late arrivals.
     Ogre::Vector3 mHopFrom;
     Ogre::Vector3 mHopTo;
     uint32_t mHopTurns;
     uint32_t mHopTurnsLeft;
+    Ogre::Real mHopElapsed;
     bool mFollowing;
     Ogre::Vector2 mFollowTarget;
     double mFollowGap;
@@ -303,6 +316,7 @@ private:
     std::string mLockOwner;
     std::string mSnatchedFrom;
     ChickenFlight::State mFlight;
+    std::string mMountHenName;
 
     //! \brief Server side: the chicken was dropped by the keeper. Offers it to the closest idle creature of
     //! the keeper that is not hungry, which sniffs at it and eats it slowly anyway (see CreatureActionEatChicken).

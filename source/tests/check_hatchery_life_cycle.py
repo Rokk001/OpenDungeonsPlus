@@ -47,7 +47,7 @@ for key in ('HatcheryLayMin', 'HatcheryLayMax', 'HatcheryHatchTurns', 'HatcheryG
 
 print('hatchery life cycle checks passed')
 
-# Breeding needs care: lay faster when claimed, lit and without enemies; eggs wait while enemies stand in the hatchery
+# Breeding needs care: room-wide calm affects laying; enemies pause hatching only on the egg tile.
 cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 cfg = (root / 'config/rooms.cfg').read_text()
@@ -63,7 +63,11 @@ assert 'getSeat' not in lit and 'isAlliedSeat' not in lit and 'getMapLights' in 
 assert 'WallTorches::hasTorchWithin(getGameMap()->getWallTorches()' in lit
 ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
 assert 'Torch       yes' not in ambience_cfg
-assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, care.mEnemies)' in room_cpp
+assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, false)' in room_cpp
+hatching = room_cpp[room_cpp.index('// Eggs hatch while'):room_cpp.index('// Chicks grow up')]
+assert 'enemy->getPositionTile() == egg->getPositionTile()' in hatching
+assert 'if(enemyOnTile)\n                continue;' in hatching
+assert hatching.index('if(enemyOnTile)') < hatching.index('egg->incrementAge()')
 assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
 assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' not in cfg
 
@@ -135,16 +139,16 @@ assert 'HatcheryNestEggs' in nest and 'HatcheryNestSameRadius' in nest
 assert 'HatcheryNestEggs' in cfg and 'HatcheryNestSameRadius' in cfg
 assert 'nestCount' not in coop_h and 'nestCenter' not in coop_h, 'no seats in the coops'
 assert (root / 'source/rooms/HatcheryNestField.h').exists()
-lay = doUpkeep[doUpkeep.index('Hens lay eggs while the hatchery is not full'):doUpkeep.index('Eggs hatch while there is a rooster')]
-assert 'findNestSpot(' in lay and 'eggs.push_back(spawnAnimal(ChickenKind::egg, eggSpot, settings))' in lay
+lay = doUpkeep[doUpkeep.index('Reserve a nest before starting the trip'):doUpkeep.index('Eggs hatch while there is a rooster')]
+assert 'findNestSpot(' in lay and 'eggs.push_back(spawnAnimal(ChickenKind::egg, eggSpot, settings))' not in lay
 assert 'eggPositions.push_back' in lay, 'an egg laid this turn takes its place at once'
 assert 'HatcheryCycle::canLay(counts, capacity)' in lay, 'capacity still limits the eggs'
-assert 'ChickenPose::lay' in lay, 'the hen sits down where she is when the egg has no nest'
+assert 'plan.mNest = true' in lay, 'every new egg reserves a nest'
 # The hen plans her egg early, walks to the place next to the nest (real distance, real walking speed) and lays there
 assert 'getNestStandPoint(eggSpot, standing)' in lay and 'plan.mHen = hen->getName()' in lay
 walk_body = body(room_cpp, 'uint32_t RoomHatchery::nestWalkTurns')
-assert 'HatcheryCycle::walkTurns(' in walk_body and 'getMoveSpeed()' in walk_body and 'ODApplication::turnsPerSecond' in walk_body, 'the walk window follows the real distance and speed'
-assert 'nestWalkTurns(*hen, standing)' in lay and 'HatcheryCycle::walkFits(walk, hen->getLayTimer(), settings)' in lay
+assert 'HatcheryCycle::walkTurns(' in walk_body and 'getMoveSpeed()' in walk_body and '/ ODApplication::turnsPerSecond' not in walk_body, 'the walk window follows speed per server turn'
+assert 'nestWalkTurns(*hen, standing)' in lay and 'walkFits' not in lay
 assert 'leadTurns' not in room_cpp and 'mNestWalkTurns' not in room_cpp and 'mNestWalkTurns' not in cycle
 assert 'planned->mDue = true' in lay, 'the egg is laid when the laying timer runs out, not when the hen arrives'
 trips = body(room_cpp, 'void RoomHatchery::updateNestTrips')
@@ -152,11 +156,14 @@ assert 'HatcheryNestArrive' in trips and 'ChickenPose::lay' in trips and 'Hatche
 assert 'setFollowTarget(it->mStand' in trips and 'hen == nullptr' in trips and 'it->mDue' in trips, 'a hen that is gone takes a planned egg with her, a laid one still appears'
 assert 'uint32_t HatcheryCycle::walkTurns' in cycle_cpp and 'bool HatcheryCycle::tripDue' in cycle_cpp and 'layDelay' not in cycle_cpp
 assert 'standingPosition' in body(room_cpp, 'bool RoomHatchery::getNestStandPoint')
-assert doUpkeep.index('updateNestTrips(hens, settings)') < doUpkeep.index('hen->countDownLay()') < doUpkeep.index('releasePendingEggs(settings, eggs)')
+assert doUpkeep.index('updateNestTrips(hens, settings)') < doUpkeep.index('hen->countDownLay()') < doUpkeep.index('releasePendingEggs(layingSettings, eggs)')
 assert 'HatcheryNestWalkTurns' not in cfg and 'HatcheryNestArrive' in cfg and 'HatcheryLayFactor' in cfg and 'HatcheryLayFactor' in room_cpp
-# A late egg (the walk was longer than the time left) gets the age it would have had, and so does the chick: the rhythm
-# of the cycle does not depend on the way to the nest. The parity test in the unit tests models exactly this.
-assert 'egg->setAge(it->mLate)' in body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+# Incubation starts at actual laying; a late arrival cannot hatch a newly laid egg immediately.
+assert 'egg->setAge(0)' in body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+assert 'const bool arrived = distance <= arrive;' in trips
+assert 'mWalked >' not in trips and 'it->mSpot = hen->getPosition()' not in trips
+assert lay.index('hen->countDownLay()') < lay.index('hen->setLayTimer') < lay.index('if(planned->mDue)')
+assert 'hen->setLayTimer' not in body(room_cpp, 'void RoomHatchery::releasePendingEggs'), 'arrival cannot reset the established interval a second time'
 assert 'setAge(eggAge - settings.mHatchTurns)' in doUpkeep and 'chicks.push_back(egg)' in doUpkeep
 assert 'void setAge' in chicken_h or 'inline void setAge' in chicken_h
 assert 'eggs.erase(eggIt)' in doUpkeep and doUpkeep.index('eggs.erase(eggIt)') < doUpkeep.index('eggPositions.push_back'),     'trampled eggs free their place'
@@ -229,15 +236,18 @@ print('hatchery no day and night checks passed')
 assert 'mLayShowTurns' in (root / 'source/rooms/HatcheryCycle.h').read_text()
 assert 'HatcheryLayShowTurns' in room_cpp and 'HatcheryLayShowTurns' in config
 laying = body(room_cpp, 'void RoomHatchery::doUpkeep')
-assert 'mPendingEggs.push_back(PendingEgg(eggSpot, settings.mLayShowTurns))' in laying
-assert 'releasePendingEggs(settings, eggs)' in laying and 'if(pending.mDue)' in laying
-assert laying.index('hen->countDownLay()') < laying.index('releasePendingEggs(settings, eggs)')
+assert 'mPendingEggs.push_back(plan)' in laying
+assert 'releasePendingEggs(layingSettings, eggs)' in laying and 'if(pending.mDue)' in laying
+assert laying.index('hen->countDownLay()') < laying.index('releasePendingEggs(layingSettings, eggs)')
 release = body(room_cpp, 'void RoomHatchery::releasePendingEggs')
 assert 'spawnAnimal(ChickenKind::egg' in release and 'erase(it)' in release
 # the egg is created in one place only (here or at once without delay), never in both
-assert laying.count('spawnAnimal(ChickenKind::egg') == 1
-assert '"HatcheryLays "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:900]
-assert 'tag == "HatcheryLays"' in room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:2600]
+assert laying.count('spawnAnimal(ChickenKind::egg') == 0
+assert '"HatcheryNestLays "' in room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:900]
+assert 'tag == "HatcheryLays"' in room_cpp and 'tag == "HatcheryNestLays"' in room_cpp
+assert 'if(egg.mDue && egg.mPosing)' in room_cpp
+assert 'is >> pending.mHen' in room_cpp, 'saving a laying egg preserves its hen and does not restart an unarrived trip'
+assert 'bool nestExists = false;' in trips and 'if(!nestExists)' in trips, 'removed nests invalidate old reservations'
 print('hatchery delayed egg checks passed')
 
 # The hens do not sit in the coops: a full hatchery does not calm them, they wander all day. The rooster sits on the roof of the nearest coop.
@@ -246,3 +256,56 @@ assert 'HatcheryCoopSit' not in config and 'HatcheryCoopSeatRadius' not in confi
 assert 'updateFlock(hens);' in room_cpp and 'getHighestCoop' not in room_cpp
 assert 'Tile* coopTile = getNearestCoop(position);' in room_cpp
 print('hatchery coop seat and roof checks passed')
+
+# Pickup captures the keeper before detach; allied hatcheries cannot adopt young animals.
+pickup = body(chicken, 'void ChickenEntity::pickup')
+assert 'mHomeSeat = tile->getSeat();' in pickup
+assert pickup.index('mHomeSeat = tile->getSeat();') < pickup.index('RenderedMovableEntity::pickup();')
+upkeep = body(chicken, 'void ChickenEntity::doUpkeep')
+assert '(room->getSeat() == mHomeSeat)' in upkeep and '(mHomeSeat == nullptr)' in upkeep
+assert 'HatcheryYoungLostTurns' in upkeep and '(currentHatchery == nullptr)' in upkeep
+assert 'chicken->getHomeSeat() != getSeat()' in doUpkeep
+assert doUpkeep.index('chicken->getHomeSeat() != getSeat()') < doUpkeep.index('switch(chicken->getKind())')
+print('young animal same-keeper lifecycle source contracts passed; C++ not executed')
+
+# Movement and server scheduling cancel the clock/speed factor: speed is tiles per turn.
+movement = (root / 'source/entities/MovableGameEntity.cpp').read_text()
+server = (root / 'source/network/ODServer.cpp').read_text()
+assert 'double moveDist = ODApplication::turnsPerSecond' in movement
+assert '* getMoveSpeed()' in movement and 'timeSinceLastFrame * gameSpeedFactor' in movement
+assert '1000.0 / (ODApplication::turnsPerSecond * gameMap->getGameSpeedFactor())' in server
+for clock in (0.7, 1.4, 2.8):
+    for game_speed in (0.5, 1.0, 2.0):
+        delta = 1 / (clock * game_speed)
+        assert abs(clock * .4 * delta * game_speed - .4) < 1e-12
+# Save records contain only actual arrivals; hen identity survives delayed pose completion.
+records = [(1.2, 2.3, .1, 1, 'henA', True, True),
+           (3.2, 4.3, .1, 0, 'henB', True, False),
+           (2.2, 1.3, .1, 0, '', True, True)]
+saved = [r for r in records if r[5] and r[6]]
+tokens = ['HatcheryNestLays', str(len(saved))]
+for x, y, z, turns, hen, due, posing in saved:
+    tokens.extend(map(str, (x, y, z, turns, hen or '-')))
+loaded = []
+for i in range(int(tokens[1])):
+    x, y, z, turns, hen = tokens[2 + 5*i:7 + 5*i]
+    loaded.append((float(x), float(y), float(z), int(turns), '' if hen == '-' else hen))
+assert loaded == [(r[0], r[1], r[2], r[3], r[4]) for r in saved]
+assert 'henB' not in tokens and loaded[0][4] == 'henA' and loaded[0][3] == 1
+assert 'pending.mPosing = true;' in room_cpp and 'pending.mHen.clear();' in room_cpp
+print('hatchery speed-per-turn and arrived-only save record checks passed')
+
+# Due-time cadence survives a long blocked trip; actual arrival does not change the next timer.
+intervals = iter((5, 4, 6))
+timer = 1
+resets = []
+for turn in range(1, 13):
+    if timer > 1:
+        timer -= 1
+    else:
+        timer = next(intervals)
+        resets.append(turn)
+    if turn == 8:  # actual laying after a late arrival
+        assert timer == 2
+assert resets == [1, 6, 10]
+print('hatchery original due-time interval start preserved across late arrival')

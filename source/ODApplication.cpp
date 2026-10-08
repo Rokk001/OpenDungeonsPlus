@@ -68,6 +68,7 @@
 #include <sstream>
 #include <fstream>
 #include <exception>
+#include <pybind11/embed.h>
 
 void ODApplication::startGame(boost::program_options::variables_map& options)
 {
@@ -283,6 +284,10 @@ void ODApplication::startClient()
 
     MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
     SoundEffectsManager soundEffectsManager;
+
+    // Keep Python alive across game-mode changes; consoles own only their game state.
+    pybind11::scoped_interpreter pythonInterpreter;
+    pybind11::gil_scoped_release pythonMainThreadRelease;
 
     ODServer server;
     ODClient client;

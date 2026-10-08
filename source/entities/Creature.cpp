@@ -79,6 +79,7 @@
 #include "gamemap/SandboxMode.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
+#include "gamemap/RoomObjectBounds.h"
 #include "giftboxes/GiftBoxSkill.h"
 
 #include "modes/GameEditorModeConsole.h"
@@ -1877,6 +1878,10 @@ void Creature::handleHeartDefence()
     if(isActionInList(CreatureActionType::goDefendHeart))
         return;
 
+    // Existing combat and retreat decisions take priority over gathering at the defence point.
+    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::flee))
+        return;
+
     // The heart defence is on: drop the current job and run to the defence point
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
@@ -3298,11 +3303,11 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     const CEGUI::Image* appearanceImage = getCreatureAppearanceImage(getName(), mAppearance);
     if(appearanceImage != nullptr)
     {
-        page->getChild("Portrait")->setProperty("Image", appearanceImage->getName());
+        page->getChild("Portrait/Image")->setProperty("Image", appearanceImage->getName());
     }
     else
     {
-        page->getChild("Portrait")->setProperty("Image",
+        page->getChild("Portrait/Image")->setProperty("Image",
             getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender).getName());
     }
     page->getChild("NameText")->setText(profile.getFullName());
@@ -4636,8 +4641,46 @@ bool Creature::resizeMeshAfterDrop()
 }
 
 
+bool Creature::wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vector<Ogre::Vector2>& path)
+{
+    if(nTile == nullptr || wallTile == nullptr || getPositionTile() == nullptr || slot >= 3)
+        return false;
+
+    const Ogre::Vector2 facing = wallTile->getPosition2d() - nTile->getPosition2d();
+    const Ogre::Vector2 sideways(-facing.y, facing.x);
+    // All three standing centers stay inside the same floor tile, including narrow corridors.
+    const float offset = slot == 0 ? 0.0f : (slot == 1 ? -1.0f / 3.0f : 1.0f / 3.0f);
+    const Ogre::Vector2 point = nTile->getPosition2d() + facing * 0.2f + sideways * offset;
+    Tile* destination = getGameMap()->getTile(Helper::round(point.x), Helper::round(point.y));
+    if(destination == nullptr || !canGoThroughTile(destination) ||
+        !getGameMap()->pathExists(this, getPositionTile(), destination))
+        return false;
+    const std::list<Tile*> tiles = getGameMap()->path(this, destination);
+    tileToVector2(tiles, path, true, 0.0f);
+    path.push_back(point);
+    RoomObjectNavigation::refine(*this, path);
+    if(!RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(*this), point, facing) ||
+        path.empty() || path.back() != point ||
+        RoomObjectNavigation::blocked(*this, path))
+    {
+        path.clear();
+        return false;
+    }
+    return true;
+}
+
 bool Creature::parkToWallTile(Tile* wallTile, Tile* nTile)
 {
+    const int slot = wallTile == nullptr || nTile == nullptr ? -1 : wallTile->getWorkerDiggingSlot(*this, *nTile);
+    if(slot >= 0)
+    {
+        std::vector<Ogre::Vector2> path;
+        if(!wallDigPath(wallTile, nTile, static_cast<uint32_t>(slot), path))
+            return false;
+        setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, false, true);
+        pushAction(Utils::make_unique<CreatureActionParkToTile>(*this));
+        return true;
+    }
     if(nTile == nullptr || wallTile == nullptr )
         return false;
 
