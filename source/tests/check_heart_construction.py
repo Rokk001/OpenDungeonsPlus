@@ -13,6 +13,7 @@ end = treasury.index('        std::vector<Tile*> buildableTiles', start)
 hover = treasury[start:end]
 code = r'''
 #include "gamemap/RoomObjectBounds.h"
+#include <functional>
 #include <iostream>
 #include <vector>
 struct Seat { int getNbRooms(int){return 1;} int getGold(){return 100;} };
@@ -46,7 +47,7 @@ struct InputCommand {int selected=0,failures=0;void unselectAllTiles(){selected=
 std::string formatBuildRoom(int,int){return "build";}
 METHOD
 void hover(GameMap* gameMap,const InputManager& inputManager,InputCommand& inputCommand){HOVER}
-int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++failures;};
+int main(){int checks=0,failures=0;std::function<void(bool)> check=[&](bool ok){++checks;if(!ok)++failures;};
  GameMap map;Tile tile{&map};Seat seat;Object heart{"",{58,102}};
  map.objects={&heart};map.hovered=&tile;
  // Every health tier mesh blocks the tiles under its measured footprint (the 5x5 heart with its pedestal, +-1.733 around the centre).

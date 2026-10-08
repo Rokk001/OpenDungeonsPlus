@@ -10,6 +10,7 @@ end = source.index('\nstd::vector<GameEntity*> GameMap::getVisibleCreatures', st
 method = source[start:end]
 probe = r'''
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <vector>
 #define OD_LOG_ERR(x) ((void)0)
@@ -28,21 +29,22 @@ struct Tile {
  Building* getCoveringBuilding(){return building;}
  const std::vector<GameEntity*>& getEntitiesInTile(){return entities;}
  void fillWithEntities(std::vector<GameEntity*>& out,SelectionEntityWanted wanted,Seat* viewer){
-  for(auto* e:entities)if(e->type==GameEntityType::creature&&e->alive&&
+  for(GameEntity* e:entities)if(e->type==GameEntityType::creature&&e->alive&&
     (e->owner->isAlliedSeat(viewer)==(wanted==SelectionEntityWanted::creatureAliveAllied)))out.push_back(e);}
 };
 struct GameMap {std::vector<GameEntity*> getVisibleForce(const std::vector<Tile*>&,Seat*,bool);};
 METHOD
 int main(){int checks=0,failures=0;
- auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
+ std::function<void(bool,const char*)> check=[&](bool ok,const char* msg){
+  ++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Seat owner{1},ally{1},enemy{2};GameMap map;Tile centre,outer,roomTile;
  GameEntity floor{GameEntityType::room,&owner,true,false};centre.building=&floor;outer.building=&floor;
  GameEntity heart{GameEntityType::persistentObject,&owner,true,true,&centre};
  GameEntity portal{GameEntityType::persistentObject,&owner,true,false,&centre};
  GameEntity furniture{GameEntityType::buildingObject,&owner,true,true,&centre};
  centre.entities={&heart,&portal,&furniture};
- for(auto* viewer:{&owner,&ally,&enemy}){
-  auto seen=map.getVisibleForce({nullptr,&outer,&centre,&centre},viewer,true);
+ for(Seat* viewer:{&owner,&ally,&enemy}){
+  std::vector<GameEntity*> seen=map.getVisibleForce({nullptr,&outer,&centre,&centre},viewer,true);
   check(seen==(viewer==&enemy?std::vector<GameEntity*>{&heart}:std::vector<GameEntity*>{}),"only enemy discovers one heart, never floor or portal");
   check(map.getVisibleForce({&outer},viewer,true).empty(),"visible floor does not reveal a hidden heart");
  }
@@ -50,7 +52,7 @@ int main(){int checks=0,failures=0;
  centre.building=nullptr;check(map.getVisibleForce({&centre},&enemy,true)==std::vector<GameEntity*>{&heart},"heart remains targetable if old save lacks its centre floor");
  GameEntity room{GameEntityType::room,&owner};roomTile.building=&room;
  GameEntity creature{GameEntityType::creature,&owner};roomTile.entities={&creature};
- auto seen=map.getVisibleForce({&roomTile,&centre},&enemy,true);
+ std::vector<GameEntity*> seen=map.getVisibleForce({&roomTile,&centre},&enemy,true);
  check(seen==std::vector<GameEntity*>({&creature,&room,&heart}),"ordinary creature and room targeting preserved");
  check(map.getVisibleForce({&roomTile},&ally,false)==std::vector<GameEntity*>({&creature,&room}),"allied discovery preserved");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
