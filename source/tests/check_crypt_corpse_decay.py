@@ -85,18 +85,18 @@ int main(int argc,char** argv){try{
  Ogre::MaterialManager::getSingleton().initialise();
  Ogre::ParticleSystemManager::getSingleton()._initialise();
  root.loadPlugin(std::string(argv[2])+"/bin/Plugin_ParticleFX");
- auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
+ Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
  groups.initialiseResourceGroup("Graphics");
- auto* scene=root.createSceneManager();
+ Ogre::SceneManager* scene=root.createSceneManager();
  for(const std::string model:{MODELS}){
-  auto* entity=scene->createEntity(model,model,"Graphics");
-  auto* skeleton=entity->getMesh()->getSkeleton().get();
+  Ogre::Entity* entity=scene->createEntity(model,model,"Graphics");
+  Ogre::Skeleton* skeleton=entity->getMesh()->getSkeleton().get();
   std::string pose=needsCreatureDropFallback(entity)?"Sleep":"Die";
   if(!skeleton->hasAnimation(pose))pose=skeleton->hasAnimation("Sleep")?"Sleep":"Idle";
-  const auto name=createCreatureDecayAnimation(entity,pose,80);
+  const std::string name=createCreatureDecayAnimation(entity,pose,80);
   check(name=="CorpseDecay"&&entity->hasAnimationState(name),"every configured creature gets a decay state");
-  const auto* source=skeleton->getAnimation(pose);auto* decay=skeleton->getAnimation(name);
+  const Ogre::Animation* source=skeleton->getAnimation(pose);Ogre::Animation* decay=skeleton->getAnimation(name);
   check(decay->getLength()==80,"decay uses the configured turn duration");
   for(unsigned short bone=0;bone<skeleton->getNumBones();++bone){
    Ogre::TransformKeyFrame expected(nullptr,0);
@@ -109,9 +109,9 @@ int main(int argc,char** argv){try{
     check(actual.getScale().positionEquals(expected.getScale()*scale,.0001f),"settling changes root scale only");
    }
   }
-  const auto count=skeleton->getNumAnimations();createCreatureDecayAnimation(entity,pose,80);
+  const unsigned short count=skeleton->getNumAnimations();createCreatureDecayAnimation(entity,pose,80);
   check(skeleton->getNumAnimations()==count,"repeated decay reuses cached animation");
-  auto* second=scene->createEntity(model+"_second",model,"Graphics");createCreatureDecayAnimation(second,pose,80);
+  Ogre::Entity* second=scene->createEntity(model+"_second",model,"Graphics");createCreatureDecayAnimation(second,pose,80);
   check(second->hasAnimationState(name),"another creature sharing the skeleton has its own animation state");
   scene->destroyEntity(second);scene->destroyEntity(entity);
  }
@@ -120,7 +120,7 @@ int main(int argc,char** argv){try{
  std::ifstream stream(std::string(argv[1])+"/particles/CorpseDecay.particle");
  Ogre::DataStreamPtr data(new Ogre::FileStreamDataStream("CorpseDecay.particle",&stream,false));
  Ogre::ParticleSystemManager::getSingleton().parseScript(data,"Graphics");
- auto* effect=scene->createParticleSystem("corpse","CorpseDecay");
+ Ogre::ParticleSystem* effect=scene->createParticleSystem("corpse","CorpseDecay");
  check(effect->getParticleQuota()==24,"fly count is bounded");
  check(effect->getNumEmitters()==1&&effect->getNumAffectors()==1,"fly script parses with emitter and movement affector");
  check(effect->getAffector(0)->getType()=="DirectionRandomiser","flies have animated erratic movement");
