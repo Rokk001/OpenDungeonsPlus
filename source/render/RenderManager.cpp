@@ -764,6 +764,21 @@ Ogre::AnimationState* createCreatureCombatReaction(Ogre::Entity* entity, bool gu
     return entity->getAnimationState(name);
 }
 
+//! Forearm raise in degrees of the generated feeding animation.
+const Ogre::Real FEEDING_ARM_RAISE = 65.0f;
+//! Playback speed of the idle animation of the chicken while it is eaten.
+const Ogre::Real FEEDING_CHICKEN_IDLE_SPEED = 3.0f;
+//! Number of feather bursts shown while a chicken is eaten.
+const unsigned int FEEDING_FEATHER_BURSTS = 2;
+//! Length of the fade of the pick of a worker at both ends of the feeding animation.
+const Ogre::Real FEEDING_PICK_FADE_LENGTH = 0.12f;
+//! Crouch of a creature that uses its hands, as fractions of its body height: forward and down.
+const Ogre::Real FEEDING_CROUCH_FORWARD_RATIO = 0.10f;
+const Ogre::Real FEEDING_CROUCH_DOWN_RATIO = 0.28f;
+//! Forward bend in degrees of the spine at the deepest crouch.
+const Ogre::Real FEEDING_CROUCH_BEND = 35.0f;
+
+//! \brief Returns the first bone of the skeleton that has one of the given names, or null.
 Ogre::Bone* findFeedingBone(Ogre::Skeleton* skeleton, std::initializer_list<const char*> names)
 {
     for(const char* name : names)
@@ -772,6 +787,7 @@ Ogre::Bone* findFeedingBone(Ogre::Skeleton* skeleton, std::initializer_list<cons
     return nullptr;
 }
 
+//! \brief Rotates the bone so that the direction from points along the direction to.
 void turnFeedingBone(Ogre::Bone* bone, const Ogre::Vector3& from, const Ogre::Vector3& to)
 {
     if(from.squaredLength() < 0.0000001f || to.squaredLength() < 0.0000001f)
@@ -782,6 +798,8 @@ void turnFeedingBone(Ogre::Bone* bone, const Ogre::Vector3& from, const Ogre::Ve
     bone->_update(true, false);
 }
 
+//! \brief Bends a two-bone limb so that the point at tipOffset in the space of the lower bone reaches
+//! the target; the target is brought into reach if the limb is too short or too long.
 void solveFeedingLimb(Ogre::Bone* upper, Ogre::Bone* lower,
     const Ogre::Vector3& tipOffset, const Ogre::Vector3& target)
 {
@@ -2167,9 +2185,9 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             feeding.mChickenNode->setScale(scale);
             feeding.mChickenNode->setPosition(centre + jitter - orientation * (scale * chickenCentre));
             if(feeding.mChickenEntity->hasAnimationState(EntityAnimation::idle_anim))
-                feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * 3.0f);
+                feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * FEEDING_CHICKEN_IDLE_SPEED);
         }
-        if(feeding.mFeatherBursts < 2 && time >= meal.mFirstBite + 0.45f * meal.mBite +
+        if(feeding.mFeatherBursts < FEEDING_FEATHER_BURSTS && time >= meal.mFirstBite + 0.45f * meal.mBite +
             feeding.mFeatherBursts * (meal.mSecondBite - meal.mFirstBite) &&
             feeding.mAnimation != nullptr && feeding.mAnimation->getEnabled() && !feeding.mAnimation->hasEnded() &&
             feeding.mEntity->isVisible() && feeding.mChickenNode != nullptr &&
@@ -4882,7 +4900,7 @@ void RenderManager::startCreatureFeedingAnimation(Creature* creature, Ogre::Enti
                 if(jaw)
                     angle = -meal.mJawAngle * phase.mJaw;
                 if(arm)
-                    angle = -65.0f * envelope;
+                    angle = -FEEDING_ARM_RAISE * envelope;
                 const Ogre::Quaternion basis = bone->_getDerivedOrientation();
                 frame->setRotation(basis.Inverse() *
                     Ogre::Quaternion(Ogre::Degree(angle), Ogre::Vector3::UNIT_X) *
@@ -5053,18 +5071,19 @@ Ogre::Vector3 RenderManager::updateCreatureFeedingReach(CreatureFeedingAnimation
         pose.mBone->setOrientation(pose.mOrientation);
         pose.mBone->setScale(pose.mScale);
         if(feeding.mEntity->getMesh()->getName() == "Kobold.mesh" && pose.mBone->getName() == "Pick")
-            pose.mBone->setScale(pose.mScale * (1.0f - chickenMealSmooth(progress / 0.12f) *
-                (1.0f - chickenMealSmooth((progress - 0.88f) / 0.12f))));
+            pose.mBone->setScale(pose.mScale * (1.0f - chickenMealSmooth(progress / FEEDING_PICK_FADE_LENGTH) *
+                (1.0f - chickenMealSmooth((progress - (1.0f - FEEDING_PICK_FADE_LENGTH)) / FEEDING_PICK_FADE_LENGTH))));
     }
     feeding.mEntity->getSkeleton()->_updateTransforms();
     const Ogre::Real crouch = reach * (1.0f - lift);
     const Ogre::Real height = feeding.mEntity->getBoundingBox().getSize().z;
     for(Ogre::Bone* root : feeding.mRoots)
     {
-        root->translate(Ogre::Vector3(0, -height * 0.10f, -height * 0.28f) * crouch, Ogre::Node::TS_WORLD);
+        root->translate(Ogre::Vector3(0, -height * FEEDING_CROUCH_FORWARD_RATIO, -height * FEEDING_CROUCH_DOWN_RATIO) * crouch,
+            Ogre::Node::TS_WORLD);
         root->_update(true, false);
     }
-    const Ogre::Quaternion bend(Ogre::Degree(35.0f * crouch + biteLean), Ogre::Vector3::UNIT_X);
+    const Ogre::Quaternion bend(Ogre::Degree(FEEDING_CROUCH_BEND * crouch + biteLean), Ogre::Vector3::UNIT_X);
     const Ogre::Quaternion parent = feeding.mSpine->getParent() != nullptr ?
         feeding.mSpine->getParent()->_getDerivedOrientation() : Ogre::Quaternion::IDENTITY;
     feeding.mSpine->setOrientation(parent.Inverse() * bend * feeding.mSpine->_getDerivedOrientation());
