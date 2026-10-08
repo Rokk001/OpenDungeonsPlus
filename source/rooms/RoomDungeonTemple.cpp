@@ -40,6 +40,7 @@ const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
 namespace
 {
+//! \brief The persistent object of the heart. It is the combat target and forwards health and damage to the room.
 class DungeonHeartObject : public PersistentObject
 {
 public:

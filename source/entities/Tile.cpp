@@ -1200,6 +1200,7 @@ bool Tile::isBuildableUpon(Seat* seat) const
                 if(object->getMeshName() != bounds.name)
                     continue;
                 const Ogre::Vector3 position = object->getPosition();
+                // The tile reaches half a unit from its centre in each direction.
                 if(getX() + 0.5f > position.x + bounds.minX &&
                     getX() - 0.5f < position.x + bounds.maxX &&
                     getY() + 0.5f > position.y + bounds.minY &&
