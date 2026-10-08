@@ -48,12 +48,12 @@
             <Property name="Text" value="Exit to System" />
             <Property name="TooltipText" value="Leave this game and exit to the desktop..." />
         </Window>
-            <Window type="OD/IconButton" name="HelpButton" >
+        <Window type="OD/IconButton" name="HelpButton" >
             <Property name="Area" value="{{0,24},{0,358},{1,-24},{0,396}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/HelpIcon" />
             <Property name="Text" value="Help" />
         </Window>
-            <Window type="OD/IconButton" name="PlayerSettingsButton" >
+        <Window type="OD/IconButton" name="PlayerSettingsButton" >
             <Property name="Area" value="{{0,24},{0,404},{1,-24},{0,442}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/SeatIcon" />
             <Property name="Text" value="Player information" />
