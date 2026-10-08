@@ -63,6 +63,22 @@ namespace
 const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
 
+// Layout of the room, trap and spell buttons in unscaled pixels.
+const float ACTION_BUTTON_MARGIN_X = 20.0f;
+const float ACTION_BUTTON_MARGIN_Y = 6.0f;
+const float ACTION_BUTTON_SPACING = 4.0f;
+const float LARGE_ACTION_BUTTON_SIDE = 102.0f;
+const float SMALL_ACTION_BUTTON_SIDE = 52.0f;
+//! Vertical distance between the two rows of small buttons.
+const float SMALL_ACTION_BUTTON_ROW_PITCH = 56.0f;
+//! Most buttons that are still shown large, in a single row.
+const size_t MAX_LARGE_ACTION_BUTTONS = 6;
+
+// Properties and user strings the layouts use to mark the navigation frame.
+const std::string NAVIGATION_FRAME_NAME = "NavigationFrame";
+const std::string NAVIGATION_COLOUR_NAME = "NavigationColour";
+const std::string NAVIGATION_IMAGE_NAME = "NavigationImage";
+
 //! Resolution the fonts are designed for.
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
@@ -103,6 +119,7 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
+//! Round button that fills a corner of the minimap frame: it only reacts outside the round map.
 class MiniMapCornerButton : public CEGUI::PushButton
 {
 public:
@@ -113,6 +130,8 @@ public:
     {
         if(!CEGUI::PushButton::isHit(position, allowDisabled))
             return false;
+        if(getParent() == nullptr || !getParent()->isChild("MiniMap"))
+            return true;
         // Use the actual map bounds: pixel rounding can differ from this button.
         const CEGUI::Rectf& map = getParent()->getChild("MiniMap")->getUnclippedOuterRect().get();
         const float x = (position.d_x - map.left() - map.getWidth() * 0.5f) / (map.getWidth() * 0.5f);
@@ -1532,34 +1551,35 @@ void Gui::registerWindowHierarchy(CEGUI::Window* window)
 
 void Gui::registerWindow(CEGUI::Window* window)
 {
-    if(window->isPropertyPresent("NavigationFrame"))
+    if(window->isPropertyPresent(NAVIGATION_FRAME_NAME))
     {
         for(CEGUI::Window* parent = window->getParent(); parent != nullptr; parent = parent->getParent())
         {
-            if(parent->isUserStringDefined("NavigationFrame") && parent->getUserString("NavigationFrame") == "true")
+            if(parent->isUserStringDefined(NAVIGATION_FRAME_NAME) &&
+               parent->getUserString(NAVIGATION_FRAME_NAME) == "true")
             {
-                window->setProperty("NavigationFrame", "True");
+                window->setProperty(NAVIGATION_FRAME_NAME, "True");
                 break;
             }
         }
     }
     CEGUI::TabButton* tabButton = dynamic_cast<CEGUI::TabButton*>(window);
-    if(window->isPropertyPresent("NavigationColour"))
+    if(window->isPropertyPresent(NAVIGATION_COLOUR_NAME))
     {
         CEGUI::Window* colourSource = tabButton == nullptr ? nullptr : tabButton->getTargetWindow();
-        if(colourSource == nullptr || !colourSource->isUserStringDefined("NavigationColour"))
+        if(colourSource == nullptr || !colourSource->isUserStringDefined(NAVIGATION_COLOUR_NAME))
         {
             for(colourSource = window->getParent(); colourSource != nullptr; colourSource = colourSource->getParent())
             {
-                if(colourSource->isUserStringDefined("NavigationColour"))
+                if(colourSource->isUserStringDefined(NAVIGATION_COLOUR_NAME))
                     break;
             }
         }
-        if(colourSource != nullptr && colourSource->isUserStringDefined("NavigationColour"))
-            window->setProperty("NavigationColour", colourSource->getUserString("NavigationColour"));
-        if(tabButton != nullptr && colourSource != nullptr && colourSource->isUserStringDefined("NavigationImage") &&
-           window->isPropertyPresent("NavigationImage"))
-            window->setProperty("NavigationImage", colourSource->getUserString("NavigationImage"));
+        if(colourSource != nullptr && colourSource->isUserStringDefined(NAVIGATION_COLOUR_NAME))
+            window->setProperty(NAVIGATION_COLOUR_NAME, colourSource->getUserString(NAVIGATION_COLOUR_NAME));
+        if(tabButton != nullptr && colourSource != nullptr && colourSource->isUserStringDefined(NAVIGATION_IMAGE_NAME) &&
+           window->isPropertyPresent(NAVIGATION_IMAGE_NAME))
+            window->setProperty(NAVIGATION_IMAGE_NAME, colourSource->getUserString(NAVIGATION_IMAGE_NAME));
     }
     if(!window->isAutoWindow() && mScaledWindows.find(window) == mScaledWindows.end())
     {
@@ -1846,6 +1866,13 @@ void Gui::setUserScalePercent(float scalePercent)
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
+void Gui::arrangeActionButtonPanels(CEGUI::Window* gameSheet)
+{
+    arrangeRoomButtons(gameSheet->getChild(TAB_ROOMS));
+    arrangeTrapButtons(gameSheet->getChild(TAB_TRAPS));
+    arrangeSpellButtons(gameSheet->getChild(TAB_SPELLS));
+}
+
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 {
     rooms->getChild("DestroyRoomButton")->hide();
@@ -1885,15 +1912,21 @@ void Gui::arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const
             buttons.push_back(button);
     }
 
-    const bool large = buttons.size() <= 6 &&
-        (20.0f + 106.0f * buttons.size() - 4.0f) * scale <= panel->getPixelSize().d_width;
-    const float side = large ? 102.0f : 52.0f;
+    const bool large = buttons.size() <= MAX_LARGE_ACTION_BUTTONS &&
+        (ACTION_BUTTON_MARGIN_X + (LARGE_ACTION_BUTTON_SIDE + ACTION_BUTTON_SPACING) * buttons.size() -
+        ACTION_BUTTON_SPACING) * scale <= panel->getPixelSize().d_width;
+    const float side = large ? LARGE_ACTION_BUTTON_SIDE : SMALL_ACTION_BUTTON_SIDE;
     for(size_t index = 0; index < buttons.size(); ++index)
     {
         CEGUI::Window* button = buttons[index];
-        const float x = 20.0f + (side + 4.0f) * static_cast<float>(large ? index : index / 2);
-        const float y = 6.0f + (large ? 0.0f : 56.0f * static_cast<float>(index % 2));
-        WindowScaleData& data = mScaledWindows.at(button);
+        const size_t column = large ? index : index / 2;
+        const float x = ACTION_BUTTON_MARGIN_X + (side + ACTION_BUTTON_SPACING) * static_cast<float>(column);
+        const float y = ACTION_BUTTON_MARGIN_Y +
+            (large ? 0.0f : SMALL_ACTION_BUTTON_ROW_PITCH * static_cast<float>(index % 2));
+        std::map<CEGUI::Window*, WindowScaleData>::iterator scaled = mScaledWindows.find(button);
+        if(scaled == mScaledWindows.end())
+            continue;
+        WindowScaleData& data = scaled->second;
         data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
             CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side));
         applyScaleToWindow(button, data, scale);
@@ -1929,9 +1962,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     const std::map<guiSheet, CEGUI::Window*>::iterator gameSheet = mSheets.find(inGameMenu);
     if(gameSheet != mSheets.end())
     {
-        arrangeRoomButtons(gameSheet->second->getChild(TAB_ROOMS));
-        arrangeTrapButtons(gameSheet->second->getChild(TAB_TRAPS));
-        arrangeSpellButtons(gameSheet->second->getChild(TAB_SPELLS));
+        arrangeActionButtonPanels(gameSheet->second);
     }
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)

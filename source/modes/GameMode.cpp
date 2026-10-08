@@ -21,7 +21,6 @@
 #include "camera/CameraInput.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
-#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/RenderedMovableEntity.h"
@@ -105,6 +104,10 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 //! Seconds between two refreshes of the open trap production window.
 const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
+
+// Text colours (ARGB) of the mana change next to the mana display.
+const std::string MANA_GAIN_TEXT_COLOUR = "FF7FE3A6";
+const std::string MANA_LOSS_TEXT_COLOUR = "FFFF4848";
 
 //! Distance in pixels between the mouse cursor and the detail view shown next to it on the full map.
 const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
@@ -347,20 +350,8 @@ GameMode::GameMode(ModeManager *modeManager):
         })));
     guiSheet->getChild("GameEventText")->hide();
 
-    SkillManager::listAllRooms([this](RoomType type, const std::string& buttonName)
-    {
-        addEventConnection(mRootWindow->getChild(buttonName)->subscribeEvent(
-            CEGUI::Window::EventMouseClick,
-            CEGUI::Event::Subscriber([this, type](const CEGUI::EventArgs& args)
-            {
-                const CEGUI::MouseButton button = static_cast<const CEGUI::MouseEventArgs&>(args).button;
-                if(button != CEGUI::RightButton)
-                    return false;
-                if(!cameraInputBlocked())
-                    focusRoom(type);
-                return true;
-            })));
-    });
+    SkillManager::listAllRooms(std::bind(&GameMode::connectRoomButton, this,
+        std::placeholders::_1, std::placeholders::_2));
 
     //Help window
     addEventConnection(
@@ -1741,7 +1732,8 @@ void GameMode::refreshMainUI()
         << " / -" << static_cast<long>(mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond());
     widget->getChild("Change")->setText(tempSS.str());
     widget->getChild("Change")->setProperty("TextColours",
-        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond() ? "FF7FE3A6" : "FFFF4848");
+        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond() ?
+        MANA_GAIN_TEXT_COLOUR : MANA_LOSS_TEXT_COLOUR);
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
@@ -3891,9 +3883,7 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
         refreshSkillButtonState(skillButtonName, castButtonName, skillProgressBarName, resType);
     });
     refreshSkillConnections();
-    getModeManager().getGui().arrangeRoomButtons(mRootWindow->getChild(Gui::TAB_ROOMS));
-    getModeManager().getGui().arrangeTrapButtons(mRootWindow->getChild(Gui::TAB_TRAPS));
-    getModeManager().getGui().arrangeSpellButtons(mRootWindow->getChild(Gui::TAB_SPELLS));
+    getModeManager().getGui().arrangeActionButtonPanels(mRootWindow);
 }
 
 void GameMode::refreshSkillConnections()
@@ -4647,31 +4637,48 @@ void GameMode::checkInputCommand()
         unselectAllTiles();
 }
 
-bool GameMode::toggleQuery(const CEGUI::EventArgs& e)
+void GameMode::toggleSelectedAction(SelectedAction action)
 {
     if(!isConnected() || mGameMap->getGamePaused())
-        return true;
+        return;
 
     InputManager& inputManager = mModeManager->getInputManager();
     inputManager.mLMouseDown = false;
     inputManager.mCommandState = InputCommandState::infoOnly;
-    mPlayerSelection.setCurrentAction(mPlayerSelection.getCurrentAction() == SelectedAction::queryEntity ?
-        SelectedAction::none : SelectedAction::queryEntity);
+    if(mPlayerSelection.getCurrentAction() == action)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    else
+        mPlayerSelection.setCurrentAction(action);
     unselectAllTiles();
+}
+
+bool GameMode::toggleQuery(const CEGUI::EventArgs& e)
+{
+    toggleSelectedAction(SelectedAction::queryEntity);
     return true;
 }
 
 bool GameMode::toggleSell(const CEGUI::EventArgs& e)
 {
-    if(!isConnected() || mGameMap->getGamePaused())
-        return true;
+    toggleSelectedAction(SelectedAction::sellBuilding);
+    return true;
+}
 
-    InputManager& inputManager = mModeManager->getInputManager();
-    inputManager.mLMouseDown = false;
-    inputManager.mCommandState = InputCommandState::infoOnly;
-    mPlayerSelection.setCurrentAction(mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding ?
-        SelectedAction::none : SelectedAction::sellBuilding);
-    unselectAllTiles();
+void GameMode::connectRoomButton(RoomType type, const std::string& buttonName)
+{
+    CEGUI::Window* button = mRootWindow->getChild(buttonName);
+    button->setID(static_cast<CEGUI::uint>(type));
+    addEventConnection(button->subscribeEvent(CEGUI::Window::EventMouseClick,
+        CEGUI::Event::Subscriber(&GameMode::onRoomButtonClicked, this)));
+}
+
+bool GameMode::onRoomButtonClicked(const CEGUI::EventArgs& args)
+{
+    const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(args);
+    if(mouseArgs.button != CEGUI::RightButton)
+        return false;
+    if(!cameraInputBlocked())
+        focusRoom(static_cast<RoomType>(mouseArgs.window->getID()));
     return true;
 }
 

@@ -492,10 +492,15 @@ private:
     void updateMapDetail();
     //! \brief Moves the camera to a room of the given type owned by the local player.
     void focusRoom(RoomType type);
+    //! \brief Right-clicking the build button of a room focuses the next room of that type.
+    //! The type is stored as the window id of the button.
+    void connectRoomButton(RoomType type, const std::string& buttonName);
+    bool onRoomButtonClicked(const CEGUI::EventArgs& args);
     //! \brief The full map shown while the map window is open, nullptr otherwise.
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
     //! \brief Zoom level of the minimap before the map window was opened.
     int mSavedMiniMapZoom = 0;
+    //! \brief Per room type, the index of the room the camera jumped to last.
     std::map<RoomType, size_t> mRoomFocusIndices;
     //! \brief True while the map key is held, so that key repeat does not toggle the map again.
     bool mMapKeyDown = false;
@@ -548,6 +553,8 @@ private:
     void checkInputCommand();
     void handlePlayerActionNone();
     void handlePlayerActionSelectTile();
+    //! \brief Selects the given action, or deselects it when it is already the current one.
+    void toggleSelectedAction(SelectedAction action);
     //! \brief Button handler: switches the query mode (SelectedAction::queryEntity) on or off.
     //! While it is on, the next click shows information about the pointed entity instead of
     //! selecting tiles. Does nothing when not connected or while the game is paused.
@@ -560,6 +567,7 @@ private:
     //! pointer and, once the click is validated, opens its stats window.
     void handlePlayerActionQuery();
     bool toggleSell(const CEGUI::EventArgs& e);
+    //! \brief Shows what selling the room or trap on the hovered tile gives, and sells it on validation.
     void handlePlayerActionSell();
     //! \brief Draws eligible selection borders without including invalid room tiles.
     void updateSelectedTiles();

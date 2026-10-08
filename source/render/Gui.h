@@ -134,6 +134,8 @@ public:
     //! fraction (0 to 1) of the dungeon heart and its background glows while under attack.
     void updateHeartBadge(float healthFraction, bool underAttack);
 
+    //! \brief Arranges the room, trap and spell buttons of the in game sheet.
+    void arrangeActionButtonPanels(CEGUI::Window* gameSheet);
     //! \brief Arranges visible gameplay actions and retains their scaled layout.
     void arrangeRoomButtons(CEGUI::Window* rooms);
     void arrangeTrapButtons(CEGUI::Window* traps);
