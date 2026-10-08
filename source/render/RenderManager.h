@@ -346,6 +346,7 @@ public:
     
 private:
     Ogre::InstanceManager* mInstanceManagerDirt;
+    Ogre::InstanceManager* mInstanceManagerMarkedFog;
     Ogre::InstanceManager* mInstanceManagerCloud;
         
     Ogre::DefaultDebugDrawer ddd;
