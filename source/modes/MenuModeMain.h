@@ -47,6 +47,8 @@ private:
 
     //! \brief The Settings window
     SettingsWindow mSettings;
+    //! \brief True while a settings page opened from the settings sub menu is shown,
+    //! so that closing it shows the sub menu again.
     bool mSettingsPageOpen = false;
     //! True while the menu waits for the flight to end before it shows the skirmish sub-menu
     bool mSkirmishSubMenuPending = false;
@@ -58,9 +60,15 @@ private:
     //! \brief Function triggered when pushing a button
     bool quitButtonPressed(const CEGUI::EventArgs&);
     bool toggleSettings(const CEGUI::EventArgs&);
+    //! \brief Hides the settings sub menu and shows the named settings page.
     bool openSettingsPage(const std::string& name);
+    //! \brief Opens the settings page belonging to the clicked sub menu button.
+    bool settingsPageButtonClicked(const CEGUI::EventArgs& e);
+    //! \brief Shows the settings sub menu again after a settings page was closed.
     bool settingsPageClosed(const CEGUI::EventArgs&);
+    //! \brief Shows or hides the main menu buttons behind the sub menus.
     void showMainMenuButtons(bool visible);
+    //! \brief Toggles the named sub menu window and hides the others.
     bool toggleSubMenu(const std::string& name);
 
     //! \brief Sub menu button triggers
