@@ -7587,6 +7587,10 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
     mTilePreview->end();
     if(construction || digging)
     {
+        // A flat ribbon along the tile edge, just above the floor, with an open centre:
+        // it reaches inward to this distance from the tile centre.
+        const float ribbonHeight = 0.045f;
+        const float ribbonInnerHalfWidth = 0.44f;
         mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
         for(Tile* tile : tiles)
         {
@@ -7594,13 +7598,13 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
                 continue;
             const float x = static_cast<float>(tile->getX());
             const float y = static_cast<float>(tile->getY());
-            float z = 0.045f;
+            float z = ribbonHeight;
             if(tile->isFullTile() && !getWallPreviewHeight(mSceneManager, tile, z))
                 continue;
             const Ogre::Vector3 outer[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
                 {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
-            const Ogre::Vector3 inner[] = {{x-0.44f,y-0.44f,z}, {x+0.44f,y-0.44f,z},
-                {x+0.44f,y+0.44f,z}, {x-0.44f,y+0.44f,z}};
+            const Ogre::Vector3 inner[] = {{x-ribbonInnerHalfWidth,y-ribbonInnerHalfWidth,z}, {x+ribbonInnerHalfWidth,y-ribbonInnerHalfWidth,z},
+                {x+ribbonInnerHalfWidth,y+ribbonInnerHalfWidth,z}, {x-ribbonInnerHalfWidth,y+ribbonInnerHalfWidth,z}};
             for(int i = 0; i < 4; ++i)
             {
                 const int next = (i + 1) % 4;
