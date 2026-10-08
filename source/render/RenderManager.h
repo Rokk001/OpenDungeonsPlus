@@ -176,7 +176,9 @@ public:
         const std::string& particleScript);
     void rrEntityRemoveParticleEffect(GameEntity* entity, Ogre::ParticleSystem* particleSystem);
     void rrToggleHandSelectorVisibility();
+    //! Selects the hand pose; digging takes precedence over building, building over pointing.
     void rrSetHandPose(bool pointing, bool digging, bool building = false);
+    //! Plays the one-shot hammer strike used when a build request is accepted.
     void rrPlayBuildAnimation();
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
@@ -283,7 +285,9 @@ private:
     Ogre::AnimationState* mHandAnimationState;
     std::string mHandPose = "Idle";
     Ogre::ManualObject* mHandPickaxe = nullptr;
+    //! Hammer shown in the hand while building; hidden otherwise.
     Ogre::Entity* mHandHammer = nullptr;
+    //! Centre of the hammer's striking face in mesh space; the hand is aligned so it sits on the pointer.
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     Ogre::ManualObject* mTilePreview = nullptr;
 

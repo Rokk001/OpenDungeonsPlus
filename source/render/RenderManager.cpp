@@ -178,8 +178,12 @@ void createKeeperHandPoses(Ogre::Entity* hand)
         hand->getAllAnimationStates()->createAnimationState("PointTransition", 0, duration);
 }
 
+//! Returns the centre of the hammer mesh's striking face (the vertices with the largest Y),
+//! in mesh space. This point is placed on the pointer while the hammer is shown.
 Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
 {
+    // Vertices closer than this are treated as lying on the same face plane.
+    const float faceTolerance = 0.00001f;
     // The authored head runs along Y; positive Y is the screen-left striking face.
     float faceY = -std::numeric_limits<float>::infinity();
     Ogre::Vector3 sum = Ogre::Vector3::ZERO;
@@ -196,13 +200,13 @@ Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
         {
             float* value;
             element->baseVertexPointerToElement(bytes + (data->vertexStart + i) * buffer->getVertexSize(), &value);
-            if(value[1] > faceY + 0.00001f)
+            if(value[1] > faceY + faceTolerance)
             {
                 faceY = value[1];
                 sum = Ogre::Vector3::ZERO;
                 count = 0;
             }
-            if(std::abs(value[1] - faceY) < 0.00001f)
+            if(std::abs(value[1] - faceY) < faceTolerance)
             {
                 sum += Ogre::Vector3(value);
                 ++count;
@@ -212,6 +216,9 @@ Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
     return count == 0 ? Ogre::Vector3::ZERO : sum / float(count);
 }
 
+//! Moves the hand model so that the active cursor point lies on the pointer: the fingertip while
+//! pointing, the pickaxe tip while digging and the hammer's striking face while building.
+//! Without the tool arguments only the pointing alignment is applied.
 void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
     Ogre::Entity* hammer = nullptr, const Ogre::Vector3& hammerPoint = Ogre::Vector3::ZERO,
     Ogre::ManualObject* pickaxe = nullptr)
@@ -223,7 +230,11 @@ void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
     model->setPosition(Ogre::Vector3::ZERO);
     const bool building = animation->getAnimationName() == "Build" || animation->getAnimationName() == "BuildSwing";
     const bool digging = animation->getAnimationName() == "Dig" || animation->getAnimationName() == "DigSwing";
-    Ogre::MovableObject* tool = building ? static_cast<Ogre::MovableObject*>(hammer) : (digging ? pickaxe : nullptr);
+    Ogre::MovableObject* tool = nullptr;
+    if(building)
+        tool = hammer;
+    else if(digging)
+        tool = pickaxe;
     if(tool != nullptr)
     {
         // The ready pose's left striking end is the cursor; preserve its strike arc.
@@ -233,7 +244,9 @@ void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
         pose->apply(skeleton, 0);
         skeleton->_updateTransforms();
         Ogre::TagPoint* grip = static_cast<Ogre::TagPoint*>(tool->getParentNode());
-        const Ogre::Vector3 point = building ? hammerPoint : Ogre::Vector3(0.085f, 0.043f, 0);
+        // The pickaxe cursor point is the outer vertex of its left head prism (see createScene).
+        const Ogre::Vector3 pickaxePoint(0.085f, 0.043f, 0);
+        const Ogre::Vector3 point = building ? hammerPoint : pickaxePoint;
         const Ogre::Vector3 face = grip->_getFullLocalTransform() * point;
         model->setPosition(-(model->getOrientation() * (model->getScale() * face)));
         skeleton->setAnimationState(*hand->getAllAnimationStates());
@@ -287,6 +300,7 @@ void createKeeperHandDigAnimation(Ogre::Entity* hand, const Ogre::String& name =
         hand->getAllAnimationStates()->createAnimationState(name, 0, duration);
 }
 
+//! The build strike reuses the digging strike frame for frame, so both tools move identically.
 void createKeeperHandBuildAnimation(Ogre::Entity* hand)
 {
     createKeeperHandDigAnimation(hand, "BuildSwing");
@@ -1081,10 +1095,11 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     addPickaxePrism(mHandPickaxe, {{0.042f,0.057f}, {0.085f,0.043f}, {0.05f,0.073f}},
         0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     mHandPickaxe->end();
-    // The closed fingers wrap around the shaft across the palm, below its back.
+    // The closed fingers wrap around the shaft across the palm, below its back. Both tools share this grip.
+    const Ogre::Vector3 toolGripOffset(0, 0.030f, -0.009f);
     Ogre::TagPoint* toolGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandPickaxe,
         Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
-        Ogre::Quaternion(Ogre::Degree(55.0f), Ogre::Vector3::UNIT_Y), Ogre::Vector3(0,0.030f,-0.009f));
+        Ogre::Quaternion(Ogre::Degree(55.0f), Ogre::Vector3::UNIT_Y), toolGripOffset);
     toolGrip->setScale(0.6f, 0.6f, 0.6f);
     mHandPickaxe->setVisible(false);
     mHandHammer = mSceneManager->createEntity("KeeperHandHammer", "BasicHammer.mesh");
@@ -1098,7 +1113,7 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
         Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
         Ogre::Quaternion(Ogre::Degree(55.0f), Ogre::Vector3::UNIT_Y) *
         Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_X) *
-        Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_Z), Ogre::Vector3(0,0.030f,-0.009f));
+        Ogre::Quaternion(Ogre::Degree(-90.0f), Ogre::Vector3::UNIT_Z), toolGripOffset);
     hammerGrip->setScale(0.2f, 0.2f, 0.2f);
     mHandHammer->setVisible(false);
     mHandKeeperNode->setScale(Ogre::Vector3::UNIT_SCALE * KEEPER_HAND_POS_Z);
@@ -4441,7 +4456,16 @@ void RenderManager::moveWorldCoords(Ogre::Real x, Ogre::Real y)
 void RenderManager::rrSetHandPose(bool pointing, bool digging, bool building)
 {
     const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
-    mHandPose = digging ? "Dig" : (building ? "Build" : (pointing ? "Point" : (holding ? "Hold" : "Idle")));
+    if(digging)
+        mHandPose = "Dig";
+    else if(building)
+        mHandPose = "Build";
+    else if(pointing)
+        mHandPose = "Point";
+    else if(holding)
+        mHandPose = "Hold";
+    else
+        mHandPose = "Idle";
     if(mHandAnimationState != nullptr)
     {
         const std::string current = mHandAnimationState->getAnimationName();
