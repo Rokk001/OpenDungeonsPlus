@@ -918,7 +918,16 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             clientSocket->setState("nick");
             // Tell the client to give us their nickname
             ODPacket packetSend;
-            packetSend << ServerNotificationType::pickNick << mServerMode << true << true << true << true << true;
+            // This server offers the optional extensions in this order: live nickname change, creature
+            // mood, creature activity, creature panel and creature progress. Each client answers with the
+            // ones it accepts.
+            const bool offerLiveNickname = true;
+            const bool offerCreatureMood = true;
+            const bool offerCreatureActivity = true;
+            const bool offerCreaturePanel = true;
+            const bool offerCreatureProgress = true;
+            packetSend << ServerNotificationType::pickNick << mServerMode << offerLiveNickname
+                << offerCreatureMood << offerCreatureActivity << offerCreaturePanel << offerCreatureProgress;
             clientSocket->send(packetSend);
             break;
         }
