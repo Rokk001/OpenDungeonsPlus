@@ -917,6 +917,7 @@ const std::string Gui::TAB_SPELLS = "MainTabControl/Spells";
 const std::string Gui::TAB_CREATURES = "MainTabControl/Creatures";
 const std::string Gui::BUTTON_CREATURE_WORKER = "MainTabControl/Creatures/WorkerButton";
 const std::string Gui::BUTTON_CREATURE_FIGHTER = "MainTabControl/Creatures/FighterButton";
+const std::string Gui::USER_STRING_CONTEXT_HELP = "ContextHelp";
 const std::string Gui::TAB_COMBAT = "MainTabControl/Combat";
 
 const std::string Gui::MM_BACKGROUND = "Background";

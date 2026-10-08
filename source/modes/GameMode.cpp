@@ -375,8 +375,8 @@ GameMode::GameMode(ModeManager *modeManager):
                             std::make_pair(Gui::BUTTON_CREATURE_FIGHTER, "Fighters")})
     {
         CEGUI::Window* button = mRootWindow->getChild(entry.first);
-        if(!button->isUserStringDefined("ContextHelp"))
-            button->setUserString("ContextHelp", button->getTooltipText());
+        if(!button->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP))
+            button->setUserString(Gui::USER_STRING_CONTEXT_HELP, button->getTooltipText());
         button->setTooltipText(entry.second);
     }
     mCreaturePanel.reset(new CreaturePanel(*mGameMap, modeManager->getGui(),
@@ -1153,8 +1153,8 @@ void GameMode::refreshMainUI()
     tempSS << mySeat->getGold();
     widget->setText(tempSS.str());
     tempSS << "/" << mySeat->getGoldMax();
-    widget->setUserString("ContextHelp", "Your Gold: " + tempSS.str());
-    widget->getChild("Icon")->setUserString("ContextHelp", widget->getUserString("ContextHelp"));
+    widget->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Your Gold: " + tempSS.str());
+    widget->getChild("Icon")->setUserString(Gui::USER_STRING_CONTEXT_HELP, widget->getUserString(Gui::USER_STRING_CONTEXT_HELP));
 
     widget = guiSheet->getChild(Gui::DISPLAY_MANA);
     tempSS.str("");
@@ -1810,7 +1810,7 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     tab->setProperty("NavigationFrame", "True");
     tab->setProperty("NormalImage", "OpenDungeonsIcons/NavigationMessages");
     tab->setTooltipText("Message");
-    tab->setUserString("ContextHelp", "Message: left-click to read, right-click to dismiss after reading");
+    tab->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Message: left-click to read, right-click to dismiss after reading");
     tab->setRiseOnClickEnabled(false);
     tab->setUserData(event);
     tab->subscribeEvent(CEGUI::PushButton::EventClicked,
@@ -2270,8 +2270,8 @@ void GameMode::refreshActionFeedback(float elapsed)
         if(hover != nullptr)
         {
             SkillManager::updateCostTooltip(mGameMap, mRootWindow, hover);
-            mActionTargetText = hover->isUserStringDefined("ContextHelp") ?
-                hover->getUserString("ContextHelp").c_str() : "";
+            mActionTargetText = hover->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP) ?
+                hover->getUserString(Gui::USER_STRING_CONTEXT_HELP).c_str() : "";
             std::replace(mActionTargetText.begin(), mActionTargetText.end(), '\n', ' ');
         }
         if(inputManager.mHighlightedCreature != nullptr)

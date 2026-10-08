@@ -128,6 +128,8 @@ public:
     static const std::string TAB_CREATURES;
     static const std::string BUTTON_CREATURE_WORKER;
     static const std::string BUTTON_CREATURE_FIGHTER;
+    //! User string holding the long help text of a window. The tooltip itself only shows a short label.
+    static const std::string USER_STRING_CONTEXT_HELP;
     static const std::string TAB_COMBAT;
     static const std::string MM_BACKGROUND;
     static const std::string MM_WELCOME_MESSAGE;
