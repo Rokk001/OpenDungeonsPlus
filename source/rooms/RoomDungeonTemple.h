@@ -69,6 +69,7 @@ public:
     virtual int depositGold(int gold, Tile* tile) override;
     virtual int withdrawGold(int gold) override;
 
+    //! \brief Never splits the temple, so that damaged floor cannot create a second dungeon core.
     void checkForSplit() override
     {
         // Damaged floor must not create another dungeon core. Keep the original
