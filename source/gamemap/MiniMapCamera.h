@@ -75,7 +75,9 @@ private:
 
     int mCurCamPosX;
     int mCurCamPosY;
+    //! True if the map is centred on mViewCenter instead of following the camera.
     bool mUseViewCenter = false;
+    //! World position the map is centred on when mUseViewCenter is set.
     Ogre::Vector2 mViewCenter = Ogre::Vector2::ZERO;
     Ogre::Camera* mMiniMapCam;
     Ogre::SceneNode* mMiniMapCamNode;

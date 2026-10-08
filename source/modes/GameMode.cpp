@@ -68,13 +68,92 @@
 #include <algorithm>
 #include <vector>
 #include <string>
-#include <functional>
 
 const std::string TEXT_SEAT_ID_PREFIX = "TextSeat";
 const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
 const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+
+//! Distance in pixels between the mouse cursor and the detail view shown next to it on the full map.
+const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
+
+//! Elapsed time reported to the minimap when it is redrawn right after a zoom change.
+const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
+
+//! The four direct neighbours of a tile, as x and y offsets.
+const int NEIGHBOUR_OFFSET_X[4] = {-1, 1, 0, 0};
+const int NEIGHBOUR_OFFSET_Y[4] = {0, 0, -1, 1};
+const int NEIGHBOUR_COUNT = 4;
+
+namespace
+{
+//! \brief Reports whether single keys of the application keyboard are held down.
+class KeyDownReader
+{
+public:
+    explicit KeyDownReader(Keyboard* keyboard) :
+        mKeyboard(keyboard)
+    {}
+
+    bool operator()(OIS::KeyCode key) const
+    {
+        return mKeyboard->isKeyDown(key);
+    }
+
+private:
+    Keyboard* mKeyboard;
+};
+}
+
+//! \brief Collects the tiles that are connected to first and show the given visual for the given owner.
+//! Every collected tile is marked in visited, which is indexed by y * map width + x.
+static std::vector<Tile*> collectRoomTiles(GameMap& gameMap, Tile* first, TileVisual visual,
+    const Seat* owner, std::vector<bool>& visited)
+{
+    const int width = gameMap.getMapSizeX();
+    std::vector<Tile*> tiles(1, first);
+    visited[first->getY() * width + first->getX()] = true;
+    for(size_t i = 0; i < tiles.size(); ++i)
+    {
+        Tile* tile = tiles[i];
+        for(int direction = 0; direction < NEIGHBOUR_COUNT; ++direction)
+        {
+            Tile* neighbour = gameMap.getTile(tile->getX() + NEIGHBOUR_OFFSET_X[direction],
+                tile->getY() + NEIGHBOUR_OFFSET_Y[direction]);
+            if(neighbour == nullptr || neighbour->getTileVisual() != visual || neighbour->getSeat() != owner)
+                continue;
+            const int index = neighbour->getY() * width + neighbour->getX();
+            if(visited[index])
+                continue;
+            visited[index] = true;
+            tiles.push_back(neighbour);
+        }
+    }
+    return tiles;
+}
+
+//! \brief Returns the tile that is closest to the centre of the given tiles, which must not be empty.
+static Tile* getTileClosestToCentre(const std::vector<Tile*>& tiles)
+{
+    Ogre::Vector2 centre = Ogre::Vector2::ZERO;
+    for(size_t i = 0; i < tiles.size(); ++i)
+        centre += Ogre::Vector2(tiles[i]->getX(), tiles[i]->getY());
+    centre /= static_cast<Ogre::Real>(tiles.size());
+
+    Tile* closest = tiles.front();
+    Ogre::Real closestDistance = Ogre::Vector2(closest->getX(), closest->getY()).squaredDistance(centre);
+    for(size_t i = 1; i < tiles.size(); ++i)
+    {
+        const Ogre::Real distance = Ogre::Vector2(tiles[i]->getX(), tiles[i]->getY()).squaredDistance(centre);
+        if(distance < closestDistance)
+        {
+            closest = tiles[i];
+            closestDistance = distance;
+        }
+    }
+    return closest;
+}
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
@@ -1126,7 +1205,7 @@ void GameMode::handleHotkeys(OIS::KeyCode keycode)
 void GameMode::updateCameraControls(float elapsed)
 {
     CameraManager* camera = ODFrameListener::getSingleton().getCameraManager();
-    const std::function<bool(OIS::KeyCode)> down = [this](OIS::KeyCode key) { return getKeyboard()->isKeyDown(key); };
+    const KeyDownReader down(getKeyboard());
     if(!down(OIS::KC_M))
         mMapKeyDown = false;
     if(cameraInputBlocked())
@@ -1233,7 +1312,7 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
     if(dynamic_cast<MiniMapDrawnFull*>(mMiniMap) != nullptr)
         level = std::max(0, level);
     mMiniMap->setZoomLevel(level);
-    mMiniMap->update(0.5f, mCameraTilesIntersections);
+    mMiniMap->update(MINIMAP_ZOOM_REFRESH_SECONDS, mCameraTilesIntersections);
     return true;
 }
 
@@ -1247,8 +1326,8 @@ void GameMode::updateMapDetail()
     if(!detail->isVisible())
         return;
     const CEGUI::Sizef size = detail->getPixelSize();
-    const float x = std::max(0.0f, std::min(area.getWidth() - size.d_width, mouse.d_x - area.left() + 12.0f));
-    const float y = std::max(0.0f, std::min(area.getHeight() - size.d_height, mouse.d_y - area.top() + 12.0f));
+    const float x = std::max(0.0f, std::min(area.getWidth() - size.d_width, mouse.d_x - area.left() + MAP_DETAIL_CURSOR_OFFSET));
+    const float y = std::max(0.0f, std::min(area.getHeight() - size.d_height, mouse.d_y - area.top() + MAP_DETAIL_CURSOR_OFFSET));
     detail->setPosition(CEGUI::UVector2(CEGUI::UDim(0, x), CEGUI::UDim(0, y)));
     static_cast<MiniMapCamera*>(mMiniMap)->setViewCenter(mFullMap->camera_2dPositionFromClick(
         static_cast<int>(mouse.d_x), static_cast<int>(mouse.d_y)));
@@ -1270,34 +1349,9 @@ void GameMode::focusRoom(RoomType type)
             Tile* first = mGameMap->getTile(x, y);
             if(visited[y * width + x] || first->getTileVisual() != visual || first->getSeat() != owner)
                 continue;
-            std::vector<Tile*> tiles(1, first);
-            visited[y * width + x] = true;
-            Ogre::Vector2 centre = Ogre::Vector2::ZERO;
-            for(size_t i = 0; i < tiles.size(); ++i)
-            {
-                Tile* tile = tiles[i];
-                centre += Ogre::Vector2(tile->getX(), tile->getY());
-                const int dx[] = {-1, 1, 0, 0};
-                const int dy[] = {0, 0, -1, 1};
-                for(int direction = 0; direction < 4; ++direction)
-                {
-                    Tile* neighbour = mGameMap->getTile(tile->getX() + dx[direction], tile->getY() + dy[direction]);
-                    if(neighbour == nullptr || neighbour->getTileVisual() != visual || neighbour->getSeat() != owner)
-                        continue;
-                    const int index = neighbour->getY() * width + neighbour->getX();
-                    if(visited[index])
-                        continue;
-                    visited[index] = true;
-                    tiles.push_back(neighbour);
-                }
-            }
-            centre /= static_cast<Ogre::Real>(tiles.size());
-            Tile* centralTile = *std::min_element(tiles.begin(), tiles.end(), [&centre](Tile* a, Tile* b)
-            {
-                return Ogre::Vector2(a->getX(), a->getY()).squaredDistance(centre) <
-                    Ogre::Vector2(b->getX(), b->getY()).squaredDistance(centre);
-            });
-            centres.emplace_back(centralTile->getX(), centralTile->getY());
+            const std::vector<Tile*> tiles = collectRoomTiles(*mGameMap, first, visual, owner, visited);
+            Tile* centralTile = getTileClosestToCentre(tiles);
+            centres.push_back(Ogre::Vector2(centralTile->getX(), centralTile->getY()));
         }
     }
     if(centres.empty())

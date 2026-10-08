@@ -115,7 +115,9 @@ Ogre::Vector2 MiniMapDrawn::camera_2dPositionFromClick(int xx, int yy)
 
 void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles)
 {
-    mAnimationTime = std::fmod(mAnimationTime + timeSinceLastFrame, 2.0f);
+    advanceAnimation(timeSinceLastFrame);
+    const unsigned int animationPhase = getAnimationPhase();
+    Seat& localPlayerSeat = *mGameMap.getLocalPlayer()->getSeat();
     Ogre::Vector3 vv = mCameraManager.getCameraViewTarget();
     double rotation = mCameraManager.getActiveCameraNode()->getOrientation().getRoll().valueRadians();
     mCamera_2dPosition = Ogre::Vector2(vv.x, vv.y);
@@ -144,8 +146,7 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
                 continue;
             }
 
-            const TileColour colour = colourFromTile(*tile, *mGameMap.getLocalPlayer()->getSeat(),
-                static_cast<unsigned int>(mAnimationTime * 2.0f));
+            const TileColour colour = colourFromTile(*tile, localPlayerSeat, animationPhase);
             drawPixel(ii, jj, colour.colour.r * 255.0f, colour.colour.g * 255.0f, colour.colour.b * 255.0f);
         }
     }

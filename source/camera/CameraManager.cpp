@@ -41,7 +41,6 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
-#include <functional>
 
 //! The camera moving speed factor on Z axis.
 const Ogre::Real ZOOM_SPEED = 4.0;
@@ -732,6 +731,11 @@ bool CameraManager::storeUserView(unsigned int slot)
     return config.saveUserConfig();
 }
 
+void CameraManager::applyPanAcceleration(Ogre::Real& acceleration, Ogre::Real direction) const
+{
+    acceleration = direction * mMoveSpeedAcceleration;
+}
+
 void CameraManager::move(const Direction direction, double aux)
 {
     // NOTE : The camera loses the desired sense of left, right, top, down
@@ -743,11 +747,6 @@ void CameraManager::move(const Direction direction, double aux)
     const bool scaledPan = aux > 0.0;
     const Ogre::Real maxSpeedFactor = scaledPan ?
         static_cast<Ogre::Real>(std::min(aux, 1.0)) : 1.0f;
-    const std::function<void(Ogre::Real&, Ogre::Real)> applyPanAcceleration = [this](Ogre::Real& acceleration, Ogre::Real direction)
-    {
-        const Ogre::Real newAcceleration = direction * mMoveSpeedAcceleration;
-        acceleration = newAcceleration;
-    };
 
     switch (direction)
     {

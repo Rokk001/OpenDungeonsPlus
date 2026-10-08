@@ -255,8 +255,7 @@ bool MiniMapDrawnFull::updateTileState(uint32_t minimapXMin, uint32_t minimapXMa
             Tile* tile = mGameMap.getTile(x, y);
             if(tile == nullptr)
                 continue;
-            const TileColour colour = colourFromTile(*tile, localPlayerSeat,
-                static_cast<unsigned int>(mAnimationTime * 2.0f));
+            const TileColour colour = colourFromTile(*tile, localPlayerSeat, getAnimationPhase());
             animated |= colour.animated;
             if(colour.priority > selected.priority)
                 selected = colour;
@@ -269,9 +268,9 @@ bool MiniMapDrawnFull::updateTileState(uint32_t minimapXMin, uint32_t minimapXMa
 
 void MiniMapDrawnFull::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles)
 {
-    const unsigned int oldPhase = static_cast<unsigned int>(mAnimationTime * 2.0f);
-    mAnimationTime = std::fmod(mAnimationTime + timeSinceLastFrame, 2.0f);
-    if(oldPhase != static_cast<unsigned int>(mAnimationTime * 2.0f))
+    const unsigned int oldPhase = getAnimationPhase();
+    advanceAnimation(timeSinceLastFrame);
+    if(oldPhase != getAnimationPhase())
         for(MiniMapDrawnFullTileStateListener* listener : mTileStateListeners)
             if(listener->mAnimated)
                 listener->fireTileStateChanged();

@@ -37,10 +37,31 @@
 #include <CEGUI/Texture.h>
 #include <CEGUI/Window.h>
 #include <cmath>
-#include <functional>
 
 namespace
 {
+//! Half size in pixels of the dots that draw the dotted line towards the dungeon heart.
+const float DIRECTION_DOT_HALF_SIZE = 1.0f;
+//! Distance in pixels between two dots of the line towards the dungeon heart.
+const float DIRECTION_DOT_SPACING = 5.0f;
+//! Half size in pixels of the dots that draw the outline of the visible camera area.
+const float VIEWPORT_DOT_HALF_SIZE = 0.5f;
+//! Distance in pixels between two dots of the camera area outline.
+const float VIEWPORT_DOT_SPACING = 0.75f;
+
+//! Lowest and highest zoom level of a minimap (negative values show more of the map).
+const int MIN_ZOOM_LEVEL = -3;
+const int MAX_ZOOM_LEVEL = 2;
+
+//! Length in seconds of the colour animation cycle and the number of colour steps per second.
+const Ogre::Real ANIMATION_CYCLE_SECONDS = 2.0f;
+const Ogre::Real ANIMATION_PHASES_PER_SECOND = 2.0f;
+
+//! Colour of solid dirt, also used for unowned claimed tiles.
+const Ogre::ColourValue DIRT_COLOUR(0.36f, 0.18f, 0.05f);
+
+//! \brief Minimap image that clips the map to a circle when requested and draws the camera
+//! area outline and the direction to the dungeon heart above it.
 class MiniMapImage : public CEGUI::BasicImage
 {
 public:
@@ -54,8 +75,8 @@ public:
     bool mCircular = true;
     bool mShowDirection = false;
     std::vector<Ogre::Vector2> mViewport;
-    Ogre::Vector2 mDirectionStart;
-    Ogre::Vector2 mDirectionEnd;
+    Ogre::Vector2 mDirectionStart = Ogre::Vector2::ZERO;
+    Ogre::Vector2 mDirectionEnd = Ogre::Vector2::ZERO;
 
     void render(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
         const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const override
@@ -121,8 +142,9 @@ private:
         const float length = segment.length();
         if(length < 1.0f)
             return;
-        const float halfSize = dotted ? 1.0f : 0.5f;
-        for(float distance = 0.0f; distance <= length; distance += dotted ? 5.0f : 0.75f)
+        const float halfSize = dotted ? DIRECTION_DOT_HALF_SIZE : VIEWPORT_DOT_HALF_SIZE;
+        const float spacing = dotted ? DIRECTION_DOT_SPACING : VIEWPORT_DOT_SPACING;
+        for(float distance = 0.0f; distance <= length; distance += spacing)
         {
             const Ogre::Vector2 dot = start + segment * (distance / length);
             if(mCircular)
@@ -168,12 +190,32 @@ CEGUI::BasicImage& MiniMap::createMiniMapImage(CEGUI::Window* miniMapWindow, con
 
 void MiniMap::setZoomLevel(int level)
 {
-    mZoomLevel = std::max(-3, std::min(2, level));
+    mZoomLevel = std::max(MIN_ZOOM_LEVEL, std::min(MAX_ZOOM_LEVEL, level));
 }
 
 Ogre::Real MiniMap::getZoomScale() const
 {
     return std::ldexp(1.0f, -mZoomLevel);
+}
+
+void MiniMap::advanceAnimation(Ogre::Real elapsed)
+{
+    mAnimationTime = std::fmod(mAnimationTime + elapsed, ANIMATION_CYCLE_SECONDS);
+}
+
+unsigned int MiniMap::getAnimationPhase() const
+{
+    return static_cast<unsigned int>(mAnimationTime * ANIMATION_PHASES_PER_SECOND);
+}
+
+//! \brief Converts a world position into a position relative to the minimap image (0 to 1 on both axes).
+static Ogre::Vector2 projectToMapImage(const Ogre::Vector2& world, const Ogre::Vector2& centre,
+    const Ogre::Vector2& span, Ogre::Real rotation)
+{
+    const Ogre::Vector2 delta = world - centre;
+    const float x = delta.x * std::cos(rotation) + delta.y * std::sin(rotation);
+    const float y = -delta.x * std::sin(rotation) + delta.y * std::cos(rotation);
+    return Ogre::Vector2(0.5f + x / span.x, 0.5f - y / span.y);
 }
 
 void MiniMap::updateMapOverlay(CEGUI::Window* window, GameMap& map,
@@ -183,21 +225,14 @@ void MiniMap::updateMapOverlay(CEGUI::Window* window, GameMap& map,
         &CEGUI::ImageManager::getSingleton().get(window->getProperty("Image")));
     if(image == nullptr)
         return;
-    const std::function<Ogre::Vector2(const Ogre::Vector2&)> project = [&centre, &span, rotation](const Ogre::Vector2& world)
-    {
-        const Ogre::Vector2 delta = world - centre;
-        const float x = delta.x * std::cos(rotation) + delta.y * std::sin(rotation);
-        const float y = -delta.x * std::sin(rotation) + delta.y * std::cos(rotation);
-        return Ogre::Vector2(0.5f + x / span.x, 0.5f - y / span.y);
-    };
     image->mViewport.clear();
     for(const Ogre::Vector3& corner : cornerTiles)
-        image->mViewport.push_back(project(Ogre::Vector2(corner.x, corner.y)));
+        image->mViewport.push_back(projectToMapImage(Ogre::Vector2(corner.x, corner.y), centre, span, rotation));
     image->mShowDirection = false;
     if(image->mCircular && getZoomLevel() <= 0)
     {
         const Ogre::Vector3 target = ODFrameListener::getSingleton().getCameraManager()->getCameraViewTarget();
-        image->mDirectionStart = project(Ogre::Vector2(target.x, target.y));
+        image->mDirectionStart = projectToMapImage(Ogre::Vector2(target.x, target.y), centre, span, rotation);
         Seat* owner = map.getLocalPlayer()->getSeat();
         for(int y = 0; y < map.getMapSizeY() && !image->mShowDirection; ++y)
             for(int x = 0; x < map.getMapSizeX(); ++x)
@@ -205,7 +240,7 @@ void MiniMap::updateMapOverlay(CEGUI::Window* window, GameMap& map,
                 Tile* tile = map.getTile(x, y);
                 if(tile->getEverVisible() && tile->getSeat() == owner && tile->getTileVisual() == TileVisual::dungeonTempleRoom)
                 {
-                    image->mDirectionEnd = project(Ogre::Vector2(x, y));
+                    image->mDirectionEnd = projectToMapImage(Ogre::Vector2(x, y), centre, span, rotation);
                     image->mShowDirection = true;
                     break;
                 }
@@ -236,7 +271,7 @@ MiniMap::TileColour MiniMap::colourFromTile(Tile& tile, Seat& playerSeat, unsign
         }
         else
         {
-            result.colour = owner == nullptr ? Ogre::ColourValue(0.36f, 0.18f, 0.05f) : owner->getColorValue();
+            result.colour = owner == nullptr ? DIRT_COLOUR : owner->getColorValue();
             if(visual == TileVisual::dungeonTempleRoom)
                 result.colour = result.colour * 0.65f + Ogre::ColourValue::White * 0.35f;
             else if(visual == TileVisual::claimedFull)
@@ -254,7 +289,7 @@ MiniMap::TileColour MiniMap::colourFromTile(Tile& tile, Seat& playerSeat, unsign
                 result.colour = Ogre::ColourValue(0.82f, 0.70f, 0.50f);
                 break;
             case TileVisual::dirtFull:
-                result.colour = Ogre::ColourValue(0.36f, 0.18f, 0.05f);
+                result.colour = DIRT_COLOUR;
                 break;
             case TileVisual::rockFull:
                 result.colour = Ogre::ColourValue(0.20f, 0.10f, 0.04f);

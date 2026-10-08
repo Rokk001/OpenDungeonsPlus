@@ -27,17 +27,32 @@ bool Keyboard::isModifierDown(OIS::Keyboard::Modifier code)
 #endif
 }
 
+#ifdef OD_USE_SFML_WINDOW
+namespace
+{
+typedef std::array<CEGUI::Key::Scan, sf::Keyboard::KeyCount> SfmlKeyMap;
+
+//! \brief Returns the SFML to OIS key table, built on first use.
+const SfmlKeyMap& getSfmlKeyMap()
+{
+    static SfmlKeyMap keyMap = SfmlKeyMap();
+    static bool initialised = false;
+    if(!initialised)
+    {
+        initKeyTable(keyMap);
+        initialised = true;
+    }
+    return keyMap;
+}
+}
+#endif
+
 bool Keyboard::isKeyDown(OIS::KeyCode code)
 {
 #ifdef OD_USE_SFML_WINDOW
     if(code == OIS::KC_UNASSIGNED)
         return false;
-    static const std::array<CEGUI::Key::Scan, sf::Keyboard::KeyCount> keyMap = []
-    {
-        std::array<CEGUI::Key::Scan, sf::Keyboard::KeyCount> keys{};
-        initKeyTable(keys);
-        return keys;
-    }();
+    const SfmlKeyMap& keyMap = getSfmlKeyMap();
     for(size_t i = 0; i < keyMap.size(); ++i)
         if(static_cast<OIS::KeyCode>(keyMap[i]) == code)
             return sf::Keyboard::isKeyPressed(static_cast<sf::Keyboard::Key>(i));

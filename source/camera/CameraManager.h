@@ -204,6 +204,13 @@ private:
     //! \brief Moves the position so that the ground point the camera looks at from it
     //! stays within the map.
     void clampToMap(Ogre::Vector3& position) const;
+
+    //! \brief Sets one axis of the pan acceleration to the given direction (-1 or 1)
+    //! scaled with the current move speed acceleration.
+    void applyPanAcceleration(Ogre::Real& acceleration, Ogre::Real direction) const;
+
+    //! \brief Replaces the camera orientation while keeping the ground point
+    //! the camera looks at in place.
     void setViewOrientation(const Ogre::Quaternion& root, const Ogre::Quaternion& tilt);
 
     //! \brief HermiteCatmullSpline members for each axices.
