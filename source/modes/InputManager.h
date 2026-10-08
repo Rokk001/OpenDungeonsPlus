@@ -73,6 +73,8 @@ public:
     ~InputManager();
 
     void setWidthAndHeight(int width, int height);
+    //! \brief Moves the system cursor, the OIS mouse state and the GUI cursor to the given
+    //! window position (clamped to the window) and drops motion accumulated before the call.
     void setMousePosition(int x, int y);
     void setCurrentAMode(AbstractApplicationMode& mode);
     void handleSFMLEvent(const sf::Event& evt);
