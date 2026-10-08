@@ -243,6 +243,7 @@ private:
     void colourizeEntity(Ogre::Entity* ent, const Seat* seat, bool markedForDigging, bool playerHasVision);
 
     //! \brief Maintain local illumination for the visible room tiles around a tile.
+    //! \param removing true when the tile is being destroyed and must not count as a lit room tile.
     void rrRefreshRoomLight(const Tile& tile, bool removing = false);
 
     //! \brief Makes the material be transparent with the given opacity (0.0f - 1.0f)

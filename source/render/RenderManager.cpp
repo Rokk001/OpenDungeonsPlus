@@ -98,6 +98,23 @@ const Ogre::Real RenderManager::DRAGGABLE_NODE_HEIGHT = 3.0f;
 // so the floor next to a room doorway is not lit brighter than claimed ground elsewhere.
 const uint32_t ROOM_LIGHT_MASK = 0x2;
 
+// Light mask of entities that every light may affect (Ogre's default).
+const uint32_t ALL_LIGHTS_MASK = 0xFFFFFFFF;
+
+// A room patch light covers ROOM_LIGHT_PATCH_SIZE x ROOM_LIGHT_PATCH_SIZE tiles.
+const int ROOM_LIGHT_PATCH_SIZE = 3;
+
+// Shape of the room patch light: it ends after ROOM_LIGHT_RANGE world units, the three factors are
+// the constant, linear and quadratic distance falloff. The light hangs ROOM_LIGHT_HEIGHT above
+// the floor and glows in a warm colour, scaled by the share of room tiles in its patch.
+const Ogre::Real ROOM_LIGHT_RANGE = 6.0f;
+const Ogre::Real ROOM_LIGHT_ATTENUATION_CONSTANT = 1.0f;
+const Ogre::Real ROOM_LIGHT_ATTENUATION_LINEAR = 0.09f;
+const Ogre::Real ROOM_LIGHT_ATTENUATION_QUADRATIC = 0.032f;
+const Ogre::Real ROOM_LIGHT_HEIGHT = 3.0f;
+const Ogre::ColourValue ROOM_LIGHT_COLOUR = Ogre::ColourValue(0.9f, 0.8f, 0.6f);
+const Ogre::Real ROOM_LIGHT_INTENSITY = 0.55f;
+
 const int PERLIN_NOISE_TEXTURE_SIZE =  4096;
 
 
@@ -975,7 +992,7 @@ void RenderManager::setupFogMaterial(Ogre::TexturePtr myTexture)
 void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
 {
     // Share a light across a small patch, rather than allocating one per tile.
-    const int patchSize = 3;
+    const int patchSize = ROOM_LIGHT_PATCH_SIZE;
     const int originX = tile.getX() / patchSize * patchSize;
     const int originY = tile.getY() / patchSize * patchSize;
     const std::string name = "RoomLight_" + Helper::toString(originX) + "_" + Helper::toString(originY);
@@ -990,6 +1007,7 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
                candidate->getEntityNode() == nullptr || !candidate->getLocalPlayerHasVision())
                 continue;
             TileVisual visual = candidate->getTileVisual();
+            // The room visuals are the TileVisual values from dungeonTempleRoom up to the end of the enum.
             if(visual < TileVisual::dungeonTempleRoom || visual >= TileVisual::countTileVisual)
                 continue;
             position += Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f);
@@ -1019,17 +1037,18 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
         light->setType(Ogre::Light::LT_POINT);
         light->setCastShadows(false);
         // A local room fill complements the existing cursor and authored lights.
-        light->setAttenuation(6.0f, 1.0f, 0.09f, 0.032f);
+        light->setAttenuation(ROOM_LIGHT_RANGE, ROOM_LIGHT_ATTENUATION_CONSTANT,
+            ROOM_LIGHT_ATTENUATION_LINEAR, ROOM_LIGHT_ATTENUATION_QUADRATIC);
         light->setSpecularColour(Ogre::ColourValue::Black);
         light->setLightMask(ROOM_LIGHT_MASK);
         Ogre::SceneNode* node = mLightSceneNode->createChildSceneNode(name + "_node");
         node->attachObject(light);
     }
     position /= static_cast<Ogre::Real>(count);
-    position.z = 3.0f;
+    position.z = ROOM_LIGHT_HEIGHT;
     light->getParentSceneNode()->setPosition(position);
     const Ogre::Real density = static_cast<Ogre::Real>(count) / (patchSize * patchSize);
-    light->setDiffuseColour(Ogre::ColourValue(0.9f, 0.8f, 0.6f) * (0.55f * density));
+    light->setDiffuseColour(ROOM_LIGHT_COLOUR * (ROOM_LIGHT_INTENSITY * density));
 }
 
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
@@ -1194,7 +1213,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         if(tile.getTileVisual() == TileVisual::claimedGround)
             tileMeshEnt->setLightMask(~ROOM_LIGHT_MASK);
         else
-            tileMeshEnt->setLightMask(0xFFFFFFFF);
+            tileMeshEnt->setLightMask(ALL_LIGHTS_MASK);
         // We replace the material if required by the tileset
         if(!tileSetValue.getMaterialName().empty() )
             tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
