@@ -21,9 +21,12 @@
 #include "utils/LogManager.h"
 
 #include <cstdlib>
+#include <string>
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/widgets/PushButton.h>
 
+//! Community page opened by the button of the exit page.
+static const std::string COMMUNITY_LINK = "https://discord.gg/K2JPXuchZV";
 
 AdvertMode::AdvertMode(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::ADVERTISMENT)
@@ -70,12 +73,13 @@ void AdvertMode::activate()
 bool AdvertMode::showWWW()
 {
 #if defined(_WIN32)
-    system("start \"\" \"https://discord.gg/K2JPXuchZV\"");
+    const std::string command = "start \"\" \"" + COMMUNITY_LINK + "\"";
 #elif defined(__APPLE__)
-    system("open 'https://discord.gg/K2JPXuchZV'");
+    const std::string command = "open '" + COMMUNITY_LINK + "'";
 #else
-    system("xdg-open 'https://discord.gg/K2JPXuchZV'");
+    const std::string command = "xdg-open '" + COMMUNITY_LINK + "'";
 #endif
+    system(command.c_str());
     ODFrameListener::getSingletonPtr()->requestExit();
     return true;
 }
