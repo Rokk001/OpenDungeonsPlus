@@ -263,6 +263,8 @@ public:
     void rrPlayDigAnimation();
     //! \brief Draws tile previews with equally thick filled borders for construction and digging.
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false);
+    //! \brief Starts a short particle burst on each of the given tiles. The bursts remove
+    //! themselves after a fixed time. Null entries are skipped.
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
 
     //! \brief Creates a free-standing particle effect that stays until rrDestroyFreeParticleEffect().
@@ -831,13 +833,17 @@ private:
     void startCreatureGetUpAnimation(Creature* creature);
     void restoreCreatureGroundPose(Creature* creature);
     void setCreatureDropGroundAnimation(Creature* creature);
+    //! \brief One running room construction burst: the scene node and particle system
+    //! created for a tile, and the time left until they are destroyed.
     struct RoomConstructionEffect
     {
         std::string mNodeName;
         std::string mParticleName;
         Ogre::Real mRemainingTime;
     };
+    //! Bursts that are currently running, updated every frame.
     std::vector<RoomConstructionEffect> mRoomConstructionEffects;
+    //! Counter that makes the scene node and particle system names of each burst unique.
     uint64_t mRoomConstructionEffectNumber = 0;
 
     void clearCreatureCombatEffects(Creature* creature = nullptr);
@@ -910,7 +916,11 @@ private:
     float getTreasuryPourRise(Creature* creature) const;
     void clearTreasuryEffects();
     void cancelCreatureStep(Creature* creature = nullptr);
+    //! \brief Destroys all running room construction bursts.
     void clearRoomConstructionEffects();
+    //! \brief Destroys the particle system and the scene node of one burst. Names that
+    //! no longer exist in the scene are ignored.
+    void destroyRoomConstructionEffect(const RoomConstructionEffect& effect);
     void clearCreatureDecay(Creature* creature);
     std::map<Creature*, std::vector<Ogre::MaterialPtr>> mCreatureDecayMaterials;
 
