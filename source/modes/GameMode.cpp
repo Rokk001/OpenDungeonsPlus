@@ -72,8 +72,11 @@ const std::string TEXT_SEAT_ID_PREFIX = "TextSeat";
 const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
 const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
+//! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 
+//! Returns the autoscroll strength for one screen axis: 0 away from the border, growing linearly
+//! to 1 on the outermost pixel. minimumEdge selects the left/top border instead of the right/bottom one.
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
     if(screenSize <= 1)
@@ -398,7 +401,7 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 
     if (!directionKeyPressed && config.getInputValue(Config::AUTOSCROLL, "No", false) == "Yes")
     {
-        // The bottom edge is always covered by the game UI, so it is not blocked by it
+        // The game UI covers the bottom of the screen, so the bottom edge scrolls even over the UI
         const bool mouseOverGui = isMouseWheelOnCEGUIWindow();
         const double leftIntensity = mouseOverGui ? 0.0 : getAutoscrollIntensity(arg.state.X.abs, arg.state.width, true);
         const double rightIntensity = mouseOverGui ? 0.0 : getAutoscrollIntensity(arg.state.X.abs, arg.state.width, false);
