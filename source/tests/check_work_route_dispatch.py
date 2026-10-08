@@ -18,6 +18,7 @@ code = r'''
 #include <deque>
 #include <string>
 #include <vector>
+#include <functional>
 #include <iostream>
 enum class GameEntityType {creature,other};
 struct Creature;
@@ -32,7 +33,7 @@ struct ODServer {
  std::vector<ServerNotification*> sent;
  static ODServer& getSingleton(){static ODServer instance;return instance;}
  void queueServerNotification(ServerNotification* n){sent.push_back(n);}
- void clear(){for(auto* n:sent)delete n;sent.clear();}
+ void clear(){for(ServerNotification* n:sent)delete n;sent.clear();}
  ~ODServer(){clear();}
 };
 struct MovableGameEntity {
@@ -45,7 +46,7 @@ struct MovableGameEntity {
 };
 struct Creature:MovableGameEntity {};
 METHOD
-int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cout<<"FAIL "<<why<<'\n';}};
+int main(){int checks=0,failures=0;const std::function<void(bool,const char*)> check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cout<<"FAIL "<<why<<'\n';}};
  Seat viewer;
  for(bool server:{false,true})for(bool validated:{false,true})for(bool empty:{false,true}){
   Creature c;c.server=server;c.mSeatsWithVisionNotified={&viewer};refineCalls=0;
@@ -55,7 +56,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
   check(c.mWalkQueue.size()==route.size(),"queue preserves route length");
   if(!empty)check(c.mWalkQueue.back()==route.back()+((server&&!validated)?Ogre::Vector2(1,1):Ogre::Vector2::ZERO),"validated endpoint is not moved by dispatch");
   check(c.animation==(empty?"Idle":"Walk"),"walk and immediate end animations are preserved");
-  auto& sent=ODServer::getSingleton().sent;
+  std::vector<ServerNotification*>& sent=ODServer::getSingleton().sent;
   check(sent.size()==size_t(server),"only server sends route notifications");
   if(server)check(sent.back()->mPacket.flags.size()==3&&!sent.back()->mPacket.flags[0]&&sent.back()->mPacket.flags[1]&&!sent.back()->mPacket.flags[2],"validated and normally refined paths preserve flags without jitter");
   ODServer::getSingleton().clear();
