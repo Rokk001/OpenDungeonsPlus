@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$taskRoot = 'C:\Users\mario\od-deps'
+$taskRoot = Join-Path $env:USERPROFILE 'od-deps'
 $taskVsPath = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools'
 Import-Module "$taskVsPath\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
 Enter-VsDevShell -VsInstallPath $taskVsPath -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
