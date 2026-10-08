@@ -7422,6 +7422,26 @@ void RenderManager::rrPlayDigAnimation()
     mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "DigSwing", false);
 }
 
+// Lift of the borders above the top of the rendered wall.
+static const float WALL_BORDER_LIFT = 0.02f;
+
+//! \brief Gets the height at which the preview border of a full tile is drawn.
+//! \param sceneManager The scene manager holding the rendered tile mesh.
+//! \param tile The full tile. The revealed tile mesh is used, or else the fog of war mesh.
+//! \param height Receives the top of the rendered wall plus WALL_BORDER_LIFT.
+//! \return false if the tile has no mesh, in which case height is not modified.
+static bool getWallPreviewHeight(Ogre::SceneManager* sceneManager, Tile* tile, float& height)
+{
+    Ogre::MovableObject* wall = tile->getFogOfWarMesh();
+    const std::string meshName = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
+    if(sceneManager->hasEntity(meshName))
+        wall = sceneManager->getEntity(meshName);
+    if(wall == nullptr)
+        return false;
+    height = wall->getWorldBoundingBox(true).getMaximum().z + WALL_BORDER_LIFT;
+    return true;
+}
+
 //! \brief Draws selection borders, sharing the filled frame width for construction and digging.
 //! A dig selection (hover or drag) is flat: only the top face of a tile is framed, never a 3D block.
 void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
@@ -7460,7 +7480,7 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
                     surface = mSceneManager->getEntity(meshName);
             }
             if(surface != nullptr)
-                z = std::max(z, surface->getWorldBoundingBox(true).getMaximum().z + 0.02f);
+                z = std::max(z, surface->getWorldBoundingBox(true).getMaximum().z + WALL_BORDER_LIFT);
         }
         const Ogre::Vector3 corners[] = {
             Ogre::Vector3(minX - 0.5f, minY - 0.5f, z),
@@ -7519,18 +7539,10 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
         const float x = static_cast<float>(tile->getX());
         const float y = static_cast<float>(tile->getY());
         float z = 0.04f;
-        if(tile->isFullTile())
-        {
-            // Use the rendered wall, including the existing unrevealed tile
-            // representation, so the outline cannot sit inside a taller mesh.
-            Ogre::MovableObject* wall = tile->getFogOfWarMesh();
-            const std::string meshName = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
-            if(mSceneManager->hasEntity(meshName))
-                wall = mSceneManager->getEntity(meshName);
-            if(wall == nullptr)
-                continue;
-            z = wall->getWorldBoundingBox(true).getMaximum().z + 0.02f;
-        }
+        // Use the rendered wall, including the existing unrevealed tile
+        // representation, so the outline cannot sit inside a taller mesh.
+        if(tile->isFullTile() && !getWallPreviewHeight(mSceneManager, tile, z))
+            continue;
         const Ogre::Vector3 corners[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
             {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
         for(int i = 0; i < 4; ++i)
@@ -7566,16 +7578,8 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             const float x = static_cast<float>(tile->getX());
             const float y = static_cast<float>(tile->getY());
             float z = 0.045f;
-            if(tile->isFullTile())
-            {
-                Ogre::MovableObject* wall = tile->getFogOfWarMesh();
-                const std::string meshName = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
-                if(mSceneManager->hasEntity(meshName))
-                    wall = mSceneManager->getEntity(meshName);
-                if(wall == nullptr)
-                    continue;
-                z = wall->getWorldBoundingBox(true).getMaximum().z + 0.02f;
-            }
+            if(tile->isFullTile() && !getWallPreviewHeight(mSceneManager, tile, z))
+                continue;
             const Ogre::Vector3 outer[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
                 {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
             const Ogre::Vector3 inner[] = {{x-0.44f,y-0.44f,z}, {x+0.44f,y-0.44f,z},
