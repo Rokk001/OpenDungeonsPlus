@@ -4297,9 +4297,18 @@ void GameMode::updateSelectedTiles()
 {
     const bool building = mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
         mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap;
+    // Selling is a room demolition as soon as the preview contains a room tile.
+    bool previewHasRoom = false;
+    for(Tile* tile : mPreviewTiles)
+    {
+        if(tile->getIsRoom())
+        {
+            previewHasRoom = true;
+            break;
+        }
+    }
     const bool roomDemolition = mPlayerSelection.getCurrentAction() == SelectedAction::destroyRoom ||
-        (mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding &&
-         std::any_of(mPreviewTiles.begin(), mPreviewTiles.end(), [](Tile* tile) { return tile->getIsRoom(); }));
+        (mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding && previewHasRoom);
     const bool digging = mPlayerSelection.getCurrentAction() == SelectedAction::none ||
         mPlayerSelection.getCurrentAction() == SelectedAction::selectTile;
     bool rectangle = mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
