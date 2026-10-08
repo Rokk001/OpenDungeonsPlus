@@ -182,6 +182,7 @@ public:
     bool rrIsIdleHandAnimationPlaying() const;
     void rrCancelIdleHandAnimation();
     void rrPlayDigAnimation();
+    //! Draws the outline of the given tiles; with construction set, floor tiles also get a filled border ribbon.
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
     void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
