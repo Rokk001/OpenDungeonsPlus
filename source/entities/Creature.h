@@ -409,6 +409,8 @@ public:
     void slap() override;
 
     void fireCreatureSound(CreatureSound sound);
+    //! \brief Tells the clients that see this creature that it was hit, so they can show the reaction.
+    //! weaponClash is true when both fighters carry weapons, bodyDamage when the hit did damage.
     void fireCombatImpact(bool weaponClash, bool bodyDamage,
         const Ogre::Vector3& attackerPosition);
 
