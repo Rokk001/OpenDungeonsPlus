@@ -90,11 +90,20 @@ public:
     //! \brief Move CEGUI rendering to another Ogre render target.
     void setRenderTarget(Ogre::RenderTarget& renderTarget);
 
+    //! The range and the step of the user selectable UI scale in percent.
     enum
     {
         MIN_UI_SCALE_PERCENT = 80,
-        MAX_UI_SCALE_PERCENT = 120
+        MAX_UI_SCALE_PERCENT = 120,
+        UI_SCALE_STEP_PERCENT = 10
     };
+
+    //! \brief Reads a UI scale percentage from the config text. Invalid text gives 100.
+    //! The result is limited to the range from MIN_UI_SCALE_PERCENT to MAX_UI_SCALE_PERCENT.
+    static float parseScalePercent(const std::string& text);
+
+    //! \brief Limits a UI scale percentage to the supported range. Not a number gives 100.
+    static float clampScalePercent(float scalePercent);
 
     //! \brief Registers a window tree for resolution-independent scaling.
     void registerWindowHierarchy(CEGUI::Window* window);
@@ -169,6 +178,7 @@ public:
     bool playButtonClickSound(const CEGUI::EventArgs& e = {});
 
 private:
+    //! \brief The layout values of a window as loaded, from which its scaled values are computed.
     struct WindowScaleData
     {
         CEGUI::URect area;
@@ -181,8 +191,11 @@ private:
     };
 
     std::map<guiSheet, CEGUI::Window*> mSheets;
+
+    //! \brief The windows that follow the GUI scale, with their original layout values.
     std::map<CEGUI::Window*, WindowScaleData> mScaledWindows;
 
+    //! \brief The scale selected by the user as factor (1.0 is 100%). It is combined with the scale from the resolution.
     float mUserScale;
 
     CEGUI::Event::ScopedConnection mDisplaySizeChangedConnection;
@@ -190,11 +203,22 @@ private:
 
     SoundEffectsManager* mSoundEffectsManager;
 
+    //! \brief Applies the scale again when the display size changes.
     bool onDisplaySizeChanged(const CEGUI::EventArgs& e);
+
+    //! \brief Forgets a destroyed window.
     bool onWindowDestroyed(const CEGUI::EventArgs& e);
+
+    //! \brief Remembers the layout values of the window and of all its children that are not registered yet.
     void registerWindow(CEGUI::Window* window);
+
+    //! \brief Scales the fonts, the images and all registered windows for the display size and the user scale.
     void applyScale(const CEGUI::Sizef& displaySize);
-    void applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale);
+
+    //! \brief Scales one window from its original layout values by the given factor.
+    void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale);
+
+    //! \brief Sets the native resolution of the fonts and of the scaled images for the display size and the user scale.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 

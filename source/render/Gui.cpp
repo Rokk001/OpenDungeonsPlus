@@ -44,11 +44,15 @@
 
 namespace
 {
+//! Resolution the layout files and images are designed for. The GUI scales relative to it.
 const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
+
+//! Resolution the fonts are designed for.
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
 
+//! Scales only the absolute part (offset) of a dimension; the relative part follows the parent window.
 void scaleDimension(CEGUI::UDim& dimension, float scale)
 {
     dimension.d_offset *= scale;
@@ -72,15 +76,22 @@ CEGUI::USize scaleSize(const CEGUI::USize& size, float scale)
     return scaled;
 }
 
+bool hasPrefix(const std::string& text, const std::string& prefix)
+{
+    return text.compare(0, prefix.size(), prefix) == 0;
+}
+
+//! Whether the image belongs to one of the image sets that follow the GUI scale.
 bool shouldScaleImage(const CEGUI::String& ceguiName)
 {
     const std::string name(ceguiName.c_str());
-    return name.compare(0, 17, "OpenDungeonsSkin/") == 0
-        || name.compare(0, 18, "OpenDungeonsIcons/") == 0
-        || name.compare(0, 17, "ODMainMenuButton/") == 0
-        || name.compare(0, 7, "ODLogo/") == 0;
+    return hasPrefix(name, "OpenDungeonsSkin/")
+        || hasPrefix(name, "OpenDungeonsIcons/")
+        || hasPrefix(name, "ODMainMenuButton/")
+        || hasPrefix(name, "ODLogo/");
 }
 
+//! Scales the w: and h: values of the image-size tags in a formatted text.
 std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale)
 {
     std::string text(ceguiText.c_str());
@@ -138,13 +149,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
     OD_LOG_INF("CEGUI::SchemeManager created");
 
-    float configuredScalePercent = 100.0f;
-    std::istringstream scaleParser(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false));
-    if(!(scaleParser >> configuredScalePercent))
-        configuredScalePercent = 100.0f;
-    configuredScalePercent = std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), configuredScalePercent));
-    mUserScale = configuredScalePercent / 100.0f;
+    mUserScale = parseScalePercent(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false)) / 100.0f;
     updateResourceScaling(renderer.getDisplaySize());
 
     // We want Ogre overlays to be displayed in front of CEGUI. According to
@@ -265,14 +270,29 @@ void Gui::registerWindow(CEGUI::Window* window)
         registerWindow(window->getChildAtIdx(i));
 }
 
-void Gui::setUserScalePercent(float scalePercent)
+float Gui::clampScalePercent(float scalePercent)
 {
+    // A NaN is the only value that differs from itself.
     if(scalePercent != scalePercent)
         scalePercent = 100.0f;
 
-    scalePercent = std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
+    return std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
         std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), scalePercent));
-    mUserScale = scalePercent / 100.0f;
+}
+
+float Gui::parseScalePercent(const std::string& text)
+{
+    float scalePercent = 100.0f;
+    std::istringstream parser(text);
+    if(!(parser >> scalePercent))
+        scalePercent = 100.0f;
+
+    return clampScalePercent(scalePercent);
+}
+
+void Gui::setUserScalePercent(float scalePercent)
+{
+    mUserScale = clampScalePercent(scalePercent) / 100.0f;
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
@@ -299,12 +319,12 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     updateResourceScaling(displaySize);
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
-        applyScale(scaledWindow.first, scaledWindow.second, scale);
+        applyScaleToWindow(scaledWindow.first, scaledWindow.second, scale);
 
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 
-void Gui::applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale)
+void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale)
 {
     window->setMinSize(scaleSize(data.minSize, scale));
     window->setMaxSize(scaleSize(data.maxSize, scale));
