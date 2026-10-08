@@ -180,6 +180,7 @@ public:
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
     void rrCreateCreatureCombatImpact(Creature* creature, bool weaponClash,
         bool bodyDamage, const Ogre::Vector3& attackerPosition);
+    //! \brief Attaches the chicken that a creature starts to eat to its feeding animation.
     void rrSetFeedingChicken(Creature* creature, MovableGameEntity* chicken,
         const Ogre::Vector3& position);
 
@@ -302,6 +303,7 @@ private:
     uint64_t mCreatureCombatEffectNumber = 0;
     std::map<Creature*, uint32_t> mCreatureAttackVariants;
 
+    //! \brief How a creature eats a chicken; chosen from its mesh and selects the generated movement.
     enum class CreatureFeedingStyle
     {
         peck,
@@ -312,24 +314,33 @@ private:
         coil
     };
 
+    //! \brief Rest pose of a bone that is moved by hand while a creature reaches for the chicken.
     struct CreatureFeedingBone
     {
         Ogre::Bone* mBone;
         Ogre::Vector3 mPosition;
         Ogre::Quaternion mOrientation;
+        //! Whether the bone was manually controlled before the feeding, to restore it afterwards.
         bool mWasManual;
+        //! Bone whose movement this bone copies (second rig of a mesh), or null.
         Ogre::Bone* mDriver = nullptr;
         Ogre::Vector3 mScale = Ogre::Vector3::UNIT_SCALE;
     };
+    //! \brief Arm or leg of a creature that reaches for the chicken with its hands.
     struct CreatureFeedingLimb
     {
         Ogre::Bone* mUpper;
         Ogre::Bone* mLower;
+        //! Hand or foot.
         Ogre::Bone* mTip;
+        //! Point that has to reach the target, in the space of the lower bone.
         Ogre::Vector3 mTipOffset;
+        //! World position of that point before the feeding.
         Ogre::Vector3 mRestTip;
+        //! Offset from the tip bone to where the chicken is grasped, in the space of the tip bone.
         Ogre::Vector3 mGripOffset = Ogre::Vector3::ZERO;
     };
+    //! \brief State of a creature that is eating a chicken.
     struct CreatureFeedingAnimation
     {
         Creature* mCreature;
@@ -338,6 +349,7 @@ private:
         Ogre::Vector3 mBasePosition;
         Ogre::Quaternion mBaseOrientation;
         Ogre::Vector3 mBaseScale;
+        //! Seconds since the feeding started.
         Ogre::Real mElapsed;
         CreatureFeedingStyle mStyle;
         Ogre::AnimationState* mAnimation;
@@ -345,7 +357,9 @@ private:
         Ogre::Entity* mChickenEntity;
         Ogre::Vector3 mChickenStart;
         Ogre::Vector3 mChickenScale;
+        //! Bone that carries the mouth, or null.
         Ogre::Bone* mHead;
+        //! Number of feather bursts shown so far.
         unsigned int mFeatherBursts;
         std::vector<CreatureFeedingBone> mReachBones;
         std::vector<Ogre::Bone*> mRoots;
@@ -355,6 +369,7 @@ private:
     };
     std::vector<CreatureFeedingAnimation> mCreatureFeedingAnimations;
 
+    //! \brief Short feather particle effect shown while a chicken is eaten.
     struct ChickenFeatherEffect
     {
         Ogre::SceneNode* mNode;
@@ -362,6 +377,7 @@ private:
         Ogre::Real mRemainingTime;
     };
     std::vector<ChickenFeatherEffect> mChickenFeatherEffects;
+    //! Counter that makes the names of the feeding scene objects unique.
     uint64_t mChickenFeatherEffectNumber = 0;
 
     struct CreatureDropAnimation
@@ -417,9 +433,16 @@ private:
     uint64_t mRoomConstructionEffectNumber = 0;
 
     void clearCreatureCombatEffects(Creature* creature = nullptr);
+    //! \brief Returns how often a creature of the style chews during the feeding animation.
+    static Ogre::Real getCreatureFeedingChewCount(CreatureFeedingStyle style);
+    //! \brief Starts the feeding animation; the chicken is added later by rrSetFeedingChicken().
     void startCreatureFeedingAnimation(Creature* creature, Ogre::Entity* entity);
+    //! \brief Finds the arms, legs and spine of the creature and takes over their bones; creatures
+    //! without a complete rig keep the plain feeding animation.
     void prepareCreatureFeedingReach(CreatureFeedingAnimation& feeding);
+    //! \brief Poses the crouching creature for the given progress (0 to 1) and returns where its hands hold the chicken.
     Ogre::Vector3 updateCreatureFeedingReach(CreatureFeedingAnimation& feeding, Ogre::Real progress);
+    //! \brief Ends the feeding animation of the given creature, or of all creatures if null, and restores the bones.
     void cancelCreatureFeedingAnimation(Creature* creature = nullptr);
     void createChickenFeatherEffect(const Ogre::Vector3& position);
     void clearChickenFeatherEffects();
