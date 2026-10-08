@@ -78,9 +78,11 @@
 #include <Overlay/OgreOverlaySystem.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
 
+#include <cmath>
 #include <sstream>
 #include <string>
-#include <functional>
+#include <utility>
+#include <vector>
 
 template<> RenderManager* Ogre::Singleton<RenderManager>::msSingleton = nullptr;
 
@@ -102,6 +104,14 @@ const int PERLIN_NOISE_TEXTURE_SIZE =  4096;
 
 namespace
 {
+//! Length of the hand pose transition and of the dig swing (four frames at 30 fps).
+const Ogre::Real HAND_ANIMATION_DURATION = 4.0f / 30.0f;
+//! Side length in pixels of the tool atlas textures.
+const float HAND_TOOL_ATLAS_SIZE = 128.0f;
+//! Height above the floor of the tile preview outline, and its distance above a wall top.
+const float TILE_PREVIEW_FLOOR_HEIGHT = 0.04f;
+const float TILE_PREVIEW_WALL_MARGIN = 0.02f;
+
 void createKeeperHandPoses(Ogre::Entity* hand)
 {
     Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
@@ -145,7 +155,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
         if(!hand->hasAnimationState(pose))
             hand->getAllAnimationStates()->createAnimationState(pose, 0, 1.0f);
     }
-    const Ogre::Real duration = 4.0f / 30.0f;
+    const Ogre::Real duration = HAND_ANIMATION_DURATION;
     if(!skeleton->hasAnimation("PointTransition"))
     {
         Ogre::Animation* transition = skeleton->createAnimation("PointTransition", duration);
@@ -174,7 +184,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
 void createKeeperHandDigAnimation(Ogre::Entity* hand)
 {
     Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
-    const Ogre::Real duration = 4.0f / 30.0f;
+    const Ogre::Real duration = HAND_ANIMATION_DURATION;
     if(!skeleton->hasAnimation("DigSwing"))
     {
         const Ogre::Animation* grip = skeleton->getAnimation("Dig");
@@ -227,26 +237,43 @@ void alignKeeperHandPickaxePointer(Ogre::Entity* hand, Ogre::AnimationState* ani
     hand->_updateAnimation();
 }
 
+//! Adds one coloured line segment to a line list in progress.
+void addPreviewLine(Ogre::ManualObject* preview, const Ogre::Vector3& from, const Ogre::Vector3& to,
+    const Ogre::ColourValue& colour)
+{
+    preview->position(from);
+    preview->colour(colour);
+    preview->position(to);
+    preview->colour(colour);
+}
+
+//! Adds a texture coordinate inside textureArea, with u and v in [0, 1] across that area.
+void addAtlasTextureCoord(Ogre::ManualObject* mesh, const Ogre::FloatRect& textureArea, float u, float v)
+{
+    mesh->textureCoord(textureArea.left + u * textureArea.width(),
+        textureArea.top + v * textureArea.height());
+}
+
 void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>& points,
     float depth, const Ogre::ColourValue& colour, const Ogre::FloatRect& surface,
     const Ogre::FloatRect& textureArea)
 {
     // A small extruded polygon, in the hand rig's local units.
-    const std::function<void(float, float)> textureCoordinate = [&](float u, float v)
-    {
-        mesh->textureCoord(textureArea.left + u * textureArea.width(),
-            textureArea.top + v * textureArea.height());
-    };
     const unsigned int count = static_cast<unsigned int>(points.size());
     for(unsigned int i = 1; i + 1 < count; ++i)
     {
         for(float z : {-depth, depth})
         {
-            for(unsigned int corner : {0u, z < 0 ? i + 1 : i, z < 0 ? i : i + 1})
+            // The back face is wound the other way round.
+            unsigned int second = i;
+            unsigned int third = i + 1;
+            if(z < 0)
+                std::swap(second, third);
+            for(unsigned int corner : {0u, second, third})
             {
                 mesh->position(points[corner].x, points[corner].y, z);
                 mesh->colour(colour);
-                textureCoordinate((points[corner].x - surface.left) / surface.width(),
+                addAtlasTextureCoord(mesh, textureArea, (points[corner].x - surface.left) / surface.width(),
                     (points[corner].y - surface.top) / surface.height());
             }
         }
@@ -264,9 +291,9 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
             // Map depth across the side rather than collapsing its UVs onto an edge.
             const float across = (vertex.z + depth) / (2.0f * depth);
             if(std::abs(b.y - a.y) > std::abs(b.x - a.x))
-                textureCoordinate(across, (vertex.y - surface.top) / surface.height());
+                addAtlasTextureCoord(mesh, textureArea, across, (vertex.y - surface.top) / surface.height());
             else
-                textureCoordinate((vertex.x - surface.left) / surface.width(), across);
+                addAtlasTextureCoord(mesh, textureArea, (vertex.x - surface.left) / surface.width(), across);
         }
     }
 }
@@ -654,7 +681,7 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
-    rrEnableHeldCreatureDisplay(false, gameMap->getLocalPlayer());
+    rrEnableHeldCreatureDisplay(false, gameMap != nullptr ? gameMap->getLocalPlayer() : nullptr);
     rrDrawTilePreview({}, Ogre::ColourValue::White);
     rrSetHandPose(false, false);
     // We do not remove the entities from mDummyEntities as it is a workaround avoiding a crash and removing
@@ -730,8 +757,10 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     mHandPickaxe->setCastShadows(false);
     mHandPickaxe->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
     // Use interior atlas regions from the existing wood and metal textures.
-    const Ogre::FloatRect woodArea(5.0f/128, 2.0f/128, 39.0f/128, 124.0f/128);
-    const Ogre::FloatRect metalArea(58.0f/128, 42.0f/128, 118.0f/128, 118.0f/128);
+    const Ogre::FloatRect woodArea(5.0f / HAND_TOOL_ATLAS_SIZE, 2.0f / HAND_TOOL_ATLAS_SIZE,
+        39.0f / HAND_TOOL_ATLAS_SIZE, 124.0f / HAND_TOOL_ATLAS_SIZE);
+    const Ogre::FloatRect metalArea(58.0f / HAND_TOOL_ATLAS_SIZE, 42.0f / HAND_TOOL_ATLAS_SIZE,
+        118.0f / HAND_TOOL_ATLAS_SIZE, 118.0f / HAND_TOOL_ATLAS_SIZE);
     const Ogre::FloatRect shaftSurface(-0.006f, -0.065f, 0.006f, 0.075f);
     const Ogre::FloatRect headSurface(-0.085f, 0.043f, 0.085f, 0.085f);
     mHandPickaxe->begin("HandTool/Wood", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
@@ -1894,7 +1923,8 @@ void RenderManager::rrDropHand(GameEntity* curEntity, Player* localPlayer)
 
     // Detach the entity from the "hand" scene node
     Ogre::SceneNode* curEntityNode = curEntity->getEntityNode();
-    curEntityNode->getParentSceneNode()->removeChild(curEntityNode);
+    if(curEntityNode->getParentSceneNode() != nullptr)
+        curEntityNode->getParentSceneNode()->removeChild(curEntityNode);
 
     // We put the creature back to the default render queue
     changeRenderQueueRecursive(curEntityNode, Ogre::RenderQueueGroupID::RENDER_QUEUE_MAIN);
@@ -1920,10 +1950,16 @@ void RenderManager::rrOrderHand(Player* localPlayer)
         Ogre::SceneNode* node = tmpEntity->getEntityNode();
         const bool creature = mHeldCreatureDisplayEnabled &&
             tmpEntity->getObjectType() == GameEntityType::creature;
-        Ogre::SceneNode* parent = creature ? (i == 0 ? mHeldCreatureGrip : mHeldCreatureStorage) : mHandKeeperNode;
+        Ogre::SceneNode* parent = mHandKeeperNode;
+        if(creature)
+        {
+            // Only the first held creature is shown in the hand; the others wait out of sight.
+            parent = (i == 0) ? mHeldCreatureGrip : mHeldCreatureStorage;
+        }
         if(node->getParentSceneNode() != parent)
         {
-            node->getParentSceneNode()->removeChild(node);
+            if(node->getParentSceneNode() != nullptr)
+                node->getParentSceneNode()->removeChild(node);
             parent->addChild(node);
         }
         Ogre::Vector3 pos;
@@ -2735,7 +2771,14 @@ void RenderManager::moveWorldCoords(Ogre::Real x, Ogre::Real y)
 void RenderManager::rrSetHandPose(bool pointing, bool digging)
 {
     const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
-    mHandPose = digging ? "Dig" : (pointing ? "Point" : (holding ? "Hold" : "Idle"));
+    if(digging)
+        mHandPose = "Dig";
+    else if(pointing)
+        mHandPose = "Point";
+    else if(holding)
+        mHandPose = "Hold";
+    else
+        mHandPose = "Idle";
     if(mHandAnimationState != nullptr)
     {
         const std::string current = mHandAnimationState->getAnimationName();
@@ -2780,7 +2823,7 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
     {
         const float x = static_cast<float>(tile->getX());
         const float y = static_cast<float>(tile->getY());
-        float z = 0.04f;
+        float z = TILE_PREVIEW_FLOOR_HEIGHT;
         if(tile->isFullTile())
         {
             // Use the rendered wall, including the existing unrevealed tile
@@ -2791,28 +2834,19 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
                 wall = mSceneManager->getEntity(meshName);
             if(wall == nullptr)
                 continue;
-            z = wall->getWorldBoundingBox(true).getMaximum().z + 0.02f;
+            z = wall->getWorldBoundingBox(true).getMaximum().z + TILE_PREVIEW_WALL_MARGIN;
         }
         const Ogre::Vector3 corners[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
             {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
         for(int i = 0; i < 4; ++i)
         {
-            mTilePreview->position(corners[i]);
-            mTilePreview->colour(colour);
-            mTilePreview->position(corners[(i+1)%4]);
-            mTilePreview->colour(colour);
+            addPreviewLine(mTilePreview, corners[i], corners[(i+1)%4], colour);
             if(tile->isFullTile())
             {
-                const Ogre::Vector3 bottom(corners[i].x, corners[i].y, 0.04f);
-                const Ogre::Vector3 nextBottom(corners[(i+1)%4].x, corners[(i+1)%4].y, 0.04f);
-                mTilePreview->position(bottom);
-                mTilePreview->colour(colour);
-                mTilePreview->position(nextBottom);
-                mTilePreview->colour(colour);
-                mTilePreview->position(bottom);
-                mTilePreview->colour(colour);
-                mTilePreview->position(corners[i]);
-                mTilePreview->colour(colour);
+                const Ogre::Vector3 bottom(corners[i].x, corners[i].y, TILE_PREVIEW_FLOOR_HEIGHT);
+                const Ogre::Vector3 nextBottom(corners[(i+1)%4].x, corners[(i+1)%4].y, TILE_PREVIEW_FLOOR_HEIGHT);
+                addPreviewLine(mTilePreview, bottom, nextBottom, colour);
+                addPreviewLine(mTilePreview, bottom, corners[i], colour);
             }
         }
     }

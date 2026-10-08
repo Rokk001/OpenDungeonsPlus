@@ -76,6 +76,17 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 
+// The hand feedback is laid out for an action icon of this unscaled width; all offsets
+// below are in pixels at that size and scale with the icon.
+const float HAND_ACTION_ICON_DESIGN_SIZE = 50.0f;
+const float POINTER_TEXT_OFFSET_X = 145.0f;
+const float POINTER_TEXT_OFFSET_Y = 24.0f;
+const float ACTION_ICON_OFFSET_X = 90.0f;
+const float ACTION_ICON_OFFSET_Y = 8.0f;
+const float HELD_CREATURE_ICON_OFFSET_Y = 58.0f;
+const float HELD_CREATURE_ICON_SIZE = 32.0f;
+const size_t HELD_CREATURE_ICONS_PER_ROW = 4;
+
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
     if(screenSize <= 1)
@@ -429,10 +440,10 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     // If we have a room/trap/spell selected, show it
     // TODO: This should be changed, or combined with an icon or something later.
     TextRenderer& textRenderer = TextRenderer::getSingleton();
-    const float pointerScale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
+    const float pointerScale = getHandFeedbackScale();
     textRenderer.moveText(ODApplication::POINTER_INFO_STRING,
-        static_cast<Ogre::Real>(mouseEvent.x + 145.0f * pointerScale),
-        static_cast<Ogre::Real>(mouseEvent.y + 24.0f * pointerScale));
+        static_cast<Ogre::Real>(mouseEvent.x + POINTER_TEXT_OFFSET_X * pointerScale),
+        static_cast<Ogre::Real>(mouseEvent.y + POINTER_TEXT_OFFSET_Y * pointerScale));
 
     handleMouseWheel(toSFMLMouseWheel(arg));
 
@@ -575,17 +586,8 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(ODFrameListener::getSingleton().findWorldPositionFromMouse(arg, inputManager.mKeeperHandPos,RenderManager::KEEPER_HAND_WORLD_Z))
-    {
-        inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
-        inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
+    if(updatePointerTile(arg))
         RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
-    }
-    else
-    {
-        inputManager.mXPos = -1;
-        inputManager.mYPos = -1;
-    }
 
     // The player should be able to move the mouse even if not clicking on a tile. Because of that, we set
     // mMMouseDown before checking which tile is clicked
@@ -799,17 +801,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(ODFrameListener::getSingleton().findWorldPositionFromMouse(arg,
-        inputManager.mKeeperHandPos, RenderManager::KEEPER_HAND_WORLD_Z))
-    {
-        inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
-        inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
-    }
-    else
-    {
-        inputManager.mXPos = -1;
-        inputManager.mYPos = -1;
-    }
+    updatePointerTile(arg);
 
     // We notify current selection input
     inputManager.mCommandState = InputCommandState::validated;
@@ -1205,7 +1197,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     mCreaturePanel->update();
 
     // After frameStarted, so that the countdown shown is the one just computed.
-    refreshActionFeedback(evt.timeSinceLastFrame);
+    refreshActionFeedback();
 
     if((mSkillCurrentCompletion.mProgressBar != nullptr) &&
        (mSkillCurrentCompletion.mCompletenessDisplayed < mSkillCurrentCompletion.mCompleteness))
@@ -1745,7 +1737,41 @@ void GameMode::refreshSpellButtonCoolDowns()
     });
 }
 
-void GameMode::refreshActionFeedback(float elapsed)
+float GameMode::getHandFeedbackScale() const
+{
+    return mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / HAND_ACTION_ICON_DESIGN_SIZE;
+}
+
+bool GameMode::updatePointerTile(const OIS::MouseEvent& arg)
+{
+    InputManager& inputManager = mModeManager->getInputManager();
+    if(ODFrameListener::getSingleton().findWorldPositionFromMouse(arg,
+        inputManager.mKeeperHandPos, RenderManager::KEEPER_HAND_WORLD_Z))
+    {
+        inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
+        inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
+        return true;
+    }
+
+    inputManager.mXPos = -1;
+    inputManager.mYPos = -1;
+    return false;
+}
+
+void GameMode::setHighlightedCreature(Creature* creature)
+{
+    InputManager& inputManager = mModeManager->getInputManager();
+    if(inputManager.mHighlightedCreature == creature)
+        return;
+
+    if(inputManager.mHighlightedCreature != nullptr)
+        inputManager.mHighlightedCreature->normalizeAmbient();
+    inputManager.mHighlightedCreature = creature;
+    if(creature != nullptr)
+        creature->maxAmbient();
+}
+
+void GameMode::refreshActionFeedback()
 {
     InputManager& inputManager = mModeManager->getInputManager();
     if(isMouseDownOnCEGUIWindow())
@@ -1755,11 +1781,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         CEGUI::Window* hover = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
         if(hover != nullptr)
             mActionTargetText = hover->getTooltipText().c_str();
-        if(inputManager.mHighlightedCreature != nullptr)
-        {
-            inputManager.mHighlightedCreature->normalizeAmbient();
-            inputManager.mHighlightedCreature = nullptr;
-        }
+        setHighlightedCreature(nullptr);
         TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
     }
     else
@@ -1770,17 +1792,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         mouseState.width = static_cast<int>(size.d_width);
         mouseState.height = static_cast<int>(size.d_height);
         const OIS::MouseEvent mouseEvent(nullptr, mouseState);
-        if(ODFrameListener::getSingleton().findWorldPositionFromMouse(mouseEvent,
-            inputManager.mKeeperHandPos, RenderManager::KEEPER_HAND_WORLD_Z))
-        {
-            inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
-            inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
-        }
-        else
-        {
-            inputManager.mXPos = -1;
-            inputManager.mYPos = -1;
-        }
+        updatePointerTile(mouseEvent);
         if(!inputManager.mLMouseDown)
         {
             inputManager.mLStartDragX = inputManager.mXPos;
@@ -1794,14 +1806,7 @@ void GameMode::refreshActionFeedback(float elapsed)
             Tile* hoveredTile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
             Creature* creature = hoveredTile != nullptr ?
                 hoveredTile->getClosestCreature(inputManager.mCreatureTypeForOutliner) : nullptr;
-            if(inputManager.mHighlightedCreature != creature)
-            {
-                if(inputManager.mHighlightedCreature != nullptr)
-                    inputManager.mHighlightedCreature->normalizeAmbient();
-                inputManager.mHighlightedCreature = creature;
-                if(creature != nullptr)
-                    creature->maxAmbient();
-            }
+            setHighlightedCreature(creature);
         }
         // A release leaves validated in the input manager: a frame must never repeat it.
         const InputCommandState previousState = inputManager.mCommandState;
@@ -1830,19 +1835,20 @@ void GameMode::refreshActionFeedback(float elapsed)
     {
         icon->setProperty("Image", prohibited ? "OpenDungeonsIcons/Prohibition" :
             mRootWindow->getChild(button)->getProperty("NormalImage"));
-        const float scale = icon->getPixelSize().d_width / 50.0f;
-        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale),
-            CEGUI::UDim(0, pointer.d_y + 8.0f * scale)));
+        const float scale = getHandFeedbackScale();
+        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + ACTION_ICON_OFFSET_X * scale),
+            CEGUI::UDim(0, pointer.d_y + ACTION_ICON_OFFSET_Y * scale)));
     }
-    const float pointerScale = icon->getPixelSize().d_width / 50.0f;
+    const float pointerScale = getHandFeedbackScale();
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
-        pointer.d_x + 145.0f * pointerScale, pointer.d_y + 24.0f * pointerScale);
+        pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
          (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat())));
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging);
-    refreshHeldCreatureIcons();}
+    refreshHeldCreatureIcons();
+}
 
 void GameMode::refreshHeldCreatureIcons()
 {
@@ -1856,7 +1862,7 @@ void GameMode::refreshHeldCreatureIcons()
             CEGUI::Window* icon = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage",
                 "HeldCreatureIcon" + std::to_string(count));
             icon->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
-                CEGUI::UDim(0, 32), CEGUI::UDim(0, 32)));
+                CEGUI::UDim(0, HELD_CREATURE_ICON_SIZE), CEGUI::UDim(0, HELD_CREATURE_ICON_SIZE)));
             icon->setAlwaysOnTop(true);
             icon->setMousePassThroughEnabled(true);
             icon->setProperty("ClippedByParent", "False");
@@ -1872,16 +1878,17 @@ void GameMode::refreshHeldCreatureIcons()
     }
 
     const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
-    const float scale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
-    const float side = 32.0f * scale;
+    const float scale = getHandFeedbackScale();
+    const float side = HELD_CREATURE_ICON_SIZE * scale;
     for(size_t i = 0; i < mHeldCreatureIcons.size(); ++i)
     {
         CEGUI::Window* icon = mHeldCreatureIcons[i];
         icon->setVisible(i < count && RenderManager::getSingleton().isKeeperHandVisible());
         icon->setSize(CEGUI::USize(CEGUI::UDim(0, side), CEGUI::UDim(0, side)));
         // Keep the existing action/prohibition area clear even when it is hidden.
-        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale + (i % 4) * side),
-            CEGUI::UDim(0, pointer.d_y + 58.0f * scale + (i / 4) * side)));
+        icon->setPosition(CEGUI::UVector2(
+            CEGUI::UDim(0, pointer.d_x + ACTION_ICON_OFFSET_X * scale + (i % HELD_CREATURE_ICONS_PER_ROW) * side),
+            CEGUI::UDim(0, pointer.d_y + HELD_CREATURE_ICON_OFFSET_Y * scale + (i / HELD_CREATURE_ICONS_PER_ROW) * side)));
     }
 }
 
@@ -2097,16 +2104,7 @@ void GameMode::handlePlayerActionNone()
                 selectSquaredTiles(tile->getX(), tile->getY(), tile->getX(), tile->getY());
             }
         }
-        InputManager& mutableInput = mModeManager->getInputManager();
-        Creature* creature = dynamic_cast<Creature*>(closest);
-        if(mutableInput.mHighlightedCreature != creature)
-        {
-            if(mutableInput.mHighlightedCreature != nullptr)
-                mutableInput.mHighlightedCreature->normalizeAmbient();
-            mutableInput.mHighlightedCreature = creature;
-            if(creature != nullptr)
-                creature->maxAmbient();
-        }
+        setHighlightedCreature(dynamic_cast<Creature*>(closest));
         TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
         return;
     }

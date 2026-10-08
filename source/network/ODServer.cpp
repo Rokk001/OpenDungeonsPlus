@@ -1377,7 +1377,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // Old clients identify only the tile. New clients identify the held object too.
             if(!packetReceived.endOfPacket())
             {
-                int32_t entityType;
+                int32_t entityType = 0;
                 std::string entityName;
                 if(!(packetReceived >> entityType >> entityName))
                 {

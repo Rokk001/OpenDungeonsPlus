@@ -152,6 +152,8 @@ public:
     void rrPickUpEntity(GameEntity* curEntity, Player* localPlayer);
     void rrDropHand(GameEntity* curEntity, Player* localPlayer);
     void rrRotateHand(Player* localPlayer);
+    //! \brief Shows the first held creature in the hand (enabled) or leaves it with the other held
+    //! entities. localPlayer may be nullptr, in which case only the flag changes.
     void rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer);
     bool isKeeperHandVisible() const { return mHandKeeperHandVisibility == 0; }
     void rrAddOutliner(Creature* creature);
@@ -171,8 +173,12 @@ public:
         const std::string& particleScript);
     void rrEntityRemoveParticleEffect(GameEntity* entity, Ogre::ParticleSystem* particleSystem);
     void rrToggleHandSelectorVisibility();
+    //! \brief Selects the hand pose: digging wins over pointing; otherwise the hand holds a
+    //! creature or is idle.
     void rrSetHandPose(bool pointing, bool digging);
+    //! \brief Plays the pickaxe swing once, then returns to the current pose.
     void rrPlayDigAnimation();
+    //! \brief Outlines the given tiles in the world. An empty list clears the outline.
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
 
     //! \brief Toggles the creatures text overlay
@@ -238,6 +244,7 @@ private:
     template<typename Manager> bool removeIfExists(std::string, std::string);
     //! \brief Correctly places entities in hand next to the keeper hand
     void rrOrderHand(Player* localPlayer);
+    //! \brief Places the held creature in the grip of the hand.
     void rrUpdateHeldCreature();
 
     //! \brief Colorize the material with the corresponding team id color.
@@ -270,8 +277,11 @@ private:
     Ogre::SceneNode* mMainMenuSceneNode;
 
     Ogre::AnimationState* mHandAnimationState;
+    //! \brief Animation of the hand that is wanted: Idle, Point, Dig or Hold.
     std::string mHandPose = "Idle";
+    //! \brief Pickaxe attached to the hand while digging.
     Ogre::ManualObject* mHandPickaxe = nullptr;
+    //! \brief Outline of the tiles the current action would affect.
     Ogre::ManualObject* mTilePreview = nullptr;
 
 
@@ -282,7 +292,9 @@ private:
 
     //! For the keeper hand
     Ogre::SceneNode* mHandKeeperNode;
+    //! \brief Node in the hand holding the creature that is shown.
     Ogre::SceneNode* mHeldCreatureGrip = nullptr;
+    //! \brief Node holding the other held creatures, which are not shown.
     Ogre::SceneNode* mHeldCreatureStorage = nullptr;
     bool mHeldCreatureDisplayEnabled = false;
     Ogre::SceneNode* mDummyNode;

@@ -177,6 +177,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void unselectAllTiles() override;
 
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
+    //! \brief Displays the text next to the pointer (for example a price) rather than in the context line.
     void displayPointerText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
 
     //! \brief Called when the skill window is displayed. This function will call the Seat to get
@@ -200,7 +201,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void refreshSpellButtonCoolDowns();
 
     //! Refresh the selected action, target preview and resource/cooldown feedback without executing it.
-    void refreshActionFeedback(float elapsed);
+    void refreshActionFeedback();
 
     Creature* getClosestCreature(Tile*);
     
@@ -226,7 +227,9 @@ protected:
 
 private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
+    //! \brief Small portraits of the held creatures, drawn next to the pointer.
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
+    //! \brief Creates, updates and places the held creature portraits.
     void refreshHeldCreatureIcons();
     //! \brief Whether the pending exit confirmation should leave to the desktop
     //! rather than back to the main menu. Set by the button that opened the
@@ -237,9 +240,13 @@ private:
     //! this value is based on the first marked flag tile selected.
     bool mDigSetBool;
 
+    //! \brief Explanation of the current target shown in the context line.
     std::string mActionTargetText;
+    //! \brief Whether the current action can be executed on the current target.
     bool mActionTargetValid = false;
+    //! \brief Tiles the current action would affect, collected while checking the input.
     std::vector<Tile*> mPreviewTiles;
+    //! \brief Tiles currently outlined in the world.
     std::vector<Tile*> mSelectedTiles;
 
     //! \brief Index of the event in the game event queue (for zooming automatically)
@@ -297,7 +304,15 @@ private:
     bool toggleQuery(const CEGUI::EventArgs& e);
     GameEntity* getQueryTarget(Tile* tile) const;
     void handlePlayerActionQuery();
+    //! \brief Outlines the preview tiles in the world, in the colour of the target validity.
     void updateSelectedTiles();
+    //! \brief Scale of the hand feedback (action icon, pointer text, held portraits) relative to its design size.
+    float getHandFeedbackScale() const;
+    //! \brief Stores the tile under the mouse in the input manager (-1 when the pointer is not over the map).
+    //! Returns whether the pointer hit the ground plane.
+    bool updatePointerTile(const OIS::MouseEvent& arg);
+    //! \brief Highlights the given creature and restores the previously highlighted one.
+    void setHighlightedCreature(Creature* creature);
 
     //! \brief Builds the player settings window
     void buildPlayerSettingsWindow();

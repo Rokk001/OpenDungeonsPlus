@@ -673,7 +673,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             // A reply may arrive after another local rotation or pickup.
             if(!packetReceived.endOfPacket())
             {
-                int32_t entityType;
+                int32_t entityType = 0;
                 std::string entityName;
                 if(!(packetReceived >> entityType >> entityName))
                 {

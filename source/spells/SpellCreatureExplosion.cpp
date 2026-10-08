@@ -95,16 +95,7 @@ void SpellCreatureExplosion::checkSpellCast(GameMap* gameMap, const InputManager
     }
 
     if(inputManager.mCommandState != InputCommandState::validated)
-    {
-        std::vector<Tile*> targetTiles;
-        for(GameEntity* target : targets)
-        {
-            Tile* tile = target->getPositionTile();
-            if(std::find(targetTiles.begin(), targetTiles.end(), tile) == targetTiles.end())
-                targetTiles.push_back(tile);
-        }
-        inputCommand.selectTiles(targetTiles);
-    }
+        inputCommand.selectTilesOfEntities(targets);
 
     // Preview must not consume random numbers or change which creatures a later click affects.
     if(inputManager.mCommandState == InputCommandState::validated)

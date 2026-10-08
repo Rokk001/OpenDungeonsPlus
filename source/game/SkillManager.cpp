@@ -738,8 +738,8 @@ void SkillManager::connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* ro
 
 std::string SkillManager::getSelectedButton(const PlayerSelection& playerSelection)
 {
-    SkillFamily family;
-    uint32_t type;
+    SkillFamily family = SkillFamily::nb;
+    uint32_t type = 0;
     switch(playerSelection.getCurrentAction())
     {
         case SelectedAction::buildRoom:
