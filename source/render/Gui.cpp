@@ -59,8 +59,11 @@
 
 namespace
 {
+//! Resolution the layout files and images are designed for. The GUI scales relative to it.
 const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
+
+//! Resolution the fonts are designed for.
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
 //! Name of the child window the tab control creates to hold its tab buttons
@@ -1278,6 +1281,7 @@ void createNavigationImages()
     }
 }
 
+//! Scales only the absolute part (offset) of a dimension; the relative part follows the parent window.
 void scaleDimension(CEGUI::UDim& dimension, float scale)
 {
     dimension.d_offset *= scale;
@@ -1884,7 +1888,7 @@ void Gui::arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const
         WindowScaleData& data = mScaledWindows.at(button);
         data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
             CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side));
-        applyScale(button, data, scale);
+        applyScaleToWindow(button, data, scale);
     }
 }
 
@@ -1912,7 +1916,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     updateResourceScaling(displaySize);
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
-        applyScale(scaledWindow.first, scaledWindow.second, scale);
+        applyScaleToWindow(scaledWindow.first, scaledWindow.second, scale);
 
     const std::map<guiSheet, CEGUI::Window*>::iterator gameSheet = mSheets.find(inGameMenu);
     if(gameSheet != mSheets.end())
@@ -1952,7 +1956,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 
-void Gui::applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale)
+void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale)
 {
     window->setMinSize(scaleSize(data.minSize, scale));
     window->setMaxSize(scaleSize(data.maxSize, scale));

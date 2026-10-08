@@ -281,7 +281,7 @@ private:
     void applyScale(const CEGUI::Sizef& displaySize);
 
     //! \brief Scales one window from its stored unscaled layout.
-    void applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale);
+    void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale);
 
     //! \brief Sets the native resolution of fonts and skin images from the user scale.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
