@@ -147,6 +147,9 @@ const Ogre::Real RenderManager::DRAGGABLE_NODE_HEIGHT = 3.0f;
 // so the floor next to a room doorway is not lit brighter than claimed ground elsewhere.
 const uint32_t ROOM_LIGHT_MASK = 0x2;
 
+// Light mask of entities that every light may affect (Ogre's default).
+const uint32_t ALL_LIGHTS_MASK = 0xFFFFFFFF;
+
 const int PERLIN_NOISE_TEXTURE_SIZE =  4096;
 
 namespace
@@ -3100,7 +3103,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         if(tile.getTileVisual() == TileVisual::claimedGround)
             tileMeshEnt->setLightMask(~ROOM_LIGHT_MASK);
         else
-            tileMeshEnt->setLightMask(0xFFFFFFFF);
+            tileMeshEnt->setLightMask(ALL_LIGHTS_MASK);
         // We replace the material if required by the tileset
         if(!tileSetValue.getMaterialName().empty() )
             tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
