@@ -958,7 +958,10 @@ private:
     //! \brief Destroys the particle system and the scene node of one burst. Names that
     //! no longer exist in the scene are ignored.
     void destroyRoomConstructionEffect(const RoomConstructionEffect& effect);
+    //! Removes the fly swarm of a rotting corpse and puts the original materials back on its entity
     void clearCreatureDecay(Creature* creature);
+    //! For each rotting corpse, the original materials of its sub-entities; while a corpse is listed here its
+    //! entity uses private cloned materials whose corpseDecay value is driven by the animation progress
     std::map<Creature*, std::vector<Ogre::MaterialPtr>> mCreatureDecayMaterials;
 
 
