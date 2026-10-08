@@ -93,7 +93,11 @@ const Ogre::Real RenderManager::KEEPER_HAND_WORLD_Z = KEEPER_HAND_POS_Z / Render
 
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_OFFSET = 0.05f;
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_SCALE = 0.05f;
+//! Seconds a room construction burst stays in the scene. It is longer than the emitter
+//! duration plus the particle lifetime, so the last particles fade out before it is removed.
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
+//! Height of the burst above the tile floor, so it is not hidden by the ground.
+const Ogre::Real ROOM_CONSTRUCTION_EFFECT_HEIGHT = 0.05f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
@@ -967,16 +971,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             continue;
         }
 
-        if(mSceneManager->hasParticleSystem(it->mParticleName))
-        {
-            Ogre::ParticleSystem* particleSystem = mSceneManager->getParticleSystem(it->mParticleName);
-            Ogre::SceneNode* node = particleSystem->getParentSceneNode();
-            if(node != nullptr)
-                node->detachObject(particleSystem);
-            mSceneManager->destroyParticleSystem(particleSystem);
-        }
-        if(mSceneManager->hasSceneNode(it->mNodeName))
-            mSceneManager->destroySceneNode(it->mNodeName);
+        destroyRoomConstructionEffect(*it);
         it = mRoomConstructionEffects.erase(it);
     }
     rrUpdateHeldCreature();
@@ -995,7 +990,7 @@ void RenderManager::rrCreateRoomConstructionEffect(const std::vector<Tile*>& til
         const std::string particleName = effectName + "_particle";
         Ogre::SceneNode* node = mRoomSceneNode->createChildSceneNode(nodeName,
             Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
-                static_cast<Ogre::Real>(tile->getY()), 0.05f));
+                static_cast<Ogre::Real>(tile->getY()), ROOM_CONSTRUCTION_EFFECT_HEIGHT));
         Ogre::ParticleSystem* particleSystem = mSceneManager->createParticleSystem(
             particleName, "RoomConstruction");
         particleSystem->setVisibilityFlags(CullingType::SHOW_ALL);
@@ -1008,19 +1003,22 @@ void RenderManager::rrCreateRoomConstructionEffect(const std::vector<Tile*>& til
 void RenderManager::clearRoomConstructionEffects()
 {
     for(const RoomConstructionEffect& effect : mRoomConstructionEffects)
-    {
-        if(mSceneManager->hasParticleSystem(effect.mParticleName))
-        {
-            Ogre::ParticleSystem* particleSystem = mSceneManager->getParticleSystem(effect.mParticleName);
-            Ogre::SceneNode* node = particleSystem->getParentSceneNode();
-            if(node != nullptr)
-                node->detachObject(particleSystem);
-            mSceneManager->destroyParticleSystem(particleSystem);
-        }
-        if(mSceneManager->hasSceneNode(effect.mNodeName))
-            mSceneManager->destroySceneNode(effect.mNodeName);
-    }
+        destroyRoomConstructionEffect(effect);
     mRoomConstructionEffects.clear();
+}
+
+void RenderManager::destroyRoomConstructionEffect(const RoomConstructionEffect& effect)
+{
+    if(mSceneManager->hasParticleSystem(effect.mParticleName))
+    {
+        Ogre::ParticleSystem* particleSystem = mSceneManager->getParticleSystem(effect.mParticleName);
+        Ogre::SceneNode* node = particleSystem->getParentSceneNode();
+        if(node != nullptr)
+            node->detachObject(particleSystem);
+        mSceneManager->destroyParticleSystem(particleSystem);
+    }
+    if(mSceneManager->hasSceneNode(effect.mNodeName))
+        mSceneManager->destroySceneNode(effect.mNodeName);
 }
 
 Ogre::TexturePtr RenderManager::createPerlinTexture()

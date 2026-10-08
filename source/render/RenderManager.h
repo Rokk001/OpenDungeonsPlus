@@ -174,6 +174,8 @@ public:
     void rrSetHandPose(bool pointing, bool digging);
     void rrPlayDigAnimation();
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour);
+    //! \brief Starts a short particle burst on each of the given tiles. The bursts remove
+    //! themselves after a fixed time. Null entries are skipped.
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
 
     //! \brief Toggles the creatures text overlay
@@ -275,16 +277,24 @@ private:
     Ogre::ManualObject* mHandPickaxe = nullptr;
     Ogre::ManualObject* mTilePreview = nullptr;
 
+    //! \brief One running room construction burst: the scene node and particle system
+    //! created for a tile, and the time left until they are destroyed.
     struct RoomConstructionEffect
     {
         std::string mNodeName;
         std::string mParticleName;
         Ogre::Real mRemainingTime;
     };
+    //! Bursts that are currently running, updated every frame.
     std::vector<RoomConstructionEffect> mRoomConstructionEffects;
+    //! Counter that makes the scene node and particle system names of each burst unique.
     uint64_t mRoomConstructionEffectNumber = 0;
 
+    //! \brief Destroys all running room construction bursts.
     void clearRoomConstructionEffects();
+    //! \brief Destroys the particle system and the scene node of one burst. Names that
+    //! no longer exist in the scene are ignored.
+    void destroyRoomConstructionEffect(const RoomConstructionEffect& effect);
 
 
     Ogre::TexturePtr m_texture;
