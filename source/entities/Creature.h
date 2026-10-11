@@ -671,6 +671,7 @@ public:
     //! weaponClash is true when both fighters carry weapons, bodyDamage when the hit did damage.
     void fireCombatImpact(bool weaponClash, bool bodyDamage,
         const Ogre::Vector3& attackerPosition);
+    //! \brief Tells the clients that see this creature that it starts to eat the given chicken.
     void fireChickenFeeding(const std::string& chickenName,
         const Ogre::Vector3& chickenPosition);
 
