@@ -35,7 +35,8 @@ def geometry(root):
 spec = importlib.util.spec_from_file_location('coop_depth', ROOT / 'tools/blender-assets/coop_depth.py')
 patch = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(patch)
-baseline = subprocess.run(['git', 'show', 'origin/integration/all:models/ChickenCoopHouse.mesh'], cwd=ROOT,
+BASELINE_REVISION = 'a4ac984c8^'  # the state before the doorway/ridge change was committed
+baseline = subprocess.run(['git', 'show', BASELINE_REVISION + ':models/ChickenCoopHouse.mesh'], cwd=ROOT,
                           capture_output=True, check=True, timeout=60, stdin=subprocess.DEVNULL).stdout
 (OUT / 'baseline.mesh').write_bytes(baseline)
 before = convert(OUT / 'baseline.mesh', OUT / 'baseline.xml')
@@ -44,7 +45,7 @@ a, auv, aw, afaces = geometry(before)
 b, buv, bw, bfaces = geometry(after)
 assert a == b and aw == bw, 'positions or bone weights changed outside the targeted face/UV changes'
 assert (ROOT / 'models/ChickenCoopHouse.skeleton').read_bytes() == subprocess.run(
-    ['git', 'show', 'origin/integration/all:models/ChickenCoopHouse.skeleton'], cwd=ROOT,
+    ['git', 'show', BASELINE_REVISION + ':models/ChickenCoopHouse.skeleton'], cwd=ROOT,
     capture_output=True, check=True, timeout=60, stdin=subprocess.DEVNULL).stdout
 # Door faces stay exactly as shipped, including their material and UVs.
 def door(faces, weights):
