@@ -83,6 +83,7 @@ class ODSocketClient
         Player* getPlayer() { return mPlayer; }
         void setPlayer(Player* player) { mPlayer = player; }
         bool supportsLiveNickname() const { return mSupportsLiveNickname; }
+        //! \brief Stores whether the other side agreed to nickname changes during the game.
         void setSupportsLiveNickname(bool supported) { mSupportsLiveNickname = supported; }
         bool supportsCreatureMood() const { return mSupportsCreatureMood; }
         void setSupportsCreatureMood(bool supported) { mSupportsCreatureMood = supported; }
