@@ -1707,6 +1707,12 @@ const float PROFILE_FALLBACK_LINE_HEIGHT = 16.0f;
 //! Number of rows with a label and links (friends, foe) and the most windows in such a row (label and two links)
 const std::size_t PROFILE_LINK_ROWS = 2;
 const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
+//! Tolerance (design pixels) before the rows count as higher than the page
+const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
+//! Names of the rows that flow from top to bottom and so change their position when the texts change
+const char* const PROFILE_FLOW_ROWS[] = {"BioText", "LikesText", "DislikesText", "RelationsText", "FriendsLabel",
+    "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
+const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
 //! \brief Number of lines the window text occupies when CEGUI wraps it at the given pixel width
 std::size_t countWrappedLines(const CEGUI::Window* window, float width)
@@ -1789,8 +1795,6 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 
     // Remember where every row sits without scrolling. The rows laid out above are fresh, the rows of the
     // header (portrait to experience bar) are never moved by the layout and are noted once.
-    const char* const flowRows[] = {"BioText", "LikesText", "DislikesText", "RelationsText", "FriendsLabel",
-        "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
     for(std::size_t i = 0; i < page->getChildCount(); ++i)
     {
         CEGUI::Window* child = page->getChildAtIdx(i);
@@ -1798,8 +1802,8 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
             continue;
 
         bool isFlowRow = false;
-        for(std::size_t k = 0; k < 12; ++k)
-            isFlowRow = isFlowRow || (child->getName() == flowRows[k]);
+        for(std::size_t k = 0; k < PROFILE_FLOW_ROW_COUNT; ++k)
+            isFlowRow = isFlowRow || (child->getName() == PROFILE_FLOW_ROWS[k]);
 
         std::map<CEGUI::Window*, WindowScaleData>::const_iterator data = mScaledWindows.find(child);
         if((data != mScaledWindows.end()) && (isFlowRow || (mProfileBaseAreas.find(child) == mProfileBaseAreas.end())))
@@ -1810,12 +1814,13 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     // appears, so no row is ever cut off without a way to reach it
     CEGUI::Window* bar = page->getChild("ProfileScrollbar");
     const float viewport = page->getPixelSize().d_height / scale;
-    const bool overflow = (y > viewport + 0.5f);
+    const bool overflow = (y > viewport + PROFILE_OVERFLOW_TOLERANCE);
     float offset = 0.0f;
     if(overflow)
     {
         CEGUI::Scrollbar* scrollbar = static_cast<CEGUI::Scrollbar*>(bar);
         offset = std::max(0.0f, std::min(scrollbar->getScrollPosition(), y - viewport));
+        // Setting the position below must not scroll the rows a second time through onProfileScrolled
         page->setUserString("ProfileScrolling", "true");
         scrollbar->setDocumentSize(y);
         scrollbar->setPageSize(viewport);
