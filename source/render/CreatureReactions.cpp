@@ -176,6 +176,10 @@ const double BUMP_RADIUS = 1.3;
 const double WAVE_RADIUS_FACTOR = 1.3;
 //! Creatures that are on the map when the game starts did not arrive: nothing is shown in this time
 const double ARRIVAL_QUIET_TIME = 3.0;
+//! Seconds the reactions of a picked up, a dropped and an arrived creature wait for the creature to be ready
+const double PICKED_UP_DELAY = 0.4;
+const double DROPPED_DELAY = 0.35;
+const double ARRIVAL_DELAY = 0.9;
 //! Seconds the mood told for an arrival counts, how recent a delivery has to be to belong to a full treasury,
 //! and how close to the last deposit the worker has to stand
 const double ARRIVAL_MOOD_MEMORY = 30.0;
@@ -2398,7 +2402,7 @@ void CreatureReactions::noteCreatureAdded(Creature* creature)
         Tile* tile = creature->getPositionTile();
         Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
         if((room != nullptr) && ((room->getType() == RoomType::portal) || (room->getType() == RoomType::portalWave)))
-            queueReaction(creature, "PortalArrival", DONE_WAIT_MAX, 0.9);
+            queueReaction(creature, "PortalArrival", DONE_WAIT_MAX, ARRIVAL_DELAY);
 
         return;
     }
@@ -2522,7 +2526,7 @@ void CreatureReactions::noteHandPicked(Creature* creature)
         return;
 
     // The creature is in the hand after a moment, the reaction waits for the hand to be ready
-    queueReaction(creature, "PickedUp", DONE_WAIT_MAX, 0.4);
+    queueReaction(creature, "PickedUp", DONE_WAIT_MAX, PICKED_UP_DELAY);
     WorkerReactions::noteHandled(*this, creature);
 }
 
@@ -2531,7 +2535,7 @@ void CreatureReactions::noteHandDropped(Creature* creature)
     if((mMode == Mode::off) || !mConfigLoaded)
         return;
 
-    queueReaction(creature, "Dropped", DONE_WAIT_MAX, 0.35);
+    queueReaction(creature, "Dropped", DONE_WAIT_MAX, DROPPED_DELAY);
 }
 
 void CreatureReactions::noteRelationshipTier(Creature* first, Creature* second, RelationshipTier oldTier,
