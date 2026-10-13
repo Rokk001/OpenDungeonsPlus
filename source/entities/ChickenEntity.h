@@ -332,8 +332,10 @@ private:
     uint32_t mGiftTurns;
     //! Turns until the hen may peck (and take grain) again
     uint32_t mPeckWait;
+    //! Name of the creature that holds the lock to eat this chicken (empty while nobody does)
     std::string mLockOwner;
     std::string mSnatchedFrom;
+    //! The state of the flight from a hungry creature (see ChickenFlight.h)
     ChickenFlight::State mFlight;
     std::string mMountHenName;
 
