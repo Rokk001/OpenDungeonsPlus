@@ -272,7 +272,9 @@ public:
     //! \brief Describes the saved animal fields including its life-stage duration.
     static std::string getChickenEntityStreamFormat();
 protected:
+    //! \brief Client side: creates the mesh and adds the scaled and tinted look of the animal.
     void createMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
+    //! \brief Client side: removes the look of the animal and then the mesh.
     void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
     //! \brief Saves the animal including its individually drawn life-stage duration.
     void exportToStream(std::ostream& os) const override;
