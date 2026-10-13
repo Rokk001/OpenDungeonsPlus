@@ -27,7 +27,7 @@
 class TrapWatchBanner : public Trap
 {
 public:
-    //! \brief Creates a watch banner that has not called the guards yet.
+    //! \brief Creates a watch banner that has not called the guards yet and starts loaded.
     TrapWatchBanner(GameMap* gameMap);
 
     //! \brief The type of this trap.
@@ -54,7 +54,8 @@ public:
     { return true; }
 
     //! \brief Looks for enemy creatures within the aura of an installed banner and, if there is one,
-    //! sends the guards of the owner's guard rooms to it (at most once per distress period).
+    //! sends the guards of the owner's guard rooms to it (at most once per distress period). The call is reported to
+    //! the clients as the shot of the post, then as a reload, and once more when the post is loaded again.
     virtual void doUpkeep() override;
 
     //! \brief Creates the entity shown on the given tile.
