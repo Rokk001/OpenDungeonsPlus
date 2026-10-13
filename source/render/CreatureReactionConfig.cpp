@@ -42,6 +42,7 @@ bool readWords(std::istream& file, std::vector<std::string>& words)
     return true;
 }
 
+//! \brief True for the words "yes", "true" and "1", false for everything else
 bool toBool(const std::string& text)
 {
     return (text == "yes") || (text == "true") || (text == "1");
