@@ -2456,6 +2456,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
             if(feeding.mChickenEntity->hasAnimationState(EntityAnimation::idle_anim))
                 feeding.mChickenEntity->getAnimationState(EntityAnimation::idle_anim)->addTime(timeSinceLastFrame * FEEDING_CHICKEN_IDLE_SPEED);
         }
+        // The feathers only fly while the keeper can see the meal: the clip plays and both animals are shown
         if(feeding.mFeatherBursts < FEEDING_FEATHER_BURSTS && time >= meal.mFirstBite + 0.45f * meal.mBite +
             feeding.mFeatherBursts * (meal.mSecondBite - meal.mFirstBite) &&
             feeding.mAnimation != nullptr && feeding.mAnimation->getEnabled() && !feeding.mAnimation->hasEnded() &&
@@ -5665,6 +5666,7 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
 //! \brief Creates a particle system at the position and removes it after a short time.
 void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName)
 {
+    // The feathers of the animals are only made where the camera looks
     if((particleName == "ChickenFeathers" || particleName == "ChickenFeathersRooster") &&
        (mViewport == nullptr || mViewport->getCamera() == nullptr || !mViewport->getCamera()->isVisible(position)))
         return;

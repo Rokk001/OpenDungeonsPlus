@@ -52,10 +52,18 @@ public:
     ChickenEntity(GameMap* gameMap);
 
     virtual void doUpkeep() override;
+    //! \brief Client side: moves a flying rooster along the same curve as the server, frame by frame.
     virtual void update(Ogre::Real timeSinceLastFrame) override;
+    //! \brief Client side: the roof flight clip is stretched to the length of the flight.
     virtual double getAnimationSpeedFactor() const override;
+    //! \brief Client side: starts (or joins, for a late arrival) the flight of the rooster the server tells about.
+    //! \param from Start of the flight.
+    //! \param to Goal of the flight.
+    //! \param turns Length of the whole flight in turns.
+    //! \param elapsed Turns of the flight that are over already.
     void startRoofFlightFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to,
         uint32_t turns, Ogre::Real elapsed);
+    //! \brief Client side: an authoritative move (pickup, drop, another action) ends the flight.
     virtual void setPosition(const Ogre::Vector3& position, GameMap* gameMap = nullptr) override;
 
     virtual double getMoveSpeed() const override
@@ -154,13 +162,18 @@ public:
     void playPose(const std::string& pose, uint32_t turns);
     //! \brief Stops both birds and announces mating poses with the same facing direction.
     void mountHen(ChickenEntity& hen);
+    //! \brief The name of the hen the rooster mounts (empty when he does not).
     const std::string& getMountHenName() const
     { return mMountHenName; }
+    //! \brief Client side: remembers the hen the server says the rooster mounts.
     void setMountHenFromServer(const std::string& name)
     { mMountHenName = name; }
 
     //! Plays the coop entrance pose, then walks through its door to the hatchery floor.
+    //! \param door The place of the door in front of the coop.
+    //! \param exit The free place on the floor where the animal ends up.
     void emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit);
+    //! \brief True while the animal is on its way out of the coop.
     inline bool isLeavingCoop() const
     { return mLeavingCoop; }
 
@@ -168,6 +181,7 @@ public:
     inline bool isBusy() const
     { return (mBusyTurns > 0) || (mHopTurnsLeft > 0) || mLeavingCoop; }
 
+    //! \brief True while the animal flies to or from a roof.
     inline bool isHopping() const
     { return mHopTurnsLeft > 0; }
 
@@ -217,6 +231,7 @@ public:
     inline uint32_t countApproachTurn()
     { return ++mApproachTurns; }
 
+    //! \brief The rooster starts a new way to a coop roof.
     inline void resetApproachTurns()
     { mApproachTurns = 0; }
 
@@ -289,7 +304,9 @@ private:
         dying
     };
     //! Starts the roof flight; server ticks and client frames sample the same continuous curve.
+    //! \param target The goal of the flight.
     void startHop(const Ogre::Vector3& target);
+    //! \brief Server side: one turn of the flight; the animal lands in the last one.
     void continueHop();
     //! Puts the animal at the position and tells the clients, without touching the animation
     void moveTo(const Ogre::Vector3& position);
@@ -301,6 +318,7 @@ private:
     //! Individual incubation/growth duration, preserved across save/load and cleared on a kind transition.
     uint32_t mStageDuration;
     uint32_t mBusyTurns;
+    //! The animal is on its way out of the coop (pose, then a walk through the door)
     bool mLeavingCoop;
     Ogre::Vector2 mCoopDoor;
     Ogre::Vector2 mCoopExit;
@@ -337,6 +355,7 @@ private:
     std::string mSnatchedFrom;
     //! The state of the flight from a hungry creature (see ChickenFlight.h)
     ChickenFlight::State mFlight;
+    //! The hen the rooster mounts (server: while the pose lasts; clients: told by the server)
     std::string mMountHenName;
 
     //! \brief Server side: the chicken was dropped by the keeper. Offers it to the closest idle creature of

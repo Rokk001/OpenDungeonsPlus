@@ -600,8 +600,11 @@ private:
         Ogre::Real mPoseTime;
         Ogre::Real mPhase;
         int mFeatherBursts;
+        //! The feathers of the coop exit are still to fly (they fly when the animal walks through the door)
         bool mEmergeFeathersPending;
+        //! The door of the coop still has to swing again when the animal reaches it
         bool mCoopDoorReplayPending;
+        //! The animal walks out of the coop (the flags above end when it stops)
         bool mCoopExitWalking;
         //! The rooster this one fights (set by the server event), the first of the two makes the feather clouds
         ChickenEntity* mFightPartner;
@@ -901,6 +904,7 @@ private:
     //! \param position World position of the effect.
     //! \param particleName Name of the particle template to use.
     void createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName = "ChickenFeathers");
+    //! True when the animal is in the scene, in the view of the camera and plays the clip (feathers only fly for that).
     bool chickenClipVisible(ChickenEntity* chicken, const std::string& clip) const;
     //! \brief Moves every animal look (pose motion, fight clouds) and the coop decor for the elapsed time.
     //! \param timeSinceLastFrame Seconds since the last frame.

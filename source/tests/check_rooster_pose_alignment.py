@@ -28,8 +28,8 @@ assert 'RoomObjectPath::clearPoint(obstacles, position)' in room, 'takeoff only 
 assert 'rooster->walkToward(approach, 0.0, ChickenPose::strut)' in room
 assert 'RoomObjectNavigation::collect(*getGameMap(), clearance)' in room
 # The technical clearance follows the existing rooster scale, never a new balance setting.
-assert chicken.count('0.4f * static_cast<Ogre::Real>') == 1
-assert room.count('0.4f * static_cast<Ogre::Real>') == 2
+assert chicken.count('ROOF_FLIGHT_CLEARANCE * static_cast<Ogre::Real>') == 1
+assert room.count('ROOSTER_CLEARANCE_PER_SCALE * static_cast<Ogre::Real>') == 2
 
 
 def ease(x):

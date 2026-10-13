@@ -196,6 +196,8 @@ private:
     //! roof with the pose. Without coop he stays on the ground. True when he is where he crows (on the roof, or on
     //! the ground without coop), false while he is on his way.
     bool roostOnRoof(ChickenEntity* rooster, const std::string& pose);
+    //! \brief Lets the rooster flutter down from a coop roof to a free place next to the coop (he stays on the roof
+    //! when there is none).
     void climbDown(ChickenEntity* rooster);
     //! The chicks follow the nearest hen in a line, never the rooster.
     void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks);

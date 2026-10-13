@@ -62,6 +62,12 @@ const std::string MeshNest = "ChickenNest";
 const std::string MeshFeathers = "ChickenLooseFeathers";
 const std::string MaterialGroup = "Graphics";
 
+//! Coop exit: the door of a coop lies this far in front of the coop tile (tiles), an animal at the door is within the
+//! square root of DOOR_REACH_SQUARED of it, and the door opens when the animal is DOOR_OPEN_MARGIN before it
+const float COOP_DOOR_OFFSET = 0.9f;
+const float COOP_DOOR_REACH_SQUARED = 0.16f;
+const float COOP_DOOR_OPEN_MARGIN = 0.2f;
+
 //! Small deterministic random numbers so that the meshes look the same every time
 class ShapeRandom
 {
@@ -525,6 +531,10 @@ void RenderManager::rrUpdateChickenLook(ChickenEntity* chicken)
     applyChickenKindLook(chicken);
 }
 
+//! \brief True when the animal can be seen (in the scene, in the view of the camera) and its clip is playing.
+//! Feathers only fly for what the keeper can see.
+//! \param chicken The animal.
+//! \param clip The name of the clip that has to be playing.
 bool RenderManager::chickenClipVisible(ChickenEntity* chicken, const std::string& clip) const
 {
     std::map<ChickenEntity*, ChickenLook>::const_iterator it = mChickenLooks.find(chicken);
@@ -570,6 +580,9 @@ void RenderManager::rrSetHatcheryNests(const std::string& roomName, const std::v
     ++nests.mVersion;
 }
 
+//! \brief The server says which hen the rooster mounts: the mounting look uses exactly this pair.
+//! \param rooster The rooster that climbs on the hen.
+//! \param hen The hen he climbs on.
 void RenderManager::rrChickenMount(ChickenEntity* rooster, ChickenEntity* hen)
 {
     std::map<ChickenEntity*, ChickenLook>::iterator look = mChickenLooks.find(rooster);
@@ -698,7 +711,7 @@ void RenderManager::rrCreateCoopDecor(BuildingObject* coop)
         }
     }
 
-    decor.mNode = node->createChildSceneNode(name + "_node", Ogre::Vector3(0.9f, 0.0f, 0.0f));
+    decor.mNode = node->createChildSceneNode(name + "_node", Ogre::Vector3(COOP_DOOR_OFFSET, 0.0f, 0.0f));
     mCoopDecors[coop] = decor;
     // The first check is done at once
     mCoopDecorTimer = 10.0f;
@@ -1000,21 +1013,23 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
             }
         }
 
+        // A hen that flutters up shakes out a few feathers while the clip is seen
         if((kind == ChickenKind::hen) && (pose == ChickenPose::flutter) && (look.mFeatherBursts == 0) &&
            chickenClipVisible(chicken, "Flutter"))
         {
             look.mFeatherBursts = 1;
             createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.1f), featherSystem(kind));
         }
+        // The door of the coop swings and the feathers fly when the animal walks through it
         if((look.mEmergeFeathersPending || look.mCoopDoorReplayPending) && moving)
         {
             look.mCoopExitWalking = true;
             for(std::map<BuildingObject*, CoopDecor>::iterator coop = mCoopDecors.begin(); coop != mCoopDecors.end(); ++coop)
             {
-                const Ogre::Vector3 door = coop->first->getPosition() + Ogre::Vector3(0.9f, 0.0f, 0.0f);
-                if(chicken->getPosition().squaredDistance(door) > 0.16f)
+                const Ogre::Vector3 door = coop->first->getPosition() + Ogre::Vector3(COOP_DOOR_OFFSET, 0.0f, 0.0f);
+                if(chicken->getPosition().squaredDistance(door) > COOP_DOOR_REACH_SQUARED)
                     continue;
-                if(look.mCoopDoorReplayPending && chicken->getPosition().x >= door.x - 0.2f)
+                if(look.mCoopDoorReplayPending && chicken->getPosition().x >= door.x - COOP_DOOR_OPEN_MARGIN)
                 {
                     look.mCoopDoorReplayPending = false;
                     if(coop->second.mDoor != nullptr)

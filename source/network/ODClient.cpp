@@ -1583,10 +1583,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> roosterName >> henName);
             GameEntity* rooster = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, roosterName);
             GameEntity* hen = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, henName);
-            if(rooster != nullptr)
+            if((rooster != nullptr) && (rooster->getObjectType() == GameEntityType::chickenEntity))
             {
                 static_cast<ChickenEntity*>(rooster)->setMountHenFromServer(henName);
-                if(hen != nullptr)
+                if((hen != nullptr) && (hen->getObjectType() == GameEntityType::chickenEntity))
                     RenderManager::getSingleton().rrChickenMount(static_cast<ChickenEntity*>(rooster), static_cast<ChickenEntity*>(hen));
             }
             break;
@@ -1594,13 +1594,13 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::chickenRoofFlight:
         {
             std::string name;
-            Ogre::Vector3 from;
-            Ogre::Vector3 to;
-            uint32_t turns;
-            Ogre::Real elapsed;
+            Ogre::Vector3 from(Ogre::Vector3::ZERO);
+            Ogre::Vector3 to(Ogre::Vector3::ZERO);
+            uint32_t turns = 0;
+            Ogre::Real elapsed = 0.0f;
             OD_ASSERT_TRUE(packetReceived >> name >> from >> to >> turns >> elapsed);
             GameEntity* entity = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, name);
-            if(entity != nullptr)
+            if((entity != nullptr) && (entity->getObjectType() == GameEntityType::chickenEntity))
                 static_cast<ChickenEntity*>(entity)->startRoofFlightFromServer(from, to, turns, elapsed);
             break;
         }

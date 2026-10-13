@@ -57,6 +57,16 @@ const std::string RoomHatcheryNameDisplay = "Hatchery room";
 const RoomType RoomHatchery::mRoomType = RoomType::hatchery;
 const TileVisual RoomHatchery::mRoomVisual= TileVisual::hatcheryRoom;
 
+//! Where an animal stands inside a coop, where the door in front of it is and where the search for a free place on the
+//! floor starts (tiles from the center of the coop tile, along x)
+const Ogre::Real COOP_INSIDE_OFFSET = 0.3f;
+const Ogre::Real COOP_DOOR_OFFSET = 0.9f;
+const Ogre::Real COOP_EXIT_SEARCH_OFFSET = 1.1f;
+//! Free space the rooster needs around him, per unit of his scale (the long tail), tiles
+const Ogre::Real ROOSTER_CLEARANCE_PER_SCALE = 0.4f;
+//! Grid of the search for a landing place next to a coop: points per tile
+const float LAND_SEARCH_STEPS_PER_TILE = 8.0f;
+
 
 namespace
 {
@@ -776,16 +786,17 @@ bool RoomHatchery::spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& 
     for(uint32_t i = 0; (i < mCentralActiveSpotTiles.size()) && (spawned < count); ++i)
     {
         Tile* coopTile = mCentralActiveSpotTiles[(first + i) % mCentralActiveSpotTiles.size()];
+        // The door of the coop faces the next tile in x: it has to belong to this hatchery
         Tile* floorTile = getGameMap()->getTile(coopTile->getX() + 1, coopTile->getY());
         if((floorTile == nullptr) || (floorTile->getCoveringRoom() != this))
             continue;
 
-        const Ogre::Vector2 inside(coopTile->getX() + 0.3f, coopTile->getY());
-        const Ogre::Vector2 door(coopTile->getX() + 0.9f, coopTile->getY());
+        const Ogre::Vector2 inside(coopTile->getX() + COOP_INSIDE_OFFSET, coopTile->getY());
+        const Ogre::Vector2 door(coopTile->getX() + COOP_DOOR_OFFSET, coopTile->getY());
         Ogre::Vector2 freePosition;
         if(!RoomObjectNavigation::standingPosition(obstacles,
-            Ogre::Vector2(coopTile->getX() + 1.1f, coopTile->getY()), freePosition) ||
-           (freePosition.x <= coopTile->getX() + 0.9f) ||
+            Ogre::Vector2(coopTile->getX() + COOP_EXIT_SEARCH_OFFSET, coopTile->getY()), freePosition) ||
+           (freePosition.x <= coopTile->getX() + COOP_DOOR_OFFSET) ||
            (getGameMap()->getTile(Helper::round(freePosition.x), Helper::round(freePosition.y)) != floorTile) ||
            !RoomObjectPath::clearSegment(obstacles, inside, door, true) ||
            !RoomObjectPath::clearSegment(obstacles, door, freePosition))
@@ -1702,6 +1713,8 @@ Tile* RoomHatchery::getNearestCoop(const Ogre::Vector2& position) const
     return nearest;
 }
 
+//! \brief The height of the roof of a coop above the floor (the same for every coop mesh, from the config).
+//! \param coopTile The tile of the coop.
 double RoomHatchery::getRoofHeight(const Tile& coopTile) const
 {
     return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCoopRoofHeight",
@@ -1719,18 +1732,18 @@ Ogre::Vector2 RoomHatchery::getPerchSpot(const Tile& coopTile) const
 bool RoomHatchery::getGroundSpot(const Tile& coopTile, Ogre::Vector2& spot) const
 {
     // The long tail must clear the entire coop footprint before the vertical leg of the flight.
-    const Ogre::Real clearance = 0.4f * static_cast<Ogre::Real>(
+    const Ogre::Real clearance = ROOSTER_CLEARANCE_PER_SCALE * static_cast<Ogre::Real>(
         ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterScale", 1.25));
     const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), clearance);
     const Ogre::Vector2 coopCenter(coopTile.getX(), coopTile.getY());
     const double reach = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterLandReach", 1.0);
-    const int steps = static_cast<int>(std::ceil(reach * 8.0));
+    const int steps = static_cast<int>(std::ceil(reach * LAND_SEARCH_STEPS_PER_TILE));
     Ogre::Real nearest = static_cast<Ogre::Real>(reach * reach);
     bool found = false;
     for(int y = -steps; y <= steps; ++y)
         for(int x = -steps; x <= steps; ++x)
         {
-            const Ogre::Vector2 candidate = coopCenter + Ogre::Vector2(x / 8.0f, y / 8.0f);
+            const Ogre::Vector2 candidate = coopCenter + Ogre::Vector2(x / LAND_SEARCH_STEPS_PER_TILE, y / LAND_SEARCH_STEPS_PER_TILE);
             Tile* tile = getGameMap()->getTile(Helper::round(candidate.x), Helper::round(candidate.y));
             if(tile == nullptr || tile->getCoveringRoom() != this || candidate.squaredDistance(coopCenter) > nearest ||
                 !RoomObjectPath::clearPoint(obstacles, candidate))
@@ -1781,6 +1794,7 @@ void RoomHatchery::climbDown(ChickenEntity* rooster)
     Ogre::Vector2 spot(rooster->getPosition().x, rooster->getPosition().y);
     if(coopTile != nullptr)
     {
+        // No free place next to the coop: he stays on the roof for now
         if(!getGroundSpot(*coopTile, spot))
             return;
     }
@@ -1814,7 +1828,7 @@ bool RoomHatchery::roostOnRoof(ChickenEntity* rooster, const std::string& pose)
         return false;
     }
 
-    const Ogre::Real clearance = 0.4f * static_cast<Ogre::Real>(
+    const Ogre::Real clearance = ROOSTER_CLEARANCE_PER_SCALE * static_cast<Ogre::Real>(
         ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterScale", 1.25));
     const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(*getGameMap(), clearance);
     if(position.distance(approach) < mRoosterSettings.mHopDistance && RoomObjectPath::clearPoint(obstacles, position))

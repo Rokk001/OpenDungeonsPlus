@@ -281,6 +281,7 @@ void ChickenEntity::doUpkeep()
         {
             if(mLeavingCoop)
             {
+                // The entrance pose is over: through the door of the coop to the free place on the floor
                 std::vector<Ogre::Vector2> path;
                 if(getPosition().x < mCoopDoor.x)
                     path.push_back(mCoopDoor);
@@ -462,10 +463,12 @@ void ChickenEntity::mountHen(ChickenEntity& hen)
 {
     if(!isFree() || mKind != ChickenKind::rooster || !hen.isFree() || hen.getKind() != ChickenKind::hen)
         return;
+    // He climbs on her facing the way she looks, and the clients are told which hen it is
     Ogre::Vector3 direction = hen.getWalkDirection();
     if(direction.squaredLength() < 0.000001f)
         direction = Ogre::Vector3::NEGATIVE_UNIT_Y;
     mMountHenName = hen.getName();
+    // The climb on the hen, the treading and the climb down last three turns together
     hen.playPose(ChickenPose::cackle, 3);
     playPose(ChickenPose::mount, 3);
     // Clearing the old paths can restore their final headings, so announce the shared heading afterwards.
@@ -514,30 +517,50 @@ void ChickenEntity::clearFollowTarget()
 
 namespace
 {
+//! Seconds of the RoofFlight clip of the skeleton; the clip is stretched to the length of the flight
+const float ROOF_FLIGHT_CLIP_SECONDS = 4.0f;
+//! The rooster stays on the ground while he crouches (the first part of the flight) and has settled before the wings
+//! are folded (the last part): only this part of the flight is travel
+const float ROOF_FLIGHT_CROUCH_PART = 0.12f;
+const float ROOF_FLIGHT_TRAVEL_PART = 0.73f;
+//! The travel is a lift (up to this part of it), the way across (the next ROOF_FLIGHT_ACROSS_PART of it) and the
+//! settling (from ROOF_FLIGHT_LAND_START on)
+const float ROOF_FLIGHT_LIFT_END = 0.3f;
+const float ROOF_FLIGHT_ACROSS_PART = 0.4f;
+const float ROOF_FLIGHT_LAND_START = 0.7f;
+//! Tiles of clearance above the higher end of the flight, for the scale of the rooster (long tail)
+const float ROOF_FLIGHT_CLEARANCE = 0.4f;
+
+//! \brief The place of a flying rooster at a part of the flight (0 = start, 1 = end). The route lifts vertically
+//! outside the coop, crosses above its ridge and settles vertically on the perch; exchanging the two ends gives
+//! exactly the reverse route for the descent.
+//! \param from Start of the flight.
+//! \param to Goal of the flight.
+//! \param progress Part of the flight that is over (0 to 1).
 Ogre::Vector3 roofFlightPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress)
 {
     // Grounded during crouching and settled before the wings finish folding.
-    const Ogre::Real travel = std::max(0.0f, std::min(1.0f, (progress - 0.12f) / 0.73f));
+    const Ogre::Real travel = std::max(0.0f, std::min(1.0f, (progress - ROOF_FLIGHT_CROUCH_PART) / ROOF_FLIGHT_TRAVEL_PART));
     if(travel <= 0.0f)
         return from;
     if(travel >= 1.0f)
         return to;
-    const Ogre::Real clearance = 0.4f * static_cast<Ogre::Real>(
+    const Ogre::Real clearance = ROOF_FLIGHT_CLEARANCE * static_cast<Ogre::Real>(
         ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryRoosterScale", 1.25));
     const Ogre::Real high = std::max(from.z, to.z) + clearance;
     // Lift vertically outside the coop, cross above its ridge, then settle vertically on the perch.
     // Exchanging the endpoints gives exactly the reverse safe route for descent.
-    const Ogre::Real lateral = std::max(0.0f, std::min(1.0f, (travel - 0.3f) / 0.4f));
+    const Ogre::Real lateral = std::max(0.0f, std::min(1.0f, (travel - ROOF_FLIGHT_LIFT_END) / ROOF_FLIGHT_ACROSS_PART));
     const Ogre::Real across = lateral * lateral * (3.0f - 2.0f * lateral);
     Ogre::Vector3 position = from + (to - from) * across;
-    if(travel < 0.3f)
+    if(travel < ROOF_FLIGHT_LIFT_END)
     {
-        const Ogre::Real lift = travel / 0.3f;
+        const Ogre::Real lift = travel / ROOF_FLIGHT_LIFT_END;
         position.z = from.z + (high - from.z) * lift * lift * (3.0f - 2.0f * lift);
     }
-    else if(travel > 0.7f)
+    else if(travel > ROOF_FLIGHT_LAND_START)
     {
-        const Ogre::Real land = (travel - 0.7f) / 0.3f;
+        const Ogre::Real land = (travel - ROOF_FLIGHT_LAND_START) / (1.0f - ROOF_FLIGHT_LAND_START);
         position.z = high + (to.z - high) * land * land * (3.0f - 2.0f * land);
     }
     else
@@ -589,12 +612,12 @@ void ChickenEntity::startRoofFlightFromServer(const Ogre::Vector3& from, const O
     setAnimationState(ChickenPose::roofFlight, false, Ogre::Vector3::ZERO, false);
     RenderedMovableEntity::setPosition(roofFlightPosition(from, to, elapsed / mHopTurns));
     if(getAnimationState() != nullptr)
-        getAnimationState()->setTimePosition(4.0f * elapsed / mHopTurns);
+        getAnimationState()->setTimePosition(ROOF_FLIGHT_CLIP_SECONDS * elapsed / mHopTurns);
 }
 
 double ChickenEntity::getAnimationSpeedFactor() const
 {
-    return (!getIsOnServerMap() && mHopTurnsLeft > 0) ? 4.0 / mHopTurns : 1.0;
+    return (!getIsOnServerMap() && mHopTurnsLeft > 0) ? ROOF_FLIGHT_CLIP_SECONDS / mHopTurns : 1.0;
 }
 
 void ChickenEntity::update(Ogre::Real timeSinceLastFrame)
@@ -606,7 +629,7 @@ void ChickenEntity::update(Ogre::Real timeSinceLastFrame)
         static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
     RenderedMovableEntity::setPosition(roofFlightPosition(mHopFrom, mHopTo, mHopElapsed / mHopTurns));
     if(getAnimationState() != nullptr && getAnimationState()->getAnimationName() == "RoofFlight")
-        getAnimationState()->setTimePosition(4.0f * mHopElapsed / mHopTurns);
+        getAnimationState()->setTimePosition(ROOF_FLIGHT_CLIP_SECONDS * mHopElapsed / mHopTurns);
     if(mHopElapsed >= mHopTurns)
         mHopTurnsLeft = 0;
 }
@@ -1176,6 +1199,7 @@ void ChickenEntity::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     RenderedMovableEntity::exportToPacket(os, seat);
     os << static_cast<uint32_t>(mKind);
+    // A client that joins during a flight or a mounting pose is told how far it is
     os << mHopTurnsLeft;
     if(mHopTurnsLeft > 0)
         os << mHopFrom << mHopTo << mHopTurns << mHopElapsed;
@@ -1203,6 +1227,7 @@ void ChickenEntity::exportToStream(std::ostream& os) const
     os << static_cast<uint32_t>(mKind) << "\t" << mNbTurnLay << "\t" << mAge << "\t";
     // Appended later: turns the keeper's gift is still offered to a creature that is not hungry
     os << mGiftTurns << "\t";
+    // Appended later: the way out of the coop (saves without it load with the animal outside)
     os << mLeavingCoop << "\t" << mCoopExit.x << "\t" << mCoopExit.y << "\t"
        << mCoopDoor.x << "\t" << mCoopDoor.y << "\t" << mStageDuration << "\t";
 }
@@ -1250,6 +1275,7 @@ bool ChickenEntity::importFromStream(std::istream& is)
             }
             if(mLeavingCoop)
             {
+                // The way out is started again: a short entrance pose, then the walk
                 mBusyTurns = 1;
                 mPrevAnimationState = ChickenPose::emerge;
                 mPrevAnimationStateLoop = false;
