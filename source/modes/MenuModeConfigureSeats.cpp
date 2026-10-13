@@ -58,6 +58,33 @@ const std::string SETTINGS_TABS = "SettingsTabs";
 
 //! \brief Height of one line on the creature, room, spell, trap and door pages, in layout pixels
 const float SETTING_LINE_HEIGHT = 34.0f;
+//! \brief Distance of the first line from the top of its page, in layout pixels
+const float SETTING_LINE_START = 10.0f;
+//! \brief Height of the label, spinner and button of one line, in layout pixels
+const float SETTING_CONTROL_HEIGHT = 28.0f;
+//! \brief Left edge of the label of one line, in layout pixels
+const float SETTING_LABEL_LEFT = 16.0f;
+//! \brief Right edge of the label of one line, in layout pixels
+const float SETTING_LABEL_RIGHT = 330.0f;
+//! \brief Left edge of the spinner or button of one line, in layout pixels
+const float SETTING_CONTROL_LEFT = 350.0f;
+//! \brief Right edge of the spinner of one line, in layout pixels
+const float SETTING_SPINNER_RIGHT = 470.0f;
+//! \brief Right edge of the button of one line, in layout pixels
+const float SETTING_BUTTON_RIGHT = 540.0f;
+//! \brief Smallest limit of the number of creatures of one class. 0 stops the keeper from getting that class
+const double SETTING_CREATURE_LIMIT_MIN = 0.0;
+//! \brief Smallest maximum number of creatures of a seat
+const double SETTING_MAX_CREATURES_MIN = 1.0;
+//! \brief The value of the maximum number of creatures that stands for the default of the configuration
+const uint32_t SETTING_MAX_CREATURES_DEFAULT = 0;
+//! \brief Step size of the spinners of the Game settings window
+const double SETTING_SPINNER_STEP = 1.0;
+//! \brief Step size of the game speed spinner, in percent
+const double SETTING_GAME_SPEED_STEP = 25.0;
+//! \brief The values of the fog of war combo
+const uint32_t SETTING_FOG_OFF = 0;
+const uint32_t SETTING_FOG_ON = 1;
 
 //! \brief The text on the button of a room, spell, trap or door
 std::string itemStateText(uint32_t state)
@@ -260,15 +287,16 @@ void MenuModeConfigureSeats::initSettingCombos()
     combo->setReadOnly(true);
     combo->setEnabled(false);
     mHostSettingWindows.push_back(combo);
-    addSettingItem(combo, "On", 1);
-    addSettingItem(combo, "Off", 0);
-    selectSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, 1);
+    addSettingItem(combo, "On", SETTING_FOG_ON);
+    addSettingItem(combo, "Off", SETTING_FOG_OFF);
+    selectSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, SETTING_FOG_ON);
     addEventConnection(
         combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
             CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
     );
 
-    // The spinners: maximum number of creatures, game speed and game duration
+    // The spinners: maximum number of creatures of a seat (from one to the absolute maximum of the
+    // configuration), game speed and game duration
     struct SpinnerSetting
     {
         const std::string* name;
@@ -280,9 +308,10 @@ void MenuModeConfigureSeats::initSettingCombos()
     const double maxCreaturesAbsolute = ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute();
     const double maxCreaturesDefault = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
     const SpinnerSetting spinners[] = {
-        {&SPINNER_MAX_CREATURES, 1.0, maxCreaturesAbsolute, 1.0, maxCreaturesDefault},
-        {&SPINNER_GAME_SPEED, 25.0, 400.0, 25.0, 100.0},
-        {&SPINNER_GAME_DURATION, 0.0, 9999.0, 1.0, 0.0}
+        {&SPINNER_MAX_CREATURES, SETTING_MAX_CREATURES_MIN, maxCreaturesAbsolute, SETTING_SPINNER_STEP, maxCreaturesDefault},
+        {&SPINNER_GAME_SPEED, static_cast<double>(GameMap::SKIRMISH_SPEED_MIN), static_cast<double>(GameMap::SKIRMISH_SPEED_MAX),
+            SETTING_GAME_SPEED_STEP, static_cast<double>(GameMap::SKIRMISH_SPEED_DEFAULT)},
+        {&SPINNER_GAME_DURATION, 0.0, static_cast<double>(GameMap::SKIRMISH_DURATION_MAX), SETTING_SPINNER_STEP, 0.0}
     };
     for(const SpinnerSetting& setting : spinners)
     {
@@ -975,7 +1004,7 @@ void MenuModeConfigureSeats::refreshSeatConfiguration(ODPacket& packet)
     selectSettingValue(generalPage, COMBOBOX_FOG_OF_WAR, fogOfWar);
     selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, heartDestroyedReward);
     // 0 means that the default number of creatures is used
-    if(maxCreaturesSetting == 0)
+    if(maxCreaturesSetting == SETTING_MAX_CREATURES_DEFAULT)
         maxCreaturesSetting = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
     static_cast<CEGUI::Spinner*>(generalPage->getChild(SPINNER_MAX_CREATURES))->setCurrentValue(maxCreaturesSetting);
     static_cast<CEGUI::Spinner*>(generalPage->getChild(SPINNER_GAME_SPEED))->setCurrentValue(gameSpeedPercent);

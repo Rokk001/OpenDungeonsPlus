@@ -580,14 +580,23 @@ public:
     //! \brief Sent instead of a setting that the Game Settings page has not shown yet
     static const uint32_t SKIRMISH_SETTING_UNCHOSEN = 0xFFFFFFFF;
 
+    //! \brief Smallest, largest and default game speed, in percent of the default turn rate
+    static const uint32_t SKIRMISH_SPEED_MIN = 25;
+    static const uint32_t SKIRMISH_SPEED_MAX = 400;
+    static const uint32_t SKIRMISH_SPEED_DEFAULT = 100;
+
+    //! \brief Longest game duration that can be set, in minutes
+    static const uint32_t SKIRMISH_DURATION_MAX = 9999;
+
     //! \brief Game speed is a percentage of the default turn rate, duration is in minutes (0 = no limit)
     inline uint32_t getGameSpeedPercent() const
     { return mGameSpeedPercent; }
 
     //! \brief The factor applied to the real time speed of the game (1.0 = default speed)
     inline double getGameSpeedFactor() const
-    { return static_cast<double>(mGameSpeedPercent) / 100.0; }
+    { return static_cast<double>(mGameSpeedPercent) / static_cast<double>(SKIRMISH_SPEED_DEFAULT); }
 
+    //! \brief The game duration in minutes of game time, 0 means no limit
     inline uint32_t getGameDurationMinutes() const
     { return mGameDurationMinutes; }
 
@@ -596,12 +605,21 @@ public:
     inline uint32_t getHeartDestroyedReward() const
     { return mHeartDestroyedReward; }
 
+    //! \brief Sets the rules chosen on the Game Settings page
+    //! \param gameSpeedPercent Game speed in percent, kept between SKIRMISH_SPEED_MIN and SKIRMISH_SPEED_MAX
+    //! \param gameDurationMinutes Game duration in minutes of game time, 0 for no limit
+    //! \param fogOfWar True if the fog of war is on
+    //! \param heartDestroyedReward What the keeper that destroys a dungeon heart receives, see getHeartDestroyedReward
     void setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinutes, bool fogOfWar,
         uint32_t heartDestroyedReward);
 
     //! \brief Maximum number of creatures of the given class a seat may own.
     //! SKIRMISH_CREATURE_LIMIT_NONE if unlimited
     uint32_t getCreatureClassLimit(const std::string& className) const;
+
+    //! \brief Sets the maximum number of creatures of the given class a seat may own
+    //! \param className The class name of the creature definition
+    //! \param limit The new limit. SKIRMISH_CREATURE_LIMIT_NONE or more removes the limit
     void setCreatureClassLimit(const std::string& className, uint32_t limit);
 
     //! \brief The state of every skill chosen on the Game Settings page. The index is the SkillType. It is
@@ -612,7 +630,9 @@ public:
     //! \brief Applies the states that differ from the level to every seat. To be called before the seats are initialized.
     void applySkirmishSkillStates();
 
-    //! \brief Called on the server each turn: announces the end of the game time once
+    //! \brief Called on the server each turn: sends the time limit and the countdowns of the level script to the
+    //! players and makes every keeper lose once a time limit of the level script or the game duration of the
+    //! skirmish settings has run out. The limit of the level script wins over the game duration.
     void checkGameDuration();
 
     //! \brief Level script action: the time runs out after that many seconds from now, for every

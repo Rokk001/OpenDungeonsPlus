@@ -74,7 +74,8 @@ names = [n for n in names if n]
 check(names[:3] == ["notAvailable", "availableAtStart", "needsResearch"], "item state order changed")
 check("SKIRMISH_CREATURE_LIMIT_NONE = 32" in header, "creature limit range is 0 to 32")
 gamemap = (root / "source/gamemap/GameMap.cpp").read_text(encoding="utf-8")
-check("std::max<uint32_t>(gameSpeedPercent, 25), 400" in gamemap, "game speed range is 25 to 400 percent")
+check("SKIRMISH_SPEED_MIN = 25" in header and "SKIRMISH_SPEED_MAX = 400" in header, "game speed range is 25 to 400 percent")
+check("std::max<uint32_t>(gameSpeedPercent, SKIRMISH_SPEED_MIN), SKIRMISH_SPEED_MAX" in gamemap, "game speed is not limited to its range")
 
 # When the game time runs out every seat with a player loses (no winner), through the shared defeat path
 duration = gamemap[gamemap.index("void GameMap::checkGameDuration"):]

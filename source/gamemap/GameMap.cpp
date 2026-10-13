@@ -240,7 +240,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mGoldDensityPercent(100),
         mManaRegenerationPercent(100),
         mMaxCreaturesSetting(0),
-        mGameSpeedPercent(100),
+        mGameSpeedPercent(SKIRMISH_SPEED_DEFAULT),
         mGameDurationMinutes(0),
         mHeartDestroyedReward(0),
         mGameDurationAnnounced(false),
@@ -418,7 +418,7 @@ void GameMap::clearAll()
         mGoldDensityPercent = 100;
         mManaRegenerationPercent = 100;
         mMaxCreaturesSetting = 0;
-        mGameSpeedPercent = 100;
+        mGameSpeedPercent = SKIRMISH_SPEED_DEFAULT;
         mGameDurationMinutes = 0;
         mHeartDestroyedReward = 0;
         mGameDurationAnnounced = false;
@@ -4007,8 +4007,8 @@ void GameMap::setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinut
     uint32_t heartDestroyedReward)
 {
     // The game turn ranges from 25 % to 400 % of its default rate
-    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, 25), 400);
-    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, 9999);
+    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, SKIRMISH_SPEED_MIN), SKIRMISH_SPEED_MAX);
+    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, SKIRMISH_DURATION_MAX);
     mIsFOWActivated = fogOfWar;
     mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, 2);
 }
