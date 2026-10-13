@@ -44,6 +44,7 @@ public:
     virtual ~CreatureEffectBurn()
     {}
 
+    //! \brief Returns the name under which this effect is registered and saved.
     virtual const std::string& getEffectName() const override;
 
     //! \brief Writes the effect with both damage endpoints.
@@ -51,6 +52,7 @@ public:
     //! \brief Reads both endpoints, accepting legacy fixed damage effects.
     virtual bool importFromStream(std::istream& is) override;
 
+    //! \brief Creates a burn effect from the stream (used when loading a saved game).
     static CreatureEffectBurn* load(std::istream& is);
 
 protected:
@@ -58,6 +60,7 @@ protected:
     virtual void applyEffect(Creature& creature) override;
 
 private:
+    //! Damage the creature takes each turn while it burns.
     double mDamagePerTurn;
     //! \brief Minimum damage, retained separately for a fresh roll every application.
     double mDamagePerTurnMin;
