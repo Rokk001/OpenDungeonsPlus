@@ -50,6 +50,26 @@ const double BEAT_MIN = 7.0;
 const double BEAT_MAX = 17.0;
 //! How fast strength and beat follow their new values (per second)
 const double FOLLOW_SPEED = 3.0;
+//! The squared distance (node units) and the angle (radians) up to which a node counts as left the way we put it
+const double UNTOUCHED_DISTANCE_SQUARED = 0.00000001;
+const float UNTOUCHED_ANGLE = 0.001f;
+//! The chance (0 to 1) that a new strength is a quiet one, and the ranges of a quiet and of a strong strength
+const double QUIET_CHANCE = 0.25;
+const double QUIET_MIN = 0.1;
+const double QUIET_MAX = 0.25;
+const double STRONG_MIN = 0.5;
+const double STRONG_MAX = 1.0;
+//! The sway sideways, the tilt over the long side and the second sway axis follow the beat at these shares
+const double SWAY_BEAT_SHARE = 0.6;
+const double TILT_BEAT_SHARE = 0.8;
+//! The share of the sway and of the tilt that the second axis gets, and its beat and phase against the first axis
+const double SECOND_AXIS_SHARE = 0.6;
+const double SWAY_SECOND_BEAT = 0.7;
+const double SWAY_SECOND_PHASE = 1.0;
+const double TILT_SECOND_BEAT = 1.3;
+const double TILT_SECOND_PHASE = 0.5;
+//! The time that counts as "no sound played yet"
+const double NEVER_PLAYED = -1000.0;
 
 //! Cosmetic dice of their own: the game logic must not see them
 std::mt19937& extrasRng()
@@ -58,6 +78,7 @@ std::mt19937& extrasRng()
     return rng;
 }
 
+//! \brief Returns a random number between min and max from the cosmetic generator
 double extrasRandom(double min, double max)
 {
     std::uniform_real_distribution<double> distribution(min, max);
@@ -98,13 +119,13 @@ struct Struggle
 };
 
 std::map<std::string, Struggle> sStruggles;
-double sLastSound = -1000.0;
+double sLastSound = NEVER_PLAYED;
 
 //! True if the node still is the way the struggling left it
 bool isUntouched(const Ogre::SceneNode* node, const Struggle& struggle)
 {
-    return ((node->getPosition() - struggle.mLastPosition).squaredLength() < 0.00000001) &&
-        node->getOrientation().equals(struggle.mLastOrientation, Ogre::Radian(0.001f));
+    return ((node->getPosition() - struggle.mLastPosition).squaredLength() < UNTOUCHED_DISTANCE_SQUARED) &&
+        node->getOrientation().equals(struggle.mLastOrientation, Ogre::Radian(UNTOUCHED_ANGLE));
 }
 
 //! Puts the node of the body back the way it was before the struggling, as far as nobody else changed it meanwhile
@@ -122,15 +143,16 @@ void restoreBody(GameMap* gameMap, const std::string& bodyName, const Struggle& 
     if(node == nullptr)
         return;
 
-    if((node->getPosition() - struggle.mLastPosition).squaredLength() < 0.00000001)
+    if((node->getPosition() - struggle.mLastPosition).squaredLength() < UNTOUCHED_DISTANCE_SQUARED)
         node->setPosition(struggle.mBasePosition);
 
-    if(node->getOrientation().equals(struggle.mLastOrientation, Ogre::Radian(0.001f)))
+    if(node->getOrientation().equals(struggle.mLastOrientation, Ogre::Radian(UNTOUCHED_ANGLE)))
         node->setOrientation(struggle.mBaseOrientation);
 }
 
 }
 
+//! \brief The body is picked up by the carrier: a creature that is still alive starts to struggle
 void WorkerExtras::startStruggle(GameMap* gameMap, Creature* carrier, Creature* body)
 {
     if((gameMap == nullptr) || (carrier == nullptr) || (body == nullptr) || !body->isAlive())
@@ -148,6 +170,7 @@ void WorkerExtras::startStruggle(GameMap* gameMap, Creature* carrier, Creature* 
     sStruggles[body->getName()] = struggle;
 }
 
+//! \brief The body is put down or lost: its node is put back the way it was and the struggle is forgotten
 void WorkerExtras::endStruggle(GameMap* gameMap, const std::string& bodyName)
 {
     std::map<std::string, Struggle>::iterator it = sStruggles.find(bodyName);
@@ -160,6 +183,8 @@ void WorkerExtras::endStruggle(GameMap* gameMap, const std::string& bodyName)
     sStruggles.erase(it);
 }
 
+//! \brief Moves the struggling bodies a little each frame and lets go of those that are put down, dead or moved by
+//! someone else; with enabled false all of them are put back and forgotten
 void WorkerExtras::update(GameMap* gameMap, double timeSinceLastFrame, bool enabled)
 {
     if(sStruggles.empty())
@@ -206,8 +231,8 @@ void WorkerExtras::update(GameMap* gameMap, double timeSinceLastFrame, bool enab
         if(struggle.mRetarget <= 0.0)
         {
             struggle.mRetarget = extrasRandom(RETARGET_MIN, RETARGET_MAX);
-            struggle.mStrengthTarget = (extrasRandom(0.0, 1.0) < 0.25) ? extrasRandom(0.1, 0.25) :
-                extrasRandom(0.5, 1.0);
+            struggle.mStrengthTarget = (extrasRandom(0.0, 1.0) < QUIET_CHANCE) ?
+                extrasRandom(QUIET_MIN, QUIET_MAX) : extrasRandom(STRONG_MIN, STRONG_MAX);
             struggle.mBeatTarget = extrasRandom(BEAT_MIN, BEAT_MAX);
         }
 
@@ -215,16 +240,18 @@ void WorkerExtras::update(GameMap* gameMap, double timeSinceLastFrame, bool enab
         struggle.mStrength += (struggle.mStrengthTarget - struggle.mStrength) * follow;
         struggle.mBeat += (struggle.mBeatTarget - struggle.mBeat) * follow;
         struggle.mPhaseBob += struggle.mBeat * timeSinceLastFrame;
-        struggle.mPhaseSway += struggle.mBeat * 0.6 * timeSinceLastFrame;
-        struggle.mPhaseTilt += struggle.mBeat * 0.8 * timeSinceLastFrame;
+        struggle.mPhaseSway += struggle.mBeat * SWAY_BEAT_SHARE * timeSinceLastFrame;
+        struggle.mPhaseTilt += struggle.mBeat * TILT_BEAT_SHARE * timeSinceLastFrame;
 
         double strength = struggle.mStrength;
         Ogre::Vector3 offset(
             static_cast<Ogre::Real>(STRUGGLE_SWAY * strength * std::sin(struggle.mPhaseSway)),
-            static_cast<Ogre::Real>(STRUGGLE_SWAY * 0.6 * strength * std::sin(struggle.mPhaseSway * 0.7 + 1.0)),
+            static_cast<Ogre::Real>(STRUGGLE_SWAY * SECOND_AXIS_SHARE * strength *
+                std::sin(struggle.mPhaseSway * SWAY_SECOND_BEAT + SWAY_SECOND_PHASE)),
             static_cast<Ogre::Real>(STRUGGLE_BOB * strength * std::fabs(std::sin(struggle.mPhaseBob))));
         double tiltX = STRUGGLE_TILT * strength * std::sin(struggle.mPhaseTilt);
-        double tiltY = STRUGGLE_TILT * 0.6 * strength * std::sin(struggle.mPhaseTilt * 1.3 + 0.5);
+        double tiltY = STRUGGLE_TILT * SECOND_AXIS_SHARE * strength *
+            std::sin(struggle.mPhaseTilt * TILT_SECOND_BEAT + TILT_SECOND_PHASE);
         Ogre::Quaternion tilt = Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(tiltX)), Ogre::Vector3::UNIT_X) *
             Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(tiltY)), Ogre::Vector3::UNIT_Y);
 
@@ -238,6 +265,7 @@ void WorkerExtras::update(GameMap* gameMap, double timeSinceLastFrame, bool enab
         endStruggle(gameMap, name);
 }
 
+//! \brief Puts all bodies back and forgets them
 void WorkerExtras::stopAll(GameMap* gameMap)
 {
     std::vector<std::string> names;
@@ -248,9 +276,10 @@ void WorkerExtras::stopAll(GameMap* gameMap)
         endStruggle(gameMap, name);
 
     sStruggles.clear();
-    sLastSound = -1000.0;
+    sLastSound = NEVER_PLAYED;
 }
 
+//! \brief Returns the sound family of the reaction event, an empty string if the event has no sound
 std::string WorkerExtras::getSoundFamily(const std::string& eventName)
 {
     static const std::string PREFIX = "Creatures/Worker/";
@@ -274,6 +303,7 @@ std::string WorkerExtras::getSoundFamily(const std::string& eventName)
     return std::string();
 }
 
+//! \brief Plays the sound of the reaction event at the place of the creature, not more often than SOUND_INTERVAL
 void WorkerExtras::playSound(const std::string& eventName, const Creature* creature, double now)
 {
     if((creature == nullptr) || (SoundEffectsManager::getSingletonPtr() == nullptr))
