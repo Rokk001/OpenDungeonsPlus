@@ -7017,6 +7017,8 @@ bool isPossessedBasicAttack(const CreatureSkill& skill)
 
 //! \brief Tells whether a possessed creature can use the skill now: no cooldown (including a fraction of a
 //! turn) and no warmup left, and the skill is usable by the creature.
+//! \param creature The possessed creature that wants to use the skill.
+//! \param skillData The state of the skill (cooldown and warmup turns left).
 bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
 {
     return (skillData.mCooldown <= 0.0) && (skillData.mWarmup == 0) &&
