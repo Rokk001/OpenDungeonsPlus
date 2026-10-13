@@ -22,7 +22,9 @@ assert definition.index('os << c->mLowHealthWalkSpeedFactor;') < definition.inde
 assert definition.index('is >> c->mLowHealthWalkSpeedFactor;') < definition.index('is >> c->mWalkClipRate;')
 assert 'nextParam == "WalkClipRate"' in definition and 'creatureDef->mWalkClipRate = Helper::toDouble(nextParam);' in definition
 assert '"    WalkClipRate' in definition and 'mWalkClipRate != 1.0' in definition
-assert 'std::max(0.2, std::min(8.0, mWalkClipRate))' in definition_h and '#include <algorithm>' in definition_h
+assert 'std::max(WALK_CLIP_RATE_MIN, std::min(WALK_CLIP_RATE_MAX, mWalkClipRate))' in definition_h and '#include <algorithm>' in definition_h
+assert 'static const double WALK_CLIP_RATE_MIN = 0.2;' in definition_h
+assert 'static const double WALK_CLIP_RATE_MAX = 8.0;' in definition_h
 
 # Applied only to the client clip speed of the walk state, not to the move speed
 pose = creature[creature.index('double Creature::getClientPoseSpeedFactor'):creature.index('double Creature::getPhysicalDefense')]
@@ -67,7 +69,7 @@ assert '"    WalkHurtClipRate' in definition and 'mWalkHurtClipRate >= 0.0' in d
 hurt_getter = definition_h[definition_h.index('getWalkHurtClipRate ()'):]
 hurt_getter = hurt_getter[:hurt_getter.index('}') + 1]
 assert 'if(mWalkHurtClipRate < 0.0)' in hurt_getter and 'return getWalkClipRate();' in hurt_getter
-assert 'std::max(0.2, std::min(8.0, mWalkHurtClipRate))' in hurt_getter
+assert 'std::max(WALK_CLIP_RATE_MIN, std::min(WALK_CLIP_RATE_MAX, mWalkHurtClipRate))' in hurt_getter
 BS = chr(92)
 assert '//! ' + BS + 'brief Optional (WalkHurtClipRate)' in definition_h and '//! ' + BS + 'brief Speed factor of the WalkHurt clip' in definition_h
 # no control character in the header (a backspace once replaced a backslash)
