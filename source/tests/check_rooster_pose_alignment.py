@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Non-compiling checks of the rooster's coop-clear flight and mounting alignment."""
 import math
+import os
 from pathlib import Path
 import subprocess
 import xml.etree.ElementTree as ET
@@ -45,7 +46,8 @@ def flight(a, b, t, clearance):
 
 out = root / 'out/rooster-flight'
 out.mkdir(parents=True, exist_ok=True)
-converter = r'C:/Users/mario/od-deps/build/ogre/bin/release/OgreXMLConverter.exe'
+# Converter executable: set OGRE_XML_CONVERTER to its full path, otherwise it is looked up on the PATH.
+converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 for name in ('ChickenCoopHouse', 'ChickenRooster'):
     subprocess.run([converter, '-q', '-log', str(out / (name + '-alignment.log')),
                     str(root / ('models/' + name + '.mesh')), str(out / (name + '.mesh.xml'))],
