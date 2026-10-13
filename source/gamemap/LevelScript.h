@@ -206,6 +206,7 @@ const char* levelScriptCompareToken(LevelScriptCompare op);
 //! Reads an operator, false if the text is none of them
 bool levelScriptParseCompare(const std::string& token, LevelScriptCompare& op);
 
+//! \brief The kinds of conditions a trigger can test (see the format above).
 enum class LevelScriptConditionType
 {
     time,
@@ -285,6 +286,7 @@ enum class LevelScriptObjectiveState
 //! \brief Returns the stable stream and display spelling of an objective state.
 const char* levelScriptObjectiveStateName(LevelScriptObjectiveState state);
 
+//! \brief The kinds of actions a trigger can run (see the format above).
 enum class LevelScriptActionType
 {
     message,
@@ -323,8 +325,10 @@ enum class LevelScriptActionType
     keyDoor
 };
 
+//! \brief One condition of a trigger. The fields that are used depend on the type.
 struct LevelScriptCondition
 {
+    //! \brief Creates a time condition with every value zero or "any seat".
     LevelScriptCondition() :
         mType(LevelScriptConditionType::time),
         mSeatId(-1),
@@ -411,6 +415,7 @@ struct LevelScriptAction
 //! and the conditions and actions of the triggers refer to them by name.
 struct LevelScriptRegion
 {
+    //! \brief Creates a region with all corners at tile 0,0.
     LevelScriptRegion() :
         mX1(0),
         mY1(0),
@@ -418,6 +423,7 @@ struct LevelScriptRegion
         mY2(0)
     {}
 
+    //! \brief Creates a region with that name between the two corners (any order).
     LevelScriptRegion(const std::string& name, int32_t x1, int32_t y1, int32_t x2, int32_t y2) :
         mName(name),
         mX1(x1),
@@ -436,8 +442,10 @@ struct LevelScriptRegion
     int32_t mY2;
 };
 
+//! \brief A trigger: conditions that must all hold, the actions to run then and how often it may fire.
 struct LevelScriptTrigger
 {
+    //! \brief Creates a trigger that fires once and has not fired yet.
     LevelScriptTrigger() :
         mRepeat(false),
         mCooldownSeconds(0),
@@ -476,6 +484,7 @@ struct LevelScriptOrder
 //! A timer that an action started: it counts game turns while it runs
 struct LevelScriptTimer
 {
+    //! \brief Creates a timer that is stopped and at turn 0.
     LevelScriptTimer() :
         mRunning(false),
         mTurns(0)
@@ -613,16 +622,20 @@ public:
     inline bool isEmpty() const
     { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mVictoryRequests.empty() && mCrossingProgress.empty() && mFatalShots.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
+    //! \brief The triggers of the script. The caller may change them.
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
         mWatchedValid = false;
         return mTriggers;
     }
 
+    //! \brief The triggers of the script.
     inline const std::vector<LevelScriptTrigger>& getTriggers() const
     { return mTriggers; }
 
+    //! \brief The value of the flag, 0 if it was never set.
     int64_t getFlag(const std::string& name) const;
+    //! \brief Sets the flag to the value.
     void setFlag(const std::string& name, int64_t value);
 
     //! Timers: a timer that was never started does not exist and counts 0 turns
@@ -633,6 +646,7 @@ public:
     //! Adds one turn to every running timer
     void advanceTimers();
 
+    //! \brief All timers that were started.
     inline const std::map<std::string, LevelScriptTimer>& getTimers() const
     { return mTimers; }
 
@@ -689,9 +703,11 @@ public:
     inline void setSlapLimit(int64_t limit)
     { mSlapLimit = limit; }
 
+    //! \brief All flags that were set.
     inline const std::map<std::string, int64_t>& getFlags() const
     { return mFlags; }
 
+    //! \brief All named regions of the level.
     inline const std::vector<LevelScriptRegion>& getRegions() const
     { return mRegions; }
 

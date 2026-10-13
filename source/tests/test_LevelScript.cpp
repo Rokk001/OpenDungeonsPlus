@@ -317,6 +317,7 @@ BOOST_AUTO_TEST_CASE(identified_objective_invalid_state)
     BOOST_CHECK(!script.importFromStream(input));
 }
 
+//! \brief A [Triggers] section (without the opening tag) that uses every kind of line of the model
 static const std::string sample =
     "# comment\n"
     "Flag\tgateOpen\t1\n"
@@ -380,6 +381,7 @@ static const std::string sample =
     "[/Trigger]\n"
     "[/Triggers]\n";
 
+//! \brief The triggers, conditions and actions of the sample are read with the values written there
 BOOST_AUTO_TEST_CASE(test_parse)
 {
     LevelScript script;
@@ -503,6 +505,7 @@ BOOST_AUTO_TEST_CASE(test_time_limit)
     BOOST_CHECK_EQUAL(again.getTimeLimitSeconds(), LevelScript::TIME_LIMIT_NOT_SET);
 }
 
+//! \brief Regions: the corners may come in any order, names are unique and the editor helpers work
 BOOST_AUTO_TEST_CASE(test_regions)
 {
     LevelScript script;
@@ -539,6 +542,7 @@ BOOST_AUTO_TEST_CASE(test_regions)
     BOOST_CHECK(!onlyRegion.isEmpty());
 }
 
+//! \brief Writing a script and reading it again gives the same text
 BOOST_AUTO_TEST_CASE(test_roundtrip)
 {
     LevelScript script;
@@ -561,6 +565,7 @@ BOOST_AUTO_TEST_CASE(test_roundtrip)
     BOOST_CHECK_EQUAL(written, os2.str());
 }
 
+//! \brief Malformed sections are refused
 BOOST_AUTO_TEST_CASE(test_invalid)
 {
     const char* invalid[] = {
@@ -668,6 +673,7 @@ BOOST_AUTO_TEST_CASE(test_region_level)
     BOOST_CHECK(actions.count(static_cast<int>(LevelScriptActionType::win)) == 1);
 }
 
+//! \brief A section with only the end tag is valid and empty
 BOOST_AUTO_TEST_CASE(test_empty)
 {
     LevelScript script;

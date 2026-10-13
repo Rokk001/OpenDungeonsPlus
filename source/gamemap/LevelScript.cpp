@@ -27,6 +27,7 @@
 namespace
 {
 
+//! \brief Reads a decimal number. Returns false if the text is empty or has other characters.
 bool parseInt(const std::string& str, int64_t& value)
 {
     if(str.empty())
@@ -41,9 +42,10 @@ bool parseInt(const std::string& str, int64_t& value)
     return true;
 }
 
+//! \brief Reads a decimal number that fits 32 bits (as parseInt).
 bool parseInt32(const std::string& str, int32_t& value)
 {
-    int64_t tmp;
+    int64_t tmp = 0;
     if(!parseInt(str, tmp))
         return false;
 
@@ -61,6 +63,7 @@ bool parseNonnegativeInt32(const std::string& str, int32_t& value)
     return true;
 }
 
+//! \brief Removes spaces, tabs and line ends from both ends of the text.
 std::string trim(const std::string& str)
 {
     std::string::size_type first = str.find_first_not_of(" \t\r\n");
@@ -71,6 +74,7 @@ std::string trim(const std::string& str)
     return str.substr(first, last - first + 1);
 }
 
+//! \brief Splits the line into the tokens that are separated by white space.
 std::vector<std::string> split(const std::string& line)
 {
     std::vector<std::string> tokens;
@@ -99,6 +103,7 @@ std::string restOfLine(const std::string& line, uint32_t count)
     return trim(line.substr(pos));
 }
 
+//! \brief Reads a comparison operator into the condition. Returns false if the token is none.
 bool parseOperator(const std::string& token, LevelScriptCondition& cond)
 {
     if(!levelScriptParseCompare(token, cond.mCompare))
@@ -179,7 +184,7 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     {
         cond.mType = LevelScriptConditionType::region;
         cond.mNumber = 1;
-        int32_t corner;
+        int32_t corner = 0;
         if((t.size() == 4) || ((t.size() >= 6) && !parseInt32(t[3], corner)))
         {
             cond.mName = t[3];
@@ -737,7 +742,7 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
                     return false;
             }
 
-            int64_t level;
+            int64_t level = 0;
             if(!parseInt(levelText, level) || (level < 1))
                 return false;
 
@@ -922,7 +927,7 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
             return false;
 
         std::string::size_type colon = t[3].find(':');
-        int64_t level;
+        int64_t level = 0;
         if((colon == std::string::npos) || (colon == 0) || !parseInt(t[3].substr(colon + 1), level) || (level < 1))
             return false;
 
@@ -1720,7 +1725,7 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "Flag")
         {
-            int64_t value;
+            int64_t value = 0;
             if(inTrigger || (t.size() != 3) || !parseInt(t[2], value))
                 return false;
 
@@ -1728,7 +1733,7 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "Timer")
         {
-            int64_t running;
+            int64_t running = 0;
             LevelScriptTimer timer;
             if(inTrigger || (t.size() != 4) || !parseInt(t[2], running) || !parseInt(t[3], timer.mTurns))
                 return false;
@@ -1894,7 +1899,7 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "State")
         {
-            int64_t fired;
+            int64_t fired = 0;
             if((t.size() != 3) || !parseInt(t[1], fired) || !parseInt(t[2], trigger.mLastFiredTurn))
                 return false;
 
