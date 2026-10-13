@@ -925,10 +925,15 @@ private:
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
     bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
         TreasuryEffectKind kind = TreasuryEffectKind::splash);
+    //! \brief Now and then starts gold dust over a full pile in view, over the portals and over the heart of the
+    //! local keeper when it is rich.
     void updateTreasuryDust(Ogre::Real timeSinceLastFrame);
+    //! \brief Starts a puff of gold dust over a portal of the local keeper when the keeper is rich.
     void startTreasuryPortalDust();
+    //! \brief Starts a puff of gold dust over the dungeon heart of the local keeper when the keeper is rich.
     void startTreasuryHeartDust();
     void startForeignWealthDust();
+    //! \brief Now and then starts sliding coins or a sparkle on a rich pile in view.
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
         int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);
@@ -952,6 +957,7 @@ private:
     void applyTreasuryGlowLights();
     void setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch);
     void destroyTreasuryGlowLight(const std::string& name);
+    //! \brief Ends the effects whose time is over and gives their places back to the budget of their room.
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     void startTreasuryPour(Tile* tile, int level);
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);

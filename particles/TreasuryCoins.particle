@@ -1,3 +1,10 @@
+// Effects on the gold of a treasury: coins thrown up by feet and rained down by workers (see
+// RenderManager::treasuryCreatureStep and RenderManager::rrTreasuryDeposit), gold dust over full piles and over the
+// portal and the heart of a rich keeper (RenderManager::updateTreasuryDust), coins that slide down a heap, coins
+// that roll away from the dent where gold was taken, and a soft sparkle on rich piles (see
+// RenderManager::updateTreasuryAmbient and RenderManager::startTreasuryPileChange). The sprites are the ones of
+// the creature reaction particles.
+
 // Coins thrown up by feet in deep treasury gold, and coins that rain onto a pile when gold is delivered
 // (over the whole tile, not only the top).
 

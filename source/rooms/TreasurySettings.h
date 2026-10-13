@@ -54,12 +54,18 @@ struct TreasurySettings
     float pourDuration = 1.4f;
     int splashBudgetFull = 6;
     int splashBudgetReduced = 2;
+    //! Gold dust puffs a room may show at once at the full and at the reduced detail (0 turns the floating motes off),
+    //! seconds between two attempts to start a puff and how long a puff counts against the budget of its room
     int dustBudgetFull = 0;
     int dustBudgetReduced = 0;
     float dustInterval = 0.7f;
     float dustLifetime = 3.0f;
+    //! A keeper is rich when it holds this share of the treasury capacity and at least this much gold (dust over
+    //! its portal and its heart)
     float portalRichShare = 0.5f;
     int portalRichMinGold = 500;
+    //! Seconds between two attempts to start a sparkle, sliding coins or rolling coins, and how long such an
+    //! effect counts against the budget of its room
     float ambientInterval = 0.9f;
     float ambientLifetime = 2.5f;
     int ambientBudgetFull = 3;

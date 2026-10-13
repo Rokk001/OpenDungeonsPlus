@@ -167,6 +167,7 @@ inline int splashBudget(TreasuryGoldMesh::Detail detail)
 static const float& dustInterval = TreasurySettings::current().dustInterval;
 static const float& dustLifetime = TreasurySettings::current().dustLifetime;
 
+//! Number of dust puffs one room may show at once at the given "Treasury detail" option
 inline int dustBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)
@@ -189,6 +190,7 @@ static const float portalDustHeight = 0.9f;
 //! The dungeon heart of a rich keeper uses the same rule; its dust floats this high above the heart.
 static const float heartDustHeight = 1.8f;
 
+//! True when a keeper with that gold and treasury capacity counts as rich (dust over its portal and heart)
 inline bool isRichKeeper(int gold, int goldMax)
 {
     return KeeperWealth::tier(gold, goldMax) > 0;
