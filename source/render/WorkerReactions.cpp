@@ -125,6 +125,8 @@ const double TRAP_KNOCK_DELAY = 0.4;
 const double HASTY_DELAY = 1.0;
 
 const std::string GOLD_BODY_PREFIX = "WorkerGoldBody_";
+//! Seconds before the worker lets go of the creature it pulled
+const double PUT_WOUNDED_DOWN_DELAY = 0.2;
 
 //! Cosmetic dice of their own: the game logic must not see them
 std::mt19937& workerRng()
@@ -352,6 +354,8 @@ void WorkerReactions::processLater(CreatureReactions& reactions)
     }
 }
 
+//! \brief Notes the clip a creature was told to play: deaths are remembered as loot places, claiming, weak fights and the
+//! pulling of a hurt creature to its bed are started
 void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* creature, const std::string& clip)
 {
     if(!isActive(reactions))
@@ -400,7 +404,7 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
     else if(previousClip == EntityAnimation::drag_anim)
     {
         if(reactions.getRoomName(creature) == "Dormitory")
-            later(reactions, creature, "PutWoundedDown", 0.2);
+            later(reactions, creature, "PutWoundedDown", PUT_WOUNDED_DOWN_DELAY);
     }
 
     if(clip == "Claim")
