@@ -37,6 +37,24 @@ namespace
     //! Factor between a fraction and percent, used to compare health with the percent settings of the brawl
     static const double BRAWL_PERCENT_FACTOR = 100.0;
 
+    //! Default values used when config/relationships.cfg is missing or lacks an entry
+    static const int32_t DEFAULT_THRESHOLD_FRIENDS = 50;
+    static const int32_t DEFAULT_THRESHOLD_BEST_FRIENDS = 80;
+    static const int32_t DEFAULT_THRESHOLD_LOVERS = 90;
+    static const int32_t DEFAULT_THRESHOLD_HATED = -50;
+    static const int32_t DEFAULT_THRESHOLD_NEMESIS = -80;
+    static const int32_t DEFAULT_DRIFT_AMOUNT = 1;
+    static const int64_t DEFAULT_DRIFT_INTERVAL_TURNS = 30;
+    static const int64_t DEFAULT_DRIFT_IDLE_TURNS = 420;
+    static const int32_t DEFAULT_EVENT_TRAINING_TOGETHER = 3;
+    static const int32_t DEFAULT_EVENT_DEFEATED_ENEMIES_TOGETHER = 8;
+    static const int32_t DEFAULT_EVENT_ARENA_LOSS = -10;
+    static const int32_t DEFAULT_EVENT_CHICKEN_SNATCHED = -12;
+    //! Largest absolute value a config setting may have; larger values are cut to it
+    static const int64_t SETTING_LIMIT = 1000000;
+
+    //! \brief Reads a whole text as an integer. Returns false and leaves value untouched if the text
+    //! is not exactly one integer.
     bool parseInt(const std::string& text, int64_t& value)
     {
         std::istringstream ss(text);
@@ -88,18 +106,18 @@ namespace
 }
 
 RelationshipSettings::RelationshipSettings() :
-    mThresholdFriends(50),
-    mThresholdBestFriends(80),
-    mThresholdLovers(90),
-    mThresholdHated(-50),
-    mThresholdNemesis(-80),
-    mDriftAmount(1),
-    mDriftIntervalTurns(30),
-    mDriftIdleTurns(420),
-    mEventTrainingTogether(3),
-    mEventDefeatedEnemiesTogether(8),
-    mEventArenaLoss(-10),
-    mEventChickenSnatched(-12),
+    mThresholdFriends(DEFAULT_THRESHOLD_FRIENDS),
+    mThresholdBestFriends(DEFAULT_THRESHOLD_BEST_FRIENDS),
+    mThresholdLovers(DEFAULT_THRESHOLD_LOVERS),
+    mThresholdHated(DEFAULT_THRESHOLD_HATED),
+    mThresholdNemesis(DEFAULT_THRESHOLD_NEMESIS),
+    mDriftAmount(DEFAULT_DRIFT_AMOUNT),
+    mDriftIntervalTurns(DEFAULT_DRIFT_INTERVAL_TURNS),
+    mDriftIdleTurns(DEFAULT_DRIFT_IDLE_TURNS),
+    mEventTrainingTogether(DEFAULT_EVENT_TRAINING_TOGETHER),
+    mEventDefeatedEnemiesTogether(DEFAULT_EVENT_DEFEATED_ENEMIES_TOGETHER),
+    mEventArenaLoss(DEFAULT_EVENT_ARENA_LOSS),
+    mEventChickenSnatched(DEFAULT_EVENT_CHICKEN_SNATCHED),
     mEventPrayedTogether(4),
     mPrayerTogetherCooldownTurns(30),
     mTrainingTogetherCooldownTurns(40),
@@ -247,7 +265,7 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
             missing += std::string(" ") + entry.mKey;
             continue;
         }
-        *entry.mTarget = static_cast<int32_t>(std::max<int64_t>(-1000000, std::min<int64_t>(1000000, value)));
+        *entry.mTarget = static_cast<int32_t>(std::max<int64_t>(-SETTING_LIMIT, std::min<int64_t>(SETTING_LIMIT, value)));
     }
     for(DoubleEntry& entry : doubleEntries)
     {

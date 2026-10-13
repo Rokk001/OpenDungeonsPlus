@@ -313,6 +313,7 @@ public:
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
 
     //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
+    //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
     const std::map<std::string, std::string>& getRelationshipsConfig() const
     { return mRelationshipsConfig; }
 
