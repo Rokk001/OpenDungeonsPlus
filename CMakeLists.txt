@@ -377,6 +377,7 @@ set(OD_SOURCEFILES
     ${SRC}/modes/ConsoleInterface.cpp
     ${SRC}/modes/EditorMode.cpp
     ${SRC}/modes/GameMode.cpp
+    ${SRC}/game/CreatureAppearance.cpp
     ${SRC}/modes/GameEditorModeBase.cpp
     ${SRC}/modes/GameEditorModeConsole.cpp
     ${SRC}/modes/InputBridge.cpp
@@ -411,6 +412,12 @@ set(OD_SOURCEFILES
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
     ${SRC}/render/PortraitTint.cpp
+    ${SRC}/render/PortraitManifest.cpp
+    ${SRC}/render/AppearanceCompose.cpp
+    ${SRC}/render/CreatureAppearancePicture.cpp
+    ${SRC}/render/PortraitManifestRegistry.cpp
+    ${SRC}/render/DungeonbookAppearanceConfig.cpp
+    ${SRC}/render/DungeonbookQuirks.cpp
     ${SRC}/render/CreaturePanel.cpp
     ${SRC}/render/SocialWindow.cpp
     ${SRC}/render/MovableTextOverlay.cpp
