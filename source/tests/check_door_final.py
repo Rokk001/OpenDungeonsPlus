@@ -17,6 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 
 def read(*parts, binary=False):
+    """Returns the content of a file below the repository root, as bytes when binary is true."""
     with open(os.path.join(ROOT, *parts), "rb" if binary else "r", **({} if binary else {"encoding": "utf-8"})) as handle:
         return handle.read()
 

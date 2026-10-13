@@ -17,6 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 
 def read(*parts):
+    """Returns the text of a file below the repository root."""
     with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
         return handle.read()
 
