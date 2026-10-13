@@ -291,10 +291,9 @@ textures/
 -> NatureMonster*.png                  Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 -> CreaturePrisoner.png                AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Sleepy,Unhappy}.pngAI-generated with Codex  GPLv3+                  AI-generated mood icons (tools/artwork/CreatureMoodAtlas.png), see "Generated assets" below
--> CreatureExperience.png, CreatureRecovery.pngMario                   GPLv3+                  Added 2026 (first commit)
+-> CreatureExperience.png, CreatureRecovery.pngAI-generated              GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 -> DungeonHeart{Healthy,Damaged,Critical}{,Normal,Glow}.pngMario                   GPLv3+                  Procedural, tools/heart-textures/generate_heart_textures.py
--> DungeonHeartPedestal.png            Mario                   GPLv3+                  Procedural, tools/heart-textures/generate_pedestal_texture.py
--> DefeatFireball.png                  Mario                   GPLv3+                  Added 2026 (first commit 2c05e6eb2), created for this project
+-> DefeatFireball.png                  AI-generated            GPLv3+                  AI-generated, created for this project (first commit 2c05e6eb2); see "Generated assets" below
 -> MainMenuBackground.png              AI-generated with Codex  GPLv3+                  Added 2026 (first commit b04544ed8)
 -> portrait-*.png                      AI-generated with Codex  GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 
@@ -976,6 +975,9 @@ Name                                   Author                  License          
 ------------------------------------------------------------------------------------------------------------------------
 materials/textures/portrait-*.png (50 files)AI-generated with Codex  GPLv3+                  AI-generated, created for this project; prompts in materials/portraits/*.md, method in materials/portraits/README.md
 tools/artwork/CreatureMoodAtlas.png    AI-generated with Codex  GPLv3+                  AI-generated, created for this project; method and prompt in tools/artwork/README.md
+materials/textures/CreatureExperience.png      AI-generated            GPLv3+                  AI-generated, created for this project
+materials/textures/CreatureRecovery.png        AI-generated            GPLv3+                  AI-generated, created for this project
+materials/textures/DefeatFireball.png          AI-generated            GPLv3+                  AI-generated, created for this project
 gui/ODMainMenuLogo.png                 AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
 gui/ODHudSurface.png                   AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
 meta/gui/application-icon.png          AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
