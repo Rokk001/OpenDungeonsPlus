@@ -658,11 +658,20 @@ public:
     { mFreePossession = free; }
 
     //! Portals of a seat that are switched off
+    //! \brief Switches the portals of a seat off or on again (the portal action)
+    //! \param seatId The seat whose portals change
+    //! \param off true to stop the portals from attracting creatures
     void setPortalOff(int32_t seatId, bool off);
+    //! \brief True if the portals of the seat are switched off by the script
     bool isPortalOff(int32_t seatId) const;
 
     //! Creature classes that cannot come to the dungeon of a seat
+    //! \brief Keeps a creature class away from the dungeon of a seat or lets it come again (the available action)
+    //! \param seatId The seat whose portals attract the class
+    //! \param className The creature class
+    //! \param blocked true to keep the class away
     void setCreatureBlocked(int32_t seatId, const std::string& className, bool blocked);
+    //! \brief True if the script keeps the creature class away from the dungeon of the seat
     bool isCreatureBlocked(int32_t seatId, const std::string& className) const;
 
     //! Counts an event of a creature (and of the party it belongs to). Only the creatures and parties

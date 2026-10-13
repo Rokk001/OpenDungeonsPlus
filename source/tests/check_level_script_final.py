@@ -1,5 +1,6 @@
 """Static wiring check for the later stages of level scripting: the make action, the time limit with
-its countdown, the creature event conditions, the victory statistics and the region test level.
+its countdown, the creature event conditions, the story state conditions, the victory statistics and
+the region test level.
 
 The parser and the writer are run by check_level_script.py; this script checks that the pieces
 that need the running game are connected, so a missing hook is found without playing.
@@ -120,5 +121,21 @@ for word in ('Cond	pickedup', 'Cond	dropped', 'Cond	slapped', 'Cond	happy', 'Con
              'Cond	claimed', 'Cond	region', 'Cond	gold', 'Action	make', 'Action	reveal',
              'Action	timelimit', 'Action	win'):
     assert word in section, word
+
+# story state: the conditions are evaluated by the runner and the portal and class state reach the game
+script_h = read('source/gamemap/LevelScript.h')
+for kind in ('seatDefeated', 'ownsCreature', 'creatureHealth', 'spellKnown', 'trapsBuilt', 'roomTiles', 'largestRoom',
+             'portalActive', 'creatureAlive', 'creatureReached'):
+    assert 'case LevelScriptConditionType::%s:' % kind in runner, kind
+    assert 'case LevelScriptConditionType::%s:' % kind in script_cpp, kind
+for kind in ('portalStatus', 'creatureAvailable', 'removeCreature'):
+    assert 'case LevelScriptActionType::%s:' % kind in runner, kind
+    assert 'case LevelScriptActionType::%s:' % kind in script_cpp, kind
+for name in ('defeated', 'owns', 'health', 'spell', 'built', 'roomtiles', 'roomsize', 'portal', 'alive', 'reached', 'available', 'remove'):
+    assert 'type == "%s"' % name in script_cpp or '(type == "%s")' % name in script_cpp, name
+assert 'key == "PortalOff"' in script_cpp and 'key == "Block"' in script_cpp
+assert 'mPortalOff' in script_h and 'mBlocked' in script_h
+assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
+assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')
 
 print('level script final wiring: ok')

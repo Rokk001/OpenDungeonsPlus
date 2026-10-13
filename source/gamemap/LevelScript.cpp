@@ -1750,7 +1750,7 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "PortalOff")
         {
-            int32_t seatId;
+            int32_t seatId = 0;
             if(inTrigger || (t.size() != 2) || !parseInt32(t[1], seatId))
                 return false;
 
@@ -1758,7 +1758,7 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "Block")
         {
-            int32_t seatId;
+            int32_t seatId = 0;
             if(inTrigger || (t.size() != 3) || !parseInt32(t[1], seatId))
                 return false;
 

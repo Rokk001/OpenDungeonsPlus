@@ -1294,6 +1294,7 @@ void keepMinion(GameMap& gameMap, int32_t seatId)
         Campaign::getSingleton().setKeptMinion(best->getDefinition()->getClassName(), best->getLevel());
 }
 
+//! \brief The creature with that name leaves the map (the remove action). Nothing happens if there is none on the map.
 void removeCreature(GameMap& gameMap, const std::string& name)
 {
     Creature* creature = gameMap.getCreature(name);
