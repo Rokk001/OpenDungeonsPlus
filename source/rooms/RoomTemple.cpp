@@ -41,6 +41,9 @@ const std::string RoomTempleNameDisplay = "Temple";
 const RoomType RoomTemple::mRoomType = RoomType::temple;
 const TileVisual RoomTemple::mRoomVisual = TileVisual::templeRoom;
 
+//! \brief A sacrifice result only gets the average level of the sacrificed creatures when it is above this level
+static const uint32_t SacrificeAverageLevelThreshold = 1;
+
 namespace
 {
 class RoomTempleFactory : public RoomFactory
@@ -452,7 +455,7 @@ void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t average
                 break;
 
             Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
-            if(averageLevel > 1 && !classToSpawn->isWorker())
+            if(averageLevel > SacrificeAverageLevelThreshold &&!classToSpawn->isWorker())
                 newCreature->setLevel(averageLevel);
 
             newCreature->addToGameMap();
