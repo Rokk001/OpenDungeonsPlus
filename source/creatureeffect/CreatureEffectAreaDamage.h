@@ -61,6 +61,7 @@ public:
     //! \brief Reads both endpoints, accepting legacy fixed damage effects.
     virtual bool importFromStream(std::istream& is) override;
 
+    //! \brief Creates the effect from the stream (used when loading a saved game).
     static CreatureEffectAreaDamage* load(std::istream& is);
 
 protected:
