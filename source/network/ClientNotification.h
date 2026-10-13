@@ -95,8 +95,8 @@ enum class ClientNotificationType
     editorCreateGiftBox,
 
     // Sandbox mode
-    askSandboxTakeHero,
-    askSandboxInvasion,
+    askSandboxTakeHero, // Asks for a hero in the hand: + string className + uint32_t level
+    askSandboxInvasion, // Asks for hero waves: + bool continual (false = one wave)
     //! Possession: the direction the possessed creature should walk (Vector2, zero to stop)
     askPossessMove,
     //! Possession: the player wants to leave the possessed creature

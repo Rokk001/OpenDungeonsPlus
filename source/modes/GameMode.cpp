@@ -272,7 +272,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mDigSetBool(false),
     mIndexEvent(0),
     mSettings(mRootWindow, modeManager->getGui(), false, true),
-    mSandboxHeroLevel(1),
+    mSandboxHeroLevel(SandboxMode::MIN_HERO_LEVEL),
     mIsSkillWindowOpen(false),
     mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
@@ -2519,7 +2519,7 @@ bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
     const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(e);
     if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::MAX_HERO_LEVEL))
         ++mSandboxHeroLevel;
-    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > 1))
+    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::MIN_HERO_LEVEL))
         --mSandboxHeroLevel;
 
     mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));

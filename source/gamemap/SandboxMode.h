@@ -100,7 +100,9 @@ public:
     static const uint32_t NB_WAVES;
     //! \brief Number of heroes in a wave
     static const uint32_t NB_HEROES_PER_WAVE;
-    //! \brief Highest level of a hero (the level selector of the toolbox goes from 1 to this)
+    //! \brief Lowest level of a hero (the level selector of the toolbox starts here)
+    static const uint32_t MIN_HERO_LEVEL;
+    //! \brief Highest level of a hero (the level selector of the toolbox goes up to this)
     static const uint32_t MAX_HERO_LEVEL;
 
     //! \brief Score values of the sandbox: a hero killed, a tile of land owned (also lost
@@ -113,6 +115,7 @@ public:
     static const int32_t SCORE_CREATURE_ENTERED;
     static const int32_t SCORE_CREATURE_CONVERTED;
 
+    //! \brief Creates the sandbox logic of the given map. No wave is launched yet.
     SandboxMode(GameMap& gameMap);
 
     //! \brief Forgets the waves, the toolbox heroes, the score and the realm settings of the level
@@ -167,14 +170,17 @@ public:
     std::string getNextRoomName(int32_t& secondsLeft) const;
 
 private:
+    //! \brief The map this sandbox logic belongs to
     GameMap& mGameMap;
     //! \brief Number of waves already launched. The next one is mNbWavesLaunched + 1.
     uint32_t mNbWavesLaunched;
+    //! \brief True while a continual invasion goes through its waves
     bool mIsContinual;
     //! \brief True from the launch of a wave until its last hero is dead
     bool mIsWaveActive;
     //! \brief Turns before the next wave of a continual invasion is launched
     int32_t mTurnsBeforeNextWave;
+    //! \brief Turns before the heroes of the current wave are checked again
     int32_t mTurnsBeforeCheck;
     //! \brief Turns since the sandbox started (restored from a saved game): the room unlocks go by this time
     int64_t mTurnsElapsed;
@@ -213,6 +219,7 @@ private:
     uint32_t mSentBonusMask;
     std::string mSentNextRoom;
 
+    //! \brief Returns the first seat of the hero faction, or nullptr if the level has none
     Seat* getHeroSeat() const;
     //! \brief The seats of the human keepers
     std::vector<Seat*> getKeeperSeats() const;
@@ -234,6 +241,7 @@ private:
     bool launchWave(uint32_t waveNumber);
     //! \brief Sends a message to every human player
     void sendMessage(const std::string& message) const;
+    //! \brief Sends a message to the given player only
     void sendMessage(Player* player, const std::string& message) const;
 };
 
