@@ -158,7 +158,9 @@ public:
 
     static CreatureJob creatureJobFromString(const std::string& s);
     static std::string creatureJobToString(CreatureJob c);
+    //! \brief Converts the name of a combat class (as written in the configuration) to the enum value
     static CombatClass combatClassFromString(const std::string& s);
+    //! \brief Converts a combat class to the name used in the configuration
     static std::string combatClassToString(CombatClass c);
     //! \brief Converts a configured avoidance name to its mechanism; unknown names use none.
     static Avoidance avoidanceFromString(const std::string& s);
