@@ -3859,6 +3859,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     rrRefreshCreatureGoldSack(curCreature);
 }
 
+//! \brief Swaps the entity of a creature for one with its current mesh and rebuilds the overlay, keeping the animation.
 void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
 {
     Ogre::SceneNode* node = curCreature->getEntityNode();

@@ -186,6 +186,9 @@ public:
     //! The "Treasury detail" option changed: every pile, floor gold heap and thief sack is drawn again for the new
     //! setting (the piles and heaps a few per frame, see updateTreasuryRebuild)
     void rrTreasuryDetailChanged();
+    //! \brief Replaces the mesh of an already rendered creature by its current mesh (for example the chicken mesh of a
+    //! creature hit by Hexen Hen), keeping the running animation if the new mesh has it.
+    //! \param curCreature The creature whose mesh changed.
     void rrChangeCreatureMesh(Creature* curCreature);
     void rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction);
 
