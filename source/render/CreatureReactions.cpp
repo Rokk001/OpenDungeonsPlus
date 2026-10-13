@@ -121,6 +121,22 @@ const double ONGOING_MIN = 5.0;
 const double ONGOING_MAX = 9.0;
 //! Shortest wait before the first try when a creature starts to do something for a while
 const double ONGOING_FIRST_MIN = 2.0;
+//! Share of the reaction time spent sinking down, and again getting up, for the sit motion
+const double SIT_RAMP = 0.12;
+//! Share of the sit motion by which the model grows sideways while it gets lower
+const double SIT_SIDE_GROWTH = 0.4;
+//! Share of the startle motion spent nodding off, the rest is the jump
+const double STARTLE_NOD_SHARE = 0.7;
+//! Share of the nod by which the model grows sideways while it gets lower
+const double STARTLE_SIDE_GROWTH = 0.5;
+//! Height (world units) of the jump at the end of the startle motion
+const double STARTLE_JUMP_HEIGHT = 0.15;
+//! Upper bound of the random number that picks one of the four sides next to a creature
+const double WALL_SIDE_RANDOM_MAX = 3.999;
+//! Number of tiles next to a tile that share an edge with it
+const uint32_t NB_WALL_SIDES = 4;
+//! Distance (world units) from the middle of a tile to the face of the wall next to it
+const float WALL_FACE_OFFSET = 0.5f;
 const std::string PROP_MATERIAL_PREFIX = "CreatureProp_";
 const std::string PROP_NAME_PREFIX = "CreatureReactionProp_";
 //! The reactions of the moods and the habits leave this many places of the simultaneous ones to the events
@@ -529,20 +545,20 @@ bool CreatureReactions::findWall(const Creature* creature, Ogre::Vector3& point)
     if(tile == nullptr)
         return false;
 
-    static const int offsets[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    static const int offsets[NB_WALL_SIDES][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     // Start at another side each time, so that the creature does not always pick the same wall
-    uint32_t start = static_cast<uint32_t>(cosmeticRandom(0.0, 3.999));
-    for(uint32_t i = 0; i < 4; ++i)
+    uint32_t start = static_cast<uint32_t>(cosmeticRandom(0.0, WALL_SIDE_RANDOM_MAX));
+    for(uint32_t i = 0; i < NB_WALL_SIDES; ++i)
     {
-        uint32_t index = (start + i) % 4;
+        uint32_t index = (start + i) % NB_WALL_SIDES;
         Tile* neighbour = mGameMap->getTile(tile->getX() + offsets[index][0], tile->getY() + offsets[index][1]);
         if((neighbour == nullptr) || (neighbour->getFullness() <= 0.0))
             continue;
 
         // The face of the wall is half a tile away from the middle of the tile the creature stands on
-        point = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + 0.5f * static_cast<Ogre::Real>(offsets[index][0]),
-            static_cast<Ogre::Real>(tile->getY()) + 0.5f * static_cast<Ogre::Real>(offsets[index][1]), 0.0f);
+        point = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + WALL_FACE_OFFSET * static_cast<Ogre::Real>(offsets[index][0]),
+            static_cast<Ogre::Real>(tile->getY()) + WALL_FACE_OFFSET * static_cast<Ogre::Real>(offsets[index][1]), 0.0f);
         return true;
     }
 
@@ -1165,9 +1181,9 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
             }
             case ReactionMotion::Type::sit:
             {
-                double share = motion.mAmount * plateau(progress, 0.12);
-                addedScale.x = static_cast<Ogre::Real>(1.0 + 0.4 * share);
-                addedScale.y = static_cast<Ogre::Real>(1.0 + 0.4 * share);
+                double share = motion.mAmount * plateau(progress, SIT_RAMP);
+                addedScale.x = static_cast<Ogre::Real>(1.0 + SIT_SIDE_GROWTH * share);
+                addedScale.y = static_cast<Ogre::Real>(1.0 + SIT_SIDE_GROWTH * share);
                 addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 break;
             }
@@ -1188,18 +1204,17 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
             case ReactionMotion::Type::startle:
             {
                 // Nods off a few times, then jumps up
-                const double nodShare = 0.7;
-                if(progress < nodShare)
+                if(progress < STARTLE_NOD_SHARE)
                 {
-                    double share = motion.mAmount * std::fabs(std::sin(PI_VALUE * motion.mCount * progress / nodShare));
-                    addedScale.x = static_cast<Ogre::Real>(1.0 + 0.5 * share);
-                    addedScale.y = static_cast<Ogre::Real>(1.0 + 0.5 * share);
+                    double share = motion.mAmount * std::fabs(std::sin(PI_VALUE * motion.mCount * progress / STARTLE_NOD_SHARE));
+                    addedScale.x = static_cast<Ogre::Real>(1.0 + STARTLE_SIDE_GROWTH * share);
+                    addedScale.y = static_cast<Ogre::Real>(1.0 + STARTLE_SIDE_GROWTH * share);
                     addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 }
                 else
                 {
-                    double jump = (progress - nodShare) / (1.0 - nodShare);
-                    addedPosition.z = static_cast<Ogre::Real>(0.15 * std::sin(PI_VALUE * jump));
+                    double jump = (progress - STARTLE_NOD_SHARE) / (1.0 - STARTLE_NOD_SHARE);
+                    addedPosition.z = static_cast<Ogre::Real>(STARTLE_JUMP_HEIGHT * std::sin(PI_VALUE * jump));
                 }
                 break;
             }

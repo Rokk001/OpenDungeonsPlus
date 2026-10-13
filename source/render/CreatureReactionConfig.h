@@ -451,10 +451,15 @@ private:
     double mMaxCameraDistance;
     double mGroupStaggerMin;
     double mGroupStaggerMax;
+    //! \brief Seconds between two looks at the moods of a few creatures
     double mMoodInterval;
+    //! \brief Number of creatures looked at in each of these looks
     uint32_t mMoodPerTick;
+    //! \brief Chance (0 to 1) that a mood is shown on a creature that walks instead of standing
     double mMoodWalkingChance;
+    //! \brief Seconds a creature has to stand idle until it is impatient
     double mImpatientAfter;
+    //! \brief Seconds a creature stays proud after a victory or a level up
     double mProudSeconds;
     double mBoredAfter;
     double mAmbientAfter;
