@@ -1528,7 +1528,7 @@ void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
                 continue;
 
             std::string className;
-            uint32_t level;
+            uint32_t level = 0;
             if(!Campaign::getSingleton().takeKeptMinion(className, level))
                 return;
 
