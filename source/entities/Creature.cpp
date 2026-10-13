@@ -356,6 +356,7 @@ struct ProfileRelations
     bool mHasNemesis;
 };
 
+//! \brief Orders two (creature name, relationship value) pairs: the stronger value first, equal values by name.
 bool isStrongerRelationship(const std::pair<std::string, int32_t>& a, const std::pair<std::string, int32_t>& b)
 {
     if(a.second != b.second)
@@ -364,6 +365,12 @@ bool isStrongerRelationship(const std::pair<std::string, int32_t>& a, const std:
     return a.first < b.first;
 }
 
+//! \brief Fills the relations of a creature from the tiers of the client: who is close to it (friends, best friends,
+//! partner), who is against it (hated, nemesis) and the text that is shown per creature.
+//! \param gameMap The map the creatures are looked up in
+//! \param relationships The relationship table of the map
+//! \param name Name of the creature the profile belongs to
+//! \param result Receives the lists and texts
 void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationships, const std::string& name,
     ProfileRelations& result)
 {
