@@ -183,9 +183,10 @@ public:
     static bool update(CreatureDefinition* creatureDef, std::stringstream& defFile, const std::map<std::string, CreatureDefinition*>& defMap);
 
     inline CreatureJob          getCreatureJob  () const    { return mCreatureJob; }
-    inline CombatClass          getCombatClass  () const    { return mCombatClass; }
+    inline CombatClass         getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
     inline bool                 isFearless      () const    { return mFearless; }
+    //! \brief True for the champion definition (the creature the Summon champion spell calls).
     inline bool                 isChampion      () const    { return mChampion; }
     inline double               getPossessManaCost () const { return mPossessManaCost; }
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
