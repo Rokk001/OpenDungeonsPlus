@@ -195,6 +195,7 @@ public:
     //! \brief True for the champion definition (the creature the Summon champion spell calls).
     inline bool                 isChampion      () const    { return mChampion; }
     inline double               getPossessManaCost () const { return mPossessManaCost; }
+    //! \brief Seconds a captured enemy of this kind must be tortured at level 1 before it changes side
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
     //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
     inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
