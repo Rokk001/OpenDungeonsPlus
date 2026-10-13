@@ -461,8 +461,11 @@ private:
     double mSitAfter;
     double mLieAfter;
     double mLookRadius;
+    //! \brief Chance (0 to 1) that a creature that is looked at starts a short meeting with a creature close by
     double mInteractionChance;
+    //! \brief Distance (world units) within which creatures that meet interact
     double mInteractionRadius;
+    //! \brief Seconds between the starts of two meetings, over all creatures
     double mInteractionPause;
     double mArenaSpectatorInterval;
     double mArenaCheerPause;

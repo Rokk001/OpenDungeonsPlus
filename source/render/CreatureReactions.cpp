@@ -174,6 +174,26 @@ const double ENEMY_SPOTTED_INTERVAL = 20.0;
 const double BUMP_RADIUS = 1.3;
 //! A worker waves at a fighter that passes within this share more than the meeting radius
 const double WAVE_RADIUS_FACTOR = 1.3;
+//! Standing creatures laugh at a slapped creature at most this often (seconds)
+const double SLAP_LAUGH_INTERVAL = 3.0;
+//! Shortest and longest wait (seconds) of the answer of a chat partner
+const double CHAT_REPLY_DELAY_MIN = 0.9;
+const double CHAT_REPLY_DELAY_SPREAD = 0.6;
+//! Seconds the answer to a sparring push, a wave and a grumble waits
+const double SPAR_REPLY_DELAY = 0.5;
+const double WAVE_REPLY_DELAY = 0.7;
+const double GRUMBLE_REPLY_DELAY = 0.4;
+//! Kept off the upper end of the range so that the random choice never indexes past the last option
+const double CHOICE_RANGE_MARGIN = 0.001;
+//! Creatures closer than this (world units) have no usable direction to each other
+const float FACING_MIN_LENGTH = 0.01f;
+//! Dot product above which a creature looks at the other one (and below its negative the other looks back)
+const float FACING_MIN_DOT = 0.3f;
+//! Meeting kinds the dice choose from
+const uint32_t MEETING_CHAT = 0;
+const uint32_t MEETING_SPAR = 1;
+const uint32_t MEETING_WAVE = 2;
+const uint32_t MEETING_GRUMBLE = 3;
 //! Creatures that are on the map when the game starts did not arrive: nothing is shown in this time
 const double ARRIVAL_QUIET_TIME = 3.0;
 //! Seconds the reactions of a picked up, a dropped and an arrived creature wait for the creature to be ready
@@ -2517,7 +2537,7 @@ void CreatureReactions::noteSlapped(const Ogre::Vector3& handPosition)
     WorkerReactions::noteHandled(*this, target);
 
     // Some of the creatures that stand around laugh at it
-    noteNearbyEvent("LaughAtSlapped", target->getPosition(), target, 3.0);
+    noteNearbyEvent("LaughAtSlapped", target->getPosition(), target, SLAP_LAUGH_INTERVAL);
 }
 
 void CreatureReactions::noteHandPicked(Creature* creature)
@@ -2992,7 +3012,7 @@ bool CreatureReactions::areFacingEachOther(const Creature* first, const Creature
 
     Ogre::Vector3 toSecond = second->getPosition() - first->getPosition();
     toSecond.z = 0.0f;
-    if(toSecond.length() < 0.01f)
+    if(toSecond.length() < FACING_MIN_LENGTH)
         return false;
 
     toSecond.normalise();
@@ -3000,12 +3020,12 @@ bool CreatureReactions::areFacingEachOther(const Creature* first, const Creature
     Ogre::Vector3 secondForward = secondNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
     firstForward.z = 0.0f;
     secondForward.z = 0.0f;
-    if((firstForward.length() < 0.01f) || (secondForward.length() < 0.01f))
+    if((firstForward.length() < FACING_MIN_LENGTH) || (secondForward.length() < FACING_MIN_LENGTH))
         return false;
 
     firstForward.normalise();
     secondForward.normalise();
-    return (firstForward.dotProduct(toSecond) > 0.3f) && (secondForward.dotProduct(toSecond) < -0.3f);
+    return (firstForward.dotProduct(toSecond) > FACING_MIN_DOT) && (secondForward.dotProduct(toSecond) < -FACING_MIN_DOT);
 }
 
 bool CreatureReactions::startMeeting(Creature* first, const std::string& firstEvent, Creature* second,
@@ -3090,31 +3110,32 @@ void CreatureReactions::examineInteraction(Creature* creature, bool idle, bool m
     // One of the meetings that is possible now, chosen by chance
     std::vector<uint32_t> options;
     if(chatPartner != nullptr)
-        options.push_back(0);
+        options.push_back(MEETING_CHAT);
     if(sparPartner != nullptr)
-        options.push_back(1);
+        options.push_back(MEETING_SPAR);
     if(passingFighter != nullptr)
-        options.push_back(2);
+        options.push_back(MEETING_WAVE);
     if(bumpPartner != nullptr)
-        options.push_back(3);
+        options.push_back(MEETING_GRUMBLE);
 
     if(options.empty())
         return;
 
-    uint32_t choice = options[static_cast<size_t>(cosmeticRandom(0.0, static_cast<double>(options.size()) - 0.001))];
+    uint32_t choice = options[static_cast<size_t>(cosmeticRandom(0.0, static_cast<double>(options.size()) - CHOICE_RANGE_MARGIN))];
     switch(choice)
     {
-        case 0:
-            startMeeting(creature, "Chat", chatPartner, "ChatReply", 0.9 + cosmeticRandom(0.0, 0.6));
+        case MEETING_CHAT:
+            startMeeting(creature, "Chat", chatPartner, "ChatReply",
+                CHAT_REPLY_DELAY_MIN + cosmeticRandom(0.0, CHAT_REPLY_DELAY_SPREAD));
             break;
-        case 1:
-            startMeeting(creature, "SparPush", sparPartner, "SparStumble", 0.5);
+        case MEETING_SPAR:
+            startMeeting(creature, "SparPush", sparPartner, "SparStumble", SPAR_REPLY_DELAY);
             break;
-        case 2:
-            startMeeting(creature, "WaveAtFighter", passingFighter, "NodBack", 0.7);
+        case MEETING_WAVE:
+            startMeeting(creature, "WaveAtFighter", passingFighter, "NodBack", WAVE_REPLY_DELAY);
             break;
         default:
-            startMeeting(creature, "Grumble", bumpPartner, "GrumbleBack", 0.4);
+            startMeeting(creature, "Grumble", bumpPartner, "GrumbleBack", GRUMBLE_REPLY_DELAY);
             break;
     }
 }
