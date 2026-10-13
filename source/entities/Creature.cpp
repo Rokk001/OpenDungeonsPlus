@@ -239,6 +239,8 @@ static const uint32_t IDLE_BREATH_STAGE_LIGHT = 4;
 static const double IDLE_BREATH_FACTOR_HEAVY = 0.78;
 static const double IDLE_BREATH_FACTOR_MEDIUM = 0.85;
 static const double IDLE_BREATH_FACTOR_LIGHT = 0.92;
+//! \brief Tolerance that keeps a health border that falls exactly on a stage in the lower stage (see isLowHealthWalkStage)
+static const double HEALTH_STAGE_ROUNDING_TOLERANCE = 0.000001;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
@@ -2538,7 +2540,8 @@ bool Creature::isLowHealthWalkStage(uint32_t healthStage)
     // a creature is badly hurt from the first stage that lies completely below the configured percent
     const double nbSteps = static_cast<double>(NB_OVERLAY_HEALTH_VALUES - 2);
     double thresholdPercent = ConfigManager::getSingleton().getLowHealthWalkThresholdPercent();
-    double firstStage = std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0;
+    double firstStage = std::ceil((FULL_HEALTH_PERCENT - thresholdPercent) / FULL_HEALTH_PERCENT * nbSteps
+        - HEALTH_STAGE_ROUNDING_TOLERANCE) + 1.0;
     return static_cast<double>(healthStage) >= firstStage;
 }
 
