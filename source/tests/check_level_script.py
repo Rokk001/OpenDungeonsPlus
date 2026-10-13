@@ -61,6 +61,7 @@ int main()
 
 
 def find_vcvars():
+    """Returns the path of vcvars64.bat of an installed Visual Studio 2022, or None."""
     candidates = [
         os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'),
         os.environ.get('ProgramFiles', r'C:\Program Files'),
