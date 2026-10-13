@@ -1353,6 +1353,7 @@ private:
 
     //! Name of the creature this one brawls with (relationships), empty if there is no brawl
     std::string                     mBrawlOpponent;
+    //! Turn on which the current brawl started (relationships), used to end it after the longest allowed time
     int64_t                         mBrawlStartTurn = 0;
     //! Brawl restored from a saved game: the opponent and the turns it may still last. Starts as
     //! soon as both creatures can fight (see resumeBrawl), empty if there is none.
