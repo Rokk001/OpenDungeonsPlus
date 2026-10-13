@@ -252,6 +252,7 @@ public:
     inline double getMaxManaPerSeat() const
     { return mMaxManaPerSeat; }
 
+    //! \brief Returns the extra mana per second each claimed mana well tile gives its owner
     inline double getManaWellBonusPerTile() const
     { return mManaWellBonusPerTile; }
 
@@ -487,6 +488,7 @@ private:
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
+    //! \brief Extra mana per second for each claimed mana well tile
     double mManaWellBonusPerTile;
     double mBedStepMaxHeight;
     double mClaimingWallPenalty;
