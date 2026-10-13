@@ -293,12 +293,14 @@ protected:
     //! \brief Leaves the game: starts the level again when that was asked, to the desktop, to the campaign menu while a campaign level is played, otherwise to the main menu
     bool onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/);
 
-    //! \brief The different Game Options Menu handlers
+    //! \brief The different Game Options Menu handlers.
+    //! showQuitMenuFromOptions asks for confirmation before leaving the game to the main menu.
     bool showQuitMenuFromOptions(const CEGUI::EventArgs& e = {});
     //! \brief Options menu handler that marks the exit as a level restart (not a quit) and opens the exit confirmation popup
     //! \param e CEGUI event arguments, not used
     //! \return true, the event was handled
     bool showRestartLevelFromOptions(const CEGUI::EventArgs& e = {});
+    //! \brief Asks for confirmation before the application is closed.
     bool showExitApplicationFromOptions(const CEGUI::EventArgs& e = {});
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
@@ -462,6 +464,7 @@ private:
     void handleMouseWheel(const MouseWheelEvent& arg);
 
     //! \brief Set the state of the given skill button accordingly to the skill type given.
+    //! The cast button is shown only once the skill has been researched at least to level 1.
     //! \note: Called by refreshGuiSkill() for each skillType.
     void refreshSkillButtonState(const std::string& skillButton, const std::string& castButton,
         const std::string& skillProgressBar, SkillType resType);
