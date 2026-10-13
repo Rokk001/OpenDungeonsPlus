@@ -205,6 +205,13 @@ const double ARRIVAL_DELAY = 0.9;
 const double ARRIVAL_MOOD_MEMORY = 30.0;
 const double FULL_DELIVERY_MEMORY = 6.0;
 const double FULL_TREASURY_RADIUS = 3.0;
+//! Seconds the creature waits before it shows a reaction to a cosmetic event of the server
+const double TREASURY_FULL_DELAY = 0.3;
+const double MOOD_CHANGE_DELAY = 1.0;
+const double SCARED_DELAY = 0.8;
+const double IMPATIENT_DELAY = 0.3;
+//! Seconds a creature waits after the last healing step in the temple before it shows that it is done
+const double TEMPLE_DONE_DELAY = 0.6;
 //! Distance (tiles) up to which a creature of the keeper catches a chicken that the keeper drops
 const double CHICKEN_CATCH_RADIUS = 3.0;
 
@@ -2197,7 +2204,7 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
         uint32_t steps = oldHealth - health;
         bool inTemple = (getRoomName(creature) == "Temple");
         if(inTemple && (health == 0) && (oldHealth >= HURT_STAGE))
-            queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+            queueReaction(creature, "TempleDone", DONE_WAIT_MAX, TEMPLE_DONE_DELAY);
         else if((steps >= HEAL_MIN_STEPS) || ((steps >= 1) && (oldHealth >= HURT_STAGE) && inTemple))
             trigger(creature, "Healed");
     }
@@ -2654,7 +2661,7 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
         }
 
         if(best != nullptr)
-            queueReaction(best, "TreasuryFull", DONE_WAIT_MAX, 0.3);
+            queueReaction(best, "TreasuryFull", DONE_WAIT_MAX, TREASURY_FULL_DELAY);
 
         return;
     }
@@ -2683,23 +2690,23 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
         int32_t newLevel = event.mValue;
         int32_t oldLevel = event.mValue2;
         if((newLevel == static_cast<int32_t>(CreatureMoodLevel::Happy)) && (oldLevel != newLevel))
-            queueReaction(creature, "MoodHappy", DONE_WAIT_MAX, 1.0);
+            queueReaction(creature, "MoodHappy", DONE_WAIT_MAX, MOOD_CHANGE_DELAY);
         else if((newLevel == static_cast<int32_t>(CreatureMoodLevel::Upset)) && (oldLevel < newLevel))
-            queueReaction(creature, "MoodUpset", DONE_WAIT_MAX, 1.0);
+            queueReaction(creature, "MoodUpset", DONE_WAIT_MAX, MOOD_CHANGE_DELAY);
     }
     else if(event.is(CosmeticEventType::scared))
     {
         // It runs first, the cowering follows when it stands again
-        queueReaction(creature, "MoodScared", DONE_WAIT_MAX, 0.8);
+        queueReaction(creature, "MoodScared", DONE_WAIT_MAX, SCARED_DELAY);
     }
     else if(event.is(CosmeticEventType::impatient))
     {
-        queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, 0.3);
+        queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, IMPATIENT_DELAY);
     }
     else if(event.is(CosmeticEventType::calmed))
     {
         // The prayer in the temple took the anger away: soft light and relaxed shoulders
-        queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+        queueReaction(creature, "TempleDone", DONE_WAIT_MAX, TEMPLE_DONE_DELAY);
     }
     else if(event.is(CosmeticEventType::bedStatus))
     {
