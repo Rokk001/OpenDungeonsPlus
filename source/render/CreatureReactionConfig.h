@@ -486,9 +486,13 @@ private:
     //! \brief Seconds a creature stays proud after a victory or a level up
     double mProudSeconds;
     double mBoredAfter;
+    //! \brief Seconds a creature has to stand idle until it shows small habits
     double mAmbientAfter;
+    //! \brief Seconds a creature has to stand idle until it sits down
     double mSitAfter;
+    //! \brief Seconds a creature has to stand idle until it lies down
     double mLieAfter;
+    //! \brief Distance (world units) within which creatures turn their head to an event
     double mLookRadius;
     //! \brief Chance (0 to 1) that a creature that is looked at starts a short meeting with a creature close by
     double mInteractionChance;

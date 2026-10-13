@@ -457,7 +457,12 @@ private:
     //! \brief Another idle creature close by shows the event a moment later (the yawn that spreads)
     void spreadTo(Creature* creature, const std::string& eventName);
     //! \brief Shows the event on the creature and lets it turn its head to the point
+    //! \param creature The creature that shows the event
+    //! \param eventName The event to show
+    //! \param target The point the creature turns its head to
+    //! \return True if the reaction was started
     bool triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target);
+    //! \brief True if the event (a victory or a level up) makes a creature proud for a while
     static bool isProudEvent(const std::string& eventName);
     static bool isStandingMotion(ReactionMotion::Type type);
 

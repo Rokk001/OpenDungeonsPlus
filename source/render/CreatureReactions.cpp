@@ -240,6 +240,15 @@ const double IMPATIENT_DELAY = 0.3;
 const double TEMPLE_DONE_DELAY = 0.6;
 //! Distance (tiles) up to which a creature of the keeper catches a chicken that the keeper drops
 const double CHICKEN_CATCH_RADIUS = 3.0;
+//! Share of the reaction time spent tipping over, and again getting up, for the lie motion
+static const double LIE_RAMP = 0.15;
+//! Most creatures that turn their head to the same event
+static const uint32_t MAX_LOOKERS = 3;
+//! Seconds before the creatures look at the next fight, and at the next fall of gold
+static const double FIGHT_LOOK_INTERVAL = 4.0;
+static const double GOLD_LOOK_INTERVAL = 1.0;
+//! Chance (0 to 1) that a small habit comes before a change of the idle pose
+static const double HABIT_FIRST_CHANCE = 0.5;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -1212,7 +1221,7 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                         reaction.mMotionAxis = forward.normalisedCopy();
                 }
 
-                angle = motion.mAmount * PI_VALUE / 180.0 * plateau(progress, 0.15);
+                angle = motion.mAmount * PI_VALUE / 180.0 * plateau(progress, LIE_RAMP);
                 break;
             }
             case ReactionMotion::Type::startle:
@@ -1701,7 +1710,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
             CreatureCombatReactions::noteAttack(*this, creature, clip);
 
             // The creatures that stand around look at the fight
-            noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, 4.0);
+            noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, FIGHT_LOOK_INTERVAL);
         }
         else
         {
@@ -2382,7 +2391,7 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     if(type == GameEntityType::treasuryObject)
     {
         noteNearbyEvent("AmbientLookGold", Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
-            static_cast<Ogre::Real>(tile->getY()), 0.0f), nullptr, 1.0);
+            static_cast<Ogre::Real>(tile->getY()), 0.0f), nullptr, GOLD_LOOK_INTERVAL);
     }
 }
 
@@ -2806,7 +2815,7 @@ void CreatureReactions::noteNearbyEvent(const std::string& eventName, const Ogre
     uint32_t nbLooking = 0;
     for(Creature* creature : candidates)
     {
-        if(nbLooking >= 3)
+        if(nbLooking >= MAX_LOOKERS)
             break;
 
         if(triggerLook(creature, eventName, position))
@@ -2993,7 +3002,7 @@ void CreatureReactions::examineMood(Creature* creature)
     // Small habits of the kind of creature and small changes of the idle pose, in a changing order
     if(idle && (idleFor >= mConfig.getAmbientAfter()))
     {
-        if(cosmeticRandom(0.0, 1.0) < 0.5)
+        if(cosmeticRandom(0.0, 1.0) < HABIT_FIRST_CHANCE)
         {
             events.push_back("AmbientHabit");
             events.push_back("AmbientIdle");

@@ -124,6 +124,9 @@ const Ogre::Real RenderManager::BLENDER_UNITS_PER_OGRE_UNIT = 10.0f;
 const Ogre::Real KEEPER_HAND_POS_Z = 20.0;
 const Ogre::Real RenderManager::KEEPER_HAND_WORLD_Z = KEEPER_HAND_POS_Z / RenderManager::BLENDER_UNITS_PER_OGRE_UNIT;
 
+//! Seconds before the creatures that stand around look at the hand that slaps again
+const double SLAP_LOOK_INTERVAL = 1.0;
+
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_OFFSET = 0.05f;
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_SCALE = 0.05f;
 const Ogre::Real CREATURE_DROP_ANIMATION_DURATION = 0.35f;
@@ -7888,11 +7891,12 @@ void RenderManager::entitySlapped()
         mHandAnimationState = setEntityAnimation(ent, "Slap", false);
 
     // The creatures that stand around look at the hand that slaps
-    if(CreatureReactions::getSingletonPtr() != nullptr)
+    if((CreatureReactions::getSingletonPtr() != nullptr) && (mHandLightNode != nullptr))
     {
         // The creature that was slapped reacts, the ones around only look
         CreatureReactions::getSingleton().noteSlapped(mHandLightNode->getPosition());
-        CreatureReactions::getSingleton().noteNearbyEvent("AmbientLookSlap", mHandLightNode->getPosition(), nullptr, 1.0);
+        CreatureReactions::getSingleton().noteNearbyEvent("AmbientLookSlap", mHandLightNode->getPosition(), nullptr,
+            SLAP_LOOK_INTERVAL);
     }
 }
 
