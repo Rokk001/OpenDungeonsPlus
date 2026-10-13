@@ -5384,6 +5384,7 @@ void RenderManager::cancelCreatureFeedingAnimation(Creature* creature)
     }
 }
 
+//! \brief Creates a particle system at the position and removes it after a short time.
 void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, const std::string& particleName)
 {
     if((particleName == "ChickenFeathers" || particleName == "ChickenFeathersRooster") &&
