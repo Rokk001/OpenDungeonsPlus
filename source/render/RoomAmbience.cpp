@@ -126,6 +126,26 @@ const std::string MESH_SUFFIX = ".mesh";
 
 const double TWO_PI = 6.283185307179586;
 
+//! Seconds that a trap counts as reloading after the server sent the start of the reload; the long time only
+//! protects against a ready message that was missed out of sight
+const double RELOAD_STATE_SECONDS = 300.0;
+//! Seconds that the reload look is kept after the server said that the trap is loaded, so that a short reload is seen at all
+const double RELOAD_FADE_OUT_SECONDS = 2.0;
+//! Shakes per second of a view shake before the first one has started
+const double DEFAULT_SHAKE_SPEED = 12.0;
+//! The shortest time a view shake runs, in seconds
+const double MIN_SHAKE_SECONDS = 0.05;
+//! The slowest a view shake may be, in shakes per second
+const double MIN_SHAKE_SPEED = 0.5;
+//! The three axes of a view shake run at different speeds and start at different phases, so that it does not
+//! look like a regular swing: factor of the speed and start phase of the second axis
+const double SHAKE_SECOND_AXIS_SPEED_FACTOR = 1.31;
+const double SHAKE_SECOND_AXIS_PHASE = 1.7;
+//! Strength of the third axis (up and down) as a fraction of the strength, its speed factor and start phase
+const double SHAKE_THIRD_AXIS_STRENGTH = 0.5;
+const double SHAKE_THIRD_AXIS_SPEED_FACTOR = 0.83;
+const double SHAKE_THIRD_AXIS_PHASE = 0.4;
+
 bool matchesPattern(const std::string& pattern, const std::string& name)
 {
     if(pattern.empty())
@@ -219,7 +239,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mShakeTime(0.0),
     mShakeTotal(1.0),
     mShakeAmount(0.0),
-    mShakeSpeed(12.0),
+    mShakeSpeed(DEFAULT_SHAKE_SPEED),
     mShakePhase(0.0),
     mShakeApplied(Ogre::Vector3::ZERO),
     mRandom(RANDOM_SEED),
@@ -844,10 +864,7 @@ void RoomAmbience::scan()
         return;
 
     Ogre::Vector3 cameraPosition = camera->getDerivedPosition();
-    Ogre::Vector3 direction = camera->getDerivedDirection();
-    Ogre::Vector3 lookPoint = cameraPosition;
-    if(direction.z < -MIN_LOOK_DOWN)
-        lookPoint = cameraPosition + direction * (cameraPosition.z / -direction.z);
+    Ogre::Vector3 lookPoint = getLookPoint(cameraPosition, camera->getDerivedDirection());
 
     ++mGeneration;
     mEventsThisScan = 0;
@@ -2771,9 +2788,9 @@ void RoomAmbience::startShake(const AmbienceEffect& effect, const Ogre::Vector3&
         return;
 
     mShakeAmount = strength;
-    mShakeTotal = std::max(0.05, effect.mDuration);
+    mShakeTotal = std::max(MIN_SHAKE_SECONDS, effect.mDuration);
     mShakeTime = mShakeTotal;
-    mShakeSpeed = std::max(0.5, effect.mSpeed);
+    mShakeSpeed = std::max(MIN_SHAKE_SPEED, effect.mSpeed);
 }
 
 void RoomAmbience::updateShake(double timeSinceLastFrame)
@@ -2784,7 +2801,7 @@ void RoomAmbience::updateShake(double timeSinceLastFrame)
     mShakeTime -= timeSinceLastFrame;
     if(mShakeTime < 0.0)
         mShakeTime = 0.0;
-    mShakePhase += timeSinceLastFrame * mShakeSpeed * 6.283185307179586;
+    mShakePhase += timeSinceLastFrame * mShakeSpeed * TWO_PI;
 }
 
 void RoomAmbience::applyShake()
@@ -2804,8 +2821,9 @@ void RoomAmbience::applyShake()
     Ogre::Node* viewNode = cameraNode->getChild(0);
     double strength = mShakeAmount * (mShakeTime / mShakeTotal);
     Ogre::Vector3 offset(static_cast<Ogre::Real>(strength * std::sin(mShakePhase)),
-        static_cast<Ogre::Real>(strength * std::sin(mShakePhase * 1.31 + 1.7)),
-        static_cast<Ogre::Real>(strength * 0.5 * std::sin(mShakePhase * 0.83 + 0.4)));
+        static_cast<Ogre::Real>(strength * std::sin(mShakePhase * SHAKE_SECOND_AXIS_SPEED_FACTOR + SHAKE_SECOND_AXIS_PHASE)),
+        static_cast<Ogre::Real>(strength * SHAKE_THIRD_AXIS_STRENGTH *
+            std::sin(mShakePhase * SHAKE_THIRD_AXIS_SPEED_FACTOR + SHAKE_THIRD_AXIS_PHASE)));
     viewNode->setPosition(viewNode->getPosition() + offset);
     mShakeApplied = offset;
 }
@@ -2859,15 +2877,15 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
         case 4:
             // Reloading, or empty after the last shot: the state is kept until the server says ready. The
             // long time only protects against a ready message that was missed out of sight.
-            mReloadingUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 300.0;
+            mReloadingUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + RELOAD_STATE_SECONDS;
             break;
         case 5:
         {
             // The reload look fades out for two seconds, so that a short reload is seen at all
             std::map<std::string, double>::iterator reloadIt =
                 mReloadingUntil.find(Helper::toString(tileX) + "," + Helper::toString(tileY));
-            if((reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock + 2.0))
-                reloadIt->second = mClock + 2.0;
+            if((reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock + RELOAD_FADE_OUT_SECONDS))
+                reloadIt->second = mClock + RELOAD_FADE_OUT_SECONDS;
             break;
         }
         default:

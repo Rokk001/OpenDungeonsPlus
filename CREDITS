@@ -749,6 +749,7 @@ materials/textures/RoomAmb*.png        OD Team                 GPLv3+           
 tools/gen_room_ambience_art.py         OD Team                 GPLv3+
 materials/textures/RoomAmbFlame.png, RoomAmbBracket.png, RoomAmbGear.png, RoomAmbRat.png, RoomAmbRatL.png, RoomAmbRumple.png, RoomAmbSoftRing.png   OD Team   GPLv3+   Drawn from simple shapes and gradients by tools/gen_room_effects_art.py (script generated, original work)
 tools/gen_room_effects_art.py          OD Team                 GPLv3+
+source/tests/check_view_shake.py       OD Team                 GPLv3+
 tools/check_room_ambience.py           OD Team                 GPLv3+
 materials/textures/RoomAmbRing.png      OD Team                 GPLv3+                  Thin glowing ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work)
 materials/textures/RoomAmbRingRunes.png  OD Team                 GPLv3+                  Double ring with tick marks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work)

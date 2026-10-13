@@ -118,8 +118,10 @@ public:
     //! \brief Moves the camera by the current shake. Called just before the frame is rendered; clearShake()
     //! takes it away again after the frame, so nothing else ever sees the shaken camera.
     void applyShake();
+    //! \brief Takes the offset of applyShake() from the camera again; does nothing when no shake was applied
     void clearShake();
 
+    //! \brief The number of particle systems that run now (for the console)
     inline uint32_t getNbParticleSystems() const
     { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size() + mMarks.size()); }
     inline uint32_t getNbMovedObjects() const
@@ -368,12 +370,16 @@ private:
     void updateRollers(double timeSinceLastFrame);
     //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
     void finishRoller(Roller& roller, bool leaveEffects);
+    //! \brief Lets a running view shake fade out and moves its phase on
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a beam or a projectile (effect kinds beam and projectile) for an event at the given place
     void startFlight(const AmbienceEffect& effect, const Ogre::Vector3& position);
     void updateFlights(double timeSinceLastFrame);
     void destroyFlight(Flight& flight);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
+    //! \param effect The shake effect; Amount is its strength at the middle of the view.
+    //! \param position Where the event happened.
+    //! \param lookPoint The point on the floor the camera looks at, from which the distance is measured.
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
     void updateMotions(double timeSinceLastFrame);
     void destroyEmitter(Emitter& emitter);
