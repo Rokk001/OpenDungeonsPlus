@@ -73,6 +73,56 @@ const double TURRET_HOLD_SECONDS = 1.5;
 const double ROLL_AIM_RADIUS = 8.0;
 //! Distance in tiles within which an effect belongs to a heart for the beat
 const double HEART_RATE_RADIUS = 3.0;
+//! Seed of the dice of the ambience, which are separate from the game random sequence
+const uint32_t RANDOM_SEED = 12345;
+//! Seconds between two prunings of the lists of old entries
+const double PRUNE_INTERVAL_SECONDS = 30.0;
+//! Seconds after which the busy info of a target that nobody asked for is dropped
+const double BUSY_KEEP_SECONDS = 600.0;
+//! Seconds after which the clip timer of an object that was not seen is dropped
+const double CLIP_TIMER_KEEP_SECONDS = 120.0;
+//! An effect that already runs is kept this much beyond its view distance, so it does not flicker at the limit
+const double VIEW_DISTANCE_MARGIN = 1.2;
+//! Radius in tiles that must be in view for an object or an event to count as seen
+const double OBJECT_VISIBLE_RADIUS = 1.5;
+//! Radius in tiles that must be in view for a room tile to count as seen
+const double TILE_VISIBLE_RADIUS = 1.0;
+//! Value in the list of seen tile visuals for a tile that was never seen
+const uint8_t NEVER_SEEN_VISUAL = 255;
+//! Tile visual value of a tile that is not known yet
+const uint8_t UNKNOWN_VISUAL = 0;
+//! Multipliers and shift that mix the tile coordinates into the hash that picks every n-th tile
+const int32_t TILE_HASH_X = 73856093;
+const int32_t TILE_HASH_Y = 19349663;
+const uint32_t TILE_HASH_SHIFT = 3;
+//! Tiles added to the occupied radius when a room tile asks whether a creature is close
+const double TILE_OCCUPIED_MARGIN = 1.0;
+//! Seconds after the start during which changes count as a map being loaded, not as events
+const double SETTLE_SECONDS = 3.0;
+//! Seconds within which the same event does not start again
+const double EVENT_REPEAT_SECONDS = 0.1;
+//! Radians in one degree
+const double DEGREES_TO_RADIANS = 0.0174532925;
+//! The second wave of a flicker runs this much faster than the first, so the flicker does not repeat
+const double FLICKER_SECOND_WAVE_RATE = 1.7;
+//! Cycles per second of the swell of a wobble
+const double WOBBLE_SWELL_RATE = 0.11;
+//! The start phase of a hash is a whole number of these steps per radian ...
+const uint32_t PHASE_STEPS = 6283;
+//! ... divided by this, so it lies between 0 and 2 pi
+const double PHASE_STEPS_PER_RADIAN = 1000.0;
+//! The camera must look down at least this much (z of its direction) for the point where it meets the floor to be used
+const float MIN_LOOK_DOWN = 0.05f;
+//! Scan radius in tiles before a configuration was read
+const double DEFAULT_SCAN_RADIUS = 30.0;
+//! Smallest scan radius in tiles
+const double MIN_SCAN_RADIUS = 10.0;
+//! Start of a Match name that stands for a bridge (followed by the bridge mesh or the tile visual)
+const std::string BRIDGE_PREFIX = "bridge:";
+//! Start of a Match name that stands for the type of a trap or door (Alarm, Gas, DoorSteel...)
+const std::string TRAP_PREFIX = "trap:";
+//! The end of a mesh file name
+const std::string MESH_SUFFIX = ".mesh";
 
 const double TWO_PI = 6.283185307179586;
 
@@ -122,7 +172,7 @@ void turnNodeToward(Ogre::SceneNode* node, const Ogre::Vector3& wanted, double m
 double hashPhase(const std::string& text)
 {
     std::hash<std::string> hasher;
-    return static_cast<double>(hasher(text) % 6283) / 1000.0;
+    return static_cast<double>(hasher(text) % PHASE_STEPS) / PHASE_STEPS_PER_RADIAN;
 }
 
 bool candidateBefore(const std::pair<int32_t, double>& a, const std::pair<int32_t, double>& b)
@@ -136,15 +186,18 @@ bool candidateBefore(const std::pair<int32_t, double>& a, const std::pair<int32_
 //! Orders indices by priority (high first) and then by distance (near first)
 struct IndexOrder
 {
+    //! \brief Creates the order over the given priority and distance pairs, which must outlive it
     explicit IndexOrder(const std::vector<std::pair<int32_t, double> >& order) :
         mOrder(order)
     {}
 
+    //! \brief True if the entry with index a comes before the entry with index b
     bool operator()(uint32_t a, uint32_t b) const
     {
         return candidateBefore(mOrder[a], mOrder[b]);
     }
 
+    //! The priority and distance pairs the indices point into
     const std::vector<std::pair<int32_t, double> >& mOrder;
 };
 
@@ -158,7 +211,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mScanTimer(0.0),
     mPruneTimer(0.0),
     mUniqueNumber(0),
-    mScanRadius(30.0),
+    mScanRadius(DEFAULT_SCAN_RADIUS),
     mWallTorchesVersion(0),
     mSeenSizeX(0),
     mSeenSizeY(0),
@@ -169,7 +222,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mShakeSpeed(12.0),
     mShakePhase(0.0),
     mShakeApplied(Ogre::Vector3::ZERO),
-    mRandom(12345),
+    mRandom(RANDOM_SEED),
     mCreaturesInitialized(false),
     mGeneration(0),
     mEntitiesInitialized(false),
@@ -229,7 +282,7 @@ void RoomAmbience::buildIndex()
     mObjectEffectsMemo.clear();
     mEventEffects.clear();
     mBridgeEffects.clear();
-    mScanRadius = 10.0;
+    mScanRadius = MIN_SCAN_RADIUS;
 
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
     for(uint32_t i = 0; i < effects.size(); ++i)
@@ -241,9 +294,9 @@ void RoomAmbience::buildIndex()
             for(const std::string& name : effect.mMatch)
             {
                 // Bridges are not rooms for the client: "bridge:<mesh>" or "bridge:<tile visual>"
-                if(name.compare(0, 7, "bridge:") == 0)
+                if(name.compare(0, BRIDGE_PREFIX.size(), BRIDGE_PREFIX) == 0)
                 {
-                    mBridgeEffects[name.substr(7)].push_back(i);
+                    mBridgeEffects[name.substr(BRIDGE_PREFIX.size())].push_back(i);
                     continue;
                 }
 
@@ -282,8 +335,8 @@ const std::vector<uint32_t>& RoomAmbience::getObjectEffects(const std::string& m
         for(const std::string& pattern : effect.mMatch)
         {
             // "trap:<type>" matches the type of a trap or door (Alarm, Gas, DoorSteel...), all others the mesh
-            bool matches = (pattern.compare(0, 5, "trap:") == 0) ?
-                (!kind.empty() && matchesPattern(pattern.substr(5), kind)) : matchesPattern(pattern, meshName);
+            bool matches = (pattern.compare(0, TRAP_PREFIX.size(), TRAP_PREFIX) == 0) ?
+                (!kind.empty() && matchesPattern(pattern.substr(TRAP_PREFIX.size()), kind)) : matchesPattern(pattern, meshName);
             if(matches)
             {
                 list.push_back(i);
@@ -301,8 +354,9 @@ std::vector<uint32_t> RoomAmbience::getBridgeEffects(Tile* tile) const
 {
     std::vector<uint32_t> list;
     std::string meshName = tile->getMeshName();
-    if((meshName.size() > 5) && (meshName.compare(meshName.size() - 5, 5, ".mesh") == 0))
-        meshName = meshName.substr(0, meshName.size() - 5);
+    if((meshName.size() > MESH_SUFFIX.size())
+        && (meshName.compare(meshName.size() - MESH_SUFFIX.size(), MESH_SUFFIX.size(), MESH_SUFFIX) == 0))
+        meshName = meshName.substr(0, meshName.size() - MESH_SUFFIX.size());
 
     std::map<std::string, std::vector<uint32_t> >::const_iterator it = mBridgeEffects.find(meshName);
     if(it != mBridgeEffects.end())
@@ -500,7 +554,7 @@ void RoomAmbience::moveModel(Emitter& emitter, const AmbienceEffect& effect, dou
         }
         case AmbienceMotion::wobble:
         {
-            double envelope = std::sin(TWO_PI * 0.11 * mClock + emitter.mPhase);
+            double envelope = std::sin(TWO_PI * WOBBLE_SWELL_RATE * mClock + emitter.mPhase);
             envelope = (envelope > 0.0) ? envelope * envelope : 0.0;
             orientation = orientation * Ogre::Quaternion(
                 Ogre::Degree(static_cast<Ogre::Real>(effect.mAmount * wave * envelope)), effect.mAxis);
@@ -518,14 +572,14 @@ void RoomAmbience::moveModel(Emitter& emitter, const AmbienceEffect& effect, dou
         }
         case AmbienceMotion::spin:
         {
-            emitter.mCycle += effect.mSpeed * timeSinceLastFrame * 0.0174532925;
+            emitter.mCycle += effect.mSpeed * timeSinceLastFrame * DEGREES_TO_RADIANS;
             orientation = orientation * Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(emitter.mCycle)), effect.mAxis);
             break;
         }
         case AmbienceMotion::flicker:
         {
             double noise = 0.5 * (std::sin(TWO_PI * effect.mSpeed * mClock + emitter.mPhase)
-                + std::sin(TWO_PI * effect.mSpeed * 1.7 * mClock + 2.0 * emitter.mPhase));
+                + std::sin(TWO_PI * effect.mSpeed * FLICKER_SECOND_WAVE_RATE * mClock + 2.0 * emitter.mPhase));
             scale = scale * static_cast<Ogre::Real>(1.0 + effect.mAmount * noise);
             break;
         }
@@ -792,7 +846,7 @@ void RoomAmbience::scan()
     Ogre::Vector3 cameraPosition = camera->getDerivedPosition();
     Ogre::Vector3 direction = camera->getDerivedDirection();
     Ogre::Vector3 lookPoint = cameraPosition;
-    if(direction.z < -0.05f)
+    if(direction.z < -MIN_LOOK_DOWN)
         lookPoint = cameraPosition + direction * (cameraPosition.z / -direction.z);
 
     ++mGeneration;
@@ -829,12 +883,12 @@ void RoomAmbience::scan()
     playClips();
 
     mPruneTimer += mConfig.getScanInterval();
-    if(mPruneTimer >= 30.0)
+    if(mPruneTimer >= PRUNE_INTERVAL_SECONDS)
     {
         mPruneTimer = 0.0;
         for(std::map<std::string, BusyInfo>::iterator it = mBusy.begin(); it != mBusy.end();)
         {
-            if((mClock - it->second.mLastTouched) > 600.0)
+            if((mClock - it->second.mLastTouched) > BUSY_KEEP_SECONDS)
                 mBusy.erase(it++);
             else
                 ++it;
@@ -842,7 +896,7 @@ void RoomAmbience::scan()
 
         for(std::map<std::string, double>::iterator it = mClipTimers.begin(); it != mClipTimers.end();)
         {
-            if(it->second < (mClock - 120.0))
+            if(it->second < (mClock - CLIP_TIMER_KEEP_SECONDS))
                 mClipTimers.erase(it++);
             else
                 ++it;
@@ -903,12 +957,12 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             }
 
             // An effect that already runs is kept a bit beyond its distance
-            double limit = getDistanceLimit(effect) * 1.2;
+            double limit = getDistanceLimit(effect) * VIEW_DISTANCE_MARGIN;
             if(distance > limit)
                 continue;
 
             if(visible < 0)
-                visible = isVisibleNear(camera, cameraPosition, position, 1.5, limit) ? 1 : 0;
+                visible = isVisibleNear(camera, cameraPosition, position, OBJECT_VISIBLE_RADIUS, limit) ? 1 : 0;
             if(visible == 0)
                 continue;
 
@@ -1014,7 +1068,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
     {
         mSeenSizeX = sizeX;
         mSeenSizeY = sizeY;
-        mSeenVisual.assign(static_cast<size_t>(sizeX) * static_cast<size_t>(sizeY), 255);
+        mSeenVisual.assign(static_cast<size_t>(sizeX) * static_cast<size_t>(sizeY), NEVER_SEEN_VISUAL);
     }
 
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
@@ -1043,7 +1097,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
             mSeenVisual[seenIndex] = current;
             bool currentRoom = (current >= firstRoomVisual) && (current < static_cast<uint8_t>(TileVisual::countTileVisual));
             // A tile that was not known yet (visual 0) coming into view is not a room being built
-            if((previous != 255) && (previous != 0) && (previous != current))
+            if((previous != NEVER_SEEN_VISUAL) && (previous != UNKNOWN_VISUAL) && (previous != current))
             {
                 bool previousRoom = (previous >= firstRoomVisual);
                 if(currentRoom && !previousRoom)
@@ -1100,14 +1154,14 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 if(!isEffectUsable(effect))
                     continue;
 
-                double limit = getDistanceLimit(effect) * 1.2;
+                double limit = getDistanceLimit(effect) * VIEW_DISTANCE_MARGIN;
                 if(distance > limit)
                     continue;
 
                 if(effect.mSpacing > 1)
                 {
-                    uint32_t hash = static_cast<uint32_t>(x * 73856093) ^ static_cast<uint32_t>(y * 19349663);
-                    if(((hash >> 3) % effect.mSpacing) != 0)
+                    uint32_t hash = static_cast<uint32_t>(x * TILE_HASH_X) ^ static_cast<uint32_t>(y * TILE_HASH_Y);
+                    if(((hash >> TILE_HASH_SHIFT) % effect.mSpacing) != 0)
                         continue;
                 }
 
@@ -1143,7 +1197,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 }
 
                 if(visible < 0)
-                    visible = isVisibleNear(camera, cameraPosition, position, 1.0, limit) ? 1 : 0;
+                    visible = isVisibleNear(camera, cameraPosition, position, TILE_VISIBLE_RADIUS, limit) ? 1 : 0;
                 if(visible == 0)
                     continue;
 
@@ -1168,7 +1222,7 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 else
                 {
                     if(busy < 0)
-                        busy = isCreatureNear(position.x, position.y, mConfig.getOccupiedRadius() + 1.0) ? 1 : 0;
+                        busy = isCreatureNear(position.x, position.y, mConfig.getOccupiedRadius() + TILE_OCCUPIED_MARGIN) ? 1 : 0;
 
                     if(effect.mWhen == AmbienceWhen::occupied)
                         candidate.mActive = (busy == 1);
@@ -1329,7 +1383,7 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
     }
 
     // Many changes at once are a map being loaded or revealed, not things being made
-    bool settled = (mClock > 3.0) && mEntitiesInitialized && (changes.size() <= MAX_EVENTS_PER_SCAN);
+    bool settled = (mClock > SETTLE_SECONDS) && mEntitiesInitialized && (changes.size() <= MAX_EVENTS_PER_SCAN);
     mEntitiesInitialized = true;
     if(!settled)
         return;
@@ -1459,7 +1513,7 @@ void RoomAmbience::scanCreatureEvents()
     }
 
     // Many changes at once are a map being loaded or revealed, not creatures acting
-    bool settled = (mClock > 3.0) && mCreaturesInitialized && (changes.size() <= MAX_EVENTS_PER_SCAN);
+    bool settled = (mClock > SETTLE_SECONDS) && mCreaturesInitialized && (changes.size() <= MAX_EVENTS_PER_SCAN);
     mCreaturesInitialized = true;
     if(!settled)
         return;
@@ -1903,7 +1957,7 @@ void RoomAmbience::updateEmitters(double timeSinceLastFrame)
                 cycles = emitter.mCycle;
             }
             double rate = TWO_PI * cycles;
-            double noise = 0.5 * (std::sin(rate + emitter.mPhase) + std::sin(1.7 * rate + 2.0 * emitter.mPhase));
+            double noise = 0.5 * (std::sin(rate + emitter.mPhase) + std::sin(FLICKER_SECOND_WAVE_RATE * rate + 2.0 * emitter.mPhase));
             double factor = 1.0 + flicker * noise;
             emitter.mSystem->setDefaultDimensions(static_cast<Ogre::Real>(emitter.mBaseWidth * factor),
                 static_cast<Ogre::Real>(emitter.mBaseHeight * factor));
@@ -2099,7 +2153,7 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
                 case AmbienceMotion::wobble:
                 {
                     // Swells and fades about every nine seconds, like something that was hit now and then
-                    double envelope = std::sin(TWO_PI * 0.11 * motionNode.mClock + instance.mPhase);
+                    double envelope = std::sin(TWO_PI * WOBBLE_SWELL_RATE * motionNode.mClock + instance.mPhase);
                     envelope = (envelope > 0.0) ? envelope * envelope : 0.0;
                     double angle = effect.mAmount * wave * envelope * instance.mIntensity;
                     orientation = orientation * Ogre::Quaternion(Ogre::Degree(static_cast<Ogre::Real>(angle)), effect.mAxis);
@@ -2108,7 +2162,7 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
                 case AmbienceMotion::spin:
                 {
                     // The turned angle is summed up, so a fading spin stops where it is instead of jumping back
-                    instance.mPhase += effect.mSpeed * instance.mIntensity * timeSinceLastFrame * 0.0174532925;
+                    instance.mPhase += effect.mSpeed * instance.mIntensity * timeSinceLastFrame * DEGREES_TO_RADIANS;
                     orientation = orientation * Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(instance.mPhase)), effect.mAxis);
                     break;
                 }
@@ -2125,7 +2179,7 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
                 case AmbienceMotion::flicker:
                 {
                     double noise = 0.5 * (std::sin(TWO_PI * effect.mSpeed * motionNode.mClock + instance.mPhase)
-                        + std::sin(TWO_PI * effect.mSpeed * 1.7 * motionNode.mClock + 2.0 * instance.mPhase));
+                        + std::sin(TWO_PI * effect.mSpeed * FLICKER_SECOND_WAVE_RATE * motionNode.mClock + 2.0 * instance.mPhase));
                     scale = scale * static_cast<Ogre::Real>(1.0 + effect.mAmount * noise * instance.mIntensity);
                     break;
                 }
@@ -2166,7 +2220,7 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
     if(!forced)
     {
         std::map<std::string, double>::iterator lastIt = mLastEventTime.find(eventName);
-        if(!noThrottle && (lastIt != mLastEventTime.end()) && ((mClock - lastIt->second) < 0.1))
+        if(!noThrottle && (lastIt != mLastEventTime.end()) && ((mClock - lastIt->second) < EVENT_REPEAT_SECONDS))
             return 0;
     }
 
@@ -2178,7 +2232,7 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
     if(camera != nullptr)
     {
         Ogre::Vector3 direction = camera->getDerivedDirection();
-        if(direction.z < -0.05f)
+        if(direction.z < -MIN_LOOK_DOWN)
             lookPoint = cameraPosition + direction * (cameraPosition.z / -direction.z);
     }
 
@@ -2220,13 +2274,13 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
                 continue;
 
             // A shake is felt wherever the event is; a mark must be there when the view comes by later
-            if(!isShake && !isMark && !isVisibleNear(camera, cameraPosition, position, 1.5, getDistanceLimit(effect)))
+            if(!isShake && !isMark && !isVisibleNear(camera, cameraPosition, position, OBJECT_VISIBLE_RADIUS, getDistanceLimit(effect)))
                 continue;
 
             if(effect.mSpacing > 1)
             {
-                uint32_t hash = static_cast<uint32_t>(tileX * 73856093) ^ static_cast<uint32_t>(tileY * 19349663);
-                if(((hash >> 3) % effect.mSpacing) != 0)
+                uint32_t hash = static_cast<uint32_t>(tileX * TILE_HASH_X) ^ static_cast<uint32_t>(tileY * TILE_HASH_Y);
+                if(((hash >> TILE_HASH_SHIFT) % effect.mSpacing) != 0)
                     continue;
             }
 

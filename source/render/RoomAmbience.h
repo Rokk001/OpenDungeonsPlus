@@ -350,6 +350,7 @@ private:
     //! shows it, has gone down since the last scan
     void scanHeartHit();
     void reconcile();
+    //! \brief Plays the clips of the objects whose time has come
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
@@ -407,7 +408,9 @@ private:
     bool isEffectUsable(const AmbienceEffect& effect) const;
     bool createParticleSystem(const std::string& system, const Ogre::Vector3& position, const std::string& baseName,
         Ogre::SceneNode*& node, Ogre::ParticleSystem*& particleSystem);
+    //! \brief The effects of the given kind for the objects with the given mesh name, remembered per mesh
     const std::vector<uint32_t>& getObjectEffects(const std::string& meshName, const std::string& kind);
+    //! \brief The effects for a bridge tile, found by the mesh of its bridge and the visual of the ground under it
     std::vector<uint32_t> getBridgeEffects(Tile* tile) const;
     bool isVisibleNear(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& position,
         double radius, double limit) const;
