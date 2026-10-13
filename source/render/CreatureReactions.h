@@ -363,6 +363,7 @@ private:
     };
 
     //! \brief Starts the configured reaction, using articulated resting clips when available.
+    //! Returns false if nothing could be shown.
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -390,10 +391,12 @@ private:
     //! \brief The event that is shown now and then while the creature goes on with what the animation
     //! shows (empty if the creature does not do such a thing)
     std::string getOngoingEvent(const Creature* creature, const std::string& clip) const;
+    //! \brief Remembers that the creature goes on with the work of the event, to try a reaction now and then
     void startOngoing(Creature* creature, const std::string& eventName);
     //! \brief The creature starts to do something else than before (newEvent is empty or the event of the
     //! new ongoing work): the work it was doing ends and may have a done moment
     void finishOngoing(Creature* creature, const std::string& newEvent);
+    //! \brief Tries the reaction of every ongoing work whose time has come
     void updateOngoing();
     //! \brief While a bout goes on in an arena, the creatures of its keeper that watch it from within the spectator
     //! distance cheer, and the crowd of the arena cheers (confetti and shouting of the room ambience)

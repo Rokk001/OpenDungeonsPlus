@@ -85,6 +85,16 @@ const double HAND_DROP_MEMORY = 120.0;
 //! Seconds a reaction waits at most for the creature to finish what it is doing
 const double PENDING_WAIT_MAX = 5.0;
 const double PENDING_WAIT_STEP = 0.25;
+//! Largest squared distance at which a node still counts as being where the motion left it
+const double MOTION_UNCHANGED_SQUARED_TOLERANCE = 0.00000001;
+//! Share of the squash by which the model grows sideways while it gets lower
+const double SQUASH_SIDE_GROWTH = 0.5;
+//! Shortest distance (world units) at which the direction to the camera or the front is used
+const double TURN_MIN_LENGTH = 0.01;
+//! Share of the turn motion spent turning towards the camera, and again turning back
+const double TURN_PHASE = 0.25;
+//! Smallest change of the turn angle (radians) that is applied to the node
+const double ROTATION_EPSILON = 0.00001;
 //! Seconds a done moment waits at most for the creature to finish its get-up or meal
 const double DONE_WAIT_MAX = 8.0;
 //! Seconds a creature has to sleep or pray until the end of it is shown
@@ -109,6 +119,8 @@ const double ROOM_RESULT_DELAY = 0.7;
 //! Seconds between two tries to show the work reaction of a creature that does something for a while
 const double ONGOING_MIN = 5.0;
 const double ONGOING_MAX = 9.0;
+//! Shortest wait before the first try when a creature starts to do something for a while
+const double ONGOING_FIRST_MIN = 2.0;
 const std::string PROP_MATERIAL_PREFIX = "CreatureProp_";
 const std::string PROP_NAME_PREFIX = "CreatureReactionProp_";
 //! The reactions of the moods and the habits leave this many places of the simultaneous ones to the events
@@ -1070,11 +1082,11 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     // Whoever moves or scales the creature sets the position or scale, so what we added is lost
     // then. We only take our own share away if the node still is the way we left it.
     Ogre::Vector3 position = node->getPosition();
-    if((position - reaction.mMotionLastPosition).squaredLength() < 0.00000001)
+    if((position - reaction.mMotionLastPosition).squaredLength() < MOTION_UNCHANGED_SQUARED_TOLERANCE)
         position -= reaction.mMotionPosition;
 
     Ogre::Vector3 scale = node->getScale();
-    if((scale - reaction.mMotionLastScale).squaredLength() < 0.00000001)
+    if((scale - reaction.mMotionLastScale).squaredLength() < MOTION_UNCHANGED_SQUARED_TOLERANCE)
         scale = scale / reaction.mMotionScale;
 
     Ogre::Vector3 addedPosition = Ogre::Vector3::ZERO;
@@ -1101,8 +1113,8 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
             case ReactionMotion::Type::squash:
             {
                 double share = motion.mAmount * wave;
-                addedScale.x = static_cast<Ogre::Real>(1.0 + 0.5 * share);
-                addedScale.y = static_cast<Ogre::Real>(1.0 + 0.5 * share);
+                addedScale.x = static_cast<Ogre::Real>(1.0 + SQUASH_SIDE_GROWTH * share);
+                addedScale.y = static_cast<Ogre::Real>(1.0 + SQUASH_SIDE_GROWTH * share);
                 addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 break;
             }
@@ -1206,7 +1218,7 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                         Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
                         toCamera.z = 0.0f;
                         forward.z = 0.0f;
-                        if((toCamera.length() > 0.01f) && (forward.length() > 0.01f))
+                        if((toCamera.length() > TURN_MIN_LENGTH) && (forward.length() > TURN_MIN_LENGTH))
                         {
                             toCamera.normalise();
                             forward.normalise();
@@ -1218,10 +1230,10 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
 
                 // Turns in the first quarter, stays, and turns back in the last quarter
                 double envelope = 1.0;
-                if(progress < 0.25)
-                    envelope = progress / 0.25;
-                else if(progress > 0.75)
-                    envelope = (1.0 - progress) / 0.25;
+                if(progress < TURN_PHASE)
+                    envelope = progress / TURN_PHASE;
+                else if(progress > (1.0 - TURN_PHASE))
+                    envelope = (1.0 - progress) / TURN_PHASE;
                 envelope = envelope * envelope * (3.0 - 2.0 * envelope);
                 angle = reaction.mMotionTurnAngle * envelope;
                 break;
@@ -1239,7 +1251,7 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     reaction.mMotionLastScale = node->getScale();
 
     double deltaAngle = angle - reaction.mMotionAngle;
-    if(std::fabs(deltaAngle) > 0.00001)
+    if(std::fabs(deltaAngle) > ROTATION_EPSILON)
     {
         // The creature tips over onto its side around the axis it looks along, everything else turns around the vertical
         Ogre::Vector3 axis = (motion.mType == ReactionMotion::Type::lie) ? reaction.mMotionAxis : Ogre::Vector3::UNIT_Z;
@@ -1840,7 +1852,7 @@ void CreatureReactions::startOngoing(Creature* creature, const std::string& even
     OngoingWork work;
     work.mEventName = eventName;
     work.mSince = mTime;
-    work.mNext = mTime + cosmeticRandom(2.0, ONGOING_MAX);
+    work.mNext = mTime + cosmeticRandom(ONGOING_FIRST_MIN, ONGOING_MAX);
     mOngoing[creature->getName()] = work;
 }
 
