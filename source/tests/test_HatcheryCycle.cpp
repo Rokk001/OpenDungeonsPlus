@@ -865,6 +865,7 @@ BOOST_AUTO_TEST_CASE(test_NestFieldFeathers)
         std::vector<HatcheryNestField::TileCoord>(), std::vector<HatcheryNestField::Place>(), settings).size() >= 2u);
 }
 
+//! The crow interval always lies between the configured minimum and maximum, and a maximum below the minimum falls back to the minimum.
 BOOST_AUTO_TEST_CASE(test_RoosterCrowInterval)
 {
     RoosterSettings settings;
