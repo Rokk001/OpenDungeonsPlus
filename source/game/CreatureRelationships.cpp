@@ -32,6 +32,11 @@ const size_t RelationshipCreatureState::MAX_CAPTORS;
 
 namespace
 {
+    //! A creature only starts a brawl if its health is this many percent above the health that stops the brawl
+    static const int32_t BRAWL_START_HEALTH_MARGIN_PERCENT = 25;
+    //! Factor between a fraction and percent, used to compare health with the percent settings of the brawl
+    static const double BRAWL_PERCENT_FACTOR = 100.0;
+
     bool parseInt(const std::string& text, int64_t& value)
     {
         std::istringstream ss(text);
@@ -1208,13 +1213,14 @@ bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings&
     if(state.mFighting || state.mInArenaOrCasino)
         return false;
 
-    return (state.mHp * 100.0) > (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + 25));
+    return (state.mHp * BRAWL_PERCENT_FACTOR) >
+        (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + BRAWL_START_HEALTH_MARGIN_PERCENT));
 }
 
 bool shouldStopBrawl(const BrawlFighterState& first, const BrawlFighterState& second, int64_t turnsSinceStart,
     bool stillFighting, const RelationshipSettings& settings)
 {
-    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
+    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / BRAWL_PERCENT_FACTOR;
     return !first.mAlive || !second.mAlive || first.mKo || second.mKo
         || first.mPossessed || second.mPossessed
         || (first.mHp <= (first.mMaxHp * stopRatio)) || (second.mHp <= (second.mMaxHp * stopRatio))

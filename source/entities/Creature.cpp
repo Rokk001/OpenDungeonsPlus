@@ -3857,7 +3857,9 @@ void Creature::reportLeavingToBestFriend()
 
     int32_t chance = isPartner ? relationships->getSettings().mLeavePartnerChancePercent :
         relationships->getSettings().mLeaveTogetherChancePercent;
-    if(Random::Int(0, 99) >= chance)
+    // The chance is in percent: a roll from 0 to 99 below it succeeds
+    const int32_t maxPercentRoll = 99;
+    if(Random::Int(0, maxPercentRoll) >= chance)
         return;
 
     OD_LOG_INF("creature=" + friendCreature->getName() + " leaves its dungeon together with its " +
