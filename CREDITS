@@ -293,7 +293,6 @@ textures/
 -> Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Sleepy,Unhappy}.pngAI-generated with Codex  GPLv3+                  AI-generated mood icons (tools/artwork/CreatureMoodAtlas.png), see "Generated assets" below
 -> CreatureExperience.png, CreatureRecovery.pngMario                   GPLv3+                  Added 2026 (first commit)
 -> DungeonHeart{Healthy,Damaged,Critical}{,Normal,Glow}.pngMario                   GPLv3+                  Procedural, tools/heart-textures/generate_heart_textures.py
--> DungeonHeartPedestal.png            Mario                   GPLv3+                  Procedural, tools/heart-textures/generate_pedestal_texture.py
 -> DefeatFireball.png                  Mario                   GPLv3+                  Added 2026 (first commit 2c05e6eb2), created for this project
 -> MainMenuBackground.png              AI-generated with Codex  GPLv3+                  Added 2026 (first commit b04544ed8)
 -> portrait-*.png                      AI-generated with Codex  GPLv3+                  AI-generated, created for this project; see "Generated assets" below
