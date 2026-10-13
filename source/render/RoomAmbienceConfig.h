@@ -61,6 +61,7 @@ enum class AmbienceWhen
     sleeping
 };
 
+//! \brief What an ambience effect does when it is shown
 enum class AmbienceKind
 {
     //! A particle system (also used as glow, with a flicker)
@@ -96,6 +97,7 @@ enum class AmbienceKind
     creatureClip
 };
 
+//! \brief How an effect of the kind motion moves the node of its object
 enum class AmbienceMotion
 {
     //! Slow rocking around an axis
@@ -115,6 +117,7 @@ enum class AmbienceMotion
 //! \brief One effect read from the room ambience configuration
 struct AmbienceEffect
 {
+    //! \brief Creates an effect with the defaults that the configuration file may override
     AmbienceEffect() :
         mTarget(AmbienceTarget::object),
         mWhen(AmbienceWhen::always),
@@ -144,13 +147,17 @@ struct AmbienceEffect
         mOwnerOnly(false)
     {}
 
+    //! Name of the effect, used in the log
     std::string mName;
+    //! What the effect is attached to (an object, a tile or an event)
     AmbienceTarget mTarget;
     //! Mesh names (object, with * as first or last character as wildcard) or tile visual names (tile, event)
     std::vector<std::string> mMatch;
+    //! When a looping effect is shown
     AmbienceWhen mWhen;
     //! Event name (target event)
     std::string mEvent;
+    //! What the effect does (a particle system, a motion or a clip)
     AmbienceKind mKind;
     //! Particle system template (kind particle)
     std::string mSystem;
@@ -166,10 +173,13 @@ struct AmbienceEffect
     std::vector<std::string> mObjects;
     //! Object clips: the clip runs in a loop as long as the condition holds (and stops at its last pose when it ends)
     bool mLoop;
+    //! How the object is moved (kind motion)
     AmbienceMotion mMotion;
     //! Seconds without a creature before an empty room effect starts
     double mAfter;
+    //! Added to the position of the target
     Ogre::Vector3 mOffset;
+    //! Axis a motion works around or along
     Ogre::Vector3 mAxis;
     //! Degrees (sway, wobble), units (bob), fraction (pulse, flicker)
     double mAmount;
@@ -197,6 +207,7 @@ struct AmbienceEffect
     uint32_t mSpacing;
     //! Tile targets: only shown while the grain level of the tile (hatchery floor) is at least this (0 = always)
     uint32_t mGrainMin;
+    //! Distance to the camera up to which the effect runs
     double mMaxDistance;
     //! Higher priority effects are served first when the budget is used up
     int32_t mPriority;
@@ -222,49 +233,71 @@ struct AmbienceEffect
 class RoomAmbienceConfig
 {
 public:
+    //! \brief Creates an empty configuration with the default limits
     RoomAmbienceConfig();
 
     //! \brief Reads the file, replacing what was loaded before. Returns false if it could not be used
     bool load(const std::string& fileName);
 
+    //! \brief The effects read from the file and its includes, in file order
     const std::vector<AmbienceEffect>& getEffects() const
     { return mEffects; }
 
+    //! \brief Seconds between two scans of the visible rooms and objects
     double getScanInterval() const
     { return mScanInterval; }
+    //! \brief The most looping particle systems that may run at once (the lower limit in the mode reduced)
     uint32_t getMaxParticles(bool reduced) const
     { return reduced ? mMaxParticlesReduced : mMaxParticles; }
+    //! \brief The most objects that may be moved by motions at once
     uint32_t getMaxMotions() const
     { return mMaxMotions; }
+    //! \brief The most one-shot particle systems that may run at once
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
     uint32_t getMaxFlights() const
     { return mMaxFlights; }
     uint32_t getMaxMarks() const
     { return mMaxMarks; }
+    //! \brief Distance in tiles within which a creature counts as close to an object or tile
     double getOccupiedRadius() const
     { return mOccupiedRadius; }
+    //! \brief Factor that shortens the view distance of every effect in the mode reduced
     double getReducedDistanceFactor() const
     { return mReducedDistanceFactor; }
 
+    //! \brief Reads the name of a "When" condition; returns false for an unknown name
     static bool whenFromString(const std::string& text, AmbienceWhen& when);
+    //! \brief Reads the name of a motion; returns false for an unknown name
     static bool motionFromString(const std::string& text, AmbienceMotion& motion);
 
 private:
+    //! \brief Reads one file; included is true for a file named by an "Include" line (a missing one is skipped)
     bool loadFile(const std::string& fileName, bool included);
+    //! \brief Reads the [Settings] block
     bool loadSettings(std::istream& file);
+    //! \brief Reads the [Effects] block, one [Effect] entry after the other
     bool loadEffects(std::istream& file);
+    //! \brief Reads one [Effect] entry and adds it to mEffects
     bool loadEffect(std::istream& file);
 
+    //! The effects read from the file and its includes, in file order
     std::vector<AmbienceEffect> mEffects;
+    //! Seconds between two scans
     double mScanInterval;
+    //! Most looping particle systems that may run at once
     uint32_t mMaxParticles;
+    //! The same limit in the mode reduced
     uint32_t mMaxParticlesReduced;
+    //! Most objects that may be moved at once
     uint32_t mMaxMotions;
+    //! Most one-shot particle systems that may run at once
     uint32_t mMaxOneShots;
     uint32_t mMaxMarks;
     uint32_t mMaxFlights;
+    //! Distance in tiles within which a creature counts as close
     double mOccupiedRadius;
+    //! Factor that shortens the view distance in the mode reduced
     double mReducedDistanceFactor;
 };
 

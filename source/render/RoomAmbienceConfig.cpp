@@ -43,6 +43,7 @@ bool readWords(std::istream& file, std::vector<std::string>& words)
     return true;
 }
 
+//! \brief Reads a yes/no value of the configuration file ("yes", "true" and "1" are true)
 bool toBool(const std::string& text)
 {
     return (text == "yes") || (text == "true") || (text == "1");
