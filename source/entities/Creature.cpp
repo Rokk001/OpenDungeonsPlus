@@ -256,6 +256,8 @@ static const double IDLE_BREATH_FACTOR_MEDIUM = 0.85;
 static const double IDLE_BREATH_FACTOR_LIGHT = 0.92;
 //! \brief Tolerance that keeps a health border that falls exactly on a stage in the lower stage (see isLowHealthWalkStage)
 static const double HEALTH_STAGE_ROUNDING_TOLERANCE = 0.000001;
+//! \brief Number of closest targets for which a path is tried when a creature looks for a destination
+static const uint32_t MAX_PATH_CHECK_TARGET_TRIES = 5;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
@@ -6872,7 +6874,7 @@ bool Creature::handleChampionIdle()
     uint32_t nbTries = 0;
     for(const std::pair<int, Tile*>& target : targets)
     {
-        if(nbTries >= 5)
+        if(nbTries >= MAX_PATH_CHECK_TARGET_TRIES)
             break;
         ++nbTries;
 
