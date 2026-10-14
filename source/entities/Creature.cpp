@@ -150,6 +150,10 @@ static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 static const Ogre::Real POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
 //! \brief Squared length below which a possession aim direction counts as no aim
 static const Ogre::Real POSSESSION_MIN_AIM_SQUARED_LENGTH = 0.0001f;
+//! \brief Pit mood points lost per second when the room config has no PitMoodDecay
+static const double DEFAULT_PIT_MOOD_DECAY_PER_SECOND = 3.0;
+//! \brief Radius in tiles of the hated company check when the room config has no HatedCompanyRadius
+static const double DEFAULT_HATED_COMPANY_RADIUS = 5.0;
 
 // Target selection by combat class: the distance to an enemy support creature is multiplied by this
 // factor for blitzers and flankers, so they prefer it over closer enemies
@@ -1779,7 +1783,7 @@ void Creature::doUpkeep()
     // The pit mood fades towards 0
     if(mPitMood != 0.0)
     {
-        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodDecay", 3.0)
+        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodDecay", DEFAULT_PIT_MOOD_DECAY_PER_SECOND)
             / ODApplication::turnsPerSecond;
         if(mPitMood > 0.0)
             mPitMood = std::max(0.0, mPitMood - decay);
@@ -5918,7 +5922,7 @@ bool Creature::isHatedCompanyNear() const
         return false;
 
     bool isGood = isGoodAligned();
-    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatedCompanyRadius", 5.0);
+    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatedCompanyRadius", DEFAULT_HATED_COMPANY_RADIUS);
     double squaredRadius = radius * radius;
     const std::vector<Creature*>& creatures = getGameMap()->getCreatures();
     for(Creature* other : creatures)
