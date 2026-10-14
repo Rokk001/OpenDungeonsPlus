@@ -144,6 +144,10 @@ const char* const BONUS_KIND_NAMES[] =
 };
 const uint32_t NB_BONUS_KINDS = 16;
 
+//! \brief Looks up a bonus kind by its name in BONUS_KIND_NAMES
+//! \param name The name as written in a level file
+//! \param kind Receives the bonus kind when the name is known
+//! \return True if the name is a known bonus kind
 bool bonusKindFromString(const std::string& name, SandboxBonusKind& kind)
 {
     for(uint32_t i = 0; i < NB_BONUS_KINDS; ++i)
@@ -173,6 +177,10 @@ bool parseNumber(const std::string& text, int64_t& number)
     return true;
 }
 
+//! \brief Checks whether the name of the given skill starts with the given prefix
+//! \param type The skill to check
+//! \param prefix The text the skill name has to start with
+//! \return True if the skill name starts with the prefix
 bool isSkillNamed(SkillType type, const std::string& prefix)
 {
     return Skills::toString(type).compare(0, prefix.size(), prefix) == 0;

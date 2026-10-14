@@ -117,6 +117,7 @@ public:
     static const int32_t SCORE_CREATURE_CONVERTED;
 
     //! \brief Creates the sandbox logic of the given map. No wave is launched yet.
+    //! \param gameMap The map whose sandbox state this object manages
     SandboxMode(GameMap& gameMap);
 
     //! \brief Forgets the waves, the toolbox heroes, the score and the realm settings of the level
