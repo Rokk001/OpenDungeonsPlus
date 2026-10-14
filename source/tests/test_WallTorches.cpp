@@ -138,6 +138,7 @@ void checkRules(TestMap& map, const std::vector<WallTorch>& torches)
 }
 } // namespace
 
+//! \brief The same map always gives the same torches in the same order (the clients rely on stable keys).
 BOOST_AUTO_TEST_CASE(test_SameInputSamePositions)
 {
     TestMap map;
@@ -154,6 +155,7 @@ BOOST_AUTO_TEST_CASE(test_SameInputSamePositions)
     }
 }
 
+//! \brief A room side of length L gets L / divisor torches, spread over the side and facing into the room.
 BOOST_AUTO_TEST_CASE(test_RoomSides)
 {
     // 4x4: one torch per side, in the middle of the section (index 2 of 0..3)
@@ -205,6 +207,7 @@ BOOST_AUTO_TEST_CASE(test_RoomSides)
     checkRules(room8, torches);
 }
 
+//! \brief A torch that would stand in front of a blocked tile moves to the next fitting wall tile of the side.
 BOOST_AUTO_TEST_CASE(test_MovingAside)
 {
     // The wanted wall tile (7,4) is an opening: the torch moves to the right first (growing x)
@@ -236,6 +239,7 @@ BOOST_AUTO_TEST_CASE(test_MovingAside)
     checkRules(object, torches);
 }
 
+//! \brief Two torches are never closer than the minimum distance, also not around a corner.
 BOOST_AUTO_TEST_CASE(test_MinimumDistanceAroundCorners)
 {
     // The torch of the lower side moved to (8,4). The right side can only use (9,5), which is two steps away
@@ -253,6 +257,7 @@ BOOST_AUTO_TEST_CASE(test_MinimumDistanceAroundCorners)
     checkRules(map, torches);
 }
 
+//! \brief Outside of rooms a straight run of reinforced wall gets one torch at the corridor spacing.
 BOOST_AUTO_TEST_CASE(test_Corridors)
 {
     // A straight corridor along x: open tiles at y = 10 with a reinforced wall at y = 9. Every fourth wall tile
@@ -279,6 +284,7 @@ BOOST_AUTO_TEST_CASE(test_Corridors)
     checkRules(map, torches);
 }
 
+//! \brief No torch faces a door, a bridge, water or lava.
 BOOST_AUTO_TEST_CASE(test_NoTorchOnDoorBridgeWaterLava)
 {
     // Such a tile in front of the wanted wall tile (7,4) is not an open claimed tile: the torch moves aside
@@ -301,6 +307,7 @@ BOOST_AUTO_TEST_CASE(test_NoTorchOnDoorBridgeWaterLava)
     BOOST_CHECK(foreign.compute().empty());
 }
 
+//! \brief Torches follow the walls: a destroyed wall loses its torch, a side without reinforcement has none.
 BOOST_AUTO_TEST_CASE(test_Lifetime)
 {
     TestMap map;
