@@ -114,6 +114,13 @@ public:
     static const std::string DEFAULT_TILESET_NAME;
     static const std::string DEFAULT_KEEPER_VOICE;
 
+    //! Lowest and highest angular speed in degrees per second of the turn to the target before a blow
+    static const double AttackTurnSpeedMin;
+    static const double AttackTurnSpeedMax;
+    //! Lowest and highest number of seconds the strike clip waits for the turn to the target
+    static const double AttackTurnMaxDelayMin;
+    static const double AttackTurnMaxDelayMax;
+
     const Ogre::ColourValue& getColorFromId(const std::string& id) const;
 
     inline const std::map<std::string, CreatureDefinition*>& getCreatureDefinitions() const
@@ -209,11 +216,11 @@ public:
 
     //! \brief Angular speed in degrees per second of the turn to the target before a blow (client, 90 - 1440)
     inline double getAttackTurnSpeed() const
-    { return std::max(90.0, std::min(1440.0, mAttackTurnSpeed)); }
+    { return std::max(AttackTurnSpeedMin, std::min(AttackTurnSpeedMax, mAttackTurnSpeed)); }
 
     //! \brief The most seconds the strike clip waits for the turn to the target (client, 0 - 0.6, 0 = no waiting)
     inline double getAttackTurnMaxDelay() const
-    { return std::max(0.0, std::min(0.6, mAttackTurnMaxDelay)); }
+    { return std::max(AttackTurnMaxDelayMin, std::min(AttackTurnMaxDelayMax, mAttackTurnMaxDelay)); }
 
     //! \brief Master switch for creature dodge, parry and shield block, decided by the server.
     inline bool getMeleeDodgeParry() const
