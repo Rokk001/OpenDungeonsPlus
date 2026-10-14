@@ -12,14 +12,13 @@ The Heartstone is a parallel source of strength, never a prerequisite invented f
 After Varn's Crossing, an optional night of siege can send your strongest surviving fighter onward, while Silverdeep and Wraithwood strip away the last rival powers before Kingsfall.
 Prince Aurel's defeat and the capture or conversion of his three champions bring the struggle to Castellan's three courts, where the king's death fulfils the promise made at Mossgate.
 
-## Decision pending
+## Confirmed source decisions
 
-Four existing shard trials are used in this draft. The requested five Heartstone rewards conflict with the current campaign: The Swarm Night explicitly disables a Heartstone reward and carries one fighter forward, while the campaign flow check expects four pieces. This outline preserves the current source behaviour pending Mario's clarification; it does not authorise a fifth shard, change a reward, or rewrite gameplay. Recommendation: keep the four existing shard trials and the distinct fighter reward unless Mario commissions a gameplay change separately.
+Mario confirmed that four Heartstone fragments, The Swarm Night's fighter carry-over reward and The Skittle Cavern's actually trigger-spawned guards match the current gameplay and are correct for this outline. The Skittle Cavern preview may therefore depict its spawned guards alongside a placed worker; no fifth fragment, changed reward or invented warden body is introduced.
 
-## Approval questions
+## Approval gate
 
-- Approve this story outline using the four existing Heartstone fragments and The Swarm Night's separate fighter reward, as recommended, or request a separately scoped gameplay decision before the story texts are rewritten?
-- For The Skittle Cavern, approve depicting the ten guards spawned by the lane-opening triggers alongside a placed worker, as recommended, even though the image-selection rule currently limits picks to placed creatures? Without that exception, the required main-enemy depiction cannot match the strict placed list.
+Story-outline approval remains pending until the coordinating session has read this file. Story text changes and preview generation remain paused until that approval.
 
 ## Chapters in campaign order
 
