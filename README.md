@@ -22,6 +22,9 @@ following resources to learn the basic gameplay concepts:
 You can play singleplayer levels using the Skirmish menu, or host/join a
 multiplayer game by using the corresponding menus.
 
+Campaign briefings show a painted scene for each chapter as your keeper advances
+against King Castellan and Prince Aurel.
+
 Press Print Screen to save a PNG screenshot from menus, dialogs, gameplay or
 the editor; images use the existing timestamped filenames in the configured
 user-data directory.
