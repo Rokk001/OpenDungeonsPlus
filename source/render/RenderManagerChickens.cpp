@@ -79,6 +79,10 @@ const float LOOK_PHASE_STEP = 0.37f;
 const float FEATHER_HEIGHT_HATCH_SHELL = 0.05f;
 //! \brief Height at which the shell pieces and yolk of a trampled egg start.
 const float FEATHER_HEIGHT_TRAMPLE_SHELL = 0.04f;
+//! \brief Height above the hen at which the feathers fly when she is mounted.
+const float FEATHER_HEIGHT_MOUNT = 0.2f;
+//! \brief Number of feather bursts of one mating, the count that is stored once the second burst has flown.
+const uint32_t MOUNT_FEATHER_BURSTS = 2;
 //! \brief Height above the ground from which an egg counts as lying in a nest.
 const float NEST_EGG_MIN_HEIGHT = 0.01f;
 
@@ -1006,8 +1010,8 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                     (look.mMountPartner != nullptr) && chickenClipVisible(chicken, "Tread") &&
                     chickenClipVisible(look.mMountPartner, "Duck"))
                 {
-                    look.mFeatherBursts = 2;
-                    createChickenFeatherEffect(look.mMountPartner->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.2f),
+                    look.mFeatherBursts = MOUNT_FEATHER_BURSTS;
+                    createChickenFeatherEffect(look.mMountPartner->getPosition() + Ogre::Vector3(0.0f, 0.0f, FEATHER_HEIGHT_MOUNT),
                         featherSystem(ChickenKind::hen));
                 }
             }

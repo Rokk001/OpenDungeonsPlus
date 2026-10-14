@@ -160,7 +160,11 @@ public:
 
     //! \brief Factor on the walking speed of a tired creature (1 = no slowdown), limited to 0.2 - 1
     inline double getTiredWalkSpeedFactor() const
-    { return std::max(0.2, std::min(1.0, mTiredWalkSpeedFactor)); }
+    {
+        // Slowest speed factor a tired creature can be given
+        const double minTiredWalkSpeedFactor = 0.2;
+        return std::max(minTiredWalkSpeedFactor, std::min(1.0, mTiredWalkSpeedFactor));
+    }
 
     //! \brief How much bigger than its base size a creature of the highest level is shown (0.10 = 10 percent), limited to 0 - 1
     inline double getCreatureLevelGrowthMax() const

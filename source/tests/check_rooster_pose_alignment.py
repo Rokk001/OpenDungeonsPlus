@@ -14,7 +14,8 @@ client = (root / 'source/network/ODClient.cpp').read_text()
 for token in ('direction = hen.getWalkDirection()',
               'hen.setAnimationState(ChickenPose::cackle, true, direction, false)',
               'setAnimationState(ChickenPose::mount, true, direction, false)',
-              'hen.playPose(ChickenPose::cackle, 3)', 'mMountHenName = hen.getName()',
+              'hen.playPose(ChickenPose::cackle, MOUNT_POSE_TURNS)', 'MOUNT_POSE_TURNS = 3;',
+              'mMountHenName = hen.getName()',
               'notification->mPacket << getName() << hen.getName()', 'is >> mMountHenName'):
     assert token in chicken, token
 assert 'rooster->mountHen(*target)' in room
