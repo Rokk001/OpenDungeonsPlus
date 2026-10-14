@@ -280,6 +280,8 @@ public:
     void notifyOwnCreatureVision(Tile* tile);
 
     //! \brief Records visibility and starts the fog deadline once on first discovery from any source.
+    //! \param tile The tile that is seen.
+    //! \param nt Tells whether the tile belongs to the map tiles or to a draggable tile container.
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);
