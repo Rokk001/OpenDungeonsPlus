@@ -193,6 +193,7 @@ public:
     inline CreatureJob          getCreatureJob  () const    { return mCreatureJob; }
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
+    //! \brief True for creatures that are never scared by a Fear trap.
     inline bool                 isFearless      () const    { return mFearless; }
     //! \brief True for the champion definition (the creature the Summon champion spell calls).
     inline bool                 isChampion      () const    { return mChampion; }

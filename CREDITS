@@ -297,7 +297,7 @@ textures/
 -> NatureMonster*.png                  Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 -> CreaturePrisoner.png                AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Sleepy,Unhappy}.pngAI-generated with Codex  GPLv3+                  AI-generated mood icons (tools/artwork/CreatureMoodAtlas.png), see "Generated assets" below
--> CreatureExperience.png, CreatureRecovery.pngAI-generated              GPLv3+                  AI-generated, created for this project; see "Generated assets" below
+-> CreatureExperience.png, CreatureRecovery.png    AI-generated           GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 -> DungeonHeart{Healthy,Damaged,Critical}{,Normal,Glow}.pngMario                   GPLv3+                  Procedural, tools/heart-textures/generate_heart_textures.py
 -> DefeatFireball.png                  AI-generated            GPLv3+                  AI-generated, created for this project (first commit 2c05e6eb2); see "Generated assets" below
 -> MainMenuBackground.png              AI-generated with Codex  GPLv3+                  Added 2026 (first commit b04544ed8)
