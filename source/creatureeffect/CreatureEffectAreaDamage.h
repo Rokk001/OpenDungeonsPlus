@@ -51,9 +51,11 @@ public:
     //! \brief Sets the minimum damage used for each application of this effect.
     void setDamageMin(double value) { mDamagePerTurnMin = value; }
 
+    //! \brief Destroys the effect.
     virtual ~CreatureEffectAreaDamage()
     {}
 
+    //! \brief Returns the name under which the effect is registered.
     virtual const std::string& getEffectName() const override;
 
     //! \brief Writes the effect with both damage endpoints.
