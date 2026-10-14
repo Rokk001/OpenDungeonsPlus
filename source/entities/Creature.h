@@ -983,6 +983,8 @@ public:
     //! example if a door is closed)
     void checkWalkPathValid(bool includeWalkDistortion = false);
 
+    //! \brief True if the creature is tired: on the server when its wakefulness is at or below the configured
+    //! limit, on the client when the mood bit Tired is set.
     bool isTired() const;
 
     //! \brief Share of its normal speed this creature walks at because it is badly hurt (1 = not slowed).
