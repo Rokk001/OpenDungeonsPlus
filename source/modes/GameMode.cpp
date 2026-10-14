@@ -58,6 +58,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/SelectionSize.h"
 #include "ODApplication.h"
 
 #include <CEGUI/CEGUI.h>
@@ -76,6 +77,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 #include <string>
 #include <functional>
@@ -86,6 +88,14 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
+
+// Selection size label: size and offset from the pointer, in pixels at the reference hand icon scale.
+const float SELECTION_LABEL_WIDTH = 64.0f;
+const float SELECTION_LABEL_HEIGHT = 28.0f;
+const float SELECTION_LABEL_OFFSET_X = 90.0f;
+const float SELECTION_LABEL_OFFSET_Y = 110.0f;
+// Pixel width of the hand action icon at scale 1.
+const float SELECTION_LABEL_REFERENCE_ICON_WIDTH = 50.0f;
 
 static double getAutoscrollIntensity(int mousePosition, int screenSize, bool minimumEdge)
 {
@@ -414,6 +424,8 @@ GameMode::~GameMode()
     RenderManager::getSingleton().rrEnableHeldCreatureDisplay(false, mGameMap->getLocalPlayer());
     for(CEGUI::Window* icon : mHeldCreatureIcons)
         CEGUI::WindowManager::getSingleton().destroyWindow(icon);
+    if(mSelectionSizeLabel != nullptr)
+        CEGUI::WindowManager::getSingleton().destroyWindow(mSelectionSizeLabel);
     // Remove tile listeners before the base destructor clears the game map.
     mFullMap.reset();
     CEGUI::ToggleButton* checkBox =
@@ -2644,6 +2656,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         !inputManager.mLMouseDown && !inputManager.mRMouseDown && !inputManager.mMMouseDown &&
         isConnected() && RenderManager::getSingleton().isKeeperHandVisible());
     refreshHeldCreatureIcons();
+    refreshSelectionSizeLabel();
 }
 
 void GameMode::resetIdleHand()
@@ -2722,6 +2735,51 @@ void GameMode::refreshHeldCreatureIcons()
     }
 }
 
+
+//! \brief Shows, moves or hides the width x height label next to the hand while an area is dragged.
+void GameMode::refreshSelectionSizeLabel()
+{
+    const InputManager& inputManager = mModeManager->getInputManager();
+    const SelectedAction action = mPlayerSelection.getCurrentAction();
+    const bool areaAction = action == SelectedAction::none || action == SelectedAction::selectTile ||
+        action == SelectedAction::buildRoom || action == SelectedAction::buildTrap ||
+        action == SelectedAction::destroyRoom || action == SelectedAction::destroyTrap ||
+        action == SelectedAction::sellBuilding;
+    // Size of the tiles actually marked, which can be smaller than the dragged rectangle
+    int width = 0;
+    int height = 0;
+    getSelectionSize(mPreviewTiles, width, height);
+    // Only while a drag marks more than one tile; a single tile click shows nothing
+    const bool show = areaAction && inputManager.mLMouseDown && !isMouseDownOnCEGUIWindow() &&
+        !mGameMap->getGamePaused() && mGameMap->getLocalPlayer()->numObjectsInHand() == 0 &&
+        !mPreviewTiles.empty() && width * height > 1 &&
+        mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) != nullptr;
+    if(!show)
+    {
+        if(mSelectionSizeLabel != nullptr)
+            mSelectionSizeLabel->setVisible(false);
+        return;
+    }
+
+    if(mSelectionSizeLabel == nullptr)
+    {
+        mSelectionSizeLabel = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText", "SelectionSizeLabel");
+        mSelectionSizeLabel->setAlwaysOnTop(true);
+        mSelectionSizeLabel->setMousePassThroughEnabled(true);
+        mSelectionSizeLabel->setProperty("ClippedByParent", "False");
+        mSelectionSizeLabel->setProperty("FrameEnabled", "True");
+        mSelectionSizeLabel->setProperty("BackgroundEnabled", "True");
+        mRootWindow->addChild(mSelectionSizeLabel);
+    }
+    const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+    const float scale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / SELECTION_LABEL_REFERENCE_ICON_WIDTH;
+    mSelectionSizeLabel->setText(std::to_string(width) + "x" + std::to_string(height));
+    mSelectionSizeLabel->setSize(CEGUI::USize(CEGUI::UDim(0, SELECTION_LABEL_WIDTH * scale), CEGUI::UDim(0, SELECTION_LABEL_HEIGHT * scale)));
+    // Below the hand, clear of the action icon and the pointer text
+    mSelectionSizeLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + SELECTION_LABEL_OFFSET_X * scale),
+        CEGUI::UDim(0, pointer.d_y + SELECTION_LABEL_OFFSET_Y * scale)));
+    mSelectionSizeLabel->setVisible(true);
+}
 
 void GameMode::selectSquaredTiles(int tileX1, int tileY1, int tileX2, int tileY2)
 {
