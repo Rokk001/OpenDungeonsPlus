@@ -20,9 +20,10 @@ MAX_PREVIEW_BYTES = 400 * 1024
 PNG_SIGNATURE = bytes((137, 80, 78, 71, 13, 10, 26, 10))
 
 
-# Read the level fields without treating campaign section markers as values.
+# Read level fields while ignoring commented section markers and retaining empty levels.
 def read_levels(definition):
     levels = []
+    definition = "\n".join(line for line in definition.splitlines() if not line.lstrip().startswith("#"))
     for section in definition.split("[Level]")[1:]:
         fields = {}
         for line in section.splitlines():
@@ -122,7 +123,7 @@ def test_chunk(kind, payload):
     return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload) & 0xffffffff)
 
 
-# Check that valid data passes and malformed chunks or incomplete pixel data fail.
+# Check asset failures and level parsing, including commented markers and missing fields.
 def self_test():
     header = struct.pack(">IIBBBBB", PREVIEW_WIDTH, PREVIEW_HEIGHT, 8, 2, 0, 0, 0)
     pixels = (bytes(1 + PREVIEW_WIDTH * 3)) * PREVIEW_HEIGHT
@@ -142,6 +143,8 @@ def self_test():
     short_pixels = PNG_SIGNATURE + test_chunk(b"IHDR", header) + test_chunk(b"IDAT", zlib.compress(b"x")) + test_chunk(b"IEND", b"")
     assert "invalid PNG image data" in png_errors(short_pixels)
     assert read_levels("[Level]\nProvince=T01\nPreview=previews/T01.png\n[/Level]\n") == [{"Province": "T01", "Preview": "previews/T01.png"}]
+    assert read_levels("# [Level] starts each campaign entry.\n[Level]\nProvince=T01\nPreview=previews/T01.png\n[/Level]\n") == [{"Province": "T01", "Preview": "previews/T01.png"}]
+    assert read_levels("[Level]\n[/Level]\n") == [{}], "empty real level hidden"
     print("campaign preview checker self-tests passed")
 
 

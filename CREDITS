@@ -532,7 +532,7 @@ icon.rc                                OD Team                 GPLv3+
 logo.svg                               Svenskmand              CC-BY-SA 3.0
 OD-Logo.ico                            Svenskmand              CC-BY-SA 3.0
 opendungeons.appdata.xml               OD Team                 GPLv3+
-gui/campaign/previews/*.png            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-10), see "Generated assets" below; prompts and identity references in materials/campaign-previews/*.md
+gui/campaign/previews/*.png            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-10), see "Generated assets" below; 31 painted chapter scenes, prompts and identity references in materials/campaign-previews/*.md
 
 
 ===================================
