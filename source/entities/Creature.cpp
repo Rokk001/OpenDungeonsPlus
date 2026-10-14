@@ -146,6 +146,11 @@
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 
+//! \brief Squared length below which a possession move direction counts as no movement
+static const Ogre::Real POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
+//! \brief Squared length below which a possession aim direction counts as no aim
+static const Ogre::Real POSSESSION_MIN_AIM_SQUARED_LENGTH = 0.0001f;
+
 // Target selection by combat class: the distance to an enemy support creature is multiplied by this
 // factor for blitzers and flankers, so they prefer it over closer enemies
 static const double COMBAT_CLASS_SUPPORT_TARGET_FACTOR = 0.5;
@@ -7035,7 +7040,7 @@ void Creature::possessedMove(const Ogre::Vector2& direction)
     Ogre::Vector2 position(mPosition.x, mPosition.y);
     Ogre::Vector2 destination = position;
     bool canMove = false;
-    if(direction.squaredLength() > 0.0001f)
+    if(direction.squaredLength() > POSSESSION_MIN_DIRECTION_SQUARED_LENGTH)
     {
         Ogre::Vector2 dir = direction;
         dir.normalise();
@@ -7089,7 +7094,7 @@ bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkill
     if(myTile == nullptr)
         return false;
 
-    if(aim.squaredLength() < 0.0001f)
+    if(aim.squaredLength() < POSSESSION_MIN_AIM_SQUARED_LENGTH)
         return false;
 
     Ogre::Vector2 aimDir = aim;
