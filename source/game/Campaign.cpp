@@ -28,6 +28,11 @@
 
 namespace
 {
+//! Lowest and highest level difficulty a campaign file may state
+const int LEVEL_DIFFICULTY_MIN = 1;
+const int LEVEL_DIFFICULTY_MAX = 5;
+
+//! Removes the white space at both ends of a text
 std::string trim(const std::string& text)
 {
     const std::string whitespace = " \t\r\n";
@@ -126,7 +131,8 @@ bool Campaign::importDefinition(std::istream& is)
         else if(key == "Warden")
             level.mWarden = value;
         else if(key == "Difficulty")
-            level.mDifficulty = static_cast<uint32_t>(std::max(1, std::min(5, std::atoi(value.c_str()))));
+            level.mDifficulty = static_cast<uint32_t>(
+                std::max(LEVEL_DIFFICULTY_MIN, std::min(LEVEL_DIFFICULTY_MAX, std::atoi(value.c_str()))));
     }
 
     if(inLevel && !level.mFile.empty())
