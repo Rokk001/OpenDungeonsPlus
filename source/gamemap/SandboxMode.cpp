@@ -59,6 +59,10 @@ const int32_t SandboxMode::SCORE_CREATURE_CONVERTED = 30;
 namespace
 {
 const std::string HERO_FACTION = "Hero";
+//! \brief Number of bonus objectives that fit into the bit mask of the awarded bonuses
+const uint32_t MAX_BONUS_MASK_BITS = 32;
+//! \brief Turns after the start before the seat counters are taken as the baseline of the score
+const int64_t BASELINE_DELAY_TURNS = 3;
 //! \brief The turns between the check for a beaten wave
 const int32_t TURNS_BETWEEN_CHECKS = 5;
 //! \brief The turns between the end of a wave and the next wave of a continual invasion
@@ -288,7 +292,7 @@ bool SandboxMode::importInfoLine(const std::string& line)
         }
 
         mScore = static_cast<int32_t>(score);
-        for(uint32_t i = 0; (i < mBonuses.size()) && (i < 32); ++i)
+        for(uint32_t i = 0; (i < mBonuses.size()) && (i < MAX_BONUS_MASK_BITS); ++i)
             mBonuses[i].mAwarded = ((mask >> i) & 1) != 0;
 
         mTurnsElapsed = static_cast<int64_t>(static_cast<double>(seconds) * ODApplication::turnsPerSecond);
@@ -303,7 +307,7 @@ bool SandboxMode::importInfoLine(const std::string& line)
 uint32_t SandboxMode::getBonusMask() const
 {
     uint32_t mask = 0;
-    for(uint32_t i = 0; (i < mBonuses.size()) && (i < 32); ++i)
+    for(uint32_t i = 0; (i < mBonuses.size()) && (i < MAX_BONUS_MASK_BITS); ++i)
     {
         if(mBonuses[i].mAwarded)
             mask |= (1u << i);
@@ -666,7 +670,7 @@ void SandboxMode::updateScore(const std::vector<Seat*>& keeperSeats)
     {
         // What the keepers have at the start does not count. The seat counters of the map are
         // computed during the first turns, so the start is taken a few turns later.
-        if(mTurnsElapsed < 3)
+        if(mTurnsElapsed < BASELINE_DELAY_TURNS)
             return;
 
         mIsBaselineSet = true;
