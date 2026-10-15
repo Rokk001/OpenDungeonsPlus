@@ -277,6 +277,9 @@ protected:
 
     //! \brief The different Game Options Menu handlers
     bool showQuitMenuFromOptions(const CEGUI::EventArgs& e = {});
+    //! \brief Options menu handler that marks the exit as a level restart (not a quit) and opens the exit confirmation popup
+    //! \param e CEGUI event arguments, not used
+    //! \return true, the event was handled
     bool showRestartLevelFromOptions(const CEGUI::EventArgs& e = {});
     bool showExitApplicationFromOptions(const CEGUI::EventArgs& e = {});
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
