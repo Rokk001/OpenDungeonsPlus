@@ -178,8 +178,8 @@ public:
     static const std::string EDITOR_BOX_HEAL_ALL_BUTTON;
     static const std::string EDITOR_BOX_MAKE_SAFE_BUTTON;
     static const std::string EDITOR_BOX_WEAKEN_WALLS_BUTTON;
-    static const std::string EDITOR_BOX_STUN_IMPS_BUTTON;
-    static const std::string EDITOR_BOX_RECEIVE_IMPS_BUTTON;
+    static const std::string EDITOR_BOX_STUN_WORKERS_BUTTON;
+    static const std::string EDITOR_BOX_RECEIVE_WORKERS_BUTTON;
     static const std::string EDITOR_BOX_MAKE_HAPPY_BUTTON;
     static const std::string EDITOR_BOX_MAKE_UNHAPPY_BUTTON;
     static const std::string EDITOR_BOX_KILL_CREATURES_BUTTON;
