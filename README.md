@@ -22,7 +22,6 @@ following resources to learn the basic gameplay concepts:
 You can play singleplayer levels using the Skirmish menu, or host/join a
 multiplayer game by using the corresponding menus.
 
-
 Use Load Game in the game options, or F8 while hosting a local game, to open
 the saved-game browser; Back preserves the current game until another save is
 selected. Loaded single-player saves resume their stored side without a new
