@@ -1,6 +1,6 @@
 # Campaign story outline
 
-Status: approved by Mario on 2026-10-14, with Castellan and Aurel recurring from the first provinces; story texts and preview generation may proceed.
+Status: approved by the project owner on 2026-10-14, with Castellan and Aurel recurring from the first provinces; story texts and preview generation may proceed.
 
 ## Red thread
 
@@ -14,11 +14,11 @@ Prince Aurel's defeat and the capture or conversion of his three champions bring
 
 ## Confirmed source decisions
 
-Mario confirmed that four Heartstone fragments, The Swarm Night's fighter carry-over reward and The Skittle Cavern's actually trigger-spawned guards match the current gameplay and are correct for this outline. The Skittle Cavern preview may therefore depict its spawned guards alongside a placed worker; no fifth fragment, changed reward or invented warden body is introduced.
+The project owner confirmed that four Heartstone fragments, The Swarm Night's fighter carry-over reward and The Skittle Cavern's actually trigger-spawned guards match the current gameplay and are correct for this outline. The Skittle Cavern preview may therefore depict its spawned guards alongside a placed worker; no fifth fragment, changed reward or invented warden body is introduced.
 
 ## Approval gate
 
-Mario approved this outline with one binding condition: High King Castellan and Prince Aurel recur from the first levels through messengers, threats, reactions to victories and short briefing/debriefing scenes, increasing the tension toward their final confrontations. These are narration only; goals, triggers, level files and gameplay remain unchanged.
+The project owner approved this outline with one binding condition: High King Castellan and Prince Aurel recur from the first levels through messengers, threats, reactions to victories and short briefing/debriefing scenes, increasing the tension toward their final confrontations. These are narration only; goals, triggers, level files and gameplay remain unchanged.
 
 ## Chapters in campaign order
 
