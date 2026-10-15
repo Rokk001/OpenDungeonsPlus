@@ -79,13 +79,13 @@ const HeartRewardSpecial HEART_REWARD_SPECIALS[] =
     { GiftBoxType::gold, 15 },
     { GiftBoxType::mana, 14 },
     { GiftBoxType::revealMap, 12 },
-    { GiftBoxType::receiveImps, 10 },
+    { GiftBoxType::receiveWorkers, 10 },
     { GiftBoxType::makeHappy, 9 },
     { GiftBoxType::healAll, 8 },
     { GiftBoxType::makeSafe, 7 },
     { GiftBoxType::weakenWalls, 7 },
     { GiftBoxType::levelUp, 6 },
-    { GiftBoxType::stunImps, 6 },
+    { GiftBoxType::stunWorkers, 6 },
     { GiftBoxType::makeUnhappy, 4 },
     { GiftBoxType::killCreatures, 2 }
 };

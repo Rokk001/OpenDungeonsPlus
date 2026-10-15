@@ -36,13 +36,13 @@
 static const uint32_t DEFAULT_AMOUNT_MANA = 50000;
 static const uint32_t DEFAULT_AMOUNT_GOLD = 10000;
 static const uint32_t DEFAULT_AMOUNT_LEVELS = 1;
-static const uint32_t DEFAULT_AMOUNT_IMPS = 10;
+static const uint32_t DEFAULT_AMOUNT_WORKERS = 10;
 //! Workers received with the upgraded Summon Worker spell start at this level
-static const uint32_t LEVEL_IMPS_UPGRADED = 4;
+static const uint32_t LEVEL_WORKERS_UPGRADED = 4;
 //! Skill level of the Summon Worker spell from which it counts as upgraded
 static const uint32_t SKILL_LEVEL_UPGRADED = 2;
 //! Stun Workers: the enemy workers stay down for this many seconds
-static const double STUN_IMPS_SECONDS = 5.0;
+static const double STUN_WORKERS_SECONDS = 5.0;
 
 GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, const std::string& baseName, GiftBoxType type, uint32_t amount) :
     GiftBoxEntity(gameMap, baseName, "MysteryBox", type),
@@ -76,9 +76,9 @@ std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
             return "Make Safe";
         case GiftBoxType::weakenWalls:
             return "Weaken Walls";
-        case GiftBoxType::stunImps:
+        case GiftBoxType::stunWorkers:
             return "Stun Workers";
-        case GiftBoxType::receiveImps:
+        case GiftBoxType::receiveWorkers:
             return "Receive Workers";
         case GiftBoxType::makeHappy:
             return "Make Happy";
@@ -109,9 +109,9 @@ std::string GiftBoxBonus::getDescription(GiftBoxType type)
             return "Reinforces the walls around your dungeon.";
         case GiftBoxType::weakenWalls:
             return "Turns the reinforced walls of the enemy back to earth.";
-        case GiftBoxType::stunImps:
+        case GiftBoxType::stunWorkers:
             return "Stuns all enemy workers for a few seconds.";
-        case GiftBoxType::receiveImps:
+        case GiftBoxType::receiveWorkers:
             return "Gives you free workers.";
         case GiftBoxType::makeHappy:
             return "Removes all the annoyance of your creatures.";
@@ -134,13 +134,13 @@ uint32_t GiftBoxBonus::getDefaultAmount(GiftBoxType type)
             return DEFAULT_AMOUNT_GOLD;
         case GiftBoxType::levelUp:
             return DEFAULT_AMOUNT_LEVELS;
-        case GiftBoxType::receiveImps:
-            return DEFAULT_AMOUNT_IMPS;
+        case GiftBoxType::receiveWorkers:
+            return DEFAULT_AMOUNT_WORKERS;
         case GiftBoxType::revealMap:
         case GiftBoxType::healAll:
         case GiftBoxType::makeSafe:
         case GiftBoxType::weakenWalls:
-        case GiftBoxType::stunImps:
+        case GiftBoxType::stunWorkers:
         case GiftBoxType::makeHappy:
         case GiftBoxType::makeUnhappy:
         case GiftBoxType::killCreatures:
@@ -272,9 +272,9 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
             }
             break;
         }
-        case GiftBoxType::stunImps:
+        case GiftBoxType::stunWorkers:
         {
-            int32_t nbTurns = static_cast<int32_t>(std::ceil(STUN_IMPS_SECONDS * ODApplication::turnsPerSecond));
+            int32_t nbTurns = static_cast<int32_t>(std::ceil(STUN_WORKERS_SECONDS * ODApplication::turnsPerSecond));
             std::vector<Creature*> creatures = gameMap->getCreatures();
             for(Creature* creature : creatures)
             {
@@ -288,7 +288,7 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
             }
             break;
         }
-        case GiftBoxType::receiveImps:
+        case GiftBoxType::receiveWorkers:
         {
             const CreatureDefinition* workerClass = seat->getWorkerClassToSpawn();
             Tile* tile = positionTile;
@@ -304,7 +304,7 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
                 Creature* newCreature = new Creature(gameMap, workerClass, seat);
                 newCreature->addToGameMap();
                 if(upgraded)
-                    newCreature->setLevel(LEVEL_IMPS_UPGRADED);
+                    newCreature->setLevel(LEVEL_WORKERS_UPGRADED);
 
                 Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
                                             static_cast<Ogre::Real>(tile->getY()), 0.0f);

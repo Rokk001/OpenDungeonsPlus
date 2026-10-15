@@ -323,13 +323,13 @@
                     <Property name="TooltipText" value="Adds a box weakening the reinforced walls of the enemy" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
-                <Window type="OD/GameTabButton" name="StunImpsBoxButton" >
+                <Window type="OD/GameTabButton" name="StunWorkersBoxButton" >
                     <Property name="Area" value="{{0,440},{0,25},{0,500},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
                     <Property name="TooltipText" value="Adds a box stunning the enemy workers" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
-                <Window type="OD/GameTabButton" name="ReceiveImpsBoxButton" >
+                <Window type="OD/GameTabButton" name="ReceiveWorkersBoxButton" >
                     <Property name="Area" value="{{0,500},{0,25},{0,560},{0,85}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/SummonWorkerButton" />
                     <Property name="TooltipText" value="Adds a box giving free workers" />
