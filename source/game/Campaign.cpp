@@ -72,6 +72,7 @@ std::string Campaign::unescapeText(const std::string& text)
     return result;
 }
 
+//! \brief Reads campaign levels, including their optional briefing images.
 bool Campaign::importDefinition(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -112,6 +113,8 @@ bool Campaign::importDefinition(std::istream& is)
             level.mBriefing = unescapeText(value);
         else if(key == "Debriefing")
             level.mDebriefing = unescapeText(value);
+        else if(key == "Preview")
+            level.mPreview = value;
         else if(key == "Bonus")
             level.mBonus = (value == "1");
         else if(key == "Heartstone")

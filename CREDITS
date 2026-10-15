@@ -965,6 +965,7 @@ materials/portraits/generated-outfits/  AI-generated with Codex  GPLv3+  Newly g
 materials/portraits/variants/*/outfit-*.png  AI-generated with Codex  GPLv3+  Registered clothing layers and locally fitted build copies from generated-outfits; original sources preserved.
 materials/portraits/variants/*/review/  AI-generated with Codex  GPLv3+  Native-resolution and 50x100 diagnostic composites of the preserved AI-generated portrait sources and their derived registrations.
 OD-Logo.ico                            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
+gui/campaign/previews/*.png            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-10), see "Generated assets" below; 31 painted chapter scenes, prompts and identity references in materials/campaign-previews/*.md
 opendungeons-plus.appdata.xml          Remi Verschelde         GPLv3+                  Added 2015 (first commit)
 
 
