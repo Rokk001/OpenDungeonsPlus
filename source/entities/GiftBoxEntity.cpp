@@ -135,8 +135,8 @@ GiftBoxEntity* GiftBoxEntity::getGiftBoxEntityFromStream(GameMap* gameMap, std::
         case GiftBoxType::healAll:
         case GiftBoxType::makeSafe:
         case GiftBoxType::weakenWalls:
-        case GiftBoxType::stunImps:
-        case GiftBoxType::receiveImps:
+        case GiftBoxType::stunWorkers:
+        case GiftBoxType::receiveWorkers:
         case GiftBoxType::makeHappy:
         case GiftBoxType::makeUnhappy:
         case GiftBoxType::killCreatures:

@@ -31,7 +31,7 @@ class Seat;
 //! and levelUp. The meaning of the amount depends on the type: mana points, gold coins,
 //! number of levels given. The types revealMap and healAll do not use it; healAll heals
 //! every creature of the seat completely. The types makeSafe, weakenWalls,
-//! stunImps, makeHappy, makeUnhappy and killCreatures do not use the amount either, receiveImps uses it
+//! stunWorkers, makeHappy, makeUnhappy and killCreatures do not use the amount either, receiveWorkers uses it
 //! as the number of workers.
 class GiftBoxBonus: public GiftBoxEntity
 {

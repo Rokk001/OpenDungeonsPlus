@@ -68,8 +68,8 @@ public:
         ButtonPressedBoxHealAll,
         ButtonPressedBoxMakeSafe,
         ButtonPressedBoxWeakenWalls,
-        ButtonPressedBoxStunImps,
-        ButtonPressedBoxReceiveImps,
+        ButtonPressedBoxStunWorkers,
+        ButtonPressedBoxReceiveWorkers,
         ButtonPressedBoxMakeHappy,
         ButtonPressedBoxMakeUnhappy,
         ButtonPressedBoxKillCreatures

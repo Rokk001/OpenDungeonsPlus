@@ -415,10 +415,10 @@ EditorMode::EditorMode(ModeManager* modeManager):
                      AbstractApplicationMode::GuiAction::ButtonPressedBoxMakeSafe);
     connectGuiAction(Gui::EDITOR_BOX_WEAKEN_WALLS_BUTTON,
                      AbstractApplicationMode::GuiAction::ButtonPressedBoxWeakenWalls);
-    connectGuiAction(Gui::EDITOR_BOX_STUN_IMPS_BUTTON,
-                     AbstractApplicationMode::GuiAction::ButtonPressedBoxStunImps);
-    connectGuiAction(Gui::EDITOR_BOX_RECEIVE_IMPS_BUTTON,
-                     AbstractApplicationMode::GuiAction::ButtonPressedBoxReceiveImps);
+    connectGuiAction(Gui::EDITOR_BOX_STUN_WORKERS_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxStunWorkers);
+    connectGuiAction(Gui::EDITOR_BOX_RECEIVE_WORKERS_BUTTON,
+                     AbstractApplicationMode::GuiAction::ButtonPressedBoxReceiveWorkers);
     connectGuiAction(Gui::EDITOR_BOX_MAKE_HAPPY_BUTTON,
                      AbstractApplicationMode::GuiAction::ButtonPressedBoxMakeHappy);
     connectGuiAction(Gui::EDITOR_BOX_MAKE_UNHAPPY_BUTTON,
@@ -2066,14 +2066,14 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
                 askCreateGiftBox(GiftBoxType::weakenWalls);
                 break;
             }
-            case GuiAction::ButtonPressedBoxStunImps:
+            case GuiAction::ButtonPressedBoxStunWorkers:
             {
-                askCreateGiftBox(GiftBoxType::stunImps);
+                askCreateGiftBox(GiftBoxType::stunWorkers);
                 break;
             }
-            case GuiAction::ButtonPressedBoxReceiveImps:
+            case GuiAction::ButtonPressedBoxReceiveWorkers:
             {
-                askCreateGiftBox(GiftBoxType::receiveImps);
+                askCreateGiftBox(GiftBoxType::receiveWorkers);
                 break;
             }
             case GuiAction::ButtonPressedBoxMakeHappy:
