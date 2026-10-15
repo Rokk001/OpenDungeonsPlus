@@ -38,7 +38,7 @@ Source: `levels/campaign/Campaign.cfg` and the outer placed `[Creatures]` sectio
 
 ## Constraints confirmed in level files
 
-- B01 and B04 have only workers in the placed creature section; their configured wardens have no placed creature. B04 lane-opening triggers spawn ten Adventurer guards (`Pin1` to `Pin10`); Mario explicitly approved these actual trigger-spawned guards for the B04 preview; Pin1 is selected alongside the placed worker, while the placed-class column stays unchanged.
+- B01 and B04 have only workers in the placed creature section; their configured wardens have no placed creature. B04 lane-opening triggers spawn ten Adventurer guards (`Pin1` to `Pin10`); the project owner explicitly approved these actual trigger-spawned guards for the B04 preview; Pin1 is selected alongside the placed worker, while the placed-class column stays unchanged.
 - B03 is a traversal challenge with player-owned walkers and traps, not a battle against a placed warden.
 - B05 has enemy workers placed, but its six scripted attacking waves alternate Rat and Spider classes; the configured Night Reeve Sable has no named placed body. The picks do not imply workers are the only attackers.
 - T10, T11, T12, T13, T14, T15, T17, T20 and T22 are won by destroying rival hearts, not by killing an invented individual body for the configured warden; picks show actual defenders. T22 represents Elowen Ash through a placed coven DarkElf, not a named witch model.
