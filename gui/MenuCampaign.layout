@@ -43,19 +43,32 @@
                 <Property name="TextColours" value="FF3A0A0A" />
             </Window>
             <Window type="OD/StaticText" name="BriefingPanel" >
-                <Property name="Area" value="{{0.5,-336},{0.5,-340},{0.5,336},{0.5,340}}" />
+                <Property name="Area" value="{{0.5,-336},{0.5,-352},{0.5,336},{0.5,352}}" />
                 <Property name="Visible" value="False" />
                 <Property name="AlwaysOnTop" value="True" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Window type="OD/StaticImage" name="BriefingImage" >
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="AspectRatio" value="1.77777778" />
                     <Property name="Area" value="{{0,16},{0,16},{1,-16},{0,376}}" />
                     <Property name="Visible" value="False" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
                 </Window>
                 <Window type="OD/StaticText" name="BriefingText" >
-                    <Property name="Area" value="{{0,16},{0,392},{1,-16},{1,-72}}" />
+                    <Property name="VertScrollbar" value="True" />
+                    <Property name="Area" value="{{0,16},{0,392},{0.5,-8},{1,-72}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="TopAligned" />
+                </Window>
+                <Window type="OD/StaticText" name="BriefingGoals" >
+                    <Property name="Area" value="{{0.5,8},{0,392},{1,-16},{1,-72}}" />
+                    <Property name="Text" value="Goals:" />
+                    <Property name="Visible" value="False" />
+                    <Property name="VertScrollbar" value="True" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
                     <Property name="HorzFormatting" value="WordWrapLeftAligned" />

@@ -363,6 +363,7 @@ public:
     inline Seat* getSeatRogue() const
     { return getSeatById(0); }
 
+    //! \brief Records victory once, saves campaign progress and notifies the winning human seat.
     void addWinningSeat(Seat *s);
     bool seatIsAWinner(Seat *s) const;
 
@@ -418,6 +419,7 @@ public:
     inline SandboxMode& getSandboxMode()
     { return mSandboxMode; }
 
+    //! \brief Formats all goal descriptions and their current state for the player's objectives window.
     std::string getGoalsStringForPlayer(Player* player);
 
     //! \brief Loops over all the creatures and calls their individual doTurn methods,

@@ -476,6 +476,21 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
     return false;
 }
 
+//! \brief Parses a stream spelling of an explicit objective state.
+bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& state)
+{
+    if(text == "open")
+        state = LevelScriptObjectiveState::open;
+    else if(text == "reached")
+        state = LevelScriptObjectiveState::reached;
+    else if(text == "failed")
+        state = LevelScriptObjectiveState::failed;
+    else
+        return false;
+    return true;
+}
+
+//! \brief Parses one action, retaining legacy objective text and explicit ID/state variants.
 bool parseAction(const std::string& line, const std::vector<std::string>& t, LevelScriptAction& action)
 {
     // t[0] is "Action"
@@ -483,6 +498,26 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         return false;
 
     const std::string& type = t[1];
+    if(type == "objectiveid")
+    {
+        if(t.size() < 5 || !parseInt32(t[2], action.mSeatId))
+            return false;
+        action.mType = LevelScriptActionType::objective;
+        action.mObjectiveId = t[3];
+        action.mText = restOfLine(line, 4);
+        return !action.mObjectiveId.empty() && !action.mText.empty();
+    }
+    if(type == "objectivestate")
+    {
+        LevelScriptObjectiveState state = LevelScriptObjectiveState::open;
+        if(t.size() != 5 || !parseInt32(t[2], action.mSeatId) ||
+           !parseObjectiveState(t[4], state) || state == LevelScriptObjectiveState::open)
+            return false;
+        action.mType = LevelScriptActionType::objectiveState;
+        action.mObjectiveId = t[3];
+        action.mNumber = static_cast<int64_t>(state);
+        return !action.mObjectiveId.empty();
+    }
     if((type == "message") || (type == "objective"))
     {
         action.mType = (type == "message") ? LevelScriptActionType::message : LevelScriptActionType::objective;
@@ -927,6 +962,7 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
     os << "\n";
 }
 
+//! \brief Serializes an action without changing legacy objective text syntax.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -936,7 +972,14 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             os << "message\t" << a.mSeatId << "\t" << a.mText;
             break;
         case LevelScriptActionType::objective:
-            os << "objective\t" << a.mSeatId << "\t" << a.mText;
+            if(a.mObjectiveId.empty())
+                os << "objective\t" << a.mSeatId << "\t" << a.mText;
+            else
+                os << "objectiveid\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t" << a.mText;
+            break;
+        case LevelScriptActionType::objectiveState:
+            os << "objectivestate\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t"
+               << levelScriptObjectiveStateName(static_cast<LevelScriptObjectiveState>(a.mNumber));
             break;
         case LevelScriptActionType::spawn:
             os << "spawn\t" << a.mSeatId << "\t" << a.mX << "\t" << a.mY << "\t" << a.mTargetSeatId;
@@ -1049,6 +1092,36 @@ const int64_t LevelScript::TIME_LIMIT_NOT_SET;
 const int64_t LevelScript::TIME_LIMIT_REMOVED;
 const int64_t LevelScript::COUNTDOWN_NOT_SET;
 
+//! \brief Returns the stable text representation used by saved state and action syntax.
+const char* levelScriptObjectiveStateName(LevelScriptObjectiveState state)
+{
+    switch(state)
+    {
+        case LevelScriptObjectiveState::open:
+            return "open";
+        case LevelScriptObjectiveState::reached:
+            return "reached";
+        case LevelScriptObjectiveState::failed:
+            return "failed";
+    }
+    return "open";
+}
+
+//! \brief Returns the last explicit state for this seat and ID, or open when unset.
+LevelScriptObjectiveState LevelScript::getObjectiveState(int32_t seatId, const std::string& id) const
+{
+    std::map<std::pair<int32_t, std::string>, LevelScriptObjectiveState>::const_iterator it =
+        mObjectiveStates.find(std::make_pair(seatId, id));
+    return it == mObjectiveStates.end() ? LevelScriptObjectiveState::open : it->second;
+}
+
+//! \brief Persists an explicit presentation update without changing winning conditions.
+void LevelScript::setObjectiveState(int32_t seatId, const std::string& id, LevelScriptObjectiveState state)
+{
+    mObjectiveStates[std::make_pair(seatId, id)] = state;
+}
+
+//! \brief Reads legacy definitions and optional persisted per-seat objective states.
 bool LevelScript::importFromStream(std::istream& is)
 {
     clear();
@@ -1087,7 +1160,16 @@ bool LevelScript::importFromStream(std::istream& is)
 
         std::vector<std::string> t = split(line);
         const std::string& key = t[0];
-        if(key == "Flag")
+        if(key == "ObjectiveState")
+        {
+            int32_t seatId = -1;
+            LevelScriptObjectiveState state = LevelScriptObjectiveState::open;
+            if(inTrigger || t.size() != 4 || !parseInt32(t[1], seatId) ||
+               !parseObjectiveState(t[3], state))
+                return false;
+            setObjectiveState(seatId, t[2], state);
+        }
+        else if(key == "Flag")
         {
             int64_t value;
             if(inTrigger || (t.size() != 3) || !parseInt(t[2], value))
@@ -1266,9 +1348,13 @@ bool LevelScript::importFromStream(std::istream& is)
     return false;
 }
 
+//! \brief Writes script definitions and explicit objective states for save/load round trips.
 void LevelScript::exportToStream(std::ostream& os) const
 {
     os << "[Triggers]\n";
+    for(const std::pair<const std::pair<int32_t, std::string>, LevelScriptObjectiveState>& objective : mObjectiveStates)
+        os << "ObjectiveState\t" << objective.first.first << "\t" << objective.first.second << "\t"
+           << levelScriptObjectiveStateName(objective.second) << "\n";
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
         os << "Flag\t" << flag.first << "\t" << flag.second << "\n";
 
@@ -1344,8 +1430,10 @@ void LevelScript::exportToStream(std::ostream& os) const
     os << "[/Triggers]\n";
 }
 
+//! \brief Resets definitions and all saved runtime state, including identified objectives.
 void LevelScript::clear()
 {
+    mObjectiveStates.clear();
     mTriggers.clear();
     mFlags.clear();
     mTimers.clear();

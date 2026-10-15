@@ -117,12 +117,12 @@ assert 'createChickenFeatherEffect' not in body(render, 'void RenderManager::rrC
 assert 'bool ChickenEntity::loseFight' in chicken and 'ChickenState::dying' in body(chicken, 'bool ChickenEntity::loseFight')
 pick = body(chicken, 'void ChickenEntity::pickup')
 assert 'mFighting = false' in pick, 'a picked up rooster leaves the fight'
-# the event is inserted before timeLimit (which stays the last value) and after chickenKindChanged
+# the event keeps its position before timeLimit and after chickenKindChanged
 enum_body = notif[notif.index('enum class ServerNotificationType'):notif.index('};')]
 enum_names = [line.split(',')[0].strip() for line in enum_body.splitlines()
               if line.strip() and not line.strip().startswith(('//', 'enum', '{'))]
 assert enum_names.index('chickenKindChanged') < enum_names.index('chickenFight') < enum_names.index('timeLimit')
-assert enum_body.rstrip().endswith('timeLimit')
+assert enum_body.rstrip().endswith('campaignVictory')
 assert 'ServerNotificationType::chickenFight' in chicken and 'ServerNotificationType::chickenFight' in client
 assert 'case ServerNotificationType::chickenFight' in (root / 'source/network/ServerNotification.cpp').read_text()
 print('hatchery rooster fight checks passed')
@@ -187,7 +187,7 @@ assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' i
 particles = (root / 'particles/ChickenEggShell.particle').read_text()
 trample = particles[particles.index('particle_system ChickenEggTrample'):]
 assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
-assert 'enum class ServerNotificationType' in notif and notif[notif.index('enum class ServerNotificationType'):notif.index('};')].rstrip().endswith('timeLimit')
+assert 'enum class ServerNotificationType' in notif and notif[notif.index('enum class ServerNotificationType'):notif.index('};')].rstrip().endswith('campaignVictory')
 print('hatchery nest egg and trample checks passed')
 
 # The numbers of the rooster and the flock are settings read from the config, not fixed numbers in the room code
