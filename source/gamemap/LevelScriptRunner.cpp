@@ -123,6 +123,7 @@ bool isClassMatching(const Creature* creature, const std::string& className)
     return className.empty() || (creature->getDefinition()->getClassName() == className);
 }
 
+//! \brief Evaluates gameplay conditions and read-only objective presentation predicates.
 bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScriptCondition& cond)
 {
     switch(cond.mType)
@@ -186,6 +187,60 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
                 return false;
             }
             return levelScriptCompare(static_cast<int64_t>(seat->getNbRooms(roomType)), cond.mCompare, cond.mNumber);
+        }
+        case LevelScriptConditionType::creaturesAtHeart:
+        {
+            int64_t count = 0;
+            for(Creature* creature : gameMap.getCreatures())
+            {
+                if(!creature->isAlive() || !creature->getIsOnMap() || !isSeatMatching(creature, cond.mSeatId))
+                    continue;
+                Tile* tile = creature->getPositionTile();
+                if(tile == nullptr)
+                    continue;
+                Room* room = tile->getCoveringRoom();
+                if(room != nullptr && room->getType() == RoomType::dungeonTemple && room->getSeat() != nullptr &&
+                   room->getSeat()->getId() == cond.mSeatId)
+                    ++count;
+            }
+            return levelScriptCompare(count, cond.mCompare, cond.mNumber);
+        }
+        case LevelScriptConditionType::objectiveState:
+            return static_cast<int64_t>(script.getObjectiveState(cond.mSeatId, cond.mName)) == cond.mNumber;
+        case LevelScriptConditionType::trapGone:
+            return gameMap.getTrapByName(cond.mName) == nullptr;
+        case LevelScriptConditionType::minedInRegion:
+            return script.getRegion(cond.mName) != nullptr &&
+                levelScriptCompare(script.getGoldMinedInRegion(cond.mSeatId, cond.mName), cond.mCompare, cond.mNumber);
+        case LevelScriptConditionType::killedInRegion:
+            return script.wasCreatureKilledInRegion(cond.mName, cond.mName2);
+        case LevelScriptConditionType::spawnCleared:
+            return script.areSpawnsCleared(cond.mName, cond.mNumber, cond.mSeatId);
+        case LevelScriptConditionType::triggerFired:
+            for(const LevelScriptTrigger& trigger : script.getTriggers())
+            {
+                if(trigger.mName == cond.mName)
+                    return (trigger.mTimesFired > 0) == (cond.mNumber != 0);
+            }
+            return false;
+        case LevelScriptConditionType::goalMet:
+        {
+            Seat* seat = gameMap.getSeatById(cond.mSeatId);
+            if(seat == nullptr)
+                return false;
+            for(unsigned int i = 0; i < seat->numUncompleteGoals(); ++i)
+            {
+                Goal* goal = seat->getUncompleteGoal(i);
+                if(goal->getName() == cond.mName && !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
+                    return true;
+            }
+            for(unsigned int i = 0; i < seat->numCompletedGoals(); ++i)
+            {
+                Goal* goal = seat->getCompletedGoal(i);
+                if(goal->getName() == cond.mName && !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
+                    return true;
+            }
+            return false;
         }
         case LevelScriptConditionType::goal:
         {
@@ -621,7 +676,9 @@ void sendMessage(GameMap& gameMap, int32_t seatId, const std::string& text)
     }
 }
 
-void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action)
+//! \brief Spawns the existing group unchanged and optionally observes actual instances for a goal condition.
+void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action,
+    const std::string& sourceTrigger = "", int64_t sourceAction = -1)
 {
     Seat* seat = gameMap.getSeatById(action.mSeatId);
     if(seat == nullptr)
@@ -668,6 +725,8 @@ void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action)
             + ", name=" + newCreature->getName() + ", seatId=" + Helper::toString(seat->getId()));
 
         newCreature->addToGameMap();
+        if(!sourceTrigger.empty())
+            gameMap.getLevelScript().observeSpawn(sourceTrigger, sourceAction, newCreature->getName());
         if(!action.mParty.empty())
             gameMap.getLevelScript().addPartyMember(action.mParty, newCreature->getName());
 
@@ -1112,12 +1171,16 @@ void removeCreature(GameMap& gameMap, const std::string& name)
 }
 
 //! \brief Executes a script action, including explicit presentation updates for identified goals.
-void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action)
+void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
+    const std::string& sourceTrigger, int64_t sourceAction)
 {
     switch(action.mType)
     {
         case LevelScriptActionType::message:
             sendMessage(gameMap, action.mSeatId, action.mText);
+            break;
+        case LevelScriptActionType::hint:
+            sendMessage(gameMap, action.mSeatId, "Hint: " + action.mText);
             break;
         case LevelScriptActionType::objective:
             sendMessage(gameMap, action.mSeatId, "Objective: " + action.mText);
@@ -1128,7 +1191,7 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
                     static_cast<LevelScriptObjectiveState>(action.mNumber));
             break;
         case LevelScriptActionType::spawn:
-            spawnCreatures(gameMap, action);
+            spawnCreatures(gameMap, action, sourceTrigger, sourceAction);
             break;
         case LevelScriptActionType::gold:
         {
@@ -1275,6 +1338,7 @@ void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
     }
 }
 
+//! \brief Runs existing triggers in order and passes stable source identities to presentation observers.
 void LevelScriptRunner::doTurn(GameMap& gameMap)
 {
     LevelScript& script = gameMap.getLevelScript();
@@ -1308,8 +1372,12 @@ void LevelScriptRunner::doTurn(GameMap& gameMap)
         OD_LOG_INF("Level script trigger fired: " + trigger.mName);
         ++trigger.mTimesFired;
         trigger.mLastFiredTurn = turn;
+        int64_t actionIndex = 0;
         for(const LevelScriptAction& action : trigger.mActions)
-            runAction(gameMap, script, action);
+        {
+            runAction(gameMap, script, action, trigger.mName, actionIndex);
+            ++actionIndex;
+        }
     }
 }
 

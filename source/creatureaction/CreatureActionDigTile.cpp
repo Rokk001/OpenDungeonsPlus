@@ -27,6 +27,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "gamemap/Pathfinding.h"
 #include "network/CosmeticEvent.h"
 #include "rooms/Room.h"
@@ -62,6 +63,7 @@ std::function<bool()> CreatureActionDigTile::action()
         std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos));
 }
 
+//! \brief Performs the existing dig action and observes exact credited gold at its source tile for presentation goals.
 bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
 {
     Tile* myTile = creature.getPositionTile();
@@ -121,6 +123,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
                 double tempDouble = digCoefGold * amountDug * creature.getGameMap()->getGoldDensityPercent() / 100.0;
                 creature.addGoldCarried(static_cast<int>(tempDouble));
                 creature.getSeat()->addGoldMined(static_cast<int>(tempDouble));
+                creature.getGameMap()->getLevelScript().observeGoldMined(creature.getSeat()->getId(),
+                    tileDig.getX(), tileDig.getY(), static_cast<int>(tempDouble));
                 if(tileDig.getFullness() <= 0.0)
                     ++creature.getSeat()->getStatistics().mGoldTilesMined;
 
@@ -134,6 +138,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
                 double tempDouble = digCoefGem * amountDug;
                 creature.addGoldCarried(static_cast<int>(tempDouble));
                 creature.getSeat()->addGoldMined(static_cast<int>(tempDouble));
+                creature.getGameMap()->getLevelScript().observeGoldMined(creature.getSeat()->getId(),
+                    tileDig.getX(), tileDig.getY(), static_cast<int>(tempDouble));
                 // Receive experience for digging
                 creature.receiveExp(creature.getDigRate() / 20.0);
                 break;
