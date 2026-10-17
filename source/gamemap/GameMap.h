@@ -419,7 +419,7 @@ public:
     inline SandboxMode& getSandboxMode()
     { return mSandboxMode; }
 
-    //! \brief Formats all goal descriptions and their current state for the player's objectives window.
+    //! \brief Formats goal descriptions and graphical state markers for the player's objectives window.
     std::string getGoalsStringForPlayer(Player* player);
 
     //! \brief Loops over all the creatures and calls their individual doTurn methods,
