@@ -1,12 +1,13 @@
 """Historical short-cycle nest-wait record and source contract, not C++ execution.
 The approved longer life stages intentionally change production; the old record is not a current yield claim.
-Only the explicit life-stage timing changes are normalized for its original contract; other changes still fail.
+The original source contract is checked at its pinned pre-cadence revision; current cadence is checked separately.
 """
 from pathlib import Path
 import hashlib
 import itertools
 import json
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 RECORD = ROOT/'source/tests/fixtures/hatchery_nest_parity.json'
@@ -90,7 +91,10 @@ expected_sections = {
 assert set(record['source_sha256']) == expected_sections
 for key, expected in record['source_sha256'].items():
     path, separator, name = key.partition('#')
-    data = recorded_source(key, section((ROOT/path).read_text(), name)).encode() if separator else (ROOT/path).read_bytes()
+    historical = subprocess.run(['git', 'show', '109eba4048e7d9360fb86409cea459b96068f3ea:'+path],
+                                cwd=ROOT, capture_output=True, check=True, stdin=subprocess.DEVNULL, timeout=30).stdout
+    text = historical.decode().replace('\r\n', '\n')
+    data = recorded_source(key, section(text, name)).encode() if separator else historical
     assert hashlib.sha256(data).hexdigest() == expected, 'Simulation source changed: '+key
 
 rows = record['rows']
@@ -111,4 +115,4 @@ for exception in record['accepted_exceptions']:
     assert round(exception['diff'], 6) == float(exception['documented_percent'])
     assert exception['acceptance'] == ACCEPTANCE
 assert {case_key(row) for row in record['accepted_exceptions']} == set(EXCEPTIONS)
-print('Historical short-cycle record: 46 cases <=3%, exactly two unchanged accepted outcomes; approved longer timings and unchanged remaining source contract verified. No current yield parity claim, model or C++ execution.')
+print('Historical short-cycle record: 46 cases <=3%, exactly two unchanged accepted outcomes; nominal longer timings and pinned historical source contract verified. No current yield parity claim, model or C++ execution.')

@@ -46,7 +46,9 @@ enum class ChickenKind : uint32_t
 class ChickenEntity: public RenderedMovableEntity
 {
 public:
+    //! \brief Initializes an animal and its persisted life-stage timer.
     ChickenEntity(GameMap* gameMap, const std::string& hatcheryName, ChickenKind kind = ChickenKind::hen);
+    //! \brief Initializes an animal and its persisted life-stage timer.
     ChickenEntity(GameMap* gameMap);
 
     virtual void doUpkeep() override;
@@ -124,6 +126,14 @@ public:
     //! the age it would have had on time, so the cycle keeps its rhythm.
     inline void setAge(uint32_t age)
     { mAge = age; }
+
+    //! \brief The persisted incubation or growth duration chosen once for this individual stage; zero is legacy/unset.
+    uint32_t getStageDuration() const
+    { return mStageDuration; }
+
+    //! \brief Stores the server's single duration draw for the current incubation or growth stage.
+    void setStageDuration(uint32_t turns)
+    { mStageDuration = turns; }
 
     inline void setLayTimer(uint32_t turns)
     { mNbTurnLay = turns; }
@@ -259,11 +269,14 @@ public:
 
     static ChickenEntity* getChickenEntityFromStream(GameMap* gameMap, std::istream& is);
     static ChickenEntity* getChickenEntityFromPacket(GameMap* gameMap, ODPacket& is);
+    //! \brief Describes the saved animal fields including its life-stage duration.
     static std::string getChickenEntityStreamFormat();
 protected:
     void createMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
     void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
+    //! \brief Saves the animal including its individually drawn life-stage duration.
     void exportToStream(std::ostream& os) const override;
+    //! \brief Loads saved animal fields, accepting older records without a stage duration.
     bool importFromStream(std::istream& is) override;
 
 private:
@@ -283,6 +296,8 @@ private:
     ChickenKind mKind;
     uint32_t mNbTurnLay;
     uint32_t mAge;
+    //! Individual incubation/growth duration, preserved across save/load and cleared on a kind transition.
+    uint32_t mStageDuration;
     uint32_t mBusyTurns;
     bool mLeavingCoop;
     Ogre::Vector2 mCoopDoor;
