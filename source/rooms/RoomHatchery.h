@@ -45,6 +45,7 @@ public:
     RoomType getType() const override
     { return mRoomType; }
 
+    //! \brief Updates animals without aging a newly created life stage in the same turn.
     void doUpkeep() override;
     void removeFromGameMap(GameMap* gameMap = nullptr) override;
     bool hasOpenCreatureSpot(Creature* c) override;
@@ -163,6 +164,7 @@ private:
     //! Hens with a planned egg: one sets off when the turns left until the egg are as many as the walk and the Lay
     //! pose, waits at the nest until the pose has to start, and sits down. A hen that is gone loses an egg that is not
     //! laid yet, an egg whose laying pose started still appears.
+    //! \brief Guides hens to nests and times their complete laying poses after arrival.
     void updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings);
     //! Lets a hen or a rooster come out of a coop. Returns false if no coop has a free place.
     bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count = 1);

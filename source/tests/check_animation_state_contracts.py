@@ -15,6 +15,7 @@ PATHS = {
     'movable': 'source/entities/MovableGameEntity.cpp',
     'chicken': 'source/entities/ChickenEntity.cpp',
     'combat': 'source/render/CreatureCombatReactions.cpp',
+    'overlay': 'source/render/CreatureOverlayStatus.cpp',
 }
 
 
@@ -29,6 +30,7 @@ def violations(sources):
     render = body(sources['render'], 'void RenderManager::updateRenderAnimations(')
     frame = body(sources['frame'], 'void ODFrameListener::updateAnimations(')
     start = body(sources['reactions'], 'bool CreatureReactions::startClip(')
+    activate = body(sources['reactions'], 'bool CreatureReactions::startReaction(')
     reaction = body(sources['reactions'], 'bool CreatureReactions::updateReaction(')
     motion = body(sources['reactions'], 'void CreatureReactions::clearMotion(')
     scan = body(sources['rooms'], 'void RoomAmbience::scan()')
@@ -38,8 +40,12 @@ def violations(sources):
     mount = body(sources['chicken'], 'void ChickenEntity::mountHen(')
     contact = body(sources['movable'], 'bool MovableGameEntity::hasReachedAnimationContact(')
     hits = body(sources['combat'], 'void CreatureCombatReactions::processHits(')
+    schedule = body(sources['combat'], 'void CreatureCombatReactions::scheduleHit(')
+    request = body(sources['movable'], 'void MovableGameEntity::setAnimationState(')
     wake = body(sources['render'], 'bool RenderManager::startCreatureWakeAnimation(')
     select = body(sources['render'], 'void RenderManager::rrSetObjectAnimationState(')
+    overlay = body(sources['overlay'], 'void CreatureOverlayStatus::update(')
+    emote = body(sources['overlay'], 'void CreatureOverlayStatus::showEmote(')
     protections = [
         ('pause', 'if((mGameMap == nullptr) || mGameMap->getGamePaused() || (mGameMap->getTurnNumber() <= 0))' in render and
          render.index('if(mHandAnimationState != nullptr)') <
@@ -78,6 +84,23 @@ def violations(sources):
         ('wake priority', '(anim == EntityAnimation::idle_anim) && startCreatureWakeAnimation' in select and
          select.index('startCreatureWakeAnimation(dropCreature, objectEntity)') <
          select.index('cancelCreatureSleepAnimation(dropCreature);')),
+        ('native wake blend', 'sleeping.mWakeFromAnimation = previousAnimation;' in wake and
+         'sleeping.mWakeFromAnimation->setWeight(1.0f - weight);' in render and
+         'sleeping.mWakeFromAnimation->setEnabled(false);' in render),
+        ('articulated motion', 'if(!reaction.mArticulatedMotion)' in activate and
+         'reaction.mArticulatedMotion = true;' in start),
+        ('rest strength', 'getArticulatedRestTime(position / animState->getLength(), reaction.mClipWeight)' in reaction and
+         'position = std::min(end, reaction.mElapsed * speed);' in reaction),
+        ('queued contact', '!mWalkQueue.empty()' in contact and 'mDestinationAnimationState.find("Attack")' in contact),
+        ('hit request identity', 'it->mAnimationSequence != attacker->getAnimationSequence()' in hits and
+         'hit.mAnimationSequence == animationSequence' in schedule and '++mAnimationSequence;' in request),
+        ('impact separation', 'hit.mAttacker == attackerName' in schedule),
+        ('rest duration', 'getLength() / variant.mMotion.mDuration' in start and
+         'reaction.mArticulatedMotion ? reaction.mClipSpeed :' in reaction),
+        ('explicit rest priority', '(sitting || lying) && variant.mClip.empty() && variant.mFallbackClip.empty()' in start),
+        ('emote clock', 'mEmoteRemaining -= timeSincelastFrame * static_cast<Ogre::Real>(mCreature->getGameMap()->getGameSpeedFactor());' in overlay and
+         'mMovableTextOverlay->update(timeSincelastFrame);' in overlay and
+         'timeToDisplay > 0.0f ? -1.0f : timeToDisplay' in emote),
     ]
     return [name for name, protected in protections if not protected]
 
@@ -110,13 +133,26 @@ def main():
         ('render', '(clip == previousClip) ? previousTime', '(clip == previousClip) ? 0.0f', 'wake continuity'),
         ('render', '(anim == EntityAnimation::idle_anim) && startCreatureWakeAnimation',
          'startCreatureWakeAnimation', 'wake priority'),
+        ('render', 'sleeping.mWakeFromAnimation = previousAnimation;', '', 'native wake blend'),
+        ('reactions', 'if(!reaction.mArticulatedMotion)', 'if(true)', 'articulated motion'),
+        ('reactions', 'getArticulatedRestTime(position / animState->getLength(), reaction.mClipWeight)',
+         'getArticulatedRestTime(position / animState->getLength(), 1.0)', 'rest strength'),
+        ('movable', 'mDestinationAnimationState.find("Attack")', 'std::string().find("Attack")', 'queued contact'),
+        ('combat', 'it->mAnimationSequence != attacker->getAnimationSequence()', 'false', 'hit request identity'),
+        ('combat', 'hit.mAttacker == attackerName', 'true', 'impact separation'),
+        ('reactions', 'reaction.mArticulatedMotion ? reaction.mClipSpeed :',
+         'false ? reaction.mClipSpeed :', 'rest duration'),
+        ('reactions', '(sitting || lying) && variant.mClip.empty() && variant.mFallbackClip.empty()',
+         '(sitting || lying)', 'explicit rest priority'),
+        ('overlay', 'mEmoteRemaining -= timeSincelastFrame * static_cast<Ogre::Real>(mCreature->getGameMap()->getGameSpeedFactor());',
+         'mEmoteRemaining -= timeSincelastFrame;', 'emote clock'),
     ]
     for key, old, new, label in mutations:
         changed = dict(sources)
         assert old in changed[key], (label, 'mutation did not match')
         changed[key] = changed[key].replace(old, new, 1)
         assert label in violations(changed), (label, 'negative control was accepted')
-    print('Animation contracts: 16 protections and 16 negative controls passed; no compilation or game execution.')
+    print('Animation contracts: 25 protections and 25 negative controls passed; no compilation or game execution.')
 
 
 if __name__ == '__main__':

@@ -625,6 +625,8 @@ private:
         Ogre::Real mWakeStartTime;
         //! Breathing scale at the start of waking, blended back to the standing scale.
         Ogre::Vector3 mWakeScale;
+        //! Frozen sleep pose used briefly while entering a different native wake clip.
+        Ogre::AnimationState* mWakeFromAnimation;
     };
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
     std::set<Creature*> mSteppingCreatures;
@@ -829,6 +831,7 @@ private:
     //! \brief Starts a cosmetic wake transition only when this creature has a stored sleep pose.
     bool startCreatureWakeAnimation(Creature* creature, Ogre::Entity* entity);
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
+    //! \brief Restores the standing transform and removes any retained native wake blend.
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
     void updateCreatureStep(Creature* creature);
     void refreshCreaturesOnTile(Tile* tile);
