@@ -249,12 +249,12 @@ if True:
         assert expected <= used, (mesh, expected, used)
         for name in used:
             material_block(name)
-    # The Lay clip is as long as the Lay pose of the server (HatcheryLayShowTurns turns of 1 / turnsPerSecond seconds)
+    # Playback advances turnsPerSecond clip units per second, matching the server's laying turns.
     import re
     show_turns = max(2, int(re.search(r'^\s*HatcheryLayShowTurns\s+(\d+)', config, re.M).group(1)))
     turns_per_second = float(re.search(r'turnsPerSecond = ([0-9.]+);', (root / 'source/ODApplication.cpp').read_text()).group(1))
     lay = [a for a in skeleton_xml.find('animations').findall('animation') if a.get('name') == 'Lay'][0]
-    assert abs(float(lay.get('length')) - show_turns / turns_per_second) < 0.01, lay.get('length')
+    assert abs(float(lay.get('length')) / turns_per_second - show_turns / turns_per_second) < 0.01, lay.get('length')
     last_times = set()
     for track in lay.find('tracks').findall('track'):
         last_times.add(round(float(track.find('keyframes').findall('keyframe')[-1].get('time')), 3))

@@ -72,8 +72,12 @@ private:
     static bool findTarget(CreatureReactions& reactions, Creature* attacker, double range, Creature*& target,
         double& distance);
     static std::string chooseAttackEvent(const CreatureReactions& reactions, const Creature* attacker, bool ranged);
-    static void scheduleHit(CreatureReactions& reactions, Creature* target, uint32_t level, bool shield, double delay);
+    //! \brief Queues a hit for one melee request, keeping already landed shots independent of waiting strikes.
+    static void scheduleHit(CreatureReactions& reactions, Creature* target, uint32_t level, bool shield, double delay,
+        Creature* attacker = nullptr);
+    //! \brief Chooses attack looks and schedules legacy hits without changing server damage.
     static void processAttacks(CreatureReactions& reactions);
+    //! \brief Shows queued hits at their contact phase and discards superseded visual attack requests.
     static void processHits(CreatureReactions& reactions);
     static void processDrops(CreatureReactions& reactions);
     static void updateFallen(CreatureReactions& reactions, double timeSinceLastFrame);

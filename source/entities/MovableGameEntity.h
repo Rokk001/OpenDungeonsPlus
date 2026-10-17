@@ -23,6 +23,7 @@
 #include <Ogre.h>
 
 #include <deque>
+#include <cstdint>
 #include <list>
 
 class Tile;
@@ -59,9 +60,11 @@ namespace EntityAnimation
     static const std::string dragged_anim = "Dragged";
 };
 
+//! \brief Moves and animates an entity while keeping deferred strikes synchronized with its displayed pose.
 class MovableGameEntity : public GameEntity
 {
 public:
+    //! \brief Creates a movable entity with no pending visual animation request.
     MovableGameEntity(GameMap* gameMap);
 
     virtual ~MovableGameEntity()
@@ -91,7 +94,7 @@ public:
     //! This is a server side function
     void clearDestinations(const std::string& animation, bool loopAnim, bool playIdleWhenAnimationEnds);
 
-    //! \brief Stops the object where it is, and sets its animation state.
+    //! \brief Stops the object where it is, activating its queued animation as the same visual request.
     virtual void stopWalking();
 
     //! \brief Clients side function that corrects entities moves to allow several entities
@@ -104,10 +107,20 @@ public:
     virtual double getMoveSpeed() const
     { return 1.0; }
 
+    //! \brief Requests an animation and identifies it so delayed cosmetic hits cannot follow a later action.
     virtual void setAnimationState(const std::string& state, bool loop = true, const Ogre::Vector3& direction = Ogre::Vector3::ZERO, bool playIdleWhenAnimationEnds = true);
 
     virtual double getAnimationSpeedFactor() const
     { return 1.0; }
+
+    //! \brief True once the current strike reaches the contact fraction, or its animation was interrupted.
+    //! A strike queued behind movement or waiting for its facing turn has not reached contact yet.
+    //! \param share Fraction of the displayed strike clip at which contact occurs.
+    bool hasReachedAnimationContact(double share) const;
+
+    //! \brief Returns the local visual request identity; queued activation retains the same value.
+    uint64_t getAnimationSequence() const
+    { return mAnimationSequence; }
 
     //! \brief Only the clients: how fast the walk and idle clips play on screen (cosmetic, the movement
     //! speed and every timing of the game stay as they are)
@@ -123,6 +136,7 @@ public:
     //! in the update function. If they do, it might lead to crashes as the gamemap
     //! will iterate the movable entities vector
     //! \param timeSinceLastFrame the elapsed time since last displayed frame in seconds.
+    //! Deferred strikes use the same game-time scale as movement and skeletal clips.
     virtual void update(Ogre::Real timeSinceLastFrame);
 
     void setWalkDirection(const Ogre::Vector3& direction);
@@ -172,6 +186,8 @@ private:
     double mAnimationTime;
     //! Client: seconds the strike clip still waits for the turn to the target (0 = nothing waits). Not saved.
     double mBlowStartDelay;
+    //! Local-only request identity for pending impacts; never serialized or sent to the server.
+    uint64_t mAnimationSequence;
 };
 
 

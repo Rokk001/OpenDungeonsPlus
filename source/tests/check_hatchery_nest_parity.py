@@ -1,6 +1,6 @@
-"""Recorded nest-wait simulation and source-contract regression, not C++ execution.
-The record covers finite collision-grid/roaming/nominal-clock approximations;
-it is not a proof of all possible layouts. Source changes require revalidation.
+"""Historical short-cycle nest-wait record and source contract, not C++ execution.
+The approved longer life stages intentionally change production; the old record is not a current yield claim.
+Only the explicit life-stage timing changes are normalized for its original contract; other changes still fail.
 """
 from pathlib import Path
 import hashlib
@@ -43,7 +43,7 @@ assert record['turns'] == 84000
 assert record['settings'] == dict(min=3, max=9, factor='0.6516666667', hatch=2, grow=4)
 config = (ROOT/'config/rooms.cfg').read_text()
 for name, value in [('HatcheryLayMin','3'), ('HatcheryLayMax','9'), ('HatcheryLayFactor','0.6516666667'),
-                    ('HatcheryHatchTurns','2'), ('HatcheryGrowTurns','4'), ('HatcheryLayShowTurns','2'),
+                    ('HatcheryHatchTurns','42'), ('HatcheryGrowTurns','84'), ('HatcheryLayShowTurns','7'),
                     ('HatcheryNestArrive','0.3')]:
     match = re.search(r'^\s*'+name+r'\s+(\S+)', config, re.M)
     assert match and match.group(1) == value, name
@@ -59,6 +59,30 @@ def section(text, name):
             return text[start:pos+1]
     raise AssertionError(name)
 
+# Reverse only the explicitly approved life-stage edits when comparing the historical record's source contract.
+def recorded_source(key, text):
+    replacements = []
+    if key.endswith('#RoomHatchery::updateNestTrips'):
+        replacements = [('it->mTurns = settings.mLayShowTurns;',
+                         'it->mTurns = (settings.mLayShowTurns > 0) ? settings.mLayShowTurns - 1 : 0;')]
+    elif key.endswith('#RoomHatchery::doUpkeep'):
+        replacements = [
+            ('    // Newly laid eggs and newly hatched chicks start aging on the following upkeep.\n'
+             '    const size_t eggsBeforeLaying = eggs.size();\n'
+             '    const size_t chicksBeforeHatching = chicks.size();\n', ''),
+            ('        for(size_t index = 0; index < eggsBeforeLaying; ++index)\n'
+             '        {\n            ChickenEntity* egg = eggs[index];',
+             '        for(ChickenEntity* egg : eggs)\n        {'),
+            ('    for(size_t index = 0; index < chicksBeforeHatching; ++index)\n'
+             '    {\n        ChickenEntity* chick = chicks[index];',
+             '    for(ChickenEntity* chick : chicks)\n    {'),
+        ]
+    for current, historical in replacements:
+        assert text.count(current) == 1, ('Approved timing edit changed', key)
+        text = text.replace(current, historical, 1)
+    return text
+
+
 expected_sections = {
     'source/rooms/RoomHatchery.cpp#RoomHatchery::'+name
     for name in ['getCycleSettings','releasePendingEggs','nestWalkTurns','updateNestTrips','doUpkeep']
@@ -66,7 +90,7 @@ expected_sections = {
 assert set(record['source_sha256']) == expected_sections
 for key, expected in record['source_sha256'].items():
     path, separator, name = key.partition('#')
-    data = section((ROOT/path).read_text(), name).encode() if separator else (ROOT/path).read_bytes()
+    data = recorded_source(key, section((ROOT/path).read_text(), name)).encode() if separator else (ROOT/path).read_bytes()
     assert hashlib.sha256(data).hexdigest() == expected, 'Simulation source changed: '+key
 
 rows = record['rows']
@@ -87,4 +111,4 @@ for exception in record['accepted_exceptions']:
     assert round(exception['diff'], 6) == float(exception['documented_percent'])
     assert exception['acceptance'] == ACCEPTANCE
 assert {case_key(row) for row in record['accepted_exceptions']} == set(EXCEPTIONS)
-print('Recorded nest-wait parity: 46 cases <=3%, exactly two unchanged accepted outcomes; config/source provenance verified. No model or C++ executed.')
+print('Historical short-cycle record: 46 cases <=3%, exactly two unchanged accepted outcomes; approved longer timings and unchanged remaining source contract verified. No current yield parity claim, model or C++ execution.')

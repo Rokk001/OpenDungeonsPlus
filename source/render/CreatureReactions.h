@@ -198,14 +198,19 @@ private:
     //! Worker reactions (dig hits, claiming, carrying, danger, idling) use the internals too
     friend class WorkerReactions;
 
+    //! \brief Holds a cosmetic overlay, its independent clip phase and its reversible scene offsets.
     struct RunningReaction
     {
+        //! \brief Initializes the overlay clock, clip range and reversible pose state.
         RunningReaction() :
             mPriority(ReactionPriority::event),
             mElapsed(0.0),
             mDuration(0.0),
             mClipSpeed(1.0),
+            mClipStart(0.0),
             mClipEnd(1.0),
+            mClipWeight(1.0),
+            mArticulatedMotion(false),
             mEmoteShown(false),
             mMotion(),
             mMotionPosition(Ogre::Vector3::ZERO),
@@ -237,9 +242,16 @@ private:
         double mDuration;
 
         std::string mClip;
+        //! Regular clip multiplier, or clip units per game second for an articulated rest motion.
         double mClipSpeed;
+        //! Fraction where the clip starts, used to blend into a fallback segment correctly.
+        double mClipStart;
         //! Fraction of the clip length where the clip is stopped
         double mClipEnd;
+        //! Relative depth sampled from the grounded entry poses of existing sit/lie variants.
+        double mClipWeight;
+        //! A joint-based rest clip replaces the corresponding whole-node squash or tilt.
+        bool mArticulatedMotion;
         //! Name of the clip the creature was playing when the reaction started
         std::string mBaseClip;
 
@@ -350,6 +362,7 @@ private:
         double mSince;
     };
 
+    //! \brief Starts the configured reaction, using articulated resting clips when available.
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -454,9 +467,12 @@ private:
     //! If the event is given and decorates the work animation, that animation does not count as busy.
     ReactionPriority getCreaturePriority(const Creature* creature, const ReactionEvent* event = nullptr) const;
 
+    //! \brief Starts the reaction clip without deriving its lifetime from a fixed playback speed.
     bool startClip(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
+    //! \brief Removes an overlay while keeping a clip enabled if gameplay now uses it as its base.
     void stopClip(RunningReaction& reaction, Creature* creature);
     void applyMotion(RunningReaction& reaction, Creature* creature);
+    //! \brief Removes the pose offset while preserving the reaction clock.
     void clearMotion(RunningReaction& reaction, Creature* creature);
     bool addParticles(RunningReaction& reaction, Creature* creature, const std::string& effect);
     void removeParticles(RunningReaction& reaction);

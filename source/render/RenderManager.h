@@ -70,6 +70,7 @@ namespace RTShader {
 } //End namespace Ogre
 
 
+//! \brief Renders entities and advances their visual poses independently of interface animation time.
 class RenderManager: public Ogre::Singleton<RenderManager>, Ogre::RenderTargetListener
 {
 public:
@@ -91,7 +92,11 @@ public:
     //! attack weapon in each hand strikes with the left; false for every other creature and before any blow)
     bool isLastBlowLeftHanded(const Creature* creature) const;
 
+    //! \brief True during logical sleep and its visible transition back to standing.
+    bool rrIsCreatureSleeping(const Creature* creature) const;
+
     //! \brief Loop through the render requests in the queue and process them
+    //! Advances hand animations in real time and world animations in unpaused game time.
     void updateRenderAnimations(Ogre::Real timeSinceLastFrame);
 
     void setPosition(Ogre::Camera* obj, const Ogre::Vector3& vec);
@@ -601,6 +606,7 @@ private:
     Ogre::Real mCoopDecorTimer = 0.0f;
     uint64_t mChickenLookNumber = 0;
 
+    //! \brief Keeps bed alignment and reversible sleep-entry/wake pose state for one creature.
     struct CreatureSleepAnimation
     {
         Creature* mCreature;
@@ -612,6 +618,15 @@ private:
         bool mNativeEntry;
         Ogre::Vector3 mBasePosition, mRestPosition;
         Ogre::Quaternion mBaseOrientation, mRestOrientation;
+        //! Waking reverses the entry unless the model supplies its own Sleep_End clip.
+        bool mWaking;
+        bool mReverseWake;
+        //! Entry-clip time at interruption, so waking never jumps to a fully settled pose first.
+        Ogre::Real mWakeStartTime;
+        //! Breathing scale at the start of waking, blended back to the standing scale.
+        Ogre::Vector3 mWakeScale;
+        //! Frozen sleep pose used briefly while entering a different native wake clip.
+        Ogre::AnimationState* mWakeFromAnimation;
     };
     std::vector<CreatureSleepAnimation> mCreatureSleepAnimations;
     std::set<Creature*> mSteppingCreatures;
@@ -811,8 +826,12 @@ private:
     void applyChickenKindLook(ChickenEntity* chicken);
     void clearChickenLooks();
     void clearChickenFeatherEffects();
+    //! \brief Starts an authored or generated sleep-entry pose and stores its standing transform.
     void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
+    //! \brief Starts a cosmetic wake transition only when this creature has a stored sleep pose.
+    bool startCreatureWakeAnimation(Creature* creature, Ogre::Entity* entity);
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
+    //! \brief Restores the standing transform and removes any retained native wake blend.
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
     void updateCreatureStep(Creature* creature);
     void refreshCreaturesOnTile(Tile* tile);

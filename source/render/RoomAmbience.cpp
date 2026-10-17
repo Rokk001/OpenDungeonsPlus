@@ -778,6 +778,7 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     mWallTorches.update(dt, (mMode == Mode::reduced) ? WallTorchView::Mode::reduced : WallTorchView::Mode::full, camera);
 }
 
+//! \brief Collects visible room effects and logical sleeping occupants for this scan.
 void RoomAmbience::scan()
 {
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
@@ -808,8 +809,7 @@ void RoomAmbience::scan()
         if(creature->getIsOnMap())
         {
             mCreaturePositions.push_back(creature->getPosition());
-            Ogre::AnimationState* creatureState = creature->getAnimationState();
-            if((creatureState != nullptr) && (creatureState->getAnimationName() == EntityAnimation::sleep_anim))
+            if(RenderManager::getSingleton().rrIsCreatureSleeping(creature))
                 mSleeperPositions.push_back(creature->getPosition());
             CreatureSpot spot;
             spot.mPosition = creature->getPosition();
@@ -1342,6 +1342,7 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
     }
 }
 
+//! \brief Detects creature changes from logical states, including generated sleep poses.
 void RoomAmbience::scanCreatureEvents()
 {
     struct Change
@@ -1373,10 +1374,7 @@ void RoomAmbience::scanCreatureEvents()
         if(tile != nullptr)
             visual = Tile::tileVisualToString(tile->getTileVisual());
 
-        bool sleeping = false;
-        Ogre::AnimationState* animationState = creature->getAnimationState();
-        if(animationState != nullptr)
-            sleeping = (animationState->getAnimationName() == EntityAnimation::sleep_anim);
+        const bool sleeping = RenderManager::getSingleton().rrIsCreatureSleeping(creature);
 
         bool enemyInGuardRoom = false;
         if((tile != nullptr) && (tile->getTileVisual() == TileVisual::guardRoom) && (tile->getSeat() != nullptr) &&
@@ -1823,13 +1821,16 @@ bool RoomAmbience::playEventClip(const AmbienceEffect& effect, const Ogre::Vecto
     return false;
 }
 
+//! \brief Plays an ambient creature clip only while a living, conscious creature is logically idle.
 bool RoomAmbience::playCreatureClip(const AmbienceEffect& effect, const std::string& creatureName)
 {
     if(effect.mClips.empty() || creatureName.empty() || (mGameMap == nullptr))
         return false;
 
     Creature* creature = mGameMap->getCreature(creatureName);
-    if((creature == nullptr) || !creature->getIsOnMap() || creature->isMoving())
+    if((creature == nullptr) || !creature->getIsOnMap() || !creature->isAlive() ||
+       creature->isKo() || creature->isMoving() ||
+       (creature->getAnimationStateName() != EntityAnimation::idle_anim))
         return false;
 
     for(const std::string& clip : effect.mClips)

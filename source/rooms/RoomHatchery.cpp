@@ -654,6 +654,7 @@ RoomHatchery::PendingEgg* RoomHatchery::findPendingEgg(const ChickenEntity& hen)
     return nullptr;
 }
 
+//! \brief Guides hens to their nests and waits the full configured laying duration after arrival.
 void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings)
 {
     // The hen has arrived when she is this close to the place next to the nest
@@ -754,7 +755,7 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
         hen->playPose(ChickenPose::lay, std::max<uint32_t>(2, settings.mLayShowTurns));
         fireAnimalSound(*hen, "Hatchery/Cluck");
         it->mPosing = true;
-        it->mTurns = (settings.mLayShowTurns > 0) ? settings.mLayShowTurns - 1 : 0;
+        it->mTurns = settings.mLayShowTurns;
         ++it;
     }
 }
@@ -1258,6 +1259,7 @@ HatcheryCare RoomHatchery::getCare(const std::vector<Creature*>& enemies) const
     return care;
 }
 
+//! \brief Updates hatchery animals, aging each life stage only after its creation turn.
 void RoomHatchery::doUpkeep()
 {
     Room::doUpkeep();
@@ -1413,13 +1415,17 @@ void RoomHatchery::doUpkeep()
 
         // No nest reservation yet: keep waiting and retry on the next upkeep.
     }
+    // Newly laid eggs and newly hatched chicks start aging on the following upkeep.
+    const size_t eggsBeforeLaying = eggs.size();
+    const size_t chicksBeforeHatching = chicks.size();
     releasePendingEggs(layingSettings, eggs);
 
     // Eggs hatch while there is a rooster and no enemy stands on that egg's tile.
     if(HatcheryCycle::canHatch(counts, false))
     {
-        for(ChickenEntity* egg : eggs)
+        for(size_t index = 0; index < eggsBeforeLaying; ++index)
         {
+            ChickenEntity* egg = eggs[index];
             bool enemyOnTile = false;
             for(Creature* enemy : enemies)
             {
@@ -1454,8 +1460,9 @@ void RoomHatchery::doUpkeep()
     }
 
     // Chicks grow up
-    for(ChickenEntity* chick : chicks)
+    for(size_t index = 0; index < chicksBeforeHatching; ++index)
     {
+        ChickenEntity* chick = chicks[index];
         if(chick->incrementAge() < settings.mGrowTurns)
             continue;
 
