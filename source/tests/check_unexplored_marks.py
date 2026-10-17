@@ -30,7 +30,7 @@ assert 'Ogre::Vector4(0.65f, 0.45f, 1.0f, 0.5f)' in tile
 assert 'mix(texelColor, outputColor.rgb, outputColor.a)' in fog_shader
 preview = render[render.index('void RenderManager::rrDrawTilePreview('):render.index('bool RenderManager::getKeeperHandPosition')]
 rectangle = preview[preview.index('if(singleRectangle)'):preview.index('    return;\n    }')]
-assert 'if(digging)' in rectangle and 'OT_TRIANGLE_LIST' in rectangle
+assert 'if(construction || digging)' in rectangle and 'OT_TRIANGLE_LIST' in rectangle
 assert 'minX - 0.44f' in rectangle and 'maxX + 0.44f' in rectangle
 assert 'minX - 0.5f' in rectangle and 'maxX + 0.5f' in rectangle
 
@@ -61,7 +61,7 @@ for width, height in [(1, 1), (4, 1), (4, 4), (3, 7)]:
     # One outer frame, with the same width as the existing single-tile frame, no internal tile lines.
     ring_area = width * height - (width - 2 * thickness) * (height - 2 * thickness)
     assert ring_area > 0
-assert 'for(Tile* tile' not in rectangle[rectangle.index('if(digging)'):]
+assert 'for(Tile* tile' not in rectangle[rectangle.index('if(construction || digging)'):]
 vertex = read('shaders/DirtTileInstanced.vert')
 flat_branch = vertex[vertex.index('if(final_color.a > 0.0)'):vertex.index('    vec3 local_normal')]
 assert 'deform(' not in flat_branch and 'return;' in flat_branch

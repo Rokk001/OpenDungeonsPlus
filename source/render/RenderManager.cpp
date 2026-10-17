@@ -7395,6 +7395,7 @@ void RenderManager::rrPlayDigAnimation()
     mHandAnimationState = setEntityAnimation(mSceneManager->getEntity("keeperHandEnt"), "DigSwing", false);
 }
 
+//! \brief Draws selection borders, sharing the filled frame width for construction and digging.
 void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
 {
     if(singleRectangle)
@@ -7448,7 +7449,7 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             mTilePreview->colour(colour);
         }
         mTilePreview->end();
-        if(digging)
+        if(construction || digging)
         {
             const Ogre::Vector3 inner[] = {
                 Ogre::Vector3(minX - 0.44f, minY - 0.44f, z),

@@ -97,16 +97,15 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     /*! \brief Process the mouse movement event.
      *
-     * The function does a raySceneQuery to determine what object the mouse is over
-     * to handle things like dragging out selections of tiles and selecting
-     * creatures.
+     * The function uses ground targeting for room construction and surface targeting
+     * for other actions to handle dragging selections and selecting creatures.
      */
     virtual bool mouseMoved     (const OIS::MouseEvent &arg) override;
 
     /*! \brief Handle mouse clicks.
      *
-     * This function does a ray scene query to determine what is under the mouse
-     * and determines whether a creature or a selection of tiles, is being dragged.
+     * This function uses the current action target to determine whether a creature
+     * or a selection of eligible tiles is being dragged.
      */
     virtual bool mousePressed   (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
 
@@ -268,7 +267,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Called at each frame. Updates spell cooldowns.
     void refreshSpellButtonCoolDowns();
 
-    //! Refresh the selected action, target preview and resource/cooldown feedback without executing it.
+    //! \brief Refresh the selected action, target preview and resource/cooldown feedback without executing it.
     void refreshActionFeedback(float elapsed);
 
     Creature* getClosestCreature(Tile*);
@@ -401,6 +400,9 @@ private:
     //! \brief Set the help window (quite long) text.
     void setHelpWindowText();
 
+    //! \brief Picks room floors through walls and uses normal surface picking for other actions.
+    bool findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position);
+
     //! \brief A sub-function called by mouseMoved()
     //! It will handle the potential mouse wheel logic
     void handleMouseWheel(const MouseWheelEvent& arg);
@@ -522,6 +524,7 @@ private:
     void handlePlayerActionQuery();
     bool toggleSell(const CEGUI::EventArgs& e);
     void handlePlayerActionSell();
+    //! \brief Draws eligible selection borders without including invalid room tiles.
     void updateSelectedTiles();
 
     void sendPendingHandDropRequest(bool dropAllCreatures);

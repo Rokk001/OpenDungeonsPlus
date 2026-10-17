@@ -782,6 +782,26 @@ void GameMode::activate()
     syncPlayerSettings();
 }
 
+//! \brief Picks eligible room floors through walls while preserving surface picking for other actions.
+bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position)
+{
+    ODFrameListener& frameListener = ODFrameListener::getSingleton();
+    if(mPlayerSelection.getCurrentAction() != SelectedAction::buildRoom)
+        return frameListener.findTilePositionFromMouse(arg, position);
+
+    const Ogre::Real roomFloorHeight = 0.0f;
+    if(!frameListener.findWorldPositionFromMouse(arg, position, roomFloorHeight))
+        return false;
+    Tile* tile = mGameMap->getTile(Helper::round(position.x), Helper::round(position.y));
+    if(tile == nullptr || tile->isFullTile())
+        return false;
+    const RoomType roomType = mPlayerSelection.getNewRoomType();
+    if(roomType == RoomType::bridgeWooden || roomType == RoomType::bridgeStone)
+        return true;
+    return tile->isBuildableUpon(mGameMap->getLocalPlayer()->getSeat());
+}
+
+//! \brief Updates pointer targeting and selection as the mouse moves.
 bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 {
     resetIdleHand();
@@ -842,10 +862,12 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 
     // Since this is a tile selection query we loop over the result set
     // and look for the first object which is actually a tile.
-    if(!ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    if(!findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        if(mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom)
+            unselectAllTiles();
         return true;
     }
     RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
@@ -1059,6 +1081,7 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
     }
 }
 
+//! \brief Starts a world action only when its pointer target is valid.
 bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
     resetIdleHand();
@@ -1135,7 +1158,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    if(findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
     {
         inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
         inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -1329,6 +1352,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Completes a world action using the current action-specific pointer target.
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
     resetIdleHand();
@@ -1392,7 +1416,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(ODFrameListener::getSingleton().findTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    if(findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
     {
         inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
         inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -3982,6 +4006,7 @@ void GameMode::refreshSpellButtonCoolDowns()
     });
 }
 
+//! \brief Refreshes action feedback and the eligible pointer target without executing an action.
 void GameMode::refreshActionFeedback(float elapsed)
 {
     if(mIsSkillWindowOpen)
@@ -4022,7 +4047,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         mouseState.width = static_cast<int>(size.d_width);
         mouseState.height = static_cast<int>(size.d_height);
         const OIS::MouseEvent mouseEvent(nullptr, mouseState);
-        if(ODFrameListener::getSingleton().findTilePositionFromMouse(mouseEvent, inputManager.mKeeperHandPos))
+        if(findActionTilePositionFromMouse(mouseEvent, inputManager.mKeeperHandPos))
         {
             inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
             inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -4251,6 +4276,7 @@ void GameMode::selectTiles(const std::vector<Tile*> tiles)
     mPreviewTiles = tiles;
 }
 
+//! \brief Draws the current eligible selection without extending room previews over invalid tiles.
 void GameMode::updateSelectedTiles()
 {
     const bool building = mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
@@ -4260,7 +4286,7 @@ void GameMode::updateSelectedTiles()
          std::any_of(mPreviewTiles.begin(), mPreviewTiles.end(), [](Tile* tile) { return tile->getIsRoom(); }));
     const bool digging = mPlayerSelection.getCurrentAction() == SelectedAction::none ||
         mPlayerSelection.getCurrentAction() == SelectedAction::selectTile;
-    const bool rectangle = mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
+    bool rectangle = mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
         mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
         mPlayerSelection.getCurrentAction() == SelectedAction::destroyRoom ||
         mPlayerSelection.getCurrentAction() == SelectedAction::destroyTrap ||
@@ -4270,19 +4296,26 @@ void GameMode::updateSelectedTiles()
     const Ogre::ColourValue colour = mActionTargetValid ? Ogre::ColourValue(0.35f, 0.3f, 1.0f) :
         Ogre::ColourValue(1.0f, 0.15f, 0.1f);
     const InputManager& inputManager = mModeManager->getInputManager();
-    const std::vector<Tile*> outlineTiles = rectangle && inputManager.mLMouseDown ?
+    std::vector<Tile*> outlineTiles = rectangle && inputManager.mLMouseDown ?
         mGameMap->rectangularRegion(inputManager.mXPos, inputManager.mYPos,
             inputManager.mLStartDragX, inputManager.mLStartDragY) : mPreviewTiles;
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom)
+    {
+        // A complete floor keeps its single border; holes retain only eligible tile borders.
+        rectangle = outlineTiles.size() == mPreviewTiles.size();
+        outlineTiles = mPreviewTiles;
+    }
+    // Rectangle demolition retains its existing line; filled construction borders apply to room building.
     if(mPreviewTiles == mSelectedTiles)
     {
-        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || roomDemolition, digging, rectangle);
+        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle);
         return;
     }
     Player* player = mGameMap->getLocalPlayer();
     for(Tile* tile : mSelectedTiles)
         tile->setSelected(false, player);
     mSelectedTiles = mPreviewTiles;
-    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || roomDemolition, digging, rectangle);
+    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle);
 }
 
 void GameMode::unselectAllTiles()

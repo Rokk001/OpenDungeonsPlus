@@ -255,6 +255,7 @@ public:
     //! Stops a running idle hand effect and returns the hand to its contextual pose.
     void rrCancelIdleHandAnimation();
     void rrPlayDigAnimation();
+    //! \brief Draws tile previews with equally thick filled borders for construction and digging.
     void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false);
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
 
