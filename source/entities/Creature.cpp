@@ -4106,13 +4106,26 @@ void Creature::reportFightParticipants(Creature& killer)
 
 namespace
 {
-//! Counts an event of the creature for the conditions of the level script (server only)
+//! \brief Counts script events and records an observed spawn's actual temple tile when it is killed (server only).
 void recordScriptEvent(const Creature& creature, const std::string& eventName)
 {
     if(!creature.getIsOnServerMap())
         return;
 
     creature.getGameMap()->getLevelScript().recordEvent(creature.getName(), eventName);
+    if(eventName == "killed")
+    {
+        int32_t templeSeat = -1;
+        Tile* tile = creature.getPositionTile();
+        if(tile != nullptr)
+        {
+            creature.getGameMap()->getLevelScript().observeCreatureDeath(creature.getName(), tile->getX(), tile->getY());
+            Room* room = tile->getCoveringRoom();
+            if(room != nullptr && room->getType() == RoomType::dungeonTemple && room->getSeat() != nullptr)
+                templeSeat = room->getSeat()->getId();
+        }
+        creature.getGameMap()->getLevelScript().observeSpawnDeath(creature.getName(), templeSeat);
+    }
 }
 } // namespace
 

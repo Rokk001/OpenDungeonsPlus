@@ -93,11 +93,11 @@ private:
     size_t findSiteAt(float x, float y) const;
     void updateLift(float elapsed);
     void updateTooltip(const CEGUI::Vector2f& position, size_t province, size_t site);
-    //! \brief Shows the level briefing and its preview when available.
+    //! \brief Shows the unchanged story beside the level goals and its preview when available.
     void showBriefing(size_t level);
-    //! \brief Shows the last level result without a preview.
+    //! \brief Shows the last level result at full text width without a preview or goal list.
     void showDebriefing();
-    //! \brief Shows or hides the preview and selects the matching panel and text areas.
+    //! \brief Shows or hides the preview and registers scaled panel and text areas.
     void setBriefingPreviewVisible(bool visible);
     void hideBriefing();
     void startLevel(size_t index);

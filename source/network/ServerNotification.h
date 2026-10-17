@@ -168,17 +168,17 @@ enum class ServerNotificationType
     //! int32_t direction (WallTorches::getDirX/getDirY: where the open tile is, seen from the wall),
     //! int32_t seatId of the wall owner. Sent once when a client joins or loads (the whole list) and when
     //! the torches or the tiles the player sees change. Inserted before cosmeticEvent; trapEffect and
-    //! timeLimit stay the last values.
+    //! timeLimit retain their relative order before the appended campaign victory.
     wallTorches,
     //! A short cosmetic note that something happened (a mood change, a full treasury, a blow, a missile
     //! launch): + a CosmeticEvent (see network/CosmeticEvent.h). Only sent to clients that negotiated
     //! cosmetic events; an older client never gets it. Inserted before creatureAppearance; trapEffect
-    //! and timeLimit stay the last values.
+    //! and timeLimit retain their relative order before the appended campaign victory.
     cosmeticEvent,
     //! The server assigned a Dungeonbook appearance to a creature after it spawned (the portrait manifest
     //! was not available before): + string creature name, string appearance token. Sent once to the
     //! human players that see the creature; clients that see it later get it with the creature data.
-    //! Inserted before relationshipTier; trapEffect and timeLimit stay the last values.
+    //! Inserted before relationshipTier; trapEffect and timeLimit retain their existing positions.
     creatureAppearance,
     //! Owner-only tier of a creature pair that changed (or the current tier, sent once when a
     //! client joins or a game is loaded): + string creatureA, string creatureB, int32_t tier
@@ -195,7 +195,7 @@ enum class ServerNotificationType
     //! The places of the straw nests of a hatchery (the server alone computes them, the clients only draw them):
     //! + string room name, uint32_t count, then per nest: float x, float y, float angle in degrees. Sent to the
     //! human players when the places of the hatchery change and once to a client that joined or loaded.
-    //! Inserted before trapEffect; trapEffect and timeLimit stay the last values.
+    //! Inserted before trapEffect; trapEffect and timeLimit retain their existing positions.
     hatcheryNests,
     //! Rooster flight: name, start and goal Vector3, total turns, elapsed turns.
     chickenRoofFlight,
@@ -204,11 +204,14 @@ enum class ServerNotificationType
     //! Presentation-only effect of a trap or door, sent to the human seats that see the tile:
     //! + int32_t kind (TrapEffectKind), int32_t tileX, int32_t tileY, string type name of the trap or door
     //! (e.g. Alarm, DoorSteel), float health fraction (0 to 1, doors only, else 1).
-    //! Inserted before timeLimit, which stays the last value.
+    //! Inserted before timeLimit, which retains its existing position.
     trapEffect,
     //! The time left until the level is lost: + int32_t seconds (-1: there is no time limit), then an
     //! int32_t with the seconds left until the next hero wave of a level script (-1: none is shown)
-    timeLimit
+    timeLimit,
+    //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
+    //! Appended so existing notification values remain unchanged.
+    campaignVictory
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
@@ -229,6 +232,7 @@ class ServerNotification
 
         ODPacket mPacket;
 
+        //! \brief Returns the diagnostic name of the notification type.
         static std::string typeString(ServerNotificationType type);
 
     private:

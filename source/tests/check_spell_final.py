@@ -24,13 +24,13 @@ def read(*parts):
 
 problems = []
 
-# 1. No new network value: timeLimit is still last
+# 1. Existing network values remain before the appended campaign victory.
 header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-1] != "timeLimit":
-    problems.append("timeLimit is not the last server notification")
+if names[-2:] != ["timeLimit", "campaignVictory"]:
+    problems.append("campaignVictory must follow timeLimit without moving existing values")
 
 # 2. Beam and projectile are wired
 config_h = read("source", "render", "RoomAmbienceConfig.h")

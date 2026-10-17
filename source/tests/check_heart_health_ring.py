@@ -552,6 +552,10 @@ enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
+# Campaign victory appends one value after the historical tail without changing existing ordinals.
+assert enumerators[-4:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory'], enumerators[-4:]
+assert enumerators.count('campaignVictory') == 1
+enumerators = enumerators[:-1]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1

@@ -142,12 +142,12 @@ for family in families:
 need("tools/gen_room_effect_sounds.py" in credits, "no CREDITS entry for the sound script")
 need(re.search(r"^tools/gen_room_effect_sounds\.py\s+OD Team", credits, re.M) is not None, "script entry without author")
 
-# --- no network change
+# --- existing network values precede the appended campaign victory
 notif = read("source", "network", "ServerNotification.h")
 body = notif[notif.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-need(names[-1] == "timeLimit", "timeLimit must stay the last server notification")
+need(names[-2:] == ["timeLimit", "campaignVictory"], "campaignVictory must be appended after timeLimit")
 need("casinoPayout" in names, "casinoPayout must stay")
 
 if problems:
