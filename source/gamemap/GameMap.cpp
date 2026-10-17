@@ -3425,52 +3425,48 @@ std::vector<Tile*> GameMap::getBuildableTilesForPlayerInArea(int x1, int y1, int
     return tiles;
 }
 
-//! \brief Formats every authoritative goal state without hiding the list after victory.
+//! \brief Displays authoritative goal states with graphical marks, including after victory.
 std::string GameMap::getGoalsStringForPlayer(Player* player)
 {
     bool playerIsAWinner = seatIsAWinner(player->getSeat());
     std::stringstream tempSS("");
     Seat* seat = player->getSeat();
     seat->resetGoalsChanged();
-
-    const std::string formatTitleOn = "[font='MedievalSharp-12'][colour='FFF2C860']";
-    const std::string formatTitleOff = "[font='MedievalSharp-10'][colour='FFE8DCC0']";
+    const std::string openGoalMark = "[image='GoalStatus/Open'] ";
+    const std::string reachedGoalMark = "[image='GoalStatus/Reached'] ";
+    const std::string failedGoalMark = "[image='GoalStatus/Failed'] ";
 
     if (playerIsAWinner)
     {
-        tempSS << "Congratulations, you have completed this level.\n\n";
+        tempSS << "Victory!\n";
     }
     if (seat->numFailedGoals() > 0)
     {
         // Loop over the list of completed goals for the seat we are sitting in an print them.
-        tempSS << formatTitleOn << "Failed Goals:\n" << formatTitleOff
-               << "(You cannot complete this level!)\n\n";
         for (unsigned int i = 0; i < seat->numFailedGoals(); ++i)
         {
             Goal *tempGoal = seat->getFailedGoal(i);
-            tempSS << "Failed: " << tempGoal->getFailedMessage(*seat) << "\n";
+            tempSS << failedGoalMark << tempGoal->getDescription(*seat) << "\n";
         }
     }
 
     if (seat->numUncompleteGoals() > 0)
     {
         // Loop over the list of unmet goals for the seat we are sitting in an print them.
-        tempSS << formatTitleOn << "Unfinished Goals:" << formatTitleOff << "\n\n";
         for (unsigned int i = 0; i < seat->numUncompleteGoals(); ++i)
         {
             Goal *tempGoal = seat->getUncompleteGoal(i);
-            tempSS << "Open: " << tempGoal->getDescription(*seat) << "\n";
+            tempSS << openGoalMark << tempGoal->getDescription(*seat) << "\n";
         }
     }
 
     if (seat->numCompletedGoals() > 0)
     {
         // Loop over the list of completed goals for the seat we are sitting in an print them.
-        tempSS << "\n" << formatTitleOn << "Completed Goals:" << formatTitleOff << "\n\n";
         for (unsigned int i = 0; i < seat->numCompletedGoals(); ++i)
         {
             Goal *tempGoal = seat->getCompletedGoal(i);
-            tempSS << "Reached: " << tempGoal->getSuccessMessage(*seat) << "\n";
+            tempSS << reachedGoalMark << tempGoal->getDescription(*seat) << "\n";
         }
     }
 
@@ -3495,18 +3491,17 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
             else
             {
                 const LevelScriptObjectiveState state = script.getObjectiveState(seat->getId(), action.mObjectiveId);
-                std::string stateText = "Open";
+                std::string stateMark = openGoalMark;
                 if(state == LevelScriptObjectiveState::reached)
-                    stateText = "Reached";
+                    stateMark = reachedGoalMark;
                 else if(state == LevelScriptObjectiveState::failed)
-                    stateText = "Failed";
-                scriptObjectives.push_back(stateText + " (" + action.mObjectiveId + "): " + action.mText);
+                    stateMark = failedGoalMark;
+                scriptObjectives.push_back(stateMark + action.mText);
             }
         }
     }
     if(!scriptObjectives.empty())
     {
-        tempSS << "\n" << formatTitleOn << "Script objectives:" << formatTitleOff << "\n\n";
         for(const std::string& objective : scriptObjectives)
             tempSS << objective << "\n";
     }

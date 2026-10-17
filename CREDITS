@@ -1201,3 +1201,8 @@ source/tests/fixtures/portraits/    OD Team    GPLv3+    Solid colour test image
 sounds/Spatial/Rooms/Torch/Loop/FxWallTorchLoop01.ogg   PagDev   CC0   https://opengameart.org/content/fireplace-sound-loop (fire.wav, wood fire recording); converted to mono Ogg Vorbis, not AI generated
 
 materials/scripts/ChickenCoop.material OD Team                 GPLv3+                  ChickenCoopInterior: dark, matte textured inner lining, original material added for the existing coop cavity
+
+=============================================================
+==  Graphical goal status indicators                       ==
+=============================================================
+gui/GoalStatus.svg, gui/GoalStatus.png    OpenDungeonsPlus contributors    CC0-1.0    Original AI-assisted procedural vector artwork; source: gui/GoalStatus.svg. Raster export for the graphical open, reached and failed goal markers.
