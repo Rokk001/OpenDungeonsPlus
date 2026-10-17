@@ -121,6 +121,8 @@ const double SCARE_RADIUS = 9.0;
 const double NEIGHBOUR_RADIUS = 6.0;
 //! The creatures that catch a yawn show it after this much time
 const double YAWN_CATCH_DELAY = 1.1;
+//! Reuse the hand's four-frame transition length for short, interruptible reaction blends.
+static const double REACTION_BLEND_SECONDS = 4.0 / 30.0;
 
 //! Seconds the target of a slap request is remembered until the server confirms the slap
 const double SLAP_MEMORY = 3.0;
@@ -316,6 +318,7 @@ bool CreatureReactions::isCreatureNearCamera(Creature* creature) const
     return distance <= static_cast<Ogre::Real>(mConfig.getMaxCameraDistance());
 }
 
+//! \brief Protects gameplay and bed transitions while allowing reactions that decorate logical sleep or work.
 ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature, const ReactionEvent* event) const
 {
     Ogre::AnimationState* animState = creature->getAnimationState();
@@ -334,7 +337,8 @@ ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature
 
     // The event decorates the work or sleep animation: that is what the creature is expected to do
     if((event != nullptr) && event->mWhileWorking &&
-       (startsWith(clip, "Sleep") || (clip == "Dig") || (clip == "Claim") || (clip == "Flee")))
+       ((creature->getAnimationStateName() == EntityAnimation::sleep_anim) ||
+        (clip == "Dig") || (clip == "Claim") || (clip == "Flee")))
     {
         return ReactionPriority::none;
     }
@@ -350,7 +354,8 @@ ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature
         return ReactionPriority::combat;
     }
 
-    if(startsWith(clip, "Sleep") || (clip == "Drop") || (clip == "GetUp") || (clip == "EatChicken"))
+    if(startsWith(clip, "Sleep") || (clip == "SettleToSleep") ||
+       (clip == "Drop") || (clip == "GetUp") || (clip == "EatChicken"))
         return ReactionPriority::held;
 
     if((clip == "Dig") || (clip == "Claim"))
@@ -880,6 +885,7 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
     return true;
 }
 
+//! \brief Starts an available reaction clip whose completion is tracked independently of effect timers.
 bool CreatureReactions::startClip(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant)
 {
     Ogre::Entity* entity = getCreatureEntity(creature);
@@ -929,24 +935,22 @@ bool CreatureReactions::startClip(RunningReaction& reaction, Creature* creature,
     Ogre::AnimationState* animState = entity->getAnimationState(clip);
     animState->setLoop(false);
     animState->setTimePosition(static_cast<Ogre::Real>(start * animState->getLength()));
-    animState->setWeight(1.0f);
+    animState->setWeight(0.0f);
     animState->setEnabled(true);
 
-    // The clip of the creature goes on running (it is advanced by the entity as before) but is
-    // not shown, so that both clips are not blended into a mess
-    base->setWeight(0.0f);
+    // The clip of the creature goes on running, providing the current pose for the entry and exit blend.
+    base->setWeight(1.0f);
 
     reaction.mClip = clip;
     reaction.mClipSpeed = speed;
+    reaction.mClipStart = start;
     reaction.mClipEnd = end;
     reaction.mBaseClip = base->getAnimationName();
 
-    double clipSeconds = ((end - start) * static_cast<double>(animState->getLength())) /
-        (ODApplication::turnsPerSecond * speed);
-    reaction.mDuration = std::max(reaction.mDuration, clipSeconds);
     return true;
 }
 
+//! \brief Removes the reaction overlay without disabling a clip that gameplay has adopted as its base.
 void CreatureReactions::stopClip(RunningReaction& reaction, Creature* creature)
 {
     if(reaction.mClip.empty())
@@ -955,14 +959,15 @@ void CreatureReactions::stopClip(RunningReaction& reaction, Creature* creature)
     Ogre::Entity* entity = (creature != nullptr) ? getCreatureEntity(creature) : nullptr;
     if(entity != nullptr)
     {
+        Ogre::AnimationState* base = creature->getAnimationState();
         if(entity->hasAnimationState(reaction.mClip))
         {
             Ogre::AnimationState* animState = entity->getAnimationState(reaction.mClip);
-            animState->setEnabled(false);
+            if(animState != base)
+                animState->setEnabled(false);
             animState->setWeight(1.0f);
         }
 
-        Ogre::AnimationState* base = creature->getAnimationState();
         if(base != nullptr)
             base->setWeight(1.0f);
     }
@@ -1206,23 +1211,27 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     reaction.mMotionAngle = angle;
 }
 
+//! \brief Removes the pose offset without advancing the reaction's shared clock.
 void CreatureReactions::clearMotion(RunningReaction& reaction, Creature* creature)
 {
     if((reaction.mMotion.mType == ReactionMotion::Type::none) || (creature == nullptr))
         return;
 
     // Past the end of the motion, so that everything it added is taken away
+    const double elapsed = reaction.mElapsed;
     reaction.mElapsed = reaction.mMotion.mDuration;
     applyMotion(reaction, creature);
+    reaction.mElapsed = elapsed;
 
     reaction.mMotion = ReactionMotion();
 }
 
+//! \brief Advances effects and clips in game time until both finish or gameplay interrupts them.
 bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* creature,
         Ogre::Real timeSinceLastFrame)
 {
     reaction.mElapsed += timeSinceLastFrame;
-    if(reaction.mElapsed >= reaction.mDuration)
+    if((reaction.mElapsed >= reaction.mDuration) && reaction.mClip.empty())
         return false;
 
     // Something more important than the reaction now happens to the creature
@@ -1250,9 +1259,22 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
             stop = !animState->getEnabled();
             if(!stop)
             {
-                double step = ODApplication::turnsPerSecond * static_cast<double>(timeSinceLastFrame) *
+                const double speed = ODApplication::turnsPerSecond *
                     creature->getAnimationSpeedFactor() * reaction.mClipSpeed;
+                const double step = static_cast<double>(timeSinceLastFrame) * speed;
                 animState->addTime(static_cast<Ogre::Real>(step));
+                const double start = reaction.mClipStart * animState->getLength();
+                const double end = reaction.mClipEnd * animState->getLength();
+                const double fade = std::min(REACTION_BLEND_SECONDS * speed, (end - start) * 0.5);
+                if(fade > 0.0)
+                {
+                    double weight = std::max(0.0, std::min(1.0, std::min(
+                        (animState->getTimePosition() - start) / fade,
+                        (end - animState->getTimePosition()) / fade)));
+                    weight = weight * weight * (3.0 - 2.0 * weight);
+                    animState->setWeight(static_cast<Ogre::Real>(weight));
+                    base->setWeight(static_cast<Ogre::Real>(1.0 - weight));
+                }
                 stop = animState->hasEnded() ||
                     (animState->getTimePosition() >= static_cast<Ogre::Real>(reaction.mClipEnd) * animState->getLength());
             }
@@ -1271,7 +1293,7 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
 
     applyMotion(reaction, creature);
     updateProps(reaction, creature);
-    return true;
+    return !reaction.mClip.empty() || (reaction.mElapsed < reaction.mDuration);
 }
 
 void CreatureReactions::updateLate(RunningReaction& reaction, Creature* creature)

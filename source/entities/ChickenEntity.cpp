@@ -453,15 +453,18 @@ void ChickenEntity::playPose(const std::string& pose, uint32_t turns)
     clearDestinations(pose, true, false);
 }
 
+//! \brief Stops both birds before synchronizing their mating poses and facing direction.
 void ChickenEntity::mountHen(ChickenEntity& hen)
 {
     Ogre::Vector3 direction = hen.getWalkDirection();
     if(direction.squaredLength() < 0.000001f)
         direction = Ogre::Vector3::NEGATIVE_UNIT_Y;
-    setWalkDirection(direction);
     mMountHenName = hen.getName();
     hen.playPose(ChickenPose::cackle, 3);
     playPose(ChickenPose::mount, 3);
+    // Clearing the old paths can restore their final headings, so announce the shared heading afterwards.
+    hen.setAnimationState(ChickenPose::cackle, true, direction, false);
+    setAnimationState(ChickenPose::mount, true, direction, false);
     for(Seat* seat : mSeatsWithVisionNotified)
     {
         if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())

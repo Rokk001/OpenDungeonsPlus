@@ -8,6 +8,9 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Keep creature poses and room reactions aligned with pause and game speed, let slowed reaction clips finish, preserve sleeping occupancy, and keep cosmetic wake-up stretches from replacing important actions.
+* Align mating birds after stopping their paths, show melee reactions at the displayed strike contact, and animate wall-torch flames as rising, fading tongues instead of a stationary image.
+* Give hens and roosters complete articulated flight feathers, close visible movement-loop seams in chickens, hornets and small spiders, and blend cosmetic reactions and normal waking back into their base poses.
 * Creatures can get an individual picture in the Dungeonbook, composed from a neutral base and one part per slot (chosen once when the creature spawns and stored in the save game as an optional field; old saves still load) together with short profile remarks that match the parts. Without the part images the Dungeonbook keeps the previous portrait
 * Legacy multiplayer descriptions use the official worker name.
 * Campaign levels now keep the creature types of the human keeper limited per level (Block lines of the level script); the file format and the save format are unchanged

@@ -337,12 +337,14 @@ private:
     };
 
     void buildIndex();
+    //! \brief Collects visible effects and occupants using their logical animation states.
     void scan();
     //! \brief Hands the torch list of the client map to mWallTorches when it has changed
     void syncWallTorches();
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
+    //! \brief Detects creature events using logical sleep states rather than rendered clip names.
     void scanCreatureEvents();
     //! \brief Raises HeartHit (and the state for "When Hit") when the health of the own dungeon heart, as the heart badge
     //! shows it, has gone down since the last scan
@@ -389,6 +391,7 @@ private:
     bool playEventClip(const AmbienceEffect& effect, const Ogre::Vector3& position);
     //! \brief Plays the clip of an event effect (kind creatureClip) once on the creature; false when it is on its way,
     //! unknown or has no such clip
+    //! \brief Plays an ambient clip only on an idle creature that is alive and conscious.
     bool playCreatureClip(const AmbienceEffect& effect, const std::string& creatureName);
     //! \brief Lets an object that loops the clip of the effect (kind clip with Loop) finish on the last pose of the clip,
     //! which is its pose at rest

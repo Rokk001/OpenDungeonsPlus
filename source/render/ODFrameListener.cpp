@@ -385,6 +385,7 @@ void ODFrameListener::exitApplication()
     mInitialized = false;
 }
 
+//! \brief Keeps interface time independent while advancing world effects at the game speed.
 void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
 {
     updateMenuScene(timeSinceLastFrame);
@@ -394,12 +395,14 @@ void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
 
     mGameMap->updateAnimations(timeSinceLastFrame);
 
+    const Ogre::Real gameTime = timeSinceLastFrame * static_cast<Ogre::Real>(mGameMap->getGameSpeedFactor());
+
     // Cosmetic creature reactions. Like the animations, they stand still while the game is paused.
     if(!mGameMap->getGamePaused())
-        mCreatureReactions->update(timeSinceLastFrame);
+        mCreatureReactions->update(gameTime);
     // Cosmetic life in the rooms. Like the animations, it stands still while the game is paused.
     if(!mGameMap->getGamePaused())
-        mRoomAmbience->update(timeSinceLastFrame);
+        mRoomAmbience->update(gameTime);
 }
 
 bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
