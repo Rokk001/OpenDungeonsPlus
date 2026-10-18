@@ -34,9 +34,11 @@ out mat3 TBN;
  
 float freq = 3.1415; 
  
+// Keeps unknown-wall borders aligned with adjacent tiles while retaining interior noise.
 vec3 deform(vec3 pos) {
-    pos.x += perlin(pos.x,pos.y);
-    pos.y += perlin(pos.y,pos.x);
+    float fade = tileBorderFade(pos.xy);
+    pos.x += fade * perlin(pos.x,pos.y);
+    pos.y += fade * perlin(pos.y,pos.x);
     return pos;
 }
  

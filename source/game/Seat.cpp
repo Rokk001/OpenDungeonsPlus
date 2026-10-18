@@ -16,6 +16,7 @@
  */
 
 #include "game/Seat.h"
+#include "ODApplication.h"
 
 #include "ai/KeeperAIType.h"
 #include "entities/Building.h"
@@ -50,6 +51,8 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <limits>
+#include <cmath>
 #include <istream>
 #include <ostream>
 
@@ -69,6 +72,8 @@ TileStateNotified::TileStateNotified():
     mMarkedForDigging(false),
     mVisionTurnLast(false),
     mVisionTurnCurrent(false),
+    mOwnCreatureSightAgeTurns(-1),
+    mEnemyFogNotified(false),
     mBuilding(nullptr)
 {
 }
@@ -274,6 +279,9 @@ void Seat::clearTilesWithVision()
 
         p.second.mVisionTurnLast = p.second.mVisionTurnCurrent;
         p.second.mVisionTurnCurrent = false;
+        if(p.second.mOwnCreatureSightAgeTurns >= 0 &&
+           p.second.mOwnCreatureSightAgeTurns < std::numeric_limits<int64_t>::max())
+            ++p.second.mOwnCreatureSightAgeTurns;
 
     }
     for(std::pair<Tile* const ,TileStateNotified>& p: mDraggableTilesStates)
@@ -314,6 +322,14 @@ bool Seat::hasSeenTile(Tile* tile)
     return getTileStateNotified(tile) != nullptr;
 }
 
+//! \brief Resets the own-creature sight age, excluding map reveals and allied sight.
+void Seat::notifyOwnCreatureVision(Tile* tile)
+{
+    if(tile == nullptr || mPlayer == nullptr || !mPlayer->getIsHuman())
+        return;
+    mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
+}
+
 void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 {
     if(mPlayer == nullptr)
@@ -327,6 +343,9 @@ void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 
     if( nt == NodeType::MTILES_NODE)
     {
+        // Every first discovery starts a grace period; only own-creature sight resets it later.
+        if(mTilesStates[tile].mOwnCreatureSightAgeTurns < 0)
+            mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
         mTilesStates[tile].mVisionTurnCurrent =  true;
         mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId] = true;
     }
@@ -550,6 +569,14 @@ void Seat::initSeat()
                 continue;
             }
 
+            // Legacy saves have no sight ages: give only previously discovered tiles one initial grace period.
+            if(!mHasSavedOwnCreatureSightAges &&
+               mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId])
+                p.second.mOwnCreatureSightAgeTurns = 0;
+
+            mTilesStates[tile].mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns;
+            mTilesStates[tile].mSeatIdOwner = p.second.mSeatIdOwner;
+
             // We check if the tile is marked
             if(p.second.mMarkedForDigging)
                 tilesMark.push_back(tile);
@@ -591,6 +618,7 @@ void Seat::initSeat()
 
         getPlayer()->markTilesForDigging(true, tilesMark, false);
     }
+    mHasSavedOwnCreatureSightAges = true;
 }
 
 void Seat::setMapSize(GameMap* gameMapPointer,int x, int y)
@@ -909,10 +937,21 @@ void Seat::sendVisibleTiles()
         ServerNotificationType::refreshVisibleTiles, getPlayer());
     std::vector<Tile*> tilesVisionGained;
     std::vector<Tile*> tilesVisionLost;
+    std::vector<std::pair<Tile*, bool>> fogChanges;
     
     serverNotification->mPacket << NodeType::MTILES_NODE;
         for(std::pair<Tile* const, TileStateNotified> &p : mTilesStates)
         {
+            Seat* knownOwner = mGameMap->getSeatById(p.second.mSeatIdOwner);
+            const bool enemyFog = knownOwner != nullptr && !knownOwner->isRogueSeat() &&
+                knownOwner != this && !isAlliedSeat(knownOwner) &&
+                p.second.mOwnCreatureSightAgeTurns >= static_cast<int64_t>(std::ceil(30.0 * ODApplication::turnsPerSecond));
+            if(enemyFog != p.second.mEnemyFogNotified)
+            {
+                p.second.mEnemyFogNotified = enemyFog;
+                fogChanges.push_back(std::make_pair(p.first, enemyFog));
+            }
+
             if(p.second.mVisionTurnCurrent == p.second.mVisionTurnLast)
                 continue;
 
@@ -945,6 +984,18 @@ void Seat::sendVisibleTiles()
         mGameMap->tileToPacket(serverNotification->mPacket, tile);
     }
     ODServer::getSingleton().queueServerNotification(serverNotification);
+
+    if(!fogChanges.empty())
+    {
+        ServerNotification* fogNotification = new ServerNotification(ServerNotificationType::enemyTerritoryFog, getPlayer());
+        fogNotification->mPacket << static_cast<uint32_t>(fogChanges.size());
+        for(const auto& change : fogChanges)
+        {
+            mGameMap->tileToPacket(fogNotification->mPacket, change.first);
+            fogNotification->mPacket << change.second;
+        }
+        ODServer::getSingleton().queueServerNotification(fogNotification);
+    }
 
 
     nbTiles =0;
@@ -1396,6 +1447,28 @@ bool Seat::importSeatFromStream(std::istream& is)
     }
 
     
+    if(str == "[OwnCreatureSightAges]")
+    {
+        mHasSavedOwnCreatureSightAges = true;
+        while(true)
+        {
+            OD_ASSERT_TRUE(is >> str);
+            if(str == "[/OwnCreatureSightAges]")
+                break;
+            const int x = Helper::toInt(str);
+            int y;
+            int64_t age;
+            OD_ASSERT_TRUE(is >> y >> age);
+            if(x < 0 || y < 0 || age < 0)
+                return false;
+            TileStateNotified& state = mTilesStateLoaded[std::make_pair(x, y)];
+            if(state.mOwnCreatureSightAgeTurns >= 0)
+                return false;
+            state.mOwnCreatureSightAgeTurns = age;
+        }
+        OD_ASSERT_TRUE(is >> str);
+    }
+
     if(str != "[/Seat]")
     {
         OD_LOG_INF("WARNING: expected [/Seat] and read " + str);
@@ -1583,6 +1656,15 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         }
     }
     os << "[/EverVisitedTiles]" << std::endl;
+
+    os << "[OwnCreatureSightAges]\n";
+    for(const auto& entry : mTilesStates)
+    {
+        if(entry.second.mOwnCreatureSightAgeTurns >= 0)
+            os << entry.first->getX() << "\t" << entry.first->getY() << "\t"
+               << entry.second.mOwnCreatureSightAgeTurns << "\n";
+    }
+    os << "[/OwnCreatureSightAges]\n";
 
     
     return true;

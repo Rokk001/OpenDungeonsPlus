@@ -1453,6 +1453,23 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::enemyTerritoryFog:
+        {
+            uint32_t count;
+            OD_ASSERT_TRUE(packetReceived >> count);
+            while(count-- > 0)
+            {
+                Tile* tile = gameMap->tileFromPacket(packetReceived);
+                bool fogged;
+                OD_ASSERT_TRUE(packetReceived >> fogged);
+                if(tile == nullptr)
+                    continue;
+                tile->setEnemyTerritoryFog(fogged);
+                tile->refreshMesh(NodeType::MTILES_NODE, gameMap);
+            }
+            break;
+        }
+
         case ServerNotificationType::refreshTiles:
         {
             uint32_t nbTiles;

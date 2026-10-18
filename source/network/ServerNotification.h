@@ -211,7 +211,10 @@ enum class ServerNotificationType
     timeLimit,
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
-    campaignVictory
+    campaignVictory,
+    //! \brief Delayed enemy fog changes: count, then tile coordinates and bool fogged per tile.
+    //! Appended to preserve existing notification values.
+    enemyTerritoryFog
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

@@ -83,6 +83,7 @@ Tile::Tile(GameMap* gameMap, int x, int y, TileType type, double fullness) :
     mFogPresent          (false),
     mEverVisible         (false),
     mLocalPlayerHasVision   (false),
+    mEnemyTerritoryFog(false),
     mTileCulling        (CullingType::HIDE),
     mNbWorkersClaiming(0),
     mStatsWindow             (nullptr),
@@ -116,7 +117,8 @@ void Tile::transfer(Tile* tt)
     mDisplayTileMesh = tt->mDisplayTileMesh;    
     mColorCustomMesh = tt->mColorCustomMesh;  
     mHasBridge = tt->mHasBridge;         
-    mLocalPlayerHasVision = tt->mLocalPlayerHasVision; 
+    mLocalPlayerHasVision = tt->mLocalPlayerHasVision;
+    mEnemyTerritoryFog = tt->mEnemyTerritoryFog;
     mTileCulling = tt->mTileCulling;       
     
 }
