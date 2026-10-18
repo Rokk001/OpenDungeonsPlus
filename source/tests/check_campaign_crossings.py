@@ -19,7 +19,7 @@ script = read("source/gamemap/LevelScript.cpp")
 walk = read("source/entities/MovableGameEntity.cpp")
 observer = body(script, "void LevelScript::observeCrossingStep(")
 for guard in ("condition.mSeatId != seatId", "required->mTimesFired == 0",
-              "progress.mCreature == creature", "candidate->mX != fromX",
+              "candidate->mCreature == creature", "candidate->mX != fromX",
               "std::abs(toX - fromX) > 1", "region->contains(toX, toY)",
               "before == low && after == low - 1", "before == high && after == high + 1",
               "!observed.insert(key).second"):
