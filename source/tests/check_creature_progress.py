@@ -22,7 +22,8 @@ def function(path, signature):
 creature = 'source/entities/Creature.cpp'
 methods = '\n'.join(function(creature, sig) for sig in (
     'double Creature::getExperienceProgress()', 'void Creature::exportProgressToPacket(',
-    'void Creature::importProgressFromPacket(', 'void Creature::receiveExp('))
+    'void Creature::importProgressFromPacket(', 'void Creature::receiveExp(',
+    'void Creature::recordWorkerStepRecovery('))
 clock = function('source/render/CreatureOverlayStatus.cpp', 'void CreatureOverlayStatus::updateProgress(')
 source = (root / creature).read_text()
 for sig in ('void Creature::exportToPacket(', 'void Creature::exportToPacketForUpdate('):
@@ -70,6 +71,8 @@ struct Creature {
  CreatureActivity getActivity() const {CreatureActivity activity;if(working)activity.action=CreatureActionType::useRoom;return activity;}
 
  bool getIsOnServerMap()const{return server;}std::string getName()const{return "probe";}
+ //! \brief Records the real one-turn interval using the production method below.
+ void recordWorkerStepRecovery();
  double getExperienceProgress()const;void receiveExp(double);
  void exportProgressToPacket(ODPacket&,const Seat*)const;void importProgressFromPacket(ODPacket&);
  bool hasProgressInformation()const{return mHasProgressInformation;}
@@ -92,7 +95,7 @@ struct CreatureOverlayStatus {
  void updateProgress(float);
 };
 CLOCK
-//! \brief Checks progress packets and the unchanged clock for attacks and actual job pauses.
+//! \brief Checks progress packets and the unchanged clock for attacks, room pauses and worker steps.
 int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<why<<'\n';}};
  Seat seat;Creature a,b;b.server=false;
  for(unsigned level=1;level<=30;++level)for(double xp:{0.,25.,100.,150.}){
@@ -130,6 +133,15 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  b.mAttackRecoveryTurns=1;status.updateProgress(0);check(overlay.frames[2]==47,"server corrects recovery");
  b.mAttackRecoveryTurns=0;status.updateProgress(0);check(overlay.frames[2]==0,"ready hides clock");
  b.mAttackRecoveryTurns=4;++b.mAttackRecoverySerial;status.updateProgress(0);check(overlay.frames[2]==1,"repeated attack resets clock");
+ a.working=false;a.mAttackRecoverySerial=150;
+ for(unsigned step=1;step<=3;++step){
+  a.mNeedFireRefresh=false;a.recordWorkerStepRecovery();
+  ODPacket packet;a.exportProgressToPacket(packet,&seat);b.importProgressFromPacket(packet);
+  check(b.mAttackRecoveryTurns==1&&b.mAttackRecoveryDuration==1&&b.mAttackRecoverySerial==150+step&&a.mNeedFireRefresh,"worker step reports actual upkeep interval");
+  status.updateProgress(0);check(overlay.frames[2]==1,"each worker step restarts the existing ring");
+  status.updateProgress(.35f);check(overlay.frames[2]>1&&overlay.frames[2]<63,"worker interval sweeps within the server turn");
+  auto paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
+ }
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }

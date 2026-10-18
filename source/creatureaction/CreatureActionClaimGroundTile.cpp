@@ -42,6 +42,7 @@ std::function<bool()> CreatureActionClaimGroundTile::action()
         std::ref(mCreature), std::ref(mTileClaim));
 }
 
+//! \brief Performs the existing claim step and reports its one-upkeep interval without delaying work.
 bool CreatureActionClaimGroundTile::handleCreatureActionClaimGroundTile(Creature& creature, Tile& tileClaim)
 {
     Tile* myTile = creature.getPositionTile();
@@ -71,6 +72,7 @@ bool CreatureActionClaimGroundTile::handleCreatureActionClaimGroundTile(Creature
         creature.setAnimationState(EntityAnimation::claim_anim);
         room->repairClaimHealth(creature.getClaimRate());
         creature.receiveExp(1.5 * (creature.getClaimRate() / (0.35 + 0.05 * creature.getLevel())));
+        creature.recordWorkerStepRecovery();
         return false;
     }
 
@@ -84,6 +86,7 @@ bool CreatureActionClaimGroundTile::handleCreatureActionClaimGroundTile(Creature
     creature.setAnimationState(EntityAnimation::claim_anim);
     myTile->claimForSeat(creature.getSeat(), creature.getClaimRate());
     creature.receiveExp(1.5 * (creature.getClaimRate() / (0.35 + 0.05 * creature.getLevel())));
+    creature.recordWorkerStepRecovery();
 
     // Since we danced on a tile we are done for this turn
     return false;

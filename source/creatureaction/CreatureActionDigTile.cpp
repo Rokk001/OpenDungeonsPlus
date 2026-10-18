@@ -63,7 +63,7 @@ std::function<bool()> CreatureActionDigTile::action()
         std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos));
 }
 
-//! \brief Performs the existing dig action and observes exact credited gold at its source tile for presentation goals.
+//! \brief Performs digging with unchanged timing and reports actual gold and the interval to the next step.
 bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
 {
     Tile* myTile = creature.getPositionTile();
@@ -227,5 +227,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             creature.getSeat()->getPlayer()->notifyNoTreasuryAvailable();
         }
     }
+    if(amountDug > 0.0 && tileDig.getFullness() > 0.0)
+        creature.recordWorkerStepRecovery();
     return false;
 }

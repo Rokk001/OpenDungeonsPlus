@@ -6167,6 +6167,15 @@ void Creature::checkWalkPathValid(bool includeWalkDistortion)
     clearDestinations(EntityAnimation::idle_anim, true, true);
 }
 
+//! \brief Reports the one-upkeep interval after a worker step; action scheduling remains unchanged.
+void Creature::recordWorkerStepRecovery()
+{
+    mAttackRecoveryDuration = 1;
+    mAttackRecoveryTurns = mAttackRecoveryDuration;
+    ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
+}
+
 void Creature::setJobCooldown(int val)
 {
     // If the creature has been slapped, its cooldown is decreased

@@ -605,6 +605,8 @@ public:
     }
     //! \brief Sets the existing job pause and records its duration for the progress ring.
     void setJobCooldown(int val);
+    //! \brief Reports the existing one-turn interval between worker dig or claim steps without delaying work.
+    void recordWorkerStepRecovery();
     inline int getJobCooldown() const
     { return mJobCooldown; }
 

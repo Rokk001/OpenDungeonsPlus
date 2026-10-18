@@ -33,6 +33,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Claims or repairs the target with unchanged timing and reports the interval to the next step.
     static bool handleClaimWallTile(Creature& creature, Tile& tileClaim);
 
 private:
