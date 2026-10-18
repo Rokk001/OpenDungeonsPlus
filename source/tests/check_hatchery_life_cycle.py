@@ -382,3 +382,15 @@ for nominal in (1, 7, 42, 84):
     assert min(durations) * 100 >= nominal * 80 and max(durations) * 100 <= nominal * 120
     assert durations == set(range(low, high + 1))
 print('room-only capacity, immediate nest dispatch, persisted jitter and adult mating source contracts passed')
+
+# Unfinished or anonymous reservations must never release an egg without its laying hen.
+release = body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+trips = body(room_cpp, 'void RoomHatchery::updateNestTrips')
+assert '(it->mTurns == 0) && !it->mHen.empty() && it->mPosing' in release
+assert 'it->mHen.empty() || it->mPosing' not in release
+anonymous = trips[trips.index('if(it->mHen.empty())'):trips.index('ChickenEntity* hen = nullptr;')]
+assert 'mPendingEggs.erase(it)' in anonymous and '--it->mTurns' not in anonymous
+missing = trips[trips.index('if(hen == nullptr)'):trips.index('if(hen->isLeavingCoop())')]
+assert 'mPendingEggs.erase(it)' in missing and 'it->mTurns = 0' not in missing
+assert trips.index('if(!arrived') < trips.index('hen->playPose(ChickenPose::lay')
+print('anonymous and interrupted laying cannot produce eggs: source guards passed')
