@@ -965,9 +965,29 @@ File: `levels/campaign/Stormhaven.level`.
 | Script line 4025 | `Action	objectiveid	1	stormhaven-o01	Destroy every rival keeper's heart.` | yes |
 | Script line 4026 | `Action	objectiveid	1	stormhaven-o02	Cross the inlet by the stone bridges.` | yes |
 | Script line 4027 | `Action	objectiveid	1	stormhaven-o03	Prevent the keepers from joining forces.` | yes |
-| Script line 4265 | `Action	win	1` | yes |
-| Script line 4270 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4273 | `Action	win	1` | yes |
+| Script line 4264 | `Action	win	1` | yes |
+| Script line 4269 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4271 | `Action	win	1` | yes |
+| Script line 4378 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `stormhaven-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `stormhaven-main-spans`: Cross and control both stone bridges. | `mainSpans`: Cond	flag	mainSouthCrossed	1; Cond	flag	mainNorthCrossed	1; Cond	roomclaimed	1	30	70	34	71; Cond	roomclaimed	1	30	33	34	34 |
+| main | `stormhaven-main-keepers`: Destroy all four rival hearts and enemy forces. | `mainKeepers`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `stormhaven-extra-cave`: Explore the hidden storm cave. | `extraCave`: Cond	region	1	GaleCave |
+
+Possible route (static, not a playthrough):
+- Cross both actual stone bridges with own living creatures: South StoneBridge2(30..34,70..71),North StoneBridge1(30..34,33..34). Either east or west direction qualifies; no prescribed order. Each crossing tracks the same creature from one dry bank through the whole bridge to the opposite bank. Visits and mixed visitors do not count.
+- Claim all ten original bridge fields on each span; keep both bridges currently owned until victory. RoomBridge uses the shared takeover pool and Room::claimForSeat claims all resulting tiles. Water beneath bridges is not an excuse to skip their ownership.
+- Protect the heart and destroy all four rival temples,seats2..5,then remaining forces/portals. Preserve original pact changes, nine attacking waves and north portal activation.
+- Optionally enter GaleCave(26,2)-(42,6),30reachable open dry fields. The prior alliance-prevention legacy objective remains hidden when grouped and does not block the new main goals; no alliance gameplay is removed.
+- Unchanged victory sentence occurs once after all current main observers. Original pending win requests remain.
+
+Static bridge/bank/takeover source evidence only; actual crossing, claiming, combat and save/load remain for runtime verification.
+
 | Trigger `goalPactFormedQuayEntered` | `Action	objectivestate	1	stormhaven-o03	failed`; conditions: `Cond	trigger	quayEntered; Cond	objective	1	stormhaven-o03	open` | yes |
 | Trigger `goalPactFormedDockEntered` | `Action	objectivestate	1	stormhaven-o03	failed`; conditions: `Cond	trigger	dockEntered; Cond	objective	1	stormhaven-o03	open` | yes |
 | Trigger `goalPactFormedTideTurns` | `Action	objectivestate	1	stormhaven-o03	failed`; conditions: `Cond	trigger	tideTurns; Cond	objective	1	stormhaven-o03	open` | yes |
@@ -975,7 +995,12 @@ File: `levels/campaign/Stormhaven.level`.
 | Trigger `goalPactsPrevented` | `Action	objectivestate	1	stormhaven-o03	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	trigger	quayEntered	0; Cond	trigger	dockEntered	0; Cond	trigger	tideTurns	0; Cond	trigger	tideTurns2	0` | yes |
 | Trigger `goalStormhavenBothSpans` | `Action	objectivestate	1	stormhaven-o02	reached`; conditions: `Cond	flag	goalStormhavenSpan1After	1; Cond	flag	goalStormhavenSpan2After	1` | yes |
 | Trigger `stormEndsGoal` | `Action	objectivestate	1	stormhaven-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Control the stone spans and destroy every rival heart. | no: enemy temples are checked; stone-span control is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	stormhaven-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	stormhaven-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainSpans` | `Action	objectivestate	1	stormhaven-main-spans	reached`; conditions: `Cond	flag	mainSouthCrossed	1; Cond	flag	mainNorthCrossed	1; Cond	roomclaimed	1	30	70	34	71; Cond	roomclaimed	1	30	33	34	34` | yes |
+| Trigger `mainKeepers` | `Action	objectivestate	1	stormhaven-main-keepers	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraCave` | `Action	objectivestate	1	stormhaven-extra-cave	reached`; conditions: `Cond	region	1	GaleCave` | yes |
+| Briefing | Control the stone spans and destroy every rival heart. | yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated |
 
 ## SwarmNight
 

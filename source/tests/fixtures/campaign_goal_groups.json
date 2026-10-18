@@ -6702,5 +6702,553 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet. The heart gives you a shard."
     }
+  },
+  "Stormhaven": {
+    "goals": {
+      "stormhaven-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "stormhaven-main-spans": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross and control both stone bridges.",
+        "completion": "mainSpans",
+        "conditions": [
+          "Cond\tflag\tmainSouthCrossed\t1",
+          "Cond\tflag\tmainNorthCrossed\t1",
+          "Cond\troomclaimed\t1\t30\t70\t34\t71",
+          "Cond\troomclaimed\t1\t30\t33\t34\t34"
+        ],
+        "mode": "repeat\t0"
+      },
+      "stormhaven-main-keepers": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy all four rival hearts and enemy forces.",
+        "completion": "mainKeepers",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t4\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t5\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "stormhaven-extra-cave": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the hidden storm cave.",
+        "completion": "extraCave",
+        "conditions": [
+          "Cond\tregion\t1\tGaleCave"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "stormhaven-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "crossSouthEast": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainSouthBridge\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainSouthCrossed\t1"
+        ]
+      },
+      "crossSouthWest": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainSouthBridge\twest"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainSouthCrossed\t1"
+        ]
+      },
+      "crossNorthEast": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainNorthBridge\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainNorthCrossed\t1"
+        ]
+      },
+      "crossNorthWest": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainNorthBridge\twest"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainNorthCrossed\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tstormhaven-main-heart\treached",
+          "Cond\tobjective\t1\tstormhaven-main-spans\treached",
+          "Cond\tobjective\t1\tstormhaven-main-keepers\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe last keeper is dead and the harbour lies calm. Stormhaven answers to you.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "landfall": [
+        "Cond\ttime\t3"
+      ],
+      "coveHeld": [
+        "Cond\tclaimed\t1\tCove\t30"
+      ],
+      "quayEntered": [
+        "Cond\tregion\t1\tEastQuay"
+      ],
+      "dockEntered": [
+        "Cond\tregion\t1\tWestDock"
+      ],
+      "spanSeen": [
+        "Cond\tregion\t1\tSouthSpan"
+      ],
+      "basinSeen": [
+        "Cond\tregion\t1\tBasin"
+      ],
+      "northSpan": [
+        "Cond\tregion\t1\tNorthSpan"
+      ],
+      "lightSeen": [
+        "Cond\tregion\t1\tLighthouse"
+      ],
+      "gale": [
+        "Cond\tregion\t1\tGaleCave"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t3000"
+      ],
+      "tide1": [
+        "Cond\ttime\t500"
+      ],
+      "tide2": [
+        "Cond\ttime\t1900"
+      ],
+      "surf1": [
+        "Cond\ttime\t900"
+      ],
+      "surf2": [
+        "Cond\ttime\t2500"
+      ],
+      "swell1": [
+        "Cond\ttime\t1300"
+      ],
+      "swell2": [
+        "Cond\ttime\t3000"
+      ],
+      "gale1": [
+        "Cond\ttime\t700"
+      ],
+      "gale2": [
+        "Cond\ttime\t2000"
+      ],
+      "gale3": [
+        "Cond\ttime\t3400"
+      ],
+      "goalPactFormedQuayEntered": [
+        "Cond\ttrigger\tquayEntered",
+        "Cond\tobjective\t1\tstormhaven-o03\topen"
+      ],
+      "goalPactFormedDockEntered": [
+        "Cond\ttrigger\tdockEntered",
+        "Cond\tobjective\t1\tstormhaven-o03\topen"
+      ],
+      "goalPactFormedTideTurns": [
+        "Cond\ttrigger\ttideTurns",
+        "Cond\tobjective\t1\tstormhaven-o03\topen"
+      ],
+      "goalPactFormedTideTurns2": [
+        "Cond\ttrigger\ttideTurns2",
+        "Cond\tobjective\t1\tstormhaven-o03\topen"
+      ],
+      "goalPactsPrevented": [
+        "Cond\tgoalmet\t1\tKillAllEnemies",
+        "Cond\ttrigger\tquayEntered\t0",
+        "Cond\ttrigger\tdockEntered\t0",
+        "Cond\ttrigger\ttideTurns\t0",
+        "Cond\ttrigger\ttideTurns2\t0"
+      ],
+      "goalStormhavenSpan1Before": [
+        "Cond\tregion\t1\t35\t70\t35\t71"
+      ],
+      "goalStormhavenSpan1On": [
+        "Cond\tregion\t1\t30\t70\t34\t71",
+        "Cond\tflag\tgoalStormhavenSpan1Before\t1"
+      ],
+      "goalStormhavenSpan1After": [
+        "Cond\tregion\t1\t29\t70\t29\t71",
+        "Cond\tflag\tgoalStormhavenSpan1On\t1"
+      ],
+      "goalStormhavenSpan2Before": [
+        "Cond\tregion\t1\t29\t33\t29\t34"
+      ],
+      "goalStormhavenSpan2On": [
+        "Cond\tregion\t1\t30\t33\t34\t34",
+        "Cond\tflag\tgoalStormhavenSpan2Before\t1"
+      ],
+      "goalStormhavenSpan2After": [
+        "Cond\tregion\t1\t35\t33\t35\t34",
+        "Cond\tflag\tgoalStormhavenSpan2On\t1"
+      ],
+      "goalStormhavenBothSpans": [
+        "Cond\tflag\tgoalStormhavenSpan1After\t1",
+        "Cond\tflag\tgoalStormhavenSpan2After\t1"
+      ],
+      "tideTurns": [
+        "Cond\ttime\t2200"
+      ],
+      "tideTurns2": [
+        "Cond\ttime\t3300"
+      ],
+      "northPortals": [
+        "Cond\ttime\t1500"
+      ]
+    },
+    "preserved_actions": {
+      "landfall": [
+        "Action\tmessage\t1\tThe storm is breaking on Stormhaven, master. Captain Ivo Strand lets four keepers share his coast, and each thinks the harbour is his alone.",
+        "Action\tobjectiveid\t1\tstormhaven-o01\tDestroy every rival keeper's heart.",
+        "Action\tobjectiveid\t1\tstormhaven-o02\tCross the inlet by the stone bridges.",
+        "Action\tobjectiveid\t1\tstormhaven-o03\tPrevent the keepers from joining forces.",
+        "Action\tportal\t2\toff",
+        "Action\tportal\t3\toff"
+      ],
+      "coveHeld": [
+        "Action\tmessage\t1\tYour cove is secure. The road north runs up the east quay, and another leads west along the shore.",
+        "Action\treveal\t1\tEastQuay",
+        "Action\treveal\t1\tWestCove"
+      ],
+      "quayEntered": [
+        "Action\tmessage\t1\tThe east quay. Its keeper has called on the north-east cliff for help, and a squad is already on the road.",
+        "Action\talliance\t3\t5\tmake",
+        "Action\tportal\t3\ton",
+        "Action\treveal\t1\tBasin",
+        "Action\tspawn\t3\t51\t39\t1\tOrc:3\tTroll:3\tSpider:3\tGoblin:3"
+      ],
+      "dockEntered": [
+        "Action\tmessage\t1\tThe west dock. The keeper here has sent a runner across the south span to the quay.",
+        "Action\talliance\t2\t4\tmake",
+        "Action\tportal\t2\ton",
+        "Action\treveal\t1\tSouthSpan",
+        "Action\tspawn\t5\t37\t71\t1\tOrc:3\tTroll:3\tGoblin:3"
+      ],
+      "spanSeen": [
+        "Action\tmessage\t1\tA stone span crosses the black water here. Everything that crosses will cross under your eyes.",
+        "Action\treveal\t1\tNorthSpan"
+      ],
+      "basinSeen": [
+        "Action\tmessage\t1\tThe harbour basin. Sea stacks stand in the water like teeth, and the keepers are watching from the banks.",
+        "Action\tspawn\t1\t50\t79\t1\tOrc:3\tTroll:3\tSpider:3"
+      ],
+      "northSpan": [
+        "Action\tmessage\t1\tThe north span. The two northern keepers are now at your back door and at each other.",
+        "Action\treveal\t1\tNorthEast",
+        "Action\treveal\t1\tNorthWest",
+        "Action\treveal\t1\tLighthouse"
+      ],
+      "lightSeen": [
+        "Action\tmessage\t1\tBelow the old lighthouse the earth is soft. Something is walled up in the north.",
+        "Action\treveal\t1\tGaleCave",
+        "Action\tgold\t1\t600",
+        "Action\tterrain\t30\t15\t30\t15\tmanawell"
+      ],
+      "gale": [
+        "Action\tmessage\t1\tA gale cave of heaped coin. The harbourmaster hid his tithe here.",
+        "Action\tgold\t1\t1500"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe coast seams are paying. Hold the gold and the keepers will fall one at a time."
+      ],
+      "tide1": [
+        "Action\tmessage\t1\tA raiding party is landing at the north-west harbour.",
+        "Action\tspawn\t2\t22\t22\t1\tOrc:2\tSpider:2\tGoblin:2"
+      ],
+      "tide2": [
+        "Action\tmessage\t1\tThe harbour keeper is sending a boarding party south.",
+        "Action\tspawn\t2\t20\t64\t1\tOrc:3\tTroll:3\tGoblin:3\tSpider:3"
+      ],
+      "surf1": [
+        "Action\tmessage\t1\tThe cliff keeper is loosing a pack down the east road.",
+        "Action\tspawn\t3\t51\t39\t1\tTroll:3\tOrc:3\tSpider:2"
+      ],
+      "surf2": [
+        "Action\tmessage\t1\tA heavy column marches out of the north-east.",
+        "Action\tspawn\t3\t51\t39\t1\tTroll:3\tTroll:3\tOrc:3\tSpider:3\tGoblin:3"
+      ],
+      "swell1": [
+        "Action\tmessage\t1\tThe dock keeper has called every deckhand.",
+        "Action\tspawn\t4\t19\t75\t1\tOrc:3\tGoblin:3\tTroll:3"
+      ],
+      "swell2": [
+        "Action\tmessage\t1\tThe west dock is emptying onto the road.",
+        "Action\tspawn\t4\t15\t79\t1\tTroll:4\tOrc:3\tSpider:3\tGoblin:3"
+      ],
+      "gale1": [
+        "Action\tmessage\t1\tThe quay keeper is sending his packs south.",
+        "Action\tspawn\t5\t37\t71\t1\tOrc:3\tTroll:2\tSpider:2"
+      ],
+      "gale2": [
+        "Action\tmessage\t1\tA storm of rats and spiders is coming off the quay.",
+        "Action\tspawn\t5\t37\t71\t1\tSpider:3\tGoblin:3\tOrc:3\tTroll:3"
+      ],
+      "gale3": [
+        "Action\tmessage\t1\tThe east quay has thrown its last guard against you.",
+        "Action\tspawn\t5\t37\t71\t1\tTroll:4\tTroll:3\tOrc:4\tGoblin:3"
+      ],
+      "goalPactFormedQuayEntered": [
+        "Action\tobjectivestate\t1\tstormhaven-o03\tfailed"
+      ],
+      "goalPactFormedDockEntered": [
+        "Action\tobjectivestate\t1\tstormhaven-o03\tfailed"
+      ],
+      "goalPactFormedTideTurns": [
+        "Action\tobjectivestate\t1\tstormhaven-o03\tfailed"
+      ],
+      "goalPactFormedTideTurns2": [
+        "Action\tobjectivestate\t1\tstormhaven-o03\tfailed"
+      ],
+      "goalPactsPrevented": [
+        "Action\tobjectivestate\t1\tstormhaven-o03\treached"
+      ],
+      "goalStormhavenSpan1Before": [
+        "Action\tsetflag\tgoalStormhavenSpan1Before\t1"
+      ],
+      "goalStormhavenSpan1On": [
+        "Action\tsetflag\tgoalStormhavenSpan1On\t1"
+      ],
+      "goalStormhavenSpan1After": [
+        "Action\tsetflag\tgoalStormhavenSpan1After\t1"
+      ],
+      "goalStormhavenSpan2Before": [
+        "Action\tsetflag\tgoalStormhavenSpan2Before\t1"
+      ],
+      "goalStormhavenSpan2On": [
+        "Action\tsetflag\tgoalStormhavenSpan2On\t1"
+      ],
+      "goalStormhavenSpan2After": [
+        "Action\tsetflag\tgoalStormhavenSpan2After\t1"
+      ],
+      "goalStormhavenBothSpans": [
+        "Action\tobjectivestate\t1\tstormhaven-o02\treached"
+      ],
+      "tideTurns": [
+        "Action\tmessage\t1\tThe tide has turned on the old oaths. The cliff keeper and the quay keeper drift apart, and the two northern keepers shake hands.",
+        "Action\talliance\t3\t5\tbreak",
+        "Action\talliance\t2\t3\tmake"
+      ],
+      "tideTurns2": [
+        "Action\tmessage\t1\tThe last pact is breaking. The north-west keeper has left the dock keeper and joins the quay keeper against your cove.",
+        "Action\talliance\t2\t4\tbreak",
+        "Action\talliance\t2\t5\tmake"
+      ],
+      "northPortals": [
+        "Action\tmessage\t1\tThe northern keepers have thrown their portals open and are calling every recruit in the harbour.",
+        "Action\tportal\t2\ton",
+        "Action\tportal\t3\ton"
+      ]
+    },
+    "reachability": {
+      "room_claims": [
+        {
+          "name": "StoneBridge2",
+          "type": 13,
+          "seat": 0,
+          "tiles": [
+            [
+              30,
+              70
+            ],
+            [
+              30,
+              71
+            ],
+            [
+              31,
+              70
+            ],
+            [
+              31,
+              71
+            ],
+            [
+              32,
+              70
+            ],
+            [
+              32,
+              71
+            ],
+            [
+              33,
+              70
+            ],
+            [
+              33,
+              71
+            ],
+            [
+              34,
+              70
+            ],
+            [
+              34,
+              71
+            ]
+          ],
+          "goal": "stormhaven-main-spans",
+          "bounds": [
+            30,
+            70,
+            34,
+            71
+          ]
+        },
+        {
+          "name": "StoneBridge1",
+          "type": 13,
+          "seat": 0,
+          "tiles": [
+            [
+              30,
+              33
+            ],
+            [
+              30,
+              34
+            ],
+            [
+              31,
+              33
+            ],
+            [
+              31,
+              34
+            ],
+            [
+              32,
+              33
+            ],
+            [
+              32,
+              34
+            ],
+            [
+              33,
+              33
+            ],
+            [
+              33,
+              34
+            ],
+            [
+              34,
+              33
+            ],
+            [
+              34,
+              34
+            ]
+          ],
+          "goal": "stormhaven-main-spans",
+          "bounds": [
+            30,
+            33,
+            34,
+            34
+          ]
+        }
+      ],
+      "crossing_bridges": {
+        "MainSouthBridge": {
+          "room": "StoneBridge2",
+          "bounds": [
+            30,
+            70,
+            34,
+            71
+          ],
+          "direction": "east"
+        },
+        "MainNorthBridge": {
+          "room": "StoneBridge1",
+          "bounds": [
+            30,
+            33,
+            34,
+            34
+          ],
+          "direction": "east"
+        }
+      },
+      "regions": {
+        "GaleCave": {
+          "bounds": [
+            26,
+            2,
+            42,
+            6
+          ],
+          "minimum_open_tiles": 30
+        },
+        "MainSouthBridge": {
+          "bounds": [
+            30,
+            70,
+            34,
+            71
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "MainNorthBridge": {
+          "bounds": [
+            30,
+            33,
+            34,
+            34
+          ],
+          "minimum_potential_tiles": 10
+        }
+      }
+    },
+    "route": [
+      "Cross both actual stone bridges with own living creatures: South StoneBridge2(30..34,70..71),North StoneBridge1(30..34,33..34). Either east or west direction qualifies; no prescribed order. Each crossing tracks the same creature from one dry bank through the whole bridge to the opposite bank. Visits and mixed visitors do not count.",
+      "Claim all ten original bridge fields on each span; keep both bridges currently owned until victory. RoomBridge uses the shared takeover pool and Room::claimForSeat claims all resulting tiles. Water beneath bridges is not an excuse to skip their ownership.",
+      "Protect the heart and destroy all four rival temples,seats2..5,then remaining forces/portals. Preserve original pact changes, nine attacking waves and north portal activation.",
+      "Optionally enter GaleCave(26,2)-(42,6),30reachable open dry fields. The prior alliance-prevention legacy objective remains hidden when grouped and does not block the new main goals; no alliance gameplay is removed.",
+      "Unchanged victory sentence occurs once after all current main observers. Original pending win requests remain."
+    ],
+    "runtime_limit": "Static bridge/bank/takeover source evidence only; actual crossing, claiming, combat and save/load remain for runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe last keeper is dead and the harbour lies calm. Stormhaven answers to you."
+    }
   }
 }

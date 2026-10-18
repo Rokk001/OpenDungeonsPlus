@@ -80,6 +80,8 @@ BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces 
 
 BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit"}
 
+BRIEFING_MATCH["Stormhaven"] = {3: "yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1619,6 +1621,17 @@ def self_test(root):
             ("Cond\tobjective\t1\tskittlecavern-main-trial\treached", "Cond\tcreatures\t2\t<=\t0")):
         assert needle in skittle
         assert grouped_goal_errors(skittle.replace(needle, replacement), "SkittleCavern"), "Skittle requirement weakening must fail: " + needle
+    storm = (root / "levels/campaign/Stormhaven.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(storm, "Stormhaven")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tMainSouthBridge\teast", "Cond\tregion\t1\tSouthSpan"),
+            ("Cond\tcrossed\t1\tMainNorthBridge\twest", "Cond\tcrossed\t2\tMainNorthBridge\twest"),
+            ("Cond\troomclaimed\t1\t30\t70\t34\t71", "Cond\tregion\t1\tSouthSpan"),
+            ("Cond\troomclaimed\t1\t30\t33\t34\t34", "Cond\troomclaimed\t1\t30\t33\t33\t34"),
+            ("Cond\troomtiles\t5\tDungeonTemple\t<=\t0", "Cond\tcreatures\t5\t<=\t0"),
+            ("Cond\tregion\t1\tGaleCave", "Cond\tregion\t1\tLighthouse")):
+        assert needle in storm
+        assert grouped_goal_errors(storm.replace(needle, replacement), "Stormhaven"), "Stormhaven requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 
