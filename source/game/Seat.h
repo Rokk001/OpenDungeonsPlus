@@ -275,6 +275,7 @@ public:
     //! \brief Records direct sight from an active creature owned by this seat, independently of shared or scripted vision.
     void notifyOwnCreatureVision(Tile* tile);
 
+    //! \brief Records visibility and starts the fog deadline once on first discovery from any source.
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);

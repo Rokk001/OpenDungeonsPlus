@@ -343,6 +343,9 @@ void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 
     if( nt == NodeType::MTILES_NODE)
     {
+        // Every first discovery starts a grace period; only own-creature sight resets it later.
+        if(mTilesStates[tile].mOwnCreatureSightAgeTurns < 0)
+            mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
         mTilesStates[tile].mVisionTurnCurrent =  true;
         mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId] = true;
     }

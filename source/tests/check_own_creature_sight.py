@@ -19,8 +19,11 @@ assert "getSeat()->notifyOwnCreatureVision(tile);" in creature
 owner = function("source/game/Seat.cpp", "void Seat::notifyOwnCreatureVision(")
 assert "mOwnCreatureSightAgeTurns = 0" in owner
 assert "mTilesStates[tile].mOwnCreatureSightAgeTurns" in owner
-for signature in ("void Seat::applyRevealedTiles()", "void Seat::notifyVisionOnTile("):
-    assert "mOwnCreatureSightAgeTurns" not in function("source/game/Seat.cpp", signature)
+assert "mOwnCreatureSightAgeTurns" not in function("source/game/Seat.cpp", "void Seat::applyRevealedTiles()")
+discovery = function("source/game/Seat.cpp", "void Seat::notifyVisionOnTile(")
+assert discovery.count("mOwnCreatureSightAgeTurns = 0") == 1
+assert discovery.index("if(mTilesStates[tile].mOwnCreatureSightAgeTurns < 0)") < discovery.index("mOwnCreatureSightAgeTurns = 0")
+assert discovery.index("if( nt == NodeType::MTILES_NODE)") < discovery.index("mOwnCreatureSightAgeTurns = 0")
 print("Direct owner sight excludes KO, dead, jailed, carried, allied and scripted vision sources: PASS (static only)")
 
 advance = function("source/game/Seat.cpp", "void Seat::clearTilesWithVision()")
