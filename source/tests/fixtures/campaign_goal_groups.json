@@ -494,5 +494,502 @@
         "DefaultWorker3"
       ]
     }
+  },
+  "Brackenford": {
+    "goals": {
+      "brackenford-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Keep your heart, 2 beds and a hatchery.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tfurniture\t1\tDormitory\t>=\t2",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "brackenford-main-grove": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim the grove; rally 2 fighters before attacking Brack.",
+        "completion": "mainGrove",
+        "conditions": [
+          "Cond\tclaimed\t1\tGrove\t22",
+          "Cond\tflag\tgroveAssembled\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "brackenford-main-ford": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the ford; clear the landing.",
+        "completion": "mainFord",
+        "conditions": [
+          "Cond\tflag\tgoalFordCrossed\t1",
+          "Cond\tevent\tFordGuard1\tkilled",
+          "Cond\tevent\tFordGuard2\tkilled",
+          "Cond\tspawncleared\tlandingSeen\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "brackenford-main-keep": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Brack, foes and portals; claim the keep.",
+        "completion": "mainKeep",
+        "conditions": [
+          "Cond\tevent\tElsaBrack\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies",
+          "Cond\tgroundclaimed\t1\t44\t5\t48\t5",
+          "Cond\tgroundclaimed\t1\t43\t6\t50\t6",
+          "Cond\tgroundclaimed\t1\t43\t7\t52\t7",
+          "Cond\tgroundclaimed\t1\t43\t8\t52\t8",
+          "Cond\tgroundclaimed\t1\t43\t9\t52\t9",
+          "Cond\tgroundclaimed\t1\t43\t10\t51\t10",
+          "Cond\tgroundclaimed\t1\t41\t11\t48\t11",
+          "Cond\tgroundclaimed\t1\t41\t12\t44\t12"
+        ],
+        "mode": "repeat\t0"
+      },
+      "brackenford-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 500 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t500"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "groveAssembly": {
+        "conditions": [
+          "Cond\tclaimed\t1\tGrove\t22",
+          "Cond\tregion\t1\tGrove\t>=\t2\t@fighters",
+          "Cond\tevent\tElsaBrack\tattacked\t==\t0",
+          "Cond\tevent\tElsaBrack\tkilled\t==\t0"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tgroveAssembled\t1"
+        ]
+      },
+      "groveAssemblyMissed": {
+        "conditions": [
+          "Cond\tflag\tgroveAssembled\t0",
+          "Cond\tevent\tElsaBrack\tattacked"
+        ],
+        "states": [
+          [
+            "1",
+            "brackenford-main-grove",
+            "failed"
+          ]
+        ]
+      },
+      "groveAssemblyMissedDeath": {
+        "conditions": [
+          "Cond\tflag\tgroveAssembled\t0",
+          "Cond\tevent\tElsaBrack\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "brackenford-main-grove",
+            "failed"
+          ]
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "brackenford-main-home",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "reachability": {
+      "minimum_mineable_gold": 500,
+      "named_creatures": [
+        "ElsaBrack",
+        "FordGuard1",
+        "FordGuard2"
+      ],
+      "footprints": [
+        {
+          "goal": "brackenford-main-keep",
+          "bounds": [
+            41,
+            4,
+            53,
+            12
+          ],
+          "runs": [
+            [
+              44,
+              5,
+              48,
+              5
+            ],
+            [
+              43,
+              6,
+              50,
+              6
+            ],
+            [
+              43,
+              7,
+              52,
+              7
+            ],
+            [
+              43,
+              8,
+              52,
+              8
+            ],
+            [
+              43,
+              9,
+              52,
+              9
+            ],
+            [
+              43,
+              10,
+              51,
+              10
+            ],
+            [
+              41,
+              11,
+              48,
+              11
+            ],
+            [
+              41,
+              12,
+              44,
+              12
+            ]
+          ]
+        }
+      ]
+    },
+    "route": [
+      "Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.",
+      "Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.",
+      "Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.",
+      "Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.",
+      "Defeat ElsaBrack and all remaining enemies, claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required."
+    ],
+    "runtime_limit": "Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.",
+    "setup": {
+      "starting_gold": 2500,
+      "bed_tiles": 2,
+      "hatchery_tiles": 9,
+      "cost": 1174,
+      "bed_class": "Goblin",
+      "bed_dimensions": [
+        1,
+        1
+      ],
+      "hatchery_bounds": [
+        3,
+        32,
+        5,
+        34
+      ],
+      "bed_positions": [
+        [
+          3,
+          35
+        ],
+        [
+          3,
+          36
+        ]
+      ],
+      "skills": [
+        "roomDormitory",
+        "roomHatchery"
+      ]
+    },
+    "preserved_actions": {
+      "groveClaimed": [
+        "Action\tspawn\t1\t12\t28\t-1\tGoblin:2\tGoblin:2"
+      ]
+    }
+  },
+  "Coldwell": {
+    "goals": {
+      "coldwell-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "coldwell-main-plaza": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim the well plaza; mine 600 gold beneath it.",
+        "completion": "mainPlaza",
+        "conditions": [
+          "Cond\tminedregion\t1\tUndercroft\t>=\t600",
+          "Cond\tgroundclaimed\t1\t26\t20\t32\t20",
+          "Cond\tgroundclaimed\t1\t26\t21\t32\t21",
+          "Cond\tgroundclaimed\t1\t26\t22\t32\t22",
+          "Cond\tgroundclaimed\t1\t26\t23\t35\t23",
+          "Cond\tgroundclaimed\t1\t29\t24\t35\t24",
+          "Cond\tgroundclaimed\t1\t19\t25\t24\t25",
+          "Cond\tgroundclaimed\t1\t30\t25\t36\t25",
+          "Cond\tgroundclaimed\t1\t17\t26\t17\t26",
+          "Cond\tgroundclaimed\t1\t19\t26\t24\t26",
+          "Cond\tgroundclaimed\t1\t30\t26\t36\t26",
+          "Cond\tgroundclaimed\t1\t17\t27\t24\t27",
+          "Cond\tgroundclaimed\t1\t30\t27\t36\t27",
+          "Cond\tgroundclaimed\t1\t18\t28\t25\t28",
+          "Cond\tgroundclaimed\t1\t29\t28\t36\t28",
+          "Cond\tgroundclaimed\t1\t18\t29\t35\t29",
+          "Cond\tgroundclaimed\t1\t19\t30\t20\t30",
+          "Cond\tgroundclaimed\t1\t22\t30\t33\t30",
+          "Cond\tgroundclaimed\t1\t23\t31\t32\t31",
+          "Cond\tgroundclaimed\t1\t22\t32\t30\t32",
+          "Cond\tgroundclaimed\t1\t35\t32\t36\t32"
+        ],
+        "mode": "repeat\t0"
+      },
+      "coldwell-main-gate": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Break the keep's north gate.",
+        "completion": "mainGate",
+        "conditions": [
+          "Cond\ttrapgone\tDoorWooden2"
+        ],
+        "mode": "repeat\t0"
+      },
+      "coldwell-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Hugo Cole and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tevent\tHugoCole\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "coldwell-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1200 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1200"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "coldwell-main-heart",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "reachability": {
+      "minimum_mineable_gold": 1200,
+      "named_creatures": [
+        "HugoCole",
+        "WellWatch1",
+        "WellWatch2",
+        "KeepGuard1",
+        "KeepGuard2",
+        "KeepMonk"
+      ],
+      "footprints": [
+        {
+          "goal": "coldwell-main-plaza",
+          "bounds": [
+            17,
+            20,
+            37,
+            32
+          ],
+          "runs": [
+            [
+              26,
+              20,
+              32,
+              20
+            ],
+            [
+              26,
+              21,
+              32,
+              21
+            ],
+            [
+              26,
+              22,
+              32,
+              22
+            ],
+            [
+              26,
+              23,
+              35,
+              23
+            ],
+            [
+              29,
+              24,
+              35,
+              24
+            ],
+            [
+              19,
+              25,
+              24,
+              25
+            ],
+            [
+              30,
+              25,
+              36,
+              25
+            ],
+            [
+              17,
+              26,
+              17,
+              26
+            ],
+            [
+              19,
+              26,
+              24,
+              26
+            ],
+            [
+              30,
+              26,
+              36,
+              26
+            ],
+            [
+              17,
+              27,
+              24,
+              27
+            ],
+            [
+              30,
+              27,
+              36,
+              27
+            ],
+            [
+              18,
+              28,
+              25,
+              28
+            ],
+            [
+              29,
+              28,
+              36,
+              28
+            ],
+            [
+              18,
+              29,
+              35,
+              29
+            ],
+            [
+              19,
+              30,
+              20,
+              30
+            ],
+            [
+              22,
+              30,
+              33,
+              30
+            ],
+            [
+              23,
+              31,
+              32,
+              31
+            ],
+            [
+              22,
+              32,
+              30,
+              32
+            ],
+            [
+              35,
+              32,
+              36,
+              32
+            ]
+          ]
+        }
+      ],
+      "regional_gold": {
+        "region": "Undercroft",
+        "bounds": [
+          21,
+          34,
+          33,
+          42
+        ],
+        "minimum": 600
+      },
+      "required_traps": {
+        "DoorWooden2": {
+          "type": 4,
+          "seat": 2,
+          "tiles": [
+            [
+              48,
+              32
+            ]
+          ]
+        }
+      }
+    },
+    "route": [
+      "Claim the 149 original open dry Plaza tiles, including the existing treasury footprint. Do not require walls or new rooms on the plaza.",
+      "Mine 600 actual credited gold from Undercroft (21,34)-(33,42); it contains 23500 finite gold. Gifts and starting gold do not count.",
+      "Mine at least 1200 actual gold overall for the optional task; at least 36000 finite gold is potentially reachable.",
+      "Destroy DoorWooden2 at (48,32), the northern entrance immediately above Court; a mere Court visit does not count.",
+      "Defeat HugoCole at the keep and all remaining enemy creatures while preserving the own heart."
+    ],
+    "runtime_limit": "Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee."
   }
 }

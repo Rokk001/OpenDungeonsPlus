@@ -1486,4 +1486,89 @@ Action	objectivestate	1	brackenford-o01	reached
 Action	objectivestate	1	brackenford-o06	reached
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	brackenford-main-home	Keep your heart, 2 beds and a hatchery.
+Action	mainobjectiveid	1	brackenford-main-grove	Claim the grove; rally 2 fighters before attacking Brack.
+Action	mainobjectiveid	1	brackenford-main-ford	Cross the ford; clear the landing.
+Action	mainobjectiveid	1	brackenford-main-keep	Defeat Brack, foes and portals; claim the keep.
+Action	optionalobjectiveid	1	brackenford-extra-gold	Mine 500 gold.
+[/Trigger]
+[Trigger]
+Name	groveAssembly
+Mode	once
+Cond	claimed	1	Grove	22
+Cond	region	1	Grove	>=	2	@fighters
+Cond	event	ElsaBrack	attacked	==	0
+Cond	event	ElsaBrack	killed	==	0
+Action	setflag	groveAssembled	1
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	furniture	1	Dormitory	>=	2
+Cond	furniture	1	Hatchery	>=	1
+Action	objectivestate	1	brackenford-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainGrove
+Mode	repeat	0
+Cond	claimed	1	Grove	22
+Cond	flag	groveAssembled	1
+Action	objectivestate	1	brackenford-main-grove	reached
+[/Trigger]
+[Trigger]
+Name	mainFord
+Mode	repeat	0
+Cond	flag	goalFordCrossed	1
+Cond	event	FordGuard1	killed
+Cond	event	FordGuard2	killed
+Cond	spawncleared	landingSeen	1
+Action	objectivestate	1	brackenford-main-ford	reached
+[/Trigger]
+[Trigger]
+Name	mainKeep
+Mode	repeat	0
+Cond	event	ElsaBrack	killed
+Cond	goalmet	1	KillAllEnemies
+Cond	groundclaimed	1	44	5	48	5
+Cond	groundclaimed	1	43	6	50	6
+Cond	groundclaimed	1	43	7	52	7
+Cond	groundclaimed	1	43	8	52	8
+Cond	groundclaimed	1	43	9	52	9
+Cond	groundclaimed	1	43	10	51	10
+Cond	groundclaimed	1	41	11	48	11
+Cond	groundclaimed	1	41	12	44	12
+Action	objectivestate	1	brackenford-main-keep	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	500
+Action	objectivestate	1	brackenford-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	groveAssemblyMissed
+Mode	once
+Cond	flag	groveAssembled	0
+Cond	event	ElsaBrack	attacked
+Action	objectivestate	1	brackenford-main-grove	failed
+[/Trigger]
+[Trigger]
+Name	groveAssemblyMissedDeath
+Mode	once
+Cond	flag	groveAssembled	0
+Cond	event	ElsaBrack	killed
+Action	objectivestate	1	brackenford-main-grove	failed
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	brackenford-main-home	failed
+[/Trigger]
+
 [/Triggers]

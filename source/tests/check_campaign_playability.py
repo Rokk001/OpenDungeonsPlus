@@ -65,6 +65,8 @@ BRIEFING_MATCH["Mossgate"] = {
     4: "yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal"
 }
 
+BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked", 4: "yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles"}
+BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold", 4: "yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces"}
 BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
 
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
@@ -846,6 +848,11 @@ def grouped_goal_errors(text, level_name):
         states = [row.split()[2:] for row in rows if row.startswith("Action\tobjectivestate\t")]
         if states != definition["states"]:
             errors.append("grouped failure states differ: " + name)
+        if "Mode\t" + definition.get("mode", "once") not in rows:
+            errors.append("grouped history/failure observer mode differs: " + name)
+        for action in definition.get("actions", []):
+            if action not in rows:
+                errors.append("grouped history flag action differs: " + name)
     for name, definition in review.get("extra_status_triggers", {}).items():
         for condition in definition["conditions"]:
             fields = condition.split()
@@ -869,6 +876,59 @@ def grouped_goal_errors(text, level_name):
             opened = {tile for tile in tiles if level["tiles"][tile][1] == 0 and level["tiles"][tile][0] not in (4, 5)}
             if len(tiles) < definition.get("minimum_potential_tiles", 0) or len(opened) < definition.get("minimum_open_tiles", 0):
                 errors.append("insufficient reachable grouped region tiles: " + name)
+        for footprint in proof.get("footprints", []):
+            expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
+            x1, y1, x2, y2 = footprint["bounds"]
+            actual_tiles = {(x, y) for (x, y), (kind, fullness, _) in level["tiles"].items()
+                            if x1 <= x <= x2 and y1 <= y <= y2 and fullness == 0 and kind not in (4, 5)}
+            if actual_tiles != expected_tiles or expected_tiles - area:
+                errors.append("original floor footprint differs or is unreachable: " + footprint["goal"])
+            covered = set()
+            for condition in expected[footprint["goal"]]["conditions"]:
+                fields = condition.split()
+                if fields[:2] == ["Cond", "groundclaimed"]:
+                    a, b, c, e = map(int, fields[3:7])
+                    covered.update((x, y) for x in range(a, c + 1) for y in range(b, e + 1))
+            if covered != expected_tiles:
+                errors.append("main observer does not check every original floor tile: " + footprint["goal"])
+        for name, expected_trap in proof.get("required_traps", {}).items():
+            found = None
+            for trap in re.findall(r"\[Trap\](.*?)\[/Trap\]", section(text, "Traps"), re.S):
+                rows = [row.split() for _, row in lines(trap)]
+                if rows[0][1] == name:
+                    count = int(rows[0][3])
+                    found = {"type": int(rows[0][0]), "seat": int(rows[0][2]),
+                             "tiles": [list(map(int, row[:2])) for row in rows[1:count + 1]]}
+            if found != expected_trap:
+                errors.append("named required gate differs from its original position: " + name)
+        regional = proof.get("regional_gold")
+        if regional:
+            x1, y1, x2, y2 = regional["bounds"]
+            available = sum(fullness * 5 for (x, y), (kind, fullness, _) in level["tiles"].items()
+                            if (x, y) in area and x1 <= x <= x2 and y1 <= y <= y2 and kind == 2)
+            if available < regional["minimum"]:
+                errors.append("insufficient reachable regional mining reserve")
+        setup = review.get("setup")
+        if setup:
+            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
+            food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
+            cost = setup["bed_tiles"] * bed_cost + setup["hatchery_tiles"] * food_cost
+            creatures = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            creature = re.search(r"\[Creature\]\s*Name\s+" + setup["bed_class"] + r"\b(.*?)\[/Creature\]", creatures, re.S)[1]
+            dimensions = list(map(int, re.search(r"BedDim\s+(\d+)\s+(\d+)", creature).groups()))
+            if dimensions != setup["bed_dimensions"] or cost != setup["cost"] or int(level["seats"][level["human"]]["gold"]) != setup["starting_gold"] or cost > setup["starting_gold"]:
+                errors.append("starting supply budget or bed size differs from the concrete setup proof")
+            a, b, c, e = setup["hatchery_bounds"]
+            site = {(x, y) for x in range(a, c + 1) for y in range(b, e + 1)} | {tuple(tile) for tile in setup["bed_positions"]}
+            occupied = {tile for _, _, _, footprint in level["rooms"] for tile in footprint}
+            if site - area or site & occupied or any(level["tiles"][tile][2] not in (None, level["human"]) for tile in site):
+                errors.append("starting supply build site is blocked or occupied")
+            human_block = next(block for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S)
+                               if re.search(r"seatId\s+" + str(level["human"]) + r"\b", block))
+            available = section(human_block, "SkillDone").split()
+            if any(skill not in available for skill in setup["skills"]):
+                errors.append("starting supply room is not unlocked")
         gold = sum(fullness * 5 for tile, (kind, fullness, _) in level["tiles"].items() if tile in area and kind == 2)
         if gold < proof.get("minimum_mineable_gold", 0):
             errors.append("insufficient actual mineable gold for grouped goal")
@@ -1145,6 +1205,18 @@ def self_test(root):
         trial = (root / ("levels/campaign/" + name + ".level")).read_text(encoding="utf-8")
         assert old in trial
         assert grouped_goal_errors(trial.replace(old, new), name), (name, old)
+    for name, old, new in (
+        ("Brackenford", "Cond\tregion\t1\tGrove\t>=\t2\t@fighters", "Cond\tregion\t1\tGrove\t>=\t2"),
+        ("Brackenford", "Cond\tevent\tElsaBrack\tattacked\t==\t0", "Cond\ttime\t0"),
+        ("Brackenford", "Action\tsetflag\tgroveAssembled\t1", "Action\tsetflag\tgroveAssembled\t0"),
+        ("Brackenford", "gold\t2500", "gold\t250"),
+        ("Brackenford", "Action\tspawn\t1\t12\t28\t-1\tGoblin:2\tGoblin:2", "Action\tspawn\t1\t12\t28\t-1\tDefaultWorker:2\tDefaultWorker:2"),
+        ("Coldwell", "Cond\tminedregion\t1\tUndercroft\t>=\t600", "Cond\tmined\t1\t>=\t600"),
+        ("Coldwell", "Cond\ttrapgone\tDoorWooden2", "Cond\ttrapgone\tDoorWooden1")
+    ):
+        candidate = (root / ("levels/campaign/" + name + ".level")).read_text(encoding="utf-8")
+        assert old in candidate
+        assert grouped_goal_errors(candidate.replace(old, new), name), (name, old)
     ravensledge = (root / "levels/campaign/Ravensledge.level").read_text(encoding="utf-8")
     wrong_trap = ravensledge.replace("trapgone\tDoorWooden1", "trapgone\tNoSuchDoor")
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))

@@ -64,3 +64,8 @@ print('Grouped victories wait for the current observer pass; completed outcomes 
 
 assert win.index('checkGameDuration();') < win.index('getHasLost()')
 print('Original deadline is applied before grouped victory: static wiring PASS')
+
+assert 'LevelScriptConditionType::groundFootprintClaimed' in script and 'groundclaimed' in script
+assert 'if(className == "@fighters")' in runner and 'return !creature->getDefinition()->isWorker();' in runner
+assert '(cond.mType == LevelScriptConditionType::roomFootprintClaimed && room == nullptr)' in runner
+print('Natural floor ownership and living fighter-only assembly: static wiring PASS')

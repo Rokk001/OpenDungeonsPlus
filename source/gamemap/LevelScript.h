@@ -107,6 +107,8 @@
 //!   Cond    killedin <creatureName> <region>   # actual recorded death position is within that region
 //!   Cond    groundconnected <seatId> <x1> <y1> <x2> <y2>   # actual dry worker-walkable connection; never assumes digging
 //!   Cond    roomclaimed <seatId> <x1> <y1> <x2> <y2>   # every fixed footprint tile is open, fully claimed and in a room owned by the seat
+//!   Cond    groundclaimed <seatId> <x1> <y1> <x2> <y2>   # fixed floor footprint fully claimed; no room construction required
+//!           # Region/creatures class filters also accept @fighters to exclude workers.
 //!   Cond    creaturesatheart <seatId> <op> <count>   # own living creatures on tiles of the seat's dungeon temple
 //!   Cond    flag <name> <value>               # flag has exactly that value
 //!   Cond    flag <name> <op> <value>          # op is == != < <= > >=; value may be @<otherFlag>
@@ -236,7 +238,8 @@ enum class LevelScriptConditionType
     minedInRegion,
     killedInRegion,
     groundConnected,
-    roomFootprintClaimed
+    roomFootprintClaimed,
+    groundFootprintClaimed
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.

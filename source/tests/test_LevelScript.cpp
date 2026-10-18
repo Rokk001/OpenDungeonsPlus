@@ -1279,3 +1279,32 @@ BOOST_AUTO_TEST_CASE(main_goal_model_detection_is_scoped_to_the_target_seat)
     BOOST_CHECK(!script.hasMainObjectives(2));
     BOOST_CHECK(!script.hasMainObjectives(3));
 }
+
+//! \brief Fixed natural-floor ownership and fighter-only assembly survive script save/load.
+BOOST_AUTO_TEST_CASE(natural_floor_and_fighter_assembly_conditions_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("Region Grove 8 22 21 31\n[Trigger]\nName claim\nMode repeat 0\n"
+        "Cond groundclaimed 1 44 5 48 5\nCond region 1 Grove >= 2 @fighters\n"
+        "Action mainobjectiveid 1 keep Claim the keep.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    const auto& conditions = script.getTriggers()[0].mConditions;
+    BOOST_CHECK(conditions[0].mType == LevelScriptConditionType::groundFootprintClaimed);
+    BOOST_CHECK_EQUAL(conditions[0].mX1, 44);
+    BOOST_CHECK_EQUAL(conditions[0].mX2, 48);
+    BOOST_CHECK_EQUAL(conditions[1].mName2, "@fighters");
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    std::ostringstream again;
+    restored.exportToStream(again);
+    BOOST_CHECK_EQUAL(saved.str(), again.str());
+    for(const std::string bad : {"Cond groundclaimed 1 -1 5 48 5", "Cond groundclaimed 1 44 5 48"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + bad + "\nAction message 1 x\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}

@@ -121,14 +121,42 @@ File: `levels/campaign/Brackenford.level`.
 | Script line 1389 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
 | Script line 1463 | `Action	objectiveid	1	brackenford-o06	Enter the keep and kill Elsa Brack.` | yes |
 | Script line 1487 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `brackenford-main-home`: Keep your heart, 2 beds and a hatchery. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1 |
+| main | `brackenford-main-grove`: Claim the grove; rally 2 fighters before attacking Brack. | `mainGrove`: Cond	claimed	1	Grove	22; Cond	flag	groveAssembled	1 |
+| main | `brackenford-main-ford`: Cross the ford; clear the landing. | `mainFord`: Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1 |
+| main | `brackenford-main-keep`: Defeat Brack, foes and portals; claim the keep. | `mainKeep`: Cond	event	ElsaBrack	killed; Cond	goalmet	1	KillAllEnemies; Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12 |
+| optional | `brackenford-extra-gold`: Mine 500 gold. | `extraGold`: Cond	mined	1	>=	500 |
+
+Possible route (static, not a playthrough):
+- Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.
+- Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.
+- Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.
+- Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.
+- Defeat ElsaBrack and all remaining enemies, claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.
+
+Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.
+
 | Trigger `bedsReady` | `Action	objectivestate	1	brackenford-o02	reached`; conditions: `Cond	room	1	Dormitory	1` | yes |
 | Trigger `larderReady` | `Action	objectivestate	1	brackenford-o03	reached`; conditions: `Cond	room	1	Hatchery	1` | yes |
 | Trigger `groveClaimed` | `Action	objectivestate	1	brackenford-o04	reached`; conditions: `Cond	claimed	1	Grove	22` | yes |
 | Trigger `goalLandingCleared` | `Action	objectivestate	1	brackenford-o05	reached`; conditions: `Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1` | yes |
 | Trigger `wardenGone` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenGone` | `Action	objectivestate	1	brackenford-o06	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | no: beds, hatchery, grove and gathering are not winning conditions |
-| Briefing | Cross the ford and kill the warden in her keep. | yes: KillAllEnemies and the warden seat elimination trigger |
+| Trigger `mainHome` | `Action	objectivestate	1	brackenford-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainGrove` | `Action	objectivestate	1	brackenford-main-grove	reached`; conditions: `Cond	claimed	1	Grove	22; Cond	flag	groveAssembled	1` | yes |
+| Trigger `mainFord` | `Action	objectivestate	1	brackenford-main-ford	reached`; conditions: `Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1` | yes |
+| Trigger `mainKeep` | `Action	objectivestate	1	brackenford-main-keep	reached`; conditions: `Cond	event	ElsaBrack	killed; Cond	goalmet	1	KillAllEnemies; Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	brackenford-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
+| Trigger `groveAssemblyMissed` | `Action	objectivestate	1	brackenford-main-grove	failed`; conditions: `Cond	flag	groveAssembled	0; Cond	event	ElsaBrack	attacked` | yes |
+| Trigger `groveAssemblyMissedDeath` | `Action	objectivestate	1	brackenford-main-grove	failed`; conditions: `Cond	flag	groveAssembled	0; Cond	event	ElsaBrack	killed` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	brackenford-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked |
+| Briefing | Cross the ford and kill the warden in her keep. | yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles |
 
 ## Campaign1
 
@@ -206,12 +234,38 @@ File: `levels/campaign/Coldwell.level`.
 | Script line 1401 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
 | Script line 1416 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
 | Script line 1464 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `coldwell-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `coldwell-main-plaza`: Claim the well plaza; mine 600 gold beneath it. | `mainPlaza`: Cond	minedregion	1	Undercroft	>=	600; Cond	groundclaimed	1	26	20	32	20; Cond	groundclaimed	1	26	21	32	21; Cond	groundclaimed	1	26	22	32	22; Cond	groundclaimed	1	26	23	35	23; Cond	groundclaimed	1	29	24	35	24; Cond	groundclaimed	1	19	25	24	25; Cond	groundclaimed	1	30	25	36	25; Cond	groundclaimed	1	17	26	17	26; Cond	groundclaimed	1	19	26	24	26; Cond	groundclaimed	1	30	26	36	26; Cond	groundclaimed	1	17	27	24	27; Cond	groundclaimed	1	30	27	36	27; Cond	groundclaimed	1	18	28	25	28; Cond	groundclaimed	1	29	28	36	28; Cond	groundclaimed	1	18	29	35	29; Cond	groundclaimed	1	19	30	20	30; Cond	groundclaimed	1	22	30	33	30; Cond	groundclaimed	1	23	31	32	31; Cond	groundclaimed	1	22	32	30	32; Cond	groundclaimed	1	35	32	36	32 |
+| main | `coldwell-main-gate`: Break the keep's north gate. | `mainGate`: Cond	trapgone	DoorWooden2 |
+| main | `coldwell-main-warden`: Defeat Hugo Cole and all enemy forces. | `mainWarden`: Cond	event	HugoCole	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `coldwell-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
+
+Possible route (static, not a playthrough):
+- Claim the 149 original open dry Plaza tiles, including the existing treasury footprint. Do not require walls or new rooms on the plaza.
+- Mine 600 actual credited gold from Undercroft (21,34)-(33,42); it contains 23500 finite gold. Gifts and starting gold do not count.
+- Mine at least 1200 actual gold overall for the optional task; at least 36000 finite gold is potentially reachable.
+- Destroy DoorWooden2 at (48,32), the northern entrance immediately above Court; a mere Court visit does not count.
+- Defeat HugoCole at the keep and all remaining enemy creatures while preserving the own heart.
+
+Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.
+
 | Trigger `plazaReached` | `Action	objectivestate	1	coldwell-o02	reached`; conditions: `Cond	region	1	Plaza` | yes |
 | Trigger `goalUndercroft600` | `Action	objectivestate	1	coldwell-o03	reached`; conditions: `Cond	minedregion	1	Undercroft	>=	600` | yes |
 | Trigger `courtBreached` | `Action	objectivestate	1	coldwell-o04	reached`; conditions: `Cond	region	1	Court` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	coldwell-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | no: plaza ownership and mined gold are not winning conditions |
-| Briefing | Break the north gate and slay Cole in his hall. | no: Cole elimination is checked; breaking the gate separately is not |
+| Trigger `mainHeart` | `Action	objectivestate	1	coldwell-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainPlaza` | `Action	objectivestate	1	coldwell-main-plaza	reached`; conditions: `Cond	minedregion	1	Undercroft	>=	600; Cond	groundclaimed	1	26	20	32	20; Cond	groundclaimed	1	26	21	32	21; Cond	groundclaimed	1	26	22	32	22; Cond	groundclaimed	1	26	23	35	23; Cond	groundclaimed	1	29	24	35	24; Cond	groundclaimed	1	19	25	24	25; Cond	groundclaimed	1	30	25	36	25; Cond	groundclaimed	1	17	26	17	26; Cond	groundclaimed	1	19	26	24	26; Cond	groundclaimed	1	30	26	36	26; Cond	groundclaimed	1	17	27	24	27; Cond	groundclaimed	1	30	27	36	27; Cond	groundclaimed	1	18	28	25	28; Cond	groundclaimed	1	29	28	36	28; Cond	groundclaimed	1	18	29	35	29; Cond	groundclaimed	1	19	30	20	30; Cond	groundclaimed	1	22	30	33	30; Cond	groundclaimed	1	23	31	32	31; Cond	groundclaimed	1	22	32	30	32; Cond	groundclaimed	1	35	32	36	32` | yes |
+| Trigger `mainGate` | `Action	objectivestate	1	coldwell-main-gate	reached`; conditions: `Cond	trapgone	DoorWooden2` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	coldwell-main-warden	reached`; conditions: `Cond	event	HugoCole	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	coldwell-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	coldwell-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold |
+| Briefing | Break the north gate and slay Cole in his hall. | yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces |
 
 ## CrowshotGallery
 

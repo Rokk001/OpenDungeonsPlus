@@ -120,9 +120,11 @@ bool isTileOfKind(const Tile* tile, const std::string& kind)
     return (roomType != RoomType::nullRoomType) && (room->getType() == roomType);
 }
 
-//! An empty class name matches every creature
+//! \brief Matches an exact class, every class when empty, or nonworkers for the @fighters filter.
 bool isClassMatching(const Creature* creature, const std::string& className)
 {
+    if(className == "@fighters")
+        return !creature->getDefinition()->isWorker();
     return className.empty() || (creature->getDefinition()->getClassName() == className);
 }
 
@@ -272,6 +274,7 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
         case LevelScriptConditionType::groundConnected:
             return areGroundPointsConnected(gameMap, cond);
         case LevelScriptConditionType::roomFootprintClaimed:
+        case LevelScriptConditionType::groundFootprintClaimed:
         {
             Seat* seat = gameMap.getSeatById(cond.mSeatId);
             if(seat == nullptr)
@@ -285,7 +288,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
                        tile->getClaimedPercentage() < 1.0 || !tile->isClaimedForSeat(seat))
                         return false;
                     Room* room = tile->getCoveringRoom();
-                    if(room == nullptr || room->getSeat() != seat)
+                    if((room != nullptr && room->getSeat() != seat) ||
+                       (cond.mType == LevelScriptConditionType::roomFootprintClaimed && room == nullptr))
                         return false;
                 }
             }
