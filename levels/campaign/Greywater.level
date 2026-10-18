@@ -3055,15 +3055,15 @@ Action	win	1
 Name	sluiceKey
 Mode	once
 Cond	event	SluiceWarden	killed
-Action	stonedrop	SluiceWarden	sluice-key	1	9	76
+Action	stonedrop	SluiceWarden	sluice-key	1	40	18
 [/Trigger]
 [Trigger]
 Name	sluiceKeyFalls
 Mode	once
 Cond	time	5
-Cond	alive	SluiceWarden	0
+Cond	deliveredstone	sluice-key
 Cond	flag	sluiceOpen	0
-Action	message	1	The sluice warden is down and the key he wore lies in the dust. It turns in the old lock and the sluice gate on the east bank grinds open.
+Action	message	1	The key turns in the lock. The sluice gate opens.
 Action	terrain	38	17	42	17	path
 Action	setflag	sluiceOpen	1
 Action	portal	0	on

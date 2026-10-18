@@ -6177,21 +6177,21 @@ Action	terrain	42	74	42	74	manawell
 Name	gateKeys
 Mode	once
 Cond	event	Gatewarden13	killed
-Action	stonedrop	Gatewarden13	lower-gate-key	1	58	100
+Action	stonedrop	Gatewarden13	lower-gate-key	1	58	58
 [/Trigger]
 [Trigger]
 Name	upperGateKeyDrop
 Mode	once
 Cond	event	Gatewarden8	killed
-Action	stonedrop	Gatewarden8	upper-gate-key	1	58	100
+Action	stonedrop	Gatewarden8	upper-gate-key	1	58	30
 [/Trigger]
 [Trigger]
 Name	gate2KeyFalls
 Mode	once
 Cond	time	5
-Cond	alive	Gatewarden13	0
+Cond	deliveredstone	lower-gate-key
 Cond	flag	gate2Open	0
-Action	message	1	The gatewarden of the lower court is down and the key of the second gate lies where he fell. It turns in the seal and the second gate stands open.
+Action	message	1	The key turns in the lock. The second gate opens.
 Action	terrain	56	57	59	57	path
 Action	terrain	14	57	15	57	path
 Action	terrain	101	57	103	57	path
@@ -6201,9 +6201,9 @@ Action	setflag	gate2Open	1
 Name	gate3KeyFalls
 Mode	once
 Cond	time	5
-Cond	alive	Gatewarden8	0
+Cond	deliveredstone	upper-gate-key
 Cond	flag	gate3Open	0
-Action	message	1	The gatewarden of the great court is down and the key of the third gate lies where he fell. It turns in the seal and the third gate stands open.
+Action	message	1	The key turns in the lock. The third gate opens.
 Action	terrain	56	29	59	29	path
 Action	terrain	13	29	15	29	path
 Action	terrain	102	29	103	29	path
@@ -6227,7 +6227,7 @@ Action	setflag	mainLowerProof	1
 [Trigger]
 Name	mainLowerKey
 Mode	once
-Cond	event	Gatewarden13	killed
+Cond	deliveredstone	lower-gate-key
 Action	setflag	mainLowerProof	1
 [/Trigger]
 [Trigger]
@@ -6254,7 +6254,7 @@ Action	setflag	mainUpperProof	1
 [Trigger]
 Name	mainUpperKey
 Mode	once
-Cond	event	Gatewarden8	killed
+Cond	deliveredstone	upper-gate-key
 Action	setflag	mainUpperProof	1
 [/Trigger]
 [Trigger]

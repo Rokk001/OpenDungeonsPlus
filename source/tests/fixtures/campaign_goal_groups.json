@@ -1520,6 +1520,11 @@
       ],
       "sluiceKey": [
         "Cond\tevent\tSluiceWarden\tkilled"
+      ],
+      "sluiceKeyFalls": [
+        "Cond\ttime\t5",
+        "Cond\tdeliveredstone\tsluice-key",
+        "Cond\tflag\tsluiceOpen\t0"
       ]
     },
     "preserved_actions": {
@@ -1550,13 +1555,13 @@
         "Action\tportal\t0\ton"
       ],
       "sluiceKeyFalls": [
-        "Action\tmessage\t1\tThe sluice warden is down and the key he wore lies in the dust. It turns in the old lock and the sluice gate on the east bank grinds open.",
+        "Action\tmessage\t1\tThe key turns in the lock. The sluice gate opens.",
         "Action\tterrain\t38\t17\t42\t17\tpath",
         "Action\tsetflag\tsluiceOpen\t1",
         "Action\tportal\t0\ton"
       ],
       "sluiceKey": [
-        "Action\tstonedrop\tSluiceWarden\tsluice-key\t1\t9\t76"
+        "Action\tstonedrop\tSluiceWarden\tsluice-key\t1\t40\t18"
       ]
     },
     "reachability": {
@@ -1644,10 +1649,17 @@
       "mission_deliveries": {
         "sluice-key": {
           "tile": [
-            9,
-            76
+            40,
+            18
           ],
-          "seat": 1
+          "seat": 1,
+          "region": "NorthBank",
+          "bounds": [
+            36,
+            4,
+            40,
+            24
+          ]
         }
       }
     },
@@ -1656,7 +1668,7 @@
       "Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.",
       "Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.",
       "Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged.",
-      "If the mission is still running after the owner dies, a worker may bring sluice-key to the own heart at (9, 76) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged."
+      "The sluice-key drops at its owner's actual death position; a worker must carry that physical key to (40, 18) for sluiceKeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged."
     ],
     "runtime_limit": "Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification."
   },
@@ -6050,7 +6062,7 @@
       ],
       "holdSealBreaks": [
         "Cond\ttime\t5",
-        "Cond\talive\tTerraceWatch8\t0",
+        "Cond\tdeliveredstone\thold-key",
         "Cond\tflag\tholdOpen\t0"
       ],
       "holdSealLate": [
@@ -6103,7 +6115,7 @@
         "Action\tobjectivestate\t1\thighcairn-o02\treached"
       ],
       "holdSealBreaks": [
-        "Action\tmessage\t1\tThe captain of the terrace watch is down and the key to the hold lies where he fell. It fits the old lock and the stopped passage to the hold stands open.",
+        "Action\tmessage\t1\tThe key turns in the lock. The passage to the hold opens.",
         "Action\tterrain\t29\t10\t32\t10\tpath",
         "Action\tsetflag\tholdOpen\t1"
       ],
@@ -6141,7 +6153,7 @@
         "Action\tmessage\t1\tThe first seams are open. Gold buys you more than rooms: build a bridge and a door or two."
       ],
       "holdKey": [
-        "Action\tstonedrop\tTerraceWatch8\thold-key\t1\t12\t60"
+        "Action\tstonedrop\tTerraceWatch8\thold-key\t1\t30\t11"
       ],
       "cairnStone": [
         "Action\tstonecreate\t5\t21\tcairn-stone\t1\t12\t60"
@@ -6240,10 +6252,17 @@
       "mission_deliveries": {
         "hold-key": {
           "tile": [
-            12,
-            60
+            30,
+            11
           ],
-          "seat": 1
+          "seat": 1,
+          "region": "Hold",
+          "bounds": [
+            24,
+            2,
+            48,
+            11
+          ]
         }
       }
     },
@@ -6254,7 +6273,7 @@
       "Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.",
       "After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
       "Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.",
-      "If the mission is still running after the owner dies, a worker may bring hold-key to the own heart at (12, 60) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged."
+      "The hold-key drops at its owner's actual death position; a worker must carry that physical key to (30, 11) for holdSealBreaks to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged."
     ],
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "victory_narration": {
@@ -7968,7 +7987,7 @@
         "Action\tterrain\t80\t58\t81\t72\tpath"
       ],
       "treasurerKey": [
-        "Action\tstonedrop\tAlaricPenn\ttreasurer-key\t1\t14\t74"
+        "Action\tstonedrop\tAlaricPenn\ttreasurer-key"
       ],
       "treasurerHurt": [
         "Action\tmessage\t1\tAlaric Penn is bleeding coin. He calls the last of his guard to the core.",
@@ -8231,15 +8250,7 @@
           73
         ]
       ],
-      "mission_deliveries": {
-        "treasurer-key": {
-          "tile": [
-            14,
-            74
-          ],
-          "seat": 1
-        }
-      }
+      "mission_deliveries": {}
     },
     "route": [
       "Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.",
@@ -8247,8 +8258,7 @@
       "After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.",
       "After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.",
       "Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.",
-      "Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.",
-      "If the mission is still running after the owner dies, a worker may bring treasurer-key to the own heart at (14, 74) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged."
+      "Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request."
     ],
     "runtime_limit": "Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.",
     "victory_narration": {
@@ -8563,7 +8573,7 @@
         "Action\tterrain\t80\t8\t80\t8\tpath"
       ],
       "watchKey": [
-        "Action\tstonedrop\tMoraFenwick\twatch-key\t1\t16\t112"
+        "Action\tstonedrop\tMoraFenwick\twatch-key"
       ],
       "keyDropped": [
         "Action\tmessage\t1\tMora Fenwick is dead and the watch key she wore has dropped from her belt."
@@ -9027,15 +9037,7 @@
           "minimum_open_tiles": 1
         }
       },
-      "mission_deliveries": {
-        "watch-key": {
-          "tile": [
-            16,
-            112
-          ],
-          "seat": 1
-        }
-      }
+      "mission_deliveries": {}
     },
     "route": [
       "Build2actualbeds and a hatchery coop; protect the heart. Start0gold. Original firstCoin at400actualmining gives600gold and Orc2/Goblin2. Three dormitory fields(19..21,109)provide space for their3bedfields,276gold;3x3hatchery(19..21,106..108)990gold. Total1266requires266additionalgold beyond first400+gift600. All twelve fields are free reachable removable dirt, skills unlocked, finite reserve112500. No new reward or compulsory mining threshold.",
@@ -9043,8 +9045,7 @@
       "Secure the east and north approaches by actual ownership of Prison1 in TowerF and Workshop1 in TowerG plus the original sealsOpen completion. These are the two approach towers named by the original messages; mere visits do not replace room control. Original three terrain openings are preserved, without inventing a requirement to traverse all alternative holes.",
       "Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.",
       "MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.",
-      "Move the identical victory sentence after all current main observers, retaining the original pending win request.",
-      "If the mission is still running after the owner dies, a worker may bring watch-key to the own heart at (16, 112) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged."
+      "Move the identical victory sentence after all current main observers, retaining the original pending win request."
     ],
     "runtime_limit": "Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.",
     "victory_narration": {
@@ -9784,7 +9785,7 @@
         "Action\tterrain\t25\t84\t25\t86\tpath"
       ],
       "wardenKey": [
-        "Action\tstonedrop\tSabineRook\trook-key\t1\t64\t14"
+        "Action\tstonedrop\tSabineRook\trook-key"
       ],
       "wardenHurt": [
         "Action\tmessage\t1\tSabine Rook is bleeding and calls every rook of the roots to her side.",
@@ -9930,15 +9931,7 @@
         "Rookhunter14"
       ],
       "minimum_mineable_gold": 2674,
-      "mission_deliveries": {
-        "rook-key": {
-          "tile": [
-            64,
-            14
-          ],
-          "seat": 1
-        }
-      }
+      "mission_deliveries": {}
     },
     "route": [
       "Mine300actualgold,provide14realbeds and a coop,and protect the heart. The actual starting army is4Orc,3Troll,3Goblin,3Spider,1Rat. Orc beds1x2,Troll2x2,others1x1,total27bedfields. No starting fighters invented or ignored.",
@@ -9946,8 +9939,7 @@
       "Actual cost27*92+9*110=3474gold. Start0;original firstCoin after300mining gives800gold. A total2674mining plus800gift can pay for this layout,from93500finitepotentialgold. No added mining threshold beyond300: supplying the army naturally requires the resources,existing gifts/rewards remain.",
       "Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.",
       "Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.",
-      "Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals.",
-      "If the mission is still running after the owner dies, a worker may bring rook-key to the own heart at (64, 14) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged."
+      "Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals."
     ],
     "runtime_limit": "Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.",
     "victory_narration": {
@@ -11661,7 +11653,7 @@
       },
       "mainLowerKey": {
         "conditions": [
-          "Cond\tevent\tGatewarden13\tkilled"
+          "Cond\tdeliveredstone\tlower-gate-key"
         ],
         "states": [],
         "actions": [
@@ -11700,7 +11692,7 @@
       },
       "mainUpperKey": {
         "conditions": [
-          "Cond\tevent\tGatewarden8\tkilled"
+          "Cond\tdeliveredstone\tupper-gate-key"
         ],
         "states": [],
         "actions": [
@@ -11733,8 +11725,8 @@
       "Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.",
       "Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.",
       "Optionally visit WestTower3; it is not one of the required gate towers.",
-      "If the mission is still running after the owner dies, a worker may bring lower-gate-key to the own heart at (58, 100) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.",
-      "If the mission is still running after the owner dies, a worker may bring upper-gate-key to the own heart at (58, 100) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged."
+      "The lower-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 58) for gate2KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.",
+      "The upper-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 30) for gate3KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged."
     ],
     "runtime_limit": "Static conditions only; full movement, claiming, combat, treasury payout and save/load remain unverified.",
     "preserved_conditions": {
@@ -11961,12 +11953,12 @@
       ],
       "gate2KeyFalls": [
         "Cond\ttime\t5",
-        "Cond\talive\tGatewarden13\t0",
+        "Cond\tdeliveredstone\tlower-gate-key",
         "Cond\tflag\tgate2Open\t0"
       ],
       "gate3KeyFalls": [
         "Cond\ttime\t5",
-        "Cond\talive\tGatewarden8\t0",
+        "Cond\tdeliveredstone\tupper-gate-key",
         "Cond\tflag\tgate3Open\t0"
       ],
       "upperGateKeyDrop": [
@@ -12264,24 +12256,24 @@
         "Action\tterrain\t42\t74\t42\t74\tmanawell"
       ],
       "gateKeys": [
-        "Action\tstonedrop\tGatewarden13\tlower-gate-key\t1\t58\t100"
+        "Action\tstonedrop\tGatewarden13\tlower-gate-key\t1\t58\t58"
       ],
       "gate2KeyFalls": [
-        "Action\tmessage\t1\tThe gatewarden of the lower court is down and the key of the second gate lies where he fell. It turns in the seal and the second gate stands open.",
+        "Action\tmessage\t1\tThe key turns in the lock. The second gate opens.",
         "Action\tterrain\t56\t57\t59\t57\tpath",
         "Action\tterrain\t14\t57\t15\t57\tpath",
         "Action\tterrain\t101\t57\t103\t57\tpath",
         "Action\tsetflag\tgate2Open\t1"
       ],
       "gate3KeyFalls": [
-        "Action\tmessage\t1\tThe gatewarden of the great court is down and the key of the third gate lies where he fell. It turns in the seal and the third gate stands open.",
+        "Action\tmessage\t1\tThe key turns in the lock. The third gate opens.",
         "Action\tterrain\t56\t29\t59\t29\tpath",
         "Action\tterrain\t13\t29\t15\t29\tpath",
         "Action\tterrain\t102\t29\t103\t29\tpath",
         "Action\tsetflag\tgate3Open\t1"
       ],
       "upperGateKeyDrop": [
-        "Action\tstonedrop\tGatewarden8\tupper-gate-key\t1\t58\t100"
+        "Action\tstonedrop\tGatewarden8\tupper-gate-key\t1\t58\t30"
       ]
     },
     "reachability": {
@@ -12616,16 +12608,30 @@
         "lower-gate-key": {
           "tile": [
             58,
-            100
+            58
           ],
-          "seat": 1
+          "seat": 1,
+          "region": "SecondGate",
+          "bounds": [
+            50,
+            56,
+            66,
+            66
+          ]
         },
         "upper-gate-key": {
           "tile": [
             58,
-            100
+            30
           ],
-          "seat": 1
+          "seat": 1,
+          "region": "ThirdGate",
+          "bounds": [
+            50,
+            28,
+            66,
+            42
+          ]
         }
       }
     },

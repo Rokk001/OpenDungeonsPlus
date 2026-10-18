@@ -1872,7 +1872,11 @@ def self_test(root):
     # Only the right physical key, dropped on real death, may satisfy an existing delivery consumer.
     for map_name, owner, identity, target in (
             ("Silverdeep", "DorianSilt", "silver-vault-key", "1\t80\t89"),
-            ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20")):
+            ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20"),
+            ("Greywater", "SluiceWarden", "sluice-key", "1\t40\t18"),
+            ("Highcairn", "TerraceWatch8", "hold-key", "1\t30\t11"),
+            ("HollowmarkCitadel", "Gatewarden13", "lower-gate-key", "1\t58\t58"),
+            ("HollowmarkCitadel", "Gatewarden8", "upper-gate-key", "1\t58\t30")):
         source = (root / "levels/campaign" / (map_name + ".level")).read_text(encoding="utf-8")
         for old, new in (
                 ("Cond\tevent\t" + owner + "\tkilled", "Cond\tevent\t" + owner + "\tincapacitated"),

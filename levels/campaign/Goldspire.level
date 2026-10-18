@@ -3336,7 +3336,7 @@ Action	terrain	80	58	81	72	path
 Name	treasurerKey
 Mode	once
 Cond	event	AlaricPenn	killed
-Action	stonedrop	AlaricPenn	treasurer-key	1	14	74
+Action	stonedrop	AlaricPenn	treasurer-key
 [/Trigger]
 [Trigger]
 Name	treasurerHurt
