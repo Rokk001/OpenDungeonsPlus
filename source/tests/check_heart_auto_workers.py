@@ -39,7 +39,10 @@ struct Vector3 {float x,y,z;Vector3(){}Vector3(float a,float b,float c):x(a),y(b
 enum class RoomType {dungeonTemple, other, nbRooms};
 struct Tile {int x=0,y=0;Tile(){}Tile(int xi,int yi):x(xi),y(yi){}
  int getX()const{return x;}int getY()const{return y;}};
-struct CreatureDefinition {std::string name="worker";};
+// Supplies the class identity used by the real successful-spawn path.
+struct CreatureDefinition {std::string name="worker";
+ // Returns the worker class identity passed to the arrival helper.
+ const std::string& getClassName()const{return name;}};
 struct Seat;
 struct GameMap;
 struct Creature {
@@ -57,14 +60,21 @@ struct Creature {
 int Creature::spawned=0, Creature::addToMap=0, Creature::meshes=0, Creature::effects=0, Creature::positions=0;
 int Creature::lastX=-1, Creature::lastY=-1;
 Creature* Creature::first=nullptr;
+// Records arrival helper calls without replacing the production history implementation.
 struct Seat {
  int id;
+ std::vector<std::string> arrivals;
+ bool arrivalAfterPlacement=true;
  double mAutoWorkerTimer=0.0;
  int mNumCreaturesWorkers=0;
  const CreatureDefinition* mDefaultWorkerClass=nullptr;
  Seat(int i):id(i){}
  int getNumCreaturesWorkers()const{return mNumCreaturesWorkers;}
  const CreatureDefinition* getWorkerClassToSpawn()const{return mDefaultWorkerClass;}
+ // Records each successful-spawn request and whether map placement was complete.
+ void notifyCreatureArrival(const std::string& name){arrivals.push_back(name);
+  arrivalAfterPlacement=arrivalAfterPlacement&&Creature::positions==Creature::spawned
+   &&Creature::addToMap==Creature::spawned;}
 };
 struct BuildingObject;
 struct Room {Seat* seat;double hp=250.0;
@@ -101,12 +111,15 @@ int main(){
  // From zero workers to four, one every five seconds
  for(int i=0;i<7;++i)map.updateSeatAutoWorkers(&owner,0.7);
  check(Creature::spawned==0,"below the five seconds no worker appears yet");
+ check(owner.arrivals.empty(),"no arrival before an actual spawn");
  map.updateSeatAutoWorkers(&owner,0.7);
  check(Creature::spawned==1,"at about five and a half seconds the first worker appears");
  check(Creature::addToMap==1&&Creature::meshes==1&&Creature::effects==1&&Creature::positions==1,
   "the worker joins the map, gets its mesh, the summon effect and its position");
  check(Creature::first->definition==&workerClass,"the worker is the seat own worker class");
  check(Creature::lastX==5&&Creature::lastY==7,"the worker stands on the heart tile");
+ check(owner.arrivals.size()==1&&owner.arrivals.front()=="worker"&&owner.arrivalAfterPlacement,
+  "successful worker placement passes its class to arrival history");
  for(int i=0;i<21;++i)map.updateSeatAutoWorkers(&owner,0.7);
  check(Creature::spawned==4,"four workers have appeared by about twenty seconds");
  check(owner.mNumCreaturesWorkers==4,"the seat count follows the spawns");
@@ -150,6 +163,8 @@ int main(){
  owner.mNumCreaturesWorkers=0;owner.mAutoWorkerTimer=0.0;
  map.updateSeatAutoWorkers(&owner,1000.0);
  check(Creature::spawned==burstBefore+4,"a long turn still creates only up to the target");
+ check(owner.arrivals.size()==static_cast<size_t>(Creature::spawned)&&owner.arrivalAfterPlacement,
+  "exactly one arrival request per real spawn including after blocked attempts");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<"\n";return failures?1:0;
 }
 """

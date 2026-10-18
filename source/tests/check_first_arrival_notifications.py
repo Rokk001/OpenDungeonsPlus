@@ -146,3 +146,11 @@ for signature in ("bool Creature::importFromStream(",
     assert "notifyNewCreatureType(" not in restored
 assert "notifyCreatureArrival(" not in function(seat, "bool Seat::importSeatFromStream(")
 print("Existing start creatures and save/network restoration do not emit arrival notices: PASS (static only)")
+
+# The compiled integration probe must provide the new production calls, without no-op history stubs.
+probe = (ROOT / "source/tests/check_heart_auto_workers.py").read_text(encoding="utf-8")
+assert "const std::string& getClassName()const" in probe
+assert "void notifyCreatureArrival(const std::string& name)" in probe
+assert "no arrival before an actual spawn" in probe
+assert "exactly one arrival request per real spawn including after blocked attempts" in probe
+print("Heart worker integration probe records successful arrival requests: PASS (static only)")
