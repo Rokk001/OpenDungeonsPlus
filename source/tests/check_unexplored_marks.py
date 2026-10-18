@@ -24,6 +24,12 @@ assert 'mPlayer->markTilesForDigging(false, std::vector<Tile*>(1, tile), false)'
 render = read('source/render/RenderManager.cpp')
 assert render.count('(isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)') == 3
 assert 'tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked)' in render
+# The cloud above a marked unknown tile is hidden so it cannot cover the mark; unmarking shows it again.
+fog_block = render[render.index('if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)'):]
+fog_block = fog_block[:fog_block.index('// We rescale and set the orientation')]
+assert fog_block.index('tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked)') < \
+    fog_block.index('tile.getFogOfWarCloud()->setVisible(!isMarked)')
+assert 'if(tile.getFogOfWarCloud() != nullptr)' in fog_block
 tile = read('source/entities/Tile.cpp')
 fog_shader = read('shaders/DirtTileInstanced.frag')
 assert 'Ogre::Vector4(0.65f, 0.45f, 1.0f, 0.5f)' in tile

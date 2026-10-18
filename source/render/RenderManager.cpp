@@ -2823,6 +2823,8 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
     light->setDiffuseColour(lightColour * (lightFullIntensity * density));
 }
 
+//! \brief Creates or updates the meshes of a tile, including the neutral fog surface, its cloud
+//! and the dig mark of the local player.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -2973,6 +2975,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.getFogOfWarMesh()->setPosition(tile.getPosition());
         }
         tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
+        // The alpha-blended cloud hangs above the flat mark and would hide it again, the more the
+        // farther away the tile is; a marked unknown tile shows its violet surface without it.
+        if(tile.getFogOfWarCloud() != nullptr)
+            tile.getFogOfWarCloud()->setVisible(!isMarked);
     }
 
     // Only previously discovered enemy territory receives the delayed fog cloud.
