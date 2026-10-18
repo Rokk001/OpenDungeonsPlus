@@ -4893,7 +4893,7 @@
       "varnscrossing-main-home": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Claim your quarter; provide beds and food; protect your heart.",
+        "text": "Claim your quarter; build a bed and coop; guard your heart.",
         "completion": "mainHome",
         "conditions": [
           "Cond\tgoalmet\t1\tProtectDungeonTemple",

@@ -4814,7 +4814,7 @@ Action	setflag	portalOn	1
 Name	mainGoalList
 Mode	once
 Cond	time	0
-Action	mainobjectiveid	1	varnscrossing-main-home	Claim your quarter; provide beds and food; protect your heart.
+Action	mainobjectiveid	1	varnscrossing-main-home	Claim your quarter; build a bed and coop; guard your heart.
 Action	mainobjectiveid	1	varnscrossing-main-keep	Capture and hold the lava-ringed fortress.
 Action	mainobjectiveid	1	varnscrossing-main-rivals	Destroy both rival hearts and all enemy forces.
 Action	optionalobjectiveid	1	varnscrossing-extra-gold	Mine 5000 gold.
