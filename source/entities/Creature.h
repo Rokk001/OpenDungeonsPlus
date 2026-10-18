@@ -818,6 +818,7 @@ public:
 
     void fireCreatureRefreshIfNeeded();
 
+    //! \brief Reports a collected fee using the client profile name.
     void fireChatMsgTookFee(int goldTaken);
     //! \brief Reports departure using the client profile name.
     void fireChatMsgLeftDungeon();

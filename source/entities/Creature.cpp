@@ -5254,17 +5254,14 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg;
+    std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
     if(getGoldFee() <= 0)
-        msg = getName() + " took its fee: " + Helper::toString(goldTaken);
+        suffix = " took its fee: " + Helper::toString(goldTaken);
     else
-        msg = getName() + " took " + Helper::toString(goldTaken) + " from its fee";
+        suffix = " took " + Helper::toString(goldTaken) + " from its fee";
 
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
 
 void Creature::fireChatMsgLeftDungeon()

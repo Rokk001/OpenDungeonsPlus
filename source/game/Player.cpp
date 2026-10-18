@@ -830,12 +830,13 @@ void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix)
     notifyCreatureEvent(creature, suffix, EventShortNoticeType::aboutCreatures);
 }
 
-//! \brief Sends profile identity and the original notice category to the owning client.
+//! \brief Sends a server notice whose text lacks the creature name, followed by the creature identity,
+//! so the owning client puts the profile name of the creature card in front of the text.
 void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix, EventShortNoticeType noticeType)
 {
     const CreatureDefinition* definition = creature.getDefinition();
-    ServerNotification* notification = new ServerNotification(ServerNotificationType::creatureNotice, this);
-    notification->mPacket << creature.getName() << definition->getClassName() << definition->isWorker() << suffix << noticeType;
+    ServerNotification* notification = new ServerNotification(ServerNotificationType::chatServer, this);
+    notification->mPacket << suffix << noticeType << creature.getName() << definition->getClassName() << definition->isWorker();
     ODServer::getSingleton().queueServerNotification(notification);
 }
 

@@ -171,7 +171,8 @@ class ODClient: public Ogre::Singleton<ODClient>,
 
     
  protected:
-    //! \brief Applies server notifications, resolving creature notices with the displayed profile name.
+    //! \brief Applies a server notification, including the saved campaign victory result; creature notices
+    //! get the profile name shown on the creature card.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;
     void playerDisconnected() override;
 

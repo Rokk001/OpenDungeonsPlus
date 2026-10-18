@@ -33,7 +33,7 @@ class Seat;
 class Tile;
 
 enum class CreatureActionType;
-enum class EventShortNoticeType;
+enum class EventShortNoticeType : int32_t;
 enum class GameEntityType;
 enum class SpellType;
 
