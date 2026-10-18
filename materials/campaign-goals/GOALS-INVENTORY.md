@@ -637,17 +637,44 @@ File: `levels/campaign/Lanternhill.level`.
 | Script line 3066 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
 | Script line 3067 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
 | Script line 3068 | `Action	objectiveid	1	lanternhill-o03	Defend your heart against the hill patrols.` | yes |
-| Script line 3199 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3215 | `Action	win	1` | yes |
-| Script line 3220 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3201 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3216 | `Action	win	1` | yes |
+| Script line 3221 | `Cond	goal	1	KillAllEnemies` | yes |
 | Script line 3223 | `Action	win	1` | yes |
+| Script line 3304 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `lanternhill-main-home`: Mine 700 gold; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700 |
+| main | `lanternhill-main-road`: Open the ring road; claim the crypt and library. | `mainRoad`: Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21 |
+| main | `lanternhill-main-rival`: Destroy the northern heart and all enemy forces. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| main | `lanternhill-main-stone`: If found, bring the lantern stone home. | `mainStone`: Cond	trigger	lanternStoneHome |
+| optional | `lanternhill-extra-lamp`: Explore the lamp chamber. | `extraLamp`: Cond	region	1	LampRoom |
+
+Possible route (static, not a playthrough):
+- Mine700actualgold and protect the own heart;55500finite gold is potentially reachable. Original mined1 reward and patrols remain unchanged.
+- Dig a current dry worker route from(13,57)to(40,22). Initially disconnected; one possible62step route needs24dig fields. Any legal alternative qualifies.
+- Claim all six original neutral Crypt2 fields(10..12,16..17)and all six Library2 fields(13..15,20..21); visits do not replace ownership.
+- Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.
+- Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain.
+
+Static necessary evidence only; combat, claiming, save/load and stone hand transport remain unverified. Hand transport decision pending.
+
 | Trigger `goalRingGroundPathOpened` | `Action	objectivestate	1	lanternhill-o02	reached`; conditions: `Cond	groundconnected	1	13	57	40	22` | yes |
 | Trigger `goalHeartSafe3BeforeRivalHeartDown` | `Action	objectivestate	1	lanternhill-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	lanternhill-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `rivalHeartDown` | `Action	objectivestate	1	lanternhill-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | no: mining and digging the plugs are not independent goals |
-| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: KillAllEnemies includes the northern rival temple |
-| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | no: optional stone discovery is not required to win |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	lanternhill-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	lanternhill-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700` | yes |
+| Trigger `mainRoad` | `Action	objectivestate	1	lanternhill-main-road	reached`; conditions: `Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21` | yes |
+| Trigger `mainRival` | `Action	objectivestate	1	lanternhill-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	lanternhill-main-stone	reached`; conditions: `Cond	trigger	lanternStoneHome` | yes |
+| Trigger `extraLamp` | `Action	objectivestate	1	lanternhill-extra-lamp	reached`; conditions: `Cond	region	1	LampRoom` | yes |
+| Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed |
+| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: actual northern rival heart destroyed and all remaining enemies |
+| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates actual owned stone delivery |
 lanternhill-o02 requires an actual current dry worker path from (13,57) to (40,22), including legal alternative digging routes; no fixed plug subset is required.
 
 ## Mirewatch

@@ -4619,5 +4619,273 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe last hunter is dead and the forest of Wolfscar is silent. It is yours."
     }
+  },
+  "Lanternhill": {
+    "goals": {
+      "lanternhill-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 700 gold; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tmined\t1\t>=\t700"
+        ],
+        "mode": "repeat\t0"
+      },
+      "lanternhill-main-road": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Open the ring road; claim the crypt and library.",
+        "completion": "mainRoad",
+        "conditions": [
+          "Cond\tgroundconnected\t1\t13\t57\t40\t22",
+          "Cond\troomclaimed\t1\t10\t16\t12\t17",
+          "Cond\troomclaimed\t1\t13\t20\t15\t21"
+        ],
+        "mode": "repeat\t0"
+      },
+      "lanternhill-main-rival": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy the northern heart and all enemy forces.",
+        "completion": "mainRival",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "lanternhill-main-stone": {
+        "kind": "conditionalobjectiveid",
+        "seat": "1",
+        "text": "If found, bring the lantern stone home.",
+        "completion": "mainStone",
+        "conditions": [
+          "Cond\ttrigger\tlanternStoneHome"
+        ],
+        "mode": "repeat\t0"
+      },
+      "lanternhill-extra-lamp": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the lamp chamber.",
+        "completion": "extraLamp",
+        "conditions": [
+          "Cond\tregion\t1\tLampRoom"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainStoneList": {
+        "conditions": [
+          "Cond\ttrigger\thollowFound"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tconditionalobjectiveid\t1\tlanternhill-main-stone\tIf found, bring the lantern stone home."
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "lanternhill-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "victoryWithoutStone": {
+        "conditions": [
+          "Cond\tobjective\t1\tlanternhill-main-home\treached",
+          "Cond\tobjective\t1\tlanternhill-main-road\treached",
+          "Cond\tobjective\t1\tlanternhill-main-rival\treached",
+          "Cond\tflag\tlanternStone\t0"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tvictoryStoneReady\t1"
+        ]
+      },
+      "victoryWithStone": {
+        "conditions": [
+          "Cond\ttrigger\tlanternStoneHome"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tvictoryStoneReady\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tlanternhill-main-home\treached",
+          "Cond\tobjective\t1\tlanternhill-main-road\treached",
+          "Cond\tobjective\t1\tlanternhill-main-rival\treached",
+          "Cond\tflag\tvictoryStoneReady\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "mined1": [
+        "Cond\tmined\t1\t>=\t700"
+      ],
+      "hollowFound": [
+        "Cond\tregion\t1\tSealedLantern"
+      ],
+      "lanternStoneHome": [
+        "Cond\tcarryingstone\tLampBearer",
+        "Cond\towns\t1\tLampBearer",
+        "Cond\treached\tLampBearer\theart\t1"
+      ],
+      "lanternStoneLost": [
+        "Cond\tflag\tlanternStone\t1",
+        "Cond\ttimer\tlanternSpawn\t>=\t5",
+        "Cond\talive\tLampBearer\t0"
+      ]
+    },
+    "preserved_actions": {
+      "mined1": [
+        "Action\tmessage\t1\tThe seams hold. You can afford stronger doors and heavier traps now.",
+        "Action\tgenerate\t1\tSpider:1"
+      ],
+      "hollowFound": [
+        "Action\tmessage\t1\tThe sisters of the lamp bricked this hollow up long ago. A pale stone glows in the wall, and a lost spider has lifted it. Bring it to your dungeon heart.",
+        "Action\tspawn\t1\t70\t9\t1\tSpider:1@LampBearer",
+        "Action\tstoneattach\tLampBearer",
+        "Action\tsetflag\tlanternStone\t1",
+        "Action\ttimer\tlanternSpawn\t0"
+      ],
+      "lanternStoneHome": [
+        "Action\tmessage\t1\tThe pale stone sinks into the heart and a hidden hall has opened.",
+        "Action\tdiscover\tcampaign/TwistingHalls.level"
+      ],
+      "lanternStoneLost": [
+        "Action\tmessage\t1\tThe stone-bearer has fallen. Another creature has lifted the stone in the hollow.",
+        "Action\tspawn\t1\t70\t9\t1\tSpider:1@LampBearer",
+        "Action\tstoneattach\tLampBearer"
+      ]
+    },
+    "reachability": {
+      "room_claims": [
+        {
+          "name": "Crypt2",
+          "type": 9,
+          "seat": 0,
+          "tiles": [
+            [
+              10,
+              16
+            ],
+            [
+              10,
+              17
+            ],
+            [
+              11,
+              16
+            ],
+            [
+              11,
+              17
+            ],
+            [
+              12,
+              16
+            ],
+            [
+              12,
+              17
+            ]
+          ],
+          "goal": "lanternhill-main-road",
+          "bounds": [
+            10,
+            16,
+            12,
+            17
+          ]
+        },
+        {
+          "name": "Library2",
+          "type": 7,
+          "seat": 0,
+          "tiles": [
+            [
+              13,
+              20
+            ],
+            [
+              13,
+              21
+            ],
+            [
+              14,
+              20
+            ],
+            [
+              14,
+              21
+            ],
+            [
+              15,
+              20
+            ],
+            [
+              15,
+              21
+            ]
+          ],
+          "goal": "lanternhill-main-road",
+          "bounds": [
+            13,
+            20,
+            15,
+            21
+          ]
+        }
+      ],
+      "minimum_mineable_gold": 700,
+      "regions": {
+        "LampRoom": {
+          "bounds": [
+            36,
+            30,
+            44,
+            38
+          ],
+          "minimum_open_tiles": 24
+        },
+        "SealedLantern": {
+          "bounds": [
+            65,
+            4,
+            75,
+            14
+          ],
+          "minimum_open_tiles": 47
+        }
+      }
+    },
+    "route": [
+      "Mine700actualgold and protect the own heart;55500finite gold is potentially reachable. Original mined1 reward and patrols remain unchanged.",
+      "Dig a current dry worker route from(13,57)to(40,22). Initially disconnected; one possible62step route needs24dig fields. Any legal alternative qualifies.",
+      "Claim all six original neutral Crypt2 fields(10..12,16..17)and all six Library2 fields(13..15,20..21); visits do not replace ownership.",
+      "Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.",
+      "Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain."
+    ],
+    "runtime_limit": "Static necessary evidence only; combat, claiming, save/load and stone hand transport remain unverified. Hand transport decision pending.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now."
+    }
   }
 }

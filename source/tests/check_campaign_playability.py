@@ -70,6 +70,8 @@ BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza f
 BRIEFING_MATCH["Tinmoor"] = {2: "yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals", 3: "yes: finding the vault is voluntary, but discovery activates actual owned stone-carrier delivery before victory"}
 BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
 
+BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies", 4: "yes: voluntary discovery activates actual owned stone delivery"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1533,6 +1535,19 @@ def self_test(root):
         assert any("conditions differ" in error for error in objective_errors(mutation, "Ashcombe")), "visits and pre-departure death cannot replace killed-after-departure"
     assert ashcombe_outside_errors(ash.replace("Cond\talive\tLieslAshby\n", ""))
     assert ashcombe_outside_errors(ash.replace("GoalOutsideHold01\t0\t0\t72\t75", "GoalOutsideHold01\t0\t0\t73\t75"))
+    lantern = (root / "levels/campaign/Lanternhill.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(lantern, "Lanternhill")
+    for needle, replacement in (
+            ("Cond\tmined\t1\t>=\t700", "Cond\tmined\t1\t>=\t70"),
+            ("Cond\troomclaimed\t1\t10\t16\t12\t17", "Cond\tregion\t1\tNorthWest"),
+            ("Cond\troomclaimed\t1\t13\t20\t15\t21", "Cond\troomclaimed\t1\t13\t20\t14\t21"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tcarryingstone\tLampBearer", "Cond\talive\tLampBearer"),
+            ("Cond\towns\t1\tLampBearer", "Cond\talive\tLampBearer"),
+            ("Cond\tflag\tlanternStone\t0", "Cond\tflag\tlanternStone\t1"),
+            ("Cond\tflag\tvictoryStoneReady\t1", "Cond\ttime\t5")):
+        assert needle in lantern
+        assert grouped_goal_errors(lantern.replace(needle, replacement), "Lanternhill"), "Lanternhill goal weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 
