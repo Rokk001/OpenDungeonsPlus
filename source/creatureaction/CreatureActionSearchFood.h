@@ -36,6 +36,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Finds edible food and reports a genuine failure to reach a feeding room.
     static bool handleSearchFood(Creature& creature, bool forced);
 
 private:
