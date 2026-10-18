@@ -106,7 +106,7 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
                ('goalHeartSafe3BeforeWardenSlain',),
                ('wardenSlain',),
                ('stoneHome', 'stoneHome2'),
-               ('holdSealBreaks',)],
+               ('goalCaptainKilled',)],
  'HollinFen': [('wardenSlain',), ('goalHeartSafe2BeforeWardenSlain',), ('wardEntered',), ('wardenSlain',)],
  'HollowmarkCitadel': [('kingDead',), ('goalCourt3',), ('goalHeartSafe3BeforeKingDead',)],
  'Ironbridge': [('rivalFalls', 'rivalHeartDown'),
@@ -354,6 +354,7 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalHoldBeforeDeparture': '776b58a0778ede6f329
  'Highcairn/goalTerrace2': '4acedeef1aea3f655e52c27459519c7bdb001c839d3ed01b16cd0fd4d21644b7',
  'Highcairn/goalTerrace3': '985150fc38e89890402b5e67d691ae0800fcd05adb22c486b72b559ee37eaa69',
  'Highcairn/goalTerrace4': 'ccd3ee14ef9755706a7c4575ab18958da05c515c1fccef0a6a9f38e78d0d6a4e',
+ 'Highcairn/goalCaptainKilled': 'e1747cd4004d2ca4f9cc7890eee8c6ae2e0cf86996ce7ac62af4602e141d524a',
  'Highcairn/holdSealBreaks': '8d98fbb5f48f929b4e4e9eca60cfdb982bfd32ca5d430f8918bdf3de7041f9fb',
  'Highcairn/stoneHome': 'bf6c9dad942cb5d2f04f994d6355cd9af755cedc6c9e7d1122d8205843db3c19',
  'Highcairn/stoneHome2': '14e787f8a1aa9a89f3e765383f0c68e97714f9cc40f58056110e73e77baff80c',
@@ -1574,6 +1575,17 @@ def self_test(root):
             ("Cond\tobjective\t1\tthornreach-main-maze\treached", "Cond\tregion\t1\tClearing")):
         assert needle in thorn
         assert grouped_goal_errors(thorn.replace(needle, replacement), "Thornreach"), "Thornreach weakening must fail: " + needle
+    high = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
+    assert not objective_errors(high, "Highcairn")
+    captain = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", high, re.S) if "Name\tgoalCaptainKilled\n" in block)
+    assert "Cond\tevent\tTerraceWatch8\tkilled" in captain
+    assert "Cond\tflag\tholdOpen\t1" in captain and "Cond\tflag\tholdOpen\t0" not in captain
+    opening = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", high, re.S) if "Name\tholdSealBreaks\n" in block)
+    assert "highcairn-o06" not in opening, "opening on a missing/KO captain must not complete a death goal"
+    for old, new in (("Cond\tevent\tTerraceWatch8\tkilled", "Cond\talive\tTerraceWatch8\t0"),
+                     ("Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t1", "Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t0")):
+        assert old in high
+        assert objective_errors(high.replace(old, new), "Highcairn"), "captain death must remain completable after timed opening"
     print("campaign playability self-test passed")
 
 

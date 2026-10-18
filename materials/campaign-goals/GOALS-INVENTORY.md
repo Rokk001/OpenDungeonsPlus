@@ -474,16 +474,16 @@ File: `levels/campaign/Highcairn.level`.
 | Script line 2844 | `Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.` | yes |
 | Script line 2892 | `Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.` | yes |
 | Script line 2908 | `Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.` | yes |
-| Script line 3052 | `Action	win	1` | yes |
-| Script line 3084 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3059 | `Action	win	1` | yes |
+| Script line 3090 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
 | Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	reached	CairnBearer	heart	1` | yes |
 | Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	reached	CairnBearer2	heart	1` | yes |
 | Trigger `goalHeartSafe3BeforeWardenSlain` | `Action	objectivestate	1	highcairn-o03	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalTerrace4` | `Action	objectivestate	1	highcairn-o02	reached`; conditions: `Cond	region	1	Terrace4; Cond	flag	goalTerrace3	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	highcairn-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
+| Trigger `goalCaptainKilled` | `Action	objectivestate	1	highcairn-o06	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `holdSealBreaks` | `Action	objectivestate	1	highcairn-o06	reached`; conditions: `Cond	time	5; Cond	alive	TerraceWatch8	0; Cond	flag	holdOpen	0` | yes |
 | Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | no: heart protection is checked; building and ascent are not independent goals |
 | Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | no: enemy elimination is checked; carrying the optional stone is not required to win |
 

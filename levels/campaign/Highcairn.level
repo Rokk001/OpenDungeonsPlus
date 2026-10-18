@@ -3042,6 +3042,13 @@ Cond	room	1	DungeonTemple	==	0
 Action	objectivestate	1	highcairn-o03	failed
 [/Trigger]
 [Trigger]
+Name	goalCaptainKilled
+Mode	once
+Cond	event	TerraceWatch8	killed
+Cond	flag	holdOpen	1
+Action	objectivestate	1	highcairn-o06	reached
+[/Trigger]
+[Trigger]
 Name	wardenSlain
 Mode	once
 Cond	time	5
@@ -3066,7 +3073,6 @@ Cond	flag	holdOpen	0
 Action	message	1	The captain of the terrace watch is down and the key to the hold lies where he fell. It fits the old lock and the stopped passage to the hold stands open.
 Action	terrain	29	10	32	10	path
 Action	setflag	holdOpen	1
-Action	objectivestate	1	highcairn-o06	reached
 [/Trigger]
 [Trigger]
 Name	holdSealLate
@@ -3083,5 +3089,7 @@ Mode	once
 Cond	region	1	Terrace4
 Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.
 [/Trigger]
+
+
 
 [/Triggers]
