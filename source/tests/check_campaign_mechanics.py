@@ -123,3 +123,29 @@ assert 'Tile* tile = creature.getPositionTile();' in drop
 assert 'script.getStoneCarriers().count(creature.getName()) == 0' in drop
 assert drop.index('createStone(gameMap, tile->getX(), tile->getY());') < drop.index('script.removeStoneCarrier(creature.getName());')
 print('Carrier pickup leaves the stone on the actual floor tile exactly once: static PASS')
+
+# Physical mission delivery must use workers, the existing carry node and the same ground entity.
+mission = read('source/entities/MissileStone.cpp')
+worker_gate = mission.split('Tile* MissileStone::getDeliveryTile(', 1)[1].split('\n}\n', 1)[0]
+assert '!carrier.isAlive()' in worker_gate and '!carrier.getDefinition()->isWorker()' in worker_gate
+assert 'carrier.getSeat()->getId() != mDeliverySeat' in worker_gate
+carry_on = mission.split('void MissileStone::notifyEntityCarryOn(', 1)[1].split('\n}\n', 1)[0]
+carry_off = mission.split('void MissileStone::notifyEntityCarryOff(', 1)[1].split('\n}\n', 1)[0]
+assert 'removeEntityFromPositionTile();' in carry_on and 'mCarried = true;' in carry_on
+assert 'mPosition = position;' in carry_off and 'addEntityToPositionTile();' in carry_off
+assert 'tile->getX() == mDeliveryX && tile->getY() == mDeliveryY' in carry_off
+assert 'new MissileStone' not in carry_off, 'interruption must release the original item, not create a duplicate'
+search = read('source/creatureaction/CreatureActionSearchEntityToCarry.cpp')
+grab = read('source/creatureaction/CreatureActionGrabEntity.cpp')
+carry = read('source/creatureaction/CreatureActionCarryEntity.cpp')
+assert 'getDeliveryTile(creature)' in search and 'pathExists(&creature, myTile, destination)' in search
+assert 'getDeliveryTile(creature)' in grab and '*entityToCarry, *destination' in grab
+mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest)', 1)[1].split('\n}\n', 1)[0]
+assert 'mBuildingDest(nullptr)' in mission_action
+assert 'mCreature.carryEntity(mEntityToCarry);' in mission_action
+assert 'mEntityToCarry->notifyEntityCarryOff(pos);' in carry and 'mCreature.releaseCarriedEntity();' in carry
+assert '"MissionTransport\\t"' in mission and 'mCarried = false;' in mission
+actual_delivery = runner.split('case LevelScriptConditionType::deliveredStone:', 1)[1].split('case LevelScriptConditionType::carryingStone:', 1)[0]
+assert 'stone->getMissionIdentity() == cond.mName && stone->isDelivered()' in actual_delivery
+assert 'gameMap.getCreature' not in actual_delivery, 'marked creature arrival cannot substitute for delivery'
+print('Physical worker mission transport: static PASS (runtime verification remains separate)')

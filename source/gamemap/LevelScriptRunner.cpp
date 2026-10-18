@@ -540,6 +540,17 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return script.wasRegionAttacked(cond.mSeatId, static_cast<int32_t>(cond.mNumber), cond.mName);
         case LevelScriptConditionType::crossedRegion:
             return script.wasRegionCrossed(cond.mSeatId, cond.mName, cond.mName2, cond.mAfterTrigger);
+        case LevelScriptConditionType::deliveredStone:
+            for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
+            {
+                if(entity->getObjectType() != GameEntityType::missileObject ||
+                   static_cast<MissileObject*>(entity)->getMissileType() != MissileObjectType::stone)
+                    continue;
+                const MissileStone* stone = static_cast<MissileStone*>(entity);
+                if(stone->getMissionIdentity() == cond.mName && stone->isDelivered())
+                    return true;
+            }
+            return false;
         case LevelScriptConditionType::carryingStone:
             return script.getStoneCarriers().count(cond.mName) != 0;
         case LevelScriptConditionType::stoneInRegion:
@@ -1068,8 +1079,8 @@ void createGolfBall(GameMap& gameMap, const LevelScriptAction& action)
 //! The mesh of the portal stone
 const std::string PORTAL_STONE_MESH = "MysteryBox";
 
-//! Puts a portal stone on the tile
-void createStone(GameMap& gameMap, int32_t x, int32_t y)
+//! \brief Places a physical stone and optionally configures its exact worker delivery contract.
+void createStone(GameMap& gameMap, int32_t x, int32_t y, const LevelScriptAction* delivery = nullptr)
 {
     Tile* tile = gameMap.getTile(x, y);
     if(tile == nullptr)
@@ -1079,6 +1090,8 @@ void createStone(GameMap& gameMap, int32_t x, int32_t y)
     }
 
     MissileStone* stone = new MissileStone(&gameMap, gameMap.getSeatById(0), PORTAL_STONE_MESH);
+    if(delivery != nullptr && !delivery->mText.empty())
+        stone->configureTransport(delivery->mText, delivery->mSeatId, delivery->mX2, delivery->mY2);
     stone->addToGameMap();
     stone->createMesh();
     stone->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f));
@@ -1388,7 +1401,7 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             createGolfBall(gameMap, action);
             break;
         case LevelScriptActionType::stoneCreate:
-            createStone(gameMap, action.mX, action.mY);
+            createStone(gameMap, action.mX, action.mY, &action);
             break;
         case LevelScriptActionType::stoneAttach:
         {

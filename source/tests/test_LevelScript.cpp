@@ -1660,3 +1660,39 @@ BOOST_AUTO_TEST_CASE(exact_goal_chain_stage_round_trip)
     BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[1].mName2, "100");
     BOOST_CHECK(loaded.getTriggers()[0].mConditions[2].mName2.empty());
 }
+
+//! \brief Keeps a real mission item's identity and exact worker destination through script save/load.
+BOOST_AUTO_TEST_CASE(mission_stone_delivery_definition_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName found\nMode once\n"
+        "Action stonecreate 65 50 vault-stone 1 9 46\n[/Trigger]\n"
+        "[Trigger]\nName home\nMode once\nCond deliveredstone vault-stone\n"
+        "Action setflag delivered 1\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    const LevelScriptAction& item = restored.getTriggers()[0].mActions[0];
+    BOOST_CHECK(item.mType == LevelScriptActionType::stoneCreate);
+    BOOST_CHECK_EQUAL(item.mText, "vault-stone");
+    BOOST_CHECK_EQUAL(item.mSeatId, 1);
+    BOOST_CHECK_EQUAL(item.mX, 65);
+    BOOST_CHECK_EQUAL(item.mY, 50);
+    BOOST_CHECK_EQUAL(item.mX2, 9);
+    BOOST_CHECK_EQUAL(item.mY2, 46);
+    const LevelScriptCondition& delivered = restored.getTriggers()[1].mConditions[0];
+    BOOST_CHECK(delivered.mType == LevelScriptConditionType::deliveredStone);
+    BOOST_CHECK_EQUAL(delivered.mName, "vault-stone");
+    for(const std::string line : {"Cond deliveredstone", "Cond deliveredstone a b",
+        "Action stonecreate 65 50 a 1 9", "Action stonecreate 65 50 a -1 9 46",
+        "Action stonecreate 65 50 a 1 -1 46", "Action stonecreate 65 50 a 1 9 -1",
+        "Action stonecreate 65 50 a 4294967296 9 46", "Action stonecreate 65 50 a 1 4294967296 46"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + line + "\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}

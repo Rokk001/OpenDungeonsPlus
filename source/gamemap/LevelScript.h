@@ -40,6 +40,9 @@
 //!   VictoryRequest <seatId>                    # saved original victory request waiting for main goals
 //!   SpawnObservation <trigger> <actionIndex> <creatureName> <killed 0|1> <deathTempleSeat>   # saved exact spawn/death observation; temple -1 means outside a temple
 //!   MinedGold <seatId> <x> <y> <creditedGold>    # sparse actual gold credited from a watched source tile
+//!   # Cond deliveredstone <identity> requires the physical item to have been delivered.
+//!   # Action stonecreate <x> <y> [<identity> <seat> <destinationX> <destinationY>] creates worker cargo.
+//!   Stone <creatureName> [<x> <y>]           # legacy carrier and optional last-known drop position
 //!   DeathTile <creatureName> <x> <y>           # actual death tile of a named creature watched by killedin
 //!   Timer   <name> <running 0|1> <turns>      # written by the game: a timer started by an action, in game turns
 //!   FreePossession                            # written by the game: possessions of this level cost no mana
@@ -256,7 +259,8 @@ enum class LevelScriptConditionType
     crossedRegion,
     attackedRegion,
     shotKilled,
-    heldCreature
+    heldCreature,
+    deliveredStone
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.

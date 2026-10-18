@@ -29,6 +29,8 @@ class CreatureActionCarryEntity : public CreatureAction, public GameEntityListen
 {
 public:
     CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest);
+    //! \brief Carries a mission item visibly to its exact script destination without inventing a building.
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest);
 
     virtual ~CreatureActionCarryEntity();
 

@@ -85,6 +85,23 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
     OD_LOG_INF("creature=" + mCreature.getName() + (mIsDrag ? " is pulling " : " is carrying ") + mEntityToCarry->getName() + " to tile=" + Tile::displayAsString(mTileDest));
 }
 
+//! \brief Reuses normal carry locking, mesh attachment and interruption cleanup for mission destinations.
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest) :
+    CreatureAction(creature),
+    mEntityToCarry(&entityToCarry),
+    mTileDest(&tileDest),
+    mBuildingDest(nullptr),
+    mIsDrag(false),
+    mDragPhase(0),
+    mDragLayTurns(0),
+    mDragFollowArc(0.0)
+{
+    mEntityToCarry->addGameEntityListener(this);
+    mEntityToCarry->setCarryLock(mCreature, true);
+    mEntityToCarry->notifyEntityCarryOn(&mCreature);
+    mCreature.carryEntity(mEntityToCarry);
+}
+
 CreatureActionCarryEntity::~CreatureActionCarryEntity()
 {
     if(mEntityToCarry != nullptr)

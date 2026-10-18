@@ -51,6 +51,16 @@ bool parseInt32(const std::string& str, int32_t& value)
     return true;
 }
 
+//! \brief Parses a nonnegative tile or seat index without truncating values outside int32.
+bool parseNonnegativeInt32(const std::string& str, int32_t& value)
+{
+    int64_t parsed;
+    if(!parseInt(str, parsed) || parsed < 0 || parsed > std::numeric_limits<int32_t>::max())
+        return false;
+    value = static_cast<int32_t>(parsed);
+    return true;
+}
+
 std::string trim(const std::string& str)
 {
     std::string::size_type first = str.find_first_not_of(" \t\r\n");
@@ -428,6 +438,14 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
                 return false;
         }
         return true;
+    }
+    if(type == "deliveredstone")
+    {
+        if(t.size() != 3)
+            return false;
+        cond.mType = LevelScriptConditionType::deliveredStone;
+        cond.mName = t[2];
+        return !cond.mName.empty();
     }
     if(type == "carryingstone")
     {
@@ -829,7 +847,13 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
     if(type == "stonecreate")
     {
         action.mType = LevelScriptActionType::stoneCreate;
-        return (t.size() == 4) && parseInt32(t[2], action.mX) && parseInt32(t[3], action.mY);
+        if((t.size() != 4 && t.size() != 8) || !parseInt32(t[2], action.mX) || !parseInt32(t[3], action.mY))
+            return false;
+        if(t.size() == 4)
+            return true;
+        action.mText = t[4];
+        return parseNonnegativeInt32(t[5], action.mSeatId) &&
+            parseNonnegativeInt32(t[6], action.mX2) && parseNonnegativeInt32(t[7], action.mY2);
     }
     if(type == "stoneattach")
     {
@@ -1010,6 +1034,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             os << "crossed\t" << c.mSeatId << "\t" << c.mName << "\t" << c.mName2;
             if(!c.mAfterTrigger.empty())
                 os << "\tafter\t" << c.mAfterTrigger;
+            break;
+        case LevelScriptConditionType::deliveredStone:
+            os << "deliveredstone\t" << c.mName;
             break;
         case LevelScriptConditionType::carryingStone:
             os << "carryingstone\t" << c.mName;
@@ -1269,6 +1296,8 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::stoneCreate:
             os << "stonecreate\t" << a.mX << "\t" << a.mY;
+            if(!a.mText.empty())
+                os << "\t" << a.mText << "\t" << a.mSeatId << "\t" << a.mX2 << "\t" << a.mY2;
             break;
         case LevelScriptActionType::stoneAttach:
             os << "stoneattach\t" << a.mText;
