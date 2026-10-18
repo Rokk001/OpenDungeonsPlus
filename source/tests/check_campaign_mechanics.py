@@ -149,3 +149,16 @@ actual_delivery = runner.split('case LevelScriptConditionType::deliveredStone:',
 assert 'stone->getMissionIdentity() == cond.mName && stone->isDelivered()' in actual_delivery
 assert 'gameMap.getCreature' not in actual_delivery, 'marked creature arrival cannot substitute for delivery'
 print('Physical worker mission transport: static PASS (runtime verification remains separate)')
+
+# A mission drop requires an observed actual death; recovery cannot mint another copy of the same item.
+mission_drop = runner.split('case LevelScriptActionType::stoneDrop:', 1)[1].split('case LevelScriptActionType::stoneAttach:', 1)[0]
+assert 'script.getCreatureDeathTile(action.mText, x, y)' in mission_drop
+assert 'createStone(gameMap, x, y, &delivery)' in mission_drop
+assert 'getStoneCarrierTile' not in mission_drop
+create_stone = runner.split('void createStone(', 1)[1].split('\n}\n', 1)[0]
+assert create_stone.index('getMissionIdentity() == delivery->mText') < create_stone.index('new MissileStone')
+actual_event = creature_source.rsplit('void recordScriptEvent(', 1)[1].split('\n}\n', 1)[0]
+assert actual_event.index('if(eventName == "killed")') < actual_event.index('observeCreatureDeath(')
+assert 'tile->getX(), tile->getY()' in actual_event
+assert 'action.mType == LevelScriptActionType::stoneDrop && action.mText == creatureName' in script
+print('Mission drops require exact recorded death coordinates and keep unique identities: static PASS')

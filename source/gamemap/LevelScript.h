@@ -40,6 +40,7 @@
 //!   VictoryRequest <seatId>                    # saved original victory request waiting for main goals
 //!   SpawnObservation <trigger> <actionIndex> <creatureName> <killed 0|1> <deathTempleSeat>   # saved exact spawn/death observation; temple -1 means outside a temple
 //!   MinedGold <seatId> <x> <y> <creditedGold>    # sparse actual gold credited from a watched source tile
+//!   # Action stonedrop <owner> <identity> [<seat> <destinationX> <destinationY>] drops at actual death.
 //!   # Cond deliveredstone <identity> requires the physical item to have been delivered.
 //!   # Action stonecreate <x> <y> [<identity> <seat> <destinationX> <destinationY>] creates worker cargo.
 //!   Stone <creatureName> [<x> <y>]           # legacy carrier and optional last-known drop position
@@ -314,6 +315,7 @@ enum class LevelScriptActionType
     golfBall,
     stoneCreate,
     stoneAttach,
+    stoneDrop,
     keepMinion,
     objectiveState,
     hint
@@ -594,8 +596,10 @@ public:
     void observeGoldMined(int32_t seatId, int32_t x, int32_t y, int64_t amount);
     //! \brief Returns credited gold mined by this seat from the named region's tiles.
     int64_t getGoldMinedInRegion(int32_t seatId, const std::string& regionName) const;
-    //! \brief Saves the actual death tile of a named creature watched by killedin conditions.
+    //! \brief Saves the actual death tile watched by regional conditions or mission-item drops.
     void observeCreatureDeath(const std::string& creatureName, int32_t x, int32_t y);
+    //! \brief Returns a watched creature's actual saved death tile, never its last living position.
+    bool getCreatureDeathTile(const std::string& creatureName, int32_t& x, int32_t& y) const;
     //! \brief True only when a recorded actual death lies inside the named region.
     bool wasCreatureKilledInRegion(const std::string& creatureName, const std::string& regionName) const;
 

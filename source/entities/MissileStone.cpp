@@ -109,7 +109,7 @@ bool MissileStone::importFromStream(std::istream& is)
     std::string marker;
     int32_t delivered;
     if(!(is >> marker >> mMissionIdentity >> mDeliverySeat >> mDeliveryX >> mDeliveryY >> delivered) ||
-       marker != "MissionTransport" || mDeliverySeat < 0 || mDeliveryX < 0 || mDeliveryY < 0 ||
+       marker != "MissionTransport" || mDeliverySeat < -1 || mDeliveryX < 0 || mDeliveryY < 0 ||
        (delivered != 0 && delivered != 1))
         return false;
     mDelivered = delivered != 0;

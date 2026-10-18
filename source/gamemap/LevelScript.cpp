@@ -855,6 +855,16 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         return parseNonnegativeInt32(t[5], action.mSeatId) &&
             parseNonnegativeInt32(t[6], action.mX2) && parseNonnegativeInt32(t[7], action.mY2);
     }
+    if(type == "stonedrop")
+    {
+        action.mType = LevelScriptActionType::stoneDrop;
+        if(t.size() != 4 && t.size() != 7)
+            return false;
+        action.mText = t[2];
+        action.mParty = t[3];
+        return t.size() == 4 || (parseNonnegativeInt32(t[4], action.mSeatId) &&
+            parseNonnegativeInt32(t[5], action.mX2) && parseNonnegativeInt32(t[6], action.mY2));
+    }
     if(type == "stoneattach")
     {
         action.mType = LevelScriptActionType::stoneAttach;
@@ -1299,6 +1309,11 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             if(!a.mText.empty())
                 os << "\t" << a.mText << "\t" << a.mSeatId << "\t" << a.mX2 << "\t" << a.mY2;
             break;
+        case LevelScriptActionType::stoneDrop:
+            os << "stonedrop\t" << a.mText << "\t" << a.mParty;
+            if(a.mSeatId >= 0)
+                os << "\t" << a.mSeatId << "\t" << a.mX2 << "\t" << a.mY2;
+            break;
         case LevelScriptActionType::stoneAttach:
             os << "stoneattach\t" << a.mText;
             break;
@@ -1522,7 +1537,7 @@ int64_t LevelScript::getGoldMinedInRegion(int32_t seatId, const std::string& reg
     return amount;
 }
 
-//! \brief Records a named creature's real death position only when a killedin condition watches it.
+//! \brief Records an actual death position watched by a regional condition or a physical mission-item drop.
 void LevelScript::observeCreatureDeath(const std::string& creatureName, int32_t x, int32_t y)
 {
     for(const LevelScriptTrigger& trigger : mTriggers)
@@ -1535,7 +1550,26 @@ void LevelScript::observeCreatureDeath(const std::string& creatureName, int32_t 
                 return;
             }
         }
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType == LevelScriptActionType::stoneDrop && action.mText == creatureName)
+            {
+                mCreatureDeathTiles[creatureName] = std::make_pair(x, y);
+                return;
+            }
+        }
     }
+}
+
+//! \brief Retrieves only an observed real death position, including after a save/load round trip.
+bool LevelScript::getCreatureDeathTile(const std::string& creatureName, int32_t& x, int32_t& y) const
+{
+    auto death = mCreatureDeathTiles.find(creatureName);
+    if(death == mCreatureDeathTiles.end())
+        return false;
+    x = death->second.first;
+    y = death->second.second;
+    return true;
 }
 
 //! \brief Checks the actual saved death position rather than the creature's last-known live region.

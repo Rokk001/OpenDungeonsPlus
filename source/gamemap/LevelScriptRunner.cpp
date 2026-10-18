@@ -1082,6 +1082,16 @@ const std::string PORTAL_STONE_MESH = "MysteryBox";
 //! \brief Places a physical stone and optionally configures its exact worker delivery contract.
 void createStone(GameMap& gameMap, int32_t x, int32_t y, const LevelScriptAction* delivery = nullptr)
 {
+    if(delivery != nullptr && !delivery->mText.empty())
+    {
+        for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
+        {
+            if(entity->getObjectType() == GameEntityType::missileObject &&
+               static_cast<MissileObject*>(entity)->getMissileType() == MissileObjectType::stone &&
+               static_cast<MissileStone*>(entity)->getMissionIdentity() == delivery->mText)
+                return;
+        }
+    }
     Tile* tile = gameMap.getTile(x, y);
     if(tile == nullptr)
     {
@@ -1403,6 +1413,17 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::stoneCreate:
             createStone(gameMap, action.mX, action.mY, &action);
             break;
+        case LevelScriptActionType::stoneDrop:
+        {
+            int32_t x;
+            int32_t y;
+            if(!script.getCreatureDeathTile(action.mText, x, y))
+                break;
+            LevelScriptAction delivery = action;
+            delivery.mText = action.mParty;
+            createStone(gameMap, x, y, &delivery);
+            break;
+        }
         case LevelScriptActionType::stoneAttach:
         {
             Creature* creature = gameMap.getCreature(action.mText);

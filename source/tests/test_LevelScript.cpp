@@ -1696,3 +1696,45 @@ BOOST_AUTO_TEST_CASE(mission_stone_delivery_definition_round_trip)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief Physical drops use saved actual death coordinates, never KO or unrelated creature positions.
+BOOST_AUTO_TEST_CASE(mission_item_drop_uses_actual_death_and_survives_save)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName drop\nMode once\n"
+        "Cond event KeyOwner killed\nAction stonedrop KeyOwner cache-key 1 88 20\n"
+        "[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    int32_t x;
+    int32_t y;
+    script.recordEvent("KeyOwner", "incapacitated");
+    BOOST_CHECK(!script.getCreatureDeathTile("KeyOwner", x, y));
+    script.observeCreatureDeath("Other", 2, 3);
+    BOOST_CHECK(!script.getCreatureDeathTile("Other", x, y));
+    script.observeCreatureDeath("KeyOwner", 83, 21);
+    BOOST_REQUIRE(script.getCreatureDeathTile("KeyOwner", x, y));
+    BOOST_CHECK_EQUAL(x, 83);
+    BOOST_CHECK_EQUAL(y, 21);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_REQUIRE(restored.getCreatureDeathTile("KeyOwner", x, y));
+    BOOST_CHECK_EQUAL(x, 83);
+    BOOST_CHECK_EQUAL(y, 21);
+    const LevelScriptAction& drop = restored.getTriggers()[0].mActions[0];
+    BOOST_CHECK(drop.mType == LevelScriptActionType::stoneDrop);
+    BOOST_CHECK_EQUAL(drop.mText, "KeyOwner");
+    BOOST_CHECK_EQUAL(drop.mParty, "cache-key");
+    BOOST_CHECK_EQUAL(drop.mSeatId, 1);
+    BOOST_CHECK_EQUAL(drop.mX2, 88);
+    BOOST_CHECK_EQUAL(drop.mY2, 20);
+    for(const std::string line : {"Action stonedrop KeyOwner", "Action stonedrop KeyOwner key 1 88",
+        "Action stonedrop KeyOwner key -1 88 20", "Action stonedrop KeyOwner key 1 4294967296 20"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + line + "\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
