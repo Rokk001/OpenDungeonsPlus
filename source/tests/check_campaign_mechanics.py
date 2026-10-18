@@ -174,3 +174,20 @@ position_update = creature_source.split('void Creature::setPosition(', 1)[1].spl
 assert 'mCarriedEntity->notifyCarryMove(v);' in position_update
 assert 'mPosition.x' in read('source/entities/GameEntity.cpp')
 print('Mission metadata load failure and in-flight item save wiring: static PASS')
+
+# Both normal idle cargo selection and a forced drop-to-pickup are confined to workers.
+idle_worker = creature_source.split('bool Creature::handleIdleAction()', 1)[1].split('// A standing order', 1)[0]
+assert idle_worker.index('if (mDefinition->isWorker())') < idle_worker.index('CreatureActionSearchEntityToCarry')
+forced_drop = creature_source.split('void Creature::drop(const Ogre::Vector3& v)', 1)[1].split('// Fighters', 1)[0]
+assert forced_drop.index('if(mDefinition->isWorker())') < forced_drop.index('CreatureActionGrabEntity')
+# All interruptions destroy the existing carry action, releasing the same item and its pickup lock.
+for signature in ('void Creature::pickup()', 'void Creature::dropCarriedEquipment()', 'void Creature::changeSeat('):
+    interrupted = creature_source.split(signature, 1)[1].split('\n}\n', 1)[0]
+    assert 'clearActionQueue();' in interrupted, signature
+clear_actions = creature_source.split('void Creature::clearActionQueue()', 1)[1].split('\n}\n', 1)[0]
+assert 'mActions.clear();' in clear_actions
+release = carry.split('CreatureActionCarryEntity::~CreatureActionCarryEntity()', 1)[1].split('\n}\n', 1)[0]
+assert release.index('setCarryLock(mCreature, false)') < release.index('notifyEntityCarryOff(pos)')
+assert 'const Ogre::Vector3& pos = mCreature.getPosition();' in release
+assert 'new MissileStone' not in release
+print('Worker-only cargo entry and same-item pickup/death/conversion interruption: static PASS')
