@@ -1576,7 +1576,7 @@ void LevelScript::observeCreatureDeath(const std::string& creatureName, int32_t 
 //! \brief Retrieves only an observed real death position, including after a save/load round trip.
 bool LevelScript::getCreatureDeathTile(const std::string& creatureName, int32_t& x, int32_t& y) const
 {
-    auto death = mCreatureDeathTiles.find(creatureName);
+    std::map<std::string, std::pair<int32_t, int32_t> >::const_iterator death = mCreatureDeathTiles.find(creatureName);
     if(death == mCreatureDeathTiles.end())
         return false;
     x = death->second.first;
@@ -1909,7 +1909,7 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::pair<int32_t, std::string>, LevelScriptObjectiveState>& objective : mObjectiveStates)
         os << "ObjectiveState\t" << objective.first.first << "\t" << objective.first.second << "\t"
            << levelScriptObjectiveStateName(objective.second) << "\n";
-    for(const auto& shot : mFatalShots)
+    for(const std::pair<const std::string, int32_t>& shot : mFatalShots)
         os << "FatalShot\t" << shot.first << "\t" << shot.second << "\n";
     for(const LevelScriptCrossingProgress& progress : mCrossingProgress)
         os << "CrossingProgress\t" << progress.mSeatId << "\t" << progress.mCreature << "\t"
@@ -2406,9 +2406,14 @@ bool LevelScript::wasRegionCrossed(int32_t seatId, const std::string& region,
 //! \brief Removes unfinished movement belonging to a creature instance before its name can be reused.
 void LevelScript::clearCreatureCrossings(const std::string& creature)
 {
-    mCrossingProgress.erase(std::remove_if(mCrossingProgress.begin(), mCrossingProgress.end(),
-        [&creature](const LevelScriptCrossingProgress& progress) { return progress.mCreature == creature; }),
-        mCrossingProgress.end());
+    std::vector<LevelScriptCrossingProgress>::iterator it = mCrossingProgress.begin();
+    while(it != mCrossingProgress.end())
+    {
+        if(it->mCreature == creature)
+            it = mCrossingProgress.erase(it);
+        else
+            ++it;
+    }
 }
 
 //! \brief Follows an actual walked path across entry, interior and opposite exit using the same creature.
@@ -2433,17 +2438,18 @@ void LevelScript::observeCrossingStep(const std::string& creature, int32_t seatI
                 continue;
             if(!condition.mAfterTrigger.empty())
             {
-                const auto required = std::find_if(mTriggers.begin(), mTriggers.end(),
-                    [&condition](const LevelScriptTrigger& item) { return item.mName == condition.mAfterTrigger; });
+                std::vector<LevelScriptTrigger>::const_iterator required = mTriggers.begin();
+                while(required != mTriggers.end() && required->mName != condition.mAfterTrigger)
+                    ++required;
                 if(required == mTriggers.end() || required->mTimesFired == 0)
                     continue;
             }
-            auto candidate = std::find_if(mCrossingProgress.begin(), mCrossingProgress.end(),
-                [&creature, &condition, seatId](const LevelScriptCrossingProgress& progress) {
-                    return progress.mCreature == creature && progress.mSeatId == seatId &&
-                        progress.mRegion == condition.mName && progress.mDirection == condition.mName2 &&
-                        progress.mAfterTrigger == condition.mAfterTrigger;
-                });
+            std::vector<LevelScriptCrossingProgress>::iterator candidate = mCrossingProgress.begin();
+            while(candidate != mCrossingProgress.end() &&
+                  !(candidate->mCreature == creature && candidate->mSeatId == seatId &&
+                    candidate->mRegion == condition.mName && candidate->mDirection == condition.mName2 &&
+                    candidate->mAfterTrigger == condition.mAfterTrigger))
+                ++candidate;
             if(std::abs(toX - fromX) > 1 || std::abs(toY - fromY) > 1)
             {
                 if(candidate != mCrossingProgress.end())
@@ -2543,7 +2549,7 @@ void LevelScript::clearFatalShot(const std::string& creature)
 //! \brief An actual killed event consumes its pending projectile source exactly once.
 void LevelScript::completeShotKill(const std::string& creature)
 {
-    const auto shot = mFatalShots.find(creature);
+    const std::map<std::string, int32_t>::iterator shot = mFatalShots.find(creature);
     if(shot == mFatalShots.end())
         return;
     recordEvent(creature, "shotkilled:" + std::to_string(shot->second));

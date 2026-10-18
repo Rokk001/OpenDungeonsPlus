@@ -399,9 +399,9 @@ public:
 
     static Seat* createRogueSeat(GameMap* gameMap);
 
-    //! rief Loads seat data, optional first-arrival history and optional saved own-creature sight ages.
+    //! brief Loads seat data, optional first-arrival history and optional saved own-creature sight ages.
     bool importSeatFromStream(std::istream& is);
-    //! rief Saves seat data, first-arrival history and own-creature sight ages.
+    //! brief Saves seat data, first-arrival history and own-creature sight ages.
     bool exportSeatToStream(std::ostream& os) const;
     static void loadFromLine(const std::string& line, Seat *s);
 

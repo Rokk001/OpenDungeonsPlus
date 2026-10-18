@@ -381,7 +381,7 @@ public:
      * walking toward the tile as a new action, and when it arrives at the tile it will
      * revert to the 'digTile' action.
      */
-    //! rief Updates creature actions and recovery display for AI and player possession, including actual death
+    //! brief Updates creature actions and recovery display for AI and player possession, including actual death
     //! observations when a lethal knockout expires.
     void doUpkeep() override;
 

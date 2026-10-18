@@ -143,7 +143,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
   check(b.mAttackRecoveryTurns==1&&b.mAttackRecoveryDuration==1&&b.mAttackRecoverySerial==150+step&&a.mNeedFireRefresh,"worker step reports actual upkeep interval");
   status.updateProgress(0);check(overlay.frames[2]==1,"each worker step restarts the existing ring");
   status.updateProgress(.35f);check(overlay.frames[2]>1&&overlay.frames[2]<63,"worker interval sweeps within the server turn");
-  auto paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
+  unsigned paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
  }
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;

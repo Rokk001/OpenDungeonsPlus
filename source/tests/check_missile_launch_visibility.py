@@ -95,6 +95,7 @@ struct SavedMissile:RenderedMovableEntity {
 };
 ORIGIN_METHODS
 // Run real base-missile serialization with old rows, subtype suffixes and both control modes.
+// allowed-lambda: takes the probe's existing check callback from main
 void checkShotSave(const std::function<void(bool,const char*)>& check){
  for(bool possessed:{false,true}){
   SavedMissile original;original.mCreatureShot=true;original.mPossessedShot=possessed;

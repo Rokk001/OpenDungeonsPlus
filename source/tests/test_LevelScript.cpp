@@ -1288,7 +1288,7 @@ BOOST_AUTO_TEST_CASE(natural_floor_and_fighter_assembly_conditions_round_trip)
         "Cond groundclaimed 1 44 5 48 5\nCond region 1 Grove >= 2 @fighters\n"
         "Action mainobjectiveid 1 keep Claim the keep.\n[/Trigger]\n[/Triggers]\n");
     BOOST_REQUIRE(script.importFromStream(input));
-    const auto& conditions = script.getTriggers()[0].mConditions;
+    const std::vector<LevelScriptCondition>& conditions = script.getTriggers()[0].mConditions;
     BOOST_CHECK(conditions[0].mType == LevelScriptConditionType::groundFootprintClaimed);
     BOOST_CHECK_EQUAL(conditions[0].mX1, 44);
     BOOST_CHECK_EQUAL(conditions[0].mX2, 48);

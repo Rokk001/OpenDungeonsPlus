@@ -989,7 +989,7 @@ void Seat::sendVisibleTiles()
     {
         ServerNotification* fogNotification = new ServerNotification(ServerNotificationType::enemyTerritoryFog, getPlayer());
         fogNotification->mPacket << static_cast<uint32_t>(fogChanges.size());
-        for(const auto& change : fogChanges)
+        for(const std::pair<Tile*, bool>& change : fogChanges)
         {
             mGameMap->tileToPacket(fogNotification->mPacket, change.first);
             fogNotification->mPacket << change.second;
@@ -1658,7 +1658,7 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << "[/EverVisitedTiles]" << std::endl;
 
     os << "[OwnCreatureSightAges]\n";
-    for(const auto& entry : mTilesStates)
+    for(const std::pair<Tile* const, TileStateNotified>& entry : mTilesStates)
     {
         if(entry.second.mOwnCreatureSightAgeTurns >= 0)
             os << entry.first->getX() << "\t" << entry.first->getY() << "\t"
