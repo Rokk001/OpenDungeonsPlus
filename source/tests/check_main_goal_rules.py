@@ -69,3 +69,15 @@ assert 'LevelScriptConditionType::groundFootprintClaimed' in script and 'groundc
 assert 'if(className == "@fighters")' in runner and 'return !creature->getDefinition()->isWorker();' in runner
 assert '(cond.mType == LevelScriptConditionType::roomFootprintClaimed && room == nullptr)' in runner
 print('Natural floor ownership and living fighter-only assembly: static wiring PASS')
+
+assert 'if(hasMainGoalPlayer && allHumansWon)' in turn
+assert turn.index('if(hasMainGoalPlayer && allHumansWon)') < turn.index('script.advanceTimers();')
+deadline = body(read('source/gamemap/GameMap.cpp'), 'void GameMap::checkGameDuration()')
+assert 'seatIsAWinner(player->getSeat()) && mLevelScript->hasMainObjectives' in deadline
+assert 'seatIsAWinner(seat) && mLevelScript->hasMainObjectives' in deadline
+print('Post-victory discoveries and expired timers cannot reopen a completed grouped campaign: static wiring PASS')
+
+assert 'LevelScriptConditionType::carryingStone' in script
+assert 'return script.getStoneCarriers().count(cond.mName) != 0;' in runner
+assert 'carried_stone_condition_and_state_round_trip' in unit
+print('Stone delivery checks the actual attached stone, not only a carrier name: static wiring PASS')

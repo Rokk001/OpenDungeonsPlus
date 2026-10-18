@@ -991,5 +991,180 @@
       "Defeat HugoCole at the keep and all remaining enemy creatures while preserving the own heart."
     ],
     "runtime_limit": "Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee."
+  },
+  "Tinmoor": {
+    "goals": {
+      "tinmoor-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "tinmoor-main-seams": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 900 gold; scout the seams in possession.",
+        "completion": "mainSeams",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t900",
+          "Cond\ttrigger\tscoutSeams"
+        ],
+        "mode": "repeat\t0"
+      },
+      "tinmoor-main-posts": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Clear both watch posts and reinforcements.",
+        "completion": "mainPosts",
+        "conditions": [
+          "Cond\tevent\tPostAWatch1\tkilled",
+          "Cond\tevent\tPostAWatch2\tkilled",
+          "Cond\tspawncleared\tpostAEntered\t1",
+          "Cond\tevent\tPostBWatch1\tkilled",
+          "Cond\tevent\tPostBWatch2\tkilled",
+          "Cond\tspawncleared\tpostBEntered\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "tinmoor-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Merrin Tay, all foes and portals.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tevent\tMerrinTay\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "tinmoor-main-stone": {
+        "kind": "conditionalobjectiveid",
+        "seat": "1",
+        "text": "If found, bring the vault stone home.",
+        "completion": "mainStone",
+        "conditions": [
+          "Cond\ttrigger\tvaultFound",
+          "Cond\ttrigger\tvaultStoneHome"
+        ],
+        "mode": "repeat\t0"
+      },
+      "tinmoor-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1500 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1500"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainScoutAccess": {
+        "conditions": [
+          "Cond\ttime\t90"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmake\t1\tspellPossess"
+        ]
+      },
+      "mainStoneList": {
+        "conditions": [
+          "Cond\ttrigger\tvaultFound"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tconditionalobjectiveid\t1\ttinmoor-main-stone\tIf found, bring the vault stone home."
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "tinmoor-main-heart",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_actions": {
+      "vaultFound": [
+        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer",
+        "Action\tstoneattach\tVaultBearer",
+        "Action\tsetflag\tvaultStone\t1",
+        "Action\ttimer\tvaultSpawn\t0"
+      ],
+      "vaultStoneLost": [
+        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer",
+        "Action\tstoneattach\tVaultBearer"
+      ],
+      "vaultStoneHome": [
+        "Action\tdiscover\tcampaign/BoulderCourse.level"
+      ]
+    },
+    "reachability": {
+      "minimum_mineable_gold": 1500,
+      "named_creatures": [
+        "MerrinTay",
+        "PostAWatch1",
+        "PostAWatch2",
+        "PostBWatch1",
+        "PostBWatch2"
+      ],
+      "regions": {
+        "Seams": {
+          "bounds": [
+            14,
+            8,
+            50,
+            34
+          ],
+          "minimum_open_tiles": 1
+        },
+        "SealedVault": {
+          "bounds": [
+            61,
+            46,
+            71,
+            54
+          ],
+          "minimum_open_tiles": 1
+        }
+      }
+    },
+    "route": [
+      "Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.",
+      "At the existing 90-second scout order, the make action enables previously blocked spellPossess. Its mana price and upkeep are unchanged. Possess an own living creature and enter Seams (14,8)-(50,34).",
+      "Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.",
+      "Before the final main goal, optionally enter SealedVault (61,46)-(71,54). This activates the stone requirement; bring VaultBearer from (66,50) to the own heart. The original repeat60 respawn remains available after bearer loss. Home completion now also verifies the actual attached stone and player ownership, not the carrier name alone.",
+      "Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required."
+    ],
+    "runtime_limit": "Conditional transport and replacement routes still require runtime verification; this is a static source/resource route, not a playthrough.",
+    "preserved_conditions": {
+      "scoutSeams": [
+        "Cond\tpossessed\t1\tSeams"
+      ],
+      "vaultFound": [
+        "Cond\tregion\t1\tSealedVault"
+      ],
+      "vaultStoneHome": [
+        "Cond\tcarryingstone\tVaultBearer",
+        "Cond\towns\t1\tVaultBearer",
+        "Cond\treached\tVaultBearer\theart\t1"
+      ],
+      "vaultStoneLost": [
+        "Cond\tflag\tvaultStone\t1",
+        "Cond\ttimer\tvaultSpawn\t>=\t5",
+        "Cond\talive\tVaultBearer\t0"
+      ]
+    }
   }
 }

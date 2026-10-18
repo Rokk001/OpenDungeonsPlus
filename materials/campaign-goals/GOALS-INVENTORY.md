@@ -749,15 +749,43 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1711 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
 | Script line 1719 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
 | Script line 1737 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
-| Script line 1819 | `Action	win	1` | yes |
-| Script line 1825 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1821 | `Action	win	1` | yes |
+| Script line 1827 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `tinmoor-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `tinmoor-main-seams`: Mine 900 gold; scout the seams in possession. | `mainSeams`: Cond	mined	1	>=	900; Cond	trigger	scoutSeams |
+| main | `tinmoor-main-posts`: Clear both watch posts and reinforcements. | `mainPosts`: Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1; Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1 |
+| main | `tinmoor-main-warden`: Defeat Merrin Tay, all foes and portals. | `mainWarden`: Cond	event	MerrinTay	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `tinmoor-main-stone`: If found, bring the vault stone home. | `mainStone`: Cond	trigger	vaultFound; Cond	trigger	vaultStoneHome |
+| optional | `tinmoor-extra-gold`: Mine 1500 gold. | `extraGold`: Cond	mined	1	>=	1500 |
+
+Possible route (static, not a playthrough):
+- Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.
+- At the existing 90-second scout order, the make action enables previously blocked spellPossess. Its mana price and upkeep are unchanged. Possess an own living creature and enter Seams (14,8)-(50,34).
+- Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.
+- Before the final main goal, optionally enter SealedVault (61,46)-(71,54). This activates the stone requirement; bring VaultBearer from (66,50) to the own heart. The original repeat60 respawn remains available after bearer loss. Home completion now also verifies the actual attached stone and player ownership, not the carrier name alone.
+- Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required.
+
+Conditional transport and replacement routes still require runtime verification; this is a static source/resource route, not a playthrough.
+
 | Trigger `seamsFilled` | `Action	objectivestate	1	tinmoor-o02	reached`; conditions: `Cond	mined	1	>=	900` | yes |
 | Trigger `goalPostACleared` | `Action	objectivestate	1	tinmoor-o03	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1` | yes |
 | Trigger `goalPostBCleared` | `Action	objectivestate	1	tinmoor-o04	reached`; conditions: `Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1` | yes |
 | Trigger `wardenDown` | `Action	objectivestate	1	tinmoor-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutSeams` | `Action	objectivestate	1	tinmoor-o05	reached`; conditions: `Cond	possessed	1	Seams` | yes |
-| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | no: enemy elimination is checked; seams and both posts are not independent goals |
-| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | no: optional stone discovery is not required to win |
+| Trigger `mainHeart` | `Action	objectivestate	1	tinmoor-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainSeams` | `Action	objectivestate	1	tinmoor-main-seams	reached`; conditions: `Cond	mined	1	>=	900; Cond	trigger	scoutSeams` | yes |
+| Trigger `mainPosts` | `Action	objectivestate	1	tinmoor-main-posts	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1; Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	tinmoor-main-warden	reached`; conditions: `Cond	event	MerrinTay	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	tinmoor-main-stone	reached`; conditions: `Cond	trigger	vaultFound; Cond	trigger	vaultStoneHome` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	tinmoor-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	tinmoor-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals |
+| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: finding the vault is voluntary, but discovery activates actual owned stone-carrier delivery before victory |
 
 ## TwistingHalls
 

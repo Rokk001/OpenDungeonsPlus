@@ -78,6 +78,7 @@
 //!   Cond    alive <creatureName> [1 | 0]      # the creature with that name is alive, whatever its seat (0: it is dead or not there)
 //!   Cond    reached <creatureName> region <regionName>   # the living creature with that name stands inside the region (also a creature that carries a portal stone)
 //!   Cond    reached <creatureName> heart <seatId>        # the living creature with that name stands on the dungeon heart room of the seat
+//!   Cond    carryingstone <creatureName>        # the named creature still carries an attached portal stone
 //!   Cond    stone <regionName> <op> <count>   # portal stones lying on the ground inside the region (see stonecreate, stoneattach)
 //!   Cond    health <creatureName> <op> <percent>   # health of that living creature in percent of its maximum
 //!   Cond    spell <seatId> <skillName>        # the seat has the spell (or any other skill) researched
@@ -239,7 +240,8 @@ enum class LevelScriptConditionType
     killedInRegion,
     groundConnected,
     roomFootprintClaimed,
-    groundFootprintClaimed
+    groundFootprintClaimed,
+    carryingStone
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.

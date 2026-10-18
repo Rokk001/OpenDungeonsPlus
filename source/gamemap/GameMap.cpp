@@ -4135,6 +4135,7 @@ void GameMap::sendTimeLimit(int32_t remainingSeconds)
     }
 }
 
+//! \brief Applies existing deadlines without turning a completed grouped campaign into a later defeat.
 void GameMap::checkGameDuration()
 {
     // The wave countdown of the script is shown beside the other displays, whatever else runs;
@@ -4188,6 +4189,8 @@ void GameMap::checkGameDuration()
     {
         if(!player->getIsHuman())
             continue;
+        if(seatIsAWinner(player->getSeat()) && mLevelScript->hasMainObjectives(player->getSeat()->getId()))
+            continue;
 
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, player);
@@ -4208,6 +4211,8 @@ void GameMap::checkGameDuration()
     for(Seat* seat : mSeats)
     {
         if(seat->getPlayer() == nullptr)
+            continue;
+        if(seatIsAWinner(seat) && mLevelScript->hasMainObjectives(seat->getId()))
             continue;
 
         seat->getPlayer()->notifyTimeUp();

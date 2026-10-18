@@ -530,6 +530,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) &&
                 (room->getSeat() != nullptr) && (room->getSeat()->getId() == cond.mSeatId);
         }
+        case LevelScriptConditionType::carryingStone:
+            return script.getStoneCarriers().count(cond.mName) != 0;
         case LevelScriptConditionType::stoneInRegion:
         {
             const LevelScriptRegion* region = script.getRegion(cond.mName);
@@ -1441,6 +1443,18 @@ void LevelScriptRunner::doTurn(GameMap& gameMap)
 {
     LevelScript& script = gameMap.getLevelScript();
     int64_t turn = gameMap.getTurnNumber();
+    bool hasMainGoalPlayer = false;
+    bool allHumansWon = true;
+    for(Player* player : gameMap.getPlayers())
+    {
+        if(!player->getIsHuman())
+            continue;
+        hasMainGoalPlayer = hasMainGoalPlayer || script.hasMainObjectives(player->getSeat()->getId());
+        allHumansWon = allHumansWon && gameMap.seatIsAWinner(player->getSeat());
+    }
+    // A finished campaign has no later discovery that can create a new required goal.
+    if(hasMainGoalPlayer && allHumansWon)
+        return;
     script.advanceTimers();
     updateStoneCarriers(gameMap, script);
     for(Seat* seat : gameMap.getSeats())

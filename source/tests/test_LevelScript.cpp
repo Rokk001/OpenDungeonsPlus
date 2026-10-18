@@ -1308,3 +1308,30 @@ BOOST_AUTO_TEST_CASE(natural_floor_and_fighter_assembly_conditions_round_trip)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief A transport condition identifies the actual attached stone through parsing and saves.
+BOOST_AUTO_TEST_CASE(carried_stone_condition_and_state_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName home\nMode once\n"
+        "Cond carryingstone VaultBearer\nCond owns 1 VaultBearer\nCond reached VaultBearer heart 1\n"
+        "Action message 1 home\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::carryingStone);
+    BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[0].mName, "VaultBearer");
+    script.addStoneCarrier("VaultBearer");
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(restored.getStoneCarriers().count("VaultBearer") == 1);
+    restored.removeStoneCarrier("VaultBearer");
+    BOOST_CHECK(restored.getStoneCarriers().empty());
+    for(const std::string condition : {"Cond carryingstone", "Cond carryingstone VaultBearer extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + condition + "\nAction message 1 x\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}

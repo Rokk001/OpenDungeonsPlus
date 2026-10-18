@@ -389,6 +389,14 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mName = t[2];
         return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
     }
+    if(type == "carryingstone")
+    {
+        if(t.size() != 3)
+            return false;
+        cond.mType = LevelScriptConditionType::carryingStone;
+        cond.mName = t[2];
+        return !cond.mName.empty();
+    }
     if(type == "possessed")
     {
         cond.mType = LevelScriptConditionType::possessedInRegion;
@@ -943,6 +951,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
                 os << "reached\t" << c.mName << "\theart\t" << c.mSeatId;
             else
                 os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::carryingStone:
+            os << "carryingstone\t" << c.mName;
             break;
         case LevelScriptConditionType::stoneInRegion:
             os << "stone\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;

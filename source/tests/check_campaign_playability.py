@@ -67,6 +67,7 @@ BRIEFING_MATCH["Mossgate"] = {
 
 BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked", 4: "yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles"}
 BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold", 4: "yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces"}
+BRIEFING_MATCH["Tinmoor"] = {2: "yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals", 3: "yes: finding the vault is voluntary, but discovery activates actual owned stone-carrier delivery before victory"}
 BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
 
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
@@ -858,6 +859,9 @@ def grouped_goal_errors(text, level_name):
             fields = condition.split()
             if fields[1] in ("roomtiles", "roomsize", "room", "furniture") and fields[3] not in room_names:
                 errors.append("unregistered room name in grouped status: " + name)
+    for name, conditions in review.get("preserved_conditions", {}).items():
+        if [row for row in blocks.get(name, []) if row.startswith("Cond\t")] != conditions:
+            errors.append("required underlying trigger conditions differ: " + name)
     for name, actions in review.get("preserved_actions", {}).items():
         for action in actions:
             if action not in blocks.get(name, []):
@@ -1217,6 +1221,17 @@ def self_test(root):
         candidate = (root / ("levels/campaign/" + name + ".level")).read_text(encoding="utf-8")
         assert old in candidate
         assert grouped_goal_errors(candidate.replace(old, new), name), (name, old)
+    tinmoor = (root / "levels/campaign/Tinmoor.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Action\tmake\t1\tspellPossess", "Action\tmake\t1\tspellLightning"),
+        ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\tvaultFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0"),
+        ("Cond\tcarryingstone\tVaultBearer", "Cond\ttime\t0"),
+        ("Cond\towns\t1\tVaultBearer", "Cond\ttime\t0"),
+        ("Cond\tspawncleared\tpostAEntered\t1", "Cond\tspawncleared\tpostAEntered\t0"),
+        ("Action\tstoneattach\tVaultBearer", "Action\tstoneattach\tWrongBearer")
+    ):
+        assert old in tinmoor
+        assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
     ravensledge = (root / "levels/campaign/Ravensledge.level").read_text(encoding="utf-8")
     wrong_trap = ravensledge.replace("trapgone\tDoorWooden1", "trapgone\tNoSuchDoor")
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))
