@@ -1805,6 +1805,11 @@ void Creature::doUpkeep()
 
         skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
         skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+        // Successful self-casts use the same recovery display as attacks.
+        mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);
+        mAttackRecoveryTurns = mAttackRecoveryDuration;
+        ++mAttackRecoverySerial;
+        mNeedFireRefresh = true;
 
         if(skillData.mWarmup > 0)
             isWarmUp = true;
@@ -7029,6 +7034,11 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
 
             skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
             skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            // Report a successful self-cast exactly as in normal creature control.
+            mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);
+            mAttackRecoveryTurns = mAttackRecoveryDuration;
+            ++mAttackRecoverySerial;
+            mNeedFireRefresh = true;
             return;
         }
 

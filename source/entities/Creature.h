@@ -1073,6 +1073,7 @@ public:
     //! the ground plane). Same range, damage and cooldown as in a normal fight.
     void possessedAttack(const Ogre::Vector2& aim);
 
+    //! \brief Reports recovery for successful possessed self-casts as well as targeted attacks.
     //! Called on server side. Uses the creature skill (other than melee and ranged attack) of
     //! the given slot (0 is the first one the creature can use). Skills that need a target
     //! use the enemy in front of the creature.
