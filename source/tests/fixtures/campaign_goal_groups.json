@@ -2573,5 +2573,287 @@
       "For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce a shard for an invalid clear."
     ],
     "runtime_limit": "Actual aiming, target movement, damage/cadence, the 420-second route and save/load still require integrator/Mario runtime verification; no playthrough claimed."
+  },
+  "Saltmere": {
+    "goals": {
+      "saltmere-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "saltmere-main-gold": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 800 gold.",
+        "completion": "mainGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t800"
+        ],
+        "mode": "repeat\t0"
+      },
+      "saltmere-main-port": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross flats and lagoons; breach both port gates.",
+        "completion": "mainPort",
+        "conditions": [
+          "Cond\tflag\thighFlatVisited\t1",
+          "Cond\ttrigger\tlagoonReached",
+          "Cond\tflag\tsouthFlatVisited\t1",
+          "Cond\ttrapgone\tDoorWooden1",
+          "Cond\ttrapgone\tDoorWooden2",
+          "Cond\tflag\tportCrossed\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "saltmere-main-admiral": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Bram Seward and all enemy forces.",
+        "completion": "mainAdmiral",
+        "conditions": [
+          "Cond\tevent\tBramSeward\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "saltmere-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1600 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1600"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHighFlatEntered": {
+        "conditions": [
+          "Cond\tregion\t1\tHighFlat"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\thighFlatVisited\t1"
+        ]
+      },
+      "mainSouthFlatEntered": {
+        "conditions": [
+          "Cond\tregion\t1\tSouthFlat"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsouthFlatVisited\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "saltmere-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "crossPortWestGate": {
+        "conditions": [
+          "Cond\tcrossed\t1\tPortWestGate\tsouth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tportCrossed\t1"
+        ]
+      },
+      "crossPortEastGate": {
+        "conditions": [
+          "Cond\tcrossed\t1\tPortEastGate\tsouth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tportCrossed\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "flatHeld": [
+        "Cond\tclaimed\t1\tSouthFlat\t50"
+      ],
+      "portGatesTimeout": [
+        "Cond\ttime\t2400",
+        "Cond\tflag\tportGatesOpen\t0"
+      ],
+      "lagoonReached": [
+        "Cond\tregion\t1\tLagoon"
+      ]
+    },
+    "preserved_actions": {
+      "firstSalt": [
+        "Action\tmessage\t1\tThe salt walls pay well. Orcs from the dry caves have heard of it.",
+        "Action\tspawn\t1\t16\t13\t1\tOrc:2\tGoblin:2",
+        "Action\tobjectivestate\t1\tsaltmere-o02\treached"
+      ],
+      "flatHeld": [
+        "Action\tmessage\t1\tThe south flat is yours and the port gates are in range. Seward knows it, and both gate tunnels grind open.",
+        "Action\treveal\t1\tPort",
+        "Action\tterrain\t40\t78\t41\t78\tpath",
+        "Action\tterrain\t48\t78\t49\t78\tpath",
+        "Action\tsetflag\tportGatesOpen\t1",
+        "Action\tportal\t0\ton",
+        "Action\tobjectiveid\t1\tsaltmere-o04\tBreak through the port gates.",
+        "Action\tgenerate\t1\tSpider:1",
+        "Action\tobjectivestate\t1\tsaltmere-o04\treached"
+      ],
+      "portGatesTimeout": [
+        "Action\tmessage\t1\tThe port has opened its gate tunnels to draw you in.",
+        "Action\tterrain\t40\t78\t41\t78\tpath",
+        "Action\tterrain\t48\t78\t49\t78\tpath",
+        "Action\tsetflag\tportGatesOpen\t1",
+        "Action\tportal\t0\ton",
+        "Action\tobjectivestate\t1\tsaltmere-o04\treached"
+      ],
+      "portEntered": [
+        "Action\tmessage\t1\tHorns sound over the water. Seward has called every deckhand ashore.",
+        "Action\tspawn\t3\t40\t84\t1\tKnight:3\tKnight:2\tDwarf2:2\tMonk:2\tAdventurer:2",
+        "Action\tobjectiveid\t1\tsaltmere-o05\tFind Bram Seward in the harbour hall."
+      ]
+    },
+    "reachability": {
+      "minimum_mineable_gold": 1600,
+      "named_creatures": [
+        "BramSeward"
+      ],
+      "regions": {
+        "HighFlat": {
+          "bounds": [
+            24,
+            14,
+            50,
+            28
+          ],
+          "minimum_open_tiles": 202
+        },
+        "Lagoon": {
+          "bounds": [
+            18,
+            44,
+            44,
+            62
+          ],
+          "minimum_open_tiles": 308
+        },
+        "SouthFlat": {
+          "bounds": [
+            20,
+            66,
+            46,
+            78
+          ],
+          "minimum_open_tiles": 179
+        },
+        "PortWestGate": {
+          "bounds": [
+            40,
+            80,
+            41,
+            80
+          ],
+          "minimum_open_tiles": 2
+        },
+        "PortEastGate": {
+          "bounds": [
+            48,
+            80,
+            49,
+            80
+          ],
+          "minimum_open_tiles": 2
+        }
+      },
+      "required_traps": {
+        "DoorWooden1": {
+          "type": 4,
+          "seat": 3,
+          "tiles": [
+            [
+              48,
+              80
+            ]
+          ]
+        },
+        "DoorWooden2": {
+          "type": 4,
+          "seat": 3,
+          "tiles": [
+            [
+              40,
+              80
+            ]
+          ]
+        }
+      },
+      "open_route_tiles": [
+        [
+          40,
+          79
+        ],
+        [
+          40,
+          80
+        ],
+        [
+          40,
+          81
+        ],
+        [
+          48,
+          79
+        ],
+        [
+          48,
+          80
+        ],
+        [
+          48,
+          81
+        ],
+        [
+          41,
+          79
+        ],
+        [
+          41,
+          80
+        ],
+        [
+          41,
+          81
+        ],
+        [
+          49,
+          79
+        ],
+        [
+          49,
+          80
+        ]
+      ]
+    },
+    "route": [
+      "Mine 800 actual gold from the zero-gold start. Original firstSalt supplies Orc/Goblin at (16,13). Finite reachable gold totals 52000; optionally mine 1600 total before the final main goal.",
+      "An own living creature must reach HighFlat (24,14)-(50,28), Lagoon (18,44)-(44,62) and SouthFlat (20,66)-(46,78). Current legacy lagoonReached and exact new region histories are used; no reveal or gate opening substitutes for those visits.",
+      "Keep both original tunnel-opening alternatives: claim 50 SouthFlat fields, or wait for portGatesTimeout at time2400 while closed. Both clear (40..41,78)/(48..49,78). The grouped goal adds no compulsory 50-field claim after the timed alternative.",
+      "Destroy both actual outer doors: DoorWooden2 (40,80) and DoorWooden1 (48,80). Walk one own living creature south through either whole two-field-wide gateway, x40..41 or x48..49 at y80, from y79 to y81. The complete tunnel width counts, not an arbitrary exact door-center field. Verified open banks permit both crossings; the original earth at (49,81) can be dug or the open exit at (48,81) used. Opening only the tunnel mouth never completes the requirement.",
+      "Defeat BramSeward, initially (46,86) in the port hall, and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). Original reinforcements, inner doors and all geometry remain unchanged."
+    ],
+    "runtime_limit": "Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification."
   }
 }

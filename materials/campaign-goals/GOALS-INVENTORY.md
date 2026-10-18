@@ -735,6 +735,26 @@ File: `levels/campaign/Saltmere.level`.
 | Script line 3131 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
 | Script line 3141 | `Action	objectiveid	1	saltmere-o05	Find Bram Seward in the harbour hall.` | yes |
 | Script line 3231 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `saltmere-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `saltmere-main-gold`: Mine 800 gold. | `mainGold`: Cond	mined	1	>=	800 |
+| main | `saltmere-main-port`: Cross flats and lagoons; breach both port gates. | `mainPort`: Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1 |
+| main | `saltmere-main-admiral`: Defeat Bram Seward and all enemy forces. | `mainAdmiral`: Cond	event	BramSeward	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `saltmere-extra-gold`: Mine 1600 gold. | `extraGold`: Cond	mined	1	>=	1600 |
+
+Possible route (static, not a playthrough):
+- Mine 800 actual gold from the zero-gold start. Original firstSalt supplies Orc/Goblin at (16,13). Finite reachable gold totals 52000; optionally mine 1600 total before the final main goal.
+- An own living creature must reach HighFlat (24,14)-(50,28), Lagoon (18,44)-(44,62) and SouthFlat (20,66)-(46,78). Current legacy lagoonReached and exact new region histories are used; no reveal or gate opening substitutes for those visits.
+- Keep both original tunnel-opening alternatives: claim 50 SouthFlat fields, or wait for portGatesTimeout at time2400 while closed. Both clear (40..41,78)/(48..49,78). The grouped goal adds no compulsory 50-field claim after the timed alternative.
+- Destroy both actual outer doors: DoorWooden2 (40,80) and DoorWooden1 (48,80). Walk one own living creature south through either whole two-field-wide gateway, x40..41 or x48..49 at y80, from y79 to y81. The complete tunnel width counts, not an arbitrary exact door-center field. Verified open banks permit both crossings; the original earth at (49,81) can be dug or the open exit at (48,81) used. Opening only the tunnel mouth never completes the requirement.
+- Defeat BramSeward, initially (46,86) in the port hall, and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). Original reinforcements, inner doors and all geometry remain unchanged.
+
+Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification.
+
 | Trigger `firstSalt` | `Action	objectivestate	1	saltmere-o02	reached`; conditions: `Cond	mined	1	>=	800` | yes |
 | Trigger `flatHeld` | `Action	objectivestate	1	saltmere-o04	reached`; conditions: `Cond	claimed	1	SouthFlat	50` | yes |
 | Trigger `portGatesTimeout` | `Action	objectivestate	1	saltmere-o04	reached`; conditions: `Cond	time	2400; Cond	flag	portGatesOpen	0` | yes |
@@ -742,9 +762,14 @@ File: `levels/campaign/Saltmere.level`.
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	saltmere-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `admiralFalls` | `Action	objectivestate	1	saltmere-o01	reached`; conditions: `Cond	event	BramSeward	killed` | yes |
 | Trigger `admiralFalls` | `Action	objectivestate	1	saltmere-o05	reached`; conditions: `Cond	event	BramSeward	killed` | yes |
-| Briefing | Mine the salt walls and cross the white flats and green lagoons to his southern harbour. | no: mining and the travel route are not independent goals |
-| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: ProtectDungeonTemple |
-| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | yes: KillAllEnemies includes Seward |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	saltmere-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	saltmere-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainGold` | `Action	objectivestate	1	saltmere-main-gold	reached`; conditions: `Cond	mined	1	>=	800` | yes |
+| Trigger `mainPort` | `Action	objectivestate	1	saltmere-main-port	reached`; conditions: `Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1` | yes |
+| Trigger `mainAdmiral` | `Action	objectivestate	1	saltmere-main-admiral	reached`; conditions: `Cond	event	BramSeward	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	saltmere-extra-gold	reached`; conditions: `Cond	mined	1	>=	1600` | yes |
+| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
+| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals |
 
 ## Silverdeep
 

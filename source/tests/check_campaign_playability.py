@@ -43,7 +43,7 @@ BRIEFING_MATCH = {
     "SkittleCavern": {3: "no: laneCleared checks opened lanes and no remaining guards, not whether boulders killed them"},
     "Stormhaven": {3: "no: enemy temples are checked; stone-span control is not an independent goal"},
     "Cinderhollow": {3: "no: ProtectDungeonTemple checks survival; mining is not required", 4: "no: enemy temple elimination is checked; bridge crossing is not an independent goal"},
-    "Saltmere": {2: "no: mining and the travel route are not independent goals", 3: "yes: ProtectDungeonTemple", 4: "yes: KillAllEnemies includes Seward"},
+    "Saltmere": {3: "yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing", 4: "yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals"},
     "Dunmarrow": {3: "no: enemy elimination/escape is checked; the route used is not a winning condition"},
     "Goldspire": {2: "no: building before attacking is not a winning condition", 3: "no: enemy elimination is checked; the ordered low-town/link route is not an independent goal"},
     "Mirewatch": {2: "no: digging/building order is not a winning condition", 3: "no: all tower ownership and both approaches are not independent winning goals", 4: "yes: KillAllEnemies includes the watcher"},
@@ -927,6 +927,10 @@ def grouped_goal_errors(text, level_name):
                         or any(tile not in level["tiles"] or level["tiles"][tile][1] != 0 for tile in ray)):
                     errors.append("shooting position or open projectile ray is unavailable")
 
+        for coordinates in proof.get("open_route_tiles", []):
+            tile = tuple(coordinates)
+            if tile not in area or level["tiles"][tile][1] != 0 or level["tiles"][tile][0] in (4, 5):
+                errors.append("required open dry route tile is blocked: " + str(coordinates))
         for footprint in proof.get("footprints", []):
             expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
             x1, y1, x2, y2 = footprint["bounds"]
@@ -1329,6 +1333,20 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    saltmere = (root / "levels/campaign/Saltmere.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\ttrigger\tlagoonReached", "Cond\ttime\t0"),
+        ("Cond\ttrapgone\tDoorWooden2", "Cond\ttrapgone\tDoorWooden3"),
+        ("Region\tPortWestGate\t40\t80\t41\t80", "Region\tPortWestGate\t40\t80\t40\t80"),
+        ("Cond\tcrossed\t1\tPortWestGate\tsouth", "Cond\tcrossed\t2\tPortWestGate\tsouth"),
+        ("Cond\tflag\tportCrossed\t1", "Cond\tflag\tportGatesOpen\t1"),
+        ("Action\tsetflag\tportCrossed\t1", "Action\tsetflag\tportCrossed\t0"),
+        ("Cond\tmined\t1\t>=\t1600", "Cond\tmined\t1\t>=\t800"),
+        ("Cond\tclaimed\t1\tSouthFlat\t50", "Cond\tclaimed\t1\tSouthFlat\t1"),
+        ("Cond\ttime\t2400", "Cond\ttime\t0")
+    ):
+        assert old in saltmere
+        assert objective_errors(saltmere.replace(old, new), "Saltmere"), old
     crowshot = (root / "levels/campaign/CrowshotGallery.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\tshotkilled\t1\tCrow1", "Cond\tevent\tCrow1\tkilled"),
