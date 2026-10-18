@@ -779,14 +779,42 @@ File: `levels/campaign/Mirewatch.level`.
 | Script line 5737 | `Action	objectiveid	1	mirewatch-o03	Claim every room in all eight towers.` | yes |
 | Script line 5767 | `Action	objectiveid	1	mirewatch-o04	Possess a creature; scout the north-west tower.` | yes |
 | Script line 5827 | `Action	objectiveid	1	mirewatch-o05	Enter Mora Fenwick's tower and kill her.` | yes |
-| Script line 5922 | `Action	win	1` | yes |
+| Script line 5921 | `Action	win	1` | yes |
+| Script line 6034 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `mirewatch-main-home`: Build 2 beds and a coop; protect your heart. | `mainHome`: Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `mirewatch-main-towers`: Claim every room in all eight towers. | `mainTowers`: Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19 |
+| main | `mirewatch-main-approaches`: Secure both approaches; scout the northwest tower possessed. | `mainApproaches`: Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	trigger	sealsOpen; Cond	trigger	scoutTowerC |
+| main | `mirewatch-main-warden`: Defeat Mora in her tower and all enemy forces. | `mainWarden`: Cond	killedin	MoraFenwick	TowerH; Cond	goalmet	1	KillAllEnemies |
+| optional | `mirewatch-extra-gold`: Mine 2000 gold. | `extraGold`: Cond	mined	1	>=	2000 |
+
+Possible route (static, not a playthrough):
+- Build2actualbeds and a hatchery coop; protect the heart. Start0gold. Original firstCoin at400actualmining gives600gold and Orc2/Goblin2. Three dormitory fields(19..21,109)provide space for their3bedfields,276gold;3x3hatchery(19..21,106..108)990gold. Total1266requires266additionalgold beyond first400+gift600. All twelve fields are free reachable removable dirt, skills unlocked, finite reserve112500. No new reward or compulsory mining threshold.
+- Workers must claim exactly the original9rooms of8towers:GuardRoom1 8,GuardRoom2 6,Library1 6,Arena1 15,Library2 6,Prison1 6,Workshop1 8,GuardRoom3 8,Workshop2 6,total69fields. Every fixed field remains currently owned until victory. The existing mirewatch_errors checks actual footprint/type/seat and worker access/claimability for all69fields.
+- Secure the east and north approaches by actual ownership of Prison1 in TowerF and Workshop1 in TowerG plus the original sealsOpen completion. These are the two approach towers named by the original messages; mere visits do not replace room control. Original three terrain openings are preserved, without inventing a requirement to traverse all alternative holes.
+- Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.
+- MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.
+- Move the identical victory sentence after all current main observers, retaining the original pending win request.
+
+Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.
+
 | Trigger `goalNineTowerRoomsClaimed` | `Action	objectivestate	1	mirewatch-o03	reached`; conditions: `Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19` | yes |
 | Trigger `watcherSlain` | `Action	objectivestate	1	mirewatch-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `watcherSlain` | `Action	objectivestate	1	mirewatch-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutTowerC` | `Action	objectivestate	1	mirewatch-o04	reached`; conditions: `Cond	possessed	1	TowerC` | yes |
-| Briefing | You have only workers, so dig and build before crossing the black-water causeways. | no: digging/building order is not a winning condition |
-| Briefing | Take the towers and secure both sealed approaches to Mora Fenwick's last tower. | no: all tower ownership and both approaches are not independent winning goals |
-| Briefing | Kill the watcher and bring this chosen barrier down. | yes: KillAllEnemies includes the watcher |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	mirewatch-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	mirewatch-main-home	reached`; conditions: `Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTowers` | `Action	objectivestate	1	mirewatch-main-towers	reached`; conditions: `Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19` | yes |
+| Trigger `mainApproaches` | `Action	objectivestate	1	mirewatch-main-approaches	reached`; conditions: `Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	trigger	sealsOpen; Cond	trigger	scoutTowerC` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	mirewatch-main-warden	reached`; conditions: `Cond	killedin	MoraFenwick	TowerH; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	mirewatch-extra-gold	reached`; conditions: `Cond	mined	1	>=	2000` | yes |
+| Briefing | You have only workers, so dig and build before crossing the black-water causeways. | yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint |
+| Briefing | Take the towers and secure both sealed approaches to Mora Fenwick's last tower. | yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession |
+| Briefing | Kill the watcher and bring this chosen barrier down. | yes: Mora actually killed in TowerH and remaining foes defeated |
 mirewatch-o03 requires complete worker claim and current room ownership on the nine original room masks, exactly 69 fields; broad tower regions and visits do not qualify.
 Original room `GuardRoom1`: type 17, owner 3, rectangle (44, 106, 47, 107), 8 fields.
 Original room `GuardRoom2`: type 17, owner 3, rectangle (86, 110, 88, 111), 6 fields.

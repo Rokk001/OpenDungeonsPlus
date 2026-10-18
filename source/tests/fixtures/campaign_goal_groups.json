@@ -8144,5 +8144,791 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tAlaric Penn lies dead on his own coin. Goldspire is yours."
     }
+  },
+  "Mirewatch": {
+    "goals": {
+      "mirewatch-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Build 2 beds and a coop; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tfurniture\t1\tDormitory\t>=\t2",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mirewatch-main-towers": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim every room in all eight towers.",
+        "completion": "mainTowers",
+        "conditions": [
+          "Cond\troomclaimed\t1\t44\t106\t47\t107",
+          "Cond\troomclaimed\t1\t86\t110\t88\t111",
+          "Cond\troomclaimed\t1\t24\t78\t26\t79",
+          "Cond\troomclaimed\t1\t74\t82\t78\t84",
+          "Cond\troomclaimed\t1\t20\t44\t22\t45",
+          "Cond\troomclaimed\t1\t68\t50\t69\t52",
+          "Cond\troomclaimed\t1\t44\t24\t47\t25",
+          "Cond\troomclaimed\t1\t94\t22\t97\t23",
+          "Cond\troomclaimed\t1\t99\t18\t101\t19"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mirewatch-main-approaches": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Secure both approaches; scout the northwest tower possessed.",
+        "completion": "mainApproaches",
+        "conditions": [
+          "Cond\troomclaimed\t1\t68\t50\t69\t52",
+          "Cond\troomclaimed\t1\t44\t24\t47\t25",
+          "Cond\ttrigger\tsealsOpen",
+          "Cond\ttrigger\tscoutTowerC"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mirewatch-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Mora in her tower and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tkilledin\tMoraFenwick\tTowerH",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mirewatch-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 2000 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t2000"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "mirewatch-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tmirewatch-main-home\treached",
+          "Cond\tobjective\t1\tmirewatch-main-towers\treached",
+          "Cond\tobjective\t1\tmirewatch-main-approaches\treached",
+          "Cond\tobjective\t1\tmirewatch-main-warden\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tMora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "dusk": [
+        "Cond\ttime\t3"
+      ],
+      "firstCoin": [
+        "Cond\tmined\t1\t>=\t400"
+      ],
+      "hollowHeld": [
+        "Cond\tclaimed\t1\tHollow\t40"
+      ],
+      "towerA": [
+        "Cond\tregion\t1\tTowerA"
+      ],
+      "towerB": [
+        "Cond\tregion\t1\tTowerB"
+      ],
+      "towerC": [
+        "Cond\tregion\t1\tTowerC"
+      ],
+      "towerD": [
+        "Cond\tregion\t1\tTowerD"
+      ],
+      "towerE": [
+        "Cond\tregion\t1\tTowerE"
+      ],
+      "towerF": [
+        "Cond\tregion\t1\tTowerF"
+      ],
+      "towerG": [
+        "Cond\tregion\t1\tTowerG"
+      ],
+      "bothHeld": [
+        "Cond\tflag\teastHeld\t1",
+        "Cond\tflag\tnorthHeld\t1"
+      ],
+      "wardenSeen": [
+        "Cond\tregion\t1\tTowerH"
+      ],
+      "marsh1": [
+        "Cond\ttime\t240"
+      ],
+      "marsh2": [
+        "Cond\ttime\t520"
+      ],
+      "marsh3": [
+        "Cond\ttime\t850"
+      ],
+      "marsh4": [
+        "Cond\ttime\t1200"
+      ],
+      "marsh5": [
+        "Cond\ttime\t1600"
+      ],
+      "marsh6": [
+        "Cond\ttime\t2050"
+      ],
+      "marsh7": [
+        "Cond\ttime\t2550"
+      ],
+      "marsh8": [
+        "Cond\ttime\t3100"
+      ],
+      "marsh9": [
+        "Cond\ttime\t3700"
+      ],
+      "goalNineTowerRoomsClaimed": [
+        "Cond\troomclaimed\t1\t44\t106\t47\t107",
+        "Cond\troomclaimed\t1\t86\t110\t88\t111",
+        "Cond\troomclaimed\t1\t24\t78\t26\t79",
+        "Cond\troomclaimed\t1\t74\t82\t78\t84",
+        "Cond\troomclaimed\t1\t20\t44\t22\t45",
+        "Cond\troomclaimed\t1\t68\t50\t69\t52",
+        "Cond\troomclaimed\t1\t44\t24\t47\t25",
+        "Cond\troomclaimed\t1\t94\t22\t97\t23",
+        "Cond\troomclaimed\t1\t99\t18\t101\t19"
+      ],
+      "sealsOpen": [
+        "Cond\tflag\teastHeld\t1",
+        "Cond\tflag\tnorthHeld\t1"
+      ],
+      "watchKey": [
+        "Cond\ttime\t4"
+      ],
+      "keyDropped": [
+        "Cond\ttime\t5",
+        "Cond\talive\tMoraFenwick\t0"
+      ],
+      "portalWake": [
+        "Cond\ttime\t600",
+        "Cond\tflag\tportalOn\t0"
+      ],
+      "scoutTowerC": [
+        "Cond\tpossessed\t1\tTowerC"
+      ]
+    },
+    "preserved_actions": {
+      "dusk": [
+        "Action\tmessage\t1\tThe mire is awake, master. Watcher Mora Fenwick has eight towers in the marsh and she sleeps in the last of them, behind sealed ground.",
+        "Action\tobjectiveid\t1\tmirewatch-o01\tKill Mora Fenwick in the north-east tower.",
+        "Action\thint\t1\tDig, claim and build before marching.",
+        "Action\tobjectiveid\t1\tmirewatch-o03\tClaim every room in all eight towers.",
+        "Action\tportal\t1\toff"
+      ],
+      "firstCoin": [
+        "Action\tmessage\t1\tThe first coin of the mire. Rooms and traps are yours to build.",
+        "Action\tgold\t1\t600",
+        "Action\tspawn\t1\t21\t111\t1\tOrc:2\tGoblin:2"
+      ],
+      "hollowHeld": [
+        "Action\tmessage\t1\tThe hollow is held and your portal draws creatures again. A causeway leads east across the black water to the first tower.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1",
+        "Action\treveal\t1\tTowerA",
+        "Action\treveal\t1\tLowRoad"
+      ],
+      "towerA": [
+        "Action\tmessage\t1\tThe first tower. Beyond it the road splits, north through the marsh and east along the shore.",
+        "Action\treveal\t1\tTowerB",
+        "Action\treveal\t1\tTowerC",
+        "Action\tgold\t1\t500",
+        "Action\tspawn\t3\t47\t98\t1\tKnight:2\tElf:2\tAdventurer:2",
+        "Action\tobjectiveid\t1\tmirewatch-o04\tPossess a creature; scout the north-west tower."
+      ],
+      "towerB": [
+        "Action\tmessage\t1\tThe south-east tower, thick with reeds. A heavy squad has been waiting for you.",
+        "Action\treveal\t1\tTowerD",
+        "Action\tspawn\t3\t83\t103\t1\tKnight:3\tMonk:3\tElf:2\tDwarf2:2"
+      ],
+      "towerC": [
+        "Action\tmessage\t1\tA tower with a library of marsh lore, and the signal beacons of the west road. The mire knows you are here.",
+        "Action\treveal\t1\tTowerE",
+        "Action\treveal\t1\tTowerD",
+        "Action\tspawn\t3\t25\t70\t1\tKnight:3\tElf:3\tMonk:2\tAdventurer:2"
+      ],
+      "towerD": [
+        "Action\tmessage\t1\tThe arena tower. Its garrison fights for sport and will not give way.",
+        "Action\treveal\t1\tTowerF",
+        "Action\tspawn\t3\t75\t75\t1\tKnight:3\tKnight:3\tDwarf2:3\tElf:3"
+      ],
+      "towerE": [
+        "Action\tmessage\t1\tThe west tower. From here a road climbs to the north tower.",
+        "Action\treveal\t1\tTowerG",
+        "Action\tspawn\t3\t21\t41\t1\tKnight:3\tMonk:3\tElf:3\tAdventurer:3"
+      ],
+      "towerF": [
+        "Action\tmessage\t1\tThe east tower. A road beyond it runs north-east to the warden, but the way is sealed with a stone door that opens only from the far side.",
+        "Action\tsetflag\teastHeld\t1",
+        "Action\treveal\t1\tTowerG",
+        "Action\tspawn\t3\t69\t42\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "towerG": [
+        "Action\tmessage\t1\tThe north tower, with a workshop at its heart. A second road to the warden leaves from its ridge, also sealed shut.",
+        "Action\tsetflag\tnorthHeld\t1",
+        "Action\treveal\t1\tTowerH",
+        "Action\tspawn\t3\t45\t27\t1\tKnight:4\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "bothHeld": [
+        "Action\tmessage\t1\tBoth approaches to the warden are in your hands. The stone doors grind open. Go in and finish the watch.",
+        "Action\treveal\t1\tTowerH",
+        "Action\tobjectiveid\t1\tmirewatch-o05\tEnter Mora Fenwick's tower and kill her.",
+        "Action\tspawn\t3\t61\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "wardenSeen": [
+        "Action\tmessage\t1\tThe warden's tower. The watcher has seen you, and the bell on the roof is ringing.",
+        "Action\tspawn\t2\t96\t28\t1\tKnight:4\tElf:4\tMonk:4\tDwarf2:3"
+      ],
+      "marsh1": [
+        "Action\tmessage\t1\tA marsh patrol is wading toward your hollow.",
+        "Action\tspawn\t3\t47\t98\t1\tAdventurer:2\tElf:2\tMonk:2"
+      ],
+      "marsh2": [
+        "Action\tmessage\t1\tWatchmen are on the low road.",
+        "Action\tspawn\t3\t57\t103\t1\tKnight:2\tElf:2\tAdventurer:2\tMonk:2"
+      ],
+      "marsh3": [
+        "Action\tmessage\t1\tA squad from the first tower is marching.",
+        "Action\tspawn\t3\t47\t98\t1\tKnight:2\tKnight:2\tDwarf2:2\tMonk:2"
+      ],
+      "marsh4": [
+        "Action\tmessage\t1\tReed cutters with pikes are coming down the shore.",
+        "Action\tspawn\t3\t57\t103\t1\tKnight:3\tElf:2\tAdventurer:3\tMonk:2\tDwarf2:2"
+      ],
+      "marsh5": [
+        "Action\tmessage\t1\tBeacon fires burn on the towers and a column answers.",
+        "Action\tspawn\t3\t47\t98\t1\tKnight:3\tKnight:2\tElf:3\tMonk:3\tAdventurer:2"
+      ],
+      "marsh6": [
+        "Action\tmessage\t1\tThe mire sends a heavy column.",
+        "Action\tspawn\t3\t57\t103\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "marsh7": [
+        "Action\tmessage\t1\tThe watch has called every spear in the marsh.",
+        "Action\tspawn\t3\t47\t98\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
+      ],
+      "marsh8": [
+        "Action\tmessage\t1\tMora Fenwick is spending her reserve.",
+        "Action\tspawn\t3\t57\t103\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "marsh9": [
+        "Action\tmessage\t1\tThe last of the watch is on the march.",
+        "Action\tspawn\t3\t47\t98\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:3\tAdventurer:3"
+      ],
+      "goalNineTowerRoomsClaimed": [
+        "Action\tobjectivestate\t1\tmirewatch-o03\treached"
+      ],
+      "sealsOpen": [
+        "Action\tmessage\t1\tThe seals of both approaches crack open. The way to the warden is free.",
+        "Action\tterrain\t83\t30\t85\t30\tpath",
+        "Action\tterrain\t95\t30\t97\t30\tpath",
+        "Action\tterrain\t80\t7\t80\t7\tpath",
+        "Action\tterrain\t80\t8\t80\t8\tpath"
+      ],
+      "watchKey": [
+        "Action\tstoneattach\tMoraFenwick"
+      ],
+      "keyDropped": [
+        "Action\tmessage\t1\tMora Fenwick is dead and the watch key she wore has dropped from her belt."
+      ],
+      "portalWake": [
+        "Action\tmessage\t1\tThe mire has settled around your hollow, and your portal draws creatures again.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1"
+      ],
+      "scoutTowerC": [
+        "Action\tmessage\t1\tYour scout looks down from the north-west tower. The road beyond is clear, and a drowned cache is yours.",
+        "Action\treveal\t1\tTowerE",
+        "Action\tgold\t1\t400",
+        "Action\tobjectivestate\t1\tmirewatch-o04\treached"
+      ]
+    },
+    "reachability": {
+      "room_claims": [
+        {
+          "name": "GuardRoom1",
+          "type": 17,
+          "seat": 3,
+          "tiles": [
+            [
+              44,
+              106
+            ],
+            [
+              44,
+              107
+            ],
+            [
+              45,
+              106
+            ],
+            [
+              45,
+              107
+            ],
+            [
+              46,
+              106
+            ],
+            [
+              46,
+              107
+            ],
+            [
+              47,
+              106
+            ],
+            [
+              47,
+              107
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            44,
+            106,
+            47,
+            107
+          ]
+        },
+        {
+          "name": "GuardRoom2",
+          "type": 17,
+          "seat": 3,
+          "tiles": [
+            [
+              86,
+              110
+            ],
+            [
+              86,
+              111
+            ],
+            [
+              87,
+              110
+            ],
+            [
+              87,
+              111
+            ],
+            [
+              88,
+              110
+            ],
+            [
+              88,
+              111
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            86,
+            110,
+            88,
+            111
+          ]
+        },
+        {
+          "name": "Library1",
+          "type": 7,
+          "seat": 3,
+          "tiles": [
+            [
+              24,
+              78
+            ],
+            [
+              24,
+              79
+            ],
+            [
+              25,
+              78
+            ],
+            [
+              25,
+              79
+            ],
+            [
+              26,
+              78
+            ],
+            [
+              26,
+              79
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            24,
+            78,
+            26,
+            79
+          ]
+        },
+        {
+          "name": "Arena1",
+          "type": 14,
+          "seat": 3,
+          "tiles": [
+            [
+              74,
+              82
+            ],
+            [
+              74,
+              83
+            ],
+            [
+              74,
+              84
+            ],
+            [
+              75,
+              82
+            ],
+            [
+              75,
+              83
+            ],
+            [
+              75,
+              84
+            ],
+            [
+              76,
+              82
+            ],
+            [
+              76,
+              83
+            ],
+            [
+              76,
+              84
+            ],
+            [
+              77,
+              82
+            ],
+            [
+              77,
+              83
+            ],
+            [
+              77,
+              84
+            ],
+            [
+              78,
+              82
+            ],
+            [
+              78,
+              83
+            ],
+            [
+              78,
+              84
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            74,
+            82,
+            78,
+            84
+          ]
+        },
+        {
+          "name": "Library2",
+          "type": 7,
+          "seat": 3,
+          "tiles": [
+            [
+              20,
+              44
+            ],
+            [
+              20,
+              45
+            ],
+            [
+              21,
+              44
+            ],
+            [
+              21,
+              45
+            ],
+            [
+              22,
+              44
+            ],
+            [
+              22,
+              45
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            20,
+            44,
+            22,
+            45
+          ]
+        },
+        {
+          "name": "Prison1",
+          "type": 11,
+          "seat": 3,
+          "tiles": [
+            [
+              68,
+              50
+            ],
+            [
+              68,
+              51
+            ],
+            [
+              68,
+              52
+            ],
+            [
+              69,
+              50
+            ],
+            [
+              69,
+              51
+            ],
+            [
+              69,
+              52
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            68,
+            50,
+            69,
+            52
+          ]
+        },
+        {
+          "name": "Workshop1",
+          "type": 5,
+          "seat": 3,
+          "tiles": [
+            [
+              44,
+              24
+            ],
+            [
+              44,
+              25
+            ],
+            [
+              45,
+              24
+            ],
+            [
+              45,
+              25
+            ],
+            [
+              46,
+              24
+            ],
+            [
+              46,
+              25
+            ],
+            [
+              47,
+              24
+            ],
+            [
+              47,
+              25
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            44,
+            24,
+            47,
+            25
+          ]
+        },
+        {
+          "name": "GuardRoom3",
+          "type": 17,
+          "seat": 2,
+          "tiles": [
+            [
+              94,
+              22
+            ],
+            [
+              94,
+              23
+            ],
+            [
+              95,
+              22
+            ],
+            [
+              95,
+              23
+            ],
+            [
+              96,
+              22
+            ],
+            [
+              96,
+              23
+            ],
+            [
+              97,
+              22
+            ],
+            [
+              97,
+              23
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            94,
+            22,
+            97,
+            23
+          ]
+        },
+        {
+          "name": "Workshop2",
+          "type": 5,
+          "seat": 2,
+          "tiles": [
+            [
+              99,
+              18
+            ],
+            [
+              99,
+              19
+            ],
+            [
+              100,
+              18
+            ],
+            [
+              100,
+              19
+            ],
+            [
+              101,
+              18
+            ],
+            [
+              101,
+              19
+            ]
+          ],
+          "goal": "mirewatch-main-towers",
+          "bounds": [
+            99,
+            18,
+            101,
+            19
+          ]
+        }
+      ],
+      "named_creatures": [
+        "MoraFenwick"
+      ],
+      "minimum_mineable_gold": 2000,
+      "regions": {
+        "TowerC": {
+          "bounds": [
+            17,
+            69,
+            35,
+            83
+          ],
+          "minimum_open_tiles": 1
+        },
+        "TowerF": {
+          "bounds": [
+            61,
+            41,
+            79,
+            55
+          ],
+          "minimum_open_tiles": 1
+        },
+        "TowerG": {
+          "bounds": [
+            37,
+            15,
+            55,
+            29
+          ],
+          "minimum_open_tiles": 1
+        },
+        "TowerH": {
+          "bounds": [
+            87,
+            13,
+            105,
+            27
+          ],
+          "minimum_open_tiles": 1
+        }
+      }
+    },
+    "route": [
+      "Build2actualbeds and a hatchery coop; protect the heart. Start0gold. Original firstCoin at400actualmining gives600gold and Orc2/Goblin2. Three dormitory fields(19..21,109)provide space for their3bedfields,276gold;3x3hatchery(19..21,106..108)990gold. Total1266requires266additionalgold beyond first400+gift600. All twelve fields are free reachable removable dirt, skills unlocked, finite reserve112500. No new reward or compulsory mining threshold.",
+      "Workers must claim exactly the original9rooms of8towers:GuardRoom1 8,GuardRoom2 6,Library1 6,Arena1 15,Library2 6,Prison1 6,Workshop1 8,GuardRoom3 8,Workshop2 6,total69fields. Every fixed field remains currently owned until victory. The existing mirewatch_errors checks actual footprint/type/seat and worker access/claimability for all69fields.",
+      "Secure the east and north approaches by actual ownership of Prison1 in TowerF and Workshop1 in TowerG plus the original sealsOpen completion. These are the two approach towers named by the original messages; mere visits do not replace room control. Original three terrain openings are preserved, without inventing a requirement to traverse all alternative holes.",
+      "Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.",
+      "MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.",
+      "Move the identical victory sentence after all current main observers, retaining the original pending win request."
+    ],
+    "runtime_limit": "Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tMora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours."
+    }
   }
 }

@@ -5916,7 +5916,6 @@ Name	watcherSlain
 Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	Mora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours.
 Action	objectivestate	1	mirewatch-o01	reached
 Action	objectivestate	1	mirewatch-o05	reached
 Action	win	1
@@ -5962,5 +5961,76 @@ Action	message	1	Your scout looks down from the north-west tower. The road beyon
 Action	reveal	1	TowerE
 Action	gold	1	400
 Action	objectivestate	1	mirewatch-o04	reached
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	mirewatch-main-home	Build 2 beds and a coop; protect your heart.
+Action	mainobjectiveid	1	mirewatch-main-towers	Claim every room in all eight towers.
+Action	mainobjectiveid	1	mirewatch-main-approaches	Secure both approaches; scout the northwest tower possessed.
+Action	mainobjectiveid	1	mirewatch-main-warden	Defeat Mora in her tower and all enemy forces.
+Action	optionalobjectiveid	1	mirewatch-extra-gold	Mine 2000 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	mirewatch-main-home	failed
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	furniture	1	Dormitory	>=	2
+Cond	furniture	1	Hatchery	>=	1
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	mirewatch-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainTowers
+Mode	repeat	0
+Cond	roomclaimed	1	44	106	47	107
+Cond	roomclaimed	1	86	110	88	111
+Cond	roomclaimed	1	24	78	26	79
+Cond	roomclaimed	1	74	82	78	84
+Cond	roomclaimed	1	20	44	22	45
+Cond	roomclaimed	1	68	50	69	52
+Cond	roomclaimed	1	44	24	47	25
+Cond	roomclaimed	1	94	22	97	23
+Cond	roomclaimed	1	99	18	101	19
+Action	objectivestate	1	mirewatch-main-towers	reached
+[/Trigger]
+[Trigger]
+Name	mainApproaches
+Mode	repeat	0
+Cond	roomclaimed	1	68	50	69	52
+Cond	roomclaimed	1	44	24	47	25
+Cond	trigger	sealsOpen
+Cond	trigger	scoutTowerC
+Action	objectivestate	1	mirewatch-main-approaches	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	killedin	MoraFenwick	TowerH
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	mirewatch-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	2000
+Action	objectivestate	1	mirewatch-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	mirewatch-main-home	reached
+Cond	objective	1	mirewatch-main-towers	reached
+Cond	objective	1	mirewatch-main-approaches	reached
+Cond	objective	1	mirewatch-main-warden	reached
+Action	message	1	Mora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours.
+Action	win	1
 [/Trigger]
 [/Triggers]

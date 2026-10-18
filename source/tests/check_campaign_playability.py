@@ -86,6 +86,8 @@ BRIEFING_MATCH["Cinderhollow"] = {3: "yes: heart protected through dawn, both or
 
 BRIEFING_MATCH["Goldspire"] = {2: "yes: actual two-fighter buildup and own-heart protection", 3: "yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links", 4: "yes: actual Penn death inside the spire and all remaining foes"}
 
+BRIEFING_MATCH["Mirewatch"] = {2: "yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint", 3: "yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession", 4: "yes: Mora actually killed in TowerH and remaining foes defeated"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1668,6 +1670,19 @@ def self_test(root):
             ("Cond\tregion\t1\tWestWing", "Cond\tregion\t1\tYard")):
         assert needle in goldspire
         assert grouped_goal_errors(goldspire.replace(needle, replacement), "Goldspire"), "Goldspire requirement weakening must fail: " + needle
+    mire = (root / "levels/campaign/Mirewatch.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(mire, "Mirewatch")
+    assert not mirewatch_errors(parse_level(mire))
+    for needle, replacement in (
+            ("Cond\troomclaimed\t1\t44\t106\t47\t107", "Cond\tregion\t1\tTowerA"),
+            ("Cond\troomclaimed\t1\t99\t18\t101\t19", "Cond\troomclaimed\t1\t99\t18\t100\t19"),
+            ("Cond\troomclaimed\t1\t68\t50\t69\t52", "Cond\tregion\t1\tTowerF"),
+            ("Cond\tpossessed\t1\tTowerC", "Cond\tregion\t1\tTowerC"),
+            ("Cond\tkilledin\tMoraFenwick\tTowerH", "Cond\talive\tMoraFenwick\t0"),
+            ("Cond\tmined\t1\t>=\t2000", "Cond\tmined\t1\t>=\t400"),
+            ("Cond\tfurniture\t1\tDormitory\t>=\t2", "Cond\troomtiles\t1\tDormitory\t>=\t2")):
+        assert needle in mire
+        assert grouped_goal_errors(mire.replace(needle, replacement), "Mirewatch"), "Mirewatch requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 
