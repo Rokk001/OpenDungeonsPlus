@@ -166,6 +166,7 @@ public:
     void cleanUp();
     
     //Render request functions
+    //! \brief Refreshes tile geometry, keeping never-seen ground hidden behind a cloud-free earth surface.
     void rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt = NodeType::MTILES_NODE);
     void rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPlayer, NodeType nt = NodeType::MTILES_NODE);
     void rrDestroyTile(Tile& tile, NodeType nt = NodeType::MTILES_NODE);
