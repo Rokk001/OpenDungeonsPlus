@@ -1773,6 +1773,14 @@ def self_test(root):
             ("Cond\tregion\t1\tWestTower3", "Cond\tregion\t1\tWestTower1")):
         assert needle in hollow
         assert grouped_goal_errors(hollow.replace(needle, replacement), "HollowmarkCitadel"), "Hollowmark exact task must reject weakening: " + needle
+    legacy_first = (root / "levels/campaign/Campaign1.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(legacy_first, "Campaign1")
+    for needle, replacement in (
+            ("Cond\tgoalmet\t1\tProtectDungeonTemple", "Cond\ttime\t0"),
+            ("Cond\tgoalmet\t1\tKillAllEnemies", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tmined\t1\t>=\t500", "Cond\ttime\t500")):
+        assert needle in legacy_first
+        assert grouped_goal_errors(legacy_first.replace(needle, replacement), "Campaign1"), "Legacy Campaign1 must retain exact classic goals and mining: " + needle
     print("campaign playability self-test passed")
 
 
@@ -1794,6 +1802,14 @@ def main():
     entries = campaign_entries(ROOT)
     if len(entries) != 31 or len({entry.get("File") for entry in entries}) != 31:
         failures.append("expected 31 distinct configured campaign levels")
+    configured_names = {Path(entry.get("File", "")).stem for entry in entries}
+    for legacy_name in sorted(set(GROUP_REVIEW) - configured_names):
+        legacy_path = ROOT / "levels/campaign" / (legacy_name + ".level")
+        try:
+            failures.extend("campaign/" + legacy_path.name + ": " + error
+                            for error in grouped_goal_errors(legacy_path.read_text(encoding="utf-8"), legacy_name))
+        except (ValueError, OSError) as error:
+            failures.append("campaign/" + legacy_path.name + ": " + str(error))
     for entry in entries:
         name = entry.get("File", "")
         path_level = ROOT / "levels" / name

@@ -12447,5 +12447,91 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tHigh King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours."
     }
+  },
+  "Campaign1": {
+    "goals": {
+      "campaign1-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign1-main-enemies": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat all enemies.",
+        "completion": "mainEnemies",
+        "conditions": [
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign1-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 500 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t500"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "campaign1-main-heart",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "intro": [
+        "Cond\ttime\t3"
+      ],
+      "hint": [
+        "Cond\ttime\t180"
+      ],
+      "bonus1": [
+        "Cond\ttime\t60"
+      ],
+      "goalClassicComplete": [
+        "Cond\tgoalmet\t1\tKillAllEnemies",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
+      ]
+    },
+    "preserved_actions": {
+      "intro": [
+        "Action\tmessage\t-1\tHeroes are attacking a keeper nearby. Let them weaken each other.",
+        "Action\tobjectiveid\t-1\tcampaign1-o01\tDefeat all enemies; protect your heart."
+      ],
+      "hint": [
+        "Action\tmessage\t-1\tKeep building rooms and train your creatures. Gold and a strong army win the level."
+      ],
+      "bonus1": [
+        "Action\tdiscover\tcampaign/Bonus1.level"
+      ],
+      "goalClassicComplete": [
+        "Action\tobjectivestate\t-1\tcampaign1-o01\treached"
+      ]
+    },
+    "route": [
+      "Keep the original seat1 heart alive and defeat all hostile creatures, hearts and portals through the original classic goals.",
+      "Optionally mine500gold before finishing the last enemy; original finite potential259500gold exceeds the optional amount. Preserve original bonus discovery and all messages."
+    ],
+    "runtime_limit": "Static goal wiring only; original campaign battle, mining and save/load remain unverified.",
+    "reachability": {
+      "minimum_mineable_gold": 500
+    }
   }
 }

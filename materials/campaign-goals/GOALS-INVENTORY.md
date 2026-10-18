@@ -192,7 +192,26 @@ File: `levels/campaign/Campaign1.level` (not listed in Campaign.cfg).
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 2286 | `Action	objectiveid	-1	campaign1-o01	Defeat all enemies; protect your heart.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `campaign1-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `campaign1-main-enemies`: Defeat all enemies. | `mainEnemies`: Cond	goalmet	1	KillAllEnemies |
+| optional | `campaign1-extra-gold`: Mine 500 gold. | `extraGold`: Cond	mined	1	>=	500 |
+
+Possible route (static, not a playthrough):
+- Keep the original seat1 heart alive and defeat all hostile creatures, hearts and portals through the original classic goals.
+- Optionally mine500gold before finishing the last enemy; original finite potential259500gold exceeds the optional amount. Preserve original bonus discovery and all messages.
+
+Static goal wiring only; original campaign battle, mining and save/load remain unverified.
+
 | Trigger `goalClassicComplete` | `Action	objectivestate	-1	campaign1-o01	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	campaign1-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemies` | `Action	objectivestate	1	campaign1-main-enemies	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	campaign1-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	campaign1-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 
 ## Campaign2
 
