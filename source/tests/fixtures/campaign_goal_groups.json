@@ -2855,5 +2855,561 @@
       "Defeat BramSeward, initially (46,86) in the port hall, and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). Original reinforcements, inner doors and all geometry remain unchanged."
     ],
     "runtime_limit": "Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification."
+  },
+  "Dunmarrow": {
+    "goals": {
+      "dunmarrow-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "dunmarrow-main-route": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Take a tunnel north; reach camp before departure.",
+        "completion": "mainRoute",
+        "conditions": [
+          "Cond\tflag\tburiedRouteUsed\t1",
+          "Cond\tflag\tgoalCampArrived\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "dunmarrow-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Stop Dunn escaping; defeat all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\ttrigger\twardenCaught",
+          "Cond\tevent\tYsoldeDunn\tkilled",
+          "Cond\ttrigger\twardenEscaped\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "dunmarrow-extra-oasis": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Claim 40 oasis tiles.",
+        "completion": "extraOasis",
+        "conditions": [
+          "Cond\tclaimed\t1\tOasis\t40"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "dunmarrow-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainCampMissed": {
+        "conditions": [
+          "Cond\tflag\twagons\t1",
+          "Cond\ttimer\twagonClock\t>=\t900",
+          "Cond\tflag\tgoalCampArrived\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "dunmarrow-main-route",
+            "failed"
+          ]
+        ]
+      },
+      "mainEscapeFailed": {
+        "conditions": [
+          "Cond\ttrigger\twardenEscaped"
+        ],
+        "states": [
+          [
+            "1",
+            "dunmarrow-main-warden",
+            "failed"
+          ]
+        ]
+      },
+      "mainCrossBarrows": {
+        "conditions": [
+          "Cond\tcrossed\t1\tBarrows\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tburiedRouteUsed\t1"
+        ]
+      },
+      "mainCrossWestBarrows": {
+        "conditions": [
+          "Cond\tcrossed\t1\tWestBarrows\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tburiedRouteUsed\t1"
+        ]
+      },
+      "mainCrossShaftHead": {
+        "conditions": [
+          "Cond\tcrossed\t1\tShaftHead\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tburiedRouteUsed\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "highDunes": [
+        "Cond\tregion\t1\tHighDunes"
+      ],
+      "wagonLeaves": [
+        "Cond\tflag\twagons\t1",
+        "Cond\ttimer\twagonClock\t>=\t900",
+        "Cond\talive\tYsoldeDunn"
+      ],
+      "goalCampBeforeLoading": [
+        "Cond\tflag\twagons\t0",
+        "Cond\tregion\t1\tCamp"
+      ],
+      "goalCampBeforeDeparture": [
+        "Cond\tflag\twagons\t1",
+        "Cond\ttimer\twagonClock\t<\t900",
+        "Cond\tregion\t1\tCamp"
+      ],
+      "goalCampMissed": [
+        "Cond\ttrigger\twagonLeaves",
+        "Cond\tflag\tgoalCampArrived\t0"
+      ],
+      "wardenEscaped": [
+        "Cond\treached\tYsoldeDunn\tregion\tExitShaft"
+      ],
+      "wardenCaught": [
+        "Cond\tevent\tYsoldeDunn\tkilled",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple",
+        "Cond\tflag\tburiedRouteUsed\t1",
+        "Cond\tflag\tgoalCampArrived\t1",
+        "Cond\ttrigger\twardenEscaped\t0",
+        "Cond\tgoalmet\t1\tKillAllEnemies"
+      ]
+    },
+    "preserved_actions": {
+      "highDunes": [
+        "Action\tmessage\t1\tFrom these dunes you can see her camp. The wagons are loaded and she is leaving within the quarter hour!",
+        "Action\tspawn\t2\t50\t38\t1\tKnight:2\tElf:2\tAdventurer:2\tMonk:2",
+        "Action\treveal\t1\tNorthDunes",
+        "Action\tobjectiveid\t1\tdunmarrow-o03\tReach the camp before the wagons leave.",
+        "Action\tsetflag\twagons\t1",
+        "Action\ttimer\twagonClock\t0"
+      ],
+      "campSeen": [
+        "Action\tmessage\t1\tThe camp gate is in sight. Her last guards are forming up on the ramp, and the gate swings open.",
+        "Action\tspawn\t2\t18\t18\t1\tKnight:3\tKnight:2\tDwarf2:2\tMonk:2",
+        "Action\tterrain\t14\t21\t15\t21\tpath"
+      ],
+      "wagonLeaves": [
+        "Action\tmessage\t1\tThe wagons are rolling! Dunn is running for the old shaft. Cut her off.",
+        "Action\tterrain\t14\t21\t15\t21\tpath",
+        "Action\torder\tgoto\t2\t16,12;14,19;14,22;12,26;11,31;10,36;10,42;12,47;16,49;18,51;17,53\tYsoldeDunn",
+        "Action\tspeed\trun\tYsoldeDunn"
+      ],
+      "goalCampBeforeLoading": [
+        "Action\tobjectivestate\t1\tdunmarrow-o03\treached",
+        "Action\tsetflag\tgoalCampArrived\t1"
+      ],
+      "goalCampBeforeDeparture": [
+        "Action\tobjectivestate\t1\tdunmarrow-o03\treached",
+        "Action\tsetflag\tgoalCampArrived\t1"
+      ],
+      "oasisHeld": [
+        "Action\tmessage\t1\tThe oasis is ours. A wandering spider has smelled the water and comes to serve you.",
+        "Action\tgenerate\t1\tSpider:1"
+      ]
+    },
+    "reachability": {
+      "named_creatures": [
+        "YsoldeDunn"
+      ],
+      "regions": {
+        "Barrows": {
+          "bounds": [
+            48,
+            60,
+            76,
+            80
+          ],
+          "minimum_open_tiles": 334
+        },
+        "WestBarrows": {
+          "bounds": [
+            10,
+            72,
+            34,
+            90
+          ],
+          "minimum_open_tiles": 237
+        },
+        "ShaftHead": {
+          "bounds": [
+            4,
+            34,
+            16,
+            46
+          ],
+          "minimum_open_tiles": 72
+        },
+        "Camp": {
+          "bounds": [
+            4,
+            4,
+            28,
+            22
+          ],
+          "minimum_open_tiles": 285
+        },
+        "Oasis": {
+          "bounds": [
+            46,
+            88,
+            66,
+            100
+          ],
+          "minimum_open_tiles": 158,
+          "minimum_potential_tiles": 40
+        }
+      },
+      "crossing_paths": {
+        "Barrows": {
+          "direction": "north",
+          "path": [
+            [
+              61,
+              81
+            ],
+            [
+              61,
+              80
+            ],
+            [
+              61,
+              79
+            ],
+            [
+              60,
+              79
+            ],
+            [
+              60,
+              78
+            ],
+            [
+              59,
+              78
+            ],
+            [
+              59,
+              77
+            ],
+            [
+              58,
+              77
+            ],
+            [
+              57,
+              77
+            ],
+            [
+              57,
+              76
+            ],
+            [
+              56,
+              76
+            ],
+            [
+              56,
+              75
+            ],
+            [
+              56,
+              74
+            ],
+            [
+              56,
+              73
+            ],
+            [
+              56,
+              72
+            ],
+            [
+              56,
+              71
+            ],
+            [
+              56,
+              70
+            ],
+            [
+              56,
+              69
+            ],
+            [
+              56,
+              68
+            ],
+            [
+              56,
+              67
+            ],
+            [
+              56,
+              66
+            ],
+            [
+              56,
+              65
+            ],
+            [
+              56,
+              64
+            ],
+            [
+              56,
+              63
+            ],
+            [
+              56,
+              62
+            ],
+            [
+              56,
+              61
+            ],
+            [
+              56,
+              60
+            ],
+            [
+              56,
+              59
+            ]
+          ]
+        },
+        "WestBarrows": {
+          "direction": "north",
+          "path": [
+            [
+              17,
+              91
+            ],
+            [
+              17,
+              90
+            ],
+            [
+              18,
+              90
+            ],
+            [
+              18,
+              89
+            ],
+            [
+              19,
+              89
+            ],
+            [
+              19,
+              88
+            ],
+            [
+              19,
+              87
+            ],
+            [
+              19,
+              86
+            ],
+            [
+              19,
+              85
+            ],
+            [
+              19,
+              84
+            ],
+            [
+              19,
+              83
+            ],
+            [
+              19,
+              82
+            ],
+            [
+              19,
+              81
+            ],
+            [
+              19,
+              80
+            ],
+            [
+              19,
+              79
+            ],
+            [
+              20,
+              79
+            ],
+            [
+              20,
+              78
+            ],
+            [
+              21,
+              78
+            ],
+            [
+              22,
+              78
+            ],
+            [
+              23,
+              78
+            ],
+            [
+              24,
+              78
+            ],
+            [
+              24,
+              77
+            ],
+            [
+              24,
+              76
+            ],
+            [
+              24,
+              75
+            ],
+            [
+              24,
+              74
+            ],
+            [
+              25,
+              74
+            ],
+            [
+              25,
+              73
+            ],
+            [
+              25,
+              72
+            ],
+            [
+              25,
+              71
+            ]
+          ]
+        },
+        "ShaftHead": {
+          "direction": "north",
+          "path": [
+            [
+              13,
+              47
+            ],
+            [
+              13,
+              46
+            ],
+            [
+              12,
+              46
+            ],
+            [
+              12,
+              45
+            ],
+            [
+              11,
+              45
+            ],
+            [
+              11,
+              44
+            ],
+            [
+              11,
+              43
+            ],
+            [
+              11,
+              42
+            ],
+            [
+              11,
+              41
+            ],
+            [
+              11,
+              40
+            ],
+            [
+              11,
+              39
+            ],
+            [
+              11,
+              38
+            ],
+            [
+              11,
+              37
+            ],
+            [
+              11,
+              36
+            ],
+            [
+              11,
+              35
+            ],
+            [
+              11,
+              34
+            ],
+            [
+              11,
+              33
+            ]
+          ]
+        }
+      }
+    },
+    "route": [
+      "Protect the heart. Start is (68,116); use an own living creature to walk north through any existing buried route: Barrows, WestBarrows or ShaftHead. Existing open routes span each whole region: Barrows (61,81)->(56,59), WestBarrows (17,91)->(25,71), ShaftHead (13,47)->(11,33); all exact steps are checked in the fixture.",
+      "Reach Camp (4,4)-(28,22) either before highDunes starts the wagon timer, or while wagonClock is below 900 seconds. Existing goalCampBeforeLoading/goalCampBeforeDeparture set goalCampArrived. Arrival after 900 is a failed main requirement even if Dunn was already killed and wagonLeaves therefore never fired. No new shorter deadline or automatic loss is introduced.",
+      "Dunn starts at (18,12). The original escape route through the shaft remains: (16,12);(14,19);(14,22);(12,26);(11,31);(10,36);(10,42);(12,47);(16,49);(18,51);(17,53). Kill her before the existing ExitShaft escape and defeat remaining enemies. Camp arrival before departure remains required; a later intercept cannot erase a missed camp objective.",
+      "Before final victory optionally claim 40 Oasis fields (46,88)-(66,100), with 253 potentially reachable fields. Existing oasisHeld spider generation is retained. Claim/remove Portal1 (75..77,87..89) as part of the original remaining-enemy rule.",
+      "Victory narration waits for tunnel use, timely camp arrival, heart survival, actual Dunn death and enemy clearance. No story text or original departure/escape behavior is changed."
+    ],
+    "runtime_limit": "Only static source/open-route evidence; actual tunnel travel, the 900-second campaign route, combat and save/load require integrator/Mario runtime verification."
   }
 }

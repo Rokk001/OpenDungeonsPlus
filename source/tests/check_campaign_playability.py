@@ -44,7 +44,7 @@ BRIEFING_MATCH = {
     "Stormhaven": {3: "no: enemy temples are checked; stone-span control is not an independent goal"},
     "Cinderhollow": {3: "no: ProtectDungeonTemple checks survival; mining is not required", 4: "no: enemy temple elimination is checked; bridge crossing is not an independent goal"},
     "Saltmere": {3: "yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing", 4: "yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals"},
-    "Dunmarrow": {3: "no: enemy elimination/escape is checked; the route used is not a winning condition"},
+    "Dunmarrow": {3: "yes: actual northbound tunnel use and camp arrival before the original 900-second departure deadline; actual Dunn death before escape, heart protection and remaining foes"},
     "Goldspire": {2: "no: building before attacking is not a winning condition", 3: "no: enemy elimination is checked; the ordered low-town/link route is not an independent goal"},
     "Mirewatch": {2: "no: digging/building order is not a winning condition", 3: "no: all tower ownership and both approaches are not independent winning goals", 4: "yes: KillAllEnemies includes the watcher"},
     "Bellwick": {3: "no: enemy temple elimination is checked; holding until the gate event is not an independent goal"},
@@ -931,6 +931,14 @@ def grouped_goal_errors(text, level_name):
             tile = tuple(coordinates)
             if tile not in area or level["tiles"][tile][1] != 0 or level["tiles"][tile][0] in (4, 5):
                 errors.append("required open dry route tile is blocked: " + str(coordinates))
+        for name, crossing in proof.get("crossing_paths", {}).items():
+            a, b, c, d = proof["regions"][name]["bounds"]
+            path = [tuple(tile) for tile in crossing["path"]]
+            if (crossing["direction"] != "north" or not path or path[0][1] != d + 1 or path[-1][1] != b - 1
+                    or any(not a <= x <= c or not b <= y <= d for x, y in path[1:-1])
+                    or any(abs(x - u) + abs(y - v) != 1 for (x, y), (u, v) in zip(path, path[1:]))
+                    or any(tile not in area or not passable(level, tile) or level["tiles"][tile][1] != 0 for tile in path)):
+                errors.append("original open tunnel crossing is unavailable: " + name)
         for footprint in proof.get("footprints", []):
             expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
             x1, y1, x2, y2 = footprint["bounds"]
@@ -1333,6 +1341,19 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    dunmarrow = (root / "levels/campaign/Dunmarrow.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tflag\tgoalCampArrived\t1", "Cond\ttrigger\tcampEntered"),
+        ("Cond\tflag\tburiedRouteUsed\t1", "Cond\ttrigger\tbarrowsEntered"),
+        ("Cond\tcrossed\t1\tWestBarrows\tnorth", "Cond\tregion\t1\tWestBarrows"),
+        ("Action\tsetflag\tburiedRouteUsed\t1", "Action\tsetflag\tburiedRouteUsed\t0"),
+        ("Cond\ttimer\twagonClock\t<\t900", "Cond\ttimer\twagonClock\t<=\t900"),
+        ("Cond\ttimer\twagonClock\t>=\t900", "Cond\ttimer\twagonClock\t>=\t901"),
+        ("Cond\ttrigger\twardenEscaped\t0", "Cond\ttime\t0"),
+        ("Cond\tclaimed\t1\tOasis\t40", "Cond\tclaimed\t1\tOasis\t1")
+    ):
+        assert old in dunmarrow
+        assert objective_errors(dunmarrow.replace(old, new), "Dunmarrow"), old
     saltmere = (root / "levels/campaign/Saltmere.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\ttrigger\tlagoonReached", "Cond\ttime\t0"),

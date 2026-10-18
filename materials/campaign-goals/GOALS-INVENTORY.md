@@ -338,14 +338,40 @@ File: `levels/campaign/Dunmarrow.level`.
 | Script line 3883 | `Action	objectiveid	1	dunmarrow-o01	Kill Ysolde Dunn before she escapes.` | yes |
 | Script line 3884 | `Action	objectiveid	1	dunmarrow-o02	Find the tunnels beneath the dunes.` | yes |
 | Script line 3924 | `Action	objectiveid	1	dunmarrow-o03	Reach the camp before the wagons leave.` | yes |
-| Script line 4025 | `Action	win	1` | yes |
+| Script line 4030 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `dunmarrow-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `dunmarrow-main-route`: Take a tunnel north; reach camp before departure. | `mainRoute`: Cond	flag	buriedRouteUsed	1; Cond	flag	goalCampArrived	1 |
+| main | `dunmarrow-main-warden`: Stop Dunn escaping; defeat all enemy forces. | `mainWarden`: Cond	trigger	wardenCaught; Cond	event	YsoldeDunn	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `dunmarrow-extra-oasis`: Claim 40 oasis tiles. | `extraOasis`: Cond	claimed	1	Oasis	40 |
+
+Possible route (static, not a playthrough):
+- Protect the heart. Start is (68,116); use an own living creature to walk north through any existing buried route: Barrows, WestBarrows or ShaftHead. Existing open routes span each whole region: Barrows (61,81)->(56,59), WestBarrows (17,91)->(25,71), ShaftHead (13,47)->(11,33); all exact steps are checked in the fixture.
+- Reach Camp (4,4)-(28,22) either before highDunes starts the wagon timer, or while wagonClock is below 900 seconds. Existing goalCampBeforeLoading/goalCampBeforeDeparture set goalCampArrived. Arrival after 900 is a failed main requirement even if Dunn was already killed and wagonLeaves therefore never fired. No new shorter deadline or automatic loss is introduced.
+- Dunn starts at (18,12). The original escape route through the shaft remains: (16,12);(14,19);(14,22);(12,26);(11,31);(10,36);(10,42);(12,47);(16,49);(18,51);(17,53). Kill her before the existing ExitShaft escape and defeat remaining enemies. Camp arrival before departure remains required; a later intercept cannot erase a missed camp objective.
+- Before final victory optionally claim 40 Oasis fields (46,88)-(66,100), with 253 potentially reachable fields. Existing oasisHeld spider generation is retained. Claim/remove Portal1 (75..77,87..89) as part of the original remaining-enemy rule.
+- Victory narration waits for tunnel use, timely camp arrival, heart survival, actual Dunn death and enemy clearance. No story text or original departure/escape behavior is changed.
+
+Only static source/open-route evidence; actual tunnel travel, the 900-second campaign route, combat and save/load require integrator/Mario runtime verification.
+
 | Trigger `barrowsEntered` | `Action	objectivestate	1	dunmarrow-o02	reached`; conditions: `Cond	region	1	Barrows` | yes |
 | Trigger `wardenEscaped` | `Action	objectivestate	1	dunmarrow-o01	failed`; conditions: `Cond	reached	YsoldeDunn	region	ExitShaft` | yes |
 | Trigger `goalCampBeforeLoading` | `Action	objectivestate	1	dunmarrow-o03	reached`; conditions: `Cond	flag	wagons	0; Cond	region	1	Camp` | yes |
 | Trigger `goalCampBeforeDeparture` | `Action	objectivestate	1	dunmarrow-o03	reached`; conditions: `Cond	flag	wagons	1; Cond	timer	wagonClock	<	900; Cond	region	1	Camp` | yes |
 | Trigger `goalCampMissed` | `Action	objectivestate	1	dunmarrow-o03	failed`; conditions: `Cond	trigger	wagonLeaves; Cond	flag	goalCampArrived	0` | yes |
-| Trigger `wardenCaught` | `Action	objectivestate	1	dunmarrow-o01	reached`; conditions: `Cond	event	YsoldeDunn	killed` | yes |
-| Briefing | Use the buried tunnels to reach her and kill her before she gets away. | no: enemy elimination/escape is checked; the route used is not a winning condition |
+| Trigger `wardenCaught` | `Action	objectivestate	1	dunmarrow-o01	reached`; conditions: `Cond	event	YsoldeDunn	killed; Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	buriedRouteUsed	1; Cond	flag	goalCampArrived	1; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	dunmarrow-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainCampMissed` | `Action	objectivestate	1	dunmarrow-main-route	failed`; conditions: `Cond	flag	wagons	1; Cond	timer	wagonClock	>=	900; Cond	flag	goalCampArrived	0` | yes |
+| Trigger `mainEscapeFailed` | `Action	objectivestate	1	dunmarrow-main-warden	failed`; conditions: `Cond	trigger	wardenEscaped` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	dunmarrow-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainRoute` | `Action	objectivestate	1	dunmarrow-main-route	reached`; conditions: `Cond	flag	buriedRouteUsed	1; Cond	flag	goalCampArrived	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	dunmarrow-main-warden	reached`; conditions: `Cond	trigger	wardenCaught; Cond	event	YsoldeDunn	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraOasis` | `Action	objectivestate	1	dunmarrow-extra-oasis	reached`; conditions: `Cond	claimed	1	Oasis	40` | yes |
+| Briefing | Use the buried tunnels to reach her and kill her before she gets away. | yes: actual northbound tunnel use and camp arrival before the original 900-second departure deadline; actual Dunn death before escape, heart protection and remaining foes |
 
 ## Ebonrook
 
