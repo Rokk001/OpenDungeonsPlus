@@ -45,3 +45,12 @@ assert raise_creature.count("notifyCreatureArrival(className)") == 1
 assert raise_creature.index("newCreature->addToGameMap();") < raise_creature.index("notifyCreatureArrival(className)")
 assert raise_creature.index("newCreature->setPosition(") < raise_creature.index("notifyCreatureArrival(className)")
 print("Crypt and portal share successful first-class arrival history: PASS (static only)")
+
+temple = (ROOT / "source/rooms/RoomTemple.cpp").read_text(encoding="utf-8")
+reward = function(temple, "void RoomTemple::giveSacrificeResult(")
+assert "The gods accepted your sacrifice and send you a new creature" not in reward
+assert reward.index("newCreature->addToGameMap();") < reward.index("notifyCreatureArrival(classToSpawn->getClassName())")
+assert reward.index("newCreature->setPosition(") < reward.index("notifyCreatureArrival(classToSpawn->getClassName())")
+assert 'if(!message.empty() &&' in reward
+assert 'message = "The gods accepted your sacrifice and send you a special";' in reward
+print("Creature sacrifice rewards share first-arrival history; real special rewards remain announced: PASS (static only)")

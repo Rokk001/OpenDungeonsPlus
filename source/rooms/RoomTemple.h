@@ -71,6 +71,7 @@ private:
     void sacrificeCreature(Creature& creature);
 
     //! \brief Gives the result of a recipe to the owner of the room
+    //! \brief Grants a recipe reward and announces only actual first arrivals or received specials.
     void giveSacrificeResult(const std::string& result, uint32_t averageLevel, Tile& tile);
 
     std::map<Creature*, Tile*> mPrayerSpots;

@@ -459,11 +459,13 @@ void RoomTemple::giveSacrificeResult(const std::string& result, uint32_t average
             newCreature->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()),
                 static_cast<Ogre::Real>(tile.getY()), 0.0f));
             newCreature->createMesh();
+            getSeat()->notifyCreatureArrival(classToSpawn->getClassName());
         }
-        message = "The gods accepted your sacrifice and send you a new creature";
+
     }
 
-    if((getSeat()->getPlayer() != nullptr) &&
+    if(!message.empty() &&
+       (getSeat()->getPlayer() != nullptr) &&
        getSeat()->getPlayer()->getIsHuman() &&
        !getSeat()->getPlayer()->getHasLost())
     {
