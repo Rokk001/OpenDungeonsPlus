@@ -31,7 +31,7 @@ BRIEFING_MATCH = {
     "Tinmoor": {2: "no: enemy elimination is checked; seams and both posts are not independent goals", 3: "no: optional stone discovery is not required to win"},
     "BoulderCourse": {3: "yes: courseDone checks all four cups; the timeout trigger limits the trial"},
     "Ravensledge": {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals"},
-    "Ashcombe": {3: "no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal"},
+    "Ashcombe": {3: "yes: actual northward Basin crossing, actual Ashby death before escape regardless of location, remaining enemy forces and own-heart protection"},
     "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
     "HollinFen": {3: "yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes", 4: "yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery"},
     "CrowshotGallery": {3: "yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline"},

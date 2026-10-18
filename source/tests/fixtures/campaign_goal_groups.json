@@ -13066,5 +13066,238 @@
         }
       ]
     }
+  },
+  "Ashcombe": {
+    "goals": {
+      "ashcombe-main-heart": {
+        "kind": "mainobjectiveid",
+        "text": "Protect your heart.",
+        "seat": "1",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ashcombe-main-basin": {
+        "kind": "mainobjectiveid",
+        "text": "Cross the ash basin.",
+        "seat": "1",
+        "completion": "mainBasin",
+        "conditions": [
+          "Cond\tcrossed\t1\tBasin\tnorth"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ashcombe-main-warden": {
+        "kind": "mainobjectiveid",
+        "text": "Kill Ashby before escape and defeat her forces.",
+        "seat": "1",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tevent\tLieslAshby\tkilled",
+          "Cond\ttrigger\twardenEscaped\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ashcombe-extra-ruins": {
+        "kind": "optionalobjectiveid",
+        "text": "Explore the old mill ruins.",
+        "seat": "1",
+        "completion": "extraRuins",
+        "conditions": [
+          "Cond\tregion\t1\tRuinYard"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "ashcombe-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainAshbyEscaped": {
+        "conditions": [
+          "Cond\ttrigger\twardenEscaped"
+        ],
+        "states": [
+          [
+            "1",
+            "ashcombe-main-warden",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "smoulder": [
+        "Cond\ttime\t3"
+      ],
+      "basinEntered": [
+        "Cond\tregion\t1\tBasin"
+      ],
+      "ruinsFound": [
+        "Cond\tregion\t1\tRuinYard"
+      ],
+      "hollowFound": [
+        "Cond\tregion\t1\tEastHollow"
+      ],
+      "wagonsMoving": [
+        "Cond\tregion\t1\tApproach"
+      ],
+      "holdBreached": [
+        "Cond\tregion\t1\tHold"
+      ],
+      "firstEmber": [
+        "Cond\ttime\t480"
+      ],
+      "secondEmber": [
+        "Cond\ttime\t1000"
+      ],
+      "thirdEmber": [
+        "Cond\ttime\t1700"
+      ],
+      "fourthEmber": [
+        "Cond\ttime\t2300"
+      ],
+      "wagonLeaves": [
+        "Cond\tflag\tfleeing\t1",
+        "Cond\ttimer\twagonClock\t>=\t300",
+        "Cond\talive\tLieslAshby"
+      ],
+      "goalKillBeforeEscape": [
+        "Cond\tevent\tLieslAshby\tkilled",
+        "Cond\ttrigger\twardenEscaped\t0"
+      ],
+      "goalHoldOrRoadMissed": [
+        "Cond\treached\tLieslAshby\tregion\tExitRoad",
+        "Cond\tobjective\t1\tashcombe-o03\topen"
+      ],
+      "wardenEscaped": [
+        "Cond\treached\tLieslAshby\tregion\tExitRoad"
+      ],
+      "wardenDown": [
+        "Cond\tevent\tLieslAshby\tkilled"
+      ],
+      "goalBasinCrossed": [
+        "Cond\tcrossed\t1\tBasin\tnorth"
+      ]
+    },
+    "preserved_actions": {
+      "smoulder": [
+        "Action\tmessage\t1\tThe Ashcombe valley still smokes from an old fire, master, and Warden Liesl Ashby has mounted her wagons to flee over the northern pass. You have most of an hour before she is gone.",
+        "Action\tobjectiveid\t1\tashcombe-o01\tKill Ashby before she escapes.",
+        "Action\tobjectiveid\t1\tashcombe-o02\tCross the ash basin.",
+        "Action\torder\twait\t2\t-\tLieslAshby"
+      ],
+      "basinEntered": [
+        "Action\tmessage\t1\tThe ash is deep here and the lava cracks run in all directions. Her sentries watch the dunes, so keep your creatures close together.",
+        "Action\treveal\t1\tTrail"
+      ],
+      "ruinsFound": [
+        "Action\tmessage\t1\tThese ruins were a mill once. Their stores are intact, and there is a way north behind them.",
+        "Action\treveal\t1\tNorthHall"
+      ],
+      "hollowFound": [
+        "Action\tmessage\t1\tThe east hollow joins the warden road from below. Gold lies in its walls, if you can hold it.",
+        "Action\treveal\t1\tApproach"
+      ],
+      "wagonsMoving": [
+        "Action\tmessage\t1\tHer wagons are being loaded! Ashby will leave the hold in five minutes and run for the south road.",
+        "Action\tspawn\t3\t76\t22\t1\tKnight:2\tElf:2\tAdventurer:2\tMonk:2",
+        "Action\tobjectiveid\t1\tashcombe-o03\tKill Ashby before she escapes.",
+        "Action\tsetflag\tfleeing\t1",
+        "Action\ttimer\twagonClock\t0"
+      ],
+      "holdBreached": [
+        "Action\tmessage\t1\tYou are in her hold. Ashby is somewhere in the great hall, and her best are with her.",
+        "Action\tspawn\t3\t80\t12\t1\tKnight:3\tKnight:2\tMonk:2\tDwarf2:2"
+      ],
+      "firstEmber": [
+        "Action\tmessage\t1\tAsh-stained patrols are crossing the basin towards you.",
+        "Action\tspawn\t3\t40\t52\t1\tAdventurer:2\tDwarf1:2\tElf:2"
+      ],
+      "secondEmber": [
+        "Action\tmessage\t1\tA heavier column marches down the south road.",
+        "Action\tspawn\t3\t62\t62\t1\tKnight:2\tAdventurer:2\tMonk:2\tDwarf1:2"
+      ],
+      "thirdEmber": [
+        "Action\tmessage\t1\tThe valley is rising against you. Fighters are coming from the old mill.",
+        "Action\tspawn\t3\t24\t22\t1\tKnight:3\tElf:2\tDwarf2:2\tMonk:2"
+      ],
+      "fourthEmber": [
+        "Action\tmessage\t1\tAshby has called back everything she has left.",
+        "Action\tspawn\t3\t46\t12\t1\tKnight:3\tKnight:3\tElf:3\tAdventurer:3\tMonk:3"
+      ],
+      "wagonLeaves": [
+        "Action\tmessage\t1\tThe wagons are out of the gate! Ashby is making for the south road. Cut her off.",
+        "Action\torder\tgoto\t2\t82,18;83,24;84,30;87,36;84,45;81,49;78,52;75,55;63,56\tLieslAshby",
+        "Action\tspeed\trun\tLieslAshby"
+      ],
+      "goalKillBeforeEscape": [
+        "Action\tobjectivestate\t1\tashcombe-o03\treached"
+      ],
+      "goalHoldOrRoadMissed": [
+        "Action\tobjectivestate\t1\tashcombe-o03\tfailed"
+      ],
+      "wardenEscaped": [
+        "Action\tmessage\t1\tAshby has reached the south road and her wagons are gone. Ashcombe is lost.",
+        "Action\tobjectivestate\t1\tashcombe-o01\tfailed",
+        "Action\tlose\t1"
+      ],
+      "wardenDown": [
+        "Action\tobjectivestate\t1\tashcombe-o01\treached",
+        "Action\twin\t1"
+      ],
+      "goalBasinCrossed": [
+        "Action\tobjectivestate\t1\tashcombe-o02\treached"
+      ]
+    },
+    "victory_narration": {
+      "action": "Action\tmessage\t1\tLiesl Ashby has fallen before her wagons could leave. The ashes of Ashcombe are yours.",
+      "trigger": "mainVictory"
+    },
+    "reachability": {
+      "regions": {
+        "Basin": {
+          "bounds": [
+            24,
+            28,
+            68,
+            54
+          ],
+          "minimum_open_tiles": 937
+        },
+        "RuinYard": {
+          "bounds": [
+            12,
+            16,
+            30,
+            28
+          ],
+          "minimum_open_tiles": 166
+        }
+      },
+      "named_creatures": [
+        "LieslAshby"
+      ]
+    },
+    "route": [
+      "Protect the original heart throughout the mission.",
+      "Cross Basin (24,28)-(68,54) northwards with one living owned creature. A dry or removable corridor along x24 connects y55 to y27; visiting Hold is not a substitute.",
+      "Optionally enter RuinYard (12,16)-(30,28) before the last main goal; 166 original open dry fields are potentially reachable.",
+      "Kill LieslAshby before she reaches ExitRoad (60,55)-(64,58). Death inside Hold or anywhere on the road counts; no prior wagon departure is required. Preserve the original 300-second departure after Approach and its original route.",
+      "Defeat all remaining enemy creatures and portals before the final main objective. The original four patrol schedules and hold/approach reinforcements remain unchanged."
+    ],
+    "runtime_limit": "Static geometry and source conditions are not a combat or timing playthrough; the original escape and optional exploration still require runtime verification."
   }
 }

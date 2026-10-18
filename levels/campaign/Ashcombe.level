@@ -3410,17 +3410,72 @@ Action	objectivestate	1	ashcombe-o01	failed
 Action	lose	1
 [/Trigger]
 [Trigger]
-Name	wardenDown
-Mode	once
-Cond	event	LieslAshby	killed
-Action	message	1	Liesl Ashby has fallen before her wagons could leave. The ashes of Ashcombe are yours.
-Action	objectivestate	1	ashcombe-o01	reached
-Action	win	1
-[/Trigger]
-[Trigger]
 Name	goalBasinCrossed
 Mode	once
 Cond	crossed	1	Basin	north
 Action	objectivestate	1	ashcombe-o02	reached
+[/Trigger]
+[Trigger]
+Name	wardenDown
+Mode	once
+Cond	event	LieslAshby	killed
+Action	objectivestate	1	ashcombe-o01	reached
+Action	win	1
+[/Trigger]
+[Trigger]
+Name	mainObjectives
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	ashcombe-main-heart	Protect your heart.
+Action	mainobjectiveid	1	ashcombe-main-basin	Cross the ash basin.
+Action	mainobjectiveid	1	ashcombe-main-warden	Kill Ashby before escape and defeat her forces.
+Action	optionalobjectiveid	1	ashcombe-extra-ruins	Explore the old mill ruins.
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	ashcombe-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainBasin
+Mode	repeat	0
+Cond	crossed	1	Basin	north
+Action	objectivestate	1	ashcombe-main-basin	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	event	LieslAshby	killed
+Cond	trigger	wardenEscaped	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	ashcombe-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraRuins
+Mode	once
+Cond	region	1	RuinYard
+Action	objectivestate	1	ashcombe-extra-ruins	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	ashcombe-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainAshbyEscaped
+Mode	once
+Cond	trigger	wardenEscaped
+Action	objectivestate	1	ashcombe-main-warden	failed
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	ashcombe-main-heart	reached
+Cond	objective	1	ashcombe-main-basin	reached
+Cond	objective	1	ashcombe-main-warden	reached
+Action	message	1	Liesl Ashby has fallen before her wagons could leave. The ashes of Ashcombe are yours.
+Action	win	1
 [/Trigger]
 [/Triggers]
