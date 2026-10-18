@@ -46,6 +46,7 @@ public:
 
     //! \brief Applies the bonus to the seat. The tile is where workers or left over gold appear.
     //! Used when the box is delivered and when a stored special is used.
+    //! Announces received workers only on the first successful arrival of their class.
     static void applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, uint32_t amount, Tile* positionTile);
 
     //! \brief The name of the special, used for the button and the message

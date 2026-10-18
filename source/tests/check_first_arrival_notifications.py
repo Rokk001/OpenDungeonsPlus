@@ -1,0 +1,156 @@
+"""Static guards for one first-arrival notice per class, preserved across saves.
+
+No compiler or game is launched. Runtime save round trips remain integration checks.
+"""
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+# Read one C++ function for the notification and save-path checks.
+def function(source, signature):
+    body = source[source.index(signature):]
+    return body[:body.index("\n}\n")]
+
+
+seat = (ROOT / "source/game/Seat.cpp").read_text(encoding="utf-8")
+portal = (ROOT / "source/rooms/RoomPortal.cpp").read_text(encoding="utf-8")
+arrival = function(seat, "void Seat::notifyCreatureArrival(")
+pick = function(seat, "const CreatureDefinition* Seat::getNextFighterClassToSpawn(")
+spawn = function(portal, "void RoomPortal::spawnCreature()")
+load = function(seat, "bool Seat::importSeatFromStream(")
+save = function(seat, "bool Seat::exportSeatToStream(")
+assert "notifyNewCreatureType" not in pick
+assert "ServerNotificationType::chatServer" not in pick
+assert "SoundRelativeKeeperStatements::CreatureNew" not in pick
+assert spawn.index("newCreature->addToGameMap();") < spawn.index("notifyCreatureArrival(")
+assert spawn.index("newCreature->setPosition(") < spawn.index("notifyCreatureArrival(")
+assert arrival.count("notifyNewCreatureType(") == 1
+assert arrival.index("std::find(") < arrival.index("mAnnouncedCreatureClasses.push_back(")
+assert arrival.index("mAnnouncedCreatureClasses.push_back(") < arrival.index("notifyNewCreatureType(")
+assert "getHasLost()" in arrival and "getIsHuman()" in arrival
+assert 'if(str == "[AnnouncedCreatureClasses]")' in load
+assert "NameAliases::resolve(str)" in load
+assert "mAnnouncedCreatureClasses.push_back(className)" in load
+assert "[/AnnouncedCreatureClasses]" in load and "[/AnnouncedCreatureClasses]" in save
+assert "for(const std::string& className : mAnnouncedCreatureClasses)" in save
+assert save.index("[AnnouncedCreatureClasses]") < save.index("[SkillNotAllowed]")
+assert load.index("[AnnouncedCreatureClasses]") < load.index('if(str != "[SkillNotAllowed]")')
+print("First-arrival notification and optional saved-history guards: PASS (static only)")
+
+crypt = (ROOT / "source/rooms/RoomCrypt.cpp").read_text(encoding="utf-8")
+raise_creature = function(crypt, "void RoomCrypt::doUpkeep()")
+assert "A creature has raised in your crypt" not in raise_creature
+assert raise_creature.count("notifyCreatureArrival(className)") == 1
+assert raise_creature.index("newCreature->addToGameMap();") < raise_creature.index("notifyCreatureArrival(className)")
+assert raise_creature.index("newCreature->setPosition(") < raise_creature.index("notifyCreatureArrival(className)")
+print("Crypt and portal share successful first-class arrival history: PASS (static only)")
+
+temple = (ROOT / "source/rooms/RoomTemple.cpp").read_text(encoding="utf-8")
+reward = function(temple, "void RoomTemple::giveSacrificeResult(")
+assert "The gods accepted your sacrifice and send you a new creature" not in reward
+assert reward.index("newCreature->addToGameMap();") < reward.index("notifyCreatureArrival(classToSpawn->getClassName())")
+assert reward.index("newCreature->setPosition(") < reward.index("notifyCreatureArrival(classToSpawn->getClassName())")
+assert 'if(!message.empty() &&' in reward
+assert 'message = "The gods accepted your sacrifice and send you a special";' in reward
+print("Creature sacrifice rewards share first-arrival history; real special rewards remain announced: PASS (static only)")
+
+prison = (ROOT / "source/rooms/RoomPrison.cpp").read_text(encoding="utf-8")
+prison_upkeep = function(prison, "void RoomPrison::doUpkeep()")
+assert prison_upkeep.count("notifyCreatureArrival(className)") == 1
+assert prison_upkeep.index("newCreature->addToGameMap();") < prison_upkeep.index("notifyCreatureArrival(className)")
+assert prison_upkeep.index("newCreature->setPosition(") < prison_upkeep.index("notifyCreatureArrival(className)")
+assert "A creature died starving in your prison" in prison_upkeep
+print("Prison offspring use shared first-arrival history while starvation losses remain visible: PASS (static only)")
+
+# Summoning announces only after the creature exists at its valid destination.
+for spell, actor, definition in (("Worker", "newCreature", "classToSpawn"),
+                                  ("Champion", "champion", "definition")):
+    source = (ROOT / f"source/spells/SpellSummon{spell}.cpp").read_text(encoding="utf-8")
+    method = "summonWorkersOnTiles" if spell == "Worker" else "castSpell"
+    summon = function(source, f"bool SpellSummon{spell}::{method}(")
+    notice = f"notifyCreatureArrival({definition}->getClassName())"
+    assert summon.count(notice) == 1
+    assert summon.index(f"{actor}->addToGameMap();") < summon.index(notice)
+    assert summon.index(f"{actor}->setPosition(spawnPosition);") < summon.index(notice)
+    assert summon.index("takeMana(") < summon.index(notice)
+print("Successful worker and champion summons share saved first-arrival history: PASS (static only)")
+
+# Ownership acquisition counts only after the conversion actually succeeds.
+torture = (ROOT / "source/rooms/RoomTorture.cpp").read_text(encoding="utf-8")
+conversion = function(torture, "bool RoomTorture::useRoom(")
+notice = "notifyCreatureArrival(creature.getDefinition()->getClassName())"
+assert conversion.count(notice) == 1
+assert conversion.index("creature.changeSeat(getSeat());") < conversion.index(notice)
+assert "Your tormentors have convinced another creature" in conversion
+source = (ROOT / "source/spells/SpellDefector.cpp").read_text(encoding="utf-8")
+conversion = function(source, "bool SpellDefector::castSpell(")
+notice = "notifyCreatureArrival(creature->getDefinition()->getClassName())"
+assert conversion.count(notice) == 1
+assert conversion.index("creature->changeSeat(player->getSeat());") < conversion.index(notice)
+assert conversion.index("creature->addCreatureEffect(") < conversion.index(notice)
+assert conversion.index("takeMana(") < conversion.index(notice)
+print("Successful conversions share saved first-arrival history: PASS (static only)")
+
+# Heart replacements and worker gifts must not bypass the first-arrival history.
+for path, signature, class_name in (
+    ("source/gamemap/GameMap.cpp", "void GameMap::updateSeatAutoWorkers(", "classToSpawn"),
+    ("source/giftboxes/GiftBoxBonus.cpp", "void GiftBoxBonus::applyBonus(", "workerClass"),
+):
+    source = (ROOT / path).read_text(encoding="utf-8")
+    spawn = function(source, signature)
+    notice = f"notifyCreatureArrival({class_name}->getClassName())"
+    assert spawn.count(notice) == 1
+    assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
+    assert spawn.index("newCreature->setPosition(spawnPosition);") < spawn.index(notice)
+print("Heart workers and worker gifts share saved first-arrival history: PASS (static only)")
+
+# Script reinforcements (including carried-over minions) and skill summons are arrivals too.
+source = (ROOT / "source/gamemap/LevelScriptRunner.cpp").read_text(encoding="utf-8")
+spawn = function(source, "void spawnCreatures(")
+notice = "notifyCreatureArrival(classToSpawn->getClassName())"
+assert spawn.count(notice) == 1
+assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
+assert spawn.index("newCreature->setPosition(newCreature->getPosition());") < spawn.index(notice)
+kept = function(source, "void LevelScriptRunner::spawnKeptMinion(")
+assert "spawnCreatures(gameMap, action);" in kept
+source = (ROOT / "source/creatureskill/CreatureSkillSummon.cpp").read_text(encoding="utf-8")
+spawn = function(source, "Creature* summonTemporaryCreature(")
+notice = "notifyCreatureArrival(definition->getClassName())"
+assert spawn.count(notice) == 1
+assert spawn.index("summoned->setPosition(spawnPosition);") < spawn.index(notice)
+assert spawn.index("summoned->addCreatureEffect(") < spawn.index(notice)
+print("Script reinforcements, transferred minions and skill summons share arrival history: PASS (static only)")
+
+# Human-owned wave portals share class history; enemy wave warnings remain unchanged.
+source = (ROOT / "source/rooms/RoomPortalWave.cpp").read_text(encoding="utf-8")
+spawn = function(source, "void RoomPortalWave::spawnWave(RoomPortalWaveData*")
+notice = "notifyCreatureArrival(classToSpawn->getClassName())"
+assert spawn.count(notice) == 1
+assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
+assert spawn.index("newCreature->setPosition(newCreature->getPosition());") < spawn.index(notice)
+assert "if((nbSpawned > 0) && (spawnedNames == nullptr))" in spawn
+assert "warnHeroesComing();" in spawn
+print("Wave portals share first-arrival history without removing invasion warnings: PASS (static only)")
+
+# Existing start creatures and restored/replicated creatures are not new arrivals.
+assert "notifyCreatureArrival(" not in function(seat, "void Seat::initSeat(")
+creature = (ROOT / "source/entities/Creature.cpp").read_text(encoding="utf-8")
+for signature in ("bool Creature::importFromStream(",
+                  "Creature* Creature::getCreatureFromStream(",
+                  "Creature* Creature::getCreatureFromPacket(",
+                  "void Creature::importFromPacket(",
+                  "void Creature::updateFromPacket("):
+    restored = function(creature, signature)
+    assert "notifyCreatureArrival(" not in restored
+    assert "notifyNewCreatureType(" not in restored
+assert "notifyCreatureArrival(" not in function(seat, "bool Seat::importSeatFromStream(")
+print("Existing start creatures and save/network restoration do not emit arrival notices: PASS (static only)")
+
+# The compiled integration probe must provide the new production calls, without no-op history stubs.
+probe = (ROOT / "source/tests/check_heart_auto_workers.py").read_text(encoding="utf-8")
+assert "const std::string& getClassName()const" in probe
+assert "void notifyCreatureArrival(const std::string& name)" in probe
+assert "no arrival before an actual spawn" in probe
+assert "exactly one arrival request per real spawn including after blocked attempts" in probe
+print("Heart worker integration probe records successful arrival requests: PASS (static only)")

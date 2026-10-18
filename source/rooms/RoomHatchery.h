@@ -56,6 +56,7 @@ public:
     bool shouldNotUseIfBadMood(Creature& creature, bool forced) override
     { return false; }
 
+    //! \brief Feeds a creature or reports missing food while it is hungry.
     bool useRoom(Creature& creature, bool forced) override;
     void handleCreatureUsingAbsorbedRoom(Creature& creature) override;
 

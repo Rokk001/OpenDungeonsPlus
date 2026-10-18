@@ -798,6 +798,7 @@ void sendMessage(GameMap& gameMap, int32_t seatId, const std::string& text)
 }
 
 //! \brief Spawns the existing group unchanged and optionally observes actual instances for a goal condition.
+//! Announces each class only after its first successful arrival for the receiving human seat.
 void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action,
     const std::string& sourceTrigger = "", int64_t sourceAction = -1)
 {
@@ -853,6 +854,7 @@ void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action,
 
         newCreature->createMesh();
         newCreature->setPosition(newCreature->getPosition());
+        seat->notifyCreatureArrival(classToSpawn->getClassName());
         ++numCreatures;
     }
 
