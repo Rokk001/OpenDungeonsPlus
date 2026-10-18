@@ -171,6 +171,9 @@ static double getTargetDistanceFactor(const Creature& attacker, const GameEntity
 
 namespace
 {
+//! \brief Records server-side script events and exact death observations.
+void recordScriptEvent(const Creature& creature, const std::string& eventName);
+
 //! Turns between two tries to assign a missing appearance
 const uint32_t APPEARANCE_RETRY_TURNS = 200;
 //! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
@@ -1339,6 +1342,7 @@ void Creature::dropCarriedEquipment()
     // TODO: drop weapon when available
 }
 
+//! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
 void Creature::doUpkeep()
 {
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
@@ -1537,6 +1541,7 @@ void Creature::doUpkeep()
             return;
 
         mHp = 0;
+        recordScriptEvent(*this, "killed");
         computeCreatureOverlayHealthValue();
         computeCreatureOverlayMoodValue();
     }

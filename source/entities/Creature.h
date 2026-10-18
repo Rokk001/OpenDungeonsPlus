@@ -381,6 +381,7 @@ public:
      * walking toward the tile as a new action, and when it arrives at the tile it will
      * revert to the 'digTile' action.
      */
+    //! \brief Advances creature upkeep, including actual death observations when a lethal knockout expires.
     void doUpkeep() override;
 
     //! \brief Computes the visible tiles and tags them to know which are visible
