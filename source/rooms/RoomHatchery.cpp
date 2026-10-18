@@ -2044,6 +2044,7 @@ bool RoomHatchery::hasOpenCreatureSpot(Creature* c)
     return mNumActiveSpots > mCreaturesUsingRoom.size();
 }
 
+//! \brief Feeds a creature or reports missing food while it is hungry.
 bool RoomHatchery::useRoom(Creature& creature, bool forced)
 {
     // Check if the creature needs to eat
@@ -2085,7 +2086,12 @@ bool RoomHatchery::useRoom(Creature& creature, bool forced)
 
     // If we cannot find any available chicken, nothing to do
     if(chickenClosest == nullptr)
+    {
+        if(creature.isHungry() && (getSeat()->getPlayer() != nullptr) &&
+           getSeat()->getPlayer()->getIsHuman())
+            getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
         return false;
+    }
 
     creature.pushAction(Utils::make_unique<CreatureActionEatChicken>(creature, *chickenClosest));
     return true;
