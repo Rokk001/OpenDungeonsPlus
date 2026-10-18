@@ -49,9 +49,14 @@ assert "knownOwner != this && !isAlliedSeat(knownOwner)" in notify
 assert "!knownOwner->isRogueSeat()" in notify
 assert "if(enemyFog != p.second.mEnemyFogNotified)" in notify
 assert notify.index("fogChanges.push_back") < notify.index("if(p.second.mVisionTurnCurrent == p.second.mVisionTurnLast)")
-assert "ServerNotificationType::enemyTerritoryFog, getPlayer()" in notify
+# Fog changes travel as an optional tail of the main map vision update, never as a new notification type.
+assert notify.index("serverNotification->mPacket << static_cast<uint32_t>(fogChanges.size());") < \
+    notify.index("ODServer::getSingleton().queueServerNotification(serverNotification);")
+assert "enemyTerritoryFog" not in (ROOT / "source/network/ServerNotification.h").read_text(encoding="utf-8")
 client = (ROOT / "source/network/ODClient.cpp").read_text(encoding="utf-8")
-packet = client[client.index("case ServerNotificationType::enemyTerritoryFog:"):client.index("case ServerNotificationType::refreshTiles:")]
+vision = client[client.index("case ServerNotificationType::refreshVisibleTiles:"):client.index("case ServerNotificationType::refreshTiles:")]
+packet = vision[vision.index("// Optional tail of the main map update: delayed enemy fog changes"):]
+assert "if(nt == NodeType::MTILES_NODE && !packetReceived.endOfPacket())" in packet
 assert "tile->setEnemyTerritoryFog(fogged)" in packet
 assert "setLocalPlayerHasVision" not in packet and "setEverVisible" not in packet
 assert "tile->refreshMesh(NodeType::MTILES_NODE, gameMap)" in packet

@@ -196,8 +196,6 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "seatTeam";
         case ServerNotificationType::sandboxStatus:
             return "sandboxStatus";
-        case ServerNotificationType::enemyTerritoryFog:
-            return "enemyTerritoryFog";
         case ServerNotificationType::sandboxRealmComplete:
             return "sandboxRealmComplete";
         default:

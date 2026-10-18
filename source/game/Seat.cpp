@@ -983,19 +983,19 @@ void Seat::sendVisibleTiles()
     {
         mGameMap->tileToPacket(serverNotification->mPacket, tile);
     }
-    ODServer::getSingleton().queueServerNotification(serverNotification);
 
+    // Delayed enemy fog changes ride as an optional tail of the same vision update, so no new
+    // notification type shifts the existing ones: count, then tile coordinates and bool fogged per tile.
     if(!fogChanges.empty())
     {
-        ServerNotification* fogNotification = new ServerNotification(ServerNotificationType::enemyTerritoryFog, getPlayer());
-        fogNotification->mPacket << static_cast<uint32_t>(fogChanges.size());
+        serverNotification->mPacket << static_cast<uint32_t>(fogChanges.size());
         for(const std::pair<Tile*, bool>& change : fogChanges)
         {
-            mGameMap->tileToPacket(fogNotification->mPacket, change.first);
-            fogNotification->mPacket << change.second;
+            mGameMap->tileToPacket(serverNotification->mPacket, change.first);
+            serverNotification->mPacket << change.second;
         }
-        ODServer::getSingleton().queueServerNotification(fogNotification);
     }
+    ODServer::getSingleton().queueServerNotification(serverNotification);
 
 
     nbTiles =0;
