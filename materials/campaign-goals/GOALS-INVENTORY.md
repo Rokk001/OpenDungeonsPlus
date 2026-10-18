@@ -1070,14 +1070,40 @@ File: `levels/campaign/VarnsCrossing.level`.
 | Script line 4449 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
 | Script line 4450 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
 | Script line 4755 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4781 | `Action	win	1` | yes |
-| Script line 4786 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4790 | `Action	win	1` | yes |
+| Script line 4779 | `Action	win	1` | yes |
+| Script line 4784 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4786 | `Action	win	1` | yes |
+| Script line 4892 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `varnscrossing-main-home`: Claim your quarter; provide beds and food; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	claimed	1	Quarter	25; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1 |
+| main | `varnscrossing-main-keep`: Capture and hold the lava-ringed fortress. | `mainKeep`: Cond	trigger	quarterHeld; Cond	groundclaimed	1	36	38	37	38; Cond	groundclaimed	1	55	38	56	38; Cond	groundclaimed	1	36	39	36	39; Cond	groundclaimed	1	42	39	50	39; Cond	groundclaimed	1	56	39	56	39; Cond	groundclaimed	1	41	40	51	40; Cond	groundclaimed	1	39	41	53	41; Cond	groundclaimed	1	39	42	53	42; Cond	groundclaimed	1	38	43	54	43; Cond	groundclaimed	1	37	44	55	44; Cond	groundclaimed	1	37	45	55	45; Cond	groundclaimed	1	37	46	55	46; Cond	groundclaimed	1	37	47	55	47; Cond	groundclaimed	1	37	48	55	48; Cond	groundclaimed	1	37	49	55	49; Cond	groundclaimed	1	37	50	55	50; Cond	groundclaimed	1	37	51	55	51; Cond	groundclaimed	1	37	52	55	52; Cond	groundclaimed	1	38	53	54	53; Cond	groundclaimed	1	39	54	53	54; Cond	groundclaimed	1	39	55	53	55; Cond	groundclaimed	1	41	56	51	56; Cond	groundclaimed	1	36	57	36	57; Cond	groundclaimed	1	42	57	50	57; Cond	groundclaimed	1	56	57	56	57; Cond	groundclaimed	1	36	58	37	58; Cond	groundclaimed	1	55	58	56	58 |
+| main | `varnscrossing-main-rivals`: Destroy both rival hearts and all enemy forces. | `mainRivals`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `varnscrossing-extra-gold`: Mine 5000 gold. | `extraGold`: Cond	mined	1	>=	5000 |
+
+Possible route (static, not a playthrough):
+- Claim25Quarter fields, retaining original quarterHeld threshold. Protect the heart and provide at least one real bed and hatchery coop; the map starts with workers only, so no invented initial fighter population is assumed.
+- Dormitory1(18..20,76..77)already has6fields; one bed can fit at(18,76). Hatchery1(8..10,85..86)has6fields; add row87 to form a3x3site,330gold from4000startinggold. All three added fields are reachable removable dirt and room skills are unlocked. Later reinforcements still need player care.
+- Capture all317original open Keep floor fields in(36,38)-(56,58), including current ownership of any rooms on them. Lava, water and original walls are excluded. Do not require a new room on natural floor. Keep control until all other main goals are reached.
+- Destroy both real rival hearts,seats2and3,then defeat remaining enemies/portals. Original30columns,alliance changes and portal timing remain unchanged.
+- Optionally mine5000actualgold from118000potentialfinitegold,above original4000milestone. Original gold gifts are not mining.
+- Unchanged victory sentence and SwarmNight discovery move together to the final completion after all current main observers. Old win requests remain pending.
+
+Static resource/footprint evidence only; claim takeover, bed/coop use, combat, save/load and runtime UI need integrator/Mario verification.
+
 | Trigger `goalHeartSafe2BeforeCrossingHeldGoal` | `Action	objectivestate	1	varnscrossing-o02	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalQuarterThenFortress` | `Action	objectivestate	1	varnscrossing-o03	reached`; conditions: `Cond	trigger	quarterHeld; Cond	region	1	Keep` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	varnscrossing-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `crossingHeldGoal` | `Action	objectivestate	1	varnscrossing-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | no: heart protection and enemy temples are checked; quarter and fortress ownership are not independent goals |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	varnscrossing-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	varnscrossing-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	claimed	1	Quarter	25; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainKeep` | `Action	objectivestate	1	varnscrossing-main-keep	reached`; conditions: `Cond	trigger	quarterHeld; Cond	groundclaimed	1	36	38	37	38; Cond	groundclaimed	1	55	38	56	38; Cond	groundclaimed	1	36	39	36	39; Cond	groundclaimed	1	42	39	50	39; Cond	groundclaimed	1	56	39	56	39; Cond	groundclaimed	1	41	40	51	40; Cond	groundclaimed	1	39	41	53	41; Cond	groundclaimed	1	39	42	53	42; Cond	groundclaimed	1	38	43	54	43; Cond	groundclaimed	1	37	44	55	44; Cond	groundclaimed	1	37	45	55	45; Cond	groundclaimed	1	37	46	55	46; Cond	groundclaimed	1	37	47	55	47; Cond	groundclaimed	1	37	48	55	48; Cond	groundclaimed	1	37	49	55	49; Cond	groundclaimed	1	37	50	55	50; Cond	groundclaimed	1	37	51	55	51; Cond	groundclaimed	1	37	52	55	52; Cond	groundclaimed	1	38	53	54	53; Cond	groundclaimed	1	39	54	53	54; Cond	groundclaimed	1	39	55	53	55; Cond	groundclaimed	1	41	56	51	56; Cond	groundclaimed	1	36	57	36	57; Cond	groundclaimed	1	42	57	50	57; Cond	groundclaimed	1	56	57	56	57; Cond	groundclaimed	1	36	58	37	58; Cond	groundclaimed	1	55	58	56	58` | yes |
+| Trigger `mainRivals` | `Action	objectivestate	1	varnscrossing-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	varnscrossing-extra-gold	reached`; conditions: `Cond	mined	1	>=	5000` | yes |
+| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes |
 
 ## Wolfscar
 

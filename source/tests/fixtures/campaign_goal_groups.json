@@ -4887,5 +4887,582 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now."
     }
+  },
+  "VarnsCrossing": {
+    "goals": {
+      "varnscrossing-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim your quarter; provide beds and food; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tclaimed\t1\tQuarter\t25",
+          "Cond\tfurniture\t1\tDormitory\t>=\t1",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "varnscrossing-main-keep": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Capture and hold the lava-ringed fortress.",
+        "completion": "mainKeep",
+        "conditions": [
+          "Cond\ttrigger\tquarterHeld",
+          "Cond\tgroundclaimed\t1\t36\t38\t37\t38",
+          "Cond\tgroundclaimed\t1\t55\t38\t56\t38",
+          "Cond\tgroundclaimed\t1\t36\t39\t36\t39",
+          "Cond\tgroundclaimed\t1\t42\t39\t50\t39",
+          "Cond\tgroundclaimed\t1\t56\t39\t56\t39",
+          "Cond\tgroundclaimed\t1\t41\t40\t51\t40",
+          "Cond\tgroundclaimed\t1\t39\t41\t53\t41",
+          "Cond\tgroundclaimed\t1\t39\t42\t53\t42",
+          "Cond\tgroundclaimed\t1\t38\t43\t54\t43",
+          "Cond\tgroundclaimed\t1\t37\t44\t55\t44",
+          "Cond\tgroundclaimed\t1\t37\t45\t55\t45",
+          "Cond\tgroundclaimed\t1\t37\t46\t55\t46",
+          "Cond\tgroundclaimed\t1\t37\t47\t55\t47",
+          "Cond\tgroundclaimed\t1\t37\t48\t55\t48",
+          "Cond\tgroundclaimed\t1\t37\t49\t55\t49",
+          "Cond\tgroundclaimed\t1\t37\t50\t55\t50",
+          "Cond\tgroundclaimed\t1\t37\t51\t55\t51",
+          "Cond\tgroundclaimed\t1\t37\t52\t55\t52",
+          "Cond\tgroundclaimed\t1\t38\t53\t54\t53",
+          "Cond\tgroundclaimed\t1\t39\t54\t53\t54",
+          "Cond\tgroundclaimed\t1\t39\t55\t53\t55",
+          "Cond\tgroundclaimed\t1\t41\t56\t51\t56",
+          "Cond\tgroundclaimed\t1\t36\t57\t36\t57",
+          "Cond\tgroundclaimed\t1\t42\t57\t50\t57",
+          "Cond\tgroundclaimed\t1\t56\t57\t56\t57",
+          "Cond\tgroundclaimed\t1\t36\t58\t37\t58",
+          "Cond\tgroundclaimed\t1\t55\t58\t56\t58"
+        ],
+        "mode": "repeat\t0"
+      },
+      "varnscrossing-main-rivals": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy both rival hearts and all enemy forces.",
+        "completion": "mainRivals",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "varnscrossing-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 5000 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t5000"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "varnscrossing-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tvarnscrossing-main-home\treached",
+          "Cond\tobjective\t1\tvarnscrossing-main-keep\treached",
+          "Cond\tobjective\t1\tvarnscrossing-main-rivals\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tBoth keepers lie dead and the great roads are quiet. Varn has lost his crossing.",
+          "Action\tdiscover\tcampaign/SwarmNight.level",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "quarterHeld": [
+        "Cond\tclaimed\t1\tQuarter\t25"
+      ],
+      "keepEntered": [
+        "Cond\tregion\t1\tKeep"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t4000"
+      ],
+      "crossingPact": [
+        "Cond\tregion\t1\tEastRoad"
+      ],
+      "crossingPactBreaks": [
+        "Cond\ttime\t3200"
+      ],
+      "portalWake": [
+        "Cond\ttime\t500",
+        "Cond\tflag\tportalOn\t0"
+      ],
+      "column1": [
+        "Cond\ttime\t150"
+      ],
+      "column2": [
+        "Cond\ttime\t290"
+      ],
+      "column3": [
+        "Cond\ttime\t430"
+      ],
+      "column4": [
+        "Cond\ttime\t570"
+      ],
+      "column5": [
+        "Cond\ttime\t710"
+      ],
+      "column6": [
+        "Cond\ttime\t850"
+      ],
+      "column7": [
+        "Cond\ttime\t990"
+      ],
+      "column8": [
+        "Cond\ttime\t1130"
+      ],
+      "column9": [
+        "Cond\ttime\t1270"
+      ],
+      "column10": [
+        "Cond\ttime\t1410"
+      ],
+      "column11": [
+        "Cond\ttime\t1550"
+      ],
+      "column12": [
+        "Cond\ttime\t1690"
+      ],
+      "column13": [
+        "Cond\ttime\t1830"
+      ],
+      "column14": [
+        "Cond\ttime\t1970"
+      ],
+      "column15": [
+        "Cond\ttime\t2110"
+      ],
+      "column16": [
+        "Cond\ttime\t2250"
+      ],
+      "column17": [
+        "Cond\ttime\t2390"
+      ],
+      "column18": [
+        "Cond\ttime\t2530"
+      ],
+      "column19": [
+        "Cond\ttime\t2670"
+      ],
+      "column20": [
+        "Cond\ttime\t2810"
+      ],
+      "column21": [
+        "Cond\ttime\t2950"
+      ],
+      "column22": [
+        "Cond\ttime\t3090"
+      ],
+      "column23": [
+        "Cond\ttime\t3230"
+      ],
+      "column24": [
+        "Cond\ttime\t3370"
+      ],
+      "column25": [
+        "Cond\ttime\t3510"
+      ],
+      "column26": [
+        "Cond\ttime\t3650"
+      ],
+      "column27": [
+        "Cond\ttime\t3790"
+      ],
+      "column28": [
+        "Cond\ttime\t3930"
+      ],
+      "column29": [
+        "Cond\ttime\t4070"
+      ],
+      "column30": [
+        "Cond\ttime\t4210"
+      ]
+    },
+    "preserved_actions": {
+      "quarterHeld": [
+        "Action\tmessage\t1\tYour quarter is secure and your portal draws creatures again. A shrine of the old garrison opens to you, and the roads lie east and north.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1",
+        "Action\tmake\t1\troomTemple",
+        "Action\treveal\t1\tSouthRoad",
+        "Action\treveal\t1\tWestRoad"
+      ],
+      "keepEntered": [
+        "Action\tmessage\t1\tYou stand inside the fortress. The marshal left his strongbox behind.",
+        "Action\tgold\t1\t2000",
+        "Action\tspawn\t4\t45\t27\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe great seams are paying. Spend it before the next column arrives.",
+        "Action\tgold\t1\t800"
+      ],
+      "crossingPact": [
+        "Action\tmessage\t1\tThe two rival keepers have sworn to hold the east road together until you are broken.",
+        "Action\talliance\t2\t3\tmake"
+      ],
+      "crossingPactBreaks": [
+        "Action\tmessage\t1\tThe pact of the rival keepers has cracked. Each wants the crossing for himself.",
+        "Action\talliance\t2\t3\tbreak"
+      ],
+      "portalWake": [
+        "Action\tmessage\t1\tThe crossing has quieted around your quarter, and your portal draws creatures again.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1"
+      ],
+      "column1": [
+        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "column2": [
+        "Action\tmessage\t1\tRiders are crossing the west road.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "column3": [
+        "Action\tmessage\t1\tPikes are marching along the east road.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "column4": [
+        "Action\tmessage\t1\tThe south road is full of banners.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "column5": [
+        "Action\tmessage\t1\tThe marshal has sent another company.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "column6": [
+        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "column7": [
+        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "column8": [
+        "Action\tmessage\t1\tRiders are crossing the west road.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "column9": [
+        "Action\tmessage\t1\tPikes are marching along the east road.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "column10": [
+        "Action\tmessage\t1\tThe south road is full of banners.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "column11": [
+        "Action\tmessage\t1\tThe marshal has sent another company.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "column12": [
+        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "column13": [
+        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column14": [
+        "Action\tmessage\t1\tRiders are crossing the west road.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column15": [
+        "Action\tmessage\t1\tPikes are marching along the east road.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column16": [
+        "Action\tmessage\t1\tThe south road is full of banners.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column17": [
+        "Action\tmessage\t1\tThe marshal has sent another company.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column18": [
+        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column19": [
+        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "column20": [
+        "Action\tmessage\t1\tRiders are crossing the west road.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "column21": [
+        "Action\tmessage\t1\tPikes are marching along the east road.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "column22": [
+        "Action\tmessage\t1\tThe south road is full of banners.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "column23": [
+        "Action\tmessage\t1\tThe marshal has sent another company.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "column24": [
+        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "column25": [
+        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "column26": [
+        "Action\tmessage\t1\tRiders are crossing the west road.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "column27": [
+        "Action\tmessage\t1\tPikes are marching along the east road.",
+        "Action\tspawn\t4\t83\t47\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "column28": [
+        "Action\tmessage\t1\tThe south road is full of banners.",
+        "Action\tspawn\t4\t45\t87\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "column29": [
+        "Action\tmessage\t1\tThe marshal has sent another company.",
+        "Action\tspawn\t4\t45\t7\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "column30": [
+        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
+        "Action\tspawn\t4\t7\t47\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ]
+    },
+    "reachability": {
+      "minimum_mineable_gold": 5000,
+      "regions": {
+        "Quarter": {
+          "bounds": [
+            4,
+            66,
+            30,
+            92
+          ],
+          "minimum_potential_tiles": 25
+        },
+        "Keep": {
+          "bounds": [
+            36,
+            38,
+            56,
+            58
+          ],
+          "minimum_open_tiles": 317
+        }
+      },
+      "footprints": [
+        {
+          "goal": "varnscrossing-main-keep",
+          "bounds": [
+            36,
+            38,
+            56,
+            58
+          ],
+          "runs": [
+            [
+              36,
+              38,
+              37,
+              38
+            ],
+            [
+              55,
+              38,
+              56,
+              38
+            ],
+            [
+              36,
+              39,
+              36,
+              39
+            ],
+            [
+              42,
+              39,
+              50,
+              39
+            ],
+            [
+              56,
+              39,
+              56,
+              39
+            ],
+            [
+              41,
+              40,
+              51,
+              40
+            ],
+            [
+              39,
+              41,
+              53,
+              41
+            ],
+            [
+              39,
+              42,
+              53,
+              42
+            ],
+            [
+              38,
+              43,
+              54,
+              43
+            ],
+            [
+              37,
+              44,
+              55,
+              44
+            ],
+            [
+              37,
+              45,
+              55,
+              45
+            ],
+            [
+              37,
+              46,
+              55,
+              46
+            ],
+            [
+              37,
+              47,
+              55,
+              47
+            ],
+            [
+              37,
+              48,
+              55,
+              48
+            ],
+            [
+              37,
+              49,
+              55,
+              49
+            ],
+            [
+              37,
+              50,
+              55,
+              50
+            ],
+            [
+              37,
+              51,
+              55,
+              51
+            ],
+            [
+              37,
+              52,
+              55,
+              52
+            ],
+            [
+              38,
+              53,
+              54,
+              53
+            ],
+            [
+              39,
+              54,
+              53,
+              54
+            ],
+            [
+              39,
+              55,
+              53,
+              55
+            ],
+            [
+              41,
+              56,
+              51,
+              56
+            ],
+            [
+              36,
+              57,
+              36,
+              57
+            ],
+            [
+              42,
+              57,
+              50,
+              57
+            ],
+            [
+              56,
+              57,
+              56,
+              57
+            ],
+            [
+              36,
+              58,
+              37,
+              58
+            ],
+            [
+              55,
+              58,
+              56,
+              58
+            ]
+          ]
+        }
+      ]
+    },
+    "route": [
+      "Claim25Quarter fields, retaining original quarterHeld threshold. Protect the heart and provide at least one real bed and hatchery coop; the map starts with workers only, so no invented initial fighter population is assumed.",
+      "Dormitory1(18..20,76..77)already has6fields; one bed can fit at(18,76). Hatchery1(8..10,85..86)has6fields; add row87 to form a3x3site,330gold from4000startinggold. All three added fields are reachable removable dirt and room skills are unlocked. Later reinforcements still need player care.",
+      "Capture all317original open Keep floor fields in(36,38)-(56,58), including current ownership of any rooms on them. Lava, water and original walls are excluded. Do not require a new room on natural floor. Keep control until all other main goals are reached.",
+      "Destroy both real rival hearts,seats2and3,then defeat remaining enemies/portals. Original30columns,alliance changes and portal timing remain unchanged.",
+      "Optionally mine5000actualgold from118000potentialfinitegold,above original4000milestone. Original gold gifts are not mining.",
+      "Unchanged victory sentence and SwarmNight discovery move together to the final completion after all current main observers. Old win requests remain pending."
+    ],
+    "runtime_limit": "Static resource/footprint evidence only; claim takeover, bed/coop use, combat, save/load and runtime UI need integrator/Mario verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tBoth keepers lie dead and the great roads are quiet. Varn has lost his crossing."
+    }
   }
 }

@@ -72,6 +72,8 @@ BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently pos
 
 BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies", 4: "yes: voluntary discovery activates actual owned stone delivery"}
 
+BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1548,6 +1550,17 @@ def self_test(root):
             ("Cond\tflag\tvictoryStoneReady\t1", "Cond\ttime\t5")):
         assert needle in lantern
         assert grouped_goal_errors(lantern.replace(needle, replacement), "Lanternhill"), "Lanternhill goal weakening must fail: " + needle
+    crossing = (root / "levels/campaign/VarnsCrossing.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(crossing, "VarnsCrossing")
+    for needle, replacement in (
+            ("Cond\tclaimed\t1\tQuarter\t25", "Cond\tclaimed\t1\tQuarter\t2"),
+            ("Cond\tfurniture\t1\tDormitory\t>=\t1", "Cond\troomtiles\t1\tDormitory\t>=\t1"),
+            ("Cond\tfurniture\t1\tHatchery\t>=\t1", "Cond\troomtiles\t1\tHatchery\t>=\t1"),
+            ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\tcreatures\t3\t<=\t0"),
+            ("Cond\tmined\t1\t>=\t5000", "Cond\tmined\t1\t>=\t4000"),
+            ("Cond\tobjective\t1\tvarnscrossing-main-keep\treached", "Cond\tregion\t1\tKeep")):
+        assert needle in crossing
+        assert grouped_goal_errors(crossing.replace(needle, replacement), "VarnsCrossing"), "Crossing requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 
