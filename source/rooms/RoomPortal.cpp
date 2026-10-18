@@ -260,6 +260,7 @@ void RoomPortal::doUpkeep()
     spawnCreature();
 }
 
+//! \brief Spawns an eligible fighter and announces its first actual class arrival.
 void RoomPortal::spawnCreature()
 {
     // We check if a creature can spawn
@@ -288,6 +289,7 @@ void RoomPortal::spawnCreature()
     newCreature->createMesh();
     newCreature->setPosition(newCreature->getPosition());
     newCreature->fireArrivalEvent();
+    getSeat()->notifyCreatureArrival(classToSpawn->getClassName());
     ++getSeat()->getStatistics().mCreaturesEntered;
 }
 

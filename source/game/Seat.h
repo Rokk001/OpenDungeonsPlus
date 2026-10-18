@@ -218,6 +218,9 @@ public:
     //! \brief Returns the next fighter creature class to spawn.
     const CreatureDefinition* getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager );
 
+    //! \brief Announces the first actual portal arrival of each class, once per seat.
+    void notifyCreatureArrival(const std::string& creatureClassName);
+
     //! \brief Returns the first (default) worker class definition.
     inline const CreatureDefinition* getWorkerClassToSpawn()
     { return mDefaultWorkerClass; }
@@ -384,7 +387,9 @@ public:
 
     static Seat* createRogueSeat(GameMap* gameMap);
 
+    //! \brief Loads seat state and optional first-arrival history.
     bool importSeatFromStream(std::istream& is);
+    //! \brief Saves seat state and first-arrival history.
     bool exportSeatToStream(std::ostream& os) const;
     static void loadFromLine(const std::string& line, Seat *s);
 
@@ -465,6 +470,9 @@ private:
     //! are managed by the configuration manager and should NOT be deleted. The boolean will be set to false at beginning
     //! if the spawning conditions are not empty and are met, we will set it to true and force spawning of the related creature
     std::vector<std::pair<const CreatureDefinition*, bool> > mSpawnPool;
+
+    //! Creature classes whose first portal arrival has already been announced.
+    std::vector<std::string> mAnnouncedCreatureClasses;
 
     //! \brief The default workers spawned in temples.
     const CreatureDefinition* mDefaultWorkerClass;

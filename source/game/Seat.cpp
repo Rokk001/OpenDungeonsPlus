@@ -1056,6 +1056,7 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
+//! \brief Loads seat state, including optional first-arrival history.
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1236,6 +1237,23 @@ bool Seat::importSeatFromStream(std::istream& is)
         if(!(is >> str) || str != "[/StoredSpecials]" || !(is >> str))
             return false;
     }
+    // Optional arrival history; older maps and saves omit this section.
+    if(str == "[AnnouncedCreatureClasses]")
+    {
+        while(true)
+        {
+            if(!(is >> str))
+                return false;
+            if(str == "[/AnnouncedCreatureClasses]")
+                break;
+            const std::string className = NameAliases::resolve(str);
+            if(std::find(mAnnouncedCreatureClasses.begin(), mAnnouncedCreatureClasses.end(), className) ==
+               mAnnouncedCreatureClasses.end())
+                mAnnouncedCreatureClasses.push_back(className);
+        }
+        if(!(is >> str))
+            return false;
+    }
     if(str != "[SkillNotAllowed]")
     {
         OD_LOG_INF("WARNING: expected [SkillNotAllowed] and read " + str);
@@ -1388,6 +1406,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
+//! \brief Saves seat state and the classes whose first arrival was announced.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1482,6 +1501,14 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         for(const std::pair<int32_t, uint32_t>& special : mStoredSpecialBoxes)
             os << special.first << "\t" << special.second << "\n";
         os << "[/StoredSpecials]\n";
+    }
+
+    if(!mAnnouncedCreatureClasses.empty())
+    {
+        os << "[AnnouncedCreatureClasses]\n";
+        for(const std::string& className : mAnnouncedCreatureClasses)
+            os << className << "\n";
+        os << "[/AnnouncedCreatureClasses]\n";
     }
 
     os << "[SkillNotAllowed]" << std::endl;
@@ -2262,6 +2289,23 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
     return false;
 }
 
+//! \brief Announces a class only after its first successful arrival; the history survives saves.
+void Seat::notifyCreatureArrival(const std::string& creatureClassName)
+{
+    if((getPlayer() == nullptr) || !getPlayer()->getIsHuman() || getPlayer()->getHasLost())
+        return;
+    if(std::find(mAnnouncedCreatureClasses.begin(), mAnnouncedCreatureClasses.end(), creatureClassName) !=
+       mAnnouncedCreatureClasses.end())
+        return;
+
+    mAnnouncedCreatureClasses.push_back(creatureClassName);
+    getPlayer()->notifyNewCreatureType(creatureClassName);
+    std::vector<Seat*> seats;
+    seats.push_back(this);
+    mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNew);
+}
+
+//! \brief Selects an eligible fighter class without announcing an arrival before it exists.
 const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager)
 {
     std::vector<std::pair<const CreatureDefinition*, int32_t> > defSpawnable;
@@ -2313,24 +2357,6 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
         {
             def.second = true;
 
-            // The voice line has a text so it can be read as well
-            if((getPlayer() != nullptr) &&
-               getPlayer()->getIsHuman() &&
-               !getPlayer()->getHasLost())
-            {
-                ServerNotification *serverNotification = new ServerNotification(
-                    ServerNotificationType::chatServer, getPlayer());
-
-                serverNotification->mPacket << "A new creature is drawn to your dungeon: " + def.first->getClassName()
-                    << EventShortNoticeType::genericGameInfo;
-                ODServer::getSingleton().queueServerNotification(serverNotification);
-            }
-
-            std::vector<Seat*> seats;
-            seats.push_back(this);
-            mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNew);
-            if(getPlayer() != nullptr)
-                getPlayer()->notifyNewCreatureType(def.first->getClassName());
             return def.first;
         }
         nbPointsConditions += configManager.getBaseSpawnPoint();
