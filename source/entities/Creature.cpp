@@ -59,6 +59,7 @@
 
 #include "entities/ChickenEntity.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/MissileObject.h"
 #include "entities/CreatureMoodValues.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
@@ -4175,10 +4176,13 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     if(wasAlive && (damageDone > 0.0))
     {
         recordScriptEvent(*this, "attacked");
-        if(getIsOnServerMap() && creatureAttacking != nullptr &&
-           creatureAttacking->getSeat() != nullptr && getSeat() != nullptr && getPositionTile() != nullptr &&
-           !creatureAttacking->getSeat()->isAlliedSeat(getSeat()))
-            getGameMap()->getLevelScript().observeRegionAttack(creatureAttacking->getSeat()->getId(),
+        Seat* attackingSeat = creatureAttacking != nullptr ? creatureAttacking->getSeat() : nullptr;
+        if(attacker != nullptr && attacker->getObjectType() == GameEntityType::missileObject &&
+           static_cast<MissileObject*>(attacker)->isCreatureShot())
+            attackingSeat = attacker->getSeat();
+        if(getIsOnServerMap() && attackingSeat != nullptr && getSeat() != nullptr && getPositionTile() != nullptr &&
+           !attackingSeat->isAlliedSeat(getSeat()))
+            getGameMap()->getLevelScript().observeRegionAttack(attackingSeat->getId(),
                 getSeat()->getId(), getPositionTile()->getX(), getPositionTile()->getY());
     }
 
