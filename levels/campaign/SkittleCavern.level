@@ -1040,11 +1040,170 @@ Action	message	1	Half of the guards are down.
 [Trigger]
 Name	laneCleared
 Mode	once
+Cond	event	Pin1	boulderkilled:1
+Cond	event	Pin2	boulderkilled:1
+Cond	event	Pin3	boulderkilled:1
+Cond	event	Pin4	boulderkilled:1
+Cond	event	Pin5	boulderkilled:1
+Cond	event	Pin6	boulderkilled:1
+Cond	event	Pin7	boulderkilled:1
+Cond	event	Pin8	boulderkilled:1
+Cond	event	Pin9	boulderkilled:1
+Cond	event	Pin10	boulderkilled:1
 Cond	flag	lanesOpened	>=	4
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	The last guard has fallen and the lanes lie quiet. The heart gives you a shard.
 Action	objectivestate	1	skittlecavern-o01	reached
+Action	win	1
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	skittlecavern-main-heart	Protect your heart.
+Action	mainobjectiveid	1	skittlecavern-main-trial	Open all 4 lanes; bowl down 10 guards within 540s.
+Action	optionalobjectiveid	1	skittlecavern-extra-survivors	Keep all 4 starting workers alive.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	skittlecavern-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost1
+Mode	once
+Cond	event	DefaultWorker1	killed
+Action	objectivestate	1	skittlecavern-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost2
+Mode	once
+Cond	event	DefaultWorker2	killed
+Action	objectivestate	1	skittlecavern-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost3
+Mode	once
+Cond	event	DefaultWorker3	killed
+Action	objectivestate	1	skittlecavern-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	mainTrialFailed
+Mode	once
+Cond	defeated	1
+Action	objectivestate	1	skittlecavern-main-trial	failed
+Action	objectivestate	1	skittlecavern-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost4
+Mode	once
+Cond	event	DefaultWorker4	killed
+Action	objectivestate	1	skittlecavern-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath1
+Mode	once
+Cond	event	Pin1	killed
+Cond	event	Pin1	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath2
+Mode	once
+Cond	event	Pin2	killed
+Cond	event	Pin2	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath3
+Mode	once
+Cond	event	Pin3	killed
+Cond	event	Pin3	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath4
+Mode	once
+Cond	event	Pin4	killed
+Cond	event	Pin4	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath5
+Mode	once
+Cond	event	Pin5	killed
+Cond	event	Pin5	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath6
+Mode	once
+Cond	event	Pin6	killed
+Cond	event	Pin6	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath7
+Mode	once
+Cond	event	Pin7	killed
+Cond	event	Pin7	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath8
+Mode	once
+Cond	event	Pin8	killed
+Cond	event	Pin8	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath9
+Mode	once
+Cond	event	Pin9	killed
+Cond	event	Pin9	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongPinDeath10
+Mode	once
+Cond	event	Pin10	killed
+Cond	event	Pin10	boulderkilled:1	==	0
+Action	objectivestate	1	skittlecavern-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	skittlecavern-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainTrial
+Mode	repeat	0
+Cond	trigger	laneCleared
+Action	objectivestate	1	skittlecavern-main-trial	reached
+[/Trigger]
+[Trigger]
+Name	extraSurvivors
+Mode	once
+Cond	objective	1	skittlecavern-main-trial	reached
+Cond	alive	DefaultWorker1
+Cond	event	DefaultWorker1	killed	==	0
+Cond	alive	DefaultWorker2
+Cond	event	DefaultWorker2	killed	==	0
+Cond	alive	DefaultWorker3
+Cond	event	DefaultWorker3	killed	==	0
+Cond	alive	DefaultWorker4
+Cond	event	DefaultWorker4	killed	==	0
+Action	objectivestate	1	skittlecavern-extra-survivors	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	skittlecavern-main-heart	reached
+Cond	objective	1	skittlecavern-main-trial	reached
+Action	message	1	The last guard has fallen and the lanes lie quiet. The heart gives you a shard.
 Action	win	1
 [/Trigger]
 [/Triggers]

@@ -911,9 +911,48 @@ File: `levels/campaign/SkittleCavern.level`.
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 988 | `Action	objectiveid	1	skittlecavern-o01	Knock down all ten guards before time runs out.` | yes |
-| Script line 1048 | `Action	win	1` | yes |
-| Trigger `laneCleared` | `Action	objectivestate	1	skittlecavern-o01	reached`; conditions: `Cond	flag	lanesOpened	>=	4; Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Roll the boulders through every guard before time expires to earn this optional trial's Heartstone fragment. | no: laneCleared checks opened lanes and no remaining guards, not whether boulders killed them |
+| Script line 1057 | `Action	win	1` | yes |
+| Script line 1207 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `skittlecavern-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `skittlecavern-main-trial`: Open all 4 lanes; bowl down 10 guards within 540s. | `mainTrial`: Cond	trigger	laneCleared |
+| optional | `skittlecavern-extra-survivors`: Keep all 4 starting workers alive. | `extraSurvivors`: Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Open each original lane mouth at y8,16,24,32. Keep all original14boulder traps and ten exact guard spawns Pin1..10; original wait orders retained.
+- All ten guards must actually die from a hostile boulder owned by seat1. Existing boulder damage explicitly disables KO; living-to-dead transition is recorded by exact name and seat in saved events. Golf balls, allied boulders, already dead targets and other weapons do not qualify.
+- The original540second limit starts at openingRound,time3; no shorter time or new slap limit. Existing laneCleared now additionally requires all ten exact boulder deaths before requesting victory. Wrong-cause death permanently fails the main trial.
+- Protect the heart. At successful trial completion optionally retain all four original workers alive without actual death history; real worker death or defeat fails that optional objective.
+- Original maps, doors, traps, waiting guards and rewards remain unchanged. Unchanged victory narration is emitted once after both current main goals.
+
+Static script and death-source evidence only; actual boulder trajectories, hit limits, guard damage, opening routes, combat and save/load need integrator/Mario runtime verification.
+
+| Trigger `laneCleared` | `Action	objectivestate	1	skittlecavern-o01	reached`; conditions: `Cond	event	Pin1	boulderkilled:1; Cond	event	Pin2	boulderkilled:1; Cond	event	Pin3	boulderkilled:1; Cond	event	Pin4	boulderkilled:1; Cond	event	Pin5	boulderkilled:1; Cond	event	Pin6	boulderkilled:1; Cond	event	Pin7	boulderkilled:1; Cond	event	Pin8	boulderkilled:1; Cond	event	Pin9	boulderkilled:1; Cond	event	Pin10	boulderkilled:1; Cond	flag	lanesOpened	>=	4; Cond	time	5; Cond	creatures	2	<=	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	skittlecavern-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `extraSurvivorLost4` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker4	killed` | yes |
+| Trigger `wrongPinDeath1` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin1	killed; Cond	event	Pin1	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath2` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin2	killed; Cond	event	Pin2	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath3` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin3	killed; Cond	event	Pin3	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath4` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin4	killed; Cond	event	Pin4	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath5` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin5	killed; Cond	event	Pin5	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath6` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin6	killed; Cond	event	Pin6	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath7` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin7	killed; Cond	event	Pin7	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath8` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin8	killed; Cond	event	Pin8	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath9` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin9	killed; Cond	event	Pin9	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath10` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin10	killed; Cond	event	Pin10	boulderkilled:1	==	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	skittlecavern-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	skittlecavern-main-trial	reached`; conditions: `Cond	trigger	laneCleared` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	skittlecavern-extra-survivors	reached`; conditions: `Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0` | yes |
+| Briefing | Roll the boulders through every guard before time expires to earn this optional trial's Heartstone fragment. | yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit |
 
 ## Stormhaven
 

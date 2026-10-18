@@ -6160,5 +6160,547 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours."
     }
+  },
+  "SkittleCavern": {
+    "goals": {
+      "skittlecavern-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "skittlecavern-main-trial": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Open all 4 lanes; bowl down 10 guards within 540s.",
+        "completion": "mainTrial",
+        "conditions": [
+          "Cond\ttrigger\tlaneCleared"
+        ],
+        "mode": "repeat\t0"
+      },
+      "skittlecavern-extra-survivors": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Keep all 4 starting workers alive.",
+        "completion": "extraSurvivors",
+        "conditions": [
+          "Cond\tobjective\t1\tskittlecavern-main-trial\treached",
+          "Cond\talive\tDefaultWorker1",
+          "Cond\tevent\tDefaultWorker1\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker2",
+          "Cond\tevent\tDefaultWorker2\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker3",
+          "Cond\tevent\tDefaultWorker3\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker4",
+          "Cond\tevent\tDefaultWorker4\tkilled\t==\t0"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost1": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker1\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost2": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker2\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost3": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker3\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "mainTrialFailed": {
+        "conditions": [
+          "Cond\tdefeated\t1"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ],
+          [
+            "1",
+            "skittlecavern-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost4": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker4\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath1": {
+        "conditions": [
+          "Cond\tevent\tPin1\tkilled",
+          "Cond\tevent\tPin1\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath2": {
+        "conditions": [
+          "Cond\tevent\tPin2\tkilled",
+          "Cond\tevent\tPin2\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath3": {
+        "conditions": [
+          "Cond\tevent\tPin3\tkilled",
+          "Cond\tevent\tPin3\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath4": {
+        "conditions": [
+          "Cond\tevent\tPin4\tkilled",
+          "Cond\tevent\tPin4\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath5": {
+        "conditions": [
+          "Cond\tevent\tPin5\tkilled",
+          "Cond\tevent\tPin5\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath6": {
+        "conditions": [
+          "Cond\tevent\tPin6\tkilled",
+          "Cond\tevent\tPin6\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath7": {
+        "conditions": [
+          "Cond\tevent\tPin7\tkilled",
+          "Cond\tevent\tPin7\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath8": {
+        "conditions": [
+          "Cond\tevent\tPin8\tkilled",
+          "Cond\tevent\tPin8\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath9": {
+        "conditions": [
+          "Cond\tevent\tPin9\tkilled",
+          "Cond\tevent\tPin9\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongPinDeath10": {
+        "conditions": [
+          "Cond\tevent\tPin10\tkilled",
+          "Cond\tevent\tPin10\tboulderkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "skittlecavern-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tskittlecavern-main-heart\treached",
+          "Cond\tobjective\t1\tskittlecavern-main-trial\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet. The heart gives you a shard.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "openingRound": [
+        "Cond\ttime\t3"
+      ],
+      "lane1Opened": [
+        "Cond\tregion\t1\tMouth1"
+      ],
+      "lane2Opened": [
+        "Cond\tregion\t1\tMouth2"
+      ],
+      "lane3Opened": [
+        "Cond\tregion\t1\tMouth3"
+      ],
+      "lane4Opened": [
+        "Cond\tregion\t1\tMouth4"
+      ],
+      "halfDown": [
+        "Cond\tflag\tlanesOpened\t>=\t2",
+        "Cond\tkills\t1\t>=\t5"
+      ],
+      "laneCleared": [
+        "Cond\tevent\tPin1\tboulderkilled:1",
+        "Cond\tevent\tPin2\tboulderkilled:1",
+        "Cond\tevent\tPin3\tboulderkilled:1",
+        "Cond\tevent\tPin4\tboulderkilled:1",
+        "Cond\tevent\tPin5\tboulderkilled:1",
+        "Cond\tevent\tPin6\tboulderkilled:1",
+        "Cond\tevent\tPin7\tboulderkilled:1",
+        "Cond\tevent\tPin8\tboulderkilled:1",
+        "Cond\tevent\tPin9\tboulderkilled:1",
+        "Cond\tevent\tPin10\tboulderkilled:1",
+        "Cond\tflag\tlanesOpened\t>=\t4",
+        "Cond\ttime\t5",
+        "Cond\tcreatures\t2\t<=\t0"
+      ]
+    },
+    "preserved_actions": {
+      "openingRound": [
+        "Action\tmessage\t1\tA vaulted cavern holds four long lanes with old boulder traps in them, and stone-faced guards stand in the lanes like skittles as soon as the earth plugs are opened. Dig into each lane and let the boulders roll.",
+        "Action\tobjectiveid\t1\tskittlecavern-o01\tKnock down all ten guards before time runs out.",
+        "Action\ttimelimit\t540"
+      ],
+      "lane1Opened": [
+        "Action\tmessage\t1\tLane 1 is open and its guards step up to their marks.",
+        "Action\tspawn\t2\t34\t8\t-1\tAdventurer:1@Pin1",
+        "Action\tspawn\t2\t36\t8\t-1\tAdventurer:1@Pin2",
+        "Action\tspawn\t2\t38\t8\t-1\tAdventurer:1@Pin3",
+        "Action\torder\twait\t2\t-\tPin1\tPin2\tPin3",
+        "Action\taddflag\tlanesOpened\t1"
+      ],
+      "lane2Opened": [
+        "Action\tmessage\t1\tLane 2 is open and its guards step up to their marks.",
+        "Action\tspawn\t2\t34\t16\t-1\tAdventurer:1@Pin4",
+        "Action\tspawn\t2\t36\t16\t-1\tAdventurer:1@Pin5",
+        "Action\tspawn\t2\t38\t16\t-1\tAdventurer:1@Pin6",
+        "Action\torder\twait\t2\t-\tPin4\tPin5\tPin6",
+        "Action\taddflag\tlanesOpened\t1"
+      ],
+      "lane3Opened": [
+        "Action\tmessage\t1\tLane 3 is open and its guards step up to their marks.",
+        "Action\tspawn\t2\t37\t24\t-1\tAdventurer:1@Pin7",
+        "Action\tspawn\t2\t39\t24\t-1\tAdventurer:1@Pin8",
+        "Action\torder\twait\t2\t-\tPin7\tPin8",
+        "Action\taddflag\tlanesOpened\t1"
+      ],
+      "lane4Opened": [
+        "Action\tmessage\t1\tLane 4 is open and its guards step up to their marks.",
+        "Action\tspawn\t2\t37\t32\t-1\tAdventurer:1@Pin9",
+        "Action\tspawn\t2\t39\t32\t-1\tAdventurer:1@Pin10",
+        "Action\torder\twait\t2\t-\tPin9\tPin10",
+        "Action\taddflag\tlanesOpened\t1"
+      ],
+      "halfDown": [
+        "Action\tmessage\t1\tHalf of the guards are down."
+      ],
+      "laneCleared": [
+        "Action\tobjectivestate\t1\tskittlecavern-o01\treached",
+        "Action\twin\t1"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "Mouth1": {
+          "bounds": [
+            30,
+            8,
+            32,
+            8
+          ],
+          "minimum_potential_tiles": 3
+        },
+        "Mouth2": {
+          "bounds": [
+            30,
+            16,
+            32,
+            16
+          ],
+          "minimum_potential_tiles": 3
+        },
+        "Mouth3": {
+          "bounds": [
+            30,
+            24,
+            32,
+            24
+          ],
+          "minimum_potential_tiles": 3
+        },
+        "Mouth4": {
+          "bounds": [
+            30,
+            32,
+            32,
+            32
+          ],
+          "minimum_potential_tiles": 3
+        }
+      },
+      "named_creatures": [
+        "DefaultWorker1",
+        "DefaultWorker2",
+        "DefaultWorker3",
+        "DefaultWorker4"
+      ],
+      "required_traps": {
+        "Boulder1": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              33,
+              8
+            ]
+          ]
+        },
+        "Boulder2": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              35,
+              8
+            ]
+          ]
+        },
+        "Boulder3": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              37,
+              8
+            ]
+          ]
+        },
+        "Boulder4": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              39,
+              8
+            ]
+          ]
+        },
+        "Boulder5": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              33,
+              16
+            ]
+          ]
+        },
+        "Boulder6": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              35,
+              16
+            ]
+          ]
+        },
+        "Boulder7": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              37,
+              16
+            ]
+          ]
+        },
+        "Boulder8": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              39,
+              16
+            ]
+          ]
+        },
+        "Boulder9": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              36,
+              24
+            ]
+          ]
+        },
+        "Boulder10": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              38,
+              24
+            ]
+          ]
+        },
+        "Boulder11": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              40,
+              24
+            ]
+          ]
+        },
+        "Boulder12": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              36,
+              32
+            ]
+          ]
+        },
+        "Boulder13": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              38,
+              32
+            ]
+          ]
+        },
+        "Boulder14": {
+          "type": 3,
+          "seat": 1,
+          "tiles": [
+            [
+              40,
+              32
+            ]
+          ]
+        }
+      }
+    },
+    "route": [
+      "Open each original lane mouth at y8,16,24,32. Keep all original14boulder traps and ten exact guard spawns Pin1..10; original wait orders retained.",
+      "All ten guards must actually die from a hostile boulder owned by seat1. Existing boulder damage explicitly disables KO; living-to-dead transition is recorded by exact name and seat in saved events. Golf balls, allied boulders, already dead targets and other weapons do not qualify.",
+      "The original540second limit starts at openingRound,time3; no shorter time or new slap limit. Existing laneCleared now additionally requires all ten exact boulder deaths before requesting victory. Wrong-cause death permanently fails the main trial.",
+      "Protect the heart. At successful trial completion optionally retain all four original workers alive without actual death history; real worker death or defeat fails that optional objective.",
+      "Original maps, doors, traps, waiting guards and rewards remain unchanged. Unchanged victory narration is emitted once after both current main goals."
+    ],
+    "runtime_limit": "Static script and death-source evidence only; actual boulder trajectories, hit limits, guard damage, opening routes, combat and save/load need integrator/Mario runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet. The heart gives you a shard."
+    }
   }
 }

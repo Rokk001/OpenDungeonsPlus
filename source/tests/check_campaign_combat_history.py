@@ -59,3 +59,11 @@ complete = body(script, 'void LevelScript::completeShotKill(')
 assert 'mFatalShots.find(creature)' in complete and 'mFatalShots.erase(shot)' in complete
 assert 'projectile_death_credit_and_recovery' in read('source/tests/test_LevelScript.cpp')
 print('Lethal KO waits for actual death; recovery, fresh instances and later fatal causes clear credit: static PASS')
+
+# Boulder damage disables KO; only its actual living-to-dead transition is credited.
+boulder = body(read("source/entities/MissileBoulder.cpp"), "bool MissileBoulder::hitCreature(")
+for guard in ("if(isGolfBall())", "target->isAlive()", "wasAlive && !target->isAlive()", "getIsOnServerMap()",
+              "!getSeat()->isAlliedSeat(target->getSeat())", '"boulderkilled:" + std::to_string(getSeat()->getId())'):
+    assert guard in boulder, guard
+assert boulder.index("const bool wasAlive") < boulder.index("entity->takeDamage") < boulder.index('recordEvent(target->getName()')
+assert "mDamage, 0.0, 0.0, tile, false)" in boulder

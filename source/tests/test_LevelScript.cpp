@@ -1562,3 +1562,24 @@ BOOST_AUTO_TEST_CASE(stone_carrier_recovery_round_trip)
     BOOST_CHECK(trigger.mActions[1].mType == LevelScriptActionType::stoneAttach);
     BOOST_CHECK_EQUAL(trigger.mActions[1].mText, "CairnBearer2");
 }
+
+//! \brief Boulder death events preserve their exact victim and owning seat across saves.
+BOOST_AUTO_TEST_CASE(boulder_death_event_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName pin\nMode once\n"
+        "Cond event Pin1 boulderkilled:1\nAction message 1 hit\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    script.recordEvent("Pin1", "boulderkilled:2");
+    BOOST_CHECK_EQUAL(script.getEventCount("Pin1", "boulderkilled:1"), 0);
+    script.recordEvent("Pin1", "killed");
+    BOOST_CHECK_EQUAL(script.getEventCount("Pin1", "boulderkilled:1"), 0);
+    script.recordEvent("Pin1", "boulderkilled:1");
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK_EQUAL(restored.getEventCount("Pin1", "boulderkilled:1"), 1);
+    BOOST_CHECK_EQUAL(restored.getEventCount("Pin2", "boulderkilled:1"), 0);
+}

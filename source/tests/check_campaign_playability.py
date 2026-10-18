@@ -78,6 +78,8 @@ BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields cu
 
 BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with hand transport/repeated replacement still under audit"}
 
+BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1606,6 +1608,17 @@ def self_test(root):
             ("Name\tcarrierRecovery\nMode\trepeat\t0", "Name\tcarrierRecovery\nMode\tonce")):
         assert needle in high_retry
         assert grouped_goal_errors(high_retry.replace(needle, replacement), "Highcairn"), "replacement must retry only when its exact name is free"
+    skittle = (root / "levels/campaign/SkittleCavern.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(skittle, "SkittleCavern")
+    for needle, replacement in (
+            ("Cond\tevent\tPin10\tboulderkilled:1", "Cond\tevent\tPin10\tkilled"),
+            ("Cond\tevent\tPin1\tboulderkilled:1", "Cond\tevent\tPin1\tboulderkilled:2"),
+            ("Cond\tflag\tlanesOpened\t>=\t4", "Cond\tflag\tlanesOpened\t>=\t3"),
+            ("Action\ttimelimit\t540", "Action\ttimelimit\t600"),
+            ("Cond\talive\tDefaultWorker4", "Cond\talive\tDefaultWorker3"),
+            ("Cond\tobjective\t1\tskittlecavern-main-trial\treached", "Cond\tcreatures\t2\t<=\t0")):
+        assert needle in skittle
+        assert grouped_goal_errors(skittle.replace(needle, replacement), "SkittleCavern"), "Skittle requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 
