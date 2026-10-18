@@ -52,6 +52,7 @@ public:
 
     virtual void updateActiveSpots(GameMap* gameMap = nullptr) override;
     
+    //! \brief Updates prisoners and announces only actual first arrivals of the resulting creature class.
     void doUpkeep() override;
 
     bool hasOpenCreatureSpot(Creature* creature) override;

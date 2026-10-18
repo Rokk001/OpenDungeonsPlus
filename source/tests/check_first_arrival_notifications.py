@@ -54,3 +54,11 @@ assert reward.index("newCreature->setPosition(") < reward.index("notifyCreatureA
 assert 'if(!message.empty() &&' in reward
 assert 'message = "The gods accepted your sacrifice and send you a special";' in reward
 print("Creature sacrifice rewards share first-arrival history; real special rewards remain announced: PASS (static only)")
+
+prison = (ROOT / "source/rooms/RoomPrison.cpp").read_text(encoding="utf-8")
+prison_upkeep = function(prison, "void RoomPrison::doUpkeep()")
+assert prison_upkeep.count("notifyCreatureArrival(className)") == 1
+assert prison_upkeep.index("newCreature->addToGameMap();") < prison_upkeep.index("notifyCreatureArrival(className)")
+assert prison_upkeep.index("newCreature->setPosition(") < prison_upkeep.index("notifyCreatureArrival(className)")
+assert "A creature died starving in your prison" in prison_upkeep
+print("Prison offspring use shared first-arrival history while starvation losses remain visible: PASS (static only)")
