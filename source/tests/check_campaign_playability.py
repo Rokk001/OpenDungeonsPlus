@@ -76,6 +76,8 @@ BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own h
 
 BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes"}
 
+BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with hand transport/repeated replacement still under audit"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1586,6 +1588,18 @@ def self_test(root):
                      ("Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t1", "Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t0")):
         assert old in high
         assert objective_errors(high.replace(old, new), "Highcairn"), "captain death must remain completable after timed opening"
+    high_grouped = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(high_grouped, "Highcairn")
+    for needle, replacement in (
+            ("Cond\tflag\tgoalTerrace4\t1", "Cond\tregion\t1\tTerrace4"),
+            ("Cond\tflag\tgoalTerrace3\t1", "Cond\tflag\tgoalTerrace3\t0"),
+            ("Cond\tkilledin\tHildeCairn\tHold", "Cond\tevent\tHildeCairn\tkilled"),
+            ("Cond\tcarryingstone\tCairnBearer2", "Cond\talive\tCairnBearer2"),
+            ("Cond\towns\t1\tCairnBearer", "Cond\talive\tCairnBearer"),
+            ("Cond\tflag\tbearerOut\t0", "Cond\tflag\tbearerOut\t1"),
+            ("Cond\tobjective\t1\thighcairn-main-captain\treached", "Cond\tflag\tholdOpen\t1")):
+        assert needle in high_grouped
+        assert grouped_goal_errors(high_grouped.replace(needle, replacement), "Highcairn"), "Highcairn requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 

@@ -5814,5 +5814,322 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe last keeper is dead and the thorns are quiet. Thornreach is yours."
     }
+  },
+  "Highcairn": {
+    "goals": {
+      "highcairn-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Build a bed and coop; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tfurniture\t1\tDormitory\t>=\t1",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "highcairn-main-terraces": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Climb the four terraces in order.",
+        "completion": "mainTerraces",
+        "conditions": [
+          "Cond\tflag\tgoalTerrace4\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "highcairn-main-captain": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the watch captain and open the hold.",
+        "completion": "mainCaptain",
+        "conditions": [
+          "Cond\tevent\tTerraceWatch8\tkilled",
+          "Cond\tflag\tholdOpen\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "highcairn-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Hilde Cairn in her hold and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tkilledin\tHildeCairn\tHold",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "highcairn-main-stone": {
+        "kind": "conditionalobjectiveid",
+        "seat": "1",
+        "text": "If found, bring the cairn spirit and stone home.",
+        "completion": "mainStone",
+        "conditions": [
+          "Cond\tflag\tstoneDone\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "highcairn-extra-caldera": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the southern caldera.",
+        "completion": "extraCaldera",
+        "conditions": [
+          "Cond\tregion\t1\tCaldera"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainStoneList": {
+        "conditions": [
+          "Cond\ttrigger\tsealedFound"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tconditionalobjectiveid\t1\thighcairn-main-stone\tIf found, bring the cairn spirit and stone home."
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "highcairn-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "victoryWithoutStone": {
+        "conditions": [
+          "Cond\tobjective\t1\thighcairn-main-home\treached",
+          "Cond\tobjective\t1\thighcairn-main-terraces\treached",
+          "Cond\tobjective\t1\thighcairn-main-captain\treached",
+          "Cond\tobjective\t1\thighcairn-main-warden\treached",
+          "Cond\tflag\tbearerOut\t0"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tvictoryStoneReady\t1"
+        ]
+      },
+      "victoryWithStone": {
+        "conditions": [
+          "Cond\tflag\tstoneDone\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tvictoryStoneReady\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\thighcairn-main-home\treached",
+          "Cond\tobjective\t1\thighcairn-main-terraces\treached",
+          "Cond\tobjective\t1\thighcairn-main-captain\treached",
+          "Cond\tobjective\t1\thighcairn-main-warden\treached",
+          "Cond\tflag\tvictoryStoneReady\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "goalTerrace1": [
+        "Cond\tregion\t1\tTerrace1"
+      ],
+      "goalTerrace2": [
+        "Cond\tregion\t1\tTerrace2",
+        "Cond\tflag\tgoalTerrace1\t1"
+      ],
+      "goalTerrace3": [
+        "Cond\tregion\t1\tTerrace3",
+        "Cond\tflag\tgoalTerrace2\t1"
+      ],
+      "goalTerrace4": [
+        "Cond\tregion\t1\tTerrace4",
+        "Cond\tflag\tgoalTerrace3\t1"
+      ],
+      "holdSealBreaks": [
+        "Cond\ttime\t5",
+        "Cond\talive\tTerraceWatch8\t0",
+        "Cond\tflag\tholdOpen\t0"
+      ],
+      "holdSealLate": [
+        "Cond\ttime\t2700",
+        "Cond\tflag\tholdOpen\t0"
+      ],
+      "goalCaptainKilled": [
+        "Cond\tevent\tTerraceWatch8\tkilled",
+        "Cond\tflag\tholdOpen\t1"
+      ],
+      "stoneHome": [
+        "Cond\tcarryingstone\tCairnBearer",
+        "Cond\towns\t1\tCairnBearer",
+        "Cond\treached\tCairnBearer\theart\t1"
+      ],
+      "stoneHome2": [
+        "Cond\tcarryingstone\tCairnBearer2",
+        "Cond\towns\t1\tCairnBearer2",
+        "Cond\treached\tCairnBearer2\theart\t1"
+      ],
+      "bearerLost": [
+        "Cond\tflag\tbearerOut\t1",
+        "Cond\tflag\tstoneDone\t0",
+        "Cond\talive\tCairnBearer\t0"
+      ],
+      "sealedFound": [
+        "Cond\tregion\t1\tCairnHall"
+      ],
+      "firstSeams": [
+        "Cond\tmined\t1\t>=\t400"
+      ]
+    },
+    "preserved_actions": {
+      "goalTerrace1": [
+        "Action\tsetflag\tgoalTerrace1\t1"
+      ],
+      "goalTerrace2": [
+        "Action\tsetflag\tgoalTerrace2\t1"
+      ],
+      "goalTerrace3": [
+        "Action\tsetflag\tgoalTerrace3\t1"
+      ],
+      "goalTerrace4": [
+        "Action\tsetflag\tgoalTerrace4\t1",
+        "Action\tobjectivestate\t1\thighcairn-o02\treached"
+      ],
+      "holdSealBreaks": [
+        "Action\tmessage\t1\tThe captain of the terrace watch is down and the key to the hold lies where he fell. It fits the old lock and the stopped passage to the hold stands open.",
+        "Action\tterrain\t29\t10\t32\t10\tpath",
+        "Action\tsetflag\tholdOpen\t1"
+      ],
+      "holdSealLate": [
+        "Action\tmessage\t1\tThe masons of the hold have broken the seal from inside. The passage to the hold stands open.",
+        "Action\tterrain\t29\t10\t32\t10\tpath",
+        "Action\tsetflag\tholdOpen\t1"
+      ],
+      "goalCaptainKilled": [
+        "Action\tobjectivestate\t1\thighcairn-o06\treached"
+      ],
+      "stoneHome": [
+        "Action\tmessage\t1\tThe pale stone has reached your heart and a hidden land has opened.",
+        "Action\tsetflag\tstoneDone\t1",
+        "Action\tdiscover\tcampaign/SkittleCavern.level",
+        "Action\tobjectivestate\t1\thighcairn-o05\treached"
+      ],
+      "stoneHome2": [
+        "Action\tmessage\t1\tThe pale stone has reached your heart and a hidden land has opened.",
+        "Action\tsetflag\tstoneDone\t1",
+        "Action\tdiscover\tcampaign/SkittleCavern.level",
+        "Action\tobjectivestate\t1\thighcairn-o05\treached"
+      ],
+      "bearerLost": [
+        "Action\tmessage\t1\tThe cairn spirit has fallen. Another one rises from the plinth to carry the stone.",
+        "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2",
+        "Action\tstoneattach\tCairnBearer2"
+      ],
+      "sealedFound": [
+        "Action\tmessage\t1\tA cairn at the end of the third terrace has been bricked in, and a hidden hall lies behind it. A pale stone rests on a plinth, and a bound cairn spirit rises beside it and takes the stone up. Carry it home to your own heart.",
+        "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer",
+        "Action\tstoneattach\tCairnBearer",
+        "Action\tsetflag\tbearerOut\t1",
+        "Action\tobjectiveid\t1\thighcairn-o05\tBring the cairn spirit to your heart."
+      ],
+      "firstSeams": [
+        "Action\tmessage\t1\tThe first seams are open. Gold buys you more than rooms: build a bridge and a door or two."
+      ]
+    },
+    "reachability": {
+      "named_creatures": [
+        "HildeCairn",
+        "TerraceWatch8"
+      ],
+      "regions": {
+        "Caldera": {
+          "bounds": [
+            44,
+            56,
+            62,
+            66
+          ],
+          "minimum_open_tiles": 71
+        },
+        "Terrace1": {
+          "bounds": [
+            14,
+            48,
+            64,
+            54
+          ],
+          "minimum_open_tiles": 1
+        },
+        "Terrace2": {
+          "bounds": [
+            8,
+            36,
+            62,
+            42
+          ],
+          "minimum_open_tiles": 1
+        },
+        "Terrace3": {
+          "bounds": [
+            10,
+            24,
+            66,
+            30
+          ],
+          "minimum_open_tiles": 1
+        },
+        "Terrace4": {
+          "bounds": [
+            22,
+            12,
+            62,
+            18
+          ],
+          "minimum_open_tiles": 1
+        },
+        "Hold": {
+          "bounds": [
+            24,
+            2,
+            48,
+            11
+          ],
+          "minimum_open_tiles": 1
+        },
+        "CairnHall": {
+          "bounds": [
+            3,
+            18,
+            8,
+            24
+          ],
+          "minimum_open_tiles": 1
+        }
+      }
+    },
+    "route": [
+      "Start with three workers and1500gold. Build a bed on free reachable ground(18,59),92gold; create a3x3hatchery at(17..19,56..58),990gold. Total1082below1500. All fields potentially reachable, unoccupied, dry or removable dirt; room skills unlocked. No invented initial fighter population.",
+      "Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.",
+      "Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.",
+      "Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.",
+      "Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both original home triggers now require the actual stone and ownership; stoneDone records that completion. Hand transport and indefinite carrier replacement remain open, not claimed solved.",
+      "Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty."
+    ],
+    "runtime_limit": "Partial: stone hand transport and repeated carrier-loss recovery remain unresolved. Static necessary supply/route evidence only; combat, ordered visits, save/load and UI need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours."
+    }
   }
 }

@@ -474,18 +474,48 @@ File: `levels/campaign/Highcairn.level`.
 | Script line 2844 | `Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.` | yes |
 | Script line 2892 | `Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.` | yes |
 | Script line 2908 | `Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.` | yes |
-| Script line 3059 | `Action	win	1` | yes |
-| Script line 3090 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	reached	CairnBearer	heart	1` | yes |
-| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	reached	CairnBearer2	heart	1` | yes |
+| Script line 3062 | `Action	win	1` | yes |
+| Script line 3093 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3186 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `highcairn-main-home`: Build a bed and coop; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1 |
+| main | `highcairn-main-terraces`: Climb the four terraces in order. | `mainTerraces`: Cond	flag	goalTerrace4	1 |
+| main | `highcairn-main-captain`: Defeat the watch captain and open the hold. | `mainCaptain`: Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1 |
+| main | `highcairn-main-warden`: Defeat Hilde Cairn in her hold and all enemy forces. | `mainWarden`: Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies |
+| main | `highcairn-main-stone`: If found, bring the cairn spirit and stone home. | `mainStone`: Cond	flag	stoneDone	1 |
+| optional | `highcairn-extra-caldera`: Explore the southern caldera. | `extraCaldera`: Cond	region	1	Caldera |
+
+Possible route (static, not a playthrough):
+- Start with three workers and1500gold. Build a bed on free reachable ground(18,59),92gold; create a3x3hatchery at(17..19,56..58),990gold. Total1082below1500. All fields potentially reachable, unoccupied, dry or removable dirt; room skills unlocked. No invented initial fighter population.
+- Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.
+- Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.
+- Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.
+- Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both original home triggers now require the actual stone and ownership; stoneDone records that completion. Hand transport and indefinite carrier replacement remain open, not claimed solved.
+- Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.
+
+Partial: stone hand transport and repeated carrier-loss recovery remain unresolved. Static necessary supply/route evidence only; combat, ordered visits, save/load and UI need runtime verification.
+
+| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	carryingstone	CairnBearer; Cond	owns	1	CairnBearer; Cond	reached	CairnBearer	heart	1` | yes |
+| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	carryingstone	CairnBearer2; Cond	owns	1	CairnBearer2; Cond	reached	CairnBearer2	heart	1` | yes |
 | Trigger `goalHeartSafe3BeforeWardenSlain` | `Action	objectivestate	1	highcairn-o03	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalTerrace4` | `Action	objectivestate	1	highcairn-o02	reached`; conditions: `Cond	region	1	Terrace4; Cond	flag	goalTerrace3	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	highcairn-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `goalCaptainKilled` | `Action	objectivestate	1	highcairn-o06	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | no: heart protection is checked; building and ascent are not independent goals |
-| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | no: enemy elimination is checked; carrying the optional stone is not required to win |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	highcairn-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	highcairn-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainTerraces` | `Action	objectivestate	1	highcairn-main-terraces	reached`; conditions: `Cond	flag	goalTerrace4	1` | yes |
+| Trigger `mainCaptain` | `Action	objectivestate	1	highcairn-main-captain	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	highcairn-main-warden	reached`; conditions: `Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	highcairn-main-stone	reached`; conditions: `Cond	flag	stoneDone	1` | yes |
+| Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
+| Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
+| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with hand transport/repeated replacement still under audit |
 
 ## HollinFen
 

@@ -2910,6 +2910,8 @@ Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.
 [Trigger]
 Name	stoneHome
 Mode	once
+Cond	carryingstone	CairnBearer
+Cond	owns	1	CairnBearer
 Cond	reached	CairnBearer	heart	1
 Action	message	1	The pale stone has reached your heart and a hidden land has opened.
 Action	setflag	stoneDone	1
@@ -2929,6 +2931,8 @@ Action	stoneattach	CairnBearer2
 [Trigger]
 Name	stoneHome2
 Mode	once
+Cond	carryingstone	CairnBearer2
+Cond	owns	1	CairnBearer2
 Cond	reached	CairnBearer2	heart	1
 Action	message	1	The pale stone has reached your heart and a hidden land has opened.
 Action	setflag	stoneDone	1
@@ -3053,7 +3057,6 @@ Name	wardenSlain
 Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	Warden Hilde Cairn lies dead among her own stones. Highcairn is yours.
 Action	objectivestate	1	highcairn-o01	reached
 Action	objectivestate	1	highcairn-o04	reached
 Action	win	1
@@ -3092,4 +3095,94 @@ Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the h
 
 
 
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	highcairn-main-home	Build a bed and coop; protect your heart.
+Action	mainobjectiveid	1	highcairn-main-terraces	Climb the four terraces in order.
+Action	mainobjectiveid	1	highcairn-main-captain	Defeat the watch captain and open the hold.
+Action	mainobjectiveid	1	highcairn-main-warden	Defeat Hilde Cairn in her hold and all enemy forces.
+Action	optionalobjectiveid	1	highcairn-extra-caldera	Explore the southern caldera.
+[/Trigger]
+[Trigger]
+Name	mainStoneList
+Mode	once
+Cond	trigger	sealedFound
+Action	conditionalobjectiveid	1	highcairn-main-stone	If found, bring the cairn spirit and stone home.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	highcairn-main-home	failed
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	furniture	1	Dormitory	>=	1
+Cond	furniture	1	Hatchery	>=	1
+Action	objectivestate	1	highcairn-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainTerraces
+Mode	repeat	0
+Cond	flag	goalTerrace4	1
+Action	objectivestate	1	highcairn-main-terraces	reached
+[/Trigger]
+[Trigger]
+Name	mainCaptain
+Mode	repeat	0
+Cond	event	TerraceWatch8	killed
+Cond	flag	holdOpen	1
+Action	objectivestate	1	highcairn-main-captain	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	killedin	HildeCairn	Hold
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	highcairn-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	mainStone
+Mode	repeat	0
+Cond	flag	stoneDone	1
+Action	objectivestate	1	highcairn-main-stone	reached
+[/Trigger]
+[Trigger]
+Name	extraCaldera
+Mode	once
+Cond	region	1	Caldera
+Action	objectivestate	1	highcairn-extra-caldera	reached
+[/Trigger]
+[Trigger]
+Name	victoryWithoutStone
+Mode	once
+Cond	objective	1	highcairn-main-home	reached
+Cond	objective	1	highcairn-main-terraces	reached
+Cond	objective	1	highcairn-main-captain	reached
+Cond	objective	1	highcairn-main-warden	reached
+Cond	flag	bearerOut	0
+Action	setflag	victoryStoneReady	1
+[/Trigger]
+[Trigger]
+Name	victoryWithStone
+Mode	once
+Cond	flag	stoneDone	1
+Action	setflag	victoryStoneReady	1
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	highcairn-main-home	reached
+Cond	objective	1	highcairn-main-terraces	reached
+Cond	objective	1	highcairn-main-captain	reached
+Cond	objective	1	highcairn-main-warden	reached
+Cond	flag	victoryStoneReady	1
+Action	message	1	Warden Hilde Cairn lies dead among her own stones. Highcairn is yours.
+Action	win	1
+[/Trigger]
 [/Triggers]
