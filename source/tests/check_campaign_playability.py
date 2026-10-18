@@ -328,7 +328,7 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalHoldBeforeDeparture': '776b58a0778ede6f329
  'Cinderhollow/goalDawnBridge': '31bfa776f2fabb75b9c400e4c14449f2a23ae0ccb9c090599b354d62c37237b5',
  'Cinderhollow/goalDawnBridgeApproach': '7b7cc92553db0a630d9d8eeb64e9163000ea576ebde2679543af1f26f4ca5e02',
  'Cinderhollow/goalDawnBridgeCrossed': '05f90e1f8e74e92ee126418d8d02c528ef152fe4aff7e0f87c532bc0c3df4262',
- 'Cinderhollow/goalThreeWavesDefeatedAtHeart': '739e7b104d57d3c922e9216d3f41d887c0efeff9d8c18523bd8c5b80500724b5',
+ 'Cinderhollow/goalThreeWavesDefeatedAtHeart': '66ab2425596a2a131e5b81285debd24703c77d08988f7e274700157f8c323cea',
  'Cinderhollow/rivalHeartDown': 'b490f8085c95c318f0aee37b0bcb7f903d47f272d0bedb3114676bcf5146fc3b',
  'Cinderhollow/rivalHeartFalls': 'e39927741e06e2f5d2a2863a979535b542e7774e671af7d7838cc8153b14097d',
  'Coldwell/courtBreached': '44ebb7a1fa5c16d2bc4cf4cfd4e82ec1ea98501c6839fb6190f50f6b51175f33',
@@ -1632,6 +1632,14 @@ def self_test(root):
             ("Cond\tregion\t1\tGaleCave", "Cond\tregion\t1\tLighthouse")):
         assert needle in storm
         assert grouped_goal_errors(storm.replace(needle, replacement), "Stormhaven"), "Stormhaven requirement weakening must fail: " + needle
+    cinder = (root / "levels/campaign/Cinderhollow.level").read_text(encoding="utf-8")
+    wave_status = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", cinder, re.S) if "Name\tgoalThreeWavesDefeatedAtHeart\n" in block)
+    assert "atheart" not in wave_status
+    for source, action in (("waveOne", 2), ("waveTwo", 2), ("waveThree", 2), ("waveThree", 3)):
+        exact = "Cond\tspawncleared\t" + source + "\t" + str(action)
+        assert exact in wave_status
+        assert objective_errors(cinder.replace(exact + "\n", exact + "\tatheart\t1\n"), "Cinderhollow"), "intercepting a wave away from the heart must remain valid"
+        assert objective_errors(cinder.replace(exact + "\n", "Cond\tcreatures\t3\t<=\t0\n"), "Cinderhollow"), "only actual deaths of each exact wave count"
     print("campaign playability self-test passed")
 
 

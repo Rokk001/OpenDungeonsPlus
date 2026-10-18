@@ -213,7 +213,7 @@ File: `levels/campaign/Cinderhollow.level`.
 | Trigger `goalHeartSafe1BeforeRivalHeartDown` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartSafe1BeforeRivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCraterAfterBridge` | `Action	objectivestate	1	cinderhollow-o04	reached`; conditions: `Cond	flag	goalDawnBridgeCrossed	1; Cond	region	1	RivalCrater` | yes |
-| Trigger `goalThreeWavesDefeatedAtHeart` | `Action	objectivestate	1	cinderhollow-o03	reached`; conditions: `Cond	spawncleared	waveOne	2	atheart	1; Cond	spawncleared	waveTwo	2	atheart	1; Cond	spawncleared	waveThree	2	atheart	1; Cond	spawncleared	waveThree	3	atheart	1` | yes |
+| Trigger `goalThreeWavesDefeatedAtHeart` | `Action	objectivestate	1	cinderhollow-o03	reached`; conditions: `Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3` | yes |
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	cinderhollow-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	defeated	2` | yes |

@@ -5236,10 +5236,10 @@ Action	objectivestate	1	cinderhollow-o04	reached
 [Trigger]
 Name	goalThreeWavesDefeatedAtHeart
 Mode	once
-Cond	spawncleared	waveOne	2	atheart	1
-Cond	spawncleared	waveTwo	2	atheart	1
-Cond	spawncleared	waveThree	2	atheart	1
-Cond	spawncleared	waveThree	3	atheart	1
+Cond	spawncleared	waveOne	2
+Cond	spawncleared	waveTwo	2
+Cond	spawncleared	waveThree	2
+Cond	spawncleared	waveThree	3
 Action	objectivestate	1	cinderhollow-o03	reached
 [/Trigger]
 [Trigger]
