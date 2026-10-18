@@ -1752,6 +1752,13 @@ void Creature::doUpkeep()
         return;
     }
 
+    // The recovery display follows the skill timers in both AI and possessed control.
+    if(mAttackRecoveryTurns > 0)
+    {
+        --mAttackRecoveryTurns;
+        mNeedFireRefresh = true;
+    }
+
     // If a player controls the creature, its other actions are paused. Only the possessed
     // action runs and the movement comes from the player input
     if(isPossessed())
@@ -1775,11 +1782,6 @@ void Creature::doUpkeep()
     }
 
     bool isWarmUp = false;
-    if(mAttackRecoveryTurns > 0)
-    {
-        --mAttackRecoveryTurns;
-        mNeedFireRefresh = true;
-    }
     // We use creature skills if we can
     for(CreatureSkillData& skillData : mSkillData)
     {
