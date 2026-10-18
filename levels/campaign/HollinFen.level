@@ -3465,18 +3465,16 @@ Action	objectivestate	1	hollinfen-o03	reached
 Name	hollowFound
 Mode	once
 Cond	region	1	SealedHollow
-Action	message	1	The sisters bricked this hollow up. A pale stone sits in the wall niche, and a lost goblin has lifted it. Bring it to your dungeon heart.
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
 Action	spawn	1	6	54	1	Goblin:1@HollowBearer
-Action	stoneattach	HollowBearer
+Action	stonecreate	5	54	hollow-stone	1	12	12
 Action	setflag	hollowStone	1
 Action	timer	hollowSpawn	0
 [/Trigger]
 [Trigger]
 Name	hollowStoneHome
 Mode	once
-Cond	carryingstone	HollowBearer
-Cond	owns	1	HollowBearer
-Cond	reached	HollowBearer	heart	1
+Cond	deliveredstone	hollow-stone
 Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/CrowshotGallery.level
 [/Trigger]
@@ -3486,9 +3484,8 @@ Mode	repeat	60
 Cond	flag	hollowStone	1
 Cond	timer	hollowSpawn	>=	5
 Cond	alive	HollowBearer	0
-Action	message	1	The stone-bearer has fallen. Another goblin has lifted the stone in the hollow.
+Action	message	1	Another goblin emerges. Send a worker for the stone.
 Action	spawn	1	6	54	1	Goblin:1@HollowBearer
-Action	stoneattach	HollowBearer
 [/Trigger]
 [Trigger]
 Name	fenDrains

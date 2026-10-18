@@ -1097,14 +1097,14 @@
     },
     "preserved_actions": {
       "vaultFound": [
+        "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
         "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer",
-        "Action\tstoneattach\tVaultBearer",
+        "Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46",
         "Action\tsetflag\tvaultStone\t1",
         "Action\ttimer\tvaultSpawn\t0"
       ],
       "vaultStoneLost": [
-        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer",
-        "Action\tstoneattach\tVaultBearer"
+        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer"
       ],
       "vaultStoneHome": [
         "Action\tdiscover\tcampaign/BoulderCourse.level"
@@ -1138,16 +1138,35 @@
           ],
           "minimum_open_tiles": 1
         }
+      },
+      "mission_pickups": {
+        "vault-stone": {
+          "source": [
+            65,
+            50
+          ],
+          "friendly": "VaultBearer",
+          "friendly_spawn": [
+            66,
+            50
+          ],
+          "destination": [
+            9,
+            46
+          ],
+          "seat": 1,
+          "discovery": "vaultFound"
+        }
       }
     },
     "route": [
       "Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.",
       "At the existing 90-second scout order, the make action enables previously blocked spellPossess. Its mana price and upkeep are unchanged. Possess an own living creature and enter Seams (14,8)-(50,34).",
       "Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.",
-      "Before the final main goal, optionally enter SealedVault (61,46)-(71,54). This activates the stone requirement; bring VaultBearer from (66,50) to the own heart. The original repeat60 respawn remains available after bearer loss. Home completion now also verifies the actual attached stone and player ownership, not the carrier name alone.",
+      "After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
       "Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required."
     ],
-    "runtime_limit": "Conditional transport and replacement routes still require runtime verification; this is a static source/resource route, not a playthrough.",
+    "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "preserved_conditions": {
       "scoutSeams": [
         "Cond\tpossessed\t1\tSeams"
@@ -1156,9 +1175,7 @@
         "Cond\tregion\t1\tSealedVault"
       ],
       "vaultStoneHome": [
-        "Cond\tcarryingstone\tVaultBearer",
-        "Cond\towns\t1\tVaultBearer",
-        "Cond\treached\tVaultBearer\theart\t1"
+        "Cond\tdeliveredstone\tvault-stone"
       ],
       "vaultStoneLost": [
         "Cond\tflag\tvaultStone\t1",
@@ -1725,9 +1742,7 @@
         "Cond\tregion\t1\tSealedHollow"
       ],
       "hollowStoneHome": [
-        "Cond\tcarryingstone\tHollowBearer",
-        "Cond\towns\t1\tHollowBearer",
-        "Cond\treached\tHollowBearer\theart\t1"
+        "Cond\tdeliveredstone\thollow-stone"
       ],
       "hollowStoneLost": [
         "Cond\tflag\thollowStone\t1",
@@ -1742,9 +1757,9 @@
         "Action\tterrain\t38\t36\t38\t36\tmanawell\t1"
       ],
       "hollowFound": [
-        "Action\tmessage\t1\tThe sisters bricked this hollow up. A pale stone sits in the wall niche, and a lost goblin has lifted it. Bring it to your dungeon heart.",
+        "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
         "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer",
-        "Action\tstoneattach\tHollowBearer",
+        "Action\tstonecreate\t5\t54\thollow-stone\t1\t12\t12",
         "Action\tsetflag\thollowStone\t1",
         "Action\ttimer\thollowSpawn\t0"
       ],
@@ -1753,9 +1768,8 @@
         "Action\tdiscover\tcampaign/CrowshotGallery.level"
       ],
       "hollowStoneLost": [
-        "Action\tmessage\t1\tThe stone-bearer has fallen. Another goblin has lifted the stone in the hollow.",
-        "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer",
-        "Action\tstoneattach\tHollowBearer"
+        "Action\tmessage\t1\tAnother goblin emerges. Send a worker for the stone.",
+        "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer"
       ]
     },
     "reachability": {
@@ -1906,6 +1920,25 @@
         ],
         "starting_gold": 1800,
         "cost": 790
+      },
+      "mission_pickups": {
+        "hollow-stone": {
+          "source": [
+            5,
+            54
+          ],
+          "friendly": "HollowBearer",
+          "friendly_spawn": [
+            6,
+            54
+          ],
+          "destination": [
+            12,
+            12
+          ],
+          "seat": 1,
+          "discovery": "hollowFound"
+        }
       }
     },
     "route": [
@@ -1913,10 +1946,10 @@
       "Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.",
       "Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.",
       "Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.",
-      "Finding SealedHollow (2,50)-(10,58) is voluntary. If found, the own HollowBearer spawned at (6,54) must carry the actual attached stone to the own heart. Original replacement after death and CrowshotGallery discovery are retained; hand transport remains a separate unresolved mechanic.",
+      "After optional discovery, a worker collects hollow-stone from (5, 54) beside HollowBearer and visibly carries the same item to the own heart at (12, 12). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
       "Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged."
     ],
-    "runtime_limit": "Supply geometry and resource route are static necessary evidence; egg/bed use, combat, stone hand transport and save/load still require further verification. Hand transport decision pending."
+    "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification."
   },
   "CrowshotGallery": {
     "goals": {
@@ -4748,9 +4781,7 @@
         "Cond\tregion\t1\tSealedLantern"
       ],
       "lanternStoneHome": [
-        "Cond\tcarryingstone\tLampBearer",
-        "Cond\towns\t1\tLampBearer",
-        "Cond\treached\tLampBearer\theart\t1"
+        "Cond\tdeliveredstone\tlantern-stone"
       ],
       "lanternStoneLost": [
         "Cond\tflag\tlanternStone\t1",
@@ -4764,9 +4795,9 @@
         "Action\tgenerate\t1\tSpider:1"
       ],
       "hollowFound": [
-        "Action\tmessage\t1\tThe sisters of the lamp bricked this hollow up long ago. A pale stone glows in the wall, and a lost spider has lifted it. Bring it to your dungeon heart.",
+        "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
         "Action\tspawn\t1\t70\t9\t1\tSpider:1@LampBearer",
-        "Action\tstoneattach\tLampBearer",
+        "Action\tstonecreate\t69\t9\tlantern-stone\t1\t13\t57",
         "Action\tsetflag\tlanternStone\t1",
         "Action\ttimer\tlanternSpawn\t0"
       ],
@@ -4775,9 +4806,8 @@
         "Action\tdiscover\tcampaign/TwistingHalls.level"
       ],
       "lanternStoneLost": [
-        "Action\tmessage\t1\tThe stone-bearer has fallen. Another creature has lifted the stone in the hollow.",
-        "Action\tspawn\t1\t70\t9\t1\tSpider:1@LampBearer",
-        "Action\tstoneattach\tLampBearer"
+        "Action\tmessage\t1\tAnother spider emerges. Send a worker for the stone.",
+        "Action\tspawn\t1\t70\t9\t1\tSpider:1@LampBearer"
       ]
     },
     "reachability": {
@@ -4879,6 +4909,25 @@
           ],
           "minimum_open_tiles": 47
         }
+      },
+      "mission_pickups": {
+        "lantern-stone": {
+          "source": [
+            69,
+            9
+          ],
+          "friendly": "LampBearer",
+          "friendly_spawn": [
+            70,
+            9
+          ],
+          "destination": [
+            13,
+            57
+          ],
+          "seat": 1,
+          "discovery": "hollowFound"
+        }
       }
     },
     "route": [
@@ -4888,7 +4937,7 @@
       "Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.",
       "Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain."
     ],
-    "runtime_limit": "Static necessary evidence only; combat, claiming, save/load and stone hand transport remain unverified. Hand transport decision pending.",
+    "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now."
@@ -5870,7 +5919,7 @@
       "highcairn-main-stone": {
         "kind": "conditionalobjectiveid",
         "seat": "1",
-        "text": "If found, bring the cairn spirit and stone home.",
+        "text": "If found, bring the stone home.",
         "completion": "mainStone",
         "conditions": [
           "Cond\tflag\tstoneDone\t1"
@@ -5895,7 +5944,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tconditionalobjectiveid\t1\thighcairn-main-stone\tIf found, bring the cairn spirit and stone home."
+          "Action\tconditionalobjectiveid\t1\thighcairn-main-stone\tIf found, bring the stone home."
         ]
       },
       "mainHeartLost": {
@@ -5955,9 +6004,8 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe cairn spirit has fallen. Another one rises from the plinth to carry the stone.",
-          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2",
-          "Action\tstoneattach\tCairnBearer2"
+          "Action\tmessage\t1\tAnother spirit rises. Send a worker for the stone.",
+          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
         ],
         "mode": "once"
       },
@@ -5969,8 +6017,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2",
-          "Action\tstoneattach\tCairnBearer2"
+          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
         ],
         "mode": "repeat\t0"
       }
@@ -6005,14 +6052,12 @@
         "Cond\tflag\tholdOpen\t1"
       ],
       "stoneHome": [
-        "Cond\tcarryingstone\tCairnBearer",
-        "Cond\towns\t1\tCairnBearer",
-        "Cond\treached\tCairnBearer\theart\t1"
+        "Cond\tdeliveredstone\tcairn-stone",
+        "Cond\tflag\tstoneDone\t0"
       ],
       "stoneHome2": [
-        "Cond\tcarryingstone\tCairnBearer2",
-        "Cond\towns\t1\tCairnBearer2",
-        "Cond\treached\tCairnBearer2\theart\t1"
+        "Cond\tdeliveredstone\tcairn-stone",
+        "Cond\tflag\tstoneDone\t0"
       ],
       "bearerLost": [
         "Cond\tflag\tbearerOut\t1",
@@ -6028,6 +6073,9 @@
       ],
       "holdKey": [
         "Cond\tevent\tTerraceWatch8\tkilled"
+      ],
+      "cairnStone": [
+        "Cond\ttime\t3"
       ]
     },
     "preserved_actions": {
@@ -6070,22 +6118,23 @@
         "Action\tobjectivestate\t1\thighcairn-o05\treached"
       ],
       "bearerLost": [
-        "Action\tmessage\t1\tThe cairn spirit has fallen. Another one rises from the plinth to carry the stone.",
-        "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2",
-        "Action\tstoneattach\tCairnBearer2"
+        "Action\tmessage\t1\tAnother spirit rises. Send a worker for the stone.",
+        "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
       ],
       "sealedFound": [
-        "Action\tmessage\t1\tA cairn at the end of the third terrace has been bricked in, and a hidden hall lies behind it. A pale stone rests on a plinth, and a bound cairn spirit rises beside it and takes the stone up. Carry it home to your own heart.",
+        "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
         "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer",
-        "Action\tstoneattach\tCairnBearer",
         "Action\tsetflag\tbearerOut\t1",
-        "Action\tobjectiveid\t1\thighcairn-o05\tBring the cairn spirit to your heart."
+        "Action\tobjectiveid\t1\thighcairn-o05\tBring the stone to your heart."
       ],
       "firstSeams": [
         "Action\tmessage\t1\tThe first seams are open. Gold buys you more than rooms: build a bridge and a door or two."
       ],
       "holdKey": [
         "Action\tstonedrop\tTerraceWatch8\thold-key"
+      ],
+      "cairnStone": [
+        "Action\tstonecreate\t5\t21\tcairn-stone\t1\t12\t60"
       ]
     },
     "reachability": {
@@ -6157,6 +6206,26 @@
           ],
           "minimum_open_tiles": 1
         }
+      },
+      "mission_pickups": {
+        "cairn-stone": {
+          "source": [
+            5,
+            21
+          ],
+          "friendly": "CairnBearer",
+          "friendly_spawn": [
+            5,
+            22
+          ],
+          "destination": [
+            12,
+            60
+          ],
+          "seat": 1,
+          "discovery": "sealedFound",
+          "creation": "cairnStone"
+        }
       }
     },
     "route": [
@@ -6164,10 +6233,10 @@
       "Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.",
       "Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.",
       "Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.",
-      "Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both home triggers require the actual stone and ownership. Repeated replacement waits until CairnBearer2 is absent, including its corpse, so the new creature receives the exact name. A failed spawn cannot attach a stone to a missing or dead creature and is retried while absent. Hand transport remains pending.",
+      "After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
       "Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty."
     ],
-    "runtime_limit": "Partial: stone hand transport remains unresolved. Repeated replacement now waits for the named predecessor to leave the map; actual death/removal, population-cap retry and save/load still need runtime verification.",
+    "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours."

@@ -67,16 +67,16 @@ BRIEFING_MATCH["Mossgate"] = {
 
 BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked", 4: "yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles"}
 BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold", 4: "yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces"}
-BRIEFING_MATCH["Tinmoor"] = {2: "yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals", 3: "yes: finding the vault is voluntary, but discovery activates actual owned stone-carrier delivery before victory"}
+BRIEFING_MATCH["Tinmoor"] = {2: "yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals", 3: "yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory"}
 BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
 
-BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies", 4: "yes: voluntary discovery activates actual owned stone delivery"}
+BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies", 4: "yes: voluntary discovery activates delivery of the actual floor stone by a worker"}
 
 BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes"}
 
 BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes"}
 
-BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with hand transport/repeated replacement still under audit"}
+BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified"}
 
 BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit"}
 
@@ -924,6 +924,31 @@ def grouped_goal_errors(text, level_name):
             claimable = sum(candidate["tiles"][tile][0] in (1, 2, 7) for tile in candidate_area)
             if claimable < start.get("minimum_claimable_tiles", 0):
                 errors.append("selectable starting seat lacks claimable ground: " + str(start["seat"]))
+        # Friendly mission items start as one reachable floor object beside the original friendly spawn.
+        for identity, pickup in proof.get("mission_pickups", {}).items():
+            source, target = tuple(pickup["source"]), tuple(pickup["destination"])
+            friendly = tuple(pickup["friendly_spawn"])
+            create = "Action\tstonecreate\t" + "\t".join(map(str, (*source, identity, pickup["seat"], *target)))
+            rows = blocks.get(pickup["discovery"], [])
+            all_creations = [row for block_rows in blocks.values() for row in block_rows
+                             if row.startswith("Action\tstonecreate\t") and len(row.split()) >= 5 and row.split()[4] == identity]
+            creation_rows = blocks.get(pickup.get("creation", pickup["discovery"]), [])
+            if create not in creation_rows or all_creations != [create]:
+                errors.append("friendly mission item must have one exact floor creation: " + identity)
+            spawns = [row.split() for row in rows if row.startswith("Action\tspawn\t") and
+                      any("@" + pickup["friendly"] == "@" + token.rsplit("@", 1)[-1] for token in row.split()[6:] if "@" in token)]
+            if len(spawns) != 1 or list(map(int, spawns[0][3:5])) != list(friendly):
+                errors.append("friendly mission spawn was moved or removed: " + identity)
+            if abs(source[0] - friendly[0]) + abs(source[1] - friendly[1]) != 1:
+                errors.append("friendly mission item must lie beside its friendly creature: " + identity)
+            for tile in (source, target):
+                terrain = level["tiles"].get(tile)
+                if tile not in area or terrain is None or terrain[1] != 0 or terrain[0] in (4, 5):
+                    errors.append("friendly item source or destination is not reachable dry ground: " + identity)
+            if not any(room[0] == 1 and room[2] == pickup["seat"] and target in room[3] for room in level["rooms"]):
+                errors.append("friendly mission item destination is not its own dungeon heart: " + identity)
+            if "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart." not in rows:
+                errors.append("friendly mission discovery message differs from approved wording: " + identity)
         # A delivery tile must be dry, reachable and inside the original consumer region.
         for identity, delivery in proof.get("mission_deliveries", {}).items():
             target = tuple(delivery["tile"])
@@ -1423,10 +1448,10 @@ def self_test(root):
     for old, new in (
         ("Action\tmake\t1\tspellPossess", "Action\tmake\t1\tspellLightning"),
         ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\tvaultFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0"),
-        ("Cond\tcarryingstone\tVaultBearer", "Cond\ttime\t0"),
-        ("Cond\towns\t1\tVaultBearer", "Cond\ttime\t0"),
+        ("Cond\tdeliveredstone\tvault-stone", "Cond\ttime\t0"),
+        ("Cond\tdeliveredstone\tvault-stone", "Cond\tcarryingstone\tVaultBearer"),
         ("Cond\tspawncleared\tpostAEntered\t1", "Cond\tspawncleared\tpostAEntered\t0"),
-        ("Action\tstoneattach\tVaultBearer", "Action\tstoneattach\tWrongBearer")
+        ("Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46", "Action\tstonecreate\t66\t50\tvault-stone\t1\t9\t46")
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
@@ -1512,8 +1537,8 @@ def self_test(root):
         ("Cond\ttrapgone\tDoorWooden1", "Cond\ttrapgone\tDoorWooden2"),
         ("Cond\tclaimed\t1\tFen\t120", "Cond\tclaimed\t1\tFen\t40"),
         ("Cond\tslabs\t1\tManaSpring\tmanawell\t>=\t1", "Cond\ttime\t1"),
-        ("Cond\tcarryingstone\tHollowBearer", "Cond\ttime\t1"),
-        ("Cond\towns\t1\tHollowBearer", "Cond\ttime\t1"),
+        ("Cond\tdeliveredstone\thollow-stone", "Cond\ttime\t1"),
+        ("Cond\tdeliveredstone\thollow-stone", "Cond\tcarryingstone\tHollowBearer"),
         ("gold\t1800", "gold\t100"),
         ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\thollowFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0")
     ):
@@ -1604,8 +1629,8 @@ def self_test(root):
             ("Cond\troomclaimed\t1\t10\t16\t12\t17", "Cond\tregion\t1\tNorthWest"),
             ("Cond\troomclaimed\t1\t13\t20\t15\t21", "Cond\troomclaimed\t1\t13\t20\t14\t21"),
             ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
-            ("Cond\tcarryingstone\tLampBearer", "Cond\talive\tLampBearer"),
-            ("Cond\towns\t1\tLampBearer", "Cond\talive\tLampBearer"),
+            ("Cond\tdeliveredstone\tlantern-stone", "Cond\talive\tLampBearer"),
+            ("Cond\tdeliveredstone\tlantern-stone", "Cond\tcarryingstone\tLampBearer"),
             ("Cond\tflag\tlanternStone\t0", "Cond\tflag\tlanternStone\t1"),
             ("Cond\tflag\tvictoryStoneReady\t1", "Cond\ttime\t5")):
         assert needle in lantern
@@ -1649,8 +1674,8 @@ def self_test(root):
             ("Cond\tflag\tgoalTerrace4\t1", "Cond\tregion\t1\tTerrace4"),
             ("Cond\tflag\tgoalTerrace3\t1", "Cond\tflag\tgoalTerrace3\t0"),
             ("Cond\tkilledin\tHildeCairn\tHold", "Cond\tevent\tHildeCairn\tkilled"),
-            ("Cond\tcarryingstone\tCairnBearer2", "Cond\talive\tCairnBearer2"),
-            ("Cond\towns\t1\tCairnBearer", "Cond\talive\tCairnBearer"),
+            ("Cond\tdeliveredstone\tcairn-stone", "Cond\talive\tCairnBearer2"),
+            ("Cond\tdeliveredstone\tcairn-stone", "Cond\tcarryingstone\tCairnBearer"),
             ("Cond\tflag\tbearerOut\t0", "Cond\tflag\tbearerOut\t1"),
             ("Cond\tobjective\t1\thighcairn-main-captain\treached", "Cond\tflag\tholdOpen\t1")):
         assert needle in high_grouped

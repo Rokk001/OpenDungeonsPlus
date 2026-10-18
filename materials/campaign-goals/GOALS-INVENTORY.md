@@ -724,10 +724,10 @@ File: `levels/campaign/Highcairn.level`.
 | Script line 2843 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
 | Script line 2844 | `Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.` | yes |
 | Script line 2892 | `Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.` | yes |
-| Script line 2908 | `Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.` | yes |
-| Script line 3063 | `Action	win	1` | yes |
-| Script line 3094 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Script line 3196 | `Action	win	1` | yes |
+| Script line 2907 | `Action	objectiveid	1	highcairn-o05	Bring the stone to your heart.` | yes |
+| Script line 3059 | `Action	win	1` | yes |
+| Script line 3090 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3191 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -737,7 +737,7 @@ File: `levels/campaign/Highcairn.level`.
 | main | `highcairn-main-terraces`: Climb the four terraces in order. | `mainTerraces`: Cond	flag	goalTerrace4	1 |
 | main | `highcairn-main-captain`: Defeat the watch captain and open the hold. | `mainCaptain`: Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1 |
 | main | `highcairn-main-warden`: Defeat Hilde Cairn in her hold and all enemy forces. | `mainWarden`: Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies |
-| main | `highcairn-main-stone`: If found, bring the cairn spirit and stone home. | `mainStone`: Cond	flag	stoneDone	1 |
+| main | `highcairn-main-stone`: If found, bring the stone home. | `mainStone`: Cond	flag	stoneDone	1 |
 | optional | `highcairn-extra-caldera`: Explore the southern caldera. | `extraCaldera`: Cond	region	1	Caldera |
 
 Possible route (static, not a playthrough):
@@ -745,13 +745,13 @@ Possible route (static, not a playthrough):
 - Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.
 - Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.
 - Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.
-- Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both home triggers require the actual stone and ownership. Repeated replacement waits until CairnBearer2 is absent, including its corpse, so the new creature receives the exact name. A failed spawn cannot attach a stone to a missing or dead creature and is retried while absent. Hand transport remains pending.
+- After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
 - Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.
 
-Partial: stone hand transport remains unresolved. Repeated replacement now waits for the named predecessor to leave the map; actual death/removal, population-cap retry and save/load still need runtime verification.
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
-| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	carryingstone	CairnBearer; Cond	owns	1	CairnBearer; Cond	reached	CairnBearer	heart	1` | yes |
-| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	carryingstone	CairnBearer2; Cond	owns	1	CairnBearer2; Cond	reached	CairnBearer2	heart	1` | yes |
+| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	deliveredstone	cairn-stone; Cond	flag	stoneDone	0` | yes |
+| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	deliveredstone	cairn-stone; Cond	flag	stoneDone	0` | yes |
 | Trigger `goalHeartSafe3BeforeWardenSlain` | `Action	objectivestate	1	highcairn-o03	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalTerrace4` | `Action	objectivestate	1	highcairn-o02	reached`; conditions: `Cond	region	1	Terrace4; Cond	flag	goalTerrace3	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	highcairn-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
@@ -766,7 +766,7 @@ Partial: stone hand transport remains unresolved. Repeated replacement now waits
 | Trigger `mainStone` | `Action	objectivestate	1	highcairn-main-stone	reached`; conditions: `Cond	flag	stoneDone	1` | yes |
 | Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
 | Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
-| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with hand transport/repeated replacement still under audit |
+| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified |
 
 ## HollinFen
 
@@ -780,7 +780,7 @@ File: `levels/campaign/HollinFen.level`.
 | Script line 3425 | `Action	objectiveid	1	hollinfen-o02	Defend your heart against convent patrols.` | yes |
 | Script line 3452 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
 | Script line 3461 | `Action	objectiveid	1	hollinfen-o04	Reach the chapel and kill Agathe Hollin.` | yes |
-| Script line 3572 | `Action	win	1` | yes |
+| Script line 3569 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -797,10 +797,10 @@ Possible route (static, not a playthrough):
 - Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.
 - Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.
 - Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.
-- Finding SealedHollow (2,50)-(10,58) is voluntary. If found, the own HollowBearer spawned at (6,54) must carry the actual attached stone to the own heart. Original replacement after death and CrowshotGallery discovery are retained; hand transport remains a separate unresolved mechanic.
+- After optional discovery, a worker collects hollow-stone from (5, 54) beside HollowBearer and visibly carries the same item to the own heart at (12, 12). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
 - Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged.
 
-Supply geometry and resource route are static necessary evidence; egg/bed use, combat, stone hand transport and save/load still require further verification. Hand transport decision pending.
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
 | Trigger `wardEntered` | `Action	objectivestate	1	hollinfen-o03	reached`; conditions: `Cond	region	1	Ward` | yes |
 | Trigger `goalHeartSafe2BeforeWardenSlain` | `Action	objectivestate	1	hollinfen-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
@@ -975,11 +975,11 @@ File: `levels/campaign/Lanternhill.level`.
 | Script line 3066 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
 | Script line 3067 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
 | Script line 3068 | `Action	objectiveid	1	lanternhill-o03	Defend your heart against the hill patrols.` | yes |
-| Script line 3201 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3216 | `Action	win	1` | yes |
-| Script line 3221 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3223 | `Action	win	1` | yes |
-| Script line 3304 | `Action	win	1` | yes |
+| Script line 3198 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3213 | `Action	win	1` | yes |
+| Script line 3218 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3220 | `Action	win	1` | yes |
+| Script line 3301 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -998,7 +998,7 @@ Possible route (static, not a playthrough):
 - Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.
 - Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain.
 
-Static necessary evidence only; combat, claiming, save/load and stone hand transport remain unverified. Hand transport decision pending.
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
 | Trigger `goalRingGroundPathOpened` | `Action	objectivestate	1	lanternhill-o02	reached`; conditions: `Cond	groundconnected	1	13	57	40	22` | yes |
 | Trigger `goalHeartSafe3BeforeRivalHeartDown` | `Action	objectivestate	1	lanternhill-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
@@ -1012,7 +1012,7 @@ Static necessary evidence only; combat, claiming, save/load and stone hand trans
 | Trigger `extraLamp` | `Action	objectivestate	1	lanternhill-extra-lamp	reached`; conditions: `Cond	region	1	LampRoom` | yes |
 | Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed |
 | Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: actual northern rival heart destroyed and all remaining enemies |
-| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates actual owned stone delivery |
+| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates delivery of the actual floor stone by a worker |
 lanternhill-o02 requires an actual current dry worker path from (13,57) to (40,22), including legal alternative digging routes; no fixed plug subset is required.
 
 ## Mirewatch
@@ -1464,8 +1464,8 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1711 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
 | Script line 1719 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
 | Script line 1737 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
-| Script line 1821 | `Action	win	1` | yes |
-| Script line 1827 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1818 | `Action	win	1` | yes |
+| Script line 1824 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
 
 ### Main and optional goals
 
@@ -1482,10 +1482,10 @@ Possible route (static, not a playthrough):
 - Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.
 - At the existing 90-second scout order, the make action enables previously blocked spellPossess. Its mana price and upkeep are unchanged. Possess an own living creature and enter Seams (14,8)-(50,34).
 - Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.
-- Before the final main goal, optionally enter SealedVault (61,46)-(71,54). This activates the stone requirement; bring VaultBearer from (66,50) to the own heart. The original repeat60 respawn remains available after bearer loss. Home completion now also verifies the actual attached stone and player ownership, not the carrier name alone.
+- After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
 - Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required.
 
-Conditional transport and replacement routes still require runtime verification; this is a static source/resource route, not a playthrough.
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
 | Trigger `seamsFilled` | `Action	objectivestate	1	tinmoor-o02	reached`; conditions: `Cond	mined	1	>=	900` | yes |
 | Trigger `goalPostACleared` | `Action	objectivestate	1	tinmoor-o03	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1` | yes |
@@ -1500,7 +1500,7 @@ Conditional transport and replacement routes still require runtime verification;
 | Trigger `extraGold` | `Action	objectivestate	1	tinmoor-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	tinmoor-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals |
-| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: finding the vault is voluntary, but discovery activates actual owned stone-carrier delivery before victory |
+| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory |
 
 ## TwistingHalls
 

@@ -2895,24 +2895,22 @@ Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.
 Name	cairnStone
 Mode	once
 Cond	time	3
-Action	stonecreate	5	21
+Action	stonecreate	5	21	cairn-stone	1	12	60
 [/Trigger]
 [Trigger]
 Name	sealedFound
 Mode	once
 Cond	region	1	CairnHall
-Action	message	1	A cairn at the end of the third terrace has been bricked in, and a hidden hall lies behind it. A pale stone rests on a plinth, and a bound cairn spirit rises beside it and takes the stone up. Carry it home to your own heart.
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
 Action	spawn	1	5	22	1	Spider:3@CairnBearer
-Action	stoneattach	CairnBearer
 Action	setflag	bearerOut	1
-Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.
+Action	objectiveid	1	highcairn-o05	Bring the stone to your heart.
 [/Trigger]
 [Trigger]
 Name	stoneHome
 Mode	once
-Cond	carryingstone	CairnBearer
-Cond	owns	1	CairnBearer
-Cond	reached	CairnBearer	heart	1
+Cond	deliveredstone	cairn-stone
+Cond	flag	stoneDone	0
 Action	message	1	The pale stone has reached your heart and a hidden land has opened.
 Action	setflag	stoneDone	1
 Action	discover	campaign/SkittleCavern.level
@@ -2925,16 +2923,14 @@ Cond	flag	bearerOut	1
 Cond	flag	stoneDone	0
 Cond	alive	CairnBearer	0
 Cond	event	CairnBearer2	created	==	0
-Action	message	1	The cairn spirit has fallen. Another one rises from the plinth to carry the stone.
+Action	message	1	Another spirit rises. Send a worker for the stone.
 Action	spawn	1	5	22	1	Spider:3@CairnBearer2
-Action	stoneattach	CairnBearer2
 [/Trigger]
 [Trigger]
 Name	stoneHome2
 Mode	once
-Cond	carryingstone	CairnBearer2
-Cond	owns	1	CairnBearer2
-Cond	reached	CairnBearer2	heart	1
+Cond	deliveredstone	cairn-stone
+Cond	flag	stoneDone	0
 Action	message	1	The pale stone has reached your heart and a hidden land has opened.
 Action	setflag	stoneDone	1
 Action	discover	campaign/SkittleCavern.level
@@ -3104,7 +3100,6 @@ Cond	trigger	bearerLost
 Cond	flag	stoneDone	0
 Cond	event	CairnBearer2	created	==	0
 Action	spawn	1	5	22	1	Spider:3@CairnBearer2
-Action	stoneattach	CairnBearer2
 [/Trigger]
 [Trigger]
 Name	mainGoalList
@@ -3120,7 +3115,7 @@ Action	optionalobjectiveid	1	highcairn-extra-caldera	Explore the southern calder
 Name	mainStoneList
 Mode	once
 Cond	trigger	sealedFound
-Action	conditionalobjectiveid	1	highcairn-main-stone	If found, bring the cairn spirit and stone home.
+Action	conditionalobjectiveid	1	highcairn-main-stone	If found, bring the stone home.
 [/Trigger]
 [Trigger]
 Name	mainHeartLost
