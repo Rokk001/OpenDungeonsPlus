@@ -94,6 +94,8 @@ BRIEFING_MATCH["Ebonrook"] = {2: "yes: 300actualgold,14realbeds,coop,own heart a
 
 BRIEFING_MATCH["Silverdeep"] = {2: "yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection", 3: "yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes"}
 
+BRIEFING_MATCH["Wraithwood"] = {3: "yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1734,6 +1736,16 @@ def self_test(root):
             ("Cond\tregion\t1\tGallery", "Cond\tregion\t1\tWestBank")):
         assert needle in silver
         assert grouped_goal_errors(silver.replace(needle, replacement), "Silverdeep"), "Silverdeep requirement weakening must fail: " + needle
+    wraith = (root / "levels/campaign/Wraithwood.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(wraith, "Wraithwood")
+    for needle, replacement in (
+            ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\tgoalmet\t1\tKillAllEnemies"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tgoalmet\t1\tKillAllEnemies"),
+            ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\troomtiles\t2\tDungeonTemple\t<=\t0"),
+            ("Cond\tobjective\t1\twraithwood-main-forces\treached", "Cond\ttime\t5"),
+            ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tWestGlade")):
+        assert needle in wraith
+        assert grouped_goal_errors(wraith.replace(needle, replacement), "Wraithwood"), "Wraithwood must retain independent heart completion: " + needle
     print("campaign playability self-test passed")
 
 

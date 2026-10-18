@@ -10562,5 +10562,218 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe last rival lies dead beside his silver. Silverdeep answers to you."
     }
+  },
+  "Wraithwood": {
+    "goals": {
+      "wraithwood-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wraithwood-main-witch": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy the northwestern witch heart.",
+        "completion": "mainWitch",
+        "conditions": [
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wraithwood-main-rival": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy the northeastern rival heart.",
+        "completion": "mainRival",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wraithwood-main-forces": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat all remaining enemy forces.",
+        "completion": "mainForces",
+        "conditions": [
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wraithwood-extra-grove": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the hidden western grove.",
+        "completion": "extraGrove",
+        "conditions": [
+          "Cond\tregion\t1\tSealedGrove"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "wraithwood-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\twraithwood-main-heart\treached",
+          "Cond\tobjective\t1\twraithwood-main-witch\treached",
+          "Cond\tobjective\t1\twraithwood-main-rival\treached",
+          "Cond\tobjective\t1\twraithwood-main-forces\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "mist": [
+        "Cond\ttime\t3"
+      ],
+      "westGlade": [
+        "Cond\tregion\t1\tWestGlade"
+      ],
+      "grove": [
+        "Cond\tregion\t1\tSealedGrove"
+      ],
+      "southGlade": [
+        "Cond\tregion\t1\tSouthGlade"
+      ],
+      "middle": [
+        "Cond\tregion\t1\tMiddleGlade"
+      ],
+      "covenStirs": [
+        "Cond\tregion\t1\tWitchHold"
+      ],
+      "keeperStirs": [
+        "Cond\tregion\t1\tRivalKeep"
+      ],
+      "bond": [
+        "Cond\ttime\t900"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t4000"
+      ],
+      "goalHeartSafe3BeforeBothFallGoal": [
+        "Cond\tgoal\t1\tKillAllEnemies",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
+      ],
+      "goalHeartLost3": [
+        "Cond\troom\t1\tDungeonTemple\t==\t0"
+      ],
+      "gladeWell": [
+        "Cond\tslabs\t1\tWestGlade\tclaimed\t>=\t40"
+      ]
+    },
+    "preserved_actions": {
+      "mist": [
+        "Action\tmessage\t1\tMaster, Wraithwood is a forest of grey trunks and drifting fog, and Witch-Warden Elowen Ash has bound a rival keeper to her cause. Their two hearts lie at opposite corners of the wood.",
+        "Action\tobjectiveid\t1\twraithwood-o01\tDestroy the witch-warden's heart in the north-west.",
+        "Action\tobjectiveid\t1\twraithwood-o02\tDestroy the rival heart in the north-east.",
+        "Action\tobjectiveid\t1\twraithwood-o03\tDefend your heart against the kingdom's heroes."
+      ],
+      "westGlade": [
+        "Action\tmessage\t1\tThe west glade. The witch-warden's road climbs north from here, closed with earth, and a creek bars the way east."
+      ],
+      "grove": [
+        "Action\tmessage\t1\tA grove the fog had hidden. Someone buried a hoard under the roots long ago.",
+        "Action\tgold\t1\t900"
+      ],
+      "southGlade": [
+        "Action\tmessage\t1\tThe south glade. The road east runs to the hero portal. Every column of the kingdom will come this way.",
+        "Action\treveal\t1\tPortalCave"
+      ],
+      "middle": [
+        "Action\tmessage\t1\tThe middle glade. The witch and the keeper watch it from both sides, and what one of them sees the other hears.",
+        "Action\treveal\t1\tNorthGlade",
+        "Action\treveal\t1\tEastGlade"
+      ],
+      "covenStirs": [
+        "Action\tmessage\t1\tElowen Ash has seen you. Her coven comes to the gate.",
+        "Action\tspawn\t3\t28\t15\t1\tDarkElf:5\tCultist:5\tLizardMan:5\tSpider:5"
+      ],
+      "keeperStirs": [
+        "Action\tmessage\t1\tThe rival keeper has called out every pack he owns.",
+        "Action\tspawn\t2\t71\t15\t1\tTroll:5\tOrc:5\tOrc:5\tGoblin:5"
+      ],
+      "bond": [
+        "Action\tmessage\t1\tThe witch-warden and the rival keeper have sent one pack to each other. Whichever heart you strike, the other will answer.",
+        "Action\tspawn\t2\t28\t15\t1\tOrc:5\tTroll:5\tGoblin:5",
+        "Action\tspawn\t3\t71\t15\t1\tDarkElf:5\tCultist:5\tSpider:5"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe wood's seams are paying. The heroes will not wait for you to finish building."
+      ],
+      "goalHeartSafe3BeforeBothFallGoal": [
+        "Action\tobjectivestate\t1\twraithwood-o03\treached"
+      ],
+      "goalHeartLost3": [
+        "Action\tobjectivestate\t1\twraithwood-o03\tfailed"
+      ],
+      "gladeWell": [
+        "Action\tmessage\t1\tThe west glade is yours, master, and the fog over its middle has thinned to a spring of mana. Claim it with a worker.",
+        "Action\tterrain\t17\t52\t17\t52\tmanawell"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "WitchHold": {
+          "bounds": [
+            7,
+            8,
+            30,
+            27
+          ],
+          "minimum_open_tiles": 25
+        },
+        "RivalKeep": {
+          "bounds": [
+            72,
+            8,
+            92,
+            26
+          ],
+          "minimum_open_tiles": 25
+        },
+        "SealedGrove": {
+          "bounds": [
+            2,
+            36,
+            9,
+            45
+          ],
+          "minimum_open_tiles": 43
+        }
+      }
+    },
+    "route": [
+      "Protect the own heart through victory. Destroy actual northwest witch DungeonTemple2,seat3,original25fields(16..20,16..20). Its dedicated goal checks only that actual heart state,not the last enemy.",
+      "Destroy actual northeast rival DungeonTemple3,seat2,original25fields(80..84,14..18). Its dedicated goal likewise checks only that actual heart state,independent of the witch and remaining enemies. Either destruction order is valid.",
+      "Defeat remaining enemy forces/portals as a separate main goal. This separates the matrix combined rival-heart/enemy duty so both individual heart icons can change immediately instead of waiting for global clearance. Four main goals remain within the approved2..5range.",
+      "Optionally enter hidden western SealedGrove(2,36)-(9,45),43reachable open dry fields. Retain original900gold reward. All spawns,bond reinforcements,mana spring and geometry remain unchanged.",
+      "The exact unchanged victory sentence is emitted once after all four current main goals. Original bothFall/bothFallGoal requests remain pending."
+    ],
+    "runtime_limit": "Static heart-seat/location and region evidence only; actual heart destruction, combat, icon updates and save/load need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours."
+    }
   }
 }

@@ -1451,11 +1451,38 @@ File: `levels/campaign/Wraithwood.level`.
 | Script line 4773 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
 | Script line 4774 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
 | Script line 4835 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4852 | `Action	win	1` | yes |
-| Script line 4857 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4861 | `Action	win	1` | yes |
+| Script line 4851 | `Action	win	1` | yes |
+| Script line 4856 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4859 | `Action	win	1` | yes |
+| Script line 4924 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `wraithwood-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `wraithwood-main-witch`: Destroy the northwestern witch heart. | `mainWitch`: Cond	roomtiles	3	DungeonTemple	<=	0 |
+| main | `wraithwood-main-rival`: Destroy the northeastern rival heart. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0 |
+| main | `wraithwood-main-forces`: Defeat all remaining enemy forces. | `mainForces`: Cond	goalmet	1	KillAllEnemies |
+| optional | `wraithwood-extra-grove`: Explore the hidden western grove. | `extraGrove`: Cond	region	1	SealedGrove |
+
+Possible route (static, not a playthrough):
+- Protect the own heart through victory. Destroy actual northwest witch DungeonTemple2,seat3,original25fields(16..20,16..20). Its dedicated goal checks only that actual heart state,not the last enemy.
+- Destroy actual northeast rival DungeonTemple3,seat2,original25fields(80..84,14..18). Its dedicated goal likewise checks only that actual heart state,independent of the witch and remaining enemies. Either destruction order is valid.
+- Defeat remaining enemy forces/portals as a separate main goal. This separates the matrix combined rival-heart/enemy duty so both individual heart icons can change immediately instead of waiting for global clearance. Four main goals remain within the approved2..5range.
+- Optionally enter hidden western SealedGrove(2,36)-(9,45),43reachable open dry fields. Retain original900gold reward. All spawns,bond reinforcements,mana spring and geometry remain unchanged.
+- The exact unchanged victory sentence is emitted once after all four current main goals. Original bothFall/bothFallGoal requests remain pending.
+
+Static heart-seat/location and region evidence only; actual heart destruction, combat, icon updates and save/load need runtime verification.
+
 | Trigger `goalHeartSafe3BeforeBothFallGoal` | `Action	objectivestate	1	wraithwood-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	wraithwood-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `bothFallGoal` | `Action	objectivestate	1	wraithwood-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `bothFallGoal` | `Action	objectivestate	1	wraithwood-o02	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: ProtectDungeonTemple and KillAllEnemies include both rival temples |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	wraithwood-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	wraithwood-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainWitch` | `Action	objectivestate	1	wraithwood-main-witch	reached`; conditions: `Cond	roomtiles	3	DungeonTemple	<=	0` | yes |
+| Trigger `mainRival` | `Action	objectivestate	1	wraithwood-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
+| Trigger `mainForces` | `Action	objectivestate	1	wraithwood-main-forces	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGrove` | `Action	objectivestate	1	wraithwood-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
+| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately |
