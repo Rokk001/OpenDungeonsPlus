@@ -3055,7 +3055,7 @@ Action	win	1
 Name	sluiceKey
 Mode	once
 Cond	event	SluiceWarden	killed
-Action	stonedrop	SluiceWarden	sluice-key
+Action	stonedrop	SluiceWarden	sluice-key	1	9	76
 [/Trigger]
 [Trigger]
 Name	sluiceKeyFalls

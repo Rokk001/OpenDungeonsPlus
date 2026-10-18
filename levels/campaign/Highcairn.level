@@ -3062,7 +3062,7 @@ Action	win	1
 Name	holdKey
 Mode	once
 Cond	event	TerraceWatch8	killed
-Action	stonedrop	TerraceWatch8	hold-key
+Action	stonedrop	TerraceWatch8	hold-key	1	12	60
 [/Trigger]
 [Trigger]
 Name	holdSealBreaks

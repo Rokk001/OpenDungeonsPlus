@@ -5935,7 +5935,7 @@ Action	terrain	80	8	80	8	path
 Name	watchKey
 Mode	once
 Cond	event	MoraFenwick	killed
-Action	stonedrop	MoraFenwick	watch-key
+Action	stonedrop	MoraFenwick	watch-key	1	16	112
 [/Trigger]
 [Trigger]
 Name	keyDropped

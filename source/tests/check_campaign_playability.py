@@ -952,15 +952,20 @@ def grouped_goal_errors(text, level_name):
         # A delivery tile must be dry, reachable and inside the original consumer region.
         for identity, delivery in proof.get("mission_deliveries", {}).items():
             target = tuple(delivery["tile"])
-            x1, y1, x2, y2 = delivery["bounds"]
-            region = re.search(r"^Region\s+" + re.escape(delivery["region"]) +
-                               r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
-            if not region or list(map(int, region.groups())) != delivery["bounds"]:
-                errors.append("mission delivery region changed: " + identity)
+            inside_receiving_area = True
+            if "region" in delivery:
+                x1, y1, x2, y2 = delivery["bounds"]
+                region = re.search(r"^Region\s+" + re.escape(delivery["region"]) +
+                                   r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
+                if not region or list(map(int, region.groups())) != delivery["bounds"]:
+                    errors.append("mission delivery region changed: " + identity)
+                inside_receiving_area = x1 <= target[0] <= x2 and y1 <= target[1] <= y2
+            else:
+                inside_receiving_area = any(room[0] == 1 and room[2] == delivery["seat"] and target in room[3]
+                                            for room in level["rooms"])
             tile = level["tiles"].get(target)
-            if target not in area or tile is None or tile[1] != 0 or tile[0] in (4, 5) or not (
-                    x1 <= target[0] <= x2 and y1 <= target[1] <= y2):
-                errors.append("mission delivery tile is not reachable dry ground inside its original region: " + identity)
+            if target not in area or tile is None or tile[1] != 0 or tile[0] in (4, 5) or not inside_receiving_area:
+                errors.append("mission delivery tile is not reachable dry ground in its reviewed receiving area: " + identity)
             drops = [row.split() for rows in blocks.values() for row in rows
                      if row.startswith("Action\tstonedrop\t") and row.split()[3] == identity]
             expected_target = list(map(str, (delivery["seat"], *target)))

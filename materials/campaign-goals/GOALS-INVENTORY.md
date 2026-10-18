@@ -600,6 +600,7 @@ Possible route (static, not a playthrough):
 - Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.
 - Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.
 - Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals.
+- If the mission is still running after the owner dies, a worker may bring rook-key to the own heart at (64, 14) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
 
 Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.
 
@@ -649,6 +650,7 @@ Possible route (static, not a playthrough):
 - After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.
 - Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.
 - Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.
+- If the mission is still running after the owner dies, a worker may bring treasurer-key to the own heart at (14, 74) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
 
 Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.
 
@@ -695,6 +697,7 @@ Possible route (static, not a playthrough):
 - Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.
 - Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.
 - Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged.
+- If the mission is still running after the owner dies, a worker may bring sluice-key to the own heart at (9, 76) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
 
 Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification.
 
@@ -747,6 +750,7 @@ Possible route (static, not a playthrough):
 - Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.
 - After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
 - Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.
+- If the mission is still running after the owner dies, a worker may bring hold-key to the own heart at (12, 60) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
 
 Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
@@ -844,6 +848,8 @@ Possible route (static, not a playthrough):
 - Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.
 - Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.
 - Optionally visit WestTower3; it is not one of the required gate towers.
+- If the mission is still running after the owner dies, a worker may bring lower-gate-key to the own heart at (58, 100) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
+- If the mission is still running after the owner dies, a worker may bring upper-gate-key to the own heart at (58, 100) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
 
 Static conditions only; full movement, claiming, combat, treasury payout and save/load remain unverified.
 
@@ -1048,6 +1054,7 @@ Possible route (static, not a playthrough):
 - Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.
 - MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.
 - Move the identical victory sentence after all current main observers, retaining the original pending win request.
+- If the mission is still running after the owner dies, a worker may bring watch-key to the own heart at (16, 112) for storage. This adds no objective, reward, gate prerequisite or victory prerequisite; existing automatic openings and mission ending remain unchanged.
 
 Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.
 
