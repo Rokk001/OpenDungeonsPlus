@@ -92,6 +92,8 @@ BRIEFING_MATCH["Bellwick"] = {3: "yes: heart protected through the unchanged two
 
 BRIEFING_MATCH["Ebonrook"] = {2: "yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge", 3: "yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes"}
 
+BRIEFING_MATCH["Silverdeep"] = {2: "yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection", 3: "yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1038,7 +1040,16 @@ def grouped_goal_errors(text, level_name):
             bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
             food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
             cost = len(occupied_beds - dorm[2]) * bed_cost + len(hatch_tiles - hatch[2]) * food_cost
-            if cost != supply["cost"] or cost > supply["starting_gold"] or int(level["seats"][level["human"]]["gold"]) != supply["starting_gold"]:
+            budget = supply["starting_gold"]
+            income = supply.get("mining_income")
+            if income:
+                rows = blocks.get(income["trigger"], [])
+                condition = "Cond\tmined\t" + str(level["human"]) + "\t>=\t" + str(income["amount"])
+                gift = "Action\tgold\t" + str(level["human"]) + "\t" + str(income["gift"])
+                if [row for row in rows if row.startswith("Cond\t")] != [condition] or gift not in rows:
+                    errors.append("supply mining income source differs")
+                budget += income["amount"] + income["gift"]
+            if cost != supply["cost"] or cost > budget or int(level["seats"][level["human"]]["gold"]) != supply["starting_gold"]:
                 errors.append("original supply expansion budget differs")
             human = next(block for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S)
                          if re.search(r"seatId\s+" + str(level["human"]) + r"\b", block))
@@ -1710,6 +1721,19 @@ def self_test(root):
             ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tNorthEast")):
         assert needle in ebon
         assert grouped_goal_errors(ebon.replace(needle, replacement), "Ebonrook"), "Ebonrook requirement weakening must fail: " + needle
+    silver = (root / "levels/campaign/Silverdeep.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(silver, "Silverdeep")
+    for needle, replacement in (
+            ("Cond\tmined\t1\t>=\t400", "Cond\tmined\t1\t>=\t40"),
+            ("Cond\tfurniture\t1\tDormitory\t>=\t6", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
+            ("Cond\tcrossed\t1\tMainLakeA\twest\tafter\tmainSetup", "Cond\tregion\t1\tWestBank"),
+            ("Cond\tcrossed\t1\tMainLakeAAdded\twest\tafter\tfirstSpanReady", "Cond\tcrossed\t1\tMainLakeAAdded\twest"),
+            ("Cond\tcrossed\t1\tMainLakeB\tsouth\tafter\tmainSetup", "Cond\tcrossed\t1\tMainLakeB\tsouth"),
+            ("Cond\troomtiles\t4\tDungeonTemple\t<=\t0", "Cond\tcreatures\t4\t<=\t0"),
+            ("Action\tgold\t1\t700", "Action\tgold\t1\t70"),
+            ("Cond\tregion\t1\tGallery", "Cond\tregion\t1\tWestBank")):
+        assert needle in silver
+        assert grouped_goal_errors(silver.replace(needle, replacement), "Silverdeep"), "Silverdeep requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 

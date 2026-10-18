@@ -1035,13 +1035,39 @@ File: `levels/campaign/Silverdeep.level`.
 | Script line 4539 | `Action	objectiveid	1	silverdeep-o01	Destroy every rival keeper's heart.` | yes |
 | Script line 4540 | `Action	objectiveid	1	silverdeep-o02	Cross all three lakes by the wooden bridges.` | yes |
 | Advisory hint line 4541 | `Action	hint	1	Mine silver first.` | not an objective; no state required |
-| Script line 4842 | `Action	win	1` | yes |
-| Script line 4847 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4850 | `Action	win	1` | yes |
+| Script line 4841 | `Action	win	1` | yes |
+| Script line 4846 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4848 | `Action	win	1` | yes |
+| Script line 5046 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `silverdeep-main-home`: Mine 400 gold; build 6 beds and a coop; guard your heart. | `mainHome`: Cond	mined	1	>=	400; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `silverdeep-main-lakes`: Cross all three lakes by the wooden bridges. | `mainLakes`: Cond	flag	mainLake1	1; Cond	flag	mainLake2	1; Cond	flag	mainLake3	1 |
+| main | `silverdeep-main-rivals`: Destroy all three rival hearts and enemy forces. | `mainRivals`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `silverdeep-extra-gallery`: Explore the hidden northwestern silver gallery. | `extraGallery`: Cond	region	1	Gallery |
+
+Possible route (static, not a playthrough):
+- First mine400actualgold and supply all6initialfighters with6realbeds and a coop; protect the heart. Delver1/5Troll2x2,Delver2/6Spider1x1,Delver3DarkElf1x2,Delver4Cultist1x2,total14bedfields.
+- Concrete bed layout:Delver1(62..63,14..15),Delver5(64..65,14..15),Delver3(62,16..17),Delver4(63,16..17),Delver2(64,16),Delver6(65,16). Uses original6dormfields plus8newfields,736gold. Extend existing hatchery(72..74,16..17)by row18for330gold. Total1066below actual400mined+700firstSilver gift=1100; no new reward or skipped initial supply.
+- Only after the setup milestone, physically cross all3lakes. LakeA west via original WoodenBridge1(22..42,30..31)OR added spanA row(22..42,29)after both setup and spanA. Accept both actual valid tracks. LakeB south via original WoodenBridge2(56..57,50..66),including the existing column reinforced by spanB. LakeC west via original WoodenBridge3(20..40,86..87),including spanC row86. No order between the three crossings is invented.
+- Each crossing uses one own living creature from one dry bank through the full rectangle to the opposite bank. Visits, mixed creatures and crossings before setup do not count. All original footprints, banks and exact added spanA terrain action remain checked/preserved.
+- Destroy actual rival hearts of seats2,3,4 and all remaining foes/portals. Optionally enter Gallery,66reachable open fields,retaining original1500gold reward. Preserve20torchwaves,pacts,vault alternatives and portal timing.
+- The unchanged duplicate victory sentence is emitted once after all current main goals. Original win requests remain pending.
+
+Static supply/source/bridge/bank evidence only; actual construction, movement over both first-lake tracks, battles and save/load need runtime verification.
+
 | Trigger `goalSilverdeepAllSpans` | `Action	objectivestate	1	silverdeep-o02	reached`; conditions: `Cond	flag	goalSilverdeepCross1	1; Cond	flag	goalSilverdeepCross2	1; Cond	flag	goalSilverdeepCross3	1` | yes |
 | Trigger `silverWonGoal` | `Action	objectivestate	1	silverdeep-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | You arrive without gold, so mine first and build your force. | no: mining/building are not independent goals |
-| Briefing | Bridge three deep lakes with wooden spans and destroy all three rival hearts before their pacts overwhelm you. | no: enemy temples are checked; building exactly three wooden spans is not a winning condition |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	silverdeep-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	silverdeep-main-home	reached`; conditions: `Cond	mined	1	>=	400; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainLakes` | `Action	objectivestate	1	silverdeep-main-lakes	reached`; conditions: `Cond	flag	mainLake1	1; Cond	flag	mainLake2	1; Cond	flag	mainLake3	1` | yes |
+| Trigger `mainRivals` | `Action	objectivestate	1	silverdeep-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGallery` | `Action	objectivestate	1	silverdeep-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
+| Briefing | You arrive without gold, so mine first and build your force. | yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection |
+| Briefing | Bridge three deep lakes with wooden spans and destroy all three rival hearts before their pacts overwhelm you. | yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes |
 
 ## SkittleCavern
 

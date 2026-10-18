@@ -4838,14 +4838,12 @@ Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
 Cond	creatures	4	<=	0
-Action	message	1	The last rival lies dead beside his silver. Silverdeep answers to you.
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	silverWonGoal
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The last rival lies dead beside his silver. Silverdeep answers to you.
 Action	objectivestate	1	silverdeep-o01	reached
 Action	win	1
 [/Trigger]
@@ -4946,4 +4944,105 @@ Action	terrain	80	90	80	96	path
 Action	setflag	vaultOpen	1
 [/Trigger]
 
+
+Region	MainLakeA	22	30	42	31
+Region	MainLakeAAdded	22	29	42	29
+Region	MainLakeB	56	50	57	66
+Region	MainLakeC	20	86	40	87
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	silverdeep-main-home	Mine 400 gold; build 6 beds and a coop; guard your heart.
+Action	mainobjectiveid	1	silverdeep-main-lakes	Cross all three lakes by the wooden bridges.
+Action	mainobjectiveid	1	silverdeep-main-rivals	Destroy all three rival hearts and enemy forces.
+Action	optionalobjectiveid	1	silverdeep-extra-gallery	Explore the hidden northwestern silver gallery.
+[/Trigger]
+[Trigger]
+Name	mainSetup
+Mode	once
+Cond	mined	1	>=	400
+Cond	furniture	1	Dormitory	>=	6
+Cond	furniture	1	Hatchery	>=	1
+Cond	goalmet	1	ProtectDungeonTemple
+Action	setflag	mainSetupDone	1
+[/Trigger]
+[Trigger]
+Name	firstSpanReady
+Mode	once
+Cond	trigger	mainSetup
+Cond	trigger	spanA
+Action	setflag	firstSpanReady	1
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	silverdeep-main-home	failed
+[/Trigger]
+[Trigger]
+Name	crossLakeA
+Mode	once
+Cond	crossed	1	MainLakeA	west	after	mainSetup
+Action	setflag	mainLake1	1
+[/Trigger]
+[Trigger]
+Name	crossLakeAAdded
+Mode	once
+Cond	crossed	1	MainLakeAAdded	west	after	firstSpanReady
+Action	setflag	mainLake1	1
+[/Trigger]
+[Trigger]
+Name	crossLakeB
+Mode	once
+Cond	crossed	1	MainLakeB	south	after	mainSetup
+Action	setflag	mainLake2	1
+[/Trigger]
+[Trigger]
+Name	crossLakeC
+Mode	once
+Cond	crossed	1	MainLakeC	west	after	mainSetup
+Action	setflag	mainLake3	1
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	mined	1	>=	400
+Cond	furniture	1	Dormitory	>=	6
+Cond	furniture	1	Hatchery	>=	1
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	silverdeep-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainLakes
+Mode	repeat	0
+Cond	flag	mainLake1	1
+Cond	flag	mainLake2	1
+Cond	flag	mainLake3	1
+Action	objectivestate	1	silverdeep-main-lakes	reached
+[/Trigger]
+[Trigger]
+Name	mainRivals
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	roomtiles	3	DungeonTemple	<=	0
+Cond	roomtiles	4	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	silverdeep-main-rivals	reached
+[/Trigger]
+[Trigger]
+Name	extraGallery
+Mode	once
+Cond	region	1	Gallery
+Action	objectivestate	1	silverdeep-extra-gallery	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	silverdeep-main-home	reached
+Cond	objective	1	silverdeep-main-lakes	reached
+Cond	objective	1	silverdeep-main-rivals	reached
+Action	message	1	The last rival lies dead beside his silver. Silverdeep answers to you.
+Action	win	1
+[/Trigger]
 [/Triggers]

@@ -9823,5 +9823,744 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tSabine Rook is dead and the rooks fly south. Ebonrook is yours."
     }
+  },
+  "Silverdeep": {
+    "goals": {
+      "silverdeep-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 400 gold; build 6 beds and a coop; guard your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t400",
+          "Cond\tfurniture\t1\tDormitory\t>=\t6",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "silverdeep-main-lakes": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross all three lakes by the wooden bridges.",
+        "completion": "mainLakes",
+        "conditions": [
+          "Cond\tflag\tmainLake1\t1",
+          "Cond\tflag\tmainLake2\t1",
+          "Cond\tflag\tmainLake3\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "silverdeep-main-rivals": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy all three rival hearts and enemy forces.",
+        "completion": "mainRivals",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t4\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "silverdeep-extra-gallery": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the hidden northwestern silver gallery.",
+        "completion": "extraGallery",
+        "conditions": [
+          "Cond\tregion\t1\tGallery"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainSetup": {
+        "conditions": [
+          "Cond\tmined\t1\t>=\t400",
+          "Cond\tfurniture\t1\tDormitory\t>=\t6",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainSetupDone\t1"
+        ]
+      },
+      "firstSpanReady": {
+        "conditions": [
+          "Cond\ttrigger\tmainSetup",
+          "Cond\ttrigger\tspanA"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tfirstSpanReady\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "silverdeep-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "crossLakeA": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainLakeA\twest\tafter\tmainSetup"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLake1\t1"
+        ]
+      },
+      "crossLakeAAdded": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainLakeAAdded\twest\tafter\tfirstSpanReady"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLake1\t1"
+        ]
+      },
+      "crossLakeB": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainLakeB\tsouth\tafter\tmainSetup"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLake2\t1"
+        ]
+      },
+      "crossLakeC": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainLakeC\twest\tafter\tmainSetup"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLake3\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tsilverdeep-main-home\treached",
+          "Cond\tobjective\t1\tsilverdeep-main-lakes\treached",
+          "Cond\tobjective\t1\tsilverdeep-main-rivals\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe last rival lies dead beside his silver. Silverdeep answers to you.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "descent": [
+        "Cond\ttime\t3"
+      ],
+      "firstSilver": [
+        "Cond\tmined\t1\t>=\t400"
+      ],
+      "caveHeld": [
+        "Cond\tclaimed\t1\tCave\t30"
+      ],
+      "bankSeen": [
+        "Cond\tregion\t1\tEastBank"
+      ],
+      "westBank": [
+        "Cond\tregion\t1\tWestBank"
+      ],
+      "galleryOpen": [
+        "Cond\tregion\t1\tGallery"
+      ],
+      "midway": [
+        "Cond\tregion\t1\tMidway"
+      ],
+      "southBank": [
+        "Cond\tregion\t1\tSouthBank"
+      ],
+      "lakeC": [
+        "Cond\tregion\t1\tLakeC"
+      ],
+      "vaultOpen": [
+        "Cond\tregion\t1\tVault"
+      ],
+      "kills1": [
+        "Cond\tkills\t1\t>=\t30"
+      ],
+      "torch1": [
+        "Cond\ttime\t360"
+      ],
+      "torch2": [
+        "Cond\ttime\t550"
+      ],
+      "torch3": [
+        "Cond\ttime\t740"
+      ],
+      "torch4": [
+        "Cond\ttime\t930"
+      ],
+      "torch5": [
+        "Cond\ttime\t1120"
+      ],
+      "torch6": [
+        "Cond\ttime\t1310"
+      ],
+      "torch7": [
+        "Cond\ttime\t1500"
+      ],
+      "torch8": [
+        "Cond\ttime\t1690"
+      ],
+      "torch9": [
+        "Cond\ttime\t1880"
+      ],
+      "torch10": [
+        "Cond\ttime\t2070"
+      ],
+      "torch11": [
+        "Cond\ttime\t2260"
+      ],
+      "torch12": [
+        "Cond\ttime\t2450"
+      ],
+      "torch13": [
+        "Cond\ttime\t2640"
+      ],
+      "torch14": [
+        "Cond\ttime\t2830"
+      ],
+      "torch15": [
+        "Cond\ttime\t3020"
+      ],
+      "torch16": [
+        "Cond\ttime\t3210"
+      ],
+      "torch17": [
+        "Cond\ttime\t3400"
+      ],
+      "torch18": [
+        "Cond\ttime\t3590"
+      ],
+      "torch19": [
+        "Cond\ttime\t3780"
+      ],
+      "torch20": [
+        "Cond\ttime\t3970"
+      ],
+      "goalSilverdeepSpan1Path1Before": [
+        "Cond\tregion\t1\t43\t29\t43\t31"
+      ],
+      "goalSilverdeepSpan1Path1On": [
+        "Cond\tregion\t1\t22\t29\t42\t31",
+        "Cond\tflag\tgoalSilverdeepSpan1Path1Before\t1"
+      ],
+      "goalSilverdeepSpan1Path1After": [
+        "Cond\tregion\t1\t21\t29\t21\t31",
+        "Cond\tflag\tgoalSilverdeepSpan1Path1On\t1"
+      ],
+      "goalSilverdeepSpan2Path1Before": [
+        "Cond\tregion\t1\t56\t49\t57\t49"
+      ],
+      "goalSilverdeepSpan2Path1On": [
+        "Cond\tregion\t1\t56\t50\t57\t66",
+        "Cond\tflag\tgoalSilverdeepSpan2Path1Before\t1"
+      ],
+      "goalSilverdeepSpan2Path1After": [
+        "Cond\tregion\t1\t56\t67\t57\t67",
+        "Cond\tflag\tgoalSilverdeepSpan2Path1On\t1"
+      ],
+      "goalSilverdeepSpan3Path1Before": [
+        "Cond\tregion\t1\t41\t86\t41\t87"
+      ],
+      "goalSilverdeepSpan3Path1On": [
+        "Cond\tregion\t1\t20\t86\t40\t87",
+        "Cond\tflag\tgoalSilverdeepSpan3Path1Before\t1"
+      ],
+      "goalSilverdeepSpan3Path1After": [
+        "Cond\tregion\t1\t19\t86\t19\t87",
+        "Cond\tflag\tgoalSilverdeepSpan3Path1On\t1"
+      ],
+      "goalSilverdeepAllSpans": [
+        "Cond\tflag\tgoalSilverdeepCross1\t1",
+        "Cond\tflag\tgoalSilverdeepCross2\t1",
+        "Cond\tflag\tgoalSilverdeepCross3\t1"
+      ],
+      "pactSworn": [
+        "Cond\ttime\t4"
+      ],
+      "spanA": [
+        "Cond\tregion\t1\tEastBank"
+      ],
+      "spanB": [
+        "Cond\tregion\t1\tMidway"
+      ],
+      "spanC": [
+        "Cond\tregion\t1\tSouthBank"
+      ],
+      "pactBreaks": [
+        "Cond\tkills\t1\t>=\t45",
+        "Cond\tflag\tpactDone\t0"
+      ],
+      "pactBreaksLate": [
+        "Cond\ttime\t2600",
+        "Cond\tflag\tpactDone\t0"
+      ],
+      "portalWake": [
+        "Cond\ttime\t600",
+        "Cond\tflag\tportalOn\t0"
+      ],
+      "wardenKey": [
+        "Cond\ttime\t4"
+      ],
+      "keyDropped": [
+        "Cond\ttime\t5",
+        "Cond\talive\tDorianSilt\t0"
+      ],
+      "vaultKeyUsed": [
+        "Cond\tflag\tvaultOpen\t0",
+        "Cond\tstone\tVaultGate\t>=\t1"
+      ],
+      "vaultHoldFalls": [
+        "Cond\tflag\tvaultOpen\t0",
+        "Cond\tdefeated\t3"
+      ],
+      "vaultLate": [
+        "Cond\tflag\tvaultOpen\t0",
+        "Cond\ttime\t3300"
+      ]
+    },
+    "preserved_actions": {
+      "descent": [
+        "Action\tmessage\t1\tSilverdeep, master, the richest mines of the kingdom. Warden Dorian Silt has let three keepers dig his seams and now they are digging each other.",
+        "Action\tobjectiveid\t1\tsilverdeep-o01\tDestroy every rival keeper's heart.",
+        "Action\tobjectiveid\t1\tsilverdeep-o02\tCross all three lakes by the wooden bridges.",
+        "Action\thint\t1\tMine silver first.",
+        "Action\tportal\t1\toff"
+      ],
+      "firstSilver": [
+        "Action\tmessage\t1\tThe first silver is in your hands and your portal draws creatures again. Beds and food come before an army.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1",
+        "Action\tgold\t1\t700"
+      ],
+      "caveHeld": [
+        "Action\tmessage\t1\tYour cave is secure. A shaft runs south-west to the first lake and a long gallery runs down the east side.",
+        "Action\treveal\t1\tNorthShaft",
+        "Action\treveal\t1\tEastBank"
+      ],
+      "bankSeen": [
+        "Action\tmessage\t1\tThe first lake. A span crosses it to a western bank, and a second shaft drops south to the middle lake.",
+        "Action\treveal\t1\tLakeA",
+        "Action\treveal\t1\tMidway",
+        "Action\tspawn\t5\t45\t38\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "westBank": [
+        "Action\tmessage\t1\tThe west bank. The nearest hold belongs to a keeper who has watched your lamps all the way down. Something is walled up in the north.",
+        "Action\treveal\t1\tRival2",
+        "Action\treveal\t1\tGallery",
+        "Action\tspawn\t2\t16\t36\t1\tOrc:5\tTroll:5\tSpider:4"
+      ],
+      "galleryOpen": [
+        "Action\tmessage\t1\tA hidden gallery, its walls lined with silver. The first miners kept it for themselves.",
+        "Action\tgold\t1\t1500"
+      ],
+      "midway": [
+        "Action\tmessage\t1\tThe middle lake is the deepest. The eastern keeper and the western keeper have sworn to share what they win from you. Warden Dorian Silt stands here with the key to the sealed silver vault on his belt.",
+        "Action\treveal\t1\tLakeB",
+        "Action\treveal\t1\tSouthBank",
+        "Action\tspawn\t3\t55\t73\t1\tOrc:5\tTroll:5\tGoblin:5"
+      ],
+      "southBank": [
+        "Action\tmessage\t1\tThe south bank. The east hold is a short walk away and a long shaft runs on to the last lake.",
+        "Action\treveal\t1\tRival3",
+        "Action\treveal\t1\tLakeC",
+        "Action\tspawn\t5\t52\t75\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
+      ],
+      "lakeC": [
+        "Action\tmessage\t1\tThe last lake. The third keeper sits beyond its western bank, alone and angry.",
+        "Action\treveal\t1\tRival4",
+        "Action\tspawn\t4\t25\t92\t1\tOrc:5\tTroll:5\tCultist:5\tSpider:4"
+      ],
+      "vaultOpen": [
+        "Action\tmessage\t1\tThe silver vault of the warden. Your treasury will need a bigger room.",
+        "Action\tgold\t1\t2500"
+      ],
+      "kills1": [
+        "Action\tmessage\t1\tThe mines have run red. Your creatures grow bold.",
+        "Action\tgold\t1\t1000"
+      ],
+      "torch1": [
+        "Action\tmessage\t1\tTorches are moving along the shafts.",
+        "Action\tspawn\t5\t45\t40\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "torch2": [
+        "Action\tmessage\t1\tA company has come down the east gallery.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "torch3": [
+        "Action\tmessage\t1\tThe kingdom sends miners with swords.",
+        "Action\tspawn\t5\t10\t72\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "torch4": [
+        "Action\tmessage\t1\tBanners are in the lower shafts.",
+        "Action\tspawn\t5\t49\t81\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "torch5": [
+        "Action\tmessage\t1\tThe warden has called out his guard.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "torch6": [
+        "Action\tmessage\t1\tA heavy company is wading the lake spans.",
+        "Action\tspawn\t5\t42\t60\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "torch7": [
+        "Action\tmessage\t1\tTorches are moving along the shafts.",
+        "Action\tspawn\t5\t45\t40\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "torch8": [
+        "Action\tmessage\t1\tA company has come down the east gallery.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "torch9": [
+        "Action\tmessage\t1\tThe kingdom sends miners with swords.",
+        "Action\tspawn\t5\t10\t72\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "torch10": [
+        "Action\tmessage\t1\tBanners are in the lower shafts.",
+        "Action\tspawn\t5\t49\t81\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "torch11": [
+        "Action\tmessage\t1\tThe warden has called out his guard.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:3\tDwarf2:3"
+      ],
+      "torch12": [
+        "Action\tmessage\t1\tA heavy company is wading the lake spans.",
+        "Action\tspawn\t5\t42\t60\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:3\tDwarf2:3"
+      ],
+      "torch13": [
+        "Action\tmessage\t1\tTorches are moving along the shafts.",
+        "Action\tspawn\t5\t45\t40\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:3\tDwarf2:3"
+      ],
+      "torch14": [
+        "Action\tmessage\t1\tA company has come down the east gallery.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:3\tDwarf2:3"
+      ],
+      "torch15": [
+        "Action\tmessage\t1\tThe kingdom sends miners with swords.",
+        "Action\tspawn\t5\t10\t72\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:3\tDwarf2:3"
+      ],
+      "torch16": [
+        "Action\tmessage\t1\tBanners are in the lower shafts.",
+        "Action\tspawn\t5\t49\t81\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "torch17": [
+        "Action\tmessage\t1\tThe warden has called out his guard.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "torch18": [
+        "Action\tmessage\t1\tA heavy company is wading the lake spans.",
+        "Action\tspawn\t5\t42\t60\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "torch19": [
+        "Action\tmessage\t1\tTorches are moving along the shafts.",
+        "Action\tspawn\t5\t45\t40\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "torch20": [
+        "Action\tmessage\t1\tA company has come down the east gallery.",
+        "Action\tspawn\t5\t81\t39\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "goalSilverdeepSpan1Path1Before": [
+        "Action\tsetflag\tgoalSilverdeepSpan1Path1Before\t1"
+      ],
+      "goalSilverdeepSpan1Path1On": [
+        "Action\tsetflag\tgoalSilverdeepSpan1Path1On\t1"
+      ],
+      "goalSilverdeepSpan1Path1After": [
+        "Action\tsetflag\tgoalSilverdeepCross1\t1"
+      ],
+      "goalSilverdeepSpan2Path1Before": [
+        "Action\tsetflag\tgoalSilverdeepSpan2Path1Before\t1"
+      ],
+      "goalSilverdeepSpan2Path1On": [
+        "Action\tsetflag\tgoalSilverdeepSpan2Path1On\t1"
+      ],
+      "goalSilverdeepSpan2Path1After": [
+        "Action\tsetflag\tgoalSilverdeepCross2\t1"
+      ],
+      "goalSilverdeepSpan3Path1Before": [
+        "Action\tsetflag\tgoalSilverdeepSpan3Path1Before\t1"
+      ],
+      "goalSilverdeepSpan3Path1On": [
+        "Action\tsetflag\tgoalSilverdeepSpan3Path1On\t1"
+      ],
+      "goalSilverdeepSpan3Path1After": [
+        "Action\tsetflag\tgoalSilverdeepCross3\t1"
+      ],
+      "goalSilverdeepAllSpans": [
+        "Action\tobjectivestate\t1\tsilverdeep-o02\treached"
+      ],
+      "pactSworn": [
+        "Action\talliance\t2\t3\tmake"
+      ],
+      "spanA": [
+        "Action\tmessage\t1\tThe miners of the first lake have laid a span across it for you.",
+        "Action\tterrain\t22\t29\t42\t29\tbridge\t1"
+      ],
+      "spanB": [
+        "Action\tmessage\t1\tA span runs south across the middle lake, laid by the warden's old crew.",
+        "Action\tterrain\t57\t49\t57\t67\tbridge\t1"
+      ],
+      "spanC": [
+        "Action\tmessage\t1\tThe last lake lies ahead, and a span has been thrown across it for whoever dares.",
+        "Action\tterrain\t20\t86\t40\t86\tbridge\t1"
+      ],
+      "pactBreaks": [
+        "Action\tmessage\t1\tThe pact of the eastern and western keepers has broken over the spoils. The eastern keeper turns on the western keeper and offers his hand to the southern keeper.",
+        "Action\talliance\t2\t3\tbreak",
+        "Action\talliance\t3\t4\tmake",
+        "Action\tsetflag\tpactDone\t1"
+      ],
+      "pactBreaksLate": [
+        "Action\tmessage\t1\tThe pact of the eastern and western keepers has broken over the spoils. The eastern keeper turns on the western keeper and offers his hand to the southern keeper.",
+        "Action\talliance\t2\t3\tbreak",
+        "Action\talliance\t3\t4\tmake",
+        "Action\tsetflag\tpactDone\t1"
+      ],
+      "portalWake": [
+        "Action\tmessage\t1\tThe shafts have settled and your portal draws creatures again.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1"
+      ],
+      "wardenKey": [
+        "Action\tstoneattach\tDorianSilt"
+      ],
+      "keyDropped": [
+        "Action\tmessage\t1\tDorian Silt is dead and the vault key he wore lies where he fell. Carry it to the south shore of the east hold to break the seal of the silver vault."
+      ],
+      "vaultKeyUsed": [
+        "Action\tmessage\t1\tThe key turns in the old lock. The seal of the silver vault breaks and a shaft opens to the south.",
+        "Action\tterrain\t80\t90\t80\t96\tpath",
+        "Action\tsetflag\tvaultOpen\t1"
+      ],
+      "vaultHoldFalls": [
+        "Action\tmessage\t1\tThe east hold has fallen and its keepers can no longer guard the vault. The seal breaks and a shaft opens to the south.",
+        "Action\tterrain\t80\t90\t80\t96\tpath",
+        "Action\tsetflag\tvaultOpen\t1"
+      ],
+      "vaultLate": [
+        "Action\tmessage\t1\tThe warden has sent his crew to break the vault seal from inside. A shaft opens to the south.",
+        "Action\tterrain\t80\t90\t80\t96\tpath",
+        "Action\tsetflag\tvaultOpen\t1"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "MainLakeA": {
+          "bounds": [
+            22,
+            30,
+            42,
+            31
+          ],
+          "minimum_potential_tiles": 1
+        },
+        "MainLakeAAdded": {
+          "bounds": [
+            22,
+            29,
+            42,
+            29
+          ],
+          "minimum_potential_tiles": 0
+        },
+        "MainLakeB": {
+          "bounds": [
+            56,
+            50,
+            57,
+            66
+          ],
+          "minimum_potential_tiles": 1
+        },
+        "MainLakeC": {
+          "bounds": [
+            20,
+            86,
+            40,
+            87
+          ],
+          "minimum_potential_tiles": 1
+        },
+        "Gallery": {
+          "bounds": [
+            4,
+            8,
+            14,
+            18
+          ],
+          "minimum_open_tiles": 66
+        }
+      },
+      "crossing_bridges": {
+        "MainLakeA": {
+          "room": "WoodenBridge1",
+          "bounds": [
+            22,
+            30,
+            42,
+            31
+          ],
+          "direction": "west"
+        },
+        "MainLakeB": {
+          "room": "WoodenBridge2",
+          "bounds": [
+            56,
+            50,
+            57,
+            66
+          ],
+          "direction": "south"
+        },
+        "MainLakeC": {
+          "room": "WoodenBridge3",
+          "bounds": [
+            20,
+            86,
+            40,
+            87
+          ],
+          "direction": "west"
+        }
+      },
+      "minimum_mineable_gold": 400,
+      "supply_expansion": {
+        "beds": [
+          {
+            "creature": "Delver1",
+            "bounds": [
+              62,
+              14,
+              63,
+              15
+            ]
+          },
+          {
+            "creature": "Delver5",
+            "bounds": [
+              64,
+              14,
+              65,
+              15
+            ]
+          },
+          {
+            "creature": "Delver3",
+            "bounds": [
+              62,
+              16,
+              62,
+              17
+            ]
+          },
+          {
+            "creature": "Delver4",
+            "bounds": [
+              63,
+              16,
+              63,
+              17
+            ]
+          },
+          {
+            "creature": "Delver2",
+            "bounds": [
+              64,
+              16,
+              64,
+              16
+            ]
+          },
+          {
+            "creature": "Delver6",
+            "bounds": [
+              65,
+              16,
+              65,
+              16
+            ]
+          }
+        ],
+        "dormitory": "Dormitory1",
+        "hatchery": "Hatchery1",
+        "hatchery_bounds": [
+          72,
+          16,
+          74,
+          18
+        ],
+        "starting_gold": 0,
+        "cost": 1066,
+        "resident_count": 6,
+        "mining_income": {
+          "trigger": "firstSilver",
+          "amount": 400,
+          "gift": 700
+        }
+      },
+      "open_route_tiles": [
+        [
+          43,
+          29
+        ],
+        [
+          21,
+          29
+        ],
+        [
+          43,
+          30
+        ],
+        [
+          21,
+          30
+        ],
+        [
+          56,
+          49
+        ],
+        [
+          56,
+          67
+        ],
+        [
+          41,
+          86
+        ],
+        [
+          19,
+          86
+        ]
+      ]
+    },
+    "route": [
+      "First mine400actualgold and supply all6initialfighters with6realbeds and a coop; protect the heart. Delver1/5Troll2x2,Delver2/6Spider1x1,Delver3DarkElf1x2,Delver4Cultist1x2,total14bedfields.",
+      "Concrete bed layout:Delver1(62..63,14..15),Delver5(64..65,14..15),Delver3(62,16..17),Delver4(63,16..17),Delver2(64,16),Delver6(65,16). Uses original6dormfields plus8newfields,736gold. Extend existing hatchery(72..74,16..17)by row18for330gold. Total1066below actual400mined+700firstSilver gift=1100; no new reward or skipped initial supply.",
+      "Only after the setup milestone, physically cross all3lakes. LakeA west via original WoodenBridge1(22..42,30..31)OR added spanA row(22..42,29)after both setup and spanA. Accept both actual valid tracks. LakeB south via original WoodenBridge2(56..57,50..66),including the existing column reinforced by spanB. LakeC west via original WoodenBridge3(20..40,86..87),including spanC row86. No order between the three crossings is invented.",
+      "Each crossing uses one own living creature from one dry bank through the full rectangle to the opposite bank. Visits, mixed creatures and crossings before setup do not count. All original footprints, banks and exact added spanA terrain action remain checked/preserved.",
+      "Destroy actual rival hearts of seats2,3,4 and all remaining foes/portals. Optionally enter Gallery,66reachable open fields,retaining original1500gold reward. Preserve20torchwaves,pacts,vault alternatives and portal timing.",
+      "The unchanged duplicate victory sentence is emitted once after all current main goals. Original win requests remain pending."
+    ],
+    "runtime_limit": "Static supply/source/bridge/bank evidence only; actual construction, movement over both first-lake tracks, battles and save/load need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe last rival lies dead beside his silver. Silverdeep answers to you."
+    }
   }
 }
