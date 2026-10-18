@@ -37,3 +37,11 @@ assert "for(const std::string& className : mAnnouncedCreatureClasses)" in save
 assert save.index("[AnnouncedCreatureClasses]") < save.index("[SkillNotAllowed]")
 assert load.index("[AnnouncedCreatureClasses]") < load.index('if(str != "[SkillNotAllowed]")')
 print("First-arrival notification and optional saved-history guards: PASS (static only)")
+
+crypt = (ROOT / "source/rooms/RoomCrypt.cpp").read_text(encoding="utf-8")
+raise_creature = function(crypt, "void RoomCrypt::doUpkeep()")
+assert "A creature has raised in your crypt" not in raise_creature
+assert raise_creature.count("notifyCreatureArrival(className)") == 1
+assert raise_creature.index("newCreature->addToGameMap();") < raise_creature.index("notifyCreatureArrival(className)")
+assert raise_creature.index("newCreature->setPosition(") < raise_creature.index("notifyCreatureArrival(className)")
+print("Crypt and portal share successful first-class arrival history: PASS (static only)")
