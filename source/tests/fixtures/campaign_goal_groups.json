@@ -8306,9 +8306,10 @@
       "mirewatch-main-towers": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Claim every room in all eight towers.",
+        "text": "Unlock the watchroom. Claim every room in all eight towers.",
         "completion": "mainTowers",
         "conditions": [
+          "Cond\ttrigger\twatchroomOpened",
           "Cond\troomclaimed\t1\t44\t106\t47\t107",
           "Cond\troomclaimed\t1\t86\t110\t88\t111",
           "Cond\troomclaimed\t1\t24\t78\t26\t79",
@@ -8476,6 +8477,9 @@
       ],
       "scoutTowerC": [
         "Cond\tpossessed\t1\tTowerC"
+      ],
+      "watchroomOpened": [
+        "Cond\tdeliveredstone\twatch-key"
       ]
     },
     "preserved_actions": {
@@ -8596,7 +8600,7 @@
         "Action\tterrain\t80\t8\t80\t8\tpath"
       ],
       "watchKey": [
-        "Action\tstonedrop\tMoraFenwick\twatch-key"
+        "Action\tstonedrop\tMoraFenwick\twatch-key\t1\t96\t20"
       ],
       "keyDropped": [
         "Action\tmessage\t1\tMora Fenwick is dead and the watch key she wore has dropped from her belt."
@@ -8611,6 +8615,9 @@
         "Action\treveal\t1\tTowerE",
         "Action\tgold\t1\t400",
         "Action\tobjectivestate\t1\tmirewatch-o04\treached"
+      ],
+      "watchroomOpened": [
+        "Action\tkeydoor\tFenwickWatchroomDoor\topen"
       ]
     },
     "reachability": {
@@ -9060,7 +9067,22 @@
           "minimum_open_tiles": 1
         }
       },
-      "mission_deliveries": {}
+      "mission_deliveries": {
+        "watch-key": {
+          "region": "FenwickWatchroomDoorFront",
+          "bounds": [
+            96,
+            20,
+            96,
+            20
+          ],
+          "tile": [
+            96,
+            20
+          ],
+          "seat": 1
+        }
+      }
     },
     "route": [
       "Build2actualbeds and a hatchery coop; protect the heart. Start0gold. Original firstCoin at400actualmining gives600gold and Orc2/Goblin2. Three dormitory fields(19..21,109)provide space for their3bedfields,276gold;3x3hatchery(19..21,106..108)990gold. Total1266requires266additionalgold beyond first400+gift600. All twelve fields are free reachable removable dirt, skills unlocked, finite reserve112500. No new reward or compulsory mining threshold.",
@@ -9068,7 +9090,9 @@
       "Secure the east and north approaches by actual ownership of Prison1 in TowerF and Workshop1 in TowerG plus the original sealsOpen completion. These are the two approach towers named by the original messages; mere visits do not replace room control. Original three terrain openings are preserved, without inventing a requirement to traverse all alternative holes.",
       "Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.",
       "MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.",
-      "Move the identical victory sentence after all current main observers, retaining the original pending win request."
+      "Move the identical victory sentence after all current main observers, retaining the original pending win request.",
+      "Only actual own-worker delivery of watch-key to(96, 20) opens FenwickWatchroomDoor. The saved watchroomOpened event is required by the existing main goal. Death or a ground drop alone never opens the door. Existing rooms, reinforcements, approach openings and unrelated rewards remain unchanged.",
+      "The eight original GuardRoom3 fields remain inside21rock perimeter walls and door96,21. Both existing interior guards stay inside. All69tower room fields remain required after opening; opening itself requires neither their ownership nor enemy deaths. No reward added."
     ],
     "runtime_limit": "Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.",
     "victory_narration": {
@@ -9402,9 +9426,10 @@
       "ebonrook-main-warden": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Sabine Rook in the roots and all enemy forces.",
+        "text": "Defeat Rook in the roots and all foes. Unlock her hoard.",
         "completion": "mainWarden",
         "conditions": [
+          "Cond\ttrigger\trookHoardOpened",
           "Cond\tkilledin\tSabineRook\tRoots",
           "Cond\tgoalmet\t1\tKillAllEnemies"
         ],
@@ -9639,6 +9664,9 @@
       ],
       "scoutPossessed": [
         "Cond\tpossessed\t1\tHollow"
+      ],
+      "rookHoardOpened": [
+        "Cond\tdeliveredstone\trook-key"
       ]
     },
     "preserved_actions": {
@@ -9808,7 +9836,7 @@
         "Action\tterrain\t25\t84\t25\t86\tpath"
       ],
       "wardenKey": [
-        "Action\tstonedrop\tSabineRook\trook-key"
+        "Action\tstonedrop\tSabineRook\trook-key\t1\t36\t93"
       ],
       "wardenHurt": [
         "Action\tmessage\t1\tSabine Rook is bleeding and calls every rook of the roots to her side.",
@@ -9827,6 +9855,10 @@
         "Action\tterrain\t44\t97\t46\t98\tpath",
         "Action\tgold\t1\t600",
         "Action\tobjectivestate\t1\tebonrook-o04\treached"
+      ],
+      "rookHoardOpened": [
+        "Action\tkeydoor\tRookHoardDoor\topen",
+        "Action\tgold\t1\t1500"
       ]
     },
     "reachability": {
@@ -9954,7 +9986,22 @@
         "Rookhunter14"
       ],
       "minimum_mineable_gold": 2674,
-      "mission_deliveries": {}
+      "mission_deliveries": {
+        "rook-key": {
+          "region": "RookHoardDoorFront",
+          "bounds": [
+            36,
+            93,
+            36,
+            93
+          ],
+          "tile": [
+            36,
+            93
+          ],
+          "seat": 1
+        }
+      }
     },
     "route": [
       "Mine300actualgold,provide14realbeds and a coop,and protect the heart. The actual starting army is4Orc,3Troll,3Goblin,3Spider,1Rat. Orc beds1x2,Troll2x2,others1x1,total27bedfields. No starting fighters invented or ignored.",
@@ -9962,7 +10009,9 @@
       "Actual cost27*92+9*110=3474gold. Start0;original firstCoin after300mining gives800gold. A total2674mining plus800gift can pay for this layout,from93500finitepotentialgold. No added mining threshold beyond300: supplying the army naturally requires the resources,existing gifts/rewards remain.",
       "Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.",
       "Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.",
-      "Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals."
+      "Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals.",
+      "Only actual own-worker delivery of rook-key to(36, 93) opens RookHoardDoor. The saved rookHoardOpened event is required by the existing main goal. Death or a ground drop alone never opens the door. Existing rooms, reinforcements, approach openings and unrelated rewards remain unchanged.",
+      "New six-floor hoard38..40,92..93 has13rock walls and door37,93; the original spawn38,98 stays outside. Its once-only delivery event opens the door and pays1500additional gold before the warden goal and victory. No entry reward or added creature."
     ],
     "runtime_limit": "Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.",
     "victory_narration": {

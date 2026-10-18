@@ -1766,3 +1766,65 @@ BOOST_AUTO_TEST_CASE(mission_key_door_actions_round_trip)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief Pending key delivery and one-shot rewards retain their exact identity and state through saves.
+BOOST_AUTO_TEST_CASE(remaining_key_door_reward_and_victory_round_trip)
+{
+    for(bool hoard : {true, false})
+    {
+        const std::string key = hoard ? "rook-key" : "watch-key";
+        const std::string door = hoard ? "RookHoardDoor" : "FenwickWatchroomDoor";
+        const std::string owner = hoard ? "SabineRook" : "MoraFenwick";
+        const std::string destination = hoard ? "36 93" : "96 20";
+        const std::string reward = hoard ? "Action gold 1 1500\n" : "";
+        for(int phase : {0, 1, 2})
+        {
+            const std::string fired = phase == 2 ? "State 1 500\n" : "";
+            LevelScript script;
+            std::istringstream input("[Trigger]\nName goals\nMode once\nCond time 0\n"
+                "Action mainobjectiveid 1 delivery Unlock the door.\n"
+                "Action mainobjectiveid 1 remaining Defeat the remaining forces.\n[/Trigger]\n"
+                "[Trigger]\nName drop\nMode once\nCond event " + owner + " killed\nAction stonedrop " +
+                owner + " " + key + " 1 " + destination + "\n[/Trigger]\n"
+                "[Trigger]\nName opened\nMode once\nCond deliveredstone " + key +
+                "\nAction keydoor " + door + " open\n" + reward + fired + "[/Trigger]\n[/Triggers]\n");
+            BOOST_REQUIRE(script.importFromStream(input));
+            script.requestVictory(1);
+            if(phase >= 1)
+                script.observeCreatureDeath(owner, 70, 71);
+            if(phase == 2)
+                script.setObjectiveState(1, "delivery", LevelScriptObjectiveState::reached);
+            std::ostringstream saved;
+            script.exportToStream(saved);
+            LevelScript restored;
+            std::istringstream reload(saved.str());
+            BOOST_REQUIRE(restored.importFromStream(reload));
+            BOOST_CHECK(restored.hasVictoryRequest(1));
+            BOOST_CHECK(!restored.areMainObjectivesReached(1));
+            int32_t x;
+            int32_t y;
+            BOOST_CHECK_EQUAL(restored.getCreatureDeathTile(owner, x, y), phase >= 1);
+            if(phase >= 1)
+            {
+                BOOST_CHECK_EQUAL(x, 70);
+                BOOST_CHECK_EQUAL(y, 71);
+            }
+            const LevelScriptTrigger& opened = restored.getTriggers()[2];
+            BOOST_CHECK_EQUAL(opened.mTimesFired, phase == 2 ? 1 : 0);
+            BOOST_CHECK(!opened.mRepeat);
+            BOOST_CHECK_EQUAL(opened.mConditions[0].mName, key);
+            BOOST_CHECK_EQUAL(opened.mActions[0].mText, door);
+            BOOST_CHECK_EQUAL(opened.mActions.size(), hoard ? 2 : 1);
+            if(hoard)
+            {
+                BOOST_CHECK(opened.mActions[1].mType == LevelScriptActionType::gold);
+                BOOST_CHECK_EQUAL(opened.mActions[1].mNumber, 1500);
+            }
+            // Delivery alone cannot complete the other main goal, including after reloading.
+            restored.setObjectiveState(1, "delivery", LevelScriptObjectiveState::reached);
+            BOOST_CHECK(!restored.areMainObjectivesReached(1));
+            restored.setObjectiveState(1, "remaining", LevelScriptObjectiveState::reached);
+            BOOST_CHECK(restored.areMainObjectivesReached(1));
+        }
+    }
+}

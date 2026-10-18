@@ -1872,6 +1872,8 @@ def self_test(root):
     assert grouped_goal_errors(cellar.replace("ClaimNTiles\t60", "ClaimNTiles\t50"), "Bonus1")
     # Only the right physical key, dropped on real death, may satisfy an existing delivery consumer.
     for map_name, owner, identity, target in (
+            ("Ebonrook", "SabineRook", "rook-key", "1\t36\t93"),
+            ("Mirewatch", "MoraFenwick", "watch-key", "1\t96\t20"),
             ("Goldspire", "AlaricPenn", "treasurer-key", "1\t48\t30"),
             ("Silverdeep", "DorianSilt", "silver-vault-key", "1\t80\t89"),
             ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20"),

@@ -1525,7 +1525,7 @@ ProtectDungeonTemple	NULL
 37	85	3	100
 37	86	3	100
 37	93	1	0
-37	94	1	0
+37	94	3	100
 37	95	1	0
 37	96	1	0
 37	97	1	0
@@ -1572,7 +1572,7 @@ ProtectDungeonTemple	NULL
 38	84	3	100
 38	85	3	100
 38	86	3	100
-38	94	1	0
+38	94	3	100
 38	95	1	0
 38	96	1	0
 38	97	1	0
@@ -1664,7 +1664,7 @@ ProtectDungeonTemple	NULL
 40	84	3	100
 40	85	3	100
 40	86	3	100
-40	94	1	0
+40	94	3	100
 40	97	1	0
 40	98	1	0
 40	99	1	0
@@ -4952,6 +4952,22 @@ ProtectDungeonTemple	NULL
 127	107	3	100
 127	108	3	100
 127	109	3	100
+37	91	3	100
+37	92	3	100
+38	91	3	100
+38	92	1	0
+38	93	1	0
+39	91	3	100
+39	92	1	0
+39	93	1	0
+39	94	3	100
+40	91	3	100
+40	92	1	0
+40	93	1	0
+41	91	3	100
+41	92	3	100
+41	93	3	100
+41	94	3	100
 [/Tiles]
 
 [Rooms]
@@ -5254,6 +5270,11 @@ ProtectDungeonTemple	NULL
 1	Cannon3	2	1
 46	92	1
 [/Trap]
+[Trap]
+4	RookHoardDoor	2	1
+37	93	1
+1 KeyLock 1
+[/Trap]
 [/Traps]
 
 [Lights]
@@ -5343,6 +5364,7 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Region	RookHoardDoorFront	36	93	36	93
 Block	1	CaveHornet
 Block	1	Rat
 Block	1	Roach
@@ -5650,7 +5672,7 @@ Action	terrain	25	84	25	86	path
 Name	wardenKey
 Mode	once
 Cond	event	SabineRook	killed
-Action	stonedrop	SabineRook	rook-key
+Action	stonedrop	SabineRook	rook-key	1	36	93
 [/Trigger]
 [Trigger]
 Name	wardenHurt
@@ -5691,13 +5713,20 @@ Region	MainEastBridge	90	54	91	58
 Region	SupplyBeds	56	6	59	12
 Region	SupplyHatchery	68	18	70	20
 [Trigger]
+Name	rookHoardOpened
+Mode	once
+Cond	deliveredstone	rook-key
+Action	keydoor	RookHoardDoor	open
+Action	gold	1	1500
+[/Trigger]
+[Trigger]
 Name	mainGoalList
 Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	ebonrook-main-home	Mine 300 gold; build 14 beds and a coop; guard your heart.
 Action	mainobjectiveid	1	ebonrook-main-river	Cross the river by a northern bridge.
 Action	mainobjectiveid	1	ebonrook-main-roads	Open both southern roads; possess a scout in the hollow.
-Action	mainobjectiveid	1	ebonrook-main-warden	Defeat Sabine Rook in the roots and all enemy forces.
+Action	mainobjectiveid	1	ebonrook-main-warden	Defeat Rook in the roots and all foes. Unlock her hoard.
 Action	optionalobjectiveid	1	ebonrook-extra-grove	Explore the sealed northeastern grove.
 [/Trigger]
 [Trigger]
@@ -5775,6 +5804,7 @@ Action	objectivestate	1	ebonrook-main-roads	reached
 [Trigger]
 Name	mainWarden
 Mode	repeat	0
+Cond	trigger	rookHoardOpened
 Cond	killedin	SabineRook	Roots
 Cond	goalmet	1	KillAllEnemies
 Action	objectivestate	1	ebonrook-main-warden	reached

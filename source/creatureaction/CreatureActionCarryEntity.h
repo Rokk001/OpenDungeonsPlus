@@ -45,6 +45,7 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
+    //! \brief Walks cargo to its destination and records mission delivery only on successful arrival.
     static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
 
     //! \brief True if the entity is not carried but pulled over the ground: a living creature of the seat of the

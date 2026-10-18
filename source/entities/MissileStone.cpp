@@ -76,14 +76,20 @@ void MissileStone::notifyEntityCarryOn(Creature* carrier)
     mCarried = true;
 }
 
-//! \brief Re-enables ground pickup after interruption and records delivery only at the configured tile.
+//! \brief Re-enables ground pickup after interruption without treating the release as delivery.
 void MissileStone::notifyEntityCarryOff(const Ogre::Vector3& position)
 {
     mPosition = position;
     mCarried = false;
     addEntityToPositionTile();
-    Tile* tile = getPositionTile();
-    mDelivered = tile != nullptr && tile->getX() == mDeliveryX && tile->getY() == mDeliveryY;
+}
+
+//! \brief An interruption at the destination is not delivery; only the completed carry action calls this.
+void MissileStone::completeDelivery(Creature& carrier)
+{
+    if(mCarried && getDeliveryTile(carrier) != nullptr &&
+       carrier.getPositionTile() == getDeliveryTile(carrier))
+        mDelivered = true;
 }
 
 //! \brief Persists identity, destination and real delivery; an in-flight item reloads at its current tile.

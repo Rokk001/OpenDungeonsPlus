@@ -53,6 +53,8 @@ public:
     void notifyEntityCarryOn(Creature* carrier) override;
     //! \brief Drops the same item at the current worker position, preserving identity and destination.
     void notifyEntityCarryOff(const Ogre::Vector3& position) override;
+    //! \brief Records completion only when the owning living worker finishes carrying at the destination.
+    void completeDelivery(Creature& carrier);
     //! \brief Returns the stable mission identity, independent of carrier names.
     const std::string& getMissionIdentity() const { return mMissionIdentity; }
     //! \brief Reports actual delivery of this item rather than arrival of a marked creature.

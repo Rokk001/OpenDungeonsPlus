@@ -575,13 +575,13 @@ File: `levels/campaign/Ebonrook.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5370 | `Action	objectiveid	1	ebonrook-o01	Kill Sabine Rook in the south-west roots.` | yes |
-| Script line 5371 | `Action	objectiveid	1	ebonrook-o02	Cross the river by the north bridges.` | yes |
-| Advisory hint line 5372 | `Action	hint	1	Mine gold; feed your army from the glades.` | not an objective; no state required |
-| Script line 5422 | `Action	objectiveid	1	ebonrook-o04	Possess a creature; enter the southern hollow.` | yes |
-| Script line 5452 | `Action	objectiveid	1	ebonrook-o05	Kill Sabine Rook.` | yes |
-| Script line 5623 | `Action	win	1` | yes |
-| Script line 5796 | `Action	win	1` | yes |
+| Script line 5392 | `Action	objectiveid	1	ebonrook-o01	Kill Sabine Rook in the south-west roots.` | yes |
+| Script line 5393 | `Action	objectiveid	1	ebonrook-o02	Cross the river by the north bridges.` | yes |
+| Advisory hint line 5394 | `Action	hint	1	Mine gold; feed your army from the glades.` | not an objective; no state required |
+| Script line 5444 | `Action	objectiveid	1	ebonrook-o04	Possess a creature; enter the southern hollow.` | yes |
+| Script line 5474 | `Action	objectiveid	1	ebonrook-o05	Kill Sabine Rook.` | yes |
+| Script line 5645 | `Action	win	1` | yes |
+| Script line 5826 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -590,7 +590,7 @@ File: `levels/campaign/Ebonrook.level`.
 | main | `ebonrook-main-home`: Mine 300 gold; build 14 beds and a coop; guard your heart. | `mainHome`: Cond	mined	1	>=	300; Cond	furniture	1	Dormitory	>=	14; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
 | main | `ebonrook-main-river`: Cross the river by a northern bridge. | `mainRiver`: Cond	flag	mainRiverCrossed	1 |
 | main | `ebonrook-main-roads`: Open both southern roads; possess a scout in the hollow. | `mainRoads`: Cond	flag	mainSouthOpen	1; Cond	flag	mainNorthOpen	1; Cond	trigger	scoutPossessed |
-| main | `ebonrook-main-warden`: Defeat Sabine Rook in the roots and all enemy forces. | `mainWarden`: Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies |
+| main | `ebonrook-main-warden`: Defeat Rook in the roots and all foes. Unlock her hoard. | `mainWarden`: Cond	trigger	rookHoardOpened; Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies |
 | optional | `ebonrook-extra-grove`: Explore the sealed northeastern grove. | `extraGrove`: Cond	region	1	SealedGrove |
 
 Possible route (static, not a playthrough):
@@ -600,6 +600,8 @@ Possible route (static, not a playthrough):
 - Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.
 - Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.
 - Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals.
+- Only actual own-worker delivery of rook-key to(36, 93) opens RookHoardDoor. The saved rookHoardOpened event is required by the existing main goal. Death or a ground drop alone never opens the door. Existing rooms, reinforcements, approach openings and unrelated rewards remain unchanged.
+- New six-floor hoard38..40,92..93 has13rock walls and door37,93; the original spawn38,98 stays outside. Its once-only delivery event opens the door and pays1500additional gold before the warden goal and victory. No entry reward or added creature.
 
 Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.
 
@@ -611,7 +613,7 @@ Static source/bridge/site/resource evidence only; actual14bed setup, feeding, ri
 | Trigger `mainHome` | `Action	objectivestate	1	ebonrook-main-home	reached`; conditions: `Cond	mined	1	>=	300; Cond	furniture	1	Dormitory	>=	14; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainRiver` | `Action	objectivestate	1	ebonrook-main-river	reached`; conditions: `Cond	flag	mainRiverCrossed	1` | yes |
 | Trigger `mainRoads` | `Action	objectivestate	1	ebonrook-main-roads	reached`; conditions: `Cond	flag	mainSouthOpen	1; Cond	flag	mainNorthOpen	1; Cond	trigger	scoutPossessed` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	ebonrook-main-warden	reached`; conditions: `Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	ebonrook-main-warden	reached`; conditions: `Cond	trigger	rookHoardOpened; Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `extraGrove` | `Action	objectivestate	1	ebonrook-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
 | Briefing | You have creatures but no gold, so mine the glades and keep them fed. | yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge |
 | Briefing | Cross the northern bridges, open the southern approaches and kill Rook in the south-west roots. | yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes |
@@ -1028,20 +1030,20 @@ File: `levels/campaign/Mirewatch.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5735 | `Action	objectiveid	1	mirewatch-o01	Kill Mora Fenwick in the north-east tower.` | yes |
-| Advisory hint line 5736 | `Action	hint	1	Dig, claim and build before marching.` | not an objective; no state required |
-| Script line 5737 | `Action	objectiveid	1	mirewatch-o03	Claim every room in all eight towers.` | yes |
-| Script line 5767 | `Action	objectiveid	1	mirewatch-o04	Possess a creature; scout the north-west tower.` | yes |
-| Script line 5827 | `Action	objectiveid	1	mirewatch-o05	Enter Mora Fenwick's tower and kill her.` | yes |
-| Script line 5921 | `Action	win	1` | yes |
-| Script line 6034 | `Action	win	1` | yes |
+| Script line 5741 | `Action	objectiveid	1	mirewatch-o01	Kill Mora Fenwick in the north-east tower.` | yes |
+| Advisory hint line 5742 | `Action	hint	1	Dig, claim and build before marching.` | not an objective; no state required |
+| Script line 5743 | `Action	objectiveid	1	mirewatch-o03	Claim every room in all eight towers.` | yes |
+| Script line 5773 | `Action	objectiveid	1	mirewatch-o04	Possess a creature; scout the north-west tower.` | yes |
+| Script line 5833 | `Action	objectiveid	1	mirewatch-o05	Enter Mora Fenwick's tower and kill her.` | yes |
+| Script line 5927 | `Action	win	1` | yes |
+| Script line 6047 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
 | main | `mirewatch-main-home`: Build 2 beds and a coop; protect your heart. | `mainHome`: Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
-| main | `mirewatch-main-towers`: Claim every room in all eight towers. | `mainTowers`: Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19 |
+| main | `mirewatch-main-towers`: Unlock the watchroom. Claim every room in all eight towers. | `mainTowers`: Cond	trigger	watchroomOpened; Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19 |
 | main | `mirewatch-main-approaches`: Secure both approaches; scout the northwest tower possessed. | `mainApproaches`: Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	trigger	sealsOpen; Cond	trigger	scoutTowerC |
 | main | `mirewatch-main-warden`: Defeat Mora in her tower and all enemy forces. | `mainWarden`: Cond	killedin	MoraFenwick	TowerH; Cond	goalmet	1	KillAllEnemies |
 | optional | `mirewatch-extra-gold`: Mine 2000 gold. | `extraGold`: Cond	mined	1	>=	2000 |
@@ -1053,6 +1055,8 @@ Possible route (static, not a playthrough):
 - Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.
 - MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.
 - Move the identical victory sentence after all current main observers, retaining the original pending win request.
+- Only actual own-worker delivery of watch-key to(96, 20) opens FenwickWatchroomDoor. The saved watchroomOpened event is required by the existing main goal. Death or a ground drop alone never opens the door. Existing rooms, reinforcements, approach openings and unrelated rewards remain unchanged.
+- The eight original GuardRoom3 fields remain inside21rock perimeter walls and door96,21. Both existing interior guards stay inside. All69tower room fields remain required after opening; opening itself requires neither their ownership nor enemy deaths. No reward added.
 
 Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.
 
@@ -1062,7 +1066,7 @@ Static room/worker-access/resource/source evidence only; actual claiming, bed us
 | Trigger `scoutTowerC` | `Action	objectivestate	1	mirewatch-o04	reached`; conditions: `Cond	possessed	1	TowerC` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	mirewatch-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	mirewatch-main-home	reached`; conditions: `Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
-| Trigger `mainTowers` | `Action	objectivestate	1	mirewatch-main-towers	reached`; conditions: `Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19` | yes |
+| Trigger `mainTowers` | `Action	objectivestate	1	mirewatch-main-towers	reached`; conditions: `Cond	trigger	watchroomOpened; Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19` | yes |
 | Trigger `mainApproaches` | `Action	objectivestate	1	mirewatch-main-approaches	reached`; conditions: `Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	trigger	sealsOpen; Cond	trigger	scoutTowerC` | yes |
 | Trigger `mainWarden` | `Action	objectivestate	1	mirewatch-main-warden	reached`; conditions: `Cond	killedin	MoraFenwick	TowerH; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	mirewatch-extra-gold	reached`; conditions: `Cond	mined	1	>=	2000` | yes |

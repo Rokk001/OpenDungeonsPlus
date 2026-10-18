@@ -133,7 +133,11 @@ carry_on = mission.split('void MissileStone::notifyEntityCarryOn(', 1)[1].split(
 carry_off = mission.split('void MissileStone::notifyEntityCarryOff(', 1)[1].split('\n}\n', 1)[0]
 assert 'removeEntityFromPositionTile();' in carry_on and 'mCarried = true;' in carry_on
 assert 'mPosition = position;' in carry_off and 'addEntityToPositionTile();' in carry_off
-assert 'tile->getX() == mDeliveryX && tile->getY() == mDeliveryY' in carry_off
+assert 'mDelivered =' not in carry_off, 'interruption or plain release must not complete delivery'
+completed = mission.split('void MissileStone::completeDelivery(', 1)[1].split('\n}\n', 1)[0]
+assert 'mCarried && getDeliveryTile(carrier) != nullptr' in completed
+assert 'carrier.getPositionTile() == getDeliveryTile(carrier)' in completed
+assert 'mDelivered = true;' in completed
 assert 'new MissileStone' not in carry_off, 'interruption must release the original item, not create a duplicate'
 search = read('source/creatureaction/CreatureActionSearchEntityToCarry.cpp')
 grab = read('source/creatureaction/CreatureActionGrabEntity.cpp')
@@ -144,6 +148,8 @@ mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest)', 1)[1]
 assert 'mBuildingDest(nullptr)' in mission_action
 assert 'mCreature.carryEntity(mEntityToCarry);' in mission_action
 assert 'mEntityToCarry->notifyEntityCarryOff(pos);' in carry and 'mCreature.releaseCarriedEntity();' in carry
+finish = carry.split('bool CreatureActionCarryEntity::handleCarryEntity(', 1)[1].split('\n}\n', 1)[0]
+assert finish.index('if(myTile != tileDest)') < finish.index('completeDelivery(creature)') < finish.rindex('creature.popAction();')
 assert '"MissionTransport\\t"' in mission and 'mCarried = false;' in mission
 actual_delivery = runner.split('case LevelScriptConditionType::deliveredStone:', 1)[1].split('case LevelScriptConditionType::carryingStone:', 1)[0]
 assert 'stone->getMissionIdentity() == cond.mName && stone->isDelivered()' in actual_delivery

@@ -20,6 +20,7 @@
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
+#include "entities/MissileStone.h"
 #include "entities/Tile.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -191,6 +192,9 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     }
 
     // We are at the destination tile
+    if(entityToCarry->getObjectType() == GameEntityType::missileObject &&
+       static_cast<MissileObject*>(entityToCarry)->getMissileType() == MissileObjectType::stone)
+        static_cast<MissileStone*>(entityToCarry)->completeDelivery(creature);
     creature.popAction();
     return false;
 }
