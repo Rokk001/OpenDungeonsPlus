@@ -55,7 +55,7 @@ BRIEFING_MATCH = {
     "Wraithwood": {3: "yes: ProtectDungeonTemple and KillAllEnemies include both rival temples"},
     "Kingsfall": {2: "no: prince elimination is checked; crossing the watched spans is not independent", 3: "no: collectWin checks all champions and twelve creatures, but courtTaken also wins without all three champions and neither checks their location at the heart"},
     "SwarmNight": {3: "yes: dawn at 780 seconds with ProtectDungeonTemple", 4: "yes: dawn invokes keepminion before win; no Heartstone reward is granted"},
-    "HollowmarkCitadel": {3: "no: gate routes and treasury use are not independent winning goals", 4: "no: kingDead checks Castellan's death, not throne ownership"},
+    "HollowmarkCitadel": {3: "yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes", 4: "yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned"},
 }
 # Only existing triggers that actually satisfy each objective may change its state.
 # None is an unresolved mapping, deliberately reported as an error instead of inferred at victory.
@@ -1761,6 +1761,18 @@ def self_test(root):
             ("Cond\tmined\t1\t>=\t4000", "Cond\tmined\t1\t>=\t3000")):
         assert needle in kings
         assert grouped_goal_errors(kings.replace(needle, replacement), "Kingsfall"), "Kingsfall must preserve live capture and actual assembly: " + needle
+    hollow = (root / "levels/campaign/HollowmarkCitadel.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(hollow, "HollowmarkCitadel")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tGateCourt\tnorth", "Cond\tregion\t1\tGateCourt"),
+            ("Cond\tflag\tmainLowerProof\t1", "Cond\ttime\t900"),
+            ("Cond\tevent\tGatewarden8\tkilled", "Cond\talive\tGatewarden8\t0"),
+            ("Cond\troomclaimed\t1\t14\t64\t17\t65", "Cond\tregion\t1\tWestTower1"),
+            ("Cond\tkilledin\tCastellanKing\tThroneHall", "Cond\talive\tCastellanKing\t0"),
+            ("Cond\ttrigger\ttower2", "Cond\ttime\t5"),
+            ("Cond\tregion\t1\tWestTower3", "Cond\tregion\t1\tWestTower1")):
+        assert needle in hollow
+        assert grouped_goal_errors(hollow.replace(needle, replacement), "HollowmarkCitadel"), "Hollowmark exact task must reject weakening: " + needle
     print("campaign playability self-test passed")
 
 

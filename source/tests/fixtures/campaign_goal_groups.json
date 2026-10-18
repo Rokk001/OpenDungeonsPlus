@@ -11361,5 +11361,1091 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours."
     }
+  },
+  "HollowmarkCitadel": {
+    "goals": {
+      "hollowmark-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart and take the royal treasuries.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\troomclaimed\t1\t12\t42\t14\t43",
+          "Cond\troomclaimed\t1\t100\t42\t102\t43",
+          "Cond\ttrigger\ttower2"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollowmark-main-courts": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the three courts; take towers or gate keys.",
+        "completion": "mainCourts",
+        "conditions": [
+          "Cond\tflag\tmainCourt3\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollowmark-main-king": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat King Castellan in the throne hall.",
+        "completion": "mainKing",
+        "conditions": [
+          "Cond\tkilledin\tCastellanKing\tThroneHall"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollowmark-main-throne": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim the throne hall.",
+        "completion": "mainThrone",
+        "conditions": [
+          "Cond\tgroundclaimed\t1\t57\t11\t58\t11",
+          "Cond\tgroundclaimed\t1\t49\t12\t66\t12",
+          "Cond\tgroundclaimed\t1\t45\t13\t69\t13",
+          "Cond\tgroundclaimed\t1\t43\t14\t71\t14",
+          "Cond\tgroundclaimed\t1\t41\t15\t41\t15",
+          "Cond\tgroundclaimed\t1\t43\t15\t73\t15",
+          "Cond\tgroundclaimed\t1\t40\t16\t40\t16",
+          "Cond\tgroundclaimed\t1\t44\t16\t46\t16",
+          "Cond\tgroundclaimed\t1\t49\t16\t64\t16",
+          "Cond\tgroundclaimed\t1\t68\t16\t71\t16",
+          "Cond\tgroundclaimed\t1\t74\t16\t75\t16",
+          "Cond\tgroundclaimed\t1\t39\t17\t47\t17",
+          "Cond\tgroundclaimed\t1\t49\t17\t76\t17",
+          "Cond\tgroundclaimed\t1\t39\t18\t77\t18",
+          "Cond\tgroundclaimed\t1\t39\t19\t78\t19",
+          "Cond\tgroundclaimed\t1\t39\t20\t78\t20",
+          "Cond\tgroundclaimed\t1\t39\t21\t78\t21",
+          "Cond\tgroundclaimed\t1\t39\t22\t79\t22",
+          "Cond\tgroundclaimed\t1\t38\t23\t65\t23",
+          "Cond\tgroundclaimed\t1\t67\t23\t79\t23",
+          "Cond\tgroundclaimed\t1\t38\t24\t40\t24",
+          "Cond\tgroundclaimed\t1\t43\t24\t46\t24",
+          "Cond\tgroundclaimed\t1\t49\t24\t64\t24",
+          "Cond\tgroundclaimed\t1\t68\t24\t70\t24",
+          "Cond\tgroundclaimed\t1\t74\t24\t79\t24",
+          "Cond\tgroundclaimed\t1\t40\t25\t40\t25",
+          "Cond\tgroundclaimed\t1\t42\t25\t65\t25",
+          "Cond\tgroundclaimed\t1\t67\t25\t71\t25",
+          "Cond\tgroundclaimed\t1\t73\t25\t77\t25",
+          "Cond\tgroundclaimed\t1\t44\t26\t73\t26",
+          "Cond\tgroundclaimed\t1\t46\t27\t71\t27",
+          "Cond\tgroundclaimed\t1\t50\t28\t55\t28",
+          "Cond\tgroundclaimed\t1\t60\t28\t68\t28"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollowmark-extra-tower": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the western throne tower.",
+        "completion": "extraTower",
+        "conditions": [
+          "Cond\tregion\t1\tWestTower3"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "hollowmark-main-heart",
+            "failed"
+          ]
+        ],
+        "actions": []
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\thollowmark-main-heart\treached",
+          "Cond\tobjective\t1\thollowmark-main-courts\treached",
+          "Cond\tobjective\t1\thollowmark-main-king\treached",
+          "Cond\tobjective\t1\thollowmark-main-throne\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tHigh King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours.",
+          "Action\twin\t1"
+        ]
+      },
+      "mainFirstCourt": {
+        "conditions": [
+          "Cond\tcrossed\t1\tGateCourt\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainCourt1\t1"
+        ]
+      },
+      "mainLowerTowers": {
+        "conditions": [
+          "Cond\troomclaimed\t1\t14\t64\t17\t65",
+          "Cond\troomclaimed\t1\t98\t64\t101\t65"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLowerProof\t1"
+        ]
+      },
+      "mainLowerKey": {
+        "conditions": [
+          "Cond\tevent\tGatewarden13\tkilled"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLowerProof\t1"
+        ]
+      },
+      "mainGate2Ready": {
+        "conditions": [
+          "Cond\tflag\tmainCourt1\t1",
+          "Cond\tflag\tmainLowerProof\t1",
+          "Cond\tflag\tgate2Open\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainGate2Ready\t1"
+        ]
+      },
+      "mainSecondCourt": {
+        "conditions": [
+          "Cond\tcrossed\t1\tGreatCourt\tnorth\tafter\tmainGate2Ready"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainCourt2\t1"
+        ]
+      },
+      "mainUpperTowers": {
+        "conditions": [
+          "Cond\troomclaimed\t1\t12\t42\t14\t43",
+          "Cond\troomclaimed\t1\t100\t42\t102\t43"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainUpperProof\t1"
+        ]
+      },
+      "mainUpperKey": {
+        "conditions": [
+          "Cond\tevent\tGatewarden8\tkilled"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainUpperProof\t1"
+        ]
+      },
+      "mainGate3Ready": {
+        "conditions": [
+          "Cond\tflag\tmainCourt2\t1",
+          "Cond\tflag\tmainUpperProof\t1",
+          "Cond\tflag\tgate3Open\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainGate3Ready\t1"
+        ]
+      },
+      "mainThirdCourt": {
+        "conditions": [
+          "Cond\tcrossed\t1\tThroneHall\tnorth\tafter\tmainGate3Ready"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainCourt3\t1"
+        ]
+      }
+    },
+    "route": [
+      "Protect the heart and claim both original upper treasury rooms, receiving the unchanged tower2 reward.",
+      "Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.",
+      "Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.",
+      "Optionally visit WestTower3; it is not one of the required gate towers."
+    ],
+    "runtime_limit": "Static conditions only; full movement, claiming, combat, treasury payout and save/load remain unverified.",
+    "preserved_conditions": {
+      "siege": [
+        "Cond\ttime\t3"
+      ],
+      "campHeld": [
+        "Cond\tclaimed\t1\tCamp\t30"
+      ],
+      "mineSeen": [
+        "Cond\tregion\t1\tWestMine",
+        "Cond\tregion\t1\tEastMine"
+      ],
+      "firstGate": [
+        "Cond\tregion\t1\tFirstGate"
+      ],
+      "gateCourt": [
+        "Cond\tregion\t1\tGateCourt"
+      ],
+      "tower1": [
+        "Cond\tregion\t1\tWestTower1",
+        "Cond\tregion\t1\tEastTower1"
+      ],
+      "secondGate": [
+        "Cond\tregion\t1\tSecondGate"
+      ],
+      "greatCourt": [
+        "Cond\tregion\t1\tGreatCourt"
+      ],
+      "tower2": [
+        "Cond\tregion\t1\tWestTower2",
+        "Cond\tregion\t1\tEastTower2"
+      ],
+      "thirdGate": [
+        "Cond\tregion\t1\tThirdGate"
+      ],
+      "throneHall": [
+        "Cond\tregion\t1\tThroneHall"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t5000"
+      ],
+      "kills1": [
+        "Cond\tkills\t1\t>=\t50"
+      ],
+      "muster1": [
+        "Cond\ttime\t200"
+      ],
+      "muster2": [
+        "Cond\ttime\t320"
+      ],
+      "muster3": [
+        "Cond\ttime\t440"
+      ],
+      "muster4": [
+        "Cond\ttime\t560"
+      ],
+      "muster5": [
+        "Cond\ttime\t680"
+      ],
+      "muster6": [
+        "Cond\ttime\t800"
+      ],
+      "muster7": [
+        "Cond\ttime\t920"
+      ],
+      "muster8": [
+        "Cond\ttime\t1040"
+      ],
+      "muster9": [
+        "Cond\ttime\t1160"
+      ],
+      "muster10": [
+        "Cond\ttime\t1280"
+      ],
+      "muster11": [
+        "Cond\ttime\t1400"
+      ],
+      "muster12": [
+        "Cond\ttime\t1520"
+      ],
+      "muster13": [
+        "Cond\ttime\t1640"
+      ],
+      "muster14": [
+        "Cond\ttime\t1760"
+      ],
+      "muster15": [
+        "Cond\ttime\t1880"
+      ],
+      "muster16": [
+        "Cond\ttime\t2000"
+      ],
+      "muster17": [
+        "Cond\ttime\t2120"
+      ],
+      "muster18": [
+        "Cond\ttime\t2240"
+      ],
+      "muster19": [
+        "Cond\ttime\t2360"
+      ],
+      "muster20": [
+        "Cond\ttime\t2480"
+      ],
+      "muster21": [
+        "Cond\ttime\t2600"
+      ],
+      "muster22": [
+        "Cond\ttime\t2720"
+      ],
+      "muster23": [
+        "Cond\ttime\t2840"
+      ],
+      "muster24": [
+        "Cond\ttime\t2960"
+      ],
+      "muster25": [
+        "Cond\ttime\t3080"
+      ],
+      "muster26": [
+        "Cond\ttime\t3200"
+      ],
+      "muster27": [
+        "Cond\ttime\t3320"
+      ],
+      "muster28": [
+        "Cond\ttime\t3440"
+      ],
+      "muster29": [
+        "Cond\ttime\t3560"
+      ],
+      "muster30": [
+        "Cond\ttime\t3680"
+      ],
+      "muster31": [
+        "Cond\ttime\t3800"
+      ],
+      "muster32": [
+        "Cond\ttime\t3920"
+      ],
+      "muster33": [
+        "Cond\ttime\t4040"
+      ],
+      "muster34": [
+        "Cond\ttime\t4160"
+      ],
+      "muster35": [
+        "Cond\ttime\t4280"
+      ],
+      "muster36": [
+        "Cond\ttime\t4400"
+      ],
+      "muster37": [
+        "Cond\ttime\t4520"
+      ],
+      "muster38": [
+        "Cond\ttime\t4640"
+      ],
+      "muster39": [
+        "Cond\ttime\t4760"
+      ],
+      "muster40": [
+        "Cond\ttime\t4880"
+      ],
+      "goalHeartSafe3BeforeKingDead": [
+        "Cond\ttime\t5",
+        "Cond\talive\tCastellanKing\t0",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
+      ],
+      "goalCourt1": [
+        "Cond\tregion\t1\tGateCourt"
+      ],
+      "goalCourt2": [
+        "Cond\tregion\t1\tGreatCourt",
+        "Cond\tflag\tgoalCourt1\t1",
+        "Cond\tflag\tlowerWest\t1",
+        "Cond\tflag\tlowerEast\t1"
+      ],
+      "goalCourt3": [
+        "Cond\tregion\t1\tThroneHall",
+        "Cond\tflag\tgoalCourt2\t1",
+        "Cond\tflag\tupperWest\t1",
+        "Cond\tflag\tupperEast\t1"
+      ],
+      "goalHeartLost3": [
+        "Cond\troom\t1\tDungeonTemple\t==\t0"
+      ],
+      "kingDead": [
+        "Cond\ttime\t5",
+        "Cond\talive\tCastellanKing\t0"
+      ],
+      "gate2Open": [
+        "Cond\tflag\tlowerWest\t1",
+        "Cond\tflag\tlowerEast\t1"
+      ],
+      "gate2Late": [
+        "Cond\ttime\t900"
+      ],
+      "gate3Open": [
+        "Cond\tflag\tupperWest\t1",
+        "Cond\tflag\tupperEast\t1"
+      ],
+      "gate3Late": [
+        "Cond\ttime\t2000"
+      ],
+      "markLowerWest": [
+        "Cond\tregion\t1\tWestTower1"
+      ],
+      "markLowerEast": [
+        "Cond\tregion\t1\tEastTower1"
+      ],
+      "markUpperWest": [
+        "Cond\tregion\t1\tWestTower2"
+      ],
+      "markUpperEast": [
+        "Cond\tregion\t1\tEastTower2"
+      ],
+      "courtWell": [
+        "Cond\tslabs\t1\tGateCourt\tclaimed\t>=\t40"
+      ],
+      "gateKeys": [
+        "Cond\ttime\t4"
+      ],
+      "gate2KeyFalls": [
+        "Cond\ttime\t5",
+        "Cond\talive\tGatewarden13\t0",
+        "Cond\tflag\tgate2Open\t0"
+      ],
+      "gate3KeyFalls": [
+        "Cond\ttime\t5",
+        "Cond\talive\tGatewarden8\t0",
+        "Cond\tflag\tgate3Open\t0"
+      ]
+    },
+    "preserved_actions": {
+      "siege": [
+        "Action\tmessage\t1\tThe capital, master. High King Castellan sits on his throne at the top of three walled courts, and the heroes of the whole kingdom are marching to defend him.",
+        "Action\tobjectiveid\t1\thollowmarkcitadel-o01\tKill King Castellan on his throne.",
+        "Action\tobjectiveid\t1\thollowmarkcitadel-o02\tCross all three courts; take towers to open upper gates.",
+        "Action\tobjectiveid\t1\thollowmarkcitadel-o03\tSurvive the hero attacks."
+      ],
+      "campHeld": [
+        "Action\tmessage\t1\tYour camp is secure. The first gate stands open to the north and mines lie east and west.",
+        "Action\treveal\t1\tFirstGate",
+        "Action\treveal\t1\tWestMine",
+        "Action\treveal\t1\tEastMine"
+      ],
+      "mineSeen": [
+        "Action\tmessage\t1\tBoth mines are in your hands. The old kings stored coin here against a siege.",
+        "Action\tgold\t1\t1500"
+      ],
+      "firstGate": [
+        "Action\tmessage\t1\tThe first gate. A stone span crosses a trench of lava and the court beyond it is full of colonnades.",
+        "Action\treveal\t1\tGateCourt",
+        "Action\tspawn\t4\t57\t75\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "gateCourt": [
+        "Action\tmessage\t1\tThe gate court. The towers on both flanks hold the treasuries of the garrison. The second gate is sealed shut.",
+        "Action\treveal\t1\tWestTower1",
+        "Action\treveal\t1\tEastTower1",
+        "Action\treveal\t1\tSecondGate"
+      ],
+      "tower1": [
+        "Action\tmessage\t1\tThe lower towers fall. Their guard rooms held the pay chests.",
+        "Action\tgold\t1\t1500"
+      ],
+      "secondGate": [
+        "Action\tmessage\t1\tThe second gate is sealed shut. It opens once both lower towers are yours, or when the gatewarden of the lower court falls with its key.",
+        "Action\treveal\t1\tGreatCourt",
+        "Action\tspawn\t4\t57\t59\t1\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:4"
+      ],
+      "greatCourt": [
+        "Action\tmessage\t1\tThe great court. The royal library and prison stand here, and the upper towers watch you from both sides.",
+        "Action\treveal\t1\tWestTower2",
+        "Action\treveal\t1\tEastTower2",
+        "Action\treveal\t1\tThirdGate"
+      ],
+      "tower2": [
+        "Action\tmessage\t1\tThe upper towers are yours. The royal treasuries were here.",
+        "Action\tgold\t1\t2000"
+      ],
+      "thirdGate": [
+        "Action\tmessage\t1\tThe last gate is sealed, and above it lies the throne hall. Its key hangs on the gatewarden of the great court. The guard is gathering.",
+        "Action\treveal\t1\tThroneHall",
+        "Action\tspawn\t3\t58\t30\t1\tKnight:6\tKnight:6\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "throneHall": [
+        "Action\tmessage\t1\tThe throne hall. High King Castellan rises from his seat. Kill him and the kingdom is yours.",
+        "Action\treveal\t1\tWestTower3",
+        "Action\treveal\t1\tEastTower3",
+        "Action\tspawn\t3\t58\t24\t1\tKnight:6\tKnight:6\tElf:6\tMonk:6"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe royal seams are paying. Spend it before the next column arrives.",
+        "Action\tgold\t1\t800"
+      ],
+      "kills1": [
+        "Action\tmessage\t1\tThe capital runs red. Your creatures fight on.",
+        "Action\tgold\t1\t1200"
+      ],
+      "muster1": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t57\t73\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster2": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t58\t50\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster3": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t13\t43\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster4": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t101\t43\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster5": [
+        "Action\tmessage\t1\tPikemen are pouring from the towers.",
+        "Action\tspawn\t4\t13\t65\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster6": [
+        "Action\tmessage\t1\tA heavy company advances from the capital.",
+        "Action\tspawn\t4\t101\t65\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster7": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t58\t22\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster8": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t57\t73\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "muster9": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t58\t50\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster10": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t13\t43\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster11": [
+        "Action\tmessage\t1\tPikemen are pouring from the towers.",
+        "Action\tspawn\t4\t101\t43\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster12": [
+        "Action\tmessage\t1\tA heavy company advances from the capital.",
+        "Action\tspawn\t4\t13\t65\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster13": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t101\t65\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster14": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t58\t22\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster15": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t57\t73\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster16": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t58\t50\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "muster17": [
+        "Action\tmessage\t1\tPikemen are pouring from the towers.",
+        "Action\tspawn\t4\t13\t43\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster18": [
+        "Action\tmessage\t1\tA heavy company advances from the capital.",
+        "Action\tspawn\t4\t101\t43\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster19": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t13\t65\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster20": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t101\t65\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster21": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t58\t22\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster22": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t57\t73\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster23": [
+        "Action\tmessage\t1\tPikemen are pouring from the towers.",
+        "Action\tspawn\t4\t58\t50\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster24": [
+        "Action\tmessage\t1\tA heavy company advances from the capital.",
+        "Action\tspawn\t4\t13\t43\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "muster25": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t101\t43\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster26": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t13\t65\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster27": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t101\t65\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster28": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t58\t22\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster29": [
+        "Action\tmessage\t1\tPikemen are pouring from the towers.",
+        "Action\tspawn\t4\t57\t73\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster30": [
+        "Action\tmessage\t1\tA heavy company advances from the capital.",
+        "Action\tspawn\t4\t58\t50\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster31": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t13\t43\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster32": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t101\t43\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster33": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t13\t65\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster34": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t101\t65\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster35": [
+        "Action\tmessage\t1\tPikemen are pouring from the towers.",
+        "Action\tspawn\t4\t58\t22\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster36": [
+        "Action\tmessage\t1\tA heavy company advances from the capital.",
+        "Action\tspawn\t4\t57\t73\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster37": [
+        "Action\tmessage\t1\tThe king has called every garrison.",
+        "Action\tspawn\t4\t58\t50\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster38": [
+        "Action\tmessage\t1\tA column marches out of the gate court.",
+        "Action\tspawn\t4\t13\t43\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster39": [
+        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
+        "Action\tspawn\t4\t101\t43\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "muster40": [
+        "Action\tmessage\t1\tThe royal guard has left the great court.",
+        "Action\tspawn\t4\t13\t65\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
+      ],
+      "goalHeartSafe3BeforeKingDead": [
+        "Action\tobjectivestate\t1\thollowmarkcitadel-o03\treached"
+      ],
+      "goalCourt1": [
+        "Action\tsetflag\tgoalCourt1\t1"
+      ],
+      "goalCourt2": [
+        "Action\tsetflag\tgoalCourt2\t1"
+      ],
+      "goalCourt3": [
+        "Action\tsetflag\tgoalCourt3\t1",
+        "Action\tobjectivestate\t1\thollowmarkcitadel-o02\treached"
+      ],
+      "goalHeartLost3": [
+        "Action\tobjectivestate\t1\thollowmarkcitadel-o03\tfailed"
+      ],
+      "kingDead": [
+        "Action\tobjectivestate\t1\thollowmarkcitadel-o01\treached",
+        "Action\twin\t1"
+      ],
+      "gate2Open": [
+        "Action\tmessage\t-1\tThe seal of the second gate cracks and the gate stands open.",
+        "Action\tterrain\t56\t57\t59\t57\tpath",
+        "Action\tterrain\t14\t57\t15\t57\tpath",
+        "Action\tterrain\t101\t57\t103\t57\tpath",
+        "Action\tsetflag\tgate2Open\t1"
+      ],
+      "gate2Late": [
+        "Action\tmessage\t-1\tThe masons of the second gate have been called away. The seal gives way.",
+        "Action\tterrain\t56\t57\t59\t57\tpath",
+        "Action\tterrain\t14\t57\t15\t57\tpath",
+        "Action\tterrain\t101\t57\t103\t57\tpath",
+        "Action\tsetflag\tgate2Open\t1"
+      ],
+      "gate3Open": [
+        "Action\tmessage\t-1\tThe seal of the last gate cracks and the way to the throne hall is open.",
+        "Action\tterrain\t56\t29\t59\t29\tpath",
+        "Action\tterrain\t13\t29\t15\t29\tpath",
+        "Action\tterrain\t102\t29\t103\t29\tpath",
+        "Action\tsetflag\tgate3Open\t1"
+      ],
+      "gate3Late": [
+        "Action\tmessage\t-1\tThe seal of the last gate gives way under the weight of the siege.",
+        "Action\tterrain\t56\t29\t59\t29\tpath",
+        "Action\tterrain\t13\t29\t15\t29\tpath",
+        "Action\tterrain\t102\t29\t103\t29\tpath",
+        "Action\tsetflag\tgate3Open\t1"
+      ],
+      "markLowerWest": [
+        "Action\tsetflag\tlowerWest\t1"
+      ],
+      "markLowerEast": [
+        "Action\tsetflag\tlowerEast\t1"
+      ],
+      "markUpperWest": [
+        "Action\tsetflag\tupperWest\t1"
+      ],
+      "markUpperEast": [
+        "Action\tsetflag\tupperEast\t1"
+      ],
+      "courtWell": [
+        "Action\tmessage\t1\tThe gate court is yours and a spring of mana has opened in its west yard. Claim it with a worker.",
+        "Action\tterrain\t42\t74\t42\t74\tmanawell"
+      ],
+      "gateKeys": [
+        "Action\tstoneattach\tGatewarden13",
+        "Action\tstoneattach\tGatewarden8"
+      ],
+      "gate2KeyFalls": [
+        "Action\tmessage\t1\tThe gatewarden of the lower court is down and the key of the second gate lies where he fell. It turns in the seal and the second gate stands open.",
+        "Action\tterrain\t56\t57\t59\t57\tpath",
+        "Action\tterrain\t14\t57\t15\t57\tpath",
+        "Action\tterrain\t101\t57\t103\t57\tpath",
+        "Action\tsetflag\tgate2Open\t1"
+      ],
+      "gate3KeyFalls": [
+        "Action\tmessage\t1\tThe gatewarden of the great court is down and the key of the third gate lies where he fell. It turns in the seal and the third gate stands open.",
+        "Action\tterrain\t56\t29\t59\t29\tpath",
+        "Action\tterrain\t13\t29\t15\t29\tpath",
+        "Action\tterrain\t102\t29\t103\t29\tpath",
+        "Action\tsetflag\tgate3Open\t1"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "GateCourt": {
+          "bounds": [
+            36,
+            64,
+            80,
+            82
+          ],
+          "minimum_open_tiles": 547
+        },
+        "GreatCourt": {
+          "bounds": [
+            34,
+            40,
+            82,
+            58
+          ],
+          "minimum_open_tiles": 635
+        },
+        "ThroneHall": {
+          "bounds": [
+            38,
+            10,
+            80,
+            28
+          ],
+          "minimum_open_tiles": 548
+        },
+        "WestTower3": {
+          "bounds": [
+            6,
+            12,
+            24,
+            28
+          ],
+          "minimum_open_tiles": 162
+        }
+      },
+      "footprints": [
+        {
+          "goal": "hollowmark-main-throne",
+          "bounds": [
+            38,
+            10,
+            80,
+            28
+          ],
+          "runs": [
+            [
+              57,
+              11,
+              58,
+              11
+            ],
+            [
+              49,
+              12,
+              66,
+              12
+            ],
+            [
+              45,
+              13,
+              69,
+              13
+            ],
+            [
+              43,
+              14,
+              71,
+              14
+            ],
+            [
+              41,
+              15,
+              41,
+              15
+            ],
+            [
+              43,
+              15,
+              73,
+              15
+            ],
+            [
+              40,
+              16,
+              40,
+              16
+            ],
+            [
+              44,
+              16,
+              46,
+              16
+            ],
+            [
+              49,
+              16,
+              64,
+              16
+            ],
+            [
+              68,
+              16,
+              71,
+              16
+            ],
+            [
+              74,
+              16,
+              75,
+              16
+            ],
+            [
+              39,
+              17,
+              47,
+              17
+            ],
+            [
+              49,
+              17,
+              76,
+              17
+            ],
+            [
+              39,
+              18,
+              77,
+              18
+            ],
+            [
+              39,
+              19,
+              78,
+              19
+            ],
+            [
+              39,
+              20,
+              78,
+              20
+            ],
+            [
+              39,
+              21,
+              78,
+              21
+            ],
+            [
+              39,
+              22,
+              79,
+              22
+            ],
+            [
+              38,
+              23,
+              65,
+              23
+            ],
+            [
+              67,
+              23,
+              79,
+              23
+            ],
+            [
+              38,
+              24,
+              40,
+              24
+            ],
+            [
+              43,
+              24,
+              46,
+              24
+            ],
+            [
+              49,
+              24,
+              64,
+              24
+            ],
+            [
+              68,
+              24,
+              70,
+              24
+            ],
+            [
+              74,
+              24,
+              79,
+              24
+            ],
+            [
+              40,
+              25,
+              40,
+              25
+            ],
+            [
+              42,
+              25,
+              65,
+              25
+            ],
+            [
+              67,
+              25,
+              71,
+              25
+            ],
+            [
+              73,
+              25,
+              77,
+              25
+            ],
+            [
+              44,
+              26,
+              73,
+              26
+            ],
+            [
+              46,
+              27,
+              71,
+              27
+            ],
+            [
+              50,
+              28,
+              55,
+              28
+            ],
+            [
+              60,
+              28,
+              68,
+              28
+            ]
+          ]
+        }
+      ],
+      "room_claims": [
+        {
+          "name": "Treasury2",
+          "type": 3,
+          "seat": 3,
+          "tiles": [
+            [
+              12,
+              42
+            ],
+            [
+              12,
+              43
+            ],
+            [
+              13,
+              42
+            ],
+            [
+              13,
+              43
+            ],
+            [
+              14,
+              42
+            ],
+            [
+              14,
+              43
+            ]
+          ],
+          "bounds": [
+            12,
+            42,
+            14,
+            43
+          ],
+          "goal": "hollowmark-main-heart"
+        },
+        {
+          "name": "Treasury3",
+          "type": 3,
+          "seat": 3,
+          "tiles": [
+            [
+              100,
+              42
+            ],
+            [
+              100,
+              43
+            ],
+            [
+              101,
+              42
+            ],
+            [
+              101,
+              43
+            ],
+            [
+              102,
+              42
+            ],
+            [
+              102,
+              43
+            ]
+          ],
+          "bounds": [
+            100,
+            42,
+            102,
+            43
+          ],
+          "goal": "hollowmark-main-heart"
+        }
+      ]
+    },
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tHigh King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours."
+    }
   }
 }

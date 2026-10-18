@@ -687,13 +687,39 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | Script line 5673 | `Action	objectiveid	1	hollowmarkcitadel-o01	Kill King Castellan on his throne.` | yes |
 | Script line 5674 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
 | Script line 5675 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
-| Script line 6102 | `Action	win	1` | yes |
+| Script line 6101 | `Action	win	1` | yes |
+| Script line 6359 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `hollowmark-main-heart`: Protect your heart and take the royal treasuries. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	12	42	14	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2 |
+| main | `hollowmark-main-courts`: Cross the three courts; take towers or gate keys. | `mainCourts`: Cond	flag	mainCourt3	1 |
+| main | `hollowmark-main-king`: Defeat King Castellan in the throne hall. | `mainKing`: Cond	killedin	CastellanKing	ThroneHall |
+| main | `hollowmark-main-throne`: Claim the throne hall. | `mainThrone`: Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28 |
+| optional | `hollowmark-extra-tower`: Explore the western throne tower. | `extraTower`: Cond	region	1	WestTower3 |
+
+Possible route (static, not a playthrough):
+- Protect the heart and claim both original upper treasury rooms, receiving the unchanged tower2 reward.
+- Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.
+- Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.
+- Optionally visit WestTower3; it is not one of the required gate towers.
+
+Static conditions only; full movement, claiming, combat, treasury payout and save/load remain unverified.
+
 | Trigger `goalHeartSafe3BeforeKingDead` | `Action	objectivestate	1	hollowmarkcitadel-o03	reached`; conditions: `Cond	time	5; Cond	alive	CastellanKing	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCourt3` | `Action	objectivestate	1	hollowmarkcitadel-o02	reached`; conditions: `Cond	region	1	ThroneHall; Cond	flag	goalCourt2	1; Cond	flag	upperWest	1; Cond	flag	upperEast	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	hollowmarkcitadel-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `kingDead` | `Action	objectivestate	1	hollowmarkcitadel-o01	reached`; conditions: `Cond	time	5; Cond	alive	CastellanKing	0` | yes |
-| Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | no: gate routes and treasury use are not independent winning goals |
-| Briefing | Kill Castellan and claim the throne we promised at the beginning. | no: kingDead checks Castellan's death, not throne ownership |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	hollowmark-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	hollowmark-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	12	42	14	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2` | yes |
+| Trigger `mainCourts` | `Action	objectivestate	1	hollowmark-main-courts	reached`; conditions: `Cond	flag	mainCourt3	1` | yes |
+| Trigger `mainKing` | `Action	objectivestate	1	hollowmark-main-king	reached`; conditions: `Cond	killedin	CastellanKing	ThroneHall` | yes |
+| Trigger `mainThrone` | `Action	objectivestate	1	hollowmark-main-throne	reached`; conditions: `Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28` | yes |
+| Trigger `extraTower` | `Action	objectivestate	1	hollowmark-extra-tower	reached`; conditions: `Cond	region	1	WestTower3` | yes |
+| Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes |
+| Briefing | Kill Castellan and claim the throne we promised at the beginning. | yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned |
 
 ## Ironbridge
 
