@@ -441,13 +441,41 @@ File: `levels/campaign/Ebonrook.level`.
 | Advisory hint line 5372 | `Action	hint	1	Mine gold; feed your army from the glades.` | not an objective; no state required |
 | Script line 5422 | `Action	objectiveid	1	ebonrook-o04	Possess a creature; enter the southern hollow.` | yes |
 | Script line 5452 | `Action	objectiveid	1	ebonrook-o05	Kill Sabine Rook.` | yes |
-| Script line 5624 | `Action	win	1` | yes |
+| Script line 5623 | `Action	win	1` | yes |
+| Script line 5796 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ebonrook-main-home`: Mine 300 gold; build 14 beds and a coop; guard your heart. | `mainHome`: Cond	mined	1	>=	300; Cond	furniture	1	Dormitory	>=	14; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `ebonrook-main-river`: Cross the river by a northern bridge. | `mainRiver`: Cond	flag	mainRiverCrossed	1 |
+| main | `ebonrook-main-roads`: Open both southern roads; possess a scout in the hollow. | `mainRoads`: Cond	flag	mainSouthOpen	1; Cond	flag	mainNorthOpen	1; Cond	trigger	scoutPossessed |
+| main | `ebonrook-main-warden`: Defeat Sabine Rook in the roots and all enemy forces. | `mainWarden`: Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies |
+| optional | `ebonrook-extra-grove`: Explore the sealed northeastern grove. | `extraGrove`: Cond	region	1	SealedGrove |
+
+Possible route (static, not a playthrough):
+- Mine300actualgold,provide14realbeds and a coop,and protect the heart. The actual starting army is4Orc,3Troll,3Goblin,3Spider,1Rat. Orc beds1x2,Troll2x2,others1x1,total27bedfields. No starting fighters invented or ignored.
+- A concrete layout uses x56..59/y6..12:three Troll2x2atx56..57/y6..7,8..9,10..11;three Orc1x2atx58/y6..7,8..9,10..11;fourthOrcatx59/y6..7;seven singlesatx59/y8..11andx56..58/y12. All27fields fit without overlap. Hatchery3x3atx68..70/y18..20. Both sites free of original rooms and potentially reachable.
+- Actual cost27*92+9*110=3474gold. Start0;original firstCoin after300mining gives800gold. A total2674mining plus800gift can pay for this layout,from93500finitepotentialgold. No added mining threshold beyond300: supplying the army naturally requires the resources,existing gifts/rewards remain.
+- Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.
+- Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.
+- Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals.
+
+Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.
+
 | Trigger `crossed` | `Action	objectivestate	1	ebonrook-o02	reached`; conditions: `Cond	region	1	SouthHub` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	ebonrook-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	ebonrook-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutPossessed` | `Action	objectivestate	1	ebonrook-o04	reached`; conditions: `Cond	possessed	1	Hollow` | yes |
-| Briefing | You have creatures but no gold, so mine the glades and keep them fed. | no: mining and feeding are not winning conditions |
-| Briefing | Cross the northern bridges, open the southern approaches and kill Rook in the south-west roots. | no: enemy elimination is checked; the named route is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ebonrook-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	ebonrook-main-home	reached`; conditions: `Cond	mined	1	>=	300; Cond	furniture	1	Dormitory	>=	14; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainRiver` | `Action	objectivestate	1	ebonrook-main-river	reached`; conditions: `Cond	flag	mainRiverCrossed	1` | yes |
+| Trigger `mainRoads` | `Action	objectivestate	1	ebonrook-main-roads	reached`; conditions: `Cond	flag	mainSouthOpen	1; Cond	flag	mainNorthOpen	1; Cond	trigger	scoutPossessed` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	ebonrook-main-warden	reached`; conditions: `Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGrove` | `Action	objectivestate	1	ebonrook-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
+| Briefing | You have creatures but no gold, so mine the glades and keep them fed. | yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge |
+| Briefing | Cross the northern bridges, open the southern approaches and kill Rook in the south-west roots. | yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes |
 
 ## Goldspire
 

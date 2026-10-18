@@ -90,6 +90,8 @@ BRIEFING_MATCH["Mirewatch"] = {2: "yes: actual two beds, hatchery coop and own-h
 
 BRIEFING_MATCH["Bellwick"] = {3: "yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes"}
 
+BRIEFING_MATCH["Ebonrook"] = {2: "yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge", 3: "yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1696,6 +1698,18 @@ def self_test(root):
             ("Cond\tregion\t1\tScriptorium", "Cond\tregion\t1\tWestCloister")):
         assert needle in bell
         assert grouped_goal_errors(bell.replace(needle, replacement), "Bellwick"), "Bellwick requirement weakening must fail: " + needle
+    ebon = (root / "levels/campaign/Ebonrook.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(ebon, "Ebonrook")
+    for needle, replacement in (
+            ("Cond\tfurniture\t1\tDormitory\t>=\t14", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
+            ("Cond\tmined\t1\t>=\t300", "Cond\tmined\t1\t>=\t30"),
+            ("Cond\tcrossed\t1\tMainMiddleBridge\tsouth", "Cond\tregion\t1\tSouthHub"),
+            ("Cond\tpossessed\t1\tHollow", "Cond\tregion\t1\tHollow"),
+            ("Cond\tflag\tmainNorthOpen\t1", "Cond\tflag\tmainSouthOpen\t1"),
+            ("Cond\tkilledin\tSabineRook\tRoots", "Cond\talive\tSabineRook\t0"),
+            ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tNorthEast")):
+        assert needle in ebon
+        assert grouped_goal_errors(ebon.replace(needle, replacement), "Ebonrook"), "Ebonrook requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 

@@ -9216,5 +9216,612 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe undead keeper is dust and the bells hang silent. Bellwick is yours."
     }
+  },
+  "Ebonrook": {
+    "goals": {
+      "ebonrook-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 300 gold; build 14 beds and a coop; guard your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t300",
+          "Cond\tfurniture\t1\tDormitory\t>=\t14",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ebonrook-main-river": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the river by a northern bridge.",
+        "completion": "mainRiver",
+        "conditions": [
+          "Cond\tflag\tmainRiverCrossed\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ebonrook-main-roads": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Open both southern roads; possess a scout in the hollow.",
+        "completion": "mainRoads",
+        "conditions": [
+          "Cond\tflag\tmainSouthOpen\t1",
+          "Cond\tflag\tmainNorthOpen\t1",
+          "Cond\ttrigger\tscoutPossessed"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ebonrook-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Sabine Rook in the roots and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tkilledin\tSabineRook\tRoots",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ebonrook-extra-grove": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the sealed northeastern grove.",
+        "completion": "extraGrove",
+        "conditions": [
+          "Cond\tregion\t1\tSealedGrove"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "ebonrook-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "crossWestBridge": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainWestBridge\tsouth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRiverCrossed\t1"
+        ]
+      },
+      "crossMiddleBridge": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainMiddleBridge\tsouth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRiverCrossed\t1"
+        ]
+      },
+      "crossEastBridge": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainEastBridge\tsouth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRiverCrossed\t1"
+        ]
+      },
+      "southRoadReady": {
+        "conditions": [
+          "Cond\ttrigger\tsouthRoadOpens"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainSouthOpen\t1"
+        ]
+      },
+      "northRoadReady": {
+        "conditions": [
+          "Cond\ttrigger\tnorthRoadOpens"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainNorthOpen\t1"
+        ]
+      },
+      "possessedRoadReady": {
+        "conditions": [
+          "Cond\ttrigger\tscoutPossessed"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainSouthOpen\t1"
+        ]
+      },
+      "lateRoadsReady": {
+        "conditions": [
+          "Cond\ttrigger\troadsLate"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainSouthOpen\t1",
+          "Action\tsetflag\tmainNorthOpen\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tebonrook-main-home\treached",
+          "Cond\tobjective\t1\tebonrook-main-river\treached",
+          "Cond\tobjective\t1\tebonrook-main-roads\treached",
+          "Cond\tobjective\t1\tebonrook-main-warden\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tSabine Rook is dead and the rooks fly south. Ebonrook is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "nightfall": [
+        "Cond\ttime\t3"
+      ],
+      "firstCoin": [
+        "Cond\tmined\t1\t>=\t300"
+      ],
+      "hubHeld": [
+        "Cond\tregion\t1\tNorthHub"
+      ],
+      "westMarch": [
+        "Cond\tregion\t1\tNorthWest"
+      ],
+      "eastMarch": [
+        "Cond\tregion\t1\tNorthEast"
+      ],
+      "sealed": [
+        "Cond\tregion\t1\tSealedGrove"
+      ],
+      "crossed": [
+        "Cond\tregion\t1\tSouthHub"
+      ],
+      "hollowSeen": [
+        "Cond\tregion\t1\tHollow"
+      ],
+      "swSeen": [
+        "Cond\tregion\t1\tSouthWest"
+      ],
+      "rootsSeen": [
+        "Cond\tregion\t1\tRoots"
+      ],
+      "kills": [
+        "Cond\tkills\t1\t>=\t30"
+      ],
+      "flock1": [
+        "Cond\ttime\t160"
+      ],
+      "flock2": [
+        "Cond\ttime\t330"
+      ],
+      "flock3": [
+        "Cond\ttime\t500"
+      ],
+      "flock4": [
+        "Cond\ttime\t670"
+      ],
+      "flock5": [
+        "Cond\ttime\t840"
+      ],
+      "flock6": [
+        "Cond\ttime\t1010"
+      ],
+      "flock7": [
+        "Cond\ttime\t1180"
+      ],
+      "flock8": [
+        "Cond\ttime\t1350"
+      ],
+      "flock9": [
+        "Cond\ttime\t1520"
+      ],
+      "flock10": [
+        "Cond\ttime\t1690"
+      ],
+      "flock11": [
+        "Cond\ttime\t1860"
+      ],
+      "flock12": [
+        "Cond\ttime\t2030"
+      ],
+      "flock13": [
+        "Cond\ttime\t2200"
+      ],
+      "flock14": [
+        "Cond\ttime\t2370"
+      ],
+      "flock15": [
+        "Cond\ttime\t2540"
+      ],
+      "flock16": [
+        "Cond\ttime\t2710"
+      ],
+      "flock17": [
+        "Cond\ttime\t2880"
+      ],
+      "flock18": [
+        "Cond\ttime\t3050"
+      ],
+      "flock19": [
+        "Cond\ttime\t3220"
+      ],
+      "flock20": [
+        "Cond\ttime\t3390"
+      ],
+      "flock21": [
+        "Cond\ttime\t3560"
+      ],
+      "flock22": [
+        "Cond\ttime\t3730"
+      ],
+      "southRoadOpens": [
+        "Cond\tflag\thollowHeld\t1",
+        "Cond\tkills\t1\t>=\t20"
+      ],
+      "northRoadOpens": [
+        "Cond\tflag\tswHeld\t1",
+        "Cond\tkills\t1\t>=\t20"
+      ],
+      "roadsLate": [
+        "Cond\ttime\t2400"
+      ],
+      "wardenKey": [
+        "Cond\ttime\t4"
+      ],
+      "wardenHurt": [
+        "Cond\thealth\tSabineRook\t<=\t40"
+      ],
+      "wardenKeyDropped": [
+        "Cond\ttime\t5",
+        "Cond\talive\tSabineRook\t0"
+      ],
+      "portalWake": [
+        "Cond\ttime\t600",
+        "Cond\tflag\tportalOn\t0"
+      ],
+      "scoutPossessed": [
+        "Cond\tpossessed\t1\tHollow"
+      ]
+    },
+    "preserved_actions": {
+      "nightfall": [
+        "Action\tmessage\t1\tEbonrook is a black wood that keeps its own night, master. Warden Sabine Rook has hidden herself among the roots in the south and the rooks carry word of every move you make.",
+        "Action\tobjectiveid\t1\tebonrook-o01\tKill Sabine Rook in the south-west roots.",
+        "Action\tobjectiveid\t1\tebonrook-o02\tCross the river by the north bridges.",
+        "Action\thint\t1\tMine gold; feed your army from the glades.",
+        "Action\tportal\t1\toff"
+      ],
+      "firstCoin": [
+        "Action\tmessage\t1\tThe first coin of the wood, and your portal draws creatures again. They need beds and food soon.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1",
+        "Action\tgold\t1\t800"
+      ],
+      "hubHeld": [
+        "Action\tmessage\t1\tThe north hub is yours. Glades open to the west and the east, and the river lies south.",
+        "Action\treveal\t1\tNorthWest",
+        "Action\treveal\t1\tNorthEast",
+        "Action\treveal\t1\tFord",
+        "Action\tspawn\t3\t64\t38\t1\tKnight:3\tElf:3\tMonk:2\tAdventurer:2"
+      ],
+      "westMarch": [
+        "Action\tmessage\t1\tA glade of rooks. The old nests are lined with coin.",
+        "Action\treveal\t1\tWestMarch",
+        "Action\tgold\t1\t700"
+      ],
+      "eastMarch": [
+        "Action\tmessage\t1\tA glade of rooks in the east. A sealed grove lies north of it, and something stirs there.",
+        "Action\treveal\t1\tEastMarch",
+        "Action\treveal\t1\tSealedGrove"
+      ],
+      "sealed": [
+        "Action\tmessage\t1\tA walled-up grove with a cache of coin and ale. Someone hid it from the wardens.",
+        "Action\tgold\t1\t1500"
+      ],
+      "crossed": [
+        "Action\tmessage\t1\tThe river is behind you. The south has three more glades and the way to the nest is sealed with stone in two places. Possess one of your creatures and walk it into the southern hollow, and the rooks will lose the south road.",
+        "Action\tobjectiveid\t1\tebonrook-o04\tPossess a creature; enter the southern hollow.",
+        "Action\treveal\t1\tSouthWest",
+        "Action\treveal\t1\tSouthEast",
+        "Action\treveal\t1\tHollow",
+        "Action\tspawn\t3\t63\t79\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3",
+        "Action\tobjectivestate\t1\tebonrook-o02\treached"
+      ],
+      "hollowSeen": [
+        "Action\tmessage\t1\tThe southern hollow. An arena stands in the open. The south road west to the roots is sealed and opens once the wood has bled.",
+        "Action\tsetflag\thollowHeld\t1",
+        "Action\treveal\t1\tRoots",
+        "Action\tspawn\t3\t63\t91\t1\tKnight:4\tElf:4\tMonk:3\tAdventurer:3"
+      ],
+      "swSeen": [
+        "Action\tmessage\t1\tThe south-west glade, with a library of the rooks. The north road to the nest is sealed and opens once the wood has bled.",
+        "Action\tsetflag\tswHeld\t1",
+        "Action\treveal\t1\tRoots",
+        "Action\tspawn\t3\t23\t71\t1\tKnight:4\tMonk:3\tElf:3\tDwarf2:3"
+      ],
+      "rootsSeen": [
+        "Action\tmessage\t1\tThe roots of the black wood. Sabine Rook is here and she is awake.",
+        "Action\tobjectiveid\t1\tebonrook-o05\tKill Sabine Rook.",
+        "Action\tspawn\t2\t38\t98\t1\tKnight:5\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "kills": [
+        "Action\tmessage\t1\tThe wood has bled its guard thin. Your army has earned something.",
+        "Action\tgold\t1\t1000"
+      ],
+      "flock1": [
+        "Action\tmessage\t1\tThe rooks are wheeling and soldiers follow.",
+        "Action\tspawn\t3\t64\t38\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "flock2": [
+        "Action\tmessage\t1\tA column is coming out of the trees.",
+        "Action\tspawn\t3\t23\t29\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "flock3": [
+        "Action\tmessage\t1\tPikes are marching along the forest road.",
+        "Action\tspawn\t3\t103\t33\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "flock4": [
+        "Action\tmessage\t1\tThe wood is sending another squad.",
+        "Action\tspawn\t3\t63\t79\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "flock5": [
+        "Action\tmessage\t1\tArmoured riders are in the glade.",
+        "Action\tspawn\t3\t23\t71\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "flock6": [
+        "Action\tmessage\t1\tA heavy column has left the nest road.",
+        "Action\tspawn\t3\t103\t79\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "flock7": [
+        "Action\tmessage\t1\tThe rooks are wheeling and soldiers follow.",
+        "Action\tspawn\t3\t64\t38\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "flock8": [
+        "Action\tmessage\t1\tA column is coming out of the trees.",
+        "Action\tspawn\t3\t23\t29\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "flock9": [
+        "Action\tmessage\t1\tPikes are marching along the forest road.",
+        "Action\tspawn\t3\t103\t33\t1\tKnight:4\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
+      ],
+      "flock10": [
+        "Action\tmessage\t1\tThe wood is sending another squad.",
+        "Action\tspawn\t3\t63\t79\t1\tKnight:4\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
+      ],
+      "flock11": [
+        "Action\tmessage\t1\tArmoured riders are in the glade.",
+        "Action\tspawn\t3\t23\t71\t1\tKnight:4\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
+      ],
+      "flock12": [
+        "Action\tmessage\t1\tA heavy column has left the nest road.",
+        "Action\tspawn\t3\t103\t79\t1\tKnight:4\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
+      ],
+      "flock13": [
+        "Action\tmessage\t1\tThe rooks are wheeling and soldiers follow.",
+        "Action\tspawn\t3\t64\t38\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "flock14": [
+        "Action\tmessage\t1\tA column is coming out of the trees.",
+        "Action\tspawn\t3\t23\t29\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "flock15": [
+        "Action\tmessage\t1\tPikes are marching along the forest road.",
+        "Action\tspawn\t3\t103\t33\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "flock16": [
+        "Action\tmessage\t1\tThe wood is sending another squad.",
+        "Action\tspawn\t3\t63\t79\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "flock17": [
+        "Action\tmessage\t1\tArmoured riders are in the glade.",
+        "Action\tspawn\t3\t23\t71\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "flock18": [
+        "Action\tmessage\t1\tA heavy column has left the nest road.",
+        "Action\tspawn\t3\t103\t79\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "flock19": [
+        "Action\tmessage\t1\tThe rooks are wheeling and soldiers follow.",
+        "Action\tspawn\t3\t64\t38\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "flock20": [
+        "Action\tmessage\t1\tA column is coming out of the trees.",
+        "Action\tspawn\t3\t23\t29\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "flock21": [
+        "Action\tmessage\t1\tPikes are marching along the forest road.",
+        "Action\tspawn\t3\t103\t33\t1\tKnight:5\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "flock22": [
+        "Action\tmessage\t1\tThe wood is sending another squad.",
+        "Action\tspawn\t3\t63\t79\t1\tKnight:5\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "southRoadOpens": [
+        "Action\tmessage\t1\tThe seal of the south road gives way. The road west to the roots is open.",
+        "Action\tterrain\t44\t97\t46\t98\tpath"
+      ],
+      "northRoadOpens": [
+        "Action\tmessage\t1\tThe seal of the north road gives way. The road down to the roots is open.",
+        "Action\tterrain\t25\t84\t25\t86\tpath"
+      ],
+      "roadsLate": [
+        "Action\tmessage\t1\tThe rooks have called their masons home and both seals of the roots fall away.",
+        "Action\tterrain\t44\t97\t46\t98\tpath",
+        "Action\tterrain\t25\t84\t25\t86\tpath"
+      ],
+      "wardenKey": [
+        "Action\tstoneattach\tSabineRook"
+      ],
+      "wardenHurt": [
+        "Action\tmessage\t1\tSabine Rook is bleeding and calls every rook of the roots to her side.",
+        "Action\tspawn\t2\t38\t98\t1\tKnight:5\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "wardenKeyDropped": [
+        "Action\tmessage\t1\tThe warden is dead and the key to the rook hoard lies where she fell."
+      ],
+      "portalWake": [
+        "Action\tmessage\t1\tThe glades have settled and your portal draws creatures again.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1"
+      ],
+      "scoutPossessed": [
+        "Action\tmessage\t1\tYour possessed scout stands in the southern hollow. The rooks see it and pull back from the south road, and a cache of coin lies open.",
+        "Action\tterrain\t44\t97\t46\t98\tpath",
+        "Action\tgold\t1\t600",
+        "Action\tobjectivestate\t1\tebonrook-o04\treached"
+      ]
+    },
+    "reachability": {
+      "crossing_bridges": {
+        "MainWestBridge": {
+          "room": "WoodenBridge1",
+          "bounds": [
+            38,
+            54,
+            39,
+            58
+          ],
+          "direction": "south"
+        },
+        "MainMiddleBridge": {
+          "room": "StoneBridge1",
+          "bounds": [
+            64,
+            54,
+            65,
+            58
+          ],
+          "direction": "south"
+        },
+        "MainEastBridge": {
+          "room": "WoodenBridge2",
+          "bounds": [
+            90,
+            54,
+            91,
+            58
+          ],
+          "direction": "south"
+        }
+      },
+      "regions": {
+        "MainWestBridge": {
+          "bounds": [
+            38,
+            54,
+            39,
+            58
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "MainMiddleBridge": {
+          "bounds": [
+            64,
+            54,
+            65,
+            58
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "MainEastBridge": {
+          "bounds": [
+            90,
+            54,
+            91,
+            58
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "SupplyBeds": {
+          "bounds": [
+            56,
+            6,
+            59,
+            12
+          ],
+          "minimum_potential_tiles": 28
+        },
+        "SupplyHatchery": {
+          "bounds": [
+            68,
+            18,
+            70,
+            20
+          ],
+          "minimum_potential_tiles": 9
+        },
+        "SealedGrove": {
+          "bounds": [
+            92,
+            4,
+            108,
+            14
+          ],
+          "minimum_open_tiles": 52
+        },
+        "Roots": {
+          "bounds": [
+            20,
+            90,
+            42,
+            106
+          ],
+          "minimum_open_tiles": 1
+        },
+        "Hollow": {
+          "bounds": [
+            52,
+            90,
+            76,
+            106
+          ],
+          "minimum_open_tiles": 178
+        }
+      },
+      "named_creatures": [
+        "SabineRook",
+        "Rookhunter1",
+        "Rookhunter2",
+        "Rookhunter3",
+        "Rookhunter4",
+        "Rookhunter5",
+        "Rookhunter6",
+        "Rookhunter7",
+        "Rookhunter8",
+        "Rookhunter9",
+        "Rookhunter10",
+        "Rookhunter11",
+        "Rookhunter12",
+        "Rookhunter13",
+        "Rookhunter14"
+      ],
+      "minimum_mineable_gold": 2674
+    },
+    "route": [
+      "Mine300actualgold,provide14realbeds and a coop,and protect the heart. The actual starting army is4Orc,3Troll,3Goblin,3Spider,1Rat. Orc beds1x2,Troll2x2,others1x1,total27bedfields. No starting fighters invented or ignored.",
+      "A concrete layout uses x56..59/y6..12:three Troll2x2atx56..57/y6..7,8..9,10..11;three Orc1x2atx58/y6..7,8..9,10..11;fourthOrcatx59/y6..7;seven singlesatx59/y8..11andx56..58/y12. All27fields fit without overlap. Hatchery3x3atx68..70/y18..20. Both sites free of original rooms and potentially reachable.",
+      "Actual cost27*92+9*110=3474gold. Start0;original firstCoin after300mining gives800gold. A total2674mining plus800gift can pay for this layout,from93500finitepotentialgold. No added mining threshold beyond300: supplying the army naturally requires the resources,existing gifts/rewards remain.",
+      "Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.",
+      "Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.",
+      "Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals."
+    ],
+    "runtime_limit": "Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tSabine Rook is dead and the rooks fly south. Ebonrook is yours."
+    }
   }
 }

@@ -5618,7 +5618,6 @@ Name	wardenSlain
 Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	Sabine Rook is dead and the rooks fly south. Ebonrook is yours.
 Action	objectivestate	1	ebonrook-o01	reached
 Action	objectivestate	1	ebonrook-o05	reached
 Action	win	1
@@ -5684,5 +5683,116 @@ Action	message	1	Your possessed scout stands in the southern hollow. The rooks s
 Action	terrain	44	97	46	98	path
 Action	gold	1	600
 Action	objectivestate	1	ebonrook-o04	reached
+[/Trigger]
+
+Region	MainWestBridge	38	54	39	58
+Region	MainMiddleBridge	64	54	65	58
+Region	MainEastBridge	90	54	91	58
+Region	SupplyBeds	56	6	59	12
+Region	SupplyHatchery	68	18	70	20
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	ebonrook-main-home	Mine 300 gold; build 14 beds and a coop; guard your heart.
+Action	mainobjectiveid	1	ebonrook-main-river	Cross the river by a northern bridge.
+Action	mainobjectiveid	1	ebonrook-main-roads	Open both southern roads; possess a scout in the hollow.
+Action	mainobjectiveid	1	ebonrook-main-warden	Defeat Sabine Rook in the roots and all enemy forces.
+Action	optionalobjectiveid	1	ebonrook-extra-grove	Explore the sealed northeastern grove.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	ebonrook-main-home	failed
+[/Trigger]
+[Trigger]
+Name	crossWestBridge
+Mode	once
+Cond	crossed	1	MainWestBridge	south
+Action	setflag	mainRiverCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossMiddleBridge
+Mode	once
+Cond	crossed	1	MainMiddleBridge	south
+Action	setflag	mainRiverCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossEastBridge
+Mode	once
+Cond	crossed	1	MainEastBridge	south
+Action	setflag	mainRiverCrossed	1
+[/Trigger]
+[Trigger]
+Name	southRoadReady
+Mode	once
+Cond	trigger	southRoadOpens
+Action	setflag	mainSouthOpen	1
+[/Trigger]
+[Trigger]
+Name	northRoadReady
+Mode	once
+Cond	trigger	northRoadOpens
+Action	setflag	mainNorthOpen	1
+[/Trigger]
+[Trigger]
+Name	possessedRoadReady
+Mode	once
+Cond	trigger	scoutPossessed
+Action	setflag	mainSouthOpen	1
+[/Trigger]
+[Trigger]
+Name	lateRoadsReady
+Mode	once
+Cond	trigger	roadsLate
+Action	setflag	mainSouthOpen	1
+Action	setflag	mainNorthOpen	1
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	mined	1	>=	300
+Cond	furniture	1	Dormitory	>=	14
+Cond	furniture	1	Hatchery	>=	1
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	ebonrook-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainRiver
+Mode	repeat	0
+Cond	flag	mainRiverCrossed	1
+Action	objectivestate	1	ebonrook-main-river	reached
+[/Trigger]
+[Trigger]
+Name	mainRoads
+Mode	repeat	0
+Cond	flag	mainSouthOpen	1
+Cond	flag	mainNorthOpen	1
+Cond	trigger	scoutPossessed
+Action	objectivestate	1	ebonrook-main-roads	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	killedin	SabineRook	Roots
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	ebonrook-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraGrove
+Mode	once
+Cond	region	1	SealedGrove
+Action	objectivestate	1	ebonrook-extra-grove	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	ebonrook-main-home	reached
+Cond	objective	1	ebonrook-main-river	reached
+Cond	objective	1	ebonrook-main-roads	reached
+Cond	objective	1	ebonrook-main-warden	reached
+Action	message	1	Sabine Rook is dead and the rooks fly south. Ebonrook is yours.
+Action	win	1
 [/Trigger]
 [/Triggers]
