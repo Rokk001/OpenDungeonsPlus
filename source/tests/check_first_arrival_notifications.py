@@ -104,3 +104,20 @@ for path, signature, class_name in (
     assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
     assert spawn.index("newCreature->setPosition(spawnPosition);") < spawn.index(notice)
 print("Heart workers and worker gifts share saved first-arrival history: PASS (static only)")
+
+# Script reinforcements (including carried-over minions) and skill summons are arrivals too.
+source = (ROOT / "source/gamemap/LevelScriptRunner.cpp").read_text(encoding="utf-8")
+spawn = function(source, "void spawnCreatures(")
+notice = "notifyCreatureArrival(classToSpawn->getClassName())"
+assert spawn.count(notice) == 1
+assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
+assert spawn.index("newCreature->setPosition(newCreature->getPosition());") < spawn.index(notice)
+kept = function(source, "void LevelScriptRunner::spawnKeptMinion(")
+assert "spawnCreatures(gameMap, action);" in kept
+source = (ROOT / "source/creatureskill/CreatureSkillSummon.cpp").read_text(encoding="utf-8")
+spawn = function(source, "Creature* summonTemporaryCreature(")
+notice = "notifyCreatureArrival(definition->getClassName())"
+assert spawn.count(notice) == 1
+assert spawn.index("summoned->setPosition(spawnPosition);") < spawn.index(notice)
+assert spawn.index("summoned->addCreatureEffect(") < spawn.index(notice)
+print("Script reinforcements, transferred minions and skill summons share arrival history: PASS (static only)")

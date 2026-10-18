@@ -30,6 +30,7 @@ namespace CreatureSkillSummon
 {
 //! \brief Creates a creature of the given class for the seat of the caster on the given tile. The creature
 //! falls apart after nbTurns turns. Returns nullptr if the class does not exist.
+//! Announces the class only on its first successful arrival for the caster's seat.
 Creature* summonTemporaryCreature(GameMap& gameMap, const Creature& caster, const std::string& creatureClass,
     Tile* tile, int32_t nbTurns);
 }

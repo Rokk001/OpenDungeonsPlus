@@ -52,6 +52,7 @@ Creature* summonTemporaryCreature(GameMap& gameMap, const Creature& caster, cons
     summoned->createMesh();
     summoned->setPosition(spawnPosition);
     summoned->addCreatureEffect(new CreatureEffectTemporary(nbTurns));
+    caster.getSeat()->notifyCreatureArrival(definition->getClassName());
 
     return summoned;
 }
