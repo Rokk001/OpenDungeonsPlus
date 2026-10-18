@@ -1273,8 +1273,15 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             break;
         case LevelScriptActionType::objectiveState:
             for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
+            {
+                // Completed campaigns and irreversible failures have no later success transition.
+                if(script.hasMainObjectives(player->getSeat()->getId()) &&
+                   (gameMap.seatIsAWinner(player->getSeat()) ||
+                    script.getObjectiveState(player->getSeat()->getId(), action.mObjectiveId) == LevelScriptObjectiveState::failed))
+                    continue;
                 script.setObjectiveState(player->getSeat()->getId(), action.mObjectiveId,
                     static_cast<LevelScriptObjectiveState>(action.mNumber));
+            }
             break;
         case LevelScriptActionType::spawn:
             spawnCreatures(gameMap, action, sourceTrigger, sourceAction);
@@ -1432,6 +1439,13 @@ void LevelScriptRunner::doTurn(GameMap& gameMap)
     int64_t turn = gameMap.getTurnNumber();
     script.advanceTimers();
     updateStoneCarriers(gameMap, script);
+    for(Seat* seat : gameMap.getSeats())
+    {
+        Player* player = seat->getPlayer();
+        if(player != nullptr && player->getIsHuman() && !player->getHasLost() &&
+           !gameMap.seatIsAWinner(seat))
+            script.refreshMainObjectives(seat->getId());
+    }
     for(LevelScriptTrigger& trigger : script.getTriggers())
     {
         if(trigger.mTimesFired > 0)
@@ -1473,7 +1487,7 @@ void LevelScriptRunner::doTurn(GameMap& gameMap)
         Player* player = seat->getPlayer();
         if(player != nullptr && player->getIsHuman() && !player->getHasLost() &&
            script.hasVictoryRequest(seat->getId()) && script.areMainObjectivesReached(seat->getId()))
-            gameMap.addWinningSeat(seat);
+            gameMap.addWinningSeat(seat, true);
     }
 }
 

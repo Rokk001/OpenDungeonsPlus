@@ -46,3 +46,21 @@ unit = read('source/tests/test_LevelScript.cpp')
 assert 'required_objectives_and_pending_victory_round_trip' in unit
 assert 'legacy_objectives_keep_their_original_victory_rules' in unit
 print('Main/optional/conditional goals, shared victory gate and grouped display: static wiring PASS')
+
+refresh = body(script, 'void LevelScript::refreshMainObjectives(')
+assert 'LevelScriptObjectiveState::failed' in refresh and 'LevelScriptObjectiveState::open' in refresh
+assert 'LevelScriptObjectiveGroup::optional' not in refresh
+assert turn.index('script.refreshMainObjectives(') < turn.index('for(LevelScriptTrigger& trigger')
+print('Current main-state refresh preserves optional successes and terminal failures: static wiring PASS')
+
+assert 'hasMainObjectives(s->getId()) && !objectivesUpdated' in win
+assert 'gameMap.addWinningSeat(seat, true);' in turn
+assert '!gameMap.seatIsAWinner(seat)' in turn
+runner = read('source/gamemap/LevelScriptRunner.cpp')
+assert 'script.hasMainObjectives(player->getSeat()->getId()) &&' in runner
+assert 'gameMap.seatIsAWinner(player->getSeat()) ||' in runner
+assert 'script.getObjectiveState(player->getSeat()->getId(), action.mObjectiveId) == LevelScriptObjectiveState::failed' in runner
+print('Grouped victories wait for the current observer pass; completed outcomes stay frozen: static wiring PASS')
+
+assert win.index('checkGameDuration();') < win.index('getHasLost()')
+print('Original deadline is applied before grouped victory: static wiring PASS')

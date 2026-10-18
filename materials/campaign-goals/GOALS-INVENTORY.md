@@ -78,7 +78,32 @@ File: `levels/campaign/BoulderCourse.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 1431 | `Action	objectiveid	1	bouldercourse-o01	Slap all four boulders into their cups.` | yes |
 | Script line 1476 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `bouldercourse-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `bouldercourse-main-trial`: Sink all 4 boulders within 600s and 80 slaps. | `mainTrial`: Cond	trigger	courseDone |
+| optional | `bouldercourse-extra-survivors`: Keep all 3 starting workers alive. | `extraSurvivors`: Cond	objective	1	bouldercourse-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Use the four original balls and four Cup regions; original limits remain 600 seconds after openingRound and 80 slaps.
+- Keep the three named initial workers alive while rolling all four balls into their cups.
+- Complete courseDone with the heart intact. Optional survival is evaluated against the original death histories.
+
+The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.
+
 | Trigger `courseDone` | `Action	objectivestate	1	bouldercourse-o01	reached`; conditions: `Cond	boulder	CupA	>=	1; Cond	boulder	CupB	>=	1; Cond	boulder	CupC	>=	1; Cond	boulder	CupD	>=	1` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	bouldercourse-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	bouldercourse-main-trial	reached`; conditions: `Cond	trigger	courseDone` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	bouldercourse-extra-survivors	reached`; conditions: `Cond	objective	1	bouldercourse-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	bouldercourse-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	bouldercourse-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
 | Briefing | Roll every ball into its cup before the shift bell; this optional trial rewards one of four Heartstone fragments. | yes: courseDone checks all four cups; the timeout trigger limits the trial |
 
 ## Brackenford
@@ -461,13 +486,39 @@ File: `levels/campaign/Mossgate.level`.
 | Script line 749 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
 | Script line 767 | `Action	objectiveid	1	mossgate-o05	Enter the hall and kill Tobin Marsh.` | yes |
 | Script line 799 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `mossgate-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `mossgate-main-meadow`: Mine 60 gold and claim the meadow. | `mainMeadow`: Cond	mined	1	>=	60; Cond	claimed	1	Meadow	18 |
+| main | `mossgate-main-watch`: Clear the watch post and reinforcements. | `mainWatch`: Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1 |
+| main | `mossgate-main-village`: Defeat Marsh, his guards and their portal. | `mainVillage`: Cond	event	ReeveMarsh	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `mossgate-extra-gallery`: Explore the side gallery. | `extraGallery`: Cond	region	1	Gallery |
+
+Possible route (static, not a playthrough):
+- Mine at least 60 actual gold near the starting heart.
+- Claim 18 tiles of Meadow (14,18)-(27,26).
+- Enter Yard (3,11)-(13,20), defeat both named watchmen and the actual postStirs reinforcements.
+- Explore Gallery (10,6)-(24,12) with a living own creature before ending the level.
+- Defeat ReeveMarsh and remaining enemy creatures; destroy or take the enemy portal at (31,30). Preserve the own heart.
+
+Static routes and source conditions are not combat balance or an executed game playthrough.
+
 | Trigger `firstGold` | `Action	objectivestate	1	mossgate-o02	reached`; conditions: `Cond	mined	1	>=	60` | yes |
 | Trigger `meadowOurs` | `Action	objectivestate	1	mossgate-o03	reached`; conditions: `Cond	claimed	1	Meadow	18` | yes |
 | Trigger `goalWatchPostCleared` | `Action	objectivestate	1	mossgate-o04	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
 | Trigger `reeveFalls` | `Action	objectivestate	1	mossgate-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `reeveFalls` | `Action	objectivestate	1	mossgate-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Mine the soft walls and claim the meadow cave. | no: mining and meadow claiming are not winning conditions |
-| Briefing | Break the watch post and slay the reeve in his hall. | no: reeve elimination is checked; breaking the watch post separately is not |
+| Trigger `mainHeart` | `Action	objectivestate	1	mossgate-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainMeadow` | `Action	objectivestate	1	mossgate-main-meadow	reached`; conditions: `Cond	mined	1	>=	60; Cond	claimed	1	Meadow	18` | yes |
+| Trigger `mainWatch` | `Action	objectivestate	1	mossgate-main-watch	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
+| Trigger `mainVillage` | `Action	objectivestate	1	mossgate-main-village	reached`; conditions: `Cond	event	ReeveMarsh	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGallery` | `Action	objectivestate	1	mossgate-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	mossgate-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Mine the soft walls and claim the meadow cave. | yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles |
+| Briefing | Break the watch post and slay the reeve in his hall. | yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal |
 
 ## Ravensledge
 
@@ -580,10 +631,35 @@ File: `levels/campaign/SwarmNight.level`.
 | Script line 1483 | `Action	objectiveid	1	swarmnight-o01	Survive the swarm for 13 minutes.` | yes |
 | Script line 1484 | `Action	objectiveid	1	swarmnight-o02	Protect your heart.` | yes |
 | Script line 1599 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `swarmnight-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `swarmnight-main-trial`: Survive until dawn (13 minutes). | `mainTrial`: Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple |
+| optional | `swarmnight-extra-survivors`: Keep all 3 starting workers alive. | `extraSurvivors`: Cond	objective	1	swarmnight-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Prepare the existing dungeon against the six timed waves, preserving the heart.
+- Protect all three named initial workers; no requirement to defeat the rival heart or every surviving wave enemy is introduced.
+- At 780 seconds dawn requests victory; main goals and the optional survival outcome are evaluated before the victory result.
+
+The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.
+
 | Trigger `goalHeartSafe1BeforeDawn` | `Action	objectivestate	1	swarmnight-o01	reached`; conditions: `Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartSafe2BeforeDawn` | `Action	objectivestate	1	swarmnight-o02	reached`; conditions: `Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	swarmnight-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	swarmnight-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	swarmnight-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	swarmnight-main-trial	reached`; conditions: `Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	swarmnight-extra-survivors	reached`; conditions: `Cond	objective	1	swarmnight-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	swarmnight-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
 | Briefing | Keep your heart standing for thirteen minutes. | yes: dawn at 780 seconds with ProtectDungeonTemple |
 | Briefing | Your strongest surviving fighter can follow you onward toward Aurel's stand; this trial grants no Heartstone fragment. | yes: dawn invokes keepminion before win; no Heartstone reward is granted |
 
@@ -638,8 +714,34 @@ File: `levels/campaign/TwistingHalls.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3178 | `Action	objectiveid	1	twistinghalls-o01	Reach the north-east exit before time runs out.` | yes |
 | Script line 3202 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `twistinghalls-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `twistinghalls-main-trial`: Reach the exit in possession before time runs out. | `mainTrial`: Cond	trigger	hallReached; Cond	possessed	1	ExitHall |
+| optional | `twistinghalls-extra-survivors`: Keep all 4 starting fighters alive. | `extraSurvivors`: Cond	objective	1	twistinghalls-main-trial	reached; Cond	alive	Walker1; Cond	event	Walker1	killed	==	0; Cond	alive	Walker2; Cond	event	Walker2	killed	==	0; Cond	alive	Walker3; Cond	event	Walker3	killed	==	0; Cond	alive	Walker4; Cond	event	Walker4	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Possess an own creature and navigate the existing Maze; crossing Between opens the second moat span.
+- Reach Lever (47,44) to open the seal at (50,6).
+- Bring the currently possessed creature into ExitHall (51,2)-(57,8) before the existing 900-second limit; keep all four original Walkers alive.
+
+The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.
+
 | Trigger `hallReached` | `Action	objectivestate	1	twistinghalls-o01	reached`; conditions: `Cond	region	1	ExitHall` | yes |
-| Briefing | Possess your own creature and reach the north-east exit before time runs out to earn this optional trial's Heartstone fragment. | no: hallReached checks region presence; it does not independently require possession |
+| Trigger `mainHeart` | `Action	objectivestate	1	twistinghalls-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	twistinghalls-main-trial	reached`; conditions: `Cond	trigger	hallReached; Cond	possessed	1	ExitHall` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	twistinghalls-extra-survivors	reached`; conditions: `Cond	objective	1	twistinghalls-main-trial	reached; Cond	alive	Walker1; Cond	event	Walker1	killed	==	0; Cond	alive	Walker2; Cond	event	Walker2	killed	==	0; Cond	alive	Walker3; Cond	event	Walker3	killed	==	0; Cond	alive	Walker4; Cond	event	Walker4	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	twistinghalls-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker3	killed` | yes |
+| Trigger `extraSurvivorLost4` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker4	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	twistinghalls-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
+| Briefing | Possess your own creature and reach the north-east exit before time runs out to earn this optional trial's Heartstone fragment. | yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active |
 
 ## VarnsCrossing
 

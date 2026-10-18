@@ -1269,6 +1269,37 @@ bool LevelScript::areMainObjectivesReached(int32_t seatId) const
     return true;
 }
 
+//! \brief Detects explicit main goals, including discovery-activated goals not yet revealed.
+bool LevelScript::hasMainObjectives(int32_t seatId) const
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+        for(const LevelScriptAction& action : trigger.mActions)
+            if(action.mType == LevelScriptActionType::objective &&
+               (action.mSeatId == -1 || action.mSeatId == seatId) &&
+               (action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain))
+                return true;
+    return false;
+}
+
+//! \brief Rechecks main goals every turn instead of retaining an obsolete ownership or enemy-clear state.
+void LevelScript::refreshMainObjectives(int32_t seatId)
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType != LevelScriptActionType::objective ||
+               (action.mSeatId != -1 && action.mSeatId != seatId))
+                continue;
+            const bool required = action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                (action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain && trigger.mTimesFired > 0);
+            if(required && getObjectiveState(seatId, action.mObjectiveId) != LevelScriptObjectiveState::failed)
+                setObjectiveState(seatId, action.mObjectiveId, LevelScriptObjectiveState::open);
+        }
+    }
+}
+
 //! \brief Persists an original victory request while required goals are incomplete.
 void LevelScript::requestVictory(int32_t seatId)
 {

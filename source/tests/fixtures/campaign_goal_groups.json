@@ -1,0 +1,498 @@
+{
+  "Mossgate": {
+    "goals": {
+      "mossgate-main-heart": {
+        "kind": "mainobjectiveid",
+        "text": "Protect your heart.",
+        "seat": "1",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mossgate-main-meadow": {
+        "kind": "mainobjectiveid",
+        "text": "Mine 60 gold and claim the meadow.",
+        "seat": "1",
+        "completion": "mainMeadow",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t60",
+          "Cond\tclaimed\t1\tMeadow\t18"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mossgate-main-watch": {
+        "kind": "mainobjectiveid",
+        "text": "Clear the watch post and reinforcements.",
+        "seat": "1",
+        "completion": "mainWatch",
+        "conditions": [
+          "Cond\tevent\tPostWatch1\tkilled",
+          "Cond\tevent\tPostWatch2\tkilled",
+          "Cond\tspawncleared\tpostStirs\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mossgate-main-village": {
+        "kind": "mainobjectiveid",
+        "text": "Defeat Marsh, his guards and their portal.",
+        "seat": "1",
+        "completion": "mainVillage",
+        "conditions": [
+          "Cond\tevent\tReeveMarsh\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "mossgate-extra-gallery": {
+        "kind": "optionalobjectiveid",
+        "text": "Explore the side gallery.",
+        "seat": "1",
+        "completion": "extraGallery",
+        "conditions": [
+          "Cond\tregion\t1\tGallery"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "mossgate-main-heart",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "route": [
+      "Mine at least 60 actual gold near the starting heart.",
+      "Claim 18 tiles of Meadow (14,18)-(27,26).",
+      "Enter Yard (3,11)-(13,20), defeat both named watchmen and the actual postStirs reinforcements.",
+      "Explore Gallery (10,6)-(24,12) with a living own creature before ending the level.",
+      "Defeat ReeveMarsh and remaining enemy creatures; destroy or take the enemy portal at (31,30). Preserve the own heart."
+    ],
+    "runtime_limit": "Static routes and source conditions are not combat balance or an executed game playthrough.",
+    "reachability": {
+      "regions": {
+        "Meadow": {
+          "bounds": [
+            14,
+            18,
+            27,
+            26
+          ],
+          "minimum_potential_tiles": 18
+        },
+        "Gallery": {
+          "bounds": [
+            10,
+            6,
+            24,
+            12
+          ],
+          "minimum_open_tiles": 1
+        }
+      },
+      "minimum_mineable_gold": 60,
+      "named_creatures": [
+        "ReeveMarsh",
+        "PostWatch1",
+        "PostWatch2"
+      ]
+    }
+  },
+  "BoulderCourse": {
+    "goals": {
+      "bouldercourse-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bouldercourse-main-trial": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Sink all 4 boulders within 600s and 80 slaps.",
+        "completion": "mainTrial",
+        "conditions": [
+          "Cond\ttrigger\tcourseDone"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bouldercourse-extra-survivors": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Keep all 3 starting workers alive.",
+        "completion": "extraSurvivors",
+        "conditions": [
+          "Cond\tobjective\t1\tbouldercourse-main-trial\treached",
+          "Cond\talive\tDefaultWorker1",
+          "Cond\tevent\tDefaultWorker1\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker2",
+          "Cond\tevent\tDefaultWorker2\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker3",
+          "Cond\tevent\tDefaultWorker3\tkilled\t==\t0"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "bouldercourse-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost1": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker1\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "bouldercourse-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost2": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker2\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "bouldercourse-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost3": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker3\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "bouldercourse-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "mainTrialFailed": {
+        "conditions": [
+          "Cond\tdefeated\t1"
+        ],
+        "states": [
+          [
+            "1",
+            "bouldercourse-main-trial",
+            "failed"
+          ],
+          [
+            "1",
+            "bouldercourse-extra-survivors",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "route": [
+      "Use the four original balls and four Cup regions; original limits remain 600 seconds after openingRound and 80 slaps.",
+      "Keep the three named initial workers alive while rolling all four balls into their cups.",
+      "Complete courseDone with the heart intact. Optional survival is evaluated against the original death histories."
+    ],
+    "runtime_limit": "The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.",
+    "reachability": {
+      "named_creatures": [
+        "DefaultWorker1",
+        "DefaultWorker2",
+        "DefaultWorker3"
+      ]
+    },
+    "preserved_actions": {
+      "openingRound": [
+        "Action\tslaplimit\t80",
+        "Action\ttimelimit\t600"
+      ]
+    }
+  },
+  "TwistingHalls": {
+    "goals": {
+      "twistinghalls-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "twistinghalls-main-trial": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Reach the exit in possession before time runs out.",
+        "completion": "mainTrial",
+        "conditions": [
+          "Cond\ttrigger\thallReached",
+          "Cond\tpossessed\t1\tExitHall"
+        ],
+        "mode": "repeat\t0"
+      },
+      "twistinghalls-extra-survivors": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Keep all 4 starting fighters alive.",
+        "completion": "extraSurvivors",
+        "conditions": [
+          "Cond\tobjective\t1\ttwistinghalls-main-trial\treached",
+          "Cond\talive\tWalker1",
+          "Cond\tevent\tWalker1\tkilled\t==\t0",
+          "Cond\talive\tWalker2",
+          "Cond\tevent\tWalker2\tkilled\t==\t0",
+          "Cond\talive\tWalker3",
+          "Cond\tevent\tWalker3\tkilled\t==\t0",
+          "Cond\talive\tWalker4",
+          "Cond\tevent\tWalker4\tkilled\t==\t0"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "twistinghalls-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost1": {
+        "conditions": [
+          "Cond\tevent\tWalker1\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "twistinghalls-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost2": {
+        "conditions": [
+          "Cond\tevent\tWalker2\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "twistinghalls-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost3": {
+        "conditions": [
+          "Cond\tevent\tWalker3\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "twistinghalls-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost4": {
+        "conditions": [
+          "Cond\tevent\tWalker4\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "twistinghalls-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "mainTrialFailed": {
+        "conditions": [
+          "Cond\tdefeated\t1"
+        ],
+        "states": [
+          [
+            "1",
+            "twistinghalls-main-trial",
+            "failed"
+          ],
+          [
+            "1",
+            "twistinghalls-extra-survivors",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "route": [
+      "Possess an own creature and navigate the existing Maze; crossing Between opens the second moat span.",
+      "Reach Lever (47,44) to open the seal at (50,6).",
+      "Bring the currently possessed creature into ExitHall (51,2)-(57,8) before the existing 900-second limit; keep all four original Walkers alive."
+    ],
+    "runtime_limit": "The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.",
+    "reachability": {
+      "named_creatures": [
+        "Walker1",
+        "Walker2",
+        "Walker3",
+        "Walker4"
+      ]
+    },
+    "preserved_actions": {
+      "openingRound": [
+        "Action\ttimelimit\t900"
+      ]
+    }
+  },
+  "SwarmNight": {
+    "goals": {
+      "swarmnight-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "swarmnight-main-trial": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Survive until dawn (13 minutes).",
+        "completion": "mainTrial",
+        "conditions": [
+          "Cond\ttime\t780",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "swarmnight-extra-survivors": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Keep all 3 starting workers alive.",
+        "completion": "extraSurvivors",
+        "conditions": [
+          "Cond\tobjective\t1\tswarmnight-main-trial\treached",
+          "Cond\talive\tDefaultWorker1",
+          "Cond\tevent\tDefaultWorker1\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker2",
+          "Cond\tevent\tDefaultWorker2\tkilled\t==\t0",
+          "Cond\talive\tDefaultWorker3",
+          "Cond\tevent\tDefaultWorker3\tkilled\t==\t0"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "swarmnight-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost1": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker1\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "swarmnight-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost2": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker2\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "swarmnight-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost3": {
+        "conditions": [
+          "Cond\tevent\tDefaultWorker3\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "swarmnight-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "mainTrialFailed": {
+        "conditions": [
+          "Cond\tdefeated\t1"
+        ],
+        "states": [
+          [
+            "1",
+            "swarmnight-main-trial",
+            "failed"
+          ],
+          [
+            "1",
+            "swarmnight-extra-survivors",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "route": [
+      "Prepare the existing dungeon against the six timed waves, preserving the heart.",
+      "Protect all three named initial workers; no requirement to defeat the rival heart or every surviving wave enemy is introduced.",
+      "At 780 seconds dawn requests victory; main goals and the optional survival outcome are evaluated before the victory result."
+    ],
+    "runtime_limit": "The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.",
+    "reachability": {
+      "named_creatures": [
+        "DefaultWorker1",
+        "DefaultWorker2",
+        "DefaultWorker3"
+      ]
+    }
+  }
+}

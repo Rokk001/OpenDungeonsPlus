@@ -10,12 +10,15 @@ are never presumed satisfied.
 import argparse
 from collections import deque
 import hashlib
+import json
 import math
 from pathlib import Path
 import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+GROUP_KINDS = {"mainobjectiveid", "optionalobjectiveid", "conditionalobjectiveid"}
+GROUP_REVIEW = json.loads((ROOT / "source/tests/fixtures/campaign_goal_groups.json").read_text(encoding="utf-8"))
 GOALS = {"KillAllEnemies", "ProtectDungeonTemple", "ProtectCreature", "ClaimNTiles", "MineNGold"}
 REQUIRED = ("Info", "Seats", "Goals", "Tiles", "Rooms", "Traps", "Lights",
             "CreatureDefinitions", "EquipmentDefinitions", "Creatures", "Spells",
@@ -56,6 +59,14 @@ BRIEFING_MATCH = {
 }
 # Only existing triggers that actually satisfy each objective may change its state.
 # None is an unresolved mapping, deliberately reported as an error instead of inferred at victory.
+# Main-goal observers now enforce these formerly unchecked Mossgate briefing duties.
+BRIEFING_MATCH["Mossgate"] = {
+    3: "yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles",
+    4: "yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal"
+}
+
+BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -783,9 +794,97 @@ def mirewatch_errors(level):
     return errors
 
 
+# Validate reviewed grouped goals, continuous main observers and optional completion bindings.
+def grouped_goal_errors(text, level_name):
+    review = GROUP_REVIEW.get(level_name, {})
+    expected = review.get("goals", {})
+    actual, blocks, errors = {}, {}, []
+    for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S):
+        rows = [row for _, row in lines(block)]
+        name = next((row.split(None, 1)[1] for row in rows if row.startswith("Name\t")), "")
+        blocks[name] = rows
+        for row in rows:
+            fields = row.split(None, 4)
+            if len(fields) >= 2 and fields[0] == "Action" and fields[1] in GROUP_KINDS:
+                if len(fields) != 5:
+                    errors.append("invalid grouped objective in " + name)
+                    continue
+                if fields[3] in actual:
+                    errors.append("duplicate grouped objective " + fields[3])
+                actual[fields[3]] = fields
+    if set(actual) != set(expected):
+        errors.append("grouped objective set differs from reviewed matrix: " + level_name)
+    if not actual and not expected:
+        return []
+    main_count = sum(row[1] != "optionalobjectiveid" for row in actual.values())
+    optional_count = sum(row[1] == "optionalobjectiveid" for row in actual.values())
+    if not 2 <= main_count <= 5 or not 1 <= optional_count <= 3:
+        errors.append("grouped goal counts must be 2-5 main and 1-3 optional")
+    room_names = {name for path in (ROOT / "source/rooms").glob("*.cpp")
+                  for name in re.findall(r'const std::string \w+Name = "([^"]+)"', path.read_text(encoding="utf-8"))}
+    for identity, definition in expected.items():
+        for condition in definition["conditions"]:
+            fields = condition.split()
+            if fields[1] in ("roomtiles", "roomsize", "room", "furniture") and fields[3] not in room_names:
+                errors.append("unregistered room name in grouped goal: " + identity)
+        fields = actual.get(identity)
+        if fields != ["Action", definition["kind"], definition["seat"], identity, definition["text"]]:
+            errors.append("grouped goal differs from approved definition: " + identity)
+        rows = blocks.get(definition["completion"], [])
+        if [row for row in rows if row.startswith("Cond\t")] != definition["conditions"]:
+            errors.append("grouped completion conditions differ: " + identity)
+        if "Mode\t" + definition["mode"] not in rows:
+            errors.append("grouped observer mode differs: " + identity)
+        if definition["kind"] != "optionalobjectiveid" and definition["mode"] != "repeat\t0":
+            errors.append("main goal must reevaluate current conditions: " + identity)
+        if "Action\tobjectivestate\t" + definition["seat"] + "\t" + identity + "\treached" not in rows:
+            errors.append("grouped objective lacks its exact completion action: " + identity)
+    for name, definition in review.get("extra_status_triggers", {}).items():
+        rows = blocks.get(name, [])
+        if [row for row in rows if row.startswith("Cond\t")] != definition["conditions"]:
+            errors.append("grouped failure conditions differ: " + name)
+        states = [row.split()[2:] for row in rows if row.startswith("Action\tobjectivestate\t")]
+        if states != definition["states"]:
+            errors.append("grouped failure states differ: " + name)
+    for name, definition in review.get("extra_status_triggers", {}).items():
+        for condition in definition["conditions"]:
+            fields = condition.split()
+            if fields[1] in ("roomtiles", "roomsize", "room", "furniture") and fields[3] not in room_names:
+                errors.append("unregistered room name in grouped status: " + name)
+    for name, actions in review.get("preserved_actions", {}).items():
+        for action in actions:
+            if action not in blocks.get(name, []):
+                errors.append("original trial limit was changed: " + name)
+    proof = review.get("reachability", {})
+    if proof:
+        level = parse_level(text)
+        area, _ = reachable(timed_openings(level))
+        for name, definition in proof.get("regions", {}).items():
+            match = re.search(r"^Region\s+" + re.escape(name) + r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
+            if not match or list(map(int, match.groups())) != definition["bounds"]:
+                errors.append("grouped region bounds differ: " + name)
+                continue
+            x1, y1, x2, y2 = definition["bounds"]
+            tiles = {(x, y) for x in range(x1, x2 + 1) for y in range(y1, y2 + 1)} & area
+            opened = {tile for tile in tiles if level["tiles"][tile][1] == 0 and level["tiles"][tile][0] not in (4, 5)}
+            if len(tiles) < definition.get("minimum_potential_tiles", 0) or len(opened) < definition.get("minimum_open_tiles", 0):
+                errors.append("insufficient reachable grouped region tiles: " + name)
+        gold = sum(fullness * 5 for tile, (kind, fullness, _) in level["tiles"].items() if tile in area and kind == 2)
+        if gold < proof.get("minimum_mineable_gold", 0):
+            errors.append("insufficient actual mineable gold for grouped goal")
+        for name in proof.get("named_creatures", []):
+            if not any(creature == name and tile in area for creature, _, tile in level["creatures"]):
+                errors.append("unreachable or absent grouped target: " + name)
+    return errors
+
+
 # Validate explicit objective identities and only the individually mapped completion triggers.
 def objective_errors(text, level_name):
     declarations, states, errors = {}, {}, []
+    grouped = set()
+    review = GROUP_REVIEW.get(level_name, {})
+    reviewed_triggers = {item["completion"]: item["conditions"] for item in review.get("goals", {}).values()}
+    reviewed_triggers.update({name: item["conditions"] for name, item in review.get("extra_status_triggers", {}).items()})
     trigger_names = set(re.findall(r"^Name\t([^\r\n]+)", section(text, "Triggers"), re.M)) if "[Triggers]" in text else set()
     region_names = set(re.findall(r"^Region\t(\S+)", text, re.M))
     conditions_to_check = []
@@ -795,14 +894,19 @@ def objective_errors(text, level_name):
         conditions = "\n".join(row for _, row in rows if row.startswith("Cond\t"))
         fingerprint = hashlib.sha256(conditions.encode("utf-8")).hexdigest()
         has_state = any(row.startswith("Action\tobjectivestate\t") for _, row in rows)
-        if (has_state or trigger.startswith("goal")) and OBJECTIVE_CONDITIONS.get(level_name + "/" + trigger) != fingerprint:
-            errors.append("objective status trigger conditions differ from reviewed conditions: " + trigger)
+        if has_state or trigger.startswith("goal"):
+            expected_conditions = reviewed_triggers.get(trigger)
+            if expected_conditions is not None:
+                if conditions.splitlines() != expected_conditions:
+                    errors.append("grouped status conditions differ from reviewed conditions: " + trigger)
+            elif OBJECTIVE_CONDITIONS.get(level_name + "/" + trigger) != fingerprint:
+                errors.append("objective status trigger conditions differ from reviewed conditions: " + trigger)
         conditions_to_check.extend((trigger, row.split()) for _, row in rows if row.startswith("Cond\t"))
         for number, row in rows:
             fields = row.split(None, 5)
             if fields[:2] == ["Action", "objective"]:
                 errors.append("legacy objective without an individual ID: " + trigger)
-            elif fields[:2] == ["Action", "objectiveid"]:
+            elif fields[0] == "Action" and fields[1] in GROUP_KINDS | {"objectiveid"}:
                 if len(fields) < 5:
                     errors.append("invalid objectiveid in " + trigger)
                     continue
@@ -810,6 +914,8 @@ def objective_errors(text, level_name):
                 if key in declarations:
                     errors.append("duplicate objective ID " + fields[3])
                 declarations[key] = row.split(None, 4)[4]
+                if fields[1] in GROUP_KINDS:
+                    grouped.add(key)
             elif fields[:2] == ["Action", "objectivestate"]:
                 if len(fields) != 5 or fields[4] not in ("reached", "failed"):
                     errors.append("invalid objective state in " + trigger)
@@ -846,6 +952,10 @@ def objective_errors(text, level_name):
                     fields[4] != "atheart" or not fields[5].isdigit() or int(fields[5]) <= 0):
                 errors.append("invalid spawncleared death-location restriction in " + trigger)
     for key, description in declarations.items():
+        if key in grouped:
+            if not any(state == "reached" for _, state in states.get(key, [])):
+                errors.append("grouped objective has no completing trigger: " + key[1])
+            continue
         identity = re.fullmatch(re.escape(level_name.lower()) + r"-o(\d{2})", key[1])
         index = int(identity[1]) if identity else 0
         if index < 1 or key[1] in HINT_IDS:
@@ -862,6 +972,7 @@ def objective_errors(text, level_name):
         identity = level_name.lower() + "-o%02d" % index
         if identity not in HINT_IDS and not any(key[1] == identity for key in declarations):
             errors.append("required stable objective ID is missing: " + identity)
+    errors.extend(grouped_goal_errors(text, level_name))
     return errors
 
 
@@ -896,6 +1007,12 @@ def inventory(root):
                 result.append("| Advisory hint line %d | `%s` | not an objective; no state required |" % (number, cell(line)))
             elif len(parts) >= 2 and (parts[:2] in (["Action", "objective"], ["Action", "objectiveid"], ["Action", "win"], ["Cond", "goal"])):
                 result.append("| Script line %d | `%s` | yes |" % (number, cell(line)))
+        review = GROUP_REVIEW.get(path.stem)
+        if review:
+            result += ["", "### Main and optional goals", "", "| Group | Goal | Current completion conditions |", "| --- | --- | --- |"]
+            for identity, definition in review["goals"].items():
+                result.append("| " + ("optional" if definition["kind"] == "optionalobjectiveid" else "main") + " | `" + identity + "`: " + cell(definition["text"]) + " | `" + definition["completion"] + "`: " + cell("; ".join(definition["conditions"])) + " |")
+            result += ["", "Possible route (static, not a playthrough):"] + ["- " + item for item in review["route"]] + ["", review["runtime_limit"], ""]
         trigger_conditions = {}
         for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S):
             rows = [row for _, row in lines(block)]
@@ -997,6 +1114,17 @@ def self_test(root):
     wraithwood = parse_level((root / "levels/campaign/Wraithwood.level").read_text(encoding="utf-8"))
     assert wraithwood["creatures"], "nested tuning sections must not replace actual creatures"
     assert not objective_errors(original, "Mossgate"), "all Mossgate objectives need exact completions"
+    for old, new, message in (
+        ("mainobjectiveid\t1\tmossgate-main-watch", "optionalobjectiveid\t1\tmossgate-main-watch", "group classification"),
+        ("Mode\trepeat\t0\nCond\tmined", "Mode\tonce\nCond\tmined", "main reevaluation"),
+        ("Cond\tclaimed\t1\tMeadow\t18", "Cond\tclaimed\t1\tMeadow\t1", "exact meadow count"),
+        ("Cond\tgoalmet\t1\tKillAllEnemies", "Cond\ttime\t1", "remaining enemies and portal"),
+        ("mossgate-extra-gallery\treached", "mossgate-missing-gallery\treached", "optional completion")
+    ):
+        assert old in original, message
+        assert objective_errors(original.replace(old, new), "Mossgate"), message
+    assert "insufficient actual mineable gold for grouped goal" in grouped_goal_errors(
+        re.sub(r"^([0-9]+\s+[0-9]+)\s+2\s+", r"\1\t1\t", original, flags=re.M), "Mossgate")
     missing_state = re.sub(r"^Action\tobjectivestate\t1\tmossgate-o02\treached\r?\n", "", original, flags=re.M)
     assert any("no completing trigger: mossgate-o02" in error for error in objective_errors(missing_state, "Mossgate"))
     altered = original.replace("Cond\tmined\t1\t>=\t60", "Cond\tmined\t1\t>=\t1")
@@ -1007,6 +1135,16 @@ def self_test(root):
     assert any("undeclared objective" in error for error in objective_errors(unknown_status, "Mossgate"))
     wrong_spawn = original.replace("spawncleared\tpostStirs\t1", "spawncleared\tpostStirs\t0")
     assert any("actual original spawn" in error for error in objective_errors(wrong_spawn, "Mossgate"))
+    for name, old, new in (
+        ("BoulderCourse", "Action\tslaplimit\t80", "Action\tslaplimit\t81"),
+        ("BoulderCourse", "Action\ttimelimit\t600", "Action\ttimelimit\t601"),
+        ("TwistingHalls", "Action\ttimelimit\t900", "Action\ttimelimit\t901"),
+        ("TwistingHalls", "Cond\tpossessed\t1\tExitHall", "Cond\tregion\t1\tExitHall"),
+        ("SwarmNight", "Cond\tevent\tDefaultWorker1\tkilled\t==\t0", "Cond\tevent\tDefaultWorker1\tincapacitated\t==\t0")
+    ):
+        trial = (root / ("levels/campaign/" + name + ".level")).read_text(encoding="utf-8")
+        assert old in trial
+        assert grouped_goal_errors(trial.replace(old, new), name), (name, old)
     ravensledge = (root / "levels/campaign/Ravensledge.level").read_text(encoding="utf-8")
     wrong_trap = ravensledge.replace("trapgone\tDoorWooden1", "trapgone\tNoSuchDoor")
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))

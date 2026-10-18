@@ -119,6 +119,7 @@
 //!   Action  hint <seatId> <text>             # advice with no ID, state or completion tick
 //!   Action  objectiveid <seatId> <id> <text>   # tracked objective, initially open; legacy objective stays valid
 //!   Action  mainobjectiveid <seatId> <id> <text>   # required goal; every declared main goal gates victory
+//!           # Use repeat 0 completion observers: main states are reevaluated each turn before victory.
 //!   Action  optionalobjectiveid <seatId> <id> <text>   # optional goal; never blocks victory
 //!   Action  conditionalobjectiveid <seatId> <id> <text>   # required only after its declaration trigger fires
 //!   Action  objectivestate <seatId> <id> reached|failed   # individual state, shared by the list and victory gate
@@ -495,6 +496,12 @@ public:
     //! \brief True when all declared required goals of this seat are reached; optional goals never block.
     //! Conditional required goals apply only after their declaration trigger fires; legacy maps retain their rules.
     bool areMainObjectivesReached(int32_t seatId) const;
+
+    //! \brief True if this seat uses the explicit main-goal model rather than legacy victory rules.
+    bool hasMainObjectives(int32_t seatId) const;
+
+    //! \brief Reopens nonfailed main goals before their per-turn observers reevaluate current requirements.
+    void refreshMainObjectives(int32_t seatId);
 
     //! \brief Records a victory request until the seat's required goals allow it to be announced.
     void requestVictory(int32_t seatId);

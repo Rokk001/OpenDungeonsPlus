@@ -365,7 +365,8 @@ public:
 
     //! \brief Records victory once, saves campaign progress and notifies the winning human seat.
     //! \brief Defers human victory until all main goals are reached, then records it once.
-    void addWinningSeat(Seat *s);
+    //! \param objectivesUpdated True only after this turn's required-goal observers have run.
+    void addWinningSeat(Seat *s, bool objectivesUpdated = false);
     bool seatIsAWinner(Seat *s) const;
 
     void addGoalForAllSeats(std::unique_ptr<Goal>&& g);

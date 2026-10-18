@@ -2960,15 +2960,19 @@ Seat* GameMap::getSeatById(int id) const
 }
 
 //! \brief Defers human victory until all main goals are reached, then records and announces it once.
-void GameMap::addWinningSeat(Seat *s)
+void GameMap::addWinningSeat(Seat *s, bool objectivesUpdated)
 {
     Player* requestingPlayer = getPlayerBySeat(s);
     if(requestingPlayer != nullptr && requestingPlayer->getIsHuman())
     {
+        // The original script deadline must win over a grouped victory in its expiry turn.
+        if(objectivesUpdated && mLevelScript->hasMainObjectives(s->getId()))
+            checkGameDuration();
         if(requestingPlayer->getHasLost())
             return;
         mLevelScript->requestVictory(s->getId());
-        if(!mLevelScript->areMainObjectivesReached(s->getId()))
+        if((mLevelScript->hasMainObjectives(s->getId()) && !objectivesUpdated) ||
+           !mLevelScript->areMainObjectivesReached(s->getId()))
             return;
     }
 

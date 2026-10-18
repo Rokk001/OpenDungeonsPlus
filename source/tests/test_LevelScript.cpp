@@ -1247,3 +1247,35 @@ BOOST_AUTO_TEST_CASE(legacy_objectives_keep_their_original_victory_rules)
     BOOST_CHECK(!script.hasVictoryRequest(1));
     BOOST_CHECK(script.getTriggers()[0].mActions[0].mObjectiveGroup == LevelScriptObjectiveGroup::legacy);
 }
+
+//! \brief Main goals must be reaffirmed by current observers; optional completion and real failure persist.
+BOOST_AUTO_TEST_CASE(main_goal_refresh_does_not_keep_obsolete_success)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName setup\nMode once\n"
+        "Action mainobjectiveid 1 control Hold the fortress.\n"
+        "Action mainobjectiveid 1 deadline Reach the camp in time.\n"
+        "Action optionalobjectiveid 1 explore Explore the gallery.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    script.setObjectiveState(1, "control", LevelScriptObjectiveState::reached);
+    script.setObjectiveState(1, "deadline", LevelScriptObjectiveState::failed);
+    script.setObjectiveState(1, "explore", LevelScriptObjectiveState::reached);
+    script.refreshMainObjectives(1);
+    BOOST_CHECK(script.getObjectiveState(1, "control") == LevelScriptObjectiveState::open);
+    BOOST_CHECK(script.getObjectiveState(1, "deadline") == LevelScriptObjectiveState::failed);
+    BOOST_CHECK(script.getObjectiveState(1, "explore") == LevelScriptObjectiveState::reached);
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+}
+
+//! \brief Only explicit main goals opt a seat into end-of-turn victory evaluation.
+BOOST_AUTO_TEST_CASE(main_goal_model_detection_is_scoped_to_the_target_seat)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName setup\nMode once\n"
+        "Action mainobjectiveid 1 keep Hold the keep.\n"
+        "Action optionalobjectiveid 2 scout Explore the gallery.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.hasMainObjectives(1));
+    BOOST_CHECK(!script.hasMainObjectives(2));
+    BOOST_CHECK(!script.hasMainObjectives(3));
+}
