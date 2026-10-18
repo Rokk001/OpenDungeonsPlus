@@ -33,7 +33,7 @@ BRIEFING_MATCH = {
     "Ravensledge": {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals"},
     "Ashcombe": {3: "no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal"},
     "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
-    "HollinFen": {2: "no: enemy elimination and heart protection are checked; building and breaking the ward are not independent goals", 3: "no: optional stone discovery is not required to win"},
+    "HollinFen": {3: "yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes", 4: "yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery"},
     "CrowshotGallery": {3: "no: galleryClear checks the flock; possession is not a separate winning condition"},
     "Ironbridge": {3: "no: building and bridge order are not independent goals", 4: "yes: KillAllEnemies includes the rival temple"},
     "Lanternhill": {2: "no: mining and digging the plugs are not independent goals", 3: "yes: KillAllEnemies includes the northern rival temple", 4: "no: optional stone discovery is not required to win"},
@@ -921,6 +921,45 @@ def grouped_goal_errors(text, level_name):
                              "tiles": [list(map(int, row[:2])) for row in rows[1:count + 1]]}
             if found != expected_trap:
                 errors.append("named required gate differs from its original position: " + name)
+        supply = proof.get("supply_expansion")
+        if supply:
+            rooms = {name: (kind, seat, set(tiles)) for kind, name, seat, tiles in level["rooms"]}
+            dorm = rooms.get(supply["dormitory"], (0, 0, set()))
+            hatch = rooms.get(supply["hatchery"], (0, 0, set()))
+            if dorm[:2] != (2, level["human"]) or hatch[:2] != (8, level["human"]):
+                errors.append("original supply rooms changed ownership or type")
+            creature_rows = {row.split()[1]: row.split() for _, row in lines(section(text, "Creatures"))}
+            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            occupied_beds = set()
+            for bed in supply["beds"]:
+                row = creature_rows.get(bed["creature"])
+                a, b, c, d = bed["bounds"]
+                footprint = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+                if row is None or int(row[0]) != level["human"]:
+                    errors.append("missing original supply resident: " + bed["creature"])
+                    continue
+                definition = re.search(r"\[Creature\]\s*Name\s+" + re.escape(row[6]) + r"\b(.*?)\[/Creature\]", definitions, re.S)
+                dimensions = tuple(map(int, re.search(r"BedDim\s+(\d+)\s+(\d+)", definition[1]).groups()))
+                if (c - a + 1, d - b + 1) not in (dimensions, dimensions[::-1]) or footprint & occupied_beds:
+                    errors.append("supply bed dimensions or overlap differ: " + bed["creature"])
+                occupied_beds.update(footprint)
+            a, b, c, d = supply["hatchery_bounds"]
+            hatch_tiles = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+            additions = (occupied_beds - dorm[2]) | (hatch_tiles - hatch[2])
+            other_rooms = set().union(*(tiles for name, (_, _, tiles) in rooms.items()
+                                      if name not in (supply["dormitory"], supply["hatchery"])))
+            if len(supply["beds"]) != 9 or occupied_beds & hatch_tiles or additions - area or additions & other_rooms or c - a < 2 or d - b < 2:
+                errors.append("supply expansion is blocked or lacks nine beds and a coop site")
+            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
+            food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
+            cost = len(occupied_beds - dorm[2]) * bed_cost + len(hatch_tiles - hatch[2]) * food_cost
+            if cost != supply["cost"] or cost > supply["starting_gold"] or int(level["seats"][level["human"]]["gold"]) != supply["starting_gold"]:
+                errors.append("original supply expansion budget differs")
+            human = next(block for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S)
+                         if re.search(r"seatId\s+" + str(level["human"]) + r"\b", block))
+            if not {"roomDormitory", "roomHatchery"} <= set(section(human, "SkillDone").split()):
+                errors.append("supply expansion skills are unavailable")
         regional = proof.get("regional_gold")
         if regional:
             x1, y1, x2, y2 = regional["bounds"]
@@ -1258,6 +1297,20 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    hollin = (root / "levels/campaign/HollinFen.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tfurniture\t1\tDormitory\t>=\t9", "Cond\tfurniture\t1\tDormitory\t>=\t2"),
+        ("Cond\tclaimed\t1\tCauseway\t40", "Cond\tregion\t1\tWard"),
+        ("Cond\ttrapgone\tDoorWooden1", "Cond\ttrapgone\tDoorWooden2"),
+        ("Cond\tclaimed\t1\tFen\t120", "Cond\tclaimed\t1\tFen\t40"),
+        ("Cond\tslabs\t1\tManaSpring\tmanawell\t>=\t1", "Cond\ttime\t1"),
+        ("Cond\tcarryingstone\tHollowBearer", "Cond\ttime\t1"),
+        ("Cond\towns\t1\tHollowBearer", "Cond\ttime\t1"),
+        ("gold\t1800", "gold\t100"),
+        ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\thollowFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0")
+    ):
+        assert old in hollin
+        assert objective_errors(hollin.replace(old, new), "HollinFen"), old
     greywater = (root / "levels/campaign/Greywater.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tregion\t1\tSiege"),

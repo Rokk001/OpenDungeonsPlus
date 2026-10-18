@@ -425,14 +425,41 @@ File: `levels/campaign/HollinFen.level`.
 | Script line 3425 | `Action	objectiveid	1	hollinfen-o02	Defend your heart against convent patrols.` | yes |
 | Script line 3452 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
 | Script line 3461 | `Action	objectiveid	1	hollinfen-o04	Reach the chapel and kill Agathe Hollin.` | yes |
-| Script line 3570 | `Action	win	1` | yes |
+| Script line 3572 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `hollinfen-main-home`: Build 9 beds and a hatchery; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	9; Cond	furniture	1	Hatchery	>=	1 |
+| main | `hollinfen-main-gate`: Claim 40 causeway tiles; break the west gate. | `mainGate`: Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1 |
+| main | `hollinfen-main-warden`: Defeat Agathe Hollin and all enemy forces. | `mainWarden`: Cond	event	AgatheHollin	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `hollinfen-main-stone`: If found, bring the hollow stone home. | `mainStone`: Cond	trigger	hollowStoneHome |
+| optional | `hollinfen-extra-fen`: Claim 120 fen tiles and uncover the mana spring. | `extraFen`: Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1 |
+
+Possible route (static, not a playthrough):
+- Protect the heart and house the nine initial nonworkers. Original Dormitory1 has 6 fields. Bed plan uses 11 fields: Orcs at (16,15)-(16,16) and (17,15)-(17,16), seven single beds at (18..20,15),(18..20,16),(20,17). Expand by 5 fields for 460 gold.
+- Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.
+- Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.
+- Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.
+- Finding SealedHollow (2,50)-(10,58) is voluntary. If found, the own HollowBearer spawned at (6,54) must carry the actual attached stone to the own heart. Original replacement after death and CrowshotGallery discovery are retained; hand transport remains a separate unresolved mechanic.
+- Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged.
+
+Supply geometry and resource route are static necessary evidence; egg/bed use, combat, stone hand transport and save/load still require further verification. Hand transport decision pending.
+
 | Trigger `wardEntered` | `Action	objectivestate	1	hollinfen-o03	reached`; conditions: `Cond	region	1	Ward` | yes |
 | Trigger `goalHeartSafe2BeforeWardenSlain` | `Action	objectivestate	1	hollinfen-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	hollinfen-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	hollinfen-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	hollinfen-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Build your dungeon, hold your heart and break the convent ward to kill her in the chapel. | no: enemy elimination and heart protection are checked; building and breaking the ward are not independent goals |
-| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | no: optional stone discovery is not required to win |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	hollinfen-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	hollinfen-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	9; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainGate` | `Action	objectivestate	1	hollinfen-main-gate	reached`; conditions: `Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	hollinfen-main-warden	reached`; conditions: `Cond	event	AgatheHollin	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	hollinfen-main-stone	reached`; conditions: `Cond	trigger	hollowStoneHome` | yes |
+| Trigger `extraFen` | `Action	objectivestate	1	hollinfen-extra-fen	reached`; conditions: `Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1` | yes |
+| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes |
+| Briefing | Castellan has ordered good news this time. | yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery |
 
 ## HollowmarkCitadel
 

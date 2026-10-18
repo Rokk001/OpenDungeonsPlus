@@ -1626,5 +1626,290 @@
       "Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged."
     ],
     "runtime_limit": "Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification."
+  },
+  "HollinFen": {
+    "goals": {
+      "hollinfen-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Build 9 beds and a hatchery; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tfurniture\t1\tDormitory\t>=\t9",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollinfen-main-gate": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim 40 causeway tiles; break the west gate.",
+        "completion": "mainGate",
+        "conditions": [
+          "Cond\tclaimed\t1\tCauseway\t40",
+          "Cond\ttrapgone\tDoorWooden1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollinfen-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Agathe Hollin and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tevent\tAgatheHollin\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollinfen-main-stone": {
+        "kind": "conditionalobjectiveid",
+        "seat": "1",
+        "text": "If found, bring the hollow stone home.",
+        "completion": "mainStone",
+        "conditions": [
+          "Cond\ttrigger\thollowStoneHome"
+        ],
+        "mode": "repeat\t0"
+      },
+      "hollinfen-extra-fen": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Claim 120 fen tiles and uncover the mana spring.",
+        "completion": "extraFen",
+        "conditions": [
+          "Cond\tclaimed\t1\tFen\t120",
+          "Cond\tslabs\t1\tManaSpring\tmanawell\t>=\t1"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainStoneList": {
+        "conditions": [
+          "Cond\ttrigger\thollowFound"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tconditionalobjectiveid\t1\thollinfen-main-stone\tIf found, bring the hollow stone home."
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "hollinfen-main-home",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "causewayHeld": [
+        "Cond\tclaimed\t1\tCauseway\t40"
+      ],
+      "fenDrains": [
+        "Cond\tclaimed\t1\tFen\t120"
+      ],
+      "hollowFound": [
+        "Cond\tregion\t1\tSealedHollow"
+      ],
+      "hollowStoneHome": [
+        "Cond\tcarryingstone\tHollowBearer",
+        "Cond\towns\t1\tHollowBearer",
+        "Cond\treached\tHollowBearer\theart\t1"
+      ],
+      "hollowStoneLost": [
+        "Cond\tflag\thollowStone\t1",
+        "Cond\ttimer\thollowSpawn\t>=\t5",
+        "Cond\talive\tHollowBearer\t0"
+      ]
+    },
+    "preserved_actions": {
+      "fenDrains": [
+        "Action\tmessage\t1\tWith so much of the fen under your claim, the reed pool has drained and a spring of raw mana has surfaced beside it.",
+        "Action\tterrain\t27\t35\t33\t37\tpath",
+        "Action\tterrain\t38\t36\t38\t36\tmanawell\t1"
+      ],
+      "hollowFound": [
+        "Action\tmessage\t1\tThe sisters bricked this hollow up. A pale stone sits in the wall niche, and a lost goblin has lifted it. Bring it to your dungeon heart.",
+        "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer",
+        "Action\tstoneattach\tHollowBearer",
+        "Action\tsetflag\thollowStone\t1",
+        "Action\ttimer\thollowSpawn\t0"
+      ],
+      "hollowStoneHome": [
+        "Action\tmessage\t1\tThe pale stone sinks into the heart and a hidden hall has opened.",
+        "Action\tdiscover\tcampaign/CrowshotGallery.level"
+      ],
+      "hollowStoneLost": [
+        "Action\tmessage\t1\tThe stone-bearer has fallen. Another goblin has lifted the stone in the hollow.",
+        "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer",
+        "Action\tstoneattach\tHollowBearer"
+      ]
+    },
+    "reachability": {
+      "named_creatures": [
+        "AgatheHollin"
+      ],
+      "regions": {
+        "Fen": {
+          "bounds": [
+            20,
+            24,
+            54,
+            48
+          ],
+          "minimum_potential_tiles": 120
+        },
+        "Causeway": {
+          "bounds": [
+            22,
+            62,
+            50,
+            72
+          ],
+          "minimum_potential_tiles": 40
+        },
+        "SealedHollow": {
+          "bounds": [
+            2,
+            50,
+            10,
+            58
+          ],
+          "minimum_open_tiles": 36
+        },
+        "ManaSpring": {
+          "bounds": [
+            38,
+            36,
+            38,
+            36
+          ],
+          "minimum_potential_tiles": 1
+        }
+      },
+      "required_traps": {
+        "DoorWooden1": {
+          "type": 4,
+          "seat": 3,
+          "tiles": [
+            [
+              51,
+              66
+            ]
+          ]
+        }
+      },
+      "supply_expansion": {
+        "beds": [
+          {
+            "creature": "FenKeeper1",
+            "bounds": [
+              18,
+              15,
+              18,
+              15
+            ]
+          },
+          {
+            "creature": "FenKeeper2",
+            "bounds": [
+              19,
+              15,
+              19,
+              15
+            ]
+          },
+          {
+            "creature": "FenKeeper3",
+            "bounds": [
+              20,
+              15,
+              20,
+              15
+            ]
+          },
+          {
+            "creature": "FenKeeper4",
+            "bounds": [
+              18,
+              16,
+              18,
+              16
+            ]
+          },
+          {
+            "creature": "FenKeeper5",
+            "bounds": [
+              19,
+              16,
+              19,
+              16
+            ]
+          },
+          {
+            "creature": "FenKeeper6",
+            "bounds": [
+              16,
+              15,
+              16,
+              16
+            ]
+          },
+          {
+            "creature": "FenKeeper7",
+            "bounds": [
+              17,
+              15,
+              17,
+              16
+            ]
+          },
+          {
+            "creature": "FenKeeper8",
+            "bounds": [
+              20,
+              16,
+              20,
+              16
+            ]
+          },
+          {
+            "creature": "FenKeeper9",
+            "bounds": [
+              20,
+              17,
+              20,
+              17
+            ]
+          }
+        ],
+        "dormitory": "Dormitory1",
+        "hatchery": "Hatchery1",
+        "hatchery_bounds": [
+          5,
+          14,
+          7,
+          16
+        ],
+        "starting_gold": 1800,
+        "cost": 790
+      }
+    },
+    "route": [
+      "Protect the heart and house the nine initial nonworkers. Original Dormitory1 has 6 fields. Bed plan uses 11 fields: Orcs at (16,15)-(16,16) and (17,15)-(17,16), seven single beds at (18..20,15),(18..20,16),(20,17). Expand by 5 fields for 460 gold.",
+      "Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.",
+      "Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.",
+      "Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.",
+      "Finding SealedHollow (2,50)-(10,58) is voluntary. If found, the own HollowBearer spawned at (6,54) must carry the actual attached stone to the own heart. Original replacement after death and CrowshotGallery discovery are retained; hand transport remains a separate unresolved mechanic.",
+      "Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged."
+    ],
+    "runtime_limit": "Supply geometry and resource route are static necessary evidence; egg/bed use, combat, stone hand transport and save/load still require further verification. Hand transport decision pending."
   }
 }
