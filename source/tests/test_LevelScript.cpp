@@ -1335,3 +1335,112 @@ BOOST_AUTO_TEST_CASE(carried_stone_condition_and_state_round_trip)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief Crossings require one actual ordered path, survive saves and reject unrelated visitors.
+BOOST_AUTO_TEST_CASE(actual_crossing_progress_and_save_round_trip)
+{
+    const std::string text = "Region Bridge 11 43 13 46\n[Trigger]\nName crossing\nMode once\n"
+        "Cond crossed 1 Bridge north\nAction message 1 crossed\n[/Trigger]\n[/Triggers]\n";
+    LevelScript script;
+    std::istringstream input(text);
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.hasCrossingObservers());
+    script.observeCrossingStep("WalkerA", 1, 12, 47, 12, 46);
+    script.observeCrossingStep("WalkerA", 1, 12, 46, 12, 45);
+    script.observeCrossingStep("WalkerB", 1, 12, 44, 12, 43);
+    script.observeCrossingStep("WalkerB", 1, 12, 43, 12, 42);
+    BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", "north", ""));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    BOOST_CHECK(saved.str().find("CrossingProgress\t1\tWalkerA\tBridge\tnorth\t-\t12\t45") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    restored.observeCrossingStep("WalkerA", 1, 12, 45, 12, 44);
+    restored.observeCrossingStep("WalkerA", 1, 12, 44, 12, 43);
+    restored.observeCrossingStep("WalkerA", 1, 12, 43, 12, 42);
+    BOOST_CHECK(restored.wasRegionCrossed(1, "Bridge", "north", ""));
+    BOOST_CHECK(!restored.wasRegionCrossed(2, "Bridge", "north", ""));
+    std::ostringstream complete;
+    restored.exportToStream(complete);
+    LevelScript completed;
+    std::istringstream done(complete.str().substr(complete.str().find('\n') + 1));
+    BOOST_REQUIRE(completed.importFromStream(done));
+    BOOST_CHECK(completed.wasRegionCrossed(1, "Bridge", "north", ""));
+    LevelScript reset;
+    std::istringstream clean(text);
+    BOOST_REQUIRE(reset.importFromStream(clean));
+    reset.observeCrossingStep("WalkerA", 1, 12, 47, 12, 46);
+    reset.clearCreatureCrossings("WalkerA");
+    reset.observeCrossingStep("WalkerA", 1, 12, 46, 12, 45);
+    reset.observeCrossingStep("WalkerA", 1, 12, 45, 12, 44);
+    reset.observeCrossingStep("WalkerA", 1, 12, 44, 12, 43);
+    reset.observeCrossingStep("WalkerA", 1, 12, 43, 12, 42);
+    BOOST_CHECK(!reset.wasRegionCrossed(1, "Bridge", "north", ""));
+}
+
+//! \brief A crossing made before its prerequisite, by another seat, sideways or by a jump is not success.
+BOOST_AUTO_TEST_CASE(crossing_order_and_negative_paths)
+{
+    LevelScript script;
+    std::istringstream input("Region Bridge 11 43 13 46\n[Trigger]\nName shelfHeld\nMode once\n"
+        "Action message 1 held\n[/Trigger]\n[Trigger]\nName crossing\nMode once\n"
+        "Cond crossed 1 Bridge north after shelfHeld\nCond crossed 1 Bridge north after shelfHeld\n"
+        "Action message 1 crossed\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    for(int y = 47; y > 42; --y)
+        script.observeCrossingStep("Walker", 1, 12, y, 12, y - 1);
+    BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", "north", "shelfHeld"));
+    script.getTriggers()[0].mTimesFired = 1;
+    script.observeCrossingStep("Walker", 1, 12, 47, 12, 42);
+    script.observeCrossingStep("Walker", 1, 10, 45, 11, 45);
+    script.observeCrossingStep("Walker", 1, 11, 45, 11, 44);
+    script.observeCrossingStep("Walker", 1, 11, 44, 11, 43);
+    script.observeCrossingStep("Walker", 1, 11, 43, 11, 42);
+    for(int y = 47; y > 42; --y)
+        script.observeCrossingStep("Enemy", 2, 12, y, 12, y - 1);
+    BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", "north", "shelfHeld"));
+    for(int y = 47; y > 42; --y)
+        script.observeCrossingStep("Walker", 1, 12, y, 12, y - 1);
+    BOOST_CHECK(script.wasRegionCrossed(1, "Bridge", "north", "shelfHeld"));
+    script.clear();
+    BOOST_CHECK(!script.hasCrossingObservers());
+    BOOST_CHECK(script.isEmpty());
+}
+
+//! \brief All four directions reject a return to the entry bank and accept only the opposite exit.
+BOOST_AUTO_TEST_CASE(crossing_directions_and_backtracking)
+{
+    for(const std::string direction : {"north", "south", "east", "west"})
+    {
+        LevelScript script;
+        std::istringstream input("Region Bridge 10 10 12 12\n[Trigger]\nName crossing\nMode once\n"
+            "Cond crossed 1 Bridge " + direction + "\nAction message 1 crossed\n[/Trigger]\n[/Triggers]\n");
+        BOOST_REQUIRE(script.importFromStream(input));
+        const bool vertical = direction == "north" || direction == "south";
+        const int delta = direction == "north" || direction == "west" ? -1 : 1;
+        const int entry = delta < 0 ? 13 : 9;
+        const int edge = entry + delta;
+        script.observeCrossingStep("Walker", 1, vertical ? 11 : entry, vertical ? entry : 11,
+            vertical ? 11 : edge, vertical ? edge : 11);
+        script.observeCrossingStep("Walker", 1, vertical ? 11 : edge, vertical ? edge : 11,
+            vertical ? 11 : entry, vertical ? entry : 11);
+        BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", direction, ""));
+        for(int step = 0; step < 4; ++step)
+        {
+            const int from = entry + step * delta;
+            const int to = from + delta;
+            script.observeCrossingStep("Walker", 1, vertical ? 11 : from, vertical ? from : 11,
+                vertical ? 11 : to, vertical ? to : 11);
+        }
+        BOOST_CHECK(script.wasRegionCrossed(1, "Bridge", direction, ""));
+    }
+    for(const std::string condition : {"Cond crossed 0 Bridge north", "Cond crossed 1 Bridge up",
+        "Cond crossed 1 Bridge north after", "Cond crossed 1 Bridge north after -"})
+    {
+        LevelScript invalid;
+        std::istringstream input("[Trigger]\nName bad\nMode once\n" + condition +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(input));
+    }
+}

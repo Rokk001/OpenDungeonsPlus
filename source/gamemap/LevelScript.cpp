@@ -389,6 +389,24 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mName = t[2];
         return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
     }
+    if(type == "crossed")
+    {
+        if((t.size() != 5 && t.size() != 7) || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1 ||
+           (t[4] != "north" && t[4] != "south" && t[4] != "east" && t[4] != "west"))
+            return false;
+        cond.mType = LevelScriptConditionType::crossedRegion;
+        cond.mName = t[3];
+        cond.mName2 = t[4];
+        if(t.size() == 7)
+        {
+            if(t[5] != "after")
+                return false;
+            cond.mAfterTrigger = t[6];
+            if(cond.mAfterTrigger == "-")
+                return false;
+        }
+        return true;
+    }
     if(type == "carryingstone")
     {
         if(t.size() != 3)
@@ -951,6 +969,11 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
                 os << "reached\t" << c.mName << "\theart\t" << c.mSeatId;
             else
                 os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::crossedRegion:
+            os << "crossed\t" << c.mSeatId << "\t" << c.mName << "\t" << c.mName2;
+            if(!c.mAfterTrigger.empty())
+                os << "\tafter\t" << c.mAfterTrigger;
             break;
         case LevelScriptConditionType::carryingStone:
             os << "carryingstone\t" << c.mName;
@@ -1525,6 +1548,19 @@ bool LevelScript::importFromStream(std::istream& is)
             observation.mKilled = killed != 0;
             mSpawnObservations.push_back(observation);
         }
+        else if(key == "CrossingProgress")
+        {
+            LevelScriptCrossingProgress progress;
+            if(inTrigger || t.size() != 8 || !parseInt32(t[1], progress.mSeatId) || progress.mSeatId < 1 ||
+               !parseInt32(t[6], progress.mX) || !parseInt32(t[7], progress.mY) || progress.mX < 0 || progress.mY < 0 ||
+               (t[4] != "north" && t[4] != "south" && t[4] != "east" && t[4] != "west"))
+                return false;
+            progress.mCreature = t[2];
+            progress.mRegion = t[3];
+            progress.mDirection = t[4];
+            progress.mAfterTrigger = t[5] == "-" ? "" : t[5];
+            mCrossingProgress.push_back(progress);
+        }
         else if(key == "VictoryRequest")
         {
             int32_t seatId = -1;
@@ -1692,6 +1728,8 @@ bool LevelScript::importFromStream(std::istream& is)
             if(!parseCondition(t, cond))
                 return false;
 
+            if(cond.mType == LevelScriptConditionType::crossedRegion)
+                mHasCrossingObservers = true;
             trigger.mConditions.push_back(cond);
         }
         else if(key == "Action")
@@ -1737,6 +1775,11 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::pair<int32_t, std::string>, LevelScriptObjectiveState>& objective : mObjectiveStates)
         os << "ObjectiveState\t" << objective.first.first << "\t" << objective.first.second << "\t"
            << levelScriptObjectiveStateName(objective.second) << "\n";
+    for(const LevelScriptCrossingProgress& progress : mCrossingProgress)
+        os << "CrossingProgress\t" << progress.mSeatId << "\t" << progress.mCreature << "\t"
+           << progress.mRegion << "\t" << progress.mDirection << "\t"
+           << (progress.mAfterTrigger.empty() ? "-" : progress.mAfterTrigger) << "\t"
+           << progress.mX << "\t" << progress.mY << "\n";
     for(int32_t seatId : mVictoryRequests)
         os << "VictoryRequest\t" << seatId << "\n";
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
@@ -1819,6 +1862,8 @@ void LevelScript::clear()
 {
     mObjectiveStates.clear();
     mVictoryRequests.clear();
+    mCrossingProgress.clear();
+    mHasCrossingObservers = false;
     mSpawnObservations.clear();
     mMinedGold.clear();
     mCreatureDeathTiles.clear();
@@ -2197,4 +2242,102 @@ void LevelScript::setCreatureBlocked(int32_t seatId, const std::string& classNam
 bool LevelScript::isCreatureBlocked(int32_t seatId, const std::string& className) const
 {
     return mBlocked.count(std::make_pair(seatId, className)) > 0;
+}
+
+//! \brief Reports a completed crossing using the existing saved event history.
+bool LevelScript::wasRegionCrossed(int32_t seatId, const std::string& region,
+    const std::string& direction, const std::string& afterTrigger) const
+{
+    return getEventCount("Seat" + std::to_string(seatId),
+        "crossed:" + region + ":" + direction + ":" + afterTrigger) > 0;
+}
+
+//! \brief Removes unfinished movement belonging to a creature instance before its name can be reused.
+void LevelScript::clearCreatureCrossings(const std::string& creature)
+{
+    mCrossingProgress.erase(std::remove_if(mCrossingProgress.begin(), mCrossingProgress.end(),
+        [&creature](const LevelScriptCrossingProgress& progress) { return progress.mCreature == creature; }),
+        mCrossingProgress.end());
+}
+
+//! \brief Follows an actual walked path across entry, interior and opposite exit using the same creature.
+void LevelScript::observeCrossingStep(const std::string& creature, int32_t seatId,
+    int32_t fromX, int32_t fromY, int32_t toX, int32_t toY)
+{
+    if(!mHasCrossingObservers || (fromX == toX && fromY == toY))
+        return;
+    std::set<std::string> observed;
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptCondition& condition : trigger.mConditions)
+        {
+            if(condition.mType != LevelScriptConditionType::crossedRegion || condition.mSeatId != seatId ||
+               wasRegionCrossed(seatId, condition.mName, condition.mName2, condition.mAfterTrigger))
+                continue;
+            const std::string key = condition.mName + "\t" + condition.mName2 + "\t" + condition.mAfterTrigger;
+            if(!observed.insert(key).second)
+                continue;
+            const LevelScriptRegion* region = getRegion(condition.mName);
+            if(region == nullptr)
+                continue;
+            if(!condition.mAfterTrigger.empty())
+            {
+                const auto required = std::find_if(mTriggers.begin(), mTriggers.end(),
+                    [&condition](const LevelScriptTrigger& item) { return item.mName == condition.mAfterTrigger; });
+                if(required == mTriggers.end() || required->mTimesFired == 0)
+                    continue;
+            }
+            auto candidate = std::find_if(mCrossingProgress.begin(), mCrossingProgress.end(),
+                [&creature, &condition, seatId](const LevelScriptCrossingProgress& progress) {
+                    return progress.mCreature == creature && progress.mSeatId == seatId &&
+                        progress.mRegion == condition.mName && progress.mDirection == condition.mName2 &&
+                        progress.mAfterTrigger == condition.mAfterTrigger;
+                });
+            if(std::abs(toX - fromX) > 1 || std::abs(toY - fromY) > 1)
+            {
+                if(candidate != mCrossingProgress.end())
+                    mCrossingProgress.erase(candidate);
+                continue;
+            }
+            const bool vertical = condition.mName2 == "north" || condition.mName2 == "south";
+            const bool descending = condition.mName2 == "north" || condition.mName2 == "west";
+            const int32_t low = vertical ? std::min(region->mY1, region->mY2) : std::min(region->mX1, region->mX2);
+            const int32_t high = vertical ? std::max(region->mY1, region->mY2) : std::max(region->mX1, region->mX2);
+            const int32_t before = vertical ? fromY : fromX;
+            const int32_t after = vertical ? toY : toX;
+            const bool inside = region->contains(toX, toY);
+            if(candidate != mCrossingProgress.end())
+            {
+                if(candidate->mX != fromX || candidate->mY != fromY)
+                {
+                    mCrossingProgress.erase(candidate);
+                    continue;
+                }
+                if(inside)
+                {
+                    candidate->mX = toX;
+                    candidate->mY = toY;
+                    continue;
+                }
+                if((descending && before == low && after == low - 1) ||
+                   (!descending && before == high && after == high + 1))
+                    recordEvent("Seat" + std::to_string(seatId),
+                        "crossed:" + condition.mName + ":" + condition.mName2 + ":" + condition.mAfterTrigger);
+                mCrossingProgress.erase(candidate);
+            }
+            else if(inside && ((descending && before == high + 1 && after == high) ||
+                              (!descending && before == low - 1 && after == low)))
+            {
+                LevelScriptCrossingProgress progress;
+                progress.mCreature = creature;
+                progress.mSeatId = seatId;
+                progress.mRegion = condition.mName;
+                progress.mDirection = condition.mName2;
+                progress.mAfterTrigger = condition.mAfterTrigger;
+                progress.mX = toX;
+                progress.mY = toY;
+                mCrossingProgress.push_back(progress);
+            }
+        }
+    }
 }

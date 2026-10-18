@@ -35,6 +35,7 @@
 //!   [Triggers]
 //!   Flag    <name>  <value>                   # initial value of a flag (unset flags are 0)
 //!   ObjectiveState <seatId> <id> open|reached|failed   # saved state for an identified objective
+//!   CrossingProgress <seatId> <creature> <region> <direction> <afterTrigger|-> <lastX> <lastY>   # saved unfinished crossing
 //!   VictoryRequest <seatId>                    # saved original victory request waiting for main goals
 //!   SpawnObservation <trigger> <actionIndex> <creatureName> <killed 0|1> <deathTempleSeat>   # saved exact spawn/death observation; temple -1 means outside a temple
 //!   MinedGold <seatId> <x> <y> <creditedGold>    # sparse actual gold credited from a watched source tile
@@ -108,6 +109,7 @@
 //!   Cond    killedin <creatureName> <region>   # actual recorded death position is within that region
 //!   Cond    groundconnected <seatId> <x1> <y1> <x2> <y2>   # actual dry worker-walkable connection; never assumes digging
 //!   Cond    roomclaimed <seatId> <x1> <y1> <x2> <y2>   # every fixed footprint tile is open, fully claimed and in a room owned by the seat
+//!   Cond    crossed <seatId> <region> north|south|east|west [after <trigger>]   # one living creature walks from entry bank across the whole region to the opposite bank
 //!   Cond    groundclaimed <seatId> <x1> <y1> <x2> <y2>   # fixed floor footprint fully claimed; no room construction required
 //!           # Region/creatures class filters also accept @fighters to exclude workers.
 //!   Cond    creaturesatheart <seatId> <op> <count>   # own living creatures on tiles of the seat's dungeon temple
@@ -241,7 +243,8 @@ enum class LevelScriptConditionType
     groundConnected,
     roomFootprintClaimed,
     groundFootprintClaimed,
-    carryingStone
+    carryingStone,
+    crossedRegion
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.
@@ -335,6 +338,8 @@ struct LevelScriptCondition
     //! The flag a flag condition compares with (empty when it compares with mNumber), or the creature class
     //! that a creatures or region condition counts (empty: every creature)
     std::string mName2;
+    //! A crossing is observed only after this trigger fired; empty means no ordering prerequisite.
+    std::string mAfterTrigger;
 };
 
 //! \brief One script action, with an optional stable ID for objective descriptions and state updates.
@@ -472,11 +477,27 @@ struct LevelScriptSpawnObservation
     int32_t mDeathTempleSeat;
 };
 
+//! \brief One unfinished, same-creature crossing, saved so a load cannot replace it with another visitor.
+struct LevelScriptCrossingProgress
+{
+    //! \brief Creates an unassigned crossing candidate.
+    LevelScriptCrossingProgress() : mSeatId(-1), mX(0), mY(0) {}
+    int32_t mSeatId;
+    std::string mCreature;
+    std::string mRegion;
+    std::string mDirection;
+    std::string mAfterTrigger;
+    int32_t mX;
+    int32_t mY;
+};
+
 //! \brief Holds trigger definitions and saved runtime state, including identified objective states.
 class LevelScript
 {
 public:
+    //! \brief Creates an empty script with no movement observers or active runtime state.
     LevelScript() :
+        mHasCrossingObservers(false),
         mFreePossession(false),
         mWatchedValid(false),
         mTimeLimitSeconds(TIME_LIMIT_NOT_SET),
@@ -517,6 +538,17 @@ public:
     //! \brief Records the explicit presentation state for one seat and objective ID.
     void setObjectiveState(int32_t seatId, const std::string& id, LevelScriptObjectiveState state);
 
+    //! \brief True when the loaded script contains a crossing condition; ordinary maps need no movement work.
+    bool hasCrossingObservers() const { return mHasCrossingObservers; }
+    //! \brief Observes one actual walked tile step; teleports and mere region presence are not input events.
+    void observeCrossingStep(const std::string& creature, int32_t seatId, int32_t fromX, int32_t fromY,
+        int32_t toX, int32_t toY);
+    //! \brief Tests a completed ordered crossing recorded by one creature of this seat.
+    bool wasRegionCrossed(int32_t seatId, const std::string& region, const std::string& direction,
+        const std::string& afterTrigger) const;
+    //! \brief Discards an unfinished candidate when a fresh creature gets the same internal name.
+    void clearCreatureCrossings(const std::string& creature);
+
     //! \brief Observes an actual spawn instance without changing its name, party or behaviour.
     void observeSpawn(const std::string& trigger, int64_t actionIndex, const std::string& creatureName);
     //! \brief Records the latest living instance's death; templeSeat is -1 outside a temple.
@@ -536,7 +568,7 @@ public:
 
     //! \brief True when neither script definitions nor persistent runtime state exist.
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mVictoryRequests.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mVictoryRequests.empty() && mCrossingProgress.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
@@ -686,6 +718,8 @@ public:
     void rebaseTimeLimit(int64_t elapsedSeconds);
 
 private:
+    bool mHasCrossingObservers;
+    std::vector<LevelScriptCrossingProgress> mCrossingProgress;
     std::map<std::pair<int32_t, std::string>, LevelScriptObjectiveState> mObjectiveStates;
     //! Seats with an original victory request deferred until all required goals are reached.
     std::set<int32_t> mVictoryRequests;

@@ -23,6 +23,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "gamemap/RoomObjectNavigation.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -34,6 +35,7 @@
 #include "ODApplication.h"
 
 #include <OgreAnimationState.h>
+#include <cmath>
 
 //! Playback speed factor of the combat attack animation, so that strikes look quick.
 const double COMBAT_ATTACK_SPEED_FACTOR = 1.35;
@@ -298,7 +300,37 @@ bool MovableGameEntity::hasReachedAnimationContact(double share) const
         (mAnimationState->getTimePosition() >= mAnimationState->getLength() * share);
 }
 
+namespace
+{
+//! \brief Observes only actual server walk segments, including intermediate waypoints in a long frame.
+void recordScriptWalk(MovableGameEntity& entity, const Ogre::Vector2& from, const Ogre::Vector2& to)
+{
+    if(!entity.getIsOnServerMap() || entity.getObjectType() != GameEntityType::creature || !entity.getIsOnMap())
+        return;
+    Creature& creature = static_cast<Creature&>(entity);
+    LevelScript& script = entity.getGameMap()->getLevelScript();
+    if(!creature.isAlive() || !script.hasCrossingObservers())
+        return;
+    int32_t x = Helper::round(from.x);
+    int32_t y = Helper::round(from.y);
+    if(x == Helper::round(to.x) && y == Helper::round(to.y))
+        return;
+    const Ogre::Vector2 delta = to - from;
+    const int steps = std::max(1, static_cast<int>(std::ceil(std::max(std::abs(delta.x), std::abs(delta.y)) * 4.0)));
+    for(int index = 1; index <= steps; ++index)
+    {
+        const Ogre::Vector2 point = from + delta * (static_cast<Ogre::Real>(index) / steps);
+        const int32_t nextX = Helper::round(point.x);
+        const int32_t nextY = Helper::round(point.y);
+        script.observeCrossingStep(entity.getName(), creature.getSeat()->getId(), x, y, nextX, nextY);
+        x = nextX;
+        y = nextY;
+    }
+}
+}
+
 //! \brief Advances movement, clips and deferred strikes using the same game-time scale.
+//! Observes actual crossing steps without changing movement.
 void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
 {
     // On the server, the elapsed time already is game time. On the clients, the game speed setting
@@ -370,16 +402,19 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
 
     while(moveDist > 0.0)
     {
+        const Ogre::Vector2 stepStart = newPosition;
         Ogre::Real distToNextDest = newPosition.distance(nextDest);
         if(distToNextDest > moveDist)
         {
             newPosition = newPosition + walkDirection * static_cast<Ogre::Real>(moveDist);
+            recordScriptWalk(*this, stepStart, newPosition);
             break;
         }
         else
         {
             // We have reached the destination. We go to the next if available
             newPosition = nextDest;
+            recordScriptWalk(*this, stepStart, newPosition);
             moveDist -= distToNextDest;
             mWalkQueue.pop_front();
             if(mWalkQueue.empty())

@@ -145,6 +145,7 @@ public:
     void clearCreatures();
 
     //! \brief Adds the address of a new creature to be stored in this GameMap.
+    //! \brief Registers a fresh creature without inheriting unfinished movement from a reused name.
     void addCreature(Creature *c);
 
     //! \brief Removes the creature from the game map but does not delete its data structure.

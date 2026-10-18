@@ -634,11 +634,14 @@ void GameMap::saveLevelEquipments(std::ofstream& levelFile)
     }
 }
 
+//! \brief Registers a creature and discards unfinished crossing history belonging to a reused name.
 void GameMap::addCreature(Creature *cc)
 {
     OD_LOG_INF(serverStr() + "Adding Creature " + cc->getName()
         + ", seatId=" + (cc->getSeat() != nullptr ? Helper::toString(cc->getSeat()->getId()) : std::string("null")));
 
+    if(isServerGameMap())
+        mLevelScript->clearCreatureCrossings(cc->getName());
     mCreatures.push_back(cc);
 }
 

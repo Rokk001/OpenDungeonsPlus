@@ -530,6 +530,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) &&
                 (room->getSeat() != nullptr) && (room->getSeat()->getId() == cond.mSeatId);
         }
+        case LevelScriptConditionType::crossedRegion:
+            return script.wasRegionCrossed(cond.mSeatId, cond.mName, cond.mName2, cond.mAfterTrigger);
         case LevelScriptConditionType::carryingStone:
             return script.getStoneCarriers().count(cond.mName) != 0;
         case LevelScriptConditionType::stoneInRegion:
