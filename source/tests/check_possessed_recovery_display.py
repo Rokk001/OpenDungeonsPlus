@@ -13,6 +13,6 @@ assert upkeep.index("if(isHexenHen())") < countdown
 assert 'mNeedFireRefresh = true;' in upkeep[countdown:possessed]
 assert upkeep.index('--skillData.mCooldown;', possessed) > countdown
 assert upkeep.index('possessedFunc();', possessed) > countdown
-assert 'os << getExperienceProgress() << mAttackRecoveryTurns << mAttackRecoveryDuration' in source
-assert '<< mAttackRecoverySerial;' in source
+assert 'working ? static_cast<uint32_t>(mJobCooldown) : mAttackRecoveryTurns' in source
+assert 'os << getExperienceProgress() << remaining << duration << mAttackRecoverySerial;' in source
 print("Recovery countdown updates exactly once before possessed and AI actions, retaining existing packet fields: PASS (static only)")

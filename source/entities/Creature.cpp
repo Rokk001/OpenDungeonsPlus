@@ -2819,8 +2819,11 @@ void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
 {
     if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
         return;
-    os << getExperienceProgress() << mAttackRecoveryTurns << mAttackRecoveryDuration
-       << mAttackRecoverySerial;
+    const bool working = getActivity().action == CreatureActionType::useRoom &&
+        mJobCooldown > 0 && mJobCooldownDuration > 0;
+    const uint32_t remaining = working ? static_cast<uint32_t>(mJobCooldown) : mAttackRecoveryTurns;
+    const uint32_t duration = working ? mJobCooldownDuration : mAttackRecoveryDuration;
+    os << getExperienceProgress() << remaining << duration << mAttackRecoverySerial;
 }
 
 void Creature::importProgressFromPacket(ODPacket& is)
@@ -6166,6 +6169,10 @@ void Creature::setJobCooldown(int val)
         val = Helper::round(static_cast<float>(val) * 0.8f);
 
     mJobCooldown = val;
+    mJobCooldownDuration = static_cast<uint32_t>(std::max(0, val));
+    if(val > 0)
+        ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
 }
 
 bool Creature::isTired() const

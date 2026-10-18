@@ -250,8 +250,7 @@ public:
     uint32_t getAttackRecoveryTurns() const { return mAttackRecoveryTurns; }
     //! \brief Turns the recovery after the last attack lasts in total
     uint32_t getAttackRecoveryDuration() const { return mAttackRecoveryDuration; }
-    //! \brief Counter increased at every attack, so that a client can tell two attacks with the same
-    //! remaining turns apart
+    //! \brief Counter increased for each attack or job-pause restart, distinguishing equal remaining values
     uint32_t getAttackRecoverySerial() const { return mAttackRecoverySerial; }
     //! \brief Whether experience and attack recovery were received from the server. Only a client sets it,
     //! and only if the server sent them.
@@ -594,14 +593,17 @@ public:
         if(mWakefulness < 0.0)
             mWakefulness = 0.0;
     }
+    //! \brief Advances the real job pause and refreshes its displayed countdown.
     inline bool decreaseJobCooldown()
     {
         if(mJobCooldown <= 0)
             return true;
 
         --mJobCooldown;
+        mNeedFireRefresh = true;
         return false;
     }
+    //! \brief Sets the existing job pause and records its duration for the progress ring.
     void setJobCooldown(int val);
     inline int getJobCooldown() const
     { return mJobCooldown; }
@@ -1176,6 +1178,8 @@ private:
     //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep), not saved
     uint32_t        mChampionTurns;
     int             mJobCooldown;
+    //! Total duration of the current job pause, used only by the existing progress ring.
+    uint32_t mJobCooldownDuration = 0;
 
     //! \brief At pay day, mGoldFee will be set to the creature fee and decreased when the creature gets gold
     int32_t         mGoldFee;
@@ -1383,7 +1387,7 @@ private:
     uint32_t mAttackRecoveryTurns = 0;
     //! \brief Turns the recovery after the last attack lasts in total (longest of warmup and cooldown)
     uint32_t mAttackRecoveryDuration = 0;
-    //! \brief Number of attacks so far (wraps around), see getAttackRecoverySerial()
+    //! \brief Number of recovery-display restarts so far (wraps around), see getAttackRecoverySerial()
     uint32_t mAttackRecoverySerial = 0;
     //! \brief Experience progress received from the server. Only used on a client.
     double mExperienceProgress = 0.0;
@@ -1444,6 +1448,7 @@ private:
     //! \brief The activity is sent as unknown for creatures of non-allied seats.
     void exportActivityToPacket(ODPacket& os, const Seat* seat) const;
     void importActivityFromPacket(ODPacket& is);
+    //! \brief Sends experience and the currently active room-work or attack recovery through the existing payload.
     void exportProgressToPacket(ODPacket& os, const Seat* seat) const;
     void importProgressFromPacket(ODPacket& is);
 
