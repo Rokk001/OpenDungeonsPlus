@@ -10,12 +10,15 @@ are never presumed satisfied.
 import argparse
 from collections import deque
 import hashlib
+import json
 import math
 from pathlib import Path
 import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+GROUP_KINDS = {"mainobjectiveid", "optionalobjectiveid", "conditionalobjectiveid"}
+GROUP_REVIEW = json.loads((ROOT / "source/tests/fixtures/campaign_goal_groups.json").read_text(encoding="utf-8"))
 GOALS = {"KillAllEnemies", "ProtectDungeonTemple", "ProtectCreature", "ClaimNTiles", "MineNGold"}
 REQUIRED = ("Info", "Seats", "Goals", "Tiles", "Rooms", "Traps", "Lights",
             "CreatureDefinitions", "EquipmentDefinitions", "Creatures", "Spells",
@@ -27,12 +30,12 @@ BRIEFING_MATCH = {
     "Coldwell": {3: "no: plaza ownership and mined gold are not winning conditions", 4: "no: Cole elimination is checked; breaking the gate separately is not"},
     "Tinmoor": {2: "no: enemy elimination is checked; seams and both posts are not independent goals", 3: "no: optional stone discovery is not required to win"},
     "BoulderCourse": {3: "yes: courseDone checks all four cups; the timeout trigger limits the trial"},
-    "Ravensledge": {3: "no: bridgeheads and shelf progression are not independent goals", 4: "yes: KillAllEnemies includes Vane"},
-    "Ashcombe": {3: "no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal"},
-    "Greywater": {3: "no: ProtectDungeonTemple checks the heart; mining is not a winning condition", 4: "yes: KillAllEnemies includes Gray"},
-    "HollinFen": {2: "no: enemy elimination and heart protection are checked; building and breaking the ward are not independent goals", 3: "no: optional stone discovery is not required to win"},
-    "CrowshotGallery": {3: "no: galleryClear checks the flock; possession is not a separate winning condition"},
-    "Ironbridge": {3: "no: building and bridge order are not independent goals", 4: "yes: KillAllEnemies includes the rival temple"},
+    "Ravensledge": {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals"},
+    "Ashcombe": {3: "yes: actual northward Basin crossing, actual Ashby death before escape regardless of location, remaining enemy forces and own-heart protection"},
+    "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
+    "HollinFen": {3: "yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes", 4: "yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery"},
+    "CrowshotGallery": {3: "yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline"},
+    "Ironbridge": {3: "yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms", 4: "yes: an actual fortress entrance breached, rival temple gone and all remaining enemy forces defeated"},
     "Lanternhill": {2: "no: mining and digging the plugs are not independent goals", 3: "yes: KillAllEnemies includes the northern rival temple", 4: "no: optional stone discovery is not required to win"},
     "VarnsCrossing": {3: "no: heart protection and enemy temples are checked; quarter and fortress ownership are not independent goals"},
     "Thornreach": {3: "no: enemy temples are checked; clearing ownership and maze progression are not independent goals"},
@@ -40,25 +43,64 @@ BRIEFING_MATCH = {
     "SkittleCavern": {3: "no: laneCleared checks opened lanes and no remaining guards, not whether boulders killed them"},
     "Stormhaven": {3: "no: enemy temples are checked; stone-span control is not an independent goal"},
     "Cinderhollow": {3: "no: ProtectDungeonTemple checks survival; mining is not required", 4: "no: enemy temple elimination is checked; bridge crossing is not an independent goal"},
-    "Saltmere": {2: "no: mining and the travel route are not independent goals", 3: "yes: ProtectDungeonTemple", 4: "yes: KillAllEnemies includes Seward"},
-    "Dunmarrow": {3: "no: enemy elimination/escape is checked; the route used is not a winning condition"},
+    "Saltmere": {3: "yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing", 4: "yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals"},
+    "Dunmarrow": {3: "yes: actual northbound tunnel use and camp arrival before the original 900-second departure deadline; actual Dunn death before escape, heart protection and remaining foes"},
     "Goldspire": {2: "no: building before attacking is not a winning condition", 3: "no: enemy elimination is checked; the ordered low-town/link route is not an independent goal"},
     "Mirewatch": {2: "no: digging/building order is not a winning condition", 3: "no: all tower ownership and both approaches are not independent winning goals", 4: "yes: KillAllEnemies includes the watcher"},
     "Bellwick": {3: "no: enemy temple elimination is checked; holding until the gate event is not an independent goal"},
-    "Wolfscar": {3: "no: enemy temples and own-heart protection are checked; wolf-den ownership and the route are not independent goals"},
+    "Wolfscar": {3: "yes: actual bridge crossings of both ravines, ownership of all344original den floor fields, four rival temples gone, remaining enemy forces and own-heart protection"},
     "TwistingHalls": {3: "no: hallReached checks region presence; it does not independently require possession"},
     "Silverdeep": {2: "no: mining/building are not independent goals", 3: "no: enemy temples are checked; building exactly three wooden spans is not a winning condition"},
     "Ebonrook": {2: "no: mining and feeding are not winning conditions", 3: "no: enemy elimination is checked; the named route is not an independent goal"},
     "Wraithwood": {3: "yes: ProtectDungeonTemple and KillAllEnemies include both rival temples"},
     "Kingsfall": {2: "no: prince elimination is checked; crossing the watched spans is not independent", 3: "no: collectWin checks all champions and twelve creatures, but courtTaken also wins without all three champions and neither checks their location at the heart"},
     "SwarmNight": {3: "yes: dawn at 780 seconds with ProtectDungeonTemple", 4: "yes: dawn invokes keepminion before win; no Heartstone reward is granted"},
-    "HollowmarkCitadel": {3: "no: gate routes and treasury use are not independent winning goals", 4: "no: kingDead checks Castellan's death, not throne ownership"},
+    "HollowmarkCitadel": {3: "yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes", 4: "yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned"},
 }
 # Only existing triggers that actually satisfy each objective may change its state.
 # None is an unresolved mapping, deliberately reported as an error instead of inferred at victory.
+# Main-goal observers now enforce these formerly unchecked Mossgate briefing duties.
+BRIEFING_MATCH["Mossgate"] = {
+    3: "yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles",
+    4: "yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal"
+}
+
+BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked", 4: "yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles"}
+BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold", 4: "yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces"}
+BRIEFING_MATCH["Tinmoor"] = {2: "yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals", 3: "yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory"}
+BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
+
+BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies", 4: "yes: voluntary discovery activates delivery of the actual floor stone by a worker"}
+
+BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes"}
+
+BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes"}
+
+BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified"}
+
+BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit"}
+
+BRIEFING_MATCH["Stormhaven"] = {3: "yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated"}
+
+BRIEFING_MATCH["Cinderhollow"] = {3: "yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere", 4: "yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated"}
+
+BRIEFING_MATCH["Goldspire"] = {2: "yes: actual two-fighter buildup and own-heart protection", 3: "yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links", 4: "yes: actual Penn death inside the spire and all remaining foes"}
+
+BRIEFING_MATCH["Mirewatch"] = {2: "yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint", 3: "yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession", 4: "yes: Mora actually killed in TowerH and remaining foes defeated"}
+
+BRIEFING_MATCH["Bellwick"] = {3: "yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes"}
+
+BRIEFING_MATCH["Ebonrook"] = {2: "yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge", 3: "yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes"}
+
+BRIEFING_MATCH["Silverdeep"] = {2: "yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection", 3: "yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes"}
+
+BRIEFING_MATCH["Wraithwood"] = {3: "yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately"}
+
+BRIEFING_MATCH["Kingsfall"] = {3: "yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance", 4: "yes:12own living creatures currently on the own-heart tiles"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
-              ('holdBreached',),
-              ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
+              ('goalBasinCrossed',),
+              ('goalKillBeforeEscape',)],
  'Bellwick': [('keeperHeartDown',), None, ('naveGatesKills', 'naveGatesLate'), ('transept',)],
  'BoulderCourse': [('courseDone',)],
  'Brackenford': [('wardenGone',),
@@ -86,7 +128,7 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
                ('goalHeartSafe3BeforeWardenSlain',),
                ('wardenSlain',),
                ('stoneHome', 'stoneHome2'),
-               ('holdSealBreaks',)],
+               ('goalCaptainKilled',)],
  'HollinFen': [('wardenSlain',), ('goalHeartSafe2BeforeWardenSlain',), ('wardEntered',), ('wardenSlain',)],
  'HollowmarkCitadel': [('kingDead',), ('goalCourt3',), ('goalHeartSafe3BeforeKingDead',)],
  'Ironbridge': [('rivalFalls', 'rivalHeartDown'),
@@ -268,12 +310,9 @@ OBJECTIVE_REVIEW = {'bellwick-o02': ('naveGatesKills, naveGatesLate',
                        'should that existing goal trigger complete this text?')}
 
 # Fixed fingerprints of the reviewed existing conditions; never recalculated as expectations.
-OBJECTIVE_CONDITIONS = {'Ashcombe/goalHoldBeforeDeparture': '776b58a0778ede6f329bf9703c105074745fe0c1d7b273766e3e2fb052d95454',
- 'Ashcombe/goalOutsideHoldDeath01': '4b55b1bcd3b6c124c1baca2e1ea3f32f638e21b5b6ab26bc3d2e6e7d3a76c958',
- 'Ashcombe/goalOutsideHoldDeath02': 'b0439d62b1fa95ea3b184ed79bd2e3197ef01165510a41fe5b8a824123f49c63',
- 'Ashcombe/goalOutsideHoldDeath03': '47121a958cf69f7b9a61bca91df8955391839b666ff65501520458af0c8cf7f7',
- 'Ashcombe/goalOutsideHoldDeath04': '74ece0097d1767e87ccf3f06f08682c2d4d55a952b3cb37c06f51e09d4a16ab4',
- 'Ashcombe/goalHoldOrRoadMissed': '6b50aa8f09f86e56c7383895f34b7b828306cbfa792e8aaf22af95b105e6708a',
+OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a76ab7069491bc45a3439b9e8efff92f3363e0e0789',
+'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa328f53c00f5f2768be0f7367fda1c7aec6424870',
+  'Ashcombe/goalHoldOrRoadMissed': '6b50aa8f09f86e56c7383895f34b7b828306cbfa792e8aaf22af95b105e6708a',
  'Ashcombe/holdBreached': 'bae0a393bc01e08ad3ae0b95d56ee971dc346396388423a3d0c019f97ff58aaf',
  'Ashcombe/wardenDown': '9099b47ed59d017b8ca6cede9c74e2bbfe5d91a9ee0d4ee005dbbf423926927f',
  'Ashcombe/wardenEscaped': '56e37df8874d71b952e4aff8e246d5568afc363fa678dde537ce5b53d3bb0604',
@@ -302,7 +341,7 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalHoldBeforeDeparture': '776b58a0778ede6f329
  'Cinderhollow/goalDawnBridge': '31bfa776f2fabb75b9c400e4c14449f2a23ae0ccb9c090599b354d62c37237b5',
  'Cinderhollow/goalDawnBridgeApproach': '7b7cc92553db0a630d9d8eeb64e9163000ea576ebde2679543af1f26f4ca5e02',
  'Cinderhollow/goalDawnBridgeCrossed': '05f90e1f8e74e92ee126418d8d02c528ef152fe4aff7e0f87c532bc0c3df4262',
- 'Cinderhollow/goalThreeWavesDefeatedAtHeart': '739e7b104d57d3c922e9216d3f41d887c0efeff9d8c18523bd8c5b80500724b5',
+ 'Cinderhollow/goalThreeWavesDefeatedAtHeart': '66ab2425596a2a131e5b81285debd24703c77d08988f7e274700157f8c323cea',
  'Cinderhollow/rivalHeartDown': 'b490f8085c95c318f0aee37b0bcb7f903d47f272d0bedb3114676bcf5146fc3b',
  'Cinderhollow/rivalHeartFalls': 'e39927741e06e2f5d2a2863a979535b542e7774e671af7d7838cc8153b14097d',
  'Coldwell/courtBreached': '44ebb7a1fa5c16d2bc4cf4cfd4e82ec1ea98501c6839fb6190f50f6b51175f33',
@@ -334,6 +373,7 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalHoldBeforeDeparture': '776b58a0778ede6f329
  'Highcairn/goalTerrace2': '4acedeef1aea3f655e52c27459519c7bdb001c839d3ed01b16cd0fd4d21644b7',
  'Highcairn/goalTerrace3': '985150fc38e89890402b5e67d691ae0800fcd05adb22c486b72b559ee37eaa69',
  'Highcairn/goalTerrace4': 'ccd3ee14ef9755706a7c4575ab18958da05c515c1fccef0a6a9f38e78d0d6a4e',
+ 'Highcairn/goalCaptainKilled': 'e1747cd4004d2ca4f9cc7890eee8c6ae2e0cf86996ce7ac62af4602e141d524a',
  'Highcairn/holdSealBreaks': '8d98fbb5f48f929b4e4e9eca60cfdb982bfd32ca5d430f8918bdf3de7041f9fb',
  'Highcairn/stoneHome': 'bf6c9dad942cb5d2f04f994d6355cd9af755cedc6c9e7d1122d8205843db3c19',
  'Highcairn/stoneHome2': '14e787f8a1aa9a89f3e765383f0c68e97714f9cc40f58056110e73e77baff80c',
@@ -522,8 +562,8 @@ def validate_sections(text):
         raise ValueError("unsupported level version")
 
 
-# Load seats, sparse tile overrides, room footprints and creatures using the file contract.
-def parse_level(text):
+# Load the file contract; an explicit selectable seat permits independent legacy-start analysis.
+def parse_level(text, selected_seat=None):
     validate_sections(text)
     seats = {0: {"teamId": "0", "player": "Inactive"}}
     for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S):
@@ -547,6 +587,10 @@ def parse_level(text):
         if not math.isfinite(float(fields["mana"])):
             raise ValueError("non-finite seat mana")
     humans = [seat for seat, fields in seats.items() if fields["player"] == "Human"]
+    if selected_seat is not None:
+        if selected_seat not in seats or seats[selected_seat]["player"] not in ("Human", "Choice"):
+            raise ValueError("analysis seat is not human-selectable")
+        humans = [selected_seat]
     if len(humans) != 1:
         raise ValueError("expected exactly one human seat")
     tile_lines = lines(section(text, "Tiles"))
@@ -719,22 +763,21 @@ def check_level(level):
     return errors
 
 
-# Prove the four death regions are exactly the map complement of the original Hold.
-def ashcombe_outside_errors(text):
-    expected = ((0, 0, 72, 75), (90, 0, 91, 75), (73, 0, 89, 4), (73, 22, 89, 75))
+# Keep Ashby's existing escape route, and require death before escape without any location restriction.
+def ashcombe_escape_errors(text):
     errors = []
-    if "Region\tHold\t73\t5\t89\t21" not in text.splitlines():
-        errors.append("original Hold bounds differ")
-    if not re.search(r"\[Tiles\]\s*# Map Size\s*92 # MapSizeX\s*76 # MapSizeY", text):
-        errors.append("original Ashcombe map bounds differ")
-    for index, rect in enumerate(expected, 1):
-        row = "Region\tGoalOutsideHold%02d\t%s" % (index, "\t".join(map(str, rect)))
-        if row not in text.splitlines():
-            errors.append("outside-Hold death region differs: %d" % index)
-    departure = next((block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S)
-                      if "Name\twagonLeaves\n" in block), "")
-    if "Cond\talive\tLieslAshby" not in departure:
-        errors.append("departure must require Ashby alive to exclude earlier death")
+    blocks = {re.search(r"^Name\t([^\n]+)", b, re.M)[1]: b
+              for b in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S)}
+    completion = blocks.get("goalKillBeforeEscape", "")
+    conditions = [row for row in completion.splitlines() if row.startswith("Cond\t")]
+    if conditions != ["Cond\tevent\tLieslAshby\tkilled", "Cond\ttrigger\twardenEscaped\t0"]:
+        errors.append("Ashby must die before escape, without a location or departure prerequisite")
+    if "Cond\talive\tLieslAshby" not in blocks.get("wagonLeaves", ""):
+        errors.append("original departure must require Ashby alive")
+    if "Cond\treached\tLieslAshby\tregion\tExitRoad" not in blocks.get("wardenEscaped", ""):
+        errors.append("original escape destination differs")
+    if "Action\tlose\t1" not in blocks.get("wardenEscaped", ""):
+        errors.append("original escape defeat must remain")
     return errors
 
 
@@ -783,9 +826,347 @@ def mirewatch_errors(level):
     return errors
 
 
+# Validate reviewed grouped goals, continuous main observers and optional completion bindings.
+def grouped_goal_errors(text, level_name):
+    review = GROUP_REVIEW.get(level_name, {})
+    expected = review.get("goals", {})
+    actual, blocks, errors = {}, {}, []
+    for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S):
+        rows = [row for _, row in lines(block)]
+        name = next((row.split(None, 1)[1] for row in rows if row.startswith("Name\t")), "")
+        blocks[name] = rows
+        for row in rows:
+            fields = row.split(None, 4)
+            if len(fields) >= 2 and fields[0] == "Action" and fields[1] in GROUP_KINDS:
+                if len(fields) != 5:
+                    errors.append("invalid grouped objective in " + name)
+                    continue
+                if fields[3] in actual:
+                    errors.append("duplicate grouped objective " + fields[3])
+                actual[fields[3]] = fields
+    if set(actual) != set(expected):
+        errors.append("grouped objective set differs from reviewed matrix: " + level_name)
+    if not actual and not expected:
+        return []
+    # Count the visible goals for each target seat, including shared declarations.
+    target_seats = {row[2] for row in actual.values() if row[2] != "-1"} or {"-1"}
+    for seat in target_seats:
+        visible = [row for row in actual.values() if row[2] in (seat, "-1")]
+        main_count = sum(row[1] != "optionalobjectiveid" for row in visible)
+        optional_count = sum(row[1] == "optionalobjectiveid" for row in visible)
+        if not 2 <= main_count <= 5 or not 1 <= optional_count <= 3:
+            errors.append("grouped goal counts must be 2-5 main and 1-3 optional for seat " + seat)
+    room_names = {name for path in (ROOT / "source/rooms").glob("*.cpp")
+                  for name in re.findall(r'const std::string \w+Name = "([^"]+)"', path.read_text(encoding="utf-8"))}
+    for identity, definition in expected.items():
+        for condition in definition["conditions"]:
+            fields = condition.split()
+            if fields[1] in ("roomtiles", "roomsize", "room", "furniture") and fields[3] not in room_names:
+                errors.append("unregistered room name in grouped goal: " + identity)
+        fields = actual.get(identity)
+        if fields != ["Action", definition["kind"], definition["seat"], identity, definition["text"]]:
+            errors.append("grouped goal differs from approved definition: " + identity)
+        rows = blocks.get(definition["completion"], [])
+        if [row for row in rows if row.startswith("Cond\t")] != definition["conditions"]:
+            errors.append("grouped completion conditions differ: " + identity)
+        if "Mode\t" + definition["mode"] not in rows:
+            errors.append("grouped observer mode differs: " + identity)
+        if definition["kind"] != "optionalobjectiveid" and definition["mode"] != "repeat\t0":
+            errors.append("main goal must reevaluate current conditions: " + identity)
+        if "Action\tobjectivestate\t" + definition["seat"] + "\t" + identity + "\treached" not in rows:
+            errors.append("grouped objective lacks its exact completion action: " + identity)
+    for name, definition in review.get("extra_status_triggers", {}).items():
+        rows = blocks.get(name, [])
+        if [row for row in rows if row.startswith("Cond\t")] != definition["conditions"]:
+            errors.append("grouped failure conditions differ: " + name)
+        states = [row.split()[2:] for row in rows if row.startswith("Action\tobjectivestate\t")]
+        if states != definition["states"]:
+            errors.append("grouped failure states differ: " + name)
+        if "Mode\t" + definition.get("mode", "once") not in rows:
+            errors.append("grouped history/failure observer mode differs: " + name)
+        for action in definition.get("actions", []):
+            if action not in rows:
+                errors.append("grouped history flag action differs: " + name)
+    for name, definition in review.get("extra_status_triggers", {}).items():
+        for condition in definition["conditions"]:
+            fields = condition.split()
+            if fields[1] in ("roomtiles", "roomsize", "room", "furniture") and fields[3] not in room_names:
+                errors.append("unregistered room name in grouped status: " + name)
+    for name, conditions in review.get("preserved_conditions", {}).items():
+        if [row for row in blocks.get(name, []) if row.startswith("Cond\t")] != conditions:
+            errors.append("required underlying trigger conditions differ: " + name)
+    for name, actions in review.get("preserved_actions", {}).items():
+        for action in actions:
+            if action not in blocks.get(name, []):
+                errors.append("original trial limit was changed: " + name)
+    narration = review.get("victory_narration")
+    if narration:
+        if sum(row == narration["action"] for rows in blocks.values() for row in rows) != 1:
+            errors.append("victory narration must occur exactly once after current main goals")
+        names = list(blocks)
+        if narration["trigger"] not in names or any(
+                goal["completion"] not in names or names.index(goal["completion"]) >= names.index(narration["trigger"])
+                for goal in expected.values() if goal["kind"] != "optionalobjectiveid"):
+            errors.append("victory narration must follow all current main-goal observers")
+    if "preserved_goals" in review and [row for _, row in lines(section(text, "Goals"))] != review["preserved_goals"]:
+        errors.append("original classic goal chains were changed")
+    proof = review.get("reachability", {})
+    if proof:
+        level = parse_level(text, proof.get("selected_seat"))
+        area, _ = reachable(timed_openings(level))
+        for start in proof.get("selectable_starts", []):
+            candidate = parse_level(text, start["seat"])
+            candidate_area, _ = reachable(timed_openings(candidate))
+            gold = sum(fullness * 5 for tile, (kind, fullness, _) in candidate["tiles"].items()
+                       if tile in candidate_area and kind == 2)
+            if list(candidate["start"]) != start["position"] or gold < start["minimum_mineable_gold"]:
+                errors.append("selectable starting seat lacks its original position or mining resources: " + str(start["seat"]))
+            claimable = sum(candidate["tiles"][tile][0] in (1, 2, 7) for tile in candidate_area)
+            if claimable < start.get("minimum_claimable_tiles", 0):
+                errors.append("selectable starting seat lacks claimable ground: " + str(start["seat"]))
+        # Friendly mission items start as one reachable floor object beside the original friendly spawn.
+        for identity, pickup in proof.get("mission_pickups", {}).items():
+            source, target = tuple(pickup["source"]), tuple(pickup["destination"])
+            friendly = tuple(pickup["friendly_spawn"])
+            create = "Action\tstonecreate\t" + "\t".join(map(str, (*source, identity, pickup["seat"], *target)))
+            rows = blocks.get(pickup["discovery"], [])
+            all_creations = [row for block_rows in blocks.values() for row in block_rows
+                             if row.startswith("Action\tstonecreate\t") and len(row.split()) >= 5 and row.split()[4] == identity]
+            creation_rows = blocks.get(pickup.get("creation", pickup["discovery"]), [])
+            if create not in creation_rows or all_creations != [create]:
+                errors.append("friendly mission item must have one exact floor creation: " + identity)
+            spawns = [row.split() for row in rows if row.startswith("Action\tspawn\t") and
+                      any("@" + pickup["friendly"] == "@" + token.rsplit("@", 1)[-1] for token in row.split()[6:] if "@" in token)]
+            if len(spawns) != 1 or list(map(int, spawns[0][3:5])) != list(friendly):
+                errors.append("friendly mission spawn was moved or removed: " + identity)
+            if abs(source[0] - friendly[0]) + abs(source[1] - friendly[1]) != 1:
+                errors.append("friendly mission item must lie beside its friendly creature: " + identity)
+            for tile in (source, target):
+                terrain = level["tiles"].get(tile)
+                if tile not in area or terrain is None or terrain[1] != 0 or terrain[0] in (4, 5):
+                    errors.append("friendly item source or destination is not reachable dry ground: " + identity)
+            if not any(room[0] == 1 and room[2] == pickup["seat"] and target in room[3] for room in level["rooms"]):
+                errors.append("friendly mission item destination is not its own dungeon heart: " + identity)
+            if "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart." not in rows:
+                errors.append("friendly mission discovery message differs from approved wording: " + identity)
+        # A delivery tile must be dry, reachable and inside the original consumer region.
+        for identity, delivery in proof.get("mission_deliveries", {}).items():
+            target = tuple(delivery["tile"])
+            inside_receiving_area = True
+            if "region" in delivery:
+                x1, y1, x2, y2 = delivery["bounds"]
+                region = re.search(r"^Region\s+" + re.escape(delivery["region"]) +
+                                   r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
+                if not region or list(map(int, region.groups())) != delivery["bounds"]:
+                    errors.append("mission delivery region changed: " + identity)
+                inside_receiving_area = x1 <= target[0] <= x2 and y1 <= target[1] <= y2
+            else:
+                inside_receiving_area = any(room[0] == 1 and room[2] == delivery["seat"] and target in room[3]
+                                            for room in level["rooms"])
+            tile = level["tiles"].get(target)
+            if target not in area or tile is None or tile[1] != 0 or tile[0] in (4, 5) or not inside_receiving_area:
+                errors.append("mission delivery tile is not reachable dry ground in its reviewed receiving area: " + identity)
+            drops = [row.split() for rows in blocks.values() for row in rows
+                     if row.startswith("Action\tstonedrop\t") and row.split()[3] == identity]
+            expected_target = list(map(str, (delivery["seat"], *target)))
+            if len(drops) != 1 or drops[0][4:] != expected_target:
+                errors.append("mission item does not use its exact reviewed destination: " + identity)
+        for name, definition in proof.get("regions", {}).items():
+            match = re.search(r"^Region\s+" + re.escape(name) + r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
+            if not match or list(map(int, match.groups())) != definition["bounds"]:
+                errors.append("grouped region bounds differ: " + name)
+                continue
+            x1, y1, x2, y2 = definition["bounds"]
+            tiles = {(x, y) for x in range(x1, x2 + 1) for y in range(y1, y2 + 1)} & area
+            opened = {tile for tile in tiles if level["tiles"][tile][1] == 0 and level["tiles"][tile][0] not in (4, 5)}
+            if len(tiles) < definition.get("minimum_potential_tiles", 0) or len(opened) < definition.get("minimum_open_tiles", 0):
+                errors.append("insufficient reachable grouped region tiles: " + name)
+        for name, definition in proof.get("crossing_bridges", {}).items():
+            a, b, c, d = definition["bounds"]
+            expected_tiles = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+            bridge = next((room for room in level["rooms"] if room[1] == definition["room"]), None)
+            if bridge is None or bridge[0] not in (12, 13) or set(bridge[3]) != expected_tiles or expected_tiles - area:
+                errors.append("crossing region differs from the actual reachable bridge: " + name)
+            if definition.get("direction", "north") in ("north", "south"):
+                banks = [{(x, y) for x in range(a, c + 1)} for y in (b - 1, d + 1)]
+            else:
+                banks = [{(x, y) for y in range(b, d + 1)} for x in (a - 1, c + 1)]
+            for bank in banks:
+                if not any(tile in area and level["tiles"][tile][0] not in (4, 5) for tile in bank):
+                    errors.append("crossing has no reachable dry entry or exit bank: " + name)
+        for name, target in {**proof.get("attack_targets", {}), **proof.get("initial_creatures", {})}.items():
+            if (name, target["seat"], tuple(target["tile"])) not in level["creatures"]:
+                errors.append("regional attack target seat or position differs: " + name)
+            if "class" in target:
+                row = next((row.split() for _, row in lines(section(text, "Creatures")) if row.split()[1] == name), None)
+                if row is None or row[6] != target["class"]:
+                    errors.append("original creature class differs: " + name)
+        shooting = proof.get("shooting_route")
+        if shooting:
+            rows = [row.split() for _, row in lines(section(text, "Creatures"))]
+            shooter = next((row for row in rows if row[1] == shooting["shooter"]), None)
+            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            definition = re.search(r"\[Creature\]\s*Name\s+" + re.escape(shooting["class"]) + r"\b(.*?)\[/Creature\]", definitions, re.S)
+            skill = next((row.split() for _, row in lines(definition[1]) if row.startswith("MissileLaunch")), None)
+            if (shooter is None or shooter[6] != shooting["class"] or int(shooter[7]) != shooting["level"]
+                    or skill is None or int(skill[5]) > shooting["level"]
+                    or float(skill[3]) + float(skill[4]) * shooting["level"] != shooting["range"]):
+                errors.append("original shooter level or available projectile range differs")
+            opened, queue = set(), deque([level["start"]])
+            while queue:
+                tile = queue.popleft()
+                if tile in opened or tile not in level["tiles"] or level["tiles"][tile][1] != 0 or level["tiles"][tile][0] in (4, 5):
+                    continue
+                opened.add(tile)
+                queue.extend(neighbours(tile))
+            for target, origin in shooting["positions"]:
+                distance = math.dist(target, origin)
+                steps = max(1, math.ceil(distance * 4))
+                ray = [(math.floor(origin[0] + (target[0] - origin[0]) * i / steps + .5),
+                        math.floor(origin[1] + (target[1] - origin[1]) * i / steps + .5)) for i in range(steps + 1)]
+                if (tuple(origin) not in opened or not 0 < distance <= shooting["range"]
+                        or any(tile not in level["tiles"] or level["tiles"][tile][1] != 0 for tile in ray)):
+                    errors.append("shooting position or open projectile ray is unavailable")
+
+        for coordinates in proof.get("open_route_tiles", []):
+            tile = tuple(coordinates)
+            if tile not in area or level["tiles"][tile][1] != 0 or level["tiles"][tile][0] in (4, 5):
+                errors.append("required open dry route tile is blocked: " + str(coordinates))
+        for name, crossing in proof.get("crossing_paths", {}).items():
+            a, b, c, d = proof["regions"][name]["bounds"]
+            path = [tuple(tile) for tile in crossing["path"]]
+            if (crossing["direction"] != "north" or not path or path[0][1] != d + 1 or path[-1][1] != b - 1
+                    or any(not a <= x <= c or not b <= y <= d for x, y in path[1:-1])
+                    or any(abs(x - u) + abs(y - v) != 1 for (x, y), (u, v) in zip(path, path[1:]))
+                    or any(tile not in area or not passable(level, tile) or level["tiles"][tile][1] != 0 for tile in path)):
+                errors.append("original open tunnel crossing is unavailable: " + name)
+        for claim in proof.get("room_claims", []):
+            room = next((r for r in level["rooms"] if r[1] == claim["name"]), None)
+            a, b, c, d = claim["bounds"]
+            tiles = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+            condition = "Cond\troomclaimed\t1\t" + "\t".join(map(str, claim["bounds"]))
+            if (room is None or room[0] != claim["type"] or room[2] != claim["seat"]
+                    or set(room[3]) != {tuple(t) for t in claim["tiles"]} or set(room[3]) != tiles
+                    or tiles - area or condition not in expected[claim["goal"]]["conditions"]):
+                errors.append("original required room footprint or ownership observer differs: " + claim["name"])
+        for footprint in proof.get("footprints", []):
+            expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
+            x1, y1, x2, y2 = footprint["bounds"]
+            actual_tiles = {(x, y) for (x, y), (kind, fullness, _) in level["tiles"].items()
+                            if x1 <= x <= x2 and y1 <= y <= y2 and fullness == 0 and kind not in (4, 5)}
+            if actual_tiles != expected_tiles or expected_tiles - area:
+                errors.append("original floor footprint differs or is unreachable: " + footprint["goal"])
+            covered = set()
+            for condition in expected[footprint["goal"]]["conditions"]:
+                fields = condition.split()
+                if fields[:2] == ["Cond", "groundclaimed"]:
+                    a, b, c, e = map(int, fields[3:7])
+                    covered.update((x, y) for x in range(a, c + 1) for y in range(b, e + 1))
+            if covered != expected_tiles:
+                errors.append("main observer does not check every original floor tile: " + footprint["goal"])
+        for name, expected_trap in proof.get("required_traps", {}).items():
+            found = None
+            for trap in re.findall(r"\[Trap\](.*?)\[/Trap\]", section(text, "Traps"), re.S):
+                rows = [row.split() for _, row in lines(trap)]
+                if rows[0][1] == name:
+                    count = int(rows[0][3])
+                    found = {"type": int(rows[0][0]), "seat": int(rows[0][2]),
+                             "tiles": [list(map(int, row[:2])) for row in rows[1:count + 1]]}
+            if found != expected_trap:
+                errors.append("named required gate differs from its original position: " + name)
+        supply = proof.get("supply_expansion")
+        if supply:
+            rooms = {name: (kind, seat, set(tiles)) for kind, name, seat, tiles in level["rooms"]}
+            dorm = rooms.get(supply["dormitory"], (0, 0, set()))
+            hatch = rooms.get(supply["hatchery"], (0, 0, set()))
+            if dorm[:2] != (2, level["human"]) or hatch[:2] != (8, level["human"]):
+                errors.append("original supply rooms changed ownership or type")
+            creature_rows = {row.split()[1]: row.split() for _, row in lines(section(text, "Creatures"))}
+            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            occupied_beds = set()
+            for bed in supply["beds"]:
+                row = creature_rows.get(bed["creature"])
+                a, b, c, d = bed["bounds"]
+                footprint = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+                if row is None or int(row[0]) != level["human"]:
+                    errors.append("missing original supply resident: " + bed["creature"])
+                    continue
+                definition = re.search(r"\[Creature\]\s*Name\s+" + re.escape(row[6]) + r"\b(.*?)\[/Creature\]", definitions, re.S)
+                dimensions = tuple(map(int, re.search(r"BedDim\s+(\d+)\s+(\d+)", definition[1]).groups()))
+                if (c - a + 1, d - b + 1) not in (dimensions, dimensions[::-1]) or footprint & occupied_beds:
+                    errors.append("supply bed dimensions or overlap differ: " + bed["creature"])
+                occupied_beds.update(footprint)
+            a, b, c, d = supply["hatchery_bounds"]
+            hatch_tiles = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+            additions = (occupied_beds - dorm[2]) | (hatch_tiles - hatch[2])
+            other_rooms = set().union(*(tiles for name, (_, _, tiles) in rooms.items()
+                                      if name not in (supply["dormitory"], supply["hatchery"])))
+            if len(supply["beds"]) != supply.get("resident_count", 9) or occupied_beds & hatch_tiles or additions - area or additions & other_rooms or c - a < 2 or d - b < 2:
+                errors.append("supply expansion is blocked or lacks the required beds and a coop site")
+            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
+            food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
+            cost = len(occupied_beds - dorm[2]) * bed_cost + len(hatch_tiles - hatch[2]) * food_cost
+            budget = supply["starting_gold"]
+            income = supply.get("mining_income")
+            if income:
+                rows = blocks.get(income["trigger"], [])
+                condition = "Cond\tmined\t" + str(level["human"]) + "\t>=\t" + str(income["amount"])
+                gift = "Action\tgold\t" + str(level["human"]) + "\t" + str(income["gift"])
+                if [row for row in rows if row.startswith("Cond\t")] != [condition] or gift not in rows:
+                    errors.append("supply mining income source differs")
+                budget += income["amount"] + income["gift"]
+            if cost != supply["cost"] or cost > budget or int(level["seats"][level["human"]]["gold"]) != supply["starting_gold"]:
+                errors.append("original supply expansion budget differs")
+            human = next(block for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S)
+                         if re.search(r"seatId\s+" + str(level["human"]) + r"\b", block))
+            if not {"roomDormitory", "roomHatchery"} <= set(section(human, "SkillDone").split()):
+                errors.append("supply expansion skills are unavailable")
+        regional = proof.get("regional_gold")
+        if regional:
+            x1, y1, x2, y2 = regional["bounds"]
+            available = sum(fullness * 5 for (x, y), (kind, fullness, _) in level["tiles"].items()
+                            if (x, y) in area and x1 <= x <= x2 and y1 <= y <= y2 and kind == 2)
+            if available < regional["minimum"]:
+                errors.append("insufficient reachable regional mining reserve")
+        setup = review.get("setup")
+        if setup:
+            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
+            food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
+            cost = setup["bed_tiles"] * bed_cost + setup["hatchery_tiles"] * food_cost
+            creatures = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            creature = re.search(r"\[Creature\]\s*Name\s+" + setup["bed_class"] + r"\b(.*?)\[/Creature\]", creatures, re.S)[1]
+            dimensions = list(map(int, re.search(r"BedDim\s+(\d+)\s+(\d+)", creature).groups()))
+            if dimensions != setup["bed_dimensions"] or cost != setup["cost"] or int(level["seats"][level["human"]]["gold"]) != setup["starting_gold"] or cost > setup["starting_gold"]:
+                errors.append("starting supply budget or bed size differs from the concrete setup proof")
+            a, b, c, e = setup["hatchery_bounds"]
+            site = {(x, y) for x in range(a, c + 1) for y in range(b, e + 1)} | {tuple(tile) for tile in setup["bed_positions"]}
+            occupied = {tile for _, _, _, footprint in level["rooms"] for tile in footprint}
+            if site - area or site & occupied or any(level["tiles"][tile][2] not in (None, level["human"]) for tile in site):
+                errors.append("starting supply build site is blocked or occupied")
+            human_block = next(block for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S)
+                               if re.search(r"seatId\s+" + str(level["human"]) + r"\b", block))
+            available = section(human_block, "SkillDone").split()
+            if any(skill not in available for skill in setup["skills"]):
+                errors.append("starting supply room is not unlocked")
+        gold = sum(fullness * 5 for tile, (kind, fullness, _) in level["tiles"].items() if tile in area and kind == 2)
+        if gold < proof.get("minimum_mineable_gold", 0):
+            errors.append("insufficient actual mineable gold for grouped goal")
+        for name in proof.get("named_creatures", []):
+            if not any(creature == name and tile in area for creature, _, tile in level["creatures"]):
+                errors.append("unreachable or absent grouped target: " + name)
+    return errors
+
+
 # Validate explicit objective identities and only the individually mapped completion triggers.
 def objective_errors(text, level_name):
     declarations, states, errors = {}, {}, []
+    grouped = set()
+    review = GROUP_REVIEW.get(level_name, {})
+    reviewed_triggers = {item["completion"]: item["conditions"] for item in review.get("goals", {}).values()}
+    reviewed_triggers.update({name: item["conditions"] for name, item in review.get("extra_status_triggers", {}).items()})
+    reviewed_triggers.update(review.get("preserved_conditions", {}))
     trigger_names = set(re.findall(r"^Name\t([^\r\n]+)", section(text, "Triggers"), re.M)) if "[Triggers]" in text else set()
     region_names = set(re.findall(r"^Region\t(\S+)", text, re.M))
     conditions_to_check = []
@@ -795,14 +1176,19 @@ def objective_errors(text, level_name):
         conditions = "\n".join(row for _, row in rows if row.startswith("Cond\t"))
         fingerprint = hashlib.sha256(conditions.encode("utf-8")).hexdigest()
         has_state = any(row.startswith("Action\tobjectivestate\t") for _, row in rows)
-        if (has_state or trigger.startswith("goal")) and OBJECTIVE_CONDITIONS.get(level_name + "/" + trigger) != fingerprint:
-            errors.append("objective status trigger conditions differ from reviewed conditions: " + trigger)
+        if has_state or trigger.startswith("goal"):
+            expected_conditions = reviewed_triggers.get(trigger)
+            if expected_conditions is not None:
+                if conditions.splitlines() != expected_conditions:
+                    errors.append("grouped status conditions differ from reviewed conditions: " + trigger)
+            elif OBJECTIVE_CONDITIONS.get(level_name + "/" + trigger) != fingerprint:
+                errors.append("objective status trigger conditions differ from reviewed conditions: " + trigger)
         conditions_to_check.extend((trigger, row.split()) for _, row in rows if row.startswith("Cond\t"))
         for number, row in rows:
             fields = row.split(None, 5)
             if fields[:2] == ["Action", "objective"]:
                 errors.append("legacy objective without an individual ID: " + trigger)
-            elif fields[:2] == ["Action", "objectiveid"]:
+            elif fields[0] == "Action" and fields[1] in GROUP_KINDS | {"objectiveid"}:
                 if len(fields) < 5:
                     errors.append("invalid objectiveid in " + trigger)
                     continue
@@ -810,6 +1196,8 @@ def objective_errors(text, level_name):
                 if key in declarations:
                     errors.append("duplicate objective ID " + fields[3])
                 declarations[key] = row.split(None, 4)[4]
+                if fields[1] in GROUP_KINDS:
+                    grouped.add(key)
             elif fields[:2] == ["Action", "objectivestate"]:
                 if len(fields) != 5 or fields[4] not in ("reached", "failed"):
                     errors.append("invalid objective state in " + trigger)
@@ -824,6 +1212,16 @@ def objective_errors(text, level_name):
             expected_size = 6 if fields[1] == "minedregion" else 4
             if len(fields) != expected_size or fields[3] not in region_names:
                 errors.append("unknown presentation region or malformed regional history in " + trigger)
+        if fields[:2] == ["Cond", "attackedregion"]:
+            if (len(fields) != 5 or not fields[2].isdigit() or not fields[3].isdigit()
+                    or int(fields[2]) < 1 or int(fields[3]) < 1 or fields[2] == fields[3]
+                    or fields[4] not in region_names):
+                errors.append("invalid regional attack seat, target or region in " + trigger)
+        if fields[:2] == ["Cond", "crossed"]:
+            if (len(fields) not in (5, 7) or not fields[2].isdigit() or int(fields[2]) < 1
+                    or fields[3] not in region_names or fields[4] not in ("north", "south", "east", "west")
+                    or len(fields) == 7 and (fields[5] != "after" or fields[6] not in trigger_names)):
+                errors.append("invalid crossing region, direction, seat or prerequisite in " + trigger)
         if fields[:2] == ["Cond", "trigger"]:
             if len(fields) not in (3, 4) or fields[2] not in trigger_names or len(fields) == 4 and fields[3] not in ("0", "1"):
                 errors.append("unknown trigger-history reference in " + trigger)
@@ -846,6 +1244,10 @@ def objective_errors(text, level_name):
                     fields[4] != "atheart" or not fields[5].isdigit() or int(fields[5]) <= 0):
                 errors.append("invalid spawncleared death-location restriction in " + trigger)
     for key, description in declarations.items():
+        if key in grouped:
+            if not any(state == "reached" for _, state in states.get(key, [])):
+                errors.append("grouped objective has no completing trigger: " + key[1])
+            continue
         identity = re.fullmatch(re.escape(level_name.lower()) + r"-o(\d{2})", key[1])
         index = int(identity[1]) if identity else 0
         if index < 1 or key[1] in HINT_IDS:
@@ -862,6 +1264,7 @@ def objective_errors(text, level_name):
         identity = level_name.lower() + "-o%02d" % index
         if identity not in HINT_IDS and not any(key[1] == identity for key in declarations):
             errors.append("required stable objective ID is missing: " + identity)
+    errors.extend(grouped_goal_errors(text, level_name))
     return errors
 
 
@@ -896,6 +1299,12 @@ def inventory(root):
                 result.append("| Advisory hint line %d | `%s` | not an objective; no state required |" % (number, cell(line)))
             elif len(parts) >= 2 and (parts[:2] in (["Action", "objective"], ["Action", "objectiveid"], ["Action", "win"], ["Cond", "goal"])):
                 result.append("| Script line %d | `%s` | yes |" % (number, cell(line)))
+        review = GROUP_REVIEW.get(path.stem)
+        if review:
+            result += ["", "### Main and optional goals", "", "| Group | Goal | Current completion conditions |", "| --- | --- | --- |"]
+            for identity, definition in review["goals"].items():
+                result.append("| " + ("optional" if definition["kind"] == "optionalobjectiveid" else "main") + " | `" + identity + "`: " + cell(definition["text"]) + " | `" + definition["completion"] + "`: " + cell("; ".join(definition["conditions"])) + " |")
+            result += ["", "Possible route (static, not a playthrough):"] + ["- " + item for item in review["route"]] + ["", review["runtime_limit"], ""]
         trigger_conditions = {}
         for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S):
             rows = [row for _, row in lines(block)]
@@ -928,7 +1337,7 @@ def inventory(root):
             for index, match in BRIEFING_MATCH[path.stem].items():
                 result.append("| Briefing | " + cell(sentences[index - 1].strip()) + " | " + match + " |")
         if path.stem == "Ashcombe":
-            result.append("Approved ashcombe-o03 alternative: Ashby is killed after wagonLeaves fired, outside original Hold (73..89,5..21). Four disjoint rectangles cover the entire map complement. Original wagonLeaves requires Ashby alive, so an earlier death cannot satisfy departure; walking through the area never satisfies killedin. Hold-before-departure remains unchanged.")
+            result.append("Mario decided: kill Ashby before she escapes, regardless of location. Actual death and no fired escape trigger are required; departure and a hold visit are not prerequisites or substitutes.")
         if path.stem == "Cinderhollow":
             result.append("Mario's explicit criterion for cinderhollow-o02: fully mine all 16 original finite gold fields x5..6/y55..58 and x30..33/y72..73. The approved objective text requires complete depletion of both finite veins; no deadline or first-wave failure applies.")
         elif path.stem == "Lanternhill":
@@ -997,6 +1406,17 @@ def self_test(root):
     wraithwood = parse_level((root / "levels/campaign/Wraithwood.level").read_text(encoding="utf-8"))
     assert wraithwood["creatures"], "nested tuning sections must not replace actual creatures"
     assert not objective_errors(original, "Mossgate"), "all Mossgate objectives need exact completions"
+    for old, new, message in (
+        ("mainobjectiveid\t1\tmossgate-main-watch", "optionalobjectiveid\t1\tmossgate-main-watch", "group classification"),
+        ("Mode\trepeat\t0\nCond\tmined", "Mode\tonce\nCond\tmined", "main reevaluation"),
+        ("Cond\tclaimed\t1\tMeadow\t18", "Cond\tclaimed\t1\tMeadow\t1", "exact meadow count"),
+        ("Cond\tgoalmet\t1\tKillAllEnemies", "Cond\ttime\t1", "remaining enemies and portal"),
+        ("mossgate-extra-gallery\treached", "mossgate-missing-gallery\treached", "optional completion")
+    ):
+        assert old in original, message
+        assert objective_errors(original.replace(old, new), "Mossgate"), message
+    assert "insufficient actual mineable gold for grouped goal" in grouped_goal_errors(
+        re.sub(r"^([0-9]+\s+[0-9]+)\s+2\s+", r"\1\t1\t", original, flags=re.M), "Mossgate")
     missing_state = re.sub(r"^Action\tobjectivestate\t1\tmossgate-o02\treached\r?\n", "", original, flags=re.M)
     assert any("no completing trigger: mossgate-o02" in error for error in objective_errors(missing_state, "Mossgate"))
     altered = original.replace("Cond\tmined\t1\t>=\t60", "Cond\tmined\t1\t>=\t1")
@@ -1007,7 +1427,152 @@ def self_test(root):
     assert any("undeclared objective" in error for error in objective_errors(unknown_status, "Mossgate"))
     wrong_spawn = original.replace("spawncleared\tpostStirs\t1", "spawncleared\tpostStirs\t0")
     assert any("actual original spawn" in error for error in objective_errors(wrong_spawn, "Mossgate"))
+    for name, old, new in (
+        ("BoulderCourse", "Action\tslaplimit\t80", "Action\tslaplimit\t81"),
+        ("BoulderCourse", "Action\ttimelimit\t600", "Action\ttimelimit\t601"),
+        ("TwistingHalls", "Action\ttimelimit\t900", "Action\ttimelimit\t901"),
+        ("TwistingHalls", "Cond\tpossessed\t1\tExitHall", "Cond\tregion\t1\tExitHall"),
+        ("SwarmNight", "Cond\tevent\tDefaultWorker1\tkilled\t==\t0", "Cond\tevent\tDefaultWorker1\tincapacitated\t==\t0")
+    ):
+        trial = (root / ("levels/campaign/" + name + ".level")).read_text(encoding="utf-8")
+        assert old in trial
+        assert grouped_goal_errors(trial.replace(old, new), name), (name, old)
+    for name, old, new in (
+        ("Brackenford", "Cond\tregion\t1\tGrove\t>=\t2\t@fighters", "Cond\tregion\t1\tGrove\t>=\t2"),
+        ("Brackenford", "Cond\tevent\tElsaBrack\tattacked\t==\t0", "Cond\ttime\t0"),
+        ("Brackenford", "Action\tsetflag\tgroveAssembled\t1", "Action\tsetflag\tgroveAssembled\t0"),
+        ("Brackenford", "gold\t2500", "gold\t250"),
+        ("Brackenford", "Action\tspawn\t1\t12\t28\t-1\tGoblin:2\tGoblin:2", "Action\tspawn\t1\t12\t28\t-1\tDefaultWorker:2\tDefaultWorker:2"),
+        ("Coldwell", "Cond\tminedregion\t1\tUndercroft\t>=\t600", "Cond\tmined\t1\t>=\t600"),
+        ("Coldwell", "Cond\ttrapgone\tDoorWooden2", "Cond\ttrapgone\tDoorWooden1")
+    ):
+        candidate = (root / ("levels/campaign/" + name + ".level")).read_text(encoding="utf-8")
+        assert old in candidate
+        assert grouped_goal_errors(candidate.replace(old, new), name), (name, old)
+    tinmoor = (root / "levels/campaign/Tinmoor.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Action\tmake\t1\tspellPossess", "Action\tmake\t1\tspellLightning"),
+        ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\tvaultFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0"),
+        ("Cond\tdeliveredstone\tvault-stone", "Cond\ttime\t0"),
+        ("Cond\tdeliveredstone\tvault-stone", "Cond\tcarryingstone\tVaultBearer"),
+        ("Cond\tspawncleared\tpostAEntered\t1", "Cond\tspawncleared\tpostAEntered\t0"),
+        ("Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46", "Action\tstonecreate\t66\t50\tvault-stone\t1\t9\t46")
+    ):
+        assert old in tinmoor
+        assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    wolfscar = (root / "levels/campaign/Wolfscar.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tflag\tsouthRavineCrossed\t1", "Cond\ttrigger\tsouthCrossed"),
+        ("Cond\tcrossed\t1\tMainStoneBridge5\tnorth", "Cond\tregion\t1\tMainStoneBridge5"),
+        ("Cond\tgroundclaimed\t1", "Cond\troomclaimed\t1"),
+        ("Cond\troomtiles\t5\tDungeonTemple\t<=\t0", "Cond\tdefeated\t5"),
+        ("Cond\tmined\t1\t>=\t1500", "Cond\tmined\t1\t>=\t150"),
+        ("Cond\tslabs\t1\tWolfden\tclaimed\t>=\t20", "Cond\tslabs\t1\tWolfden\tclaimed\t>=\t1"),
+        ("Cond\tobjective\t1\twolfscar-main-den\treached", "Cond\tobjective\t1\twolfscar-main-den\topen")
+    ):
+        assert old in wolfscar
+        assert objective_errors(wolfscar.replace(old, new), "Wolfscar"), old
+    narration = GROUP_REVIEW["Wolfscar"]["victory_narration"]["action"]
+    duplicate_narration = wolfscar.replace("Name\thuntersGone\nMode\tonce\n", "Name\thuntersGone\nMode\tonce\n" + narration + "\n")
+    assert any("narration must occur exactly once" in error for error in grouped_goal_errors(duplicate_narration, "Wolfscar"))
+    narration_block = next(block for block in re.findall(r"\[Trigger\].*?\[/Trigger\]", wolfscar, re.S)
+                           if "Name\tmainVictory\n" in block)
+    early_narration = wolfscar.replace(narration_block, "", 1)
+    marker = "[Trigger]\nName\tmainHeart\n"
+    early_narration = early_narration.replace(marker, narration_block + "\n" + marker, 1)
+    assert any("narration must follow" in error for error in grouped_goal_errors(early_narration, "Wolfscar"))
+    ironbridge = (root / "levels/campaign/Ironbridge.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tcrossed\t1\tMainStoneBridge3\teast\tafter\tmainSpan1", "Cond\tcrossed\t1\tMainStoneBridge3\teast"),
+        ("Cond\tcrossed\t1\tMainStoneBridge6\teast\tafter\tmainSpan2", "Cond\tcrossed\t1\tMainStoneBridge6\teast"),
+        ("Cond\tcrossed\t1\tMainStoneBridge1\teast", "Cond\tregion\t1\tMainStoneBridge1"),
+        ("Cond\troomclaimed\t1\t48\t8\t50\t9", "Cond\tregion\t1\tSmithy"),
+        ("Cond\troomclaimed\t1\t78\t54\t80\t55", "Cond\tregion\t1\tOreDock"),
+        ("Cond\ttrapgone\tDoorWooden10", "Cond\ttrapgone\tDoorWooden11"),
+        ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\ttime\t0"),
+        ("Cond\tfurniture\t1\tDormitory\t>=\t6", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
+        ("Cond\tflag\tstoryVictorySent\t0", "Cond\ttime\t0"),
+        ("Action\ttimelimit\t5400", "Action\ttimelimit\t5401")
+    ):
+        assert old in ironbridge
+        assert objective_errors(ironbridge.replace(old, new), "Ironbridge"), old
+    dunmarrow = (root / "levels/campaign/Dunmarrow.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tflag\tgoalCampArrived\t1", "Cond\ttrigger\tcampEntered"),
+        ("Cond\tflag\tburiedRouteUsed\t1", "Cond\ttrigger\tbarrowsEntered"),
+        ("Cond\tcrossed\t1\tWestBarrows\tnorth", "Cond\tregion\t1\tWestBarrows"),
+        ("Action\tsetflag\tburiedRouteUsed\t1", "Action\tsetflag\tburiedRouteUsed\t0"),
+        ("Cond\ttimer\twagonClock\t<\t900", "Cond\ttimer\twagonClock\t<=\t900"),
+        ("Cond\ttimer\twagonClock\t>=\t900", "Cond\ttimer\twagonClock\t>=\t901"),
+        ("Cond\ttrigger\twardenEscaped\t0", "Cond\ttime\t0"),
+        ("Cond\tclaimed\t1\tOasis\t40", "Cond\tclaimed\t1\tOasis\t1")
+    ):
+        assert old in dunmarrow
+        assert objective_errors(dunmarrow.replace(old, new), "Dunmarrow"), old
+    saltmere = (root / "levels/campaign/Saltmere.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\ttrigger\tlagoonReached", "Cond\ttime\t0"),
+        ("Cond\ttrapgone\tDoorWooden2", "Cond\ttrapgone\tDoorWooden3"),
+        ("Region\tPortWestGate\t40\t80\t41\t80", "Region\tPortWestGate\t40\t80\t40\t80"),
+        ("Cond\tcrossed\t1\tPortWestGate\tsouth", "Cond\tcrossed\t2\tPortWestGate\tsouth"),
+        ("Cond\tflag\tportCrossed\t1", "Cond\tflag\tportGatesOpen\t1"),
+        ("Action\tsetflag\tportCrossed\t1", "Action\tsetflag\tportCrossed\t0"),
+        ("Cond\tmined\t1\t>=\t1600", "Cond\tmined\t1\t>=\t800"),
+        ("Cond\tclaimed\t1\tSouthFlat\t50", "Cond\tclaimed\t1\tSouthFlat\t1"),
+        ("Cond\ttime\t2400", "Cond\ttime\t0")
+    ):
+        assert old in saltmere
+        assert objective_errors(saltmere.replace(old, new), "Saltmere"), old
+    crowshot = (root / "levels/campaign/CrowshotGallery.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tshotkilled\t1\tCrow1", "Cond\tevent\tCrow1\tkilled"),
+        ("Cond\tshotkilled\t1\tRook8", "Cond\tevent\tRook8\tincapacitated"),
+        ("Cond\tevent\tSeat1\tpossessedshot", "Cond\ttime\t0"),
+        ("Cond\tspawncleared\tthirdFlock\t8", "Cond\tspawncleared\tthirdFlock\t7"),
+        ("Action\ttimelimit\t420", "Action\ttimelimit\t421"),
+        ("1\tShooter1\tLizardman.mesh\t15\t28\t0\tLizardMan\t3", "1\tShooter1\tLizardman.mesh\t15\t28\t0\tLizardMan\t1"),
+        ("Cond\tevent\tShooter5\tkilled\t==\t0", "Cond\tevent\tShooter5\tincapacitated\t==\t0")
+    ):
+        assert old in crowshot
+        assert objective_errors(crowshot.replace(old, new), "CrowshotGallery"), old
+    hollin = (root / "levels/campaign/HollinFen.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tfurniture\t1\tDormitory\t>=\t9", "Cond\tfurniture\t1\tDormitory\t>=\t2"),
+        ("Cond\tclaimed\t1\tCauseway\t40", "Cond\tregion\t1\tWard"),
+        ("Cond\ttrapgone\tDoorWooden1", "Cond\ttrapgone\tDoorWooden2"),
+        ("Cond\tclaimed\t1\tFen\t120", "Cond\tclaimed\t1\tFen\t40"),
+        ("Cond\tslabs\t1\tManaSpring\tmanawell\t>=\t1", "Cond\ttime\t1"),
+        ("Cond\tdeliveredstone\thollow-stone", "Cond\ttime\t1"),
+        ("Cond\tdeliveredstone\thollow-stone", "Cond\tcarryingstone\tHollowBearer"),
+        ("gold\t1800", "gold\t100"),
+        ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\thollowFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0")
+    ):
+        assert old in hollin
+        assert objective_errors(hollin.replace(old, new), "HollinFen"), old
+    greywater = (root / "levels/campaign/Greywater.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tregion\t1\tSiege"),
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t2\t3\tSiege"),
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t1\t2\tSiege"),
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t1\t3\tWharf"),
+        ("Cond\tcrossed\t1\tCrossMiddle\teast", "Cond\tcrossed\t1\tCrossMiddle\tnorth"),
+        ("Action\tsetflag\triverCrossed\t1", "Action\tsetflag\triverCrossed\t0"),
+        ("3\tSiegeHand1\tAdventurer.mesh\t38\t35", "2\tSiegeHand1\tAdventurer.mesh\t38\t35"),
+        ("Cond\tmined\t1\t>=\t1200", "Cond\tmined\t1\t>=\t600")
+    ):
+        assert old in greywater
+        assert objective_errors(greywater.replace(old, new), "Greywater"), old
     ravensledge = (root / "levels/campaign/Ravensledge.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tcrossed\t1\tCrossLowerWest\tnorth", "Cond\tregion\t1\tShelf"),
+        ("Cond\tcrossed\t1\tCrossUpperWest\tnorth\tafter\tshelfHeld", "Cond\tcrossed\t1\tCrossUpperWest\tnorth"),
+        ("Action\tsetflag\tlowerCrossed\t1", "Action\tsetflag\tlowerCrossed\t0"),
+        ("Cond\tclaimed\t1\tShelf\t80", "Cond\tclaimed\t1\tShelf\t1"),
+        ("Cond\ttrapgone\tDoorWooden1", "Cond\ttrapgone\tDoorWooden2"),
+        ("Region\tCrossLowerWest\t11\t43\t13\t46", "Region\tCrossLowerWest\t11\t43\t13\t45")
+    ):
+        assert old in ravensledge
+        assert objective_errors(ravensledge.replace(old, new), "Ravensledge"), old
     wrong_trap = ravensledge.replace("trapgone\tDoorWooden1", "trapgone\tNoSuchDoor")
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))
     bellwick = (root / "levels/campaign/Bellwick.level").read_text(encoding="utf-8")
@@ -1057,18 +1622,273 @@ def self_test(root):
         assert needle in original_map
         assert any("conditions differ" in error for error in objective_errors(original_map.replace(needle, replacement), filename))
     ash = (root / "levels/campaign/Ashcombe.level").read_text(encoding="utf-8")
-    assert not ashcombe_outside_errors(ash)
-    masks = [tuple(map(int, row.split()[2:])) for row in ash.splitlines() if row.startswith("Region\tGoalOutsideHold")]
-    outside = {(x, y) for x1, y1, x2, y2 in masks for x in range(x1, x2 + 1) for y in range(y1, y2 + 1)}
-    hold = {(x, y) for x in range(73, 90) for y in range(5, 22)}
-    assert outside == {(x, y) for x in range(92) for y in range(76)} - hold
-    assert not outside & hold, "no death inside Hold may satisfy the outside alternative"
-    assert sum((x2-x1+1)*(y2-y1+1) for x1,y1,x2,y2 in masks) == len(outside)
-    for mutation in (ash.replace("Cond\tkilledin\tLieslAshby\tGoalOutsideHold01", "Cond\tregion\t1\tGoalOutsideHold01"),
-                     ash.replace("Cond\ttrigger\twagonLeaves\nCond\tkilledin", "Cond\ttrigger\twagonLeaves\t0\nCond\tkilledin")):
-        assert any("conditions differ" in error for error in objective_errors(mutation, "Ashcombe")), "visits and pre-departure death cannot replace killed-after-departure"
-    assert ashcombe_outside_errors(ash.replace("Cond\talive\tLieslAshby\n", ""))
-    assert ashcombe_outside_errors(ash.replace("GoalOutsideHold01\t0\t0\t72\t75", "GoalOutsideHold01\t0\t0\t73\t75"))
+    assert not ashcombe_escape_errors(ash)
+    for replacement in ("Cond\tregion\t1\tHold", "Cond\tkilledin\tLieslAshby\tHold"):
+        assert ashcombe_escape_errors(ash.replace("Cond\tevent\tLieslAshby\tkilled\nCond\ttrigger\twardenEscaped\t0", replacement+"\nCond\ttrigger\twardenEscaped\t0"))
+    assert ashcombe_escape_errors(ash.replace("Cond\ttrigger\twardenEscaped\t0", "Cond\ttrigger\twagonLeaves"))
+    assert ashcombe_escape_errors(ash.replace("Cond\talive\tLieslAshby\n", ""))
+    lantern = (root / "levels/campaign/Lanternhill.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(lantern, "Lanternhill")
+    for needle, replacement in (
+            ("Cond\tmined\t1\t>=\t700", "Cond\tmined\t1\t>=\t70"),
+            ("Cond\troomclaimed\t1\t10\t16\t12\t17", "Cond\tregion\t1\tNorthWest"),
+            ("Cond\troomclaimed\t1\t13\t20\t15\t21", "Cond\troomclaimed\t1\t13\t20\t14\t21"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tdeliveredstone\tlantern-stone", "Cond\talive\tLampBearer"),
+            ("Cond\tdeliveredstone\tlantern-stone", "Cond\tcarryingstone\tLampBearer"),
+            ("Cond\tflag\tlanternStone\t0", "Cond\tflag\tlanternStone\t1"),
+            ("Cond\tflag\tvictoryStoneReady\t1", "Cond\ttime\t5")):
+        assert needle in lantern
+        assert grouped_goal_errors(lantern.replace(needle, replacement), "Lanternhill"), "Lanternhill goal weakening must fail: " + needle
+    crossing = (root / "levels/campaign/VarnsCrossing.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(crossing, "VarnsCrossing")
+    for needle, replacement in (
+            ("Cond\tclaimed\t1\tQuarter\t25", "Cond\tclaimed\t1\tQuarter\t2"),
+            ("Cond\tfurniture\t1\tDormitory\t>=\t1", "Cond\troomtiles\t1\tDormitory\t>=\t1"),
+            ("Cond\tfurniture\t1\tHatchery\t>=\t1", "Cond\troomtiles\t1\tHatchery\t>=\t1"),
+            ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\tcreatures\t3\t<=\t0"),
+            ("Cond\tmined\t1\t>=\t5000", "Cond\tmined\t1\t>=\t4000"),
+            ("Cond\tobjective\t1\tvarnscrossing-main-keep\treached", "Cond\tregion\t1\tKeep")):
+        assert needle in crossing
+        assert grouped_goal_errors(crossing.replace(needle, replacement), "VarnsCrossing"), "Crossing requirement weakening must fail: " + needle
+    thorn = (root / "levels/campaign/Thornreach.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(thorn, "Thornreach")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tThornMaze\teast", "Cond\tregion\t1\tClearing"),
+            ("Cond\tcrossed\t1\tThornMaze\teast", "Cond\tcrossed\t1\tThornMaze\twest"),
+            ("Region\tThornMaze\t26\t5\t80\t68", "Region\tThornMaze\t46\t30\t58\t42"),
+            ("Cond\troomtiles\t5\tDungeonTemple\t<=\t0", "Cond\tcreatures\t5\t<=\t0"),
+            ("Cond\tmined\t1\t>=\t2000", "Cond\tmined\t1\t>=\t200"),
+            ("Cond\tobjective\t1\tthornreach-main-maze\treached", "Cond\tregion\t1\tClearing")):
+        assert needle in thorn
+        assert grouped_goal_errors(thorn.replace(needle, replacement), "Thornreach"), "Thornreach weakening must fail: " + needle
+    high = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
+    assert not objective_errors(high, "Highcairn")
+    captain = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", high, re.S) if "Name\tgoalCaptainKilled\n" in block)
+    assert "Cond\tevent\tTerraceWatch8\tkilled" in captain
+    assert "Cond\tflag\tholdOpen\t1" in captain and "Cond\tflag\tholdOpen\t0" not in captain
+    opening = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", high, re.S) if "Name\tholdSealBreaks\n" in block)
+    assert "highcairn-o06" not in opening, "opening on a missing/KO captain must not complete a death goal"
+    for old, new in (("Cond\tevent\tTerraceWatch8\tkilled", "Cond\talive\tTerraceWatch8\t0"),
+                     ("Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t1", "Cond\tevent\tTerraceWatch8\tkilled\nCond\tflag\tholdOpen\t0")):
+        assert old in high
+        assert objective_errors(high.replace(old, new), "Highcairn"), "captain death must remain completable after timed opening"
+    high_grouped = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(high_grouped, "Highcairn")
+    for needle, replacement in (
+            ("Cond\tflag\tgoalTerrace4\t1", "Cond\tregion\t1\tTerrace4"),
+            ("Cond\tflag\tgoalTerrace3\t1", "Cond\tflag\tgoalTerrace3\t0"),
+            ("Cond\tkilledin\tHildeCairn\tHold", "Cond\tevent\tHildeCairn\tkilled"),
+            ("Cond\tdeliveredstone\tcairn-stone", "Cond\talive\tCairnBearer2"),
+            ("Cond\tdeliveredstone\tcairn-stone", "Cond\tcarryingstone\tCairnBearer"),
+            ("Cond\tflag\tbearerOut\t0", "Cond\tflag\tbearerOut\t1"),
+            ("Cond\tobjective\t1\thighcairn-main-captain\treached", "Cond\tflag\tholdOpen\t1")):
+        assert needle in high_grouped
+        assert grouped_goal_errors(high_grouped.replace(needle, replacement), "Highcairn"), "Highcairn requirement weakening must fail: " + needle
+    high_retry = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
+    for needle, replacement in (
+            ("Cond\tevent\tCairnBearer2\tcreated\t==\t0", "Cond\talive\tCairnBearer2\t0"),
+            ("Name\tcarrierRecovery\nMode\trepeat\t0", "Name\tcarrierRecovery\nMode\tonce")):
+        assert needle in high_retry
+        assert grouped_goal_errors(high_retry.replace(needle, replacement), "Highcairn"), "replacement must retry only when its exact name is free"
+    skittle = (root / "levels/campaign/SkittleCavern.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(skittle, "SkittleCavern")
+    for needle, replacement in (
+            ("Cond\tevent\tPin10\tboulderkilled:1", "Cond\tevent\tPin10\tkilled"),
+            ("Cond\tevent\tPin1\tboulderkilled:1", "Cond\tevent\tPin1\tboulderkilled:2"),
+            ("Cond\tflag\tlanesOpened\t>=\t4", "Cond\tflag\tlanesOpened\t>=\t3"),
+            ("Action\ttimelimit\t540", "Action\ttimelimit\t600"),
+            ("Cond\talive\tDefaultWorker4", "Cond\talive\tDefaultWorker3"),
+            ("Cond\tobjective\t1\tskittlecavern-main-trial\treached", "Cond\tcreatures\t2\t<=\t0")):
+        assert needle in skittle
+        assert grouped_goal_errors(skittle.replace(needle, replacement), "SkittleCavern"), "Skittle requirement weakening must fail: " + needle
+    storm = (root / "levels/campaign/Stormhaven.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(storm, "Stormhaven")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tMainSouthBridge\teast", "Cond\tregion\t1\tSouthSpan"),
+            ("Cond\tcrossed\t1\tMainNorthBridge\twest", "Cond\tcrossed\t2\tMainNorthBridge\twest"),
+            ("Cond\troomclaimed\t1\t30\t70\t34\t71", "Cond\tregion\t1\tSouthSpan"),
+            ("Cond\troomclaimed\t1\t30\t33\t34\t34", "Cond\troomclaimed\t1\t30\t33\t33\t34"),
+            ("Cond\troomtiles\t5\tDungeonTemple\t<=\t0", "Cond\tcreatures\t5\t<=\t0"),
+            ("Cond\tregion\t1\tGaleCave", "Cond\tregion\t1\tLighthouse")):
+        assert needle in storm
+        assert grouped_goal_errors(storm.replace(needle, replacement), "Stormhaven"), "Stormhaven requirement weakening must fail: " + needle
+    cinder = (root / "levels/campaign/Cinderhollow.level").read_text(encoding="utf-8")
+    wave_status = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", cinder, re.S) if "Name\tgoalThreeWavesDefeatedAtHeart\n" in block)
+    assert "atheart" not in wave_status
+    for source, action in (("waveOne", 2), ("waveTwo", 2), ("waveThree", 2), ("waveThree", 3)):
+        exact = "Cond\tspawncleared\t" + source + "\t" + str(action)
+        assert exact in wave_status
+        assert objective_errors(cinder.replace(exact + "\n", exact + "\tatheart\t1\n"), "Cinderhollow"), "intercepting a wave away from the heart must remain valid"
+        assert objective_errors(cinder.replace(exact + "\n", "Cond\tcreatures\t3\t<=\t0\n"), "Cinderhollow"), "only actual deaths of each exact wave count"
+    cinder_grouped = (root / "levels/campaign/Cinderhollow.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(cinder_grouped, "Cinderhollow")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tregion\t1\tRivalCrater"),
+            ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tcrossed\t1\tDawnCauseway\tnorth"),
+            ("Cond\tslabs\t-1\tGoalSouthGoldSeam\tgold\t==\t0", "Cond\tmined\t1\t>=\t700"),
+            ("Cond\tspawncleared\twaveThree\t3", "Cond\tcreatures\t3\t<=\t0"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tdefeated\t2"),
+            ("Action\tterrain\t55\t31\t55\t34\tbridge\t1", "Action\tterrain\t55\t31\t55\t33\tbridge\t1"),
+            ("Cond\ttrigger\tdawn\nCond\tgoalmet", "Cond\ttime\t420\nCond\tgoalmet")):
+        assert needle in cinder_grouped
+        assert grouped_goal_errors(cinder_grouped.replace(needle, replacement), "Cinderhollow"), "Cinderhollow requirement weakening must fail: " + needle
+    goldspire = (root / "levels/campaign/Goldspire.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(goldspire, "Goldspire")
+    for needle, replacement in (
+            ("Cond\tregion\t1\tArmyGround\t>=\t2\t@fighters", "Cond\tregion\t1\tArmyGround\t>=\t2"),
+            ("Cond\tcrossed\t1\tMainSouthGate\tnorth\tafter\tsouthGateOpens", "Cond\tregion\t1\tSouthGate"),
+            ("Cond\tflag\tmainGateCrossed\t1", "Cond\ttrigger\tsouthGateOpens"),
+            ("Cond\tcrossed\t1\tMainWestLink\tnorth\tafter\tlinksReady", "Cond\tcrossed\t1\tMainWestLink\tnorth"),
+            ("Cond\tflag\tmainEastCrossed\t1", "Cond\ttrigger\tlinksOpen"),
+            ("Cond\tkilledin\tAlaricPenn\tOuterRing", "Cond\talive\tAlaricPenn\t0"),
+            ("Cond\ttrigger\tpennVaultOpened", "Cond\talive\tAlaricPenn\t0"),
+            ("Cond\tregion\t1\tWestWing", "Cond\tregion\t1\tYard")):
+        assert needle in goldspire
+        assert grouped_goal_errors(goldspire.replace(needle, replacement), "Goldspire"), "Goldspire requirement weakening must fail: " + needle
+    mire = (root / "levels/campaign/Mirewatch.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(mire, "Mirewatch")
+    assert not mirewatch_errors(parse_level(mire))
+    for needle, replacement in (
+            ("Cond\troomclaimed\t1\t44\t106\t47\t107", "Cond\tregion\t1\tTowerA"),
+            ("Cond\troomclaimed\t1\t99\t18\t101\t19", "Cond\troomclaimed\t1\t99\t18\t100\t19"),
+            ("Cond\troomclaimed\t1\t68\t50\t69\t52", "Cond\tregion\t1\tTowerF"),
+            ("Cond\tpossessed\t1\tTowerC", "Cond\tregion\t1\tTowerC"),
+            ("Cond\tkilledin\tMoraFenwick\tTowerH", "Cond\talive\tMoraFenwick\t0"),
+            ("Cond\tmined\t1\t>=\t2000", "Cond\tmined\t1\t>=\t400"),
+            ("Cond\tfurniture\t1\tDormitory\t>=\t2", "Cond\troomtiles\t1\tDormitory\t>=\t2")):
+        assert needle in mire
+        assert grouped_goal_errors(mire.replace(needle, replacement), "Mirewatch"), "Mirewatch requirement weakening must fail: " + needle
+    bell = (root / "levels/campaign/Bellwick.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(bell, "Bellwick")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tregion\t1\tTransept"),
+            ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tcrossed\t2\tNave\tnorth"),
+            ("Cond\tflag\tgatesOpen\t1", "Cond\ttime\t5"),
+            ("Action\tterrain\t48\t29\t48\t31\tpath", "Action\tterrain\t48\t29\t48\t30\tpath"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tregion\t1\tScriptorium", "Cond\tregion\t1\tWestCloister")):
+        assert needle in bell
+        assert grouped_goal_errors(bell.replace(needle, replacement), "Bellwick"), "Bellwick requirement weakening must fail: " + needle
+    ebon = (root / "levels/campaign/Ebonrook.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(ebon, "Ebonrook")
+    for needle, replacement in (
+            ("Cond\tfurniture\t1\tDormitory\t>=\t14", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
+            ("Cond\tmined\t1\t>=\t300", "Cond\tmined\t1\t>=\t30"),
+            ("Cond\tcrossed\t1\tMainMiddleBridge\tsouth", "Cond\tregion\t1\tSouthHub"),
+            ("Cond\tpossessed\t1\tHollow", "Cond\tregion\t1\tHollow"),
+            ("Cond\tflag\tmainNorthOpen\t1", "Cond\tflag\tmainSouthOpen\t1"),
+            ("Cond\tkilledin\tSabineRook\tRoots", "Cond\talive\tSabineRook\t0"),
+            ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tNorthEast")):
+        assert needle in ebon
+        assert grouped_goal_errors(ebon.replace(needle, replacement), "Ebonrook"), "Ebonrook requirement weakening must fail: " + needle
+    silver = (root / "levels/campaign/Silverdeep.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(silver, "Silverdeep")
+    for needle, replacement in (
+            ("Cond\tmined\t1\t>=\t400", "Cond\tmined\t1\t>=\t40"),
+            ("Cond\tfurniture\t1\tDormitory\t>=\t6", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
+            ("Cond\tcrossed\t1\tMainLakeA\twest\tafter\tmainSetup", "Cond\tregion\t1\tWestBank"),
+            ("Cond\tcrossed\t1\tMainLakeAAdded\twest\tafter\tfirstSpanReady", "Cond\tcrossed\t1\tMainLakeAAdded\twest"),
+            ("Cond\tcrossed\t1\tMainLakeB\tsouth\tafter\tmainSetup", "Cond\tcrossed\t1\tMainLakeB\tsouth"),
+            ("Cond\troomtiles\t4\tDungeonTemple\t<=\t0", "Cond\tcreatures\t4\t<=\t0"),
+            ("Action\tgold\t1\t700", "Action\tgold\t1\t70"),
+            ("Cond\tregion\t1\tGallery", "Cond\tregion\t1\tWestBank")):
+        assert needle in silver
+        assert grouped_goal_errors(silver.replace(needle, replacement), "Silverdeep"), "Silverdeep requirement weakening must fail: " + needle
+    wraith = (root / "levels/campaign/Wraithwood.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(wraith, "Wraithwood")
+    for needle, replacement in (
+            ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\tgoalmet\t1\tKillAllEnemies"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tgoalmet\t1\tKillAllEnemies"),
+            ("Cond\troomtiles\t3\tDungeonTemple\t<=\t0", "Cond\troomtiles\t2\tDungeonTemple\t<=\t0"),
+            ("Cond\tobjective\t1\twraithwood-main-forces\treached", "Cond\ttime\t5"),
+            ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tWestGlade")):
+        assert needle in wraith
+        assert grouped_goal_errors(wraith.replace(needle, replacement), "Wraithwood"), "Wraithwood must retain independent heart completion: " + needle
+    kings = (root / "levels/campaign/Kingsfall.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(kings, "Kingsfall")
+    for needle, replacement in (
+            ("Cond\theld\t1\tFalconerEdda", "Cond\towns\t1\tFalconerEdda"),
+            ("Cond\theld\t1\tHuntsmanBrann", "Cond\talive\tHuntsmanBrann"),
+            ("Cond\theld\t1\tSquireWick", "Cond\tflag\tchampions\t==\t3"),
+            ("Cond\tcreaturesatheart\t1\t>=\t12", "Cond\tcreatures\t1\t>=\t12"),
+            ("Cond\tevent\tPrinceAurel\tkilled", "Cond\talive\tPrinceAurel\t0"),
+            ("Cond\tcreatures\t3\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tcrossed\t1\tMainMiddleSpan\tnorth", "Cond\tregion\t1\tCentre"),
+            ("Cond\tmined\t1\t>=\t4000", "Cond\tmined\t1\t>=\t3000")):
+        assert needle in kings
+        assert grouped_goal_errors(kings.replace(needle, replacement), "Kingsfall"), "Kingsfall must preserve live capture and actual assembly: " + needle
+    hollow = (root / "levels/campaign/HollowmarkCitadel.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(hollow, "HollowmarkCitadel")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tGateCourt\tnorth", "Cond\tregion\t1\tGateCourt"),
+            ("Cond\tflag\tmainLowerProof\t1", "Cond\ttime\t900"),
+            ("Cond\tevent\tGatewarden8\tkilled", "Cond\talive\tGatewarden8\t0"),
+            ("Cond\troomclaimed\t1\t14\t64\t17\t65", "Cond\tregion\t1\tWestTower1"),
+            ("Cond\tkilledin\tCastellanKing\tThroneHall", "Cond\talive\tCastellanKing\t0"),
+            ("Cond\ttrigger\ttower2", "Cond\ttime\t5"),
+            ("Cond\tregion\t1\tWestTower3", "Cond\tregion\t1\tWestTower1")):
+        assert needle in hollow
+        assert grouped_goal_errors(hollow.replace(needle, replacement), "HollowmarkCitadel"), "Hollowmark exact task must reject weakening: " + needle
+    legacy_first = (root / "levels/campaign/Campaign1.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(legacy_first, "Campaign1")
+    for needle, replacement in (
+            ("Cond\tgoalmet\t1\tProtectDungeonTemple", "Cond\ttime\t0"),
+            ("Cond\tgoalmet\t1\tKillAllEnemies", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tmined\t1\t>=\t500", "Cond\ttime\t500")):
+        assert needle in legacy_first
+        assert grouped_goal_errors(legacy_first.replace(needle, replacement), "Campaign1"), "Legacy Campaign1 must retain exact classic goals and mining: " + needle
+    for legacy_name in ("Campaign2", "Campaign3"):
+        legacy = (root / "levels/campaign" / (legacy_name + ".level")).read_text(encoding="utf-8")
+        assert not grouped_goal_errors(legacy, legacy_name)
+        for seat in (1, 2):
+            other = 3 - seat
+            candidate = parse_level(legacy, seat)
+            assert candidate["human"] == seat
+            for source, replacement in (
+                    ("Cond\tgoalmet\t%d\tProtectDungeonTemple" % seat, "Cond\tgoalmet\t%d\tProtectDungeonTemple" % other),
+                    ("Cond\tgoalmet\t%d\tKillAllEnemies" % seat, "Cond\tgoalmet\t%d\tKillAllEnemies" % other),
+                    ("Cond\tmined\t%d\t>=\t1000" % seat, "Cond\tmined\t%d\t>=\t1000" % other),
+                    ("Action\tobjectivestate\t%d\t%s-main-heart-s%d\treached" % (seat, legacy_name.lower(), seat),
+                     "Action\tobjectivestate\t%d\t%s-main-heart-s%d\treached" % (other, legacy_name.lower(), seat))):
+                assert source in legacy
+                assert grouped_goal_errors(legacy.replace(source, replacement), legacy_name), "Legacy progress must remain bound to its own seat"
+        try:
+            parse_level(legacy, 0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("inactive seat must not become a selectable analysis start")
+    cellar = (root / "levels/campaign/Bonus1.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(cellar, "Bonus1")
+    for seat in (1, 3, 4):
+        for source, replacement in (
+                ("Cond\tgoalmet\t%d\tClaimNTiles\t60" % seat, "Cond\tgoalmet\t%d\tClaimNTiles\t40" % seat),
+                ("Cond\tgoalmet\t%d\tMineNGold\t100" % seat, "Cond\tgoalmet\t%d\tMineNGold\t20" % seat),
+                ("Cond\tclaimed\t%d\tMainCellar\t100" % seat, "Cond\tclaimed\t%d\tMainCellar\t60" % seat),
+                ("Cond\tgoalmet\t%d\tKillAllEnemies" % seat, "Cond\tgoalmet\t2\tKillAllEnemies")):
+            assert source in cellar
+            assert grouped_goal_errors(cellar.replace(source, replacement), "Bonus1"), "Bonus1 must retain every exact chain and correct seat"
+    assert grouped_goal_errors(cellar.replace("ClaimNTiles\t60", "ClaimNTiles\t50"), "Bonus1")
+    # Only the right physical key, dropped on real death, may satisfy an existing delivery consumer.
+    for map_name, owner, identity, target in (
+            ("Ebonrook", "SabineRook", "rook-key", "1\t36\t93"),
+            ("Mirewatch", "MoraFenwick", "watch-key", "1\t96\t20"),
+            ("Goldspire", "AlaricPenn", "treasurer-key", "1\t48\t30"),
+            ("Silverdeep", "DorianSilt", "silver-vault-key", "1\t80\t89"),
+            ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20"),
+            ("Greywater", "SluiceWarden", "sluice-key", "1\t40\t18"),
+            ("Highcairn", "TerraceWatch8", "hold-key", "1\t30\t11"),
+            ("HollowmarkCitadel", "Gatewarden13", "lower-gate-key", "1\t58\t58"),
+            ("HollowmarkCitadel", "Gatewarden8", "upper-gate-key", "1\t58\t30")):
+        source = (root / "levels/campaign" / (map_name + ".level")).read_text(encoding="utf-8")
+        for old, new in (
+                ("Cond\tevent\t" + owner + "\tkilled", "Cond\tevent\t" + owner + "\tincapacitated"),
+                ("Cond\tdeliveredstone\t" + identity, "Cond\tstone\tWrongRegion\t>=\t1"),
+                ("Action\tstonedrop\t" + owner + "\t" + identity + "\t" + target,
+                 "Action\tstonedrop\t" + owner + "\t" + identity + "\t1\t0\t0")):
+            assert old in source
+            assert grouped_goal_errors(source.replace(old, new), map_name), "Wrong item, KO or wrong destination must fail"
     print("campaign playability self-test passed")
 
 
@@ -1090,6 +1910,14 @@ def main():
     entries = campaign_entries(ROOT)
     if len(entries) != 31 or len({entry.get("File") for entry in entries}) != 31:
         failures.append("expected 31 distinct configured campaign levels")
+    configured_names = {Path(entry.get("File", "")).stem for entry in entries}
+    for legacy_name in sorted(set(GROUP_REVIEW) - configured_names):
+        legacy_path = ROOT / "levels/campaign" / (legacy_name + ".level")
+        try:
+            failures.extend("campaign/" + legacy_path.name + ": " + error
+                            for error in grouped_goal_errors(legacy_path.read_text(encoding="utf-8"), legacy_name))
+        except (ValueError, OSError) as error:
+            failures.append("campaign/" + legacy_path.name + ": " + str(error))
     for entry in entries:
         name = entry.get("File", "")
         path_level = ROOT / "levels" / name
@@ -1099,7 +1927,7 @@ def main():
             level = parse_level(path_level.read_text(encoding="utf-8"))
             failures.extend(name + ": " + error for error in check_level(level))
             if path_level.stem == "Ashcombe":
-                failures.extend(name + ": " + error for error in ashcombe_outside_errors(level["text"]))
+                failures.extend(name + ": " + error for error in ashcombe_escape_errors(level["text"]))
             if path_level.stem == "Cinderhollow":
                 failures.extend(name + ": " + error for error in cinder_seam_errors(level))
             if path_level.stem == "Mirewatch":

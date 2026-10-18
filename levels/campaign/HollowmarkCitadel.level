@@ -6097,7 +6097,6 @@ Name	kingDead
 Mode	once
 Cond	time	5
 Cond	alive	CastellanKing	0
-Action	message	1	High King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours.
 Action	objectivestate	1	hollowmarkcitadel-o01	reached
 Action	win	1
 [/Trigger]
@@ -6177,17 +6176,22 @@ Action	terrain	42	74	42	74	manawell
 [Trigger]
 Name	gateKeys
 Mode	once
-Cond	time	4
-Action	stoneattach	Gatewarden13
-Action	stoneattach	Gatewarden8
+Cond	event	Gatewarden13	killed
+Action	stonedrop	Gatewarden13	lower-gate-key	1	58	58
+[/Trigger]
+[Trigger]
+Name	upperGateKeyDrop
+Mode	once
+Cond	event	Gatewarden8	killed
+Action	stonedrop	Gatewarden8	upper-gate-key	1	58	30
 [/Trigger]
 [Trigger]
 Name	gate2KeyFalls
 Mode	once
 Cond	time	5
-Cond	alive	Gatewarden13	0
+Cond	deliveredstone	lower-gate-key
 Cond	flag	gate2Open	0
-Action	message	1	The gatewarden of the lower court is down and the key of the second gate lies where he fell. It turns in the seal and the second gate stands open.
+Action	message	1	The key turns in the lock. The second gate opens.
 Action	terrain	56	57	59	57	path
 Action	terrain	14	57	15	57	path
 Action	terrain	101	57	103	57	path
@@ -6197,13 +6201,166 @@ Action	setflag	gate2Open	1
 Name	gate3KeyFalls
 Mode	once
 Cond	time	5
-Cond	alive	Gatewarden8	0
+Cond	deliveredstone	upper-gate-key
 Cond	flag	gate3Open	0
-Action	message	1	The gatewarden of the great court is down and the key of the third gate lies where he fell. It turns in the seal and the third gate stands open.
+Action	message	1	The key turns in the lock. The third gate opens.
 Action	terrain	56	29	59	29	path
 Action	terrain	13	29	15	29	path
 Action	terrain	102	29	103	29	path
 Action	setflag	gate3Open	1
 [/Trigger]
 
+
+[Trigger]
+Name	mainFirstCourt
+Mode	once
+Cond	crossed	1	GateCourt	north
+Action	setflag	mainCourt1	1
+[/Trigger]
+[Trigger]
+Name	mainLowerTowers
+Mode	once
+Cond	roomclaimed	1	14	64	17	65
+Cond	roomclaimed	1	98	64	101	65
+Action	setflag	mainLowerProof	1
+[/Trigger]
+[Trigger]
+Name	mainLowerKey
+Mode	once
+Cond	deliveredstone	lower-gate-key
+Action	setflag	mainLowerProof	1
+[/Trigger]
+[Trigger]
+Name	mainGate2Ready
+Mode	once
+Cond	flag	mainCourt1	1
+Cond	flag	mainLowerProof	1
+Cond	flag	gate2Open	1
+Action	setflag	mainGate2Ready	1
+[/Trigger]
+[Trigger]
+Name	mainSecondCourt
+Mode	once
+Cond	crossed	1	GreatCourt	north	after	mainGate2Ready
+Action	setflag	mainCourt2	1
+[/Trigger]
+[Trigger]
+Name	mainUpperTowers
+Mode	once
+Cond	roomclaimed	1	12	42	14	43
+Cond	roomclaimed	1	100	42	102	43
+Action	setflag	mainUpperProof	1
+[/Trigger]
+[Trigger]
+Name	mainUpperKey
+Mode	once
+Cond	deliveredstone	upper-gate-key
+Action	setflag	mainUpperProof	1
+[/Trigger]
+[Trigger]
+Name	mainGate3Ready
+Mode	once
+Cond	flag	mainCourt2	1
+Cond	flag	mainUpperProof	1
+Cond	flag	gate3Open	1
+Action	setflag	mainGate3Ready	1
+[/Trigger]
+[Trigger]
+Name	mainThirdCourt
+Mode	once
+Cond	crossed	1	ThroneHall	north	after	mainGate3Ready
+Action	setflag	mainCourt3	1
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	hollowmark-main-heart	Protect your heart and take the royal treasuries.
+Action	mainobjectiveid	1	hollowmark-main-courts	Cross the three courts; take towers or gate keys.
+Action	mainobjectiveid	1	hollowmark-main-king	Defeat King Castellan in the throne hall.
+Action	mainobjectiveid	1	hollowmark-main-throne	Claim the throne hall.
+Action	optionalobjectiveid	1	hollowmark-extra-tower	Explore the western throne tower.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	hollowmark-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	roomclaimed	1	12	42	14	43
+Cond	roomclaimed	1	100	42	102	43
+Cond	trigger	tower2
+Action	objectivestate	1	hollowmark-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainCourts
+Mode	repeat	0
+Cond	flag	mainCourt3	1
+Action	objectivestate	1	hollowmark-main-courts	reached
+[/Trigger]
+[Trigger]
+Name	mainKing
+Mode	repeat	0
+Cond	killedin	CastellanKing	ThroneHall
+Action	objectivestate	1	hollowmark-main-king	reached
+[/Trigger]
+[Trigger]
+Name	mainThrone
+Mode	repeat	0
+Cond	groundclaimed	1	57	11	58	11
+Cond	groundclaimed	1	49	12	66	12
+Cond	groundclaimed	1	45	13	69	13
+Cond	groundclaimed	1	43	14	71	14
+Cond	groundclaimed	1	41	15	41	15
+Cond	groundclaimed	1	43	15	73	15
+Cond	groundclaimed	1	40	16	40	16
+Cond	groundclaimed	1	44	16	46	16
+Cond	groundclaimed	1	49	16	64	16
+Cond	groundclaimed	1	68	16	71	16
+Cond	groundclaimed	1	74	16	75	16
+Cond	groundclaimed	1	39	17	47	17
+Cond	groundclaimed	1	49	17	76	17
+Cond	groundclaimed	1	39	18	77	18
+Cond	groundclaimed	1	39	19	78	19
+Cond	groundclaimed	1	39	20	78	20
+Cond	groundclaimed	1	39	21	78	21
+Cond	groundclaimed	1	39	22	79	22
+Cond	groundclaimed	1	38	23	65	23
+Cond	groundclaimed	1	67	23	79	23
+Cond	groundclaimed	1	38	24	40	24
+Cond	groundclaimed	1	43	24	46	24
+Cond	groundclaimed	1	49	24	64	24
+Cond	groundclaimed	1	68	24	70	24
+Cond	groundclaimed	1	74	24	79	24
+Cond	groundclaimed	1	40	25	40	25
+Cond	groundclaimed	1	42	25	65	25
+Cond	groundclaimed	1	67	25	71	25
+Cond	groundclaimed	1	73	25	77	25
+Cond	groundclaimed	1	44	26	73	26
+Cond	groundclaimed	1	46	27	71	27
+Cond	groundclaimed	1	50	28	55	28
+Cond	groundclaimed	1	60	28	68	28
+Action	objectivestate	1	hollowmark-main-throne	reached
+[/Trigger]
+[Trigger]
+Name	extraTower
+Mode	once
+Cond	region	1	WestTower3
+Action	objectivestate	1	hollowmark-extra-tower	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	hollowmark-main-heart	reached
+Cond	objective	1	hollowmark-main-courts	reached
+Cond	objective	1	hollowmark-main-king	reached
+Cond	objective	1	hollowmark-main-throne	reached
+Action	message	1	High King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours.
+Action	win	1
+[/Trigger]
 [/Triggers]

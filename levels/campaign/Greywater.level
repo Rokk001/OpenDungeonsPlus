@@ -3054,19 +3054,83 @@ Action	win	1
 [Trigger]
 Name	sluiceKey
 Mode	once
-Cond	time	4
-Action	stoneattach	SluiceWarden
+Cond	event	SluiceWarden	killed
+Action	stonedrop	SluiceWarden	sluice-key	1	40	18
 [/Trigger]
 [Trigger]
 Name	sluiceKeyFalls
 Mode	once
 Cond	time	5
-Cond	alive	SluiceWarden	0
+Cond	deliveredstone	sluice-key
 Cond	flag	sluiceOpen	0
-Action	message	1	The sluice warden is down and the key he wore lies in the dust. It turns in the old lock and the sluice gate on the east bank grinds open.
+Action	message	1	The key turns in the lock. The sluice gate opens.
 Action	terrain	38	17	42	17	path
 Action	setflag	sluiceOpen	1
 Action	portal	0	on
+[/Trigger]
+
+
+Region	CrossSouth	30	68	34	69
+Region	CrossMiddle	21	46	25	46
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	greywater-main-heart	Protect your heart.
+Action	mainobjectiveid	1	greywater-main-gold	Mine 600 gold.
+Action	mainobjectiveid	1	greywater-main-siege	Cross the river; attack the besiegers.
+Action	mainobjectiveid	1	greywater-main-warden	Defeat Corwin Gray and all enemy forces.
+Action	optionalobjectiveid	1	greywater-extra-gold	Mine 1200 gold.
+[/Trigger]
+[Trigger]
+Name	observeCrossSouth
+Mode	once
+Cond	crossed	1	CrossSouth	east
+Action	setflag	riverCrossed	1
+[/Trigger]
+[Trigger]
+Name	observeCrossMiddle
+Mode	once
+Cond	crossed	1	CrossMiddle	east
+Action	setflag	riverCrossed	1
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	greywater-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	greywater-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainGold
+Mode	repeat	0
+Cond	mined	1	>=	600
+Action	objectivestate	1	greywater-main-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainSiege
+Mode	repeat	0
+Cond	flag	riverCrossed	1
+Cond	attackedregion	1	3	Siege
+Action	objectivestate	1	greywater-main-siege	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	event	CorwinGray	killed
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	greywater-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	1200
+Action	objectivestate	1	greywater-extra-gold	reached
 [/Trigger]
 
 [/Triggers]

@@ -4020,6 +4020,11 @@ Action	objectivestate	1	dunmarrow-o03	failed
 Name	wardenCaught
 Mode	once
 Cond	event	YsoldeDunn	killed
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	flag	buriedRouteUsed	1
+Cond	flag	goalCampArrived	1
+Cond	trigger	wardenEscaped	0
+Cond	goalmet	1	KillAllEnemies
 Action	message	1	Ysolde Dunn is dead in the sand and her wagons are still. Dunmarrow is yours.
 Action	objectivestate	1	dunmarrow-o01	reached
 Action	win	1
@@ -4030,6 +4035,83 @@ Mode	once
 Cond	claimed	1	Oasis	40
 Action	message	1	The oasis is ours. A wandering spider has smelled the water and comes to serve you.
 Action	generate	1	Spider:1
+[/Trigger]
+
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	dunmarrow-main-heart	Protect your heart.
+Action	mainobjectiveid	1	dunmarrow-main-route	Take a tunnel north; reach camp before departure.
+Action	mainobjectiveid	1	dunmarrow-main-warden	Stop Dunn escaping; defeat all enemy forces.
+Action	optionalobjectiveid	1	dunmarrow-extra-oasis	Claim 40 oasis tiles.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	dunmarrow-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainCampMissed
+Mode	once
+Cond	flag	wagons	1
+Cond	timer	wagonClock	>=	900
+Cond	flag	goalCampArrived	0
+Action	objectivestate	1	dunmarrow-main-route	failed
+[/Trigger]
+[Trigger]
+Name	mainEscapeFailed
+Mode	once
+Cond	trigger	wardenEscaped
+Action	objectivestate	1	dunmarrow-main-warden	failed
+[/Trigger]
+[Trigger]
+Name	mainCrossBarrows
+Mode	once
+Cond	crossed	1	Barrows	north
+Action	setflag	buriedRouteUsed	1
+[/Trigger]
+[Trigger]
+Name	mainCrossWestBarrows
+Mode	once
+Cond	crossed	1	WestBarrows	north
+Action	setflag	buriedRouteUsed	1
+[/Trigger]
+[Trigger]
+Name	mainCrossShaftHead
+Mode	once
+Cond	crossed	1	ShaftHead	north
+Action	setflag	buriedRouteUsed	1
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	dunmarrow-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainRoute
+Mode	repeat	0
+Cond	flag	buriedRouteUsed	1
+Cond	flag	goalCampArrived	1
+Action	objectivestate	1	dunmarrow-main-route	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	trigger	wardenCaught
+Cond	event	YsoldeDunn	killed
+Cond	trigger	wardenEscaped	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	dunmarrow-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraOasis
+Mode	once
+Cond	claimed	1	Oasis	40
+Action	objectivestate	1	dunmarrow-extra-oasis	reached
 [/Trigger]
 
 [/Triggers]

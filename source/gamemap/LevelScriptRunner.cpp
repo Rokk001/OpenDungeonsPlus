@@ -120,9 +120,11 @@ bool isTileOfKind(const Tile* tile, const std::string& kind)
     return (roomType != RoomType::nullRoomType) && (room->getType() == roomType);
 }
 
-//! An empty class name matches every creature
+//! \brief Matches an exact class, every class when empty, or nonworkers for the @fighters filter.
 bool isClassMatching(const Creature* creature, const std::string& className)
 {
+    if(className == "@fighters")
+        return !creature->getDefinition()->isWorker();
     return className.empty() || (creature->getDefinition()->getClassName() == className);
 }
 
@@ -185,7 +187,7 @@ bool areGroundPointsConnected(GameMap& gameMap, const LevelScriptCondition& cond
     return false;
 }
 
-//! \brief Evaluates gameplay conditions and read-only objective presentation predicates.
+//! \brief Evaluates gameplay conditions, living captivity and read-only objective presentation predicates.
 bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScriptCondition& cond)
 {
     switch(cond.mType)
@@ -272,6 +274,7 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
         case LevelScriptConditionType::groundConnected:
             return areGroundPointsConnected(gameMap, cond);
         case LevelScriptConditionType::roomFootprintClaimed:
+        case LevelScriptConditionType::groundFootprintClaimed:
         {
             Seat* seat = gameMap.getSeatById(cond.mSeatId);
             if(seat == nullptr)
@@ -285,7 +288,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
                        tile->getClaimedPercentage() < 1.0 || !tile->isClaimedForSeat(seat))
                         return false;
                     Room* room = tile->getCoveringRoom();
-                    if(room == nullptr || room->getSeat() != seat)
+                    if((room != nullptr && room->getSeat() != seat) ||
+                       (cond.mType == LevelScriptConditionType::roomFootprintClaimed && room == nullptr))
                         return false;
                 }
             }
@@ -315,13 +319,17 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             for(unsigned int i = 0; i < seat->numUncompleteGoals(); ++i)
             {
                 Goal* goal = seat->getUncompleteGoal(i);
-                if(goal->getName() == cond.mName && !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
+                if(goal->getName() == cond.mName &&
+                   (cond.mName2.empty() || goal->getArguments() == cond.mName2) &&
+                   !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
                     return true;
             }
             for(unsigned int i = 0; i < seat->numCompletedGoals(); ++i)
             {
                 Goal* goal = seat->getCompletedGoal(i);
-                if(goal->getName() == cond.mName && !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
+                if(goal->getName() == cond.mName &&
+                   (cond.mName2.empty() || goal->getArguments() == cond.mName2) &&
+                   !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
                     return true;
             }
             return false;
@@ -526,6 +534,25 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) &&
                 (room->getSeat() != nullptr) && (room->getSeat()->getId() == cond.mSeatId);
         }
+        case LevelScriptConditionType::shotKilled:
+            return script.wasShotKilled(cond.mSeatId, cond.mName);
+        case LevelScriptConditionType::attackedRegion:
+            return script.wasRegionAttacked(cond.mSeatId, static_cast<int32_t>(cond.mNumber), cond.mName);
+        case LevelScriptConditionType::crossedRegion:
+            return script.wasRegionCrossed(cond.mSeatId, cond.mName, cond.mName2, cond.mAfterTrigger);
+        case LevelScriptConditionType::deliveredStone:
+            for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
+            {
+                if(entity->getObjectType() != GameEntityType::missileObject ||
+                   static_cast<MissileObject*>(entity)->getMissileType() != MissileObjectType::stone)
+                    continue;
+                const MissileStone* stone = static_cast<MissileStone*>(entity);
+                if(stone->getMissionIdentity() == cond.mName && stone->isDelivered())
+                    return true;
+            }
+            return false;
+        case LevelScriptConditionType::carryingStone:
+            return script.getStoneCarriers().count(cond.mName) != 0;
         case LevelScriptConditionType::stoneInRegion:
         {
             const LevelScriptRegion* region = script.getRegion(cond.mName);
@@ -554,6 +581,16 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
         {
             Player* player = gameMap.getPlayerBySeatId(cond.mSeatId);
             return (player != nullptr) && player->getHasLost();
+        }
+        case LevelScriptConditionType::heldCreature:
+        {
+            Creature* creature = gameMap.getCreature(cond.mName);
+            if(creature == nullptr)
+                return false;
+            Seat* owner = creature->getSeat();
+            Seat* jailer = creature->getSeatPrison();
+            return levelScriptCreatureHeld(cond.mSeatId, owner != nullptr ? owner->getId() : -1,
+                jailer != nullptr ? jailer->getId() : -1, creature->isAlive());
         }
         case LevelScriptConditionType::ownsCreature:
         {
@@ -1042,9 +1079,19 @@ void createGolfBall(GameMap& gameMap, const LevelScriptAction& action)
 //! The mesh of the portal stone
 const std::string PORTAL_STONE_MESH = "MysteryBox";
 
-//! Puts a portal stone on the tile
-void createStone(GameMap& gameMap, int32_t x, int32_t y)
+//! \brief Places a physical stone and optionally configures its exact worker delivery contract.
+void createStone(GameMap& gameMap, int32_t x, int32_t y, const LevelScriptAction* delivery = nullptr)
 {
+    if(delivery != nullptr && !delivery->mText.empty())
+    {
+        for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
+        {
+            if(entity->getObjectType() == GameEntityType::missileObject &&
+               static_cast<MissileObject*>(entity)->getMissileType() == MissileObjectType::stone &&
+               static_cast<MissileStone*>(entity)->getMissionIdentity() == delivery->mText)
+                return;
+        }
+    }
     Tile* tile = gameMap.getTile(x, y);
     if(tile == nullptr)
     {
@@ -1053,6 +1100,8 @@ void createStone(GameMap& gameMap, int32_t x, int32_t y)
     }
 
     MissileStone* stone = new MissileStone(&gameMap, gameMap.getSeatById(0), PORTAL_STONE_MESH);
+    if(delivery != nullptr && !delivery->mText.empty())
+        stone->configureTransport(delivery->mText, delivery->mSeatId, delivery->mX2, delivery->mY2);
     stone->addToGameMap();
     stone->createMesh();
     stone->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f));
@@ -1254,7 +1303,7 @@ void removeCreature(GameMap& gameMap, const std::string& name)
     creature->deleteYourself();
 }
 
-//! \brief Executes a script action, including explicit presentation updates for identified goals.
+//! \brief Executes actions, mission door locks and identified goal updates; stone attachment requires a living carrier.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1267,12 +1316,21 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             sendMessage(gameMap, action.mSeatId, "Hint: " + action.mText);
             break;
         case LevelScriptActionType::objective:
-            sendMessage(gameMap, action.mSeatId, "Objective: " + action.mText);
+            // Grouped declarations populate the goal panels; they are not duplicate routine notices.
+            if(action.mObjectiveGroup == LevelScriptObjectiveGroup::legacy)
+                sendMessage(gameMap, action.mSeatId, "Objective: " + action.mText);
             break;
         case LevelScriptActionType::objectiveState:
             for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
+            {
+                // Completed campaigns and irreversible failures have no later success transition.
+                if(script.hasMainObjectives(player->getSeat()->getId()) &&
+                   (gameMap.seatIsAWinner(player->getSeat()) ||
+                    script.getObjectiveState(player->getSeat()->getId(), action.mObjectiveId) == LevelScriptObjectiveState::failed))
+                    continue;
                 script.setObjectiveState(player->getSeat()->getId(), action.mObjectiveId,
                     static_cast<LevelScriptObjectiveState>(action.mNumber));
+            }
             break;
         case LevelScriptActionType::spawn:
             spawnCreatures(gameMap, action, sourceTrigger, sourceAction);
@@ -1322,6 +1380,13 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::startTimer:
             script.startTimer(action.mText, secondsToTurns(action.mNumber));
             break;
+        case LevelScriptActionType::keyDoor:
+        {
+            Trap* trap = gameMap.getTrapByName(action.mText);
+            if(trap != nullptr && trap->isDoor())
+                static_cast<TrapDoor*>(trap)->setKeyLocked(action.mNumber != 0);
+            break;
+        }
         case LevelScriptActionType::alterTerrain:
             alterTerrain(gameMap, action);
             break;
@@ -1353,11 +1418,26 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             createGolfBall(gameMap, action);
             break;
         case LevelScriptActionType::stoneCreate:
-            createStone(gameMap, action.mX, action.mY);
+            createStone(gameMap, action.mX, action.mY, &action);
             break;
+        case LevelScriptActionType::stoneDrop:
+        {
+            int32_t x;
+            int32_t y;
+            if(!script.getCreatureDeathTile(action.mText, x, y))
+                break;
+            LevelScriptAction delivery = action;
+            delivery.mText = action.mParty;
+            createStone(gameMap, x, y, &delivery);
+            break;
+        }
         case LevelScriptActionType::stoneAttach:
-            script.addStoneCarrier(action.mText);
+        {
+            Creature* creature = gameMap.getCreature(action.mText);
+            if((creature != nullptr) && creature->isAlive())
+                script.addStoneCarrier(action.mText);
             break;
+        }
         case LevelScriptActionType::alliance:
             changeAlliance(gameMap, action);
             break;
@@ -1387,6 +1467,19 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
 }
 
 } // namespace
+
+//! \brief Drops an attached stone at the actual pickup tile and clears its carrier exactly once.
+void LevelScriptRunner::dropCarriedStone(Creature& creature)
+{
+    GameMap& gameMap = *creature.getGameMap();
+    LevelScript& script = gameMap.getLevelScript();
+    Tile* tile = creature.getPositionTile();
+    if(tile == nullptr || script.getStoneCarriers().count(creature.getName()) == 0)
+        return;
+
+    createStone(gameMap, tile->getX(), tile->getY());
+    script.removeStoneCarrier(creature.getName());
+}
 
 void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
 {
@@ -1423,12 +1516,32 @@ void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
 }
 
 //! \brief Runs existing triggers in order and passes stable source identities to presentation observers.
+//! \brief Evaluates triggers, then retries original victories after all objective observers have run.
 void LevelScriptRunner::doTurn(GameMap& gameMap)
 {
     LevelScript& script = gameMap.getLevelScript();
     int64_t turn = gameMap.getTurnNumber();
+    bool hasMainGoalPlayer = false;
+    bool allHumansWon = true;
+    for(Player* player : gameMap.getPlayers())
+    {
+        if(!player->getIsHuman())
+            continue;
+        hasMainGoalPlayer = hasMainGoalPlayer || script.hasMainObjectives(player->getSeat()->getId());
+        allHumansWon = allHumansWon && gameMap.seatIsAWinner(player->getSeat());
+    }
+    // A finished campaign has no later discovery that can create a new required goal.
+    if(hasMainGoalPlayer && allHumansWon)
+        return;
     script.advanceTimers();
     updateStoneCarriers(gameMap, script);
+    for(Seat* seat : gameMap.getSeats())
+    {
+        Player* player = seat->getPlayer();
+        if(player != nullptr && player->getIsHuman() && !player->getHasLost() &&
+           !gameMap.seatIsAWinner(seat))
+            script.refreshMainObjectives(seat->getId());
+    }
     for(LevelScriptTrigger& trigger : script.getTriggers())
     {
         if(trigger.mTimesFired > 0)
@@ -1462,6 +1575,15 @@ void LevelScriptRunner::doTurn(GameMap& gameMap)
             runAction(gameMap, script, action, trigger.mName, actionIndex);
             ++actionIndex;
         }
+    }
+    // Observers later in the trigger list may complete a goal after the original win action ran.
+    // Retry only an actual prior victory request, never invent a new win condition.
+    for(Seat* seat : gameMap.getSeats())
+    {
+        Player* player = seat->getPlayer();
+        if(player != nullptr && player->getIsHuman() && !player->getHasLost() &&
+           script.hasVictoryRequest(seat->getId()) && script.areMainObjectivesReached(seat->getId()))
+            gameMap.addWinningSeat(seat, true);
     }
 }
 

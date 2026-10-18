@@ -159,7 +159,7 @@ bool readBriefingSeat(std::istream& level, Seat& player)
     return false;
 }
 
-//! \brief Reads initial open goals, identified objectives and untracked advice using the gameplay parsers.
+//! \brief Reads grouped main/optional goals or the legacy list using the gameplay parsers.
 //! \return True when level goal metadata was read; no game state or script action is executed.
 bool readBriefingGoals(const std::string& path, std::string& descriptions)
 {
@@ -192,6 +192,32 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
         if(!script.importFromStream(level))
             return false;
         const std::vector<LevelScriptTrigger>& triggers = script.getTriggers();
+        std::vector<std::string> mainObjectives;
+        std::vector<std::string> optionalObjectives;
+        for(const LevelScriptTrigger& trigger : triggers)
+        {
+            for(const LevelScriptAction& action : trigger.mActions)
+            {
+                if(action.mType != LevelScriptActionType::objective ||
+                   action.mObjectiveGroup == LevelScriptObjectiveGroup::legacy ||
+                   (action.mSeatId >= 0 && action.mSeatId != player.getId()))
+                    continue;
+                if(action.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
+                    optionalObjectives.push_back(action.mText);
+                else
+                    mainObjectives.push_back(action.mText);
+            }
+        }
+        if(!mainObjectives.empty() || !optionalObjectives.empty())
+        {
+            descriptions = "Main goals";
+            for(const std::string& objective : mainObjectives)
+                descriptions += "\n[image='GoalStatus/Open'] " + objective;
+            descriptions += "\n\nOptional goals";
+            for(const std::string& objective : optionalObjectives)
+                descriptions += "\n[image='GoalStatus/Open'] " + objective;
+            return true;
+        }
         for(const LevelScriptTrigger& trigger : triggers)
         {
             for(const LevelScriptAction& action : trigger.mActions)

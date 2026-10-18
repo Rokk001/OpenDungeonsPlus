@@ -381,6 +381,7 @@ public:
      * walking toward the tile as a new action, and when it arrives at the tile it will
      * revert to the 'digTile' action.
      */
+    //! \brief Advances creature upkeep, including actual death observations when a lethal knockout expires.
     void doUpkeep() override;
 
     //! \brief Computes the visible tiles and tags them to know which are visible
@@ -504,6 +505,7 @@ public:
     //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
     //! part, gives up after a while.
     void resumeBrawl();
+    //! \brief Applies damage and records actual hostile creature hits for regional script observers.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -558,8 +560,10 @@ public:
 
     //! \brief In a sandbox level, the player can pick up and drop the heroes of the hero seat
     bool isSandboxHeroFor(const Seat* seat) const;
+    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
+    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -919,6 +923,7 @@ public:
 
     bool isHungry() const;
 
+    //! \brief Clears knockout state and any pending lethal-shot credit after recovery.
     void resetKoTurns();
 
     //! \brief Knocks the creature out so that it can be carried away (used when

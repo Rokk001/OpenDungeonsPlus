@@ -2305,4 +2305,37 @@ Cond	goalmet	1	KillAllEnemies
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	-1	campaign1-o01	reached
 [/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	campaign1-main-heart	Protect your heart.
+Action	mainobjectiveid	1	campaign1-main-enemies	Defeat all enemies.
+Action	optionalobjectiveid	1	campaign1-extra-gold	Mine 500 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	campaign1-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainEnemies
+Mode	repeat	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	campaign1-main-enemies	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	500
+Action	objectivestate	1	campaign1-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	campaign1-main-heart	failed
+[/Trigger]
 [/Triggers]

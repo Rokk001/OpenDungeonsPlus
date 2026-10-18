@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <istream>
+#include <limits>
 #include <ostream>
 #include <sstream>
 
@@ -47,6 +48,16 @@ bool parseInt32(const std::string& str, int32_t& value)
         return false;
 
     value = static_cast<int32_t>(tmp);
+    return true;
+}
+
+//! \brief Parses a nonnegative tile or seat index without truncating values outside int32.
+bool parseNonnegativeInt32(const std::string& str, int32_t& value)
+{
+    int64_t parsed;
+    if(!parseInt(str, parsed) || parsed < 0 || parsed > std::numeric_limits<int32_t>::max())
+        return false;
+    value = static_cast<int32_t>(parsed);
     return true;
 }
 
@@ -272,7 +283,7 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
 
         return parseInt32(t[2], cond.mSeatId) && parseInt(t[4], cond.mNumber);
     }
-    if(type == "groundconnected" || type == "roomclaimed")
+    if(type == "groundconnected" || type == "roomclaimed" || type == "groundclaimed")
     {
         if(t.size() != 7 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 0 ||
            !parseInt32(t[3], cond.mX1) || cond.mX1 < 0 || !parseInt32(t[4], cond.mY1) || cond.mY1 < 0 ||
@@ -281,6 +292,8 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::groundConnected;
         if(type == "roomclaimed")
             cond.mType = LevelScriptConditionType::roomFootprintClaimed;
+        else if(type == "groundclaimed")
+            cond.mType = LevelScriptConditionType::groundFootprintClaimed;
         return true;
     }
     if(type == "minedregion")
@@ -350,10 +363,12 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::goal;
         if(type == "goalmet")
             cond.mType = LevelScriptConditionType::goalMet;
-        if(t.size() != 4)
+        if(t.size() != 4 && !(type == "goalmet" && t.size() == 5))
             return false;
 
         cond.mName = t[3];
+        if(t.size() == 5)
+            cond.mName2 = t[4];
         return parseInt32(t[2], cond.mSeatId);
     }
     if(type == "flag")
@@ -386,6 +401,59 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
 
         cond.mName = t[2];
         return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
+    }
+    if(type == "shotkilled")
+    {
+        if(t.size() != 4 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1)
+            return false;
+        cond.mType = LevelScriptConditionType::shotKilled;
+        cond.mName = t[3];
+        return true;
+    }
+    if(type == "attackedregion")
+    {
+        int32_t targetSeat;
+        if(t.size() != 5 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1 ||
+           !parseInt32(t[3], targetSeat) || targetSeat < 1 || targetSeat == cond.mSeatId)
+            return false;
+        cond.mNumber = targetSeat;
+        cond.mType = LevelScriptConditionType::attackedRegion;
+        cond.mName = t[4];
+        return true;
+    }
+    if(type == "crossed")
+    {
+        if((t.size() != 5 && t.size() != 7) || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1 ||
+           (t[4] != "north" && t[4] != "south" && t[4] != "east" && t[4] != "west"))
+            return false;
+        cond.mType = LevelScriptConditionType::crossedRegion;
+        cond.mName = t[3];
+        cond.mName2 = t[4];
+        if(t.size() == 7)
+        {
+            if(t[5] != "after")
+                return false;
+            cond.mAfterTrigger = t[6];
+            if(cond.mAfterTrigger == "-")
+                return false;
+        }
+        return true;
+    }
+    if(type == "deliveredstone")
+    {
+        if(t.size() != 3)
+            return false;
+        cond.mType = LevelScriptConditionType::deliveredStone;
+        cond.mName = t[2];
+        return !cond.mName.empty();
+    }
+    if(type == "carryingstone")
+    {
+        if(t.size() != 3)
+            return false;
+        cond.mType = LevelScriptConditionType::carryingStone;
+        cond.mName = t[2];
+        return !cond.mName.empty();
     }
     if(type == "possessed")
     {
@@ -510,6 +578,14 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::seatDefeated;
         return (t.size() == 3) && parseInt32(t[2], cond.mSeatId);
     }
+    if(type == "held")
+    {
+        if(t.size() != 4 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1)
+            return false;
+        cond.mType = LevelScriptConditionType::heldCreature;
+        cond.mName = t[3];
+        return !cond.mName.empty();
+    }
     if((type == "owns") || (type == "spell"))
     {
         cond.mType = (type == "owns") ? LevelScriptConditionType::ownsCreature : LevelScriptConditionType::spellKnown;
@@ -569,7 +645,7 @@ bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& sta
     return true;
 }
 
-//! \brief Parses one action, retaining legacy objective text and explicit ID/state variants.
+//! \brief Parses actions including mission door locks, retaining legacy objective text and ID/state variants.
 bool parseAction(const std::string& line, const std::vector<std::string>& t, LevelScriptAction& action)
 {
     // t[0] is "Action"
@@ -577,11 +653,18 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         return false;
 
     const std::string& type = t[1];
-    if(type == "objectiveid")
+    if(type == "objectiveid" || type == "mainobjectiveid" || type == "optionalobjectiveid" ||
+       type == "conditionalobjectiveid")
     {
         if(t.size() < 5 || !parseInt32(t[2], action.mSeatId))
             return false;
         action.mType = LevelScriptActionType::objective;
+        if(type == "mainobjectiveid")
+            action.mObjectiveGroup = LevelScriptObjectiveGroup::main;
+        else if(type == "optionalobjectiveid")
+            action.mObjectiveGroup = LevelScriptObjectiveGroup::optional;
+        else if(type == "conditionalobjectiveid")
+            action.mObjectiveGroup = LevelScriptObjectiveGroup::conditionalMain;
         action.mObjectiveId = t[3];
         action.mText = restOfLine(line, 4);
         return !action.mObjectiveId.empty() && !action.mText.empty();
@@ -724,6 +807,15 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mType = LevelScriptActionType::waveCountdown;
         return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
     }
+    if(type == "keydoor")
+    {
+        action.mType = LevelScriptActionType::keyDoor;
+        if(t.size() != 4 || (t[3] != "locked" && t[3] != "open"))
+            return false;
+        action.mText = t[2];
+        action.mNumber = t[3] == "locked" ? 1 : 0;
+        return true;
+    }
     if(type == "terrain")
     {
         action.mType = LevelScriptActionType::alterTerrain;
@@ -764,7 +856,23 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
     if(type == "stonecreate")
     {
         action.mType = LevelScriptActionType::stoneCreate;
-        return (t.size() == 4) && parseInt32(t[2], action.mX) && parseInt32(t[3], action.mY);
+        if((t.size() != 4 && t.size() != 8) || !parseInt32(t[2], action.mX) || !parseInt32(t[3], action.mY))
+            return false;
+        if(t.size() == 4)
+            return true;
+        action.mText = t[4];
+        return parseNonnegativeInt32(t[5], action.mSeatId) &&
+            parseNonnegativeInt32(t[6], action.mX2) && parseNonnegativeInt32(t[7], action.mY2);
+    }
+    if(type == "stonedrop")
+    {
+        action.mType = LevelScriptActionType::stoneDrop;
+        if(t.size() != 4 && t.size() != 7)
+            return false;
+        action.mText = t[2];
+        action.mParty = t[3];
+        return t.size() == 4 || (parseNonnegativeInt32(t[4], action.mSeatId) &&
+            parseNonnegativeInt32(t[5], action.mX2) && parseNonnegativeInt32(t[6], action.mY2));
     }
     if(type == "stoneattach")
     {
@@ -935,6 +1043,23 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             else
                 os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
             break;
+        case LevelScriptConditionType::shotKilled:
+            os << "shotkilled\t" << c.mSeatId << "\t" << c.mName;
+            break;
+        case LevelScriptConditionType::attackedRegion:
+            os << "attackedregion\t" << c.mSeatId << "\t" << c.mNumber << "\t" << c.mName;
+            break;
+        case LevelScriptConditionType::crossedRegion:
+            os << "crossed\t" << c.mSeatId << "\t" << c.mName << "\t" << c.mName2;
+            if(!c.mAfterTrigger.empty())
+                os << "\tafter\t" << c.mAfterTrigger;
+            break;
+        case LevelScriptConditionType::deliveredStone:
+            os << "deliveredstone\t" << c.mName;
+            break;
+        case LevelScriptConditionType::carryingStone:
+            os << "carryingstone\t" << c.mName;
+            break;
         case LevelScriptConditionType::stoneInRegion:
             os << "stone\t" << c.mName << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
             break;
@@ -960,6 +1085,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             os << "event\t" << c.mName << "\t" << c.mName2;
             if((c.mCompare != LevelScriptCompare::atLeast) || (c.mNumber != 1))
                 os << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::heldCreature:
+            os << "held\t" << c.mSeatId << "\t" << c.mName;
             break;
         case LevelScriptConditionType::ownsCreature:
             os << "owns\t" << c.mSeatId << "\t" << c.mName;
@@ -991,6 +1119,8 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::goalMet:
             os << "goalmet\t" << c.mSeatId << "\t" << c.mName;
+            if(!c.mName2.empty())
+                os << "\t" << c.mName2;
             break;
         case LevelScriptConditionType::trapGone:
             os << "trapgone\t" << c.mName;
@@ -999,7 +1129,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             os << "groundconnected\t" << c.mSeatId << "\t" << c.mX1 << "\t" << c.mY1 << "\t" << c.mX2 << "\t" << c.mY2;
             break;
         case LevelScriptConditionType::roomFootprintClaimed:
-            os << "roomclaimed\t" << c.mSeatId << "\t" << c.mX1 << "\t" << c.mY1 << "\t" << c.mX2 << "\t" << c.mY2;
+        case LevelScriptConditionType::groundFootprintClaimed:
+            os << (c.mType == LevelScriptConditionType::roomFootprintClaimed ? "roomclaimed\t" : "groundclaimed\t")
+               << c.mSeatId << "\t" << c.mX1 << "\t" << c.mY1 << "\t" << c.mX2 << "\t" << c.mY2;
             break;
         case LevelScriptConditionType::minedInRegion:
             os << "minedregion\t" << c.mSeatId << "\t" << c.mName << "\t"
@@ -1086,7 +1218,7 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
     os << "\n";
 }
 
-//! \brief Serializes an action without changing legacy objective text syntax.
+//! \brief Serializes mission door locks, goal classification and actions with legacy objective compatibility.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -1102,7 +1234,16 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             if(a.mObjectiveId.empty())
                 os << "objective\t" << a.mSeatId << "\t" << a.mText;
             else
-                os << "objectiveid\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t" << a.mText;
+            {
+                const char* kind = "objectiveid";
+                if(a.mObjectiveGroup == LevelScriptObjectiveGroup::main)
+                    kind = "mainobjectiveid";
+                else if(a.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
+                    kind = "optionalobjectiveid";
+                else if(a.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain)
+                    kind = "conditionalobjectiveid";
+                os << kind << "\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t" << a.mText;
+            }
             break;
         case LevelScriptActionType::objectiveState:
             os << "objectivestate\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t"
@@ -1152,6 +1293,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
         case LevelScriptActionType::startTimer:
             os << "timer\t" << a.mText << "\t" << a.mNumber;
             break;
+        case LevelScriptActionType::keyDoor:
+            os << "keydoor\t" << a.mText << "\t" << (a.mNumber ? "locked" : "open");
+            break;
         case LevelScriptActionType::alterTerrain:
             os << "terrain\t" << a.mX << "\t" << a.mY << "\t" << a.mX2 << "\t" << a.mY2 << "\t" << a.mText;
             if(a.mSeatId >= 0)
@@ -1174,6 +1318,13 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::stoneCreate:
             os << "stonecreate\t" << a.mX << "\t" << a.mY;
+            if(!a.mText.empty())
+                os << "\t" << a.mText << "\t" << a.mSeatId << "\t" << a.mX2 << "\t" << a.mY2;
+            break;
+        case LevelScriptActionType::stoneDrop:
+            os << "stonedrop\t" << a.mText << "\t" << a.mParty;
+            if(a.mSeatId >= 0)
+                os << "\t" << a.mSeatId << "\t" << a.mX2 << "\t" << a.mY2;
             break;
         case LevelScriptActionType::stoneAttach:
             os << "stoneattach\t" << a.mText;
@@ -1234,6 +1385,68 @@ const char* levelScriptObjectiveStateName(LevelScriptObjectiveState state)
     return "open";
 }
 
+//! \brief Checks the same required objective states that the goal list displays.
+bool LevelScript::areMainObjectivesReached(int32_t seatId) const
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType != LevelScriptActionType::objective ||
+               (action.mSeatId != -1 && action.mSeatId != seatId))
+                continue;
+            const bool required = action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                (action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain && trigger.mTimesFired > 0);
+            if(required && getObjectiveState(seatId, action.mObjectiveId) != LevelScriptObjectiveState::reached)
+                return false;
+        }
+    }
+    return true;
+}
+
+//! \brief Detects explicit main goals, including discovery-activated goals not yet revealed.
+bool LevelScript::hasMainObjectives(int32_t seatId) const
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+        for(const LevelScriptAction& action : trigger.mActions)
+            if(action.mType == LevelScriptActionType::objective &&
+               (action.mSeatId == -1 || action.mSeatId == seatId) &&
+               (action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain))
+                return true;
+    return false;
+}
+
+//! \brief Rechecks main goals every turn instead of retaining an obsolete ownership or enemy-clear state.
+void LevelScript::refreshMainObjectives(int32_t seatId)
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType != LevelScriptActionType::objective ||
+               (action.mSeatId != -1 && action.mSeatId != seatId))
+                continue;
+            const bool required = action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                (action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain && trigger.mTimesFired > 0);
+            if(required && getObjectiveState(seatId, action.mObjectiveId) != LevelScriptObjectiveState::failed)
+                setObjectiveState(seatId, action.mObjectiveId, LevelScriptObjectiveState::open);
+        }
+    }
+}
+
+//! \brief Persists an original victory request while required goals are incomplete.
+void LevelScript::requestVictory(int32_t seatId)
+{
+    mVictoryRequests.insert(seatId);
+}
+
+//! \brief Reports whether the seat has an original victory request to retry.
+bool LevelScript::hasVictoryRequest(int32_t seatId) const
+{
+    return mVictoryRequests.count(seatId) != 0;
+}
+
 //! \brief Returns the last explicit state for this seat and ID, or open when unset.
 LevelScriptObjectiveState LevelScript::getObjectiveState(int32_t seatId, const std::string& id) const
 {
@@ -1242,7 +1455,7 @@ LevelScriptObjectiveState LevelScript::getObjectiveState(int32_t seatId, const s
     return it == mObjectiveStates.end() ? LevelScriptObjectiveState::open : it->second;
 }
 
-//! \brief Persists an explicit presentation update without changing winning conditions.
+//! \brief Persists an objective state shared by presentation and any declared main-goal gate.
 void LevelScript::setObjectiveState(int32_t seatId, const std::string& id, LevelScriptObjectiveState state)
 {
     mObjectiveStates[std::make_pair(seatId, id)] = state;
@@ -1336,7 +1549,7 @@ int64_t LevelScript::getGoldMinedInRegion(int32_t seatId, const std::string& reg
     return amount;
 }
 
-//! \brief Records a named creature's real death position only when a killedin condition watches it.
+//! \brief Records an actual death position watched by a regional condition or a physical mission-item drop.
 void LevelScript::observeCreatureDeath(const std::string& creatureName, int32_t x, int32_t y)
 {
     for(const LevelScriptTrigger& trigger : mTriggers)
@@ -1349,7 +1562,26 @@ void LevelScript::observeCreatureDeath(const std::string& creatureName, int32_t 
                 return;
             }
         }
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType == LevelScriptActionType::stoneDrop && action.mText == creatureName)
+            {
+                mCreatureDeathTiles[creatureName] = std::make_pair(x, y);
+                return;
+            }
+        }
     }
+}
+
+//! \brief Retrieves only an observed real death position, including after a save/load round trip.
+bool LevelScript::getCreatureDeathTile(const std::string& creatureName, int32_t& x, int32_t& y) const
+{
+    auto death = mCreatureDeathTiles.find(creatureName);
+    if(death == mCreatureDeathTiles.end())
+        return false;
+    x = death->second.first;
+    y = death->second.second;
+    return true;
 }
 
 //! \brief Checks the actual saved death position rather than the creature's last-known live region.
@@ -1360,7 +1592,7 @@ bool LevelScript::wasCreatureKilledInRegion(const std::string& creatureName, con
     return region != nullptr && death != mCreatureDeathTiles.end() && region->contains(death->second.first, death->second.second);
 }
 
-//! \brief Reads legacy definitions and optional persisted per-seat objective states.
+//! \brief Reads legacy definitions, objective states and optional last-known stone carrier positions.
 bool LevelScript::importFromStream(std::istream& is)
 {
     clear();
@@ -1432,6 +1664,33 @@ bool LevelScript::importFromStream(std::istream& is)
             observation.mKilled = killed != 0;
             mSpawnObservations.push_back(observation);
         }
+        else if(key == "FatalShot")
+        {
+            int32_t seatId;
+            if(inTrigger || t.size() != 3 || !parseInt32(t[2], seatId) || seatId < 1)
+                return false;
+            mFatalShots[t[1]] = seatId;
+        }
+        else if(key == "CrossingProgress")
+        {
+            LevelScriptCrossingProgress progress;
+            if(inTrigger || t.size() != 8 || !parseInt32(t[1], progress.mSeatId) || progress.mSeatId < 1 ||
+               !parseInt32(t[6], progress.mX) || !parseInt32(t[7], progress.mY) || progress.mX < 0 || progress.mY < 0 ||
+               (t[4] != "north" && t[4] != "south" && t[4] != "east" && t[4] != "west"))
+                return false;
+            progress.mCreature = t[2];
+            progress.mRegion = t[3];
+            progress.mDirection = t[4];
+            progress.mAfterTrigger = t[5] == "-" ? "" : t[5];
+            mCrossingProgress.push_back(progress);
+        }
+        else if(key == "VictoryRequest")
+        {
+            int32_t seatId = -1;
+            if(inTrigger || t.size() != 2 || !parseInt32(t[1], seatId) || seatId < 1)
+                return false;
+            requestVictory(seatId);
+        }
         else if(key == "ObjectiveState")
         {
             int32_t seatId = -1;
@@ -1492,9 +1751,18 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "Stone")
         {
-            if(inTrigger || (t.size() != 2))
+            if(inTrigger || ((t.size() != 2) && (t.size() != 4)))
                 return false;
 
+            if(t.size() == 4)
+            {
+                int64_t x;
+                int64_t y;
+                if(!parseInt(t[2], x) || !parseInt(t[3], y) || x < 0 || y < 0 ||
+                   x > std::numeric_limits<int32_t>::max() || y > std::numeric_limits<int32_t>::max())
+                    return false;
+                setStoneCarrierTile(t[1], static_cast<int32_t>(x), static_cast<int32_t>(y));
+            }
             mStoneCarriers.insert(t[1]);
         }
         else if(key == "Member")
@@ -1592,6 +1860,10 @@ bool LevelScript::importFromStream(std::istream& is)
             if(!parseCondition(t, cond))
                 return false;
 
+            if(cond.mType == LevelScriptConditionType::crossedRegion)
+                mHasCrossingObservers = true;
+            if(cond.mType == LevelScriptConditionType::shotKilled)
+                mHasShotObservers = true;
             trigger.mConditions.push_back(cond);
         }
         else if(key == "Action")
@@ -1620,7 +1892,7 @@ bool LevelScript::importFromStream(std::istream& is)
     return false;
 }
 
-//! \brief Writes script definitions and explicit objective states for save/load round trips.
+//! \brief Writes definitions, objective states and known stone drop positions for save/load round trips.
 void LevelScript::exportToStream(std::ostream& os) const
 {
     os << "[Triggers]\n";
@@ -1637,6 +1909,15 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::pair<int32_t, std::string>, LevelScriptObjectiveState>& objective : mObjectiveStates)
         os << "ObjectiveState\t" << objective.first.first << "\t" << objective.first.second << "\t"
            << levelScriptObjectiveStateName(objective.second) << "\n";
+    for(const auto& shot : mFatalShots)
+        os << "FatalShot\t" << shot.first << "\t" << shot.second << "\n";
+    for(const LevelScriptCrossingProgress& progress : mCrossingProgress)
+        os << "CrossingProgress\t" << progress.mSeatId << "\t" << progress.mCreature << "\t"
+           << progress.mRegion << "\t" << progress.mDirection << "\t"
+           << (progress.mAfterTrigger.empty() ? "-" : progress.mAfterTrigger) << "\t"
+           << progress.mX << "\t" << progress.mY << "\n";
+    for(int32_t seatId : mVictoryRequests)
+        os << "VictoryRequest\t" << seatId << "\n";
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
         os << "Flag\t" << flag.first << "\t" << flag.second << "\n";
 
@@ -1681,7 +1962,14 @@ void LevelScript::exportToStream(std::ostream& os) const
         os << "\n";
     }
     for(const std::string& carrier : mStoneCarriers)
-        os << "Stone\t" << carrier << "\n";
+    {
+        os << "Stone\t" << carrier;
+        int32_t x;
+        int32_t y;
+        if(getStoneCarrierTile(carrier, x, y))
+            os << "\t" << x << "\t" << y;
+        os << "\n";
+    }
 
     for(const LevelScriptRegion& region : mRegions)
     {
@@ -1716,6 +2004,11 @@ void LevelScript::exportToStream(std::ostream& os) const
 void LevelScript::clear()
 {
     mObjectiveStates.clear();
+    mVictoryRequests.clear();
+    mCrossingProgress.clear();
+    mHasCrossingObservers = false;
+    mHasShotObservers = false;
+    mFatalShots.clear();
     mSpawnObservations.clear();
     mMinedGold.clear();
     mCreatureDeathTiles.clear();
@@ -1901,6 +2194,12 @@ void LevelScript::advanceTimers()
         if(timer.second.mRunning)
             ++timer.second.mTurns;
     }
+}
+
+//! \brief Uses the current jailer for captive creatures, otherwise their converted ownership.
+bool levelScriptCreatureHeld(int32_t requestedSeat, int32_t creatureSeat, int32_t prisonSeat, bool alive)
+{
+    return alive && requestedSeat > 0 && (prisonSeat >= 0 ? prisonSeat : creatureSeat) == requestedSeat;
 }
 
 bool levelScriptCompare(int64_t value, LevelScriptCompare op, int64_t reference)
@@ -2094,4 +2393,165 @@ void LevelScript::setCreatureBlocked(int32_t seatId, const std::string& classNam
 bool LevelScript::isCreatureBlocked(int32_t seatId, const std::string& className) const
 {
     return mBlocked.count(std::make_pair(seatId, className)) > 0;
+}
+
+//! \brief Reports a completed crossing using the existing saved event history.
+bool LevelScript::wasRegionCrossed(int32_t seatId, const std::string& region,
+    const std::string& direction, const std::string& afterTrigger) const
+{
+    return getEventCount("Seat" + std::to_string(seatId),
+        "crossed:" + region + ":" + direction + ":" + afterTrigger) > 0;
+}
+
+//! \brief Removes unfinished movement belonging to a creature instance before its name can be reused.
+void LevelScript::clearCreatureCrossings(const std::string& creature)
+{
+    mCrossingProgress.erase(std::remove_if(mCrossingProgress.begin(), mCrossingProgress.end(),
+        [&creature](const LevelScriptCrossingProgress& progress) { return progress.mCreature == creature; }),
+        mCrossingProgress.end());
+}
+
+//! \brief Follows an actual walked path across entry, interior and opposite exit using the same creature.
+void LevelScript::observeCrossingStep(const std::string& creature, int32_t seatId,
+    int32_t fromX, int32_t fromY, int32_t toX, int32_t toY)
+{
+    if(!mHasCrossingObservers || (fromX == toX && fromY == toY))
+        return;
+    std::set<std::string> observed;
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptCondition& condition : trigger.mConditions)
+        {
+            if(condition.mType != LevelScriptConditionType::crossedRegion || condition.mSeatId != seatId ||
+               wasRegionCrossed(seatId, condition.mName, condition.mName2, condition.mAfterTrigger))
+                continue;
+            const std::string key = condition.mName + "\t" + condition.mName2 + "\t" + condition.mAfterTrigger;
+            if(!observed.insert(key).second)
+                continue;
+            const LevelScriptRegion* region = getRegion(condition.mName);
+            if(region == nullptr)
+                continue;
+            if(!condition.mAfterTrigger.empty())
+            {
+                const auto required = std::find_if(mTriggers.begin(), mTriggers.end(),
+                    [&condition](const LevelScriptTrigger& item) { return item.mName == condition.mAfterTrigger; });
+                if(required == mTriggers.end() || required->mTimesFired == 0)
+                    continue;
+            }
+            auto candidate = std::find_if(mCrossingProgress.begin(), mCrossingProgress.end(),
+                [&creature, &condition, seatId](const LevelScriptCrossingProgress& progress) {
+                    return progress.mCreature == creature && progress.mSeatId == seatId &&
+                        progress.mRegion == condition.mName && progress.mDirection == condition.mName2 &&
+                        progress.mAfterTrigger == condition.mAfterTrigger;
+                });
+            if(std::abs(toX - fromX) > 1 || std::abs(toY - fromY) > 1)
+            {
+                if(candidate != mCrossingProgress.end())
+                    mCrossingProgress.erase(candidate);
+                continue;
+            }
+            const bool vertical = condition.mName2 == "north" || condition.mName2 == "south";
+            const bool descending = condition.mName2 == "north" || condition.mName2 == "west";
+            const int32_t low = vertical ? std::min(region->mY1, region->mY2) : std::min(region->mX1, region->mX2);
+            const int32_t high = vertical ? std::max(region->mY1, region->mY2) : std::max(region->mX1, region->mX2);
+            const int32_t before = vertical ? fromY : fromX;
+            const int32_t after = vertical ? toY : toX;
+            const bool inside = region->contains(toX, toY);
+            if(candidate != mCrossingProgress.end())
+            {
+                if(candidate->mX != fromX || candidate->mY != fromY)
+                {
+                    mCrossingProgress.erase(candidate);
+                    continue;
+                }
+                if(inside)
+                {
+                    candidate->mX = toX;
+                    candidate->mY = toY;
+                    continue;
+                }
+                if((descending && before == low && after == low - 1) ||
+                   (!descending && before == high && after == high + 1))
+                    recordEvent("Seat" + std::to_string(seatId),
+                        "crossed:" + condition.mName + ":" + condition.mName2 + ":" + condition.mAfterTrigger);
+                mCrossingProgress.erase(candidate);
+            }
+            else if(inside && ((descending && before == high + 1 && after == high) ||
+                              (!descending && before == low - 1 && after == low)))
+            {
+                LevelScriptCrossingProgress progress;
+                progress.mCreature = creature;
+                progress.mSeatId = seatId;
+                progress.mRegion = condition.mName;
+                progress.mDirection = condition.mName2;
+                progress.mAfterTrigger = condition.mAfterTrigger;
+                progress.mX = toX;
+                progress.mY = toY;
+                mCrossingProgress.push_back(progress);
+            }
+        }
+    }
+}
+
+//! \brief Uses existing saved event history for a seat-specific regional attack.
+bool LevelScript::wasRegionAttacked(int32_t attackingSeat, int32_t targetSeat, const std::string& region) const
+{
+    return getEventCount("Seat" + std::to_string(attackingSeat),
+        "attackedregion:" + std::to_string(targetSeat) + ":" + region) > 0;
+}
+
+//! \brief Observes a real positive hostile hit without substituting visits or attacks by other seats.
+void LevelScript::observeRegionAttack(int32_t attackingSeat, int32_t targetSeat, int32_t x, int32_t y)
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptCondition& condition : trigger.mConditions)
+        {
+            if(condition.mType != LevelScriptConditionType::attackedRegion || condition.mSeatId != attackingSeat ||
+               condition.mNumber != targetSeat || wasRegionAttacked(attackingSeat, targetSeat, condition.mName))
+                continue;
+            const LevelScriptRegion* region = getRegion(condition.mName);
+            if(region != nullptr && region->contains(x, y))
+                recordEvent("Seat" + std::to_string(attackingSeat),
+                    "attackedregion:" + std::to_string(targetSeat) + ":" + condition.mName);
+        }
+    }
+}
+
+//! \brief Retains only an explicitly watched target and a matching projectile seat until death.
+void LevelScript::observeFatalShot(const std::string& creature, int32_t attackingSeat)
+{
+    clearFatalShot(creature);
+    if(!mHasShotObservers || attackingSeat < 1)
+        return;
+    for(const LevelScriptTrigger& trigger : mTriggers)
+        for(const LevelScriptCondition& condition : trigger.mConditions)
+            if(condition.mType == LevelScriptConditionType::shotKilled && condition.mName == creature &&
+               condition.mSeatId == attackingSeat)
+            {
+                mFatalShots[creature] = attackingSeat;
+                return;
+            }
+}
+
+//! \brief Recovery and fresh instances cannot inherit a previous lethal shot.
+void LevelScript::clearFatalShot(const std::string& creature)
+{
+    mFatalShots.erase(creature);
+}
+
+//! \brief An actual killed event consumes its pending projectile source exactly once.
+void LevelScript::completeShotKill(const std::string& creature)
+{
+    const auto shot = mFatalShots.find(creature);
+    if(shot == mFatalShots.end())
+        return;
+    recordEvent(creature, "shotkilled:" + std::to_string(shot->second));
+    mFatalShots.erase(shot);
+}
+
+//! \brief Returns saved actual projectile death history rather than a knockout or hit count.
+bool LevelScript::wasShotKilled(int32_t attackingSeat, const std::string& creature) const
+{
+    return getEventCount(creature, "shotkilled:" + std::to_string(attackingSeat)) > 0;
 }

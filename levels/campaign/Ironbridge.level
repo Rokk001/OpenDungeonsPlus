@@ -4524,18 +4524,193 @@ Action	objectivestate	1	ironbridge-o04	reached
 Name	rivalFalls
 Mode	once
 Cond	defeated	2
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	furniture	1	Dormitory	>=	6
+Cond	furniture	1	Hatchery	>=	1
+Cond	flag	bridgeOneDone	1
+Cond	flag	bridgeTwoDone	1
+Cond	flag	thirdSpanCrossed	1
+Cond	roomclaimed	1	48	8	50	9
+Cond	roomclaimed	1	78	54	80	55
+Cond	flag	keepGateBreached	1
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Cond	flag	storyVictorySent	0
 Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
+Action	setflag	storyVictorySent	1
 [/Trigger]
 [Trigger]
 Name	rivalHeartDown
 Mode	once
 Cond	goal	1	KillAllEnemies
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	furniture	1	Dormitory	>=	6
+Cond	furniture	1	Hatchery	>=	1
+Cond	flag	bridgeOneDone	1
+Cond	flag	bridgeTwoDone	1
+Cond	flag	thirdSpanCrossed	1
+Cond	roomclaimed	1	48	8	50	9
+Cond	roomclaimed	1	78	54	80	55
+Cond	flag	keepGateBreached	1
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Cond	flag	storyVictorySent	0
 Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
+Action	setflag	storyVictorySent	1
 [/Trigger]
 
+
+
+Region	MainStoneBridge1	36	20	39	21
+Region	MainStoneBridge2	36	46	39	46
+Region	MainStoneBridge3	62	12	65	12
+Region	MainStoneBridge4	62	34	65	35
+Region	MainStoneBridge5	62	54	65	54
+Region	MainStoneBridge6	88	26	91	27
+Region	MainStoneBridge7	88	48	91	48
+Region	MainGateNorth	93	26	93	26
+Region	MainGateSouth	93	27	93	27
+Region	MainGateLower	93	48	93	48
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	ironbridge-main-home	Build 6 beds and a hatchery; protect your heart.
+Action	mainobjectiveid	1	ironbridge-main-spans	Cross the 3 rifts in order.
+Action	mainobjectiveid	1	ironbridge-main-sites	Claim the north smithy and ore dock.
+Action	mainobjectiveid	1	ironbridge-main-hold	Breach the hold; destroy its heart and enemy forces.
+Action	optionalobjectiveid	1	ironbridge-extra-coal	Explore the coal store.
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge1
+Mode	once
+Cond	crossed	1	MainStoneBridge1	east
+Action	setflag	firstSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge2
+Mode	once
+Cond	crossed	1	MainStoneBridge2	east
+Action	setflag	firstSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge3
+Mode	once
+Cond	crossed	1	MainStoneBridge3	east	after	mainSpan1
+Action	setflag	secondSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge4
+Mode	once
+Cond	crossed	1	MainStoneBridge4	east	after	mainSpan1
+Action	setflag	secondSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge5
+Mode	once
+Cond	crossed	1	MainStoneBridge5	east	after	mainSpan1
+Action	setflag	secondSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge6
+Mode	once
+Cond	crossed	1	MainStoneBridge6	east	after	mainSpan2
+Action	setflag	thirdSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge7
+Mode	once
+Cond	crossed	1	MainStoneBridge7	east	after	mainSpan2
+Action	setflag	thirdSpanCrossed	1
+[/Trigger]
+[Trigger]
+Name	mainSpan1
+Mode	once
+Cond	flag	firstSpanCrossed	1
+Action	setflag	bridgeOneDone	1
+[/Trigger]
+[Trigger]
+Name	mainSpan2
+Mode	once
+Cond	flag	secondSpanCrossed	1
+Action	setflag	bridgeTwoDone	1
+[/Trigger]
+[Trigger]
+Name	walkMainGateNorth
+Mode	once
+Cond	trapgone	DoorWooden8
+Cond	crossed	1	MainGateNorth	east
+Action	setflag	keepGateBreached	1
+[/Trigger]
+[Trigger]
+Name	walkMainGateSouth
+Mode	once
+Cond	trapgone	DoorWooden9
+Cond	crossed	1	MainGateSouth	east
+Action	setflag	keepGateBreached	1
+[/Trigger]
+[Trigger]
+Name	walkMainGateLower
+Mode	once
+Cond	trapgone	DoorWooden10
+Cond	crossed	1	MainGateLower	east
+Action	setflag	keepGateBreached	1
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	ironbridge-main-home	failed
+[/Trigger]
+[Trigger]
+Name	mainTrialFailed
+Mode	once
+Cond	defeated	1
+Action	objectivestate	1	ironbridge-main-spans	failed
+Action	objectivestate	1	ironbridge-main-sites	failed
+Action	objectivestate	1	ironbridge-main-hold	failed
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	furniture	1	Dormitory	>=	6
+Cond	furniture	1	Hatchery	>=	1
+Action	objectivestate	1	ironbridge-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainSpans
+Mode	repeat	0
+Cond	flag	bridgeOneDone	1
+Cond	flag	bridgeTwoDone	1
+Cond	flag	thirdSpanCrossed	1
+Action	objectivestate	1	ironbridge-main-spans	reached
+[/Trigger]
+[Trigger]
+Name	mainSites
+Mode	repeat	0
+Cond	roomclaimed	1	48	8	50	9
+Cond	roomclaimed	1	78	54	80	55
+Action	objectivestate	1	ironbridge-main-sites	reached
+[/Trigger]
+[Trigger]
+Name	mainHold
+Mode	repeat	0
+Cond	flag	keepGateBreached	1
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Cond	flag	storyVictorySent	1
+Action	objectivestate	1	ironbridge-main-hold	reached
+[/Trigger]
+[Trigger]
+Name	extraCoal
+Mode	once
+Cond	region	1	CoalStore
+Action	objectivestate	1	ironbridge-extra-coal	reached
+[/Trigger]
 
 [/Triggers]

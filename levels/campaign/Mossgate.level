@@ -806,4 +806,55 @@ Action	message	1	The reeve is bleeding and calling for the last of his watch.
 Action	spawn	3	8	6	1	Adventurer:1	Adventurer:1
 [/Trigger]
 
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	mossgate-main-heart	Protect your heart.
+Action	mainobjectiveid	1	mossgate-main-meadow	Mine 60 gold and claim the meadow.
+Action	mainobjectiveid	1	mossgate-main-watch	Clear the watch post and reinforcements.
+Action	mainobjectiveid	1	mossgate-main-village	Defeat Marsh, his guards and their portal.
+Action	optionalobjectiveid	1	mossgate-extra-gallery	Explore the side gallery.
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	mossgate-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainMeadow
+Mode	repeat	0
+Cond	mined	1	>=	60
+Cond	claimed	1	Meadow	18
+Action	objectivestate	1	mossgate-main-meadow	reached
+[/Trigger]
+[Trigger]
+Name	mainWatch
+Mode	repeat	0
+Cond	event	PostWatch1	killed
+Cond	event	PostWatch2	killed
+Cond	spawncleared	postStirs	1
+Action	objectivestate	1	mossgate-main-watch	reached
+[/Trigger]
+[Trigger]
+Name	mainVillage
+Mode	repeat	0
+Cond	event	ReeveMarsh	killed
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	mossgate-main-village	reached
+[/Trigger]
+[Trigger]
+Name	extraGallery
+Mode	once
+Cond	region	1	Gallery
+Action	objectivestate	1	mossgate-extra-gallery	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	mossgate-main-heart	failed
+[/Trigger]
+
 [/Triggers]

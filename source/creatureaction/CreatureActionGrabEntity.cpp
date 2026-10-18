@@ -20,6 +20,8 @@
 #include "creatureaction/CreatureActionCarryEntity.h"
 #include "entities/Building.h"
 #include "entities/Creature.h"
+#include "entities/MissileStone.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "utils/Helper.h"
@@ -49,6 +51,7 @@ std::function<bool()> CreatureActionGrabEntity::action()
         std::ref(mCreature), std::ref(mEntityToCarry));
 }
 
+//! \brief Rechecks cargo and destination before starting ordinary or mission-item transport.
 bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry)
 {
     Tile* myTile = creature.getPositionTile();
@@ -81,6 +84,21 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
         // We try to go at the given entity
         creature.setDestination(entityTile);
         return false;
+    }
+
+    if(entityToCarry->getObjectType() == GameEntityType::missileObject &&
+       static_cast<MissileObject*>(entityToCarry)->getMissileType() == MissileObjectType::stone)
+    {
+        Tile* destination = static_cast<MissileStone*>(entityToCarry)->getDeliveryTile(creature);
+        if(entityToCarry->getEntityCarryType(&creature) == EntityCarryType::notCarryable ||
+           destination == nullptr || !creature.getGameMap()->pathExists(&creature, myTile, destination))
+        {
+            creature.popAction();
+            return true;
+        }
+        creature.popAction();
+        creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *destination));
+        return true;
     }
 
     // We try to find a building that wants the entity

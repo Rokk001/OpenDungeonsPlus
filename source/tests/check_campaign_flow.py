@@ -62,7 +62,12 @@ script_header = read('source/gamemap/LevelScript.h')
 script_source = read('source/gamemap/LevelScript.cpp')
 script_runner = read('source/gamemap/LevelScriptRunner.cpp')
 assert 'std::string mObjectiveId;' in script_header and 'objectiveState' in script_header
-assert 'if(type == "objectiveid")' in script_source and 'if(type == "objectivestate")' in script_source
+# The legacy ID parser now also accepts the explicitly classified goal variants.
+objective_parser = script_source[script_source.index('bool parseAction('):script_source.index('if(type == "objectivestate")')]
+for keyword in ('objectiveid', 'mainobjectiveid', 'optionalobjectiveid', 'conditionalobjectiveid'):
+    assert 'type == "' + keyword + '"' in objective_parser
+assert 'action.mObjectiveId = t[3];' in objective_parser
+assert 'if(type == "objectivestate")' in script_source
 assert 'if((type == "message") || (type == "objective"))' in script_source
 assert 'if(key == "ObjectiveState")' in script_source and 'os << "ObjectiveState\\t"' in script_source
 assert 'mObjectiveStates.clear()' in script_source

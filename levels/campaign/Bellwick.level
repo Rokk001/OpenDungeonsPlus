@@ -3947,14 +3947,12 @@ Name	keeperFalls
 Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	The undead keeper is dust and the bells hang silent. Bellwick is yours.
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	keeperHeartDown
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The undead keeper is dust and the bells hang silent. Bellwick is yours.
 Action	objectivestate	1	bellwick-o01	reached
 Action	win	1
 [/Trigger]
@@ -3988,5 +3986,56 @@ Mode	once
 Cond	slabs	1	Nave	claimed	>=	30
 Action	message	1	The nave is yours, and the stones below it answer. A spring of mana has risen in the crypt cells.
 Action	terrain	16	71	16	71	manawell
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	bellwick-main-heart	Protect your heart until both north gates open.
+Action	mainobjectiveid	1	bellwick-main-nave	Pass through the nave to the transept.
+Action	mainobjectiveid	1	bellwick-main-keeper	Destroy the undercroft heart and all enemy forces.
+Action	optionalobjectiveid	1	bellwick-extra-scriptorium	Explore the western scriptorium.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	bellwick-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	flag	gatesOpen	1
+Action	objectivestate	1	bellwick-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainNave
+Mode	repeat	0
+Cond	crossed	1	Nave	north
+Action	objectivestate	1	bellwick-main-nave	reached
+[/Trigger]
+[Trigger]
+Name	mainKeeper
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	bellwick-main-keeper	reached
+[/Trigger]
+[Trigger]
+Name	extraScriptorium
+Mode	once
+Cond	region	1	Scriptorium
+Action	objectivestate	1	bellwick-extra-scriptorium	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	bellwick-main-heart	reached
+Cond	objective	1	bellwick-main-nave	reached
+Cond	objective	1	bellwick-main-keeper	reached
+Action	message	1	The undead keeper is dust and the bells hang silent. Bellwick is yours.
+Action	win	1
 [/Trigger]
 [/Triggers]
