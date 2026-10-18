@@ -403,3 +403,15 @@ assert 'hen->playPose(ChickenPose::lay, it->mTurns)' in posing
 assert posing.index('hen->playPose(') < posing.index('--it->mTurns')
 assert 'it->mStarted = true;' in posing and 'Random::' not in posing
 print('saved laying resumes its remaining visible pose once: source guards passed')
+
+# New eggs have exactly one production call site, inside completed real-hen laying release.
+egg_creation = 'spawnAnimal(ChickenKind::egg,'
+assert room_cpp.count(egg_creation) == 1
+assert egg_creation in release
+for source_path in (root / 'source').rglob('*.cpp'):
+    source_text = source_path.read_text(encoding='utf-8')
+    if source_path.name != 'RoomHatchery.cpp':
+        assert egg_creation not in source_text, source_path
+    assert not re.search(r'new\s+ChickenEntity\s*\([^;]*ChickenKind::egg', source_text), source_path
+    assert not re.search(r'setKind\s*\(\s*ChickenKind::egg\s*\)', source_text), source_path
+print('new eggs have one production path, guarded by completed real-hen laying; saved existing eggs remain loadable')
