@@ -437,13 +437,42 @@ File: `levels/campaign/Goldspire.level`.
 | Script line 3122 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
 | Script line 3151 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
 | Script line 3211 | `Action	objectiveid	1	goldspire-o05	Kill Alaric Penn.` | yes |
-| Script line 3319 | `Action	win	1` | yes |
+| Script line 3318 | `Action	win	1` | yes |
+| Script line 3494 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `goldspire-main-home`: Raise 2 fighters; protect your heart. | `mainHome`: Cond	flag	mainArmyReady	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `goldspire-main-town`: Capture the low town. | `mainTown`: Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	53	66; Cond	groundclaimed	1	42	67	55	67; Cond	groundclaimed	1	42	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74 |
+| main | `goldspire-main-route`: Pass the south gate, outer ring and both sealed links. | `mainRoute`: Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1 |
+| main | `goldspire-main-warden`: Defeat Penn in the spire and all enemy forces. | `mainWarden`: Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies |
+| optional | `goldspire-extra-wing`: Explore the western treasure wing. | `extraWing`: Cond	region	1	WestWing |
+
+Possible route (static, not a playthrough):
+- Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.
+- Capture all153original open LowTown floor fields(38..60,60..74),all statically reachable. No placed room exists; no new room is required. Original40claimed trigger still opens the gate without changing its mechanics.
+- After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.
+- After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.
+- Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.
+- Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.
+
+Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.
+
 | Trigger `lowTown` | `Action	objectivestate	1	goldspire-o03	reached`; conditions: `Cond	claimed	1	LowTown	40` | yes |
 | Trigger `onRing` | `Action	objectivestate	1	goldspire-o04	reached`; conditions: `Cond	region	1	OuterRing` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	goldspire-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	goldspire-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | With workers and a thin purse, build before challenging the garrison below its rings. | no: building before attacking is not a winning condition |
-| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | no: enemy elimination is checked; the ordered low-town/link route is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	goldspire-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	goldspire-main-home	reached`; conditions: `Cond	flag	mainArmyReady	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTown` | `Action	objectivestate	1	goldspire-main-town	reached`; conditions: `Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	53	66; Cond	groundclaimed	1	42	67	55	67; Cond	groundclaimed	1	42	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74` | yes |
+| Trigger `mainRoute` | `Action	objectivestate	1	goldspire-main-route	reached`; conditions: `Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-warden	reached`; conditions: `Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
+| Briefing | With workers and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
+| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links |
+| Briefing | Aurel cannot hold this chosen barrier with promises. | yes: actual Penn death inside the spire and all remaining foes |
 
 ## Greywater
 

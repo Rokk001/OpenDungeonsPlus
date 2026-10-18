@@ -7462,5 +7462,687 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe rival heart is shattered and the crater is silent. Cinderhollow is yours."
     }
+  },
+  "Goldspire": {
+    "goals": {
+      "goldspire-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Raise 2 fighters; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tflag\tmainArmyReady\t1",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "goldspire-main-town": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Capture the low town.",
+        "completion": "mainTown",
+        "conditions": [
+          "Cond\tgroundclaimed\t1\t46\t60\t49\t60",
+          "Cond\tgroundclaimed\t1\t46\t61\t48\t61",
+          "Cond\tgroundclaimed\t1\t46\t62\t48\t62",
+          "Cond\tgroundclaimed\t1\t44\t63\t49\t63",
+          "Cond\tgroundclaimed\t1\t42\t64\t52\t64",
+          "Cond\tgroundclaimed\t1\t41\t65\t53\t65",
+          "Cond\tgroundclaimed\t1\t41\t66\t53\t66",
+          "Cond\tgroundclaimed\t1\t42\t67\t55\t67",
+          "Cond\tgroundclaimed\t1\t42\t68\t56\t68",
+          "Cond\tgroundclaimed\t1\t42\t69\t57\t69",
+          "Cond\tgroundclaimed\t1\t59\t69\t59\t69",
+          "Cond\tgroundclaimed\t1\t42\t70\t60\t70",
+          "Cond\tgroundclaimed\t1\t43\t71\t54\t71",
+          "Cond\tgroundclaimed\t1\t57\t71\t60\t71",
+          "Cond\tgroundclaimed\t1\t45\t72\t53\t72",
+          "Cond\tgroundclaimed\t1\t60\t72\t60\t72",
+          "Cond\tgroundclaimed\t1\t46\t73\t51\t73",
+          "Cond\tgroundclaimed\t1\t46\t74\t48\t74"
+        ],
+        "mode": "repeat\t0"
+      },
+      "goldspire-main-route": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Pass the south gate, outer ring and both sealed links.",
+        "completion": "mainRoute",
+        "conditions": [
+          "Cond\ttrigger\tmainRingReached",
+          "Cond\tflag\tmainWestCrossed\t1",
+          "Cond\tflag\tmainEastCrossed\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "goldspire-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Penn in the spire and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tkilledin\tAlaricPenn\tOuterRing",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "goldspire-extra-wing": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the western treasure wing.",
+        "completion": "extraWing",
+        "conditions": [
+          "Cond\tregion\t1\tWestWing"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "armyReady": {
+        "conditions": [
+          "Cond\tregion\t1\tArmyGround\t>=\t2\t@fighters"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainArmyReady\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "goldspire-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "southGateCrossed": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainSouthGate\tnorth\tafter\tsouthGateOpens"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainGateCrossed\t1"
+        ]
+      },
+      "mainRingReached": {
+        "conditions": [
+          "Cond\tflag\tmainGateCrossed\t1",
+          "Cond\tregion\t1\tOuterRing"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRingReached\t1"
+        ]
+      },
+      "linksReady": {
+        "conditions": [
+          "Cond\ttrigger\tmainRingReached",
+          "Cond\ttrigger\tlinksOpen"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainLinksReady\t1"
+        ]
+      },
+      "crossWestNorth": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainWestLink\tnorth\tafter\tlinksReady"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainWestCrossed\t1"
+        ]
+      },
+      "crossWestSouth": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainWestLink\tsouth\tafter\tlinksReady"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainWestCrossed\t1"
+        ]
+      },
+      "crossEastNorth": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainEastLink\tnorth\tafter\tlinksReady"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainEastCrossed\t1"
+        ]
+      },
+      "crossEastSouth": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainEastLink\tsouth\tafter\tlinksReady"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainEastCrossed\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tgoldspire-main-home\treached",
+          "Cond\tobjective\t1\tgoldspire-main-town\treached",
+          "Cond\tobjective\t1\tgoldspire-main-route\treached",
+          "Cond\tobjective\t1\tgoldspire-main-warden\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tAlaric Penn lies dead on his own coin. Goldspire is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "rising": [
+        "Cond\ttime\t3"
+      ],
+      "firstCoin": [
+        "Cond\tmined\t1\t>=\t500"
+      ],
+      "roadWalked": [
+        "Cond\tregion\t1\tRoad"
+      ],
+      "lowTown": [
+        "Cond\tclaimed\t1\tLowTown\t40"
+      ],
+      "yardSeen": [
+        "Cond\tregion\t1\tYard"
+      ],
+      "gateOpen": [
+        "Cond\tflag\tsouthHeld\t1",
+        "Cond\tregion\t1\tSouthGate"
+      ],
+      "onRing": [
+        "Cond\tregion\t1\tOuterRing"
+      ],
+      "wingSeen": [
+        "Cond\tregion\t1\tWestWing"
+      ],
+      "northEastSeen": [
+        "Cond\tregion\t1\tNorthEastWing"
+      ],
+      "midRing": [
+        "Cond\tregion\t1\tMidRing"
+      ],
+      "coreSeen": [
+        "Cond\tregion\t1\tCore"
+      ],
+      "alertFollowup": [
+        "Cond\tflag\ttreasurerAlert\t1",
+        "Cond\tkills\t1\t>=\t20"
+      ],
+      "lowGold": [
+        "Cond\tmined\t1\t>=\t2500"
+      ],
+      "column1": [
+        "Cond\ttime\t200"
+      ],
+      "column2": [
+        "Cond\ttime\t420"
+      ],
+      "column3": [
+        "Cond\ttime\t650"
+      ],
+      "column4": [
+        "Cond\ttime\t900"
+      ],
+      "column5": [
+        "Cond\ttime\t1150"
+      ],
+      "column6": [
+        "Cond\ttime\t1400"
+      ],
+      "column7": [
+        "Cond\ttime\t1700"
+      ],
+      "column8": [
+        "Cond\ttime\t2000"
+      ],
+      "column9": [
+        "Cond\ttime\t2350"
+      ],
+      "column10": [
+        "Cond\ttime\t2700"
+      ],
+      "column11": [
+        "Cond\ttime\t3050"
+      ],
+      "column12": [
+        "Cond\ttime\t3500"
+      ],
+      "southGateOpens": [
+        "Cond\tflag\tsouthHeld\t1"
+      ],
+      "linksOpen": [
+        "Cond\tflag\tringsBroken\t1"
+      ],
+      "treasurerKey": [
+        "Cond\ttime\t4"
+      ],
+      "treasurerHurt": [
+        "Cond\thealth\tAlaricPenn\t<=\t40"
+      ],
+      "keyDropped": [
+        "Cond\ttime\t5",
+        "Cond\talive\tAlaricPenn\t0"
+      ],
+      "portalWake": [
+        "Cond\ttime\t700",
+        "Cond\tflag\tportalOn\t0"
+      ]
+    },
+    "preserved_actions": {
+      "rising": [
+        "Action\tmessage\t1\tGoldspire stands over the plateau like a coin on its edge, master. Treasurer Alaric Penn counts the kingdom's tax in its core and soldiers pour out of its gates day and night.",
+        "Action\tobjectiveid\t1\tgoldspire-o01\tKill Alaric Penn inside the spire.",
+        "Action\thint\t1\tMine gold and build an army.",
+        "Action\tobjectiveid\t1\tgoldspire-o03\tTake the low town below the spire.",
+        "Action\tportal\t1\toff"
+      ],
+      "firstCoin": [
+        "Action\tmessage\t1\tThe first coin is in the vault and your portal draws creatures again. Rooms for them are within reach now.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1",
+        "Action\tgold\t1\t400",
+        "Action\tspawn\t1\t21\t73\t1\tOrc:2\tGoblin:2"
+      ],
+      "roadWalked": [
+        "Action\tmessage\t1\tThe road to the spire. The treasurer has spies on the low town, so move quickly.",
+        "Action\treveal\t1\tLowTown",
+        "Action\treveal\t1\tYard"
+      ],
+      "lowTown": [
+        "Action\tmessage\t1\tThe low town is yours. The spire has taken notice and the first of the soldiers have been woken.",
+        "Action\tsetflag\tsouthHeld\t1",
+        "Action\treveal\t1\tSouthGate",
+        "Action\treveal\t1\tOuterRing",
+        "Action\tobjectiveid\t1\tgoldspire-o04\tEnter the outer ring after the south gate opens.",
+        "Action\tobjectivestate\t1\tgoldspire-o03\treached"
+      ],
+      "yardSeen": [
+        "Action\tmessage\t1\tA gold yard in the south-east that the garrison forgot. Take what you can carry.",
+        "Action\tgold\t1\t700"
+      ],
+      "gateOpen": [
+        "Action\tmessage\t1\tThe south gate stands over you. The garrison will empty onto the ring the moment you enter.",
+        "Action\tsetflag\ttreasurerAlert\t1",
+        "Action\tspawn\t3\t47\t51\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:2"
+      ],
+      "onRing": [
+        "Action\tmessage\t1\tYou are on the outer ring. Four wings branch off it, and each holds a vault. The east and west links are walled up and open when the inner ring falls.",
+        "Action\treveal\t1\tWestWing",
+        "Action\treveal\t1\tNorthWing",
+        "Action\treveal\t1\tNorthEastWing",
+        "Action\treveal\t1\tEastWing",
+        "Action\treveal\t1\tMidRing",
+        "Action\treveal\t1\tLedge",
+        "Action\tobjectivestate\t1\tgoldspire-o04\treached"
+      ],
+      "wingSeen": [
+        "Action\tmessage\t1\tThe west vault is full and badly guarded. A strong box is worth a hundred soldiers.",
+        "Action\tgold\t1\t500"
+      ],
+      "northEastSeen": [
+        "Action\tmessage\t1\tThe north-east wing is the barracks of the heavy guard, and it will not stay quiet.",
+        "Action\tspawn\t3\t65\t19\t1\tKnight:3\tKnight:3\tDwarf2:3\tMonk:3"
+      ],
+      "midRing": [
+        "Action\tmessage\t1\tThe inner ring. Lightning hangs in the air, and the core is only a few steps away.",
+        "Action\treveal\t1\tCore",
+        "Action\tsetflag\tringsBroken\t1",
+        "Action\tspawn\t3\t66\t23\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "coreSeen": [
+        "Action\tmessage\t1\tThe core of the spire. The treasurer is at his table, and his guards are rising.",
+        "Action\tobjectiveid\t1\tgoldspire-o05\tKill Alaric Penn."
+      ],
+      "alertFollowup": [
+        "Action\tmessage\t1\tThe treasurer is paying his soldiers with the tax. The vaults are thinner now.",
+        "Action\tgold\t1\t800"
+      ],
+      "lowGold": [
+        "Action\tmessage\t1\tThe plateau has paid for your army. Do not let the waves outpace you."
+      ],
+      "column1": [
+        "Action\tmessage\t1\tA column is marching out of the south gate.",
+        "Action\tspawn\t3\t47\t51\t1\tAdventurer:2\tElf:2\tMonk:2"
+      ],
+      "column2": [
+        "Action\tmessage\t1\tPatrols are in the low town.",
+        "Action\tspawn\t3\t47\t67\t1\tKnight:2\tAdventurer:2\tElf:2\tMonk:2"
+      ],
+      "column3": [
+        "Action\tmessage\t1\tThe garrison is changing its watch, and the old one has come for you.",
+        "Action\tspawn\t3\t47\t51\t1\tKnight:2\tKnight:2\tDwarf2:2\tMonk:2"
+      ],
+      "column4": [
+        "Action\tmessage\t1\tAnother squad is on the road to the quarry.",
+        "Action\tspawn\t3\t47\t67\t1\tKnight:3\tElf:2\tAdventurer:3\tMonk:2"
+      ],
+      "column5": [
+        "Action\tmessage\t1\tPikes are coming down from the ring.",
+        "Action\tspawn\t3\t47\t51\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:2"
+      ],
+      "column6": [
+        "Action\tmessage\t1\tThe treasurer has paid a heavy column.",
+        "Action\tspawn\t3\t47\t67\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "column7": [
+        "Action\tmessage\t1\tBanners are in the south gate.",
+        "Action\tspawn\t3\t47\t51\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "column8": [
+        "Action\tmessage\t1\tThe spire is emptying its barracks.",
+        "Action\tspawn\t3\t47\t67\t1\tKnight:4\tKnight:4\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "column9": [
+        "Action\tmessage\t1\tThe heavy guard marches.",
+        "Action\tspawn\t3\t47\t51\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:3"
+      ],
+      "column10": [
+        "Action\tmessage\t1\tAlaric Penn has opened his last purse.",
+        "Action\tspawn\t3\t47\t67\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
+      ],
+      "column11": [
+        "Action\tmessage\t1\tThe tower will not stop sending men.",
+        "Action\tspawn\t3\t47\t51\t1\tKnight:5\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "column12": [
+        "Action\tmessage\t1\tA last great column, every spear in the spire.",
+        "Action\tspawn\t3\t47\t67\t1\tKnight:5\tKnight:5\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "southGateOpens": [
+        "Action\tmessage\t1\tThe seal of the south gate gives way and the road onto the outer ring is open.",
+        "Action\tterrain\t47\t56\t49\t56\tpath"
+      ],
+      "linksOpen": [
+        "Action\tmessage\t1\tA rockfall in the old plugs has opened the east and west links. Your reinforcements can come up the flanks.",
+        "Action\tterrain\t11\t52\t12\t67\tpath",
+        "Action\tterrain\t80\t58\t81\t72\tpath"
+      ],
+      "treasurerKey": [
+        "Action\tstoneattach\tAlaricPenn"
+      ],
+      "treasurerHurt": [
+        "Action\tmessage\t1\tAlaric Penn is bleeding coin. He calls the last of his guard to the core.",
+        "Action\tspawn\t3\t48\t38\t1\tKnight:5\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "keyDropped": [
+        "Action\tmessage\t1\tThe treasurer is dead and the vault key he carried lies where he fell."
+      ],
+      "portalWake": [
+        "Action\tmessage\t1\tThe quarry has gone quiet and your portal draws creatures again.",
+        "Action\tportal\t1\ton",
+        "Action\tsetflag\tportalOn\t1"
+      ]
+    },
+    "reachability": {
+      "named_creatures": [
+        "AlaricPenn"
+      ],
+      "regions": {
+        "ArmyGround": {
+          "bounds": [
+            0,
+            0,
+            93,
+            87
+          ],
+          "minimum_potential_tiles": 0
+        },
+        "MainSouthGate": {
+          "bounds": [
+            47,
+            56,
+            49,
+            56
+          ],
+          "minimum_potential_tiles": 0
+        },
+        "MainWestLink": {
+          "bounds": [
+            11,
+            52,
+            12,
+            67
+          ],
+          "minimum_potential_tiles": 0
+        },
+        "MainEastLink": {
+          "bounds": [
+            80,
+            58,
+            81,
+            72
+          ],
+          "minimum_potential_tiles": 0
+        },
+        "LowTown": {
+          "bounds": [
+            38,
+            60,
+            60,
+            74
+          ],
+          "minimum_open_tiles": 153
+        },
+        "OuterRing": {
+          "bounds": [
+            26,
+            8,
+            70,
+            52
+          ],
+          "minimum_open_tiles": 1
+        },
+        "WestWing": {
+          "bounds": [
+            4,
+            36,
+            22,
+            54
+          ],
+          "minimum_open_tiles": 117
+        }
+      },
+      "footprints": [
+        {
+          "goal": "goldspire-main-town",
+          "bounds": [
+            38,
+            60,
+            60,
+            74
+          ],
+          "runs": [
+            [
+              46,
+              60,
+              49,
+              60
+            ],
+            [
+              46,
+              61,
+              48,
+              61
+            ],
+            [
+              46,
+              62,
+              48,
+              62
+            ],
+            [
+              44,
+              63,
+              49,
+              63
+            ],
+            [
+              42,
+              64,
+              52,
+              64
+            ],
+            [
+              41,
+              65,
+              53,
+              65
+            ],
+            [
+              41,
+              66,
+              53,
+              66
+            ],
+            [
+              42,
+              67,
+              55,
+              67
+            ],
+            [
+              42,
+              68,
+              56,
+              68
+            ],
+            [
+              42,
+              69,
+              57,
+              69
+            ],
+            [
+              59,
+              69,
+              59,
+              69
+            ],
+            [
+              42,
+              70,
+              60,
+              70
+            ],
+            [
+              43,
+              71,
+              54,
+              71
+            ],
+            [
+              57,
+              71,
+              60,
+              71
+            ],
+            [
+              45,
+              72,
+              53,
+              72
+            ],
+            [
+              60,
+              72,
+              60,
+              72
+            ],
+            [
+              46,
+              73,
+              51,
+              73
+            ],
+            [
+              46,
+              74,
+              48,
+              74
+            ]
+          ]
+        }
+      ],
+      "open_route_tiles": [
+        [
+          47,
+          55
+        ],
+        [
+          48,
+          55
+        ],
+        [
+          49,
+          55
+        ],
+        [
+          47,
+          57
+        ],
+        [
+          48,
+          57
+        ],
+        [
+          49,
+          57
+        ],
+        [
+          11,
+          51
+        ],
+        [
+          12,
+          51
+        ],
+        [
+          11,
+          68
+        ],
+        [
+          12,
+          68
+        ],
+        [
+          80,
+          57
+        ],
+        [
+          81,
+          57
+        ],
+        [
+          80,
+          73
+        ],
+        [
+          81,
+          73
+        ]
+      ]
+    },
+    "route": [
+      "Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.",
+      "Capture all153original open LowTown floor fields(38..60,60..74),all statically reachable. No placed room exists; no new room is required. Original40claimed trigger still opens the gate without changing its mechanics.",
+      "After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.",
+      "After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.",
+      "Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.",
+      "Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request."
+    ],
+    "runtime_limit": "Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tAlaric Penn lies dead on his own coin. Goldspire is yours."
+    }
   }
 }

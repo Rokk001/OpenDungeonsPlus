@@ -84,6 +84,8 @@ BRIEFING_MATCH["Stormhaven"] = {3: "yes: both actual stone bridges crossed in ei
 
 BRIEFING_MATCH["Cinderhollow"] = {3: "yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere", 4: "yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated"}
 
+BRIEFING_MATCH["Goldspire"] = {2: "yes: actual two-fighter buildup and own-heart protection", 3: "yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links", 4: "yes: actual Penn death inside the spire and all remaining foes"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1654,6 +1656,18 @@ def self_test(root):
             ("Cond\ttrigger\tdawn\nCond\tgoalmet", "Cond\ttime\t420\nCond\tgoalmet")):
         assert needle in cinder_grouped
         assert grouped_goal_errors(cinder_grouped.replace(needle, replacement), "Cinderhollow"), "Cinderhollow requirement weakening must fail: " + needle
+    goldspire = (root / "levels/campaign/Goldspire.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(goldspire, "Goldspire")
+    for needle, replacement in (
+            ("Cond\tregion\t1\tArmyGround\t>=\t2\t@fighters", "Cond\tregion\t1\tArmyGround\t>=\t2"),
+            ("Cond\tcrossed\t1\tMainSouthGate\tnorth\tafter\tsouthGateOpens", "Cond\tregion\t1\tSouthGate"),
+            ("Cond\tflag\tmainGateCrossed\t1", "Cond\ttrigger\tsouthGateOpens"),
+            ("Cond\tcrossed\t1\tMainWestLink\tnorth\tafter\tlinksReady", "Cond\tcrossed\t1\tMainWestLink\tnorth"),
+            ("Cond\tflag\tmainEastCrossed\t1", "Cond\ttrigger\tlinksOpen"),
+            ("Cond\tkilledin\tAlaricPenn\tOuterRing", "Cond\talive\tAlaricPenn\t0"),
+            ("Cond\tregion\t1\tWestWing", "Cond\tregion\t1\tYard")):
+        assert needle in goldspire
+        assert grouped_goal_errors(goldspire.replace(needle, replacement), "Goldspire"), "Goldspire requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 
