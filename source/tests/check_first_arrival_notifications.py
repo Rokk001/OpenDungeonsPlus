@@ -132,3 +132,17 @@ assert spawn.index("newCreature->setPosition(newCreature->getPosition());") < sp
 assert "if((nbSpawned > 0) && (spawnedNames == nullptr))" in spawn
 assert "warnHeroesComing();" in spawn
 print("Wave portals share first-arrival history without removing invasion warnings: PASS (static only)")
+
+# Existing start creatures and restored/replicated creatures are not new arrivals.
+assert "notifyCreatureArrival(" not in function(seat, "void Seat::initSeat(")
+creature = (ROOT / "source/entities/Creature.cpp").read_text(encoding="utf-8")
+for signature in ("bool Creature::importFromStream(",
+                  "Creature* Creature::getCreatureFromStream(",
+                  "Creature* Creature::getCreatureFromPacket(",
+                  "void Creature::importFromPacket(",
+                  "void Creature::updateFromPacket("):
+    restored = function(creature, signature)
+    assert "notifyCreatureArrival(" not in restored
+    assert "notifyNewCreatureType(" not in restored
+assert "notifyCreatureArrival(" not in function(seat, "bool Seat::importSeatFromStream(")
+print("Existing start creatures and save/network restoration do not emit arrival notices: PASS (static only)")
