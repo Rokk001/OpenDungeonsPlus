@@ -505,6 +505,7 @@ public:
     //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
     //! part, gives up after a while.
     void resumeBrawl();
+    //! \brief Applies damage and records actual hostile creature hits for regional script observers.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 

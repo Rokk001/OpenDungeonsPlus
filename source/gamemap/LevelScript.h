@@ -109,6 +109,7 @@
 //!   Cond    killedin <creatureName> <region>   # actual recorded death position is within that region
 //!   Cond    groundconnected <seatId> <x1> <y1> <x2> <y2>   # actual dry worker-walkable connection; never assumes digging
 //!   Cond    roomclaimed <seatId> <x1> <y1> <x2> <y2>   # every fixed footprint tile is open, fully claimed and in a room owned by the seat
+//!   Cond    attackedregion <attackingSeat> <targetSeat> <region>   # positive hostile creature damage inside the region
 //!   Cond    crossed <seatId> <region> north|south|east|west [after <trigger>]   # one living creature walks from entry bank across the whole region to the opposite bank
 //!   Cond    groundclaimed <seatId> <x1> <y1> <x2> <y2>   # fixed floor footprint fully claimed; no room construction required
 //!           # Region/creatures class filters also accept @fighters to exclude workers.
@@ -244,7 +245,8 @@ enum class LevelScriptConditionType
     roomFootprintClaimed,
     groundFootprintClaimed,
     carryingStone,
-    crossedRegion
+    crossedRegion,
+    attackedRegion
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.
@@ -548,6 +550,11 @@ public:
         const std::string& afterTrigger) const;
     //! \brief Discards an unfinished candidate when a fresh creature gets the same internal name.
     void clearCreatureCrossings(const std::string& creature);
+
+    //! \brief Records positive hostile creature damage at a target tile for matching region observers.
+    void observeRegionAttack(int32_t attackingSeat, int32_t targetSeat, int32_t x, int32_t y);
+    //! \brief True after this seat dealt actual creature damage to the target seat in the region.
+    bool wasRegionAttacked(int32_t attackingSeat, int32_t targetSeat, const std::string& region) const;
 
     //! \brief Observes an actual spawn instance without changing its name, party or behaviour.
     void observeSpawn(const std::string& trigger, int64_t actionIndex, const std::string& creatureName);

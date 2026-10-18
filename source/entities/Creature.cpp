@@ -4173,7 +4173,14 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
     if(wasAlive && (damageDone > 0.0))
+    {
         recordScriptEvent(*this, "attacked");
+        if(getIsOnServerMap() && creatureAttacking != nullptr &&
+           creatureAttacking->getSeat() != nullptr && getSeat() != nullptr && getPositionTile() != nullptr &&
+           !creatureAttacking->getSeat()->isAlliedSeat(getSeat()))
+            getGameMap()->getLevelScript().observeRegionAttack(creatureAttacking->getSeat()->getId(),
+                getSeat()->getId(), getPositionTile()->getX(), getPositionTile()->getY());
+    }
 
     if(mHp <= 0)
     {

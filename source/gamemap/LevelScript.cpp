@@ -389,6 +389,17 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mName = t[2];
         return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
     }
+    if(type == "attackedregion")
+    {
+        int32_t targetSeat;
+        if(t.size() != 5 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1 ||
+           !parseInt32(t[3], targetSeat) || targetSeat < 1 || targetSeat == cond.mSeatId)
+            return false;
+        cond.mNumber = targetSeat;
+        cond.mType = LevelScriptConditionType::attackedRegion;
+        cond.mName = t[4];
+        return true;
+    }
     if(type == "crossed")
     {
         if((t.size() != 5 && t.size() != 7) || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1 ||
@@ -969,6 +980,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
                 os << "reached\t" << c.mName << "\theart\t" << c.mSeatId;
             else
                 os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
+            break;
+        case LevelScriptConditionType::attackedRegion:
+            os << "attackedregion\t" << c.mSeatId << "\t" << c.mNumber << "\t" << c.mName;
             break;
         case LevelScriptConditionType::crossedRegion:
             os << "crossed\t" << c.mSeatId << "\t" << c.mName << "\t" << c.mName2;
@@ -2338,6 +2352,31 @@ void LevelScript::observeCrossingStep(const std::string& creature, int32_t seatI
                 progress.mY = toY;
                 mCrossingProgress.push_back(progress);
             }
+        }
+    }
+}
+
+//! \brief Uses existing saved event history for a seat-specific regional attack.
+bool LevelScript::wasRegionAttacked(int32_t attackingSeat, int32_t targetSeat, const std::string& region) const
+{
+    return getEventCount("Seat" + std::to_string(attackingSeat),
+        "attackedregion:" + std::to_string(targetSeat) + ":" + region) > 0;
+}
+
+//! \brief Observes a real positive hostile hit without substituting visits or attacks by other seats.
+void LevelScript::observeRegionAttack(int32_t attackingSeat, int32_t targetSeat, int32_t x, int32_t y)
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptCondition& condition : trigger.mConditions)
+        {
+            if(condition.mType != LevelScriptConditionType::attackedRegion || condition.mSeatId != attackingSeat ||
+               condition.mNumber != targetSeat || wasRegionAttacked(attackingSeat, targetSeat, condition.mName))
+                continue;
+            const LevelScriptRegion* region = getRegion(condition.mName);
+            if(region != nullptr && region->contains(x, y))
+                recordEvent("Seat" + std::to_string(attackingSeat),
+                    "attackedregion:" + std::to_string(targetSeat) + ":" + condition.mName);
         }
     }
 }

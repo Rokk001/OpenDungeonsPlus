@@ -1444,3 +1444,38 @@ BOOST_AUTO_TEST_CASE(crossing_directions_and_backtracking)
         BOOST_CHECK(!invalid.importFromStream(input));
     }
 }
+
+//! \brief A regional hit belongs to the attacking seat, target seat and actual impact region, including saves.
+BOOST_AUTO_TEST_CASE(regional_attack_attribution_and_save)
+{
+    LevelScript script;
+    std::istringstream input("Region Siege 33 30 42 42\n[Trigger]\nName fought\nMode once\n"
+        "Cond attackedregion 1 3 Siege\nAction message 1 fought\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    script.observeRegionAttack(2, 3, 38, 35);
+    script.observeRegionAttack(1, 2, 38, 35);
+    script.observeRegionAttack(1, 3, 32, 35);
+    BOOST_CHECK(!script.wasRegionAttacked(1, 3, "Siege"));
+    script.observeRegionAttack(1, 3, 38, 35);
+    BOOST_CHECK(script.wasRegionAttacked(1, 3, "Siege"));
+    BOOST_CHECK(!script.wasRegionAttacked(2, 3, "Siege"));
+    BOOST_CHECK(!script.wasRegionAttacked(1, 2, "Siege"));
+    BOOST_CHECK(!script.wasRegionAttacked(1, 3, "Other"));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    BOOST_CHECK(saved.str().find("Cond\tattackedregion\t1\t3\tSiege") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(restored.wasRegionAttacked(1, 3, "Siege"));
+    restored.clear();
+    BOOST_CHECK(!restored.wasRegionAttacked(1, 3, "Siege"));
+    for(const std::string condition : {"Cond attackedregion 0 3 Siege", "Cond attackedregion 1 1 Siege",
+        "Cond attackedregion 1 -3 Siege", "Cond attackedregion 1 2147483648 Siege", "Cond attackedregion 1 3"})
+    {
+        LevelScript invalid;
+        std::istringstream bad("[Trigger]\nName bad\nMode once\n" + condition +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(bad));
+    }
+}
