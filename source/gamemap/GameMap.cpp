@@ -1955,6 +1955,7 @@ void GameMap::updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn)
         newCreature->addParticleEffect("SummonWorker", 3);
         newCreature->createMesh();
         newCreature->setPosition(spawnPosition);
+        seat->notifyCreatureArrival(classToSpawn->getClassName());
         ++seat->mNumCreaturesWorkers;
     }
 }

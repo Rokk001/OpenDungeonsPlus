@@ -907,6 +907,7 @@ private:
 
     //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
     //! until the seat has four workers. A seat without a living dungeon heart creates none.
+    //! Announces the worker class only on its first successful arrival.
     void updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn);
 
     //! \brief Checks each turn whether an enemy creature is within range of the seat's

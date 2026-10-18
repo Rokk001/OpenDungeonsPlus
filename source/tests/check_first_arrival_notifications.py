@@ -91,3 +91,16 @@ assert conversion.index("creature->changeSeat(player->getSeat());") < conversion
 assert conversion.index("creature->addCreatureEffect(") < conversion.index(notice)
 assert conversion.index("takeMana(") < conversion.index(notice)
 print("Successful conversions share saved first-arrival history: PASS (static only)")
+
+# Heart replacements and worker gifts must not bypass the first-arrival history.
+for path, signature, class_name in (
+    ("source/gamemap/GameMap.cpp", "void GameMap::updateSeatAutoWorkers(", "classToSpawn"),
+    ("source/giftboxes/GiftBoxBonus.cpp", "void GiftBoxBonus::applyBonus(", "workerClass"),
+):
+    source = (ROOT / path).read_text(encoding="utf-8")
+    spawn = function(source, signature)
+    notice = f"notifyCreatureArrival({class_name}->getClassName())"
+    assert spawn.count(notice) == 1
+    assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
+    assert spawn.index("newCreature->setPosition(spawnPosition);") < spawn.index(notice)
+print("Heart workers and worker gifts share saved first-arrival history: PASS (static only)")
