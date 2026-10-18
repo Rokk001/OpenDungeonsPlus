@@ -17,8 +17,11 @@
 
 #include "utils/RunLevelTest.h"
 
+#include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
+#include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -35,10 +38,12 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <map>
 #include <mutex>
 #include <sstream>
 #include <thread>
@@ -69,6 +74,178 @@ namespace
     std::vector<double> sFrameTimes;
     std::vector<double> sTurnTimes;
     std::mutex sTimeMutex;
+
+    //! Scenario that places own fighters near an enemy and writes their combat state after every turn
+    const std::string SCENARIO_IGNORED_ENEMIES = "ignored-enemies";
+    //! Enemy creature of the level the scenario fighters are placed near
+    const std::string SCENARIO_ENEMY_NAME = "PostWatch1";
+    //! Class and number of the fighters the scenario places for the human seat
+    const std::string SCENARIO_FIGHTER_CLASS = "Goblin";
+    const uint32_t SCENARIO_FIGHTERS = 4;
+    //! Squared tile distances from the enemy within which the scenario fighters are placed
+    const int32_t SCENARIO_MIN_DIST_SQUARED = 16;
+    const int32_t SCENARIO_MAX_DIST_SQUARED = 49;
+    //! A fighter is written when an enemy creature is within this squared tile distance
+    const int32_t SCENARIO_LOG_DIST_SQUARED = 225;
+    //! Output file of the scenario in the user data folder
+    const std::string SCENARIO_FILE = "run-level-scenario.txt";
+
+    std::string sScenario;
+    //! Server thread only: target each creature chose in its fight action during the current turn
+    std::map<std::string, std::string> sFightTargets;
+
+    //! \brief Squared distance in tiles between two tiles.
+    int32_t squaredTileDistance(const Tile& tile1, const Tile& tile2)
+    {
+        int32_t dx = tile1.getX() - tile2.getX();
+        int32_t dy = tile1.getY() - tile2.getY();
+        return dx * dx + dy * dy;
+    }
+
+    //! \brief Sums the threat of the fighters in the list, the creature given as skip is left out.
+    //! Counted like the fear of stronger enemy groups counts it (workers do not count).
+    double scenarioThreat(const std::vector<GameEntity*>& entities, const Creature* skip)
+    {
+        double threat = 0.0;
+        for(GameEntity* entity : entities)
+        {
+            if(entity->getObjectType() != GameEntityType::creature)
+                continue;
+
+            const Creature* other = static_cast<const Creature*>(entity);
+            if((other == skip) || other->getDefinition()->isWorker())
+                continue;
+
+            threat += other->getThreat();
+        }
+        return threat;
+    }
+
+    //! \brief Places the scenario fighters of the human seat near the scenario enemy and starts the output file.
+    //! \return An empty string on success, otherwise the reason why the scenario cannot be set up.
+    std::string setupIgnoredEnemiesScenario(GameMap& gameMap, Seat* humanSeat)
+    {
+        Creature* enemy = gameMap.getCreature(SCENARIO_ENEMY_NAME);
+        if(enemy == nullptr)
+            return "no creature " + SCENARIO_ENEMY_NAME + " in the level";
+
+        Tile* enemyTile = enemy->getPositionTile();
+        if(enemyTile == nullptr)
+            return SCENARIO_ENEMY_NAME + " is not on the map";
+
+        const CreatureDefinition* definition = gameMap.getClassDescription(SCENARIO_FIGHTER_CLASS);
+        if(definition == nullptr)
+            return "no creature class " + SCENARIO_FIGHTER_CLASS;
+
+        std::ofstream out((ResourceManager::getSingleton().getUserDataPath() + SCENARIO_FILE).c_str(), std::ios::trunc);
+        out << "scenario " << SCENARIO_IGNORED_ENEMIES << " enemy=" << SCENARIO_ENEMY_NAME
+            << " pos=" << enemyTile->getX() << "," << enemyTile->getY() << "\n";
+
+        uint32_t placed = 0;
+        int radius = static_cast<int>(std::sqrt(static_cast<double>(SCENARIO_MAX_DIST_SQUARED)));
+        std::vector<Tile*> tiles = gameMap.circularRegion(enemyTile->getX(), enemyTile->getY(), radius);
+        for(Tile* tile : tiles)
+        {
+            if(placed >= SCENARIO_FIGHTERS)
+                break;
+
+            int32_t dist = squaredTileDistance(*tile, *enemyTile);
+            if((dist < SCENARIO_MIN_DIST_SQUARED) || (dist > SCENARIO_MAX_DIST_SQUARED))
+                continue;
+
+            if(tile->isFullTile() || !gameMap.pathExists(enemy, enemyTile, tile))
+                continue;
+
+            Ogre::Vector3 position(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()), 0.0f);
+            Creature* fighter = new Creature(&gameMap, definition, humanSeat, position);
+            fighter->setLevel(1);
+            fighter->setHP(fighter->getMaxHp());
+            fighter->addToGameMap();
+            fighter->createMesh();
+            fighter->setPosition(fighter->getPosition());
+            out << "placed " << fighter->getName() << " pos=" << tile->getX() << "," << tile->getY() << "\n";
+            ++placed;
+        }
+
+        if(placed == 0)
+            return "no reachable free tile near " + SCENARIO_ENEMY_NAME;
+
+        return std::string();
+    }
+
+    //! \brief Writes one line per living fighter that has an enemy creature nearby: position, health, knock out
+    //! counter, mood, action stack, the enemies it decided with this turn, the threat of both sides and the
+    //! target its fight action chose this turn.
+    void writeIgnoredEnemiesTurn(GameMap& gameMap)
+    {
+        std::ofstream out((ResourceManager::getSingleton().getUserDataPath() + SCENARIO_FILE).c_str(), std::ios::app);
+        for(Creature* creature : gameMap.getCreatures())
+        {
+            if(!creature->getIsOnMap() || (creature->getHP() <= 0.0) || creature->getDefinition()->isWorker())
+                continue;
+
+            Tile* myTile = creature->getPositionTile();
+            if(myTile == nullptr)
+                continue;
+
+            int32_t nearest = -1;
+            for(Creature* other : gameMap.getCreatures())
+            {
+                if(!other->getIsOnMap() || (other->getHP() <= 0.0) || other->getSeat()->isAlliedSeat(creature->getSeat()))
+                    continue;
+
+                Tile* otherTile = other->getPositionTile();
+                if(otherTile == nullptr)
+                    continue;
+
+                int32_t dist = squaredTileDistance(*myTile, *otherTile);
+                if((nearest < 0) || (dist < nearest))
+                    nearest = dist;
+            }
+            if((nearest < 0) || (nearest > SCENARIO_LOG_DIST_SQUARED))
+                continue;
+
+            // The lists the creature decided with this turn (the const accessors do not compute them again)
+            const Creature& decided = *creature;
+            std::ostringstream line;
+            line << "turn=" << gameMap.getTurnNumber() << " name=" << creature->getName()
+                << " seat=" << creature->getSeat()->getId() << std::fixed << std::setprecision(2)
+                << " pos=" << creature->getPosition().x << "," << creature->getPosition().y
+                << " hp=" << creature->getHP() << "/" << creature->getMaxHp()
+                << " ko=" << creature->getKoTurnCounter()
+                << " mood=" << static_cast<int32_t>(creature->getMoodValue())
+                << " moving=" << (creature->isMoving() ? 1 : 0)
+                << " nearestEnemyDist2=" << nearest << " actions=";
+            for(const std::unique_ptr<CreatureAction>& action : decided.getActions())
+                line << CreatureAction::toString(action->getType()) << ":" << action->getNbTurns() << ",";
+
+            line << " visibleEnemies=";
+            for(GameEntity* entity : decided.getVisibleEnemyObjects())
+            {
+                line << entity->getName();
+                Tile* entityTile = entity->getPositionTile();
+                if(entityTile != nullptr)
+                    line << "(dist2=" << squaredTileDistance(*myTile, *entityTile);
+                else
+                    line << "(dist2=?";
+
+                if(entity->getObjectType() == GameEntityType::creature)
+                {
+                    const Creature* enemy = static_cast<const Creature*>(entity);
+                    line << " hp=" << enemy->getHP() << " ko=" << enemy->getKoTurnCounter();
+                }
+                line << "),";
+            }
+
+            line << " threatOwn=" << (creature->getThreat() + scenarioThreat(decided.getVisibleAlliedObjects(), creature))
+                << " threatEnemy=" << scenarioThreat(decided.getVisibleEnemyObjects(), nullptr);
+
+            std::map<std::string, std::string>::const_iterator target = sFightTargets.find(creature->getName());
+            line << " fightTarget=" << ((target != sFightTargets.end()) ? target->second : std::string("-"));
+            out << line.str() << "\n";
+        }
+        sFightTargets.clear();
+    }
 
     //! Average and 95th percentile of the values, scaled by factor
     std::string describeTimes(std::vector<double>& values, double factor)
@@ -173,9 +350,10 @@ namespace
     }
 }
 
-void RunLevelTest::configure(const std::string& levelFile, int32_t seconds, uint32_t seed)
+void RunLevelTest::configure(const std::string& levelFile, int32_t seconds, uint32_t seed, const std::string& scenario)
 {
     sSeed = seed;
+    sScenario = scenario;
     sLevelFile = levelFile;
     sLevelName = boost::filesystem::path(levelFile).filename().string();
     sSeconds = seconds;
@@ -277,6 +455,24 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
         std::cout << "GOALS registered=" << goalCount << std::endl;
     }
 
+    if(firstTurn && !sScenario.empty())
+    {
+        if(sScenario != SCENARIO_IGNORED_ENEMIES)
+        {
+            fail(codeUsage, "usage error: unknown scenario " + sScenario);
+            return;
+        }
+
+        std::string error = setupIgnoredEnemiesScenario(gameMap, humanSeat);
+        if(!error.empty())
+        {
+            fail(codeRunError, "scenario error: " + error);
+            return;
+        }
+    }
+    if(sScenario == SCENARIO_IGNORED_ENEMIES)
+        writeIgnoredEnemiesTurn(gameMap);
+
     std::string played = Helper::toString(static_cast<int64_t>(turn / ODApplication::turnsPerSecond)) + " s game time";
     if(gameMap.seatIsAWinner(humanSeat))
     {
@@ -353,4 +549,13 @@ void RunLevelTest::onFrame(double seconds)
 
     std::lock_guard<std::mutex> lock(sTimeMutex);
     sFrameTimes.push_back(seconds);
+}
+
+//! \brief Remembers the fight target of the creature for the scenario line of the current turn.
+void RunLevelTest::onFightTarget(const Creature& creature, const GameEntity& target, bool attackNow)
+{
+    if(sScenario.empty() || sFinished.load())
+        return;
+
+    sFightTargets[creature.getName()] = target.getName() + (attackNow ? ":attack" : ":approach");
 }
