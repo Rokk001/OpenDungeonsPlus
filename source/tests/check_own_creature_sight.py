@@ -38,3 +38,26 @@ print("Own-creature sight ages advance on simulation passes and preserve their a
 init = function("source/game/Seat.cpp", "void Seat::initSeat()")
 assert init.index("if(tile == nullptr)") < init.index("mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns")
 assert "getMapSizeX()" not in load[load.index('if(str == "[OwnCreatureSightAges]")'):]
+
+# Delayed fog is a separate presentation state; ordinary visibility is not extended.
+notify = function("source/game/Seat.cpp", "void Seat::sendVisibleTiles()")
+assert "std::ceil(30.0 * ODApplication::turnsPerSecond)" in notify
+assert "knownOwner != this && !isAlliedSeat(knownOwner)" in notify
+assert "!knownOwner->isRogueSeat()" in notify
+assert "if(enemyFog != p.second.mEnemyFogNotified)" in notify
+assert notify.index("fogChanges.push_back") < notify.index("if(p.second.mVisionTurnCurrent == p.second.mVisionTurnLast)")
+assert "ServerNotificationType::enemyTerritoryFog, getPlayer()" in notify
+client = (ROOT / "source/network/ODClient.cpp").read_text(encoding="utf-8")
+packet = client[client.index("case ServerNotificationType::enemyTerritoryFog:"):client.index("case ServerNotificationType::refreshTiles:")]
+assert "tile->setEnemyTerritoryFog(fogged)" in packet
+assert "setLocalPlayerHasVision" not in packet and "setEverVisible" not in packet
+assert "tile->refreshMesh(NodeType::MTILES_NODE, gameMap)" in packet
+print("Thirty-second enemy-only fog changes reach only the owning client without extending real sight: PASS (static only)")
+
+render = function("source/render/RenderManager.cpp", "void RenderManager::rrRefreshTile(")
+cloud = render[render.index("// Only previously discovered enemy territory receives") :]
+assert "if(tile.getEverVisible() && tileMeshNode != nullptr)" in cloud
+assert "tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() == nullptr" in cloud
+assert '!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr' in cloud
+assert 'tile.setFogOfWarCloud(nullptr)' in cloud
+print("Previously explored enemy clouds follow authoritative fog changes without covering never-seen earth: PASS (static only)")

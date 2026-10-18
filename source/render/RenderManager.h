@@ -166,9 +166,10 @@ public:
     void cleanUp();
     
     //Render request functions
-    //! \brief Refreshes tile geometry, keeping never-seen ground hidden behind a cloud-free earth surface.
+    //! \brief Refreshes earth geometry and the delayed enemy fog while keeping never-seen ground cloud-free.
     void rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt = NodeType::MTILES_NODE);
     void rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPlayer, NodeType nt = NodeType::MTILES_NODE);
+    //! \brief Destroys tile render objects and clears its delayed fog cloud reference.
     void rrDestroyTile(Tile& tile, NodeType nt = NodeType::MTILES_NODE);
     void rrTemporalMarkTile(Tile* curTile);
     void rrDetachEntity(GameEntity* curEntity, bool really_do = true);

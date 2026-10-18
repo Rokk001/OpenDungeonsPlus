@@ -2975,6 +2975,23 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
     }
 
+    // Only previously discovered enemy territory receives the delayed fog cloud.
+    if(tile.getEverVisible() && tileMeshNode != nullptr)
+    {
+        if(tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() == nullptr)
+        {
+            tile.setFogOfWarCloud(mInstanceManagerCloud->createInstancedEntity("Fog"));
+            tileMeshNode->attachObject(tile.getFogOfWarCloud());
+            tile.getFogOfWarCloud()->setPosition(tile.getPosition());
+        }
+        else if(!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr)
+        {
+            tileMeshNode->detachObject(tile.getFogOfWarCloud());
+            mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
+            tile.setFogOfWarCloud(nullptr);
+        }
+    }
+
     // We rescale and set the orientation that may have changed
     if(tileMeshNode != nullptr)
     {
@@ -3164,7 +3181,10 @@ void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
     if(tile.getFogOfWarMesh())
         mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
     if(tile.getFogOfWarCloud())
+    {
         mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
+        tile.setFogOfWarCloud(nullptr);
+    }
 }
 
 void RenderManager::rrTemporalMarkTile(Tile* curTile)

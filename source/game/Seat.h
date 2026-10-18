@@ -67,6 +67,8 @@ public:
     bool mVisionTurnCurrent;
     //! Simulation turns since this seat's own active creature last saw the tile; -1 means never.
     int64_t mOwnCreatureSightAgeTurns;
+    //! Last fog state sent to this seat, used to send only changes.
+    bool mEnemyFogNotified;
     bool mEverVisited;
     Building* mBuilding;
     
@@ -292,6 +294,7 @@ public:
     void refreshSeatVisualDebug();
 
     //! Sends a message to the player on this seat to refresh the list of tiles he has vision on
+    //! \brief Sends current visibility and changes to the delayed enemy-territory fog state.
     void sendVisibleTiles();
 
     //! \brief Client side to display the tile this seat has vision on

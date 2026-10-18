@@ -16,6 +16,7 @@
  */
 
 #include "game/Seat.h"
+#include "ODApplication.h"
 
 #include "ai/KeeperAIType.h"
 #include "entities/Building.h"
@@ -51,6 +52,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <cmath>
 #include <istream>
 #include <ostream>
 
@@ -71,6 +73,7 @@ TileStateNotified::TileStateNotified():
     mVisionTurnLast(false),
     mVisionTurnCurrent(false),
     mOwnCreatureSightAgeTurns(-1),
+    mEnemyFogNotified(false),
     mBuilding(nullptr)
 {
 }
@@ -564,6 +567,7 @@ void Seat::initSeat()
             }
 
             mTilesStates[tile].mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns;
+            mTilesStates[tile].mSeatIdOwner = p.second.mSeatIdOwner;
 
             // We check if the tile is marked
             if(p.second.mMarkedForDigging)
@@ -924,10 +928,21 @@ void Seat::sendVisibleTiles()
         ServerNotificationType::refreshVisibleTiles, getPlayer());
     std::vector<Tile*> tilesVisionGained;
     std::vector<Tile*> tilesVisionLost;
+    std::vector<std::pair<Tile*, bool>> fogChanges;
     
     serverNotification->mPacket << NodeType::MTILES_NODE;
         for(std::pair<Tile* const, TileStateNotified> &p : mTilesStates)
         {
+            Seat* knownOwner = mGameMap->getSeatById(p.second.mSeatIdOwner);
+            const bool enemyFog = knownOwner != nullptr && !knownOwner->isRogueSeat() &&
+                knownOwner != this && !isAlliedSeat(knownOwner) &&
+                p.second.mOwnCreatureSightAgeTurns >= static_cast<int64_t>(std::ceil(30.0 * ODApplication::turnsPerSecond));
+            if(enemyFog != p.second.mEnemyFogNotified)
+            {
+                p.second.mEnemyFogNotified = enemyFog;
+                fogChanges.push_back(std::make_pair(p.first, enemyFog));
+            }
+
             if(p.second.mVisionTurnCurrent == p.second.mVisionTurnLast)
                 continue;
 
@@ -960,6 +975,18 @@ void Seat::sendVisibleTiles()
         mGameMap->tileToPacket(serverNotification->mPacket, tile);
     }
     ODServer::getSingleton().queueServerNotification(serverNotification);
+
+    if(!fogChanges.empty())
+    {
+        ServerNotification* fogNotification = new ServerNotification(ServerNotificationType::enemyTerritoryFog, getPlayer());
+        fogNotification->mPacket << static_cast<uint32_t>(fogChanges.size());
+        for(const auto& change : fogChanges)
+        {
+            mGameMap->tileToPacket(fogNotification->mPacket, change.first);
+            fogNotification->mPacket << change.second;
+        }
+        ODServer::getSingleton().queueServerNotification(fogNotification);
+    }
 
 
     nbTiles =0;
