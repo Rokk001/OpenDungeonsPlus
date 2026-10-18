@@ -10775,5 +10775,591 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours."
     }
+  },
+  "Kingsfall": {
+    "goals": {
+      "kingsfall-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart and cross a guarded lava bridge.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tflag\tmainRavineCrossed\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "kingsfall-main-champions": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Capture or convert Edda, Brann and Wick alive.",
+        "completion": "mainChampions",
+        "conditions": [
+          "Cond\theld\t1\tFalconerEdda",
+          "Cond\theld\t1\tHuntsmanBrann",
+          "Cond\theld\t1\tSquireWick"
+        ],
+        "mode": "repeat\t0"
+      },
+      "kingsfall-main-army": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Gather 12 creatures at your heart.",
+        "completion": "mainArmy",
+        "conditions": [
+          "Cond\tcreaturesatheart\t1\t>=\t12"
+        ],
+        "mode": "repeat\t0"
+      },
+      "kingsfall-main-court": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Prince Aurel and his court.",
+        "completion": "mainCourt",
+        "conditions": [
+          "Cond\tevent\tPrinceAurel\tkilled",
+          "Cond\tcreatures\t3\t<=\t0"
+        ],
+        "mode": "repeat\t0"
+      },
+      "kingsfall-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 4000 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t4000"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "kingsfall-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "crossMainWestSpan": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainWestSpan\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRavineCrossed\t1"
+        ]
+      },
+      "crossMainMiddleSpan": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainMiddleSpan\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRavineCrossed\t1"
+        ]
+      },
+      "crossMainEastSpan": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainEastSpan\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tmainRavineCrossed\t1"
+        ]
+      },
+      "lostFalconerEdda": {
+        "conditions": [
+          "Cond\tevent\tFalconerEdda\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "kingsfall-main-champions",
+            "failed"
+          ]
+        ]
+      },
+      "lostHuntsmanBrann": {
+        "conditions": [
+          "Cond\tevent\tHuntsmanBrann\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "kingsfall-main-champions",
+            "failed"
+          ]
+        ]
+      },
+      "lostSquireWick": {
+        "conditions": [
+          "Cond\tevent\tSquireWick\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "kingsfall-main-champions",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tkingsfall-main-heart\treached",
+          "Cond\tobjective\t1\tkingsfall-main-champions\treached",
+          "Cond\tobjective\t1\tkingsfall-main-army\treached",
+          "Cond\tobjective\t1\tkingsfall-main-court\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "hunt": [
+        "Cond\ttime\t3"
+      ],
+      "hollowHeld": [
+        "Cond\tclaimed\t1\tHollow\t30"
+      ],
+      "meadows": [
+        "Cond\tregion\t1\tSouthMeadows"
+      ],
+      "ravineSeen": [
+        "Cond\tregion\t1\tRavine"
+      ],
+      "centreSeen": [
+        "Cond\tregion\t1\tCentre"
+      ],
+      "westSeen": [
+        "Cond\tregion\t1\tWestLodge"
+      ],
+      "eastSeen": [
+        "Cond\tregion\t1\tEastLodge"
+      ],
+      "cacheSeen": [
+        "Cond\tregion\t1\tCache"
+      ],
+      "keepSeen": [
+        "Cond\tregion\t1\tKeep"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t3000"
+      ],
+      "horn1": [
+        "Cond\ttime\t500"
+      ],
+      "horn2": [
+        "Cond\ttime\t720"
+      ],
+      "horn3": [
+        "Cond\ttime\t940"
+      ],
+      "horn4": [
+        "Cond\ttime\t1160"
+      ],
+      "horn5": [
+        "Cond\ttime\t1380"
+      ],
+      "horn6": [
+        "Cond\ttime\t1600"
+      ],
+      "horn7": [
+        "Cond\ttime\t1820"
+      ],
+      "horn8": [
+        "Cond\ttime\t2040"
+      ],
+      "horn9": [
+        "Cond\ttime\t2260"
+      ],
+      "horn10": [
+        "Cond\ttime\t2480"
+      ],
+      "horn11": [
+        "Cond\ttime\t2700"
+      ],
+      "horn12": [
+        "Cond\ttime\t2920"
+      ],
+      "horn13": [
+        "Cond\ttime\t3140"
+      ],
+      "horn14": [
+        "Cond\ttime\t3360"
+      ],
+      "horn15": [
+        "Cond\ttime\t3580"
+      ],
+      "horn16": [
+        "Cond\ttime\t3800"
+      ],
+      "horn17": [
+        "Cond\ttime\t4020"
+      ],
+      "horn18": [
+        "Cond\ttime\t4240"
+      ],
+      "goalArmyAtHeart": [
+        "Cond\tcreaturesatheart\t1\t>=\t12"
+      ],
+      "cacheOpensSlain": [
+        "Cond\talive\tHuntsmanBrann\t0",
+        "Cond\ttime\t5"
+      ],
+      "cacheOpensYours": [
+        "Cond\towns\t1\tHuntsmanBrann"
+      ],
+      "championFalconerEdda": [
+        "Cond\towns\t1\tFalconerEdda"
+      ],
+      "championHuntsmanBrann": [
+        "Cond\towns\t1\tHuntsmanBrann"
+      ],
+      "championSquireWick": [
+        "Cond\towns\t1\tSquireWick"
+      ],
+      "princeWounded": [
+        "Cond\thealth\tPrinceAurel\t<=\t35"
+      ],
+      "centreWell": [
+        "Cond\tslabs\t1\tCentre\tclaimed\t>=\t25"
+      ],
+      "cacheKey": [
+        "Cond\ttime\t4"
+      ],
+      "cacheKeyUsed": [
+        "Cond\tflag\tcacheOpen\t0",
+        "Cond\tstone\tCacheGate\t>=\t1"
+      ],
+      "cacheLate": [
+        "Cond\ttime\t3000",
+        "Cond\tflag\tcacheOpen\t0"
+      ]
+    },
+    "preserved_actions": {
+      "hunt": [
+        "Action\tmessage\t1\tKingsfall, master, where Prince Aurel hunts and where he has made his stand. His champions are Falconer Edda, Huntsman Brann and Squire Wick, and a keeper who wants the crown must take them alive.",
+        "Action\tobjectiveid\t1\tkingsfall-o01\tCapture or convert Edda, Brann and Wick.",
+        "Action\tobjectiveid\t1\tkingsfall-o02\tDefeat Prince Aurel and his court.",
+        "Action\tobjectiveid\t1\tkingsfall-o03\tGather at least 12 creatures at your heart."
+      ],
+      "hollowHeld": [
+        "Action\tmessage\t1\tThe hollow is yours. Your prison and torture chamber are ready for guests. Cross the lava by the stone spans to the north.",
+        "Action\treveal\t1\tSouthMeadows",
+        "Action\treveal\t1\tRavine"
+      ],
+      "meadows": [
+        "Action\tmessage\t1\tThe south meadows. The prince lets his hunting parties range here.",
+        "Action\tspawn\t3\t48\t55\t1\tKnight:4\tElf:4\tMonk:3\tAdventurer:3"
+      ],
+      "ravineSeen": [
+        "Action\tmessage\t1\tThe lava ravine. Three stone spans cross it and every one of them is watched.",
+        "Action\treveal\t1\tCentre"
+      ],
+      "centreSeen": [
+        "Action\tmessage\t1\tThe royal glade. Squire Wick stands here, the youngest of the champions. Drop him in your prison and your creatures will do the rest.",
+        "Action\treveal\t1\tWestLodge",
+        "Action\treveal\t1\tEastLodge",
+        "Action\tspawn\t3\t48\t31\t1\tKnight:5\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "westSeen": [
+        "Action\tmessage\t1\tThe west lodge. Falconer Edda keeps her birds here and does not leave them.",
+        "Action\treveal\t1\tKeep"
+      ],
+      "eastSeen": [
+        "Action\tmessage\t1\tThe east lodge. Huntsman Brann guards a cache walled up in the north-east corner.",
+        "Action\treveal\t1\tCache",
+        "Action\treveal\t1\tKeep"
+      ],
+      "cacheSeen": [
+        "Action\tmessage\t1\tThe prince hid his hunting purse here. It will pay for a larger prison.",
+        "Action\tgold\t1\t2000"
+      ],
+      "keepSeen": [
+        "Action\tmessage\t1\tThe keep of the prince. The last of his guard stands between you and the court.",
+        "Action\tspawn\t3\t50\t19\t1\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:4"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe grounds are paying. A bigger dungeon needs more gold.",
+        "Action\tgold\t1\t600"
+      ],
+      "horn1": [
+        "Action\tmessage\t1\tA hunting party is sounding its horns.",
+        "Action\tspawn\t3\t45\t22\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "horn2": [
+        "Action\tmessage\t1\tRiders of the court are crossing a span.",
+        "Action\tspawn\t3\t21\t29\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "horn3": [
+        "Action\tmessage\t1\tThe prince has called out his foresters.",
+        "Action\tspawn\t3\t75\t29\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "horn4": [
+        "Action\tmessage\t1\tA column of the guard is on the trail.",
+        "Action\tspawn\t3\t48\t44\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "horn5": [
+        "Action\tmessage\t1\tHounds and spearmen are coming down from the lodges.",
+        "Action\tspawn\t3\t19\t54\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
+      ],
+      "horn6": [
+        "Action\tmessage\t1\tThe heralds have summoned the court.",
+        "Action\tspawn\t3\t79\t53\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "horn7": [
+        "Action\tmessage\t1\tA hunting party is sounding its horns.",
+        "Action\tspawn\t3\t45\t22\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "horn8": [
+        "Action\tmessage\t1\tRiders of the court are crossing a span.",
+        "Action\tspawn\t3\t21\t29\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "horn9": [
+        "Action\tmessage\t1\tThe prince has called out his foresters.",
+        "Action\tspawn\t3\t75\t29\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "horn10": [
+        "Action\tmessage\t1\tA column of the guard is on the trail.",
+        "Action\tspawn\t3\t48\t44\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "horn11": [
+        "Action\tmessage\t1\tHounds and spearmen are coming down from the lodges.",
+        "Action\tspawn\t3\t19\t54\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "horn12": [
+        "Action\tmessage\t1\tThe heralds have summoned the court.",
+        "Action\tspawn\t3\t79\t53\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "horn13": [
+        "Action\tmessage\t1\tA hunting party is sounding its horns.",
+        "Action\tspawn\t3\t45\t22\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "horn14": [
+        "Action\tmessage\t1\tRiders of the court are crossing a span.",
+        "Action\tspawn\t3\t21\t29\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "horn15": [
+        "Action\tmessage\t1\tThe prince has called out his foresters.",
+        "Action\tspawn\t3\t75\t29\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
+      ],
+      "horn16": [
+        "Action\tmessage\t1\tA column of the guard is on the trail.",
+        "Action\tspawn\t3\t48\t44\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "horn17": [
+        "Action\tmessage\t1\tHounds and spearmen are coming down from the lodges.",
+        "Action\tspawn\t3\t19\t54\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "horn18": [
+        "Action\tmessage\t1\tThe heralds have summoned the court.",
+        "Action\tspawn\t3\t79\t53\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
+      ],
+      "goalArmyAtHeart": [
+        "Action\tobjectivestate\t1\tkingsfall-o03\treached"
+      ],
+      "cacheOpensSlain": [
+        "Action\tmessage\t1\tHuntsman Brann is down and the cache key he wore lies where he fell. Carry it to the cache wall at the foot of the east lodge to break it open."
+      ],
+      "cacheOpensYours": [
+        "Action\tmessage\t1\tThe masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.",
+        "Action\tterrain\t89\t10\t89\t19\tpath",
+        "Action\tsetflag\tcacheOpen\t1"
+      ],
+      "championFalconerEdda": [
+        "Action\tmessage\t1\tFalconer Edda has taken your side.",
+        "Action\taddflag\tchampions\t1"
+      ],
+      "championHuntsmanBrann": [
+        "Action\tmessage\t1\tHuntsman Brann has taken your side.",
+        "Action\taddflag\tchampions\t1"
+      ],
+      "championSquireWick": [
+        "Action\tmessage\t1\tSquire Wick has taken your side.",
+        "Action\taddflag\tchampions\t1"
+      ],
+      "princeWounded": [
+        "Action\tmessage\t1\tPrince Aurel is badly hurt. His court is rallying around him and the guard of the keep is called out.",
+        "Action\tspawn\t3\t48\t14\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
+      ],
+      "centreWell": [
+        "Action\tmessage\t1\tThe royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a worker.",
+        "Action\tterrain\t49\t35\t49\t35\tmanawell"
+      ],
+      "cacheKey": [
+        "Action\tstoneattach\tHuntsmanBrann"
+      ],
+      "cacheKeyUsed": [
+        "Action\tmessage\t1\tThe key turns in the old lock. The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.",
+        "Action\tterrain\t89\t10\t89\t19\tpath",
+        "Action\tsetflag\tcacheOpen\t1"
+      ],
+      "cacheLate": [
+        "Action\tmessage\t1\tThe masons have given up guarding the cache and broken the wall open from inside. A passage runs up from the east lodge to the prince's hunting purse.",
+        "Action\tterrain\t89\t10\t89\t19\tpath",
+        "Action\tsetflag\tcacheOpen\t1"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "MainWestSpan": {
+          "bounds": [
+            18,
+            49,
+            19,
+            53
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "MainMiddleSpan": {
+          "bounds": [
+            49,
+            39,
+            50,
+            43
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "MainEastSpan": {
+          "bounds": [
+            80,
+            48,
+            81,
+            52
+          ],
+          "minimum_potential_tiles": 10
+        }
+      },
+      "crossing_paths": {
+        "MainWestSpan": {
+          "direction": "north",
+          "path": [
+            [
+              19,
+              54
+            ],
+            [
+              19,
+              53
+            ],
+            [
+              19,
+              52
+            ],
+            [
+              19,
+              51
+            ],
+            [
+              19,
+              50
+            ],
+            [
+              19,
+              49
+            ],
+            [
+              19,
+              48
+            ]
+          ]
+        },
+        "MainMiddleSpan": {
+          "direction": "north",
+          "path": [
+            [
+              50,
+              44
+            ],
+            [
+              50,
+              43
+            ],
+            [
+              50,
+              42
+            ],
+            [
+              50,
+              41
+            ],
+            [
+              50,
+              40
+            ],
+            [
+              50,
+              39
+            ],
+            [
+              50,
+              38
+            ]
+          ]
+        },
+        "MainEastSpan": {
+          "direction": "north",
+          "path": [
+            [
+              81,
+              53
+            ],
+            [
+              81,
+              52
+            ],
+            [
+              81,
+              51
+            ],
+            [
+              81,
+              50
+            ],
+            [
+              81,
+              49
+            ],
+            [
+              81,
+              48
+            ],
+            [
+              81,
+              47
+            ]
+          ]
+        }
+      },
+      "named_creatures": [
+        "PrinceAurel",
+        "FalconerEdda",
+        "HuntsmanBrann",
+        "SquireWick"
+      ],
+      "minimum_mineable_gold": 4000
+    },
+    "route": [
+      "Protect the heart and physically cross any actual watched lava span northward:west(18..19,49..53),middle(49..50,39..43),east(80..81,48..52). Each original bridge has9roomfields plus one natural dry gap; do not invent rectangular10field bridge rooms. Explicit open ground/bridge paths follow x19/y54..48,x50/y44..38,x81/y53..47. Any one original route qualifies.",
+      "Keep all three named champions alive and currently held by seat1:FalconerEdda,HuntsmanBrann,SquireWick. Each may be either actually jailed by seat1 or converted to seat1 with no foreign jailer. Escape or recapture removes current success; actual death permanently fails the task. Historical champions flags alone do not count.",
+      "Currently gather at least12own living creatures on actual own-heart tiles. Global army size or an old visit is not enough. Existing25field temple and own portal/worker recruitment allow staging; original start has5workers and7000gold. Foreign-seat prisoners do not become own creatures merely by captivity.",
+      "Actually kill PrinceAurel and clear living court troops of seat3,which contains all court guards and horn waves. Do not require seat2emptiness:the three live captured champions retain seat2,and must not block victory. This level has no KillAllEnemies goal or hostile temple/portal requirement.",
+      "Optionally mine4000actualgold from79000finitepotentialgold. Preserve original3000gold milestone,all18hornwaves,prison/torture setup,conversion messages and every cache-opening alternative. No champion death is required for optional mining.",
+      "The unchanged original sentence describing champions in your hands is emitted after all current main goals,followed by a new valid win request. This is necessary because both old requests assume conversion/seat2emptiness and can never cover the approved live-captive alternative. Old win requests remain preserved pending requests."
+    ],
+    "runtime_limit": "Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours."
+    }
   }
 }

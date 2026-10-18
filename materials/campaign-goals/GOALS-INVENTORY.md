@@ -759,14 +759,45 @@ File: `levels/campaign/Kingsfall.level`.
 | Script line 3836 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
 | Script line 3837 | `Action	objectiveid	1	kingsfall-o02	Defeat Prince Aurel and his court.` | yes |
 | Script line 3838 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
-| Script line 4047 | `Action	win	1` | yes |
-| Script line 4102 | `Action	win	1` | yes |
+| Script line 4046 | `Action	win	1` | yes |
+| Script line 4100 | `Action	win	1` | yes |
+| Script line 4232 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `kingsfall-main-heart`: Protect your heart and cross a guarded lava bridge. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	mainRavineCrossed	1 |
+| main | `kingsfall-main-champions`: Capture or convert Edda, Brann and Wick alive. | `mainChampions`: Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick |
+| main | `kingsfall-main-army`: Gather 12 creatures at your heart. | `mainArmy`: Cond	creaturesatheart	1	>=	12 |
+| main | `kingsfall-main-court`: Defeat Prince Aurel and his court. | `mainCourt`: Cond	event	PrinceAurel	killed; Cond	creatures	3	<=	0 |
+| optional | `kingsfall-extra-gold`: Mine 4000 gold. | `extraGold`: Cond	mined	1	>=	4000 |
+
+Possible route (static, not a playthrough):
+- Protect the heart and physically cross any actual watched lava span northward:west(18..19,49..53),middle(49..50,39..43),east(80..81,48..52). Each original bridge has9roomfields plus one natural dry gap; do not invent rectangular10field bridge rooms. Explicit open ground/bridge paths follow x19/y54..48,x50/y44..38,x81/y53..47. Any one original route qualifies.
+- Keep all three named champions alive and currently held by seat1:FalconerEdda,HuntsmanBrann,SquireWick. Each may be either actually jailed by seat1 or converted to seat1 with no foreign jailer. Escape or recapture removes current success; actual death permanently fails the task. Historical champions flags alone do not count.
+- Currently gather at least12own living creatures on actual own-heart tiles. Global army size or an old visit is not enough. Existing25field temple and own portal/worker recruitment allow staging; original start has5workers and7000gold. Foreign-seat prisoners do not become own creatures merely by captivity.
+- Actually kill PrinceAurel and clear living court troops of seat3,which contains all court guards and horn waves. Do not require seat2emptiness:the three live captured champions retain seat2,and must not block victory. This level has no KillAllEnemies goal or hostile temple/portal requirement.
+- Optionally mine4000actualgold from79000finitepotentialgold. Preserve original3000gold milestone,all18hornwaves,prison/torture setup,conversion messages and every cache-opening alternative. No champion death is required for optional mining.
+- The unchanged original sentence describing champions in your hands is emitted after all current main goals,followed by a new valid win request. This is necessary because both old requests assume conversion/seat2emptiness and can never cover the approved live-captive alternative. Old win requests remain preserved pending requests.
+
+Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.
+
 | Trigger `goalArmyAtHeart` | `Action	objectivestate	1	kingsfall-o03	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
 | Trigger `courtTaken` | `Action	objectivestate	1	kingsfall-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	creatures	1	>=	12` | yes |
 | Trigger `collectWin` | `Action	objectivestate	1	kingsfall-o01	reached`; conditions: `Cond	time	5; Cond	flag	champions	==	3; Cond	alive	PrinceAurel	0; Cond	creatures	1	>=	12` | yes |
 | Trigger `collectWin` | `Action	objectivestate	1	kingsfall-o02	reached`; conditions: `Cond	time	5; Cond	flag	champions	==	3; Cond	alive	PrinceAurel	0; Cond	creatures	1	>=	12` | yes |
-| Briefing | Cross the watched lava spans and defeat Aurel and his court. | no: prince elimination is checked; crossing the watched spans is not independent |
-| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | no: collectWin checks all champions and twelve creatures, but courtTaken also wins without all three champions and neither checks their location at the heart |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	kingsfall-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `lostFalconerEdda` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	FalconerEdda	killed` | yes |
+| Trigger `lostHuntsmanBrann` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	HuntsmanBrann	killed` | yes |
+| Trigger `lostSquireWick` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	SquireWick	killed` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	kingsfall-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	mainRavineCrossed	1` | yes |
+| Trigger `mainChampions` | `Action	objectivestate	1	kingsfall-main-champions	reached`; conditions: `Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick` | yes |
+| Trigger `mainArmy` | `Action	objectivestate	1	kingsfall-main-army	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
+| Trigger `mainCourt` | `Action	objectivestate	1	kingsfall-main-court	reached`; conditions: `Cond	event	PrinceAurel	killed; Cond	creatures	3	<=	0` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	kingsfall-extra-gold	reached`; conditions: `Cond	mined	1	>=	4000` | yes |
+| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance |
+| Briefing | Aurel must answer for every promise he made. | yes:12own living creatures currently on the own-heart tiles |
 
 ## Lanternhill
 

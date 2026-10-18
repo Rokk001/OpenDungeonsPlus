@@ -96,6 +96,8 @@ BRIEFING_MATCH["Silverdeep"] = {2: "yes:400actualmining and actual supply for si
 
 BRIEFING_MATCH["Wraithwood"] = {3: "yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately"}
 
+BRIEFING_MATCH["Kingsfall"] = {3: "yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance", 4: "yes:12own living creatures currently on the own-heart tiles"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1746,6 +1748,19 @@ def self_test(root):
             ("Cond\tregion\t1\tSealedGrove", "Cond\tregion\t1\tWestGlade")):
         assert needle in wraith
         assert grouped_goal_errors(wraith.replace(needle, replacement), "Wraithwood"), "Wraithwood must retain independent heart completion: " + needle
+    kings = (root / "levels/campaign/Kingsfall.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(kings, "Kingsfall")
+    for needle, replacement in (
+            ("Cond\theld\t1\tFalconerEdda", "Cond\towns\t1\tFalconerEdda"),
+            ("Cond\theld\t1\tHuntsmanBrann", "Cond\talive\tHuntsmanBrann"),
+            ("Cond\theld\t1\tSquireWick", "Cond\tflag\tchampions\t==\t3"),
+            ("Cond\tcreaturesatheart\t1\t>=\t12", "Cond\tcreatures\t1\t>=\t12"),
+            ("Cond\tevent\tPrinceAurel\tkilled", "Cond\talive\tPrinceAurel\t0"),
+            ("Cond\tcreatures\t3\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tcrossed\t1\tMainMiddleSpan\tnorth", "Cond\tregion\t1\tCentre"),
+            ("Cond\tmined\t1\t>=\t4000", "Cond\tmined\t1\t>=\t3000")):
+        assert needle in kings
+        assert grouped_goal_errors(kings.replace(needle, replacement), "Kingsfall"), "Kingsfall must preserve live capture and actual assembly: " + needle
     print("campaign playability self-test passed")
 
 
