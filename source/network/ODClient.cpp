@@ -653,9 +653,12 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             std::string creatureName, className, suffix;
             bool worker;
             OD_ASSERT_TRUE(packetReceived >> creatureName >> className >> worker >> suffix);
+            EventShortNoticeType noticeType = EventShortNoticeType::aboutCreatures;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> noticeType);
             const std::string name = social::SocialProfileCache::getSingleton().getProfile(
                 creatureName, className, worker).getFullName();
-            addEventMessage(new EventMessage(name + suffix, EventShortNoticeType::aboutCreatures));
+            addEventMessage(new EventMessage(name + suffix, noticeType));
             break;
         }
 

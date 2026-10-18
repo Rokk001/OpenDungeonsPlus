@@ -212,7 +212,7 @@ enum class ServerNotificationType
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
     campaignVictory,
-    //! \brief Creature notice resolved with the client profile: internal name, class, worker flag, message suffix.
+    //! \brief Creature notice resolved with the client profile: internal name, class, worker flag, message suffix, optional event category.
     creatureNotice
 };
 

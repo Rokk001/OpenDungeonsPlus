@@ -16,7 +16,7 @@ def body(text, name):
 
 
 player = read("source/game/Player.cpp")
-notice = body(player, "void Player::notifyCreatureEvent(")
+notice = body(player, "void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix, EventShortNoticeType noticeType)")
 assert "ServerNotificationType::creatureNotice" in notice
 assert "creature.getName() << definition->getClassName() << definition->isWorker() << suffix" in notice
 assert "SocialProfileCache" not in notice
@@ -44,3 +44,15 @@ assert re.search(r"campaignVictory,\s*//![^\n]*\n\s*creatureNotice\s*}", header)
 assert 'return "creatureNotice";' in read("source/network/ServerNotification.cpp")
 print("Creature notice names use the same client profile as the creature card: static PASS")
 print("Existing text, severity and death throttling retained; runtime verification pending")
+
+for kind, suffix in (("Bed", " cannot find room for a bed. Build or enlarge a Dormitory."),
+                     ("Food", " cannot find food. Build a Hatchery.")):
+    supply = body(player, "void Player::notifyCreatureCannotFind" + kind + "(")
+    assert 'notifyCreatureEvent(creature, "' + suffix + '", EventShortNoticeType::genericGameInfo);' in supply
+    assert "creature.getName()" not in supply
+    assert "mCreatureCannotFind" + kind + " <= 0.0f" in supply
+    assert "SoundRelativeKeeperStatements::CreatureNo" + kind in supply
+assert "suffix << noticeType" in body(player, "void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix, EventShortNoticeType noticeType)")
+assert "packetReceived >> noticeType" in client
+assert "EventMessage(name + suffix, noticeType)" in client
+print("Food and bed warnings keep their original text, category, cooldown and voice while sharing profile names: static PASS")
