@@ -62,3 +62,16 @@ assert prison_upkeep.index("newCreature->addToGameMap();") < prison_upkeep.index
 assert prison_upkeep.index("newCreature->setPosition(") < prison_upkeep.index("notifyCreatureArrival(className)")
 assert "A creature died starving in your prison" in prison_upkeep
 print("Prison offspring use shared first-arrival history while starvation losses remain visible: PASS (static only)")
+
+# Summoning announces only after the creature exists at its valid destination.
+for spell, actor, definition in (("Worker", "newCreature", "classToSpawn"),
+                                  ("Champion", "champion", "definition")):
+    source = (ROOT / f"source/spells/SpellSummon{spell}.cpp").read_text(encoding="utf-8")
+    method = "summonWorkersOnTiles" if spell == "Worker" else "castSpell"
+    summon = function(source, f"bool SpellSummon{spell}::{method}(")
+    notice = f"notifyCreatureArrival({definition}->getClassName())"
+    assert summon.count(notice) == 1
+    assert summon.index(f"{actor}->addToGameMap();") < summon.index(notice)
+    assert summon.index(f"{actor}->setPosition(spawnPosition);") < summon.index(notice)
+    assert summon.index("takeMana(") < summon.index(notice)
+print("Successful worker and champion summons share saved first-arrival history: PASS (static only)")

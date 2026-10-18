@@ -33,6 +33,7 @@ class SpellSummonChampion : public Spell
 {
 public:
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    //! \brief Summons a champion and announces the first successful arrival of its class.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
     //! \brief True if the given seat already has a champion on the map. Only one can exist at a time

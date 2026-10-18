@@ -29,6 +29,7 @@ class SpellSummonWorker : public Spell
 public:
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
+    //! \brief Summons eligible workers and announces the first successful arrival of its class.
     static bool summonWorkersOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles);
     static int32_t getNextWorkerPriceForPlayer(GameMap* gameMap, Player* player);
     static int32_t getWorkerPrice(int32_t basePrice, int32_t nbWorkers);
