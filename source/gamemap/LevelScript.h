@@ -519,11 +519,11 @@ public:
         mSlapLimit(-1)
     {}
 
-    //! \brief Reads the lines after the [Triggers] tag, up to and including [/Triggers].
+    //! \brief Reads definitions and saved state, including optional stone positions, after [Triggers] through [/Triggers].
     //! Returns false on a malformed section. Existing content is replaced.
     bool importFromStream(std::istream& is);
 
-    //! \brief Writes the whole section, including the [Triggers] and [/Triggers] tags.
+    //! \brief Writes definitions and saved state, including known stone positions and both section tags.
     void exportToStream(std::ostream& os) const;
 
     //! \brief Removes all trigger definitions and their saved runtime state.

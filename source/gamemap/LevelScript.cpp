@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <istream>
+#include <limits>
 #include <ostream>
 #include <sstream>
 
@@ -1516,7 +1517,7 @@ bool LevelScript::wasCreatureKilledInRegion(const std::string& creatureName, con
     return region != nullptr && death != mCreatureDeathTiles.end() && region->contains(death->second.first, death->second.second);
 }
 
-//! \brief Reads legacy definitions and optional persisted per-seat objective states.
+//! \brief Reads legacy definitions, objective states and optional last-known stone carrier positions.
 bool LevelScript::importFromStream(std::istream& is)
 {
     clear();
@@ -1675,9 +1676,18 @@ bool LevelScript::importFromStream(std::istream& is)
         }
         else if(key == "Stone")
         {
-            if(inTrigger || (t.size() != 2))
+            if(inTrigger || ((t.size() != 2) && (t.size() != 4)))
                 return false;
 
+            if(t.size() == 4)
+            {
+                int64_t x;
+                int64_t y;
+                if(!parseInt(t[2], x) || !parseInt(t[3], y) || x < 0 || y < 0 ||
+                   x > std::numeric_limits<int32_t>::max() || y > std::numeric_limits<int32_t>::max())
+                    return false;
+                setStoneCarrierTile(t[1], static_cast<int32_t>(x), static_cast<int32_t>(y));
+            }
             mStoneCarriers.insert(t[1]);
         }
         else if(key == "Member")
@@ -1807,7 +1817,7 @@ bool LevelScript::importFromStream(std::istream& is)
     return false;
 }
 
-//! \brief Writes script definitions and explicit objective states for save/load round trips.
+//! \brief Writes definitions, objective states and known stone drop positions for save/load round trips.
 void LevelScript::exportToStream(std::ostream& os) const
 {
     os << "[Triggers]\n";
@@ -1877,7 +1887,14 @@ void LevelScript::exportToStream(std::ostream& os) const
         os << "\n";
     }
     for(const std::string& carrier : mStoneCarriers)
-        os << "Stone\t" << carrier << "\n";
+    {
+        os << "Stone\t" << carrier;
+        int32_t x;
+        int32_t y;
+        if(getStoneCarrierTile(carrier, x, y))
+            os << "\t" << x << "\t" << y;
+        os << "\n";
+    }
 
     for(const LevelScriptRegion& region : mRegions)
     {

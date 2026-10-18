@@ -1309,7 +1309,7 @@ BOOST_AUTO_TEST_CASE(natural_floor_and_fighter_assembly_conditions_round_trip)
     }
 }
 
-//! \brief A transport condition identifies the actual attached stone through parsing and saves.
+//! \brief Saves retain the attached stone and its drop tile while accepting older carrier-only records.
 BOOST_AUTO_TEST_CASE(carried_stone_condition_and_state_round_trip)
 {
     LevelScript script;
@@ -1320,14 +1320,34 @@ BOOST_AUTO_TEST_CASE(carried_stone_condition_and_state_round_trip)
     BOOST_CHECK(script.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::carryingStone);
     BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[0].mName, "VaultBearer");
     script.addStoneCarrier("VaultBearer");
+    script.setStoneCarrierTile("VaultBearer", 66, 50);
     std::ostringstream saved;
     script.exportToStream(saved);
     LevelScript restored;
     std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
     BOOST_REQUIRE(restored.importFromStream(reload));
     BOOST_CHECK(restored.getStoneCarriers().count("VaultBearer") == 1);
+    int32_t x;
+    int32_t y;
+    BOOST_REQUIRE(restored.getStoneCarrierTile("VaultBearer", x, y));
+    BOOST_CHECK_EQUAL(x, 66);
+    BOOST_CHECK_EQUAL(y, 50);
     restored.removeStoneCarrier("VaultBearer");
     BOOST_CHECK(restored.getStoneCarriers().empty());
+    BOOST_CHECK(!restored.getStoneCarrierTile("VaultBearer", x, y));
+    LevelScript legacy;
+    std::istringstream oldSave("Stone VaultBearer\n[/Triggers]\n");
+    BOOST_REQUIRE(legacy.importFromStream(oldSave));
+    BOOST_CHECK_EQUAL(legacy.getStoneCarriers().count("VaultBearer"), 1);
+    BOOST_CHECK(!legacy.getStoneCarrierTile("VaultBearer", x, y));
+    for(const std::string record : {"Stone VaultBearer 66", "Stone VaultBearer x 50",
+        "Stone VaultBearer 66 -1", "Stone VaultBearer -1 50", "Stone VaultBearer 2147483648 50",
+        "Stone VaultBearer 66 50 extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed(record + "\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
     for(const std::string condition : {"Cond carryingstone", "Cond carryingstone VaultBearer extra"})
     {
         LevelScript invalid;
