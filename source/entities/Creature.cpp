@@ -1311,6 +1311,7 @@ void Creature::dropCarriedEquipment()
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
+    setAnimationState(EntityAnimation::die_anim, false, Ogre::Vector3::ZERO, false);
 
     // We drop what we are carrying
     Tile* myTile = getPositionTile();
