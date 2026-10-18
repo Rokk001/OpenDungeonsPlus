@@ -530,6 +530,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) &&
                 (room->getSeat() != nullptr) && (room->getSeat()->getId() == cond.mSeatId);
         }
+        case LevelScriptConditionType::shotKilled:
+            return script.wasShotKilled(cond.mSeatId, cond.mName);
         case LevelScriptConditionType::attackedRegion:
             return script.wasRegionAttacked(cond.mSeatId, static_cast<int32_t>(cond.mNumber), cond.mName);
         case LevelScriptConditionType::crossedRegion:

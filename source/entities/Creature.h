@@ -562,6 +562,7 @@ public:
     bool isSandboxHeroFor(const Seat* seat) const;
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
+    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -921,6 +922,7 @@ public:
 
     bool isHungry() const;
 
+    //! \brief Clears knockout state and any pending lethal-shot credit after recovery.
     void resetKoTurns();
 
     //! \brief Knocks the creature out so that it can be carried away (used when

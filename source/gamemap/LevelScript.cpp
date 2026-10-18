@@ -389,6 +389,14 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mName = t[2];
         return parseOperator(t[3], cond) && parseInt(t[4], cond.mNumber);
     }
+    if(type == "shotkilled")
+    {
+        if(t.size() != 4 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1)
+            return false;
+        cond.mType = LevelScriptConditionType::shotKilled;
+        cond.mName = t[3];
+        return true;
+    }
     if(type == "attackedregion")
     {
         int32_t targetSeat;
@@ -981,6 +989,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             else
                 os << "reached\t" << c.mName << "\tregion\t" << c.mName2;
             break;
+        case LevelScriptConditionType::shotKilled:
+            os << "shotkilled\t" << c.mSeatId << "\t" << c.mName;
+            break;
         case LevelScriptConditionType::attackedRegion:
             os << "attackedregion\t" << c.mSeatId << "\t" << c.mNumber << "\t" << c.mName;
             break;
@@ -1562,6 +1573,13 @@ bool LevelScript::importFromStream(std::istream& is)
             observation.mKilled = killed != 0;
             mSpawnObservations.push_back(observation);
         }
+        else if(key == "FatalShot")
+        {
+            int32_t seatId;
+            if(inTrigger || t.size() != 3 || !parseInt32(t[2], seatId) || seatId < 1)
+                return false;
+            mFatalShots[t[1]] = seatId;
+        }
         else if(key == "CrossingProgress")
         {
             LevelScriptCrossingProgress progress;
@@ -1744,6 +1762,8 @@ bool LevelScript::importFromStream(std::istream& is)
 
             if(cond.mType == LevelScriptConditionType::crossedRegion)
                 mHasCrossingObservers = true;
+            if(cond.mType == LevelScriptConditionType::shotKilled)
+                mHasShotObservers = true;
             trigger.mConditions.push_back(cond);
         }
         else if(key == "Action")
@@ -1789,6 +1809,8 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::pair<int32_t, std::string>, LevelScriptObjectiveState>& objective : mObjectiveStates)
         os << "ObjectiveState\t" << objective.first.first << "\t" << objective.first.second << "\t"
            << levelScriptObjectiveStateName(objective.second) << "\n";
+    for(const auto& shot : mFatalShots)
+        os << "FatalShot\t" << shot.first << "\t" << shot.second << "\n";
     for(const LevelScriptCrossingProgress& progress : mCrossingProgress)
         os << "CrossingProgress\t" << progress.mSeatId << "\t" << progress.mCreature << "\t"
            << progress.mRegion << "\t" << progress.mDirection << "\t"
@@ -1878,6 +1900,8 @@ void LevelScript::clear()
     mVictoryRequests.clear();
     mCrossingProgress.clear();
     mHasCrossingObservers = false;
+    mHasShotObservers = false;
+    mFatalShots.clear();
     mSpawnObservations.clear();
     mMinedGold.clear();
     mCreatureDeathTiles.clear();
@@ -2379,4 +2403,42 @@ void LevelScript::observeRegionAttack(int32_t attackingSeat, int32_t targetSeat,
                     "attackedregion:" + std::to_string(targetSeat) + ":" + condition.mName);
         }
     }
+}
+
+//! \brief Retains only an explicitly watched target and a matching projectile seat until death.
+void LevelScript::observeFatalShot(const std::string& creature, int32_t attackingSeat)
+{
+    clearFatalShot(creature);
+    if(!mHasShotObservers || attackingSeat < 1)
+        return;
+    for(const LevelScriptTrigger& trigger : mTriggers)
+        for(const LevelScriptCondition& condition : trigger.mConditions)
+            if(condition.mType == LevelScriptConditionType::shotKilled && condition.mName == creature &&
+               condition.mSeatId == attackingSeat)
+            {
+                mFatalShots[creature] = attackingSeat;
+                return;
+            }
+}
+
+//! \brief Recovery and fresh instances cannot inherit a previous lethal shot.
+void LevelScript::clearFatalShot(const std::string& creature)
+{
+    mFatalShots.erase(creature);
+}
+
+//! \brief An actual killed event consumes its pending projectile source exactly once.
+void LevelScript::completeShotKill(const std::string& creature)
+{
+    const auto shot = mFatalShots.find(creature);
+    if(shot == mFatalShots.end())
+        return;
+    recordEvent(creature, "shotkilled:" + std::to_string(shot->second));
+    mFatalShots.erase(shot);
+}
+
+//! \brief Returns saved actual projectile death history rather than a knockout or hit count.
+bool LevelScript::wasShotKilled(int32_t attackingSeat, const std::string& creature) const
+{
+    return getEventCount(creature, "shotkilled:" + std::to_string(attackingSeat)) > 0;
 }

@@ -16,7 +16,7 @@ def body(text, signature):
 
 creature = body(read("source/entities/Creature.cpp"), "double Creature::takeDamage(")
 start = creature.index('if(wasAlive && (damageDone > 0.0))')
-end = creature.index("if(mHp <= 0)", start)
+end = creature.index("\n    if(mHp <= 0)", start)
 hit = creature[start:end]
 for guard in ('recordScriptEvent(*this, "attacked")', "getIsOnServerMap()", "creatureAttacking != nullptr",
               "!attackingSeat->isAlliedSeat(getSeat())", "getPositionTile() != nullptr",
@@ -46,3 +46,16 @@ loaded = body(missile, "bool MissileObject::importFromStream(")
 assert loaded.index("mCreatureShot = false;") < loaded.index("if(is.peek() == 'S')")
 assert 'marker != "ShotOrigin"' in loaded and "possessed != 0 && possessed != 1" in loaded
 print("Creature projectile attribution survives shooter loss and saves; legacy origin remains unknown: static PASS")
+
+assert "script.observeFatalShot(getName(), ownShot ? attackingSeat->getId() : -1);" in hit
+assert hit.index("if(mHp <= 0)") < hit.index("script.observeFatalShot(")
+assert 'if(ownShot && shot->isPossessedShot())' in hit and '"possessedshot"' in hit
+assert '.completeShotKill(creature.getName());' in body(read("source/entities/Creature.cpp"), 'void recordScriptEvent(const Creature& creature, const std::string& eventName)\n{')
+for name in ('void Creature::resetKoTurns()', 'void Creature::drop('):
+    assert 'clearFatalShot(getName())' in body(read("source/entities/Creature.cpp"), name)
+assert 'clearFatalShot(cc->getName())' in body(read("source/gamemap/GameMap.cpp"), 'void GameMap::addCreature(')
+assert 'key == "FatalShot"' in script and 'os << "FatalShot' in script
+complete = body(script, 'void LevelScript::completeShotKill(')
+assert 'mFatalShots.find(creature)' in complete and 'mFatalShots.erase(shot)' in complete
+assert 'projectile_death_credit_and_recovery' in read('source/tests/test_LevelScript.cpp')
+print('Lethal KO waits for actual death; recovery, fresh instances and later fatal causes clear credit: static PASS')

@@ -1479,3 +1479,59 @@ BOOST_AUTO_TEST_CASE(regional_attack_attribution_and_save)
         BOOST_CHECK(!invalid.importFromStream(bad));
     }
 }
+
+//! \brief Shot credit requires actual death, survives lethal-KO saves and cannot survive recovery or a different fatal cause.
+BOOST_AUTO_TEST_CASE(projectile_death_credit_and_recovery)
+{
+    const std::string text = "[Trigger]\nName birds\nMode once\nCond shotkilled 1 Crow1\n"
+        "Cond shotkilled 1 Crow2\nAction message 1 done\n[/Trigger]\n[/Triggers]\n";
+    LevelScript script;
+    std::istringstream input(text);
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.hasShotObservers());
+    script.observeFatalShot("Crow1", 1);
+    BOOST_CHECK(!script.wasShotKilled(1, "Crow1"));
+    std::ostringstream pending;
+    script.exportToStream(pending);
+    BOOST_CHECK(pending.str().find("FatalShot\tCrow1\t1") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(pending.str().substr(pending.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow1"));
+    restored.completeShotKill("Crow1");
+    restored.completeShotKill("Crow1");
+    BOOST_CHECK(restored.wasShotKilled(1, "Crow1"));
+    BOOST_CHECK(!restored.wasShotKilled(2, "Crow1"));
+    BOOST_CHECK_EQUAL(restored.getEventCount("Crow1", "shotkilled:1"), 1);
+    restored.observeFatalShot("Crow2", 1);
+    restored.clearFatalShot("Crow2");
+    restored.completeShotKill("Crow2");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow2"));
+    restored.observeFatalShot("Crow2", 1);
+    restored.observeFatalShot("Crow2", -1);
+    restored.completeShotKill("Crow2");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow2"));
+    restored.observeFatalShot("Crow2", 2);
+    restored.completeShotKill("Crow2");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow2"));
+    restored.observeFatalShot("Unwatched", 1);
+    restored.completeShotKill("Unwatched");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Unwatched"));
+    std::ostringstream completed;
+    restored.exportToStream(completed);
+    BOOST_CHECK(completed.str().find("FatalShot\t") == std::string::npos);
+    LevelScript loaded;
+    std::istringstream finalLoad(completed.str().substr(completed.str().find('\n') + 1));
+    BOOST_REQUIRE(loaded.importFromStream(finalLoad));
+    BOOST_CHECK(loaded.wasShotKilled(1, "Crow1"));
+    loaded.clear();
+    BOOST_CHECK(!loaded.hasShotObservers());
+    BOOST_CHECK(loaded.isEmpty());
+    for(const std::string bad : {"Cond shotkilled 0 Crow1", "Cond shotkilled 1", "Cond shotkilled 1 Crow1 extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + bad +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}

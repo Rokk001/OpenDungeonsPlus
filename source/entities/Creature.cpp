@@ -4121,6 +4121,7 @@ void recordScriptEvent(const Creature& creature, const std::string& eventName)
     creature.getGameMap()->getLevelScript().recordEvent(creature.getName(), eventName);
     if(eventName == "killed")
     {
+        creature.getGameMap()->getLevelScript().completeShotKill(creature.getName());
         int32_t templeSeat = -1;
         Tile* tile = creature.getPositionTile();
         if(tile != nullptr)
@@ -4176,6 +4177,8 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     if(wasAlive && (damageDone > 0.0))
     {
         recordScriptEvent(*this, "attacked");
+        MissileObject* shot = attacker != nullptr && attacker->getObjectType() == GameEntityType::missileObject ?
+            static_cast<MissileObject*>(attacker) : nullptr;
         Seat* attackingSeat = creatureAttacking != nullptr ? creatureAttacking->getSeat() : nullptr;
         if(attacker != nullptr && attacker->getObjectType() == GameEntityType::missileObject &&
            static_cast<MissileObject*>(attacker)->isCreatureShot())
@@ -4184,6 +4187,16 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
            !attackingSeat->isAlliedSeat(getSeat()))
             getGameMap()->getLevelScript().observeRegionAttack(attackingSeat->getId(),
                 getSeat()->getId(), getPositionTile()->getX(), getPositionTile()->getY());
+        if(getIsOnServerMap() && getGameMap()->getLevelScript().hasShotObservers())
+        {
+            LevelScript& script = getGameMap()->getLevelScript();
+            const bool ownShot = shot != nullptr && shot->isCreatureShot() && attackingSeat != nullptr &&
+                getSeat() != nullptr && !attackingSeat->isAlliedSeat(getSeat());
+            if(mHp <= 0)
+                script.observeFatalShot(getName(), ownShot ? attackingSeat->getId() : -1);
+            if(ownShot && shot->isPossessedShot())
+                script.recordEvent("Seat" + std::to_string(attackingSeat->getId()), "possessedshot");
+        }
     }
 
     if(mHp <= 0)
@@ -4510,6 +4523,8 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
 
 void Creature::drop(const Ogre::Vector3& v)
 {
+    if(getIsOnServerMap())
+        getGameMap()->getLevelScript().clearFatalShot(getName());
     setPosition(v);
     if(!getIsOnServerMap())
     {
@@ -6200,6 +6215,8 @@ bool Creature::isHungry() const
 
 void Creature::resetKoTurns()
 {
+    if(getIsOnServerMap())
+        getGameMap()->getLevelScript().clearFatalShot(getName());
     mKoTurnCounter = 0;
     mNeedFireRefresh = true;
 }
