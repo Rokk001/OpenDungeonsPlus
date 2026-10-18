@@ -75,3 +75,19 @@ for spell, actor, definition in (("Worker", "newCreature", "classToSpawn"),
     assert summon.index(f"{actor}->setPosition(spawnPosition);") < summon.index(notice)
     assert summon.index("takeMana(") < summon.index(notice)
 print("Successful worker and champion summons share saved first-arrival history: PASS (static only)")
+
+# Ownership acquisition counts only after the conversion actually succeeds.
+torture = (ROOT / "source/rooms/RoomTorture.cpp").read_text(encoding="utf-8")
+conversion = function(torture, "bool RoomTorture::useRoom(")
+notice = "notifyCreatureArrival(creature.getDefinition()->getClassName())"
+assert conversion.count(notice) == 1
+assert conversion.index("creature.changeSeat(getSeat());") < conversion.index(notice)
+assert "Your tormentors have convinced another creature" in conversion
+source = (ROOT / "source/spells/SpellDefector.cpp").read_text(encoding="utf-8")
+conversion = function(source, "bool SpellDefector::castSpell(")
+notice = "notifyCreatureArrival(creature->getDefinition()->getClassName())"
+assert conversion.count(notice) == 1
+assert conversion.index("creature->changeSeat(player->getSeat());") < conversion.index(notice)
+assert conversion.index("creature->addCreatureEffect(") < conversion.index(notice)
+assert conversion.index("takeMana(") < conversion.index(notice)
+print("Successful conversions share saved first-arrival history: PASS (static only)")
