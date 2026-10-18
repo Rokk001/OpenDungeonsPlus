@@ -4044,5 +4044,580 @@
       "Before the final main goal optionally explore CoalStore (66,5)-(86,22),153initially open reachable fields. Claim/remove Portal1 (19..21,37..39) as part of remaining-enemy clearance. Keep the original5400second deadline and all original reinforcements."
     ],
     "runtime_limit": "Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification."
+  },
+  "Wolfscar": {
+    "goals": {
+      "wolfscar-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wolfscar-main-den": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross both rifts and claim the wolf den.",
+        "completion": "mainDen",
+        "conditions": [
+          "Cond\tflag\tsouthRavineCrossed\t1",
+          "Cond\tflag\tnorthRavineCrossed\t1",
+          "Cond\tgroundclaimed\t1\t27\t46\t42\t46",
+          "Cond\tgroundclaimed\t1\t28\t47\t38\t47",
+          "Cond\tgroundclaimed\t1\t30\t48\t39\t48",
+          "Cond\tgroundclaimed\t1\t29\t49\t30\t49",
+          "Cond\tgroundclaimed\t1\t32\t49\t41\t49",
+          "Cond\tgroundclaimed\t1\t28\t50\t30\t50",
+          "Cond\tgroundclaimed\t1\t33\t50\t43\t50",
+          "Cond\tgroundclaimed\t1\t26\t51\t45\t51",
+          "Cond\tgroundclaimed\t1\t25\t52\t40\t52",
+          "Cond\tgroundclaimed\t1\t43\t52\t46\t52",
+          "Cond\tgroundclaimed\t1\t24\t53\t41\t53",
+          "Cond\tgroundclaimed\t1\t43\t53\t46\t53",
+          "Cond\tgroundclaimed\t1\t24\t54\t34\t54",
+          "Cond\tgroundclaimed\t1\t37\t54\t47\t54",
+          "Cond\tgroundclaimed\t1\t24\t55\t32\t55",
+          "Cond\tgroundclaimed\t1\t38\t55\t48\t55",
+          "Cond\tgroundclaimed\t1\t24\t56\t31\t56",
+          "Cond\tgroundclaimed\t1\t38\t56\t48\t56",
+          "Cond\tgroundclaimed\t1\t24\t57\t32\t57",
+          "Cond\tgroundclaimed\t1\t38\t57\t47\t57",
+          "Cond\tgroundclaimed\t1\t24\t58\t26\t58",
+          "Cond\tgroundclaimed\t1\t29\t58\t46\t58",
+          "Cond\tgroundclaimed\t1\t24\t59\t27\t59",
+          "Cond\tgroundclaimed\t1\t29\t59\t39\t59",
+          "Cond\tgroundclaimed\t1\t41\t59\t46\t59",
+          "Cond\tgroundclaimed\t1\t25\t60\t39\t60",
+          "Cond\tgroundclaimed\t1\t41\t60\t46\t60",
+          "Cond\tgroundclaimed\t1\t25\t61\t45\t61",
+          "Cond\tgroundclaimed\t1\t26\t62\t44\t62",
+          "Cond\tgroundclaimed\t1\t27\t63\t43\t63",
+          "Cond\tgroundclaimed\t1\t29\t64\t34\t64",
+          "Cond\tgroundclaimed\t1\t45\t65\t48\t65",
+          "Cond\tgroundclaimed\t1\t35\t66\t36\t66",
+          "Cond\tgroundclaimed\t1\t42\t66\t48\t66"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wolfscar-main-hunters": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy all rival hearts and enemy forces.",
+        "completion": "mainHunters",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t4\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t5\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wolfscar-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1500 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1500"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "walkStoneBridge1": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge1\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsouthRavineCrossed\t1"
+        ]
+      },
+      "walkStoneBridge2": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge2\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsouthRavineCrossed\t1"
+        ]
+      },
+      "walkStoneBridge3": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge3\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsouthRavineCrossed\t1"
+        ]
+      },
+      "walkStoneBridge5": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge5\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tnorthRavineCrossed\t1"
+        ]
+      },
+      "walkStoneBridge6": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge6\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tnorthRavineCrossed\t1"
+        ]
+      },
+      "walkStoneBridge7": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge7\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tnorthRavineCrossed\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "wolfscar-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\twolfscar-main-heart\treached",
+          "Cond\tobjective\t1\twolfscar-main-den\treached",
+          "Cond\tobjective\t1\twolfscar-main-hunters\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe last hunter is dead and the forest of Wolfscar is silent. It is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "denWell": [
+        "Cond\tslabs\t1\tWolfden\tclaimed\t>=\t20"
+      ],
+      "huntersGone": [
+        "Cond\tdefeated\t2",
+        "Cond\tdefeated\t3",
+        "Cond\tdefeated\t4",
+        "Cond\tdefeated\t5"
+      ],
+      "huntersGoneGoal": [
+        "Cond\tgoal\t1\tKillAllEnemies"
+      ]
+    },
+    "preserved_actions": {
+      "hunt": [
+        "Action\tmessage\t1\tWolfscar is a forest cut by two ravines, master, and four hunter keepers have claimed its corners. They dislike each other less than they dislike you, so expect their packs to join.",
+        "Action\tobjectiveid\t1\twolfscar-o01\tDestroy every rival keeper's heart.",
+        "Action\tobjectiveid\t1\twolfscar-o02\tCross the south ravine by a stone bridge.",
+        "Action\tobjectiveid\t1\twolfscar-o03\tProtect your heart.",
+        "Action\tportal\t4\toff",
+        "Action\tportal\t5\toff"
+      ],
+      "denSeen": [
+        "Action\tmessage\t1\tThis is the wolf den, rich in gold and open on every side. Hold it and the hunters lose their middle.",
+        "Action\tspawn\t1\t35\t90\t1\tOrc:3\tTroll:3\tSpider:3"
+      ],
+      "denWell": [
+        "Action\tmessage\t1\tYour claim on the den has opened a spring of mana in the middle of it. Claim it and your spells come faster.",
+        "Action\tterrain\t30\t51\t30\t51\tmanawell"
+      ],
+      "flankPortals": [
+        "Action\tmessage\t1\tThe hunters on the flanks have smelled you and opened their portals. Fresh packs will come out of both holds.",
+        "Action\tportal\t4\ton",
+        "Action\tportal\t5\ton",
+        "Action\tsetflag\tflanksOpen\t1"
+      ],
+      "flankPortalsLate": [
+        "Action\tmessage\t1\tThe flank hunters have waited long enough and have opened their portals.",
+        "Action\tportal\t4\ton",
+        "Action\tportal\t5\ton",
+        "Action\tsetflag\tflanksOpen\t1"
+      ],
+      "huntersGone": [
+        "Action\tobjectivestate\t1\twolfscar-o01\treached",
+        "Action\twin\t1"
+      ],
+      "huntersGoneGoal": [
+        "Action\tobjectivestate\t1\twolfscar-o01\treached",
+        "Action\twin\t1"
+      ]
+    },
+    "reachability": {
+      "minimum_mineable_gold": 1500,
+      "regions": {
+        "Wolfden": {
+          "bounds": [
+            24,
+            46,
+            48,
+            66
+          ],
+          "minimum_open_tiles": 344
+        },
+        "MainStoneBridge1": {
+          "bounds": [
+            18,
+            76,
+            18,
+            79
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "MainStoneBridge2": {
+          "bounds": [
+            35,
+            76,
+            36,
+            79
+          ],
+          "minimum_potential_tiles": 8
+        },
+        "MainStoneBridge3": {
+          "bounds": [
+            52,
+            76,
+            52,
+            79
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "MainStoneBridge5": {
+          "bounds": [
+            28,
+            35,
+            28,
+            35
+          ],
+          "minimum_potential_tiles": 1
+        },
+        "MainStoneBridge6": {
+          "bounds": [
+            44,
+            34,
+            45,
+            37
+          ],
+          "minimum_potential_tiles": 8
+        },
+        "MainStoneBridge7": {
+          "bounds": [
+            62,
+            35,
+            62,
+            36
+          ],
+          "minimum_potential_tiles": 2
+        }
+      },
+      "crossing_bridges": {
+        "MainStoneBridge1": {
+          "room": "StoneBridge1",
+          "bounds": [
+            18,
+            76,
+            18,
+            79
+          ],
+          "direction": "north"
+        },
+        "MainStoneBridge2": {
+          "room": "StoneBridge2",
+          "bounds": [
+            35,
+            76,
+            36,
+            79
+          ],
+          "direction": "north"
+        },
+        "MainStoneBridge3": {
+          "room": "StoneBridge3",
+          "bounds": [
+            52,
+            76,
+            52,
+            79
+          ],
+          "direction": "north"
+        },
+        "MainStoneBridge5": {
+          "room": "StoneBridge5",
+          "bounds": [
+            28,
+            35,
+            28,
+            35
+          ],
+          "direction": "north"
+        },
+        "MainStoneBridge6": {
+          "room": "StoneBridge6",
+          "bounds": [
+            44,
+            34,
+            45,
+            37
+          ],
+          "direction": "north"
+        },
+        "MainStoneBridge7": {
+          "room": "StoneBridge7",
+          "bounds": [
+            62,
+            35,
+            62,
+            36
+          ],
+          "direction": "north"
+        }
+      },
+      "footprints": [
+        {
+          "goal": "wolfscar-main-den",
+          "bounds": [
+            24,
+            46,
+            48,
+            66
+          ],
+          "runs": [
+            [
+              27,
+              46,
+              42,
+              46
+            ],
+            [
+              28,
+              47,
+              38,
+              47
+            ],
+            [
+              30,
+              48,
+              39,
+              48
+            ],
+            [
+              29,
+              49,
+              30,
+              49
+            ],
+            [
+              32,
+              49,
+              41,
+              49
+            ],
+            [
+              28,
+              50,
+              30,
+              50
+            ],
+            [
+              33,
+              50,
+              43,
+              50
+            ],
+            [
+              26,
+              51,
+              45,
+              51
+            ],
+            [
+              25,
+              52,
+              40,
+              52
+            ],
+            [
+              43,
+              52,
+              46,
+              52
+            ],
+            [
+              24,
+              53,
+              41,
+              53
+            ],
+            [
+              43,
+              53,
+              46,
+              53
+            ],
+            [
+              24,
+              54,
+              34,
+              54
+            ],
+            [
+              37,
+              54,
+              47,
+              54
+            ],
+            [
+              24,
+              55,
+              32,
+              55
+            ],
+            [
+              38,
+              55,
+              48,
+              55
+            ],
+            [
+              24,
+              56,
+              31,
+              56
+            ],
+            [
+              38,
+              56,
+              48,
+              56
+            ],
+            [
+              24,
+              57,
+              32,
+              57
+            ],
+            [
+              38,
+              57,
+              47,
+              57
+            ],
+            [
+              24,
+              58,
+              26,
+              58
+            ],
+            [
+              29,
+              58,
+              46,
+              58
+            ],
+            [
+              24,
+              59,
+              27,
+              59
+            ],
+            [
+              29,
+              59,
+              39,
+              59
+            ],
+            [
+              41,
+              59,
+              46,
+              59
+            ],
+            [
+              25,
+              60,
+              39,
+              60
+            ],
+            [
+              41,
+              60,
+              46,
+              60
+            ],
+            [
+              25,
+              61,
+              45,
+              61
+            ],
+            [
+              26,
+              62,
+              44,
+              62
+            ],
+            [
+              27,
+              63,
+              43,
+              63
+            ],
+            [
+              29,
+              64,
+              34,
+              64
+            ],
+            [
+              45,
+              65,
+              48,
+              65
+            ],
+            [
+              35,
+              66,
+              36,
+              66
+            ],
+            [
+              42,
+              66,
+              48,
+              66
+            ]
+          ]
+        }
+      ]
+    },
+    "route": [
+      "Protect the heart. Cross the southern ravine northward via existing StoneBridge1 (18,76..79),2 (35..36,76..79),or3 (52,76..79). Each full entry-to-exit walk uses one own living creature; visits, teleports and mixed visitors do not count.",
+      "Cross the northern ravine northward via existing StoneBridge5 (28,35),6 (44..45,34..37),or7 (62,35..36). No missing fourth bridge is invented. All six actual footprints and dry banks are checked.",
+      "Claim all344original open natural Wolfden fields in (24,46)-(48,66). There is no placed room in this region. Initial walls and water are excluded; no room construction is required. Original denWell creates the mana spring at (30,51) after20claimed fields; its resulting tile must also be claimed for full current control.",
+      "Destroy all four actual rival DungeonTemples of seats2,3,4,5 and defeat remaining hostile creatures/portals. A defeated-player flag alone never substitutes for an existing rival heart. Original hunter alliances, flank portal activation and eight pack waves are retained.",
+      "Before the final main goal optionally mine1500actualgold;93500finite gold is potentially reachable. Starting funds and gifts are not mining.",
+      "The unchanged victory narration is emitted once only after all three current main goals are reached. The two old win requests remain valid pending requests and carry no premature duplicate narration."
+    ],
+    "runtime_limit": "Static source/ground-mask/bank/resource evidence only; worker claiming, actual crossings, combat and save/load require integrator/Mario runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe last hunter is dead and the forest of Wolfscar is silent. It is yours."
+    }
   }
 }

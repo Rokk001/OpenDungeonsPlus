@@ -1064,15 +1064,41 @@ File: `levels/campaign/Wolfscar.level`.
 | Script line 4646 | `Action	objectiveid	1	wolfscar-o02	Cross the south ravine by a stone bridge.` | yes |
 | Script line 4647 | `Action	objectiveid	1	wolfscar-o03	Protect your heart.` | yes |
 | Script line 4761 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4780 | `Action	win	1` | yes |
-| Script line 4785 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4788 | `Action	win	1` | yes |
+| Script line 4779 | `Action	win	1` | yes |
+| Script line 4784 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4786 | `Action	win	1` | yes |
+| Script line 4944 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `wolfscar-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `wolfscar-main-den`: Cross both rifts and claim the wolf den. | `mainDen`: Cond	flag	southRavineCrossed	1; Cond	flag	northRavineCrossed	1; Cond	groundclaimed	1	27	46	42	46; Cond	groundclaimed	1	28	47	38	47; Cond	groundclaimed	1	30	48	39	48; Cond	groundclaimed	1	29	49	30	49; Cond	groundclaimed	1	32	49	41	49; Cond	groundclaimed	1	28	50	30	50; Cond	groundclaimed	1	33	50	43	50; Cond	groundclaimed	1	26	51	45	51; Cond	groundclaimed	1	25	52	40	52; Cond	groundclaimed	1	43	52	46	52; Cond	groundclaimed	1	24	53	41	53; Cond	groundclaimed	1	43	53	46	53; Cond	groundclaimed	1	24	54	34	54; Cond	groundclaimed	1	37	54	47	54; Cond	groundclaimed	1	24	55	32	55; Cond	groundclaimed	1	38	55	48	55; Cond	groundclaimed	1	24	56	31	56; Cond	groundclaimed	1	38	56	48	56; Cond	groundclaimed	1	24	57	32	57; Cond	groundclaimed	1	38	57	47	57; Cond	groundclaimed	1	24	58	26	58; Cond	groundclaimed	1	29	58	46	58; Cond	groundclaimed	1	24	59	27	59; Cond	groundclaimed	1	29	59	39	59; Cond	groundclaimed	1	41	59	46	59; Cond	groundclaimed	1	25	60	39	60; Cond	groundclaimed	1	41	60	46	60; Cond	groundclaimed	1	25	61	45	61; Cond	groundclaimed	1	26	62	44	62; Cond	groundclaimed	1	27	63	43	63; Cond	groundclaimed	1	29	64	34	64; Cond	groundclaimed	1	45	65	48	65; Cond	groundclaimed	1	35	66	36	66; Cond	groundclaimed	1	42	66	48	66 |
+| main | `wolfscar-main-hunters`: Destroy all rival hearts and enemy forces. | `mainHunters`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `wolfscar-extra-gold`: Mine 1500 gold. | `extraGold`: Cond	mined	1	>=	1500 |
+
+Possible route (static, not a playthrough):
+- Protect the heart. Cross the southern ravine northward via existing StoneBridge1 (18,76..79),2 (35..36,76..79),or3 (52,76..79). Each full entry-to-exit walk uses one own living creature; visits, teleports and mixed visitors do not count.
+- Cross the northern ravine northward via existing StoneBridge5 (28,35),6 (44..45,34..37),or7 (62,35..36). No missing fourth bridge is invented. All six actual footprints and dry banks are checked.
+- Claim all344original open natural Wolfden fields in (24,46)-(48,66). There is no placed room in this region. Initial walls and water are excluded; no room construction is required. Original denWell creates the mana spring at (30,51) after20claimed fields; its resulting tile must also be claimed for full current control.
+- Destroy all four actual rival DungeonTemples of seats2,3,4,5 and defeat remaining hostile creatures/portals. A defeated-player flag alone never substitutes for an existing rival heart. Original hunter alliances, flank portal activation and eight pack waves are retained.
+- Before the final main goal optionally mine1500actualgold;93500finite gold is potentially reachable. Starting funds and gifts are not mining.
+- The unchanged victory narration is emitted once only after all three current main goals are reached. The two old win requests remain valid pending requests and carry no premature duplicate narration.
+
+Static source/ground-mask/bank/resource evidence only; worker claiming, actual crossings, combat and save/load require integrator/Mario runtime verification.
+
 | Trigger `southCrossed` | `Action	objectivestate	1	wolfscar-o02	reached`; conditions: `Cond	region	1	Midlow` | yes |
 | Trigger `goalHeartSafe3BeforeHuntersGoneGoal` | `Action	objectivestate	1	wolfscar-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	wolfscar-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `huntersGone` | `Action	objectivestate	1	wolfscar-o01	reached`; conditions: `Cond	defeated	2; Cond	defeated	3; Cond	defeated	4; Cond	defeated	5` | yes |
 | Trigger `huntersGoneGoal` | `Action	objectivestate	1	wolfscar-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Cross the stone bridges, seize the wolf den and destroy every rival heart while guarding your own. | no: enemy temples and own-heart protection are checked; wolf-den ownership and the route are not independent goals |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	wolfscar-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	wolfscar-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainDen` | `Action	objectivestate	1	wolfscar-main-den	reached`; conditions: `Cond	flag	southRavineCrossed	1; Cond	flag	northRavineCrossed	1; Cond	groundclaimed	1	27	46	42	46; Cond	groundclaimed	1	28	47	38	47; Cond	groundclaimed	1	30	48	39	48; Cond	groundclaimed	1	29	49	30	49; Cond	groundclaimed	1	32	49	41	49; Cond	groundclaimed	1	28	50	30	50; Cond	groundclaimed	1	33	50	43	50; Cond	groundclaimed	1	26	51	45	51; Cond	groundclaimed	1	25	52	40	52; Cond	groundclaimed	1	43	52	46	52; Cond	groundclaimed	1	24	53	41	53; Cond	groundclaimed	1	43	53	46	53; Cond	groundclaimed	1	24	54	34	54; Cond	groundclaimed	1	37	54	47	54; Cond	groundclaimed	1	24	55	32	55; Cond	groundclaimed	1	38	55	48	55; Cond	groundclaimed	1	24	56	31	56; Cond	groundclaimed	1	38	56	48	56; Cond	groundclaimed	1	24	57	32	57; Cond	groundclaimed	1	38	57	47	57; Cond	groundclaimed	1	24	58	26	58; Cond	groundclaimed	1	29	58	46	58; Cond	groundclaimed	1	24	59	27	59; Cond	groundclaimed	1	29	59	39	59; Cond	groundclaimed	1	41	59	46	59; Cond	groundclaimed	1	25	60	39	60; Cond	groundclaimed	1	41	60	46	60; Cond	groundclaimed	1	25	61	45	61; Cond	groundclaimed	1	26	62	44	62; Cond	groundclaimed	1	27	63	43	63; Cond	groundclaimed	1	29	64	34	64; Cond	groundclaimed	1	45	65	48	65; Cond	groundclaimed	1	35	66	36	66; Cond	groundclaimed	1	42	66	48	66` | yes |
+| Trigger `mainHunters` | `Action	objectivestate	1	wolfscar-main-hunters	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	wolfscar-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
+| Briefing | Cross the stone bridges, seize the wolf den and destroy every rival heart while guarding your own. | yes: actual bridge crossings of both ravines, ownership of all344original den floor fields, four rival temples gone, remaining enemy forces and own-heart protection |
 
 ## Wraithwood
 

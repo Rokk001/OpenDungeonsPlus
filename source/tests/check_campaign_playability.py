@@ -48,7 +48,7 @@ BRIEFING_MATCH = {
     "Goldspire": {2: "no: building before attacking is not a winning condition", 3: "no: enemy elimination is checked; the ordered low-town/link route is not an independent goal"},
     "Mirewatch": {2: "no: digging/building order is not a winning condition", 3: "no: all tower ownership and both approaches are not independent winning goals", 4: "yes: KillAllEnemies includes the watcher"},
     "Bellwick": {3: "no: enemy temple elimination is checked; holding until the gate event is not an independent goal"},
-    "Wolfscar": {3: "no: enemy temples and own-heart protection are checked; wolf-den ownership and the route are not independent goals"},
+    "Wolfscar": {3: "yes: actual bridge crossings of both ravines, ownership of all344original den floor fields, four rival temples gone, remaining enemy forces and own-heart protection"},
     "TwistingHalls": {3: "no: hallReached checks region presence; it does not independently require possession"},
     "Silverdeep": {2: "no: mining/building are not independent goals", 3: "no: enemy temples are checked; building exactly three wooden spans is not a winning condition"},
     "Ebonrook": {2: "no: mining and feeding are not winning conditions", 3: "no: enemy elimination is checked; the named route is not an independent goal"},
@@ -866,6 +866,15 @@ def grouped_goal_errors(text, level_name):
         for action in actions:
             if action not in blocks.get(name, []):
                 errors.append("original trial limit was changed: " + name)
+    narration = review.get("victory_narration")
+    if narration:
+        if sum(row == narration["action"] for rows in blocks.values() for row in rows) != 1:
+            errors.append("victory narration must occur exactly once after current main goals")
+        names = list(blocks)
+        if narration["trigger"] not in names or any(
+                goal["completion"] not in names or names.index(goal["completion"]) >= names.index(narration["trigger"])
+                for goal in expected.values() if goal["kind"] != "optionalobjectiveid"):
+            errors.append("victory narration must follow all current main-goal observers")
     proof = review.get("reachability", {})
     if proof:
         level = parse_level(text)
@@ -1350,6 +1359,27 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    wolfscar = (root / "levels/campaign/Wolfscar.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tflag\tsouthRavineCrossed\t1", "Cond\ttrigger\tsouthCrossed"),
+        ("Cond\tcrossed\t1\tMainStoneBridge5\tnorth", "Cond\tregion\t1\tMainStoneBridge5"),
+        ("Cond\tgroundclaimed\t1", "Cond\troomclaimed\t1"),
+        ("Cond\troomtiles\t5\tDungeonTemple\t<=\t0", "Cond\tdefeated\t5"),
+        ("Cond\tmined\t1\t>=\t1500", "Cond\tmined\t1\t>=\t150"),
+        ("Cond\tslabs\t1\tWolfden\tclaimed\t>=\t20", "Cond\tslabs\t1\tWolfden\tclaimed\t>=\t1"),
+        ("Cond\tobjective\t1\twolfscar-main-den\treached", "Cond\tobjective\t1\twolfscar-main-den\topen")
+    ):
+        assert old in wolfscar
+        assert objective_errors(wolfscar.replace(old, new), "Wolfscar"), old
+    narration = GROUP_REVIEW["Wolfscar"]["victory_narration"]["action"]
+    duplicate_narration = wolfscar.replace("Name\thuntersGone\nMode\tonce\n", "Name\thuntersGone\nMode\tonce\n" + narration + "\n")
+    assert any("narration must occur exactly once" in error for error in grouped_goal_errors(duplicate_narration, "Wolfscar"))
+    narration_block = next(block for block in re.findall(r"\[Trigger\].*?\[/Trigger\]", wolfscar, re.S)
+                           if "Name\tmainVictory\n" in block)
+    early_narration = wolfscar.replace(narration_block, "", 1)
+    marker = "[Trigger]\nName\tmainHeart\n"
+    early_narration = early_narration.replace(marker, narration_block + "\n" + marker, 1)
+    assert any("narration must follow" in error for error in grouped_goal_errors(early_narration, "Wolfscar"))
     ironbridge = (root / "levels/campaign/Ironbridge.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\tcrossed\t1\tMainStoneBridge3\teast\tafter\tmainSpan1", "Cond\tcrossed\t1\tMainStoneBridge3\teast"),
