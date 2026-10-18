@@ -121,3 +121,14 @@ assert spawn.count(notice) == 1
 assert spawn.index("summoned->setPosition(spawnPosition);") < spawn.index(notice)
 assert spawn.index("summoned->addCreatureEffect(") < spawn.index(notice)
 print("Script reinforcements, transferred minions and skill summons share arrival history: PASS (static only)")
+
+# Human-owned wave portals share class history; enemy wave warnings remain unchanged.
+source = (ROOT / "source/rooms/RoomPortalWave.cpp").read_text(encoding="utf-8")
+spawn = function(source, "void RoomPortalWave::spawnWave(RoomPortalWaveData*")
+notice = "notifyCreatureArrival(classToSpawn->getClassName())"
+assert spawn.count(notice) == 1
+assert spawn.index("newCreature->addToGameMap();") < spawn.index(notice)
+assert spawn.index("newCreature->setPosition(newCreature->getPosition());") < spawn.index(notice)
+assert "if((nbSpawned > 0) && (spawnedNames == nullptr))" in spawn
+assert "warnHeroesComing();" in spawn
+print("Wave portals share first-arrival history without removing invasion warnings: PASS (static only)")
