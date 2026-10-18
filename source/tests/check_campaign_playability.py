@@ -99,8 +99,8 @@ BRIEFING_MATCH["Wraithwood"] = {3: "yes: own-heart protection, independent actua
 BRIEFING_MATCH["Kingsfall"] = {3: "yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance", 4: "yes:12own living creatures currently on the own-heart tiles"}
 
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
-              ('holdBreached',),
-              ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
+              ('goalBasinCrossed',),
+              ('goalKillBeforeEscape',)],
  'Bellwick': [('keeperHeartDown',), None, ('naveGatesKills', 'naveGatesLate'), ('transept',)],
  'BoulderCourse': [('courseDone',)],
  'Brackenford': [('wardenGone',),
@@ -310,12 +310,9 @@ OBJECTIVE_REVIEW = {'bellwick-o02': ('naveGatesKills, naveGatesLate',
                        'should that existing goal trigger complete this text?')}
 
 # Fixed fingerprints of the reviewed existing conditions; never recalculated as expectations.
-OBJECTIVE_CONDITIONS = {'Ashcombe/goalHoldBeforeDeparture': '776b58a0778ede6f329bf9703c105074745fe0c1d7b273766e3e2fb052d95454',
- 'Ashcombe/goalOutsideHoldDeath01': '4b55b1bcd3b6c124c1baca2e1ea3f32f638e21b5b6ab26bc3d2e6e7d3a76c958',
- 'Ashcombe/goalOutsideHoldDeath02': 'b0439d62b1fa95ea3b184ed79bd2e3197ef01165510a41fe5b8a824123f49c63',
- 'Ashcombe/goalOutsideHoldDeath03': '47121a958cf69f7b9a61bca91df8955391839b666ff65501520458af0c8cf7f7',
- 'Ashcombe/goalOutsideHoldDeath04': '74ece0097d1767e87ccf3f06f08682c2d4d55a952b3cb37c06f51e09d4a16ab4',
- 'Ashcombe/goalHoldOrRoadMissed': '6b50aa8f09f86e56c7383895f34b7b828306cbfa792e8aaf22af95b105e6708a',
+OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a76ab7069491bc45a3439b9e8efff92f3363e0e0789',
+'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa328f53c00f5f2768be0f7367fda1c7aec6424870',
+  'Ashcombe/goalHoldOrRoadMissed': '6b50aa8f09f86e56c7383895f34b7b828306cbfa792e8aaf22af95b105e6708a',
  'Ashcombe/holdBreached': 'bae0a393bc01e08ad3ae0b95d56ee971dc346396388423a3d0c019f97ff58aaf',
  'Ashcombe/wardenDown': '9099b47ed59d017b8ca6cede9c74e2bbfe5d91a9ee0d4ee005dbbf423926927f',
  'Ashcombe/wardenEscaped': '56e37df8874d71b952e4aff8e246d5568afc363fa678dde537ce5b53d3bb0604',
@@ -766,22 +763,21 @@ def check_level(level):
     return errors
 
 
-# Prove the four death regions are exactly the map complement of the original Hold.
-def ashcombe_outside_errors(text):
-    expected = ((0, 0, 72, 75), (90, 0, 91, 75), (73, 0, 89, 4), (73, 22, 89, 75))
+# Keep Ashby's existing escape route, and require death before escape without any location restriction.
+def ashcombe_escape_errors(text):
     errors = []
-    if "Region\tHold\t73\t5\t89\t21" not in text.splitlines():
-        errors.append("original Hold bounds differ")
-    if not re.search(r"\[Tiles\]\s*# Map Size\s*92 # MapSizeX\s*76 # MapSizeY", text):
-        errors.append("original Ashcombe map bounds differ")
-    for index, rect in enumerate(expected, 1):
-        row = "Region\tGoalOutsideHold%02d\t%s" % (index, "\t".join(map(str, rect)))
-        if row not in text.splitlines():
-            errors.append("outside-Hold death region differs: %d" % index)
-    departure = next((block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S)
-                      if "Name\twagonLeaves\n" in block), "")
-    if "Cond\talive\tLieslAshby" not in departure:
-        errors.append("departure must require Ashby alive to exclude earlier death")
+    blocks = {re.search(r"^Name\t([^\n]+)", b, re.M)[1]: b
+              for b in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S)}
+    completion = blocks.get("goalKillBeforeEscape", "")
+    conditions = [row for row in completion.splitlines() if row.startswith("Cond\t")]
+    if conditions != ["Cond\tevent\tLieslAshby\tkilled", "Cond\ttrigger\twardenEscaped\t0"]:
+        errors.append("Ashby must die before escape, without a location or departure prerequisite")
+    if "Cond\talive\tLieslAshby" not in blocks.get("wagonLeaves", ""):
+        errors.append("original departure must require Ashby alive")
+    if "Cond\treached\tLieslAshby\tregion\tExitRoad" not in blocks.get("wardenEscaped", ""):
+        errors.append("original escape destination differs")
+    if "Action\tlose\t1" not in blocks.get("wardenEscaped", ""):
+        errors.append("original escape defeat must remain")
     return errors
 
 
@@ -1294,7 +1290,7 @@ def inventory(root):
             for index, match in BRIEFING_MATCH[path.stem].items():
                 result.append("| Briefing | " + cell(sentences[index - 1].strip()) + " | " + match + " |")
         if path.stem == "Ashcombe":
-            result.append("Approved ashcombe-o03 alternative: Ashby is killed after wagonLeaves fired, outside original Hold (73..89,5..21). Four disjoint rectangles cover the entire map complement. Original wagonLeaves requires Ashby alive, so an earlier death cannot satisfy departure; walking through the area never satisfies killedin. Hold-before-departure remains unchanged.")
+            result.append("Mario decided: kill Ashby before she escapes, regardless of location. Actual death and no fired escape trigger are required; departure and a hold visit are not prerequisites or substitutes.")
         if path.stem == "Cinderhollow":
             result.append("Mario's explicit criterion for cinderhollow-o02: fully mine all 16 original finite gold fields x5..6/y55..58 and x30..33/y72..73. The approved objective text requires complete depletion of both finite veins; no deadline or first-wave failure applies.")
         elif path.stem == "Lanternhill":
@@ -1579,18 +1575,11 @@ def self_test(root):
         assert needle in original_map
         assert any("conditions differ" in error for error in objective_errors(original_map.replace(needle, replacement), filename))
     ash = (root / "levels/campaign/Ashcombe.level").read_text(encoding="utf-8")
-    assert not ashcombe_outside_errors(ash)
-    masks = [tuple(map(int, row.split()[2:])) for row in ash.splitlines() if row.startswith("Region\tGoalOutsideHold")]
-    outside = {(x, y) for x1, y1, x2, y2 in masks for x in range(x1, x2 + 1) for y in range(y1, y2 + 1)}
-    hold = {(x, y) for x in range(73, 90) for y in range(5, 22)}
-    assert outside == {(x, y) for x in range(92) for y in range(76)} - hold
-    assert not outside & hold, "no death inside Hold may satisfy the outside alternative"
-    assert sum((x2-x1+1)*(y2-y1+1) for x1,y1,x2,y2 in masks) == len(outside)
-    for mutation in (ash.replace("Cond\tkilledin\tLieslAshby\tGoalOutsideHold01", "Cond\tregion\t1\tGoalOutsideHold01"),
-                     ash.replace("Cond\ttrigger\twagonLeaves\nCond\tkilledin", "Cond\ttrigger\twagonLeaves\t0\nCond\tkilledin")):
-        assert any("conditions differ" in error for error in objective_errors(mutation, "Ashcombe")), "visits and pre-departure death cannot replace killed-after-departure"
-    assert ashcombe_outside_errors(ash.replace("Cond\talive\tLieslAshby\n", ""))
-    assert ashcombe_outside_errors(ash.replace("GoalOutsideHold01\t0\t0\t72\t75", "GoalOutsideHold01\t0\t0\t73\t75"))
+    assert not ashcombe_escape_errors(ash)
+    for replacement in ("Cond\tregion\t1\tHold", "Cond\tkilledin\tLieslAshby\tHold"):
+        assert ashcombe_escape_errors(ash.replace("Cond\tevent\tLieslAshby\tkilled\nCond\ttrigger\twardenEscaped\t0", replacement+"\nCond\ttrigger\twardenEscaped\t0"))
+    assert ashcombe_escape_errors(ash.replace("Cond\ttrigger\twardenEscaped\t0", "Cond\ttrigger\twagonLeaves"))
+    assert ashcombe_escape_errors(ash.replace("Cond\talive\tLieslAshby\n", ""))
     lantern = (root / "levels/campaign/Lanternhill.level").read_text(encoding="utf-8")
     assert not grouped_goal_errors(lantern, "Lanternhill")
     for needle, replacement in (
@@ -1871,7 +1860,7 @@ def main():
             level = parse_level(path_level.read_text(encoding="utf-8"))
             failures.extend(name + ": " + error for error in check_level(level))
             if path_level.stem == "Ashcombe":
-                failures.extend(name + ": " + error for error in ashcombe_outside_errors(level["text"]))
+                failures.extend(name + ": " + error for error in ashcombe_escape_errors(level["text"]))
             if path_level.stem == "Cinderhollow":
                 failures.extend(name + ": " + error for error in cinder_seam_errors(level))
             if path_level.stem == "Mirewatch":

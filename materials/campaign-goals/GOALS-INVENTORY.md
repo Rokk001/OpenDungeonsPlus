@@ -16,20 +16,16 @@ File: `levels/campaign/Ashcombe.level`.
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3286 | `Action	objectiveid	1	ashcombe-o01	Kill Ashby before she escapes.` | yes |
-| Script line 3287 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin to the northern hold.` | yes |
-| Script line 3317 | `Action	objectiveid	1	ashcombe-o03	Enter the hold early, or kill the fleeing Ashby.` | yes |
-| Script line 3452 | `Action	win	1` | yes |
-| Trigger `holdBreached` | `Action	objectivestate	1	ashcombe-o02	reached`; conditions: `Cond	region	1	Hold` | yes |
-| Trigger `goalHoldBeforeDeparture` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves	0; Cond	region	1	Hold; Cond	objective	1	ashcombe-o03	open` | yes |
+| Script line 3287 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
+| Script line 3317 | `Action	objectiveid	1	ashcombe-o03	Kill Ashby before she escapes.` | yes |
+| Script line 3418 | `Action	win	1` | yes |
+| Trigger `goalKillBeforeEscape` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0` | yes |
 | Trigger `goalHoldOrRoadMissed` | `Action	objectivestate	1	ashcombe-o03	failed`; conditions: `Cond	reached	LieslAshby	region	ExitRoad; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath01` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold01; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath02` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold02; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath03` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold03; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath04` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold04; Cond	objective	1	ashcombe-o03	open` | yes |
 | Trigger `wardenEscaped` | `Action	objectivestate	1	ashcombe-o01	failed`; conditions: `Cond	reached	LieslAshby	region	ExitRoad` | yes |
 | Trigger `wardenDown` | `Action	objectivestate	1	ashcombe-o01	reached`; conditions: `Cond	event	LieslAshby	killed` | yes |
+| Trigger `goalBasinCrossed` | `Action	objectivestate	1	ashcombe-o02	reached`; conditions: `Cond	crossed	1	Basin	north` | yes |
 | Briefing | Cross the ashes and kill her before she escapes, whether in the hold or on the south road. | no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal |
-Approved ashcombe-o03 alternative: Ashby is killed after wagonLeaves fired, outside original Hold (73..89,5..21). Four disjoint rectangles cover the entire map complement. Original wagonLeaves requires Ashby alive, so an earlier death cannot satisfy departure; walking through the area never satisfies killedin. Hold-before-departure remains unchanged.
+Mario decided: kill Ashby before she escapes, regardless of location. Actual death and no fired escape trigger are required; departure and a hold visit are not prerequisites or substitutes.
 
 ## Bellwick
 
