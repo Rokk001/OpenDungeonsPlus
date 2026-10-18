@@ -117,10 +117,15 @@ bool MissileStone::importFromStream(std::istream& is)
     return true;
 }
 
+//! \brief Rejects malformed saved mission metadata instead of silently loading a partially configured item.
 MissileStone* MissileStone::getMissileStoneFromStream(GameMap* gameMap, std::istream& is)
 {
     MissileStone* obj = new MissileStone(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 

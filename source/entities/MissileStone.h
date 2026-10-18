@@ -58,6 +58,7 @@ public:
     //! \brief Reports actual delivery of this item rather than arrival of a marked creature.
     bool isDelivered() const { return mDelivered; }
 
+    //! \brief Loads a complete stone, returning null for malformed saved data.
     static MissileStone* getMissileStoneFromStream(GameMap* gameMap, std::istream& is);
     static MissileStone* getMissileStoneFromPacket(GameMap* gameMap, ODPacket& is);
 protected:

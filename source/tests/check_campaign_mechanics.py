@@ -162,3 +162,15 @@ assert actual_event.index('if(eventName == "killed")') < actual_event.index('obs
 assert 'tile->getX(), tile->getY()' in actual_event
 assert 'action.mType == LevelScriptActionType::stoneDrop && action.mText == creatureName' in script
 print('Mission drops require exact recorded death coordinates and keep unique identities: static PASS')
+
+# Loaded cargo must either restore its full metadata or fail, and in-flight items remain in the save list.
+stone_factory = mission.split('MissileStone* MissileStone::getMissileStoneFromStream(', 1)[1].split('\n}\n', 1)[0]
+assert 'if(!obj->importFromStream(is))' in stone_factory and 'return nullptr;' in stone_factory
+map_handler = read('source/gamemap/MapHandler.cpp')
+missile_save = map_handler.split('levelFile << "\\n[Missiles]\\n";', 1)[1].split('levelFile << "[/Missiles]"', 1)[0]
+assert 'GameEntity::exportToStream(rendered, levelFile);' in missile_save
+assert 'getIsOnMap()' not in missile_save, 'a carried object is off its tile but must still be saved'
+position_update = creature_source.split('void Creature::setPosition(', 1)[1].split('\n}\n', 1)[0]
+assert 'mCarriedEntity->notifyCarryMove(v);' in position_update
+assert 'mPosition.x' in read('source/entities/GameEntity.cpp')
+print('Mission metadata load failure and in-flight item save wiring: static PASS')
