@@ -222,7 +222,33 @@ File: `levels/campaign/Campaign2.level` (not listed in Campaign.cfg).
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3496 | `Action	objectiveid	-1	campaign2-o01	Defeat the rival keeper; protect your heart.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `campaign2-main-heart-s1`: Protect your heart. | `mainHeartSeat1`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `campaign2-main-enemies-s1`: Defeat all enemies. | `mainEnemiesSeat1`: Cond	goalmet	1	KillAllEnemies |
+| optional | `campaign2-extra-gold-s1`: Mine 1000 gold. | `mainGoldSeat1`: Cond	mined	1	>=	1000 |
+| main | `campaign2-main-heart-s2`: Protect your heart. | `mainHeartSeat2`: Cond	goalmet	2	ProtectDungeonTemple |
+| main | `campaign2-main-enemies-s2`: Defeat all enemies. | `mainEnemiesSeat2`: Cond	goalmet	2	KillAllEnemies |
+| optional | `campaign2-extra-gold-s2`: Mine 1000 gold. | `mainGoldSeat2`: Cond	mined	2	>=	1000 |
+
+Possible route (static, not a playthrough):
+- For either selected starting seat, protect that own heart and defeat all its enemies through the original classic goal.
+- Optionally mine1000actualgold on that same seat before the final enemy is defeated. Original seat selection, resources and gameplay remain unchanged.
+
+Static seat-specific wiring only; both selectable starts, mining routes, multiplayer and save/load require further verification.
+
 | Trigger `goalClassicComplete` | `Action	objectivestate	-1	campaign2-o01	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeartSeat1` | `Action	objectivestate	1	campaign2-main-heart-s1	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat1` | `Action	objectivestate	1	campaign2-main-enemies-s1	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat1` | `Action	objectivestate	1	campaign2-extra-gold-s1	reached`; conditions: `Cond	mined	1	>=	1000` | yes |
+| Trigger `mainHeartLostSeat1` | `Action	objectivestate	1	campaign2-main-heart-s1	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat2` | `Action	objectivestate	2	campaign2-main-heart-s2	reached`; conditions: `Cond	goalmet	2	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat2` | `Action	objectivestate	2	campaign2-main-enemies-s2	reached`; conditions: `Cond	goalmet	2	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat2` | `Action	objectivestate	2	campaign2-extra-gold-s2	reached`; conditions: `Cond	mined	2	>=	1000` | yes |
+| Trigger `mainHeartLostSeat2` | `Action	objectivestate	2	campaign2-main-heart-s2	failed`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
 
 ## Campaign3
 
@@ -233,7 +259,33 @@ File: `levels/campaign/Campaign3.level` (not listed in Campaign.cfg).
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 8171 | `Action	objectiveid	-1	campaign3-o01	Defeat the rival keeper; protect your heart.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `campaign3-main-heart-s1`: Protect your heart. | `mainHeartSeat1`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `campaign3-main-enemies-s1`: Defeat all enemies. | `mainEnemiesSeat1`: Cond	goalmet	1	KillAllEnemies |
+| optional | `campaign3-extra-gold-s1`: Mine 1000 gold. | `mainGoldSeat1`: Cond	mined	1	>=	1000 |
+| main | `campaign3-main-heart-s2`: Protect your heart. | `mainHeartSeat2`: Cond	goalmet	2	ProtectDungeonTemple |
+| main | `campaign3-main-enemies-s2`: Defeat all enemies. | `mainEnemiesSeat2`: Cond	goalmet	2	KillAllEnemies |
+| optional | `campaign3-extra-gold-s2`: Mine 1000 gold. | `mainGoldSeat2`: Cond	mined	2	>=	1000 |
+
+Possible route (static, not a playthrough):
+- For either selected starting seat, protect that own heart and defeat all its enemies through the original classic goal.
+- Optionally mine1000actualgold on that same seat before the final enemy is defeated. Original seat selection, resources and gameplay remain unchanged.
+
+Static seat-specific wiring only; both selectable starts, mining routes, multiplayer and save/load require further verification.
+
 | Trigger `goalClassicComplete` | `Action	objectivestate	-1	campaign3-o01	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeartSeat1` | `Action	objectivestate	1	campaign3-main-heart-s1	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat1` | `Action	objectivestate	1	campaign3-main-enemies-s1	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat1` | `Action	objectivestate	1	campaign3-extra-gold-s1	reached`; conditions: `Cond	mined	1	>=	1000` | yes |
+| Trigger `mainHeartLostSeat1` | `Action	objectivestate	1	campaign3-main-heart-s1	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat2` | `Action	objectivestate	2	campaign3-main-heart-s2	reached`; conditions: `Cond	goalmet	2	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat2` | `Action	objectivestate	2	campaign3-main-enemies-s2	reached`; conditions: `Cond	goalmet	2	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat2` | `Action	objectivestate	2	campaign3-extra-gold-s2	reached`; conditions: `Cond	mined	2	>=	1000` | yes |
+| Trigger `mainHeartLostSeat2` | `Action	objectivestate	2	campaign3-main-heart-s2	failed`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
 
 ## Cinderhollow
 

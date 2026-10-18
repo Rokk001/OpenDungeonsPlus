@@ -565,8 +565,8 @@ def validate_sections(text):
         raise ValueError("unsupported level version")
 
 
-# Load seats, sparse tile overrides, room footprints and creatures using the file contract.
-def parse_level(text):
+# Load the file contract; an explicit selectable seat permits independent legacy-start analysis.
+def parse_level(text, selected_seat=None):
     validate_sections(text)
     seats = {0: {"teamId": "0", "player": "Inactive"}}
     for block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats"), re.S):
@@ -590,6 +590,10 @@ def parse_level(text):
         if not math.isfinite(float(fields["mana"])):
             raise ValueError("non-finite seat mana")
     humans = [seat for seat, fields in seats.items() if fields["player"] == "Human"]
+    if selected_seat is not None:
+        if selected_seat not in seats or seats[selected_seat]["player"] not in ("Human", "Choice"):
+            raise ValueError("analysis seat is not human-selectable")
+        humans = [selected_seat]
     if len(humans) != 1:
         raise ValueError("expected exactly one human seat")
     tile_lines = lines(section(text, "Tiles"))
@@ -848,10 +852,14 @@ def grouped_goal_errors(text, level_name):
         errors.append("grouped objective set differs from reviewed matrix: " + level_name)
     if not actual and not expected:
         return []
-    main_count = sum(row[1] != "optionalobjectiveid" for row in actual.values())
-    optional_count = sum(row[1] == "optionalobjectiveid" for row in actual.values())
-    if not 2 <= main_count <= 5 or not 1 <= optional_count <= 3:
-        errors.append("grouped goal counts must be 2-5 main and 1-3 optional")
+    # Count the visible goals for each target seat, including shared declarations.
+    target_seats = {row[2] for row in actual.values() if row[2] != "-1"} or {"-1"}
+    for seat in target_seats:
+        visible = [row for row in actual.values() if row[2] in (seat, "-1")]
+        main_count = sum(row[1] != "optionalobjectiveid" for row in visible)
+        optional_count = sum(row[1] == "optionalobjectiveid" for row in visible)
+        if not 2 <= main_count <= 5 or not 1 <= optional_count <= 3:
+            errors.append("grouped goal counts must be 2-5 main and 1-3 optional for seat " + seat)
     room_names = {name for path in (ROOT / "source/rooms").glob("*.cpp")
                   for name in re.findall(r'const std::string \w+Name = "([^"]+)"', path.read_text(encoding="utf-8"))}
     for identity, definition in expected.items():
@@ -906,8 +914,15 @@ def grouped_goal_errors(text, level_name):
             errors.append("victory narration must follow all current main-goal observers")
     proof = review.get("reachability", {})
     if proof:
-        level = parse_level(text)
+        level = parse_level(text, proof.get("selected_seat"))
         area, _ = reachable(timed_openings(level))
+        for start in proof.get("selectable_starts", []):
+            candidate = parse_level(text, start["seat"])
+            candidate_area, _ = reachable(timed_openings(candidate))
+            gold = sum(fullness * 5 for tile, (kind, fullness, _) in candidate["tiles"].items()
+                       if tile in candidate_area and kind == 2)
+            if list(candidate["start"]) != start["position"] or gold < start["minimum_mineable_gold"]:
+                errors.append("selectable starting seat lacks its original position or mining resources: " + str(start["seat"]))
         for name, definition in proof.get("regions", {}).items():
             match = re.search(r"^Region\s+" + re.escape(name) + r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
             if not match or list(map(int, match.groups())) != definition["bounds"]:
@@ -1781,6 +1796,27 @@ def self_test(root):
             ("Cond\tmined\t1\t>=\t500", "Cond\ttime\t500")):
         assert needle in legacy_first
         assert grouped_goal_errors(legacy_first.replace(needle, replacement), "Campaign1"), "Legacy Campaign1 must retain exact classic goals and mining: " + needle
+    for legacy_name in ("Campaign2", "Campaign3"):
+        legacy = (root / "levels/campaign" / (legacy_name + ".level")).read_text(encoding="utf-8")
+        assert not grouped_goal_errors(legacy, legacy_name)
+        for seat in (1, 2):
+            other = 3 - seat
+            candidate = parse_level(legacy, seat)
+            assert candidate["human"] == seat
+            for source, replacement in (
+                    ("Cond\tgoalmet\t%d\tProtectDungeonTemple" % seat, "Cond\tgoalmet\t%d\tProtectDungeonTemple" % other),
+                    ("Cond\tgoalmet\t%d\tKillAllEnemies" % seat, "Cond\tgoalmet\t%d\tKillAllEnemies" % other),
+                    ("Cond\tmined\t%d\t>=\t1000" % seat, "Cond\tmined\t%d\t>=\t1000" % other),
+                    ("Action\tobjectivestate\t%d\t%s-main-heart-s%d\treached" % (seat, legacy_name.lower(), seat),
+                     "Action\tobjectivestate\t%d\t%s-main-heart-s%d\treached" % (other, legacy_name.lower(), seat))):
+                assert source in legacy
+                assert grouped_goal_errors(legacy.replace(source, replacement), legacy_name), "Legacy progress must remain bound to its own seat"
+        try:
+            parse_level(legacy, 0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("inactive seat must not become a selectable analysis start")
     print("campaign playability self-test passed")
 
 

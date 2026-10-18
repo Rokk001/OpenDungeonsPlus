@@ -12533,5 +12533,287 @@
     "reachability": {
       "minimum_mineable_gold": 500
     }
+  },
+  "Campaign2": {
+    "goals": {
+      "campaign2-main-heart-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign2-main-enemies-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat all enemies.",
+        "completion": "mainEnemiesSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign2-extra-gold-s1": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1000 gold.",
+        "completion": "mainGoldSeat1",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1000"
+        ],
+        "mode": "once"
+      },
+      "campaign2-main-heart-s2": {
+        "kind": "mainobjectiveid",
+        "seat": "2",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat2",
+        "conditions": [
+          "Cond\tgoalmet\t2\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign2-main-enemies-s2": {
+        "kind": "mainobjectiveid",
+        "seat": "2",
+        "text": "Defeat all enemies.",
+        "completion": "mainEnemiesSeat2",
+        "conditions": [
+          "Cond\tgoalmet\t2\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign2-extra-gold-s2": {
+        "kind": "optionalobjectiveid",
+        "seat": "2",
+        "text": "Mine 1000 gold.",
+        "completion": "mainGoldSeat2",
+        "conditions": [
+          "Cond\tmined\t2\t>=\t1000"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLostSeat1": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "campaign2-main-heart-s1",
+            "failed"
+          ]
+        ]
+      },
+      "mainHeartLostSeat2": {
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "2",
+            "campaign2-main-heart-s2",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "intro": [
+        "Cond\ttime\t3"
+      ],
+      "hint": [
+        "Cond\ttime\t180"
+      ],
+      "goalClassicComplete": [
+        "Cond\tgoalmet\t1\tKillAllEnemies",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
+      ]
+    },
+    "preserved_actions": {
+      "intro": [
+        "Action\tmessage\t-1\tA rival keeper is after the same treasure. Claim it first.",
+        "Action\tobjectiveid\t-1\tcampaign2-o01\tDefeat the rival keeper; protect your heart."
+      ],
+      "hint": [
+        "Action\tmessage\t-1\tBuild a Treasury and a Training Room before the rival gets strong."
+      ],
+      "goalClassicComplete": [
+        "Action\tobjectivestate\t-1\tcampaign2-o01\treached"
+      ]
+    },
+    "route": [
+      "For either selected starting seat, protect that own heart and defeat all its enemies through the original classic goal.",
+      "Optionally mine1000actualgold on that same seat before the final enemy is defeated. Original seat selection, resources and gameplay remain unchanged."
+    ],
+    "runtime_limit": "Static seat-specific wiring only; both selectable starts, mining routes, multiplayer and save/load require further verification.",
+    "reachability": {
+      "selected_seat": 1,
+      "selectable_starts": [
+        {
+          "seat": 1,
+          "position": [
+            85,
+            60
+          ],
+          "minimum_mineable_gold": 1000
+        },
+        {
+          "seat": 2,
+          "position": [
+            29,
+            18
+          ],
+          "minimum_mineable_gold": 1000
+        }
+      ],
+      "minimum_mineable_gold": 1000
+    }
+  },
+  "Campaign3": {
+    "goals": {
+      "campaign3-main-heart-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign3-main-enemies-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat all enemies.",
+        "completion": "mainEnemiesSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign3-extra-gold-s1": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1000 gold.",
+        "completion": "mainGoldSeat1",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1000"
+        ],
+        "mode": "once"
+      },
+      "campaign3-main-heart-s2": {
+        "kind": "mainobjectiveid",
+        "seat": "2",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat2",
+        "conditions": [
+          "Cond\tgoalmet\t2\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign3-main-enemies-s2": {
+        "kind": "mainobjectiveid",
+        "seat": "2",
+        "text": "Defeat all enemies.",
+        "completion": "mainEnemiesSeat2",
+        "conditions": [
+          "Cond\tgoalmet\t2\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "campaign3-extra-gold-s2": {
+        "kind": "optionalobjectiveid",
+        "seat": "2",
+        "text": "Mine 1000 gold.",
+        "completion": "mainGoldSeat2",
+        "conditions": [
+          "Cond\tmined\t2\t>=\t1000"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLostSeat1": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "campaign3-main-heart-s1",
+            "failed"
+          ]
+        ]
+      },
+      "mainHeartLostSeat2": {
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "2",
+            "campaign3-main-heart-s2",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "intro": [
+        "Cond\ttime\t3"
+      ],
+      "half": [
+        "Cond\ttime\t300"
+      ],
+      "goalClassicComplete": [
+        "Cond\tgoalmet\t1\tKillAllEnemies",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
+      ]
+    },
+    "preserved_actions": {
+      "intro": [
+        "Action\tmessage\t-1\tThe final duel. Only one keeper will rule this part of the underground.",
+        "Action\tobjectiveid\t-1\tcampaign3-o01\tDefeat the rival keeper; protect your heart."
+      ],
+      "half": [
+        "Action\tmessage\t-1\tHeroes will try to steal gold from both of you. Guard your treasury."
+      ],
+      "goalClassicComplete": [
+        "Action\tobjectivestate\t-1\tcampaign3-o01\treached"
+      ]
+    },
+    "route": [
+      "For either selected starting seat, protect that own heart and defeat all its enemies through the original classic goal.",
+      "Optionally mine1000actualgold on that same seat before the final enemy is defeated. Original seat selection, resources and gameplay remain unchanged."
+    ],
+    "runtime_limit": "Static seat-specific wiring only; both selectable starts, mining routes, multiplayer and save/load require further verification.",
+    "reachability": {
+      "selected_seat": 1,
+      "selectable_starts": [
+        {
+          "seat": 1,
+          "position": [
+            58,
+            102
+          ],
+          "minimum_mineable_gold": 1000
+        },
+        {
+          "seat": 2,
+          "position": [
+            55,
+            12
+          ],
+          "minimum_mineable_gold": 1000
+        }
+      ],
+      "minimum_mineable_gold": 1000
+    }
   }
 }
