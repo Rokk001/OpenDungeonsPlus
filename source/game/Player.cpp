@@ -829,11 +829,16 @@ void Player::notifyCreatureKilled(Creature& creature)
 
     mCreatureKilledTime = CREATURE_KILLED_TIME_COUNT;
 
-    std::string chatMsg = creature.getName() + " has been killed";
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, this);
-    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    notifyCreatureEvent(creature, " has been killed");
+}
+
+//! \brief Sends identity and existing message text without generating a competing server-side profile.
+void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix)
+{
+    const CreatureDefinition* definition = creature.getDefinition();
+    ServerNotification* notification = new ServerNotification(ServerNotificationType::creatureNotice, this);
+    notification->mPacket << creature.getName() << definition->getClassName() << definition->isWorker() << suffix;
+    ODServer::getSingleton().queueServerNotification(notification);
 }
 
 void Player::notifyNewCreatureType(const std::string& creatureClassName)

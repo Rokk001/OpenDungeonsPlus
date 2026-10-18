@@ -648,6 +648,17 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::creatureNotice:
+        {
+            std::string creatureName, className, suffix;
+            bool worker;
+            OD_ASSERT_TRUE(packetReceived >> creatureName >> className >> worker >> suffix);
+            const std::string name = social::SocialProfileCache::getSingleton().getProfile(
+                creatureName, className, worker).getFullName();
+            addEventMessage(new EventMessage(name + suffix, EventShortNoticeType::aboutCreatures));
+            break;
+        }
+
         case ServerNotificationType::chatServer:
         {
             std::string evtMsg;

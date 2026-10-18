@@ -235,6 +235,9 @@ public:
     //! Should be called on the server game map
     void notifyCreatureKilled(Creature& creature);
 
+    //! \brief Sends an owner creature notice whose name is resolved from the client profile; suffix keeps existing wording.
+    void notifyCreatureEvent(Creature& creature, const std::string& suffix);
+
     //! \brief Notify the player that a new creature type is now attracted to the dungeon
     //! Should be called on the server game map
     void notifyNewCreatureType(const std::string& creatureClassName);

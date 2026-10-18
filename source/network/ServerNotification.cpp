@@ -57,6 +57,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "playerConfigChange";
         case ServerNotificationType::chat:
             return "chat";
+        case ServerNotificationType::creatureNotice:
+            return "creatureNotice";
         case ServerNotificationType::chatServer:
             return "chatServer";
         case ServerNotificationType::turnStarted:

@@ -819,10 +819,15 @@ public:
     void fireCreatureRefreshIfNeeded();
 
     void fireChatMsgTookFee(int goldTaken);
+    //! \brief Reports departure using the client profile name.
     void fireChatMsgLeftDungeon();
+    //! \brief Reports imminent departure using the client profile name.
     void fireChatMsgLeavingDungeon();
+    //! \brief Reports loss of control using the client profile name.
     void fireChatMsgBecameRogue();
+    //! \brief Reports unhappiness using the client profile name.
     void fireChatMsgUnhappy();
+    //! \brief Reports fury using the client profile name.
     void fireChatMsgFurious();
 
     //! \brief Load creature definition according to @mDefinitionString
