@@ -74,6 +74,8 @@ BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart prot
 
 BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes"}
 
+BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1561,6 +1563,17 @@ def self_test(root):
             ("Cond\tobjective\t1\tvarnscrossing-main-keep\treached", "Cond\tregion\t1\tKeep")):
         assert needle in crossing
         assert grouped_goal_errors(crossing.replace(needle, replacement), "VarnsCrossing"), "Crossing requirement weakening must fail: " + needle
+    thorn = (root / "levels/campaign/Thornreach.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(thorn, "Thornreach")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tThornMaze\teast", "Cond\tregion\t1\tClearing"),
+            ("Cond\tcrossed\t1\tThornMaze\teast", "Cond\tcrossed\t1\tThornMaze\twest"),
+            ("Region\tThornMaze\t26\t5\t80\t68", "Region\tThornMaze\t46\t30\t58\t42"),
+            ("Cond\troomtiles\t5\tDungeonTemple\t<=\t0", "Cond\tcreatures\t5\t<=\t0"),
+            ("Cond\tmined\t1\t>=\t2000", "Cond\tmined\t1\t>=\t200"),
+            ("Cond\tobjective\t1\tthornreach-main-maze\treached", "Cond\tregion\t1\tClearing")):
+        assert needle in thorn
+        assert grouped_goal_errors(thorn.replace(needle, replacement), "Thornreach"), "Thornreach weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 

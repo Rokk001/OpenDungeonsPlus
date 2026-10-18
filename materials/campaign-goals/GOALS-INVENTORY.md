@@ -962,13 +962,39 @@ File: `levels/campaign/Thornreach.level`.
 | Advisory hint line 5932 | `Action	hint	1	Dig and burn through the thorn maze.` | not an objective; no state required |
 | Script line 5933 | `Action	objectiveid	1	thornreach-o03	Protect your heart while the keepers fight.` | yes |
 | Script line 6056 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 6075 | `Action	win	1` | yes |
-| Script line 6080 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 6083 | `Action	win	1` | yes |
+| Script line 6074 | `Action	win	1` | yes |
+| Script line 6079 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 6081 | `Action	win	1` | yes |
+| Script line 6167 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `thornreach-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `thornreach-main-maze`: Claim the clearing and cross the hedge maze. | `mainMaze`: Cond	crossed	1	ThornMaze	east; Cond	groundclaimed	1	47	30	57	30; Cond	groundclaimed	1	47	31	48	31; Cond	groundclaimed	1	50	31	54	31; Cond	groundclaimed	1	56	31	57	31; Cond	groundclaimed	1	47	32	57	32; Cond	groundclaimed	1	47	33	57	33; Cond	groundclaimed	1	47	34	57	34; Cond	groundclaimed	1	47	35	58	35; Cond	groundclaimed	1	47	36	50	36; Cond	groundclaimed	1	54	36	58	36; Cond	groundclaimed	1	47	37	57	37; Cond	groundclaimed	1	47	38	58	38; Cond	groundclaimed	1	47	39	58	39; Cond	groundclaimed	1	49	40	57	40; Cond	groundclaimed	1	46	41	57	41; Cond	groundclaimed	1	46	42	57	42 |
+| main | `thornreach-main-keepers`: Destroy all rival hearts and enemy forces. | `mainKeepers`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `thornreach-extra-gold`: Mine 2000 gold. | `extraGold`: Cond	mined	1	>=	2000 |
+
+Possible route (static, not a playthrough):
+- Protect the own heart; conquer all142original dry open Clearing fields(46..58,30..42). No placed room exists there, so no new room is required. All fields are potentially reachable; original walls and lava are excluded.
+- Walk one own living creature from the west bank x25 through the full hedge maze rectangle x26..80/y5..68 to the east bank x81. A visit, teleport or different creatures on opposite banks does not count. Any legal internal path qualifies; no fixed hedge plug is prescribed.
+- One potential cardinal route runs(25,23)->(33,23)->(33,24)->(60,24)->(60,26)->(63,26)->(63,24)->(81,24),61steps and12removable dirt fields, checked against the actual map. This is static necessary evidence only, not a completed walk.
+- Destroy all four actual rival hearts,seats2..5,and remaining enemy forces/portals. Keep the full clearing until victory. Preserve original nine waves, alliance changes, timed openings and clearing reinforcements.
+- Optionally mine2000actualgold from96500finitepotentialgold. Existing mined1 threshold2000 remains unchanged.
+- Move the unchanged duplicate victory sentence to one final completion after all current main observers; original win requests remain pending.
+
+Static route/footprint/resource evidence only; actual walking, claiming, battles and save/load remain unverified.
+
 | Trigger `goalHeartSafe3BeforeKeepersGoneGoal` | `Action	objectivestate	1	thornreach-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	thornreach-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `keepersGoneGoal` | `Action	objectivestate	1	thornreach-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Take the middle clearing, cut through the maze and destroy every rival heart. | no: enemy temples are checked; clearing ownership and maze progression are not independent goals |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	thornreach-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	thornreach-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainMaze` | `Action	objectivestate	1	thornreach-main-maze	reached`; conditions: `Cond	crossed	1	ThornMaze	east; Cond	groundclaimed	1	47	30	57	30; Cond	groundclaimed	1	47	31	48	31; Cond	groundclaimed	1	50	31	54	31; Cond	groundclaimed	1	56	31	57	31; Cond	groundclaimed	1	47	32	57	32; Cond	groundclaimed	1	47	33	57	33; Cond	groundclaimed	1	47	34	57	34; Cond	groundclaimed	1	47	35	58	35; Cond	groundclaimed	1	47	36	50	36; Cond	groundclaimed	1	54	36	58	36; Cond	groundclaimed	1	47	37	57	37; Cond	groundclaimed	1	47	38	58	38; Cond	groundclaimed	1	47	39	58	39; Cond	groundclaimed	1	49	40	57	40; Cond	groundclaimed	1	46	41	57	41; Cond	groundclaimed	1	46	42	57	42` | yes |
+| Trigger `mainKeepers` | `Action	objectivestate	1	thornreach-main-keepers	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	thornreach-extra-gold	reached`; conditions: `Cond	mined	1	>=	2000` | yes |
+| Briefing | Take the middle clearing, cut through the maze and destroy every rival heart. | yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes |
 
 ## Tinmoor
 

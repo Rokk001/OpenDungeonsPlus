@@ -5464,5 +5464,355 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tBoth keepers lie dead and the great roads are quiet. Varn has lost his crossing."
     }
+  },
+  "Thornreach": {
+    "goals": {
+      "thornreach-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "thornreach-main-maze": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim the clearing and cross the hedge maze.",
+        "completion": "mainMaze",
+        "conditions": [
+          "Cond\tcrossed\t1\tThornMaze\teast",
+          "Cond\tgroundclaimed\t1\t47\t30\t57\t30",
+          "Cond\tgroundclaimed\t1\t47\t31\t48\t31",
+          "Cond\tgroundclaimed\t1\t50\t31\t54\t31",
+          "Cond\tgroundclaimed\t1\t56\t31\t57\t31",
+          "Cond\tgroundclaimed\t1\t47\t32\t57\t32",
+          "Cond\tgroundclaimed\t1\t47\t33\t57\t33",
+          "Cond\tgroundclaimed\t1\t47\t34\t57\t34",
+          "Cond\tgroundclaimed\t1\t47\t35\t58\t35",
+          "Cond\tgroundclaimed\t1\t47\t36\t50\t36",
+          "Cond\tgroundclaimed\t1\t54\t36\t58\t36",
+          "Cond\tgroundclaimed\t1\t47\t37\t57\t37",
+          "Cond\tgroundclaimed\t1\t47\t38\t58\t38",
+          "Cond\tgroundclaimed\t1\t47\t39\t58\t39",
+          "Cond\tgroundclaimed\t1\t49\t40\t57\t40",
+          "Cond\tgroundclaimed\t1\t46\t41\t57\t41",
+          "Cond\tgroundclaimed\t1\t46\t42\t57\t42"
+        ],
+        "mode": "repeat\t0"
+      },
+      "thornreach-main-keepers": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy all rival hearts and enemy forces.",
+        "completion": "mainKeepers",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t4\tDungeonTemple\t<=\t0",
+          "Cond\troomtiles\t5\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "thornreach-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 2000 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t2000"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "thornreach-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tthornreach-main-heart\treached",
+          "Cond\tobjective\t1\tthornreach-main-maze\treached",
+          "Cond\tobjective\t1\tthornreach-main-keepers\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe last keeper is dead and the thorns are quiet. Thornreach is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "clearingSeen": [
+        "Cond\tregion\t1\tClearing"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t2000"
+      ],
+      "allianceNorth": [
+        "Cond\tregion\t1\tNorthWest"
+      ],
+      "allianceSouth": [
+        "Cond\tregion\t1\tSouthWest"
+      ],
+      "pactSplit": [
+        "Cond\ttime\t2000"
+      ],
+      "pactTurn": [
+        "Cond\ttime\t3200"
+      ],
+      "hunt1": [
+        "Cond\ttime\t260"
+      ],
+      "hunt2": [
+        "Cond\ttime\t560"
+      ],
+      "hunt3": [
+        "Cond\ttime\t900"
+      ],
+      "hunt4": [
+        "Cond\ttime\t1300"
+      ],
+      "hunt5": [
+        "Cond\ttime\t1750"
+      ],
+      "hunt6": [
+        "Cond\ttime\t2250"
+      ],
+      "hunt7": [
+        "Cond\ttime\t2800"
+      ],
+      "hunt8": [
+        "Cond\ttime\t3400"
+      ],
+      "hunt9": [
+        "Cond\ttime\t4100"
+      ]
+    },
+    "preserved_actions": {
+      "clearingSeen": [
+        "Action\tmessage\t1\tThe middle clearing is the crossing of every road. The keepers have seen you and will start to move against each other too.",
+        "Action\treveal\t1\tHedge3",
+        "Action\treveal\t1\tHedge4",
+        "Action\tspawn\t1\t52\t33\t1\tOrc:3\tGoblin:3\tSpider:3"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe seams are paying. Iron doors will keep the keepers out of your halls."
+      ],
+      "allianceNorth": [
+        "Action\tmessage\t1\tThe north-west keeper has joined hands with the north-east keeper. They share a pact until you fall.",
+        "Action\talliance\t2\t4\tmake",
+        "Action\tspawn\t4\t27\t11\t1\tTroll:3\tOrc:3\tSpider:3\tGoblin:3"
+      ],
+      "allianceSouth": [
+        "Action\tmessage\t1\tThe south-west keeper and the south-east keeper are allied against you.",
+        "Action\talliance\t3\t5\tmake",
+        "Action\tspawn\t5\t27\t62\t1\tTroll:3\tOrc:3\tSpider:3\tGoblin:3"
+      ],
+      "pactSplit": [
+        "Action\tmessage\t1\tThe pacts have cracked. The north-east keeper has left the north-west keeper and sworn to the south-east keeper instead.",
+        "Action\talliance\t2\t4\tbreak",
+        "Action\talliance\t4\t5\tmake"
+      ],
+      "pactTurn": [
+        "Action\tmessage\t1\tThe hedge keepers have cut every old oath. The north-west keeper now fights beside the south-west keeper, and the pact against you is shorter than the one against each other.",
+        "Action\talliance\t2\t3\tmake"
+      ],
+      "hunt1": [
+        "Action\tmessage\t1\tThorn hunters are riding out of the north-west.",
+        "Action\tterrain\t28\t29\t28\t29\tpath",
+        "Action\tspawn\t2\t31\t29\t1\tOrc:2\tGoblin:2\tSpider:2"
+      ],
+      "hunt2": [
+        "Action\tmessage\t1\tA pack from the south-east is crossing the maze.",
+        "Action\tterrain\t28\t44\t28\t44\tpath",
+        "Action\tspawn\t5\t30\t44\t1\tOrc:2\tSpider:2\tTroll:2"
+      ],
+      "hunt3": [
+        "Action\tmessage\t1\tThe north-east keeper sends hounds.",
+        "Action\tspawn\t4\t31\t29\t1\tGoblin:3\tOrc:3\tSpider:2"
+      ],
+      "hunt4": [
+        "Action\tmessage\t1\tWolves from the south-west are in the hedges.",
+        "Action\tspawn\t3\t30\t44\t1\tTroll:3\tOrc:3\tSpider:3"
+      ],
+      "hunt5": [
+        "Action\tmessage\t1\tTwo keepers have joined their packs against you.",
+        "Action\tspawn\t2\t31\t29\t1\tOrc:3\tTroll:3\tGoblin:3\tSpider:3"
+      ],
+      "hunt6": [
+        "Action\tmessage\t1\tThe thorn guard marches in force.",
+        "Action\tspawn\t5\t30\t44\t1\tTroll:3\tOrc:3\tOrc:3\tSpider:3"
+      ],
+      "hunt7": [
+        "Action\tmessage\t1\tThe last reserves of the north-east are coming.",
+        "Action\tspawn\t4\t31\t29\t1\tTroll:4\tOrc:3\tGoblin:3\tSpider:3\tOrc:3"
+      ],
+      "hunt8": [
+        "Action\tmessage\t1\tCassia Thorne has called every keeper to arms.",
+        "Action\tspawn\t3\t30\t44\t1\tTroll:4\tTroll:3\tOrc:4\tSpider:3\tGoblin:3"
+      ],
+      "hunt9": [
+        "Action\tmessage\t1\tThe final pack is on the road.",
+        "Action\tspawn\t2\t31\t29\t1\tTroll:4\tTroll:4\tOrc:4\tSpider:4\tGoblin:3"
+      ]
+    },
+    "reachability": {
+      "minimum_mineable_gold": 2000,
+      "regions": {
+        "Clearing": {
+          "bounds": [
+            46,
+            30,
+            58,
+            42
+          ],
+          "minimum_open_tiles": 142
+        },
+        "ThornMaze": {
+          "bounds": [
+            26,
+            5,
+            80,
+            68
+          ],
+          "minimum_potential_tiles": 57
+        }
+      },
+      "footprints": [
+        {
+          "goal": "thornreach-main-maze",
+          "bounds": [
+            46,
+            30,
+            58,
+            42
+          ],
+          "runs": [
+            [
+              47,
+              30,
+              57,
+              30
+            ],
+            [
+              47,
+              31,
+              48,
+              31
+            ],
+            [
+              50,
+              31,
+              54,
+              31
+            ],
+            [
+              56,
+              31,
+              57,
+              31
+            ],
+            [
+              47,
+              32,
+              57,
+              32
+            ],
+            [
+              47,
+              33,
+              57,
+              33
+            ],
+            [
+              47,
+              34,
+              57,
+              34
+            ],
+            [
+              47,
+              35,
+              58,
+              35
+            ],
+            [
+              47,
+              36,
+              50,
+              36
+            ],
+            [
+              54,
+              36,
+              58,
+              36
+            ],
+            [
+              47,
+              37,
+              57,
+              37
+            ],
+            [
+              47,
+              38,
+              58,
+              38
+            ],
+            [
+              47,
+              39,
+              58,
+              39
+            ],
+            [
+              49,
+              40,
+              57,
+              40
+            ],
+            [
+              46,
+              41,
+              57,
+              41
+            ],
+            [
+              46,
+              42,
+              57,
+              42
+            ]
+          ]
+        }
+      ]
+    },
+    "route": [
+      "Protect the own heart; conquer all142original dry open Clearing fields(46..58,30..42). No placed room exists there, so no new room is required. All fields are potentially reachable; original walls and lava are excluded.",
+      "Walk one own living creature from the west bank x25 through the full hedge maze rectangle x26..80/y5..68 to the east bank x81. A visit, teleport or different creatures on opposite banks does not count. Any legal internal path qualifies; no fixed hedge plug is prescribed.",
+      "One potential cardinal route runs(25,23)->(33,23)->(33,24)->(60,24)->(60,26)->(63,26)->(63,24)->(81,24),61steps and12removable dirt fields, checked against the actual map. This is static necessary evidence only, not a completed walk.",
+      "Destroy all four actual rival hearts,seats2..5,and remaining enemy forces/portals. Keep the full clearing until victory. Preserve original nine waves, alliance changes, timed openings and clearing reinforcements.",
+      "Optionally mine2000actualgold from96500finitepotentialgold. Existing mined1 threshold2000 remains unchanged.",
+      "Move the unchanged duplicate victory sentence to one final completion after all current main observers; original win requests remain pending."
+    ],
+    "runtime_limit": "Static route/footprint/resource evidence only; actual walking, claiming, battles and save/load remain unverified.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe last keeper is dead and the thorns are quiet. Thornreach is yours."
+    }
   }
 }
