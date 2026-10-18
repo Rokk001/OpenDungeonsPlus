@@ -5292,17 +5292,14 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg;
+    std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
     if(getGoldFee() <= 0)
-        msg = getName() + " took its fee: " + Helper::toString(goldTaken);
+        suffix = " took its fee: " + Helper::toString(goldTaken);
     else
-        msg = getName() + " took " + Helper::toString(goldTaken) + " from its fee";
+        suffix = " took " + Helper::toString(goldTaken) + " from its fee";
 
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
 
 void Creature::fireChatMsgLeftDungeon()
@@ -5314,11 +5311,7 @@ void Creature::fireChatMsgLeftDungeon()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " left your dungeon";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " left your dungeon");
 }
 
 void Creature::fireChatMsgLeavingDungeon()
@@ -5330,11 +5323,7 @@ void Creature::fireChatMsgLeavingDungeon()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is leaving your dungeon";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is leaving your dungeon");
 }
 
 void Creature::fireChatMsgBecameRogue()
@@ -5346,11 +5335,7 @@ void Creature::fireChatMsgBecameRogue()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is not under your control anymore !";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
 }
 
 void Creature::fireChatMsgUnhappy()
@@ -5362,11 +5347,7 @@ void Creature::fireChatMsgUnhappy()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is unhappy !";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is unhappy !");
 }
 
 void Creature::fireChatMsgFurious()
@@ -5378,11 +5359,7 @@ void Creature::fireChatMsgFurious()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is furious !";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }
 
 void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition)

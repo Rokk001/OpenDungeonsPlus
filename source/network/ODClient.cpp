@@ -653,6 +653,17 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             std::string evtMsg;
             EventShortNoticeType type;
             OD_ASSERT_TRUE(packetReceived >> evtMsg >> type);
+            // A creature notice carries the creature identity after the text: put the profile name of the
+            // creature card in front of it. No creature lookup, the creature may already be gone.
+            if(!packetReceived.endOfPacket())
+            {
+                std::string creatureName;
+                std::string className;
+                bool worker = false;
+                OD_ASSERT_TRUE(packetReceived >> creatureName >> className >> worker);
+                evtMsg = social::SocialProfileCache::getSingleton().getProfile(
+                    creatureName, className, worker).getFullName() + evtMsg;
+            }
             addEventMessage(new EventMessage(evtMsg, type));
             break;
         }
