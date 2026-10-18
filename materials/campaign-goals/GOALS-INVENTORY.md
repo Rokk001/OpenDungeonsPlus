@@ -354,13 +354,38 @@ File: `levels/campaign/Greywater.level`.
 | Script line 2941 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
 | Script line 2966 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
 | Script line 3052 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `greywater-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `greywater-main-gold`: Mine 600 gold. | `mainGold`: Cond	mined	1	>=	600 |
+| main | `greywater-main-siege`: Cross the river; attack the besiegers. | `mainSiege`: Cond	flag	riverCrossed	1; Cond	attackedregion	1	3	Siege |
+| main | `greywater-main-warden`: Defeat Corwin Gray and all enemy forces. | `mainWarden`: Cond	event	CorwinGray	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `greywater-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
+
+Possible route (static, not a playthrough):
+- Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.
+- Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.
+- Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.
+- Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged.
+
+Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification.
+
 | Trigger `firstCoin` | `Action	objectivestate	1	greywater-o02	reached`; conditions: `Cond	mined	1	>=	600` | yes |
 | Trigger `siegeSeen` | `Action	objectivestate	1	greywater-o04	reached`; conditions: `Cond	region	1	Siege` | yes |
 | Trigger `goalHeartSafe3BeforeWardenFalls` | `Action	objectivestate	1	greywater-o03	reached`; conditions: `Cond	event	CorwinGray	killed; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	greywater-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `wardenFalls` | `Action	objectivestate	1	greywater-o01	reached`; conditions: `Cond	event	CorwinGray	killed` | yes |
-| Briefing | Mine first and protect your heart, for those heroes may turn on you. | no: ProtectDungeonTemple checks the heart; mining is not a winning condition |
-| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | yes: KillAllEnemies includes Gray |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	greywater-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	greywater-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainGold` | `Action	objectivestate	1	greywater-main-gold	reached`; conditions: `Cond	mined	1	>=	600` | yes |
+| Trigger `mainSiege` | `Action	objectivestate	1	greywater-main-siege	reached`; conditions: `Cond	flag	riverCrossed	1; Cond	attackedregion	1	3	Siege` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	greywater-main-warden	reached`; conditions: `Cond	event	CorwinGray	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	greywater-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
+| Briefing | Mine first and protect your heart, for those heroes may turn on you. | yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege |
+| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | yes: mainWarden requires Gray killed and all remaining enemy forces/portals |
 
 ## Highcairn
 

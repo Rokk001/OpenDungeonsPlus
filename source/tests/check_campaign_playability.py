@@ -32,7 +32,7 @@ BRIEFING_MATCH = {
     "BoulderCourse": {3: "yes: courseDone checks all four cups; the timeout trigger limits the trial"},
     "Ravensledge": {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals"},
     "Ashcombe": {3: "no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal"},
-    "Greywater": {3: "no: ProtectDungeonTemple checks the heart; mining is not a winning condition", 4: "yes: KillAllEnemies includes Gray"},
+    "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
     "HollinFen": {2: "no: enemy elimination and heart protection are checked; building and breaking the ward are not independent goals", 3: "no: optional stone discovery is not required to win"},
     "CrowshotGallery": {3: "no: galleryClear checks the flock; possession is not a separate winning condition"},
     "Ironbridge": {3: "no: building and bridge order are not independent goals", 4: "yes: KillAllEnemies includes the rival temple"},
@@ -886,10 +886,16 @@ def grouped_goal_errors(text, level_name):
             bridge = next((room for room in level["rooms"] if room[1] == definition["room"]), None)
             if bridge is None or bridge[0] not in (12, 13) or set(bridge[3]) != expected_tiles or expected_tiles - area:
                 errors.append("crossing region differs from the actual reachable bridge: " + name)
-            for bank_y in (b - 1, d + 1):
-                bank = {(x, bank_y) for x in range(a, c + 1)}
+            if definition.get("direction", "north") in ("north", "south"):
+                banks = [{(x, y) for x in range(a, c + 1)} for y in (b - 1, d + 1)]
+            else:
+                banks = [{(x, y) for y in range(b, d + 1)} for x in (a - 1, c + 1)]
+            for bank in banks:
                 if not any(tile in area and level["tiles"][tile][0] not in (4, 5) for tile in bank):
                     errors.append("crossing has no reachable dry entry or exit bank: " + name)
+        for name, target in proof.get("attack_targets", {}).items():
+            if (name, target["seat"], tuple(target["tile"])) not in level["creatures"]:
+                errors.append("regional attack target seat or position differs: " + name)
         for footprint in proof.get("footprints", []):
             expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
             x1, y1, x2, y2 = footprint["bounds"]
@@ -1004,6 +1010,11 @@ def objective_errors(text, level_name):
             expected_size = 6 if fields[1] == "minedregion" else 4
             if len(fields) != expected_size or fields[3] not in region_names:
                 errors.append("unknown presentation region or malformed regional history in " + trigger)
+        if fields[:2] == ["Cond", "attackedregion"]:
+            if (len(fields) != 5 or not fields[2].isdigit() or not fields[3].isdigit()
+                    or int(fields[2]) < 1 or int(fields[3]) < 1 or fields[2] == fields[3]
+                    or fields[4] not in region_names):
+                errors.append("invalid regional attack seat, target or region in " + trigger)
         if fields[:2] == ["Cond", "crossed"]:
             if (len(fields) not in (5, 7) or not fields[2].isdigit() or int(fields[2]) < 1
                     or fields[3] not in region_names or fields[4] not in ("north", "south", "east", "west")
@@ -1247,6 +1258,19 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    greywater = (root / "levels/campaign/Greywater.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tregion\t1\tSiege"),
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t2\t3\tSiege"),
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t1\t2\tSiege"),
+        ("Cond\tattackedregion\t1\t3\tSiege", "Cond\tattackedregion\t1\t3\tWharf"),
+        ("Cond\tcrossed\t1\tCrossMiddle\teast", "Cond\tcrossed\t1\tCrossMiddle\tnorth"),
+        ("Action\tsetflag\triverCrossed\t1", "Action\tsetflag\triverCrossed\t0"),
+        ("3\tSiegeHand1\tAdventurer.mesh\t38\t35", "2\tSiegeHand1\tAdventurer.mesh\t38\t35"),
+        ("Cond\tmined\t1\t>=\t1200", "Cond\tmined\t1\t>=\t600")
+    ):
+        assert old in greywater
+        assert objective_errors(greywater.replace(old, new), "Greywater"), old
     ravensledge = (root / "levels/campaign/Ravensledge.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\tcrossed\t1\tCrossLowerWest\tnorth", "Cond\tregion\t1\tShelf"),

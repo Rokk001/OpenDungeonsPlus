@@ -1399,5 +1399,232 @@
       "Defeat OsricVane at (30,6), all remaining hostile creatures and the neutral portal at (29,52). Original reinforcements, triggers and geometry remain unchanged."
     ],
     "runtime_limit": "Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification."
+  },
+  "Greywater": {
+    "goals": {
+      "greywater-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "greywater-main-gold": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 600 gold.",
+        "completion": "mainGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t600"
+        ],
+        "mode": "repeat\t0"
+      },
+      "greywater-main-siege": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the river; attack the besiegers.",
+        "completion": "mainSiege",
+        "conditions": [
+          "Cond\tflag\triverCrossed\t1",
+          "Cond\tattackedregion\t1\t3\tSiege"
+        ],
+        "mode": "repeat\t0"
+      },
+      "greywater-main-warden": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Corwin Gray and all enemy forces.",
+        "completion": "mainWarden",
+        "conditions": [
+          "Cond\tevent\tCorwinGray\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "greywater-extra-gold": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Mine 1200 gold.",
+        "completion": "extraGold",
+        "conditions": [
+          "Cond\tmined\t1\t>=\t1200"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "observeCrossSouth": {
+        "conditions": [
+          "Cond\tcrossed\t1\tCrossSouth\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\triverCrossed\t1"
+        ]
+      },
+      "observeCrossMiddle": {
+        "conditions": [
+          "Cond\tcrossed\t1\tCrossMiddle\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\triverCrossed\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "greywater-main-heart",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "firstCoin": [
+        "Cond\tmined\t1\t>=\t600"
+      ],
+      "siegeSeen": [
+        "Cond\tregion\t1\tSiege"
+      ],
+      "midBankHeld": [
+        "Cond\tclaimed\t1\tMidBank\t60"
+      ],
+      "sluiceTimeout": [
+        "Cond\ttime\t2000",
+        "Cond\tflag\tsluiceOpen\t0"
+      ]
+    },
+    "preserved_actions": {
+      "firstCoin": [
+        "Action\tmessage\t1\tThat is a start. Two goblins heard the clink and want to join you. A bridge crossing is open south of the dungeon.",
+        "Action\tspawn\t1\t15\t74\t1\tGoblin:1\tGoblin:1\tSpider:1",
+        "Action\treveal\t1\tSouthLanding",
+        "Action\tobjectivestate\t1\tgreywater-o02\treached"
+      ],
+      "siegeSeen": [
+        "Action\tmessage\t1\tThe besiegers are thin. Strike them from behind and the rival will have to deal with you, not them.",
+        "Action\tspawn\t3\t36\t30\t2\tKnight:2\tAdventurer:2\tAdventurer:2",
+        "Action\tobjectivestate\t1\tgreywater-o04\treached"
+      ],
+      "midBankHeld": [
+        "Action\tmessage\t1\tThe middle bank is held. Heavier creatures are ready to serve, and the sluice gate on the east bank grinds open.",
+        "Action\tspawn\t1\t16\t75\t1\tOrc:2\tGoblin:2",
+        "Action\treveal\t1\tNorthBank",
+        "Action\tterrain\t38\t17\t42\t17\tpath",
+        "Action\tsetflag\tsluiceOpen\t1",
+        "Action\tportal\t0\ton",
+        "Action\tgenerate\t1\tSpider:1"
+      ],
+      "sluiceTimeout": [
+        "Action\tmessage\t1\tThe river hall has lifted its sluice gate on the east bank. The way north is open.",
+        "Action\tterrain\t38\t17\t42\t17\tpath",
+        "Action\tsetflag\tsluiceOpen\t1",
+        "Action\tportal\t0\ton"
+      ],
+      "sluiceKeyFalls": [
+        "Action\tmessage\t1\tThe sluice warden is down and the key he wore lies in the dust. It turns in the old lock and the sluice gate on the east bank grinds open.",
+        "Action\tterrain\t38\t17\t42\t17\tpath",
+        "Action\tsetflag\tsluiceOpen\t1",
+        "Action\tportal\t0\ton"
+      ]
+    },
+    "reachability": {
+      "minimum_mineable_gold": 1200,
+      "named_creatures": [
+        "CorwinGray",
+        "SiegeHand1",
+        "SiegeHand2",
+        "SiegeHand3"
+      ],
+      "regions": {
+        "Siege": {
+          "bounds": [
+            33,
+            30,
+            42,
+            42
+          ],
+          "minimum_open_tiles": 1
+        },
+        "CrossSouth": {
+          "bounds": [
+            30,
+            68,
+            34,
+            69
+          ],
+          "minimum_potential_tiles": 10
+        },
+        "CrossMiddle": {
+          "bounds": [
+            21,
+            46,
+            25,
+            46
+          ],
+          "minimum_potential_tiles": 5
+        }
+      },
+      "crossing_bridges": {
+        "CrossSouth": {
+          "room": "WoodenBridge1",
+          "bounds": [
+            30,
+            68,
+            34,
+            69
+          ],
+          "direction": "east"
+        },
+        "CrossMiddle": {
+          "room": "WoodenBridge2",
+          "bounds": [
+            21,
+            46,
+            25,
+            46
+          ],
+          "direction": "east"
+        }
+      },
+      "attack_targets": {
+        "SiegeHand1": {
+          "seat": 3,
+          "tile": [
+            38,
+            35
+          ]
+        },
+        "SiegeHand2": {
+          "seat": 3,
+          "tile": [
+            37,
+            37
+          ]
+        },
+        "SiegeHand3": {
+          "seat": 3,
+          "tile": [
+            35,
+            36
+          ]
+        }
+      }
+    },
+    "route": [
+      "Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.",
+      "Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.",
+      "Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.",
+      "Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged."
+    ],
+    "runtime_limit": "Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification."
   }
 }
