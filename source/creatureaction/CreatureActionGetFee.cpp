@@ -37,6 +37,7 @@ std::function<bool()> CreatureActionGetFee::action()
         std::ref(mCreature));
 }
 
+//! \brief Collects owed wages without emitting a routine notification for each creature.
 bool CreatureActionGetFee::handleGetFee(Creature& creature)
 {
     Tile* myTile = creature.getPositionTile();
@@ -63,7 +64,6 @@ bool CreatureActionGetFee::handleGetFee(Creature& creature)
         {
             creature.decreaseGoldFee(goldTaken);
             creature.addGoldCarried(goldTaken);
-            creature.fireChatMsgTookFee(goldTaken);
 
             if(creature.getGoldFee() <= 0)
             {
