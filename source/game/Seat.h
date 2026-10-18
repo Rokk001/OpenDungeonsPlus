@@ -57,6 +57,7 @@ enum class TrapType;
 class TileStateNotified
 {
 public:
+    //! \brief Initializes unknown tile knowledge and an absent own-creature sight history.
     TileStateNotified();
 
     TileVisual mTileVisual;
@@ -64,6 +65,8 @@ public:
     bool mMarkedForDigging;
     bool mVisionTurnLast;
     bool mVisionTurnCurrent;
+    //! Simulation turns since this seat's own active creature last saw the tile; -1 means never.
+    int64_t mOwnCreatureSightAgeTurns;
     bool mEverVisited;
     Building* mBuilding;
     
@@ -209,6 +212,7 @@ public:
 
     void addAlliedSeat(Seat* seat);
 
+    //! \brief Initializes the seat and restores saved tile knowledge and own-creature sight ages.
     void initSeat();
 
     void setMapSize(GameMap* gameMapPointer,int x, int y);
@@ -259,12 +263,16 @@ public:
     //! Returns false if the seat has none of that type.
     bool useStoredSpecial(GiftBoxType type);
 
+    //! \brief Begins one simulation visibility pass and advances recorded own-creature sight ages.
     void clearTilesWithVision();
     //! \brief Gives this seat vision on the given tiles for the given number of turns (server side).
     void revealTiles(const std::vector<Tile*>& tiles, uint32_t turns);
     //! \brief Applies the vision granted by revealTiles. Must be called after the vision is cleared
     //! and before the visible tiles are sent.
     void applyRevealedTiles();
+    //! \brief Records direct sight from an active creature owned by this seat, independently of shared or scripted vision.
+    void notifyOwnCreatureVision(Tile* tile);
+
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);
@@ -384,7 +392,9 @@ public:
 
     static Seat* createRogueSeat(GameMap* gameMap);
 
+    //! \brief Loads seat data and optional saved own-creature sight ages from older or current files.
     bool importSeatFromStream(std::istream& is);
+    //! \brief Saves seat data and own-creature sight ages without relying on the world turn counter.
     bool exportSeatToStream(std::ostream& os) const;
     static void loadFromLine(const std::string& line, Seat *s);
 

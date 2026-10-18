@@ -50,6 +50,7 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <limits>
 #include <istream>
 #include <ostream>
 
@@ -69,6 +70,7 @@ TileStateNotified::TileStateNotified():
     mMarkedForDigging(false),
     mVisionTurnLast(false),
     mVisionTurnCurrent(false),
+    mOwnCreatureSightAgeTurns(-1),
     mBuilding(nullptr)
 {
 }
@@ -274,6 +276,9 @@ void Seat::clearTilesWithVision()
 
         p.second.mVisionTurnLast = p.second.mVisionTurnCurrent;
         p.second.mVisionTurnCurrent = false;
+        if(p.second.mOwnCreatureSightAgeTurns >= 0 &&
+           p.second.mOwnCreatureSightAgeTurns < std::numeric_limits<int64_t>::max())
+            ++p.second.mOwnCreatureSightAgeTurns;
 
     }
     for(std::pair<Tile* const ,TileStateNotified>& p: mDraggableTilesStates)
@@ -312,6 +317,14 @@ void Seat::applyRevealedTiles()
 bool Seat::hasSeenTile(Tile* tile)
 {
     return getTileStateNotified(tile) != nullptr;
+}
+
+//! \brief Resets the own-creature sight age, excluding map reveals and allied sight.
+void Seat::notifyOwnCreatureVision(Tile* tile)
+{
+    if(tile == nullptr || mPlayer == nullptr || !mPlayer->getIsHuman())
+        return;
+    mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
 }
 
 void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
@@ -549,6 +562,8 @@ void Seat::initSeat()
                 OD_LOG_ERR("tile=" + Tile::displayAsString(tile));
                 continue;
             }
+
+            mTilesStates[tile].mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns;
 
             // We check if the tile is marked
             if(p.second.mMarkedForDigging)
@@ -1378,6 +1393,27 @@ bool Seat::importSeatFromStream(std::istream& is)
     }
 
     
+    if(str == "[OwnCreatureSightAges]")
+    {
+        while(true)
+        {
+            OD_ASSERT_TRUE(is >> str);
+            if(str == "[/OwnCreatureSightAges]")
+                break;
+            const int x = Helper::toInt(str);
+            int y;
+            int64_t age;
+            OD_ASSERT_TRUE(is >> y >> age);
+            if(x < 0 || y < 0 || age < 0)
+                return false;
+            TileStateNotified& state = mTilesStateLoaded[std::make_pair(x, y)];
+            if(state.mOwnCreatureSightAgeTurns >= 0)
+                return false;
+            state.mOwnCreatureSightAgeTurns = age;
+        }
+        OD_ASSERT_TRUE(is >> str);
+    }
+
     if(str != "[/Seat]")
     {
         OD_LOG_INF("WARNING: expected [/Seat] and read " + str);
@@ -1556,6 +1592,15 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         }
     }
     os << "[/EverVisitedTiles]" << std::endl;
+
+    os << "[OwnCreatureSightAges]\n";
+    for(const auto& entry : mTilesStates)
+    {
+        if(entry.second.mOwnCreatureSightAgeTurns >= 0)
+            os << entry.first->getX() << "\t" << entry.first->getY() << "\t"
+               << entry.second.mOwnCreatureSightAgeTurns << "\n";
+    }
+    os << "[/OwnCreatureSightAges]\n";
 
     
     return true;

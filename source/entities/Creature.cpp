@@ -1282,7 +1282,10 @@ void Creature::computeVisibleTiles()
     // Look at the surrounding area
     updateTilesInSight();
     for(Tile* tile : mVisibleTiles)
+    {
+        getSeat()->notifyOwnCreatureVision(tile);
         tile->notifyVision(getSeat());
+    }
 }
 
 void Creature::setLevel(unsigned int level)

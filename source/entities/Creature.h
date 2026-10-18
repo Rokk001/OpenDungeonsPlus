@@ -384,6 +384,7 @@ public:
     void doUpkeep() override;
 
     //! \brief Computes the visible tiles and tags them to know which are visible
+    //! Records direct owner sight separately so allied and scripted reveals cannot reset its age.
     void computeVisibleTiles();
 
     virtual bool isAttackable(Tile* tile, Seat* seat) const override;
