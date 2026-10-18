@@ -1166,5 +1166,238 @@
         "Cond\talive\tVaultBearer\t0"
       ]
     }
+  },
+  "Ravensledge": {
+    "goals": {
+      "ravensledge-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ravensledge-main-shelf": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the lower bridge; claim 80 shelf tiles.",
+        "completion": "mainShelf",
+        "conditions": [
+          "Cond\tflag\tlowerCrossed\t1",
+          "Cond\tclaimed\t1\tShelf\t80"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ravensledge-main-gate": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the upper bridge; break the inner gate.",
+        "completion": "mainGate",
+        "conditions": [
+          "Cond\tflag\tupperCrossed\t1",
+          "Cond\ttrapgone\tDoorWooden1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ravensledge-main-captain": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat Osric Vane and all enemy forces.",
+        "completion": "mainCaptain",
+        "conditions": [
+          "Cond\tevent\tOsricVane\tkilled",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ravensledge-extra-east": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the east supply entrance.",
+        "completion": "extraEast",
+        "conditions": [
+          "Cond\tregion\t1\tEastGate"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "observeLowerWest": {
+        "conditions": [
+          "Cond\tcrossed\t1\tCrossLowerWest\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tlowerCrossed\t1"
+        ]
+      },
+      "observeLowerEast": {
+        "conditions": [
+          "Cond\tcrossed\t1\tCrossLowerEast\tnorth"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tlowerCrossed\t1"
+        ]
+      },
+      "observeUpperWest": {
+        "conditions": [
+          "Cond\tcrossed\t1\tCrossUpperWest\tnorth\tafter\tshelfHeld"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tupperCrossed\t1"
+        ]
+      },
+      "observeUpperEast": {
+        "conditions": [
+          "Cond\tcrossed\t1\tCrossUpperEast\tnorth\tafter\tshelfHeld"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tupperCrossed\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "ravensledge-main-heart",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "shelfHeld": [
+        "Cond\tclaimed\t1\tShelf\t80"
+      ],
+      "goalInnerKeepEntered": [
+        "Cond\ttrapgone\tDoorWooden1"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "Shelf": {
+          "bounds": [
+            3,
+            30,
+            56,
+            42
+          ],
+          "minimum_potential_tiles": 80
+        },
+        "EastGate": {
+          "bounds": [
+            44,
+            16,
+            52,
+            24
+          ],
+          "minimum_open_tiles": 22
+        },
+        "CrossLowerWest": {
+          "bounds": [
+            11,
+            43,
+            13,
+            46
+          ],
+          "minimum_potential_tiles": 12
+        },
+        "CrossLowerEast": {
+          "bounds": [
+            36,
+            43,
+            36,
+            46
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "CrossUpperWest": {
+          "bounds": [
+            23,
+            26,
+            25,
+            28
+          ],
+          "minimum_potential_tiles": 9
+        },
+        "CrossUpperEast": {
+          "bounds": [
+            50,
+            26,
+            50,
+            28
+          ],
+          "minimum_potential_tiles": 3
+        }
+      },
+      "named_creatures": [
+        "OsricVane"
+      ],
+      "required_traps": {
+        "DoorWooden1": {
+          "type": 4,
+          "seat": 3,
+          "tiles": [
+            [
+              30,
+              11
+            ]
+          ]
+        }
+      },
+      "crossing_bridges": {
+        "CrossLowerWest": {
+          "room": "WoodenBridge1",
+          "bounds": [
+            11,
+            43,
+            13,
+            46
+          ]
+        },
+        "CrossLowerEast": {
+          "room": "WoodenBridge2",
+          "bounds": [
+            36,
+            43,
+            36,
+            46
+          ]
+        },
+        "CrossUpperWest": {
+          "room": "WoodenBridge3",
+          "bounds": [
+            23,
+            26,
+            25,
+            28
+          ]
+        },
+        "CrossUpperEast": {
+          "room": "WoodenBridge4",
+          "bounds": [
+            50,
+            26,
+            50,
+            28
+          ]
+        }
+      }
+    },
+    "route": [
+      "Preserve the heart. Walk one living own creature north across either lower bridge: (11..13,43..46) or (36,43..46). A diggable bypass exists and is not a bridge crossing.",
+      "Claim 80 Shelf tiles in (3,30)-(56,42); 689 potentially reachable dry/diggable fields are available. After shelfHeld, walk north across either upper bridge: (23..25,26..28) or (50,26..28). Crossing before the shelf is held does not count.",
+      "Destroy the actual inner keep gate DoorWooden1 at (30,11). Before the final victory, optionally explore EastGate (44,16)-(52,24), with 22 initially open reachable tiles.",
+      "Defeat OsricVane at (30,6), all remaining hostile creatures and the neutral portal at (29,52). Original reinforcements, triggers and geometry remain unchanged."
+    ],
+    "runtime_limit": "Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification."
   }
 }

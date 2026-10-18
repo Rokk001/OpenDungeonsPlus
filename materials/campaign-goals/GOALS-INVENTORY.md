@@ -588,13 +588,38 @@ File: `levels/campaign/Ravensledge.level`.
 | Script line 2214 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
 | Script line 2225 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
 | Script line 2269 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ravensledge-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `ravensledge-main-shelf`: Cross the lower bridge; claim 80 shelf tiles. | `mainShelf`: Cond	flag	lowerCrossed	1; Cond	claimed	1	Shelf	80 |
+| main | `ravensledge-main-gate`: Cross the upper bridge; break the inner gate. | `mainGate`: Cond	flag	upperCrossed	1; Cond	trapgone	DoorWooden1 |
+| main | `ravensledge-main-captain`: Defeat Osric Vane and all enemy forces. | `mainCaptain`: Cond	event	OsricVane	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `ravensledge-extra-east`: Explore the east supply entrance. | `extraEast`: Cond	region	1	EastGate |
+
+Possible route (static, not a playthrough):
+- Preserve the heart. Walk one living own creature north across either lower bridge: (11..13,43..46) or (36,43..46). A diggable bypass exists and is not a bridge crossing.
+- Claim 80 Shelf tiles in (3,30)-(56,42); 689 potentially reachable dry/diggable fields are available. After shelfHeld, walk north across either upper bridge: (23..25,26..28) or (50,26..28). Crossing before the shelf is held does not count.
+- Destroy the actual inner keep gate DoorWooden1 at (30,11). Before the final victory, optionally explore EastGate (44,16)-(52,24), with 22 initially open reachable tiles.
+- Defeat OsricVane at (30,6), all remaining hostile creatures and the neutral portal at (29,52). Original reinforcements, triggers and geometry remain unchanged.
+
+Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification.
+
 | Trigger `shelfHeld` | `Action	objectivestate	1	ravensledge-o02	reached`; conditions: `Cond	claimed	1	Shelf	80` | yes |
 | Trigger `shelfHeld` | `Action	objectivestate	1	ravensledge-o03	reached`; conditions: `Cond	claimed	1	Shelf	80` | yes |
 | Trigger `yardEntered` | `Action	objectivestate	1	ravensledge-o04	reached`; conditions: `Cond	region	1	Yard` | yes |
 | Trigger `goalInnerKeepEntered` | `Action	objectivestate	1	ravensledge-o05	reached`; conditions: `Cond	trapgone	DoorWooden1` | yes |
 | Trigger `captainDown` | `Action	objectivestate	1	ravensledge-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Secure your bridgeheads and climb shelf by shelf. | no: bridgeheads and shelf progression are not independent goals |
-| Briefing | Slay him in the highest keep and send Castellan another answer. | yes: KillAllEnemies includes Vane |
+| Trigger `mainHeart` | `Action	objectivestate	1	ravensledge-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainShelf` | `Action	objectivestate	1	ravensledge-main-shelf	reached`; conditions: `Cond	flag	lowerCrossed	1; Cond	claimed	1	Shelf	80` | yes |
+| Trigger `mainGate` | `Action	objectivestate	1	ravensledge-main-gate	reached`; conditions: `Cond	flag	upperCrossed	1; Cond	trapgone	DoorWooden1` | yes |
+| Trigger `mainCaptain` | `Action	objectivestate	1	ravensledge-main-captain	reached`; conditions: `Cond	event	OsricVane	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraEast` | `Action	objectivestate	1	ravensledge-extra-east	reached`; conditions: `Cond	region	1	EastGate` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ravensledge-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Secure your bridgeheads and climb shelf by shelf. | yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate |
+| Briefing | Slay him in the highest keep and send Castellan another answer. | yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals |
 
 ## Saltmere
 

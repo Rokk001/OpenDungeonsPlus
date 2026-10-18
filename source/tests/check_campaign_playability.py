@@ -30,7 +30,7 @@ BRIEFING_MATCH = {
     "Coldwell": {3: "no: plaza ownership and mined gold are not winning conditions", 4: "no: Cole elimination is checked; breaking the gate separately is not"},
     "Tinmoor": {2: "no: enemy elimination is checked; seams and both posts are not independent goals", 3: "no: optional stone discovery is not required to win"},
     "BoulderCourse": {3: "yes: courseDone checks all four cups; the timeout trigger limits the trial"},
-    "Ravensledge": {3: "no: bridgeheads and shelf progression are not independent goals", 4: "yes: KillAllEnemies includes Vane"},
+    "Ravensledge": {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals"},
     "Ashcombe": {3: "no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal"},
     "Greywater": {3: "no: ProtectDungeonTemple checks the heart; mining is not a winning condition", 4: "yes: KillAllEnemies includes Gray"},
     "HollinFen": {2: "no: enemy elimination and heart protection are checked; building and breaking the ward are not independent goals", 3: "no: optional stone discovery is not required to win"},
@@ -880,6 +880,16 @@ def grouped_goal_errors(text, level_name):
             opened = {tile for tile in tiles if level["tiles"][tile][1] == 0 and level["tiles"][tile][0] not in (4, 5)}
             if len(tiles) < definition.get("minimum_potential_tiles", 0) or len(opened) < definition.get("minimum_open_tiles", 0):
                 errors.append("insufficient reachable grouped region tiles: " + name)
+        for name, definition in proof.get("crossing_bridges", {}).items():
+            a, b, c, d = definition["bounds"]
+            expected_tiles = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+            bridge = next((room for room in level["rooms"] if room[1] == definition["room"]), None)
+            if bridge is None or bridge[0] not in (12, 13) or set(bridge[3]) != expected_tiles or expected_tiles - area:
+                errors.append("crossing region differs from the actual reachable bridge: " + name)
+            for bank_y in (b - 1, d + 1):
+                bank = {(x, bank_y) for x in range(a, c + 1)}
+                if not any(tile in area and level["tiles"][tile][0] not in (4, 5) for tile in bank):
+                    errors.append("crossing has no reachable dry entry or exit bank: " + name)
         for footprint in proof.get("footprints", []):
             expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
             x1, y1, x2, y2 = footprint["bounds"]
@@ -994,6 +1004,11 @@ def objective_errors(text, level_name):
             expected_size = 6 if fields[1] == "minedregion" else 4
             if len(fields) != expected_size or fields[3] not in region_names:
                 errors.append("unknown presentation region or malformed regional history in " + trigger)
+        if fields[:2] == ["Cond", "crossed"]:
+            if (len(fields) not in (5, 7) or not fields[2].isdigit() or int(fields[2]) < 1
+                    or fields[3] not in region_names or fields[4] not in ("north", "south", "east", "west")
+                    or len(fields) == 7 and (fields[5] != "after" or fields[6] not in trigger_names)):
+                errors.append("invalid crossing region, direction, seat or prerequisite in " + trigger)
         if fields[:2] == ["Cond", "trigger"]:
             if len(fields) not in (3, 4) or fields[2] not in trigger_names or len(fields) == 4 and fields[3] not in ("0", "1"):
                 errors.append("unknown trigger-history reference in " + trigger)
@@ -1233,6 +1248,16 @@ def self_test(root):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
     ravensledge = (root / "levels/campaign/Ravensledge.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tcrossed\t1\tCrossLowerWest\tnorth", "Cond\tregion\t1\tShelf"),
+        ("Cond\tcrossed\t1\tCrossUpperWest\tnorth\tafter\tshelfHeld", "Cond\tcrossed\t1\tCrossUpperWest\tnorth"),
+        ("Action\tsetflag\tlowerCrossed\t1", "Action\tsetflag\tlowerCrossed\t0"),
+        ("Cond\tclaimed\t1\tShelf\t80", "Cond\tclaimed\t1\tShelf\t1"),
+        ("Cond\ttrapgone\tDoorWooden1", "Cond\ttrapgone\tDoorWooden2"),
+        ("Region\tCrossLowerWest\t11\t43\t13\t46", "Region\tCrossLowerWest\t11\t43\t13\t45")
+    ):
+        assert old in ravensledge
+        assert objective_errors(ravensledge.replace(old, new), "Ravensledge"), old
     wrong_trap = ravensledge.replace("trapgone\tDoorWooden1", "trapgone\tNoSuchDoor")
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))
     bellwick = (root / "levels/campaign/Bellwick.level").read_text(encoding="utf-8")
