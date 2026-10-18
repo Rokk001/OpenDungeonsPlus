@@ -1843,12 +1843,6 @@ Action	mainobjectiveid	1	tinmoor-main-warden	Defeat Merrin Tay, all foes and por
 Action	optionalobjectiveid	1	tinmoor-extra-gold	Mine 1500 gold.
 [/Trigger]
 [Trigger]
-Name	mainScoutAccess
-Mode	once
-Cond	time	90
-Action	make	1	spellPossess
-[/Trigger]
-[Trigger]
 Name	mainStoneList
 Mode	once
 Cond	trigger	vaultFound

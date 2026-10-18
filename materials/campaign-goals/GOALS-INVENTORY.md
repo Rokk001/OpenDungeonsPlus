@@ -1489,7 +1489,7 @@ File: `levels/campaign/Tinmoor.level`.
 
 Possible route (static, not a playthrough):
 - Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.
-- At the existing 90-second scout order, the make action enables previously blocked spellPossess. Its mana price and upkeep are unchanged. Possess an own living creature and enter Seams (14,8)-(50,34).
+- Possession comes from the level's own research list (spellPossess is pending and the library is available); no script grants it. Possess an own living creature and enter Seams (14,8)-(50,34).
 - Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.
 - After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
 - Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required.

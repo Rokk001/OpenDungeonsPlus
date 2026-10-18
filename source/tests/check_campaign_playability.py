@@ -1451,7 +1451,6 @@ def self_test(root):
         assert grouped_goal_errors(candidate.replace(old, new), name), (name, old)
     tinmoor = (root / "levels/campaign/Tinmoor.level").read_text(encoding="utf-8")
     for old, new in (
-        ("Action\tmake\t1\tspellPossess", "Action\tmake\t1\tspellLightning"),
         ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\tvaultFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0"),
         ("Cond\tdeliveredstone\tvault-stone", "Cond\ttime\t0"),
         ("Cond\tdeliveredstone\tvault-stone", "Cond\tcarryingstone\tVaultBearer"),
