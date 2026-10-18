@@ -36,6 +36,9 @@ namespace LevelScriptRunner
     //! \brief Campaign: the creature that the kept minion special of the last level won brought along
     //! comes to the dungeon temple of the first human keeper. Called once when the game starts.
     void spawnKeptMinion(GameMap& gameMap);
+
+    //! \brief Leaves a carried portal stone on the creature's current tile before pickup; server side only.
+    void dropCarriedStone(Creature& creature);
 }
 
 #endif // LEVELSCRIPTRUNNER_H

@@ -1427,6 +1427,19 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
 
 } // namespace
 
+//! \brief Drops an attached stone at the actual pickup tile and clears its carrier exactly once.
+void LevelScriptRunner::dropCarriedStone(Creature& creature)
+{
+    GameMap& gameMap = *creature.getGameMap();
+    LevelScript& script = gameMap.getLevelScript();
+    Tile* tile = creature.getPositionTile();
+    if(tile == nullptr || script.getStoneCarriers().count(creature.getName()) == 0)
+        return;
+
+    createStone(gameMap, tile->getX(), tile->getY());
+    script.removeStoneCarrier(creature.getName());
+}
+
 void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
 {
     if(!Campaign::getSingleton().isActive())

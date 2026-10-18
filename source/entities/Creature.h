@@ -560,6 +560,7 @@ public:
 
     //! \brief In a sandbox level, the player can pick up and drop the heroes of the hero seat
     bool isSandboxHeroFor(const Seat* seat) const;
+    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
     //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.

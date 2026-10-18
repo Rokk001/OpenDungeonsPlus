@@ -112,3 +112,14 @@ assert 'if((creature != nullptr) && creature->isAlive())' in attach
 assert attach.index('creature->isAlive()') < attach.index('script.addStoneCarrier(action.mText)')
 
 print('check_campaign_mechanics: all checks passed')
+
+# Picking up a carrier leaves its stone at the actual tile before removing the creature.
+creature_source = read('source/entities/Creature.cpp')
+pickup = creature_source.split('void Creature::pickup()', 1)[1].split('\n}\n', 1)[0]
+assert pickup.index('if(getIsOnServerMap())') < pickup.index('LevelScriptRunner::dropCarriedStone(*this)')
+assert pickup.index('LevelScriptRunner::dropCarriedStone(*this)') < pickup.index('removeEntityFromPositionTile();')
+drop = runner.split('void LevelScriptRunner::dropCarriedStone(', 1)[1].split('\n}\n', 1)[0]
+assert 'Tile* tile = creature.getPositionTile();' in drop
+assert 'script.getStoneCarriers().count(creature.getName()) == 0' in drop
+assert drop.index('createStone(gameMap, tile->getX(), tile->getY());') < drop.index('script.removeStoneCarrier(creature.getName());')
+print('Carrier pickup leaves the stone on the actual floor tile exactly once: static PASS')

@@ -4438,6 +4438,9 @@ bool Creature::tryPickup(Seat* seat)
 
 void Creature::pickup()
 {
+    if(getIsOnServerMap())
+        LevelScriptRunner::dropCarriedStone(*this);
+
     // Stop the creature walking and set it off the map to prevent the AI from running on it.
     removeEntityFromPositionTile();
     clearDestinations(EntityAnimation::idle_anim, true, true);
