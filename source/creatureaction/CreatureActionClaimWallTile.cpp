@@ -42,6 +42,7 @@ std::function<bool()> CreatureActionClaimWallTile::action()
         std::ref(mCreature), std::ref(mTileClaim));
 }
 
+//! \brief Performs the existing claim step and reports its one-upkeep interval without delaying work.
 bool CreatureActionClaimWallTile::handleClaimWallTile(Creature& creature, Tile& tileClaim)
 {
     Tile* myTile = creature.getPositionTile();
@@ -102,6 +103,7 @@ bool CreatureActionClaimWallTile::handleClaimWallTile(Creature& creature, Tile& 
     creature.setAnimationState(EntityAnimation::claim_anim, true, walkDirection);
     tileClaim.claimForSeat(creature.getSeat(), creature.getClaimRate());
     creature.receiveExp(1.5 * creature.getClaimRate() / 20.0);
+    creature.recordWorkerStepRecovery();
 
     return false;
 }

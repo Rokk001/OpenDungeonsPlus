@@ -94,6 +94,11 @@ public:
     //! \param attackNow true if the creature attacks from where it stands, false if it walks towards the target.
     //! Only recorded while a scenario runs; the next scenario line of the creature shows it.
     static void onFightTarget(const Creature& creature, const GameEntity& target, bool attackNow);
+
+    //! \brief Called by the client for every update of a creature's recovery display with the atlas frame it
+    //! shows (0 means no clock). The frames that show a clock are counted separately for workers and fighters
+    //! and reported with the result, next to the server turns in which a creature had recovery left.
+    static void onRecoveryFrame(bool worker, uint32_t frame);
 };
 
 #endif // RUNLEVELTEST_H

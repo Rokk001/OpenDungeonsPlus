@@ -1762,6 +1762,13 @@ void Creature::doUpkeep()
         return;
     }
 
+    // The recovery display follows the skill timers in both AI and possessed control.
+    if(mAttackRecoveryTurns > 0)
+    {
+        --mAttackRecoveryTurns;
+        mNeedFireRefresh = true;
+    }
+
     // If a player controls the creature, its other actions are paused. Only the possessed
     // action runs and the movement comes from the player input
     if(isPossessed())
@@ -1785,11 +1792,6 @@ void Creature::doUpkeep()
     }
 
     bool isWarmUp = false;
-    if(mAttackRecoveryTurns > 0)
-    {
-        --mAttackRecoveryTurns;
-        mNeedFireRefresh = true;
-    }
     // We use creature skills if we can
     for(CreatureSkillData& skillData : mSkillData)
     {
@@ -1813,6 +1815,11 @@ void Creature::doUpkeep()
 
         skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
         skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+        // Successful self-casts use the same recovery display as attacks.
+        mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);
+        mAttackRecoveryTurns = mAttackRecoveryDuration;
+        ++mAttackRecoverySerial;
+        mNeedFireRefresh = true;
 
         if(skillData.mWarmup > 0)
             isWarmUp = true;
@@ -2827,8 +2834,11 @@ void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
 {
     if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
         return;
-    os << getExperienceProgress() << mAttackRecoveryTurns << mAttackRecoveryDuration
-       << mAttackRecoverySerial;
+    const bool working = getActivity().action == CreatureActionType::useRoom &&
+        mJobCooldown > 0 && mJobCooldownDuration > 0;
+    const uint32_t remaining = working ? static_cast<uint32_t>(mJobCooldown) : mAttackRecoveryTurns;
+    const uint32_t duration = working ? mJobCooldownDuration : mAttackRecoveryDuration;
+    os << getExperienceProgress() << remaining << duration << mAttackRecoverySerial;
 }
 
 void Creature::importProgressFromPacket(ODPacket& is)
@@ -6172,6 +6182,15 @@ void Creature::checkWalkPathValid(bool includeWalkDistortion)
     clearDestinations(EntityAnimation::idle_anim, true, true);
 }
 
+//! \brief Reports the one-upkeep interval after a worker step; action scheduling remains unchanged.
+void Creature::recordWorkerStepRecovery()
+{
+    mAttackRecoveryDuration = 1;
+    mAttackRecoveryTurns = mAttackRecoveryDuration;
+    ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
+}
+
 void Creature::setJobCooldown(int val)
 {
     // If the creature has been slapped, its cooldown is decreased
@@ -6179,6 +6198,10 @@ void Creature::setJobCooldown(int val)
         val = Helper::round(static_cast<float>(val) * 0.8f);
 
     mJobCooldown = val;
+    mJobCooldownDuration = static_cast<uint32_t>(std::max(0, val));
+    if(val > 0)
+        ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
 }
 
 bool Creature::isTired() const
@@ -7037,6 +7060,11 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
 
             skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
             skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            // Report a successful self-cast exactly as in normal creature control.
+            mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);
+            mAttackRecoveryTurns = mAttackRecoveryDuration;
+            ++mAttackRecoverySerial;
+            mNeedFireRefresh = true;
             return;
         }
 
