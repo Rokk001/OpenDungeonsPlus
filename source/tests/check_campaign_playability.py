@@ -88,6 +88,8 @@ BRIEFING_MATCH["Goldspire"] = {2: "yes: actual two-fighter buildup and own-heart
 
 BRIEFING_MATCH["Mirewatch"] = {2: "yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint", 3: "yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession", 4: "yes: Mora actually killed in TowerH and remaining foes defeated"}
 
+BRIEFING_MATCH["Bellwick"] = {3: "yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1683,6 +1685,17 @@ def self_test(root):
             ("Cond\tfurniture\t1\tDormitory\t>=\t2", "Cond\troomtiles\t1\tDormitory\t>=\t2")):
         assert needle in mire
         assert grouped_goal_errors(mire.replace(needle, replacement), "Mirewatch"), "Mirewatch requirement weakening must fail: " + needle
+    bell = (root / "levels/campaign/Bellwick.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(bell, "Bellwick")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tregion\t1\tTransept"),
+            ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tcrossed\t2\tNave\tnorth"),
+            ("Cond\tflag\tgatesOpen\t1", "Cond\ttime\t5"),
+            ("Action\tterrain\t48\t29\t48\t31\tpath", "Action\tterrain\t48\t29\t48\t30\tpath"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\tregion\t1\tScriptorium", "Cond\tregion\t1\tWestCloister")):
+        assert needle in bell
+        assert grouped_goal_errors(bell.replace(needle, replacement), "Bellwick"), "Bellwick requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 

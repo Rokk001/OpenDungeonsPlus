@@ -8930,5 +8930,291 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tMora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours."
     }
+  },
+  "Bellwick": {
+    "goals": {
+      "bellwick-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart until both north gates open.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tflag\tgatesOpen\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bellwick-main-nave": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Pass through the nave to the transept.",
+        "completion": "mainNave",
+        "conditions": [
+          "Cond\tcrossed\t1\tNave\tnorth"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bellwick-main-keeper": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy the undercroft heart and all enemy forces.",
+        "completion": "mainKeeper",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bellwick-extra-scriptorium": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the western scriptorium.",
+        "completion": "extraScriptorium",
+        "conditions": [
+          "Cond\tregion\t1\tScriptorium"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "bellwick-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tbellwick-main-heart\treached",
+          "Cond\tobjective\t1\tbellwick-main-nave\treached",
+          "Cond\tobjective\t1\tbellwick-main-keeper\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe undead keeper is dust and the bells hang silent. Bellwick is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "tolling": [
+        "Cond\ttime\t3"
+      ],
+      "yardHeld": [
+        "Cond\tclaimed\t1\tSouthYard\t40"
+      ],
+      "naveEntered": [
+        "Cond\tregion\t1\tNave"
+      ],
+      "cryptRow": [
+        "Cond\tregion\t1\tCryptRow"
+      ],
+      "transept": [
+        "Cond\tregion\t1\tTransept"
+      ],
+      "kills1": [
+        "Cond\tkills\t1\t>=\t12"
+      ],
+      "mined1": [
+        "Cond\tmined\t1\t>=\t1500"
+      ],
+      "bellTower": [
+        "Cond\tregion\t1\tBellTower"
+      ],
+      "undercroftSeen": [
+        "Cond\tregion\t1\tUndercroft"
+      ],
+      "faithful1": [
+        "Cond\ttime\t240"
+      ],
+      "faithful2": [
+        "Cond\ttime\t520"
+      ],
+      "faithful3": [
+        "Cond\ttime\t850"
+      ],
+      "faithful4": [
+        "Cond\ttime\t1200"
+      ],
+      "faithful5": [
+        "Cond\ttime\t1600"
+      ],
+      "faithful6": [
+        "Cond\ttime\t2050"
+      ],
+      "faithful7": [
+        "Cond\ttime\t2550"
+      ],
+      "faithful8": [
+        "Cond\ttime\t3100"
+      ],
+      "faithful9": [
+        "Cond\ttime\t3700"
+      ],
+      "naveGatesKills": [
+        "Cond\tkills\t1\t>=\t12",
+        "Cond\tflag\tgatesOpen\t0"
+      ],
+      "naveGatesLate": [
+        "Cond\ttime\t1500",
+        "Cond\tflag\tgatesOpen\t0"
+      ],
+      "cryptWell": [
+        "Cond\tslabs\t1\tNave\tclaimed\t>=\t30"
+      ]
+    },
+    "preserved_actions": {
+      "tolling": [
+        "Action\tmessage\t1\tBellwick stands over its own dead, master. The abbey bells call the faithful to arms, and Abbot Lorens Bell keeps an undead keeper in the undercroft to bring the sleepers up.",
+        "Action\tobjectiveid\t1\tbellwick-o01\tDestroy the keeper's heart in the north undercroft.",
+        "Action\thint\t1\tHold the nave against the faithful.",
+        "Action\tobjectiveid\t1\tbellwick-o03\tSurvive until both north gates open.",
+        "Action\tportal\t2\toff"
+      ],
+      "yardHeld": [
+        "Action\tmessage\t1\tThe south yard is held. The long nave begins here and the abbey knows you are at the door.",
+        "Action\treveal\t1\tNave",
+        "Action\treveal\t1\tRefectory",
+        "Action\tobjectiveid\t1\tbellwick-o04\tReach the transept through the nave."
+      ],
+      "naveEntered": [
+        "Action\tmessage\t1\tCandles still burn along the nave. A row of crypt cells lies behind iron-banded doors.",
+        "Action\treveal\t1\tCryptRow",
+        "Action\treveal\t1\tWestCloister"
+      ],
+      "cryptRow": [
+        "Action\tmessage\t1\tOld bones in the cells will rise for whoever holds the crypt. Your gifts have come.",
+        "Action\tspawn\t1\t14\t70\t1\tOrc:3\tGoblin:3\tSpider:3"
+      ],
+      "transept": [
+        "Action\tmessage\t1\tThe bells are tolling at both gates of the transept. The faithful are answering.",
+        "Action\treveal\t1\tEastCloister",
+        "Action\treveal\t1\tScriptorium",
+        "Action\tspawn\t3\t7\t62\t1\tKnight:3\tMonk:3\tElf:2\tAdventurer:2",
+        "Action\tspawn\t3\t56\t62\t1\tKnight:3\tMonk:3\tDwarf2:2\tAdventurer:2",
+        "Action\tobjectivestate\t1\tbellwick-o04\treached"
+      ],
+      "kills1": [
+        "Action\tmessage\t1\tThe sextons are dying faster than the abbot can send them. Strengthen your creatures while the nave is quiet.",
+        "Action\tgold\t1\t800"
+      ],
+      "mined1": [
+        "Action\tmessage\t1\tThe seams below the abbey pay well. Iron doors and a stone bridge are worth the gold now."
+      ],
+      "bellTower": [
+        "Action\tmessage\t1\tThe bell tower rings the abbey awake. The undercroft is waking, too.",
+        "Action\treveal\t1\tUndercroft",
+        "Action\tspawn\t2\t30\t18\t1\tSkeleton:3\tSkeleton:3\tLich:3\tCultist:3"
+      ],
+      "undercroftSeen": [
+        "Action\tmessage\t1\tThe keeper of the undercroft has spent the dead. Break his hall and the bells go quiet.",
+        "Action\tspawn\t2\t30\t18\t1\tSkeleton:4\tLich:3\tCultist:3\tSkeleton:3"
+      ],
+      "faithful1": [
+        "Action\tmessage\t1\tAcolytes in armour are marching from the west gate.",
+        "Action\tspawn\t3\t7\t62\t1\tAdventurer:2\tMonk:2\tElf:2"
+      ],
+      "faithful2": [
+        "Action\tmessage\t1\tPilgrims have come out of the east gate.",
+        "Action\tspawn\t3\t56\t62\t1\tKnight:2\tMonk:2\tAdventurer:2\tElf:2"
+      ],
+      "faithful3": [
+        "Action\tmessage\t1\tThe sacristans are taking up pikes.",
+        "Action\tspawn\t3\t7\t62\t1\tKnight:2\tKnight:2\tDwarf2:2\tMonk:2"
+      ],
+      "faithful4": [
+        "Action\tmessage\t1\tThe abbot has ordered the bells rung twice.",
+        "Action\tspawn\t3\t56\t62\t1\tKnight:3\tElf:2\tAdventurer:3\tMonk:2\tDwarf2:2"
+      ],
+      "faithful5": [
+        "Action\tmessage\t1\tA column of the faithful is coming down the nave.",
+        "Action\tspawn\t3\t7\t62\t1\tKnight:3\tKnight:2\tElf:3\tMonk:3\tAdventurer:2"
+      ],
+      "faithful6": [
+        "Action\tmessage\t1\tA heavy column with banners has left the east gate.",
+        "Action\tspawn\t3\t56\t62\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
+      ],
+      "faithful7": [
+        "Action\tmessage\t1\tThe abbey is emptying its dormitories.",
+        "Action\tspawn\t3\t7\t62\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
+      ],
+      "faithful8": [
+        "Action\tmessage\t1\tLorens Bell himself has called the last levy.",
+        "Action\tspawn\t3\t56\t62\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "faithful9": [
+        "Action\tmessage\t1\tThe bells are tolling for the last time.",
+        "Action\tspawn\t3\t7\t62\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:3\tAdventurer:3"
+      ],
+      "naveGatesKills": [
+        "Action\tmessage\t1\tThe masons of the north gates have fled the bells. Both gates of the nave grind open and the road to the undercroft is free.",
+        "Action\tterrain\t24\t29\t26\t31\tpath",
+        "Action\tterrain\t48\t29\t48\t31\tpath",
+        "Action\tsetflag\tgatesOpen\t1",
+        "Action\tportal\t2\ton",
+        "Action\tobjectivestate\t1\tbellwick-o03\treached"
+      ],
+      "naveGatesLate": [
+        "Action\tmessage\t1\tThe seals of the north gates have given way. The road to the undercroft is free.",
+        "Action\tterrain\t24\t29\t26\t31\tpath",
+        "Action\tterrain\t48\t29\t48\t31\tpath",
+        "Action\tsetflag\tgatesOpen\t1",
+        "Action\tportal\t2\ton",
+        "Action\tobjectivestate\t1\tbellwick-o03\treached"
+      ],
+      "cryptWell": [
+        "Action\tmessage\t1\tThe nave is yours, and the stones below it answer. A spring of mana has risen in the crypt cells.",
+        "Action\tterrain\t16\t71\t16\t71\tmanawell"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "Nave": {
+          "bounds": [
+            20,
+            66,
+            30,
+            88
+          ],
+          "minimum_potential_tiles": 24
+        },
+        "Transept": {
+          "bounds": [
+            4,
+            58,
+            60,
+            66
+          ],
+          "minimum_open_tiles": 1
+        },
+        "Scriptorium": {
+          "bounds": [
+            4,
+            34,
+            22,
+            48
+          ],
+          "minimum_open_tiles": 161
+        }
+      }
+    },
+    "route": [
+      "Protect the own heart through both north-gate openings and until victory. Preserve original alternatives:12credited kills or1500seconds. Both exact terrain gate actions and gatesOpen1 remain unchanged; no new deadline.",
+      "Walk the same own living creature north from the south bank y89 through the full Nave(20..30,66..88)to y65 inside original Transept. A transept visit via a side cloister or mixed visitors does not count. A concrete potential route runs x20/y89..65,24steps with21removable dirt fields. This is not claimed to be initially open or actually played. Any legal internal path qualifies.",
+      "Destroy the actual original undercroft DungeonTemple2,footprint(28..32,10..14),and remaining enemy forces/portals. Mere seat2creature emptiness is insufficient.",
+      "Optionally enter western Scriptorium(4,34)-(22,48),161reachable open dry fields. No new reward. The advice to hold the nave remains a hint, while actual survival to the existing gate milestone is a separate main duty.",
+      "Preserve all nine faithful waves, crypt gifts, gate alternatives, mana spring and terrain. Move the unchanged duplicate victory sentence to one final completion after all current main observers; old win requests remain pending."
+    ],
+    "runtime_limit": "Static source and potential route evidence only; actual digging/movement, combat, gate timing and save/load remain for runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe undead keeper is dust and the bells hang silent. Bellwick is yours."
+    }
   }
 }

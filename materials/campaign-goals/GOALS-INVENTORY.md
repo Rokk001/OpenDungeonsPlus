@@ -43,14 +43,39 @@ File: `levels/campaign/Bellwick.level`.
 | Advisory hint line 3815 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
 | Script line 3816 | `Action	objectiveid	1	bellwick-o03	Survive until both north gates open.` | yes |
 | Script line 3826 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
-| Script line 3951 | `Action	win	1` | yes |
-| Script line 3956 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3959 | `Action	win	1` | yes |
+| Script line 3950 | `Action	win	1` | yes |
+| Script line 3955 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3957 | `Action	win	1` | yes |
+| Script line 4039 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `bellwick-main-heart`: Protect your heart until both north gates open. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	gatesOpen	1 |
+| main | `bellwick-main-nave`: Pass through the nave to the transept. | `mainNave`: Cond	crossed	1	Nave	north |
+| main | `bellwick-main-keeper`: Destroy the undercroft heart and all enemy forces. | `mainKeeper`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `bellwick-extra-scriptorium`: Explore the western scriptorium. | `extraScriptorium`: Cond	region	1	Scriptorium |
+
+Possible route (static, not a playthrough):
+- Protect the own heart through both north-gate openings and until victory. Preserve original alternatives:12credited kills or1500seconds. Both exact terrain gate actions and gatesOpen1 remain unchanged; no new deadline.
+- Walk the same own living creature north from the south bank y89 through the full Nave(20..30,66..88)to y65 inside original Transept. A transept visit via a side cloister or mixed visitors does not count. A concrete potential route runs x20/y89..65,24steps with21removable dirt fields. This is not claimed to be initially open or actually played. Any legal internal path qualifies.
+- Destroy the actual original undercroft DungeonTemple2,footprint(28..32,10..14),and remaining enemy forces/portals. Mere seat2creature emptiness is insufficient.
+- Optionally enter western Scriptorium(4,34)-(22,48),161reachable open dry fields. No new reward. The advice to hold the nave remains a hint, while actual survival to the existing gate milestone is a separate main duty.
+- Preserve all nine faithful waves, crypt gifts, gate alternatives, mana spring and terrain. Move the unchanged duplicate victory sentence to one final completion after all current main observers; old win requests remain pending.
+
+Static source and potential route evidence only; actual digging/movement, combat, gate timing and save/load remain for runtime verification.
+
 | Trigger `transept` | `Action	objectivestate	1	bellwick-o04	reached`; conditions: `Cond	region	1	Transept` | yes |
 | Trigger `keeperHeartDown` | `Action	objectivestate	1	bellwick-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `naveGatesKills` | `Action	objectivestate	1	bellwick-o03	reached`; conditions: `Cond	kills	1	>=	12; Cond	flag	gatesOpen	0` | yes |
 | Trigger `naveGatesLate` | `Action	objectivestate	1	bellwick-o03	reached`; conditions: `Cond	time	1500; Cond	flag	gatesOpen	0` | yes |
-| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | no: enemy temple elimination is checked; holding until the gate event is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	bellwick-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	bellwick-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	gatesOpen	1` | yes |
+| Trigger `mainNave` | `Action	objectivestate	1	bellwick-main-nave	reached`; conditions: `Cond	crossed	1	Nave	north` | yes |
+| Trigger `mainKeeper` | `Action	objectivestate	1	bellwick-main-keeper	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraScriptorium` | `Action	objectivestate	1	bellwick-extra-scriptorium	reached`; conditions: `Cond	region	1	Scriptorium` | yes |
+| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes |
 
 ## Bonus1
 
