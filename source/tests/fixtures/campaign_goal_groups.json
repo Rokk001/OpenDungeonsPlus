@@ -7638,9 +7638,10 @@
       "goldspire-main-warden": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Penn in the spire and all enemy forces.",
+        "text": "Defeat Penn in the spire and all enemy forces. Unlock his vault.",
         "completion": "mainWarden",
         "conditions": [
+          "Cond\ttrigger\tpennVaultOpened",
           "Cond\tkilledin\tAlaricPenn\tOuterRing",
           "Cond\tgoalmet\t1\tKillAllEnemies"
         ],
@@ -7855,6 +7856,9 @@
       "portalWake": [
         "Cond\ttime\t700",
         "Cond\tflag\tportalOn\t0"
+      ],
+      "pennVaultOpened": [
+        "Cond\tdeliveredstone\ttreasurer-key"
       ]
     },
     "preserved_actions": {
@@ -7987,7 +7991,7 @@
         "Action\tterrain\t80\t58\t81\t72\tpath"
       ],
       "treasurerKey": [
-        "Action\tstonedrop\tAlaricPenn\ttreasurer-key"
+        "Action\tstonedrop\tAlaricPenn\ttreasurer-key\t1\t48\t30"
       ],
       "treasurerHurt": [
         "Action\tmessage\t1\tAlaric Penn is bleeding coin. He calls the last of his guard to the core.",
@@ -8000,6 +8004,9 @@
         "Action\tmessage\t1\tThe quarry has gone quiet and your portal draws creatures again.",
         "Action\tportal\t1\ton",
         "Action\tsetflag\tportalOn\t1"
+      ],
+      "pennVaultOpened": [
+        "Action\tkeydoor\tPennVaultDoor\topen"
       ]
     },
     "reachability": {
@@ -8250,7 +8257,22 @@
           73
         ]
       ],
-      "mission_deliveries": {}
+      "mission_deliveries": {
+        "treasurer-key": {
+          "region": "PennVaultEntrance",
+          "bounds": [
+            48,
+            30,
+            48,
+            30
+          ],
+          "tile": [
+            48,
+            30
+          ],
+          "seat": 1
+        }
+      }
     },
     "route": [
       "Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.",
@@ -8258,7 +8280,8 @@
       "After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.",
       "After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.",
       "Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.",
-      "Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request."
+      "Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.",
+      "Penn remains at48,30 outside the relocated ten-tile treasury50..54,29..30. Its17rockwall fields surround one mission-locked wooden door49,30. Only actual treasurer-key delivery by a worker to48,30 opens PennVaultDoor; mainWarden requires this delivery trigger as well as the existing death and enemy conditions. Initial gold and treasury capacity unchanged."
     ],
     "runtime_limit": "Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.",
     "victory_narration": {

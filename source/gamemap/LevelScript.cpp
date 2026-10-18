@@ -645,7 +645,7 @@ bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& sta
     return true;
 }
 
-//! \brief Parses one action, retaining legacy objective text and explicit ID/state variants.
+//! \brief Parses actions including mission door locks, retaining legacy objective text and ID/state variants.
 bool parseAction(const std::string& line, const std::vector<std::string>& t, LevelScriptAction& action)
 {
     // t[0] is "Action"
@@ -806,6 +806,15 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
     {
         action.mType = LevelScriptActionType::waveCountdown;
         return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
+    }
+    if(type == "keydoor")
+    {
+        action.mType = LevelScriptActionType::keyDoor;
+        if(t.size() != 4 || (t[3] != "locked" && t[3] != "open"))
+            return false;
+        action.mText = t[2];
+        action.mNumber = t[3] == "locked" ? 1 : 0;
+        return true;
     }
     if(type == "terrain")
     {
@@ -1209,7 +1218,7 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
     os << "\n";
 }
 
-//! \brief Serializes goal classification and actions while preserving legacy objective syntax.
+//! \brief Serializes mission door locks, goal classification and actions with legacy objective compatibility.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -1283,6 +1292,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::startTimer:
             os << "timer\t" << a.mText << "\t" << a.mNumber;
+            break;
+        case LevelScriptActionType::keyDoor:
+            os << "keydoor\t" << a.mText << "\t" << (a.mNumber ? "locked" : "open");
             break;
         case LevelScriptActionType::alterTerrain:
             os << "terrain\t" << a.mX << "\t" << a.mY << "\t" << a.mX2 << "\t" << a.mY2 << "\t" << a.mText;

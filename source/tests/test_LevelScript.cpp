@@ -1738,3 +1738,31 @@ BOOST_AUTO_TEST_CASE(mission_item_drop_uses_actual_death_and_survives_save)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief Mission door commands survive saves and reject malformed lock states.
+BOOST_AUTO_TEST_CASE(mission_key_door_actions_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName vault\nMode once\nCond deliveredstone treasurer-key\n"
+        "Action keydoor PennVaultDoor open\nState 1 42\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    const LevelScriptAction& action = script.getTriggers()[0].mActions[0];
+    BOOST_CHECK(action.mType == LevelScriptActionType::keyDoor);
+    BOOST_CHECK_EQUAL(action.mText, "PennVaultDoor");
+    BOOST_CHECK_EQUAL(action.mNumber, 0);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str());
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mActions[0].mText, "PennVaultDoor");
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mActions[0].mNumber, 0);
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mTimesFired, 1);
+    for(const std::string line : {"Action keydoor", "Action keydoor PennVaultDoor",
+        "Action keydoor PennVaultDoor other", "Action keydoor PennVaultDoor open extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + line + "\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}

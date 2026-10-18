@@ -140,6 +140,7 @@
 //!   Action  gold <seatId> <amount>
 //!   Action  setflag <name> <value>
 //!   Action  addflag <name> <delta>            # adds to the flag (a negative value subtracts)
+//!   Action  keydoor <doorName> <locked|open> # mission lock; open only after the matching delivery
 //!   Action  terrain <x1> <y1> <x2> <y2> <kind> [<seatId>]   # changes the tiles of the rectangle: rock, path, gold, gems, claimed, wall (claimed by the seat), water, lava, impenetrable, manawell (open ground that gives its claiming seat mana; with a seat it starts claimed, path removes it)
 //!   Action  portal <seatId> on | off          # the portals of the seat do (not) attract creatures
 //!   Action  available <seatId> <class> 1 | 0  # a creature class can (not) come to the dungeon of the seat
@@ -318,7 +319,8 @@ enum class LevelScriptActionType
     stoneDrop,
     keepMinion,
     objectiveState,
-    hint
+    hint,
+    keyDoor
 };
 
 struct LevelScriptCondition

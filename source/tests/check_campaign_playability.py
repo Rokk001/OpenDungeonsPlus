@@ -1742,6 +1742,7 @@ def self_test(root):
             ("Cond\tcrossed\t1\tMainWestLink\tnorth\tafter\tlinksReady", "Cond\tcrossed\t1\tMainWestLink\tnorth"),
             ("Cond\tflag\tmainEastCrossed\t1", "Cond\ttrigger\tlinksOpen"),
             ("Cond\tkilledin\tAlaricPenn\tOuterRing", "Cond\talive\tAlaricPenn\t0"),
+            ("Cond\ttrigger\tpennVaultOpened", "Cond\talive\tAlaricPenn\t0"),
             ("Cond\tregion\t1\tWestWing", "Cond\tregion\t1\tYard")):
         assert needle in goldspire
         assert grouped_goal_errors(goldspire.replace(needle, replacement), "Goldspire"), "Goldspire requirement weakening must fail: " + needle
@@ -1871,6 +1872,7 @@ def self_test(root):
     assert grouped_goal_errors(cellar.replace("ClaimNTiles\t60", "ClaimNTiles\t50"), "Bonus1")
     # Only the right physical key, dropped on real death, may satisfy an existing delivery consumer.
     for map_name, owner, identity, target in (
+            ("Goldspire", "AlaricPenn", "treasurer-key", "1\t48\t30"),
             ("Silverdeep", "DorianSilt", "silver-vault-key", "1\t80\t89"),
             ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20"),
             ("Greywater", "SluiceWarden", "sluice-key", "1\t40\t18"),

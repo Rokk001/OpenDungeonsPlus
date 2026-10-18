@@ -1303,7 +1303,7 @@ void removeCreature(GameMap& gameMap, const std::string& name)
     creature->deleteYourself();
 }
 
-//! \brief Executes actions and identified goal updates; stone attachment requires an existing living carrier.
+//! \brief Executes actions, mission door locks and identified goal updates; stone attachment requires a living carrier.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1380,6 +1380,13 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
         case LevelScriptActionType::startTimer:
             script.startTimer(action.mText, secondsToTurns(action.mNumber));
             break;
+        case LevelScriptActionType::keyDoor:
+        {
+            Trap* trap = gameMap.getTrapByName(action.mText);
+            if(trap != nullptr && trap->isDoor())
+                static_cast<TrapDoor*>(trap)->setKeyLocked(action.mNumber != 0);
+            break;
+        }
         case LevelScriptActionType::alterTerrain:
             alterTerrain(gameMap, action);
             break;

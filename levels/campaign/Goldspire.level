@@ -1539,10 +1539,10 @@ ProtectDungeonTemple	NULL
 49	25	1	0
 49	26	1	0
 49	27	1	0
-49	28	1	0
-49	29	1	0
+49	28	3	100
+49	29	3	100
 49	30	1	0
-49	31	1	0
+49	31	3	100
 49	32	1	0
 49	33	1	0
 49	34	1	0
@@ -1590,10 +1590,10 @@ ProtectDungeonTemple	NULL
 50	25	1	0
 50	26	1	0
 50	27	1	0
-50	28	1	0
+50	28	3	100
 50	29	1	0
 50	30	1	0
-50	31	1	0
+50	31	3	100
 50	32	1	0
 50	33	1	0
 50	34	1	0
@@ -1632,10 +1632,10 @@ ProtectDungeonTemple	NULL
 51	25	1	0
 51	26	1	0
 51	27	1	0
-51	28	1	0
+51	28	3	100
 51	29	1	0
 51	30	1	0
-51	31	1	0
+51	31	3	100
 51	32	1	0
 51	33	1	0
 51	34	1	0
@@ -1675,10 +1675,10 @@ ProtectDungeonTemple	NULL
 52	25	1	0
 52	26	1	0
 52	27	1	0
-52	28	1	0
+52	28	3	100
 52	29	1	0
 52	30	1	0
-52	31	1	0
+52	31	3	100
 52	32	1	0
 52	33	1	0
 52	34	1	0
@@ -1716,10 +1716,10 @@ ProtectDungeonTemple	NULL
 53	23	1	0
 53	26	1	0
 53	27	1	0
-53	28	1	0
+53	28	3	100
 53	29	1	0
 53	30	1	0
-53	31	1	0
+53	31	3	100
 53	32	1	0
 53	33	1	0
 53	34	1	0
@@ -1754,10 +1754,10 @@ ProtectDungeonTemple	NULL
 54	22	1	0
 54	23	1	0
 54	27	1	0
-54	28	1	0
+54	28	3	100
 54	29	1	0
 54	30	1	0
-54	31	1	0
+54	31	3	100
 54	32	1	0
 54	34	1	0
 54	40	1	0
@@ -2714,6 +2714,10 @@ ProtectDungeonTemple	NULL
 93	85	3	100
 93	86	3	100
 93	87	3	100
+55	28	3	100
+55	29	3	100
+55	30	3	100
+55	31	3	100
 [/Tiles]
 
 [Rooms]
@@ -2916,16 +2920,16 @@ ProtectDungeonTemple	NULL
 [/Room]
 [Room]
 3	Treasury6	2	10
-46	29
-46	30
-47	29
-47	30
-48	29
-48	30
-49	29
-49	30
 50	29
 50	30
+51	29
+51	30
+52	29
+52	30
+53	29
+53	30
+54	29
+54	30
 [/Room]
 [/Rooms]
 
@@ -3031,6 +3035,11 @@ ProtectDungeonTemple	NULL
 8	Alarm2	3	1
 78	74	1
 [/Trap]
+[Trap]
+4	PennVaultDoor	2	1
+49	30	1
+1 KeyLock 1
+[/Trap]
 [/Traps]
 
 [Lights]
@@ -3107,6 +3116,7 @@ Region	Yard	66	68	86	84
 Region	OuterRing	26	8	70	52
 Region	MidRing	34	16	62	44
 Region	Core	40	24	56	36
+Region	PennVaultEntrance	48	30	48	30
 Region	WestWing	4	36	22	54
 Region	NorthWing	4	8	24	28
 Region	NorthEastWing	70	6	90	22
@@ -3336,7 +3346,7 @@ Action	terrain	80	58	81	72	path
 Name	treasurerKey
 Mode	once
 Cond	event	AlaricPenn	killed
-Action	stonedrop	AlaricPenn	treasurer-key
+Action	stonedrop	AlaricPenn	treasurer-key	1	48	30
 [/Trigger]
 [Trigger]
 Name	treasurerHurt
@@ -3373,7 +3383,7 @@ Cond	time	0
 Action	mainobjectiveid	1	goldspire-main-home	Raise 2 fighters; protect your heart.
 Action	mainobjectiveid	1	goldspire-main-town	Capture the low town.
 Action	mainobjectiveid	1	goldspire-main-route	Pass the south gate, outer ring and both sealed links.
-Action	mainobjectiveid	1	goldspire-main-warden	Defeat Penn in the spire and all enemy forces.
+Action	mainobjectiveid	1	goldspire-main-warden	Defeat Penn in the spire and all enemy forces. Unlock his vault.
 Action	optionalobjectiveid	1	goldspire-extra-wing	Explore the western treasure wing.
 [/Trigger]
 [Trigger]
@@ -3473,6 +3483,7 @@ Action	objectivestate	1	goldspire-main-route	reached
 [Trigger]
 Name	mainWarden
 Mode	repeat	0
+Cond	trigger	pennVaultOpened
 Cond	killedin	AlaricPenn	OuterRing
 Cond	goalmet	1	KillAllEnemies
 Action	objectivestate	1	goldspire-main-warden	reached
@@ -3492,5 +3503,11 @@ Cond	objective	1	goldspire-main-route	reached
 Cond	objective	1	goldspire-main-warden	reached
 Action	message	1	Alaric Penn lies dead on his own coin. Goldspire is yours.
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	pennVaultOpened
+Mode	once
+Cond	deliveredstone	treasurer-key
+Action	keydoor	PennVaultDoor	open
 [/Trigger]
 [/Triggers]

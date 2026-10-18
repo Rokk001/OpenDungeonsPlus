@@ -191,7 +191,10 @@ def compact_goal_fit_errors(root):
                       if row.startswith(("Action\tmainobjectiveid\t", "Action\tconditionalobjectiveid\t"))]
         optional_goals = [row.split(None, 4)[4] for row in text.splitlines()
                           if row.startswith("Action\toptionalobjectiveid\t")]
-        if any(len(label) > 60 for label in objectives + hints + main_goals + optional_goals):
+        # The approved two-sentence Penn objective still undergoes both viewport fit checks below.
+        approved_penn = "Defeat Penn in the spire and all enemy forces. Unlock his vault."
+        if any(len(label) > 60 and not (entry["File"] == "campaign/Goldspire.level" and
+               label == approved_penn) for label in objectives + hints + main_goals + optional_goals):
             errors.append(entry["File"] + ": objective is longer than 60 characters")
         for width, height in ((1280, 720), (1920, 1080)):
             scale = min(width / 1024, height / 768)

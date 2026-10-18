@@ -39,6 +39,7 @@
 #include "utils/LogManager.h"
 
 #include <algorithm>
+#include <sstream>
 
 namespace
 {
@@ -334,6 +335,9 @@ double TrapDoor::getHP(Tile* tile) const
 double TrapDoor::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,
     double elementDamage, Tile* tileTakingDamage, bool ko)
 {
+    if(mKeyLocked)
+        return 0.0;
+
     // Store health in base units, preserving its fraction across research and ownership changes.
     const double factor = SkillManager::getResearchValue(getSeat(), SkillType::trapDoorWooden, 1.0);
     double damageDone = Building::takeDamage(attacker, absoluteDamage / factor, physicalDamage / factor,
@@ -356,6 +360,7 @@ TrapDoor::TrapDoor(GameMap* gameMap, TrapType doorType) :
     mDoorType(doorType),
     mIsLocked(doorType == TrapType::doorBarricade),
     mIsLockedState(false),
+    mKeyLocked(false),
     mFireCooldownTurns(0)
 {
     mReloadTime = 0;
@@ -379,7 +384,7 @@ TrapEntity* TrapDoor::getTrapEntity(Tile* tile)
         rotation = 0.0;
     }
     return new DoorEntity(getGameMap(), *this, TrapManager::getMeshFromTrapType(mDoorType), tile, rotation, false, isActivated(tile) ? 1.0f : 0.5f,
-        ANIMATION_OPEN, false);
+        mKeyLocked ? ANIMATION_CLOSE : ANIMATION_OPEN, false);
 }
 
 double TrapDoor::getDefaultTileHP() const
@@ -560,13 +565,41 @@ bool TrapDoor::appearsAsWallForSeat(Tile* tile, Seat* seat) const
 void TrapDoor::notifyDoorSlapped(DoorEntity* doorEntity, Tile* tile)
 {
     // A barricade cannot be opened
-    if(mDoorType == TrapType::doorBarricade)
+    if(mKeyLocked || mDoorType == TrapType::doorBarricade)
         return;
 
     mIsLocked = !mIsLocked;
     changeDoorState(doorEntity, tile, mIsLocked);
 
     mIsLockedState = mIsLocked;
+}
+
+bool TrapDoor::isClaimable(Seat* seat) const
+{
+    return !mKeyLocked && Trap::isClaimable(seat);
+}
+
+void TrapDoor::claimForSeat(Seat* seat, Tile* tile, double danceRate)
+{
+    if(!mKeyLocked)
+        Trap::claimForSeat(seat, tile, danceRate);
+}
+
+void TrapDoor::setKeyLocked(bool locked)
+{
+    mKeyLocked = locked;
+    mIsLocked = locked;
+    for(Tile* tile : mCoveredTiles)
+    {
+        RenderedMovableEntity* object = getBuildingObjectFromTile(tile);
+        if(object != nullptr && object->getObjectType() == GameEntityType::trapEntity)
+        {
+            TrapEntity* entity = static_cast<TrapEntity*>(object);
+            if(entity->getTrapEntityType() == TrapEntityType::doorEntity)
+                changeDoorState(static_cast<DoorEntity*>(entity), tile, locked);
+        }
+    }
+    mIsLockedState = locked;
 }
 
 void TrapDoor::changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked)
@@ -630,6 +663,9 @@ bool TrapDoor::permitsVision(Tile* tile)
 
 double TrapDoor::getCreatureSpeed(const Creature* creature, Tile* tile) const
 {
+    if(mKeyLocked)
+        return 0.0;
+
     // Seats that did not discover a secret door see a wall and cannot walk through it
     if(appearsAsWallForSeat(tile, creature->getSeat()))
         return 0.0;
@@ -664,7 +700,10 @@ void TrapDoor::exportToStream(std::ostream& os) const
 {
     Trap::exportToStream(os);
 
-    os << mIsLocked << "\n";
+    os << mIsLocked;
+    if(mKeyLocked)
+        os << " KeyLock 1";
+    os << "\n";
 }
 
 bool TrapDoor::importFromStream(std::istream& is)
@@ -675,5 +714,19 @@ bool TrapDoor::importFromStream(std::istream& is)
     if(!(is >> mIsLocked))
         return false;
 
+    std::string remainder;
+    std::getline(is, remainder);
+    std::istringstream extra(remainder);
+    std::string marker;
+    mKeyLocked = false;
+    if(extra >> marker)
+    {
+        int locked;
+        std::string unexpected;
+        if(marker != "KeyLock" || !(extra >> locked) || locked != 1 || (extra >> unexpected))
+            return false;
+        mKeyLocked = true;
+        mIsLocked = true;
+    }
     return true;
 }
