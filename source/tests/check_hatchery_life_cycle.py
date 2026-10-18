@@ -392,5 +392,14 @@ anonymous = trips[trips.index('if(it->mHen.empty())'):trips.index('ChickenEntity
 assert 'mPendingEggs.erase(it)' in anonymous and '--it->mTurns' not in anonymous
 missing = trips[trips.index('if(hen == nullptr)'):trips.index('if(hen->isLeavingCoop())')]
 assert 'mPendingEggs.erase(it)' in missing and 'it->mTurns = 0' not in missing
-assert trips.index('if(!arrived') < trips.index('hen->playPose(ChickenPose::lay')
+initial_trip = trips[trips.index('// Recalculate the walk'):]
+assert initial_trip.index('if(!arrived') < initial_trip.index('hen->playPose(ChickenPose::lay')
 print('anonymous and interrupted laying cannot produce eggs: source guards passed')
+
+# A saved laying reservation resumes the hen's non-persistent busy pose once, without rerolling time.
+posing = trips[trips.index('if(it->mPosing)'):trips.index('// Recalculate the walk')]
+assert '!it->mStarted && (it->mTurns > 0)' in posing
+assert 'hen->playPose(ChickenPose::lay, it->mTurns)' in posing
+assert posing.index('hen->playPose(') < posing.index('--it->mTurns')
+assert 'it->mStarted = true;' in posing and 'Random::' not in posing
+print('saved laying resumes its remaining visible pose once: source guards passed')

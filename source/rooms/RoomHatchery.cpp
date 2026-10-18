@@ -716,6 +716,13 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
 
         if(it->mPosing)
         {
+            // Loaded laying reservations retain their remaining time, but the hen's busy pose is not saved.
+            if(!it->mStarted && (it->mTurns > 0))
+            {
+                hen->clearFollowTarget();
+                hen->playPose(ChickenPose::lay, it->mTurns);
+            }
+            it->mStarted = true;
             if(it->mTurns > 0)
                 --it->mTurns;
             ++it;

@@ -243,10 +243,10 @@ private:
         {}
 
         Ogre::Vector3 mSpot;
-        //! Turns until the egg may appear (counts down while the hen sits, or at once without a hen).
+        //! Turns until the egg may appear, counted only while its hen lays.
         uint32_t mTurns;
         //! Not empty while the egg is planned by a hen: her name and the place next to the nest where she stands to lay.
-        //! Not saved: a save in between lets a due egg appear after mTurns, a planned one is planned again.
+        //! Saved once laying starts; a loaded hen resumes the remaining pose before her egg appears.
         std::string mHen;
         Ogre::Vector2 mStand;
         //! Turns the walk to mStand takes (real distance and walking speed), turns she has been walking.
