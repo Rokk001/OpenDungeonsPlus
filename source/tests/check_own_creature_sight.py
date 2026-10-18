@@ -61,3 +61,15 @@ assert "tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() == nullptr" in cl
 assert '!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr' in cloud
 assert 'tile.setFogOfWarCloud(nullptr)' in cloud
 print("Previously explored enemy clouds follow authoritative fog changes without covering never-seen earth: PASS (static only)")
+
+# Legacy grace is gated by absence of the entire optional section, not by an individual missing tile age.
+assert 'mHasSavedOwnCreatureSightAges = true;' in load[load.index('if(str == "[OwnCreatureSightAges]")'):]
+legacy = init[init.index('// Legacy saves have no sight ages:'):]
+legacy = legacy[:legacy.index('mTilesStates[tile].mOwnCreatureSightAgeTurns')]
+assert '!mHasSavedOwnCreatureSightAges &&' in legacy
+assert 'everVisitedFlagPool[tile->getX()][tile->getY()][mId]' in legacy
+assert 'p.second.mOwnCreatureSightAgeTurns = 0;' in legacy
+assert init.rfind('mHasSavedOwnCreatureSightAges = true;') > init.index('getPlayer()->markTilesForDigging')
+assert 'os << "[OwnCreatureSightAges]\\n";' in save
+assert 'os << "[/OwnCreatureSightAges]\\n";' in save
+print("Old saves get one initial grace period only; current and repeated loads retain saved ages: PASS (static only)")

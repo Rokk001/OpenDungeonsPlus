@@ -214,7 +214,7 @@ public:
 
     void addAlliedSeat(Seat* seat);
 
-    //! \brief Initializes the seat and restores saved tile knowledge and own-creature sight ages.
+    //! \brief Restores tile knowledge and sight ages, granting discovered legacy tiles one initial fog grace period.
     void initSeat();
 
     void setMapSize(GameMap* gameMapPointer,int x, int y);
@@ -498,6 +498,8 @@ private:
     TileStateNotified* getTileStateNotified(Tile* tile);
 
     std::map<std::pair<int, int>, TileStateNotified> mTilesStateLoaded;
+    //! Whether a saved sight-age section exists; legacy discovered tiles receive one initial grace period.
+    bool mHasSavedOwnCreatureSightAges = false;
 
     std::vector<Tile*> mVisualDebugEntityTiles;
 

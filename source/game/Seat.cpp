@@ -566,6 +566,11 @@ void Seat::initSeat()
                 continue;
             }
 
+            // Legacy saves have no sight ages: give only previously discovered tiles one initial grace period.
+            if(!mHasSavedOwnCreatureSightAges &&
+               mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId])
+                p.second.mOwnCreatureSightAgeTurns = 0;
+
             mTilesStates[tile].mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns;
             mTilesStates[tile].mSeatIdOwner = p.second.mSeatIdOwner;
 
@@ -610,6 +615,7 @@ void Seat::initSeat()
 
         getPlayer()->markTilesForDigging(true, tilesMark, false);
     }
+    mHasSavedOwnCreatureSightAges = true;
 }
 
 void Seat::setMapSize(GameMap* gameMapPointer,int x, int y)
@@ -1422,6 +1428,7 @@ bool Seat::importSeatFromStream(std::istream& is)
     
     if(str == "[OwnCreatureSightAges]")
     {
+        mHasSavedOwnCreatureSightAges = true;
         while(true)
         {
             OD_ASSERT_TRUE(is >> str);
