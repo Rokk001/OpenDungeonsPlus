@@ -25,6 +25,7 @@ namespace LevelScriptRunner
 {
     //! \brief Checks the triggers of the game map level script and runs the actions of
     //! the ones whose conditions are met. Server side only, called once per turn.
+    //! \brief Retries original victories after all objective observers have updated.
     void doTurn(GameMap& gameMap);
 
     //! \brief Carries out the standing order that a script action gave to the creature (go to

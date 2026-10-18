@@ -86,6 +86,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <string>
 
@@ -2958,9 +2959,19 @@ Seat* GameMap::getSeatById(int id) const
     return nullptr;
 }
 
-//! \brief Records a seat victory once and opens the campaign result after saving its progress.
+//! \brief Defers human victory until all main goals are reached, then records and announces it once.
 void GameMap::addWinningSeat(Seat *s)
 {
+    Player* requestingPlayer = getPlayerBySeat(s);
+    if(requestingPlayer != nullptr && requestingPlayer->getIsHuman())
+    {
+        if(requestingPlayer->getHasLost())
+            return;
+        mLevelScript->requestVictory(s->getId());
+        if(!mLevelScript->areMainObjectivesReached(s->getId()))
+            return;
+    }
+
     // Make sure the seat has not already been added.
     if(std::find(mWinningSeats.begin(), mWinningSeats.end(), s) != mWinningSeats.end())
         return;
@@ -3435,6 +3446,45 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
     const std::string openGoalMark = "[image='GoalStatus/Open'] ";
     const std::string reachedGoalMark = "[image='GoalStatus/Reached'] ";
     const std::string failedGoalMark = "[image='GoalStatus/Failed'] ";
+    const LevelScript& script = getLevelScript();
+    std::vector<std::string> mainObjectives;
+    std::vector<std::string> optionalObjectives;
+    std::set<std::string> groupedIds;
+    bool hasGroups = false;
+    for(const LevelScriptTrigger& trigger : script.getTriggers())
+    {
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType != LevelScriptActionType::objective ||
+               action.mObjectiveGroup == LevelScriptObjectiveGroup::legacy ||
+               (action.mSeatId >= 0 && action.mSeatId != seat->getId()))
+                continue;
+            hasGroups = true;
+            if(action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain && trigger.mTimesFired == 0)
+                continue;
+            if(!groupedIds.insert(action.mObjectiveId).second)
+                continue;
+            const LevelScriptObjectiveState state = script.getObjectiveState(seat->getId(), action.mObjectiveId);
+            const std::string& mark = state == LevelScriptObjectiveState::reached ? reachedGoalMark :
+                (state == LevelScriptObjectiveState::failed ? failedGoalMark : openGoalMark);
+            if(action.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
+                optionalObjectives.push_back(mark + action.mText);
+            else
+                mainObjectives.push_back(mark + action.mText);
+        }
+    }
+    if(hasGroups)
+    {
+        if(playerIsAWinner && script.areMainObjectivesReached(seat->getId()))
+            tempSS << "Victory!\n";
+        tempSS << "Main goals\n";
+        for(const std::string& objective : mainObjectives)
+            tempSS << objective << "\n";
+        tempSS << "\nOptional goals\n";
+        for(const std::string& objective : optionalObjectives)
+            tempSS << objective << "\n";
+        return tempSS.str();
+    }
 
     if (playerIsAWinner)
     {
@@ -3472,7 +3522,6 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
 
     std::vector<std::string> scriptObjectives;
     std::vector<std::string> scriptObjectiveIds;
-    const LevelScript& script = getLevelScript();
     for(const LevelScriptTrigger& trigger : script.getTriggers())
     {
         for(const LevelScriptAction& action : trigger.mActions)

@@ -577,11 +577,18 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         return false;
 
     const std::string& type = t[1];
-    if(type == "objectiveid")
+    if(type == "objectiveid" || type == "mainobjectiveid" || type == "optionalobjectiveid" ||
+       type == "conditionalobjectiveid")
     {
         if(t.size() < 5 || !parseInt32(t[2], action.mSeatId))
             return false;
         action.mType = LevelScriptActionType::objective;
+        if(type == "mainobjectiveid")
+            action.mObjectiveGroup = LevelScriptObjectiveGroup::main;
+        else if(type == "optionalobjectiveid")
+            action.mObjectiveGroup = LevelScriptObjectiveGroup::optional;
+        else if(type == "conditionalobjectiveid")
+            action.mObjectiveGroup = LevelScriptObjectiveGroup::conditionalMain;
         action.mObjectiveId = t[3];
         action.mText = restOfLine(line, 4);
         return !action.mObjectiveId.empty() && !action.mText.empty();
@@ -1086,7 +1093,7 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
     os << "\n";
 }
 
-//! \brief Serializes an action without changing legacy objective text syntax.
+//! \brief Serializes goal classification and actions while preserving legacy objective syntax.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -1102,7 +1109,16 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             if(a.mObjectiveId.empty())
                 os << "objective\t" << a.mSeatId << "\t" << a.mText;
             else
-                os << "objectiveid\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t" << a.mText;
+            {
+                const char* kind = "objectiveid";
+                if(a.mObjectiveGroup == LevelScriptObjectiveGroup::main)
+                    kind = "mainobjectiveid";
+                else if(a.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
+                    kind = "optionalobjectiveid";
+                else if(a.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain)
+                    kind = "conditionalobjectiveid";
+                os << kind << "\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t" << a.mText;
+            }
             break;
         case LevelScriptActionType::objectiveState:
             os << "objectivestate\t" << a.mSeatId << "\t" << a.mObjectiveId << "\t"
@@ -1234,6 +1250,37 @@ const char* levelScriptObjectiveStateName(LevelScriptObjectiveState state)
     return "open";
 }
 
+//! \brief Checks the same required objective states that the goal list displays.
+bool LevelScript::areMainObjectivesReached(int32_t seatId) const
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType != LevelScriptActionType::objective ||
+               (action.mSeatId != -1 && action.mSeatId != seatId))
+                continue;
+            const bool required = action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                (action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain && trigger.mTimesFired > 0);
+            if(required && getObjectiveState(seatId, action.mObjectiveId) != LevelScriptObjectiveState::reached)
+                return false;
+        }
+    }
+    return true;
+}
+
+//! \brief Persists an original victory request while required goals are incomplete.
+void LevelScript::requestVictory(int32_t seatId)
+{
+    mVictoryRequests.insert(seatId);
+}
+
+//! \brief Reports whether the seat has an original victory request to retry.
+bool LevelScript::hasVictoryRequest(int32_t seatId) const
+{
+    return mVictoryRequests.count(seatId) != 0;
+}
+
 //! \brief Returns the last explicit state for this seat and ID, or open when unset.
 LevelScriptObjectiveState LevelScript::getObjectiveState(int32_t seatId, const std::string& id) const
 {
@@ -1242,7 +1289,7 @@ LevelScriptObjectiveState LevelScript::getObjectiveState(int32_t seatId, const s
     return it == mObjectiveStates.end() ? LevelScriptObjectiveState::open : it->second;
 }
 
-//! \brief Persists an explicit presentation update without changing winning conditions.
+//! \brief Persists an objective state shared by presentation and any declared main-goal gate.
 void LevelScript::setObjectiveState(int32_t seatId, const std::string& id, LevelScriptObjectiveState state)
 {
     mObjectiveStates[std::make_pair(seatId, id)] = state;
@@ -1431,6 +1478,13 @@ bool LevelScript::importFromStream(std::istream& is)
             observation.mCreatureName = t[3];
             observation.mKilled = killed != 0;
             mSpawnObservations.push_back(observation);
+        }
+        else if(key == "VictoryRequest")
+        {
+            int32_t seatId = -1;
+            if(inTrigger || t.size() != 2 || !parseInt32(t[1], seatId) || seatId < 1)
+                return false;
+            requestVictory(seatId);
         }
         else if(key == "ObjectiveState")
         {
@@ -1637,6 +1691,8 @@ void LevelScript::exportToStream(std::ostream& os) const
     for(const std::pair<const std::pair<int32_t, std::string>, LevelScriptObjectiveState>& objective : mObjectiveStates)
         os << "ObjectiveState\t" << objective.first.first << "\t" << objective.first.second << "\t"
            << levelScriptObjectiveStateName(objective.second) << "\n";
+    for(int32_t seatId : mVictoryRequests)
+        os << "VictoryRequest\t" << seatId << "\n";
     for(const std::pair<const std::string, int64_t>& flag : mFlags)
         os << "Flag\t" << flag.first << "\t" << flag.second << "\n";
 
@@ -1716,6 +1772,7 @@ void LevelScript::exportToStream(std::ostream& os) const
 void LevelScript::clear()
 {
     mObjectiveStates.clear();
+    mVictoryRequests.clear();
     mSpawnObservations.clear();
     mMinedGold.clear();
     mCreatureDeathTiles.clear();

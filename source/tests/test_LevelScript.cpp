@@ -1185,3 +1185,65 @@ BOOST_AUTO_TEST_CASE(test_story_conditions)
         BOOST_CHECK_MESSAGE(!bad.importFromStream(isBad), entry);
     }
 }
+
+//! \brief Required goals gate victory; optional goals and undiscovered conditional goals do not.
+BOOST_AUTO_TEST_CASE(required_objectives_and_pending_victory_round_trip)
+{
+    LevelScript script;
+    std::istringstream input(
+        "[Trigger]\nName intro\nMode once\n"
+        "Action mainobjectiveid 1 main Secure the village.\n"
+        "Action optionalobjectiveid 1 extra Explore the gallery.\n"
+        "Action mainobjectiveid 2 other Secure the fortress.\n"
+        "Action objectiveid 1 legacy An old description.\n[/Trigger]\n"
+        "[Trigger]\nName discovery\nMode once\n"
+        "Action conditionalobjectiveid 1 carrier Bring the stone home.\n"
+        "[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    BOOST_CHECK(!script.areMainObjectivesReached(2));
+    BOOST_CHECK(script.areMainObjectivesReached(3));
+    script.setObjectiveState(1, "main", LevelScriptObjectiveState::reached);
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "extra", LevelScriptObjectiveState::failed);
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    script.getTriggers()[1].mTimesFired = 1;
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "carrier", LevelScriptObjectiveState::failed);
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "carrier", LevelScriptObjectiveState::reached);
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "main", LevelScriptObjectiveState::failed);
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    script.requestVictory(1);
+    script.requestVictory(1);
+    BOOST_CHECK(script.hasVictoryRequest(1));
+    BOOST_CHECK(!script.hasVictoryRequest(2));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    BOOST_CHECK(saved.str().find("VictoryRequest\t1\n") != std::string::npos);
+    BOOST_CHECK(saved.str().find("mainobjectiveid\t1\tmain") != std::string::npos);
+    BOOST_CHECK(saved.str().find("optionalobjectiveid\t1\textra") != std::string::npos);
+    BOOST_CHECK(saved.str().find("conditionalobjectiveid\t1\tcarrier") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(restored.hasVictoryRequest(1));
+    BOOST_CHECK(!restored.areMainObjectivesReached(1));
+    restored.setObjectiveState(1, "main", LevelScriptObjectiveState::reached);
+    BOOST_CHECK(restored.areMainObjectivesReached(1));
+    restored.clear();
+    BOOST_CHECK(!restored.hasVictoryRequest(1));
+    BOOST_CHECK(restored.isEmpty());
+}
+
+//! \brief Legacy objective descriptions do not acquire a new victory requirement.
+BOOST_AUTO_TEST_CASE(legacy_objectives_keep_their_original_victory_rules)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName old\nMode once\nAction objectiveid 1 old Open a path.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    BOOST_CHECK(!script.hasVictoryRequest(1));
+    BOOST_CHECK(script.getTriggers()[0].mActions[0].mObjectiveGroup == LevelScriptObjectiveGroup::legacy);
+}

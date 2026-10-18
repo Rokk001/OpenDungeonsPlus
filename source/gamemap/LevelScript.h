@@ -34,7 +34,8 @@
 //!
 //!   [Triggers]
 //!   Flag    <name>  <value>                   # initial value of a flag (unset flags are 0)
-//!   ObjectiveState <seatId> <id> open|reached|failed   # saved presentation state for an identified objective
+//!   ObjectiveState <seatId> <id> open|reached|failed   # saved state for an identified objective
+//!   VictoryRequest <seatId>                    # saved original victory request waiting for main goals
 //!   SpawnObservation <trigger> <actionIndex> <creatureName> <killed 0|1> <deathTempleSeat>   # saved exact spawn/death observation; temple -1 means outside a temple
 //!   MinedGold <seatId> <x> <y> <creditedGold>    # sparse actual gold credited from a watched source tile
 //!   DeathTile <creatureName> <x> <y>           # actual death tile of a named creature watched by killedin
@@ -117,7 +118,10 @@
 //!   Action  objective <seatId> <text>
 //!   Action  hint <seatId> <text>             # advice with no ID, state or completion tick
 //!   Action  objectiveid <seatId> <id> <text>   # tracked objective, initially open; legacy objective stays valid
-//!   Action  objectivestate <seatId> <id> reached|failed   # explicit presentation status, not a winning condition
+//!   Action  mainobjectiveid <seatId> <id> <text>   # required goal; every declared main goal gates victory
+//!   Action  optionalobjectiveid <seatId> <id> <text>   # optional goal; never blocks victory
+//!   Action  conditionalobjectiveid <seatId> <id> <text>   # required only after its declaration trigger fires
+//!   Action  objectivestate <seatId> <id> reached|failed   # individual state, shared by the list and victory gate
 //!   Action  spawn <seatId> <x> <y> <targetSeatId> [party=<tag>] <class:level>[@<name>] [...]   # the tag names the group for event conditions, a name is the creature name (if no creature has it)
 //!   Action  gold <seatId> <amount>
 //!   Action  setflag <name> <value>
@@ -234,7 +238,16 @@ enum class LevelScriptConditionType
     roomFootprintClaimed
 };
 
-//! \brief Explicit presentation state of one identified script objective.
+//! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.
+enum class LevelScriptObjectiveGroup
+{
+    legacy,
+    main,
+    optional,
+    conditionalMain
+};
+
+//! \brief Explicit state shared by goal presentation and required-goal victory checks.
 enum class LevelScriptObjectiveState
 {
     open,
@@ -321,6 +334,7 @@ struct LevelScriptCondition
 //! \brief One script action, with an optional stable ID for objective descriptions and state updates.
 struct LevelScriptAction
 {
+    //! \brief Creates a legacy-compatible action with no required-goal classification.
     LevelScriptAction() :
         mType(LevelScriptActionType::message),
         mSeatId(-1),
@@ -329,7 +343,8 @@ struct LevelScriptAction
         mX2(0),
         mY2(0),
         mTargetSeatId(-1),
-        mNumber(0)
+        mNumber(0),
+        mObjectiveGroup(LevelScriptObjectiveGroup::legacy)
     {}
 
     LevelScriptActionType mType;
@@ -347,6 +362,8 @@ struct LevelScriptAction
     //! \brief Message text (message, objective, hint), flag name (setflag), region name (reveal),
     //! level file (discoverLevel) or skill type name (make)
     std::string mText;
+    //! \brief Required, optional or legacy classification of an objective description.
+    LevelScriptObjectiveGroup mObjectiveGroup;
     //! \brief Stable objective ID; empty for legacy objective text without individual tracking.
     std::string mObjectiveId;
     //! \brief spawn: creature class name and level
@@ -475,6 +492,16 @@ public:
     //! \brief Returns the explicitly recorded state; an untouched identified objective is open.
     LevelScriptObjectiveState getObjectiveState(int32_t seatId, const std::string& id) const;
 
+    //! \brief True when all declared required goals of this seat are reached; optional goals never block.
+    //! Conditional required goals apply only after their declaration trigger fires; legacy maps retain their rules.
+    bool areMainObjectivesReached(int32_t seatId) const;
+
+    //! \brief Records a victory request until the seat's required goals allow it to be announced.
+    void requestVictory(int32_t seatId);
+
+    //! \brief True if an earlier script or generic victory is waiting for required goals.
+    bool hasVictoryRequest(int32_t seatId) const;
+
     //! \brief Records the explicit presentation state for one seat and objective ID.
     void setObjectiveState(int32_t seatId, const std::string& id, LevelScriptObjectiveState state);
 
@@ -497,7 +524,7 @@ public:
 
     //! \brief True when neither script definitions nor persistent runtime state exist.
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mVictoryRequests.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
@@ -648,6 +675,8 @@ public:
 
 private:
     std::map<std::pair<int32_t, std::string>, LevelScriptObjectiveState> mObjectiveStates;
+    //! Seats with an original victory request deferred until all required goals are reached.
+    std::set<int32_t> mVictoryRequests;
     std::vector<LevelScriptSpawnObservation> mSpawnObservations;
     std::map<int32_t, std::map<std::pair<int32_t, int32_t>, int64_t> > mMinedGold;
     std::map<std::string, std::pair<int32_t, int32_t> > mCreatureDeathTiles;

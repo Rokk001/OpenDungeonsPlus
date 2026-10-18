@@ -1267,7 +1267,9 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             sendMessage(gameMap, action.mSeatId, "Hint: " + action.mText);
             break;
         case LevelScriptActionType::objective:
-            sendMessage(gameMap, action.mSeatId, "Objective: " + action.mText);
+            // Grouped declarations populate the goal panels; they are not duplicate routine notices.
+            if(action.mObjectiveGroup == LevelScriptObjectiveGroup::legacy)
+                sendMessage(gameMap, action.mSeatId, "Objective: " + action.mText);
             break;
         case LevelScriptActionType::objectiveState:
             for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
@@ -1423,6 +1425,7 @@ void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
 }
 
 //! \brief Runs existing triggers in order and passes stable source identities to presentation observers.
+//! \brief Evaluates triggers, then retries original victories after all objective observers have run.
 void LevelScriptRunner::doTurn(GameMap& gameMap)
 {
     LevelScript& script = gameMap.getLevelScript();
@@ -1462,6 +1465,15 @@ void LevelScriptRunner::doTurn(GameMap& gameMap)
             runAction(gameMap, script, action, trigger.mName, actionIndex);
             ++actionIndex;
         }
+    }
+    // Observers later in the trigger list may complete a goal after the original win action ran.
+    // Retry only an actual prior victory request, never invent a new win condition.
+    for(Seat* seat : gameMap.getSeats())
+    {
+        Player* player = seat->getPlayer();
+        if(player != nullptr && player->getIsHuman() && !player->getHasLost() &&
+           script.hasVictoryRequest(seat->getId()) && script.areMainObjectivesReached(seat->getId()))
+            gameMap.addWinningSeat(seat);
     }
 }
 

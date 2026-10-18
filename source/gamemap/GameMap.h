@@ -364,6 +364,7 @@ public:
     { return getSeatById(0); }
 
     //! \brief Records victory once, saves campaign progress and notifies the winning human seat.
+    //! \brief Defers human victory until all main goals are reached, then records it once.
     void addWinningSeat(Seat *s);
     bool seatIsAWinner(Seat *s) const;
 
@@ -420,6 +421,7 @@ public:
     { return mSandboxMode; }
 
     //! \brief Formats goal descriptions and graphical state markers for the player's objectives window.
+    //! \brief Formats grouped main and optional goals with their shared status icons, retaining legacy lists.
     std::string getGoalsStringForPlayer(Player* player);
 
     //! \brief Loops over all the creatures and calls their individual doTurn methods,
