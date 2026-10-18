@@ -1600,6 +1600,12 @@ def self_test(root):
             ("Cond\tobjective\t1\thighcairn-main-captain\treached", "Cond\tflag\tholdOpen\t1")):
         assert needle in high_grouped
         assert grouped_goal_errors(high_grouped.replace(needle, replacement), "Highcairn"), "Highcairn requirement weakening must fail: " + needle
+    high_retry = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
+    for needle, replacement in (
+            ("Cond\tevent\tCairnBearer2\tcreated\t==\t0", "Cond\talive\tCairnBearer2\t0"),
+            ("Name\tcarrierRecovery\nMode\trepeat\t0", "Name\tcarrierRecovery\nMode\tonce")):
+        assert needle in high_retry
+        assert grouped_goal_errors(high_retry.replace(needle, replacement), "Highcairn"), "replacement must retry only when its exact name is free"
     print("campaign playability self-test passed")
 
 

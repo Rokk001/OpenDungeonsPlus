@@ -1266,7 +1266,7 @@ void removeCreature(GameMap& gameMap, const std::string& name)
     creature->deleteYourself();
 }
 
-//! \brief Executes a script action, including explicit presentation updates for identified goals.
+//! \brief Executes actions and identified goal updates; stone attachment requires an existing living carrier.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1377,8 +1377,12 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             createStone(gameMap, action.mX, action.mY);
             break;
         case LevelScriptActionType::stoneAttach:
-            script.addStoneCarrier(action.mText);
+        {
+            Creature* creature = gameMap.getCreature(action.mText);
+            if((creature != nullptr) && creature->isAlive())
+                script.addStoneCarrier(action.mText);
             break;
+        }
         case LevelScriptActionType::alliance:
             changeAlliance(gameMap, action);
             break;

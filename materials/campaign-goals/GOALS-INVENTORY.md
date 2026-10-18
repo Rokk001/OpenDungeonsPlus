@@ -474,9 +474,9 @@ File: `levels/campaign/Highcairn.level`.
 | Script line 2844 | `Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.` | yes |
 | Script line 2892 | `Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.` | yes |
 | Script line 2908 | `Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.` | yes |
-| Script line 3062 | `Action	win	1` | yes |
-| Script line 3093 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Script line 3186 | `Action	win	1` | yes |
+| Script line 3063 | `Action	win	1` | yes |
+| Script line 3094 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3196 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -494,10 +494,10 @@ Possible route (static, not a playthrough):
 - Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.
 - Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.
 - Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.
-- Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both original home triggers now require the actual stone and ownership; stoneDone records that completion. Hand transport and indefinite carrier replacement remain open, not claimed solved.
+- Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both home triggers require the actual stone and ownership. Repeated replacement waits until CairnBearer2 is absent, including its corpse, so the new creature receives the exact name. A failed spawn cannot attach a stone to a missing or dead creature and is retried while absent. Hand transport remains pending.
 - Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.
 
-Partial: stone hand transport and repeated carrier-loss recovery remain unresolved. Static necessary supply/route evidence only; combat, ordered visits, save/load and UI need runtime verification.
+Partial: stone hand transport remains unresolved. Repeated replacement now waits for the named predecessor to leave the map; actual death/removal, population-cap retry and save/load still need runtime verification.
 
 | Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	carryingstone	CairnBearer; Cond	owns	1	CairnBearer; Cond	reached	CairnBearer	heart	1` | yes |
 | Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	carryingstone	CairnBearer2; Cond	owns	1	CairnBearer2; Cond	reached	CairnBearer2	heart	1` | yes |

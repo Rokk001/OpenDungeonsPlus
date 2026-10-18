@@ -2924,6 +2924,7 @@ Mode	once
 Cond	flag	bearerOut	1
 Cond	flag	stoneDone	0
 Cond	alive	CairnBearer	0
+Cond	event	CairnBearer2	created	==	0
 Action	message	1	The cairn spirit has fallen. Another one rises from the plinth to carry the stone.
 Action	spawn	1	5	22	1	Spider:3@CairnBearer2
 Action	stoneattach	CairnBearer2
@@ -3096,6 +3097,15 @@ Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the h
 
 
 
+[Trigger]
+Name	carrierRecovery
+Mode	repeat	0
+Cond	trigger	bearerLost
+Cond	flag	stoneDone	0
+Cond	event	CairnBearer2	created	==	0
+Action	spawn	1	5	22	1	Spider:3@CairnBearer2
+Action	stoneattach	CairnBearer2
+[/Trigger]
 [Trigger]
 Name	mainGoalList
 Mode	once

@@ -1535,3 +1535,30 @@ BOOST_AUTO_TEST_CASE(projectile_death_credit_and_recovery)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief Carrier recovery retains the exact name-availability guard and retry actions across saves.
+BOOST_AUTO_TEST_CASE(stone_carrier_recovery_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName recovery\nMode repeat 0\n"
+        "Cond event CairnBearer2 created == 0\nCond flag stoneDone 0\n"
+        "Action spawn 1 5 22 1 Spider:3@CairnBearer2\n"
+        "Action stoneattach CairnBearer2\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_REQUIRE_EQUAL(restored.getTriggers().size(), 1u);
+    const LevelScriptTrigger& trigger = restored.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 2u);
+    BOOST_CHECK(trigger.mConditions[0].mType == LevelScriptConditionType::creatureEvent);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mName, "CairnBearer2");
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mName2, "created");
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mNumber, 0);
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 2u);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mCreatureNames[0], "CairnBearer2");
+    BOOST_CHECK(trigger.mActions[1].mType == LevelScriptActionType::stoneAttach);
+    BOOST_CHECK_EQUAL(trigger.mActions[1].mText, "CairnBearer2");
+}

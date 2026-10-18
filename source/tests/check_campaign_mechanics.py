@@ -105,4 +105,10 @@ assert 'takeKeptMinion(' in runner and 'KeptMinion' in campaign
 assert 'isHeartstoneComplete()' in read('source/network/ODServer.cpp')
 assert 'getHeartstonePieces()' in read('source/modes/MenuModeCampaign.cpp')
 
+# Failed spawns and named corpses cannot receive a newly attached transport stone.
+attach = runner.split('case LevelScriptActionType::stoneAttach:', 1)[1].split('case LevelScriptActionType::alliance:', 1)[0]
+assert 'gameMap.getCreature(action.mText)' in attach
+assert 'if((creature != nullptr) && creature->isAlive())' in attach
+assert attach.index('creature->isAlive()') < attach.index('script.addStoneCarrier(action.mText)')
+
 print('check_campaign_mechanics: all checks passed')

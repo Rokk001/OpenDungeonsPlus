@@ -5939,6 +5939,34 @@
           "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours.",
           "Action\twin\t1"
         ]
+      },
+      "bearerLost": {
+        "conditions": [
+          "Cond\tflag\tbearerOut\t1",
+          "Cond\tflag\tstoneDone\t0",
+          "Cond\talive\tCairnBearer\t0",
+          "Cond\tevent\tCairnBearer2\tcreated\t==\t0"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe cairn spirit has fallen. Another one rises from the plinth to carry the stone.",
+          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2",
+          "Action\tstoneattach\tCairnBearer2"
+        ],
+        "mode": "once"
+      },
+      "carrierRecovery": {
+        "conditions": [
+          "Cond\ttrigger\tbearerLost",
+          "Cond\tflag\tstoneDone\t0",
+          "Cond\tevent\tCairnBearer2\tcreated\t==\t0"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2",
+          "Action\tstoneattach\tCairnBearer2"
+        ],
+        "mode": "repeat\t0"
       }
     },
     "preserved_conditions": {
@@ -5983,7 +6011,8 @@
       "bearerLost": [
         "Cond\tflag\tbearerOut\t1",
         "Cond\tflag\tstoneDone\t0",
-        "Cond\talive\tCairnBearer\t0"
+        "Cond\talive\tCairnBearer\t0",
+        "Cond\tevent\tCairnBearer2\tcreated\t==\t0"
       ],
       "sealedFound": [
         "Cond\tregion\t1\tCairnHall"
@@ -6123,10 +6152,10 @@
       "Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.",
       "Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.",
       "Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.",
-      "Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both original home triggers now require the actual stone and ownership; stoneDone records that completion. Hand transport and indefinite carrier replacement remain open, not claimed solved.",
+      "Only voluntary sealedFound activates real owned CairnBearer or CairnBearer2 stone delivery. Both home triggers require the actual stone and ownership. Repeated replacement waits until CairnBearer2 is absent, including its corpse, so the new creature receives the exact name. A failed spawn cannot attach a stone to a missing or dead creature and is retried while absent. Hand transport remains pending.",
       "Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty."
     ],
-    "runtime_limit": "Partial: stone hand transport and repeated carrier-loss recovery remain unresolved. Static necessary supply/route evidence only; combat, ordered visits, save/load and UI need runtime verification.",
+    "runtime_limit": "Partial: stone hand transport remains unresolved. Repeated replacement now waits for the named predecessor to leave the map; actual death/removal, population-cap retry and save/load still need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours."
