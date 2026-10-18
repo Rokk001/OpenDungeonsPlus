@@ -21,6 +21,8 @@
 #include <cstdint>
 #include <string>
 
+class Creature;
+class GameEntity;
 class GameMap;
 
 namespace Ogre
@@ -49,7 +51,11 @@ public:
     //! \brief Activates the test mode and starts the watchdog.
     //! If seed is not 0, the random generator is set to it when the first turn runs and the game
     //! state at the end of the run is written to run-level-state.txt (for seeded comparisons).
-    static void configure(const std::string& levelFile, int32_t seconds, uint32_t seed = 0);
+    //! If scenario is not empty, that scenario is set up on the first turn (command line: --scenario <name>).
+    //! The scenario "ignored-enemies" places four fighters of the human seat near the creature PostWatch1 and
+    //! writes, after every turn, the combat state of every fighter near an enemy to run-level-scenario.txt.
+    static void configure(const std::string& levelFile, int32_t seconds, uint32_t seed = 0,
+        const std::string& scenario = std::string());
 
     static bool isActive();
 
@@ -83,6 +89,11 @@ public:
 
     //! \brief Called by the client thread for every frame with the time since the last frame (seconds).
     static void onFrame(double seconds);
+
+    //! \brief Called by the fight action of a creature (server thread) with the target it chose this turn.
+    //! \param attackNow true if the creature attacks from where it stands, false if it walks towards the target.
+    //! Only recorded while a scenario runs; the next scenario line of the creature shows it.
+    static void onFightTarget(const Creature& creature, const GameEntity& target, bool attackNow);
 };
 
 #endif // RUNLEVELTEST_H

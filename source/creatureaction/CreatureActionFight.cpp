@@ -27,6 +27,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/RunLevelTest.h"
 
 CreatureActionFight::CreatureActionFight(Creature& creature, GameEntity* entityAttack, bool koOpponent, bool notifyPlayerIfHit) :
     CreatureAction(creature),
@@ -139,6 +140,9 @@ bool CreatureActionFight::handleFight(Creature& creature, GameEntity* entityAtta
         CreatureSkillData* skillData = nullptr;
         if(creature.searchBestTargetInList(enemyPrioritaryTargets, emptyTiles, entityAttack, tileAttack, tilePosition, skillData))
         {
+            if(RunLevelTest::isActive() && (entityAttack != nullptr))
+                RunLevelTest::onFightTarget(creature, *entityAttack, (myTile == tilePosition) && (skillData != nullptr));
+
             if((myTile == tilePosition) &&
                (entityAttack != nullptr) &&
                (tileAttack != nullptr) &&
@@ -176,6 +180,9 @@ bool CreatureActionFight::handleFight(Creature& creature, GameEntity* entityAtta
         CreatureSkillData* skillData = nullptr;
         if(creature.searchBestTargetInList(enemySecondaryTargets, emptyTiles, entityAttack, tileAttack, tilePosition, skillData))
         {
+            if(RunLevelTest::isActive() && (entityAttack != nullptr))
+                RunLevelTest::onFightTarget(creature, *entityAttack, (myTile == tilePosition) && (skillData != nullptr));
+
             if((myTile == tilePosition) &&
                (entityAttack != nullptr) &&
                (tileAttack != nullptr) &&
