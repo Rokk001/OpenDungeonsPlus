@@ -4906,8 +4906,8 @@ Action	setflag	portalOn	1
 [Trigger]
 Name	wardenKey
 Mode	once
-Cond	time	4
-Action	stoneattach	DorianSilt
+Cond	event	DorianSilt	killed
+Action	stonedrop	DorianSilt	silver-vault-key	1	80	89
 [/Trigger]
 [Trigger]
 Name	keyDropped
@@ -4920,7 +4920,7 @@ Action	message	1	Dorian Silt is dead and the vault key he wore lies where he fel
 Name	vaultKeyUsed
 Mode	once
 Cond	flag	vaultOpen	0
-Cond	stone	VaultGate	>=	1
+Cond	deliveredstone	silver-vault-key
 Action	message	1	The key turns in the old lock. The seal of the silver vault breaks and a shaft opens to the south.
 Action	terrain	80	90	80	96	path
 Action	setflag	vaultOpen	1

@@ -827,7 +827,7 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | Script line 5674 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
 | Script line 5675 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
 | Script line 6101 | `Action	win	1` | yes |
-| Script line 6359 | `Action	win	1` | yes |
+| Script line 6364 | `Action	win	1` | yes |
 
 ### Main and optional goals
 

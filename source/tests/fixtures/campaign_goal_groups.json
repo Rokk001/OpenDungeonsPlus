@@ -1500,6 +1500,9 @@
       "sluiceTimeout": [
         "Cond\ttime\t2000",
         "Cond\tflag\tsluiceOpen\t0"
+      ],
+      "sluiceKey": [
+        "Cond\tevent\tSluiceWarden\tkilled"
       ]
     },
     "preserved_actions": {
@@ -1534,6 +1537,9 @@
         "Action\tterrain\t38\t17\t42\t17\tpath",
         "Action\tsetflag\tsluiceOpen\t1",
         "Action\tportal\t0\ton"
+      ],
+      "sluiceKey": [
+        "Action\tstonedrop\tSluiceWarden\tsluice-key"
       ]
     },
     "reachability": {
@@ -6019,6 +6025,9 @@
       ],
       "firstSeams": [
         "Cond\tmined\t1\t>=\t400"
+      ],
+      "holdKey": [
+        "Cond\tevent\tTerraceWatch8\tkilled"
       ]
     },
     "preserved_actions": {
@@ -6074,6 +6083,9 @@
       ],
       "firstSeams": [
         "Action\tmessage\t1\tThe first seams are open. Gold buys you more than rooms: build a bridge and a door or two."
+      ],
+      "holdKey": [
+        "Action\tstonedrop\tTerraceWatch8\thold-key"
       ]
     },
     "reachability": {
@@ -7723,7 +7735,7 @@
         "Cond\tflag\tringsBroken\t1"
       ],
       "treasurerKey": [
-        "Cond\ttime\t4"
+        "Cond\tevent\tAlaricPenn\tkilled"
       ],
       "treasurerHurt": [
         "Cond\thealth\tAlaricPenn\t<=\t40"
@@ -7867,7 +7879,7 @@
         "Action\tterrain\t80\t58\t81\t72\tpath"
       ],
       "treasurerKey": [
-        "Action\tstoneattach\tAlaricPenn"
+        "Action\tstonedrop\tAlaricPenn\ttreasurer-key"
       ],
       "treasurerHurt": [
         "Action\tmessage\t1\tAlaric Penn is bleeding coin. He calls the last of his guard to the core.",
@@ -8320,7 +8332,7 @@
         "Cond\tflag\tnorthHeld\t1"
       ],
       "watchKey": [
-        "Cond\ttime\t4"
+        "Cond\tevent\tMoraFenwick\tkilled"
       ],
       "keyDropped": [
         "Cond\ttime\t5",
@@ -8452,7 +8464,7 @@
         "Action\tterrain\t80\t8\t80\t8\tpath"
       ],
       "watchKey": [
-        "Action\tstoneattach\tMoraFenwick"
+        "Action\tstonedrop\tMoraFenwick\twatch-key"
       ],
       "keyDropped": [
         "Action\tmessage\t1\tMora Fenwick is dead and the watch key she wore has dropped from her belt."
@@ -9479,7 +9491,7 @@
         "Cond\ttime\t2400"
       ],
       "wardenKey": [
-        "Cond\ttime\t4"
+        "Cond\tevent\tSabineRook\tkilled"
       ],
       "wardenHurt": [
         "Cond\thealth\tSabineRook\t<=\t40"
@@ -9663,7 +9675,7 @@
         "Action\tterrain\t25\t84\t25\t86\tpath"
       ],
       "wardenKey": [
-        "Action\tstoneattach\tSabineRook"
+        "Action\tstonedrop\tSabineRook\trook-key"
       ],
       "wardenHurt": [
         "Action\tmessage\t1\tSabine Rook is bleeding and calls every rook of the roots to her side.",
@@ -10116,7 +10128,7 @@
         "Cond\tflag\tportalOn\t0"
       ],
       "wardenKey": [
-        "Cond\ttime\t4"
+        "Cond\tevent\tDorianSilt\tkilled"
       ],
       "keyDropped": [
         "Cond\ttime\t5",
@@ -10124,7 +10136,7 @@
       ],
       "vaultKeyUsed": [
         "Cond\tflag\tvaultOpen\t0",
-        "Cond\tstone\tVaultGate\t>=\t1"
+        "Cond\tdeliveredstone\tsilver-vault-key"
       ],
       "vaultHoldFalls": [
         "Cond\tflag\tvaultOpen\t0",
@@ -10338,7 +10350,7 @@
         "Action\tsetflag\tportalOn\t1"
       ],
       "wardenKey": [
-        "Action\tstoneattach\tDorianSilt"
+        "Action\tstonedrop\tDorianSilt\tsilver-vault-key\t1\t80\t89"
       ],
       "keyDropped": [
         "Action\tmessage\t1\tDorian Silt is dead and the vault key he wore lies where he fell. Carry it to the south shore of the east hold to break the seal of the silver vault."
@@ -10547,7 +10559,23 @@
           19,
           86
         ]
-      ]
+      ],
+      "mission_deliveries": {
+        "silver-vault-key": {
+          "region": "VaultGate",
+          "bounds": [
+            76,
+            86,
+            82,
+            89
+          ],
+          "tile": [
+            80,
+            89
+          ],
+          "seat": 1
+        }
+      }
     },
     "route": [
       "First mine400actualgold and supply all6initialfighters with6realbeds and a coop; protect the heart. Delver1/5Troll2x2,Delver2/6Spider1x1,Delver3DarkElf1x2,Delver4Cultist1x2,total14bedfields.",
@@ -11034,11 +11062,11 @@
         "Cond\tslabs\t1\tCentre\tclaimed\t>=\t25"
       ],
       "cacheKey": [
-        "Cond\ttime\t4"
+        "Cond\tevent\tHuntsmanBrann\tkilled"
       ],
       "cacheKeyUsed": [
         "Cond\tflag\tcacheOpen\t0",
-        "Cond\tstone\tCacheGate\t>=\t1"
+        "Cond\tdeliveredstone\tcache-key"
       ],
       "cacheLate": [
         "Cond\ttime\t3000",
@@ -11196,7 +11224,7 @@
         "Action\tterrain\t49\t35\t49\t35\tmanawell"
       ],
       "cacheKey": [
-        "Action\tstoneattach\tHuntsmanBrann"
+        "Action\tstonedrop\tHuntsmanBrann\tcache-key\t1\t88\t20"
       ],
       "cacheKeyUsed": [
         "Action\tmessage\t1\tThe key turns in the old lock. The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.",
@@ -11346,7 +11374,23 @@
         "HuntsmanBrann",
         "SquireWick"
       ],
-      "minimum_mineable_gold": 4000
+      "minimum_mineable_gold": 4000,
+      "mission_deliveries": {
+        "cache-key": {
+          "region": "CacheGate",
+          "bounds": [
+            85,
+            19,
+            91,
+            21
+          ],
+          "tile": [
+            88,
+            20
+          ],
+          "seat": 1
+        }
+      }
     },
     "route": [
       "Protect the heart and physically cross any actual watched lava span northward:west(18..19,49..53),middle(49..50,39..43),east(80..81,48..52). Each original bridge has9roomfields plus one natural dry gap; do not invent rectangular10field bridge rooms. Explicit open ground/bridge paths follow x19/y54..48,x50/y44..38,x81/y53..47. Any one original route qualifies.",
@@ -11792,7 +11836,7 @@
         "Cond\tslabs\t1\tGateCourt\tclaimed\t>=\t40"
       ],
       "gateKeys": [
-        "Cond\ttime\t4"
+        "Cond\tevent\tGatewarden13\tkilled"
       ],
       "gate2KeyFalls": [
         "Cond\ttime\t5",
@@ -11803,6 +11847,9 @@
         "Cond\ttime\t5",
         "Cond\talive\tGatewarden8\t0",
         "Cond\tflag\tgate3Open\t0"
+      ],
+      "upperGateKeyDrop": [
+        "Cond\tevent\tGatewarden8\tkilled"
       ]
     },
     "preserved_actions": {
@@ -12096,8 +12143,7 @@
         "Action\tterrain\t42\t74\t42\t74\tmanawell"
       ],
       "gateKeys": [
-        "Action\tstoneattach\tGatewarden13",
-        "Action\tstoneattach\tGatewarden8"
+        "Action\tstonedrop\tGatewarden13\tlower-gate-key"
       ],
       "gate2KeyFalls": [
         "Action\tmessage\t1\tThe gatewarden of the lower court is down and the key of the second gate lies where he fell. It turns in the seal and the second gate stands open.",
@@ -12112,6 +12158,9 @@
         "Action\tterrain\t13\t29\t15\t29\tpath",
         "Action\tterrain\t102\t29\t103\t29\tpath",
         "Action\tsetflag\tgate3Open\t1"
+      ],
+      "upperGateKeyDrop": [
+        "Action\tstonedrop\tGatewarden8\tupper-gate-key"
       ]
     },
     "reachability": {

@@ -6176,9 +6176,14 @@ Action	terrain	42	74	42	74	manawell
 [Trigger]
 Name	gateKeys
 Mode	once
-Cond	time	4
-Action	stoneattach	Gatewarden13
-Action	stoneattach	Gatewarden8
+Cond	event	Gatewarden13	killed
+Action	stonedrop	Gatewarden13	lower-gate-key
+[/Trigger]
+[Trigger]
+Name	upperGateKeyDrop
+Mode	once
+Cond	event	Gatewarden8	killed
+Action	stonedrop	Gatewarden8	upper-gate-key
 [/Trigger]
 [Trigger]
 Name	gate2KeyFalls

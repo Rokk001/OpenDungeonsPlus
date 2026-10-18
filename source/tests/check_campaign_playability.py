@@ -924,6 +924,23 @@ def grouped_goal_errors(text, level_name):
             claimable = sum(candidate["tiles"][tile][0] in (1, 2, 7) for tile in candidate_area)
             if claimable < start.get("minimum_claimable_tiles", 0):
                 errors.append("selectable starting seat lacks claimable ground: " + str(start["seat"]))
+        # A delivery tile must be dry, reachable and inside the original consumer region.
+        for identity, delivery in proof.get("mission_deliveries", {}).items():
+            target = tuple(delivery["tile"])
+            x1, y1, x2, y2 = delivery["bounds"]
+            region = re.search(r"^Region\s+" + re.escape(delivery["region"]) +
+                               r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
+            if not region or list(map(int, region.groups())) != delivery["bounds"]:
+                errors.append("mission delivery region changed: " + identity)
+            tile = level["tiles"].get(target)
+            if target not in area or tile is None or tile[1] != 0 or tile[0] in (4, 5) or not (
+                    x1 <= target[0] <= x2 and y1 <= target[1] <= y2):
+                errors.append("mission delivery tile is not reachable dry ground inside its original region: " + identity)
+            drops = [row.split() for rows in blocks.values() for row in rows
+                     if row.startswith("Action\tstonedrop\t") and row.split()[3] == identity]
+            expected_target = list(map(str, (delivery["seat"], *target)))
+            if len(drops) != 1 or drops[0][4:] != expected_target:
+                errors.append("mission item does not use its exact reviewed destination: " + identity)
         for name, definition in proof.get("regions", {}).items():
             match = re.search(r"^Region\s+" + re.escape(name) + r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
             if not match or list(map(int, match.groups())) != definition["bounds"]:
@@ -1822,6 +1839,18 @@ def self_test(root):
             assert source in cellar
             assert grouped_goal_errors(cellar.replace(source, replacement), "Bonus1"), "Bonus1 must retain every exact chain and correct seat"
     assert grouped_goal_errors(cellar.replace("ClaimNTiles\t60", "ClaimNTiles\t50"), "Bonus1")
+    # Only the right physical key, dropped on real death, may satisfy an existing delivery consumer.
+    for map_name, owner, identity, target in (
+            ("Silverdeep", "DorianSilt", "silver-vault-key", "1\t80\t89"),
+            ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20")):
+        source = (root / "levels/campaign" / (map_name + ".level")).read_text(encoding="utf-8")
+        for old, new in (
+                ("Cond\tevent\t" + owner + "\tkilled", "Cond\tevent\t" + owner + "\tincapacitated"),
+                ("Cond\tdeliveredstone\t" + identity, "Cond\tstone\tWrongRegion\t>=\t1"),
+                ("Action\tstonedrop\t" + owner + "\t" + identity + "\t" + target,
+                 "Action\tstonedrop\t" + owner + "\t" + identity + "\t1\t0\t0")):
+            assert old in source
+            assert grouped_goal_errors(source.replace(old, new), map_name), "Wrong item, KO or wrong destination must fail"
     print("campaign playability self-test passed")
 
 

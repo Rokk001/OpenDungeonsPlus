@@ -5649,8 +5649,8 @@ Action	terrain	25	84	25	86	path
 [Trigger]
 Name	wardenKey
 Mode	once
-Cond	time	4
-Action	stoneattach	SabineRook
+Cond	event	SabineRook	killed
+Action	stonedrop	SabineRook	rook-key
 [/Trigger]
 [Trigger]
 Name	wardenHurt

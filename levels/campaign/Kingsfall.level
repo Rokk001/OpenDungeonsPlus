@@ -4109,14 +4109,14 @@ Action	terrain	49	35	49	35	manawell
 [Trigger]
 Name	cacheKey
 Mode	once
-Cond	time	4
-Action	stoneattach	HuntsmanBrann
+Cond	event	HuntsmanBrann	killed
+Action	stonedrop	HuntsmanBrann	cache-key	1	88	20
 [/Trigger]
 [Trigger]
 Name	cacheKeyUsed
 Mode	once
 Cond	flag	cacheOpen	0
-Cond	stone	CacheGate	>=	1
+Cond	deliveredstone	cache-key
 Action	message	1	The key turns in the old lock. The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
 Action	terrain	89	10	89	19	path
 Action	setflag	cacheOpen	1
