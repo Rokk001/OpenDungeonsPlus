@@ -3411,5 +3411,638 @@
       "Victory narration waits for tunnel use, timely camp arrival, heart survival, actual Dunn death and enemy clearance. No story text or original departure/escape behavior is changed."
     ],
     "runtime_limit": "Only static source/open-route evidence; actual tunnel travel, the 900-second campaign route, combat and save/load require integrator/Mario runtime verification."
+  },
+  "Ironbridge": {
+    "goals": {
+      "ironbridge-main-home": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Build 6 beds and a hatchery; protect your heart.",
+        "completion": "mainHome",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple",
+          "Cond\tfurniture\t1\tDormitory\t>=\t6",
+          "Cond\tfurniture\t1\tHatchery\t>=\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ironbridge-main-spans": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Cross the 3 rifts in order.",
+        "completion": "mainSpans",
+        "conditions": [
+          "Cond\tflag\tbridgeOneDone\t1",
+          "Cond\tflag\tbridgeTwoDone\t1",
+          "Cond\tflag\tthirdSpanCrossed\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ironbridge-main-sites": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim the north smithy and ore dock.",
+        "completion": "mainSites",
+        "conditions": [
+          "Cond\troomclaimed\t1\t48\t8\t50\t9",
+          "Cond\troomclaimed\t1\t78\t54\t80\t55"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ironbridge-main-hold": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Breach the hold; destroy its heart and enemy forces.",
+        "completion": "mainHold",
+        "conditions": [
+          "Cond\tflag\tkeepGateBreached\t1",
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies",
+          "Cond\tflag\tstoryVictorySent\t1"
+        ],
+        "mode": "repeat\t0"
+      },
+      "ironbridge-extra-coal": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the coal store.",
+        "completion": "extraCoal",
+        "conditions": [
+          "Cond\tregion\t1\tCoalStore"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "walkStoneBridge1": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge1\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tfirstSpanCrossed\t1"
+        ]
+      },
+      "walkStoneBridge2": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge2\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tfirstSpanCrossed\t1"
+        ]
+      },
+      "walkStoneBridge3": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge3\teast\tafter\tmainSpan1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsecondSpanCrossed\t1"
+        ]
+      },
+      "walkStoneBridge4": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge4\teast\tafter\tmainSpan1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsecondSpanCrossed\t1"
+        ]
+      },
+      "walkStoneBridge5": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge5\teast\tafter\tmainSpan1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tsecondSpanCrossed\t1"
+        ]
+      },
+      "walkStoneBridge6": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge6\teast\tafter\tmainSpan2"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tthirdSpanCrossed\t1"
+        ]
+      },
+      "walkStoneBridge7": {
+        "conditions": [
+          "Cond\tcrossed\t1\tMainStoneBridge7\teast\tafter\tmainSpan2"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tthirdSpanCrossed\t1"
+        ]
+      },
+      "mainSpan1": {
+        "conditions": [
+          "Cond\tflag\tfirstSpanCrossed\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tbridgeOneDone\t1"
+        ]
+      },
+      "mainSpan2": {
+        "conditions": [
+          "Cond\tflag\tsecondSpanCrossed\t1"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tbridgeTwoDone\t1"
+        ]
+      },
+      "walkMainGateNorth": {
+        "conditions": [
+          "Cond\ttrapgone\tDoorWooden8",
+          "Cond\tcrossed\t1\tMainGateNorth\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tkeepGateBreached\t1"
+        ]
+      },
+      "walkMainGateSouth": {
+        "conditions": [
+          "Cond\ttrapgone\tDoorWooden9",
+          "Cond\tcrossed\t1\tMainGateSouth\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tkeepGateBreached\t1"
+        ]
+      },
+      "walkMainGateLower": {
+        "conditions": [
+          "Cond\ttrapgone\tDoorWooden10",
+          "Cond\tcrossed\t1\tMainGateLower\teast"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tsetflag\tkeepGateBreached\t1"
+        ]
+      },
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "ironbridge-main-home",
+            "failed"
+          ]
+        ]
+      },
+      "mainTrialFailed": {
+        "conditions": [
+          "Cond\tdefeated\t1"
+        ],
+        "states": [
+          [
+            "1",
+            "ironbridge-main-spans",
+            "failed"
+          ],
+          [
+            "1",
+            "ironbridge-main-sites",
+            "failed"
+          ],
+          [
+            "1",
+            "ironbridge-main-hold",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "forge": [
+        "Cond\ttime\t3"
+      ],
+      "rivalFalls": [
+        "Cond\tdefeated\t2",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple",
+        "Cond\tfurniture\t1\tDormitory\t>=\t6",
+        "Cond\tfurniture\t1\tHatchery\t>=\t1",
+        "Cond\tflag\tbridgeOneDone\t1",
+        "Cond\tflag\tbridgeTwoDone\t1",
+        "Cond\tflag\tthirdSpanCrossed\t1",
+        "Cond\troomclaimed\t1\t48\t8\t50\t9",
+        "Cond\troomclaimed\t1\t78\t54\t80\t55",
+        "Cond\tflag\tkeepGateBreached\t1",
+        "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+        "Cond\tgoalmet\t1\tKillAllEnemies",
+        "Cond\tflag\tstoryVictorySent\t0"
+      ],
+      "rivalHeartDown": [
+        "Cond\tgoal\t1\tKillAllEnemies",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple",
+        "Cond\tfurniture\t1\tDormitory\t>=\t6",
+        "Cond\tfurniture\t1\tHatchery\t>=\t1",
+        "Cond\tflag\tbridgeOneDone\t1",
+        "Cond\tflag\tbridgeTwoDone\t1",
+        "Cond\tflag\tthirdSpanCrossed\t1",
+        "Cond\troomclaimed\t1\t48\t8\t50\t9",
+        "Cond\troomclaimed\t1\t78\t54\t80\t55",
+        "Cond\tflag\tkeepGateBreached\t1",
+        "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+        "Cond\tgoalmet\t1\tKillAllEnemies",
+        "Cond\tflag\tstoryVictorySent\t0"
+      ]
+    },
+    "preserved_actions": {
+      "forge": [
+        "Action\tmessage\t1\tIronbridge forges the arms of the kingdom, master, and it does it between three rifts of molten rock. Every crossing is a stone bridge, and every bridgehead is guarded. Warden Gareth Fenn has a good deal of time, so use yours well.",
+        "Action\tobjectiveid\t1\tironbridge-o01\tDestroy the heart in the north-east hold.",
+        "Action\tobjectiveid\t1\tironbridge-o02\tCross all three rifts by their bridges.",
+        "Action\ttimelimit\t5400"
+      ],
+      "smithyReached": [
+        "Action\tmessage\t1\tThe north smithy has a store of iron and heavy tools. Take it."
+      ],
+      "keepReached": [
+        "Action\tmessage\t1\tThe ore dock feeds the rival hold. Hold it and he will starve his own forges."
+      ],
+      "rivalFalls": [
+        "Action\tmessage\t1\tThe rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.",
+        "Action\tobjectivestate\t1\tironbridge-o01\treached",
+        "Action\twin\t1",
+        "Action\tsetflag\tstoryVictorySent\t1"
+      ],
+      "rivalHeartDown": [
+        "Action\tmessage\t1\tThe rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.",
+        "Action\tobjectivestate\t1\tironbridge-o01\treached",
+        "Action\twin\t1",
+        "Action\tsetflag\tstoryVictorySent\t1"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "CoalStore": {
+          "bounds": [
+            66,
+            5,
+            86,
+            22
+          ],
+          "minimum_open_tiles": 153
+        },
+        "MainStoneBridge1": {
+          "bounds": [
+            36,
+            20,
+            39,
+            21
+          ],
+          "minimum_potential_tiles": 8
+        },
+        "MainStoneBridge2": {
+          "bounds": [
+            36,
+            46,
+            39,
+            46
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "MainStoneBridge3": {
+          "bounds": [
+            62,
+            12,
+            65,
+            12
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "MainStoneBridge4": {
+          "bounds": [
+            62,
+            34,
+            65,
+            35
+          ],
+          "minimum_potential_tiles": 8
+        },
+        "MainStoneBridge5": {
+          "bounds": [
+            62,
+            54,
+            65,
+            54
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "MainStoneBridge6": {
+          "bounds": [
+            88,
+            26,
+            91,
+            27
+          ],
+          "minimum_potential_tiles": 8
+        },
+        "MainStoneBridge7": {
+          "bounds": [
+            88,
+            48,
+            91,
+            48
+          ],
+          "minimum_potential_tiles": 4
+        },
+        "MainGateNorth": {
+          "bounds": [
+            93,
+            26,
+            93,
+            26
+          ],
+          "minimum_potential_tiles": 1
+        },
+        "MainGateSouth": {
+          "bounds": [
+            93,
+            27,
+            93,
+            27
+          ],
+          "minimum_potential_tiles": 1
+        },
+        "MainGateLower": {
+          "bounds": [
+            93,
+            48,
+            93,
+            48
+          ],
+          "minimum_potential_tiles": 1
+        }
+      },
+      "crossing_bridges": {
+        "MainStoneBridge1": {
+          "room": "StoneBridge1",
+          "bounds": [
+            36,
+            20,
+            39,
+            21
+          ],
+          "direction": "east"
+        },
+        "MainStoneBridge2": {
+          "room": "StoneBridge2",
+          "bounds": [
+            36,
+            46,
+            39,
+            46
+          ],
+          "direction": "east"
+        },
+        "MainStoneBridge3": {
+          "room": "StoneBridge3",
+          "bounds": [
+            62,
+            12,
+            65,
+            12
+          ],
+          "direction": "east"
+        },
+        "MainStoneBridge4": {
+          "room": "StoneBridge4",
+          "bounds": [
+            62,
+            34,
+            65,
+            35
+          ],
+          "direction": "east"
+        },
+        "MainStoneBridge5": {
+          "room": "StoneBridge5",
+          "bounds": [
+            62,
+            54,
+            65,
+            54
+          ],
+          "direction": "east"
+        },
+        "MainStoneBridge6": {
+          "room": "StoneBridge6",
+          "bounds": [
+            88,
+            26,
+            91,
+            27
+          ],
+          "direction": "east"
+        },
+        "MainStoneBridge7": {
+          "room": "StoneBridge7",
+          "bounds": [
+            88,
+            48,
+            91,
+            48
+          ],
+          "direction": "east"
+        }
+      },
+      "room_claims": [
+        {
+          "name": "Treasury6",
+          "type": 3,
+          "seat": 0,
+          "tiles": [
+            [
+              48,
+              8
+            ],
+            [
+              48,
+              9
+            ],
+            [
+              49,
+              8
+            ],
+            [
+              49,
+              9
+            ],
+            [
+              50,
+              8
+            ],
+            [
+              50,
+              9
+            ]
+          ],
+          "goal": "ironbridge-main-sites",
+          "bounds": [
+            48,
+            8,
+            50,
+            9
+          ]
+        },
+        {
+          "name": "Library3",
+          "type": 7,
+          "seat": 0,
+          "tiles": [
+            [
+              78,
+              54
+            ],
+            [
+              78,
+              55
+            ],
+            [
+              79,
+              54
+            ],
+            [
+              79,
+              55
+            ],
+            [
+              80,
+              54
+            ],
+            [
+              80,
+              55
+            ]
+          ],
+          "goal": "ironbridge-main-sites",
+          "bounds": [
+            78,
+            54,
+            80,
+            55
+          ]
+        }
+      ],
+      "supply_expansion": {
+        "resident_count": 6,
+        "beds": [
+          {
+            "creature": "BridgeKeeper1",
+            "bounds": [
+              17,
+              47,
+              17,
+              47
+            ]
+          },
+          {
+            "creature": "BridgeKeeper2",
+            "bounds": [
+              18,
+              47,
+              18,
+              47
+            ]
+          },
+          {
+            "creature": "BridgeKeeper3",
+            "bounds": [
+              15,
+              47,
+              15,
+              48
+            ]
+          },
+          {
+            "creature": "BridgeKeeper4",
+            "bounds": [
+              17,
+              48,
+              17,
+              48
+            ]
+          },
+          {
+            "creature": "BridgeKeeper5",
+            "bounds": [
+              16,
+              47,
+              16,
+              48
+            ]
+          },
+          {
+            "creature": "BridgeKeeper6",
+            "bounds": [
+              18,
+              48,
+              18,
+              48
+            ]
+          }
+        ],
+        "dormitory": "Dormitory1",
+        "hatchery": "Hatchery1",
+        "hatchery_bounds": [
+          4,
+          53,
+          6,
+          55
+        ],
+        "starting_gold": 4000,
+        "cost": 514
+      },
+      "required_traps": {
+        "DoorWooden8": {
+          "type": 4,
+          "seat": 2,
+          "tiles": [
+            [
+              93,
+              26
+            ]
+          ]
+        },
+        "DoorWooden9": {
+          "type": 4,
+          "seat": 2,
+          "tiles": [
+            [
+              93,
+              27
+            ]
+          ]
+        },
+        "DoorWooden10": {
+          "type": 4,
+          "seat": 2,
+          "tiles": [
+            [
+              93,
+              48
+            ]
+          ]
+        }
+      }
+    },
+    "route": [
+      "Protect the heart and house the six initial fighters: two Goblins, two Orcs, Spider and Rat. Eight bed fields fit at (15..18,47..48); add two Dormitory fields for184gold. Extend Hatchery1 (4..6,53..54) by row55 for330gold, making the3x3coop site. Total514 is below starting4000; existing room skills remain available.",
+      "Walk east over rift1 via StoneBridge1 (36..39,20..21) or StoneBridge2 (36..39,46). Only after its actual completion may rift2 begin: StoneBridge3 (62..65,12), StoneBridge4 (62..65,34..35), or StoneBridge5 (62..65,54).",
+      "After rift2 completion walk east over rift3: StoneBridge6 (88..91,26..27) or StoneBridge7 (88..91,48). Each bridge requires one real own living walker from entry bank through the whole bridge to the opposite bank; mixed visitors and out-of-order crossings do not count.",
+      "Claim all six original Treasury6 fields (48..50,8..9) in Smithy and all six original Library3 fields (78..80,54..55) in OreDock. These are the actual placed rooms at the named sites, not an invented forge-room type or a region visit.",
+      "For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once.",
+      "Before the final main goal optionally explore CoalStore (66,5)-(86,22),153initially open reachable fields. Claim/remove Portal1 (19..21,37..39) as part of remaining-enemy clearance. Keep the original5400second deadline and all original reinforcements."
+    ],
+    "runtime_limit": "Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification."
   }
 }

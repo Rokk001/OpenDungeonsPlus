@@ -565,17 +565,47 @@ File: `levels/campaign/Ironbridge.level`.
 | Script line 4237 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
 | Script line 4254 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
 | Script line 4275 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
-| Script line 4529 | `Action	win	1` | yes |
-| Script line 4534 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4537 | `Action	win	1` | yes |
+| Script line 4541 | `Action	win	1` | yes |
+| Script line 4547 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4562 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ironbridge-main-home`: Build 6 beds and a hatchery; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1 |
+| main | `ironbridge-main-spans`: Cross the 3 rifts in order. | `mainSpans`: Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1 |
+| main | `ironbridge-main-sites`: Claim the north smithy and ore dock. | `mainSites`: Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55 |
+| main | `ironbridge-main-hold`: Breach the hold; destroy its heart and enemy forces. | `mainHold`: Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1 |
+| optional | `ironbridge-extra-coal`: Explore the coal store. | `extraCoal`: Cond	region	1	CoalStore |
+
+Possible route (static, not a playthrough):
+- Protect the heart and house the six initial fighters: two Goblins, two Orcs, Spider and Rat. Eight bed fields fit at (15..18,47..48); add two Dormitory fields for184gold. Extend Hatchery1 (4..6,53..54) by row55 for330gold, making the3x3coop site. Total514 is below starting4000; existing room skills remain available.
+- Walk east over rift1 via StoneBridge1 (36..39,20..21) or StoneBridge2 (36..39,46). Only after its actual completion may rift2 begin: StoneBridge3 (62..65,12), StoneBridge4 (62..65,34..35), or StoneBridge5 (62..65,54).
+- After rift2 completion walk east over rift3: StoneBridge6 (88..91,26..27) or StoneBridge7 (88..91,48). Each bridge requires one real own living walker from entry bank through the whole bridge to the opposite bank; mixed visitors and out-of-order crossings do not count.
+- Claim all six original Treasury6 fields (48..50,8..9) in Smithy and all six original Library3 fields (78..80,54..55) in OreDock. These are the actual placed rooms at the named sites, not an invented forge-room type or a region visit.
+- For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once.
+- Before the final main goal optionally explore CoalStore (66,5)-(86,22),153initially open reachable fields. Claim/remove Portal1 (19..21,37..39) as part of remaining-enemy clearance. Keep the original5400second deadline and all original reinforcements.
+
+Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification.
+
 | Trigger `yardReached` | `Action	objectivestate	1	ironbridge-o03	reached`; conditions: `Cond	region	1	RollingYard` | yes |
 | Trigger `goalIronbridgeAllSpans` | `Action	objectivestate	1	ironbridge-o02	reached`; conditions: `Cond	flag	goalIronbridgeCross1	1; Cond	flag	goalIronbridgeCross2	1; Cond	flag	goalIronbridgeCross3	1` | yes |
 | Trigger `goalRivalGateNorth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden8; Cond	region	1	94	26	94	26` | yes |
 | Trigger `goalRivalGateSouth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden9; Cond	region	1	94	27	94	27` | yes |
-| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Build your strength and take the guarded stone bridges one by one. | no: building and bridge order are not independent goals |
-| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: KillAllEnemies includes the rival temple |
+| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ironbridge-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-spans	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-sites	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-hold	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	ironbridge-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainSpans` | `Action	objectivestate	1	ironbridge-main-spans	reached`; conditions: `Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1` | yes |
+| Trigger `mainSites` | `Action	objectivestate	1	ironbridge-main-sites	reached`; conditions: `Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55` | yes |
+| Trigger `mainHold` | `Action	objectivestate	1	ironbridge-main-hold	reached`; conditions: `Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1` | yes |
+| Trigger `extraCoal` | `Action	objectivestate	1	ironbridge-extra-coal	reached`; conditions: `Cond	region	1	CoalStore` | yes |
+| Briefing | Build your strength and take the guarded stone bridges one by one. | yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms |
+| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: an actual fortress entrance breached, rival temple gone and all remaining enemy forces defeated |
 
 ## Kingsfall
 

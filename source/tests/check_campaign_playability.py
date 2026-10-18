@@ -35,7 +35,7 @@ BRIEFING_MATCH = {
     "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
     "HollinFen": {3: "yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes", 4: "yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery"},
     "CrowshotGallery": {3: "yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline"},
-    "Ironbridge": {3: "no: building and bridge order are not independent goals", 4: "yes: KillAllEnemies includes the rival temple"},
+    "Ironbridge": {3: "yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms", 4: "yes: an actual fortress entrance breached, rival temple gone and all remaining enemy forces defeated"},
     "Lanternhill": {2: "no: mining and digging the plugs are not independent goals", 3: "yes: KillAllEnemies includes the northern rival temple", 4: "no: optional stone discovery is not required to win"},
     "VarnsCrossing": {3: "no: heart protection and enemy temples are checked; quarter and fortress ownership are not independent goals"},
     "Thornreach": {3: "no: enemy temples are checked; clearing ownership and maze progression are not independent goals"},
@@ -939,6 +939,15 @@ def grouped_goal_errors(text, level_name):
                     or any(abs(x - u) + abs(y - v) != 1 for (x, y), (u, v) in zip(path, path[1:]))
                     or any(tile not in area or not passable(level, tile) or level["tiles"][tile][1] != 0 for tile in path)):
                 errors.append("original open tunnel crossing is unavailable: " + name)
+        for claim in proof.get("room_claims", []):
+            room = next((r for r in level["rooms"] if r[1] == claim["name"]), None)
+            a, b, c, d = claim["bounds"]
+            tiles = {(x, y) for x in range(a, c + 1) for y in range(b, d + 1)}
+            condition = "Cond\troomclaimed\t1\t" + "\t".join(map(str, claim["bounds"]))
+            if (room is None or room[0] != claim["type"] or room[2] != claim["seat"]
+                    or set(room[3]) != {tuple(t) for t in claim["tiles"]} or set(room[3]) != tiles
+                    or tiles - area or condition not in expected[claim["goal"]]["conditions"]):
+                errors.append("original required room footprint or ownership observer differs: " + claim["name"])
         for footprint in proof.get("footprints", []):
             expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
             x1, y1, x2, y2 = footprint["bounds"]
@@ -991,8 +1000,8 @@ def grouped_goal_errors(text, level_name):
             additions = (occupied_beds - dorm[2]) | (hatch_tiles - hatch[2])
             other_rooms = set().union(*(tiles for name, (_, _, tiles) in rooms.items()
                                       if name not in (supply["dormitory"], supply["hatchery"])))
-            if len(supply["beds"]) != 9 or occupied_beds & hatch_tiles or additions - area or additions & other_rooms or c - a < 2 or d - b < 2:
-                errors.append("supply expansion is blocked or lacks nine beds and a coop site")
+            if len(supply["beds"]) != supply.get("resident_count", 9) or occupied_beds & hatch_tiles or additions - area or additions & other_rooms or c - a < 2 or d - b < 2:
+                errors.append("supply expansion is blocked or lacks the required beds and a coop site")
             config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
             bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
             food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
@@ -1341,6 +1350,21 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    ironbridge = (root / "levels/campaign/Ironbridge.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tcrossed\t1\tMainStoneBridge3\teast\tafter\tmainSpan1", "Cond\tcrossed\t1\tMainStoneBridge3\teast"),
+        ("Cond\tcrossed\t1\tMainStoneBridge6\teast\tafter\tmainSpan2", "Cond\tcrossed\t1\tMainStoneBridge6\teast"),
+        ("Cond\tcrossed\t1\tMainStoneBridge1\teast", "Cond\tregion\t1\tMainStoneBridge1"),
+        ("Cond\troomclaimed\t1\t48\t8\t50\t9", "Cond\tregion\t1\tSmithy"),
+        ("Cond\troomclaimed\t1\t78\t54\t80\t55", "Cond\tregion\t1\tOreDock"),
+        ("Cond\ttrapgone\tDoorWooden10", "Cond\ttrapgone\tDoorWooden11"),
+        ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\ttime\t0"),
+        ("Cond\tfurniture\t1\tDormitory\t>=\t6", "Cond\tfurniture\t1\tDormitory\t>=\t1"),
+        ("Cond\tflag\tstoryVictorySent\t0", "Cond\ttime\t0"),
+        ("Action\ttimelimit\t5400", "Action\ttimelimit\t5401")
+    ):
+        assert old in ironbridge
+        assert objective_errors(ironbridge.replace(old, new), "Ironbridge"), old
     dunmarrow = (root / "levels/campaign/Dunmarrow.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\tflag\tgoalCampArrived\t1", "Cond\ttrigger\tcampEntered"),
