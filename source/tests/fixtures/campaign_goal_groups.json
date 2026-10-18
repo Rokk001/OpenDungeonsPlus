@@ -7250,5 +7250,217 @@
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe last keeper is dead and the harbour lies calm. Stormhaven answers to you."
     }
+  },
+  "Cinderhollow": {
+    "goals": {
+      "cinderhollow-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart until dawn and victory.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\ttrigger\tdawn",
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "cinderhollow-main-seams": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Empty both starting gold seams: west and south.",
+        "completion": "mainSeams",
+        "conditions": [
+          "Cond\tslabs\t-1\tGoalWestGoldSeam\tgold\t==\t0",
+          "Cond\tslabs\t-1\tGoalSouthGoldSeam\tgold\t==\t0"
+        ],
+        "mode": "repeat\t0"
+      },
+      "cinderhollow-main-waves": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat all three attacking waves.",
+        "completion": "mainWaves",
+        "conditions": [
+          "Cond\tspawncleared\twaveOne\t2",
+          "Cond\tspawncleared\twaveTwo\t2",
+          "Cond\tspawncleared\twaveThree\t2",
+          "Cond\tspawncleared\twaveThree\t3"
+        ],
+        "mode": "repeat\t0"
+      },
+      "cinderhollow-main-bridge": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "After dawn, cross the lava bridge to the crater.",
+        "completion": "mainBridge",
+        "conditions": [
+          "Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge"
+        ],
+        "mode": "repeat\t0"
+      },
+      "cinderhollow-main-rival": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Destroy the rival heart and all enemy forces.",
+        "completion": "mainRival",
+        "conditions": [
+          "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "cinderhollow-extra-cave": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Explore the southern creature cave.",
+        "completion": "extraCave",
+        "conditions": [
+          "Cond\tregion\t1\tSouthCave"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "cinderhollow-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tcinderhollow-main-heart\treached",
+          "Cond\tobjective\t1\tcinderhollow-main-seams\treached",
+          "Cond\tobjective\t1\tcinderhollow-main-waves\treached",
+          "Cond\tobjective\t1\tcinderhollow-main-bridge\treached",
+          "Cond\tobjective\t1\tcinderhollow-main-rival\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe rival heart is shattered and the crater is silent. Cinderhollow is yours.",
+          "Action\twin\t1"
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "waveOne": [
+        "Cond\ttime\t420"
+      ],
+      "waveTwo": [
+        "Cond\ttime\t900"
+      ],
+      "waveThree": [
+        "Cond\ttime\t1350"
+      ],
+      "dawn": [
+        "Cond\ttime\t1800"
+      ],
+      "lavaBridge": [
+        "Cond\ttime\t1800"
+      ],
+      "goalBothFiniteSeamsMined": [
+        "Cond\tslabs\t-1\tGoalWestGoldSeam\tgold\t==\t0",
+        "Cond\tslabs\t-1\tGoalSouthGoldSeam\tgold\t==\t0"
+      ],
+      "goalThreeWavesDefeatedAtHeart": [
+        "Cond\tspawncleared\twaveOne\t2",
+        "Cond\tspawncleared\twaveTwo\t2",
+        "Cond\tspawncleared\twaveThree\t2",
+        "Cond\tspawncleared\twaveThree\t3"
+      ],
+      "ashWell": [
+        "Cond\tslabs\t-1\tGoldHollow\tgold\t<=\t0"
+      ]
+    },
+    "preserved_actions": {
+      "waveOne": [
+        "Action\tmessage\t1\tThe first wave is coming down through the north-west gate.",
+        "Action\twavecountdown\t480",
+        "Action\tspawn\t3\t15\t14\t1\tAdventurer:2\tDwarf1:2\tElf:2\tMonk:2\tAdventurer:2"
+      ],
+      "waveTwo": [
+        "Action\tmessage\t1\tThe second wave has entered the hollow at the east gate.",
+        "Action\twavecountdown\t450",
+        "Action\tspawn\t3\t70\t50\t1\tKnight:3\tElf:3\tMonk:2\tAdventurer:3\tDwarf2:3\tKnight:2"
+      ],
+      "waveThree": [
+        "Action\tmessage\t1\tThe last wave is on both roads at once, from the north-west gate and the east gate.",
+        "Action\twavecountdown\t0",
+        "Action\tspawn\t3\t15\t14\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3",
+        "Action\tspawn\t3\t70\t50\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3"
+      ],
+      "dawn": [
+        "Action\tmessage\t1\tDawn has come and the waves are spent. The rival keeper is stirring in the crater: destroy him before the hollow wakes again.",
+        "Action\tobjectiveid\t1\tcinderhollow-o05\tDestroy the heart in the north-east crater.",
+        "Action\tgold\t1\t600",
+        "Action\tspawn\t2\t55\t25\t1\tTroll:4\tOrc:4\tLavaSpawn:3\tPitDemon:3\tGoblin:3",
+        "Action\ttimelimit\t1800"
+      ],
+      "lavaBridge": [
+        "Action\tmessage\t1\tThe lava lake has sunk with the dawn and a stone causeway rises across it to the crater.",
+        "Action\tterrain\t55\t31\t55\t34\tbridge\t1"
+      ],
+      "goalBothFiniteSeamsMined": [
+        "Action\tobjectivestate\t1\tcinderhollow-o02\treached"
+      ],
+      "goalThreeWavesDefeatedAtHeart": [
+        "Action\tobjectivestate\t1\tcinderhollow-o03\treached"
+      ],
+      "ashWell": [
+        "Action\tmessage\t1\tThe last gold of the seam is out and the rock behind it sweats mana. A spring has opened in the hollow.",
+        "Action\tterrain\t30\t55\t30\t55\tmanawell"
+      ]
+    },
+    "reachability": {
+      "regions": {
+        "SouthCave": {
+          "bounds": [
+            31,
+            57,
+            42,
+            66
+          ],
+          "minimum_open_tiles": 61
+        },
+        "DawnCauseway": {
+          "bounds": [
+            55,
+            31,
+            55,
+            34
+          ],
+          "minimum_potential_tiles": 0
+        }
+      },
+      "open_route_tiles": [
+        [
+          55,
+          35
+        ],
+        [
+          55,
+          30
+        ]
+      ]
+    },
+    "route": [
+      "Keep the own heart through original dawn at1800seconds and until final victory. Original waves at420,900,1350seconds and the1800second post-dawn limit remain unchanged.",
+      "Fully exhaust exactly the two original finite starting seams:west x5..6/y55..58,south x30..33/y72..73,16gold fields total. No420second mining deadline and no unrelated gold threshold. Existing cinder_seam_errors binds original vein positions and finite material.",
+      "Defeat actual instances from waveOne action2,waveTwo action2,waveThree actions2and3. Every actual creature must die; KO is not death and interception away from heart tiles is valid. Heart survival is separate.",
+      "After lavaBridge fires at1800seconds, walk one own living creature north from dry bank(55,35)through all four generated causeway fields(55,34..31)to dry crater bank(55,30). A visitor, earlier flight or different creatures on the two banks does not count. The exact original time-gated terrain bridge action is preserved.",
+      "Destroy the actual rival DungeonTemple of seat2 and remaining enemies/portals. Optional SouthCave visit has61reachable open dry fields.",
+      "The existing final rival-heart victory sentence is emitted once after all five current main goals; premature alternate victory sentences are suppressed without replacement story words. Original three win requests remain pending."
+    ],
+    "runtime_limit": "Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, generated-bridge traversal, timers and save/load require runtime verification.",
+    "victory_narration": {
+      "trigger": "mainVictory",
+      "action": "Action\tmessage\t1\tThe rival heart is shattered and the crater is silent. Cinderhollow is yours."
+    }
   }
 }

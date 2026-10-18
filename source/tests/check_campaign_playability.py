@@ -82,6 +82,8 @@ BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and a
 
 BRIEFING_MATCH["Stormhaven"] = {3: "yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated"}
 
+BRIEFING_MATCH["Cinderhollow"] = {3: "yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere", 4: "yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated"}
+
 OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('holdBreached',),
               ('goalHoldBeforeDeparture', 'goalOutsideHoldDeath01', 'goalOutsideHoldDeath02', 'goalOutsideHoldDeath03', 'goalOutsideHoldDeath04')],
@@ -1640,6 +1642,18 @@ def self_test(root):
         assert exact in wave_status
         assert objective_errors(cinder.replace(exact + "\n", exact + "\tatheart\t1\n"), "Cinderhollow"), "intercepting a wave away from the heart must remain valid"
         assert objective_errors(cinder.replace(exact + "\n", "Cond\tcreatures\t3\t<=\t0\n"), "Cinderhollow"), "only actual deaths of each exact wave count"
+    cinder_grouped = (root / "levels/campaign/Cinderhollow.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(cinder_grouped, "Cinderhollow")
+    for needle, replacement in (
+            ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tregion\t1\tRivalCrater"),
+            ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tcrossed\t1\tDawnCauseway\tnorth"),
+            ("Cond\tslabs\t-1\tGoalSouthGoldSeam\tgold\t==\t0", "Cond\tmined\t1\t>=\t700"),
+            ("Cond\tspawncleared\twaveThree\t3", "Cond\tcreatures\t3\t<=\t0"),
+            ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tdefeated\t2"),
+            ("Action\tterrain\t55\t31\t55\t34\tbridge\t1", "Action\tterrain\t55\t31\t55\t33\tbridge\t1"),
+            ("Cond\ttrigger\tdawn\nCond\tgoalmet", "Cond\ttime\t420\nCond\tgoalmet")):
+        assert needle in cinder_grouped
+        assert grouped_goal_errors(cinder_grouped.replace(needle, replacement), "Cinderhollow"), "Cinderhollow requirement weakening must fail: " + needle
     print("campaign playability self-test passed")
 
 

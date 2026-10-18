@@ -205,10 +205,33 @@ File: `levels/campaign/Cinderhollow.level`.
 | Script line 5093 | `Action	objectiveid	1	cinderhollow-o04	After dawn, cross the lava bridge to the crater.` | yes |
 | Script line 5178 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
 | Script line 5194 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5257 | `Action	win	1` | yes |
-| Script line 5263 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5266 | `Action	win	1` | yes |
-| Script line 5290 | `Action	win	1` | yes |
+| Script line 5256 | `Action	win	1` | yes |
+| Script line 5262 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5264 | `Action	win	1` | yes |
+| Script line 5287 | `Action	win	1` | yes |
+| Script line 5367 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `cinderhollow-main-heart`: Protect your heart until dawn and victory. | `mainHeart`: Cond	trigger	dawn; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `cinderhollow-main-seams`: Empty both starting gold seams: west and south. | `mainSeams`: Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0 |
+| main | `cinderhollow-main-waves`: Defeat all three attacking waves. | `mainWaves`: Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3 |
+| main | `cinderhollow-main-bridge`: After dawn, cross the lava bridge to the crater. | `mainBridge`: Cond	crossed	1	DawnCauseway	north	after	lavaBridge |
+| main | `cinderhollow-main-rival`: Destroy the rival heart and all enemy forces. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `cinderhollow-extra-cave`: Explore the southern creature cave. | `extraCave`: Cond	region	1	SouthCave |
+
+Possible route (static, not a playthrough):
+- Keep the own heart through original dawn at1800seconds and until final victory. Original waves at420,900,1350seconds and the1800second post-dawn limit remain unchanged.
+- Fully exhaust exactly the two original finite starting seams:west x5..6/y55..58,south x30..33/y72..73,16gold fields total. No420second mining deadline and no unrelated gold threshold. Existing cinder_seam_errors binds original vein positions and finite material.
+- Defeat actual instances from waveOne action2,waveTwo action2,waveThree actions2and3. Every actual creature must die; KO is not death and interception away from heart tiles is valid. Heart survival is separate.
+- After lavaBridge fires at1800seconds, walk one own living creature north from dry bank(55,35)through all four generated causeway fields(55,34..31)to dry crater bank(55,30). A visitor, earlier flight or different creatures on the two banks does not count. The exact original time-gated terrain bridge action is preserved.
+- Destroy the actual rival DungeonTemple of seat2 and remaining enemies/portals. Optional SouthCave visit has61reachable open dry fields.
+- The existing final rival-heart victory sentence is emitted once after all five current main goals; premature alternate victory sentences are suppressed without replacement story words. Original three win requests remain pending.
+
+Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, generated-bridge traversal, timers and save/load require runtime verification.
+
 | Trigger `goalBothFiniteSeamsMined` | `Action	objectivestate	1	cinderhollow-o02	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
 | Trigger `goalHeartSafe1BeforeRivalHeartDown` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartSafe1BeforeRivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple` | yes |
@@ -217,8 +240,15 @@ File: `levels/campaign/Cinderhollow.level`.
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	cinderhollow-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	defeated	2` | yes |
-| Briefing | Mine the seams and defend your heart until dawn. | no: ProtectDungeonTemple checks survival; mining is not required |
-| Briefing | Then cross the lava bridge and destroy the rival heart. | no: enemy temple elimination is checked; bridge crossing is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	cinderhollow-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	cinderhollow-main-heart	reached`; conditions: `Cond	trigger	dawn; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainSeams` | `Action	objectivestate	1	cinderhollow-main-seams	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
+| Trigger `mainWaves` | `Action	objectivestate	1	cinderhollow-main-waves	reached`; conditions: `Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3` | yes |
+| Trigger `mainBridge` | `Action	objectivestate	1	cinderhollow-main-bridge	reached`; conditions: `Cond	crossed	1	DawnCauseway	north	after	lavaBridge` | yes |
+| Trigger `mainRival` | `Action	objectivestate	1	cinderhollow-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraCave` | `Action	objectivestate	1	cinderhollow-extra-cave	reached`; conditions: `Cond	region	1	SouthCave` | yes |
+| Briefing | Mine the seams and defend your heart until dawn. | yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere |
+| Briefing | Then cross the lava bridge and destroy the rival heart. | yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated |
 Mario's explicit criterion for cinderhollow-o02: fully mine all 16 original finite gold fields x5..6/y55..58 and x30..33/y72..73. The approved objective text requires complete depletion of both finite veins; no deadline or first-wave failure applies.
 
 ## Coldwell
