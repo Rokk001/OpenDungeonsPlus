@@ -1911,5 +1911,667 @@
       "Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged."
     ],
     "runtime_limit": "Supply geometry and resource route are static necessary evidence; egg/bed use, combat, stone hand transport and save/load still require further verification. Hand transport decision pending."
+  },
+  "CrowshotGallery": {
+    "goals": {
+      "crowshotgallery-main-heart": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeart",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "crowshotgallery-main-trial": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Possess a shooter; shoot down all 3 flocks.",
+        "completion": "mainTrial",
+        "conditions": [
+          "Cond\ttrigger\tgalleryClear"
+        ],
+        "mode": "repeat\t0"
+      },
+      "crowshotgallery-extra-survivors": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Keep all 5 starting fighters alive.",
+        "completion": "extraSurvivors",
+        "conditions": [
+          "Cond\tobjective\t1\tcrowshotgallery-main-trial\treached",
+          "Cond\talive\tShooter1",
+          "Cond\tevent\tShooter1\tkilled\t==\t0",
+          "Cond\talive\tShooter2",
+          "Cond\tevent\tShooter2\tkilled\t==\t0",
+          "Cond\talive\tShooter3",
+          "Cond\tevent\tShooter3\tkilled\t==\t0",
+          "Cond\talive\tShooter4",
+          "Cond\tevent\tShooter4\tkilled\t==\t0",
+          "Cond\talive\tShooter5",
+          "Cond\tevent\tShooter5\tkilled\t==\t0"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLost": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-heart",
+            "failed"
+          ]
+        ]
+      },
+      "mainTrialFailed": {
+        "conditions": [
+          "Cond\tdefeated\t1"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ],
+          [
+            "1",
+            "crowshotgallery-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathCrow1": {
+        "conditions": [
+          "Cond\tevent\tCrow1\tkilled",
+          "Cond\tevent\tCrow1\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathCrow2": {
+        "conditions": [
+          "Cond\tevent\tCrow2\tkilled",
+          "Cond\tevent\tCrow2\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathCrow3": {
+        "conditions": [
+          "Cond\tevent\tCrow3\tkilled",
+          "Cond\tevent\tCrow3\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathCrow4": {
+        "conditions": [
+          "Cond\tevent\tCrow4\tkilled",
+          "Cond\tevent\tCrow4\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRaven1": {
+        "conditions": [
+          "Cond\tevent\tRaven1\tkilled",
+          "Cond\tevent\tRaven1\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRaven2": {
+        "conditions": [
+          "Cond\tevent\tRaven2\tkilled",
+          "Cond\tevent\tRaven2\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRaven3": {
+        "conditions": [
+          "Cond\tevent\tRaven3\tkilled",
+          "Cond\tevent\tRaven3\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRaven4": {
+        "conditions": [
+          "Cond\tevent\tRaven4\tkilled",
+          "Cond\tevent\tRaven4\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRaven5": {
+        "conditions": [
+          "Cond\tevent\tRaven5\tkilled",
+          "Cond\tevent\tRaven5\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRaven6": {
+        "conditions": [
+          "Cond\tevent\tRaven6\tkilled",
+          "Cond\tevent\tRaven6\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook1": {
+        "conditions": [
+          "Cond\tevent\tRook1\tkilled",
+          "Cond\tevent\tRook1\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook2": {
+        "conditions": [
+          "Cond\tevent\tRook2\tkilled",
+          "Cond\tevent\tRook2\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook3": {
+        "conditions": [
+          "Cond\tevent\tRook3\tkilled",
+          "Cond\tevent\tRook3\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook4": {
+        "conditions": [
+          "Cond\tevent\tRook4\tkilled",
+          "Cond\tevent\tRook4\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook5": {
+        "conditions": [
+          "Cond\tevent\tRook5\tkilled",
+          "Cond\tevent\tRook5\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook6": {
+        "conditions": [
+          "Cond\tevent\tRook6\tkilled",
+          "Cond\tevent\tRook6\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook7": {
+        "conditions": [
+          "Cond\tevent\tRook7\tkilled",
+          "Cond\tevent\tRook7\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "wrongDeathRook8": {
+        "conditions": [
+          "Cond\tevent\tRook8\tkilled",
+          "Cond\tevent\tRook8\tshotkilled:1\t==\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost1": {
+        "conditions": [
+          "Cond\tevent\tShooter1\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost2": {
+        "conditions": [
+          "Cond\tevent\tShooter2\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost3": {
+        "conditions": [
+          "Cond\tevent\tShooter3\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost4": {
+        "conditions": [
+          "Cond\tevent\tShooter4\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "extraSurvivorLost5": {
+        "conditions": [
+          "Cond\tevent\tShooter5\tkilled"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-extra-survivors",
+            "failed"
+          ]
+        ]
+      },
+      "missedPossession": {
+        "conditions": [
+          "Cond\tflag\tflock3\t1",
+          "Cond\tcreatures\t2\t<=\t0",
+          "Cond\tevent\tSeat1\tpossessedshot\t==\t0",
+          "Cond\tshotkilled\t1\tCrow1",
+          "Cond\tshotkilled\t1\tCrow2",
+          "Cond\tshotkilled\t1\tCrow3",
+          "Cond\tshotkilled\t1\tCrow4",
+          "Cond\tshotkilled\t1\tRaven1",
+          "Cond\tshotkilled\t1\tRaven2",
+          "Cond\tshotkilled\t1\tRaven3",
+          "Cond\tshotkilled\t1\tRaven4",
+          "Cond\tshotkilled\t1\tRaven5",
+          "Cond\tshotkilled\t1\tRaven6",
+          "Cond\tshotkilled\t1\tRook1",
+          "Cond\tshotkilled\t1\tRook2",
+          "Cond\tshotkilled\t1\tRook3",
+          "Cond\tshotkilled\t1\tRook4",
+          "Cond\tshotkilled\t1\tRook5",
+          "Cond\tshotkilled\t1\tRook6",
+          "Cond\tshotkilled\t1\tRook7",
+          "Cond\tshotkilled\t1\tRook8"
+        ],
+        "states": [
+          [
+            "1",
+            "crowshotgallery-main-trial",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "preserved_conditions": {
+      "openingRound": [
+        "Cond\ttime\t3"
+      ],
+      "secondFlock": [
+        "Cond\ttime\t10",
+        "Cond\tcreatures\t2\t<=\t0"
+      ],
+      "thirdFlock": [
+        "Cond\tflag\tflock2\t1",
+        "Cond\tcreatures\t2\t<=\t0"
+      ],
+      "galleryClear": [
+        "Cond\tflag\tflock3\t1",
+        "Cond\tcreatures\t2\t<=\t0",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple",
+        "Cond\tevent\tSeat1\tpossessedshot",
+        "Cond\tshotkilled\t1\tCrow1",
+        "Cond\tshotkilled\t1\tCrow2",
+        "Cond\tshotkilled\t1\tCrow3",
+        "Cond\tshotkilled\t1\tCrow4",
+        "Cond\tshotkilled\t1\tRaven1",
+        "Cond\tshotkilled\t1\tRaven2",
+        "Cond\tshotkilled\t1\tRaven3",
+        "Cond\tshotkilled\t1\tRaven4",
+        "Cond\tshotkilled\t1\tRaven5",
+        "Cond\tshotkilled\t1\tRaven6",
+        "Cond\tshotkilled\t1\tRook1",
+        "Cond\tshotkilled\t1\tRook2",
+        "Cond\tshotkilled\t1\tRook3",
+        "Cond\tshotkilled\t1\tRook4",
+        "Cond\tshotkilled\t1\tRook5",
+        "Cond\tshotkilled\t1\tRook6",
+        "Cond\tshotkilled\t1\tRook7",
+        "Cond\tshotkilled\t1\tRook8",
+        "Cond\tspawncleared\tsecondFlock\t1",
+        "Cond\tspawncleared\tsecondFlock\t2",
+        "Cond\tspawncleared\tsecondFlock\t3",
+        "Cond\tspawncleared\tsecondFlock\t4",
+        "Cond\tspawncleared\tsecondFlock\t5",
+        "Cond\tspawncleared\tsecondFlock\t6",
+        "Cond\tspawncleared\tthirdFlock\t1",
+        "Cond\tspawncleared\tthirdFlock\t2",
+        "Cond\tspawncleared\tthirdFlock\t3",
+        "Cond\tspawncleared\tthirdFlock\t4",
+        "Cond\tspawncleared\tthirdFlock\t5",
+        "Cond\tspawncleared\tthirdFlock\t6",
+        "Cond\tspawncleared\tthirdFlock\t7",
+        "Cond\tspawncleared\tthirdFlock\t8"
+      ]
+    },
+    "preserved_actions": {
+      "openingRound": [
+        "Action\tmessage\t1\tA gallery above a lava lake was built for shooting at winged targets, and the hornets that nest on its islets have made it a real hunt. Possess one of your shooters and bring them down.",
+        "Action\tobjectiveid\t1\tcrowshotgallery-o01\tShoot every hornet before time runs out.",
+        "Action\ttimelimit\t420",
+        "Action\treveal\t1\tLake",
+        "Action\torder\twait\t2\t-\tCrow1\tCrow2\tCrow3\tCrow4"
+      ],
+      "secondFlock": [
+        "Action\tmessage\t1\tA second flock rises from the cracks in the roof.",
+        "Action\tspawn\t2\t13\t12\t-1\tCaveHornet:2@Raven1",
+        "Action\tspawn\t2\t23\t12\t-1\tCaveHornet:2@Raven2",
+        "Action\tspawn\t2\t14\t18\t-1\tCaveHornet:2@Raven3",
+        "Action\tspawn\t2\t22\t18\t-1\tCaveHornet:2@Raven4",
+        "Action\tspawn\t2\t13\t12\t-1\tCaveHornet:2@Raven5",
+        "Action\tspawn\t2\t23\t12\t-1\tCaveHornet:2@Raven6",
+        "Action\torder\twait\t2\t-\tRaven1\tRaven2\tRaven3\tRaven4\tRaven5\tRaven6",
+        "Action\tsetflag\tflock2\t1"
+      ],
+      "thirdFlock": [
+        "Action\tmessage\t1\tThe last flock is the biggest, and winged lizards roost with it.",
+        "Action\tspawn\t2\t13\t12\t-1\tCaveHornet:3@Rook1",
+        "Action\tspawn\t2\t23\t12\t-1\tCaveHornet:3@Rook2",
+        "Action\tspawn\t2\t14\t18\t-1\tCaveHornet:3@Rook3",
+        "Action\tspawn\t2\t22\t18\t-1\tCaveHornet:3@Rook4",
+        "Action\tspawn\t2\t13\t12\t-1\tCaveHornet:3@Rook5",
+        "Action\tspawn\t2\t23\t12\t-1\tCaveHornet:3@Rook6",
+        "Action\tspawn\t2\t14\t18\t-1\tWyvern:1@Rook7",
+        "Action\tspawn\t2\t22\t18\t-1\tWyvern:1@Rook8",
+        "Action\torder\twait\t2\t-\tRook1\tRook2\tRook3\tRook4\tRook5\tRook6\tRook7\tRook8",
+        "Action\tsetflag\tflock3\t1"
+      ],
+      "galleryClear": [
+        "Action\tmessage\t1\tNot a wing is left over the lava. The gallery is yours and the heart has given you a shard.",
+        "Action\tobjectivestate\t1\tcrowshotgallery-o01\treached",
+        "Action\twin\t1"
+      ]
+    },
+    "reachability": {
+      "initial_creatures": {
+        "Shooter1": {
+          "seat": 1,
+          "class": "LizardMan",
+          "tile": [
+            15,
+            28
+          ]
+        },
+        "Shooter2": {
+          "seat": 1,
+          "class": "LizardMan",
+          "tile": [
+            18,
+            26
+          ]
+        },
+        "Shooter3": {
+          "seat": 1,
+          "class": "LizardMan",
+          "tile": [
+            21,
+            28
+          ]
+        },
+        "Shooter4": {
+          "seat": 1,
+          "class": "Cultist",
+          "tile": [
+            24,
+            26
+          ]
+        },
+        "Shooter5": {
+          "seat": 1,
+          "class": "Goblin",
+          "tile": [
+            12,
+            26
+          ]
+        },
+        "Crow1": {
+          "seat": 2,
+          "class": "CaveHornet",
+          "tile": [
+            15,
+            12
+          ]
+        },
+        "Crow2": {
+          "seat": 2,
+          "class": "CaveHornet",
+          "tile": [
+            21,
+            12
+          ]
+        },
+        "Crow3": {
+          "seat": 2,
+          "class": "CaveHornet",
+          "tile": [
+            16,
+            18
+          ]
+        },
+        "Crow4": {
+          "seat": 2,
+          "class": "CaveHornet",
+          "tile": [
+            20,
+            18
+          ]
+        }
+      },
+      "shooting_route": {
+        "shooter": "Shooter1",
+        "range": 7,
+        "level": 3,
+        "class": "LizardMan",
+        "positions": [
+          [
+            [
+              15,
+              12
+            ],
+            [
+              14,
+              9
+            ]
+          ],
+          [
+            [
+              21,
+              12
+            ],
+            [
+              22,
+              12
+            ]
+          ],
+          [
+            [
+              16,
+              18
+            ],
+            [
+              15,
+              21
+            ]
+          ],
+          [
+            [
+              20,
+              18
+            ],
+            [
+              22,
+              21
+            ]
+          ],
+          [
+            [
+              13,
+              12
+            ],
+            [
+              12,
+              10
+            ]
+          ],
+          [
+            [
+              23,
+              12
+            ],
+            [
+              24,
+              12
+            ]
+          ],
+          [
+            [
+              14,
+              18
+            ],
+            [
+              12,
+              20
+            ]
+          ],
+          [
+            [
+              22,
+              18
+            ],
+            [
+              24,
+              20
+            ]
+          ]
+        ]
+      }
+    },
+    "route": [
+      "Protect the heart. The existing deadline starts at openingRound (time3) and remains 420 seconds after that trigger, not 420 seconds from loading. spellPossess is already unlocked; starting mana300 and normal heart income are retained.",
+      "Possess a level3 starting LizardMan and land at least one real positive projectile hit. All 18 fixed targets must die from own creature projectiles; a hit or lethal knockout alone never counts as death. Other own shooters may assist with projectile kills. Melee, traps, spells cast by the keeper, conversion or environmental deaths do not substitute.",
+      "First kill Crow1..4. secondFlock starts after time10 and the first flock is gone, spawning Raven1..6. thirdFlock requires flock2 cleared and spawns Rook1..6 plus Wyverns Rook7/8. Every actual spawn action must have its observed instances dead.",
+      "The level3 LizardMan has MissileLaunch range7 and level minimum1. Every target coordinate has a reachable initially open dry shooting position within that range; exact points are in the fixture. This is a necessary spatial check, not a 420-second combat proof.",
+      "For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce a shard for an invalid clear."
+    ],
+    "runtime_limit": "Actual aiming, target movement, damage/cadence, the 420-second route and save/load still require integrator/Mario runtime verification; no playthrough claimed."
   }
 }

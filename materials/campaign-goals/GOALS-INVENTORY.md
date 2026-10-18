@@ -275,9 +275,57 @@ File: `levels/campaign/CrowshotGallery.level`.
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 945 | `Action	objectiveid	1	crowshotgallery-o01	Shoot every hornet before time runs out.` | yes |
-| Script line 989 | `Action	win	1` | yes |
-| Trigger `galleryClear` | `Action	objectivestate	1	crowshotgallery-o01	reached`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0` | yes |
-| Briefing | Possess a shooter and destroy every hornet before time expires to earn this optional trial's Heartstone fragment. | no: galleryClear checks the flock; possession is not a separate winning condition |
+| Script line 1023 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `crowshotgallery-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `crowshotgallery-main-trial`: Possess a shooter; shoot down all 3 flocks. | `mainTrial`: Cond	trigger	galleryClear |
+| optional | `crowshotgallery-extra-survivors`: Keep all 5 starting fighters alive. | `extraSurvivors`: Cond	objective	1	crowshotgallery-main-trial	reached; Cond	alive	Shooter1; Cond	event	Shooter1	killed	==	0; Cond	alive	Shooter2; Cond	event	Shooter2	killed	==	0; Cond	alive	Shooter3; Cond	event	Shooter3	killed	==	0; Cond	alive	Shooter4; Cond	event	Shooter4	killed	==	0; Cond	alive	Shooter5; Cond	event	Shooter5	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Protect the heart. The existing deadline starts at openingRound (time3) and remains 420 seconds after that trigger, not 420 seconds from loading. spellPossess is already unlocked; starting mana300 and normal heart income are retained.
+- Possess a level3 starting LizardMan and land at least one real positive projectile hit. All 18 fixed targets must die from own creature projectiles; a hit or lethal knockout alone never counts as death. Other own shooters may assist with projectile kills. Melee, traps, spells cast by the keeper, conversion or environmental deaths do not substitute.
+- First kill Crow1..4. secondFlock starts after time10 and the first flock is gone, spawning Raven1..6. thirdFlock requires flock2 cleared and spawns Rook1..6 plus Wyverns Rook7/8. Every actual spawn action must have its observed instances dead.
+- The level3 LizardMan has MissileLaunch range7 and level minimum1. Every target coordinate has a reachable initially open dry shooting position within that range; exact points are in the fixture. This is a necessary spatial check, not a 420-second combat proof.
+- For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce a shard for an invalid clear.
+
+Actual aiming, target movement, damage/cadence, the 420-second route and save/load still require integrator/Mario runtime verification; no playthrough claimed.
+
+| Trigger `galleryClear` | `Action	objectivestate	1	crowshotgallery-o01	reached`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple; Cond	event	Seat1	possessedshot; Cond	shotkilled	1	Crow1; Cond	shotkilled	1	Crow2; Cond	shotkilled	1	Crow3; Cond	shotkilled	1	Crow4; Cond	shotkilled	1	Raven1; Cond	shotkilled	1	Raven2; Cond	shotkilled	1	Raven3; Cond	shotkilled	1	Raven4; Cond	shotkilled	1	Raven5; Cond	shotkilled	1	Raven6; Cond	shotkilled	1	Rook1; Cond	shotkilled	1	Rook2; Cond	shotkilled	1	Rook3; Cond	shotkilled	1	Rook4; Cond	shotkilled	1	Rook5; Cond	shotkilled	1	Rook6; Cond	shotkilled	1	Rook7; Cond	shotkilled	1	Rook8; Cond	spawncleared	secondFlock	1; Cond	spawncleared	secondFlock	2; Cond	spawncleared	secondFlock	3; Cond	spawncleared	secondFlock	4; Cond	spawncleared	secondFlock	5; Cond	spawncleared	secondFlock	6; Cond	spawncleared	thirdFlock	1; Cond	spawncleared	thirdFlock	2; Cond	spawncleared	thirdFlock	3; Cond	spawncleared	thirdFlock	4; Cond	spawncleared	thirdFlock	5; Cond	spawncleared	thirdFlock	6; Cond	spawncleared	thirdFlock	7; Cond	spawncleared	thirdFlock	8` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	crowshotgallery-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	crowshotgallery-main-trial	reached`; conditions: `Cond	trigger	galleryClear` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	crowshotgallery-extra-survivors	reached`; conditions: `Cond	objective	1	crowshotgallery-main-trial	reached; Cond	alive	Shooter1; Cond	event	Shooter1	killed	==	0; Cond	alive	Shooter2; Cond	event	Shooter2	killed	==	0; Cond	alive	Shooter3; Cond	event	Shooter3	killed	==	0; Cond	alive	Shooter4; Cond	event	Shooter4	killed	==	0; Cond	alive	Shooter5; Cond	event	Shooter5	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	crowshotgallery-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `wrongDeathCrow1` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow1	killed; Cond	event	Crow1	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathCrow2` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow2	killed; Cond	event	Crow2	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathCrow3` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow3	killed; Cond	event	Crow3	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathCrow4` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow4	killed; Cond	event	Crow4	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven1` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven1	killed; Cond	event	Raven1	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven2` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven2	killed; Cond	event	Raven2	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven3` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven3	killed; Cond	event	Raven3	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven4` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven4	killed; Cond	event	Raven4	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven5` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven5	killed; Cond	event	Raven5	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven6` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven6	killed; Cond	event	Raven6	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook1` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook1	killed; Cond	event	Rook1	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook2` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook2	killed; Cond	event	Rook2	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook3` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook3	killed; Cond	event	Rook3	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook4` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook4	killed; Cond	event	Rook4	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook5` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook5	killed; Cond	event	Rook5	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook6` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook6	killed; Cond	event	Rook6	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook7` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook7	killed; Cond	event	Rook7	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook8` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook8	killed; Cond	event	Rook8	shotkilled:1	==	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter3	killed` | yes |
+| Trigger `extraSurvivorLost4` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter4	killed` | yes |
+| Trigger `extraSurvivorLost5` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter5	killed` | yes |
+| Trigger `missedPossession` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0; Cond	event	Seat1	possessedshot	==	0; Cond	shotkilled	1	Crow1; Cond	shotkilled	1	Crow2; Cond	shotkilled	1	Crow3; Cond	shotkilled	1	Crow4; Cond	shotkilled	1	Raven1; Cond	shotkilled	1	Raven2; Cond	shotkilled	1	Raven3; Cond	shotkilled	1	Raven4; Cond	shotkilled	1	Raven5; Cond	shotkilled	1	Raven6; Cond	shotkilled	1	Rook1; Cond	shotkilled	1	Rook2; Cond	shotkilled	1	Rook3; Cond	shotkilled	1	Rook4; Cond	shotkilled	1	Rook5; Cond	shotkilled	1	Rook6; Cond	shotkilled	1	Rook7; Cond	shotkilled	1	Rook8` | yes |
+| Briefing | Possess a shooter and destroy every hornet before time expires to earn this optional trial's Heartstone fragment. | yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline |
 
 ## Dunmarrow
 

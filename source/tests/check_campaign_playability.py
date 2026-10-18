@@ -34,7 +34,7 @@ BRIEFING_MATCH = {
     "Ashcombe": {3: "no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal"},
     "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
     "HollinFen": {3: "yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes", 4: "yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery"},
-    "CrowshotGallery": {3: "no: galleryClear checks the flock; possession is not a separate winning condition"},
+    "CrowshotGallery": {3: "yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline"},
     "Ironbridge": {3: "no: building and bridge order are not independent goals", 4: "yes: KillAllEnemies includes the rival temple"},
     "Lanternhill": {2: "no: mining and digging the plugs are not independent goals", 3: "yes: KillAllEnemies includes the northern rival temple", 4: "no: optional stone discovery is not required to win"},
     "VarnsCrossing": {3: "no: heart protection and enemy temples are checked; quarter and fortress ownership are not independent goals"},
@@ -893,9 +893,40 @@ def grouped_goal_errors(text, level_name):
             for bank in banks:
                 if not any(tile in area and level["tiles"][tile][0] not in (4, 5) for tile in bank):
                     errors.append("crossing has no reachable dry entry or exit bank: " + name)
-        for name, target in proof.get("attack_targets", {}).items():
+        for name, target in {**proof.get("attack_targets", {}), **proof.get("initial_creatures", {})}.items():
             if (name, target["seat"], tuple(target["tile"])) not in level["creatures"]:
                 errors.append("regional attack target seat or position differs: " + name)
+            if "class" in target:
+                row = next((row.split() for _, row in lines(section(text, "Creatures")) if row.split()[1] == name), None)
+                if row is None or row[6] != target["class"]:
+                    errors.append("original creature class differs: " + name)
+        shooting = proof.get("shooting_route")
+        if shooting:
+            rows = [row.split() for _, row in lines(section(text, "Creatures"))]
+            shooter = next((row for row in rows if row[1] == shooting["shooter"]), None)
+            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            definition = re.search(r"\[Creature\]\s*Name\s+" + re.escape(shooting["class"]) + r"\b(.*?)\[/Creature\]", definitions, re.S)
+            skill = next((row.split() for _, row in lines(definition[1]) if row.startswith("MissileLaunch")), None)
+            if (shooter is None or shooter[6] != shooting["class"] or int(shooter[7]) != shooting["level"]
+                    or skill is None or int(skill[5]) > shooting["level"]
+                    or float(skill[3]) + float(skill[4]) * shooting["level"] != shooting["range"]):
+                errors.append("original shooter level or available projectile range differs")
+            opened, queue = set(), deque([level["start"]])
+            while queue:
+                tile = queue.popleft()
+                if tile in opened or tile not in level["tiles"] or level["tiles"][tile][1] != 0 or level["tiles"][tile][0] in (4, 5):
+                    continue
+                opened.add(tile)
+                queue.extend(neighbours(tile))
+            for target, origin in shooting["positions"]:
+                distance = math.dist(target, origin)
+                steps = max(1, math.ceil(distance * 4))
+                ray = [(math.floor(origin[0] + (target[0] - origin[0]) * i / steps + .5),
+                        math.floor(origin[1] + (target[1] - origin[1]) * i / steps + .5)) for i in range(steps + 1)]
+                if (tuple(origin) not in opened or not 0 < distance <= shooting["range"]
+                        or any(tile not in level["tiles"] or level["tiles"][tile][1] != 0 for tile in ray)):
+                    errors.append("shooting position or open projectile ray is unavailable")
+
         for footprint in proof.get("footprints", []):
             expected_tiles = {(x, y) for a, b, c, e in footprint["runs"] for x in range(a, c + 1) for y in range(b, e + 1)}
             x1, y1, x2, y2 = footprint["bounds"]
@@ -1004,6 +1035,7 @@ def objective_errors(text, level_name):
     review = GROUP_REVIEW.get(level_name, {})
     reviewed_triggers = {item["completion"]: item["conditions"] for item in review.get("goals", {}).values()}
     reviewed_triggers.update({name: item["conditions"] for name, item in review.get("extra_status_triggers", {}).items()})
+    reviewed_triggers.update(review.get("preserved_conditions", {}))
     trigger_names = set(re.findall(r"^Name\t([^\r\n]+)", section(text, "Triggers"), re.M)) if "[Triggers]" in text else set()
     region_names = set(re.findall(r"^Region\t(\S+)", text, re.M))
     conditions_to_check = []
@@ -1297,6 +1329,18 @@ def self_test(root):
     ):
         assert old in tinmoor
         assert objective_errors(tinmoor.replace(old, new), "Tinmoor"), old
+    crowshot = (root / "levels/campaign/CrowshotGallery.level").read_text(encoding="utf-8")
+    for old, new in (
+        ("Cond\tshotkilled\t1\tCrow1", "Cond\tevent\tCrow1\tkilled"),
+        ("Cond\tshotkilled\t1\tRook8", "Cond\tevent\tRook8\tincapacitated"),
+        ("Cond\tevent\tSeat1\tpossessedshot", "Cond\ttime\t0"),
+        ("Cond\tspawncleared\tthirdFlock\t8", "Cond\tspawncleared\tthirdFlock\t7"),
+        ("Action\ttimelimit\t420", "Action\ttimelimit\t421"),
+        ("1\tShooter1\tLizardman.mesh\t15\t28\t0\tLizardMan\t3", "1\tShooter1\tLizardman.mesh\t15\t28\t0\tLizardMan\t1"),
+        ("Cond\tevent\tShooter5\tkilled\t==\t0", "Cond\tevent\tShooter5\tincapacitated\t==\t0")
+    ):
+        assert old in crowshot
+        assert objective_errors(crowshot.replace(old, new), "CrowshotGallery"), old
     hollin = (root / "levels/campaign/HollinFen.level").read_text(encoding="utf-8")
     for old, new in (
         ("Cond\tfurniture\t1\tDormitory\t>=\t9", "Cond\tfurniture\t1\tDormitory\t>=\t2"),
