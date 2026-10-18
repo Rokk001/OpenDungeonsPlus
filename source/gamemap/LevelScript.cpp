@@ -352,10 +352,12 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::goal;
         if(type == "goalmet")
             cond.mType = LevelScriptConditionType::goalMet;
-        if(t.size() != 4)
+        if(t.size() != 4 && !(type == "goalmet" && t.size() == 5))
             return false;
 
         cond.mName = t[3];
+        if(t.size() == 5)
+            cond.mName2 = t[4];
         return parseInt32(t[2], cond.mSeatId);
     }
     if(type == "flag")
@@ -1070,6 +1072,8 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::goalMet:
             os << "goalmet\t" << c.mSeatId << "\t" << c.mName;
+            if(!c.mName2.empty())
+                os << "\t" << c.mName2;
             break;
         case LevelScriptConditionType::trapGone:
             os << "trapgone\t" << c.mName;

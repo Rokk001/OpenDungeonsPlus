@@ -912,6 +912,8 @@ def grouped_goal_errors(text, level_name):
                 goal["completion"] not in names or names.index(goal["completion"]) >= names.index(narration["trigger"])
                 for goal in expected.values() if goal["kind"] != "optionalobjectiveid"):
             errors.append("victory narration must follow all current main-goal observers")
+    if "preserved_goals" in review and [row for _, row in lines(section(text, "Goals"))] != review["preserved_goals"]:
+        errors.append("original classic goal chains were changed")
     proof = review.get("reachability", {})
     if proof:
         level = parse_level(text, proof.get("selected_seat"))
@@ -923,6 +925,9 @@ def grouped_goal_errors(text, level_name):
                        if tile in candidate_area and kind == 2)
             if list(candidate["start"]) != start["position"] or gold < start["minimum_mineable_gold"]:
                 errors.append("selectable starting seat lacks its original position or mining resources: " + str(start["seat"]))
+            claimable = sum(candidate["tiles"][tile][0] in (1, 2, 7) for tile in candidate_area)
+            if claimable < start.get("minimum_claimable_tiles", 0):
+                errors.append("selectable starting seat lacks claimable ground: " + str(start["seat"]))
         for name, definition in proof.get("regions", {}).items():
             match = re.search(r"^Region\s+" + re.escape(name) + r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
             if not match or list(map(int, match.groups())) != definition["bounds"]:
@@ -1817,6 +1822,17 @@ def self_test(root):
             pass
         else:
             raise AssertionError("inactive seat must not become a selectable analysis start")
+    cellar = (root / "levels/campaign/Bonus1.level").read_text(encoding="utf-8")
+    assert not grouped_goal_errors(cellar, "Bonus1")
+    for seat in (1, 3, 4):
+        for source, replacement in (
+                ("Cond\tgoalmet\t%d\tClaimNTiles\t60" % seat, "Cond\tgoalmet\t%d\tClaimNTiles\t40" % seat),
+                ("Cond\tgoalmet\t%d\tMineNGold\t100" % seat, "Cond\tgoalmet\t%d\tMineNGold\t20" % seat),
+                ("Cond\tclaimed\t%d\tMainCellar\t100" % seat, "Cond\tclaimed\t%d\tMainCellar\t60" % seat),
+                ("Cond\tgoalmet\t%d\tKillAllEnemies" % seat, "Cond\tgoalmet\t2\tKillAllEnemies")):
+            assert source in cellar
+            assert grouped_goal_errors(cellar.replace(source, replacement), "Bonus1"), "Bonus1 must retain every exact chain and correct seat"
+    assert grouped_goal_errors(cellar.replace("ClaimNTiles\t60", "ClaimNTiles\t50"), "Bonus1")
     print("campaign playability self-test passed")
 
 

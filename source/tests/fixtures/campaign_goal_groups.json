@@ -12815,5 +12815,256 @@
       ],
       "minimum_mineable_gold": 1000
     }
+  },
+  "Bonus1": {
+    "goals": {
+      "bonus1-main-heart-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-enemies-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Clear the cellar.",
+        "completion": "mainEnemiesSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-claim-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Claim 40, then 60 tiles.",
+        "completion": "mainClaimSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tClaimNTiles\t40",
+          "Cond\tgoalmet\t1\tClaimNTiles\t60"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-mine-s1": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Mine 20, then 50, then 100 gold.",
+        "completion": "mainMineSeat1",
+        "conditions": [
+          "Cond\tgoalmet\t1\tMineNGold\t20",
+          "Cond\tgoalmet\t1\tMineNGold\t50",
+          "Cond\tgoalmet\t1\tMineNGold\t100"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-extra-land-s1": {
+        "kind": "optionalobjectiveid",
+        "seat": "1",
+        "text": "Claim 100 tiles.",
+        "completion": "mainLandSeat1",
+        "conditions": [
+          "Cond\tclaimed\t1\tMainCellar\t100"
+        ],
+        "mode": "once"
+      },
+      "bonus1-main-heart-s3": {
+        "kind": "mainobjectiveid",
+        "seat": "3",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat3",
+        "conditions": [
+          "Cond\tgoalmet\t3\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-enemies-s3": {
+        "kind": "mainobjectiveid",
+        "seat": "3",
+        "text": "Clear the cellar.",
+        "completion": "mainEnemiesSeat3",
+        "conditions": [
+          "Cond\tgoalmet\t3\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-claim-s3": {
+        "kind": "mainobjectiveid",
+        "seat": "3",
+        "text": "Claim 40, then 60 tiles.",
+        "completion": "mainClaimSeat3",
+        "conditions": [
+          "Cond\tgoalmet\t3\tClaimNTiles\t40",
+          "Cond\tgoalmet\t3\tClaimNTiles\t60"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-mine-s3": {
+        "kind": "mainobjectiveid",
+        "seat": "3",
+        "text": "Mine 20, then 50, then 100 gold.",
+        "completion": "mainMineSeat3",
+        "conditions": [
+          "Cond\tgoalmet\t3\tMineNGold\t20",
+          "Cond\tgoalmet\t3\tMineNGold\t50",
+          "Cond\tgoalmet\t3\tMineNGold\t100"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-extra-land-s3": {
+        "kind": "optionalobjectiveid",
+        "seat": "3",
+        "text": "Claim 100 tiles.",
+        "completion": "mainLandSeat3",
+        "conditions": [
+          "Cond\tclaimed\t3\tMainCellar\t100"
+        ],
+        "mode": "once"
+      },
+      "bonus1-main-heart-s4": {
+        "kind": "mainobjectiveid",
+        "seat": "4",
+        "text": "Protect your heart.",
+        "completion": "mainHeartSeat4",
+        "conditions": [
+          "Cond\tgoalmet\t4\tProtectDungeonTemple"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-enemies-s4": {
+        "kind": "mainobjectiveid",
+        "seat": "4",
+        "text": "Clear the cellar.",
+        "completion": "mainEnemiesSeat4",
+        "conditions": [
+          "Cond\tgoalmet\t4\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-claim-s4": {
+        "kind": "mainobjectiveid",
+        "seat": "4",
+        "text": "Claim 40, then 60 tiles.",
+        "completion": "mainClaimSeat4",
+        "conditions": [
+          "Cond\tgoalmet\t4\tClaimNTiles\t40",
+          "Cond\tgoalmet\t4\tClaimNTiles\t60"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-main-mine-s4": {
+        "kind": "mainobjectiveid",
+        "seat": "4",
+        "text": "Mine 20, then 50, then 100 gold.",
+        "completion": "mainMineSeat4",
+        "conditions": [
+          "Cond\tgoalmet\t4\tMineNGold\t20",
+          "Cond\tgoalmet\t4\tMineNGold\t50",
+          "Cond\tgoalmet\t4\tMineNGold\t100"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bonus1-extra-land-s4": {
+        "kind": "optionalobjectiveid",
+        "seat": "4",
+        "text": "Claim 100 tiles.",
+        "completion": "mainLandSeat4",
+        "conditions": [
+          "Cond\tclaimed\t4\tMainCellar\t100"
+        ],
+        "mode": "once"
+      }
+    },
+    "extra_status_triggers": {
+      "mainHeartLostSeat1": {
+        "conditions": [
+          "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "1",
+            "bonus1-main-heart-s1",
+            "failed"
+          ]
+        ]
+      },
+      "mainHeartLostSeat3": {
+        "conditions": [
+          "Cond\troomtiles\t3\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "3",
+            "bonus1-main-heart-s3",
+            "failed"
+          ]
+        ]
+      },
+      "mainHeartLostSeat4": {
+        "conditions": [
+          "Cond\troomtiles\t4\tDungeonTemple\t<=\t0"
+        ],
+        "states": [
+          [
+            "4",
+            "bonus1-main-heart-s4",
+            "failed"
+          ]
+        ]
+      }
+    },
+    "route": [
+      "For every selected human seat, retain its heart and clear enemies through the original classic goals.",
+      "Complete the original40 then60 claimed-tile chain and20 then50 then100 mined-gold chain; each exact registered stage must become active or completed before its observer can succeed.",
+      "Optionally claim100fields anywhere on this50x50map before the final enemy falls. Preserve all original goals, initial values and seat choices."
+    ],
+    "runtime_limit": "Static chain/seat wiring only; actual classic-stage activation, multiplayer, save/load and battle routes require runtime verification.",
+    "preserved_goals": [
+      "KillAllEnemies\tNULL",
+      "ClaimNTiles\t40",
+      "+ 1",
+      "ClaimNTiles\t60",
+      "MineNGold\t20",
+      "+ 1",
+      "MineNGold\t50",
+      "+ 1",
+      "MineNGold\t100",
+      "ProtectDungeonTemple\tNULL"
+    ],
+    "reachability": {
+      "selected_seat": 1,
+      "selectable_starts": [
+        {
+          "seat": 1,
+          "position": [
+            10,
+            10
+          ],
+          "minimum_mineable_gold": 100,
+          "minimum_claimable_tiles": 100
+        },
+        {
+          "seat": 3,
+          "position": [
+            40,
+            10
+          ],
+          "minimum_mineable_gold": 100,
+          "minimum_claimable_tiles": 100
+        },
+        {
+          "seat": 4,
+          "position": [
+            40,
+            40
+          ],
+          "minimum_mineable_gold": 100,
+          "minimum_claimable_tiles": 100
+        }
+      ]
+    }
   }
 }

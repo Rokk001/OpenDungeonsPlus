@@ -319,13 +319,17 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             for(unsigned int i = 0; i < seat->numUncompleteGoals(); ++i)
             {
                 Goal* goal = seat->getUncompleteGoal(i);
-                if(goal->getName() == cond.mName && !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
+                if(goal->getName() == cond.mName &&
+                   (cond.mName2.empty() || goal->getArguments() == cond.mName2) &&
+                   !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
                     return true;
             }
             for(unsigned int i = 0; i < seat->numCompletedGoals(); ++i)
             {
                 Goal* goal = seat->getCompletedGoal(i);
-                if(goal->getName() == cond.mName && !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
+                if(goal->getName() == cond.mName &&
+                   (cond.mName2.empty() || goal->getArguments() == cond.mName2) &&
+                   !goal->isFailed(*seat, gameMap) && goal->isMet(*seat, gameMap))
                     return true;
             }
             return false;

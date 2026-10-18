@@ -81,3 +81,12 @@ assert 'LevelScriptConditionType::carryingStone' in script
 assert 'return script.getStoneCarriers().count(cond.mName) != 0;' in runner
 assert 'carried_stone_condition_and_state_round_trip' in unit
 print('Stone delivery checks the actual attached stone, not only a carrier name: static wiring PASS')
+
+# Exact arguments distinguish multiple registered stages without changing name-only conditions.
+assert 'type == "goalmet" && t.size() == 5' in script
+assert 'cond.mName2 = t[4];' in script
+assert 'os << "\\t" << c.mName2;' in script
+assert runner.count('cond.mName2.empty() || goal->getArguments() == cond.mName2') == 2
+assert 'return mArguments;' in read('source/goals/Goal.h')
+assert 'exact_goal_chain_stage_round_trip' in unit
+print('Exact registered goal stages retain their arguments through parsing, saving and evaluation: static wiring PASS')

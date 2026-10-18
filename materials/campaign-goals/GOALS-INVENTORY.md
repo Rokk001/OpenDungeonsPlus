@@ -94,6 +94,52 @@ File: `levels/campaign/Bonus1.level` (not listed in Campaign.cfg).
 | [Goals] | `MineNGold	100` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `bonus1-main-heart-s1`: Protect your heart. | `mainHeartSeat1`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `bonus1-main-enemies-s1`: Clear the cellar. | `mainEnemiesSeat1`: Cond	goalmet	1	KillAllEnemies |
+| main | `bonus1-main-claim-s1`: Claim 40, then 60 tiles. | `mainClaimSeat1`: Cond	goalmet	1	ClaimNTiles	40; Cond	goalmet	1	ClaimNTiles	60 |
+| main | `bonus1-main-mine-s1`: Mine 20, then 50, then 100 gold. | `mainMineSeat1`: Cond	goalmet	1	MineNGold	20; Cond	goalmet	1	MineNGold	50; Cond	goalmet	1	MineNGold	100 |
+| optional | `bonus1-extra-land-s1`: Claim 100 tiles. | `mainLandSeat1`: Cond	claimed	1	MainCellar	100 |
+| main | `bonus1-main-heart-s3`: Protect your heart. | `mainHeartSeat3`: Cond	goalmet	3	ProtectDungeonTemple |
+| main | `bonus1-main-enemies-s3`: Clear the cellar. | `mainEnemiesSeat3`: Cond	goalmet	3	KillAllEnemies |
+| main | `bonus1-main-claim-s3`: Claim 40, then 60 tiles. | `mainClaimSeat3`: Cond	goalmet	3	ClaimNTiles	40; Cond	goalmet	3	ClaimNTiles	60 |
+| main | `bonus1-main-mine-s3`: Mine 20, then 50, then 100 gold. | `mainMineSeat3`: Cond	goalmet	3	MineNGold	20; Cond	goalmet	3	MineNGold	50; Cond	goalmet	3	MineNGold	100 |
+| optional | `bonus1-extra-land-s3`: Claim 100 tiles. | `mainLandSeat3`: Cond	claimed	3	MainCellar	100 |
+| main | `bonus1-main-heart-s4`: Protect your heart. | `mainHeartSeat4`: Cond	goalmet	4	ProtectDungeonTemple |
+| main | `bonus1-main-enemies-s4`: Clear the cellar. | `mainEnemiesSeat4`: Cond	goalmet	4	KillAllEnemies |
+| main | `bonus1-main-claim-s4`: Claim 40, then 60 tiles. | `mainClaimSeat4`: Cond	goalmet	4	ClaimNTiles	40; Cond	goalmet	4	ClaimNTiles	60 |
+| main | `bonus1-main-mine-s4`: Mine 20, then 50, then 100 gold. | `mainMineSeat4`: Cond	goalmet	4	MineNGold	20; Cond	goalmet	4	MineNGold	50; Cond	goalmet	4	MineNGold	100 |
+| optional | `bonus1-extra-land-s4`: Claim 100 tiles. | `mainLandSeat4`: Cond	claimed	4	MainCellar	100 |
+
+Possible route (static, not a playthrough):
+- For every selected human seat, retain its heart and clear enemies through the original classic goals.
+- Complete the original40 then60 claimed-tile chain and20 then50 then100 mined-gold chain; each exact registered stage must become active or completed before its observer can succeed.
+- Optionally claim100fields anywhere on this50x50map before the final enemy falls. Preserve all original goals, initial values and seat choices.
+
+Static chain/seat wiring only; actual classic-stage activation, multiplayer, save/load and battle routes require runtime verification.
+
+| Trigger `mainHeartSeat1` | `Action	objectivestate	1	bonus1-main-heart-s1	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat1` | `Action	objectivestate	1	bonus1-main-enemies-s1	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainClaimSeat1` | `Action	objectivestate	1	bonus1-main-claim-s1	reached`; conditions: `Cond	goalmet	1	ClaimNTiles	40; Cond	goalmet	1	ClaimNTiles	60` | yes |
+| Trigger `mainMineSeat1` | `Action	objectivestate	1	bonus1-main-mine-s1	reached`; conditions: `Cond	goalmet	1	MineNGold	20; Cond	goalmet	1	MineNGold	50; Cond	goalmet	1	MineNGold	100` | yes |
+| Trigger `mainLandSeat1` | `Action	objectivestate	1	bonus1-extra-land-s1	reached`; conditions: `Cond	claimed	1	MainCellar	100` | yes |
+| Trigger `mainHeartLostSeat1` | `Action	objectivestate	1	bonus1-main-heart-s1	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat3` | `Action	objectivestate	3	bonus1-main-heart-s3	reached`; conditions: `Cond	goalmet	3	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat3` | `Action	objectivestate	3	bonus1-main-enemies-s3	reached`; conditions: `Cond	goalmet	3	KillAllEnemies` | yes |
+| Trigger `mainClaimSeat3` | `Action	objectivestate	3	bonus1-main-claim-s3	reached`; conditions: `Cond	goalmet	3	ClaimNTiles	40; Cond	goalmet	3	ClaimNTiles	60` | yes |
+| Trigger `mainMineSeat3` | `Action	objectivestate	3	bonus1-main-mine-s3	reached`; conditions: `Cond	goalmet	3	MineNGold	20; Cond	goalmet	3	MineNGold	50; Cond	goalmet	3	MineNGold	100` | yes |
+| Trigger `mainLandSeat3` | `Action	objectivestate	3	bonus1-extra-land-s3	reached`; conditions: `Cond	claimed	3	MainCellar	100` | yes |
+| Trigger `mainHeartLostSeat3` | `Action	objectivestate	3	bonus1-main-heart-s3	failed`; conditions: `Cond	roomtiles	3	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat4` | `Action	objectivestate	4	bonus1-main-heart-s4	reached`; conditions: `Cond	goalmet	4	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat4` | `Action	objectivestate	4	bonus1-main-enemies-s4	reached`; conditions: `Cond	goalmet	4	KillAllEnemies` | yes |
+| Trigger `mainClaimSeat4` | `Action	objectivestate	4	bonus1-main-claim-s4	reached`; conditions: `Cond	goalmet	4	ClaimNTiles	40; Cond	goalmet	4	ClaimNTiles	60` | yes |
+| Trigger `mainMineSeat4` | `Action	objectivestate	4	bonus1-main-mine-s4	reached`; conditions: `Cond	goalmet	4	MineNGold	20; Cond	goalmet	4	MineNGold	50; Cond	goalmet	4	MineNGold	100` | yes |
+| Trigger `mainLandSeat4` | `Action	objectivestate	4	bonus1-extra-land-s4	reached`; conditions: `Cond	claimed	4	MainCellar	100` | yes |
+| Trigger `mainHeartLostSeat4` | `Action	objectivestate	4	bonus1-main-heart-s4	failed`; conditions: `Cond	roomtiles	4	DungeonTemple	<=	0` | yes |
+
 ## BoulderCourse
 
 File: `levels/campaign/BoulderCourse.level`.

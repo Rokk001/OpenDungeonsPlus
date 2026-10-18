@@ -1617,3 +1617,26 @@ BOOST_AUTO_TEST_CASE(living_captive_or_converted_condition)
         BOOST_CHECK(!invalid.importFromStream(malformed));
     }
 }
+
+//! \brief Preserves exact chain stages and legacy name-only goal conditions through saving.
+BOOST_AUTO_TEST_CASE(exact_goal_chain_stage_round_trip)
+{
+    LevelScript script;
+    std::istringstream input(
+        "[Trigger]\nName chain\nMode once\n"
+        "Cond goalmet 1 ClaimNTiles 60\nCond goalmet 3 MineNGold 100\n"
+        "Cond goalmet 4 ProtectDungeonTemple\n"
+        "Action hint 1 Observed only.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[0].mName2, "60");
+    BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[1].mName2, "100");
+    BOOST_CHECK(script.getTriggers()[0].mConditions[2].mName2.empty());
+    std::ostringstream output;
+    script.exportToStream(output);
+    LevelScript loaded;
+    std::istringstream saved(output.str());
+    BOOST_REQUIRE(loaded.importFromStream(saved));
+    BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[0].mName2, "60");
+    BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[1].mName2, "100");
+    BOOST_CHECK(loaded.getTriggers()[0].mConditions[2].mName2.empty());
+}

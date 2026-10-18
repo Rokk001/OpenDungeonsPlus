@@ -1561,3 +1561,154 @@ DwarfWorker	1
 [Chickens]
 # SeatId	Name	MeshName	PosX	PosY	PosZ	opacity	rotationAngle	PosX	PosY	PosZ
 [/Chickens]
+
+[Triggers]
+Region	MainCellar	0	0	49	49
+[Trigger]
+Name	mainGoalListSeat4
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	4	bonus1-main-heart-s4	Protect your heart.
+Action	mainobjectiveid	4	bonus1-main-enemies-s4	Clear the cellar.
+Action	mainobjectiveid	4	bonus1-main-claim-s4	Claim 40, then 60 tiles.
+Action	mainobjectiveid	4	bonus1-main-mine-s4	Mine 20, then 50, then 100 gold.
+Action	optionalobjectiveid	4	bonus1-extra-land-s4	Claim 100 tiles.
+[/Trigger]
+[Trigger]
+Name	mainGoalListSeat3
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	3	bonus1-main-heart-s3	Protect your heart.
+Action	mainobjectiveid	3	bonus1-main-enemies-s3	Clear the cellar.
+Action	mainobjectiveid	3	bonus1-main-claim-s3	Claim 40, then 60 tiles.
+Action	mainobjectiveid	3	bonus1-main-mine-s3	Mine 20, then 50, then 100 gold.
+Action	optionalobjectiveid	3	bonus1-extra-land-s3	Claim 100 tiles.
+[/Trigger]
+[Trigger]
+Name	mainGoalListSeat1
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	bonus1-main-heart-s1	Protect your heart.
+Action	mainobjectiveid	1	bonus1-main-enemies-s1	Clear the cellar.
+Action	mainobjectiveid	1	bonus1-main-claim-s1	Claim 40, then 60 tiles.
+Action	mainobjectiveid	1	bonus1-main-mine-s1	Mine 20, then 50, then 100 gold.
+Action	optionalobjectiveid	1	bonus1-extra-land-s1	Claim 100 tiles.
+[/Trigger]
+[Trigger]
+Name	mainHeartSeat1
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	bonus1-main-heart-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainEnemiesSeat1
+Mode	repeat	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	bonus1-main-enemies-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainClaimSeat1
+Mode	repeat	0
+Cond	goalmet	1	ClaimNTiles	40
+Cond	goalmet	1	ClaimNTiles	60
+Action	objectivestate	1	bonus1-main-claim-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainMineSeat1
+Mode	repeat	0
+Cond	goalmet	1	MineNGold	20
+Cond	goalmet	1	MineNGold	50
+Cond	goalmet	1	MineNGold	100
+Action	objectivestate	1	bonus1-main-mine-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainLandSeat1
+Mode	once
+Cond	claimed	1	MainCellar	100
+Action	objectivestate	1	bonus1-extra-land-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLostSeat1
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	bonus1-main-heart-s1	failed
+[/Trigger]
+[Trigger]
+Name	mainHeartSeat3
+Mode	repeat	0
+Cond	goalmet	3	ProtectDungeonTemple
+Action	objectivestate	3	bonus1-main-heart-s3	reached
+[/Trigger]
+[Trigger]
+Name	mainEnemiesSeat3
+Mode	repeat	0
+Cond	goalmet	3	KillAllEnemies
+Action	objectivestate	3	bonus1-main-enemies-s3	reached
+[/Trigger]
+[Trigger]
+Name	mainClaimSeat3
+Mode	repeat	0
+Cond	goalmet	3	ClaimNTiles	40
+Cond	goalmet	3	ClaimNTiles	60
+Action	objectivestate	3	bonus1-main-claim-s3	reached
+[/Trigger]
+[Trigger]
+Name	mainMineSeat3
+Mode	repeat	0
+Cond	goalmet	3	MineNGold	20
+Cond	goalmet	3	MineNGold	50
+Cond	goalmet	3	MineNGold	100
+Action	objectivestate	3	bonus1-main-mine-s3	reached
+[/Trigger]
+[Trigger]
+Name	mainLandSeat3
+Mode	once
+Cond	claimed	3	MainCellar	100
+Action	objectivestate	3	bonus1-extra-land-s3	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLostSeat3
+Mode	once
+Cond	roomtiles	3	DungeonTemple	<=	0
+Action	objectivestate	3	bonus1-main-heart-s3	failed
+[/Trigger]
+[Trigger]
+Name	mainHeartSeat4
+Mode	repeat	0
+Cond	goalmet	4	ProtectDungeonTemple
+Action	objectivestate	4	bonus1-main-heart-s4	reached
+[/Trigger]
+[Trigger]
+Name	mainEnemiesSeat4
+Mode	repeat	0
+Cond	goalmet	4	KillAllEnemies
+Action	objectivestate	4	bonus1-main-enemies-s4	reached
+[/Trigger]
+[Trigger]
+Name	mainClaimSeat4
+Mode	repeat	0
+Cond	goalmet	4	ClaimNTiles	40
+Cond	goalmet	4	ClaimNTiles	60
+Action	objectivestate	4	bonus1-main-claim-s4	reached
+[/Trigger]
+[Trigger]
+Name	mainMineSeat4
+Mode	repeat	0
+Cond	goalmet	4	MineNGold	20
+Cond	goalmet	4	MineNGold	50
+Cond	goalmet	4	MineNGold	100
+Action	objectivestate	4	bonus1-main-mine-s4	reached
+[/Trigger]
+[Trigger]
+Name	mainLandSeat4
+Mode	once
+Cond	claimed	4	MainCellar	100
+Action	objectivestate	4	bonus1-extra-land-s4	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLostSeat4
+Mode	once
+Cond	roomtiles	4	DungeonTemple	<=	0
+Action	objectivestate	4	bonus1-main-heart-s4	failed
+[/Trigger]
+[/Triggers]

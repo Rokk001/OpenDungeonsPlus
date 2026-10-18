@@ -102,7 +102,7 @@
 //!   Cond    slapped <seatId> >= | <= <count>    # times a creature of the seat was slapped
 //!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
-//!   Cond    goalmet <seatId> <goalName>       # a registered goal is met now, without waiting for the completed-goal cache
+//!   Cond    goalmet <seatId> <goalName> [arguments] # a registered goal is met now; optional exact arguments identify a chain stage
 //!   Cond    objective <seatId> <id> open|reached|failed   # exact state of an identified objective
 //!   Cond    trigger <name> [0|1]             # existing trigger has (1, default) or has not (0) fired
 //!   Cond    trapgone <name>                  # a trap originally declared by the level no longer exists
