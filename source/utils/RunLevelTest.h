@@ -83,6 +83,11 @@ public:
 
     //! \brief Called by the client thread for every frame with the time since the last frame (seconds).
     static void onFrame(double seconds);
+
+    //! \brief Called by the client for every update of a creature's recovery display with the atlas frame it
+    //! shows (0 means no clock). The frames that show a clock are counted separately for workers and fighters
+    //! and reported with the result, next to the server turns in which a creature had recovery left.
+    static void onRecoveryFrame(bool worker, uint32_t frame);
 };
 
 #endif // RUNLEVELTEST_H

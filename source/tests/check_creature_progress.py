@@ -54,7 +54,7 @@ struct Player {};
 struct Seat {Player player; Player* getPlayer() const {return const_cast<Player*>(&player);}};
 struct ODServer {bool enabled=true;static ODServer& getSingleton(){static ODServer s;return s;}bool supportsCreatureProgress(Player*){return enabled;}};
 struct ODClient {bool enabled=true;static ODClient& getSingleton(){static ODClient s;return s;}bool supportsCreatureProgress(){return enabled;}};
-struct Definition {double needed=100;double getXPNeededWhenLevel(unsigned)const{return needed;}};
+struct Definition {double needed=100;double getXPNeededWhenLevel(unsigned)const{return needed;}bool isWorker()const{return false;}};
 struct GameMap {double getGameSpeedFactor()const{return 1.0;}};
 //! \brief Minimal action identifiers used by the production packet selector.
 enum class CreatureActionType {nb, useRoom};
@@ -79,10 +79,13 @@ struct Creature {
  uint32_t getAttackRecoveryTurns()const{return mAttackRecoveryTurns;}
  uint32_t getAttackRecoveryDuration()const{return mAttackRecoveryDuration;}
  uint32_t getAttackRecoverySerial()const{return mAttackRecoverySerial;}
+ Definition* getDefinition()const{return mDefinition;}
 };
 METHODS
 namespace Ogre {using Real=float;}
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
+//! \brief Inactive level test, as in a normal game.
+struct RunLevelTest {static bool isActive(){return false;}static void onRecoveryFrame(bool,uint32_t){}};
 enum class CreatureOverlays {health,experience,recovery,status};
 struct MovableTextOverlay {
  unsigned frames[4]={};bool shown[4]={};

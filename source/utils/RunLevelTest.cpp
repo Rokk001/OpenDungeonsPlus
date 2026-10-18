@@ -69,6 +69,29 @@ namespace
     std::vector<double> sFrameTimes;
     std::vector<double> sTurnTimes;
     std::mutex sTimeMutex;
+    //! Server: creature turns that ended with recovery left, for fighters and for workers
+    std::atomic<uint64_t> sServerRecoveryFighters(0);
+    std::atomic<uint64_t> sServerRecoveryWorkers(0);
+    //! Client: recovery display updates that showed a clock, for fighters and for workers
+    std::atomic<uint64_t> sClientClockFighters(0);
+    std::atomic<uint64_t> sClientClockWorkers(0);
+
+    //! \brief Writes the recovery display counts to stdout and to run-level-recovery.txt. A run in which the
+    //! server had recovery left but the client never showed a clock points at the transfer or the display.
+    void writeRecovery()
+    {
+        std::ostringstream line;
+        line << "RECOVERY serverFighterTurns=" << sServerRecoveryFighters.load()
+            << " clientFighterClockFrames=" << sClientClockFighters.load()
+            << " serverWorkerTurns=" << sServerRecoveryWorkers.load()
+            << " clientWorkerClockFrames=" << sClientClockWorkers.load();
+        std::cout << line.str() << std::endl;
+        if(ResourceManager::getSingletonPtr() != nullptr)
+        {
+            std::ofstream out((ResourceManager::getSingleton().getUserDataPath() + "run-level-recovery.txt").c_str());
+            out << line.str() << "\n";
+        }
+    }
 
     //! Average and 95th percentile of the values, scaled by factor
     std::string describeTimes(std::vector<double>& values, double factor)
@@ -133,6 +156,7 @@ namespace
             return false;
 
         sExitCode = code;
+        writeRecovery();
         const uint64_t frames = sFrameCount.load();
         if(frames > 0)
             std::cout << "FRAMETIME frames=" << frames << " avg_ms="
@@ -239,6 +263,16 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
     bool firstTurn = !sGameStarted.exchange(true);
     if(firstTurn && (sSeed != 0))
         Random::setSeed(sSeed);
+    // The refresh of this turn is already sent: these are the recovery values the clients received
+    for(Creature* creature : gameMap.getCreatures())
+    {
+        if(creature->getAttackRecoveryTurns() == 0)
+            continue;
+        if(creature->getDefinition()->isWorker())
+            sServerRecoveryWorkers.fetch_add(1);
+        else
+            sServerRecoveryFighters.fetch_add(1);
+    }
     uint32_t criticalCount = LogManager::getSingleton().getCriticalCount();
     if(criticalCount > 0)
     {
@@ -353,4 +387,16 @@ void RunLevelTest::onFrame(double seconds)
 
     std::lock_guard<std::mutex> lock(sTimeMutex);
     sFrameTimes.push_back(seconds);
+}
+
+//! \brief Counts the client recovery display updates that show a clock, separately for workers and fighters.
+void RunLevelTest::onRecoveryFrame(bool worker, uint32_t frame)
+{
+    if(!sActive.load() || !sGameStarted.load() || sFinished.load() || (frame == 0))
+        return;
+
+    if(worker)
+        sClientClockWorkers.fetch_add(1);
+    else
+        sClientClockFighters.fetch_add(1);
 }
