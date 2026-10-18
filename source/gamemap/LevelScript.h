@@ -76,6 +76,7 @@
 //!   Cond    furniture <seatId> <roomName> <op> <count>   # furniture objects (bookcases, beds, ...) in the rooms of that type of the seat
 //!   Cond    breached <seatId>                 # a creature of a seat that is not allied with the seat stands on tiles that the seat has claimed (inside the dungeon)
 //!   Cond    owns <seatId> <creatureName>      # the creature with that name is alive and belongs to the seat
+//!   Cond    held <seatId> <creatureName>      # alive and converted or held captive by this seat; another jailer takes precedence
 //!   Cond    portal <seatId> on | off          # the portals of the seat attract creatures (on) or are switched off (off) by an action portal
 //!   Cond    alive <creatureName> [1 | 0]      # the creature with that name is alive, whatever its seat (0: it is dead or not there)
 //!   Cond    reached <creatureName> region <regionName>   # the living creature with that name stands inside the region (also a creature that carries a portal stone)
@@ -189,6 +190,11 @@ enum class LevelScriptCompare
 //! True if value op reference holds
 bool levelScriptCompare(int64_t value, LevelScriptCompare op, int64_t reference);
 
+//! \brief Tests living conversion or captivity, with the current jailer taking precedence over ownership.
+//! \param prisonSeat Current jailer, or -1 when not captive. Missing owners use -1.
+//! \return True only when alive and effectively held by the requested positive seat.
+bool levelScriptCreatureHeld(int32_t requestedSeat, int32_t creatureSeat, int32_t prisonSeat, bool alive);
+
 //! The text form of the operator (>=, <=, ==, !=, >, <)
 const char* levelScriptCompareToken(LevelScriptCompare op);
 
@@ -249,7 +255,8 @@ enum class LevelScriptConditionType
     carryingStone,
     crossedRegion,
     attackedRegion,
-    shotKilled
+    shotKilled,
+    heldCreature
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.

@@ -557,6 +557,14 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mType = LevelScriptConditionType::seatDefeated;
         return (t.size() == 3) && parseInt32(t[2], cond.mSeatId);
     }
+    if(type == "held")
+    {
+        if(t.size() != 4 || !parseInt32(t[2], cond.mSeatId) || cond.mSeatId < 1)
+            return false;
+        cond.mType = LevelScriptConditionType::heldCreature;
+        cond.mName = t[3];
+        return !cond.mName.empty();
+    }
     if((type == "owns") || (type == "spell"))
     {
         cond.mType = (type == "owns") ? LevelScriptConditionType::ownsCreature : LevelScriptConditionType::spellKnown;
@@ -1028,6 +1036,9 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             os << "event\t" << c.mName << "\t" << c.mName2;
             if((c.mCompare != LevelScriptCompare::atLeast) || (c.mNumber != 1))
                 os << "\t" << levelScriptCompareToken(c.mCompare) << "\t" << c.mNumber;
+            break;
+        case LevelScriptConditionType::heldCreature:
+            os << "held\t" << c.mSeatId << "\t" << c.mName;
             break;
         case LevelScriptConditionType::ownsCreature:
             os << "owns\t" << c.mSeatId << "\t" << c.mName;
@@ -2087,6 +2098,12 @@ void LevelScript::advanceTimers()
         if(timer.second.mRunning)
             ++timer.second.mTurns;
     }
+}
+
+//! \brief Uses the current jailer for captive creatures, otherwise their converted ownership.
+bool levelScriptCreatureHeld(int32_t requestedSeat, int32_t creatureSeat, int32_t prisonSeat, bool alive)
+{
+    return alive && requestedSeat > 0 && (prisonSeat >= 0 ? prisonSeat : creatureSeat) == requestedSeat;
 }
 
 bool levelScriptCompare(int64_t value, LevelScriptCompare op, int64_t reference)

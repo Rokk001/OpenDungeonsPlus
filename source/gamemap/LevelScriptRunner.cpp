@@ -187,7 +187,7 @@ bool areGroundPointsConnected(GameMap& gameMap, const LevelScriptCondition& cond
     return false;
 }
 
-//! \brief Evaluates gameplay conditions and read-only objective presentation predicates.
+//! \brief Evaluates gameplay conditions, living captivity and read-only objective presentation predicates.
 bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScriptCondition& cond)
 {
     switch(cond.mType)
@@ -566,6 +566,16 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
         {
             Player* player = gameMap.getPlayerBySeatId(cond.mSeatId);
             return (player != nullptr) && player->getHasLost();
+        }
+        case LevelScriptConditionType::heldCreature:
+        {
+            Creature* creature = gameMap.getCreature(cond.mName);
+            if(creature == nullptr)
+                return false;
+            Seat* owner = creature->getSeat();
+            Seat* jailer = creature->getSeatPrison();
+            return levelScriptCreatureHeld(cond.mSeatId, owner != nullptr ? owner->getId() : -1,
+                jailer != nullptr ? jailer->getId() : -1, creature->isAlive());
         }
         case LevelScriptConditionType::ownsCreature:
         {

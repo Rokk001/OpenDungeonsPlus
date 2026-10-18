@@ -67,3 +67,13 @@ for guard in ("if(isGolfBall())", "target->isAlive()", "wasAlive && !target->isA
     assert guard in boulder, guard
 assert boulder.index("const bool wasAlive") < boulder.index("entity->takeDamage") < boulder.index('recordEvent(target->getName()')
 assert "mDamage, 0.0, 0.0, tile, false)" in boulder
+
+# Actual living captivity and conversion share one tested predicate; a foreign jailer wins over ownership.
+held = body(read("source/gamemap/LevelScript.cpp"), "bool levelScriptCreatureHeld(")
+assert "alive && requestedSeat > 0" in held
+assert "prisonSeat >= 0 ? prisonSeat : creatureSeat" in held
+held_case = read("source/gamemap/LevelScriptRunner.cpp").split("case LevelScriptConditionType::heldCreature:", 1)[1].split("case LevelScriptConditionType::ownsCreature:", 1)[0]
+for guard in ("if(creature == nullptr)", "creature->getSeat()", "creature->getSeatPrison()", "creature->isAlive()", "levelScriptCreatureHeld(cond.mSeatId"):
+    assert guard in held_case, guard
+assert 'os << "held\\t"' in read("source/gamemap/LevelScript.cpp")
+assert "BOOST_AUTO_TEST_CASE(living_captive_or_converted_condition)" in read("source/tests/test_LevelScript.cpp")

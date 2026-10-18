@@ -1583,3 +1583,37 @@ BOOST_AUTO_TEST_CASE(boulder_death_event_round_trip)
     BOOST_CHECK_EQUAL(restored.getEventCount("Pin1", "boulderkilled:1"), 1);
     BOOST_CHECK_EQUAL(restored.getEventCount("Pin2", "boulderkilled:1"), 0);
 }
+
+//! \brief Captivity and conversion both count, but death or another jailer cannot satisfy held goals.
+BOOST_AUTO_TEST_CASE(living_captive_or_converted_condition)
+{
+    BOOST_CHECK(levelScriptCreatureHeld(1, 2, 1, true));
+    BOOST_CHECK(levelScriptCreatureHeld(1, 1, -1, true));
+    BOOST_CHECK(levelScriptCreatureHeld(1, 1, 1, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 2, -1, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 1, 2, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 2, 1, false));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 1, -1, false));
+    BOOST_CHECK(!levelScriptCreatureHeld(0, 0, -1, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, -1, -1, true));
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName captive\nMode repeat 0\n"
+        "Cond held 1 FalconerEdda\nAction message 1 captive\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::heldCreature);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mConditions[0].mSeatId, 1);
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mConditions[0].mName, "FalconerEdda");
+    BOOST_CHECK(restored.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::heldCreature);
+    for(const std::string condition : {"Cond held", "Cond held 1", "Cond held 0 Edda", "Cond held -1 Edda", "Cond held 1 Edda extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + condition +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
