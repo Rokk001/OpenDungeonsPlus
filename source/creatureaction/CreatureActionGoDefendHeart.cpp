@@ -24,6 +24,7 @@
 #include "gamemap/GameMap.h"
 #include "gamemap/RoomObjectNavigation.h"
 #include "utils/LogManager.h"
+#include "utils/Helper.h"
 #include "utils/MakeUnique.h"
 
 #include <functional>
@@ -31,14 +32,15 @@
 #include <list>
 #include <vector>
 
+//! \brief Binds the existing defence action and its transient assigned standing tile.
 std::function<bool()> CreatureActionGoDefendHeart::action()
 {
     return std::bind(&CreatureActionGoDefendHeart::handleDefendHeart,
-        std::ref(mCreature));
+        std::ref(mCreature), this);
 }
 
 //! \brief Gathers runners beside the defence point without replacing combat or sharing occupied body space.
-bool CreatureActionGoDefendHeart::handleDefendHeart(Creature& creature)
+bool CreatureActionGoDefendHeart::handleDefendHeart(Creature& creature, CreatureActionGoDefendHeart* action)
 {
     Seat* seat = creature.getSeat();
     if(seat == nullptr || !seat->getHeartDefenceActive())
@@ -63,20 +65,33 @@ bool CreatureActionGoDefendHeart::handleDefendHeart(Creature& creature)
         return false;
     }
 
+    if(action->mTargetTile != targetTile)
+    {
+        action->mTargetTile = targetTile;
+        action->mStandingTile = nullptr;
+    }
     if(creature.isMoving())
         return false; // still walking; check again next turn
 
-    if(std::abs(myTile->getX() - targetTile->getX()) <= 1 &&
-        std::abs(myTile->getY() - targetTile->getY()) <= 1)
+    if(myTile == action->mStandingTile ||
+        (std::abs(myTile->getX() - targetTile->getX()) <= 1 &&
+         std::abs(myTile->getY() - targetTile->getY()) <= 1))
     {
         const Ogre::Vector2 position(creature.getPosition().x, creature.getPosition().y);
         std::vector<Ogre::Vector2> standing{position};
         if(!RoomObjectNavigation::separate(creature, standing))
         {
-            standing = {targetTile->getPosition2d()};
-            if(!RoomObjectNavigation::separate(creature, standing, true))
+            const std::list<Tile*> tiles = creature.getGameMap()->path(&creature, targetTile);
+            if(tiles.empty())
+                return false;
+            standing.clear();
+            creature.tileToVector2(tiles, standing, true, 0.0f);
+            standing.push_back(targetTile->getPosition2d());
+            RoomObjectNavigation::refine(creature, standing);
+            if(standing.empty() || !RoomObjectNavigation::separate(creature, standing, true))
                 return false;
         }
+        action->mStandingTile = creature.getGameMap()->getTile(Helper::round(standing.back().x), Helper::round(standing.back().y));
         if(standing.back() == position)
             return false; // hold the spaced defence point; the action stays in the queue
         creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, standing, false, true);

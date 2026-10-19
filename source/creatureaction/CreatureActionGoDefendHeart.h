@@ -21,10 +21,12 @@
 #include "creatureaction/CreatureAction.h"
 
 class Creature;
+class Tile;
 
 //! \brief While the seat's heart defence is on, the runner moves to the defence
 //! point: the seat's nearest fighter, or the heart while it is damaged. When the
 //! defence is over, the action pops and the creature returns to normal work.
+//! The current target and spaced standing tile are transient state of this action only.
 class CreatureActionGoDefendHeart : public CreatureAction
 {
 public:
@@ -38,10 +40,15 @@ public:
     CreatureActionType getType() const override
     { return CreatureActionType::goDefendHeart; }
 
+    //! \brief Binds the runner and this action's transient standing assignment.
     std::function<bool()> action() override;
 
     //! \brief Holds a body-spaced position at or beside the current defence point.
-    static bool handleDefendHeart(Creature& creature);
+    static bool handleDefendHeart(Creature& creature, CreatureActionGoDefendHeart* action);
+
+private:
+    Tile* mTargetTile = nullptr;
+    Tile* mStandingTile = nullptr;
 };
 
 #endif // CREATUREACTIONGODEFENDHEART_H

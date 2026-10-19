@@ -23,7 +23,7 @@ std::vector<RoomObjectPath::Obstacle> bodyObstacles(Creature& creature,
 // false if there is none in the tile.
 bool standingPosition(const std::vector<RoomObjectPath::Obstacle>& obstacles,
     const Ogre::Vector2& wanted, Ogre::Vector2& result);
-//! rief Spaces a server destination; adjacent permits neighbouring tiles and room optionally retains a free room stance.
+//! \brief Spaces a server destination; adjacent expands reachable tile rings, optionally restricted to the supplied room.
 bool separate(Creature& creature, std::vector<Ogre::Vector2>& path, bool adjacent = false, const Room* room = nullptr);
 // Searches a route to a point from which the creature can reach the food without
 // furniture in between. The last point of the path is the position to eat at.

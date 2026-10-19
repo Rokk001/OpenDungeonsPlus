@@ -72,6 +72,14 @@ heart = body(read("source/creatureaction/CreatureActionGoDefendHeart.cpp"),
 assert "std::abs(myTile->getX() - targetTile->getX()) <= 1" in heart
 assert "std::abs(myTile->getY() - targetTile->getY()) <= 1" in heart
 assert "if(standing.back() == position)" in heart and "standing, false, true);" in heart
+assert "if(action->mTargetTile != targetTile)" in heart and "action->mStandingTile = nullptr;" in heart
+assert "myTile == action->mStandingTile" in heart and "action->mStandingTile = creature.getGameMap()->getTile(" in heart
+assert "ring <= lastRing" in separate
+assert separate.index("interactionPositionClear(creature, wanted, heading)") < separate.index("if(adjacent)")
+assert "(room == nullptr || wantedTile->getCoveringRoom() == room)" in separate
+assert "map.getMapSizeX() - 1 - centerX" in separate and "map.getMapSizeY() - 1 - centerY" in separate
+assert separate.index("if(!separate(creature, probe, false, room))") < separate.index("const std::list<Tile*> tiles = map.path(&creature, tile);")
+assert "if(tiles.empty())" in separate and "nearestPath.empty()" in separate
 assert "setPosition(" not in separate and "setPosition(" not in heart
 combat = body(creature, "bool Creature::searchBestTargetInList(")
 assert "const bool inRange = rangeTarget <= (skillRangeMax * skillRangeMax);" in combat
@@ -193,4 +201,68 @@ assert attack_position(True, False, [("crowded", 0, False), ("free adjacent in r
 assert attack_position(True, False, [("crowded", 0, False)]) == "current"
 assert attack_position(True, True, [("free adjacent in range", 5, True)]) == "current"
 assert attack_position(False, False, [("crowded", 0, False), ("free legal", 5, True), ("crowded", -1, False)]) == "free legal"
+
+
+# Exercise the production ring bound/order over finite floor/room/reachability fixtures.
+def spread(width, height, origin, own, peers, floor=None, room=None):
+    floor = set(itertools.product(range(width), range(height))) if floor is None else floor
+    reachable, pending = {origin}, [origin]
+    while pending:
+        x, y = pending.pop()
+        for tile in ((x-1, y), (x+1, y), (x, y-1), (x, y+1)):
+            if tile in floor and tile not in reachable:
+                reachable.add(tile)
+                pending.append(tile)
+    bounds = re.search(r"lastRing = std::max\(\{(.*?)\}\);", separate, re.S)[1]
+    bounds = bounds.replace("map.getMapSizeX()", "width").replace("map.getMapSizeY()", "height")
+    values = {"centerX": origin[0], "centerY": origin[1], "width": width, "height": height}
+    last_ring = max(eval(value.strip(), {"__builtins__": {}}, values) for value in bounds.split(','))
+    best, distance, visited, paths = None, math.inf, 0, 0
+    for ring in range(last_ring+1):
+        for dy, dx in itertools.product(range(-ring, ring+1), repeat=2):
+            if max(abs(dx), abs(dy)) != ring:
+                continue
+            tile = (origin[0]+dx, origin[1]+dy)
+            if tile not in floor or (room is not None and tile not in room):
+                continue
+            visited += 1
+            shifted = [((pos[0]-tile[0], pos[1]-tile[1]), peer) for pos, peer in peers]
+            point = choose(own, shifted)
+            if point is None:
+                continue
+            paths += 1
+            if tile not in reachable:
+                continue
+            point = (point[0]+tile[0], point[1]+tile[1])
+            current = (point[0]-origin[0])**2+(point[1]-origin[1])**2
+            if current < distance:
+                best, distance = point, current
+        if distance <= (ring+.5)**2:
+            break
+    return best, visited, paths
+
+
+large = tuple(float(v) for v in next(m for m in models if m[0] == "LavaSpawn.mesh")[2:])
+origin = (3, 3)
+crowd = [((3.+x, 3.+y), large) for x, y in itertools.product(range(-1, 2), repeat=2)]
+old_local = [((pos[0]-3, pos[1]-3), peer) for pos, peer in crowd]
+assert choose(humanoid, old_local, 1) is None, "Reproduce the old premature 3x3 crowded fallback"
+free, count, paths = spread(7, 7, origin, humanoid, crowd)
+assert free is not None and max(abs(free[0]-3), abs(free[1]-3)) > 1.5 and count < 49 and paths > 0
+full = [((float(x), float(y)), large) for x, y in itertools.product(range(7), repeat=2)]
+assert spread(7, 7, origin, humanoid, full) == (None, 49, 0), "Full floor terminates without path searches for occupied tiles"
+assert spread(7, 7, origin, humanoid, crowd, room={origin, (4, 3)})[0] is None
+assert spread(7, 7, origin, humanoid, [(origin, large)], floor={origin, (6, 6)})[0] is None
+# A remote assigned defence stand stays valid, a changed target invalidates it, and occupied stands are rechecked.
+assert "std::vector<Ogre::Vector2> standing{position};" in heart
+assert "if(!RoomObjectNavigation::separate(creature, standing))" in heart
+hold = re.search(r"if\((myTile == action->mStandingTile.*?)\)\s*\{", heart, re.S)[1]
+hold = hold.replace("action->mStandingTile", "assigned").replace("||", " or ").replace("&&", " and ")
+hold = hold.replace("std::abs", "abs").replace("myTile->getX()", "x").replace("myTile->getY()", "y")
+hold = hold.replace("targetTile->getX()", "target_x").replace("targetTile->getY()", "target_y")
+hold = " ".join(hold.split())
+values = {"myTile": (5, 3), "assigned": (5, 3), "x": 5, "y": 3, "target_x": 3, "target_y": 3, "abs": abs}
+assert eval(hold, {"__builtins__": {}}, values)
+values["assigned"] = None
+assert not eval(hold, {"__builtins__": {}}, values)
 print("Spacing: measured pair extents, 10-body gathering, sub-grid tangency, exhausted-space fallback and server/action contracts PASS")
