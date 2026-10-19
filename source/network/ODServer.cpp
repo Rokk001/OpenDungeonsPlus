@@ -3190,6 +3190,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askCasinoPayout:
         {
             Player* player = clientSocket->getPlayer();
+            if(player == nullptr)
+                break;
+
             int xx;
             int yy;
             uint32_t level;
