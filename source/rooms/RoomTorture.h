@@ -58,6 +58,7 @@ public:
     bool addCreatureUsingRoom(Creature* creature) override;
     void removeCreatureUsingRoom(Creature* creature) override;
     void absorbRoom(Room* room) override;
+    //! \brief Uses the torture station and announces a converted class only on its first arrival.
     bool useRoom(Creature& creature, bool forced) override;
 
     bool isInContainment(Creature& creature) override;

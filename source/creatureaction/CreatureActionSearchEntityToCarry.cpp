@@ -20,6 +20,8 @@
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "entities/Building.h"
 #include "entities/Creature.h"
+#include "entities/MissileStone.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -47,6 +49,7 @@ std::function<bool()> CreatureActionSearchEntityToCarry::action()
         std::ref(mCreature), mForced);
 }
 
+//! \brief Finds reachable ordinary transports and exact configured mission destinations without changing other cargo.
 bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& creature, bool forced)
 {
     Tile* myTile = creature.getPositionTile();
@@ -75,11 +78,21 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
         if(forced && (myTile != carryableEntTile))
             continue;
 
+        std::vector<Tile*> missionDestinations;
+        if(entity->getObjectType() == GameEntityType::missileObject &&
+           static_cast<MissileObject*>(entity)->getMissileType() == MissileObjectType::stone)
+        {
+            Tile* destination = static_cast<MissileStone*>(entity)->getDeliveryTile(creature);
+            if(destination == nullptr || !creature.getGameMap()->pathExists(&creature, myTile, destination))
+                continue;
+            missionDestinations.push_back(destination);
+        }
+
         // We check if the current entity is highest or equal to the older one (if any)
         if(entity->getEntityCarryType(&creature) > highestPriority)
         {
             // We check if a buildings wants this entity
-            std::vector<Tile*> tilesDest;
+            std::vector<Tile*> tilesDest = missionDestinations;
             for(Building* building : buildings)
             {
                 if(building->hasCarryEntitySpot(entity))
@@ -106,7 +119,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
         else if(entity->getEntityCarryType(&creature) == highestPriority)
         {
             // We check if a buildings wants this entity
-            std::vector<Tile*> tilesDest;
+            std::vector<Tile*> tilesDest = missionDestinations;
             for(Building* building : buildings)
             {
                 if(building->hasCarryEntitySpot(entity))

@@ -1749,16 +1749,16 @@ Action	setflag	postBAlarm	1
 Name	vaultFound
 Mode	once
 Cond	region	1	SealedVault
-Action	message	1	This chamber was closed off long ago. A smooth grey stone hums in the dust, and a stray goblin has picked it up. Bring it to your dungeon heart.
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
 Action	spawn	1	66	50	1	Goblin:1@VaultBearer
-Action	stoneattach	VaultBearer
+Action	stonecreate	65	50	vault-stone	1	9	46
 Action	setflag	vaultStone	1
 Action	timer	vaultSpawn	0
 [/Trigger]
 [Trigger]
 Name	vaultStoneHome
 Mode	once
-Cond	reached	VaultBearer	heart	1
+Cond	deliveredstone	vault-stone
 Action	message	1	The stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/BoulderCourse.level
 [/Trigger]
@@ -1768,9 +1768,8 @@ Mode	repeat	60
 Cond	flag	vaultStone	1
 Cond	timer	vaultSpawn	>=	5
 Cond	alive	VaultBearer	0
-Action	message	1	The stone-bearer has fallen. Another goblin has taken the stone in the vault.
+Action	message	1	Another goblin emerges. Send a worker for the stone.
 Action	spawn	1	66	50	1	Goblin:1@VaultBearer
-Action	stoneattach	VaultBearer
 [/Trigger]
 [Trigger]
 Name	firstShift
@@ -1831,6 +1830,73 @@ Cond	possessed	1	Seams
 Action	message	1	Through your creature's eyes the seams lie open, and a miners' cache falls to you.
 Action	gold	1	400
 Action	objectivestate	1	tinmoor-o05	reached
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	tinmoor-main-heart	Protect your heart.
+Action	mainobjectiveid	1	tinmoor-main-seams	Mine 900 gold; scout the seams in possession.
+Action	mainobjectiveid	1	tinmoor-main-posts	Clear both watch posts and reinforcements.
+Action	mainobjectiveid	1	tinmoor-main-warden	Defeat Merrin Tay, all foes and portals.
+Action	optionalobjectiveid	1	tinmoor-extra-gold	Mine 1500 gold.
+[/Trigger]
+[Trigger]
+Name	mainStoneList
+Mode	once
+Cond	trigger	vaultFound
+Action	conditionalobjectiveid	1	tinmoor-main-stone	If found, bring the vault stone home.
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	tinmoor-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainSeams
+Mode	repeat	0
+Cond	mined	1	>=	900
+Cond	trigger	scoutSeams
+Action	objectivestate	1	tinmoor-main-seams	reached
+[/Trigger]
+[Trigger]
+Name	mainPosts
+Mode	repeat	0
+Cond	event	PostAWatch1	killed
+Cond	event	PostAWatch2	killed
+Cond	spawncleared	postAEntered	1
+Cond	event	PostBWatch1	killed
+Cond	event	PostBWatch2	killed
+Cond	spawncleared	postBEntered	1
+Action	objectivestate	1	tinmoor-main-posts	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	event	MerrinTay	killed
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	tinmoor-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	mainStone
+Mode	repeat	0
+Cond	trigger	vaultFound
+Cond	trigger	vaultStoneHome
+Action	objectivestate	1	tinmoor-main-stone	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	1500
+Action	objectivestate	1	tinmoor-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	tinmoor-main-heart	failed
 [/Trigger]
 
 [/Triggers]

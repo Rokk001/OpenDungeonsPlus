@@ -29,6 +29,8 @@ class CreatureActionCarryEntity : public CreatureAction, public GameEntityListen
 {
 public:
     CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest);
+    //! \brief Carries a mission item visibly to its exact script destination without inventing a building.
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest);
 
     virtual ~CreatureActionCarryEntity();
 
@@ -43,6 +45,7 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
+    //! \brief Walks cargo to its destination and records mission delivery only on successful arrival.
     static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
 
     //! \brief True if the entity is not carried but pulled over the ground: a living creature of the seat of the

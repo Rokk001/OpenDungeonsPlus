@@ -25,6 +25,7 @@ namespace LevelScriptRunner
 {
     //! \brief Checks the triggers of the game map level script and runs the actions of
     //! the ones whose conditions are met. Server side only, called once per turn.
+    //! \brief Retries original victories after all objective observers have updated.
     void doTurn(GameMap& gameMap);
 
     //! \brief Carries out the standing order that a script action gave to the creature (go to
@@ -35,6 +36,9 @@ namespace LevelScriptRunner
     //! \brief Campaign: the creature that the kept minion special of the last level won brought along
     //! comes to the dungeon temple of the first human keeper. Called once when the game starts.
     void spawnKeptMinion(GameMap& gameMap);
+
+    //! \brief Leaves a carried portal stone on the creature's current tile before pickup; server side only.
+    void dropCarriedStone(Creature& creature);
 }
 
 #endif // LEVELSCRIPTRUNNER_H

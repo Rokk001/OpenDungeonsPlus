@@ -94,6 +94,8 @@ struct Seat
     struct CompletedGoal { std::string getName() const { return std::string(); } };
     unsigned int numCompletedGoals() const { return 0; }
     CompletedGoal* getCompletedGoal(unsigned int) { return nullptr; }
+    // Seat identity for the observed combat history.
+    int getId() const { return mId; }
     int getTeamId() const { return mTeamId; }
     const std::string& getFaction() const { return mFaction; }
     bool isAlliedSeat(const Seat* seat) const { return getTeamId() == seat->getTeamId(); }
@@ -108,13 +110,17 @@ struct Seat
 KILL_METHOD
 enum class RoomType { arena, other };
 enum class RelationshipEvent { arenaLoss };
-enum class GameEntityType { creature, other };
+enum class GameEntityType { creature, other, missileObject };
 struct Room
 {
     RoomType getType() const { return RoomType::other; }
 };
 struct Tile
 {
+    // Coordinates for the observed impact; this statistics probe supplies no tile.
+    int getX() const { return 0; }
+    // Coordinates for the observed impact; this statistics probe supplies no tile.
+    int getY() const { return 0; }
     Room* getCoveringRoom() { return nullptr; }
 };
 struct RelationshipSettings
@@ -126,8 +132,22 @@ struct CreatureRelationships
     const RelationshipSettings& getSettings() const { return mSettings; }
     RelationshipSettings mSettings;
 };
+// Observe-only script API; this probe deliberately runs the non-server damage path.
+struct LevelScript
+{
+    // No campaign shot objectives in this statistics fixture.
+    bool hasShotObservers() const { return false; }
+    // Regional observations are outside the statistics contract.
+    void observeRegionAttack(int, int, int, int) {}
+    // Fatal-shot observations are outside the statistics contract.
+    void observeFatalShot(const std::string&, int) {}
+    // Event observations are outside the statistics contract.
+    void recordEvent(const std::string&, const std::string&) {}
+};
 struct GameMap
 {
+    // Exposes the observation API without changing the fixture's damage behavior.
+    LevelScript& getLevelScript() { static LevelScript script; return script; }
     bool isRelationshipsEnabled() const { return false; }
     int64_t getTurnNumber() const { return 0; }
     CreatureRelationships* getCreatureRelationships() { return nullptr; }
@@ -140,6 +160,14 @@ struct GameEntity
     Seat* getSeat() { return mSeat; }
     std::string getName() { return "entity"; }
     Seat* mSeat;
+};
+// Unknown projectile provenance cannot invent creature-shot statistics.
+struct MissileObject : GameEntity
+{
+    // Legacy/unknown origin in this fixture.
+    bool isCreatureShot() const { return false; }
+    // No possessed shot in this fixture.
+    bool isPossessedShot() const { return false; }
 };
 struct CreatureDefinition
 {

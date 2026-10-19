@@ -50,6 +50,7 @@ public:
     void doUpkeep() override;
 
     //! \brief Creates a new creature whose class is probabalistic and adds it to the game map at the center of the portal.
+    //! \brief Spawns an eligible fighter and announces its first actual class arrival.
     void spawnCreature();
 
     virtual bool displayTileMesh() const override

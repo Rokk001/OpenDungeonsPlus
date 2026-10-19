@@ -114,6 +114,7 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
             targetName = attackedObject->getName();
         missile->setShooter(creature->getName(), targetName);
     }
+    missile->setCreatureShot(creature->isPossessed());
     missile->addToGameMap();
     missile->createMesh();
     missile->setPosition(position);

@@ -210,6 +210,7 @@ private:
     bool findBestDiggablePath(Tile* tileStart, Tile* tileDest, Creature* creature, std::vector<Tile*>& tiles);
 
     //! \brief Spawns a wave
+    //! Announces a class only on its first successful arrival for a human owner.
     void spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t maxCreaturesToSpawn,
         std::vector<std::string>* spawnedNames = nullptr);
 

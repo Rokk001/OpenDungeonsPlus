@@ -36,6 +36,7 @@ public:
 
     void absorbRoom(Room *r) override;
 
+    //! \brief Processes corpses and announces only the first successful arrival of each raised class.
     void doUpkeep() override;
 
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;

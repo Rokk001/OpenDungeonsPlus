@@ -6071,14 +6071,12 @@ Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
 Cond	creatures	4	<=	0
 Cond	creatures	5	<=	0
-Action	message	1	The last keeper is dead and the thorns are quiet. Thornreach is yours.
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	keepersGoneGoal
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The last keeper is dead and the thorns are quiet. Thornreach is yours.
 Action	objectivestate	1	thornreach-o01	reached
 Action	win	1
 [/Trigger]
@@ -6098,4 +6096,74 @@ Action	message	1	The hedge keepers have cut every old oath. The north-west keepe
 Action	alliance	2	3	make
 [/Trigger]
 
+
+Region	ThornMaze	26	5	80	68
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	thornreach-main-heart	Protect your heart.
+Action	mainobjectiveid	1	thornreach-main-maze	Claim the clearing and cross the hedge maze.
+Action	mainobjectiveid	1	thornreach-main-keepers	Destroy all rival hearts and enemy forces.
+Action	optionalobjectiveid	1	thornreach-extra-gold	Mine 2000 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	thornreach-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	thornreach-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainMaze
+Mode	repeat	0
+Cond	crossed	1	ThornMaze	east
+Cond	groundclaimed	1	47	30	57	30
+Cond	groundclaimed	1	47	31	48	31
+Cond	groundclaimed	1	50	31	54	31
+Cond	groundclaimed	1	56	31	57	31
+Cond	groundclaimed	1	47	32	57	32
+Cond	groundclaimed	1	47	33	57	33
+Cond	groundclaimed	1	47	34	57	34
+Cond	groundclaimed	1	47	35	58	35
+Cond	groundclaimed	1	47	36	50	36
+Cond	groundclaimed	1	54	36	58	36
+Cond	groundclaimed	1	47	37	57	37
+Cond	groundclaimed	1	47	38	58	38
+Cond	groundclaimed	1	47	39	58	39
+Cond	groundclaimed	1	49	40	57	40
+Cond	groundclaimed	1	46	41	57	41
+Cond	groundclaimed	1	46	42	57	42
+Action	objectivestate	1	thornreach-main-maze	reached
+[/Trigger]
+[Trigger]
+Name	mainKeepers
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	roomtiles	3	DungeonTemple	<=	0
+Cond	roomtiles	4	DungeonTemple	<=	0
+Cond	roomtiles	5	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	thornreach-main-keepers	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	2000
+Action	objectivestate	1	thornreach-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	thornreach-main-heart	reached
+Cond	objective	1	thornreach-main-maze	reached
+Cond	objective	1	thornreach-main-keepers	reached
+Action	message	1	The last keeper is dead and the thorns are quiet. Thornreach is yours.
+Action	win	1
+[/Trigger]
 [/Triggers]

@@ -1185,3 +1185,646 @@ BOOST_AUTO_TEST_CASE(test_story_conditions)
         BOOST_CHECK_MESSAGE(!bad.importFromStream(isBad), entry);
     }
 }
+
+//! \brief Required goals gate victory; optional goals and undiscovered conditional goals do not.
+BOOST_AUTO_TEST_CASE(required_objectives_and_pending_victory_round_trip)
+{
+    LevelScript script;
+    std::istringstream input(
+        "[Trigger]\nName intro\nMode once\nCond time 0\n"
+        "Action mainobjectiveid 1 main Secure the village.\n"
+        "Action optionalobjectiveid 1 extra Explore the gallery.\n"
+        "Action mainobjectiveid 2 other Secure the fortress.\n"
+        "Action objectiveid 1 legacy An old description.\n[/Trigger]\n"
+        "[Trigger]\nName discovery\nMode once\nCond time 0\n"
+        "Action conditionalobjectiveid 1 carrier Bring the stone home.\n"
+        "[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    BOOST_CHECK(!script.areMainObjectivesReached(2));
+    BOOST_CHECK(script.areMainObjectivesReached(3));
+    script.setObjectiveState(1, "main", LevelScriptObjectiveState::reached);
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "extra", LevelScriptObjectiveState::failed);
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    script.getTriggers()[1].mTimesFired = 1;
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "carrier", LevelScriptObjectiveState::failed);
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "carrier", LevelScriptObjectiveState::reached);
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    script.setObjectiveState(1, "main", LevelScriptObjectiveState::failed);
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+    script.requestVictory(1);
+    script.requestVictory(1);
+    BOOST_CHECK(script.hasVictoryRequest(1));
+    BOOST_CHECK(!script.hasVictoryRequest(2));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    BOOST_CHECK(saved.str().find("VictoryRequest\t1\n") != std::string::npos);
+    BOOST_CHECK(saved.str().find("mainobjectiveid\t1\tmain") != std::string::npos);
+    BOOST_CHECK(saved.str().find("optionalobjectiveid\t1\textra") != std::string::npos);
+    BOOST_CHECK(saved.str().find("conditionalobjectiveid\t1\tcarrier") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(restored.hasVictoryRequest(1));
+    BOOST_CHECK(!restored.areMainObjectivesReached(1));
+    restored.setObjectiveState(1, "main", LevelScriptObjectiveState::reached);
+    BOOST_CHECK(restored.areMainObjectivesReached(1));
+    restored.clear();
+    BOOST_CHECK(!restored.hasVictoryRequest(1));
+    BOOST_CHECK(restored.isEmpty());
+}
+
+//! \brief Legacy objective descriptions do not acquire a new victory requirement.
+BOOST_AUTO_TEST_CASE(legacy_objectives_keep_their_original_victory_rules)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName old\nMode once\nCond time 0\nAction objectiveid 1 old Open a path.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.areMainObjectivesReached(1));
+    BOOST_CHECK(!script.hasVictoryRequest(1));
+    BOOST_CHECK(script.getTriggers()[0].mActions[0].mObjectiveGroup == LevelScriptObjectiveGroup::legacy);
+}
+
+//! \brief Main goals must be reaffirmed by current observers; optional completion and real failure persist.
+BOOST_AUTO_TEST_CASE(main_goal_refresh_does_not_keep_obsolete_success)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName setup\nMode once\nCond time 0\n"
+        "Action mainobjectiveid 1 control Hold the fortress.\n"
+        "Action mainobjectiveid 1 deadline Reach the camp in time.\n"
+        "Action optionalobjectiveid 1 explore Explore the gallery.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    script.setObjectiveState(1, "control", LevelScriptObjectiveState::reached);
+    script.setObjectiveState(1, "deadline", LevelScriptObjectiveState::failed);
+    script.setObjectiveState(1, "explore", LevelScriptObjectiveState::reached);
+    script.refreshMainObjectives(1);
+    BOOST_CHECK(script.getObjectiveState(1, "control") == LevelScriptObjectiveState::open);
+    BOOST_CHECK(script.getObjectiveState(1, "deadline") == LevelScriptObjectiveState::failed);
+    BOOST_CHECK(script.getObjectiveState(1, "explore") == LevelScriptObjectiveState::reached);
+    BOOST_CHECK(!script.areMainObjectivesReached(1));
+}
+
+//! \brief Only explicit main goals opt a seat into end-of-turn victory evaluation.
+BOOST_AUTO_TEST_CASE(main_goal_model_detection_is_scoped_to_the_target_seat)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName setup\nMode once\nCond time 0\n"
+        "Action mainobjectiveid 1 keep Hold the keep.\n"
+        "Action optionalobjectiveid 2 scout Explore the gallery.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.hasMainObjectives(1));
+    BOOST_CHECK(!script.hasMainObjectives(2));
+    BOOST_CHECK(!script.hasMainObjectives(3));
+}
+
+//! \brief Fixed natural-floor ownership and fighter-only assembly survive script save/load.
+BOOST_AUTO_TEST_CASE(natural_floor_and_fighter_assembly_conditions_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("Region Grove 8 22 21 31\n[Trigger]\nName claim\nMode repeat 0\n"
+        "Cond groundclaimed 1 44 5 48 5\nCond region 1 Grove >= 2 @fighters\n"
+        "Action mainobjectiveid 1 keep Claim the keep.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    const std::vector<LevelScriptCondition>& conditions = script.getTriggers()[0].mConditions;
+    BOOST_CHECK(conditions[0].mType == LevelScriptConditionType::groundFootprintClaimed);
+    BOOST_CHECK_EQUAL(conditions[0].mX1, 44);
+    BOOST_CHECK_EQUAL(conditions[0].mX2, 48);
+    BOOST_CHECK_EQUAL(conditions[1].mName2, "@fighters");
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    std::ostringstream again;
+    restored.exportToStream(again);
+    BOOST_CHECK_EQUAL(saved.str(), again.str());
+    for(const std::string bad : {"Cond groundclaimed 1 -1 5 48 5", "Cond groundclaimed 1 44 5 48"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + bad + "\nAction message 1 x\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Saves retain the attached stone and its drop tile while accepting older carrier-only records.
+BOOST_AUTO_TEST_CASE(carried_stone_condition_and_state_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName home\nMode once\n"
+        "Cond carryingstone VaultBearer\nCond owns 1 VaultBearer\nCond reached VaultBearer heart 1\n"
+        "Action message 1 home\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::carryingStone);
+    BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[0].mName, "VaultBearer");
+    script.addStoneCarrier("VaultBearer");
+    script.setStoneCarrierTile("VaultBearer", 66, 50);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(restored.getStoneCarriers().count("VaultBearer") == 1);
+    int32_t x;
+    int32_t y;
+    BOOST_REQUIRE(restored.getStoneCarrierTile("VaultBearer", x, y));
+    BOOST_CHECK_EQUAL(x, 66);
+    BOOST_CHECK_EQUAL(y, 50);
+    restored.removeStoneCarrier("VaultBearer");
+    BOOST_CHECK(restored.getStoneCarriers().empty());
+    BOOST_CHECK(!restored.getStoneCarrierTile("VaultBearer", x, y));
+    LevelScript legacy;
+    std::istringstream oldSave("Stone VaultBearer\n[/Triggers]\n");
+    BOOST_REQUIRE(legacy.importFromStream(oldSave));
+    BOOST_CHECK_EQUAL(legacy.getStoneCarriers().count("VaultBearer"), 1);
+    BOOST_CHECK(!legacy.getStoneCarrierTile("VaultBearer", x, y));
+    for(const std::string record : {"Stone VaultBearer 66", "Stone VaultBearer x 50",
+        "Stone VaultBearer 66 -1", "Stone VaultBearer -1 50", "Stone VaultBearer 2147483648 50",
+        "Stone VaultBearer 66 50 extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed(record + "\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+    for(const std::string condition : {"Cond carryingstone", "Cond carryingstone VaultBearer extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + condition + "\nAction message 1 x\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Crossings require one actual ordered path, survive saves and reject unrelated visitors.
+BOOST_AUTO_TEST_CASE(actual_crossing_progress_and_save_round_trip)
+{
+    const std::string text = "Region Bridge 11 43 13 46\n[Trigger]\nName crossing\nMode once\n"
+        "Cond crossed 1 Bridge north\nAction message 1 crossed\n[/Trigger]\n[/Triggers]\n";
+    LevelScript script;
+    std::istringstream input(text);
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.hasCrossingObservers());
+    script.observeCrossingStep("WalkerA", 1, 12, 47, 12, 46);
+    script.observeCrossingStep("WalkerA", 1, 12, 46, 12, 45);
+    script.observeCrossingStep("WalkerB", 1, 12, 44, 12, 43);
+    script.observeCrossingStep("WalkerB", 1, 12, 43, 12, 42);
+    BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", "north", ""));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    BOOST_CHECK(saved.str().find("CrossingProgress\t1\tWalkerA\tBridge\tnorth\t-\t12\t45") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    restored.observeCrossingStep("WalkerA", 1, 12, 45, 12, 44);
+    restored.observeCrossingStep("WalkerA", 1, 12, 44, 12, 43);
+    restored.observeCrossingStep("WalkerA", 1, 12, 43, 12, 42);
+    BOOST_CHECK(restored.wasRegionCrossed(1, "Bridge", "north", ""));
+    BOOST_CHECK(!restored.wasRegionCrossed(2, "Bridge", "north", ""));
+    std::ostringstream complete;
+    restored.exportToStream(complete);
+    LevelScript completed;
+    std::istringstream done(complete.str().substr(complete.str().find('\n') + 1));
+    BOOST_REQUIRE(completed.importFromStream(done));
+    BOOST_CHECK(completed.wasRegionCrossed(1, "Bridge", "north", ""));
+    LevelScript reset;
+    std::istringstream clean(text);
+    BOOST_REQUIRE(reset.importFromStream(clean));
+    reset.observeCrossingStep("WalkerA", 1, 12, 47, 12, 46);
+    reset.clearCreatureCrossings("WalkerA");
+    reset.observeCrossingStep("WalkerA", 1, 12, 46, 12, 45);
+    reset.observeCrossingStep("WalkerA", 1, 12, 45, 12, 44);
+    reset.observeCrossingStep("WalkerA", 1, 12, 44, 12, 43);
+    reset.observeCrossingStep("WalkerA", 1, 12, 43, 12, 42);
+    BOOST_CHECK(!reset.wasRegionCrossed(1, "Bridge", "north", ""));
+}
+
+//! \brief A crossing made before its prerequisite, by another seat, sideways or by a jump is not success.
+BOOST_AUTO_TEST_CASE(crossing_order_and_negative_paths)
+{
+    LevelScript script;
+    std::istringstream input("Region Bridge 11 43 13 46\n[Trigger]\nName shelfHeld\nMode once\nCond time 0\n"
+        "Action message 1 held\n[/Trigger]\n[Trigger]\nName crossing\nMode once\n"
+        "Cond crossed 1 Bridge north after shelfHeld\nCond crossed 1 Bridge north after shelfHeld\n"
+        "Action message 1 crossed\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    for(int y = 47; y > 42; --y)
+        script.observeCrossingStep("Walker", 1, 12, y, 12, y - 1);
+    BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", "north", "shelfHeld"));
+    script.getTriggers()[0].mTimesFired = 1;
+    script.observeCrossingStep("Walker", 1, 12, 47, 12, 42);
+    script.observeCrossingStep("Walker", 1, 10, 45, 11, 45);
+    script.observeCrossingStep("Walker", 1, 11, 45, 11, 44);
+    script.observeCrossingStep("Walker", 1, 11, 44, 11, 43);
+    script.observeCrossingStep("Walker", 1, 11, 43, 11, 42);
+    for(int y = 47; y > 42; --y)
+        script.observeCrossingStep("Enemy", 2, 12, y, 12, y - 1);
+    BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", "north", "shelfHeld"));
+    for(int y = 47; y > 42; --y)
+        script.observeCrossingStep("Walker", 1, 12, y, 12, y - 1);
+    BOOST_CHECK(script.wasRegionCrossed(1, "Bridge", "north", "shelfHeld"));
+    script.clear();
+    BOOST_CHECK(!script.hasCrossingObservers());
+    BOOST_CHECK(script.isEmpty());
+}
+
+//! \brief All four directions reject a return to the entry bank and accept only the opposite exit.
+BOOST_AUTO_TEST_CASE(crossing_directions_and_backtracking)
+{
+    for(const std::string direction : {"north", "south", "east", "west"})
+    {
+        LevelScript script;
+        std::istringstream input("Region Bridge 10 10 12 12\n[Trigger]\nName crossing\nMode once\n"
+            "Cond crossed 1 Bridge " + direction + "\nAction message 1 crossed\n[/Trigger]\n[/Triggers]\n");
+        BOOST_REQUIRE(script.importFromStream(input));
+        const bool vertical = direction == "north" || direction == "south";
+        const int delta = direction == "north" || direction == "west" ? -1 : 1;
+        const int entry = delta < 0 ? 13 : 9;
+        const int edge = entry + delta;
+        script.observeCrossingStep("Walker", 1, vertical ? 11 : entry, vertical ? entry : 11,
+            vertical ? 11 : edge, vertical ? edge : 11);
+        script.observeCrossingStep("Walker", 1, vertical ? 11 : edge, vertical ? edge : 11,
+            vertical ? 11 : entry, vertical ? entry : 11);
+        BOOST_CHECK(!script.wasRegionCrossed(1, "Bridge", direction, ""));
+        for(int step = 0; step < 4; ++step)
+        {
+            const int from = entry + step * delta;
+            const int to = from + delta;
+            script.observeCrossingStep("Walker", 1, vertical ? 11 : from, vertical ? from : 11,
+                vertical ? 11 : to, vertical ? to : 11);
+        }
+        BOOST_CHECK(script.wasRegionCrossed(1, "Bridge", direction, ""));
+    }
+    for(const std::string condition : {"Cond crossed 0 Bridge north", "Cond crossed 1 Bridge up",
+        "Cond crossed 1 Bridge north after", "Cond crossed 1 Bridge north after -"})
+    {
+        LevelScript invalid;
+        std::istringstream input("[Trigger]\nName bad\nMode once\n" + condition +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(input));
+    }
+}
+
+//! \brief A regional hit belongs to the attacking seat, target seat and actual impact region, including saves.
+BOOST_AUTO_TEST_CASE(regional_attack_attribution_and_save)
+{
+    LevelScript script;
+    std::istringstream input("Region Siege 33 30 42 42\n[Trigger]\nName fought\nMode once\n"
+        "Cond attackedregion 1 3 Siege\nAction message 1 fought\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    script.observeRegionAttack(2, 3, 38, 35);
+    script.observeRegionAttack(1, 2, 38, 35);
+    script.observeRegionAttack(1, 3, 32, 35);
+    BOOST_CHECK(!script.wasRegionAttacked(1, 3, "Siege"));
+    script.observeRegionAttack(1, 3, 38, 35);
+    BOOST_CHECK(script.wasRegionAttacked(1, 3, "Siege"));
+    BOOST_CHECK(!script.wasRegionAttacked(2, 3, "Siege"));
+    BOOST_CHECK(!script.wasRegionAttacked(1, 2, "Siege"));
+    BOOST_CHECK(!script.wasRegionAttacked(1, 3, "Other"));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    BOOST_CHECK(saved.str().find("Cond\tattackedregion\t1\t3\tSiege") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(restored.wasRegionAttacked(1, 3, "Siege"));
+    restored.clear();
+    BOOST_CHECK(!restored.wasRegionAttacked(1, 3, "Siege"));
+    for(const std::string condition : {"Cond attackedregion 0 3 Siege", "Cond attackedregion 1 1 Siege",
+        "Cond attackedregion 1 -3 Siege", "Cond attackedregion 1 2147483648 Siege", "Cond attackedregion 1 3"})
+    {
+        LevelScript invalid;
+        std::istringstream bad("[Trigger]\nName bad\nMode once\n" + condition +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(bad));
+    }
+}
+
+//! \brief Shot credit requires actual death, survives lethal-KO saves and cannot survive recovery or a different fatal cause.
+BOOST_AUTO_TEST_CASE(projectile_death_credit_and_recovery)
+{
+    const std::string text = "[Trigger]\nName birds\nMode once\nCond shotkilled 1 Crow1\n"
+        "Cond shotkilled 1 Crow2\nAction message 1 done\n[/Trigger]\n[/Triggers]\n";
+    LevelScript script;
+    std::istringstream input(text);
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.hasShotObservers());
+    script.observeFatalShot("Crow1", 1);
+    BOOST_CHECK(!script.wasShotKilled(1, "Crow1"));
+    std::ostringstream pending;
+    script.exportToStream(pending);
+    BOOST_CHECK(pending.str().find("FatalShot\tCrow1\t1") != std::string::npos);
+    LevelScript restored;
+    std::istringstream reload(pending.str().substr(pending.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow1"));
+    restored.completeShotKill("Crow1");
+    restored.completeShotKill("Crow1");
+    BOOST_CHECK(restored.wasShotKilled(1, "Crow1"));
+    BOOST_CHECK(!restored.wasShotKilled(2, "Crow1"));
+    BOOST_CHECK_EQUAL(restored.getEventCount("Crow1", "shotkilled:1"), 1);
+    restored.observeFatalShot("Crow2", 1);
+    restored.clearFatalShot("Crow2");
+    restored.completeShotKill("Crow2");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow2"));
+    restored.observeFatalShot("Crow2", 1);
+    restored.observeFatalShot("Crow2", -1);
+    restored.completeShotKill("Crow2");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow2"));
+    restored.observeFatalShot("Crow2", 2);
+    restored.completeShotKill("Crow2");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Crow2"));
+    restored.observeFatalShot("Unwatched", 1);
+    restored.completeShotKill("Unwatched");
+    BOOST_CHECK(!restored.wasShotKilled(1, "Unwatched"));
+    std::ostringstream completed;
+    restored.exportToStream(completed);
+    BOOST_CHECK(completed.str().find("FatalShot\t") == std::string::npos);
+    LevelScript loaded;
+    std::istringstream finalLoad(completed.str().substr(completed.str().find('\n') + 1));
+    BOOST_REQUIRE(loaded.importFromStream(finalLoad));
+    BOOST_CHECK(loaded.wasShotKilled(1, "Crow1"));
+    loaded.clear();
+    BOOST_CHECK(!loaded.hasShotObservers());
+    BOOST_CHECK(loaded.isEmpty());
+    for(const std::string bad : {"Cond shotkilled 0 Crow1", "Cond shotkilled 1", "Cond shotkilled 1 Crow1 extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + bad +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Carrier recovery retains the exact name-availability guard and retry actions across saves.
+BOOST_AUTO_TEST_CASE(stone_carrier_recovery_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName recovery\nMode repeat 0\n"
+        "Cond event CairnBearer2 created == 0\nCond flag stoneDone 0\n"
+        "Action spawn 1 5 22 1 Spider:3@CairnBearer2\n"
+        "Action stoneattach CairnBearer2\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_REQUIRE_EQUAL(restored.getTriggers().size(), 1u);
+    const LevelScriptTrigger& trigger = restored.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mConditions.size(), 2u);
+    BOOST_CHECK(trigger.mConditions[0].mType == LevelScriptConditionType::creatureEvent);
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mName, "CairnBearer2");
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mName2, "created");
+    BOOST_CHECK_EQUAL(trigger.mConditions[0].mNumber, 0);
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 2u);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mCreatureNames[0], "CairnBearer2");
+    BOOST_CHECK(trigger.mActions[1].mType == LevelScriptActionType::stoneAttach);
+    BOOST_CHECK_EQUAL(trigger.mActions[1].mText, "CairnBearer2");
+}
+
+//! \brief Boulder death events preserve their exact victim and owning seat across saves.
+BOOST_AUTO_TEST_CASE(boulder_death_event_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName pin\nMode once\n"
+        "Cond event Pin1 boulderkilled:1\nAction message 1 hit\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    script.recordEvent("Pin1", "boulderkilled:2");
+    BOOST_CHECK_EQUAL(script.getEventCount("Pin1", "boulderkilled:1"), 0);
+    script.recordEvent("Pin1", "killed");
+    BOOST_CHECK_EQUAL(script.getEventCount("Pin1", "boulderkilled:1"), 0);
+    script.recordEvent("Pin1", "boulderkilled:1");
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK_EQUAL(restored.getEventCount("Pin1", "boulderkilled:1"), 1);
+    BOOST_CHECK_EQUAL(restored.getEventCount("Pin2", "boulderkilled:1"), 0);
+}
+
+//! \brief Captivity and conversion both count, but death or another jailer cannot satisfy held goals.
+BOOST_AUTO_TEST_CASE(living_captive_or_converted_condition)
+{
+    BOOST_CHECK(levelScriptCreatureHeld(1, 2, 1, true));
+    BOOST_CHECK(levelScriptCreatureHeld(1, 1, -1, true));
+    BOOST_CHECK(levelScriptCreatureHeld(1, 1, 1, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 2, -1, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 1, 2, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 2, 1, false));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, 1, -1, false));
+    BOOST_CHECK(!levelScriptCreatureHeld(0, 0, -1, true));
+    BOOST_CHECK(!levelScriptCreatureHeld(1, -1, -1, true));
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName captive\nMode repeat 0\n"
+        "Cond held 1 FalconerEdda\nAction message 1 captive\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK(script.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::heldCreature);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mConditions[0].mSeatId, 1);
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mConditions[0].mName, "FalconerEdda");
+    BOOST_CHECK(restored.getTriggers()[0].mConditions[0].mType == LevelScriptConditionType::heldCreature);
+    for(const std::string condition : {"Cond held", "Cond held 1", "Cond held 0 Edda", "Cond held -1 Edda", "Cond held 1 Edda extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + condition +
+            "\nAction message 1 bad\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Preserves exact chain stages and legacy name-only goal conditions through saving.
+BOOST_AUTO_TEST_CASE(exact_goal_chain_stage_round_trip)
+{
+    LevelScript script;
+    std::istringstream input(
+        "[Trigger]\nName chain\nMode once\n"
+        "Cond goalmet 1 ClaimNTiles 60\nCond goalmet 3 MineNGold 100\n"
+        "Cond goalmet 4 ProtectDungeonTemple\n"
+        "Action hint 1 Observed only.\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[0].mName2, "60");
+    BOOST_CHECK_EQUAL(script.getTriggers()[0].mConditions[1].mName2, "100");
+    BOOST_CHECK(script.getTriggers()[0].mConditions[2].mName2.empty());
+    std::ostringstream output;
+    script.exportToStream(output);
+    LevelScript loaded;
+    std::istringstream saved(output.str().substr(output.str().find('\n') + 1));
+    BOOST_REQUIRE(loaded.importFromStream(saved));
+    BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[0].mName2, "60");
+    BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[1].mName2, "100");
+    BOOST_CHECK(loaded.getTriggers()[0].mConditions[2].mName2.empty());
+}
+
+//! \brief Keeps a real mission item's identity and exact worker destination through script save/load.
+BOOST_AUTO_TEST_CASE(mission_stone_delivery_definition_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName found\nMode once\nCond time 0\n"
+        "Action stonecreate 65 50 vault-stone 1 9 46\n[/Trigger]\n"
+        "[Trigger]\nName home\nMode once\nCond deliveredstone vault-stone\n"
+        "Action setflag delivered 1\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    const LevelScriptAction& item = restored.getTriggers()[0].mActions[0];
+    BOOST_CHECK(item.mType == LevelScriptActionType::stoneCreate);
+    BOOST_CHECK_EQUAL(item.mText, "vault-stone");
+    BOOST_CHECK_EQUAL(item.mSeatId, 1);
+    BOOST_CHECK_EQUAL(item.mX, 65);
+    BOOST_CHECK_EQUAL(item.mY, 50);
+    BOOST_CHECK_EQUAL(item.mX2, 9);
+    BOOST_CHECK_EQUAL(item.mY2, 46);
+    const LevelScriptCondition& delivered = restored.getTriggers()[1].mConditions[0];
+    BOOST_CHECK(delivered.mType == LevelScriptConditionType::deliveredStone);
+    BOOST_CHECK_EQUAL(delivered.mName, "vault-stone");
+    for(const std::string line : {"Cond deliveredstone", "Cond deliveredstone a b",
+        "Action stonecreate 65 50 a 1 9", "Action stonecreate 65 50 a -1 9 46",
+        "Action stonecreate 65 50 a 1 -1 46", "Action stonecreate 65 50 a 1 9 -1",
+        "Action stonecreate 65 50 a 4294967296 9 46", "Action stonecreate 65 50 a 1 4294967296 46"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + line + "\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Physical drops use saved actual death coordinates, never KO or unrelated creature positions.
+BOOST_AUTO_TEST_CASE(mission_item_drop_uses_actual_death_and_survives_save)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName drop\nMode once\n"
+        "Cond event KeyOwner killed\nAction stonedrop KeyOwner cache-key 1 88 20\n"
+        "[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    int32_t x;
+    int32_t y;
+    script.recordEvent("KeyOwner", "incapacitated");
+    BOOST_CHECK(!script.getCreatureDeathTile("KeyOwner", x, y));
+    script.observeCreatureDeath("Other", 2, 3);
+    BOOST_CHECK(!script.getCreatureDeathTile("Other", x, y));
+    script.observeCreatureDeath("KeyOwner", 83, 21);
+    BOOST_REQUIRE(script.getCreatureDeathTile("KeyOwner", x, y));
+    BOOST_CHECK_EQUAL(x, 83);
+    BOOST_CHECK_EQUAL(y, 21);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_REQUIRE(restored.getCreatureDeathTile("KeyOwner", x, y));
+    BOOST_CHECK_EQUAL(x, 83);
+    BOOST_CHECK_EQUAL(y, 21);
+    const LevelScriptAction& drop = restored.getTriggers()[0].mActions[0];
+    BOOST_CHECK(drop.mType == LevelScriptActionType::stoneDrop);
+    BOOST_CHECK_EQUAL(drop.mText, "KeyOwner");
+    BOOST_CHECK_EQUAL(drop.mParty, "cache-key");
+    BOOST_CHECK_EQUAL(drop.mSeatId, 1);
+    BOOST_CHECK_EQUAL(drop.mX2, 88);
+    BOOST_CHECK_EQUAL(drop.mY2, 20);
+    for(const std::string line : {"Action stonedrop KeyOwner", "Action stonedrop KeyOwner key 1 88",
+        "Action stonedrop KeyOwner key -1 88 20", "Action stonedrop KeyOwner key 1 4294967296 20"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + line + "\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Mission door commands survive saves and reject malformed lock states.
+BOOST_AUTO_TEST_CASE(mission_key_door_actions_round_trip)
+{
+    LevelScript script;
+    std::istringstream input("[Trigger]\nName vault\nMode once\nCond deliveredstone treasurer-key\n"
+        "Action keydoor PennVaultDoor open\nState 1 42\n[/Trigger]\n[/Triggers]\n");
+    BOOST_REQUIRE(script.importFromStream(input));
+    const LevelScriptAction& action = script.getTriggers()[0].mActions[0];
+    BOOST_CHECK(action.mType == LevelScriptActionType::keyDoor);
+    BOOST_CHECK_EQUAL(action.mText, "PennVaultDoor");
+    BOOST_CHECK_EQUAL(action.mNumber, 0);
+    std::ostringstream saved;
+    script.exportToStream(saved);
+    LevelScript restored;
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+    BOOST_REQUIRE(restored.importFromStream(reload));
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mActions[0].mText, "PennVaultDoor");
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mActions[0].mNumber, 0);
+    BOOST_CHECK_EQUAL(restored.getTriggers()[0].mTimesFired, 1);
+    for(const std::string line : {"Action keydoor", "Action keydoor PennVaultDoor",
+        "Action keydoor PennVaultDoor other", "Action keydoor PennVaultDoor open extra"})
+    {
+        LevelScript invalid;
+        std::istringstream malformed("[Trigger]\nName bad\nMode once\n" + line + "\n[/Trigger]\n[/Triggers]\n");
+        BOOST_CHECK(!invalid.importFromStream(malformed));
+    }
+}
+
+//! \brief Pending key delivery and one-shot rewards retain their exact identity and state through saves.
+BOOST_AUTO_TEST_CASE(remaining_key_door_reward_and_victory_round_trip)
+{
+    for(bool hoard : {true, false})
+    {
+        const std::string key = hoard ? "rook-key" : "watch-key";
+        const std::string door = hoard ? "RookHoardDoor" : "FenwickWatchroomDoor";
+        const std::string owner = hoard ? "SabineRook" : "MoraFenwick";
+        const std::string destination = hoard ? "36 93" : "96 20";
+        const std::string reward = hoard ? "Action gold 1 1500\n" : "";
+        for(int phase : {0, 1, 2})
+        {
+            const std::string fired = phase == 2 ? "State 1 500\n" : "";
+            LevelScript script;
+            std::istringstream input("[Trigger]\nName goals\nMode once\nCond time 0\n"
+                "Action mainobjectiveid 1 delivery Unlock the door.\n"
+                "Action mainobjectiveid 1 remaining Defeat the remaining forces.\n[/Trigger]\n"
+                "[Trigger]\nName drop\nMode once\nCond event " + owner + " killed\nAction stonedrop " +
+                owner + " " + key + " 1 " + destination + "\n[/Trigger]\n"
+                "[Trigger]\nName opened\nMode once\nCond deliveredstone " + key +
+                "\nAction keydoor " + door + " open\n" + reward + fired + "[/Trigger]\n[/Triggers]\n");
+            BOOST_REQUIRE(script.importFromStream(input));
+            script.requestVictory(1);
+            if(phase >= 1)
+                script.observeCreatureDeath(owner, 70, 71);
+            if(phase == 2)
+                script.setObjectiveState(1, "delivery", LevelScriptObjectiveState::reached);
+            std::ostringstream saved;
+            script.exportToStream(saved);
+            LevelScript restored;
+            std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
+            BOOST_REQUIRE(restored.importFromStream(reload));
+            BOOST_CHECK(restored.hasVictoryRequest(1));
+            BOOST_CHECK(!restored.areMainObjectivesReached(1));
+            int32_t x;
+            int32_t y;
+            BOOST_CHECK_EQUAL(restored.getCreatureDeathTile(owner, x, y), phase >= 1);
+            if(phase >= 1)
+            {
+                BOOST_CHECK_EQUAL(x, 70);
+                BOOST_CHECK_EQUAL(y, 71);
+            }
+            const LevelScriptTrigger& opened = restored.getTriggers()[2];
+            BOOST_CHECK_EQUAL(opened.mTimesFired, phase == 2 ? 1 : 0);
+            BOOST_CHECK(!opened.mRepeat);
+            BOOST_CHECK_EQUAL(opened.mConditions[0].mName, key);
+            BOOST_CHECK_EQUAL(opened.mActions[0].mText, door);
+            BOOST_CHECK_EQUAL(opened.mActions.size(), hoard ? 2 : 1);
+            if(hoard)
+            {
+                BOOST_CHECK(opened.mActions[1].mType == LevelScriptActionType::gold);
+                BOOST_CHECK_EQUAL(opened.mActions[1].mNumber, 1500);
+            }
+            // Delivery alone cannot complete the other main goal, including after reloading.
+            restored.setObjectiveState(1, "delivery", LevelScriptObjectiveState::reached);
+            BOOST_CHECK(!restored.areMainObjectivesReached(1));
+            restored.setObjectiveState(1, "remaining", LevelScriptObjectiveState::reached);
+            BOOST_CHECK(restored.areMainObjectivesReached(1));
+        }
+    }
+}

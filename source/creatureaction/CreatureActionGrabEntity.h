@@ -40,6 +40,7 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
+    //! \brief Starts carry only after validating the actual cargo tile and its reachable destination.
     static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry);
 
 private:

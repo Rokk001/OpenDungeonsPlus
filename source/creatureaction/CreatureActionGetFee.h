@@ -38,6 +38,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Collects the creature's owed wages without routine collection notifications.
     static bool handleGetFee(Creature& creature);
 };
 

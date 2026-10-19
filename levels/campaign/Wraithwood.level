@@ -4848,14 +4848,12 @@ Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
-Action	message	1	The witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours.
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	bothFallGoal
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours.
 Action	objectivestate	1	wraithwood-o01	reached
 Action	objectivestate	1	wraithwood-o02	reached
 Action	win	1
@@ -4868,4 +4866,61 @@ Action	message	1	The west glade is yours, master, and the fog over its middle ha
 Action	terrain	17	52	17	52	manawell
 [/Trigger]
 
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	wraithwood-main-heart	Protect your heart.
+Action	mainobjectiveid	1	wraithwood-main-witch	Destroy the northwestern witch heart.
+Action	mainobjectiveid	1	wraithwood-main-rival	Destroy the northeastern rival heart.
+Action	mainobjectiveid	1	wraithwood-main-forces	Defeat all remaining enemy forces.
+Action	optionalobjectiveid	1	wraithwood-extra-grove	Explore the hidden western grove.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	wraithwood-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	wraithwood-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainWitch
+Mode	repeat	0
+Cond	roomtiles	3	DungeonTemple	<=	0
+Action	objectivestate	1	wraithwood-main-witch	reached
+[/Trigger]
+[Trigger]
+Name	mainRival
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Action	objectivestate	1	wraithwood-main-rival	reached
+[/Trigger]
+[Trigger]
+Name	mainForces
+Mode	repeat	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	wraithwood-main-forces	reached
+[/Trigger]
+[Trigger]
+Name	extraGrove
+Mode	once
+Cond	region	1	SealedGrove
+Action	objectivestate	1	wraithwood-extra-grove	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	wraithwood-main-heart	reached
+Cond	objective	1	wraithwood-main-witch	reached
+Cond	objective	1	wraithwood-main-rival	reached
+Cond	objective	1	wraithwood-main-forces	reached
+Action	message	1	The witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours.
+Action	win	1
+[/Trigger]
 [/Triggers]

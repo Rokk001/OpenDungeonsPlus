@@ -401,7 +401,8 @@ private:
     void setHelpWindowText();
 
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.
-    bool findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position);
+    //! While dragging, any tile (also a wall) may end the drag so the valid floors inside are built.
+    bool findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position, bool dragging);
 
     //! \brief A sub-function called by mouseMoved()
     //! It will handle the potential mouse wheel logic

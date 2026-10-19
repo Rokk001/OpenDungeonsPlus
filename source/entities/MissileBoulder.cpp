@@ -18,6 +18,8 @@
 #include "entities/MissileBoulder.h"
 
 #include "entities/Tile.h"
+#include "entities/Creature.h"
+#include "entities/GameEntityType.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
@@ -121,7 +123,12 @@ bool MissileBoulder::hitCreature(Tile* tile, GameEntity* entity)
     if(isGolfBall())
         return true;
 
+    Creature* target = entity->getObjectType() == GameEntityType::creature ? static_cast<Creature*>(entity) : nullptr;
+    const bool wasAlive = target != nullptr && target->isAlive();
     entity->takeDamage(this, 0.0, mDamage, 0.0, 0.0, tile, false);
+    if(getIsOnServerMap() && wasAlive && !target->isAlive() && getSeat() != nullptr &&
+       target->getSeat() != nullptr && !getSeat()->isAlliedSeat(target->getSeat()))
+        getGameMap()->getLevelScript().recordEvent(target->getName(), "boulderkilled:" + std::to_string(getSeat()->getId()));
     if(mNotifyPlayerIfHit)
         entity->notifyFightPlayer(tile);
 

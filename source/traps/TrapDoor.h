@@ -23,9 +23,11 @@
 
 class DoorEntity;
 
+//! \brief A door with ordinary combat rules or a persistent mission key lock.
 class TrapDoor : public Trap
 {
 public:
+    //! \brief Creates an ordinary door; mission locks are restored from level data.
     TrapDoor(GameMap* gameMap, TrapType doorType);
 
     static const std::string ANIMATION_OPEN;
@@ -50,6 +52,7 @@ public:
     void doUpkeep() override;
 
     double getHP(Tile* tile) const override;
+    //! \brief Preserves mission-locked doors and otherwise applies ordinary door damage.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,
         double elementDamage, Tile* tileTakingDamage, bool ko) override;
 
@@ -61,15 +64,27 @@ public:
     bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Ignores hand toggles while a mission key is required.
     void notifyDoorSlapped(DoorEntity* doorEntity, Tile* tile);
 
+    //! \brief Applies the persistent mission lock; only script delivery may release it.
+    void setKeyLocked(bool locked);
+
+    //! \brief Creates the door model closed when a mission key is still required.
     TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief Blocks every creature while mission-locked; otherwise keeps ordinary door rules.
     double getCreatureSpeed(const Creature* creature, Tile* tile) const override;
 
     //! \brief True only when ordinary ground passage needs no door destruction; attack-path exceptions are excluded.
     bool isGroundPassageOpen(Tile* tile) const
-    { return !isActivated(tile) || (!mIsLocked && !mIsLockedState); }
+    { return !mKeyLocked && (!isActivated(tile) || (!mIsLocked && !mIsLockedState)); }
+
+    //! \brief Mission locks cannot be removed by claiming the door tile.
+    bool isClaimable(Seat* seat) const override;
+
+    //! \brief Keeps mission doors intact until delivery, otherwise applies ordinary capture.
+    void claimForSeat(Seat* seat, Tile* tile, double danceRate) override;
 
     bool permitsVision(Tile* tile) override;
 
@@ -82,7 +97,9 @@ public:
     static bool buildTrapOnTile(GameMap* gameMap, Player* player, Tile* tile);
 
 protected:
+    //! \brief Saves ordinary and optional mission lock state on the door data line.
     void exportToStream(std::ostream& os) const override;
+    //! \brief Loads old door data or its optional persistent mission lock.
     bool importFromStream(std::istream& is) override;
 
 private:
@@ -92,6 +109,8 @@ private:
     bool mIsLocked;
     //! \brief Current state of the door
     bool mIsLockedState;
+    //! \brief Blocks damage, passage and hand toggles until key delivery.
+    bool mKeyLocked;
     //! brief Turns left before a runed door can fire again
     uint32_t mFireCooldownTurns;
 

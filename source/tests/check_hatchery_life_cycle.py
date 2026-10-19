@@ -382,3 +382,36 @@ for nominal in (1, 7, 42, 84):
     assert min(durations) * 100 >= nominal * 80 and max(durations) * 100 <= nominal * 120
     assert durations == set(range(low, high + 1))
 print('room-only capacity, immediate nest dispatch, persisted jitter and adult mating source contracts passed')
+
+# Unfinished or anonymous reservations must never release an egg without its laying hen.
+release = body(room_cpp, 'void RoomHatchery::releasePendingEggs')
+trips = body(room_cpp, 'void RoomHatchery::updateNestTrips')
+assert '(it->mTurns == 0) && !it->mHen.empty() && it->mPosing' in release
+assert 'it->mHen.empty() || it->mPosing' not in release
+anonymous = trips[trips.index('if(it->mHen.empty())'):trips.index('ChickenEntity* hen = nullptr;')]
+assert 'mPendingEggs.erase(it)' in anonymous and '--it->mTurns' not in anonymous
+missing = trips[trips.index('if(hen == nullptr)'):trips.index('if(hen->isLeavingCoop())')]
+assert 'mPendingEggs.erase(it)' in missing and 'it->mTurns = 0' not in missing
+initial_trip = trips[trips.index('// Recalculate the walk'):]
+assert initial_trip.index('if(!arrived') < initial_trip.index('hen->playPose(ChickenPose::lay')
+print('anonymous and interrupted laying cannot produce eggs: source guards passed')
+
+# A saved laying reservation resumes the hen's non-persistent busy pose once, without rerolling time.
+posing = trips[trips.index('if(it->mPosing)'):trips.index('// Recalculate the walk')]
+assert '!it->mStarted && (it->mTurns > 0)' in posing
+assert 'hen->playPose(ChickenPose::lay, it->mTurns)' in posing
+assert posing.index('hen->playPose(') < posing.index('--it->mTurns')
+assert 'it->mStarted = true;' in posing and 'Random::' not in posing
+print('saved laying resumes its remaining visible pose once: source guards passed')
+
+# New eggs have exactly one production call site, inside completed real-hen laying release.
+egg_creation = 'spawnAnimal(ChickenKind::egg,'
+assert room_cpp.count(egg_creation) == 1
+assert egg_creation in release
+for source_path in (root / 'source').rglob('*.cpp'):
+    source_text = source_path.read_text(encoding='utf-8')
+    if source_path.name != 'RoomHatchery.cpp':
+        assert egg_creation not in source_text, source_path
+    assert not re.search(r'new\s+ChickenEntity\s*\([^;]*ChickenKind::egg', source_text), source_path
+    assert not re.search(r'setKind\s*\(\s*ChickenKind::egg\s*\)', source_text), source_path
+print('new eggs have one production path, guarded by completed real-hen laying; saved existing eggs remain loadable')

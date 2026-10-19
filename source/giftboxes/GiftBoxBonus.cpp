@@ -311,6 +311,7 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
                 newCreature->addParticleEffect("SummonWorker", 3);
                 newCreature->createMesh();
                 newCreature->setPosition(spawnPosition);
+                seat->notifyCreatureArrival(workerClass->getClassName());
             }
             break;
         }

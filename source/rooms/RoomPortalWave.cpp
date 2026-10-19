@@ -373,6 +373,7 @@ void RoomPortalWave::spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t 
         newCreature->addToGameMap();
         newCreature->createMesh();
         newCreature->setPosition(newCreature->getPosition());
+        getSeat()->notifyCreatureArrival(classToSpawn->getClassName());
 
         if(spawnedNames != nullptr)
             spawnedNames->push_back(newCreature->getName());

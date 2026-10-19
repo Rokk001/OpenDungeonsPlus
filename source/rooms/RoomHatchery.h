@@ -56,6 +56,7 @@ public:
     bool shouldNotUseIfBadMood(Creature& creature, bool forced) override
     { return false; }
 
+    //! \brief Feeds a creature or reports missing food while it is hungry.
     bool useRoom(Creature& creature, bool forced) override;
     void handleCreatureUsingAbsorbedRoom(Creature& creature) override;
 
@@ -153,6 +154,7 @@ private:
     void fireEggTrample(const ChickenEntity& egg);
     //! Lets the eggs appear whose laying timer has run out and whose hen has shown herself laying (see mPendingEggs).
     //! Incubation starts at actual laying. The new eggs are added to eggs.
+    //! \brief Creates an egg only when its assigned hen has completed laying.
     void releasePendingEggs(const HatcheryCycleSettings& settings, std::vector<ChickenEntity*>& eggs);
     //! A free place next to the nest where a hen can stand (she does not stand in the nest).
     bool getNestStandPoint(const Ogre::Vector3& nestSpot, Ogre::Vector2& standing) const;
@@ -165,9 +167,10 @@ private:
     //! The planned egg of a hen (set off or not), nullptr if she has none.
     PendingEgg* findPendingEgg(const ChickenEntity& hen);
     //! Hens with a planned egg immediately walk to the reserved nest and show the complete randomized laying
-    //! pose after arriving. A hen that is gone loses an egg that is not
-    //! laid yet, an egg whose laying pose started still appears.
+    //! pose after arriving. A hen that is gone loses the unfinished laying reservation;
+    //! eggs already laid remain in the room.
     //! \brief Guides hens to nests and times their complete laying poses after arrival.
+    //! \brief Walks hens to nests and cancels unfinished laying when its hen is gone.
     void updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings);
     //! Lets a hen or a rooster come out of a coop. Returns false if no coop has a free place.
     bool spawnFromCoop(ChickenKind kind, const HatcheryCycleSettings& settings, uint32_t count = 1);
@@ -241,10 +244,10 @@ private:
         {}
 
         Ogre::Vector3 mSpot;
-        //! Turns until the egg may appear (counts down while the hen sits, or at once without a hen).
+        //! Turns until the egg may appear, counted only while its hen lays.
         uint32_t mTurns;
         //! Not empty while the egg is planned by a hen: her name and the place next to the nest where she stands to lay.
-        //! Not saved: a save in between lets a due egg appear after mTurns, a planned one is planned again.
+        //! Saved once laying starts; a loaded hen resumes the remaining pose before her egg appears.
         std::string mHen;
         Ogre::Vector2 mStand;
         //! Turns the walk to mStand takes (real distance and walking speed), turns she has been walking.

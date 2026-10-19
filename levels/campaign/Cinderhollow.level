@@ -5236,10 +5236,10 @@ Action	objectivestate	1	cinderhollow-o04	reached
 [Trigger]
 Name	goalThreeWavesDefeatedAtHeart
 Mode	once
-Cond	spawncleared	waveOne	2	atheart	1
-Cond	spawncleared	waveTwo	2	atheart	1
-Cond	spawncleared	waveThree	2	atheart	1
-Cond	spawncleared	waveThree	3	atheart	1
+Cond	spawncleared	waveOne	2
+Cond	spawncleared	waveTwo	2
+Cond	spawncleared	waveThree	2
+Cond	spawncleared	waveThree	3
 Action	objectivestate	1	cinderhollow-o03	reached
 [/Trigger]
 [Trigger]
@@ -5253,7 +5253,6 @@ Name	rivalFalls
 Mode	once
 Cond	time	1800
 Cond	creatures	2	<=	0
-Action	message	1	The rival keeper is dead and his heart is cold. Cinderhollow is quiet.
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -5261,7 +5260,6 @@ Name	rivalHeartDown
 Mode	once
 Cond	time	1800
 Cond	goal	1	KillAllEnemies
-Action	message	1	The rival keeper is dead and his heart is cold. Cinderhollow is quiet.
 Action	objectivestate	1	cinderhollow-o05	reached
 Action	win	1
 [/Trigger]
@@ -5285,7 +5283,6 @@ Name	rivalHeartFalls
 Mode	once
 Cond	time	1800
 Cond	defeated	2
-Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
 Action	objectivestate	1	cinderhollow-o05	reached
 Action	win	1
 [/Trigger]
@@ -5297,4 +5294,76 @@ Action	message	1	The last gold of the seam is out and the rock behind it sweats 
 Action	terrain	30	55	30	55	manawell
 [/Trigger]
 
+
+Region	DawnCauseway	55	31	55	34
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	cinderhollow-main-heart	Protect your heart until dawn and victory.
+Action	mainobjectiveid	1	cinderhollow-main-seams	Empty both starting gold seams: west and south.
+Action	mainobjectiveid	1	cinderhollow-main-waves	Defeat all three attacking waves.
+Action	mainobjectiveid	1	cinderhollow-main-bridge	After dawn, cross the lava bridge to the crater.
+Action	mainobjectiveid	1	cinderhollow-main-rival	Destroy the rival heart and all enemy forces.
+Action	optionalobjectiveid	1	cinderhollow-extra-cave	Explore the southern creature cave.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	cinderhollow-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	trigger	dawn
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	cinderhollow-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainSeams
+Mode	repeat	0
+Cond	slabs	-1	GoalWestGoldSeam	gold	==	0
+Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0
+Action	objectivestate	1	cinderhollow-main-seams	reached
+[/Trigger]
+[Trigger]
+Name	mainWaves
+Mode	repeat	0
+Cond	spawncleared	waveOne	2
+Cond	spawncleared	waveTwo	2
+Cond	spawncleared	waveThree	2
+Cond	spawncleared	waveThree	3
+Action	objectivestate	1	cinderhollow-main-waves	reached
+[/Trigger]
+[Trigger]
+Name	mainBridge
+Mode	repeat	0
+Cond	crossed	1	DawnCauseway	north	after	lavaBridge
+Action	objectivestate	1	cinderhollow-main-bridge	reached
+[/Trigger]
+[Trigger]
+Name	mainRival
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	cinderhollow-main-rival	reached
+[/Trigger]
+[Trigger]
+Name	extraCave
+Mode	once
+Cond	region	1	SouthCave
+Action	objectivestate	1	cinderhollow-extra-cave	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	cinderhollow-main-heart	reached
+Cond	objective	1	cinderhollow-main-seams	reached
+Cond	objective	1	cinderhollow-main-waves	reached
+Cond	objective	1	cinderhollow-main-bridge	reached
+Cond	objective	1	cinderhollow-main-rival	reached
+Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
+Action	win	1
+[/Trigger]
 [/Triggers]

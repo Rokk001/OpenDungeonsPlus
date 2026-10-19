@@ -448,6 +448,10 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
     if(itOption != options.end())
         mRunLevelSeed = itOption->second.as<uint32_t>();
 
+    itOption = options.find("scenario");
+    if(itOption != options.end())
+        mRunLevelScenario = itOption->second.as<std::string>();
+
     itOption = options.find("port");
     if(itOption != options.end())
         mForcedNetworkPort = itOption->second.as<int32_t>();
@@ -617,6 +621,7 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("run-level", boost::program_options::value<std::string>(), "Debug: starts a local game on the given level file, runs it for --seconds, triggers the win and exits with a result code")
         ("seconds", boost::program_options::value<int32_t>(), "Debug: game time in seconds for --run-level (default 120)")
         ("seed", boost::program_options::value<uint32_t>(), "Debug: seed of the random generator for --run-level (not 0); also writes the game state to run-level-state.txt")
+        ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt)")
     ;
 }
 

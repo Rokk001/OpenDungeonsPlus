@@ -35,11 +35,13 @@ assert 'i < 2' in neighbors and '--tempX;' in neighbors and '--tempY;' in neighb
 mask = runner[runner.index('case LevelScriptConditionType::roomFootprintClaimed:'):runner.index('case LevelScriptConditionType::trapGone:')]
 for required in ('tile->getFullness() != 0.0', 'tile->getSeat() != seat',
                  'tile->getClaimedPercentage() < 1.0', '!tile->isClaimedForSeat(seat)',
-                 'tile->getCoveringRoom()', 'room == nullptr || room->getSeat() != seat'):
+                 'tile->getCoveringRoom()', '(room != nullptr && room->getSeat() != seat)',
+                 '(cond.mType == LevelScriptConditionType::roomFootprintClaimed && room == nullptr)'):
     assert required in mask, required
 assert 'std::min(cond.mX1, cond.mX2)' in mask and 'std::min(cond.mY1, cond.mY2)' in mask
-assert 'if(type == "groundconnected" || type == "roomclaimed")' in parser
-assert 'os << "groundconnected\\t"' in parser and 'os << "roomclaimed\\t"' in parser
+assert 'if(type == "groundconnected" || type == "roomclaimed" || type == "groundclaimed")' in parser
+assert 'os << "groundconnected\\t"' in parser
+assert '? "roomclaimed\\t" : "groundclaimed\\t"' in parser
 
 # Victory packets snapshot goals immediately: every new pure observer and its display dependencies must run first.
 for level in sorted((root / 'levels/campaign').glob('*.level')):

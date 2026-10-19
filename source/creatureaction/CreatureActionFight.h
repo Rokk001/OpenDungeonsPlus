@@ -40,6 +40,9 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
+    //! \brief Attacks the given target (or, without one, the best visible enemy) or walks towards it.
+    //! While a level test scenario runs, the chosen target is reported to it.
+    //! \return true if the action was removed and the next action should run in the same turn.
     static bool handleFight(Creature& creature, GameEntity* entityAttack, bool koOpponent, bool notifyPlayerIfHit);
 
 private:

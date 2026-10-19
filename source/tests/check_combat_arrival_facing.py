@@ -31,6 +31,8 @@ struct MovableGameEntity {
  void setAnimationState(const std::string& s,bool,const Ogre::Vector3& d,bool){++mAnimationSequence;animation=s;if(d!=Ogre::Vector3::ZERO)setWalkDirection(d);}
  void update(Ogre::Real timeSinceLastFrame);void stopWalking();
 };
+//! \brief Stands in for the crossing observer of the production movement code; this check ignores script events.
+void recordScriptWalk(MovableGameEntity&,const Ogre::Vector2&,const Ogre::Vector2&){}
 void MovableGameEntity::update(Ogre::Real timeSinceLastFrame){const double gameSpeedFactor=1.0;MOVEMENT
 void MovableGameEntity::stopWalking()STOP
 int main(){int checks=0,failures=0;std::function<void(bool,const char*)> check=[&](bool v,const char* reason){++checks;if(!v){++failures;std::cout<<"FAIL "<<reason<<'\n';}};

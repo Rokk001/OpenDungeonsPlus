@@ -33,6 +33,7 @@ class Seat;
 class Tile;
 
 enum class CreatureActionType;
+enum class EventShortNoticeType : int32_t;
 enum class GameEntityType;
 enum class SpellType;
 
@@ -224,7 +225,7 @@ public:
     //! \brief Notify the player that a creature cannot find a bed
     void notifyCreatureCannotFindBed(Creature& creature);
 
-    //! \brief Notify the player that a creature cannot find a bed
+    //! \brief Notifies the player that a creature cannot find food using its client profile name.
     void notifyCreatureCannotFindFood(Creature& creature);
 
     //! \brief Notify the player that a build or purchase failed for lack of gold
@@ -234,6 +235,11 @@ public:
     //! \brief Notify the player that one of their creatures has died
     //! Should be called on the server game map
     void notifyCreatureKilled(Creature& creature);
+
+    //! \brief Sends an owner creature notice whose name is resolved from the client profile; suffix keeps existing wording.
+    void notifyCreatureEvent(Creature& creature, const std::string& suffix);
+    //! \brief Sends a profile-named creature notice while preserving its original event category.
+    void notifyCreatureEvent(Creature& creature, const std::string& suffix, EventShortNoticeType noticeType);
 
     //! \brief Notify the player that a new creature type is now attracted to the dungeon
     //! Should be called on the server game map

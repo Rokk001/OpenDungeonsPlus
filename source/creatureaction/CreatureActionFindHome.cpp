@@ -136,6 +136,16 @@ bool CreatureActionFindHome::handleFindHome(Creature& creature, bool forced)
 
     Tile* choosenTile = nullptr;
     std::list<Tile*> tempPath = creature.getGameMap()->findBestPath(&creature, myTile, availableDormitories, choosenTile);
+    if(choosenTile == nullptr)
+    {
+        if((creature.getSeat()->getPlayer() != nullptr) &&
+            creature.getSeat()->getPlayer()->getIsHuman())
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindBed(creature);
+        }
+        creature.popAction();
+        return true;
+    }
     std::vector<Ogre::Vector2> path;
     creature.tileToVector2(tempPath, path, true, 0.0);
     creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path,true);

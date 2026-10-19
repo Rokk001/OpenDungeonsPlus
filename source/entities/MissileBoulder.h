@@ -40,6 +40,7 @@ public:
     virtual MissileObjectType getMissileType() const override
     { return MissileObjectType::boulder; }
 
+    //! \brief Applies boulder damage and records actual hostile creature deaths for the owning seat.
     virtual bool hitCreature(Tile* tile, GameEntity* entity) override;
     virtual bool wallHitNextDirection(const Ogre::Vector3& actDirection, Tile* tile, Ogre::Vector3& nextDirection) override;
 

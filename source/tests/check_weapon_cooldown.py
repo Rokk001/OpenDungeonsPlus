@@ -416,7 +416,8 @@ assert creature.count('skillData.mCooldown = std::max(0.0, skillData.mCooldown -
 assert 'mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);' in creature
 # The network carries the recovery as a real number
 export_body = function_body(creature, 'void Creature::exportProgressToPacket(')
-assert 'mAttackRecoveryTurns << mAttackRecoveryDuration' in export_body
+assert 'const double remaining = working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns;' in export_body
+assert 'const double duration = working ? static_cast<double>(mJobCooldownDuration) : mAttackRecoveryDuration;' in export_body
 import_body = function_body(creature, 'void Creature::importProgressFromPacket(')
 assert 'double remaining = 0.0;' in import_body and 'double duration = 0.0;' in import_body
 # Support skills (not melee, no weapon cooldown) keep their definition cooldown

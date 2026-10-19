@@ -158,8 +158,10 @@ class Tile : public GameEntity
 {
     friend class GameMap;
 public:
+    //! \brief Initializes tile state with no visibility or delayed enemy fog.
     Tile(GameMap* gameMap, int x = 0, int y = 0, TileType type = TileType::dirt, double fullness = 100.0);
 
+    //! \brief Copies tile state, including local visibility and delayed enemy fog.
     void transfer(Tile* t);
     
     virtual ~Tile();
@@ -307,6 +309,11 @@ public:
     //! \brief Returns whether or not the tile has been selected.
     bool getSelected() const
     { return mSelected; }
+
+    //! \brief Returns the delayed enemy fog state received for the local player.
+    bool getEnemyTerritoryFog() const { return mEnemyTerritoryFog; }
+    //! \brief Applies the server-authoritative delayed enemy fog state.
+    void setEnemyTerritoryFog(bool fogged) { mEnemyTerritoryFog = fogged; }
 
     void setLocalPlayerHasVision(bool localPlayerHasVision);
 
@@ -650,6 +657,8 @@ private:
     
     //! \brief Used on client side. true if the local player has vision, false otherwise.
     bool mLocalPlayerHasVision;
+    //! Owner-specific delayed enemy fog, independent of current entity visibility.
+    bool mEnemyTerritoryFog;
 
     uint32_t mTileCulling;
 

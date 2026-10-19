@@ -20,6 +20,7 @@
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
+#include "entities/MissileStone.h"
 #include "entities/Tile.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -83,6 +84,23 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
     }
     mTileDest = mBuildingDest->askSpotForCarriedEntity(mEntityToCarry);
     OD_LOG_INF("creature=" + mCreature.getName() + (mIsDrag ? " is pulling " : " is carrying ") + mEntityToCarry->getName() + " to tile=" + Tile::displayAsString(mTileDest));
+}
+
+//! \brief Reuses normal carry locking, mesh attachment and interruption cleanup for mission destinations.
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest) :
+    CreatureAction(creature),
+    mEntityToCarry(&entityToCarry),
+    mTileDest(&tileDest),
+    mBuildingDest(nullptr),
+    mIsDrag(false),
+    mDragPhase(0),
+    mDragLayTurns(0),
+    mDragFollowArc(0.0)
+{
+    mEntityToCarry->addGameEntityListener(this);
+    mEntityToCarry->setCarryLock(mCreature, true);
+    mEntityToCarry->notifyEntityCarryOn(&mCreature);
+    mCreature.carryEntity(mEntityToCarry);
 }
 
 CreatureActionCarryEntity::~CreatureActionCarryEntity()
@@ -174,6 +192,9 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     }
 
     // We are at the destination tile
+    if(entityToCarry->getObjectType() == GameEntityType::missileObject &&
+       static_cast<MissileObject*>(entityToCarry)->getMissileType() == MissileObjectType::stone)
+        static_cast<MissileStone*>(entityToCarry)->completeDelivery(creature);
     creature.popAction();
     return false;
 }

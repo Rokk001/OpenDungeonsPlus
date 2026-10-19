@@ -72,6 +72,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
 #include "ODApplication.h"
 
@@ -783,7 +784,9 @@ void GameMode::activate()
 }
 
 //! \brief Picks eligible room floors through walls while preserving surface picking for other actions.
-bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position)
+//! \param dragging True while a room drag is held or released: then any map tile, also a wall,
+//! may be its corner, so the valid floors inside the drag rectangle are still built.
+bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position, bool dragging)
 {
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
     if(mPlayerSelection.getCurrentAction() != SelectedAction::buildRoom)
@@ -793,7 +796,11 @@ bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre:
     if(!frameListener.findWorldPositionFromMouse(arg, position, roomFloorHeight))
         return false;
     Tile* tile = mGameMap->getTile(Helper::round(position.x), Helper::round(position.y));
-    if(tile == nullptr || tile->isFullTile())
+    if(tile == nullptr)
+        return false;
+    if(dragging)
+        return true;
+    if(tile->isFullTile())
         return false;
     const RoomType roomType = mPlayerSelection.getNewRoomType();
     if(roomType == RoomType::bridgeWooden || roomType == RoomType::bridgeStone)
@@ -862,7 +869,7 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 
     // Since this is a tile selection query we loop over the result set
     // and look for the first object which is actually a tile.
-    if(!findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    if(!findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos, inputManager.mLMouseDown))
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
@@ -1158,7 +1165,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    if(findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos, false))
     {
         inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
         inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -1416,7 +1423,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
         return true;
     }
 
-    if(findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos))
+    if(findActionTilePositionFromMouse(arg, inputManager.mKeeperHandPos, wasLeftMouseDown))
     {
         inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
         inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);
@@ -2293,6 +2300,14 @@ void GameMode::showCampaignVictory(const std::string& goalsDisplay)
     refreshPlayerGoals(goalsDisplay);
     showObjectivesWindow();
     showDefeatDebriefing();
+
+    // The level load test reports the victory message and then leaves the way a click on the confirm button does
+    if(RunLevelTest::isActive())
+    {
+        RunLevelTest::onVictoryShown();
+        CEGUI::EventArgs confirmArgs;
+        onClickCampaignVictoryConfirm(confirmArgs);
+    }
 }
 
 //! \brief Uses the ordinary campaign exit after acknowledging the saved victory.
@@ -4047,7 +4062,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         mouseState.width = static_cast<int>(size.d_width);
         mouseState.height = static_cast<int>(size.d_height);
         const OIS::MouseEvent mouseEvent(nullptr, mouseState);
-        if(findActionTilePositionFromMouse(mouseEvent, inputManager.mKeeperHandPos))
+        if(findActionTilePositionFromMouse(mouseEvent, inputManager.mKeeperHandPos, inputManager.mLMouseDown))
         {
             inputManager.mXPos = Helper::round(inputManager.mKeeperHandPos.x);
             inputManager.mYPos = Helper::round(inputManager.mKeeperHandPos.y);

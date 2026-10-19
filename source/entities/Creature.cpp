@@ -60,6 +60,7 @@
 
 #include "entities/ChickenEntity.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/MissileObject.h"
 #include "entities/CreatureMoodValues.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
@@ -172,6 +173,9 @@ static double getTargetDistanceFactor(const Creature& attacker, const GameEntity
 
 namespace
 {
+//! \brief Records server-side script events and exact death observations.
+void recordScriptEvent(const Creature& creature, const std::string& eventName);
+
 //! Turns between two tries to assign a missing appearance
 const uint32_t APPEARANCE_RETRY_TURNS = 200;
 //! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
@@ -1283,7 +1287,10 @@ void Creature::computeVisibleTiles()
     // Look at the surrounding area
     updateTilesInSight();
     for(Tile* tile : mVisibleTiles)
+    {
+        getSeat()->notifyOwnCreatureVision(tile);
         tile->notifyVision(getSeat());
+    }
 }
 
 void Creature::setLevel(unsigned int level)
@@ -1305,6 +1312,7 @@ void Creature::dropCarriedEquipment()
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
+    setAnimationState(EntityAnimation::die_anim, false, Ogre::Vector3::ZERO, false);
 
     // We drop what we are carrying
     Tile* myTile = getPositionTile();
@@ -1340,6 +1348,7 @@ void Creature::dropCarriedEquipment()
     // TODO: drop weapon when available
 }
 
+//! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
 void Creature::doUpkeep()
 {
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
@@ -1538,6 +1547,7 @@ void Creature::doUpkeep()
             return;
 
         mHp = 0;
+        recordScriptEvent(*this, "killed");
         computeCreatureOverlayHealthValue();
         computeCreatureOverlayMoodValue();
     }
@@ -1753,6 +1763,13 @@ void Creature::doUpkeep()
         return;
     }
 
+    // The recovery display follows the skill timers in both AI and possessed control.
+    if(mAttackRecoveryTurns > 0.0)
+    {
+        mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);
+        mNeedFireRefresh = true;
+    }
+
     // If a player controls the creature, its other actions are paused. Only the possessed
     // action runs and the movement comes from the player input
     if(isPossessed())
@@ -1776,11 +1793,6 @@ void Creature::doUpkeep()
     }
 
     bool isWarmUp = false;
-    if(mAttackRecoveryTurns > 0.0)
-    {
-        mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);
-        mNeedFireRefresh = true;
-    }
     // We use creature skills if we can
     for(CreatureSkillData& skillData : mSkillData)
     {
@@ -1804,6 +1816,11 @@ void Creature::doUpkeep()
 
         skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
         skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+        // Successful self-casts use the same recovery display as attacks.
+        mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
+        mAttackRecoveryTurns = mAttackRecoveryDuration;
+        ++mAttackRecoverySerial;
+        mNeedFireRefresh = true;
 
         if(skillData.mWarmup > 0)
             isWarmUp = true;
@@ -2818,8 +2835,12 @@ void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
 {
     if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
         return;
-    os << getExperienceProgress() << mAttackRecoveryTurns << mAttackRecoveryDuration
-       << mAttackRecoverySerial;
+    const bool working = getActivity().action == CreatureActionType::useRoom &&
+        mJobCooldown > 0 && mJobCooldownDuration > 0;
+    // The attack recovery can be a fraction of a turn, so both values travel as double
+    const double remaining = working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns;
+    const double duration = working ? static_cast<double>(mJobCooldownDuration) : mAttackRecoveryDuration;
+    os << getExperienceProgress() << remaining << duration << mAttackRecoverySerial;
 }
 
 void Creature::importProgressFromPacket(ODPacket& is)
@@ -4117,6 +4138,7 @@ void recordScriptEvent(const Creature& creature, const std::string& eventName)
     creature.getGameMap()->getLevelScript().recordEvent(creature.getName(), eventName);
     if(eventName == "killed")
     {
+        creature.getGameMap()->getLevelScript().completeShotKill(creature.getName());
         int32_t templeSeat = -1;
         Tile* tile = creature.getPositionTile();
         if(tile != nullptr)
@@ -4170,7 +4192,29 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
     if(wasAlive && (damageDone > 0.0))
+    {
         recordScriptEvent(*this, "attacked");
+        MissileObject* shot = attacker != nullptr && attacker->getObjectType() == GameEntityType::missileObject ?
+            static_cast<MissileObject*>(attacker) : nullptr;
+        Seat* attackingSeat = creatureAttacking != nullptr ? creatureAttacking->getSeat() : nullptr;
+        if(attacker != nullptr && attacker->getObjectType() == GameEntityType::missileObject &&
+           static_cast<MissileObject*>(attacker)->isCreatureShot())
+            attackingSeat = attacker->getSeat();
+        if(getIsOnServerMap() && attackingSeat != nullptr && getSeat() != nullptr && getPositionTile() != nullptr &&
+           !attackingSeat->isAlliedSeat(getSeat()))
+            getGameMap()->getLevelScript().observeRegionAttack(attackingSeat->getId(),
+                getSeat()->getId(), getPositionTile()->getX(), getPositionTile()->getY());
+        if(getIsOnServerMap() && getGameMap()->getLevelScript().hasShotObservers())
+        {
+            LevelScript& script = getGameMap()->getLevelScript();
+            const bool ownShot = shot != nullptr && shot->isCreatureShot() && attackingSeat != nullptr &&
+                getSeat() != nullptr && !attackingSeat->isAlliedSeat(getSeat());
+            if(mHp <= 0)
+                script.observeFatalShot(getName(), ownShot ? attackingSeat->getId() : -1);
+            if(ownShot && shot->isPossessedShot())
+                script.recordEvent("Seat" + std::to_string(attackingSeat->getId()), "possessedshot");
+        }
+    }
 
     if(mHp <= 0)
     {
@@ -4452,6 +4496,9 @@ bool Creature::tryPickup(Seat* seat)
 
 void Creature::pickup()
 {
+    if(getIsOnServerMap())
+        LevelScriptRunner::dropCarriedStone(*this);
+
     // Stop the creature walking and set it off the map to prevent the AI from running on it.
     removeEntityFromPositionTile();
     clearDestinations(EntityAnimation::idle_anim, true, true);
@@ -4537,6 +4584,8 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
 
 void Creature::drop(const Ogre::Vector3& v)
 {
+    if(getIsOnServerMap())
+        getGameMap()->getLevelScript().clearFatalShot(getName());
     setPosition(v);
     if(!getIsOnServerMap())
     {
@@ -5297,17 +5346,14 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg;
+    std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
     if(getGoldFee() <= 0)
-        msg = getName() + " took its fee: " + Helper::toString(goldTaken);
+        suffix = " took its fee: " + Helper::toString(goldTaken);
     else
-        msg = getName() + " took " + Helper::toString(goldTaken) + " from its fee";
+        suffix = " took " + Helper::toString(goldTaken) + " from its fee";
 
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
 
 void Creature::fireChatMsgLeftDungeon()
@@ -5319,11 +5365,7 @@ void Creature::fireChatMsgLeftDungeon()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " left your dungeon";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " left your dungeon");
 }
 
 void Creature::fireChatMsgLeavingDungeon()
@@ -5335,11 +5377,7 @@ void Creature::fireChatMsgLeavingDungeon()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is leaving your dungeon";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is leaving your dungeon");
 }
 
 void Creature::fireChatMsgBecameRogue()
@@ -5351,11 +5389,7 @@ void Creature::fireChatMsgBecameRogue()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is not under your control anymore !";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
 }
 
 void Creature::fireChatMsgUnhappy()
@@ -5367,11 +5401,7 @@ void Creature::fireChatMsgUnhappy()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is unhappy !";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is unhappy !");
 }
 
 void Creature::fireChatMsgFurious()
@@ -5383,11 +5413,7 @@ void Creature::fireChatMsgFurious()
     if(getSeat()->getPlayer()->getHasLost())
         return;
 
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, getSeat()->getPlayer());
-    std::string msg = getName() + " is furious !";
-    serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }
 
 void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition)
@@ -6211,6 +6237,15 @@ void Creature::checkWalkPathValid(bool includeWalkDistortion)
     clearDestinations(EntityAnimation::idle_anim, true, true);
 }
 
+//! \brief Reports the one-upkeep interval after a worker step; action scheduling remains unchanged.
+void Creature::recordWorkerStepRecovery()
+{
+    mAttackRecoveryDuration = 1;
+    mAttackRecoveryTurns = mAttackRecoveryDuration;
+    ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
+}
+
 void Creature::setJobCooldown(int val)
 {
     // If the creature has been slapped, its cooldown is decreased
@@ -6218,6 +6253,10 @@ void Creature::setJobCooldown(int val)
         val = Helper::round(static_cast<float>(val) * 0.8f);
 
     mJobCooldown = val;
+    mJobCooldownDuration = static_cast<uint32_t>(std::max(0, val));
+    if(val > 0)
+        ++mAttackRecoverySerial;
+    mNeedFireRefresh = true;
 }
 
 bool Creature::isTired() const
@@ -6238,6 +6277,8 @@ bool Creature::isHungry() const
 
 void Creature::resetKoTurns()
 {
+    if(getIsOnServerMap())
+        getGameMap()->getLevelScript().clearFatalShot(getName());
     mKoTurnCounter = 0;
     mNeedFireRefresh = true;
 }
@@ -7076,6 +7117,11 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
 
             skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
             skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            // Report a successful self-cast exactly as in normal creature control.
+            mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
+            mAttackRecoveryTurns = mAttackRecoveryDuration;
+            ++mAttackRecoverySerial;
+            mNeedFireRefresh = true;
             return;
         }
 

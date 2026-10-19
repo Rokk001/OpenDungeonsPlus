@@ -2823,6 +2823,8 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
     light->setDiffuseColour(lightColour * (lightFullIntensity * density));
 }
 
+//! \brief Creates or updates the meshes of a tile, including the neutral fog surface, its cloud
+//! and the dig mark of the local player.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -2912,11 +2914,8 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         {
 
             tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
-            tile.setFogOfWarCloud( mInstanceManagerCloud->createInstancedEntity("Fog"));
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tileMeshNode->attachObject(tile.getFogOfWarCloud());
             tile.getFogOfWarMesh()->setPosition(tile.getPosition());
-            tile.getFogOfWarCloud()->setPosition(tile.getPosition());    
             
             
             
@@ -2927,9 +2926,12 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         else if( tile.getEverVisible() && tile.getHasFogOfWar())
         {
             tileMeshNode->detachObject(tile.getFogOfWarMesh());
-            tileMeshNode->detachObject(tile.getFogOfWarCloud());
             mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
-            mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
+            if(tile.getFogOfWarCloud() != nullptr)
+            {
+                tileMeshNode->detachObject(tile.getFogOfWarCloud());
+                mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
+            }
             tile.setFogOfWarMesh(nullptr, isMarked);
             tile.setFogOfWarCloud(nullptr);
             tileMeshEnt = mSceneManager->createEntity(tileMeshName, meshPtr);
@@ -2973,6 +2975,27 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.getFogOfWarMesh()->setPosition(tile.getPosition());
         }
         tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
+        // The alpha-blended cloud hangs above the flat mark and would hide it again, the more the
+        // farther away the tile is; a marked unknown tile shows its violet surface without it.
+        if(tile.getFogOfWarCloud() != nullptr)
+            tile.getFogOfWarCloud()->setVisible(!isMarked);
+    }
+
+    // Only previously discovered enemy territory receives the delayed fog cloud.
+    if(tile.getEverVisible() && tileMeshNode != nullptr)
+    {
+        if(tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() == nullptr)
+        {
+            tile.setFogOfWarCloud(mInstanceManagerCloud->createInstancedEntity("Fog"));
+            tileMeshNode->attachObject(tile.getFogOfWarCloud());
+            tile.getFogOfWarCloud()->setPosition(tile.getPosition());
+        }
+        else if(!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr)
+        {
+            tileMeshNode->detachObject(tile.getFogOfWarCloud());
+            mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
+            tile.setFogOfWarCloud(nullptr);
+        }
     }
 
     // We rescale and set the orientation that may have changed
@@ -3164,7 +3187,10 @@ void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
     if(tile.getFogOfWarMesh())
         mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
     if(tile.getFogOfWarCloud())
+    {
         mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
+        tile.setFogOfWarCloud(nullptr);
+    }
 }
 
 void RenderManager::rrTemporalMarkTile(Tile* curTile)

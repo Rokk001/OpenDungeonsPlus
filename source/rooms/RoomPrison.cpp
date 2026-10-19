@@ -366,6 +366,7 @@ void RoomPrison::doUpkeep()
             newCreature->addToGameMap();
             newCreature->setPosition(Ogre::Vector3(creatureTile->getX(), creatureTile->getY(), 0.0f));
             newCreature->createMesh();
+            getSeat()->notifyCreatureArrival(className);
         }
     }
 }

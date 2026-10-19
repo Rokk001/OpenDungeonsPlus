@@ -4042,7 +4042,6 @@ Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	1	>=	12
-Action	message	1	The prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.
 Action	objectivestate	1	kingsfall-o02	reached
 Action	win	1
 [/Trigger]
@@ -4096,7 +4095,6 @@ Cond	time	5
 Cond	flag	champions	==	3
 Cond	alive	PrinceAurel	0
 Cond	creatures	1	>=	12
-Action	message	1	The prince is beaten and all three of his champions follow your banner. The hunting grounds of Kingsfall are yours.
 Action	objectivestate	1	kingsfall-o01	reached
 Action	objectivestate	1	kingsfall-o02	reached
 Action	win	1
@@ -4111,14 +4109,14 @@ Action	terrain	49	35	49	35	manawell
 [Trigger]
 Name	cacheKey
 Mode	once
-Cond	time	4
-Action	stoneattach	HuntsmanBrann
+Cond	event	HuntsmanBrann	killed
+Action	stonedrop	HuntsmanBrann	cache-key	1	88	20
 [/Trigger]
 [Trigger]
 Name	cacheKeyUsed
 Mode	once
 Cond	flag	cacheOpen	0
-Cond	stone	CacheGate	>=	1
+Cond	deliveredstone	cache-key
 Action	message	1	The key turns in the old lock. The masons have gone and the cache wall has been broken open. A passage runs up from the east lodge to the prince's hunting purse.
 Action	terrain	89	10	89	19	path
 Action	setflag	cacheOpen	1
@@ -4133,4 +4131,104 @@ Action	terrain	89	10	89	19	path
 Action	setflag	cacheOpen	1
 [/Trigger]
 
+
+Region	MainWestSpan	18	49	19	53
+Region	MainMiddleSpan	49	39	50	43
+Region	MainEastSpan	80	48	81	52
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	kingsfall-main-heart	Protect your heart and cross a guarded lava bridge.
+Action	mainobjectiveid	1	kingsfall-main-champions	Capture or convert Edda, Brann and Wick alive.
+Action	mainobjectiveid	1	kingsfall-main-army	Gather 12 creatures at your heart.
+Action	mainobjectiveid	1	kingsfall-main-court	Defeat Prince Aurel and his court.
+Action	optionalobjectiveid	1	kingsfall-extra-gold	Mine 4000 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	kingsfall-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	crossMainWestSpan
+Mode	once
+Cond	crossed	1	MainWestSpan	north
+Action	setflag	mainRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossMainMiddleSpan
+Mode	once
+Cond	crossed	1	MainMiddleSpan	north
+Action	setflag	mainRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossMainEastSpan
+Mode	once
+Cond	crossed	1	MainEastSpan	north
+Action	setflag	mainRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	lostFalconerEdda
+Mode	once
+Cond	event	FalconerEdda	killed
+Action	objectivestate	1	kingsfall-main-champions	failed
+[/Trigger]
+[Trigger]
+Name	lostHuntsmanBrann
+Mode	once
+Cond	event	HuntsmanBrann	killed
+Action	objectivestate	1	kingsfall-main-champions	failed
+[/Trigger]
+[Trigger]
+Name	lostSquireWick
+Mode	once
+Cond	event	SquireWick	killed
+Action	objectivestate	1	kingsfall-main-champions	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	flag	mainRavineCrossed	1
+Action	objectivestate	1	kingsfall-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainChampions
+Mode	repeat	0
+Cond	held	1	FalconerEdda
+Cond	held	1	HuntsmanBrann
+Cond	held	1	SquireWick
+Action	objectivestate	1	kingsfall-main-champions	reached
+[/Trigger]
+[Trigger]
+Name	mainArmy
+Mode	repeat	0
+Cond	creaturesatheart	1	>=	12
+Action	objectivestate	1	kingsfall-main-army	reached
+[/Trigger]
+[Trigger]
+Name	mainCourt
+Mode	repeat	0
+Cond	event	PrinceAurel	killed
+Cond	creatures	3	<=	0
+Action	objectivestate	1	kingsfall-main-court	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	4000
+Action	objectivestate	1	kingsfall-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	kingsfall-main-heart	reached
+Cond	objective	1	kingsfall-main-champions	reached
+Cond	objective	1	kingsfall-main-army	reached
+Cond	objective	1	kingsfall-main-court	reached
+Action	message	1	The prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.
+Action	win	1
+[/Trigger]
 [/Triggers]

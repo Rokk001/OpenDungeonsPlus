@@ -137,6 +137,7 @@ public:
     //! will iterate the movable entities vector
     //! \param timeSinceLastFrame the elapsed time since last displayed frame in seconds.
     //! Deferred strikes use the same game-time scale as movement and skeletal clips.
+    //! \brief Advances animation and walking; only real server walk steps feed crossing observers.
     virtual void update(Ogre::Real timeSinceLastFrame);
 
     void setWalkDirection(const Ogre::Vector3& direction);

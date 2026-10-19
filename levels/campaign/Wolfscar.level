@@ -4775,7 +4775,6 @@ Cond	defeated	2
 Cond	defeated	3
 Cond	defeated	4
 Cond	defeated	5
-Action	message	1	The last hunter is dead and the forest of Wolfscar is silent. It is yours.
 Action	objectivestate	1	wolfscar-o01	reached
 Action	win	1
 [/Trigger]
@@ -4783,7 +4782,6 @@ Action	win	1
 Name	huntersGoneGoal
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The last hunter is dead and the forest of Wolfscar is silent. It is yours.
 Action	objectivestate	1	wolfscar-o01	reached
 Action	win	1
 [/Trigger]
@@ -4813,6 +4811,137 @@ Mode	once
 Cond	slabs	1	Wolfden	claimed	>=	20
 Action	message	1	Your claim on the den has opened a spring of mana in the middle of it. Claim it and your spells come faster.
 Action	terrain	30	51	30	51	manawell
+[/Trigger]
+
+
+Region	MainStoneBridge1	18	76	18	79
+Region	MainStoneBridge2	35	76	36	79
+Region	MainStoneBridge3	52	76	52	79
+Region	MainStoneBridge5	28	35	28	35
+Region	MainStoneBridge6	44	34	45	37
+Region	MainStoneBridge7	62	35	62	36
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	wolfscar-main-heart	Protect your heart.
+Action	mainobjectiveid	1	wolfscar-main-den	Cross both rifts and claim the wolf den.
+Action	mainobjectiveid	1	wolfscar-main-hunters	Destroy all rival hearts and enemy forces.
+Action	optionalobjectiveid	1	wolfscar-extra-gold	Mine 1500 gold.
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge1
+Mode	once
+Cond	crossed	1	MainStoneBridge1	north
+Action	setflag	southRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge2
+Mode	once
+Cond	crossed	1	MainStoneBridge2	north
+Action	setflag	southRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge3
+Mode	once
+Cond	crossed	1	MainStoneBridge3	north
+Action	setflag	southRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge5
+Mode	once
+Cond	crossed	1	MainStoneBridge5	north
+Action	setflag	northRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge6
+Mode	once
+Cond	crossed	1	MainStoneBridge6	north
+Action	setflag	northRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	walkStoneBridge7
+Mode	once
+Cond	crossed	1	MainStoneBridge7	north
+Action	setflag	northRavineCrossed	1
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	wolfscar-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	wolfscar-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainDen
+Mode	repeat	0
+Cond	flag	southRavineCrossed	1
+Cond	flag	northRavineCrossed	1
+Cond	groundclaimed	1	27	46	42	46
+Cond	groundclaimed	1	28	47	38	47
+Cond	groundclaimed	1	30	48	39	48
+Cond	groundclaimed	1	29	49	30	49
+Cond	groundclaimed	1	32	49	41	49
+Cond	groundclaimed	1	28	50	30	50
+Cond	groundclaimed	1	33	50	43	50
+Cond	groundclaimed	1	26	51	45	51
+Cond	groundclaimed	1	25	52	40	52
+Cond	groundclaimed	1	43	52	46	52
+Cond	groundclaimed	1	24	53	41	53
+Cond	groundclaimed	1	43	53	46	53
+Cond	groundclaimed	1	24	54	34	54
+Cond	groundclaimed	1	37	54	47	54
+Cond	groundclaimed	1	24	55	32	55
+Cond	groundclaimed	1	38	55	48	55
+Cond	groundclaimed	1	24	56	31	56
+Cond	groundclaimed	1	38	56	48	56
+Cond	groundclaimed	1	24	57	32	57
+Cond	groundclaimed	1	38	57	47	57
+Cond	groundclaimed	1	24	58	26	58
+Cond	groundclaimed	1	29	58	46	58
+Cond	groundclaimed	1	24	59	27	59
+Cond	groundclaimed	1	29	59	39	59
+Cond	groundclaimed	1	41	59	46	59
+Cond	groundclaimed	1	25	60	39	60
+Cond	groundclaimed	1	41	60	46	60
+Cond	groundclaimed	1	25	61	45	61
+Cond	groundclaimed	1	26	62	44	62
+Cond	groundclaimed	1	27	63	43	63
+Cond	groundclaimed	1	29	64	34	64
+Cond	groundclaimed	1	45	65	48	65
+Cond	groundclaimed	1	35	66	36	66
+Cond	groundclaimed	1	42	66	48	66
+Action	objectivestate	1	wolfscar-main-den	reached
+[/Trigger]
+[Trigger]
+Name	mainHunters
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	roomtiles	3	DungeonTemple	<=	0
+Cond	roomtiles	4	DungeonTemple	<=	0
+Cond	roomtiles	5	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	wolfscar-main-hunters	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	1500
+Action	objectivestate	1	wolfscar-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	wolfscar-main-heart	reached
+Cond	objective	1	wolfscar-main-den	reached
+Cond	objective	1	wolfscar-main-hunters	reached
+Action	message	1	The last hunter is dead and the forest of Wolfscar is silent. It is yours.
+Action	win	1
 [/Trigger]
 
 [/Triggers]

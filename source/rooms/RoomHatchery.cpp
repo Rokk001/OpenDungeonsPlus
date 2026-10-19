@@ -589,6 +589,7 @@ void RoomHatchery::fireEggTrample(const ChickenEntity& egg)
     }
 }
 
+//! \brief Creates an egg only when its assigned hen has completed laying.
 void RoomHatchery::releasePendingEggs(const HatcheryCycleSettings& settings, std::vector<ChickenEntity*>& eggs)
 {
     std::vector<PendingEgg>::iterator it = mPendingEggs.begin();
@@ -600,9 +601,9 @@ void RoomHatchery::releasePendingEggs(const HatcheryCycleSettings& settings, std
             continue;
         }
 
-        // The egg appears when the hen has shown herself laying (or at once, when it has no hen). A hen that is late
-        // lets it appear late, the turns since the timer ran out are counted
-        const bool ready = (it->mTurns == 0) && (it->mHen.empty() || it->mPosing);
+        // The egg appears only after its hen has finished laying. A hen that is late
+        // lets it appear late, the turns since the timer ran out are counted.
+        const bool ready = (it->mTurns == 0) && !it->mHen.empty() && it->mPosing;
         if(!ready)
         {
             ++it->mLate;
@@ -660,6 +661,7 @@ RoomHatchery::PendingEgg* RoomHatchery::findPendingEgg(const ChickenEntity& hen)
 }
 
 //! \brief Guides free hens to reserved nests and waits their individual laying duration after arrival.
+//! \brief Walks hens to nests, advances laying and cancels reservations whose hen is gone.
 void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, const HatcheryCycleSettings& settings)
 {
     // The hen has arrived when she is this close to the place next to the nest
@@ -682,12 +684,10 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
             continue;
         }
 
-        // An egg without a hen (from a save): its turns just run down
+        // An old reservation without a hen is replanned by a real hen, never released as an egg.
         if(it->mHen.empty())
         {
-            if(it->mTurns > 0)
-                --it->mTurns;
-            ++it;
+            it = mPendingEggs.erase(it);
             continue;
         }
 
@@ -701,17 +701,10 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
             }
         }
 
-        // The hen was eaten, picked up or lost: a planned egg is gone with her, a laid one still appears
+        // The hen was eaten, picked up or lost: an unfinished laying cannot produce an egg.
         if(hen == nullptr)
         {
-            if(!it->mPosing)
-            {
-                it = mPendingEggs.erase(it);
-                continue;
-            }
-            it->mHen.clear();
-            it->mTurns = 0;
-            ++it;
+            it = mPendingEggs.erase(it);
             continue;
         }
 
@@ -723,6 +716,13 @@ void RoomHatchery::updateNestTrips(const std::vector<ChickenEntity*>& hens, cons
 
         if(it->mPosing)
         {
+            // Loaded laying reservations retain their remaining time, but the hen's busy pose is not saved.
+            if(!it->mStarted && (it->mTurns > 0))
+            {
+                hen->clearFollowTarget();
+                hen->playPose(ChickenPose::lay, it->mTurns);
+            }
+            it->mStarted = true;
             if(it->mTurns > 0)
                 --it->mTurns;
             ++it;
@@ -2044,6 +2044,7 @@ bool RoomHatchery::hasOpenCreatureSpot(Creature* c)
     return mNumActiveSpots > mCreaturesUsingRoom.size();
 }
 
+//! \brief Feeds a creature or reports missing food while it is hungry.
 bool RoomHatchery::useRoom(Creature& creature, bool forced)
 {
     // Check if the creature needs to eat
@@ -2085,7 +2086,12 @@ bool RoomHatchery::useRoom(Creature& creature, bool forced)
 
     // If we cannot find any available chicken, nothing to do
     if(chickenClosest == nullptr)
+    {
+        if(creature.isHungry() && (getSeat()->getPlayer() != nullptr) &&
+           getSeat()->getPlayer()->getIsHuman())
+            getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
         return false;
+    }
 
     creature.pushAction(Utils::make_unique<CreatureActionEatChicken>(creature, *chickenClosest));
     return true;
