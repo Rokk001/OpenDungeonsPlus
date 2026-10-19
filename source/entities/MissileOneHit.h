@@ -22,6 +22,7 @@
 
 #include <string>
 #include <iosfwd>
+#include <cstdint>
 
 class Creature;
 class Room;
@@ -29,12 +30,15 @@ class GameMap;
 class Tile;
 class ODPacket;
 
+//! \brief Resolves projectile hits with separate creature ranges and retained building damage.
 class MissileOneHit: public MissileObject
 {
 public:
+    //! \brief Creates a projectile with unchanged building damage, a creature range and recorded launch accuracy.
     MissileOneHit(GameMap* gameMap, Seat* seat, const std::string& senderName, const std::string& meshName,
         const std::string& particleScript, const Ogre::Vector3& direction, double speed, double physicalDamage, double magicalDamage,
         double elementDamage, GameEntity* entityTarget, bool damageAllies, bool koEnemyCreature, bool notifyPlayerIfHit);
+    //! \brief Creates a projectile for loading, with no assumed shooter accuracy.
     MissileOneHit(GameMap* gameMap);
 
     virtual MissileObjectType getMissileType() const override
@@ -44,33 +48,51 @@ public:
 
     virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget) override;
 
+    //! \brief True for single-target shots; area projectiles override this to bypass hit and avoidance rolls.
+    virtual bool usesCreatureHitRoll() const { return true; }
+
     //! \brief Server side, cosmetic only. The missile was shot by this creature at that creature: the clients are
-    //! told what the shot did (event hitResult). Not saved. Without it the missile reports nothing.
+    //! told what the shot did (event hitResult). Preserved with launch accuracy in saves.
     void setShooter(const std::string& shooterName, const std::string& targetName)
     {
         mShooterName = shooterName;
         mTargetName = targetName;
     }
 
+    //! \brief Sets the scaled creature range while preserving the original building damage channels.
+    void setCreatureDamageRange(double phyMin, double phyMax, double magMin, double magMax,
+        double eleMin, double eleMax, double strength);
+
     static MissileOneHit* getMissileOneHitFromStream(GameMap* gameMap, std::istream& is);
     static MissileOneHit* getMissileOneHitFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
+    //! \brief Writes building channels, the creature range and optional launch accuracy.
     void exportToStream(std::ostream& os) const override;
+    //! \brief Reads separate damage paths and launch accuracy while accepting older saves and derived fields.
     bool importFromStream(std::istream& is) override;
     virtual void missileStopped() override;
 
-    //! \brief Deals the damage of the missile and, for a shot with a shooter, tells the clients what it did
+    //! \brief Resolves single-target hit and avoidance before damage and reports the actual result.
     void hurt(Tile* tile, GameEntity* entity);
 
 protected:
-    //! Cosmetic only (event hitResult), not saved: who shot, at whom, and whether the shot hurt a creature
+    //! Shooter and target names for hit-result events, saved with creature-shot launch accuracy.
     std::string mShooterName;
     std::string mTargetName;
     bool mHasHit;
     double mPhysicalDamage;
     double mMagicalDamage;
     double mElementDamage;
+    //! \brief Creature-only ranges; the original channels are retained for building hits.
+    double mPhysicalDamageMin, mPhysicalDamageMax, mMagicalDamageMin, mMagicalDamageMax;
+    double mElementDamageMin, mElementDamageMax;
+    //! \brief Whether a creature skill supplied the range, and its captured strength modifier.
+    bool mHasCreatureDamageRange;
+    double mCreatureStrength;
     bool mNotifyPlayerIfHit;
+    //! \brief Accuracy and level at launch; level zero means no accuracy snapshot exists in a legacy save.
+    double mShotAttackRating;
+    uint32_t mShotAttackerLevel;
 };
 
 #endif // MISSILEONEHIT_H

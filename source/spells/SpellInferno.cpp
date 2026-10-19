@@ -153,6 +153,7 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
     int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoRadiusTiles"));
     double damagePerTurn = ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurn");
+    const double damagePerTurnMin = ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurnMin");
     int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoNbTurns"));
 
     // Enemy creatures in the area catch fire. We copy the list to be safe if creatures are removed.
@@ -169,7 +170,9 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         if((pos == nullptr) || !isTileInRadius(pos, x, y, radius))
             continue;
 
-        creature->addCreatureEffect(new CreatureEffectBurn(nbTurns, damagePerTurn, "SpellCreatureInferno"));
+        CreatureEffectBurn* effect = new CreatureEffectBurn(nbTurns, damagePerTurn, "SpellCreatureInferno");
+        effect->setDamageMin(damagePerTurnMin);
+        creature->addCreatureEffect(effect);
         fireSpellEffect(*pos, "InfernoHit", "");
     }
 

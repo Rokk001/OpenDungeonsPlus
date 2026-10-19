@@ -17,6 +17,8 @@
 
 
 #include "creatureeffect/CreatureEffectAreaDamage.h"
+#include "utils/Random.h"
+#include "entities/CombatDamage.h"
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
@@ -76,7 +78,7 @@ void CreatureEffectAreaDamage::applyEffect(Creature& creature)
         if(((dx * dx) + (dy * dy)) > radiusSquared)
             continue;
 
-        target->takeDamage(&creature, mDamagePerTurn, 0.0, 0.0, 0.0, targetTile, false);
+        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn), 0.0, 0.0, 0.0, targetTile, false);
     }
 }
 
@@ -94,6 +96,7 @@ void CreatureEffectAreaDamage::exportToStream(std::ostream& os) const
     os << "\t" << mTileY;
     os << "\t" << mRadius;
     os << "\t" << mDamagePerTurn;
+    os << "\tDamageRangeMin\t" << mDamagePerTurnMin;
 }
 
 bool CreatureEffectAreaDamage::importFromStream(std::istream& is)
@@ -107,6 +110,9 @@ bool CreatureEffectAreaDamage::importFromStream(std::istream& is)
     if(!(is >> mRadius))
         return false;
     if(!(is >> mDamagePerTurn))
+        return false;
+    mDamagePerTurnMin = mDamagePerTurn;
+    if(!CombatDamage::readEffectMinimum(is, mDamagePerTurnMin))
         return false;
 
     return true;

@@ -3,6 +3,8 @@ tiles, a 3x3 heart stores none, and the gold flows through the same deposit/with
 virtuals the carry system already calls."""
 from pathlib import Path
 import subprocess
+import sys
+from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
@@ -27,7 +29,7 @@ temple_header = read('source/rooms/RoomDungeonTemple.h')
 treasury_object = read('source/entities/TreasuryObject.cpp')
 
 constants = temple[
-    temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):
+    temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):
     temple.index('RoomDungeonTemple::RoomDungeonTemple(')
 ]
 get_heart_tile = function(temple, 'Tile* RoomDungeonTemple::getHeartTile(')
@@ -169,7 +171,6 @@ struct RoomDungeonTemple:Room {
  int tierChecks=0;
  void checkHeartHealthTier(){++tierChecks;}
  RoomDungeonTemple(GameMap* m):Room(m){}
- static const double HEART_MAX_HP;
  static const double HEART_HEAL_PER_SECOND;
  static const double HEART_CRITICAL_FRACTION;
  double getHeartMaxHP()const;
@@ -418,6 +419,12 @@ probe = probe.replace('__ASK_CARRY_SPOT__', ask_carry_spot)
 probe = probe.replace('__REMOVE_COVERED_TILE__', remove_covered_tile)
 probe = probe.replace('__DO_UPKEEP__', do_upkeep)
 probe = probe.replace('__MESH_NAME__', mesh_name)
+
+check_heart_configuration(repo)
+if '--probe' not in sys.argv:
+    print('Source checks passed; compiled probe requires --probe')
+    raise SystemExit(0)
+probe = configure_heart_probe(probe)
 
 with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as tmp:
     probe_path = Path(tmp) / 'check.cpp'

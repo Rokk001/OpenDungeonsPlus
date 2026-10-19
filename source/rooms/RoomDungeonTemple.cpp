@@ -41,6 +41,7 @@
 #include "rooms/RoomManager.h"
 #include "rooms/RoomTreasury.h"
 #include "rooms/TreasuryGoldLayer.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
@@ -372,7 +373,6 @@ class RoomDungeonTempleFactory : public RoomFactory
 static RoomRegister reg(new RoomDungeonTempleFactory);
 }
 
-const double RoomDungeonTemple::HEART_MAX_HP = 10000.0;
 const double RoomDungeonTemple::HEART_HEAL_PER_SECOND = 2.5;
 const double RoomDungeonTemple::HEART_CRITICAL_FRACTION = 0.11;
 
@@ -404,7 +404,7 @@ Tile* RoomDungeonTemple::getHeartTile() const
 
 double RoomDungeonTemple::getHeartMaxHP() const
 {
-    return HEART_MAX_HP;
+    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0);
 }
 
 double RoomDungeonTemple::getHeartHealthFraction() const

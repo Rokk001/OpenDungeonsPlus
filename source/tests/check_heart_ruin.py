@@ -1,6 +1,8 @@
-"""Exercise the production destroyed-heart (ruin) path: the platform stays, the heart object goes."""
+"""Check destroyed-heart wiring and configuration; --probe exercises the production ruin path."""
 from pathlib import Path
 import subprocess
+import sys
+from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
@@ -164,7 +166,7 @@ struct RoomDungeonTemple:Room {
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  RoomType getType() const override{return RoomType::dungeonTemple;}
  INLINE_METHODS
- static const double HEART_MAX_HP;static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
+ static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const override;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -297,7 +299,7 @@ int main(){
 '''
 inline = '\n'.join(function(temple_header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
-methods = temple[temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
+methods = temple[temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
 methods += temple[temple.index('const std::string HeartMeshNameHealthy'):temple.index('class DungeonHeartObject :')]
 methods += '\n'.join(function(temple, sig) for sig in (
     'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
@@ -336,6 +338,12 @@ assert 'if(room->getHP(nullptr) <= 0.0)' in function(seat, 'void Seat::computeSe
 assert tile.count('mTileVisual = TileVisual::dungeonTempleRoom;') == 2, 'the floor emblem follows the covering room'
 assert 'mCoveredTiles.empty()' not in function(building, 'void Building::doUpkeep(')
 print('WIRING OK: platform look follows the covering room, dead rooms are skipped by every temple count')
+
+check_heart_configuration(repo)
+if '--probe' not in sys.argv:
+    print('Source checks passed; compiled probe requires --probe')
+    raise SystemExit(0)
+probe = configure_heart_probe(probe)
 
 with tempfile.TemporaryDirectory(prefix='odp-heart-ruin-') as directory:
     work = Path(directory)

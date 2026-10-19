@@ -19,6 +19,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/GameEntityType.h"
 #include "entities/MissileBlast.h"
 
 const std::string CreatureSkillGuidedBoltName = "GuidedBolt";
@@ -48,10 +49,16 @@ CreatureSkillGuidedBolt* CreatureSkillGuidedBolt::clone() const
     return new CreatureSkillGuidedBolt(*this);
 }
 
+//! \brief Creates a zero-radius guided shot and retains its shooter for hit-result events.
 MissileOneHit* CreatureSkillGuidedBolt::createMissile(GameMap& gameMap, Creature* creature,
         const Ogre::Vector3& direction, double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject,
         bool ko, bool notifyPlayerIfHit) const
 {
-    return new MissileBlast(&gameMap, creature->getSeat(), creature->getName(), mMissileMesh, mMissilePartScript,
+    MissileOneHit* missile = new MissileBlast(&gameMap, creature->getSeat(), creature->getName(), mMissileMesh, mMissilePartScript,
         direction, mMissileSpeed, phyAtk, magAtk, eleAtk, attackedObject, false, ko, notifyPlayerIfHit, 0.0, true);
+    std::string targetName;
+    if(attackedObject->getObjectType() == GameEntityType::creature)
+        targetName = attackedObject->getName();
+    missile->setShooter(creature->getName(), targetName);
+    return missile;
 }

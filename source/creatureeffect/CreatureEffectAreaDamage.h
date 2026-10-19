@@ -27,34 +27,44 @@
 class CreatureEffectAreaDamage : public CreatureEffect
 {
 public:
+    //! \brief Creates a fixed damage effect whose minimum may be supplied separately.
     CreatureEffectAreaDamage(int32_t nbTurnsEffect, int32_t tileX, int32_t tileY, double radius,
             double damagePerTurn, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mTileX(tileX),
         mTileY(tileY),
         mRadius(radius),
-        mDamagePerTurn(damagePerTurn)
+        mDamagePerTurn(damagePerTurn),
+        mDamagePerTurnMin(damagePerTurn)
     {}
 
+    //! \brief Creates an empty effect for loading.
     CreatureEffectAreaDamage() :
         CreatureEffect(),
         mTileX(0),
         mTileY(0),
         mRadius(0.0),
-        mDamagePerTurn(0.0)
+        mDamagePerTurn(0.0),
+        mDamagePerTurnMin(0.0)
     {}
+
+    //! \brief Sets the minimum damage used for each application of this effect.
+    void setDamageMin(double value) { mDamagePerTurnMin = value; }
 
     virtual ~CreatureEffectAreaDamage()
     {}
 
     virtual const std::string& getEffectName() const override;
 
+    //! \brief Writes the effect with both damage endpoints.
     virtual void exportToStream(std::ostream& os) const override;
+    //! \brief Reads both endpoints, accepting legacy fixed damage effects.
     virtual bool importFromStream(std::istream& is) override;
 
     static CreatureEffectAreaDamage* load(std::istream& is);
 
 protected:
+    //! \brief Rolls a fresh damage value for every affected creature and turn.
     virtual void applyEffect(Creature& creature) override;
 
 private:
@@ -62,6 +72,8 @@ private:
     int32_t mTileY;
     double mRadius;
     double mDamagePerTurn;
+    //! \brief Minimum damage, retained separately for a fresh roll every application.
+    double mDamagePerTurnMin;
 };
 
 #endif // CREATUREEFFECTAREADAMAGE_H

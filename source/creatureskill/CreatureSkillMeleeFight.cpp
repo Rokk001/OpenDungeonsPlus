@@ -20,6 +20,7 @@
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
 #include "entities/CreatureProgression.h"
+#include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
@@ -68,6 +69,7 @@ bool CreatureSkillMeleeFight::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Resolves creature hit chance and typed avoidance without changing attack timing or building damage.
 bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -88,6 +90,8 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         eleAtk +=creature->getWeaponR()->getElementDamage();
     }
 
+    double creatureDamage = 0.0;
+    double creatureRawDamage = 0.0;
     double modifier = creature->getModifierStrength();
     if(modifier != 1.0)
     {
@@ -95,35 +99,55 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         magAtk *= modifier;
         eleAtk *= modifier;
     }
-    // The defending creature may dodge or parry the blow (the server rolls it, before the damage is calculated).
+    // A hit roll comes first; only a landed blow allows the defender's configured avoidance kind.
     // The blow then does no damage; it is still made, so the animation, the warmup and the cooldown of the
     // attacker stay as they are, and takeDamage still runs with no damage for what it records besides the damage.
     DefenceChance::Outcome defence = DefenceChance::none;
+    bool missed = false;
     if(attackedObject->getObjectType() == GameEntityType::creature)
-        defence = static_cast<Creature*>(attackedObject)->rollMeleeDefence();
-    if(defence != DefenceChance::none)
     {
+        Creature* target = static_cast<Creature*>(attackedObject);
+        missed = !target->rollAttackHit(creature->getAttackRating(), creature->getLevel(), creature->isPossessed());
+        if(!missed)
+            defence = target->rollMeleeDefence(false);
+        if(!missed && defence == DefenceChance::none)
+        {
+            double phyMin = mPhyMin, phyMax = mPhyMax;
+            double magMin = mMagMin, magMax = mMagMax;
+            double eleMin = mEleMin, eleMax = mEleMax;
+            CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+            creatureDamage = CombatDamage::roll(*target,
+                phyMin, phyMax, magMin, magMax, eleMin, eleMax, &creatureRawDamage) * modifier;
+            creatureRawDamage *= modifier;
+        }
+        phyAtk = magAtk = eleAtk = 0.0;
+    }
+    if(missed || defence != DefenceChance::none)
+    {
+        creatureDamage = 0.0;
         phyAtk = 0.0;
         magAtk = 0.0;
         eleAtk = 0.0;
     }
-    const double damageDone = attackedObject->takeDamage(creature, 0.0,
+    const double damageDone = attackedObject->takeDamage(creature, creatureDamage,
         phyAtk, magAtk, eleAtk, attackedTile, ko);
     if(attackedObject->getObjectType() == GameEntityType::creature)
     {
         Creature* target = static_cast<Creature*>(attackedObject);
-        target->fireCombatImpact(hasWeapon(creature) && hasWeapon(target),
-            damageDone > 0.0, creature->getPosition());
+        if(!missed)
+            target->fireCombatImpact(hasWeapon(creature) && hasWeapon(target),
+                damageDone > 0.0, creature->getPosition());
 
         // Tell the clients how much of the blow got through, so that they can show a hit, a glancing blow
-        // or a blow that did nothing. The game has no random miss: this only reads the damage that was
-        // already calculated, it changes neither the damage nor when it is dealt.
-        const double rawDamage = phyAtk + magAtk + eleAtk;
+        // or a blow that missed or was avoided. Reporting reads the calculated damage and leaves attack timing unchanged.
+        const double rawDamage = creatureRawDamage + phyAtk + magAtk + eleAtk;
         double share = (rawDamage > 0.0) ? damageDone / rawDamage : 0.0;
         share = std::max(0.0, std::min(1.0, share));
         // The newer kind first (hit, glancing, blocked and how hard in relation to the health); the clients that
         // got it ignore the older kind below
-        if(defence != DefenceChance::none)
+        if(missed)
+            target->fireHitMissed(creature->getName(), false);
+        else if(defence != DefenceChance::none)
             target->fireHitDefended(creature->getName(), defence);
         else
             target->fireHitResult(creature->getName(), damageDone, rawDamage, false);
@@ -153,6 +177,7 @@ void CreatureSkillMeleeFight::getFormatString(std::string& format) const
         format += "\t";
 
     format += "LevelMin\tPhyAtk\tPhyAtkPerLvl\tMagAtk\tMagAtkPerLvl\tEleAtk\tEleAtkPerLvl";
+    format += "\tPhyMin\tPhyMax\tMagMin\tMagMax\tEleMin\tEleMax";
 
 }
 
@@ -166,6 +191,12 @@ void CreatureSkillMeleeFight::exportToStream(std::ostream& os) const
     os << "\t" << mMagAtkPerLvl;
     os << "\t" << mEleAtk;
     os << "\t" << mEleAtkPerLvl;
+    os << "\t" << mPhyMin;
+    os << "\t" << mPhyMax;
+    os << "\t" << mMagMin;
+    os << "\t" << mMagMax;
+    os << "\t" << mEleMin;
+    os << "\t" << mEleMax;
 }
 
 bool CreatureSkillMeleeFight::importFromStream(std::istream& is)
@@ -188,7 +219,10 @@ bool CreatureSkillMeleeFight::importFromStream(std::istream& is)
     if(!(is >> mEleAtkPerLvl))
         return false;
 
-    return true;
+    mPhyMin = mPhyMax = mPhyAtk + mPhyAtkPerLvl;
+    mMagMin = mMagMax = mMagAtk + mMagAtkPerLvl;
+    mEleMin = mEleMax = mEleAtk + mEleAtkPerLvl;
+    return CombatDamage::readRange(is, mPhyMin, mPhyMax, mMagMin, mMagMax, mEleMin, mEleMax);
 }
 
 bool CreatureSkillMeleeFight::isEqual(const CreatureSkill& creatureSkill) const
@@ -213,6 +247,10 @@ bool CreatureSkillMeleeFight::isEqual(const CreatureSkill& creatureSkill) const
     if(mEleAtk != skill->mEleAtk)
         return false;
     if(mEleAtkPerLvl != skill->mEleAtkPerLvl)
+        return false;
+    if(mPhyMin != skill->mPhyMin || mPhyMax != skill->mPhyMax
+        || mMagMin != skill->mMagMin || mMagMax != skill->mMagMax
+        || mEleMin != skill->mEleMin || mEleMax != skill->mEleMax)
         return false;
 
     return true;

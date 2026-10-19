@@ -84,6 +84,7 @@ bool CreatureSkillAreaDamage::tryUseFight(GameMap& gameMap, Creature* creature, 
     // The zone is centred on the target and is kept by the caster
     CreatureEffectAreaDamage* effect = new CreatureEffectAreaDamage(static_cast<int32_t>(mNbTurns),
         attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn, mParticleScript);
+    effect->setDamageMin(mDamagePerTurnMin);
     creature->addCreatureEffect(effect);
 
     return true;
@@ -100,7 +101,7 @@ void CreatureSkillAreaDamage::getFormatString(std::string& format) const
     if(!format.empty())
         format += "\t";
 
-    format += "RangeMax\tLevelMin\tRadius\tNbTurns\tDamagePerTurn\tParticleScript";
+    format += "RangeMax\tLevelMin\tRadius\tNbTurns\tDamagePerTurn\tParticleScript\tDamagePerTurnMin";
 }
 
 void CreatureSkillAreaDamage::exportToStream(std::ostream& os) const
@@ -115,6 +116,7 @@ void CreatureSkillAreaDamage::exportToStream(std::ostream& os) const
         os << "\tnone";
     else
         os << "\t" << mParticleScript;
+    os << "\t" << mDamagePerTurnMin;
 }
 
 bool CreatureSkillAreaDamage::importFromStream(std::istream& is)
@@ -136,6 +138,12 @@ bool CreatureSkillAreaDamage::importFromStream(std::istream& is)
         return false;
     if(mParticleScript == "none")
         mParticleScript.clear();
+    mDamagePerTurnMin = mDamagePerTurn;
+    is >> std::ws;
+    if(is.eof())
+        is.clear();
+    else if(!(is >> mDamagePerTurnMin))
+        return false;
 
     return true;
 }
@@ -160,6 +168,8 @@ bool CreatureSkillAreaDamage::isEqual(const CreatureSkill& creatureSkill) const
     if(mNbTurns != skill->mNbTurns)
         return false;
     if(mDamagePerTurn != skill->mDamagePerTurn)
+        return false;
+    if(mDamagePerTurnMin != skill->mDamagePerTurnMin)
         return false;
     if(mParticleScript != skill->mParticleScript)
         return false;

@@ -19,6 +19,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/CombatDamage.h"
 #include "entities/MissileBlast.h"
 
 #include <istream>
@@ -62,13 +63,15 @@ MissileOneHit* CreatureSkillGrenade::createMissile(GameMap& gameMap, Creature* c
 void CreatureSkillGrenade::getFormatString(std::string& format) const
 {
     CreatureSkillMissileLaunch::getFormatString(format);
-    format += "\tBlastRadius";
+    format += "\tBlastRadius\tPhyMin\tPhyMax\tMagMin\tMagMax\tEleMin\tEleMax";
 }
 
 void CreatureSkillGrenade::exportToStream(std::ostream& os) const
 {
     CreatureSkillMissileLaunch::exportToStream(os);
     os << "\t" << mBlastRadius;
+    os << "\t" << mPhyMin << "\t" << mPhyMax << "\t" << mMagMin << "\t" << mMagMax
+       << "\t" << mEleMin << "\t" << mEleMax;
 }
 
 bool CreatureSkillGrenade::importFromStream(std::istream& is)
@@ -79,7 +82,7 @@ bool CreatureSkillGrenade::importFromStream(std::istream& is)
     if(!(is >> mBlastRadius))
         return false;
 
-    return true;
+    return CombatDamage::readRange(is, mPhyMin, mPhyMax, mMagMin, mMagMax, mEleMin, mEleMax);
 }
 
 bool CreatureSkillGrenade::isEqual(const CreatureSkill& creatureSkill) const

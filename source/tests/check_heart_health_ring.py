@@ -7,6 +7,8 @@ fixture, and checks the wiring of the notification in the client and the game mo
 from pathlib import Path
 import re
 import subprocess
+import sys
+from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 import time
 
@@ -125,7 +127,6 @@ struct RoomDungeonTemple : Room {
     double mHeartHP;
     RoomDungeonTemple(GameMap* map, Seat* seat) : Room(RoomType::dungeonTemple, seat), mMap(map), mHeartHP(-1.0) {}
     GameMap* getGameMap() const {return mMap;}
-    static const double HEART_MAX_HP;
     static const double HEART_HEAL_PER_SECOND;
     static const double HEART_CRITICAL_FRACTION;
     double getHeartMaxHP() const;
@@ -530,7 +531,7 @@ int main()
 }
 '''
 
-temple_methods = temple[temple.index('const double RoomDungeonTemple::HEART_MAX_HP'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
+temple_methods = temple[temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
 temple_methods += '\n'.join(function(temple, signature) for signature in (
     'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
     'void RoomDungeonTemple::exportToStream(', 'bool RoomDungeonTemple::importFromStream('))
@@ -610,6 +611,12 @@ def run(command, cwd):
             time.sleep(2)
     raise SystemExit('fixture blocked by application control after 4 attempts')
 
+
+check_heart_configuration(repo)
+if '--probe' not in sys.argv:
+    print('Source checks passed; compiled probe requires --probe')
+    raise SystemExit(0)
+probe = configure_heart_probe(probe)
 
 with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as directory:
     work = Path(directory)

@@ -760,6 +760,7 @@ void noteBlow(CreatureReactions& reactions, const CosmeticEvent& event)
         startTrail(reactions, attacker);
 }
 
+//! \brief Shows server hit, miss and avoidance results with the existing combat reactions.
 void noteHitResult(CreatureReactions& reactions, const CosmeticEvent& event)
 {
     Creature* target = CreatureWeaponVisuals::getGameMap(reactions)->getCreature(event.mObject);
@@ -791,12 +792,16 @@ void noteHitResult(CreatureReactions& reactions, const CosmeticEvent& event)
                 queueReaction(reactions, target->getName(), "BlowGlanced", DODGE_DELAY);
             break;
         case static_cast<int32_t>(CosmeticHitResult::blocked):
-        case static_cast<int32_t>(CosmeticHitResult::missed):
             // Nothing got through: the target gets out of the way, the attacker of a blow overreaches
             sSoftened[event.mObject] = now;
             if(target != nullptr)
                 queueReaction(reactions, target->getName(), "BlowDodged", info.mMissile ? 0.0 : DODGE_DELAY);
             if((attacker != nullptr) && !info.mMissile)
+                queueReaction(reactions, attacker->getName(), "BlowMissed", MISS_DELAY);
+            break;
+        case static_cast<int32_t>(CosmeticHitResult::missed):
+            // A failed hit roll shows only the attacker's missed-blow reaction.
+            if(attacker != nullptr)
                 queueReaction(reactions, attacker->getName(), "BlowMissed", MISS_DELAY);
             break;
         case static_cast<int32_t>(CosmeticHitResult::dodged):
@@ -808,7 +813,8 @@ void noteHitResult(CreatureReactions& reactions, const CosmeticEvent& event)
                 queueReaction(reactions, attacker->getName(), "BlowMissed", MISS_DELAY);
             break;
         case static_cast<int32_t>(CosmeticHitResult::parried):
-            // The server decided that the defender parried: it stops the blow with its weapon, the attacker is thrown back
+        case static_cast<int32_t>(CosmeticHitResult::shieldBlocked):
+            // The server decided that the defender stopped the attack with its weapon or shield; the attacker is thrown back
             sSoftened[event.mObject] = now;
             if(target != nullptr)
                 queueReaction(reactions, target->getName(), "BlowParried", DODGE_DELAY);
