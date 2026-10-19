@@ -54,6 +54,7 @@ probe = r'''
 #include "traps/TrapType.h"
 #include "spells/SpellType.h"
 #include "network/ODPacket.h"
+#include "utils/NameAliases.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -123,6 +124,8 @@ struct Seat {
     SkillType mCurrentSkillType=SkillType::nullSkillType;float mCurrentSkillProgress=0;
     bool mGuiSkillNeedsRefresh=false;
     std::vector<SkillType> mSkillDone,mSkillPending,mSkillNotAllowed;
+    //! \brief Fixture list for the optional arrival history that the seat load and save paths handle.
+    std::vector<std::string> mAnnouncedCreatureClasses;
     std::map<SkillType,uint32_t> mResearchLevels;
     Seat(){player.seat=this;}
     Player* getPlayer() {return &player;}
