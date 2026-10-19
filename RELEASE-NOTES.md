@@ -8,7 +8,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
-* Equip twelve creature types with fitted weapons, classify held equipment by type and occupied hands, and preserve melee damage when weapon recovery is longer.
+* Equip twelve creature types with fitted weapons without additional weapon damage, classify held equipment by type and occupied hands, and preserve melee damage when weapon recovery is longer.
 
 * Give hens five seconds to lay, eggs thirty seconds to hatch and chicks sixty seconds to grow at normal game speed; preserve each full life stage instead of aging it on its creation turn, intentionally slowing food production.
 * Keep a wizard's equipped left-hand item and the defender's held idle pose from snapping at their loop boundaries.
