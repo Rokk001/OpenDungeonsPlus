@@ -550,6 +550,10 @@ public:
     //! \brief Reopens nonfailed main goals before their per-turn observers reevaluate current requirements.
     void refreshMainObjectives(int32_t seatId);
 
+    //! \brief Marks every required main goal of this seat as reached (same selection as areMainObjectivesReached).
+    //! Used by the level load test to satisfy the victory gate before it triggers the win.
+    void markMainObjectivesReached(int32_t seatId);
+
     //! \brief Records a victory request until the seat's required goals allow it to be announced.
     void requestVictory(int32_t seatId);
 
