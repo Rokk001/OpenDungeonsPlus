@@ -159,6 +159,7 @@ Goal* Seat::getFailedGoal(unsigned int index)
     return mFailedGoals[index];
 }
 
+//! \brief Updates completed goal states without adding objective notifications.
 unsigned int Seat::checkAllCompletedGoals()
 {
     // Loop over the goals vector and move any goals that have been met to the completed goals vector.
@@ -181,18 +182,6 @@ unsigned int Seat::checkAllCompletedGoals()
             if ((*currentGoal)->isFailed(*this, *mGameMap))
             {
                 mFailedGoals.push_back(*currentGoal);
-
-                // The voice line has a text so it can be read as well
-                if((getPlayer() != nullptr) &&
-                   getPlayer()->getIsHuman() &&
-                   !getPlayer()->getHasLost())
-                {
-                    ServerNotification *serverNotification = new ServerNotification(
-                        ServerNotificationType::chatServer, getPlayer());
-
-                    serverNotification->mPacket << "You have FAILED an objective!" << EventShortNoticeType::majorGameEvent;
-                    ODServer::getSingleton().queueServerNotification(serverNotification);
-                }
 
                 std::vector<Seat*> seats;
                 seats.push_back(this);
@@ -661,6 +650,7 @@ void Seat::setMapSize(GameMap* gameMapPointer,int x, int y)
 
 
 
+//! \brief Updates pending goal states and their voice cues without objective notifications.
 unsigned int Seat::checkAllGoals()
 {
     // Loop over the goals vector and move any goals that have been met to the completed goals vector.
@@ -682,18 +672,12 @@ unsigned int Seat::checkAllGoals()
 
             mHasGoalsChanged = true;
 
-            // Tells the player an objective has been met.
+            // Plays the existing voice cue when an objective has been met.
             if((mGameMap->getTurnNumber() > 5) &&
                (getPlayer() != nullptr) &&
                getPlayer()->getIsHuman() &&
                !getPlayer()->getHasLost())
             {
-                ServerNotification *serverNotification = new ServerNotification(
-                    ServerNotificationType::chatServer, getPlayer());
-
-                serverNotification->mPacket << "You have met an objective." << EventShortNoticeType::aboutObjectives;
-                ODServer::getSingleton().queueServerNotification(serverNotification);
-
                 std::vector<Seat*> seats;
                 seats.push_back(this);
                 mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::GoalMet);
@@ -713,18 +697,12 @@ unsigned int Seat::checkAllGoals()
                 currentGoal = mUncompleteGoals.erase(currentGoal);
                 mHasGoalsChanged = true;
 
-                // Tells the player an objective has been failed.
+                // Plays the existing voice cue when an objective has failed.
                 if((mGameMap->getTurnNumber() > 5) &&
                    (getPlayer() != nullptr) &&
                    getPlayer()->getIsHuman() &&
                    !getPlayer()->getHasLost())
                 {
-                    ServerNotification *serverNotification = new ServerNotification(
-                        ServerNotificationType::chatServer, getPlayer());
-
-                    serverNotification->mPacket << "You have FAILED an objective!" << EventShortNoticeType::majorGameEvent;
-                    ODServer::getSingleton().queueServerNotification(serverNotification);
-
                     std::vector<Seat*> seats;
                     seats.push_back(this);
                     mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::GoalFailed);
