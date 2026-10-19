@@ -58,6 +58,7 @@ protected:
 
 private:
     //! \brief Hurts every enemy creature within the blast radius around the given tile
+    //! Each target uses its own creature damage roll; building channels are unchanged.
     void explode(Tile* tile);
 
     double mBlastRadius;

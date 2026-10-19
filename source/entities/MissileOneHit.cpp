@@ -19,6 +19,7 @@
 
 #include "entities/Building.h"
 #include "entities/Creature.h"
+#include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
@@ -35,6 +36,10 @@ MissileOneHit::MissileOneHit(GameMap* gameMap, Seat* seat, const std::string& se
     mPhysicalDamage(physicalDamage),
     mMagicalDamage(magicalDamage),
     mElementDamage(elementDamage),
+    mPhysicalDamageMin(physicalDamage), mPhysicalDamageMax(physicalDamage),
+    mMagicalDamageMin(magicalDamage), mMagicalDamageMax(magicalDamage),
+    mElementDamageMin(elementDamage), mElementDamageMax(elementDamage),
+    mHasCreatureDamageRange(false), mCreatureStrength(1.0),
     mNotifyPlayerIfHit(notifyPlayerIfHit)
 {
     if(!particleScript.empty())
@@ -50,6 +55,10 @@ MissileOneHit::MissileOneHit(GameMap* gameMap) :
     mPhysicalDamage(0.0),
     mMagicalDamage(0.0),
     mElementDamage(0.0),
+    mPhysicalDamageMin(0.0), mPhysicalDamageMax(0.0),
+    mMagicalDamageMin(0.0), mMagicalDamageMax(0.0),
+    mElementDamageMin(0.0), mElementDamageMax(0.0),
+    mHasCreatureDamageRange(false), mCreatureStrength(1.0),
     mNotifyPlayerIfHit(false)
 {
 }
@@ -70,17 +79,43 @@ void MissileOneHit::hitTargetEntity(Tile* tile, GameEntity* entityTarget)
         entityTarget->notifyFightPlayer(tile);
 }
 
+//! \brief Captures a creature skill range independently of the unchanged building damage.
+void MissileOneHit::setCreatureDamageRange(double phyMin, double phyMax, double magMin, double magMax,
+    double eleMin, double eleMax, double strength)
+{
+    mPhysicalDamageMin = phyMin;
+    mPhysicalDamageMax = phyMax;
+    mMagicalDamageMin = magMin;
+    mMagicalDamageMax = magMax;
+    mElementDamageMin = eleMin;
+    mElementDamageMax = eleMax;
+    mCreatureStrength = strength;
+    mHasCreatureDamageRange = true;
+}
+
+//! \brief Rolls creature damage after defense while keeping building damage deterministic.
 void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
 {
-    double damageDone = entity->takeDamage(this, 0.0, mPhysicalDamage, mMagicalDamage, mElementDamage, tile,
-        getKoEnemyCreature());
+    double damageDone = 0.0;
+    double rawDamage = mPhysicalDamage + mMagicalDamage + mElementDamage;
+    if(mHasCreatureDamageRange && entity->getObjectType() == GameEntityType::creature)
+    {
+        const double damage = CombatDamage::roll(*static_cast<Creature*>(entity),
+            mPhysicalDamageMin, mPhysicalDamageMax, mMagicalDamageMin, mMagicalDamageMax,
+            mElementDamageMin, mElementDamageMax, &rawDamage) * mCreatureStrength;
+        rawDamage *= mCreatureStrength;
+        damageDone = entity->takeDamage(this, damage, 0.0, 0.0, 0.0, tile, getKoEnemyCreature());
+    }
+    else
+        damageDone = entity->takeDamage(this, 0.0, mPhysicalDamage, mMagicalDamage, mElementDamage, tile,
+            getKoEnemyCreature());
     mHasHit = true;
 
     // Tell the clients what the shot did (cosmetic only, the damage above is already done)
     if(!mShooterName.empty() && (entity->getObjectType() == GameEntityType::creature))
     {
         Creature* creature = static_cast<Creature*>(entity);
-        creature->fireHitResult(mShooterName, damageDone, mPhysicalDamage + mMagicalDamage + mElementDamage, true);
+        creature->fireHitResult(mShooterName, damageDone, rawDamage, true);
     }
 }
 
@@ -124,6 +159,11 @@ void MissileOneHit::exportToStream(std::ostream& os) const
     {
         os << "\t" << effect->mScript;
     }
+    os << "\tCreatureDamageRange\t" << mHasCreatureDamageRange
+       << "\t" << mPhysicalDamageMin << "\t" << mPhysicalDamageMax
+       << "\t" << mMagicalDamageMin << "\t" << mMagicalDamageMax
+       << "\t" << mElementDamageMin << "\t" << mElementDamageMax
+       << "\t" << mCreatureStrength;
 }
 
 bool MissileOneHit::importFromStream(std::istream& is)
@@ -148,6 +188,24 @@ bool MissileOneHit::importFromStream(std::istream& is)
         EntityParticleEffect* effect = new EntityParticleEffect(nextParticleSystemsName(), effectScript, -1);
         mEntityParticleEffects.push_back(effect);
     }
+
+    // The marker preserves old saves and leaves derived projectile fields unread.
+    const std::streampos rangePosition = is.tellg();
+    std::string rangeMarker;
+    if(!(is >> rangeMarker))
+    {
+        is.clear();
+        return true;
+    }
+    if(rangeMarker != "CreatureDamageRange")
+    {
+        is.seekg(rangePosition);
+        return static_cast<bool>(is);
+    }
+    if(!(is >> mHasCreatureDamageRange >> mPhysicalDamageMin >> mPhysicalDamageMax
+        >> mMagicalDamageMin >> mMagicalDamageMax >> mElementDamageMin >> mElementDamageMax
+        >> mCreatureStrength))
+        return false;
 
     return true;
 }

@@ -43,6 +43,7 @@ public:
 
     // We return true to make sure every creature with vision on the door tile can see it.
     // A secret door is only seen when a creature of its owner stands on it
+    //! \brief Updates door visibility and rolls the configured runed-door damage when it fires.
     bool shoot(Tile* tile) override;
 
     // The runed door pays its mana itself when it fires (see shoot), not on every upkeep

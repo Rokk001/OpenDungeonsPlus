@@ -35,13 +35,15 @@ class CreatureSkillAreaDamage : public CreatureSkill
 {
 public:
     // Constructors
+    //! \brief Creates a skill with empty creature damage ranges until its definition is loaded.
     CreatureSkillAreaDamage(const std::string& skillName) :
         mSkillName(skillName),
         mMaxRange(0.0),
         mCreatureLevelMin(0),
         mRadius(0.0),
         mNbTurns(0),
-        mDamagePerTurn(0.0)
+        mDamagePerTurn(0.0),
+        mDamagePerTurnMin(0.0)
     {}
 
     virtual ~CreatureSkillAreaDamage()
@@ -57,15 +59,20 @@ public:
     virtual bool tryUseSupport(GameMap& gameMap, Creature* creature) const override
     { return false; }
 
+    //! \brief Applies the configured creature damage range while preserving the building damage path.
     virtual bool tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const override;
 
     virtual CreatureSkillAreaDamage* clone() const override;
 
+    //! \brief Compares the complete skill definition, including its creature damage range.
     virtual bool isEqual(const CreatureSkill& creatureSkill) const override;
 
+    //! \brief Describes the legacy columns followed by the optional creature damage range.
     virtual void getFormatString(std::string& format) const override;
+    //! \brief Writes all skill columns, including the creature damage range.
     virtual void exportToStream(std::ostream& os) const override;
+    //! \brief Reads the skill, falling back to the old fixed damage when range columns are absent.
     virtual bool importFromStream(std::istream& is) override;
 
 private:
@@ -75,6 +82,8 @@ private:
     double mRadius;
     uint32_t mNbTurns;
     double mDamagePerTurn;
+    //! \brief Minimum damage per target and turn.
+    double mDamagePerTurnMin;
     std::string mParticleScript;
 };
 

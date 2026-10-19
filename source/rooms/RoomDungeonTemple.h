@@ -46,7 +46,7 @@ public:
     double getHP(Tile* tile) const override;
     //! \brief The tile the heart object stands on, or null when the heart has no object (ruin).
     Tile* getHeartTile() const;
-    //! Health of an undamaged heart: HEART_MAX_HP, independent of the number of tiles of the
+    //! \brief Configured health of an undamaged heart, independent of the number of tiles of the
     //! room and of the floor tiles' own durability.
     double getHeartMaxHP() const;
     //! \brief Remaining heart health divided by getHeartMaxHP(), from 0 to 1.
@@ -105,8 +105,6 @@ private:
 
     //! One health pool for the heart, independent of individual floor tiles.
     double mHeartHP;
-    //! Health of an undamaged heart
-    static const double HEART_MAX_HP;
     //! Health a living, damaged heart regains per second
     static const double HEART_HEAL_PER_SECOND;
     //! Share of the maximum at or below which the owner is warned that the heart is critical

@@ -122,7 +122,7 @@ void MissileBlast::explode(Tile* tile)
         if(((dx * dx) + (dy * dy)) > radiusSquared)
             continue;
 
-        creature->takeDamage(this, 0.0, mPhysicalDamage, mMagicalDamage, mElementDamage, creatureTile, getKoEnemyCreature());
+        hurt(creatureTile, creature);
         if(mNotifyPlayerIfHit)
             creature->notifyFightPlayer(creatureTile);
     }
