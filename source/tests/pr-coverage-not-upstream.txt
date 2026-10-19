@@ -1,0 +1,21 @@
+# Commits whose lines in CLAUDE.md are not submitted upstream (read by check_pr_coverage.py).
+# Format: <full commit hash> <short reason>. Lines of these commits in any other file still count as gaps.
+4aecc0a2b6578cef3e14c97b4e35fa756388d3ec local working rule: release build approval
+6ff5ae1f3325bc7f6ab70c74156458aa15ac2492 local working rule: fixed tool paths
+ae6deced065257ee69483f9f2683f9229472844a local working rule: references to local-only notes
+d0ab972578c47d871c7cc08ed80c6c258f915922 local working rule: pointer to the local notes layout
+6acd06b97b44859ce7a1c465147531b210cfed55 local working rule: one load test per integration
+a8570b269339f6db556483cf9c730e7f501fa009 local working rule: load tests for changed levels only
+6f4ae2727f4ab2f1a7dbd5c47b488d87c95ab43b local working rule: short load test for integrations
+2e49d0a3eb634cb8e46ef974832f480785fe39d0 local working rule: load tests only on request
+b98e25eedc64bc9e19e1aba946ebae888fd12a12 local working rule: short load test definition
+1a1c50a4ca23d058eb05f28f60fe2dc370d424ff local working rule: who integrates into the integration line
+8b9e350509b6a7b43d265dbf8f1dcdb923605398 local working rule: integration rules
+9ab3241b600b9c6c999cf2b5dde0561148306136 local working rule: protected content rules
+5f6ba2e7885dea9e00d2e6be52d7621025725845 local push hook entry for private notes
+d7fa1fdb33924cdbbfb41a2626cd7fe3150a15a3 local bookkeeping: takeover of the GUI rework
+40d2c1f222728adbbc749f0aa068543ecd55a1e4 local bookkeeping: assembly merges and follow-ups
+82a7a051ba21739f3a6bb8cc22608a4a79891102 local bookkeeping: merge order of the integration line
+4319745846ef80dfc3709d94b2fe2142b29a6c22 local bookkeeping: restored creature lines from assembly merges
+307358c11e261b3a00153c7bd38881f6db579c00 local bookkeeping: restored creature code from assembly merges
+e7b350931d7e414c159d889271d7734e7d0a99ea local bookkeeping: middle-click stats window follows the PR again
