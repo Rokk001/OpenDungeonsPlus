@@ -78,6 +78,7 @@ public:
      * walk, the entity will play walkAnim (looped). When it gets to the wanted position,
      * it will play endAnim (looped or not depending on loopEndAnim).
      * pathAlreadyRefined is for fully validated interaction routes with an exact endpoint.
+     * Normal creature endpoints are spaced on the server and sent identically to every client.
      */
     void setWalkPath(const std::string& walkAnim, const std::string& endAnim, bool loopEndAnim,
                      bool playIdleWhenAnimationEnds, const std::vector<Ogre::Vector2>& path, bool walkDistortion,

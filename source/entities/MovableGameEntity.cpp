@@ -96,16 +96,24 @@ void MovableGameEntity::tileToVector2(const std::list<Tile*>& tiles, std::vector
 
 
 
+//! \brief Assigns server-approved walk points and preserves exact working endpoints and shared client movement.
 void MovableGameEntity::setWalkPath(const std::string& walkAnim, const std::string& endAnim, bool loopEndAnim,
                                     bool playIdleWhenAnimationEnds, const std::vector<Ogre::Vector2>& path, bool walkDistortion,
                                     bool pathAlreadyRefined)
 {
     std::vector<Ogre::Vector2> walkPath = path;
+    const bool spaceDestination = walkDistortion && !pathAlreadyRefined && getIsOnServerMap() &&
+        getObjectType() == GameEntityType::creature;
     if(pathAlreadyRefined)
         walkDistortion = false;
     if(!pathAlreadyRefined && getIsOnServerMap() && getObjectType() == GameEntityType::creature &&
         RoomObjectNavigation::refine(static_cast<Creature&>(*this), walkPath))
         walkDistortion = false;
+    if(spaceDestination)
+    {
+        RoomObjectNavigation::separate(static_cast<Creature&>(*this), walkPath);
+        walkDistortion = false;
+    }
     mWalkQueue.clear();
     // We set the animation after clearing mWalkQueue and before filling it to be
     // sure it is empty when we set it

@@ -22,10 +22,12 @@
 #include "entities/Tile.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 
 #include <functional>
+#include <cstdlib>
 #include <list>
 #include <vector>
 
@@ -35,6 +37,7 @@ std::function<bool()> CreatureActionGoDefendHeart::action()
         std::ref(mCreature));
 }
 
+//! \brief Gathers runners beside the defence point without replacing combat or sharing occupied body space.
 bool CreatureActionGoDefendHeart::handleDefendHeart(Creature& creature)
 {
     Seat* seat = creature.getSeat();
@@ -60,11 +63,26 @@ bool CreatureActionGoDefendHeart::handleDefendHeart(Creature& creature)
         return false;
     }
 
-    if(myTile == targetTile)
-        return false; // hold the defence point; the action stays in the queue
-
     if(creature.isMoving())
         return false; // still walking; check again next turn
+
+    if(std::abs(myTile->getX() - targetTile->getX()) <= 1 &&
+        std::abs(myTile->getY() - targetTile->getY()) <= 1)
+    {
+        const Ogre::Vector2 position(creature.getPosition().x, creature.getPosition().y);
+        std::vector<Ogre::Vector2> standing{position};
+        if(!RoomObjectNavigation::separate(creature, standing))
+        {
+            standing = {targetTile->getPosition2d()};
+            if(!RoomObjectNavigation::separate(creature, standing, true))
+                return false;
+        }
+        if(standing.back() == position)
+            return false; // hold the spaced defence point; the action stays in the queue
+        creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, standing, false, true);
+        creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
+        return false;
+    }
 
     std::list<Tile*> result = creature.getGameMap()->path(&creature, targetTile);
     if(result.empty())
