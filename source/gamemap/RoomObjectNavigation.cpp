@@ -314,10 +314,62 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
     Ogre::Vector2 heading = wanted - previous;
     if(heading.squaredLength() < 0.000001f)
         heading = Ogre::Vector2(creature.getWalkDirection().x, creature.getWalkDirection().y);
-    if(interactionPositionClear(creature, wanted, heading))
-        return true;
     GameMap& map = *creature.getGameMap();
-    const int range = adjacent ? 1 : 0;
+    Tile* wantedTile = map.getTile(Helper::round(wanted.x), Helper::round(wanted.y));
+    if(wantedTile != nullptr && creature.canGoThroughTile(wantedTile) &&
+        (room == nullptr || wantedTile->getCoveringRoom() == room) &&
+        interactionPositionClear(creature, wanted, heading))
+        return true;
+    if(adjacent)
+    {
+        const int centerX = Helper::round(wanted.x), centerY = Helper::round(wanted.y);
+        const int lastRing = std::max({centerX, centerY, map.getMapSizeX() - 1 - centerX,
+            map.getMapSizeY() - 1 - centerY});
+        float nearest = std::numeric_limits<float>::infinity();
+        std::vector<Ogre::Vector2> nearestPath;
+        for(int ring = 0; ring <= lastRing; ++ring)
+        {
+            for(int dy = -ring; dy <= ring; ++dy)
+                for(int dx = -ring; dx <= ring; ++dx)
+                {
+                    if(std::max(std::abs(dx), std::abs(dy)) != ring)
+                        continue;
+                    Tile* tile = map.getTile(centerX + dx, centerY + dy);
+                    if(tile == nullptr || !creature.canGoThroughTile(tile) ||
+                        (room != nullptr && tile->getCoveringRoom() != room))
+                        continue;
+                    // Reject occupied body placements before searching a path to this tile.
+                    std::vector<Ogre::Vector2> probe{ring == 0 ? wanted : tile->getPosition2d()};
+                    if(!separate(creature, probe, false, room))
+                        continue;
+                    const std::list<Tile*> tiles = map.path(&creature, tile);
+                    if(tiles.empty())
+                        continue;
+                    std::vector<Ogre::Vector2> route;
+                    Creature::tileToVector2(tiles, route, true, 0.0f);
+                    route.push_back(ring == 0 ? wanted : tile->getPosition2d());
+                    refine(creature, route);
+                    if(route.empty() || !separate(creature, route, false, room) || blocked(creature, route))
+                        continue;
+                    const float distance = route.back().squaredDistance(wanted);
+                    if(distance < nearest)
+                    {
+                        nearest = distance;
+                        nearestPath.swap(route);
+                    }
+                }
+            // Unvisited tile rings cannot contain a point closer than their nearest tile edge.
+            const float outside = std::max(0.0f, float(ring) + 0.5f -
+                std::max(std::abs(wanted.x - centerX), std::abs(wanted.y - centerY)));
+            if(nearest <= outside * outside)
+                break;
+        }
+        if(nearestPath.empty())
+            return false;
+        path.swap(nearestPath);
+        return true;
+    }
+    const int range = 0;
     std::multimap<float, Ogre::Vector2> candidates;
     for(int dy = -range; dy <= range; ++dy)
         for(int dx = -range; dx <= range; ++dx)
