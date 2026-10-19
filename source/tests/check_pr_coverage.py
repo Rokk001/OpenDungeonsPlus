@@ -9,7 +9,8 @@ branch. Reported are
   file  a file changed on the target that no open pull request touches,
   lines added lines of the target (whitespace-only lines ignored) that appear in no open
         pull request, for files that some pull request touches.
-Files listed in EXCLUDED_FILES are skipped.
+Files listed in EXCLUDED_FILES are skipped. In CLAUDE.md, lines that git blame attributes to a commit
+listed in source/tests/pr-coverage-not-upstream.txt are skipped; all other lines count.
 
 Usage: python -I source/tests/check_pr_coverage.py [--target <ref>] [--base <ref>]
            [--repo <owner/name>] [--author <login>] [--max-lines <n>] [--strict]
@@ -46,7 +47,13 @@ EXCLUDED_FILES = frozenset([
     "docs/development/INTEGRATION-ORDER.md",
     # This check is a tool of the integration line and is not submitted upstream.
     "source/tests/check_pr_coverage.py",
+    # The list of commits below is read by this check and not submitted upstream either.
+    "source/tests/pr-coverage-not-upstream.txt",
 ])
+
+# Commits whose lines in BLAME_FILTERED_FILE are not submitted upstream; their lines in other files still count.
+NOT_UPSTREAM_COMMITS_FILE = "source/tests/pr-coverage-not-upstream.txt"
+BLAME_FILTERED_FILE = "CLAUDE.md"
 
 
 class CheckError(Exception):
@@ -108,6 +115,34 @@ def diff_added(base, ref):
     return files, added
 
 
+def read_not_upstream_commits():
+    """Return the set of commit hashes listed in the not-upstream list (first word per line, # starts a comment)."""
+    commits = set()
+    with open(os.path.join(ROOT, NOT_UPSTREAM_COMMITS_FILE), encoding="utf-8") as handle:
+        for line in handle:
+            words = line.split()
+            if words and not words[0].startswith("#"):
+                commits.add(words[0])
+    return commits
+
+
+def lines_from_commits(ref, path, commits):
+    """Return the stripped, non-empty lines of path at ref that git blame attributes to one of the commits."""
+    text = run(["git", "blame", "--porcelain", ref, "--", path], "blame of %s at %s" % (path, ref))
+    found = set()
+    owner = None
+    for line in text.splitlines():
+        if line.startswith("	"):
+            stripped = line[1:].strip()
+            if owner in commits and stripped:
+                found.add(stripped)
+        else:
+            words = line.split()
+            if len(words) >= 3 and len(words[0]) == 40 and words[2].isdigit():
+                owner = words[0]
+    return found
+
+
 def read_count(path):
     """Return the gap count stored in the counter file, or None if the file or the line is missing."""
     if not os.path.exists(path):
@@ -165,6 +200,10 @@ def main():
             raise CheckError("no open pull requests found for %s in %s; refusing to report an empty comparison" % (options.author, options.repo))
         target_files, target_added = diff_added(options.base, options.target)
         target_files -= EXCLUDED_FILES
+        if BLAME_FILTERED_FILE in target_files:
+            target_added[BLAME_FILTERED_FILE] -= lines_from_commits(options.target, BLAME_FILTERED_FILE, read_not_upstream_commits())
+            if not target_added[BLAME_FILTERED_FILE]:
+                target_files.discard(BLAME_FILTERED_FILE)
         pr_files = set()
         pr_added = {}
         for number, branch, commit in heads:
