@@ -9,6 +9,7 @@ branch. Reported are
   file  a file changed on the target that no open pull request touches,
   lines added lines of the target (whitespace-only lines ignored) that appear in no open
         pull request, for files that some pull request touches.
+Files listed in EXCLUDED_FILES are skipped.
 
 Usage: python -I source/tests/check_pr_coverage.py [--target <ref>] [--base <ref>]
            [--repo <owner/name>] [--author <login>] [--max-lines <n>] [--strict]
@@ -37,6 +38,15 @@ DEFAULT_BASE = "upstream/shaders-improvement"
 DEFAULT_REPO = "tomluchowski/OpenDungeonsPlus"
 DEFAULT_AUTHOR = "Rokk001"
 COUNT_MARKER = "PR coverage gaps (last run):"
+
+# Files that deliberately never go to the upstream project; they are not reported as gaps.
+# Every entry names where the decision is recorded.
+EXCLUDED_FILES = frozenset([
+    # Merge-order note of the integration line, recorded as not for upstream in commit 82a7a051b.
+    "docs/development/INTEGRATION-ORDER.md",
+    # This check is a tool of the integration line and is not submitted upstream.
+    "source/tests/check_pr_coverage.py",
+])
 
 
 class CheckError(Exception):
@@ -154,6 +164,7 @@ def main():
         if not heads:
             raise CheckError("no open pull requests found for %s in %s; refusing to report an empty comparison" % (options.author, options.repo))
         target_files, target_added = diff_added(options.base, options.target)
+        target_files -= EXCLUDED_FILES
         pr_files = set()
         pr_added = {}
         for number, branch, commit in heads:
