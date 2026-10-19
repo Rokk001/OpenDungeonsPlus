@@ -80,11 +80,11 @@ for creature, skills in expected.items():
 
 # Spot values (fork scale where the values are gameplay numbers)
 dragon = blocks["Dragon"]
-assert re.search(r"^\s+HailStorm\t21\t2\t4\t8\t2\t11\t1\.5\t", dragon, re.M), "hail storm: 8 s of 1.4 turns, radius 2"
+assert re.search(r"^\s+HailStorm\t21\t2\t4\t8\t2\t11\t3\.08\tnone\t2\.05$", dragon, re.M), "hail storm: radius 2, damage range 2.05 to 3.08"
 assert re.search(r"^\s+SkeletonArmy\t21\t2\t10\t3\t42\tSkeleton$", dragon, re.M), "three skeletons for 30 s"
 assert re.search(r"^\s+RaiseDead\t24\t2\t10\t4\t3\t42\tSkeleton$", blocks["Lich"], re.M), "raised skeletons last 30 s"
 assert re.search(r"^\s+Whirlwind\t14\t1\t2\t8\t3\t3$", blocks["CaveHornet"], re.M), "pushed back by three tiles"
-assert re.search(r"^\s+GasCloud\t7\t1\t2\t4\t1\.5\t2\t", blocks["Slime"], re.M), "gas cloud from level 4"
+assert re.search(r"^\s+GasCloud\t7\t1\t2\t4\t1\.5\t2\t14\.35\tSmoke\t9\.57$", blocks["Slime"], re.M), "gas cloud from level 4, damage range 9.57 to 14.35"
 for worker in ("Kobold", "DwarfWorker"):
     assert re.search(r"^\s+Teleport\t7\t0\t8\t8\t30$", blocks[worker], re.M), "these workers teleport from level 8"
 

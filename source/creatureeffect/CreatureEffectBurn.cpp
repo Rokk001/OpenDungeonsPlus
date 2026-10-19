@@ -16,6 +16,8 @@
  */
 
 #include "creatureeffect/CreatureEffectBurn.h"
+#include "utils/Random.h"
+#include "entities/CombatDamage.h"
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
@@ -51,7 +53,7 @@ void CreatureEffectBurn::applyEffect(Creature& creature)
         return;
 
     Tile* posTile = creature.getPositionTile();
-    creature.takeDamage(nullptr, mDamagePerTurn, 0.0, 0.0, 0.0, posTile, false);
+    creature.takeDamage(nullptr, Random::Double(mDamagePerTurnMin, mDamagePerTurn), 0.0, 0.0, 0.0, posTile, false);
 }
 
 CreatureEffectBurn* CreatureEffectBurn::load(std::istream& is)
@@ -65,6 +67,7 @@ void CreatureEffectBurn::exportToStream(std::ostream& os) const
 {
     CreatureEffect::exportToStream(os);
     os << "\t" << mDamagePerTurn;
+    os << "\tDamageRangeMin\t" << mDamagePerTurnMin;
 }
 
 bool CreatureEffectBurn::importFromStream(std::istream& is)
@@ -72,6 +75,9 @@ bool CreatureEffectBurn::importFromStream(std::istream& is)
     if(!CreatureEffect::importFromStream(is))
         return false;
     if(!(is >> mDamagePerTurn))
+        return false;
+    mDamagePerTurnMin = mDamagePerTurn;
+    if(!CombatDamage::readEffectMinimum(is, mDamagePerTurnMin))
         return false;
 
     return true;

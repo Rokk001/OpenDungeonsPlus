@@ -24,31 +24,43 @@
 class CreatureEffectBurn : public CreatureEffect
 {
 public:
+    //! \brief Creates a fixed damage effect whose minimum may be supplied separately.
     CreatureEffectBurn(int32_t nbTurnsEffect, double damagePerTurn, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
-        mDamagePerTurn(damagePerTurn)
+        mDamagePerTurn(damagePerTurn),
+        mDamagePerTurnMin(damagePerTurn)
     {}
 
+    //! \brief Creates an empty effect for loading.
     CreatureEffectBurn() :
         CreatureEffect(),
-        mDamagePerTurn(0.0)
+        mDamagePerTurn(0.0),
+        mDamagePerTurnMin(0.0)
     {}
+
+    //! \brief Sets the minimum damage used for each application of this effect.
+    void setDamageMin(double value) { mDamagePerTurnMin = value; }
 
     virtual ~CreatureEffectBurn()
     {}
 
     virtual const std::string& getEffectName() const override;
 
+    //! \brief Writes the effect with both damage endpoints.
     virtual void exportToStream(std::ostream& os) const override;
+    //! \brief Reads both endpoints, accepting legacy fixed damage effects.
     virtual bool importFromStream(std::istream& is) override;
 
     static CreatureEffectBurn* load(std::istream& is);
 
 protected:
+    //! \brief Rolls a fresh damage value for every affected creature and turn.
     virtual void applyEffect(Creature& creature) override;
 
 private:
     double mDamagePerTurn;
+    //! \brief Minimum damage, retained separately for a fresh roll every application.
+    double mDamagePerTurnMin;
 };
 
 #endif // CREATUREEFFECTBURN_H

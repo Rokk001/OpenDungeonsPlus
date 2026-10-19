@@ -51,6 +51,9 @@ public:
     static MissileBlast* getMissileBlastFromPacket(GameMap* gameMap, ODPacket& is);
 
 protected:
+    //! \brief Only zero-radius guided shots roll creature accuracy and avoidance; blasts always apply area damage.
+    bool usesCreatureHitRoll() const override { return mBlastRadius <= 0.0; }
+
     virtual void updateDirection() override;
 
     void exportToStream(std::ostream& os) const override;
@@ -58,6 +61,7 @@ protected:
 
 private:
     //! \brief Hurts every enemy creature within the blast radius around the given tile
+    //! Each target uses its own creature damage roll; building channels are unchanged.
     void explode(Tile* tile);
 
     double mBlastRadius;

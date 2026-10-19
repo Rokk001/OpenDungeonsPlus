@@ -16,6 +16,7 @@
  */
 
 #include "spells/SpellTremor.h"
+#include "utils/Random.h"
 
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -170,7 +171,8 @@ bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         if((pos == nullptr) || !isTileInRadius(pos, x, y, radius))
             continue;
 
-        creature->takeDamage(nullptr, damage, 0.0, 0.0, 0.0, pos, false);
+        creature->takeDamage(nullptr, Random::Double(ConfigManager::getSingleton().getSpellConfigDouble("TremorDamageMin"), damage),
+            0.0, 0.0, 0.0, pos, false);
         creature->stun(nbTurns);
     }
 
