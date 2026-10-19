@@ -53,6 +53,7 @@ public:
     virtual void updateActiveSpots(GameMap* gameMap = nullptr) override;
     
     //! \brief Updates prisoners and announces only actual first arrivals of the resulting creature class.
+    //! Prison damage is rolled independently for every prisoner and turn.
     void doUpkeep() override;
 
     bool hasOpenCreatureSpot(Creature* creature) override;

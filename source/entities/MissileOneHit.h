@@ -32,9 +32,11 @@ class ODPacket;
 class MissileOneHit: public MissileObject
 {
 public:
+    //! \brief Creates a projectile with unchanged building damage and a default fixed creature range.
     MissileOneHit(GameMap* gameMap, Seat* seat, const std::string& senderName, const std::string& meshName,
         const std::string& particleScript, const Ogre::Vector3& direction, double speed, double physicalDamage, double magicalDamage,
         double elementDamage, GameEntity* entityTarget, bool damageAllies, bool koEnemyCreature, bool notifyPlayerIfHit);
+    //! \brief Creates an empty projectile for loading.
     MissileOneHit(GameMap* gameMap);
 
     virtual MissileObjectType getMissileType() const override
@@ -52,10 +54,16 @@ public:
         mTargetName = targetName;
     }
 
+    //! \brief Sets the scaled creature range while preserving the original building damage channels.
+    void setCreatureDamageRange(double phyMin, double phyMax, double magMin, double magMax,
+        double eleMin, double eleMax, double strength);
+
     static MissileOneHit* getMissileOneHitFromStream(GameMap* gameMap, std::istream& is);
     static MissileOneHit* getMissileOneHitFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
+    //! \brief Writes building channels and the optional marked creature damage payload.
     void exportToStream(std::ostream& os) const override;
+    //! \brief Reads the separate damage paths while accepting older projectile saves.
     bool importFromStream(std::istream& is) override;
     virtual void missileStopped() override;
 
@@ -70,6 +78,12 @@ protected:
     double mPhysicalDamage;
     double mMagicalDamage;
     double mElementDamage;
+    //! \brief Creature-only ranges; the original channels are retained for building hits.
+    double mPhysicalDamageMin, mPhysicalDamageMax, mMagicalDamageMin, mMagicalDamageMax;
+    double mElementDamageMin, mElementDamageMax;
+    //! \brief Whether a creature skill supplied the range, and its captured strength modifier.
+    bool mHasCreatureDamageRange;
+    double mCreatureStrength;
     bool mNotifyPlayerIfHit;
 };
 

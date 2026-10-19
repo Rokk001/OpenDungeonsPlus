@@ -16,6 +16,7 @@
  */
 
 #include "spells/SpellLightning.h"
+#include "utils/Random.h"
 
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -174,7 +175,8 @@ bool SpellLightning::castSpell(GameMap* gameMap, Player* player, ODPacket& packe
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    double damage = ConfigManager::getSingleton().getSpellConfigDouble("LightningDamage");
+    double damage = Random::Double(ConfigManager::getSingleton().getSpellConfigDouble("LightningDamageMin"),
+        ConfigManager::getSingleton().getSpellConfigDouble("LightningDamage"));
     creature->takeDamage(nullptr, damage, 0.0, 0.0, 0.0, pos, false);
     creature->stun(creature->getDefinition()->getTurnsStunDropped());
     fireSpellEffect(*pos, "Lightning", "LightningCast");

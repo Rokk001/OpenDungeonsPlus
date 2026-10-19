@@ -20,6 +20,7 @@
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
 #include "entities/CreatureProgression.h"
+#include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileOneHit.h"
 #include "entities/Tile.h"
@@ -105,6 +106,12 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
 
     MissileOneHit* missile = createMissile(gameMap, creature, missileDirection, phyAtk, magAtk, eleAtk,
         attackedObject, ko, notifyPlayerIfHit);
+    double phyMin = mPhyMin, phyMax = mPhyMax;
+    double magMin = mMagMin, magMax = mMagMax;
+    double eleMin = mEleMin, eleMax = mEleMax;
+    CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+    missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+        creature->getModifierStrength());
     // The plain missile tells the clients what the shot did (cosmetic event hitResult). Blast missiles do their own
     // damage and report nothing.
     if(missile->getMissileType() == MissileObjectType::oneHit)
@@ -159,6 +166,8 @@ void CreatureSkillMissileLaunch::getFormatString(std::string& format) const
         format += "\t";
 
     format += "RangeMax\tRangePerLvl\tLevelMin\tMissileMesh\tMissilePartScript\tMissileSpeed\tPhyAtk\tPhyAtkPerLvl\tMagAtk\tMagAtkPerLvl\tEleAtk\tEleAtkPerLvl";
+    if(getSkillName() != "Grenade")
+        format += "\tPhyMin\tPhyMax\tMagMin\tMagMax\tEleMin\tEleMax";
 
 }
 
@@ -183,6 +192,15 @@ void CreatureSkillMissileLaunch::exportToStream(std::ostream& os) const
     os << "\t" << mMagAtkPerLvl;
     os << "\t" << mEleAtk;
     os << "\t" << mEleAtkPerLvl;
+    if(getSkillName() != "Grenade")
+    {
+    os << "\t" << mPhyMin;
+    os << "\t" << mPhyMax;
+    os << "\t" << mMagMin;
+    os << "\t" << mMagMax;
+    os << "\t" << mEleMin;
+    os << "\t" << mEleMax;
+    }
 }
 
 bool CreatureSkillMissileLaunch::importFromStream(std::istream& is)
@@ -219,7 +237,12 @@ bool CreatureSkillMissileLaunch::importFromStream(std::istream& is)
     if(!(is >> mEleAtkPerLvl))
         return false;
 
-    return true;
+    mPhyMin = mPhyMax = mPhyAtk + mPhyAtkPerLvl;
+    mMagMin = mMagMax = mMagAtk + mMagAtkPerLvl;
+    mEleMin = mEleMax = mEleAtk + mEleAtkPerLvl;
+    if(getSkillName() == "Grenade")
+        return true;
+    return CombatDamage::readRange(is, mPhyMin, mPhyMax, mMagMin, mMagMax, mEleMin, mEleMax);
 }
 
 bool CreatureSkillMissileLaunch::isEqual(const CreatureSkill& creatureSkill) const
@@ -254,6 +277,10 @@ bool CreatureSkillMissileLaunch::isEqual(const CreatureSkill& creatureSkill) con
     if(mEleAtk != skill->mEleAtk)
         return false;
     if(mEleAtkPerLvl != skill->mEleAtkPerLvl)
+        return false;
+    if(mPhyMin != skill->mPhyMin || mPhyMax != skill->mPhyMax
+        || mMagMin != skill->mMagMin || mMagMax != skill->mMagMax
+        || mEleMin != skill->mEleMin || mEleMax != skill->mEleMax)
         return false;
 
     return true;

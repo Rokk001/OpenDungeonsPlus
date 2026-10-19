@@ -31,6 +31,7 @@ class SpellTremor : public Spell
 {
 public:
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    //! \brief Casts the spell using its configured damage range for each damage application.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);

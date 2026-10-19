@@ -16,6 +16,7 @@
  */
 
 #include "traps/TrapDoor.h"
+#include "utils/Random.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 
@@ -445,7 +446,8 @@ bool TrapDoor::shoot(Tile* tile)
         return true;
 
     fireTrapEffect(TrapEffectKind::fired, tile, 1.0);
-    double damage = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamage");
+    double damage = Random::Double(ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamageMin"),
+        ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamage"));
     for(GameEntity* target : enemyCreatures)
     {
         Tile* targetTile = target->getCoveredTile(0);
