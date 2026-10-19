@@ -12,10 +12,15 @@ branch. Reported are
 
 Usage: python -I source/tests/check_pr_coverage.py [--target <ref>] [--base <ref>]
            [--repo <owner/name>] [--author <login>] [--max-lines <n>] [--strict]
+           [--count-file <path>]
 Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> uncovered"
 (with the first lines shown) per partly covered file, then a summary.
+With --count-file the number of gaps of every run is stored in that file as one line
+"PR coverage gaps (last run): <n>" (the line is replaced, or appended if the file or the
+line is missing); the run fails when the number is higher than the stored value of the
+previous run (the first run only stores it), so old gaps do not turn a run red.
 Exit codes: 0 = finished (gaps are only listed unless --strict is given), 1 = gaps found
-with --strict, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
+with --strict or more gaps than in the previous run, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
 a pull request head is not available locally); this is never reported as green.
 Nothing is compiled.
 """
@@ -30,6 +35,7 @@ DEFAULT_TARGET = "origin/integration/all"
 DEFAULT_BASE = "upstream/shaders-improvement"
 DEFAULT_REPO = "tomluchowski/OpenDungeonsPlus"
 DEFAULT_AUTHOR = "Rokk001"
+COUNT_MARKER = "PR coverage gaps (last run):"
 
 
 class CheckError(Exception):
@@ -91,6 +97,37 @@ def diff_added(base, ref):
     return files, added
 
 
+def update_count(path, gaps):
+    """Store the gap count in the counter file and return the previous count, or None if there was none."""
+    lines = []
+    eol = "\n"
+    if os.path.exists(path):
+        with open(path, encoding="utf-8", errors="replace", newline="") as handle:
+            text = handle.read()
+        if "\r\n" in text:
+            eol = "\r\n"
+        lines = text.split(eol)
+    previous = None
+    found = False
+    for index, line in enumerate(lines):
+        if line.startswith(COUNT_MARKER):
+            try:
+                previous = int(line[len(COUNT_MARKER):].strip())
+            except ValueError:
+                previous = None
+            lines[index] = "%s %d" % (COUNT_MARKER, gaps)
+            found = True
+            break
+    if not found:
+        while lines and lines[-1] == "":
+            lines.pop()
+        lines.append("%s %d" % (COUNT_MARKER, gaps))
+        lines.append("")
+    with open(path, "w", encoding="utf-8", newline="") as handle:
+        handle.write(eol.join(lines))
+    return previous
+
+
 def main():
     """Parse the arguments, compute the gaps and print them; return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -99,6 +136,7 @@ def main():
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--author", default=DEFAULT_AUTHOR)
     parser.add_argument("--max-lines", type=int, default=5, help="uncovered lines shown per file")
+    parser.add_argument("--count-file", default=None, help="file that keeps the gap count of the last run")
     parser.add_argument("--strict", action="store_true", help="exit 1 when gaps are found")
     options = parser.parse_args()
     try:
@@ -128,7 +166,17 @@ def main():
             for text in missing[:options.max_lines]:
                 print("    %s" % text[:160])
     print("%d open pull requests, %d files changed on %s, %d gaps" % (len(heads), len(target_files), options.target, gaps))
-    return 1 if (gaps and options.strict) else 0
+    rose = False
+    if options.count_file:
+        previous = update_count(options.count_file, gaps)
+        if previous is None:
+            print("gap count %d stored (no previous value)" % gaps)
+        elif gaps > previous:
+            rose = True
+            print("gap count rose from %d to %d" % (previous, gaps))
+        else:
+            print("gap count %d (previous %d)" % (gaps, previous))
+    return 1 if ((gaps and options.strict) or rose) else 0
 
 
 if __name__ == "__main__":
