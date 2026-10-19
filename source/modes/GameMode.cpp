@@ -72,6 +72,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
 #include "ODApplication.h"
 
@@ -2293,6 +2294,14 @@ void GameMode::showCampaignVictory(const std::string& goalsDisplay)
     refreshPlayerGoals(goalsDisplay);
     showObjectivesWindow();
     showDefeatDebriefing();
+
+    // The level load test reports the victory message and then leaves the way a click on the confirm button does
+    if(RunLevelTest::isActive())
+    {
+        RunLevelTest::onVictoryShown();
+        CEGUI::EventArgs confirmArgs;
+        onClickCampaignVictoryConfirm(confirmArgs);
+    }
 }
 
 //! \brief Uses the ordinary campaign exit after acknowledging the saved victory.

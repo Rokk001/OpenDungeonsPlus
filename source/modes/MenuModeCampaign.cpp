@@ -35,6 +35,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/BasicImage.h>
@@ -382,10 +383,12 @@ void MenuModeCampaign::activate()
     // Debriefing of the level that was played last
     mResultText.clear();
     size_t playedLevel = campaign.getPlayedLevel();
+    bool playedLevelWon = false;
     if(playedLevel < campaign.getNumLevels())
     {
         const CampaignLevel& level = campaign.getLevel(playedLevel);
-        if(campaign.getPlayedLevelWon())
+        playedLevelWon = campaign.getPlayedLevelWon();
+        if(playedLevelWon)
         {
             mResultText = "Debriefing - " + level.mTitle + "\n\n" + level.mDebriefing + "\n\n";
             if(level.mBonus)
@@ -427,6 +430,10 @@ void MenuModeCampaign::activate()
     if(!mResultText.empty())
         showDebriefing();
     updateDifficultyButton();
+
+    // The level load test checks here that the map with the next level appeared after the won level
+    if(RunLevelTest::isActive())
+        RunLevelTest::onCampaignMapShown(playedLevelWon);
 }
 
 void MenuModeCampaign::updateDifficultyButton()

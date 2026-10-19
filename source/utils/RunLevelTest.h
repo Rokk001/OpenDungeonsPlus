@@ -32,7 +32,9 @@ class RenderTarget;
 
 //! \brief Debug mode for automated level load tests (command line: --run-level <file> --seconds <N>).
 //! The game starts a local single player game on the level, lets it run for N seconds of game time,
-//! then fires the win of the human seat and checks that it is reported. One result line (PASS/FAIL
+//! then sets all main goals of the level as reached, fires the win of the human seat and checks that it
+//! is reported (a refused win is a failure). A campaign level also has to show the victory message and the
+//! campaign map with the next level. One result line (PASS/FAIL
 //! with reason) is printed and written to run-level-result.txt in the user data folder. A watchdog
 //! ends runs that hang. The process exit code tells the result (see Code).
 class RunLevelTest
@@ -76,8 +78,23 @@ public:
     //! average is printed as one line (FRAMETIME frames=... avg_ms=...) before the result line.
     static void recordFrame(float seconds);
 
-    //! \brief Called by the server thread after every turn of the game.
+    //! \brief Called by the server thread after every turn of the game. At the end of the run it sets all
+    //! main goals of the level as reached and then fires the win; a refused win fails the run. For a campaign
+    //! level the run only passes once the client showed the victory message and the campaign map.
     static void onServerTurn(GameMap& gameMap);
+
+    //! \brief Called by the main menu right before it starts the tested level. If the level is an entry of the
+    //! campaign definition, the campaign is started on it (without writing saved progress), so that its victory
+    //! takes the normal campaign path.
+    static void prepareCampaignLevel();
+
+    //! \brief Called by the client when the campaign victory message is shown.
+    static void onVictoryShown();
+
+    //! \brief Called by the client when the campaign map was built after a level.
+    //! \param levelWon true if the map shows the played level as won. The run passes only if the victory
+    //! message was shown before and the map offers an unlocked next level (or the campaign is completed).
+    static void onCampaignMapShown(bool levelWon);
 
     //! \brief Called by the render loop after every frame. Once the game runs, it appends one line per
     //! second to run-level-frames.txt in the user data folder (average fps, worst and best frame time

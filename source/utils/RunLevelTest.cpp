@@ -22,9 +22,11 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/Campaign.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
@@ -55,6 +57,15 @@ namespace
     const int32_t LOAD_LIMIT_SECONDS = 90;
     //! Directory identifying campaign maps in the existing level test input.
     const std::string CAMPAIGN_DIRECTORY = "campaign";
+
+    //! True when the tested level is an entry of the campaign definition; its victory must lead to the campaign map.
+    std::atomic<bool> sCampaignRun(false);
+    //! True once the server has the victory and waits for the client to show the victory message and campaign map.
+    std::atomic<bool> sAwaitingClient(false);
+    //! True once the client showed the campaign victory message.
+    std::atomic<bool> sVictoryShown(false);
+    //! Which way the victory came, written before sAwaitingClient is set.
+    std::string sWinDescription;
 
     std::atomic<bool> sActive(false);
     std::atomic<bool> sFinished(false);
@@ -348,6 +359,27 @@ namespace
         return true;
     }
 
+    //! \brief Ends the run after a victory of the human seat. A plain level passes at once. A campaign level
+    //! must have been recorded as won and then waits for the client to show the victory message and the campaign
+    //! map with the next level (see RunLevelTest::onVictoryShown and RunLevelTest::onCampaignMapShown).
+    //! \param passText the text of the PASS line after the level name, describing how the victory came.
+    void finishVictory(const std::string& passText)
+    {
+        if(!sCampaignRun.load())
+        {
+            emitResult(RunLevelTest::codePass, "PASS " + sLevelName + " : " + passText);
+            return;
+        }
+        if(!Campaign::getSingleton().getPlayedLevelWon())
+        {
+            emitResult(RunLevelTest::codeNoVictory, "FAIL " + sLevelName
+                + " : no victory: the campaign did not record the level as won");
+            return;
+        }
+        sWinDescription = passText;
+        sAwaitingClient = true;
+    }
+
     void watchdog()
     {
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -434,6 +466,10 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
     if(sFinished.load())
         return;
 
+    // The victory is decided; the client now has to show the message and the campaign map
+    if(sAwaitingClient.load())
+        return;
+
     int64_t turn = gameMap.getTurnNumber();
     if(turn < 1)
         return;
@@ -513,7 +549,7 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
         if(sSeed != 0)
             writeState(gameMap);
         writeTimings();
-        emitResult(codePass, "PASS " + sLevelName + " : level loaded, victory reported by the level goals after " + played);
+        finishVictory("level loaded, victory reported by the level goals after " + played);
         return;
     }
 
@@ -531,14 +567,75 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
         writeState(gameMap);
     writeTimings();
 
-    // Fire the win of the human seat and check that it is reported
-    gameMap.addWinningSeat(humanSeat);
+    // Set every main goal of the level as reached, then fire the win of the human seat. A level holds the
+    // victory back until all its main goals are reached, so a refused win counts as a failure.
+    gameMap.getLevelScript().markMainObjectivesReached(humanSeat->getId());
+    gameMap.addWinningSeat(humanSeat, true);
     if(!gameMap.seatIsAWinner(humanSeat))
     {
-        fail(codeNoVictory, "no victory: win was triggered after " + played + " but not reported");
+        fail(codeNoVictory, "no victory: win was refused after " + played + " although all main goals were set as reached");
         return;
     }
-    emitResult(codePass, "PASS " + sLevelName + " : level loaded, ran " + played + ", no errors, triggered win reported");
+    finishVictory("level loaded, ran " + played + ", no errors, all main goals reached, triggered win reported");
+}
+
+void RunLevelTest::prepareCampaignLevel()
+{
+    Campaign& campaign = Campaign::getSingleton();
+    boost::filesystem::path level(sLevelFile);
+    const std::string relativeFile = (level.parent_path().filename() / level.filename()).generic_string();
+    for(size_t index = 0; index < campaign.getNumLevels(); ++index)
+    {
+        if(campaign.getLevel(index).mFile != relativeFile)
+            continue;
+
+        // The test never writes the saved progress of the player
+        campaign.setProgressPath(std::string());
+        campaign.startLevel(index);
+        sCampaignRun = true;
+        return;
+    }
+}
+
+void RunLevelTest::onVictoryShown()
+{
+    if(!sAwaitingClient.load() || sFinished.load())
+        return;
+
+    sVictoryShown = true;
+    std::cout << "VICTORY message shown" << std::endl;
+}
+
+void RunLevelTest::onCampaignMapShown(bool levelWon)
+{
+    if(!sAwaitingClient.load() || sFinished.load())
+        return;
+
+    if(!sVictoryShown.load())
+    {
+        fail(codeNoVictory, "no victory: the campaign map appeared without the victory message");
+        return;
+    }
+    Campaign& campaign = Campaign::getSingleton();
+    if(!levelWon)
+    {
+        fail(codeNoVictory, "no victory: the campaign map does not show the level as won");
+        return;
+    }
+    if(campaign.isFinished())
+    {
+        emitResult(codePass, "PASS " + sLevelName + " : " + sWinDescription
+            + ", victory message shown, campaign map shows the campaign as completed");
+        return;
+    }
+    const size_t nextLevel = campaign.getCurrentLevel();
+    if((nextLevel >= campaign.getNumLevels()) || !campaign.isUnlocked(nextLevel))
+    {
+        fail(codeNoVictory, "no victory: the campaign map shows no unlocked next level");
+        return;
+    }
+    emitResult(codePass, "PASS " + sLevelName + " : " + sWinDescription
+        + ", victory message shown, campaign map shows the next level " + campaign.getLevel(nextLevel).mFile);
 }
 
 void RunLevelTest::onFrameRendered(Ogre::RenderTarget& target)

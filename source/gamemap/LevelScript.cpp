@@ -1435,6 +1435,24 @@ void LevelScript::refreshMainObjectives(int32_t seatId)
     }
 }
 
+//! \brief Sets every required main goal of the seat to reached, using the same selection as areMainObjectivesReached.
+void LevelScript::markMainObjectivesReached(int32_t seatId)
+{
+    for(const LevelScriptTrigger& trigger : mTriggers)
+    {
+        for(const LevelScriptAction& action : trigger.mActions)
+        {
+            if(action.mType != LevelScriptActionType::objective ||
+               (action.mSeatId != -1 && action.mSeatId != seatId))
+                continue;
+            const bool required = action.mObjectiveGroup == LevelScriptObjectiveGroup::main ||
+                (action.mObjectiveGroup == LevelScriptObjectiveGroup::conditionalMain && trigger.mTimesFired > 0);
+            if(required)
+                setObjectiveState(seatId, action.mObjectiveId, LevelScriptObjectiveState::reached);
+        }
+    }
+}
+
 //! \brief Persists an original victory request while required goals are incomplete.
 void LevelScript::requestVictory(int32_t seatId)
 {

@@ -270,6 +270,10 @@ void MenuModeMain::restartPendingLevel()
     if(!configNickname.empty())
         ODFrameListener::getSingleton().getClientGameMap()->setLocalPlayerNick(configNickname);
 
+    // The level load test plays a campaign level as part of the campaign, like the campaign menu does
+    if(RunLevelTest::isActive())
+        RunLevelTest::prepareCampaignLevel();
+
     // In single player mode, we act as a server
     const std::string& nickname = ODFrameListener::getSingleton().getClientGameMap()->getLocalPlayerNick();
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeGameSinglePlayer, false))
