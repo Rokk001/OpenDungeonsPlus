@@ -1225,3 +1225,4 @@ tools/add_weapon_bones.py                                OD Team  GPLv3+  Own wo
 models/skeleton.skeleton                                 OD Team  GPLv3+  Own work: right-hand weapon mount added by tools/add_weapon_bones.py, converted with OgreXMLConverter; existing data keeps its existing licence
 models/lich.skeleton                                     OD Team  GPLv3+  Own work: right-hand weapon mount added by tools/add_weapon_bones.py, converted with OgreXMLConverter; existing data keeps its existing licence
 models/PitDemon.skeleton                                 OD Team  GPLv3+  Own work: right-hand weapon mount added by tools/add_weapon_bones.py, converted with OgreXMLConverter; existing data keeps its existing licence
+source/tests/check_creature_armament.py                 OD Team  GPLv3+  Own work: static creature armament config, asset and source verification
