@@ -38,7 +38,7 @@ report(bad, changed)
 assert changed['mAttackRecoveryTurns'] != 1
 upkeep = function(source, 'void Creature::doUpkeep()')
 assert 'loopBack = func();' in upkeep and 'while (loopBack && loops < 20);' in upkeep
-assert upkeep.count('--mAttackRecoveryTurns;') == 1
+assert upkeep.count('mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);') == 1
 call = 'creature.recordWorkerStepRecovery();'
 dig = (ROOT / 'source/creatureaction/CreatureActionDigTile.cpp').read_text()
 assert dig.count(call) == 1
