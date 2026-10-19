@@ -55,6 +55,7 @@
 #include "creaturemood/CreatureMoodManager.h"
 #include "creaturemood/CreatureMoodOutOfWork.h"
 #include "creatureskill/CreatureSkill.h"
+#include "creatureskill/CreatureSkillMeleeFight.h"
 
 
 #include "entities/ChickenEntity.h"
@@ -4277,6 +4278,28 @@ void Creature::receiveExp(double experience)
     mNeedFireRefresh = true;
 }
 
+uint32_t Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
+{
+    const uint32_t definitionCooldown = skill.getCooldownNbTurns();
+    if(dynamic_cast<const CreatureSkillMeleeFight*>(&skill) == nullptr)
+        return definitionCooldown;
+
+    const Weapon* weapons[2] = {mWeaponL, mWeaponR};
+    uint32_t weaponCooldown = 0;
+    for(const Weapon* weapon : weapons)
+    {
+        if(weapon == nullptr)
+            continue;
+
+        weaponCooldown = std::max(weaponCooldown, weapon->getCooldownNbTurns());
+    }
+
+    if(weaponCooldown == 0)
+        return definitionCooldown;
+
+    return weaponCooldown;
+}
+
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
@@ -4301,7 +4324,7 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     skillData.mSkill->tryUseFight(*getGameMap(), this, range,
         &entityAttack, &tileAttack, ko, notifyPlayerIfHit);
     skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
-    skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
+    skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);
 
     // Both timers count down together; either can postpone the next attack.
     mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);
@@ -5394,7 +5417,7 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
     {
         for(const CreatureSkill* skill : mDefinition->getCreatureSkills())
         {
-            CreatureSkillData skillData(skill, skill->getCooldownNbTurns(), 0);
+            CreatureSkillData skillData(skill, getAppliedCooldownNbTurns(*skill), 0);
             mSkillData.push_back(skillData);
         }
     }
