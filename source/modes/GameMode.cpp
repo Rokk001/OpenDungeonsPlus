@@ -1340,8 +1340,9 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
     {
         Room* room = tileClicked->getCoveringRoom();
-        if((room != nullptr) && (room->getType() == RoomType::casino) &&
-           (room->getSeat() == mGameMap->getLocalPlayer()->getSeat()))
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        if((room != nullptr) && (localPlayer != nullptr) && (room->getType() == RoomType::casino) &&
+           (room->getSeat() == localPlayer->getSeat()))
         {
             showCasinoPayoutWindow(tileClicked);
             return true;
