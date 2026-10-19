@@ -7426,6 +7426,7 @@ void RenderManager::rrPlayDigAnimation()
 }
 
 //! \brief Draws selection borders, sharing the filled frame width for construction and digging.
+//! A dig selection (hover or drag) is flat: only the top face of a tile is framed, never a 3D block.
 void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
 {
     if(singleRectangle)
@@ -7541,7 +7542,8 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             mTilePreview->colour(colour);
             mTilePreview->position(corners[(i+1)%4]);
             mTilePreview->colour(colour);
-            if(tile->isFullTile())
+            // A dig selection marks only the top face of a full tile: no bottom edge and no vertical edges.
+            if(tile->isFullTile() && !digging)
             {
                 const Ogre::Vector3 bottom(corners[i].x, corners[i].y, 0.04f);
                 const Ogre::Vector3 nextBottom(corners[(i+1)%4].x, corners[(i+1)%4].y, 0.04f);
@@ -7588,25 +7590,6 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
                 {
                     mTilePreview->position(point);
                     mTilePreview->colour(colour);
-                }
-                if(!tile->isFullTile())
-                    continue;
-                // Offset side frames just outside the wall to avoid surface flicker.
-                const std::function<Ogre::Vector3(float, float)> point = [&](float along, float height)
-                {
-                    return Ogre::Vector3(x + 1.01f * (outer[i].x - x + along * (outer[next].x - outer[i].x)),
-                        y + 1.01f * (outer[i].y - y + along * (outer[next].y - outer[i].y)), height);
-                };
-                const Ogre::Vector3 face[] = {point(0, .04f), point(1, .04f), point(1, z), point(0, z)};
-                const Ogre::Vector3 inset[] = {point(.06f, .10f), point(.94f, .10f), point(.94f, z-.06f), point(.06f, z-.06f)};
-                for(int edge = 0; edge < 4; ++edge)
-                {
-                    const int end = (edge + 1) % 4;
-                    for(const Ogre::Vector3& vertex : {face[edge], face[end], inset[end], face[edge], inset[end], inset[edge]})
-                    {
-                        mTilePreview->position(vertex);
-                        mTilePreview->colour(colour);
-                    }
                 }
             }
         }
