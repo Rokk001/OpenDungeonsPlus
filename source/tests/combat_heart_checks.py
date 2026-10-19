@@ -9,6 +9,7 @@ def check_heart_configuration(repo):
     values = re.findall(r'^\s*DungeonHeartHP\s+(\S+)', rooms, re.M)
     assert len(values) == 1 and float(values[0]) == 10000.0, 'configured heart health'
     source = (repo / 'source/rooms/RoomDungeonTemple.cpp').read_text()
+    assert '#include "utils/ConfigManager.h"' in source, 'heart configuration requires its complete declaration'
     assert 'getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0)' in source
     assert 'const double RoomDungeonTemple::HEART_MAX_HP' not in source
     assert 'physicalDamage - getPhysicalDefense()' in source

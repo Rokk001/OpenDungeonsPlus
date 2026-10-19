@@ -41,6 +41,7 @@
 #include "rooms/RoomManager.h"
 #include "rooms/RoomTreasury.h"
 #include "rooms/TreasuryGoldLayer.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
