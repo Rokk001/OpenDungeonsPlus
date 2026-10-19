@@ -67,7 +67,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool pass,const char* label){+
  check(digging.size()==2,"digging adds filled frame bands");
  check(digging[1].points.size()==24,"digging frames only the top face of the wall, no side faces");
 check(digging[0].points.size()==8,"digging outline is four top edges, no bottom or vertical edges");
-for(const auto& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"digging outline lies flat on the top face");
+for(const Vector3& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"digging outline lies flat on the top face");
  for(const auto& p:digging[1].points){
   check(std::abs(p.x-5)<=.5051f&&std::abs(p.y-6)<=.5051f,"dig frame stays on the selected wall surface");
   check(std::abs(p.z-2.02f)<.00001f,"dig frame lies flat on the wall top");
