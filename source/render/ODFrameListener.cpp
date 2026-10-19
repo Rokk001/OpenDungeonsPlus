@@ -576,6 +576,7 @@ bool ODFrameListener::findWorldPositionFromMouse(const OIS::MouseEvent &arg, Ogr
 }
 
 
+//! \brief Picks the rendered wall height, including neutral earth on never-seen tiles.
 bool ODFrameListener::findTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position)
 {
     const CEGUI::Vector2f mouse = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
@@ -612,7 +613,7 @@ bool ODFrameListener::findTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre
         Tile* tile = mGameMap->getTile(x, y);
         if(tile == nullptr)
             break;
-        if(tile->isFullTile())
+        if(!tile->getEverVisible() || tile->isFullTile())
         {
             Ogre::MovableObject* wall = findTileWall(tile, scene);
             if(wall != nullptr)

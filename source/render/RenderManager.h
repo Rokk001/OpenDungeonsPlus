@@ -74,7 +74,9 @@ namespace RTShader {
 class RenderManager: public Ogre::Singleton<RenderManager>, Ogre::RenderTargetListener
 {
 public:
+    //! \brief Initializes terrain rendering and delayed enemy cloud instances.
     RenderManager(Ogre::OverlaySystem* overlaySystem);
+    //! \brief Releases the renderer's visual resources.
     ~RenderManager();
 
     Ogre::Light* mHandLight;
@@ -365,8 +367,6 @@ public:
     bool m_ZPrePassEnabled;
     
 private:
-    Ogre::InstanceManager* mInstanceManagerDirt;
-    Ogre::InstanceManager* mInstanceManagerMarkedFog;
     Ogre::InstanceManager* mInstanceManagerCloud;
         
     Ogre::DefaultDebugDrawer ddd;

@@ -702,7 +702,7 @@ public:
     //! as whether each neighbour  - West, North, East , South , contains the same TileVisual enum type
     int computeTileSetIndex(const Tile* tile) const;
     
-    //! \brief get the tileset infos for the given tile
+    //! \brief Gets tileset geometry and material, using ordinary earth for never-seen client tiles.
     const TileSetValue& getMeshForTile(const Tile* tile) ;
 
     void playerSelects(std::vector<GameEntity*>& entities, int tileX1, int tileY1, int tileX2,

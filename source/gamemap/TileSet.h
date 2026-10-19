@@ -80,6 +80,7 @@ public:
 
     //! Returns true if the 2 tiles are linked and false otherwise.
     //! Used on client side only
+    //! \brief Links terrain shapes, representing never-seen client neighbours as ordinary earth.
     bool areLinked(const Tile* tile1, const Tile* tile2) const;
 
     void addTileLink(TileVisual tileVisual1, TileVisual tileVisual2);

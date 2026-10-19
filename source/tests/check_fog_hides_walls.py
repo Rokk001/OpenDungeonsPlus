@@ -1,4 +1,4 @@
-"""Static checks that unexplored (fogged) tiles reveal no type or lit relief.
+"""Static checks that unexplored tiles reveal no type and use ordinary earth geometry and lighting.
 
 Run from any directory. It does not start a game.
 """
@@ -9,10 +9,10 @@ import sys
 root = Path(__file__).resolve().parents[2]
 game_mode = (root / "source/modes/GameMode.cpp").read_text(encoding="utf-8")
 render = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
-frag = (root / "shaders/DirtTileInstanced.frag").read_text(encoding="utf-8")
 failures = []
 
 
+# Record a contract failure while continuing the independent secrecy checks.
 def check(condition, message):
     if not condition:
         failures.append(message)
@@ -33,46 +33,25 @@ fogged = select.index("!tile->getEverVisible()")
 check(fogged < select.index("is already dug out") and fogged < select.index("enemy's claimed wall"),
       "selection error texts describe a fogged tile")
 
-# Unexplored tiles retain their neutral earth surface without a fog cloud or the real tile mesh
-check("!tile.getEverVisible() && !tile.getHasFogOfWar()" in render and "createInstancedEntity(\"DirtInstanced\")" in render,
-      "unexplored tiles are not replaced by the fog mesh")
-
-unknown = render[render.index("else if ( !tile.getEverVisible() && !tile.getHasFogOfWar())"):]
-unknown = unknown[:unknown.index("else if( tile.getEverVisible() && tile.getHasFogOfWar())")]
-check('createInstancedEntity("Fog")' not in unknown and "setFogOfWarCloud" not in unknown,
-      "never-seen earth surface still creates a fog cloud")
+# The old special unlit fog plane is replaced by exact ordinary earth geometry and lighting.
+# This strict companion verifies complete common creation/material/overlay blocks and rejects eleven
+# independent geometry, material, height, neighbour, server and preview regressions.
+import runpy
+runpy.run_path(str(root / "source/tests/check_fog_earth_geometry.py"), run_name="__fog_contract__")
+check('"FogOfWarDirt.mesh"' not in render and '"FogOfWarMarked.mesh"' not in render,
+      "a separate fog plane can conceal or clip known earth walls")
+check('createInstancedEntity("DirtInstanced")' not in render,
+      "unknown tiles still use the independent unlit fog material")
 check("if(tile.getFogOfWarCloud() != nullptr)" in render,
       "revealing cloud-free unknown ground must safely handle its absent cloud")
-
-# The fog shader is unlit: no normal map, no lighting
-for forbidden in ["getLocalLighting", "normalmap", "TBN *", "lightPos", "shadowmap", "diffuseSurface", "seatColor"]:
-    check(forbidden not in re.sub(r"//.*", "", frag.split("void main")[1]), "fog shader still uses " + forbidden)
-# The fog references no normal map at all: not in the shader and not in its material.
-check("normalmap" not in re.sub(r"//.*", "", frag), "fog shader still declares a normal map")
-_fog_mat = (root / "materials/scripts/DirtInstanced.material").read_text(encoding="utf-8")
-_fog_mat = re.sub(r"//.*", "", _fog_mat[_fog_mat.index("material DirtInstanced"):])
-check("normalmap" not in _fog_mat.lower() and "normal.png" not in _fog_mat.lower(),
-      "fog material still references a normal map")
-
-# Unexplored earth looks like explored earth without torch light: the same texture and the same
-# brightness (ambient term, then the colour grade), never a darkening factor of its own.
-def decal_texture(material_text, name):
-    block = material_text[material_text.index("material " + name):]
-    return re.search(r"texture_unit decalmap\s*\{\s*texture (\S+)", block).group(1)
-
-
-fog_material = (root / "materials/scripts/DirtInstanced.material").read_text(encoding="utf-8")
-dirt_material = (root / "materials/scripts/Dirt.material").read_text(encoding="utf-8")
-dirt_frag = (root / "shaders/DirtTile.frag").read_text(encoding="utf-8")
-fog_main = re.sub(r"//.*", "", frag.split("void main")[1])
-check(decal_texture(fog_material, "DirtInstanced") == decal_texture(dirt_material, "Dirt"),
-      "fog earth must use the same texture as explored earth")
-check(not re.search(r"\*\s*0?\.\d+\s*;", fog_main), "fog earth must not be darkened by a constant factor")
-check("enhanceDungeonColour(ambientLightColour.rgb * texelColor)" in fog_main,
-      "fog earth must be the explored earth ambient term with the same colour grade")
-check("getLocalLighting(FragPos, Normal, cameraPosition.xyz, shadow.r) + ambientLightColour.rgb;" in dirt_frag
-      and "color = vec4(enhanceDungeonColour(result)" in dirt_frag,
-      "explored earth lighting changed: update the fog earth to match")
+# Unknown and known earth share DirtWall, including its normals, lighting and colour grade.
+material = (root / "materials/scripts/Dirt.material").read_text(encoding="utf-8")
+wall_material = material[material.index("material DirtWall"):]
+check("vertex_program_ref myDirtTileVertexShader" in wall_material
+      and "fragment_program_ref myDirtTileFragmentShader" in wall_material,
+      "ordinary earth must retain its common geometry and lighting programs")
+check("if(tile.getEverVisible() && tile.shouldColorTileMesh())" in render,
+      "unknown earth exposes a hidden owner's colour")
 
 # Discovered tiles out of sight are never darkened: the colourized clone of a tile material must not
 # lower its diffuse, specular, ambient or emissive colour for a missing vision.

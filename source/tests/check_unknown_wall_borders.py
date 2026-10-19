@@ -95,15 +95,18 @@ def check_edges(unknown, known, shared):
     return checked
 
 
-# Verify the active instance transform order and preserve the flat marked early-return branch.
+# Verify the active shared earth deformation and preserve every numerical border assertion.
 def main():
     shared = (ROOT / "shaders/PerlinNoise.glsl").read_text()
-    unknown = (ROOT / "shaders/DirtTileInstanced.vert").read_text()
+    # Ordinary earth replaced the independent fog instance/flat mark shader. The exact shared
+    # geometry/transform/overlay contract and real mesh edge profiles run before these samples.
+    import runpy
+    runpy.run_path(str(ROOT / 'source/tests/check_fog_earth_geometry.py'), run_name='__fog_contract__')
+    unknown = (ROOT / "shaders/DirtTile.vert").read_text()
     known = [(ROOT / ("shaders/" + name)).read_text() for name in ["DirtTile.vert", "DCW.vert"]]
-    assert unknown.index("FFP_Transform(uv1, local_position") < unknown.index("vec3 P = (worldMatrix * local_position).xyz")
-    assert unknown.index("vec3 P = (worldMatrix * local_position).xyz", unknown.index("vec3 local_normal")) < unknown.index("vec3 PT = deform(P + T)")
-    marked = unknown[unknown.index("if(final_color.a > 0.0)"):unknown.index("vec3 local_normal")]
-    assert "deform(" not in marked and "return;" in marked and "outputColor = final_color" in marked
+    assert unknown.index("vec3 P = (worldMatrix * position).xyz") < unknown.index("vec3 PT = deform(P + T)")
+    assert 'if(final_color.a > 0.0)' not in unknown
+    assert 'P = deform(P)' in unknown
     checked = check_edges(unknown, known, shared)
     interiors = [(0.1, 0.2, 0.8), (4.17, 9.23, 0.7), (-2.21, -3.13, 0.4)]
     for point in interiors:
@@ -118,7 +121,7 @@ def main():
         pass
     else:
         raise AssertionError("undamped mutation passed shared-edge checks")
-    print(f"check_unknown_wall_borders ok: {checked} edge samples; interior noise, instance order, flat marks, undamped mutation")
+    print(f"check_unknown_wall_borders ok: {checked} edge samples; interior noise, shared earth/mark geometry, undamped mutation")
 
 
 if __name__ == "__main__":
