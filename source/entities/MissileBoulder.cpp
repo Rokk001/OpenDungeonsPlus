@@ -19,6 +19,7 @@
 
 #include "entities/Tile.h"
 #include "entities/Creature.h"
+#include "entities/GameEntityType.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
