@@ -73,11 +73,11 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->setAtlasFrame(experienceId, 0, 8);
 
     uint32_t recoveryId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
-        Ogre::ColourValue(1.0f, 0.91f, 0.66f, 1.0f), "CreatureRecovery", false);
+        Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f), "CreatureRecovery", false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)] = recoveryId;
     mMovableTextOverlay->forceTextArea(recoveryId, 64, 64);
     mMovableTextOverlay->centerCaption(recoveryId);
-    mMovableTextOverlay->setCaptionOutline(recoveryId, Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f));
+    mMovableTextOverlay->setCaptionOutline(recoveryId, Ogre::ColourValue(1.0f, 0.91f, 0.66f, 1.0f));
     mMovableTextOverlay->setAtlasFrame(recoveryId, 0, 8);
     mMovableTextOverlay->displayOverlay(recoveryId, -1);
 
