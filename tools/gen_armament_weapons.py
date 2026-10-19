@@ -9,7 +9,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 IRON, POLL, WOOD, GRIP, CRYSTAL = range(5)
-UV = ((0.5, 0.125), (0.5, 0.125), (0.5, 0.375), (0.5, 0.625), (0.5, 0.875))
+UV = ((0.25, 0.125), (0.75, 0.125), (0.5, 0.375), (0.5, 0.625), (0.5, 0.875))
 
 # Collect flat-shaded triangles from the specified primitive surfaces.
 class Mesh:
@@ -75,7 +75,7 @@ def build(name):
     if name == 'HandAxe':
         m.box(-.011,.011,-.011,.011,-.10,.25,WOOD)
         m.box(-.013,.013,-.013,.013,-.05,.05,GRIP)
-        m.rings([[(-.006,.011,.17),(.006,.011,.17),(.006,.011,.25),(-.006,.011,.25)], [(-.0015,.10,.14),(.0015,.10,.14),(.0015,.10,.27),(-.0015,.10,.27)]],IRON)
+        m.rings([[(-.006,.011,.17),(.006,.011,.17),(.006,.011,.25),(-.006,.011,.25)], [(-.0015,.10,.12),(.0015,.10,.12),(.0015,.10,.25),(-.0015,.10,.25)]],IRON)
         m.box(-.008,.008,-.031,-.011,.19,.23,POLL)
     elif name == 'Club':
         m.prism([(-.10,.022),(.06,.022),(.47,.05),(.489134,.046194),(.505355,.035355),(.516194,.019134),(.52,0)],WOOD)
@@ -113,7 +113,7 @@ def write_texture(path):
     image = Image.new('RGB',(64,64))
     for y in range(64):
         for x in range(64):
-            base = (.64,.65,.67) if y<16 else ((.48,.33,.18) if y<32 else ((.35,.21,.13) if y<48 else (.62,.53,.24)))
+            base = ((.64,.65,.67) if x<32 else (.39,.40,.42)) if y<16 else ((.48,.33,.18) if y<32 else ((.35,.21,.13) if y<48 else (.62,.53,.24)))
             noise = random.uniform(-.03,.03)
             image.putpixel((x,y),tuple(round(255*(v+noise)) for v in base))
     image.save(path)
