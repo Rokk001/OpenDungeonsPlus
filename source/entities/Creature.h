@@ -311,6 +311,11 @@ public:
     double getMagicalDefense() const;
     double getElementDefense() const;
 
+    //! \brief Returns attack rating at the current level, including both held items.
+    double getAttackRating() const;
+    //! \brief Returns defense rating at the current level, including both held items.
+    double getDefenseRating() const;
+
     //! \brief Check whether a creature has earned one level. If yes, handle leveling it up
     void checkLevelUp();
 
@@ -410,6 +415,7 @@ public:
     void clearMoveSpeedModifier();
 
     //! \brief sets the defense modifier
+    //! \brief Adds temporary defense bonuses to the natural level-scaled defenses.
     void setDefenseModifier(double phy, double mag, double ele);
     void clearDefenseModifier();
 
