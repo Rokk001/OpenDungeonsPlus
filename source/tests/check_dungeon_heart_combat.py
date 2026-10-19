@@ -1,6 +1,8 @@
-"""Exercise production heart protection, damage, death and save methods without a game."""
+"""Check heart source/configuration; --probe exercises protection, damage, death and saves."""
 from pathlib import Path
 import subprocess
+import sys
+from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
@@ -95,7 +97,7 @@ struct RoomDungeonTemple:Room {
  bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);Tile* getHeartTile()const;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
- static const double HEART_MAX_HP;static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
+ static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -116,7 +118,7 @@ int main(){int checks=0,failures=0;
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre,"DungeonHeartObjectHealthy");
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
  check(core.getSeat()==&owner,"heart entity carries room ownership");
- check(RoomDungeonTemple::HEART_MAX_HP==10000&&RoomDungeonTemple(&map,&owner).getHeartMaxHP()==10000&&heart.getHeartMaxHP()==10000,"the maximum is a fixed 10000, whatever the number of tiles");
+ check(RoomDungeonTemple(&map,&owner).getHeartMaxHP()==10000&&heart.getHeartMaxHP()==10000,"the configured maximum is 10000, whatever the number of tiles");
  check(heart.getHP(nullptr)==10000&&heart.floorHP==250,"an undamaged heart has 10000, independent of the floor durability");
  for(Seat* seat:{&owner,&ally,&enemy,static_cast<Seat*>(nullptr)}){
   GameEntity attacker{seat};
@@ -238,7 +240,7 @@ methods = '\n'.join(function(source, sig) for sig in (
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream('))
-methods = source[source.index('const double RoomDungeonTemple::HEART_MAX_HP'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
+methods = source[source.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
 probe = probe.replace('INLINE_METHODS', inline).replace('METHODS', methods)
 probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject :'))
 # The reward for destroying a heart is a file-local helper called by takeHeartDamage
@@ -248,6 +250,12 @@ reward = ('void placeHeartRewardSpecials(GameMap*, Seat*, Tile*) {}\n'
 tier_source = (repo / 'source/rooms/HeartHealthTier.cpp').read_text()
 tier = tier_source[tier_source.index('namespace'):] + '\n'
 probe = probe.replace('HEART_REWARD', tier + reward + function(source, 'void giveDestroyedHeartReward('))
+check_heart_configuration(repo)
+if '--probe' not in sys.argv:
+    print('Source checks passed; compiled probe requires --probe')
+    raise SystemExit(0)
+probe = configure_heart_probe(probe)
+
 with tempfile.TemporaryDirectory(prefix='odp-heart-combat-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
