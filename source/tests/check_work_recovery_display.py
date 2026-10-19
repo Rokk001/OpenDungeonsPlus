@@ -14,8 +14,8 @@ def function(path, signature):
 packet = function("source/entities/Creature.cpp", "void Creature::exportProgressToPacket(")
 assert 'getActivity().action == CreatureActionType::useRoom' in packet
 assert 'mJobCooldown > 0 && mJobCooldownDuration > 0' in packet
-assert 'working ? static_cast<uint32_t>(mJobCooldown) : mAttackRecoveryTurns' in packet
-assert 'working ? mJobCooldownDuration : mAttackRecoveryDuration' in packet
+assert 'working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns' in packet
+assert 'working ? static_cast<double>(mJobCooldownDuration) : mAttackRecoveryDuration' in packet
 assert 'os << getExperienceProgress() << remaining << duration << mAttackRecoverySerial;' in packet
 setup = function("source/entities/Creature.cpp", "void Creature::setJobCooldown(")
 assert setup.index('if(hasSlapEffect())') < setup.index('mJobCooldown = val;')

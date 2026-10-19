@@ -17,7 +17,7 @@ def check(text):
             guard,
             "skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();",
             "skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();",
-            "mAttackRecoveryDuration = std::max(skillData.mWarmup, skillData.mCooldown);",
+            "mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);",
             "mAttackRecoveryTurns = mAttackRecoveryDuration;",
             "++mAttackRecoverySerial;",
             "mNeedFireRefresh = true;",
