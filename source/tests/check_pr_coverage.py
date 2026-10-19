@@ -18,7 +18,8 @@ Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> u
 With --count-file the number of gaps of every run is stored in that file as one line
 "PR coverage gaps (last run): <n>" (the line is replaced, or appended if the file or the
 line is missing); the run fails when the number is higher than the stored value of the
-previous run (the first run only stores it), so old gaps do not turn a run red.
+previous run (the first run only stores it), so old gaps do not turn a run red. When the
+number rose, the stored value is left unchanged.
 Exit codes: 0 = finished (gaps are only listed unless --strict is given), 1 = gaps found
 with --strict or more gaps than in the previous run, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
 a pull request head is not available locally); this is never reported as green.
@@ -97,8 +98,23 @@ def diff_added(base, ref):
     return files, added
 
 
-def update_count(path, gaps):
-    """Store the gap count in the counter file and return the previous count, or None if there was none."""
+def read_count(path):
+    """Return the gap count stored in the counter file, or None if the file or the line is missing."""
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8", errors="replace", newline="") as handle:
+        text = handle.read()
+    for line in text.replace("\r\n", "\n").split("\n"):
+        if line.startswith(COUNT_MARKER):
+            try:
+                return int(line[len(COUNT_MARKER):].strip())
+            except ValueError:
+                return None
+    return None
+
+
+def write_count(path, gaps):
+    """Store the gap count in the counter file: replace the marker line, or append it; keep the line ending style."""
     lines = []
     eol = "\n"
     if os.path.exists(path):
@@ -107,14 +123,9 @@ def update_count(path, gaps):
         if "\r\n" in text:
             eol = "\r\n"
         lines = text.split(eol)
-    previous = None
     found = False
     for index, line in enumerate(lines):
         if line.startswith(COUNT_MARKER):
-            try:
-                previous = int(line[len(COUNT_MARKER):].strip())
-            except ValueError:
-                previous = None
             lines[index] = "%s %d" % (COUNT_MARKER, gaps)
             found = True
             break
@@ -125,7 +136,6 @@ def update_count(path, gaps):
         lines.append("")
     with open(path, "w", encoding="utf-8", newline="") as handle:
         handle.write(eol.join(lines))
-    return previous
 
 
 def main():
@@ -168,14 +178,13 @@ def main():
     print("%d open pull requests, %d files changed on %s, %d gaps" % (len(heads), len(target_files), options.target, gaps))
     rose = False
     if options.count_file:
-        previous = update_count(options.count_file, gaps)
-        if previous is None:
-            print("gap count %d stored (no previous value)" % gaps)
-        elif gaps > previous:
+        previous = read_count(options.count_file)
+        if previous is not None and gaps > previous:
             rose = True
-            print("gap count rose from %d to %d" % (previous, gaps))
+            print("gap count rose from %d to %d; stored value stays %d" % (previous, gaps, previous))
         else:
-            print("gap count %d (previous %d)" % (gaps, previous))
+            write_count(options.count_file, gaps)
+            print("gap count %d stored (previous %s)" % (gaps, "none" if previous is None else previous))
     return 1 if ((gaps and options.strict) or rose) else 0
 
 
