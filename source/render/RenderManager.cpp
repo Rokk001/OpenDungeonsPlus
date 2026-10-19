@@ -2823,6 +2823,15 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
     light->setDiffuseColour(lightColour * (lightFullIntensity * density));
 }
 
+//! \brief Places a fog surface or cloud instance on its tile. The instance is attached to the tile's own scene
+//! node, which already sits at the tile coordinates, and an instanced entity position is an offset from that
+//! node; any tile position here would be added a second time and move the fog onto other tiles.
+//! \param instance The fog instance attached to the tile's scene node.
+static void rrPlaceFogInstance(Ogre::InstancedEntity* instance)
+{
+    instance->setPosition(Ogre::Vector3::ZERO);
+}
+
 //! \brief Creates or updates the meshes of a tile, including the neutral fog surface, its cloud
 //! and the dig mark of the local player.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
@@ -2915,7 +2924,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
 
             tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarMesh());
             
             
             
@@ -2949,7 +2958,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.setHasFogOfWar(false);  
             tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarMesh());
            
             
             
@@ -2972,7 +2981,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.setFogOfWarMesh((isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->
                 createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarMesh());
         }
         tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
         // The alpha-blended cloud hangs above the flat mark and would hide it again, the more the
@@ -2988,7 +2997,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         {
             tile.setFogOfWarCloud(mInstanceManagerCloud->createInstancedEntity("Fog"));
             tileMeshNode->attachObject(tile.getFogOfWarCloud());
-            tile.getFogOfWarCloud()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarCloud());
         }
         else if(!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr)
         {
