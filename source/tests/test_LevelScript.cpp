@@ -1191,12 +1191,12 @@ BOOST_AUTO_TEST_CASE(required_objectives_and_pending_victory_round_trip)
 {
     LevelScript script;
     std::istringstream input(
-        "[Trigger]\nName intro\nMode once\n"
+        "[Trigger]\nName intro\nMode once\nCond time 0\n"
         "Action mainobjectiveid 1 main Secure the village.\n"
         "Action optionalobjectiveid 1 extra Explore the gallery.\n"
         "Action mainobjectiveid 2 other Secure the fortress.\n"
         "Action objectiveid 1 legacy An old description.\n[/Trigger]\n"
-        "[Trigger]\nName discovery\nMode once\n"
+        "[Trigger]\nName discovery\nMode once\nCond time 0\n"
         "Action conditionalobjectiveid 1 carrier Bring the stone home.\n"
         "[/Trigger]\n[/Triggers]\n");
     BOOST_REQUIRE(script.importFromStream(input));
@@ -1241,7 +1241,7 @@ BOOST_AUTO_TEST_CASE(required_objectives_and_pending_victory_round_trip)
 BOOST_AUTO_TEST_CASE(legacy_objectives_keep_their_original_victory_rules)
 {
     LevelScript script;
-    std::istringstream input("[Trigger]\nName old\nMode once\nAction objectiveid 1 old Open a path.\n[/Trigger]\n[/Triggers]\n");
+    std::istringstream input("[Trigger]\nName old\nMode once\nCond time 0\nAction objectiveid 1 old Open a path.\n[/Trigger]\n[/Triggers]\n");
     BOOST_REQUIRE(script.importFromStream(input));
     BOOST_CHECK(script.areMainObjectivesReached(1));
     BOOST_CHECK(!script.hasVictoryRequest(1));
@@ -1252,7 +1252,7 @@ BOOST_AUTO_TEST_CASE(legacy_objectives_keep_their_original_victory_rules)
 BOOST_AUTO_TEST_CASE(main_goal_refresh_does_not_keep_obsolete_success)
 {
     LevelScript script;
-    std::istringstream input("[Trigger]\nName setup\nMode once\n"
+    std::istringstream input("[Trigger]\nName setup\nMode once\nCond time 0\n"
         "Action mainobjectiveid 1 control Hold the fortress.\n"
         "Action mainobjectiveid 1 deadline Reach the camp in time.\n"
         "Action optionalobjectiveid 1 explore Explore the gallery.\n[/Trigger]\n[/Triggers]\n");
@@ -1271,7 +1271,7 @@ BOOST_AUTO_TEST_CASE(main_goal_refresh_does_not_keep_obsolete_success)
 BOOST_AUTO_TEST_CASE(main_goal_model_detection_is_scoped_to_the_target_seat)
 {
     LevelScript script;
-    std::istringstream input("[Trigger]\nName setup\nMode once\n"
+    std::istringstream input("[Trigger]\nName setup\nMode once\nCond time 0\n"
         "Action mainobjectiveid 1 keep Hold the keep.\n"
         "Action optionalobjectiveid 2 scout Explore the gallery.\n[/Trigger]\n[/Triggers]\n");
     BOOST_REQUIRE(script.importFromStream(input));
@@ -1403,7 +1403,7 @@ BOOST_AUTO_TEST_CASE(actual_crossing_progress_and_save_round_trip)
 BOOST_AUTO_TEST_CASE(crossing_order_and_negative_paths)
 {
     LevelScript script;
-    std::istringstream input("Region Bridge 11 43 13 46\n[Trigger]\nName shelfHeld\nMode once\n"
+    std::istringstream input("Region Bridge 11 43 13 46\n[Trigger]\nName shelfHeld\nMode once\nCond time 0\n"
         "Action message 1 held\n[/Trigger]\n[Trigger]\nName crossing\nMode once\n"
         "Cond crossed 1 Bridge north after shelfHeld\nCond crossed 1 Bridge north after shelfHeld\n"
         "Action message 1 crossed\n[/Trigger]\n[/Triggers]\n");
@@ -1654,7 +1654,7 @@ BOOST_AUTO_TEST_CASE(exact_goal_chain_stage_round_trip)
     std::ostringstream output;
     script.exportToStream(output);
     LevelScript loaded;
-    std::istringstream saved(output.str());
+    std::istringstream saved(output.str().substr(output.str().find('\n') + 1));
     BOOST_REQUIRE(loaded.importFromStream(saved));
     BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[0].mName2, "60");
     BOOST_CHECK_EQUAL(loaded.getTriggers()[0].mConditions[1].mName2, "100");
@@ -1665,7 +1665,7 @@ BOOST_AUTO_TEST_CASE(exact_goal_chain_stage_round_trip)
 BOOST_AUTO_TEST_CASE(mission_stone_delivery_definition_round_trip)
 {
     LevelScript script;
-    std::istringstream input("[Trigger]\nName found\nMode once\n"
+    std::istringstream input("[Trigger]\nName found\nMode once\nCond time 0\n"
         "Action stonecreate 65 50 vault-stone 1 9 46\n[/Trigger]\n"
         "[Trigger]\nName home\nMode once\nCond deliveredstone vault-stone\n"
         "Action setflag delivered 1\n[/Trigger]\n[/Triggers]\n");
@@ -1753,7 +1753,7 @@ BOOST_AUTO_TEST_CASE(mission_key_door_actions_round_trip)
     std::ostringstream saved;
     script.exportToStream(saved);
     LevelScript restored;
-    std::istringstream reload(saved.str());
+    std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
     BOOST_REQUIRE(restored.importFromStream(reload));
     BOOST_CHECK_EQUAL(restored.getTriggers()[0].mActions[0].mText, "PennVaultDoor");
     BOOST_CHECK_EQUAL(restored.getTriggers()[0].mActions[0].mNumber, 0);
@@ -1797,7 +1797,7 @@ BOOST_AUTO_TEST_CASE(remaining_key_door_reward_and_victory_round_trip)
             std::ostringstream saved;
             script.exportToStream(saved);
             LevelScript restored;
-            std::istringstream reload(saved.str());
+            std::istringstream reload(saved.str().substr(saved.str().find('\n') + 1));
             BOOST_REQUIRE(restored.importFromStream(reload));
             BOOST_CHECK(restored.hasVictoryRequest(1));
             BOOST_CHECK(!restored.areMainObjectivesReached(1));

@@ -2276,6 +2276,8 @@ bool levelScriptParseCompare(const std::string& token, LevelScriptCompare& op)
     return false;
 }
 
+//! \brief Counts an event for every watched tag it belongs to; creature events, crossings, regional attacks and
+//! projectile kills all register their tag (creature name or "Seat<n>") as watched so they are really recorded.
 void LevelScript::recordEvent(const std::string& creatureName, const std::string& eventName)
 {
     if(!mWatchedValid)
@@ -2285,8 +2287,12 @@ void LevelScript::recordEvent(const std::string& creatureName, const std::string
         {
             for(const LevelScriptCondition& cond : trigger.mConditions)
             {
-                if(cond.mType == LevelScriptConditionType::creatureEvent)
+                if(cond.mType == LevelScriptConditionType::creatureEvent ||
+                   cond.mType == LevelScriptConditionType::shotKilled)
                     mWatched.insert(cond.mName);
+                else if(cond.mType == LevelScriptConditionType::crossedRegion ||
+                        cond.mType == LevelScriptConditionType::attackedRegion)
+                    mWatched.insert("Seat" + std::to_string(cond.mSeatId));
             }
         }
         mWatchedValid = true;
