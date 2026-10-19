@@ -112,8 +112,8 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
     CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
     missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         creature->getModifierStrength());
-    // The plain missile tells the clients what the shot did (cosmetic event hitResult). Blast missiles do their own
-    // damage and report nothing.
+    // The plain missile tells the clients what the shot did (cosmetic event hitResult). Guided bolts set their
+    // shooter in their factory; area blasts do their own damage and report nothing.
     if(missile->getMissileType() == MissileObjectType::oneHit)
     {
         std::string targetName;

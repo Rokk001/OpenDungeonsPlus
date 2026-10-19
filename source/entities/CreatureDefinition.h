@@ -67,6 +67,7 @@ private:
     double mEfficiency;
 };
 
+//! \brief Stores creature type statistics, combat ratings, avoidance and skill definitions.
 class CreatureDefinition
 {
 public:
