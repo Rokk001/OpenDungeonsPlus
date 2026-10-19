@@ -61,6 +61,7 @@ probe = r'''
 #include <string>
 #include <iostream>
 #include <chrono>
+#include <deque>
 
 static const char* const oversizedTestMesh="TestOversized.mesh";
 static const std::vector<RoomObjectPath::WalkingRadius>& testWalkingRadii(){
@@ -71,7 +72,7 @@ static const std::vector<RoomObjectPath::WalkingRadius>& testWalkingRadii(){
  }
  return table;
 }
-enum class CreatureActionType {sleep,leaveDungeon,useRoom};
+enum class CreatureActionType {sleep,leaveDungeon,useRoom,digTile,parkToTile};
 namespace Helper {int round(float v){return int(std::round(v));}}
 struct Room;
 struct Tile {int x,y;bool walkable=true;Room* room=nullptr;Room* getCoveringRoom(){return room;}int getX()const{return x;}int getY()const{return y;}};
@@ -102,22 +103,35 @@ struct RoomPrison : Room {
  std::map<Tile*,BuildingObject*> fences;const auto& getFencingObjects()const{return fences;}
 };
 enum class RelationshipEvent{chickenSnatched};
+//! \brief Supplies navigation terrain, rooms and explicitly registered creature bodies.
 struct GameMap {
  int sizeX,sizeY;
  Creature* getCreature(const std::string&){return nullptr;}
  std::vector<Tile> tiles;std::vector<Room*> rooms;
+ std::vector<Creature*> creatures;
+ //! \brief Exposes explicitly registered live bodies to the production spacing checks.
+ const std::vector<Creature*>& getCreatures()const{return creatures;}
  GameMap(int xCount=16,int yCount=16):sizeX(xCount),sizeY(yCount){for(int y=0;y<sizeY;++y)for(int x=0;x<sizeX;++x)tiles.push_back({x,y});}
  Tile* getTile(int x,int y){return x>=0&&x<sizeX&&y>=0&&y<sizeY?&tiles[y*sizeX+x]:nullptr;}
  const auto& getRooms()const{return rooms;}int getMapSizeX()const{return sizeX;}int getMapSizeY()const{return sizeY;}
  std::list<Tile*> path(Creature*,Tile*);
  bool pathExists(Creature* creature,Tile*,Tile* target){return !path(creature,target).empty();}
 };
+//! \brief Represents a live server creature with measured geometry and an assigned path.
 struct Creature {
  GameMap* map;Ogre::Vector3 pos{1,5,0};Tile* home=nullptr;std::set<CreatureActionType> actions;int level=1;
  std::string mesh="Kobold.mesh";const std::string& getMeshName()const{return mesh;}
  Ogre::Vector3 direction{0,-1,0};const Ogre::Vector3& getWalkDirection()const{return direction;}
  int cooldown=0,popped=0,walkActions=0,feeding=0,workReady=0;double food=0,hp=10;
  std::vector<Ogre::Vector2> walk;bool distortion=true,alreadyRefined=false;std::string animation;
+ //! \brief Identifies the navigation fixture as a server creature.
+ bool getIsOnServerMap()const{return true;}
+ //! \brief Identifies a fixture body on the navigation map.
+ bool getIsOnMap()const{return true;}
+ //! \brief Keeps the production spacing filter tied to fixture health.
+ bool isAlive()const{return hp>0;}
+ //! \brief Supplies the assigned destination queue without changing existing path fixtures.
+ std::deque<Ogre::Vector2> getWalkQueue()const{return {walk.begin(),walk.end()};}
  GameMap* getGameMap(){return map;}const Ogre::Vector3& getPosition()const{return pos;}
  Tile* getHomeTile()const{return home;}bool isActionInList(CreatureActionType a)const{return actions.count(a)>0;}
  int getLevel()const{return level;}double getLevelScale()const{return 1.0+.10*(level-1)/29.0;}bool canGoThroughTile(Tile* t)const{return t&&t->walkable;}
@@ -154,8 +168,10 @@ struct ConfigManager {
  double getRoomConfigDouble(const char*){return 10;}unsigned getRoomConfigUInt32(const char*){return 1;}
 };
 SOURCE
+//! \brief Mirrors server refinement and spacing without changing exact work routes.
 void Creature::setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& path,bool jitter,bool refined){
  walk=path;alreadyRefined=refined;distortion=jitter&&!refined;if(!refined&&RoomObjectNavigation::refine(*this,walk))distortion=false;
+ if(jitter&&!refined){RoomObjectNavigation::separate(*this,walk);distortion=false;}
 }
 struct ChickenEntity {
  GameMap* map;Ogre::Vector3 pos;int consumed=0;
@@ -375,7 +391,7 @@ int main(){
  check(adjacent.consumed==1&&creature.walkActions==0&&creature.food==10,"unobstructed adjacent feeding remains immediate");
  creature=Creature{&map};ChickenEntity distant{&map,{8,5,0}};
  CreatureActionEatChicken::handleEatChicken(creature,&distant);
- check(distant.consumed==0&&creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains original tile path and 80 percent truncation");
+ check(distant.consumed==0&&!creature.distortion&&creature.walk.size()==5&&creature.walk.back()==Ogre::Vector2(6,5),"unobstructed distant chase retains tile path and 80 percent truncation with server-approved endpoints");
  {
   GameMap stations;Room workRoom;workRoom.type=RoomType::trainingHall;stations.rooms={&workRoom};
   for(Tile& tile:stations.tiles)tile.room=&workRoom;

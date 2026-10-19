@@ -437,7 +437,7 @@ public:
      * revert to the 'digTile' action.
      */
     //! brief Updates creature actions and recovery display for AI and player possession, including actual death
-    //! observations when a lethal knockout expires.
+    //! observations when a lethal knockout expires. Spaces standing bodies while retaining action targets.
     void doUpkeep() override;
 
     //! \brief Computes the visible tiles and tags them to know which are visible
@@ -1119,7 +1119,7 @@ public:
     //! set to the tile where it should flee and attackedEntity = nullptr and attackedTile = nullptr
     //! If tilesFilter is empty, the creature will consider moving on visible tiles. If not, it will consider
     //! moving on the given tiles only
-    //! If no suitable target is found, returns false
+    //! If no suitable target is found, returns false. Prefers body-free legal attack positions before crowded fallback.
     bool searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData);
 

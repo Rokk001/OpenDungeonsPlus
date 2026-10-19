@@ -79,10 +79,30 @@ RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
     return {minimum * scale, maximum * scale, position, -direction.y, direction.x};
 }
 
+//! \brief Collects measured live bodies at their current positions and assigned destinations.
+std::vector<RoomObjectPath::Obstacle> standingBodies(Creature& creature)
+{
+    std::vector<RoomObjectPath::Obstacle> result;
+    for(const Creature* other : creature.getGameMap()->getCreatures())
+    {
+        if(other == &creature || !other->getIsOnMap() || !other->isAlive())
+            continue;
+        const Ogre::Vector2 current(other->getPosition().x, other->getPosition().y);
+        const Ogre::Vector2 heading(other->getWalkDirection().x, other->getWalkDirection().y);
+        result.push_back(interactionFootprint(*other, current, heading));
+        const std::deque<Ogre::Vector2>& queue = other->getWalkQueue();
+        if(!queue.empty())
+            result.push_back(interactionFootprint(*other, queue.back(),
+                queue.back() - (queue.size() > 1 ? queue[queue.size() - 2] : current)));
+    }
+    return result;
+}
+
+//! \brief Tests measured bodies against room reservations, optionally including present bodies and assigned destinations.
 //! Returns false if the creature, standing at point and facing direction, would overlap another creature
 //! that has reserved an interaction position in any room
 bool interactionPositionClear(Creature& creature, const Ogre::Vector2& point,
-    const Ogre::Vector2& direction)
+    const Ogre::Vector2& direction, bool includeBodies = true)
 {
     const RoomObjectPath::Obstacle footprint = interactionFootprint(creature, point, direction);
     for(const Room* room : creature.getGameMap()->getRooms())
@@ -96,6 +116,15 @@ bool interactionPositionClear(Creature& creature, const Ogre::Vector2& point,
             if(other.contains(point, direction))
                 return false;
         }
+    if(!includeBodies)
+        return true;
+    for(RoomObjectPath::Obstacle other : standingBodies(creature))
+    {
+        other.bodyMinimum = footprint.minimum;
+        other.bodyMaximum = footprint.maximum;
+        if(other.contains(point, direction))
+            return false;
+    }
     return true;
 }
 
@@ -334,6 +363,96 @@ bool RoomObjectNavigation::standingPosition(const std::vector<RoomObjectPath::Ob
     return std::isfinite(distance);
 }
 
+//! \brief Chooses a reachable nonoverlapping destination, preserving the original route when space is exhausted.
+bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector2>& path, bool adjacent, const Room* room)
+{
+    if(path.empty() || !creature.getIsOnServerMap() ||
+        creature.isActionInList(CreatureActionType::digTile) ||
+        creature.isActionInList(CreatureActionType::parkToTile))
+        return false;
+    const Ogre::Vector2 wanted = path.back();
+    const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
+    const Ogre::Vector2 previous = path.size() > 1 ? path[path.size() - 2] : start;
+    Ogre::Vector2 heading = wanted - previous;
+    if(heading.squaredLength() < 0.000001f)
+        heading = Ogre::Vector2(creature.getWalkDirection().x, creature.getWalkDirection().y);
+    if(interactionPositionClear(creature, wanted, heading))
+        return true;
+    GameMap& map = *creature.getGameMap();
+    const int range = adjacent ? 1 : 0;
+    std::multimap<float, Ogre::Vector2> candidates;
+    for(int dy = -range; dy <= range; ++dy)
+        for(int dx = -range; dx <= range; ++dx)
+            for(int y = 0; y < 8; ++y)
+                for(int x = 0; x < 8; ++x)
+                {
+                    const Ogre::Vector2 point(Helper::round(wanted.x) + dx - 0.4375f + x * 0.125f,
+                        Helper::round(wanted.y) + dy - 0.4375f + y * 0.125f);
+                    candidates.emplace(point.squaredDistance(wanted), point);
+                }
+    const std::vector<RoomObjectPath::Obstacle> body = bodyObstacles(creature, interactionObject(creature, wanted));
+    // Add measured body tangencies as well as the navigation grid: a real free gap may be narrower than a grid cell.
+    const RoomObjectPath::Obstacle footprint = interactionFootprint(creature, wanted, heading);
+    std::vector<RoomObjectPath::Obstacle> occupied = standingBodies(creature);
+    for(const Room* room : map.getRooms())
+        for(const std::pair<Creature* const, Room::InteractionPosition>& entry : room->getInteractionPositions())
+            if(entry.first != &creature)
+                occupied.push_back(interactionFootprint(*entry.first, entry.second.position, entry.second.direction));
+    for(RoomObjectPath::Obstacle obstacle : occupied)
+    {
+        obstacle.bodyMinimum = footprint.minimum;
+        obstacle.bodyMaximum = footprint.maximum;
+        const RoomObjectPath::Obstacle expanded = obstacle.forHeading(heading);
+        const Ogre::Vector2 local = obstacle.local(wanted);
+        for(float x : {expanded.minimum.x - 0.00001f, std::max(expanded.minimum.x, std::min(local.x, expanded.maximum.x)),
+            expanded.maximum.x + 0.00001f})
+            for(float y : {expanded.minimum.y - 0.00001f, std::max(expanded.minimum.y, std::min(local.y, expanded.maximum.y)),
+                expanded.maximum.y + 0.00001f})
+            {
+                const Ogre::Vector2 point = obstacle.position + Ogre::Vector2(obstacle.cosine * x - obstacle.sine * y,
+                    obstacle.sine * x + obstacle.cosine * y);
+                candidates.emplace(point.squaredDistance(wanted), point);
+            }
+    }
+    for(const std::pair<const float, Ogre::Vector2>& candidate : candidates)
+    {
+        const Ogre::Vector2& point = candidate.second;
+        Tile* tile = map.getTile(Helper::round(point.x), Helper::round(point.y));
+        const Ogre::Vector2 direction = point - previous;
+        if(tile == nullptr || !creature.canGoThroughTile(tile) ||
+            (room != nullptr && tile->getCoveringRoom() != room) ||
+            std::abs(tile->getX() - Helper::round(wanted.x)) > range ||
+            std::abs(tile->getY() - Helper::round(wanted.y)) > range ||
+            !interactionPositionClear(creature, point, direction) ||
+            !RoomObjectPath::clearPoint(body, point, direction))
+            continue;
+        std::vector<Ogre::Vector2> route;
+        if(Helper::round(point.x) == Helper::round(wanted.x) &&
+            Helper::round(point.y) == Helper::round(wanted.y))
+        {
+            route = path;
+            route.back() = point;
+        }
+        else
+        {
+            const std::list<Tile*> tiles = map.path(&creature, tile);
+            if(tiles.empty())
+                continue;
+            Creature::tileToVector2(tiles, route, true, 0.0f);
+            route.push_back(point);
+        }
+        refine(creature, route);
+        if(route.empty() || route.back() != point || blocked(creature, route))
+            continue;
+        const Ogre::Vector2 arrival = point - (route.size() > 1 ? route[route.size() - 2] : start);
+        if(!interactionPositionClear(creature, point, arrival))
+            continue;
+        path.swap(route);
+        return true;
+    }
+    return false;
+}
+
 bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)
 {
     if(path.empty())
@@ -483,6 +602,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     return true;
 }
 
+//! \brief Prefers an unoccupied feeding body while retaining reachable crowded feeding as a last resort.
 bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2& food,
     std::vector<Ogre::Vector2>& path)
 {
@@ -521,10 +641,14 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         const float da = a.squaredDistance(food), db = b.squaredDistance(food);
         return da == db ? a.squaredDistance(start) < b.squaredDistance(start) : da < db;
     });
+    for(bool includeBodies : {true, false})
+    {
     std::vector<Ogre::Vector2> stagingPoints, standingPoints;
     for(const Ogre::Vector2& point : candidates)
     {
         Ogre::Vector2 direction = food - point;
+        if(includeBodies && !interactionPositionClear(creature, point, direction))
+            continue;
         if(direction.squaredLength() < 0.000001f)
             direction = Ogre::Vector2(0, -1);
         direction.normalise();
@@ -554,12 +678,15 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         if(stagingPoints.empty() || !removeLowStepObstacles(creature, transit) ||
             !RoomObjectPath::routeToAnyAligned(start, stagingPoints, transit, 0, 0,
                 map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, path, chosen))
-            return false;
+            continue;
     }
     path.push_back(standingPoints[chosen]);
     return true;
+    }
+    return false;
 }
 
+//! \brief Prefers body-free working positions, retaining the original valid crowded approach when none is free.
 bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject& object,
     const Ogre::Vector2& wanted, const Ogre::Vector2& facingOffset, std::vector<Ogre::Vector2>& path)
 {
@@ -598,16 +725,18 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
             for(float sign : {-1.0f, 1.0f})
                 candidates.push_back(center + sideways * (sign * side * STANDING_POINT_SPACING));
     }
+    // Exhaust all legal free placements before allowing the original crowded room interaction.
+    for(bool includeBodies : {true, false})
     for(const Ogre::Vector2& point : candidates)
     {
         Tile* tile = map.getTile(Helper::round(point.x), Helper::round(point.y));
         if(!creature.canGoThroughTile(tile) || tile->getCoveringRoom() != room ||
             !RoomObjectPath::clearPoint(body, point, facing - point) ||
-            !interactionPositionClear(creature, point, facing - point))
+            !interactionPositionClear(creature, point, facing - point, includeBodies))
             continue;
         if(start.squaredDistance(point) < STANDING_POINT_REACHED_SQUARED &&
             RoomObjectPath::clearPoint(body, start, facing - start) &&
-            interactionPositionClear(creature, start, facing - start))
+            interactionPositionClear(creature, start, facing - start, includeBodies))
         {
             room->reserveInteractionPosition(&creature, {&object, start, facing - start});
             return true;

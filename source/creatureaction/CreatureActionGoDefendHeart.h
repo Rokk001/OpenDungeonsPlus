@@ -40,6 +40,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Holds a body-spaced position at or beside the current defence point.
     static bool handleDefendHeart(Creature& creature);
 };
 
