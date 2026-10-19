@@ -45,8 +45,60 @@ check("if(tile.getFogOfWarCloud() != nullptr)" in render,
       "revealing cloud-free unknown ground must safely handle its absent cloud")
 
 # The fog shader is unlit: no normal map, no lighting
-for forbidden in ["getLocalLighting", "normalmap", "enhanceDungeonColour", "TBN *"]:
+for forbidden in ["getLocalLighting", "normalmap", "TBN *", "lightPos", "shadowmap", "diffuseSurface", "seatColor"]:
     check(forbidden not in re.sub(r"//.*", "", frag.split("void main")[1]), "fog shader still uses " + forbidden)
+# The fog references no normal map at all: not in the shader and not in its material.
+check("normalmap" not in re.sub(r"//.*", "", frag), "fog shader still declares a normal map")
+_fog_mat = (root / "materials/scripts/DirtInstanced.material").read_text(encoding="utf-8")
+_fog_mat = re.sub(r"//.*", "", _fog_mat[_fog_mat.index("material DirtInstanced"):])
+check("normalmap" not in _fog_mat.lower() and "normal.png" not in _fog_mat.lower(),
+      "fog material still references a normal map")
+
+# Unexplored earth looks like explored earth without torch light: the same texture and the same
+# brightness (ambient term, then the colour grade), never a darkening factor of its own.
+def decal_texture(material_text, name):
+    block = material_text[material_text.index("material " + name):]
+    return re.search(r"texture_unit decalmap\s*\{\s*texture (\S+)", block).group(1)
+
+
+fog_material = (root / "materials/scripts/DirtInstanced.material").read_text(encoding="utf-8")
+dirt_material = (root / "materials/scripts/Dirt.material").read_text(encoding="utf-8")
+dirt_frag = (root / "shaders/DirtTile.frag").read_text(encoding="utf-8")
+fog_main = re.sub(r"//.*", "", frag.split("void main")[1])
+check(decal_texture(fog_material, "DirtInstanced") == decal_texture(dirt_material, "Dirt"),
+      "fog earth must use the same texture as explored earth")
+check(not re.search(r"\*\s*0?\.\d+\s*;", fog_main), "fog earth must not be darkened by a constant factor")
+check("enhanceDungeonColour(ambientLightColour.rgb * texelColor)" in fog_main,
+      "fog earth must be the explored earth ambient term with the same colour grade")
+check("getLocalLighting(FragPos, Normal, cameraPosition.xyz, shadow.r) + ambientLightColour.rgb;" in dirt_frag
+      and "color = vec4(enhanceDungeonColour(result)" in dirt_frag,
+      "explored earth lighting changed: update the fog earth to match")
+
+# Discovered tiles out of sight are never darkened: the colourized clone of a tile material must not
+# lower its diffuse, specular, ambient or emissive colour for a missing vision.
+_colourize = render[render.index("std::string RenderManager::colourizeMaterial("):]
+_colourize = _colourize[:_colourize.index("\n}\n")]
+_code = re.sub(r"//.*", "", _colourize)
+check("current_color.r = 0.1" not in _code and "= 0.1;" not in _code,
+      "tiles out of sight are darkened again")
+check("if (!markedForDigging && !playerHasVision)" not in _code,
+      "a vision-dependent colour change is back in colourizeMaterial")
+
+# The fog cloud rules stay exactly as planned. Enemy territory only, thirty seconds after the last
+# own creature sight: the server never marks own, allied or rogue ground as clouded.
+seat_cpp = (root / "source/game/Seat.cpp").read_text(encoding="utf-8")
+check("const bool enemyFog = knownOwner != nullptr && !knownOwner->isRogueSeat() &&" in seat_cpp
+      and "knownOwner != this && !isAlliedSeat(knownOwner) &&" in seat_cpp
+      and "p.second.mOwnCreatureSightAgeTurns >= static_cast<int64_t>(std::ceil(30.0 * ODApplication::turnsPerSecond));" in seat_cpp,
+      "the enemy territory cloud rule (enemy ground, thirty seconds without own sight) changed")
+# Only previously discovered ground with the enemy fog flag gets a cloud, and it is the only cloud source.
+check(render.count('createInstancedEntity("Fog")') == 1
+      and "if(tile.getEverVisible() && tileMeshNode != nullptr)" in render
+      and "if(tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() == nullptr)" in render,
+      "a new cloud source appeared or the discovered-enemy-ground cloud condition changed")
+# A marked unknown tile hides its cloud so the mark stays visible at any distance.
+check("tile.getFogOfWarCloud()->setVisible(!isMarked);" in render,
+      "the cloud is no longer hidden over marked unknown tiles")
 
 if failures:
     print("\n".join("FAIL: " + f for f in failures))

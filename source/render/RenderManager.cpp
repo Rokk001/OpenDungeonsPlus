@@ -2823,6 +2823,15 @@ void RenderManager::rrRefreshRoomLight(const Tile& tile, bool removing)
     light->setDiffuseColour(lightColour * (lightFullIntensity * density));
 }
 
+//! \brief Places a fog surface or cloud instance on its tile. The instance is attached to the tile's own scene
+//! node, which already sits at the tile coordinates, and an instanced entity position is an offset from that
+//! node; any tile position here would be added a second time and move the fog onto other tiles.
+//! \param instance The fog instance attached to the tile's scene node.
+static void rrPlaceFogInstance(Ogre::InstancedEntity* instance)
+{
+    instance->setPosition(Ogre::Vector3::ZERO);
+}
+
 //! \brief Creates or updates the meshes of a tile, including the neutral fog surface, its cloud
 //! and the dig mark of the local player.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
@@ -2915,7 +2924,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
 
             tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarMesh());
             
             
             
@@ -2949,7 +2958,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.setHasFogOfWar(false);  
             tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarMesh());
            
             
             
@@ -2972,7 +2981,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.setFogOfWarMesh((isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->
                 createInstancedEntity("DirtInstanced"), isMarked);
             tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            tile.getFogOfWarMesh()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarMesh());
         }
         tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
         // The alpha-blended cloud hangs above the flat mark and would hide it again, the more the
@@ -2988,7 +2997,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         {
             tile.setFogOfWarCloud(mInstanceManagerCloud->createInstancedEntity("Fog"));
             tileMeshNode->attachObject(tile.getFogOfWarCloud());
-            tile.getFogOfWarCloud()->setPosition(tile.getPosition());
+            rrPlaceFogInstance(tile.getFogOfWarCloud());
         }
         else if(!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr)
         {
@@ -6755,33 +6764,6 @@ std::string RenderManager::colourizeMaterial(const std::string& materialName, co
         if (technique->getNumPasses() == 0 || techniqueName.find("ZPrePassScheme") != Ogre::String::npos)
             continue;
 
-        if (!markedForDigging && !playerHasVision)
-        {
-            // Color the material with dark color on the latest pass
-            // so we're sure to see the taint.
-            Ogre::Pass* pass = technique->getPass(0);
-            Ogre::ColourValue current_color;
-            current_color = pass->getDiffuse();
-            current_color.r = 0.1;
-            current_color.g = 0.1;
-            current_color.b = 0.1;
-            pass->setDiffuse(current_color);
-            current_color = pass->getSpecular();
-            current_color.r = 0.1;
-            current_color.g = 0.1;
-            current_color.b = 0.1;            
-            pass->setSpecular(current_color);
-            current_color = pass->getAmbient();
-            current_color.r = 0.1;
-            current_color.g = 0.1;
-            current_color.b = 0.1;            
-            pass->setAmbient(current_color);
-            current_color = pass->getEmissive();
-            current_color.r = 0.1;
-            current_color.g = 0.1;
-            current_color.b = 0.1;     
-            pass->setEmissive(current_color);            
-        }
         if (seat != nullptr)
         {
             // Color the material with the Seat's color.
@@ -7426,6 +7408,7 @@ void RenderManager::rrPlayDigAnimation()
 }
 
 //! \brief Draws selection borders, sharing the filled frame width for construction and digging.
+//! A dig selection (hover or drag) is flat: only the top face of a tile is framed, never a 3D block.
 void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
 {
     if(singleRectangle)
@@ -7541,7 +7524,8 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             mTilePreview->colour(colour);
             mTilePreview->position(corners[(i+1)%4]);
             mTilePreview->colour(colour);
-            if(tile->isFullTile())
+            // A dig selection marks only the top face of a full tile: no bottom edge and no vertical edges.
+            if(tile->isFullTile() && !digging)
             {
                 const Ogre::Vector3 bottom(corners[i].x, corners[i].y, 0.04f);
                 const Ogre::Vector3 nextBottom(corners[(i+1)%4].x, corners[(i+1)%4].y, 0.04f);
@@ -7588,25 +7572,6 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
                 {
                     mTilePreview->position(point);
                     mTilePreview->colour(colour);
-                }
-                if(!tile->isFullTile())
-                    continue;
-                // Offset side frames just outside the wall to avoid surface flicker.
-                const std::function<Ogre::Vector3(float, float)> point = [&](float along, float height)
-                {
-                    return Ogre::Vector3(x + 1.01f * (outer[i].x - x + along * (outer[next].x - outer[i].x)),
-                        y + 1.01f * (outer[i].y - y + along * (outer[next].y - outer[i].y)), height);
-                };
-                const Ogre::Vector3 face[] = {point(0, .04f), point(1, .04f), point(1, z), point(0, z)};
-                const Ogre::Vector3 inset[] = {point(.06f, .10f), point(.94f, .10f), point(.94f, z-.06f), point(.06f, z-.06f)};
-                for(int edge = 0; edge < 4; ++edge)
-                {
-                    const int end = (edge + 1) % 4;
-                    for(const Ogre::Vector3& vertex : {face[edge], face[end], inset[end], face[edge], inset[end], inset[edge]})
-                    {
-                        mTilePreview->position(vertex);
-                        mTilePreview->colour(colour);
-                    }
                 }
             }
         }
