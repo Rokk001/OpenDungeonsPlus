@@ -145,6 +145,7 @@ public:
     void clearCreatures();
 
     //! \brief Adds the address of a new creature to be stored in this GameMap.
+    //! \brief Registers a fresh creature without inheriting unfinished movement or lethal-shot credit from a reused name.
     void addCreature(Creature *c);
 
     //! \brief Removes the creature from the game map but does not delete its data structure.
@@ -364,7 +365,9 @@ public:
     { return getSeatById(0); }
 
     //! \brief Records victory once, saves campaign progress and notifies the winning human seat.
-    void addWinningSeat(Seat *s);
+    //! \brief Defers human victory until all main goals are reached, then records it once.
+    //! \param objectivesUpdated True only after this turn's required-goal observers have run.
+    void addWinningSeat(Seat *s, bool objectivesUpdated = false);
     bool seatIsAWinner(Seat *s) const;
 
     void addGoalForAllSeats(std::unique_ptr<Goal>&& g);
@@ -420,6 +423,7 @@ public:
     { return mSandboxMode; }
 
     //! \brief Formats goal descriptions and graphical state markers for the player's objectives window.
+    //! \brief Formats grouped main and optional goals with their shared status icons, retaining legacy lists.
     std::string getGoalsStringForPlayer(Player* player);
 
     //! \brief Loops over all the creatures and calls their individual doTurn methods,
@@ -907,6 +911,7 @@ private:
 
     //! \brief Creates a worker at the dungeon heart of one seat, one every few seconds,
     //! until the seat has four workers. A seat without a living dungeon heart creates none.
+    //! Announces the worker class only on its first successful arrival.
     void updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn);
 
     //! \brief Checks each turn whether an enemy creature is within range of the seat's

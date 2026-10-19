@@ -3122,16 +3122,16 @@ Action	spawn	3	69	32	1	Knight:3	Monk:2	Elf:2	Adventurer:2
 Name	hollowFound
 Mode	once
 Cond	region	1	SealedLantern
-Action	message	1	The sisters of the lamp bricked this hollow up long ago. A pale stone glows in the wall, and a lost spider has lifted it. Bring it to your dungeon heart.
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
 Action	spawn	1	70	9	1	Spider:1@LampBearer
-Action	stoneattach	LampBearer
+Action	stonecreate	69	9	lantern-stone	1	13	57
 Action	setflag	lanternStone	1
 Action	timer	lanternSpawn	0
 [/Trigger]
 [Trigger]
 Name	lanternStoneHome
 Mode	once
-Cond	reached	LampBearer	heart	1
+Cond	deliveredstone	lantern-stone
 Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/TwistingHalls.level
 [/Trigger]
@@ -3141,9 +3141,8 @@ Mode	repeat	60
 Cond	flag	lanternStone	1
 Cond	timer	lanternSpawn	>=	5
 Cond	alive	LampBearer	0
-Action	message	1	The stone-bearer has fallen. Another creature has lifted the stone in the hollow.
+Action	message	1	Another spider emerges. Send a worker for the stone.
 Action	spawn	1	70	9	1	Spider:1@LampBearer
-Action	stoneattach	LampBearer
 [/Trigger]
 [Trigger]
 Name	patrol1
@@ -3211,15 +3210,94 @@ Name	rivalFalls
 Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	The rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now.
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	rivalHeartDown
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now.
 Action	objectivestate	1	lanternhill-o01	reached
+Action	win	1
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	lanternhill-main-home	Mine 700 gold; protect your heart.
+Action	mainobjectiveid	1	lanternhill-main-road	Open the ring road; claim the crypt and library.
+Action	mainobjectiveid	1	lanternhill-main-rival	Destroy the northern heart and all enemy forces.
+Action	optionalobjectiveid	1	lanternhill-extra-lamp	Explore the lamp chamber.
+[/Trigger]
+[Trigger]
+Name	mainStoneList
+Mode	once
+Cond	trigger	hollowFound
+Action	conditionalobjectiveid	1	lanternhill-main-stone	If found, bring the lantern stone home.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	lanternhill-main-home	failed
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	mined	1	>=	700
+Action	objectivestate	1	lanternhill-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainRoad
+Mode	repeat	0
+Cond	groundconnected	1	13	57	40	22
+Cond	roomclaimed	1	10	16	12	17
+Cond	roomclaimed	1	13	20	15	21
+Action	objectivestate	1	lanternhill-main-road	reached
+[/Trigger]
+[Trigger]
+Name	mainRival
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	lanternhill-main-rival	reached
+[/Trigger]
+[Trigger]
+Name	mainStone
+Mode	repeat	0
+Cond	trigger	lanternStoneHome
+Action	objectivestate	1	lanternhill-main-stone	reached
+[/Trigger]
+[Trigger]
+Name	extraLamp
+Mode	once
+Cond	region	1	LampRoom
+Action	objectivestate	1	lanternhill-extra-lamp	reached
+[/Trigger]
+[Trigger]
+Name	victoryWithoutStone
+Mode	once
+Cond	objective	1	lanternhill-main-home	reached
+Cond	objective	1	lanternhill-main-road	reached
+Cond	objective	1	lanternhill-main-rival	reached
+Cond	flag	lanternStone	0
+Action	setflag	victoryStoneReady	1
+[/Trigger]
+[Trigger]
+Name	victoryWithStone
+Mode	once
+Cond	trigger	lanternStoneHome
+Action	setflag	victoryStoneReady	1
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	lanternhill-main-home	reached
+Cond	objective	1	lanternhill-main-road	reached
+Cond	objective	1	lanternhill-main-rival	reached
+Cond	flag	victoryStoneReady	1
+Action	message	1	The rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now.
 Action	win	1
 [/Trigger]
 [/Triggers]

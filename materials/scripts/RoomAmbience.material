@@ -26,7 +26,8 @@ material RoomAmbGlow
         pass
         {
             lighting off
-            scene_blend add
+            // The sprite is white with its falloff in alpha: weight by alpha, or it renders as a hard disc.
+            scene_blend src_alpha one
             depth_write off
             diffuse vertexcolour
 

@@ -1463,4 +1463,72 @@ Action	message	1	Warden Cole is dead and the gates stand open. Coldwell is yours
 Action	objectivestate	1	coldwell-o01	reached
 Action	win	1
 [/Trigger]
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	coldwell-main-heart	Protect your heart.
+Action	mainobjectiveid	1	coldwell-main-plaza	Claim the well plaza; mine 600 gold beneath it.
+Action	mainobjectiveid	1	coldwell-main-gate	Break the keep's north gate.
+Action	mainobjectiveid	1	coldwell-main-warden	Defeat Hugo Cole and all enemy forces.
+Action	optionalobjectiveid	1	coldwell-extra-gold	Mine 1200 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	coldwell-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainPlaza
+Mode	repeat	0
+Cond	minedregion	1	Undercroft	>=	600
+Cond	groundclaimed	1	26	20	32	20
+Cond	groundclaimed	1	26	21	32	21
+Cond	groundclaimed	1	26	22	32	22
+Cond	groundclaimed	1	26	23	35	23
+Cond	groundclaimed	1	29	24	35	24
+Cond	groundclaimed	1	19	25	24	25
+Cond	groundclaimed	1	30	25	36	25
+Cond	groundclaimed	1	17	26	17	26
+Cond	groundclaimed	1	19	26	24	26
+Cond	groundclaimed	1	30	26	36	26
+Cond	groundclaimed	1	17	27	24	27
+Cond	groundclaimed	1	30	27	36	27
+Cond	groundclaimed	1	18	28	25	28
+Cond	groundclaimed	1	29	28	36	28
+Cond	groundclaimed	1	18	29	35	29
+Cond	groundclaimed	1	19	30	20	30
+Cond	groundclaimed	1	22	30	33	30
+Cond	groundclaimed	1	23	31	32	31
+Cond	groundclaimed	1	22	32	30	32
+Cond	groundclaimed	1	35	32	36	32
+Action	objectivestate	1	coldwell-main-plaza	reached
+[/Trigger]
+[Trigger]
+Name	mainGate
+Mode	repeat	0
+Cond	trapgone	DoorWooden2
+Action	objectivestate	1	coldwell-main-gate	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	event	HugoCole	killed
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	coldwell-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	1200
+Action	objectivestate	1	coldwell-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	coldwell-main-heart	failed
+[/Trigger]
+
 [/Triggers]

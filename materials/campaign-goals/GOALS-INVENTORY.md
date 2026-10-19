@@ -16,20 +16,42 @@ File: `levels/campaign/Ashcombe.level`.
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3286 | `Action	objectiveid	1	ashcombe-o01	Kill Ashby before she escapes.` | yes |
-| Script line 3287 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin to the northern hold.` | yes |
-| Script line 3317 | `Action	objectiveid	1	ashcombe-o03	Enter the hold early, or kill the fleeing Ashby.` | yes |
-| Script line 3452 | `Action	win	1` | yes |
-| Trigger `holdBreached` | `Action	objectivestate	1	ashcombe-o02	reached`; conditions: `Cond	region	1	Hold` | yes |
-| Trigger `goalHoldBeforeDeparture` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves	0; Cond	region	1	Hold; Cond	objective	1	ashcombe-o03	open` | yes |
+| Script line 3287 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
+| Script line 3317 | `Action	objectiveid	1	ashcombe-o03	Kill Ashby before she escapes.` | yes |
+| Script line 3423 | `Action	win	1` | yes |
+| Script line 3479 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ashcombe-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `ashcombe-main-basin`: Cross the ash basin. | `mainBasin`: Cond	crossed	1	Basin	north |
+| main | `ashcombe-main-warden`: Kill Ashby before escape and defeat her forces. | `mainWarden`: Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `ashcombe-extra-ruins`: Explore the old mill ruins. | `extraRuins`: Cond	region	1	RuinYard |
+
+Possible route (static, not a playthrough):
+- Protect the original heart throughout the mission.
+- Cross Basin (24,28)-(68,54) northwards with one living owned creature. A dry or removable corridor along x24 connects y55 to y27; visiting Hold is not a substitute.
+- Optionally enter RuinYard (12,16)-(30,28) before the last main goal; 166 original open dry fields are potentially reachable.
+- Kill LieslAshby before she reaches ExitRoad (60,55)-(64,58). Death inside Hold or anywhere on the road counts; no prior wagon departure is required. Preserve the original 300-second departure after Approach and its original route.
+- Defeat all remaining enemy creatures and portals before the final main objective. The original four patrol schedules and hold/approach reinforcements remain unchanged.
+
+Static geometry and source conditions are not a combat or timing playthrough; the original escape and optional exploration still require runtime verification.
+
+| Trigger `goalKillBeforeEscape` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0` | yes |
 | Trigger `goalHoldOrRoadMissed` | `Action	objectivestate	1	ashcombe-o03	failed`; conditions: `Cond	reached	LieslAshby	region	ExitRoad; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath01` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold01; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath02` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold02; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath03` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold03; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `goalOutsideHoldDeath04` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	trigger	wagonLeaves; Cond	killedin	LieslAshby	GoalOutsideHold04; Cond	objective	1	ashcombe-o03	open` | yes |
 | Trigger `wardenEscaped` | `Action	objectivestate	1	ashcombe-o01	failed`; conditions: `Cond	reached	LieslAshby	region	ExitRoad` | yes |
+| Trigger `goalBasinCrossed` | `Action	objectivestate	1	ashcombe-o02	reached`; conditions: `Cond	crossed	1	Basin	north` | yes |
 | Trigger `wardenDown` | `Action	objectivestate	1	ashcombe-o01	reached`; conditions: `Cond	event	LieslAshby	killed` | yes |
-| Briefing | Cross the ashes and kill her before she escapes, whether in the hold or on the south road. | no: Ashby elimination/escape is checked; crossing the ashes is not an independent goal |
-Approved ashcombe-o03 alternative: Ashby is killed after wagonLeaves fired, outside original Hold (73..89,5..21). Four disjoint rectangles cover the entire map complement. Original wagonLeaves requires Ashby alive, so an earlier death cannot satisfy departure; walking through the area never satisfies killedin. Hold-before-departure remains unchanged.
+| Trigger `mainHeart` | `Action	objectivestate	1	ashcombe-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainBasin` | `Action	objectivestate	1	ashcombe-main-basin	reached`; conditions: `Cond	crossed	1	Basin	north` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	ashcombe-main-warden	reached`; conditions: `Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraRuins` | `Action	objectivestate	1	ashcombe-extra-ruins	reached`; conditions: `Cond	region	1	RuinYard` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ashcombe-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainAshbyEscaped` | `Action	objectivestate	1	ashcombe-main-warden	failed`; conditions: `Cond	trigger	wardenEscaped` | yes |
+| Briefing | Cross the ashes and kill her before she escapes, whether in the hold or on the south road. | yes: actual northward Basin crossing, actual Ashby death before escape regardless of location, remaining enemy forces and own-heart protection |
+Mario decided: kill Ashby before she escapes, regardless of location. Actual death and no fired escape trigger are required; departure and a hold visit are not prerequisites or substitutes.
 
 ## Bellwick
 
@@ -43,14 +65,39 @@ File: `levels/campaign/Bellwick.level`.
 | Advisory hint line 3815 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
 | Script line 3816 | `Action	objectiveid	1	bellwick-o03	Survive until both north gates open.` | yes |
 | Script line 3826 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
-| Script line 3951 | `Action	win	1` | yes |
-| Script line 3956 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3959 | `Action	win	1` | yes |
+| Script line 3950 | `Action	win	1` | yes |
+| Script line 3955 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3957 | `Action	win	1` | yes |
+| Script line 4039 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `bellwick-main-heart`: Protect your heart until both north gates open. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	gatesOpen	1 |
+| main | `bellwick-main-nave`: Pass through the nave to the transept. | `mainNave`: Cond	crossed	1	Nave	north |
+| main | `bellwick-main-keeper`: Destroy the undercroft heart and all enemy forces. | `mainKeeper`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `bellwick-extra-scriptorium`: Explore the western scriptorium. | `extraScriptorium`: Cond	region	1	Scriptorium |
+
+Possible route (static, not a playthrough):
+- Protect the own heart through both north-gate openings and until victory. Preserve original alternatives:12credited kills or1500seconds. Both exact terrain gate actions and gatesOpen1 remain unchanged; no new deadline.
+- Walk the same own living creature north from the south bank y89 through the full Nave(20..30,66..88)to y65 inside original Transept. A transept visit via a side cloister or mixed visitors does not count. A concrete potential route runs x20/y89..65,24steps with21removable dirt fields. This is not claimed to be initially open or actually played. Any legal internal path qualifies.
+- Destroy the actual original undercroft DungeonTemple2,footprint(28..32,10..14),and remaining enemy forces/portals. Mere seat2creature emptiness is insufficient.
+- Optionally enter western Scriptorium(4,34)-(22,48),161reachable open dry fields. No new reward. The advice to hold the nave remains a hint, while actual survival to the existing gate milestone is a separate main duty.
+- Preserve all nine faithful waves, crypt gifts, gate alternatives, mana spring and terrain. Move the unchanged duplicate victory sentence to one final completion after all current main observers; old win requests remain pending.
+
+Static source and potential route evidence only; actual digging/movement, combat, gate timing and save/load remain for runtime verification.
+
 | Trigger `transept` | `Action	objectivestate	1	bellwick-o04	reached`; conditions: `Cond	region	1	Transept` | yes |
 | Trigger `keeperHeartDown` | `Action	objectivestate	1	bellwick-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `naveGatesKills` | `Action	objectivestate	1	bellwick-o03	reached`; conditions: `Cond	kills	1	>=	12; Cond	flag	gatesOpen	0` | yes |
 | Trigger `naveGatesLate` | `Action	objectivestate	1	bellwick-o03	reached`; conditions: `Cond	time	1500; Cond	flag	gatesOpen	0` | yes |
-| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | no: enemy temple elimination is checked; holding until the gate event is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	bellwick-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	bellwick-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	gatesOpen	1` | yes |
+| Trigger `mainNave` | `Action	objectivestate	1	bellwick-main-nave	reached`; conditions: `Cond	crossed	1	Nave	north` | yes |
+| Trigger `mainKeeper` | `Action	objectivestate	1	bellwick-main-keeper	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraScriptorium` | `Action	objectivestate	1	bellwick-extra-scriptorium	reached`; conditions: `Cond	region	1	Scriptorium` | yes |
+| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes |
 
 ## Bonus1
 
@@ -69,6 +116,52 @@ File: `levels/campaign/Bonus1.level` (not listed in Campaign.cfg).
 | [Goals] | `MineNGold	100` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `bonus1-main-heart-s1`: Protect your heart. | `mainHeartSeat1`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `bonus1-main-enemies-s1`: Clear the cellar. | `mainEnemiesSeat1`: Cond	goalmet	1	KillAllEnemies |
+| main | `bonus1-main-claim-s1`: Claim 40, then 60 tiles. | `mainClaimSeat1`: Cond	goalmet	1	ClaimNTiles	40; Cond	goalmet	1	ClaimNTiles	60 |
+| main | `bonus1-main-mine-s1`: Mine 20, then 50, then 100 gold. | `mainMineSeat1`: Cond	goalmet	1	MineNGold	20; Cond	goalmet	1	MineNGold	50; Cond	goalmet	1	MineNGold	100 |
+| optional | `bonus1-extra-land-s1`: Claim 100 tiles. | `mainLandSeat1`: Cond	claimed	1	MainCellar	100 |
+| main | `bonus1-main-heart-s3`: Protect your heart. | `mainHeartSeat3`: Cond	goalmet	3	ProtectDungeonTemple |
+| main | `bonus1-main-enemies-s3`: Clear the cellar. | `mainEnemiesSeat3`: Cond	goalmet	3	KillAllEnemies |
+| main | `bonus1-main-claim-s3`: Claim 40, then 60 tiles. | `mainClaimSeat3`: Cond	goalmet	3	ClaimNTiles	40; Cond	goalmet	3	ClaimNTiles	60 |
+| main | `bonus1-main-mine-s3`: Mine 20, then 50, then 100 gold. | `mainMineSeat3`: Cond	goalmet	3	MineNGold	20; Cond	goalmet	3	MineNGold	50; Cond	goalmet	3	MineNGold	100 |
+| optional | `bonus1-extra-land-s3`: Claim 100 tiles. | `mainLandSeat3`: Cond	claimed	3	MainCellar	100 |
+| main | `bonus1-main-heart-s4`: Protect your heart. | `mainHeartSeat4`: Cond	goalmet	4	ProtectDungeonTemple |
+| main | `bonus1-main-enemies-s4`: Clear the cellar. | `mainEnemiesSeat4`: Cond	goalmet	4	KillAllEnemies |
+| main | `bonus1-main-claim-s4`: Claim 40, then 60 tiles. | `mainClaimSeat4`: Cond	goalmet	4	ClaimNTiles	40; Cond	goalmet	4	ClaimNTiles	60 |
+| main | `bonus1-main-mine-s4`: Mine 20, then 50, then 100 gold. | `mainMineSeat4`: Cond	goalmet	4	MineNGold	20; Cond	goalmet	4	MineNGold	50; Cond	goalmet	4	MineNGold	100 |
+| optional | `bonus1-extra-land-s4`: Claim 100 tiles. | `mainLandSeat4`: Cond	claimed	4	MainCellar	100 |
+
+Possible route (static, not a playthrough):
+- For every selected human seat, retain its heart and clear enemies through the original classic goals.
+- Complete the original40 then60 claimed-tile chain and20 then50 then100 mined-gold chain; each exact registered stage must become active or completed before its observer can succeed.
+- Optionally claim100fields anywhere on this50x50map before the final enemy falls. Preserve all original goals, initial values and seat choices.
+
+Static chain/seat wiring only; actual classic-stage activation, multiplayer, save/load and battle routes require runtime verification.
+
+| Trigger `mainHeartSeat1` | `Action	objectivestate	1	bonus1-main-heart-s1	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat1` | `Action	objectivestate	1	bonus1-main-enemies-s1	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainClaimSeat1` | `Action	objectivestate	1	bonus1-main-claim-s1	reached`; conditions: `Cond	goalmet	1	ClaimNTiles	40; Cond	goalmet	1	ClaimNTiles	60` | yes |
+| Trigger `mainMineSeat1` | `Action	objectivestate	1	bonus1-main-mine-s1	reached`; conditions: `Cond	goalmet	1	MineNGold	20; Cond	goalmet	1	MineNGold	50; Cond	goalmet	1	MineNGold	100` | yes |
+| Trigger `mainLandSeat1` | `Action	objectivestate	1	bonus1-extra-land-s1	reached`; conditions: `Cond	claimed	1	MainCellar	100` | yes |
+| Trigger `mainHeartLostSeat1` | `Action	objectivestate	1	bonus1-main-heart-s1	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat3` | `Action	objectivestate	3	bonus1-main-heart-s3	reached`; conditions: `Cond	goalmet	3	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat3` | `Action	objectivestate	3	bonus1-main-enemies-s3	reached`; conditions: `Cond	goalmet	3	KillAllEnemies` | yes |
+| Trigger `mainClaimSeat3` | `Action	objectivestate	3	bonus1-main-claim-s3	reached`; conditions: `Cond	goalmet	3	ClaimNTiles	40; Cond	goalmet	3	ClaimNTiles	60` | yes |
+| Trigger `mainMineSeat3` | `Action	objectivestate	3	bonus1-main-mine-s3	reached`; conditions: `Cond	goalmet	3	MineNGold	20; Cond	goalmet	3	MineNGold	50; Cond	goalmet	3	MineNGold	100` | yes |
+| Trigger `mainLandSeat3` | `Action	objectivestate	3	bonus1-extra-land-s3	reached`; conditions: `Cond	claimed	3	MainCellar	100` | yes |
+| Trigger `mainHeartLostSeat3` | `Action	objectivestate	3	bonus1-main-heart-s3	failed`; conditions: `Cond	roomtiles	3	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat4` | `Action	objectivestate	4	bonus1-main-heart-s4	reached`; conditions: `Cond	goalmet	4	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat4` | `Action	objectivestate	4	bonus1-main-enemies-s4	reached`; conditions: `Cond	goalmet	4	KillAllEnemies` | yes |
+| Trigger `mainClaimSeat4` | `Action	objectivestate	4	bonus1-main-claim-s4	reached`; conditions: `Cond	goalmet	4	ClaimNTiles	40; Cond	goalmet	4	ClaimNTiles	60` | yes |
+| Trigger `mainMineSeat4` | `Action	objectivestate	4	bonus1-main-mine-s4	reached`; conditions: `Cond	goalmet	4	MineNGold	20; Cond	goalmet	4	MineNGold	50; Cond	goalmet	4	MineNGold	100` | yes |
+| Trigger `mainLandSeat4` | `Action	objectivestate	4	bonus1-extra-land-s4	reached`; conditions: `Cond	claimed	4	MainCellar	100` | yes |
+| Trigger `mainHeartLostSeat4` | `Action	objectivestate	4	bonus1-main-heart-s4	failed`; conditions: `Cond	roomtiles	4	DungeonTemple	<=	0` | yes |
+
 ## BoulderCourse
 
 File: `levels/campaign/BoulderCourse.level`.
@@ -78,7 +171,32 @@ File: `levels/campaign/BoulderCourse.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 1431 | `Action	objectiveid	1	bouldercourse-o01	Slap all four boulders into their cups.` | yes |
 | Script line 1476 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `bouldercourse-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `bouldercourse-main-trial`: Sink all 4 boulders within 600s and 80 slaps. | `mainTrial`: Cond	trigger	courseDone |
+| optional | `bouldercourse-extra-survivors`: Keep all 3 starting workers alive. | `extraSurvivors`: Cond	objective	1	bouldercourse-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Use the four original balls and four Cup regions; original limits remain 600 seconds after openingRound and 80 slaps.
+- Keep the three named initial workers alive while rolling all four balls into their cups.
+- Complete courseDone with the heart intact. Optional survival is evaluated against the original death histories.
+
+The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.
+
 | Trigger `courseDone` | `Action	objectivestate	1	bouldercourse-o01	reached`; conditions: `Cond	boulder	CupA	>=	1; Cond	boulder	CupB	>=	1; Cond	boulder	CupC	>=	1; Cond	boulder	CupD	>=	1` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	bouldercourse-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	bouldercourse-main-trial	reached`; conditions: `Cond	trigger	courseDone` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	bouldercourse-extra-survivors	reached`; conditions: `Cond	objective	1	bouldercourse-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	bouldercourse-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	bouldercourse-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
 | Briefing | Roll every ball into its cup before the shift bell; this optional trial rewards one of four Heartstone fragments. | yes: courseDone checks all four cups; the timeout trigger limits the trial |
 
 ## Brackenford
@@ -96,14 +214,42 @@ File: `levels/campaign/Brackenford.level`.
 | Script line 1389 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
 | Script line 1463 | `Action	objectiveid	1	brackenford-o06	Enter the keep and kill Elsa Brack.` | yes |
 | Script line 1487 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `brackenford-main-home`: Keep your heart, 2 beds and a hatchery. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1 |
+| main | `brackenford-main-grove`: Claim the grove; rally 2 fighters before attacking Brack. | `mainGrove`: Cond	claimed	1	Grove	22; Cond	flag	groveAssembled	1 |
+| main | `brackenford-main-ford`: Cross the ford; clear the landing. | `mainFord`: Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1 |
+| main | `brackenford-main-keep`: Defeat Brack, foes and portals; claim the keep. | `mainKeep`: Cond	event	ElsaBrack	killed; Cond	goalmet	1	KillAllEnemies; Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12 |
+| optional | `brackenford-extra-gold`: Mine 500 gold. | `extraGold`: Cond	mined	1	>=	500 |
+
+Possible route (static, not a playthrough):
+- Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.
+- Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.
+- Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.
+- Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.
+- Defeat ElsaBrack and all remaining enemies, claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.
+
+Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.
+
 | Trigger `bedsReady` | `Action	objectivestate	1	brackenford-o02	reached`; conditions: `Cond	room	1	Dormitory	1` | yes |
 | Trigger `larderReady` | `Action	objectivestate	1	brackenford-o03	reached`; conditions: `Cond	room	1	Hatchery	1` | yes |
 | Trigger `groveClaimed` | `Action	objectivestate	1	brackenford-o04	reached`; conditions: `Cond	claimed	1	Grove	22` | yes |
 | Trigger `goalLandingCleared` | `Action	objectivestate	1	brackenford-o05	reached`; conditions: `Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1` | yes |
 | Trigger `wardenGone` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenGone` | `Action	objectivestate	1	brackenford-o06	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | no: beds, hatchery, grove and gathering are not winning conditions |
-| Briefing | Cross the ford and kill the warden in her keep. | yes: KillAllEnemies and the warden seat elimination trigger |
+| Trigger `mainHome` | `Action	objectivestate	1	brackenford-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainGrove` | `Action	objectivestate	1	brackenford-main-grove	reached`; conditions: `Cond	claimed	1	Grove	22; Cond	flag	groveAssembled	1` | yes |
+| Trigger `mainFord` | `Action	objectivestate	1	brackenford-main-ford	reached`; conditions: `Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1` | yes |
+| Trigger `mainKeep` | `Action	objectivestate	1	brackenford-main-keep	reached`; conditions: `Cond	event	ElsaBrack	killed; Cond	goalmet	1	KillAllEnemies; Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	brackenford-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
+| Trigger `groveAssemblyMissed` | `Action	objectivestate	1	brackenford-main-grove	failed`; conditions: `Cond	flag	groveAssembled	0; Cond	event	ElsaBrack	attacked` | yes |
+| Trigger `groveAssemblyMissedDeath` | `Action	objectivestate	1	brackenford-main-grove	failed`; conditions: `Cond	flag	groveAssembled	0; Cond	event	ElsaBrack	killed` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	brackenford-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked |
+| Briefing | Cross the ford and kill the warden in her keep. | yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles |
 
 ## Campaign1
 
@@ -114,7 +260,26 @@ File: `levels/campaign/Campaign1.level` (not listed in Campaign.cfg).
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 2286 | `Action	objectiveid	-1	campaign1-o01	Defeat all enemies; protect your heart.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `campaign1-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `campaign1-main-enemies`: Defeat all enemies. | `mainEnemies`: Cond	goalmet	1	KillAllEnemies |
+| optional | `campaign1-extra-gold`: Mine 500 gold. | `extraGold`: Cond	mined	1	>=	500 |
+
+Possible route (static, not a playthrough):
+- Keep the original seat1 heart alive and defeat all hostile creatures, hearts and portals through the original classic goals.
+- Optionally mine500gold before finishing the last enemy; original finite potential259500gold exceeds the optional amount. Preserve original bonus discovery and all messages.
+
+Static goal wiring only; original campaign battle, mining and save/load remain unverified.
+
 | Trigger `goalClassicComplete` | `Action	objectivestate	-1	campaign1-o01	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	campaign1-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemies` | `Action	objectivestate	1	campaign1-main-enemies	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	campaign1-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	campaign1-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 
 ## Campaign2
 
@@ -125,7 +290,33 @@ File: `levels/campaign/Campaign2.level` (not listed in Campaign.cfg).
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3496 | `Action	objectiveid	-1	campaign2-o01	Defeat the rival keeper; protect your heart.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `campaign2-main-heart-s1`: Protect your heart. | `mainHeartSeat1`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `campaign2-main-enemies-s1`: Defeat all enemies. | `mainEnemiesSeat1`: Cond	goalmet	1	KillAllEnemies |
+| optional | `campaign2-extra-gold-s1`: Mine 1000 gold. | `mainGoldSeat1`: Cond	mined	1	>=	1000 |
+| main | `campaign2-main-heart-s2`: Protect your heart. | `mainHeartSeat2`: Cond	goalmet	2	ProtectDungeonTemple |
+| main | `campaign2-main-enemies-s2`: Defeat all enemies. | `mainEnemiesSeat2`: Cond	goalmet	2	KillAllEnemies |
+| optional | `campaign2-extra-gold-s2`: Mine 1000 gold. | `mainGoldSeat2`: Cond	mined	2	>=	1000 |
+
+Possible route (static, not a playthrough):
+- For either selected starting seat, protect that own heart and defeat all its enemies through the original classic goal.
+- Optionally mine1000actualgold on that same seat before the final enemy is defeated. Original seat selection, resources and gameplay remain unchanged.
+
+Static seat-specific wiring only; both selectable starts, mining routes, multiplayer and save/load require further verification.
+
 | Trigger `goalClassicComplete` | `Action	objectivestate	-1	campaign2-o01	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeartSeat1` | `Action	objectivestate	1	campaign2-main-heart-s1	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat1` | `Action	objectivestate	1	campaign2-main-enemies-s1	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat1` | `Action	objectivestate	1	campaign2-extra-gold-s1	reached`; conditions: `Cond	mined	1	>=	1000` | yes |
+| Trigger `mainHeartLostSeat1` | `Action	objectivestate	1	campaign2-main-heart-s1	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat2` | `Action	objectivestate	2	campaign2-main-heart-s2	reached`; conditions: `Cond	goalmet	2	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat2` | `Action	objectivestate	2	campaign2-main-enemies-s2	reached`; conditions: `Cond	goalmet	2	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat2` | `Action	objectivestate	2	campaign2-extra-gold-s2	reached`; conditions: `Cond	mined	2	>=	1000` | yes |
+| Trigger `mainHeartLostSeat2` | `Action	objectivestate	2	campaign2-main-heart-s2	failed`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
 
 ## Campaign3
 
@@ -136,7 +327,33 @@ File: `levels/campaign/Campaign3.level` (not listed in Campaign.cfg).
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 8171 | `Action	objectiveid	-1	campaign3-o01	Defeat the rival keeper; protect your heart.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `campaign3-main-heart-s1`: Protect your heart. | `mainHeartSeat1`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `campaign3-main-enemies-s1`: Defeat all enemies. | `mainEnemiesSeat1`: Cond	goalmet	1	KillAllEnemies |
+| optional | `campaign3-extra-gold-s1`: Mine 1000 gold. | `mainGoldSeat1`: Cond	mined	1	>=	1000 |
+| main | `campaign3-main-heart-s2`: Protect your heart. | `mainHeartSeat2`: Cond	goalmet	2	ProtectDungeonTemple |
+| main | `campaign3-main-enemies-s2`: Defeat all enemies. | `mainEnemiesSeat2`: Cond	goalmet	2	KillAllEnemies |
+| optional | `campaign3-extra-gold-s2`: Mine 1000 gold. | `mainGoldSeat2`: Cond	mined	2	>=	1000 |
+
+Possible route (static, not a playthrough):
+- For either selected starting seat, protect that own heart and defeat all its enemies through the original classic goal.
+- Optionally mine1000actualgold on that same seat before the final enemy is defeated. Original seat selection, resources and gameplay remain unchanged.
+
+Static seat-specific wiring only; both selectable starts, mining routes, multiplayer and save/load require further verification.
+
 | Trigger `goalClassicComplete` | `Action	objectivestate	-1	campaign3-o01	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeartSeat1` | `Action	objectivestate	1	campaign3-main-heart-s1	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat1` | `Action	objectivestate	1	campaign3-main-enemies-s1	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat1` | `Action	objectivestate	1	campaign3-extra-gold-s1	reached`; conditions: `Cond	mined	1	>=	1000` | yes |
+| Trigger `mainHeartLostSeat1` | `Action	objectivestate	1	campaign3-main-heart-s1	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeartSeat2` | `Action	objectivestate	2	campaign3-main-heart-s2	reached`; conditions: `Cond	goalmet	2	ProtectDungeonTemple` | yes |
+| Trigger `mainEnemiesSeat2` | `Action	objectivestate	2	campaign3-main-enemies-s2	reached`; conditions: `Cond	goalmet	2	KillAllEnemies` | yes |
+| Trigger `mainGoldSeat2` | `Action	objectivestate	2	campaign3-extra-gold-s2	reached`; conditions: `Cond	mined	2	>=	1000` | yes |
+| Trigger `mainHeartLostSeat2` | `Action	objectivestate	2	campaign3-main-heart-s2	failed`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
 
 ## Cinderhollow
 
@@ -152,20 +369,50 @@ File: `levels/campaign/Cinderhollow.level`.
 | Script line 5093 | `Action	objectiveid	1	cinderhollow-o04	After dawn, cross the lava bridge to the crater.` | yes |
 | Script line 5178 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
 | Script line 5194 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5257 | `Action	win	1` | yes |
-| Script line 5263 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5266 | `Action	win	1` | yes |
-| Script line 5290 | `Action	win	1` | yes |
+| Script line 5256 | `Action	win	1` | yes |
+| Script line 5262 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5264 | `Action	win	1` | yes |
+| Script line 5287 | `Action	win	1` | yes |
+| Script line 5367 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `cinderhollow-main-heart`: Protect your heart until dawn and victory. | `mainHeart`: Cond	trigger	dawn; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `cinderhollow-main-seams`: Empty both starting gold seams: west and south. | `mainSeams`: Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0 |
+| main | `cinderhollow-main-waves`: Defeat all three attacking waves. | `mainWaves`: Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3 |
+| main | `cinderhollow-main-bridge`: After dawn, cross the lava bridge to the crater. | `mainBridge`: Cond	crossed	1	DawnCauseway	north	after	lavaBridge |
+| main | `cinderhollow-main-rival`: Destroy the rival heart and all enemy forces. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `cinderhollow-extra-cave`: Explore the southern creature cave. | `extraCave`: Cond	region	1	SouthCave |
+
+Possible route (static, not a playthrough):
+- Keep the own heart through original dawn at1800seconds and until final victory. Original waves at420,900,1350seconds and the1800second post-dawn limit remain unchanged.
+- Fully exhaust exactly the two original finite starting seams:west x5..6/y55..58,south x30..33/y72..73,16gold fields total. No420second mining deadline and no unrelated gold threshold. Existing cinder_seam_errors binds original vein positions and finite material.
+- Defeat actual instances from waveOne action2,waveTwo action2,waveThree actions2and3. Every actual creature must die; KO is not death and interception away from heart tiles is valid. Heart survival is separate.
+- After lavaBridge fires at1800seconds, walk one own living creature north from dry bank(55,35)through all four generated causeway fields(55,34..31)to dry crater bank(55,30). A visitor, earlier flight or different creatures on the two banks does not count. The exact original time-gated terrain bridge action is preserved.
+- Destroy the actual rival DungeonTemple of seat2 and remaining enemies/portals. Optional SouthCave visit has61reachable open dry fields.
+- The existing final rival-heart victory sentence is emitted once after all five current main goals; premature alternate victory sentences are suppressed without replacement story words. Original three win requests remain pending.
+
+Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, generated-bridge traversal, timers and save/load require runtime verification.
+
 | Trigger `goalBothFiniteSeamsMined` | `Action	objectivestate	1	cinderhollow-o02	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
 | Trigger `goalHeartSafe1BeforeRivalHeartDown` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartSafe1BeforeRivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCraterAfterBridge` | `Action	objectivestate	1	cinderhollow-o04	reached`; conditions: `Cond	flag	goalDawnBridgeCrossed	1; Cond	region	1	RivalCrater` | yes |
-| Trigger `goalThreeWavesDefeatedAtHeart` | `Action	objectivestate	1	cinderhollow-o03	reached`; conditions: `Cond	spawncleared	waveOne	2	atheart	1; Cond	spawncleared	waveTwo	2	atheart	1; Cond	spawncleared	waveThree	2	atheart	1; Cond	spawncleared	waveThree	3	atheart	1` | yes |
+| Trigger `goalThreeWavesDefeatedAtHeart` | `Action	objectivestate	1	cinderhollow-o03	reached`; conditions: `Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3` | yes |
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	cinderhollow-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	defeated	2` | yes |
-| Briefing | Mine the seams and defend your heart until dawn. | no: ProtectDungeonTemple checks survival; mining is not required |
-| Briefing | Then cross the lava bridge and destroy the rival heart. | no: enemy temple elimination is checked; bridge crossing is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	cinderhollow-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	cinderhollow-main-heart	reached`; conditions: `Cond	trigger	dawn; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainSeams` | `Action	objectivestate	1	cinderhollow-main-seams	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
+| Trigger `mainWaves` | `Action	objectivestate	1	cinderhollow-main-waves	reached`; conditions: `Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3` | yes |
+| Trigger `mainBridge` | `Action	objectivestate	1	cinderhollow-main-bridge	reached`; conditions: `Cond	crossed	1	DawnCauseway	north	after	lavaBridge` | yes |
+| Trigger `mainRival` | `Action	objectivestate	1	cinderhollow-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraCave` | `Action	objectivestate	1	cinderhollow-extra-cave	reached`; conditions: `Cond	region	1	SouthCave` | yes |
+| Briefing | Mine the seams and defend your heart until dawn. | yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere |
+| Briefing | Then cross the lava bridge and destroy the rival heart. | yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated |
 Mario's explicit criterion for cinderhollow-o02: fully mine all 16 original finite gold fields x5..6/y55..58 and x30..33/y72..73. The approved objective text requires complete depletion of both finite veins; no deadline or first-wave failure applies.
 
 ## Coldwell
@@ -181,12 +428,38 @@ File: `levels/campaign/Coldwell.level`.
 | Script line 1401 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
 | Script line 1416 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
 | Script line 1464 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `coldwell-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `coldwell-main-plaza`: Claim the well plaza; mine 600 gold beneath it. | `mainPlaza`: Cond	minedregion	1	Undercroft	>=	600; Cond	groundclaimed	1	26	20	32	20; Cond	groundclaimed	1	26	21	32	21; Cond	groundclaimed	1	26	22	32	22; Cond	groundclaimed	1	26	23	35	23; Cond	groundclaimed	1	29	24	35	24; Cond	groundclaimed	1	19	25	24	25; Cond	groundclaimed	1	30	25	36	25; Cond	groundclaimed	1	17	26	17	26; Cond	groundclaimed	1	19	26	24	26; Cond	groundclaimed	1	30	26	36	26; Cond	groundclaimed	1	17	27	24	27; Cond	groundclaimed	1	30	27	36	27; Cond	groundclaimed	1	18	28	25	28; Cond	groundclaimed	1	29	28	36	28; Cond	groundclaimed	1	18	29	35	29; Cond	groundclaimed	1	19	30	20	30; Cond	groundclaimed	1	22	30	33	30; Cond	groundclaimed	1	23	31	32	31; Cond	groundclaimed	1	22	32	30	32; Cond	groundclaimed	1	35	32	36	32 |
+| main | `coldwell-main-gate`: Break the keep's north gate. | `mainGate`: Cond	trapgone	DoorWooden2 |
+| main | `coldwell-main-warden`: Defeat Hugo Cole and all enemy forces. | `mainWarden`: Cond	event	HugoCole	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `coldwell-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
+
+Possible route (static, not a playthrough):
+- Claim the 149 original open dry Plaza tiles, including the existing treasury footprint. Do not require walls or new rooms on the plaza.
+- Mine 600 actual credited gold from Undercroft (21,34)-(33,42); it contains 23500 finite gold. Gifts and starting gold do not count.
+- Mine at least 1200 actual gold overall for the optional task; at least 36000 finite gold is potentially reachable.
+- Destroy DoorWooden2 at (48,32), the northern entrance immediately above Court; a mere Court visit does not count.
+- Defeat HugoCole at the keep and all remaining enemy creatures while preserving the own heart.
+
+Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.
+
 | Trigger `plazaReached` | `Action	objectivestate	1	coldwell-o02	reached`; conditions: `Cond	region	1	Plaza` | yes |
 | Trigger `goalUndercroft600` | `Action	objectivestate	1	coldwell-o03	reached`; conditions: `Cond	minedregion	1	Undercroft	>=	600` | yes |
 | Trigger `courtBreached` | `Action	objectivestate	1	coldwell-o04	reached`; conditions: `Cond	region	1	Court` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	coldwell-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | no: plaza ownership and mined gold are not winning conditions |
-| Briefing | Break the north gate and slay Cole in his hall. | no: Cole elimination is checked; breaking the gate separately is not |
+| Trigger `mainHeart` | `Action	objectivestate	1	coldwell-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainPlaza` | `Action	objectivestate	1	coldwell-main-plaza	reached`; conditions: `Cond	minedregion	1	Undercroft	>=	600; Cond	groundclaimed	1	26	20	32	20; Cond	groundclaimed	1	26	21	32	21; Cond	groundclaimed	1	26	22	32	22; Cond	groundclaimed	1	26	23	35	23; Cond	groundclaimed	1	29	24	35	24; Cond	groundclaimed	1	19	25	24	25; Cond	groundclaimed	1	30	25	36	25; Cond	groundclaimed	1	17	26	17	26; Cond	groundclaimed	1	19	26	24	26; Cond	groundclaimed	1	30	26	36	26; Cond	groundclaimed	1	17	27	24	27; Cond	groundclaimed	1	30	27	36	27; Cond	groundclaimed	1	18	28	25	28; Cond	groundclaimed	1	29	28	36	28; Cond	groundclaimed	1	18	29	35	29; Cond	groundclaimed	1	19	30	20	30; Cond	groundclaimed	1	22	30	33	30; Cond	groundclaimed	1	23	31	32	31; Cond	groundclaimed	1	22	32	30	32; Cond	groundclaimed	1	35	32	36	32` | yes |
+| Trigger `mainGate` | `Action	objectivestate	1	coldwell-main-gate	reached`; conditions: `Cond	trapgone	DoorWooden2` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	coldwell-main-warden	reached`; conditions: `Cond	event	HugoCole	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	coldwell-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	coldwell-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold |
+| Briefing | Break the north gate and slay Cole in his hall. | yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces |
 
 ## CrowshotGallery
 
@@ -196,9 +469,57 @@ File: `levels/campaign/CrowshotGallery.level`.
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 945 | `Action	objectiveid	1	crowshotgallery-o01	Shoot every hornet before time runs out.` | yes |
-| Script line 989 | `Action	win	1` | yes |
-| Trigger `galleryClear` | `Action	objectivestate	1	crowshotgallery-o01	reached`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0` | yes |
-| Briefing | Possess a shooter and destroy every hornet before time expires to earn this optional trial's Heartstone fragment. | no: galleryClear checks the flock; possession is not a separate winning condition |
+| Script line 1023 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `crowshotgallery-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `crowshotgallery-main-trial`: Possess a shooter; shoot down all 3 flocks. | `mainTrial`: Cond	trigger	galleryClear |
+| optional | `crowshotgallery-extra-survivors`: Keep all 5 starting fighters alive. | `extraSurvivors`: Cond	objective	1	crowshotgallery-main-trial	reached; Cond	alive	Shooter1; Cond	event	Shooter1	killed	==	0; Cond	alive	Shooter2; Cond	event	Shooter2	killed	==	0; Cond	alive	Shooter3; Cond	event	Shooter3	killed	==	0; Cond	alive	Shooter4; Cond	event	Shooter4	killed	==	0; Cond	alive	Shooter5; Cond	event	Shooter5	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Protect the heart. The existing deadline starts at openingRound (time3) and remains 420 seconds after that trigger, not 420 seconds from loading. spellPossess is already unlocked; starting mana300 and normal heart income are retained.
+- Possess a level3 starting LizardMan and land at least one real positive projectile hit. All 18 fixed targets must die from own creature projectiles; a hit or lethal knockout alone never counts as death. Other own shooters may assist with projectile kills. Melee, traps, spells cast by the keeper, conversion or environmental deaths do not substitute.
+- First kill Crow1..4. secondFlock starts after time10 and the first flock is gone, spawning Raven1..6. thirdFlock requires flock2 cleared and spawns Rook1..6 plus Wyverns Rook7/8. Every actual spawn action must have its observed instances dead.
+- The level3 LizardMan has MissileLaunch range7 and level minimum1. Every target coordinate has a reachable initially open dry shooting position within that range; exact points are in the fixture. This is a necessary spatial check, not a 420-second combat proof.
+- For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce a shard for an invalid clear.
+
+Actual aiming, target movement, damage/cadence, the 420-second route and save/load still require integrator/Mario runtime verification; no playthrough claimed.
+
+| Trigger `galleryClear` | `Action	objectivestate	1	crowshotgallery-o01	reached`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple; Cond	event	Seat1	possessedshot; Cond	shotkilled	1	Crow1; Cond	shotkilled	1	Crow2; Cond	shotkilled	1	Crow3; Cond	shotkilled	1	Crow4; Cond	shotkilled	1	Raven1; Cond	shotkilled	1	Raven2; Cond	shotkilled	1	Raven3; Cond	shotkilled	1	Raven4; Cond	shotkilled	1	Raven5; Cond	shotkilled	1	Raven6; Cond	shotkilled	1	Rook1; Cond	shotkilled	1	Rook2; Cond	shotkilled	1	Rook3; Cond	shotkilled	1	Rook4; Cond	shotkilled	1	Rook5; Cond	shotkilled	1	Rook6; Cond	shotkilled	1	Rook7; Cond	shotkilled	1	Rook8; Cond	spawncleared	secondFlock	1; Cond	spawncleared	secondFlock	2; Cond	spawncleared	secondFlock	3; Cond	spawncleared	secondFlock	4; Cond	spawncleared	secondFlock	5; Cond	spawncleared	secondFlock	6; Cond	spawncleared	thirdFlock	1; Cond	spawncleared	thirdFlock	2; Cond	spawncleared	thirdFlock	3; Cond	spawncleared	thirdFlock	4; Cond	spawncleared	thirdFlock	5; Cond	spawncleared	thirdFlock	6; Cond	spawncleared	thirdFlock	7; Cond	spawncleared	thirdFlock	8` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	crowshotgallery-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	crowshotgallery-main-trial	reached`; conditions: `Cond	trigger	galleryClear` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	crowshotgallery-extra-survivors	reached`; conditions: `Cond	objective	1	crowshotgallery-main-trial	reached; Cond	alive	Shooter1; Cond	event	Shooter1	killed	==	0; Cond	alive	Shooter2; Cond	event	Shooter2	killed	==	0; Cond	alive	Shooter3; Cond	event	Shooter3	killed	==	0; Cond	alive	Shooter4; Cond	event	Shooter4	killed	==	0; Cond	alive	Shooter5; Cond	event	Shooter5	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	crowshotgallery-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `wrongDeathCrow1` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow1	killed; Cond	event	Crow1	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathCrow2` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow2	killed; Cond	event	Crow2	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathCrow3` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow3	killed; Cond	event	Crow3	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathCrow4` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Crow4	killed; Cond	event	Crow4	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven1` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven1	killed; Cond	event	Raven1	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven2` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven2	killed; Cond	event	Raven2	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven3` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven3	killed; Cond	event	Raven3	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven4` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven4	killed; Cond	event	Raven4	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven5` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven5	killed; Cond	event	Raven5	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRaven6` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Raven6	killed; Cond	event	Raven6	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook1` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook1	killed; Cond	event	Rook1	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook2` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook2	killed; Cond	event	Rook2	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook3` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook3	killed; Cond	event	Rook3	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook4` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook4	killed; Cond	event	Rook4	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook5` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook5	killed; Cond	event	Rook5	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook6` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook6	killed; Cond	event	Rook6	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook7` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook7	killed; Cond	event	Rook7	shotkilled:1	==	0` | yes |
+| Trigger `wrongDeathRook8` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	event	Rook8	killed; Cond	event	Rook8	shotkilled:1	==	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter3	killed` | yes |
+| Trigger `extraSurvivorLost4` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter4	killed` | yes |
+| Trigger `extraSurvivorLost5` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter5	killed` | yes |
+| Trigger `missedPossession` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0; Cond	event	Seat1	possessedshot	==	0; Cond	shotkilled	1	Crow1; Cond	shotkilled	1	Crow2; Cond	shotkilled	1	Crow3; Cond	shotkilled	1	Crow4; Cond	shotkilled	1	Raven1; Cond	shotkilled	1	Raven2; Cond	shotkilled	1	Raven3; Cond	shotkilled	1	Raven4; Cond	shotkilled	1	Raven5; Cond	shotkilled	1	Raven6; Cond	shotkilled	1	Rook1; Cond	shotkilled	1	Rook2; Cond	shotkilled	1	Rook3; Cond	shotkilled	1	Rook4; Cond	shotkilled	1	Rook5; Cond	shotkilled	1	Rook6; Cond	shotkilled	1	Rook7; Cond	shotkilled	1	Rook8` | yes |
+| Briefing | Possess a shooter and destroy every hornet before time expires to earn this optional trial's Heartstone fragment. | yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline |
 
 ## Dunmarrow
 
@@ -211,14 +532,40 @@ File: `levels/campaign/Dunmarrow.level`.
 | Script line 3883 | `Action	objectiveid	1	dunmarrow-o01	Kill Ysolde Dunn before she escapes.` | yes |
 | Script line 3884 | `Action	objectiveid	1	dunmarrow-o02	Find the tunnels beneath the dunes.` | yes |
 | Script line 3924 | `Action	objectiveid	1	dunmarrow-o03	Reach the camp before the wagons leave.` | yes |
-| Script line 4025 | `Action	win	1` | yes |
+| Script line 4030 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `dunmarrow-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `dunmarrow-main-route`: Take a tunnel north; reach camp before departure. | `mainRoute`: Cond	flag	buriedRouteUsed	1; Cond	flag	goalCampArrived	1 |
+| main | `dunmarrow-main-warden`: Stop Dunn escaping; defeat all enemy forces. | `mainWarden`: Cond	trigger	wardenCaught; Cond	event	YsoldeDunn	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `dunmarrow-extra-oasis`: Claim 40 oasis tiles. | `extraOasis`: Cond	claimed	1	Oasis	40 |
+
+Possible route (static, not a playthrough):
+- Protect the heart. Start is (68,116); use an own living creature to walk north through any existing buried route: Barrows, WestBarrows or ShaftHead. Existing open routes span each whole region: Barrows (61,81)->(56,59), WestBarrows (17,91)->(25,71), ShaftHead (13,47)->(11,33); all exact steps are checked in the fixture.
+- Reach Camp (4,4)-(28,22) either before highDunes starts the wagon timer, or while wagonClock is below 900 seconds. Existing goalCampBeforeLoading/goalCampBeforeDeparture set goalCampArrived. Arrival after 900 is a failed main requirement even if Dunn was already killed and wagonLeaves therefore never fired. No new shorter deadline or automatic loss is introduced.
+- Dunn starts at (18,12). The original escape route through the shaft remains: (16,12);(14,19);(14,22);(12,26);(11,31);(10,36);(10,42);(12,47);(16,49);(18,51);(17,53). Kill her before the existing ExitShaft escape and defeat remaining enemies. Camp arrival before departure remains required; a later intercept cannot erase a missed camp objective.
+- Before final victory optionally claim 40 Oasis fields (46,88)-(66,100), with 253 potentially reachable fields. Existing oasisHeld spider generation is retained. Claim/remove Portal1 (75..77,87..89) as part of the original remaining-enemy rule.
+- Victory narration waits for tunnel use, timely camp arrival, heart survival, actual Dunn death and enemy clearance. No story text or original departure/escape behavior is changed.
+
+Only static source/open-route evidence; actual tunnel travel, the 900-second campaign route, combat and save/load require integrator/Mario runtime verification.
+
 | Trigger `barrowsEntered` | `Action	objectivestate	1	dunmarrow-o02	reached`; conditions: `Cond	region	1	Barrows` | yes |
 | Trigger `wardenEscaped` | `Action	objectivestate	1	dunmarrow-o01	failed`; conditions: `Cond	reached	YsoldeDunn	region	ExitShaft` | yes |
 | Trigger `goalCampBeforeLoading` | `Action	objectivestate	1	dunmarrow-o03	reached`; conditions: `Cond	flag	wagons	0; Cond	region	1	Camp` | yes |
 | Trigger `goalCampBeforeDeparture` | `Action	objectivestate	1	dunmarrow-o03	reached`; conditions: `Cond	flag	wagons	1; Cond	timer	wagonClock	<	900; Cond	region	1	Camp` | yes |
 | Trigger `goalCampMissed` | `Action	objectivestate	1	dunmarrow-o03	failed`; conditions: `Cond	trigger	wagonLeaves; Cond	flag	goalCampArrived	0` | yes |
-| Trigger `wardenCaught` | `Action	objectivestate	1	dunmarrow-o01	reached`; conditions: `Cond	event	YsoldeDunn	killed` | yes |
-| Briefing | Use the buried tunnels to reach her and kill her before she gets away. | no: enemy elimination/escape is checked; the route used is not a winning condition |
+| Trigger `wardenCaught` | `Action	objectivestate	1	dunmarrow-o01	reached`; conditions: `Cond	event	YsoldeDunn	killed; Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	buriedRouteUsed	1; Cond	flag	goalCampArrived	1; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	dunmarrow-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainCampMissed` | `Action	objectivestate	1	dunmarrow-main-route	failed`; conditions: `Cond	flag	wagons	1; Cond	timer	wagonClock	>=	900; Cond	flag	goalCampArrived	0` | yes |
+| Trigger `mainEscapeFailed` | `Action	objectivestate	1	dunmarrow-main-warden	failed`; conditions: `Cond	trigger	wardenEscaped` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	dunmarrow-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainRoute` | `Action	objectivestate	1	dunmarrow-main-route	reached`; conditions: `Cond	flag	buriedRouteUsed	1; Cond	flag	goalCampArrived	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	dunmarrow-main-warden	reached`; conditions: `Cond	trigger	wardenCaught; Cond	event	YsoldeDunn	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraOasis` | `Action	objectivestate	1	dunmarrow-extra-oasis	reached`; conditions: `Cond	claimed	1	Oasis	40` | yes |
+| Briefing | Use the buried tunnels to reach her and kill her before she gets away. | yes: actual northbound tunnel use and camp arrival before the original 900-second departure deadline; actual Dunn death before escape, heart protection and remaining foes |
 
 ## Ebonrook
 
@@ -228,18 +575,48 @@ File: `levels/campaign/Ebonrook.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5370 | `Action	objectiveid	1	ebonrook-o01	Kill Sabine Rook in the south-west roots.` | yes |
-| Script line 5371 | `Action	objectiveid	1	ebonrook-o02	Cross the river by the north bridges.` | yes |
-| Advisory hint line 5372 | `Action	hint	1	Mine gold; feed your army from the glades.` | not an objective; no state required |
-| Script line 5422 | `Action	objectiveid	1	ebonrook-o04	Possess a creature; enter the southern hollow.` | yes |
-| Script line 5452 | `Action	objectiveid	1	ebonrook-o05	Kill Sabine Rook.` | yes |
-| Script line 5624 | `Action	win	1` | yes |
+| Script line 5392 | `Action	objectiveid	1	ebonrook-o01	Kill Sabine Rook in the south-west roots.` | yes |
+| Script line 5393 | `Action	objectiveid	1	ebonrook-o02	Cross the river by the north bridges.` | yes |
+| Advisory hint line 5394 | `Action	hint	1	Mine gold; feed your army from the glades.` | not an objective; no state required |
+| Script line 5444 | `Action	objectiveid	1	ebonrook-o04	Possess a creature; enter the southern hollow.` | yes |
+| Script line 5474 | `Action	objectiveid	1	ebonrook-o05	Kill Sabine Rook.` | yes |
+| Script line 5645 | `Action	win	1` | yes |
+| Script line 5826 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ebonrook-main-home`: Mine 300 gold; build 14 beds and a coop; guard your heart. | `mainHome`: Cond	mined	1	>=	300; Cond	furniture	1	Dormitory	>=	14; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `ebonrook-main-river`: Cross the river by a northern bridge. | `mainRiver`: Cond	flag	mainRiverCrossed	1 |
+| main | `ebonrook-main-roads`: Open both southern roads; possess a scout in the hollow. | `mainRoads`: Cond	flag	mainSouthOpen	1; Cond	flag	mainNorthOpen	1; Cond	trigger	scoutPossessed |
+| main | `ebonrook-main-warden`: Defeat Rook in the roots and all foes. Unlock her hoard. | `mainWarden`: Cond	trigger	rookHoardOpened; Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies |
+| optional | `ebonrook-extra-grove`: Explore the sealed northeastern grove. | `extraGrove`: Cond	region	1	SealedGrove |
+
+Possible route (static, not a playthrough):
+- Mine300actualgold,provide14realbeds and a coop,and protect the heart. The actual starting army is4Orc,3Troll,3Goblin,3Spider,1Rat. Orc beds1x2,Troll2x2,others1x1,total27bedfields. No starting fighters invented or ignored.
+- A concrete layout uses x56..59/y6..12:three Troll2x2atx56..57/y6..7,8..9,10..11;three Orc1x2atx58/y6..7,8..9,10..11;fourthOrcatx59/y6..7;seven singlesatx59/y8..11andx56..58/y12. All27fields fit without overlap. Hatchery3x3atx68..70/y18..20. Both sites free of original rooms and potentially reachable.
+- Actual cost27*92+9*110=3474gold. Start0;original firstCoin after300mining gives800gold. A total2674mining plus800gift can pay for this layout,from93500finitepotentialgold. No added mining threshold beyond300: supplying the army naturally requires the resources,existing gifts/rewards remain.
+- Physically cross north-to-south via any one original river bridge:WoodenBridge1(38..39,54..58),StoneBridge1(64..65,54..58),WoodenBridge2(90..91,54..58). Each full crossing uses the same own living creature fromy53toy59; SouthHub visit alone does not count. All three exact footprints and dry banks are checked.
+- Open both southern roads using any original alternatives:SouthRoadOpens or scoutPossessed or roadsLate;NorthRoadOpens or roadsLate. Preserve20kill conditions and2400late timer,without forcing either when another valid path has opened the roads. Additionally require the actual possessed own scout visit to Hollow.
+- Kill SabineRook in original southwest Roots,then defeat remaining enemy forces/portals. Optionally enter SealedGrove,52reachable open fields,retaining original1500gold reward. Preserve all22flocks and road terrain actions; unchanged victory sentence occurs once after all current main goals.
+- Only actual own-worker delivery of rook-key to(36, 93) opens RookHoardDoor. The saved rookHoardOpened event is required by the existing main goal. Death or a ground drop alone never opens the door. Existing rooms, reinforcements, approach openings and unrelated rewards remain unchanged.
+- New six-floor hoard38..40,92..93 has13rock walls and door37,93; the original spawn38,98 stays outside. Its once-only delivery event opens the door and pays1500additional gold before the warden goal and victory. No entry reward or added creature.
+
+Static source/bridge/site/resource evidence only; actual14bed setup, feeding, river crossing, possession, combat and save/load need runtime verification.
+
 | Trigger `crossed` | `Action	objectivestate	1	ebonrook-o02	reached`; conditions: `Cond	region	1	SouthHub` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	ebonrook-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	ebonrook-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutPossessed` | `Action	objectivestate	1	ebonrook-o04	reached`; conditions: `Cond	possessed	1	Hollow` | yes |
-| Briefing | You have creatures but no gold, so mine the glades and keep them fed. | no: mining and feeding are not winning conditions |
-| Briefing | Cross the northern bridges, open the southern approaches and kill Rook in the south-west roots. | no: enemy elimination is checked; the named route is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ebonrook-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	ebonrook-main-home	reached`; conditions: `Cond	mined	1	>=	300; Cond	furniture	1	Dormitory	>=	14; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainRiver` | `Action	objectivestate	1	ebonrook-main-river	reached`; conditions: `Cond	flag	mainRiverCrossed	1` | yes |
+| Trigger `mainRoads` | `Action	objectivestate	1	ebonrook-main-roads	reached`; conditions: `Cond	flag	mainSouthOpen	1; Cond	flag	mainNorthOpen	1; Cond	trigger	scoutPossessed` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	ebonrook-main-warden	reached`; conditions: `Cond	trigger	rookHoardOpened; Cond	killedin	SabineRook	Roots; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGrove` | `Action	objectivestate	1	ebonrook-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
+| Briefing | You have creatures but no gold, so mine the glades and keep them fed. | yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge |
+| Briefing | Cross the northern bridges, open the southern approaches and kill Rook in the south-west roots. | yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes |
 
 ## Goldspire
 
@@ -249,18 +626,48 @@ File: `levels/campaign/Goldspire.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3120 | `Action	objectiveid	1	goldspire-o01	Kill Alaric Penn inside the spire.` | yes |
-| Advisory hint line 3121 | `Action	hint	1	Mine gold and build an army.` | not an objective; no state required |
-| Script line 3122 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
-| Script line 3151 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
-| Script line 3211 | `Action	objectiveid	1	goldspire-o05	Kill Alaric Penn.` | yes |
-| Script line 3319 | `Action	win	1` | yes |
+| Script line 3130 | `Action	objectiveid	1	goldspire-o01	Kill Alaric Penn inside the spire.` | yes |
+| Advisory hint line 3131 | `Action	hint	1	Mine gold and build an army.` | not an objective; no state required |
+| Script line 3132 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
+| Script line 3161 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
+| Script line 3221 | `Action	objectiveid	1	goldspire-o05	Kill Alaric Penn.` | yes |
+| Script line 3328 | `Action	win	1` | yes |
+| Script line 3505 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `goldspire-main-home`: Raise 2 fighters; protect your heart. | `mainHome`: Cond	flag	mainArmyReady	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `goldspire-main-town`: Capture the low town. | `mainTown`: Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	53	66; Cond	groundclaimed	1	42	67	55	67; Cond	groundclaimed	1	42	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74 |
+| main | `goldspire-main-route`: Pass the south gate, outer ring and both sealed links. | `mainRoute`: Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1 |
+| main | `goldspire-main-warden`: Defeat Penn in the spire and all enemy forces. Unlock his vault. | `mainWarden`: Cond	trigger	pennVaultOpened; Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies |
+| optional | `goldspire-extra-wing`: Explore the western treasure wing. | `extraWing`: Cond	region	1	WestWing |
+
+Possible route (static, not a playthrough):
+- Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.
+- Capture all153original open LowTown floor fields(38..60,60..74),all statically reachable. No placed room exists; no new room is required. Original40claimed trigger still opens the gate without changing its mechanics.
+- After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.
+- After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.
+- Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.
+- Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.
+- Penn remains at48,30 outside the relocated ten-tile treasury50..54,29..30. Its17rockwall fields surround one mission-locked wooden door49,30. Only actual treasurer-key delivery by a worker to48,30 opens PennVaultDoor; mainWarden requires this delivery trigger as well as the existing death and enemy conditions. Initial gold and treasury capacity unchanged.
+
+Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.
+
 | Trigger `lowTown` | `Action	objectivestate	1	goldspire-o03	reached`; conditions: `Cond	claimed	1	LowTown	40` | yes |
 | Trigger `onRing` | `Action	objectivestate	1	goldspire-o04	reached`; conditions: `Cond	region	1	OuterRing` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	goldspire-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	goldspire-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | With workers and a thin purse, build before challenging the garrison below its rings. | no: building before attacking is not a winning condition |
-| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | no: enemy elimination is checked; the ordered low-town/link route is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	goldspire-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	goldspire-main-home	reached`; conditions: `Cond	flag	mainArmyReady	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTown` | `Action	objectivestate	1	goldspire-main-town	reached`; conditions: `Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	53	66; Cond	groundclaimed	1	42	67	55	67; Cond	groundclaimed	1	42	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74` | yes |
+| Trigger `mainRoute` | `Action	objectivestate	1	goldspire-main-route	reached`; conditions: `Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-warden	reached`; conditions: `Cond	trigger	pennVaultOpened; Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
+| Briefing | With workers and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
+| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links |
+| Briefing | Aurel cannot hold this chosen barrier with promises. | yes: actual Penn death inside the spire and all remaining foes |
 
 ## Greywater
 
@@ -275,13 +682,39 @@ File: `levels/campaign/Greywater.level`.
 | Script line 2941 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
 | Script line 2966 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
 | Script line 3052 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `greywater-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `greywater-main-gold`: Mine 600 gold. | `mainGold`: Cond	mined	1	>=	600 |
+| main | `greywater-main-siege`: Cross the river; attack the besiegers. | `mainSiege`: Cond	flag	riverCrossed	1; Cond	attackedregion	1	3	Siege |
+| main | `greywater-main-warden`: Defeat Corwin Gray and all enemy forces. | `mainWarden`: Cond	event	CorwinGray	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `greywater-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
+
+Possible route (static, not a playthrough):
+- Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.
+- Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.
+- Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.
+- Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged.
+- The sluice-key drops at its owner's actual death position; a worker must carry that physical key to (40, 18) for sluiceKeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
+
+Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification.
+
 | Trigger `firstCoin` | `Action	objectivestate	1	greywater-o02	reached`; conditions: `Cond	mined	1	>=	600` | yes |
 | Trigger `siegeSeen` | `Action	objectivestate	1	greywater-o04	reached`; conditions: `Cond	region	1	Siege` | yes |
 | Trigger `goalHeartSafe3BeforeWardenFalls` | `Action	objectivestate	1	greywater-o03	reached`; conditions: `Cond	event	CorwinGray	killed; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	greywater-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `wardenFalls` | `Action	objectivestate	1	greywater-o01	reached`; conditions: `Cond	event	CorwinGray	killed` | yes |
-| Briefing | Mine first and protect your heart, for those heroes may turn on you. | no: ProtectDungeonTemple checks the heart; mining is not a winning condition |
-| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | yes: KillAllEnemies includes Gray |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	greywater-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	greywater-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainGold` | `Action	objectivestate	1	greywater-main-gold	reached`; conditions: `Cond	mined	1	>=	600` | yes |
+| Trigger `mainSiege` | `Action	objectivestate	1	greywater-main-siege	reached`; conditions: `Cond	flag	riverCrossed	1; Cond	attackedregion	1	3	Siege` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	greywater-main-warden	reached`; conditions: `Cond	event	CorwinGray	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	greywater-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
+| Briefing | Mine first and protect your heart, for those heroes may turn on you. | yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege |
+| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | yes: mainWarden requires Gray killed and all remaining enemy forces/portals |
 
 ## Highcairn
 
@@ -295,19 +728,50 @@ File: `levels/campaign/Highcairn.level`.
 | Script line 2843 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
 | Script line 2844 | `Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.` | yes |
 | Script line 2892 | `Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.` | yes |
-| Script line 2908 | `Action	objectiveid	1	highcairn-o05	Bring the cairn spirit to your heart.` | yes |
-| Script line 3052 | `Action	win	1` | yes |
-| Script line 3084 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	reached	CairnBearer	heart	1` | yes |
-| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	reached	CairnBearer2	heart	1` | yes |
+| Script line 2907 | `Action	objectiveid	1	highcairn-o05	Bring the stone to your heart.` | yes |
+| Script line 3059 | `Action	win	1` | yes |
+| Script line 3090 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3191 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `highcairn-main-home`: Build a bed and coop; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1 |
+| main | `highcairn-main-terraces`: Climb the four terraces in order. | `mainTerraces`: Cond	flag	goalTerrace4	1 |
+| main | `highcairn-main-captain`: Defeat the watch captain and open the hold. | `mainCaptain`: Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1 |
+| main | `highcairn-main-warden`: Defeat Hilde Cairn in her hold and all enemy forces. | `mainWarden`: Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies |
+| main | `highcairn-main-stone`: If found, bring the stone home. | `mainStone`: Cond	flag	stoneDone	1 |
+| optional | `highcairn-extra-caldera`: Explore the southern caldera. | `extraCaldera`: Cond	region	1	Caldera |
+
+Possible route (static, not a playthrough):
+- Start with three workers and1500gold. Build a bed on free reachable ground(18,59),92gold; create a3x3hatchery at(17..19,56..58),990gold. Total1082below1500. All fields potentially reachable, unoccupied, dry or removable dirt; room skills unlocked. No invented initial fighter population.
+- Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.
+- Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.
+- Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.
+- After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
+- Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.
+- The hold-key drops at its owner's actual death position; a worker must carry that physical key to (30, 11) for holdSealBreaks to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
+
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
+
+| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	deliveredstone	cairn-stone; Cond	flag	stoneDone	0` | yes |
+| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	deliveredstone	cairn-stone; Cond	flag	stoneDone	0` | yes |
 | Trigger `goalHeartSafe3BeforeWardenSlain` | `Action	objectivestate	1	highcairn-o03	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalTerrace4` | `Action	objectivestate	1	highcairn-o02	reached`; conditions: `Cond	region	1	Terrace4; Cond	flag	goalTerrace3	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	highcairn-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
+| Trigger `goalCaptainKilled` | `Action	objectivestate	1	highcairn-o06	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `holdSealBreaks` | `Action	objectivestate	1	highcairn-o06	reached`; conditions: `Cond	time	5; Cond	alive	TerraceWatch8	0; Cond	flag	holdOpen	0` | yes |
-| Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | no: heart protection is checked; building and ascent are not independent goals |
-| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | no: enemy elimination is checked; carrying the optional stone is not required to win |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	highcairn-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	highcairn-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainTerraces` | `Action	objectivestate	1	highcairn-main-terraces	reached`; conditions: `Cond	flag	goalTerrace4	1` | yes |
+| Trigger `mainCaptain` | `Action	objectivestate	1	highcairn-main-captain	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	highcairn-main-warden	reached`; conditions: `Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	highcairn-main-stone	reached`; conditions: `Cond	flag	stoneDone	1` | yes |
+| Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
+| Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
+| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified |
 
 ## HollinFen
 
@@ -321,14 +785,41 @@ File: `levels/campaign/HollinFen.level`.
 | Script line 3425 | `Action	objectiveid	1	hollinfen-o02	Defend your heart against convent patrols.` | yes |
 | Script line 3452 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
 | Script line 3461 | `Action	objectiveid	1	hollinfen-o04	Reach the chapel and kill Agathe Hollin.` | yes |
-| Script line 3570 | `Action	win	1` | yes |
+| Script line 3569 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `hollinfen-main-home`: Build 9 beds and a hatchery; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	9; Cond	furniture	1	Hatchery	>=	1 |
+| main | `hollinfen-main-gate`: Claim 40 causeway tiles; break the west gate. | `mainGate`: Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1 |
+| main | `hollinfen-main-warden`: Defeat Agathe Hollin and all enemy forces. | `mainWarden`: Cond	event	AgatheHollin	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `hollinfen-main-stone`: If found, bring the hollow stone home. | `mainStone`: Cond	trigger	hollowStoneHome |
+| optional | `hollinfen-extra-fen`: Claim 120 fen tiles and uncover the mana spring. | `extraFen`: Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1 |
+
+Possible route (static, not a playthrough):
+- Protect the heart and house the nine initial nonworkers. Original Dormitory1 has 6 fields. Bed plan uses 11 fields: Orcs at (16,15)-(16,16) and (17,15)-(17,16), seven single beds at (18..20,15),(18..20,16),(20,17). Expand by 5 fields for 460 gold.
+- Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.
+- Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.
+- Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.
+- After optional discovery, a worker collects hollow-stone from (5, 54) beside HollowBearer and visibly carries the same item to the own heart at (12, 12). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
+- Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged.
+
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
+
 | Trigger `wardEntered` | `Action	objectivestate	1	hollinfen-o03	reached`; conditions: `Cond	region	1	Ward` | yes |
 | Trigger `goalHeartSafe2BeforeWardenSlain` | `Action	objectivestate	1	hollinfen-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	hollinfen-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	hollinfen-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `wardenSlain` | `Action	objectivestate	1	hollinfen-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Build your dungeon, hold your heart and break the convent ward to kill her in the chapel. | no: enemy elimination and heart protection are checked; building and breaking the ward are not independent goals |
-| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | no: optional stone discovery is not required to win |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	hollinfen-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	hollinfen-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	9; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainGate` | `Action	objectivestate	1	hollinfen-main-gate	reached`; conditions: `Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	hollinfen-main-warden	reached`; conditions: `Cond	event	AgatheHollin	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	hollinfen-main-stone	reached`; conditions: `Cond	trigger	hollowStoneHome` | yes |
+| Trigger `extraFen` | `Action	objectivestate	1	hollinfen-extra-fen	reached`; conditions: `Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1` | yes |
+| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes |
+| Briefing | Castellan has ordered good news this time. | yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery |
 
 ## HollowmarkCitadel
 
@@ -340,13 +831,41 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | Script line 5673 | `Action	objectiveid	1	hollowmarkcitadel-o01	Kill King Castellan on his throne.` | yes |
 | Script line 5674 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
 | Script line 5675 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
-| Script line 6102 | `Action	win	1` | yes |
+| Script line 6101 | `Action	win	1` | yes |
+| Script line 6364 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `hollowmark-main-heart`: Protect your heart and take the royal treasuries. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	12	42	14	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2 |
+| main | `hollowmark-main-courts`: Cross the three courts; take towers or gate keys. | `mainCourts`: Cond	flag	mainCourt3	1 |
+| main | `hollowmark-main-king`: Defeat King Castellan in the throne hall. | `mainKing`: Cond	killedin	CastellanKing	ThroneHall |
+| main | `hollowmark-main-throne`: Claim the throne hall. | `mainThrone`: Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28 |
+| optional | `hollowmark-extra-tower`: Explore the western throne tower. | `extraTower`: Cond	region	1	WestTower3 |
+
+Possible route (static, not a playthrough):
+- Protect the heart and claim both original upper treasury rooms, receiving the unchanged tower2 reward.
+- Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.
+- Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.
+- Optionally visit WestTower3; it is not one of the required gate towers.
+- The lower-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 58) for gate2KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
+- The upper-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 30) for gate3KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
+
+Static conditions only; full movement, claiming, combat, treasury payout and save/load remain unverified.
+
 | Trigger `goalHeartSafe3BeforeKingDead` | `Action	objectivestate	1	hollowmarkcitadel-o03	reached`; conditions: `Cond	time	5; Cond	alive	CastellanKing	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCourt3` | `Action	objectivestate	1	hollowmarkcitadel-o02	reached`; conditions: `Cond	region	1	ThroneHall; Cond	flag	goalCourt2	1; Cond	flag	upperWest	1; Cond	flag	upperEast	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	hollowmarkcitadel-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `kingDead` | `Action	objectivestate	1	hollowmarkcitadel-o01	reached`; conditions: `Cond	time	5; Cond	alive	CastellanKing	0` | yes |
-| Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | no: gate routes and treasury use are not independent winning goals |
-| Briefing | Kill Castellan and claim the throne we promised at the beginning. | no: kingDead checks Castellan's death, not throne ownership |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	hollowmark-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	hollowmark-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	12	42	14	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2` | yes |
+| Trigger `mainCourts` | `Action	objectivestate	1	hollowmark-main-courts	reached`; conditions: `Cond	flag	mainCourt3	1` | yes |
+| Trigger `mainKing` | `Action	objectivestate	1	hollowmark-main-king	reached`; conditions: `Cond	killedin	CastellanKing	ThroneHall` | yes |
+| Trigger `mainThrone` | `Action	objectivestate	1	hollowmark-main-throne	reached`; conditions: `Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28` | yes |
+| Trigger `extraTower` | `Action	objectivestate	1	hollowmark-extra-tower	reached`; conditions: `Cond	region	1	WestTower3` | yes |
+| Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes |
+| Briefing | Kill Castellan and claim the throne we promised at the beginning. | yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned |
 
 ## Ironbridge
 
@@ -360,17 +879,47 @@ File: `levels/campaign/Ironbridge.level`.
 | Script line 4237 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
 | Script line 4254 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
 | Script line 4275 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
-| Script line 4529 | `Action	win	1` | yes |
-| Script line 4534 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4537 | `Action	win	1` | yes |
+| Script line 4541 | `Action	win	1` | yes |
+| Script line 4547 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4562 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ironbridge-main-home`: Build 6 beds and a hatchery; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1 |
+| main | `ironbridge-main-spans`: Cross the 3 rifts in order. | `mainSpans`: Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1 |
+| main | `ironbridge-main-sites`: Claim the north smithy and ore dock. | `mainSites`: Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55 |
+| main | `ironbridge-main-hold`: Breach the hold; destroy its heart and enemy forces. | `mainHold`: Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1 |
+| optional | `ironbridge-extra-coal`: Explore the coal store. | `extraCoal`: Cond	region	1	CoalStore |
+
+Possible route (static, not a playthrough):
+- Protect the heart and house the six initial fighters: two Goblins, two Orcs, Spider and Rat. Eight bed fields fit at (15..18,47..48); add two Dormitory fields for184gold. Extend Hatchery1 (4..6,53..54) by row55 for330gold, making the3x3coop site. Total514 is below starting4000; existing room skills remain available.
+- Walk east over rift1 via StoneBridge1 (36..39,20..21) or StoneBridge2 (36..39,46). Only after its actual completion may rift2 begin: StoneBridge3 (62..65,12), StoneBridge4 (62..65,34..35), or StoneBridge5 (62..65,54).
+- After rift2 completion walk east over rift3: StoneBridge6 (88..91,26..27) or StoneBridge7 (88..91,48). Each bridge requires one real own living walker from entry bank through the whole bridge to the opposite bank; mixed visitors and out-of-order crossings do not count.
+- Claim all six original Treasury6 fields (48..50,8..9) in Smithy and all six original Library3 fields (78..80,54..55) in OreDock. These are the actual placed rooms at the named sites, not an invented forge-room type or a region visit.
+- For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once.
+- Before the final main goal optionally explore CoalStore (66,5)-(86,22),153initially open reachable fields. Claim/remove Portal1 (19..21,37..39) as part of remaining-enemy clearance. Keep the original5400second deadline and all original reinforcements.
+
+Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification.
+
 | Trigger `yardReached` | `Action	objectivestate	1	ironbridge-o03	reached`; conditions: `Cond	region	1	RollingYard` | yes |
 | Trigger `goalIronbridgeAllSpans` | `Action	objectivestate	1	ironbridge-o02	reached`; conditions: `Cond	flag	goalIronbridgeCross1	1; Cond	flag	goalIronbridgeCross2	1; Cond	flag	goalIronbridgeCross3	1` | yes |
 | Trigger `goalRivalGateNorth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden8; Cond	region	1	94	26	94	26` | yes |
 | Trigger `goalRivalGateSouth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden9; Cond	region	1	94	27	94	27` | yes |
-| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Build your strength and take the guarded stone bridges one by one. | no: building and bridge order are not independent goals |
-| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: KillAllEnemies includes the rival temple |
+| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ironbridge-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-spans	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-sites	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-hold	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	ironbridge-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainSpans` | `Action	objectivestate	1	ironbridge-main-spans	reached`; conditions: `Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1` | yes |
+| Trigger `mainSites` | `Action	objectivestate	1	ironbridge-main-sites	reached`; conditions: `Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55` | yes |
+| Trigger `mainHold` | `Action	objectivestate	1	ironbridge-main-hold	reached`; conditions: `Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1` | yes |
+| Trigger `extraCoal` | `Action	objectivestate	1	ironbridge-extra-coal	reached`; conditions: `Cond	region	1	CoalStore` | yes |
+| Briefing | Build your strength and take the guarded stone bridges one by one. | yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms |
+| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: an actual fortress entrance breached, rival temple gone and all remaining enemy forces defeated |
 
 ## Kingsfall
 
@@ -382,14 +931,45 @@ File: `levels/campaign/Kingsfall.level`.
 | Script line 3836 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
 | Script line 3837 | `Action	objectiveid	1	kingsfall-o02	Defeat Prince Aurel and his court.` | yes |
 | Script line 3838 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
-| Script line 4047 | `Action	win	1` | yes |
-| Script line 4102 | `Action	win	1` | yes |
+| Script line 4046 | `Action	win	1` | yes |
+| Script line 4100 | `Action	win	1` | yes |
+| Script line 4232 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `kingsfall-main-heart`: Protect your heart and cross a guarded lava bridge. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	mainRavineCrossed	1 |
+| main | `kingsfall-main-champions`: Capture or convert Edda, Brann and Wick alive. | `mainChampions`: Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick |
+| main | `kingsfall-main-army`: Gather 12 creatures at your heart. | `mainArmy`: Cond	creaturesatheart	1	>=	12 |
+| main | `kingsfall-main-court`: Defeat Prince Aurel and his court. | `mainCourt`: Cond	event	PrinceAurel	killed; Cond	creatures	3	<=	0 |
+| optional | `kingsfall-extra-gold`: Mine 4000 gold. | `extraGold`: Cond	mined	1	>=	4000 |
+
+Possible route (static, not a playthrough):
+- Protect the heart and physically cross any actual watched lava span northward:west(18..19,49..53),middle(49..50,39..43),east(80..81,48..52). Each original bridge has9roomfields plus one natural dry gap; do not invent rectangular10field bridge rooms. Explicit open ground/bridge paths follow x19/y54..48,x50/y44..38,x81/y53..47. Any one original route qualifies.
+- Keep all three named champions alive and currently held by seat1:FalconerEdda,HuntsmanBrann,SquireWick. Each may be either actually jailed by seat1 or converted to seat1 with no foreign jailer. Escape or recapture removes current success; actual death permanently fails the task. Historical champions flags alone do not count.
+- Currently gather at least12own living creatures on actual own-heart tiles. Global army size or an old visit is not enough. Existing25field temple and own portal/worker recruitment allow staging; original start has5workers and7000gold. Foreign-seat prisoners do not become own creatures merely by captivity.
+- Actually kill PrinceAurel and clear living court troops of seat3,which contains all court guards and horn waves. Do not require seat2emptiness:the three live captured champions retain seat2,and must not block victory. This level has no KillAllEnemies goal or hostile temple/portal requirement.
+- Optionally mine4000actualgold from79000finitepotentialgold. Preserve original3000gold milestone,all18hornwaves,prison/torture setup,conversion messages and every cache-opening alternative. No champion death is required for optional mining.
+- The unchanged original sentence describing champions in your hands is emitted after all current main goals,followed by a new valid win request. This is necessary because both old requests assume conversion/seat2emptiness and can never cover the approved live-captive alternative. Old win requests remain preserved pending requests.
+
+Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.
+
 | Trigger `goalArmyAtHeart` | `Action	objectivestate	1	kingsfall-o03	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
 | Trigger `courtTaken` | `Action	objectivestate	1	kingsfall-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	creatures	1	>=	12` | yes |
 | Trigger `collectWin` | `Action	objectivestate	1	kingsfall-o01	reached`; conditions: `Cond	time	5; Cond	flag	champions	==	3; Cond	alive	PrinceAurel	0; Cond	creatures	1	>=	12` | yes |
 | Trigger `collectWin` | `Action	objectivestate	1	kingsfall-o02	reached`; conditions: `Cond	time	5; Cond	flag	champions	==	3; Cond	alive	PrinceAurel	0; Cond	creatures	1	>=	12` | yes |
-| Briefing | Cross the watched lava spans and defeat Aurel and his court. | no: prince elimination is checked; crossing the watched spans is not independent |
-| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | no: collectWin checks all champions and twelve creatures, but courtTaken also wins without all three champions and neither checks their location at the heart |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	kingsfall-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `lostFalconerEdda` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	FalconerEdda	killed` | yes |
+| Trigger `lostHuntsmanBrann` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	HuntsmanBrann	killed` | yes |
+| Trigger `lostSquireWick` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	SquireWick	killed` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	kingsfall-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	mainRavineCrossed	1` | yes |
+| Trigger `mainChampions` | `Action	objectivestate	1	kingsfall-main-champions	reached`; conditions: `Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick` | yes |
+| Trigger `mainArmy` | `Action	objectivestate	1	kingsfall-main-army	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
+| Trigger `mainCourt` | `Action	objectivestate	1	kingsfall-main-court	reached`; conditions: `Cond	event	PrinceAurel	killed; Cond	creatures	3	<=	0` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	kingsfall-extra-gold	reached`; conditions: `Cond	mined	1	>=	4000` | yes |
+| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance |
+| Briefing | Aurel must answer for every promise he made. | yes:12own living creatures currently on the own-heart tiles |
 
 ## Lanternhill
 
@@ -402,17 +982,44 @@ File: `levels/campaign/Lanternhill.level`.
 | Script line 3066 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
 | Script line 3067 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
 | Script line 3068 | `Action	objectiveid	1	lanternhill-o03	Defend your heart against the hill patrols.` | yes |
-| Script line 3199 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3215 | `Action	win	1` | yes |
-| Script line 3220 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3223 | `Action	win	1` | yes |
+| Script line 3198 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3213 | `Action	win	1` | yes |
+| Script line 3218 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3220 | `Action	win	1` | yes |
+| Script line 3301 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `lanternhill-main-home`: Mine 700 gold; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700 |
+| main | `lanternhill-main-road`: Open the ring road; claim the crypt and library. | `mainRoad`: Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21 |
+| main | `lanternhill-main-rival`: Destroy the northern heart and all enemy forces. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| main | `lanternhill-main-stone`: If found, bring the lantern stone home. | `mainStone`: Cond	trigger	lanternStoneHome |
+| optional | `lanternhill-extra-lamp`: Explore the lamp chamber. | `extraLamp`: Cond	region	1	LampRoom |
+
+Possible route (static, not a playthrough):
+- Mine700actualgold and protect the own heart;55500finite gold is potentially reachable. Original mined1 reward and patrols remain unchanged.
+- Dig a current dry worker route from(13,57)to(40,22). Initially disconnected; one possible62step route needs24dig fields. Any legal alternative qualifies.
+- Claim all six original neutral Crypt2 fields(10..12,16..17)and all six Library2 fields(13..15,20..21); visits do not replace ownership.
+- Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.
+- Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain.
+
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
+
 | Trigger `goalRingGroundPathOpened` | `Action	objectivestate	1	lanternhill-o02	reached`; conditions: `Cond	groundconnected	1	13	57	40	22` | yes |
 | Trigger `goalHeartSafe3BeforeRivalHeartDown` | `Action	objectivestate	1	lanternhill-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	lanternhill-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `rivalHeartDown` | `Action	objectivestate	1	lanternhill-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | no: mining and digging the plugs are not independent goals |
-| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: KillAllEnemies includes the northern rival temple |
-| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | no: optional stone discovery is not required to win |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	lanternhill-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	lanternhill-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700` | yes |
+| Trigger `mainRoad` | `Action	objectivestate	1	lanternhill-main-road	reached`; conditions: `Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21` | yes |
+| Trigger `mainRival` | `Action	objectivestate	1	lanternhill-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	lanternhill-main-stone	reached`; conditions: `Cond	trigger	lanternStoneHome` | yes |
+| Trigger `extraLamp` | `Action	objectivestate	1	lanternhill-extra-lamp	reached`; conditions: `Cond	region	1	LampRoom` | yes |
+| Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed |
+| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: actual northern rival heart destroyed and all remaining enemies |
+| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates delivery of the actual floor stone by a worker |
 lanternhill-o02 requires an actual current dry worker path from (13,57) to (40,22), including legal alternative digging routes; no fixed plug subset is required.
 
 ## Mirewatch
@@ -423,19 +1030,49 @@ File: `levels/campaign/Mirewatch.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5735 | `Action	objectiveid	1	mirewatch-o01	Kill Mora Fenwick in the north-east tower.` | yes |
-| Advisory hint line 5736 | `Action	hint	1	Dig, claim and build before marching.` | not an objective; no state required |
-| Script line 5737 | `Action	objectiveid	1	mirewatch-o03	Claim every room in all eight towers.` | yes |
-| Script line 5767 | `Action	objectiveid	1	mirewatch-o04	Possess a creature; scout the north-west tower.` | yes |
-| Script line 5827 | `Action	objectiveid	1	mirewatch-o05	Enter Mora Fenwick's tower and kill her.` | yes |
-| Script line 5922 | `Action	win	1` | yes |
+| Script line 5741 | `Action	objectiveid	1	mirewatch-o01	Kill Mora Fenwick in the north-east tower.` | yes |
+| Advisory hint line 5742 | `Action	hint	1	Dig, claim and build before marching.` | not an objective; no state required |
+| Script line 5743 | `Action	objectiveid	1	mirewatch-o03	Claim every room in all eight towers.` | yes |
+| Script line 5773 | `Action	objectiveid	1	mirewatch-o04	Possess a creature; scout the north-west tower.` | yes |
+| Script line 5833 | `Action	objectiveid	1	mirewatch-o05	Enter Mora Fenwick's tower and kill her.` | yes |
+| Script line 5927 | `Action	win	1` | yes |
+| Script line 6047 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `mirewatch-main-home`: Build 2 beds and a coop; protect your heart. | `mainHome`: Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `mirewatch-main-towers`: Unlock the watchroom. Claim every room in all eight towers. | `mainTowers`: Cond	trigger	watchroomOpened; Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19 |
+| main | `mirewatch-main-approaches`: Secure both approaches; scout the northwest tower possessed. | `mainApproaches`: Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	trigger	sealsOpen; Cond	trigger	scoutTowerC |
+| main | `mirewatch-main-warden`: Defeat Mora in her tower and all enemy forces. | `mainWarden`: Cond	killedin	MoraFenwick	TowerH; Cond	goalmet	1	KillAllEnemies |
+| optional | `mirewatch-extra-gold`: Mine 2000 gold. | `extraGold`: Cond	mined	1	>=	2000 |
+
+Possible route (static, not a playthrough):
+- Build2actualbeds and a hatchery coop; protect the heart. Start0gold. Original firstCoin at400actualmining gives600gold and Orc2/Goblin2. Three dormitory fields(19..21,109)provide space for their3bedfields,276gold;3x3hatchery(19..21,106..108)990gold. Total1266requires266additionalgold beyond first400+gift600. All twelve fields are free reachable removable dirt, skills unlocked, finite reserve112500. No new reward or compulsory mining threshold.
+- Workers must claim exactly the original9rooms of8towers:GuardRoom1 8,GuardRoom2 6,Library1 6,Arena1 15,Library2 6,Prison1 6,Workshop1 8,GuardRoom3 8,Workshop2 6,total69fields. Every fixed field remains currently owned until victory. The existing mirewatch_errors checks actual footprint/type/seat and worker access/claimability for all69fields.
+- Secure the east and north approaches by actual ownership of Prison1 in TowerF and Workshop1 in TowerG plus the original sealsOpen completion. These are the two approach towers named by the original messages; mere visits do not replace room control. Original three terrain openings are preserved, without inventing a requirement to traverse all alternative holes.
+- Scout original TowerC while actually possessing an own creature; existing scoutTowerC and its reward remain. No ordinary visit or unrelated tower substitutes.
+- MoraFenwick must actually die in original northeast TowerH,then defeat remaining enemy forces/portals. Optionally mine2000actualgold from112500finitepotentialgold. Existing400mining setup milestone and all nine patrols remain.
+- Move the identical victory sentence after all current main observers, retaining the original pending win request.
+- Only actual own-worker delivery of watch-key to(96, 20) opens FenwickWatchroomDoor. The saved watchroomOpened event is required by the existing main goal. Death or a ground drop alone never opens the door. Existing rooms, reinforcements, approach openings and unrelated rewards remain unchanged.
+- The eight original GuardRoom3 fields remain inside21rock perimeter walls and door96,21. Both existing interior guards stay inside. All69tower room fields remain required after opening; opening itself requires neither their ownership nor enemy deaths. No reward added.
+
+Static room/worker-access/resource/source evidence only; actual claiming, bed use, possession, combat and save/load need runtime verification.
+
 | Trigger `goalNineTowerRoomsClaimed` | `Action	objectivestate	1	mirewatch-o03	reached`; conditions: `Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19` | yes |
 | Trigger `watcherSlain` | `Action	objectivestate	1	mirewatch-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `watcherSlain` | `Action	objectivestate	1	mirewatch-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutTowerC` | `Action	objectivestate	1	mirewatch-o04	reached`; conditions: `Cond	possessed	1	TowerC` | yes |
-| Briefing | You have only workers, so dig and build before crossing the black-water causeways. | no: digging/building order is not a winning condition |
-| Briefing | Take the towers and secure both sealed approaches to Mora Fenwick's last tower. | no: all tower ownership and both approaches are not independent winning goals |
-| Briefing | Kill the watcher and bring this chosen barrier down. | yes: KillAllEnemies includes the watcher |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	mirewatch-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	mirewatch-main-home	reached`; conditions: `Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTowers` | `Action	objectivestate	1	mirewatch-main-towers	reached`; conditions: `Cond	trigger	watchroomOpened; Cond	roomclaimed	1	44	106	47	107; Cond	roomclaimed	1	86	110	88	111; Cond	roomclaimed	1	24	78	26	79; Cond	roomclaimed	1	74	82	78	84; Cond	roomclaimed	1	20	44	22	45; Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	roomclaimed	1	94	22	97	23; Cond	roomclaimed	1	99	18	101	19` | yes |
+| Trigger `mainApproaches` | `Action	objectivestate	1	mirewatch-main-approaches	reached`; conditions: `Cond	roomclaimed	1	68	50	69	52; Cond	roomclaimed	1	44	24	47	25; Cond	trigger	sealsOpen; Cond	trigger	scoutTowerC` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	mirewatch-main-warden	reached`; conditions: `Cond	killedin	MoraFenwick	TowerH; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	mirewatch-extra-gold	reached`; conditions: `Cond	mined	1	>=	2000` | yes |
+| Briefing | You have only workers, so dig and build before crossing the black-water causeways. | yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint |
+| Briefing | Take the towers and secure both sealed approaches to Mora Fenwick's last tower. | yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession |
+| Briefing | Kill the watcher and bring this chosen barrier down. | yes: Mora actually killed in TowerH and remaining foes defeated |
 mirewatch-o03 requires complete worker claim and current room ownership on the nine original room masks, exactly 69 fields; broad tower regions and visits do not qualify.
 Original room `GuardRoom1`: type 17, owner 3, rectangle (44, 106, 47, 107), 8 fields.
 Original room `GuardRoom2`: type 17, owner 3, rectangle (86, 110, 88, 111), 6 fields.
@@ -461,13 +1098,39 @@ File: `levels/campaign/Mossgate.level`.
 | Script line 749 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
 | Script line 767 | `Action	objectiveid	1	mossgate-o05	Enter the hall and kill Tobin Marsh.` | yes |
 | Script line 799 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `mossgate-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `mossgate-main-meadow`: Mine 60 gold and claim the meadow. | `mainMeadow`: Cond	mined	1	>=	60; Cond	claimed	1	Meadow	18 |
+| main | `mossgate-main-watch`: Clear the watch post and reinforcements. | `mainWatch`: Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1 |
+| main | `mossgate-main-village`: Defeat Marsh, his guards and their portal. | `mainVillage`: Cond	event	ReeveMarsh	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `mossgate-extra-gallery`: Explore the side gallery. | `extraGallery`: Cond	region	1	Gallery |
+
+Possible route (static, not a playthrough):
+- Mine at least 60 actual gold near the starting heart.
+- Claim 18 tiles of Meadow (14,18)-(27,26).
+- Enter Yard (3,11)-(13,20), defeat both named watchmen and the actual postStirs reinforcements.
+- Explore Gallery (10,6)-(24,12) with a living own creature before ending the level.
+- Defeat ReeveMarsh and remaining enemy creatures; destroy or take the enemy portal at (31,30). Preserve the own heart.
+
+Static routes and source conditions are not combat balance or an executed game playthrough.
+
 | Trigger `firstGold` | `Action	objectivestate	1	mossgate-o02	reached`; conditions: `Cond	mined	1	>=	60` | yes |
 | Trigger `meadowOurs` | `Action	objectivestate	1	mossgate-o03	reached`; conditions: `Cond	claimed	1	Meadow	18` | yes |
 | Trigger `goalWatchPostCleared` | `Action	objectivestate	1	mossgate-o04	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
 | Trigger `reeveFalls` | `Action	objectivestate	1	mossgate-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `reeveFalls` | `Action	objectivestate	1	mossgate-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Mine the soft walls and claim the meadow cave. | no: mining and meadow claiming are not winning conditions |
-| Briefing | Break the watch post and slay the reeve in his hall. | no: reeve elimination is checked; breaking the watch post separately is not |
+| Trigger `mainHeart` | `Action	objectivestate	1	mossgate-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainMeadow` | `Action	objectivestate	1	mossgate-main-meadow	reached`; conditions: `Cond	mined	1	>=	60; Cond	claimed	1	Meadow	18` | yes |
+| Trigger `mainWatch` | `Action	objectivestate	1	mossgate-main-watch	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
+| Trigger `mainVillage` | `Action	objectivestate	1	mossgate-main-village	reached`; conditions: `Cond	event	ReeveMarsh	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGallery` | `Action	objectivestate	1	mossgate-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	mossgate-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Mine the soft walls and claim the meadow cave. | yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles |
+| Briefing | Break the watch post and slay the reeve in his hall. | yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal |
 
 ## Ravensledge
 
@@ -483,13 +1146,38 @@ File: `levels/campaign/Ravensledge.level`.
 | Script line 2214 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
 | Script line 2225 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
 | Script line 2269 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `ravensledge-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `ravensledge-main-shelf`: Cross the lower bridge; claim 80 shelf tiles. | `mainShelf`: Cond	flag	lowerCrossed	1; Cond	claimed	1	Shelf	80 |
+| main | `ravensledge-main-gate`: Cross the upper bridge; break the inner gate. | `mainGate`: Cond	flag	upperCrossed	1; Cond	trapgone	DoorWooden1 |
+| main | `ravensledge-main-captain`: Defeat Osric Vane and all enemy forces. | `mainCaptain`: Cond	event	OsricVane	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `ravensledge-extra-east`: Explore the east supply entrance. | `extraEast`: Cond	region	1	EastGate |
+
+Possible route (static, not a playthrough):
+- Preserve the heart. Walk one living own creature north across either lower bridge: (11..13,43..46) or (36,43..46). A diggable bypass exists and is not a bridge crossing.
+- Claim 80 Shelf tiles in (3,30)-(56,42); 689 potentially reachable dry/diggable fields are available. After shelfHeld, walk north across either upper bridge: (23..25,26..28) or (50,26..28). Crossing before the shelf is held does not count.
+- Destroy the actual inner keep gate DoorWooden1 at (30,11). Before the final victory, optionally explore EastGate (44,16)-(52,24), with 22 initially open reachable tiles.
+- Defeat OsricVane at (30,6), all remaining hostile creatures and the neutral portal at (29,52). Original reinforcements, triggers and geometry remain unchanged.
+
+Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification.
+
 | Trigger `shelfHeld` | `Action	objectivestate	1	ravensledge-o02	reached`; conditions: `Cond	claimed	1	Shelf	80` | yes |
 | Trigger `shelfHeld` | `Action	objectivestate	1	ravensledge-o03	reached`; conditions: `Cond	claimed	1	Shelf	80` | yes |
 | Trigger `yardEntered` | `Action	objectivestate	1	ravensledge-o04	reached`; conditions: `Cond	region	1	Yard` | yes |
 | Trigger `goalInnerKeepEntered` | `Action	objectivestate	1	ravensledge-o05	reached`; conditions: `Cond	trapgone	DoorWooden1` | yes |
 | Trigger `captainDown` | `Action	objectivestate	1	ravensledge-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Secure your bridgeheads and climb shelf by shelf. | no: bridgeheads and shelf progression are not independent goals |
-| Briefing | Slay him in the highest keep and send Castellan another answer. | yes: KillAllEnemies includes Vane |
+| Trigger `mainHeart` | `Action	objectivestate	1	ravensledge-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainShelf` | `Action	objectivestate	1	ravensledge-main-shelf	reached`; conditions: `Cond	flag	lowerCrossed	1; Cond	claimed	1	Shelf	80` | yes |
+| Trigger `mainGate` | `Action	objectivestate	1	ravensledge-main-gate	reached`; conditions: `Cond	flag	upperCrossed	1; Cond	trapgone	DoorWooden1` | yes |
+| Trigger `mainCaptain` | `Action	objectivestate	1	ravensledge-main-captain	reached`; conditions: `Cond	event	OsricVane	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraEast` | `Action	objectivestate	1	ravensledge-extra-east	reached`; conditions: `Cond	region	1	EastGate` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	ravensledge-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Secure your bridgeheads and climb shelf by shelf. | yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate |
+| Briefing | Slay him in the highest keep and send Castellan another answer. | yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals |
 
 ## Saltmere
 
@@ -505,6 +1193,26 @@ File: `levels/campaign/Saltmere.level`.
 | Script line 3131 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
 | Script line 3141 | `Action	objectiveid	1	saltmere-o05	Find Bram Seward in the harbour hall.` | yes |
 | Script line 3231 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `saltmere-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `saltmere-main-gold`: Mine 800 gold. | `mainGold`: Cond	mined	1	>=	800 |
+| main | `saltmere-main-port`: Cross flats and lagoons; breach both port gates. | `mainPort`: Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1 |
+| main | `saltmere-main-admiral`: Defeat Bram Seward and all enemy forces. | `mainAdmiral`: Cond	event	BramSeward	killed; Cond	goalmet	1	KillAllEnemies |
+| optional | `saltmere-extra-gold`: Mine 1600 gold. | `extraGold`: Cond	mined	1	>=	1600 |
+
+Possible route (static, not a playthrough):
+- Mine 800 actual gold from the zero-gold start. Original firstSalt supplies Orc/Goblin at (16,13). Finite reachable gold totals 52000; optionally mine 1600 total before the final main goal.
+- An own living creature must reach HighFlat (24,14)-(50,28), Lagoon (18,44)-(44,62) and SouthFlat (20,66)-(46,78). Current legacy lagoonReached and exact new region histories are used; no reveal or gate opening substitutes for those visits.
+- Keep both original tunnel-opening alternatives: claim 50 SouthFlat fields, or wait for portGatesTimeout at time2400 while closed. Both clear (40..41,78)/(48..49,78). The grouped goal adds no compulsory 50-field claim after the timed alternative.
+- Destroy both actual outer doors: DoorWooden2 (40,80) and DoorWooden1 (48,80). Walk one own living creature south through either whole two-field-wide gateway, x40..41 or x48..49 at y80, from y79 to y81. The complete tunnel width counts, not an arbitrary exact door-center field. Verified open banks permit both crossings; the original earth at (49,81) can be dug or the open exit at (48,81) used. Opening only the tunnel mouth never completes the requirement.
+- Defeat BramSeward, initially (46,86) in the port hall, and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). Original reinforcements, inner doors and all geometry remain unchanged.
+
+Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification.
+
 | Trigger `firstSalt` | `Action	objectivestate	1	saltmere-o02	reached`; conditions: `Cond	mined	1	>=	800` | yes |
 | Trigger `flatHeld` | `Action	objectivestate	1	saltmere-o04	reached`; conditions: `Cond	claimed	1	SouthFlat	50` | yes |
 | Trigger `portGatesTimeout` | `Action	objectivestate	1	saltmere-o04	reached`; conditions: `Cond	time	2400; Cond	flag	portGatesOpen	0` | yes |
@@ -512,9 +1220,14 @@ File: `levels/campaign/Saltmere.level`.
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	saltmere-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `admiralFalls` | `Action	objectivestate	1	saltmere-o01	reached`; conditions: `Cond	event	BramSeward	killed` | yes |
 | Trigger `admiralFalls` | `Action	objectivestate	1	saltmere-o05	reached`; conditions: `Cond	event	BramSeward	killed` | yes |
-| Briefing | Mine the salt walls and cross the white flats and green lagoons to his southern harbour. | no: mining and the travel route are not independent goals |
-| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: ProtectDungeonTemple |
-| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | yes: KillAllEnemies includes Seward |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	saltmere-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	saltmere-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainGold` | `Action	objectivestate	1	saltmere-main-gold	reached`; conditions: `Cond	mined	1	>=	800` | yes |
+| Trigger `mainPort` | `Action	objectivestate	1	saltmere-main-port	reached`; conditions: `Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1` | yes |
+| Trigger `mainAdmiral` | `Action	objectivestate	1	saltmere-main-admiral	reached`; conditions: `Cond	event	BramSeward	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	saltmere-extra-gold	reached`; conditions: `Cond	mined	1	>=	1600` | yes |
+| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
+| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals |
 
 ## Silverdeep
 
@@ -527,13 +1240,39 @@ File: `levels/campaign/Silverdeep.level`.
 | Script line 4539 | `Action	objectiveid	1	silverdeep-o01	Destroy every rival keeper's heart.` | yes |
 | Script line 4540 | `Action	objectiveid	1	silverdeep-o02	Cross all three lakes by the wooden bridges.` | yes |
 | Advisory hint line 4541 | `Action	hint	1	Mine silver first.` | not an objective; no state required |
-| Script line 4842 | `Action	win	1` | yes |
-| Script line 4847 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4850 | `Action	win	1` | yes |
+| Script line 4841 | `Action	win	1` | yes |
+| Script line 4846 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4848 | `Action	win	1` | yes |
+| Script line 5046 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `silverdeep-main-home`: Mine 400 gold; build 6 beds and a coop; guard your heart. | `mainHome`: Cond	mined	1	>=	400; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `silverdeep-main-lakes`: Cross all three lakes by the wooden bridges. | `mainLakes`: Cond	flag	mainLake1	1; Cond	flag	mainLake2	1; Cond	flag	mainLake3	1 |
+| main | `silverdeep-main-rivals`: Destroy all three rival hearts and enemy forces. | `mainRivals`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `silverdeep-extra-gallery`: Explore the hidden northwestern silver gallery. | `extraGallery`: Cond	region	1	Gallery |
+
+Possible route (static, not a playthrough):
+- First mine400actualgold and supply all6initialfighters with6realbeds and a coop; protect the heart. Delver1/5Troll2x2,Delver2/6Spider1x1,Delver3DarkElf1x2,Delver4Cultist1x2,total14bedfields.
+- Concrete bed layout:Delver1(62..63,14..15),Delver5(64..65,14..15),Delver3(62,16..17),Delver4(63,16..17),Delver2(64,16),Delver6(65,16). Uses original6dormfields plus8newfields,736gold. Extend existing hatchery(72..74,16..17)by row18for330gold. Total1066below actual400mined+700firstSilver gift=1100; no new reward or skipped initial supply.
+- Only after the setup milestone, physically cross all3lakes. LakeA west via original WoodenBridge1(22..42,30..31)OR added spanA row(22..42,29)after both setup and spanA. Accept both actual valid tracks. LakeB south via original WoodenBridge2(56..57,50..66),including the existing column reinforced by spanB. LakeC west via original WoodenBridge3(20..40,86..87),including spanC row86. No order between the three crossings is invented.
+- Each crossing uses one own living creature from one dry bank through the full rectangle to the opposite bank. Visits, mixed creatures and crossings before setup do not count. All original footprints, banks and exact added spanA terrain action remain checked/preserved.
+- Destroy actual rival hearts of seats2,3,4 and all remaining foes/portals. Optionally enter Gallery,66reachable open fields,retaining original1500gold reward. Preserve20torchwaves,pacts,vault alternatives and portal timing.
+- The unchanged duplicate victory sentence is emitted once after all current main goals. Original win requests remain pending.
+
+Static supply/source/bridge/bank evidence only; actual construction, movement over both first-lake tracks, battles and save/load need runtime verification.
+
 | Trigger `goalSilverdeepAllSpans` | `Action	objectivestate	1	silverdeep-o02	reached`; conditions: `Cond	flag	goalSilverdeepCross1	1; Cond	flag	goalSilverdeepCross2	1; Cond	flag	goalSilverdeepCross3	1` | yes |
 | Trigger `silverWonGoal` | `Action	objectivestate	1	silverdeep-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | You arrive without gold, so mine first and build your force. | no: mining/building are not independent goals |
-| Briefing | Bridge three deep lakes with wooden spans and destroy all three rival hearts before their pacts overwhelm you. | no: enemy temples are checked; building exactly three wooden spans is not a winning condition |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	silverdeep-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	silverdeep-main-home	reached`; conditions: `Cond	mined	1	>=	400; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainLakes` | `Action	objectivestate	1	silverdeep-main-lakes	reached`; conditions: `Cond	flag	mainLake1	1; Cond	flag	mainLake2	1; Cond	flag	mainLake3	1` | yes |
+| Trigger `mainRivals` | `Action	objectivestate	1	silverdeep-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGallery` | `Action	objectivestate	1	silverdeep-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
+| Briefing | You arrive without gold, so mine first and build your force. | yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection |
+| Briefing | Bridge three deep lakes with wooden spans and destroy all three rival hearts before their pacts overwhelm you. | yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes |
 
 ## SkittleCavern
 
@@ -543,9 +1282,48 @@ File: `levels/campaign/SkittleCavern.level`.
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 988 | `Action	objectiveid	1	skittlecavern-o01	Knock down all ten guards before time runs out.` | yes |
-| Script line 1048 | `Action	win	1` | yes |
-| Trigger `laneCleared` | `Action	objectivestate	1	skittlecavern-o01	reached`; conditions: `Cond	flag	lanesOpened	>=	4; Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Briefing | Roll the boulders through every guard before time expires to earn this optional trial's Heartstone fragment. | no: laneCleared checks opened lanes and no remaining guards, not whether boulders killed them |
+| Script line 1057 | `Action	win	1` | yes |
+| Script line 1207 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `skittlecavern-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `skittlecavern-main-trial`: Open all 4 lanes; bowl down 10 guards within 540s. | `mainTrial`: Cond	trigger	laneCleared |
+| optional | `skittlecavern-extra-survivors`: Keep all 4 starting workers alive. | `extraSurvivors`: Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Open each original lane mouth at y8,16,24,32. Keep all original14boulder traps and ten exact guard spawns Pin1..10; original wait orders retained.
+- All ten guards must actually die from a hostile boulder owned by seat1. Existing boulder damage explicitly disables KO; living-to-dead transition is recorded by exact name and seat in saved events. Golf balls, allied boulders, already dead targets and other weapons do not qualify.
+- The original540second limit starts at openingRound,time3; no shorter time or new slap limit. Existing laneCleared now additionally requires all ten exact boulder deaths before requesting victory. Wrong-cause death permanently fails the main trial.
+- Protect the heart. At successful trial completion optionally retain all four original workers alive without actual death history; real worker death or defeat fails that optional objective.
+- Original maps, doors, traps, waiting guards and rewards remain unchanged. Unchanged victory narration is emitted once after both current main goals.
+
+Static script and death-source evidence only; actual boulder trajectories, hit limits, guard damage, opening routes, combat and save/load need integrator/Mario runtime verification.
+
+| Trigger `laneCleared` | `Action	objectivestate	1	skittlecavern-o01	reached`; conditions: `Cond	event	Pin1	boulderkilled:1; Cond	event	Pin2	boulderkilled:1; Cond	event	Pin3	boulderkilled:1; Cond	event	Pin4	boulderkilled:1; Cond	event	Pin5	boulderkilled:1; Cond	event	Pin6	boulderkilled:1; Cond	event	Pin7	boulderkilled:1; Cond	event	Pin8	boulderkilled:1; Cond	event	Pin9	boulderkilled:1; Cond	event	Pin10	boulderkilled:1; Cond	flag	lanesOpened	>=	4; Cond	time	5; Cond	creatures	2	<=	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	skittlecavern-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `extraSurvivorLost4` | `Action	objectivestate	1	skittlecavern-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker4	killed` | yes |
+| Trigger `wrongPinDeath1` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin1	killed; Cond	event	Pin1	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath2` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin2	killed; Cond	event	Pin2	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath3` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin3	killed; Cond	event	Pin3	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath4` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin4	killed; Cond	event	Pin4	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath5` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin5	killed; Cond	event	Pin5	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath6` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin6	killed; Cond	event	Pin6	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath7` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin7	killed; Cond	event	Pin7	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath8` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin8	killed; Cond	event	Pin8	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath9` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin9	killed; Cond	event	Pin9	boulderkilled:1	==	0` | yes |
+| Trigger `wrongPinDeath10` | `Action	objectivestate	1	skittlecavern-main-trial	failed`; conditions: `Cond	event	Pin10	killed; Cond	event	Pin10	boulderkilled:1	==	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	skittlecavern-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	skittlecavern-main-trial	reached`; conditions: `Cond	trigger	laneCleared` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	skittlecavern-extra-survivors	reached`; conditions: `Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0` | yes |
+| Briefing | Roll the boulders through every guard before time expires to earn this optional trial's Heartstone fragment. | yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit |
 
 ## Stormhaven
 
@@ -558,9 +1336,29 @@ File: `levels/campaign/Stormhaven.level`.
 | Script line 4025 | `Action	objectiveid	1	stormhaven-o01	Destroy every rival keeper's heart.` | yes |
 | Script line 4026 | `Action	objectiveid	1	stormhaven-o02	Cross the inlet by the stone bridges.` | yes |
 | Script line 4027 | `Action	objectiveid	1	stormhaven-o03	Prevent the keepers from joining forces.` | yes |
-| Script line 4265 | `Action	win	1` | yes |
-| Script line 4270 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4273 | `Action	win	1` | yes |
+| Script line 4264 | `Action	win	1` | yes |
+| Script line 4269 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4271 | `Action	win	1` | yes |
+| Script line 4378 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `stormhaven-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `stormhaven-main-spans`: Cross and control both stone bridges. | `mainSpans`: Cond	flag	mainSouthCrossed	1; Cond	flag	mainNorthCrossed	1; Cond	roomclaimed	1	30	70	34	71; Cond	roomclaimed	1	30	33	34	34 |
+| main | `stormhaven-main-keepers`: Destroy all four rival hearts and enemy forces. | `mainKeepers`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `stormhaven-extra-cave`: Explore the hidden storm cave. | `extraCave`: Cond	region	1	GaleCave |
+
+Possible route (static, not a playthrough):
+- Cross both actual stone bridges with own living creatures: South StoneBridge2(30..34,70..71),North StoneBridge1(30..34,33..34). Either east or west direction qualifies; no prescribed order. Each crossing tracks the same creature from one dry bank through the whole bridge to the opposite bank. Visits and mixed visitors do not count.
+- Claim all ten original bridge fields on each span; keep both bridges currently owned until victory. RoomBridge uses the shared takeover pool and Room::claimForSeat claims all resulting tiles. Water beneath bridges is not an excuse to skip their ownership.
+- Protect the heart and destroy all four rival temples,seats2..5,then remaining forces/portals. Preserve original pact changes, nine attacking waves and north portal activation.
+- Optionally enter GaleCave(26,2)-(42,6),30reachable open dry fields. The prior alliance-prevention legacy objective remains hidden when grouped and does not block the new main goals; no alliance gameplay is removed.
+- Unchanged victory sentence occurs once after all current main observers. Original pending win requests remain.
+
+Static bridge/bank/takeover source evidence only; actual crossing, claiming, combat and save/load remain for runtime verification.
+
 | Trigger `goalPactFormedQuayEntered` | `Action	objectivestate	1	stormhaven-o03	failed`; conditions: `Cond	trigger	quayEntered; Cond	objective	1	stormhaven-o03	open` | yes |
 | Trigger `goalPactFormedDockEntered` | `Action	objectivestate	1	stormhaven-o03	failed`; conditions: `Cond	trigger	dockEntered; Cond	objective	1	stormhaven-o03	open` | yes |
 | Trigger `goalPactFormedTideTurns` | `Action	objectivestate	1	stormhaven-o03	failed`; conditions: `Cond	trigger	tideTurns; Cond	objective	1	stormhaven-o03	open` | yes |
@@ -568,7 +1366,12 @@ File: `levels/campaign/Stormhaven.level`.
 | Trigger `goalPactsPrevented` | `Action	objectivestate	1	stormhaven-o03	reached`; conditions: `Cond	goalmet	1	KillAllEnemies; Cond	trigger	quayEntered	0; Cond	trigger	dockEntered	0; Cond	trigger	tideTurns	0; Cond	trigger	tideTurns2	0` | yes |
 | Trigger `goalStormhavenBothSpans` | `Action	objectivestate	1	stormhaven-o02	reached`; conditions: `Cond	flag	goalStormhavenSpan1After	1; Cond	flag	goalStormhavenSpan2After	1` | yes |
 | Trigger `stormEndsGoal` | `Action	objectivestate	1	stormhaven-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Control the stone spans and destroy every rival heart. | no: enemy temples are checked; stone-span control is not an independent goal |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	stormhaven-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	stormhaven-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainSpans` | `Action	objectivestate	1	stormhaven-main-spans	reached`; conditions: `Cond	flag	mainSouthCrossed	1; Cond	flag	mainNorthCrossed	1; Cond	roomclaimed	1	30	70	34	71; Cond	roomclaimed	1	30	33	34	34` | yes |
+| Trigger `mainKeepers` | `Action	objectivestate	1	stormhaven-main-keepers	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraCave` | `Action	objectivestate	1	stormhaven-extra-cave	reached`; conditions: `Cond	region	1	GaleCave` | yes |
+| Briefing | Control the stone spans and destroy every rival heart. | yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated |
 
 ## SwarmNight
 
@@ -580,10 +1383,35 @@ File: `levels/campaign/SwarmNight.level`.
 | Script line 1483 | `Action	objectiveid	1	swarmnight-o01	Survive the swarm for 13 minutes.` | yes |
 | Script line 1484 | `Action	objectiveid	1	swarmnight-o02	Protect your heart.` | yes |
 | Script line 1599 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `swarmnight-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `swarmnight-main-trial`: Survive until dawn (13 minutes). | `mainTrial`: Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple |
+| optional | `swarmnight-extra-survivors`: Keep all 3 starting workers alive. | `extraSurvivors`: Cond	objective	1	swarmnight-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Prepare the existing dungeon against the six timed waves, preserving the heart.
+- Protect all three named initial workers; no requirement to defeat the rival heart or every surviving wave enemy is introduced.
+- At 780 seconds dawn requests victory; main goals and the optional survival outcome are evaluated before the victory result.
+
+The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.
+
 | Trigger `goalHeartSafe1BeforeDawn` | `Action	objectivestate	1	swarmnight-o01	reached`; conditions: `Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartSafe2BeforeDawn` | `Action	objectivestate	1	swarmnight-o02	reached`; conditions: `Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	swarmnight-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	swarmnight-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	swarmnight-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	swarmnight-main-trial	reached`; conditions: `Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	swarmnight-extra-survivors	reached`; conditions: `Cond	objective	1	swarmnight-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	swarmnight-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
 | Briefing | Keep your heart standing for thirteen minutes. | yes: dawn at 780 seconds with ProtectDungeonTemple |
 | Briefing | Your strongest surviving fighter can follow you onward toward Aurel's stand; this trial grants no Heartstone fragment. | yes: dawn invokes keepminion before win; no Heartstone reward is granted |
 
@@ -599,13 +1427,39 @@ File: `levels/campaign/Thornreach.level`.
 | Advisory hint line 5932 | `Action	hint	1	Dig and burn through the thorn maze.` | not an objective; no state required |
 | Script line 5933 | `Action	objectiveid	1	thornreach-o03	Protect your heart while the keepers fight.` | yes |
 | Script line 6056 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 6075 | `Action	win	1` | yes |
-| Script line 6080 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 6083 | `Action	win	1` | yes |
+| Script line 6074 | `Action	win	1` | yes |
+| Script line 6079 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 6081 | `Action	win	1` | yes |
+| Script line 6167 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `thornreach-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `thornreach-main-maze`: Claim the clearing and cross the hedge maze. | `mainMaze`: Cond	crossed	1	ThornMaze	east; Cond	groundclaimed	1	47	30	57	30; Cond	groundclaimed	1	47	31	48	31; Cond	groundclaimed	1	50	31	54	31; Cond	groundclaimed	1	56	31	57	31; Cond	groundclaimed	1	47	32	57	32; Cond	groundclaimed	1	47	33	57	33; Cond	groundclaimed	1	47	34	57	34; Cond	groundclaimed	1	47	35	58	35; Cond	groundclaimed	1	47	36	50	36; Cond	groundclaimed	1	54	36	58	36; Cond	groundclaimed	1	47	37	57	37; Cond	groundclaimed	1	47	38	58	38; Cond	groundclaimed	1	47	39	58	39; Cond	groundclaimed	1	49	40	57	40; Cond	groundclaimed	1	46	41	57	41; Cond	groundclaimed	1	46	42	57	42 |
+| main | `thornreach-main-keepers`: Destroy all rival hearts and enemy forces. | `mainKeepers`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `thornreach-extra-gold`: Mine 2000 gold. | `extraGold`: Cond	mined	1	>=	2000 |
+
+Possible route (static, not a playthrough):
+- Protect the own heart; conquer all142original dry open Clearing fields(46..58,30..42). No placed room exists there, so no new room is required. All fields are potentially reachable; original walls and lava are excluded.
+- Walk one own living creature from the west bank x25 through the full hedge maze rectangle x26..80/y5..68 to the east bank x81. A visit, teleport or different creatures on opposite banks does not count. Any legal internal path qualifies; no fixed hedge plug is prescribed.
+- One potential cardinal route runs(25,23)->(33,23)->(33,24)->(60,24)->(60,26)->(63,26)->(63,24)->(81,24),61steps and12removable dirt fields, checked against the actual map. This is static necessary evidence only, not a completed walk.
+- Destroy all four actual rival hearts,seats2..5,and remaining enemy forces/portals. Keep the full clearing until victory. Preserve original nine waves, alliance changes, timed openings and clearing reinforcements.
+- Optionally mine2000actualgold from96500finitepotentialgold. Existing mined1 threshold2000 remains unchanged.
+- Move the unchanged duplicate victory sentence to one final completion after all current main observers; original win requests remain pending.
+
+Static route/footprint/resource evidence only; actual walking, claiming, battles and save/load remain unverified.
+
 | Trigger `goalHeartSafe3BeforeKeepersGoneGoal` | `Action	objectivestate	1	thornreach-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	thornreach-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `keepersGoneGoal` | `Action	objectivestate	1	thornreach-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Take the middle clearing, cut through the maze and destroy every rival heart. | no: enemy temples are checked; clearing ownership and maze progression are not independent goals |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	thornreach-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	thornreach-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainMaze` | `Action	objectivestate	1	thornreach-main-maze	reached`; conditions: `Cond	crossed	1	ThornMaze	east; Cond	groundclaimed	1	47	30	57	30; Cond	groundclaimed	1	47	31	48	31; Cond	groundclaimed	1	50	31	54	31; Cond	groundclaimed	1	56	31	57	31; Cond	groundclaimed	1	47	32	57	32; Cond	groundclaimed	1	47	33	57	33; Cond	groundclaimed	1	47	34	57	34; Cond	groundclaimed	1	47	35	58	35; Cond	groundclaimed	1	47	36	50	36; Cond	groundclaimed	1	54	36	58	36; Cond	groundclaimed	1	47	37	57	37; Cond	groundclaimed	1	47	38	58	38; Cond	groundclaimed	1	47	39	58	39; Cond	groundclaimed	1	49	40	57	40; Cond	groundclaimed	1	46	41	57	41; Cond	groundclaimed	1	46	42	57	42` | yes |
+| Trigger `mainKeepers` | `Action	objectivestate	1	thornreach-main-keepers	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	thornreach-extra-gold	reached`; conditions: `Cond	mined	1	>=	2000` | yes |
+| Briefing | Take the middle clearing, cut through the maze and destroy every rival heart. | yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes |
 
 ## Tinmoor
 
@@ -619,15 +1473,43 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1711 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
 | Script line 1719 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
 | Script line 1737 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
-| Script line 1819 | `Action	win	1` | yes |
-| Script line 1825 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1818 | `Action	win	1` | yes |
+| Script line 1824 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `tinmoor-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `tinmoor-main-seams`: Mine 900 gold; scout the seams in possession. | `mainSeams`: Cond	mined	1	>=	900; Cond	trigger	scoutSeams |
+| main | `tinmoor-main-posts`: Clear both watch posts and reinforcements. | `mainPosts`: Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1; Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1 |
+| main | `tinmoor-main-warden`: Defeat Merrin Tay, all foes and portals. | `mainWarden`: Cond	event	MerrinTay	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `tinmoor-main-stone`: If found, bring the vault stone home. | `mainStone`: Cond	trigger	vaultFound; Cond	trigger	vaultStoneHome |
+| optional | `tinmoor-extra-gold`: Mine 1500 gold. | `extraGold`: Cond	mined	1	>=	1500 |
+
+Possible route (static, not a playthrough):
+- Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.
+- Possession comes from the level's own research list (spellPossess is pending and the library is available); no script grants it. Possess an own living creature and enter Seams (14,8)-(50,34).
+- Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.
+- After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
+- Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required.
+
+Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
+
 | Trigger `seamsFilled` | `Action	objectivestate	1	tinmoor-o02	reached`; conditions: `Cond	mined	1	>=	900` | yes |
 | Trigger `goalPostACleared` | `Action	objectivestate	1	tinmoor-o03	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1` | yes |
 | Trigger `goalPostBCleared` | `Action	objectivestate	1	tinmoor-o04	reached`; conditions: `Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1` | yes |
 | Trigger `wardenDown` | `Action	objectivestate	1	tinmoor-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutSeams` | `Action	objectivestate	1	tinmoor-o05	reached`; conditions: `Cond	possessed	1	Seams` | yes |
-| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | no: enemy elimination is checked; seams and both posts are not independent goals |
-| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | no: optional stone discovery is not required to win |
+| Trigger `mainHeart` | `Action	objectivestate	1	tinmoor-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainSeams` | `Action	objectivestate	1	tinmoor-main-seams	reached`; conditions: `Cond	mined	1	>=	900; Cond	trigger	scoutSeams` | yes |
+| Trigger `mainPosts` | `Action	objectivestate	1	tinmoor-main-posts	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1; Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	tinmoor-main-warden	reached`; conditions: `Cond	event	MerrinTay	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainStone` | `Action	objectivestate	1	tinmoor-main-stone	reached`; conditions: `Cond	trigger	vaultFound; Cond	trigger	vaultStoneHome` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	tinmoor-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	tinmoor-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals |
+| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory |
 
 ## TwistingHalls
 
@@ -638,8 +1520,34 @@ File: `levels/campaign/TwistingHalls.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3178 | `Action	objectiveid	1	twistinghalls-o01	Reach the north-east exit before time runs out.` | yes |
 | Script line 3202 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `twistinghalls-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `twistinghalls-main-trial`: Reach the exit in possession before time runs out. | `mainTrial`: Cond	trigger	hallReached; Cond	possessed	1	ExitHall |
+| optional | `twistinghalls-extra-survivors`: Keep all 4 starting fighters alive. | `extraSurvivors`: Cond	objective	1	twistinghalls-main-trial	reached; Cond	alive	Walker1; Cond	event	Walker1	killed	==	0; Cond	alive	Walker2; Cond	event	Walker2	killed	==	0; Cond	alive	Walker3; Cond	event	Walker3	killed	==	0; Cond	alive	Walker4; Cond	event	Walker4	killed	==	0 |
+
+Possible route (static, not a playthrough):
+- Possess an own creature and navigate the existing Maze; crossing Between opens the second moat span.
+- Reach Lever (47,44) to open the seal at (50,6).
+- Bring the currently possessed creature into ExitHall (51,2)-(57,8) before the existing 900-second limit; keep all four original Walkers alive.
+
+The existing trap/ball/possession route and survival challenge still require runtime playtesting; these are static conditions, not a balance proof.
+
 | Trigger `hallReached` | `Action	objectivestate	1	twistinghalls-o01	reached`; conditions: `Cond	region	1	ExitHall` | yes |
-| Briefing | Possess your own creature and reach the north-east exit before time runs out to earn this optional trial's Heartstone fragment. | no: hallReached checks region presence; it does not independently require possession |
+| Trigger `mainHeart` | `Action	objectivestate	1	twistinghalls-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainTrial` | `Action	objectivestate	1	twistinghalls-main-trial	reached`; conditions: `Cond	trigger	hallReached; Cond	possessed	1	ExitHall` | yes |
+| Trigger `extraSurvivors` | `Action	objectivestate	1	twistinghalls-extra-survivors	reached`; conditions: `Cond	objective	1	twistinghalls-main-trial	reached; Cond	alive	Walker1; Cond	event	Walker1	killed	==	0; Cond	alive	Walker2; Cond	event	Walker2	killed	==	0; Cond	alive	Walker3; Cond	event	Walker3	killed	==	0; Cond	alive	Walker4; Cond	event	Walker4	killed	==	0` | yes |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	twistinghalls-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `extraSurvivorLost1` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker1	killed` | yes |
+| Trigger `extraSurvivorLost2` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker2	killed` | yes |
+| Trigger `extraSurvivorLost3` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker3	killed` | yes |
+| Trigger `extraSurvivorLost4` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker4	killed` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	twistinghalls-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
+| Briefing | Possess your own creature and reach the north-east exit before time runs out to earn this optional trial's Heartstone fragment. | yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active |
 
 ## VarnsCrossing
 
@@ -653,14 +1561,40 @@ File: `levels/campaign/VarnsCrossing.level`.
 | Script line 4449 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
 | Script line 4450 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
 | Script line 4755 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4781 | `Action	win	1` | yes |
-| Script line 4786 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4790 | `Action	win	1` | yes |
+| Script line 4779 | `Action	win	1` | yes |
+| Script line 4784 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4786 | `Action	win	1` | yes |
+| Script line 4892 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `varnscrossing-main-home`: Claim your quarter; build a bed and coop; guard your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	claimed	1	Quarter	25; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1 |
+| main | `varnscrossing-main-keep`: Capture and hold the lava-ringed fortress. | `mainKeep`: Cond	trigger	quarterHeld; Cond	groundclaimed	1	36	38	37	38; Cond	groundclaimed	1	55	38	56	38; Cond	groundclaimed	1	36	39	36	39; Cond	groundclaimed	1	42	39	50	39; Cond	groundclaimed	1	56	39	56	39; Cond	groundclaimed	1	41	40	51	40; Cond	groundclaimed	1	39	41	53	41; Cond	groundclaimed	1	39	42	53	42; Cond	groundclaimed	1	38	43	54	43; Cond	groundclaimed	1	37	44	55	44; Cond	groundclaimed	1	37	45	55	45; Cond	groundclaimed	1	37	46	55	46; Cond	groundclaimed	1	37	47	55	47; Cond	groundclaimed	1	37	48	55	48; Cond	groundclaimed	1	37	49	55	49; Cond	groundclaimed	1	37	50	55	50; Cond	groundclaimed	1	37	51	55	51; Cond	groundclaimed	1	37	52	55	52; Cond	groundclaimed	1	38	53	54	53; Cond	groundclaimed	1	39	54	53	54; Cond	groundclaimed	1	39	55	53	55; Cond	groundclaimed	1	41	56	51	56; Cond	groundclaimed	1	36	57	36	57; Cond	groundclaimed	1	42	57	50	57; Cond	groundclaimed	1	56	57	56	57; Cond	groundclaimed	1	36	58	37	58; Cond	groundclaimed	1	55	58	56	58 |
+| main | `varnscrossing-main-rivals`: Destroy both rival hearts and all enemy forces. | `mainRivals`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `varnscrossing-extra-gold`: Mine 5000 gold. | `extraGold`: Cond	mined	1	>=	5000 |
+
+Possible route (static, not a playthrough):
+- Claim25Quarter fields, retaining original quarterHeld threshold. Protect the heart and provide at least one real bed and hatchery coop; the map starts with workers only, so no invented initial fighter population is assumed.
+- Dormitory1(18..20,76..77)already has6fields; one bed can fit at(18,76). Hatchery1(8..10,85..86)has6fields; add row87 to form a3x3site,330gold from4000startinggold. All three added fields are reachable removable dirt and room skills are unlocked. Later reinforcements still need player care.
+- Capture all317original open Keep floor fields in(36,38)-(56,58), including current ownership of any rooms on them. Lava, water and original walls are excluded. Do not require a new room on natural floor. Keep control until all other main goals are reached.
+- Destroy both real rival hearts,seats2and3,then defeat remaining enemies/portals. Original30columns,alliance changes and portal timing remain unchanged.
+- Optionally mine5000actualgold from118000potentialfinitegold,above original4000milestone. Original gold gifts are not mining.
+- Unchanged victory sentence and SwarmNight discovery move together to the final completion after all current main observers. Old win requests remain pending.
+
+Static resource/footprint evidence only; claim takeover, bed/coop use, combat, save/load and runtime UI need integrator/Mario verification.
+
 | Trigger `goalHeartSafe2BeforeCrossingHeldGoal` | `Action	objectivestate	1	varnscrossing-o02	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalQuarterThenFortress` | `Action	objectivestate	1	varnscrossing-o03	reached`; conditions: `Cond	trigger	quarterHeld; Cond	region	1	Keep` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	varnscrossing-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `crossingHeldGoal` | `Action	objectivestate	1	varnscrossing-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | no: heart protection and enemy temples are checked; quarter and fortress ownership are not independent goals |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	varnscrossing-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHome` | `Action	objectivestate	1	varnscrossing-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	claimed	1	Quarter	25; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1` | yes |
+| Trigger `mainKeep` | `Action	objectivestate	1	varnscrossing-main-keep	reached`; conditions: `Cond	trigger	quarterHeld; Cond	groundclaimed	1	36	38	37	38; Cond	groundclaimed	1	55	38	56	38; Cond	groundclaimed	1	36	39	36	39; Cond	groundclaimed	1	42	39	50	39; Cond	groundclaimed	1	56	39	56	39; Cond	groundclaimed	1	41	40	51	40; Cond	groundclaimed	1	39	41	53	41; Cond	groundclaimed	1	39	42	53	42; Cond	groundclaimed	1	38	43	54	43; Cond	groundclaimed	1	37	44	55	44; Cond	groundclaimed	1	37	45	55	45; Cond	groundclaimed	1	37	46	55	46; Cond	groundclaimed	1	37	47	55	47; Cond	groundclaimed	1	37	48	55	48; Cond	groundclaimed	1	37	49	55	49; Cond	groundclaimed	1	37	50	55	50; Cond	groundclaimed	1	37	51	55	51; Cond	groundclaimed	1	37	52	55	52; Cond	groundclaimed	1	38	53	54	53; Cond	groundclaimed	1	39	54	53	54; Cond	groundclaimed	1	39	55	53	55; Cond	groundclaimed	1	41	56	51	56; Cond	groundclaimed	1	36	57	36	57; Cond	groundclaimed	1	42	57	50	57; Cond	groundclaimed	1	56	57	56	57; Cond	groundclaimed	1	36	58	37	58; Cond	groundclaimed	1	55	58	56	58` | yes |
+| Trigger `mainRivals` | `Action	objectivestate	1	varnscrossing-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	varnscrossing-extra-gold	reached`; conditions: `Cond	mined	1	>=	5000` | yes |
+| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes |
 
 ## Wolfscar
 
@@ -674,15 +1608,41 @@ File: `levels/campaign/Wolfscar.level`.
 | Script line 4646 | `Action	objectiveid	1	wolfscar-o02	Cross the south ravine by a stone bridge.` | yes |
 | Script line 4647 | `Action	objectiveid	1	wolfscar-o03	Protect your heart.` | yes |
 | Script line 4761 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4780 | `Action	win	1` | yes |
-| Script line 4785 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4788 | `Action	win	1` | yes |
+| Script line 4779 | `Action	win	1` | yes |
+| Script line 4784 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4786 | `Action	win	1` | yes |
+| Script line 4944 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `wolfscar-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `wolfscar-main-den`: Cross both rifts and claim the wolf den. | `mainDen`: Cond	flag	southRavineCrossed	1; Cond	flag	northRavineCrossed	1; Cond	groundclaimed	1	27	46	42	46; Cond	groundclaimed	1	28	47	38	47; Cond	groundclaimed	1	30	48	39	48; Cond	groundclaimed	1	29	49	30	49; Cond	groundclaimed	1	32	49	41	49; Cond	groundclaimed	1	28	50	30	50; Cond	groundclaimed	1	33	50	43	50; Cond	groundclaimed	1	26	51	45	51; Cond	groundclaimed	1	25	52	40	52; Cond	groundclaimed	1	43	52	46	52; Cond	groundclaimed	1	24	53	41	53; Cond	groundclaimed	1	43	53	46	53; Cond	groundclaimed	1	24	54	34	54; Cond	groundclaimed	1	37	54	47	54; Cond	groundclaimed	1	24	55	32	55; Cond	groundclaimed	1	38	55	48	55; Cond	groundclaimed	1	24	56	31	56; Cond	groundclaimed	1	38	56	48	56; Cond	groundclaimed	1	24	57	32	57; Cond	groundclaimed	1	38	57	47	57; Cond	groundclaimed	1	24	58	26	58; Cond	groundclaimed	1	29	58	46	58; Cond	groundclaimed	1	24	59	27	59; Cond	groundclaimed	1	29	59	39	59; Cond	groundclaimed	1	41	59	46	59; Cond	groundclaimed	1	25	60	39	60; Cond	groundclaimed	1	41	60	46	60; Cond	groundclaimed	1	25	61	45	61; Cond	groundclaimed	1	26	62	44	62; Cond	groundclaimed	1	27	63	43	63; Cond	groundclaimed	1	29	64	34	64; Cond	groundclaimed	1	45	65	48	65; Cond	groundclaimed	1	35	66	36	66; Cond	groundclaimed	1	42	66	48	66 |
+| main | `wolfscar-main-hunters`: Destroy all rival hearts and enemy forces. | `mainHunters`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| optional | `wolfscar-extra-gold`: Mine 1500 gold. | `extraGold`: Cond	mined	1	>=	1500 |
+
+Possible route (static, not a playthrough):
+- Protect the heart. Cross the southern ravine northward via existing StoneBridge1 (18,76..79),2 (35..36,76..79),or3 (52,76..79). Each full entry-to-exit walk uses one own living creature; visits, teleports and mixed visitors do not count.
+- Cross the northern ravine northward via existing StoneBridge5 (28,35),6 (44..45,34..37),or7 (62,35..36). No missing fourth bridge is invented. All six actual footprints and dry banks are checked.
+- Claim all344original open natural Wolfden fields in (24,46)-(48,66). There is no placed room in this region. Initial walls and water are excluded; no room construction is required. Original denWell creates the mana spring at (30,51) after20claimed fields; its resulting tile must also be claimed for full current control.
+- Destroy all four actual rival DungeonTemples of seats2,3,4,5 and defeat remaining hostile creatures/portals. A defeated-player flag alone never substitutes for an existing rival heart. Original hunter alliances, flank portal activation and eight pack waves are retained.
+- Before the final main goal optionally mine1500actualgold;93500finite gold is potentially reachable. Starting funds and gifts are not mining.
+- The unchanged victory narration is emitted once only after all three current main goals are reached. The two old win requests remain valid pending requests and carry no premature duplicate narration.
+
+Static source/ground-mask/bank/resource evidence only; worker claiming, actual crossings, combat and save/load require integrator/Mario runtime verification.
+
 | Trigger `southCrossed` | `Action	objectivestate	1	wolfscar-o02	reached`; conditions: `Cond	region	1	Midlow` | yes |
 | Trigger `goalHeartSafe3BeforeHuntersGoneGoal` | `Action	objectivestate	1	wolfscar-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	wolfscar-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `huntersGone` | `Action	objectivestate	1	wolfscar-o01	reached`; conditions: `Cond	defeated	2; Cond	defeated	3; Cond	defeated	4; Cond	defeated	5` | yes |
 | Trigger `huntersGoneGoal` | `Action	objectivestate	1	wolfscar-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Cross the stone bridges, seize the wolf den and destroy every rival heart while guarding your own. | no: enemy temples and own-heart protection are checked; wolf-den ownership and the route are not independent goals |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	wolfscar-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	wolfscar-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainDen` | `Action	objectivestate	1	wolfscar-main-den	reached`; conditions: `Cond	flag	southRavineCrossed	1; Cond	flag	northRavineCrossed	1; Cond	groundclaimed	1	27	46	42	46; Cond	groundclaimed	1	28	47	38	47; Cond	groundclaimed	1	30	48	39	48; Cond	groundclaimed	1	29	49	30	49; Cond	groundclaimed	1	32	49	41	49; Cond	groundclaimed	1	28	50	30	50; Cond	groundclaimed	1	33	50	43	50; Cond	groundclaimed	1	26	51	45	51; Cond	groundclaimed	1	25	52	40	52; Cond	groundclaimed	1	43	52	46	52; Cond	groundclaimed	1	24	53	41	53; Cond	groundclaimed	1	43	53	46	53; Cond	groundclaimed	1	24	54	34	54; Cond	groundclaimed	1	37	54	47	54; Cond	groundclaimed	1	24	55	32	55; Cond	groundclaimed	1	38	55	48	55; Cond	groundclaimed	1	24	56	31	56; Cond	groundclaimed	1	38	56	48	56; Cond	groundclaimed	1	24	57	32	57; Cond	groundclaimed	1	38	57	47	57; Cond	groundclaimed	1	24	58	26	58; Cond	groundclaimed	1	29	58	46	58; Cond	groundclaimed	1	24	59	27	59; Cond	groundclaimed	1	29	59	39	59; Cond	groundclaimed	1	41	59	46	59; Cond	groundclaimed	1	25	60	39	60; Cond	groundclaimed	1	41	60	46	60; Cond	groundclaimed	1	25	61	45	61; Cond	groundclaimed	1	26	62	44	62; Cond	groundclaimed	1	27	63	43	63; Cond	groundclaimed	1	29	64	34	64; Cond	groundclaimed	1	45	65	48	65; Cond	groundclaimed	1	35	66	36	66; Cond	groundclaimed	1	42	66	48	66` | yes |
+| Trigger `mainHunters` | `Action	objectivestate	1	wolfscar-main-hunters	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	roomtiles	5	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGold` | `Action	objectivestate	1	wolfscar-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
+| Briefing | Cross the stone bridges, seize the wolf den and destroy every rival heart while guarding your own. | yes: actual bridge crossings of both ravines, ownership of all344original den floor fields, four rival temples gone, remaining enemy forces and own-heart protection |
 
 ## Wraithwood
 
@@ -696,11 +1656,38 @@ File: `levels/campaign/Wraithwood.level`.
 | Script line 4773 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
 | Script line 4774 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
 | Script line 4835 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4852 | `Action	win	1` | yes |
-| Script line 4857 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4861 | `Action	win	1` | yes |
+| Script line 4851 | `Action	win	1` | yes |
+| Script line 4856 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4859 | `Action	win	1` | yes |
+| Script line 4924 | `Action	win	1` | yes |
+
+### Main and optional goals
+
+| Group | Goal | Current completion conditions |
+| --- | --- | --- |
+| main | `wraithwood-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
+| main | `wraithwood-main-witch`: Destroy the northwestern witch heart. | `mainWitch`: Cond	roomtiles	3	DungeonTemple	<=	0 |
+| main | `wraithwood-main-rival`: Destroy the northeastern rival heart. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0 |
+| main | `wraithwood-main-forces`: Defeat all remaining enemy forces. | `mainForces`: Cond	goalmet	1	KillAllEnemies |
+| optional | `wraithwood-extra-grove`: Explore the hidden western grove. | `extraGrove`: Cond	region	1	SealedGrove |
+
+Possible route (static, not a playthrough):
+- Protect the own heart through victory. Destroy actual northwest witch DungeonTemple2,seat3,original25fields(16..20,16..20). Its dedicated goal checks only that actual heart state,not the last enemy.
+- Destroy actual northeast rival DungeonTemple3,seat2,original25fields(80..84,14..18). Its dedicated goal likewise checks only that actual heart state,independent of the witch and remaining enemies. Either destruction order is valid.
+- Defeat remaining enemy forces/portals as a separate main goal. This separates the matrix combined rival-heart/enemy duty so both individual heart icons can change immediately instead of waiting for global clearance. Four main goals remain within the approved2..5range.
+- Optionally enter hidden western SealedGrove(2,36)-(9,45),43reachable open dry fields. Retain original900gold reward. All spawns,bond reinforcements,mana spring and geometry remain unchanged.
+- The exact unchanged victory sentence is emitted once after all four current main goals. Original bothFall/bothFallGoal requests remain pending.
+
+Static heart-seat/location and region evidence only; actual heart destruction, combat, icon updates and save/load need runtime verification.
+
 | Trigger `goalHeartSafe3BeforeBothFallGoal` | `Action	objectivestate	1	wraithwood-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	wraithwood-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `bothFallGoal` | `Action	objectivestate	1	wraithwood-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
 | Trigger `bothFallGoal` | `Action	objectivestate	1	wraithwood-o02	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: ProtectDungeonTemple and KillAllEnemies include both rival temples |
+| Trigger `mainHeartLost` | `Action	objectivestate	1	wraithwood-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	wraithwood-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainWitch` | `Action	objectivestate	1	wraithwood-main-witch	reached`; conditions: `Cond	roomtiles	3	DungeonTemple	<=	0` | yes |
+| Trigger `mainRival` | `Action	objectivestate	1	wraithwood-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
+| Trigger `mainForces` | `Action	objectivestate	1	wraithwood-main-forces	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `extraGrove` | `Action	objectivestate	1	wraithwood-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
+| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately |

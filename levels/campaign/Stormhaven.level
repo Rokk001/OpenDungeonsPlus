@@ -4261,14 +4261,12 @@ Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
 Cond	creatures	4	<=	0
 Cond	creatures	5	<=	0
-Action	message	1	The last keeper is dead and the harbour lies calm. Stormhaven answers to you.
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	stormEndsGoal
 Mode	once
 Cond	goal	1	KillAllEnemies
-Action	message	1	The last keeper is dead and the harbour lies calm. Stormhaven answers to you.
 Action	objectivestate	1	stormhaven-o01	reached
 Action	win	1
 [/Trigger]
@@ -4297,4 +4295,86 @@ Action	portal	2	on
 Action	portal	3	on
 [/Trigger]
 
+
+Region	MainSouthBridge	30	70	34	71
+Region	MainNorthBridge	30	33	34	34
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	stormhaven-main-heart	Protect your heart.
+Action	mainobjectiveid	1	stormhaven-main-spans	Cross and control both stone bridges.
+Action	mainobjectiveid	1	stormhaven-main-keepers	Destroy all four rival hearts and enemy forces.
+Action	optionalobjectiveid	1	stormhaven-extra-cave	Explore the hidden storm cave.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	stormhaven-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	crossSouthEast
+Mode	once
+Cond	crossed	1	MainSouthBridge	east
+Action	setflag	mainSouthCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossSouthWest
+Mode	once
+Cond	crossed	1	MainSouthBridge	west
+Action	setflag	mainSouthCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossNorthEast
+Mode	once
+Cond	crossed	1	MainNorthBridge	east
+Action	setflag	mainNorthCrossed	1
+[/Trigger]
+[Trigger]
+Name	crossNorthWest
+Mode	once
+Cond	crossed	1	MainNorthBridge	west
+Action	setflag	mainNorthCrossed	1
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	stormhaven-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainSpans
+Mode	repeat	0
+Cond	flag	mainSouthCrossed	1
+Cond	flag	mainNorthCrossed	1
+Cond	roomclaimed	1	30	70	34	71
+Cond	roomclaimed	1	30	33	34	34
+Action	objectivestate	1	stormhaven-main-spans	reached
+[/Trigger]
+[Trigger]
+Name	mainKeepers
+Mode	repeat	0
+Cond	roomtiles	2	DungeonTemple	<=	0
+Cond	roomtiles	3	DungeonTemple	<=	0
+Cond	roomtiles	4	DungeonTemple	<=	0
+Cond	roomtiles	5	DungeonTemple	<=	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	stormhaven-main-keepers	reached
+[/Trigger]
+[Trigger]
+Name	extraCave
+Mode	once
+Cond	region	1	GaleCave
+Action	objectivestate	1	stormhaven-extra-cave	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	stormhaven-main-heart	reached
+Cond	objective	1	stormhaven-main-spans	reached
+Cond	objective	1	stormhaven-main-keepers	reached
+Action	message	1	The last keeper is dead and the harbour lies calm. Stormhaven answers to you.
+Action	win	1
+[/Trigger]
 [/Triggers]

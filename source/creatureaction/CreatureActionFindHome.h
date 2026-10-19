@@ -36,6 +36,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Finds an available bed and reports a genuine failure to reach one.
     static bool handleFindHome(Creature& creature, bool forced);
 
 private:

@@ -250,8 +250,7 @@ public:
     uint32_t getAttackRecoveryTurns() const { return mAttackRecoveryTurns; }
     //! \brief Turns the recovery after the last attack lasts in total
     uint32_t getAttackRecoveryDuration() const { return mAttackRecoveryDuration; }
-    //! \brief Counter increased at every attack, so that a client can tell two attacks with the same
-    //! remaining turns apart
+    //! \brief Counter increased for each attack or job-pause restart, distinguishing equal remaining values
     uint32_t getAttackRecoverySerial() const { return mAttackRecoverySerial; }
     //! \brief Whether experience and attack recovery were received from the server. Only a client sets it,
     //! and only if the server sent them.
@@ -355,6 +354,7 @@ public:
 
     //! \brief Called when the creature dies or is KO to death. triggers death animation, stops
     //! the creature job and drops what it is carrying
+    //! Preserves the non-looping death state for players who discover the corpse later.
     void dropCarriedEquipment();
 
     /*! \brief The main AI routine which decides what the creature will do and carries out that action.
@@ -381,9 +381,12 @@ public:
      * walking toward the tile as a new action, and when it arrives at the tile it will
      * revert to the 'digTile' action.
      */
+    //! brief Updates creature actions and recovery display for AI and player possession, including actual death
+    //! observations when a lethal knockout expires.
     void doUpkeep() override;
 
     //! \brief Computes the visible tiles and tags them to know which are visible
+    //! Records direct owner sight separately so allied and scripted reveals cannot reset its age.
     void computeVisibleTiles();
 
     virtual bool isAttackable(Tile* tile, Seat* seat) const override;
@@ -504,6 +507,7 @@ public:
     //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
     //! part, gives up after a while.
     void resumeBrawl();
+    //! \brief Applies damage and records actual hostile creature hits for regional script observers.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -558,8 +562,10 @@ public:
 
     //! \brief In a sandbox level, the player can pick up and drop the heroes of the hero seat
     bool isSandboxHeroFor(const Seat* seat) const;
+    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
+    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -593,15 +599,20 @@ public:
         if(mWakefulness < 0.0)
             mWakefulness = 0.0;
     }
+    //! \brief Advances the real job pause and refreshes its displayed countdown.
     inline bool decreaseJobCooldown()
     {
         if(mJobCooldown <= 0)
             return true;
 
         --mJobCooldown;
+        mNeedFireRefresh = true;
         return false;
     }
+    //! \brief Sets the existing job pause and records its duration for the progress ring.
     void setJobCooldown(int val);
+    //! \brief Reports the existing one-turn interval between worker dig or claim steps without delaying work.
+    void recordWorkerStepRecovery();
     inline int getJobCooldown() const
     { return mJobCooldown; }
 
@@ -818,11 +829,17 @@ public:
 
     void fireCreatureRefreshIfNeeded();
 
+    //! \brief Reports a collected fee using the client profile name.
     void fireChatMsgTookFee(int goldTaken);
+    //! \brief Reports departure using the client profile name.
     void fireChatMsgLeftDungeon();
+    //! \brief Reports imminent departure using the client profile name.
     void fireChatMsgLeavingDungeon();
+    //! \brief Reports loss of control using the client profile name.
     void fireChatMsgBecameRogue();
+    //! \brief Reports unhappiness using the client profile name.
     void fireChatMsgUnhappy();
+    //! \brief Reports fury using the client profile name.
     void fireChatMsgFurious();
 
     //! \brief Load creature definition according to @mDefinitionString
@@ -919,6 +936,7 @@ public:
 
     bool isHungry() const;
 
+    //! \brief Clears knockout state and any pending lethal-shot credit after recovery.
     void resetKoTurns();
 
     //! \brief Knocks the creature out so that it can be carried away (used when
@@ -1070,6 +1088,7 @@ public:
     //! the ground plane). Same range, damage and cooldown as in a normal fight.
     void possessedAttack(const Ogre::Vector2& aim);
 
+    //! \brief Reports recovery for successful possessed self-casts as well as targeted attacks.
     //! Called on server side. Uses the creature skill (other than melee and ranged attack) of
     //! the given slot (0 is the first one the creature can use). Skills that need a target
     //! use the enemy in front of the creature.
@@ -1175,6 +1194,8 @@ private:
     //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep), not saved
     uint32_t        mChampionTurns;
     int             mJobCooldown;
+    //! Total duration of the current job pause, used only by the existing progress ring.
+    uint32_t mJobCooldownDuration = 0;
 
     //! \brief At pay day, mGoldFee will be set to the creature fee and decreased when the creature gets gold
     int32_t         mGoldFee;
@@ -1382,7 +1403,7 @@ private:
     uint32_t mAttackRecoveryTurns = 0;
     //! \brief Turns the recovery after the last attack lasts in total (longest of warmup and cooldown)
     uint32_t mAttackRecoveryDuration = 0;
-    //! \brief Number of attacks so far (wraps around), see getAttackRecoverySerial()
+    //! \brief Number of recovery-display restarts so far (wraps around), see getAttackRecoverySerial()
     uint32_t mAttackRecoverySerial = 0;
     //! \brief Experience progress received from the server. Only used on a client.
     double mExperienceProgress = 0.0;
@@ -1443,6 +1464,7 @@ private:
     //! \brief The activity is sent as unknown for creatures of non-allied seats.
     void exportActivityToPacket(ODPacket& os, const Seat* seat) const;
     void importActivityFromPacket(ODPacket& is);
+    //! \brief Sends experience and the currently active room-work or attack recovery through the existing payload.
     void exportProgressToPacket(ODPacket& os, const Seat* seat) const;
     void importProgressFromPacket(ODPacket& is);
 

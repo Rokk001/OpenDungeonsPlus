@@ -20,6 +20,7 @@
 
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/CreatureMoodValues.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -27,6 +28,7 @@
 #include "render/RenderManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/RunLevelTest.h"
 
 #include <OgreEntity.h>
 
@@ -71,11 +73,11 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->setAtlasFrame(experienceId, 0, 8);
 
     uint32_t recoveryId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
-        Ogre::ColourValue(1.0f, 0.91f, 0.66f, 1.0f), "CreatureRecovery", false);
+        Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f), "CreatureRecovery", false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)] = recoveryId;
     mMovableTextOverlay->forceTextArea(recoveryId, 64, 64);
     mMovableTextOverlay->centerCaption(recoveryId);
-    mMovableTextOverlay->setCaptionOutline(recoveryId, Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f));
+    mMovableTextOverlay->setCaptionOutline(recoveryId, Ogre::ColourValue(1.0f, 0.91f, 0.66f, 1.0f));
     mMovableTextOverlay->setAtlasFrame(recoveryId, 0, 8);
     mMovableTextOverlay->displayOverlay(recoveryId, -1);
 
@@ -160,6 +162,7 @@ void CreatureOverlayStatus::updateHealth()
 
 }
 
+//! \brief Updates the experience ring and the recovery clock, and reports the shown clock frame to the level test.
 void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
 {
     const uint32_t experienceId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::experience)];
@@ -185,6 +188,8 @@ void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
     const uint32_t frame = known && duration > 0 && remaining > 0 ?
         1 + static_cast<uint32_t>(62.0 * (duration - remaining + fraction) / duration) : 0;
     mMovableTextOverlay->setAtlasFrame(recoveryId, frame, 8);
+    if(RunLevelTest::isActive())
+        RunLevelTest::onRecoveryFrame(mCreature->getDefinition()->isWorker(), frame);
 }
 
 void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)

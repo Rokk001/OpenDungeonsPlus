@@ -34,9 +34,16 @@
 //!
 //!   [Triggers]
 //!   Flag    <name>  <value>                   # initial value of a flag (unset flags are 0)
-//!   ObjectiveState <seatId> <id> open|reached|failed   # saved presentation state for an identified objective
+//!   ObjectiveState <seatId> <id> open|reached|failed   # saved state for an identified objective
+//!   FatalShot <creature> <attackingSeat>   # saved lethal projectile awaiting actual death
+//!   CrossingProgress <seatId> <creature> <region> <direction> <afterTrigger|-> <lastX> <lastY>   # saved unfinished crossing
+//!   VictoryRequest <seatId>                    # saved original victory request waiting for main goals
 //!   SpawnObservation <trigger> <actionIndex> <creatureName> <killed 0|1> <deathTempleSeat>   # saved exact spawn/death observation; temple -1 means outside a temple
 //!   MinedGold <seatId> <x> <y> <creditedGold>    # sparse actual gold credited from a watched source tile
+//!   # Action stonedrop <owner> <identity> [<seat> <destinationX> <destinationY>] drops at actual death.
+//!   # Cond deliveredstone <identity> requires the physical item to have been delivered.
+//!   # Action stonecreate <x> <y> [<identity> <seat> <destinationX> <destinationY>] creates worker cargo.
+//!   Stone <creatureName> [<x> <y>]           # legacy carrier and optional last-known drop position
 //!   DeathTile <creatureName> <x> <y>           # actual death tile of a named creature watched by killedin
 //!   Timer   <name> <running 0|1> <turns>      # written by the game: a timer started by an action, in game turns
 //!   FreePossession                            # written by the game: possessions of this level cost no mana
@@ -73,10 +80,12 @@
 //!   Cond    furniture <seatId> <roomName> <op> <count>   # furniture objects (bookcases, beds, ...) in the rooms of that type of the seat
 //!   Cond    breached <seatId>                 # a creature of a seat that is not allied with the seat stands on tiles that the seat has claimed (inside the dungeon)
 //!   Cond    owns <seatId> <creatureName>      # the creature with that name is alive and belongs to the seat
+//!   Cond    held <seatId> <creatureName>      # alive and converted or held captive by this seat; another jailer takes precedence
 //!   Cond    portal <seatId> on | off          # the portals of the seat attract creatures (on) or are switched off (off) by an action portal
 //!   Cond    alive <creatureName> [1 | 0]      # the creature with that name is alive, whatever its seat (0: it is dead or not there)
 //!   Cond    reached <creatureName> region <regionName>   # the living creature with that name stands inside the region (also a creature that carries a portal stone)
 //!   Cond    reached <creatureName> heart <seatId>        # the living creature with that name stands on the dungeon heart room of the seat
+//!   Cond    carryingstone <creatureName>        # the named creature still carries an attached portal stone
 //!   Cond    stone <regionName> <op> <count>   # portal stones lying on the ground inside the region (see stonecreate, stoneattach)
 //!   Cond    health <creatureName> <op> <percent>   # health of that living creature in percent of its maximum
 //!   Cond    spell <seatId> <skillName>        # the seat has the spell (or any other skill) researched
@@ -97,7 +106,7 @@
 //!   Cond    slapped <seatId> >= | <= <count>    # times a creature of the seat was slapped
 //!   Cond    claimed <seatId> <regionName> <count> | all   # tiles of the region claimed by the seat
 //!   Cond    goal <seatId> <goalName>          # seat completed a goal with that name
-//!   Cond    goalmet <seatId> <goalName>       # a registered goal is met now, without waiting for the completed-goal cache
+//!   Cond    goalmet <seatId> <goalName> [arguments] # a registered goal is met now; optional exact arguments identify a chain stage
 //!   Cond    objective <seatId> <id> open|reached|failed   # exact state of an identified objective
 //!   Cond    trigger <name> [0|1]             # existing trigger has (1, default) or has not (0) fired
 //!   Cond    trapgone <name>                  # a trap originally declared by the level no longer exists
@@ -106,6 +115,11 @@
 //!   Cond    killedin <creatureName> <region>   # actual recorded death position is within that region
 //!   Cond    groundconnected <seatId> <x1> <y1> <x2> <y2>   # actual dry worker-walkable connection; never assumes digging
 //!   Cond    roomclaimed <seatId> <x1> <y1> <x2> <y2>   # every fixed footprint tile is open, fully claimed and in a room owned by the seat
+//!   Cond    shotkilled <attackingSeat> <creature>   # actual death from a creature projectile; lethal KO alone is not death
+//!   Cond    attackedregion <attackingSeat> <targetSeat> <region>   # positive hostile creature damage inside the region
+//!   Cond    crossed <seatId> <region> north|south|east|west [after <trigger>]   # one living creature walks from entry bank across the whole region to the opposite bank
+//!   Cond    groundclaimed <seatId> <x1> <y1> <x2> <y2>   # fixed floor footprint fully claimed; no room construction required
+//!           # Region/creatures class filters also accept @fighters to exclude workers.
 //!   Cond    creaturesatheart <seatId> <op> <count>   # own living creatures on tiles of the seat's dungeon temple
 //!   Cond    flag <name> <value>               # flag has exactly that value
 //!   Cond    flag <name> <op> <value>          # op is == != < <= > >=; value may be @<otherFlag>
@@ -117,11 +131,16 @@
 //!   Action  objective <seatId> <text>
 //!   Action  hint <seatId> <text>             # advice with no ID, state or completion tick
 //!   Action  objectiveid <seatId> <id> <text>   # tracked objective, initially open; legacy objective stays valid
-//!   Action  objectivestate <seatId> <id> reached|failed   # explicit presentation status, not a winning condition
+//!   Action  mainobjectiveid <seatId> <id> <text>   # required goal; every declared main goal gates victory
+//!           # Use repeat 0 completion observers: main states are reevaluated each turn before victory.
+//!   Action  optionalobjectiveid <seatId> <id> <text>   # optional goal; never blocks victory
+//!   Action  conditionalobjectiveid <seatId> <id> <text>   # required only after its declaration trigger fires
+//!   Action  objectivestate <seatId> <id> reached|failed   # individual state, shared by the list and victory gate
 //!   Action  spawn <seatId> <x> <y> <targetSeatId> [party=<tag>] <class:level>[@<name>] [...]   # the tag names the group for event conditions, a name is the creature name (if no creature has it)
 //!   Action  gold <seatId> <amount>
 //!   Action  setflag <name> <value>
 //!   Action  addflag <name> <delta>            # adds to the flag (a negative value subtracts)
+//!   Action  keydoor <doorName> <locked|open> # mission lock; open only after the matching delivery
 //!   Action  terrain <x1> <y1> <x2> <y2> <kind> [<seatId>]   # changes the tiles of the rectangle: rock, path, gold, gems, claimed, wall (claimed by the seat), water, lava, impenetrable, manawell (open ground that gives its claiming seat mana; with a seat it starts claimed, path removes it)
 //!   Action  portal <seatId> on | off          # the portals of the seat do (not) attract creatures
 //!   Action  available <seatId> <class> 1 | 0  # a creature class can (not) come to the dungeon of the seat
@@ -175,6 +194,11 @@ enum class LevelScriptCompare
 
 //! True if value op reference holds
 bool levelScriptCompare(int64_t value, LevelScriptCompare op, int64_t reference);
+
+//! \brief Tests living conversion or captivity, with the current jailer taking precedence over ownership.
+//! \param prisonSeat Current jailer, or -1 when not captive. Missing owners use -1.
+//! \return True only when alive and effectively held by the requested positive seat.
+bool levelScriptCreatureHeld(int32_t requestedSeat, int32_t creatureSeat, int32_t prisonSeat, bool alive);
 
 //! The text form of the operator (>=, <=, ==, !=, >, <)
 const char* levelScriptCompareToken(LevelScriptCompare op);
@@ -231,10 +255,26 @@ enum class LevelScriptConditionType
     minedInRegion,
     killedInRegion,
     groundConnected,
-    roomFootprintClaimed
+    roomFootprintClaimed,
+    groundFootprintClaimed,
+    carryingStone,
+    crossedRegion,
+    attackedRegion,
+    shotKilled,
+    heldCreature,
+    deliveredStone
 };
 
-//! \brief Explicit presentation state of one identified script objective.
+//! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.
+enum class LevelScriptObjectiveGroup
+{
+    legacy,
+    main,
+    optional,
+    conditionalMain
+};
+
+//! \brief Explicit state shared by goal presentation and required-goal victory checks.
 enum class LevelScriptObjectiveState
 {
     open,
@@ -276,9 +316,11 @@ enum class LevelScriptActionType
     golfBall,
     stoneCreate,
     stoneAttach,
+    stoneDrop,
     keepMinion,
     objectiveState,
-    hint
+    hint,
+    keyDoor
 };
 
 struct LevelScriptCondition
@@ -316,11 +358,14 @@ struct LevelScriptCondition
     //! The flag a flag condition compares with (empty when it compares with mNumber), or the creature class
     //! that a creatures or region condition counts (empty: every creature)
     std::string mName2;
+    //! A crossing is observed only after this trigger fired; empty means no ordering prerequisite.
+    std::string mAfterTrigger;
 };
 
 //! \brief One script action, with an optional stable ID for objective descriptions and state updates.
 struct LevelScriptAction
 {
+    //! \brief Creates a legacy-compatible action with no required-goal classification.
     LevelScriptAction() :
         mType(LevelScriptActionType::message),
         mSeatId(-1),
@@ -329,7 +374,8 @@ struct LevelScriptAction
         mX2(0),
         mY2(0),
         mTargetSeatId(-1),
-        mNumber(0)
+        mNumber(0),
+        mObjectiveGroup(LevelScriptObjectiveGroup::legacy)
     {}
 
     LevelScriptActionType mType;
@@ -347,6 +393,8 @@ struct LevelScriptAction
     //! \brief Message text (message, objective, hint), flag name (setflag), region name (reveal),
     //! level file (discoverLevel) or skill type name (make)
     std::string mText;
+    //! \brief Required, optional or legacy classification of an objective description.
+    LevelScriptObjectiveGroup mObjectiveGroup;
     //! \brief Stable objective ID; empty for legacy objective text without individual tracking.
     std::string mObjectiveId;
     //! \brief spawn: creature class name and level
@@ -449,11 +497,28 @@ struct LevelScriptSpawnObservation
     int32_t mDeathTempleSeat;
 };
 
+//! \brief One unfinished, same-creature crossing, saved so a load cannot replace it with another visitor.
+struct LevelScriptCrossingProgress
+{
+    //! \brief Creates an unassigned crossing candidate.
+    LevelScriptCrossingProgress() : mSeatId(-1), mX(0), mY(0) {}
+    int32_t mSeatId;
+    std::string mCreature;
+    std::string mRegion;
+    std::string mDirection;
+    std::string mAfterTrigger;
+    int32_t mX;
+    int32_t mY;
+};
+
 //! \brief Holds trigger definitions and saved runtime state, including identified objective states.
 class LevelScript
 {
 public:
+    //! \brief Creates an empty script with no movement observers or active runtime state.
     LevelScript() :
+        mHasCrossingObservers(false),
+        mHasShotObservers(false),
         mFreePossession(false),
         mWatchedValid(false),
         mTimeLimitSeconds(TIME_LIMIT_NOT_SET),
@@ -462,11 +527,11 @@ public:
         mSlapLimit(-1)
     {}
 
-    //! \brief Reads the lines after the [Triggers] tag, up to and including [/Triggers].
+    //! \brief Reads definitions and saved state, including optional stone positions, after [Triggers] through [/Triggers].
     //! Returns false on a malformed section. Existing content is replaced.
     bool importFromStream(std::istream& is);
 
-    //! \brief Writes the whole section, including the [Triggers] and [/Triggers] tags.
+    //! \brief Writes definitions and saved state, including known stone positions and both section tags.
     void exportToStream(std::ostream& os) const;
 
     //! \brief Removes all trigger definitions and their saved runtime state.
@@ -475,8 +540,55 @@ public:
     //! \brief Returns the explicitly recorded state; an untouched identified objective is open.
     LevelScriptObjectiveState getObjectiveState(int32_t seatId, const std::string& id) const;
 
+    //! \brief True when all declared required goals of this seat are reached; optional goals never block.
+    //! Conditional required goals apply only after their declaration trigger fires; legacy maps retain their rules.
+    bool areMainObjectivesReached(int32_t seatId) const;
+
+    //! \brief True if this seat uses the explicit main-goal model rather than legacy victory rules.
+    bool hasMainObjectives(int32_t seatId) const;
+
+    //! \brief Reopens nonfailed main goals before their per-turn observers reevaluate current requirements.
+    void refreshMainObjectives(int32_t seatId);
+
+    //! \brief Marks every required main goal of this seat as reached (same selection as areMainObjectivesReached).
+    //! Used by the level load test to satisfy the victory gate before it triggers the win.
+    void markMainObjectivesReached(int32_t seatId);
+
+    //! \brief Records a victory request until the seat's required goals allow it to be announced.
+    void requestVictory(int32_t seatId);
+
+    //! \brief True if an earlier script or generic victory is waiting for required goals.
+    bool hasVictoryRequest(int32_t seatId) const;
+
     //! \brief Records the explicit presentation state for one seat and objective ID.
     void setObjectiveState(int32_t seatId, const std::string& id, LevelScriptObjectiveState state);
+
+    //! \brief True when the loaded script contains a crossing condition; ordinary maps need no movement work.
+    bool hasCrossingObservers() const { return mHasCrossingObservers; }
+    //! \brief Observes one actual walked tile step; teleports and mere region presence are not input events.
+    void observeCrossingStep(const std::string& creature, int32_t seatId, int32_t fromX, int32_t fromY,
+        int32_t toX, int32_t toY);
+    //! \brief Tests a completed ordered crossing recorded by one creature of this seat.
+    bool wasRegionCrossed(int32_t seatId, const std::string& region, const std::string& direction,
+        const std::string& afterTrigger) const;
+    //! \brief Discards an unfinished candidate when a fresh creature gets the same internal name.
+    void clearCreatureCrossings(const std::string& creature);
+
+    //! \brief Records positive hostile creature damage at a target tile for matching region observers.
+    void observeRegionAttack(int32_t attackingSeat, int32_t targetSeat, int32_t x, int32_t y);
+    //! \brief True after this seat dealt actual creature damage to the target seat in the region.
+    bool wasRegionAttacked(int32_t attackingSeat, int32_t targetSeat, const std::string& region) const;
+
+    //! \brief True when the script requires attributed projectile deaths.
+    bool hasShotObservers() const { return mHasShotObservers; }
+    //! \brief Saves the lethal projectile source for a watched target; a different cause clears it.
+    void observeFatalShot(const std::string& creature, int32_t attackingSeat);
+    //! \brief Clears pending projectile credit after recovery or before a name is reused.
+    void clearFatalShot(const std::string& creature);
+    //! \brief Converts pending projectile credit into a recorded kill only at actual death.
+    void completeShotKill(const std::string& creature);
+    //! \brief True after an actual death attributed to a creature projectile of this seat.
+    bool wasShotKilled(int32_t attackingSeat, const std::string& creature) const;
 
     //! \brief Observes an actual spawn instance without changing its name, party or behaviour.
     void observeSpawn(const std::string& trigger, int64_t actionIndex, const std::string& creatureName);
@@ -490,14 +602,16 @@ public:
     void observeGoldMined(int32_t seatId, int32_t x, int32_t y, int64_t amount);
     //! \brief Returns credited gold mined by this seat from the named region's tiles.
     int64_t getGoldMinedInRegion(int32_t seatId, const std::string& regionName) const;
-    //! \brief Saves the actual death tile of a named creature watched by killedin conditions.
+    //! \brief Saves the actual death tile watched by regional conditions or mission-item drops.
     void observeCreatureDeath(const std::string& creatureName, int32_t x, int32_t y);
+    //! \brief Returns a watched creature's actual saved death tile, never its last living position.
+    bool getCreatureDeathTile(const std::string& creatureName, int32_t& x, int32_t& y) const;
     //! \brief True only when a recorded actual death lies inside the named region.
     bool wasCreatureKilledInRegion(const std::string& creatureName, const std::string& regionName) const;
 
     //! \brief True when neither script definitions nor persistent runtime state exist.
     inline bool isEmpty() const
-    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
+    { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mVictoryRequests.empty() && mCrossingProgress.empty() && mFatalShots.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
@@ -647,7 +761,13 @@ public:
     void rebaseTimeLimit(int64_t elapsedSeconds);
 
 private:
+    bool mHasCrossingObservers;
+    bool mHasShotObservers;
+    std::map<std::string, int32_t> mFatalShots;
+    std::vector<LevelScriptCrossingProgress> mCrossingProgress;
     std::map<std::pair<int32_t, std::string>, LevelScriptObjectiveState> mObjectiveStates;
+    //! Seats with an original victory request deferred until all required goals are reached.
+    std::set<int32_t> mVictoryRequests;
     std::vector<LevelScriptSpawnObservation> mSpawnObservations;
     std::map<int32_t, std::map<std::pair<int32_t, int32_t>, int64_t> > mMinedGold;
     std::map<std::string, std::pair<int32_t, int32_t> > mCreatureDeathTiles;

@@ -984,8 +984,276 @@ Name	galleryClear
 Mode	once
 Cond	flag	flock3	1
 Cond	creatures	2	<=	0
+Cond	goalmet	1	ProtectDungeonTemple
+Cond	event	Seat1	possessedshot
+Cond	shotkilled	1	Crow1
+Cond	shotkilled	1	Crow2
+Cond	shotkilled	1	Crow3
+Cond	shotkilled	1	Crow4
+Cond	shotkilled	1	Raven1
+Cond	shotkilled	1	Raven2
+Cond	shotkilled	1	Raven3
+Cond	shotkilled	1	Raven4
+Cond	shotkilled	1	Raven5
+Cond	shotkilled	1	Raven6
+Cond	shotkilled	1	Rook1
+Cond	shotkilled	1	Rook2
+Cond	shotkilled	1	Rook3
+Cond	shotkilled	1	Rook4
+Cond	shotkilled	1	Rook5
+Cond	shotkilled	1	Rook6
+Cond	shotkilled	1	Rook7
+Cond	shotkilled	1	Rook8
+Cond	spawncleared	secondFlock	1
+Cond	spawncleared	secondFlock	2
+Cond	spawncleared	secondFlock	3
+Cond	spawncleared	secondFlock	4
+Cond	spawncleared	secondFlock	5
+Cond	spawncleared	secondFlock	6
+Cond	spawncleared	thirdFlock	1
+Cond	spawncleared	thirdFlock	2
+Cond	spawncleared	thirdFlock	3
+Cond	spawncleared	thirdFlock	4
+Cond	spawncleared	thirdFlock	5
+Cond	spawncleared	thirdFlock	6
+Cond	spawncleared	thirdFlock	7
+Cond	spawncleared	thirdFlock	8
 Action	message	1	Not a wing is left over the lava. The gallery is yours and the heart has given you a shard.
 Action	objectivestate	1	crowshotgallery-o01	reached
 Action	win	1
+[/Trigger]
+
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	crowshotgallery-main-heart	Protect your heart.
+Action	mainobjectiveid	1	crowshotgallery-main-trial	Possess a shooter; shoot down all 3 flocks.
+Action	optionalobjectiveid	1	crowshotgallery-extra-survivors	Keep all 5 starting fighters alive.
+[/Trigger]
+[Trigger]
+Name	mainHeart
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	crowshotgallery-main-heart	reached
+[/Trigger]
+[Trigger]
+Name	mainTrial
+Mode	repeat	0
+Cond	trigger	galleryClear
+Action	objectivestate	1	crowshotgallery-main-trial	reached
+[/Trigger]
+[Trigger]
+Name	extraSurvivors
+Mode	once
+Cond	objective	1	crowshotgallery-main-trial	reached
+Cond	alive	Shooter1
+Cond	event	Shooter1	killed	==	0
+Cond	alive	Shooter2
+Cond	event	Shooter2	killed	==	0
+Cond	alive	Shooter3
+Cond	event	Shooter3	killed	==	0
+Cond	alive	Shooter4
+Cond	event	Shooter4	killed	==	0
+Cond	alive	Shooter5
+Cond	event	Shooter5	killed	==	0
+Action	objectivestate	1	crowshotgallery-extra-survivors	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	crowshotgallery-main-heart	failed
+[/Trigger]
+[Trigger]
+Name	mainTrialFailed
+Mode	once
+Cond	defeated	1
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+Action	objectivestate	1	crowshotgallery-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathCrow1
+Mode	once
+Cond	event	Crow1	killed
+Cond	event	Crow1	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathCrow2
+Mode	once
+Cond	event	Crow2	killed
+Cond	event	Crow2	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathCrow3
+Mode	once
+Cond	event	Crow3	killed
+Cond	event	Crow3	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathCrow4
+Mode	once
+Cond	event	Crow4	killed
+Cond	event	Crow4	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRaven1
+Mode	once
+Cond	event	Raven1	killed
+Cond	event	Raven1	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRaven2
+Mode	once
+Cond	event	Raven2	killed
+Cond	event	Raven2	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRaven3
+Mode	once
+Cond	event	Raven3	killed
+Cond	event	Raven3	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRaven4
+Mode	once
+Cond	event	Raven4	killed
+Cond	event	Raven4	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRaven5
+Mode	once
+Cond	event	Raven5	killed
+Cond	event	Raven5	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRaven6
+Mode	once
+Cond	event	Raven6	killed
+Cond	event	Raven6	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook1
+Mode	once
+Cond	event	Rook1	killed
+Cond	event	Rook1	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook2
+Mode	once
+Cond	event	Rook2	killed
+Cond	event	Rook2	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook3
+Mode	once
+Cond	event	Rook3	killed
+Cond	event	Rook3	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook4
+Mode	once
+Cond	event	Rook4	killed
+Cond	event	Rook4	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook5
+Mode	once
+Cond	event	Rook5	killed
+Cond	event	Rook5	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook6
+Mode	once
+Cond	event	Rook6	killed
+Cond	event	Rook6	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook7
+Mode	once
+Cond	event	Rook7	killed
+Cond	event	Rook7	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	wrongDeathRook8
+Mode	once
+Cond	event	Rook8	killed
+Cond	event	Rook8	shotkilled:1	==	0
+Action	objectivestate	1	crowshotgallery-main-trial	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost1
+Mode	once
+Cond	event	Shooter1	killed
+Action	objectivestate	1	crowshotgallery-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost2
+Mode	once
+Cond	event	Shooter2	killed
+Action	objectivestate	1	crowshotgallery-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost3
+Mode	once
+Cond	event	Shooter3	killed
+Action	objectivestate	1	crowshotgallery-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost4
+Mode	once
+Cond	event	Shooter4	killed
+Action	objectivestate	1	crowshotgallery-extra-survivors	failed
+[/Trigger]
+[Trigger]
+Name	extraSurvivorLost5
+Mode	once
+Cond	event	Shooter5	killed
+Action	objectivestate	1	crowshotgallery-extra-survivors	failed
+[/Trigger]
+
+
+[Trigger]
+Name	missedPossession
+Mode	once
+Cond	flag	flock3	1
+Cond	creatures	2	<=	0
+Cond	event	Seat1	possessedshot	==	0
+Cond	shotkilled	1	Crow1
+Cond	shotkilled	1	Crow2
+Cond	shotkilled	1	Crow3
+Cond	shotkilled	1	Crow4
+Cond	shotkilled	1	Raven1
+Cond	shotkilled	1	Raven2
+Cond	shotkilled	1	Raven3
+Cond	shotkilled	1	Raven4
+Cond	shotkilled	1	Raven5
+Cond	shotkilled	1	Raven6
+Cond	shotkilled	1	Rook1
+Cond	shotkilled	1	Rook2
+Cond	shotkilled	1	Rook3
+Cond	shotkilled	1	Rook4
+Cond	shotkilled	1	Rook5
+Cond	shotkilled	1	Rook6
+Cond	shotkilled	1	Rook7
+Cond	shotkilled	1	Rook8
+Action	objectivestate	1	crowshotgallery-main-trial	failed
 [/Trigger]
 [/Triggers]

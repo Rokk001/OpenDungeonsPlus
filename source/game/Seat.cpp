@@ -16,6 +16,7 @@
  */
 
 #include "game/Seat.h"
+#include "ODApplication.h"
 
 #include "ai/KeeperAIType.h"
 #include "entities/Building.h"
@@ -50,6 +51,8 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <limits>
+#include <cmath>
 #include <istream>
 #include <ostream>
 
@@ -69,6 +72,8 @@ TileStateNotified::TileStateNotified():
     mMarkedForDigging(false),
     mVisionTurnLast(false),
     mVisionTurnCurrent(false),
+    mOwnCreatureSightAgeTurns(-1),
+    mEnemyFogNotified(false),
     mBuilding(nullptr)
 {
 }
@@ -274,6 +279,9 @@ void Seat::clearTilesWithVision()
 
         p.second.mVisionTurnLast = p.second.mVisionTurnCurrent;
         p.second.mVisionTurnCurrent = false;
+        if(p.second.mOwnCreatureSightAgeTurns >= 0 &&
+           p.second.mOwnCreatureSightAgeTurns < std::numeric_limits<int64_t>::max())
+            ++p.second.mOwnCreatureSightAgeTurns;
 
     }
     for(std::pair<Tile* const ,TileStateNotified>& p: mDraggableTilesStates)
@@ -314,6 +322,14 @@ bool Seat::hasSeenTile(Tile* tile)
     return getTileStateNotified(tile) != nullptr;
 }
 
+//! \brief Resets the own-creature sight age, excluding map reveals and allied sight.
+void Seat::notifyOwnCreatureVision(Tile* tile)
+{
+    if(tile == nullptr || mPlayer == nullptr || !mPlayer->getIsHuman())
+        return;
+    mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
+}
+
 void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 {
     if(mPlayer == nullptr)
@@ -327,6 +343,9 @@ void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 
     if( nt == NodeType::MTILES_NODE)
     {
+        // Every first discovery starts a grace period; only own-creature sight resets it later.
+        if(mTilesStates[tile].mOwnCreatureSightAgeTurns < 0)
+            mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
         mTilesStates[tile].mVisionTurnCurrent =  true;
         mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId] = true;
     }
@@ -550,6 +569,14 @@ void Seat::initSeat()
                 continue;
             }
 
+            // Legacy saves have no sight ages: give only previously discovered tiles one initial grace period.
+            if(!mHasSavedOwnCreatureSightAges &&
+               mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId])
+                p.second.mOwnCreatureSightAgeTurns = 0;
+
+            mTilesStates[tile].mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns;
+            mTilesStates[tile].mSeatIdOwner = p.second.mSeatIdOwner;
+
             // We check if the tile is marked
             if(p.second.mMarkedForDigging)
                 tilesMark.push_back(tile);
@@ -591,6 +618,7 @@ void Seat::initSeat()
 
         getPlayer()->markTilesForDigging(true, tilesMark, false);
     }
+    mHasSavedOwnCreatureSightAges = true;
 }
 
 void Seat::setMapSize(GameMap* gameMapPointer,int x, int y)
@@ -909,10 +937,21 @@ void Seat::sendVisibleTiles()
         ServerNotificationType::refreshVisibleTiles, getPlayer());
     std::vector<Tile*> tilesVisionGained;
     std::vector<Tile*> tilesVisionLost;
+    std::vector<std::pair<Tile*, bool>> fogChanges;
     
     serverNotification->mPacket << NodeType::MTILES_NODE;
         for(std::pair<Tile* const, TileStateNotified> &p : mTilesStates)
         {
+            Seat* knownOwner = mGameMap->getSeatById(p.second.mSeatIdOwner);
+            const bool enemyFog = knownOwner != nullptr && !knownOwner->isRogueSeat() &&
+                knownOwner != this && !isAlliedSeat(knownOwner) &&
+                p.second.mOwnCreatureSightAgeTurns >= static_cast<int64_t>(std::ceil(30.0 * ODApplication::turnsPerSecond));
+            if(enemyFog != p.second.mEnemyFogNotified)
+            {
+                p.second.mEnemyFogNotified = enemyFog;
+                fogChanges.push_back(std::make_pair(p.first, enemyFog));
+            }
+
             if(p.second.mVisionTurnCurrent == p.second.mVisionTurnLast)
                 continue;
 
@@ -943,6 +982,18 @@ void Seat::sendVisibleTiles()
     for(Tile* tile : tilesVisionLost)
     {
         mGameMap->tileToPacket(serverNotification->mPacket, tile);
+    }
+
+    // Delayed enemy fog changes ride as an optional tail of the same vision update, so no new
+    // notification type shifts the existing ones: count, then tile coordinates and bool fogged per tile.
+    if(!fogChanges.empty())
+    {
+        serverNotification->mPacket << static_cast<uint32_t>(fogChanges.size());
+        for(const std::pair<Tile*, bool>& change : fogChanges)
+        {
+            mGameMap->tileToPacket(serverNotification->mPacket, change.first);
+            serverNotification->mPacket << change.second;
+        }
     }
     ODServer::getSingleton().queueServerNotification(serverNotification);
 
@@ -1056,6 +1107,7 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
+//! \brief Loads seat state, including optional first-arrival history.
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1236,6 +1288,23 @@ bool Seat::importSeatFromStream(std::istream& is)
         if(!(is >> str) || str != "[/StoredSpecials]" || !(is >> str))
             return false;
     }
+    // Optional arrival history; older maps and saves omit this section.
+    if(str == "[AnnouncedCreatureClasses]")
+    {
+        while(true)
+        {
+            if(!(is >> str))
+                return false;
+            if(str == "[/AnnouncedCreatureClasses]")
+                break;
+            const std::string className = NameAliases::resolve(str);
+            if(std::find(mAnnouncedCreatureClasses.begin(), mAnnouncedCreatureClasses.end(), className) ==
+               mAnnouncedCreatureClasses.end())
+                mAnnouncedCreatureClasses.push_back(className);
+        }
+        if(!(is >> str))
+            return false;
+    }
     if(str != "[SkillNotAllowed]")
     {
         OD_LOG_INF("WARNING: expected [SkillNotAllowed] and read " + str);
@@ -1378,6 +1447,28 @@ bool Seat::importSeatFromStream(std::istream& is)
     }
 
     
+    if(str == "[OwnCreatureSightAges]")
+    {
+        mHasSavedOwnCreatureSightAges = true;
+        while(true)
+        {
+            OD_ASSERT_TRUE(is >> str);
+            if(str == "[/OwnCreatureSightAges]")
+                break;
+            const int x = Helper::toInt(str);
+            int y;
+            int64_t age;
+            OD_ASSERT_TRUE(is >> y >> age);
+            if(x < 0 || y < 0 || age < 0)
+                return false;
+            TileStateNotified& state = mTilesStateLoaded[std::make_pair(x, y)];
+            if(state.mOwnCreatureSightAgeTurns >= 0)
+                return false;
+            state.mOwnCreatureSightAgeTurns = age;
+        }
+        OD_ASSERT_TRUE(is >> str);
+    }
+
     if(str != "[/Seat]")
     {
         OD_LOG_INF("WARNING: expected [/Seat] and read " + str);
@@ -1388,6 +1479,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
+//! \brief Saves seat state and the classes whose first arrival was announced.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1484,6 +1576,14 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         os << "[/StoredSpecials]\n";
     }
 
+    if(!mAnnouncedCreatureClasses.empty())
+    {
+        os << "[AnnouncedCreatureClasses]\n";
+        for(const std::string& className : mAnnouncedCreatureClasses)
+            os << className << "\n";
+        os << "[/AnnouncedCreatureClasses]\n";
+    }
+
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)
     {
@@ -1556,6 +1656,15 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         }
     }
     os << "[/EverVisitedTiles]" << std::endl;
+
+    os << "[OwnCreatureSightAges]\n";
+    for(const std::pair<Tile* const, TileStateNotified>& entry : mTilesStates)
+    {
+        if(entry.second.mOwnCreatureSightAgeTurns >= 0)
+            os << entry.first->getX() << "\t" << entry.first->getY() << "\t"
+               << entry.second.mOwnCreatureSightAgeTurns << "\n";
+    }
+    os << "[/OwnCreatureSightAges]\n";
 
     
     return true;
@@ -2262,6 +2371,23 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
     return false;
 }
 
+//! \brief Announces a class only after its first successful arrival; the history survives saves.
+void Seat::notifyCreatureArrival(const std::string& creatureClassName)
+{
+    if((getPlayer() == nullptr) || !getPlayer()->getIsHuman() || getPlayer()->getHasLost())
+        return;
+    if(std::find(mAnnouncedCreatureClasses.begin(), mAnnouncedCreatureClasses.end(), creatureClassName) !=
+       mAnnouncedCreatureClasses.end())
+        return;
+
+    mAnnouncedCreatureClasses.push_back(creatureClassName);
+    getPlayer()->notifyNewCreatureType(creatureClassName);
+    std::vector<Seat*> seats;
+    seats.push_back(this);
+    mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNew);
+}
+
+//! \brief Selects an eligible fighter class without announcing an arrival before it exists.
 const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager)
 {
     std::vector<std::pair<const CreatureDefinition*, int32_t> > defSpawnable;
@@ -2313,24 +2439,6 @@ const CreatureDefinition* Seat::getNextFighterClassToSpawn(const GameMap& gameMa
         {
             def.second = true;
 
-            // The voice line has a text so it can be read as well
-            if((getPlayer() != nullptr) &&
-               getPlayer()->getIsHuman() &&
-               !getPlayer()->getHasLost())
-            {
-                ServerNotification *serverNotification = new ServerNotification(
-                    ServerNotificationType::chatServer, getPlayer());
-
-                serverNotification->mPacket << "A new creature is drawn to your dungeon: " + def.first->getClassName()
-                    << EventShortNoticeType::genericGameInfo;
-                ODServer::getSingleton().queueServerNotification(serverNotification);
-            }
-
-            std::vector<Seat*> seats;
-            seats.push_back(this);
-            mGameMap->fireRelativeSound(seats, SoundRelativeKeeperStatements::CreatureNew);
-            if(getPlayer() != nullptr)
-                getPlayer()->notifyNewCreatureType(def.first->getClassName());
             return def.first;
         }
         nbPointsConditions += configManager.getBaseSpawnPoint();

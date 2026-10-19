@@ -33,9 +33,16 @@ fogged = select.index("!tile->getEverVisible()")
 check(fogged < select.index("is already dug out") and fogged < select.index("enemy's claimed wall"),
       "selection error texts describe a fogged tile")
 
-# Unexplored tiles get the fog mesh and the cloud instead of the real tile mesh
+# Unexplored tiles retain their neutral earth surface without a fog cloud or the real tile mesh
 check("!tile.getEverVisible() && !tile.getHasFogOfWar()" in render and "createInstancedEntity(\"DirtInstanced\")" in render,
       "unexplored tiles are not replaced by the fog mesh")
+
+unknown = render[render.index("else if ( !tile.getEverVisible() && !tile.getHasFogOfWar())"):]
+unknown = unknown[:unknown.index("else if( tile.getEverVisible() && tile.getHasFogOfWar())")]
+check('createInstancedEntity("Fog")' not in unknown and "setFogOfWarCloud" not in unknown,
+      "never-seen earth surface still creates a fog cloud")
+check("if(tile.getFogOfWarCloud() != nullptr)" in render,
+      "revealing cloud-free unknown ground must safely handle its absent cloud")
 
 # The fog shader is unlit: no normal map, no lighting
 for forbidden in ["getLocalLighting", "normalmap", "enhanceDungeonColour", "TBN *"]:

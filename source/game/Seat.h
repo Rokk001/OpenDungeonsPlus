@@ -57,6 +57,7 @@ enum class TrapType;
 class TileStateNotified
 {
 public:
+    //! \brief Initializes unknown tile knowledge and an absent own-creature sight history.
     TileStateNotified();
 
     TileVisual mTileVisual;
@@ -64,6 +65,10 @@ public:
     bool mMarkedForDigging;
     bool mVisionTurnLast;
     bool mVisionTurnCurrent;
+    //! Simulation turns since this seat's own active creature last saw the tile; -1 means never.
+    int64_t mOwnCreatureSightAgeTurns;
+    //! Last fog state sent to this seat, used to send only changes.
+    bool mEnemyFogNotified;
     bool mEverVisited;
     Building* mBuilding;
     
@@ -209,6 +214,7 @@ public:
 
     void addAlliedSeat(Seat* seat);
 
+    //! \brief Restores tile knowledge and sight ages, granting discovered legacy tiles one initial fog grace period.
     void initSeat();
 
     void setMapSize(GameMap* gameMapPointer,int x, int y);
@@ -217,6 +223,9 @@ public:
     
     //! \brief Returns the next fighter creature class to spawn.
     const CreatureDefinition* getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager );
+
+    //! \brief Announces the first actual arrival of each class, once per seat.
+    void notifyCreatureArrival(const std::string& creatureClassName);
 
     //! \brief Returns the first (default) worker class definition.
     inline const CreatureDefinition* getWorkerClassToSpawn()
@@ -259,12 +268,17 @@ public:
     //! Returns false if the seat has none of that type.
     bool useStoredSpecial(GiftBoxType type);
 
+    //! \brief Begins one simulation visibility pass and advances recorded own-creature sight ages.
     void clearTilesWithVision();
     //! \brief Gives this seat vision on the given tiles for the given number of turns (server side).
     void revealTiles(const std::vector<Tile*>& tiles, uint32_t turns);
     //! \brief Applies the vision granted by revealTiles. Must be called after the vision is cleared
     //! and before the visible tiles are sent.
     void applyRevealedTiles();
+    //! \brief Records direct sight from an active creature owned by this seat, independently of shared or scripted vision.
+    void notifyOwnCreatureVision(Tile* tile);
+
+    //! \brief Records visibility and starts the fog deadline once on first discovery from any source.
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);
@@ -284,6 +298,7 @@ public:
     void refreshSeatVisualDebug();
 
     //! Sends a message to the player on this seat to refresh the list of tiles he has vision on
+    //! \brief Sends current visibility and changes to the delayed enemy-territory fog state.
     void sendVisibleTiles();
 
     //! \brief Client side to display the tile this seat has vision on
@@ -384,7 +399,9 @@ public:
 
     static Seat* createRogueSeat(GameMap* gameMap);
 
+    //! brief Loads seat data, optional first-arrival history and optional saved own-creature sight ages.
     bool importSeatFromStream(std::istream& is);
+    //! brief Saves seat data, first-arrival history and own-creature sight ages.
     bool exportSeatToStream(std::ostream& os) const;
     static void loadFromLine(const std::string& line, Seat *s);
 
@@ -466,6 +483,9 @@ private:
     //! if the spawning conditions are not empty and are met, we will set it to true and force spawning of the related creature
     std::vector<std::pair<const CreatureDefinition*, bool> > mSpawnPool;
 
+    //! Creature classes whose first arrival has already been announced.
+    std::vector<std::string> mAnnouncedCreatureClasses;
+
     //! \brief The default workers spawned in temples.
     const CreatureDefinition* mDefaultWorkerClass;
 
@@ -485,6 +505,8 @@ private:
     TileStateNotified* getTileStateNotified(Tile* tile);
 
     std::map<std::pair<int, int>, TileStateNotified> mTilesStateLoaded;
+    //! Whether a saved sight-age section exists; legacy discovered tiles receive one initial grace period.
+    bool mHasSavedOwnCreatureSightAges = false;
 
     std::vector<Tile*> mVisualDebugEntityTiles;
 

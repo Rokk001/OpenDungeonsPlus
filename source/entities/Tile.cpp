@@ -62,6 +62,8 @@ const uint32_t Tile::NO_FLOODFILL = 0;
 const std::string Tile::TILE_PREFIX = "Tile_";
 const std::string Tile::TILE_SCANF = TILE_PREFIX + "%i_%i";
 
+//! \brief Creates the tile at map coordinates x/y and places it there in the world, so maps built without a level
+//! file (the client map, a new editor map) report the same tile positions as a loaded level
 Tile::Tile(GameMap* gameMap, int x, int y, TileType type, double fullness) :
     GameEntity(gameMap, "", "", nullptr),
     mX                  (x),
@@ -83,12 +85,14 @@ Tile::Tile(GameMap* gameMap, int x, int y, TileType type, double fullness) :
     mFogPresent          (false),
     mEverVisible         (false),
     mLocalPlayerHasVision   (false),
+    mEnemyTerritoryFog(false),
     mTileCulling        (CullingType::HIDE),
     mNbWorkersClaiming(0),
     mStatsWindow             (nullptr),
     mFogOfWarDirtMesh   (nullptr),
-    mFogOfWarCloud1Mesh (nullptr)   
+    mFogOfWarCloud1Mesh (nullptr)
 {
+    mPosition = Ogre::Vector3(static_cast<Ogre::Real>(mX), static_cast<Ogre::Real>(mY), 0.0f);
     computeTileVisual();
 }
 
@@ -116,7 +120,8 @@ void Tile::transfer(Tile* tt)
     mDisplayTileMesh = tt->mDisplayTileMesh;    
     mColorCustomMesh = tt->mColorCustomMesh;  
     mHasBridge = tt->mHasBridge;         
-    mLocalPlayerHasVision = tt->mLocalPlayerHasVision; 
+    mLocalPlayerHasVision = tt->mLocalPlayerHasVision;
+    mEnemyTerritoryFog = tt->mEnemyTerritoryFog;
     mTileCulling = tt->mTileCulling;       
     
 }

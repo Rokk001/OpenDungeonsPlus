@@ -31,6 +31,7 @@ class SpellDefector : public Spell
 {
 public:
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    //! \brief Converts an eligible creature temporarily and announces its class only on first arrival.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);

@@ -4102,11 +4102,11 @@ ProtectDungeonTemple	NULL
 92	18	1	0
 92	19	1	0
 92	20	1	0
-92	21	1	0
-92	22	1	0
-92	23	1	0
-92	24	1	0
-92	25	1	0
+92	21	3	100
+92	22	3	100
+92	23	3	100
+92	24	3	100
+92	25	3	100
 92	26	1	0
 92	27	1	0
 92	30	3	100
@@ -4152,11 +4152,11 @@ ProtectDungeonTemple	NULL
 93	18	1	0
 93	19	1	0
 93	20	1	0
-93	21	1	0
+93	21	3	100
 93	22	1	0
 93	23	1	0
 93	24	1	0
-93	25	1	0
+93	25	3	100
 93	26	1	0
 93	27	1	0
 93	30	3	100
@@ -4207,11 +4207,11 @@ ProtectDungeonTemple	NULL
 94	18	1	0
 94	19	1	0
 94	20	1	0
-94	21	1	0
+94	21	3	100
 94	22	1	0
 94	23	1	0
 94	24	1	0
-94	25	1	0
+94	25	3	100
 94	26	1	0
 94	27	1	0
 94	30	3	100
@@ -4264,11 +4264,11 @@ ProtectDungeonTemple	NULL
 95	18	1	0
 95	19	1	0
 95	20	1	0
-95	21	1	0
+95	21	3	100
 95	22	1	0
 95	23	1	0
 95	24	1	0
-95	25	1	0
+95	25	3	100
 95	26	1	0
 95	27	1	0
 95	28	1	0
@@ -4344,7 +4344,7 @@ ProtectDungeonTemple	NULL
 96	22	1	0
 96	23	1	0
 96	24	1	0
-96	25	1	0
+96	25	3	100
 96	26	1	0
 96	27	1	0
 96	28	1	0
@@ -4413,11 +4413,11 @@ ProtectDungeonTemple	NULL
 97	18	1	0
 97	19	1	0
 97	20	1	0
-97	21	1	0
+97	21	3	100
 97	22	1	0
 97	23	1	0
 97	24	1	0
-97	25	1	0
+97	25	3	100
 97	26	1	0
 97	27	1	0
 97	28	1	0
@@ -4487,11 +4487,11 @@ ProtectDungeonTemple	NULL
 98	18	1	0
 98	19	1	0
 98	20	1	0
-98	21	1	0
+98	21	3	100
 98	22	1	0
 98	23	1	0
 98	24	1	0
-98	25	1	0
+98	25	3	100
 98	26	1	0
 98	27	1	0
 98	30	3	100
@@ -4544,11 +4544,11 @@ ProtectDungeonTemple	NULL
 99	18	1	0
 99	19	1	0
 99	20	1	0
-99	21	1	0
-99	22	1	0
-99	23	1	0
-99	24	1	0
-99	25	1	0
+99	21	3	100
+99	22	3	100
+99	23	3	100
+99	24	3	100
+99	25	3	100
 99	26	1	0
 99	30	3	100
 99	36	1	0
@@ -5623,6 +5623,11 @@ ProtectDungeonTemple	NULL
 1	Cannon4	2	1
 96	26	1
 [/Trap]
+[Trap]
+4	FenwickWatchroomDoor	2	1
+96	21	1
+1 KeyLock 1
+[/Trap]
 [/Traps]
 
 [Lights]
@@ -5711,6 +5716,7 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [Triggers]
+Region	FenwickWatchroomDoorFront	96	20	96	20
 Block	1	CaveHornet
 Block	1	Rat
 Block	1	Roach
@@ -5916,7 +5922,6 @@ Name	watcherSlain
 Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
-Action	message	1	Mora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours.
 Action	objectivestate	1	mirewatch-o01	reached
 Action	objectivestate	1	mirewatch-o05	reached
 Action	win	1
@@ -5935,8 +5940,8 @@ Action	terrain	80	8	80	8	path
 [Trigger]
 Name	watchKey
 Mode	once
-Cond	time	4
-Action	stoneattach	MoraFenwick
+Cond	event	MoraFenwick	killed
+Action	stonedrop	MoraFenwick	watch-key	1	96	20
 [/Trigger]
 [Trigger]
 Name	keyDropped
@@ -5962,5 +5967,83 @@ Action	message	1	Your scout looks down from the north-west tower. The road beyon
 Action	reveal	1	TowerE
 Action	gold	1	400
 Action	objectivestate	1	mirewatch-o04	reached
+[/Trigger]
+
+[Trigger]
+Name	watchroomOpened
+Mode	once
+Cond	deliveredstone	watch-key
+Action	keydoor	FenwickWatchroomDoor	open
+[/Trigger]
+[Trigger]
+Name	mainGoalList
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	mirewatch-main-home	Build 2 beds and a coop; protect your heart.
+Action	mainobjectiveid	1	mirewatch-main-towers	Unlock the watchroom. Claim every room in all eight towers.
+Action	mainobjectiveid	1	mirewatch-main-approaches	Secure both approaches; scout the northwest tower possessed.
+Action	mainobjectiveid	1	mirewatch-main-warden	Defeat Mora in her tower and all enemy forces.
+Action	optionalobjectiveid	1	mirewatch-extra-gold	Mine 2000 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeartLost
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	mirewatch-main-home	failed
+[/Trigger]
+[Trigger]
+Name	mainHome
+Mode	repeat	0
+Cond	furniture	1	Dormitory	>=	2
+Cond	furniture	1	Hatchery	>=	1
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	mirewatch-main-home	reached
+[/Trigger]
+[Trigger]
+Name	mainTowers
+Mode	repeat	0
+Cond	trigger	watchroomOpened
+Cond	roomclaimed	1	44	106	47	107
+Cond	roomclaimed	1	86	110	88	111
+Cond	roomclaimed	1	24	78	26	79
+Cond	roomclaimed	1	74	82	78	84
+Cond	roomclaimed	1	20	44	22	45
+Cond	roomclaimed	1	68	50	69	52
+Cond	roomclaimed	1	44	24	47	25
+Cond	roomclaimed	1	94	22	97	23
+Cond	roomclaimed	1	99	18	101	19
+Action	objectivestate	1	mirewatch-main-towers	reached
+[/Trigger]
+[Trigger]
+Name	mainApproaches
+Mode	repeat	0
+Cond	roomclaimed	1	68	50	69	52
+Cond	roomclaimed	1	44	24	47	25
+Cond	trigger	sealsOpen
+Cond	trigger	scoutTowerC
+Action	objectivestate	1	mirewatch-main-approaches	reached
+[/Trigger]
+[Trigger]
+Name	mainWarden
+Mode	repeat	0
+Cond	killedin	MoraFenwick	TowerH
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	mirewatch-main-warden	reached
+[/Trigger]
+[Trigger]
+Name	extraGold
+Mode	once
+Cond	mined	1	>=	2000
+Action	objectivestate	1	mirewatch-extra-gold	reached
+[/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	mirewatch-main-home	reached
+Cond	objective	1	mirewatch-main-towers	reached
+Cond	objective	1	mirewatch-main-approaches	reached
+Cond	objective	1	mirewatch-main-warden	reached
+Action	message	1	Mora Fenwick is dead and the beacon fires have gone out. Mirewatch is yours.
+Action	win	1
 [/Trigger]
 [/Triggers]

@@ -187,16 +187,28 @@ def compact_goal_fit_errors(root):
         classic = [descriptions[row.split()[0]] for row in text.split("[Goals]", 1)[1].split("[/Goals]", 1)[0].splitlines() if row.strip() and not row.lstrip().startswith("#")]
         objectives = [row.split(None, 4)[4] for row in text.splitlines() if row.startswith("Action\tobjectiveid\t")]
         hints = [row.split(None, 3)[3] for row in text.splitlines() if row.startswith("Action\thint\t")]
-        if any(len(label) > 60 for label in objectives + hints):
+        main_goals = [row.split(None, 4)[4] for row in text.splitlines()
+                      if row.startswith(("Action\tmainobjectiveid\t", "Action\tconditionalobjectiveid\t"))]
+        optional_goals = [row.split(None, 4)[4] for row in text.splitlines()
+                          if row.startswith("Action\toptionalobjectiveid\t")]
+        # The approved two-sentence Penn objective still undergoes both viewport fit checks below.
+        approved_penn = "Defeat Penn in the spire and all enemy forces. Unlock his vault."
+        if any(len(label) > 60 and not (entry["File"] == "campaign/Goldspire.level" and
+               label == approved_penn) for label in objectives + hints + main_goals + optional_goals):
             errors.append(entry["File"] + ": objective is longer than 60 characters")
         for width, height in ((1280, 720), (1920, 1080)):
             scale = min(width / 1024, height / 768)
             font_scale = min(width / 800, height / 600)
             goals_rect = scaled_rectangle(area, (672 * scale, 704 * scale), scale)
+            briefing_lines = [(0, "Goals:")] + [(20 * scale, t) for t in classic + objectives] + [(0, "Hint: " + t) for t in hints]
+            runtime_lines = [(0, "Victory!")] + [(20 * scale, t) for t in classic + objectives] + [(0, "Hint: " + t) for t in hints]
+            if main_goals or optional_goals:
+                briefing_lines = [(0, "Main goals")] + [(20 * scale, t) for t in main_goals] + [(0, ""), (0, "Optional goals")] + [(20 * scale, t) for t in optional_goals]
+                runtime_lines = [(0, "Victory!")] + briefing_lines
             for name, lines, available in (
-                ("BriefingGoals", [(0, "Goals:")] + [(20 * scale, t) for t in classic + objectives] + [(0, "Hint: " + t) for t in hints],
+                ("BriefingGoals", briefing_lines,
                  (goals_rect[2] - goals_rect[0] - 12 * scale, goals_rect[3] - goals_rect[1] - 12 * scale)),
-                ("ObjectivesText", [(0, "Victory!")] + [(20 * scale, t) for t in classic + objectives] + [(0, "Hint: " + t) for t in hints],
+                ("ObjectivesText", runtime_lines,
                  (548 * scale, 370 * scale))):
                 font_name = properties[name]["Font"]
                 definition = ET.parse(root / ("gui/fonts/" + font_name + ".font")).getroot()

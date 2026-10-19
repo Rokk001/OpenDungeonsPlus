@@ -105,4 +105,95 @@ assert 'takeKeptMinion(' in runner and 'KeptMinion' in campaign
 assert 'isHeartstoneComplete()' in read('source/network/ODServer.cpp')
 assert 'getHeartstonePieces()' in read('source/modes/MenuModeCampaign.cpp')
 
+# Failed spawns and named corpses cannot receive a newly attached transport stone.
+attach = runner.split('case LevelScriptActionType::stoneAttach:', 1)[1].split('case LevelScriptActionType::alliance:', 1)[0]
+assert 'gameMap.getCreature(action.mText)' in attach
+assert 'if((creature != nullptr) && creature->isAlive())' in attach
+assert attach.index('creature->isAlive()') < attach.index('script.addStoneCarrier(action.mText)')
+
 print('check_campaign_mechanics: all checks passed')
+
+# Picking up a carrier leaves its stone at the actual tile before removing the creature.
+creature_source = read('source/entities/Creature.cpp')
+pickup = creature_source.split('void Creature::pickup()', 1)[1].split('\n}\n', 1)[0]
+assert pickup.index('if(getIsOnServerMap())') < pickup.index('LevelScriptRunner::dropCarriedStone(*this)')
+assert pickup.index('LevelScriptRunner::dropCarriedStone(*this)') < pickup.index('removeEntityFromPositionTile();')
+drop = runner.split('void LevelScriptRunner::dropCarriedStone(', 1)[1].split('\n}\n', 1)[0]
+assert 'Tile* tile = creature.getPositionTile();' in drop
+assert 'script.getStoneCarriers().count(creature.getName()) == 0' in drop
+assert drop.index('createStone(gameMap, tile->getX(), tile->getY());') < drop.index('script.removeStoneCarrier(creature.getName());')
+print('Carrier pickup leaves the stone on the actual floor tile exactly once: static PASS')
+
+# Physical mission delivery must use workers, the existing carry node and the same ground entity.
+mission = read('source/entities/MissileStone.cpp')
+worker_gate = mission.split('Tile* MissileStone::getDeliveryTile(', 1)[1].split('\n}\n', 1)[0]
+assert '!carrier.isAlive()' in worker_gate and '!carrier.getDefinition()->isWorker()' in worker_gate
+assert 'carrier.getSeat()->getId() != mDeliverySeat' in worker_gate
+carry_on = mission.split('void MissileStone::notifyEntityCarryOn(', 1)[1].split('\n}\n', 1)[0]
+carry_off = mission.split('void MissileStone::notifyEntityCarryOff(', 1)[1].split('\n}\n', 1)[0]
+assert 'removeEntityFromPositionTile();' in carry_on and 'mCarried = true;' in carry_on
+assert 'mPosition = position;' in carry_off and 'addEntityToPositionTile();' in carry_off
+assert 'mDelivered =' not in carry_off, 'interruption or plain release must not complete delivery'
+completed = mission.split('void MissileStone::completeDelivery(', 1)[1].split('\n}\n', 1)[0]
+assert 'mCarried && getDeliveryTile(carrier) != nullptr' in completed
+assert 'carrier.getPositionTile() == getDeliveryTile(carrier)' in completed
+assert 'mDelivered = true;' in completed
+assert 'new MissileStone' not in carry_off, 'interruption must release the original item, not create a duplicate'
+search = read('source/creatureaction/CreatureActionSearchEntityToCarry.cpp')
+grab = read('source/creatureaction/CreatureActionGrabEntity.cpp')
+carry = read('source/creatureaction/CreatureActionCarryEntity.cpp')
+assert 'getDeliveryTile(creature)' in search and 'pathExists(&creature, myTile, destination)' in search
+assert 'getDeliveryTile(creature)' in grab and '*entityToCarry, *destination' in grab
+mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest)', 1)[1].split('\n}\n', 1)[0]
+assert 'mBuildingDest(nullptr)' in mission_action
+assert 'mCreature.carryEntity(mEntityToCarry);' in mission_action
+assert 'mEntityToCarry->notifyEntityCarryOff(pos);' in carry and 'mCreature.releaseCarriedEntity();' in carry
+finish = carry.split('bool CreatureActionCarryEntity::handleCarryEntity(', 1)[1].split('\n}\n', 1)[0]
+assert finish.index('if(myTile != tileDest)') < finish.index('completeDelivery(creature)') < finish.rindex('creature.popAction();')
+assert '"MissionTransport\\t"' in mission and 'mCarried = false;' in mission
+actual_delivery = runner.split('case LevelScriptConditionType::deliveredStone:', 1)[1].split('case LevelScriptConditionType::carryingStone:', 1)[0]
+assert 'stone->getMissionIdentity() == cond.mName && stone->isDelivered()' in actual_delivery
+assert 'gameMap.getCreature' not in actual_delivery, 'marked creature arrival cannot substitute for delivery'
+print('Physical worker mission transport: static PASS (runtime verification remains separate)')
+
+# A mission drop requires an observed actual death; recovery cannot mint another copy of the same item.
+mission_drop = runner.split('case LevelScriptActionType::stoneDrop:', 1)[1].split('case LevelScriptActionType::stoneAttach:', 1)[0]
+assert 'script.getCreatureDeathTile(action.mText, x, y)' in mission_drop
+assert 'createStone(gameMap, x, y, &delivery)' in mission_drop
+assert 'getStoneCarrierTile' not in mission_drop
+create_stone = runner.split('void createStone(', 1)[1].split('\n}\n', 1)[0]
+assert create_stone.index('getMissionIdentity() == delivery->mText') < create_stone.index('new MissileStone')
+actual_event = creature_source.rsplit('void recordScriptEvent(', 1)[1].split('\n}\n', 1)[0]
+assert actual_event.index('if(eventName == "killed")') < actual_event.index('observeCreatureDeath(')
+assert 'tile->getX(), tile->getY()' in actual_event
+assert 'action.mType == LevelScriptActionType::stoneDrop && action.mText == creatureName' in script
+print('Mission drops require exact recorded death coordinates and keep unique identities: static PASS')
+
+# Loaded cargo must either restore its full metadata or fail, and in-flight items remain in the save list.
+stone_factory = mission.split('MissileStone* MissileStone::getMissileStoneFromStream(', 1)[1].split('\n}\n', 1)[0]
+assert 'if(!obj->importFromStream(is))' in stone_factory and 'return nullptr;' in stone_factory
+map_handler = read('source/gamemap/MapHandler.cpp')
+missile_save = map_handler.split('levelFile << "\\n[Missiles]\\n";', 1)[1].split('levelFile << "[/Missiles]"', 1)[0]
+assert 'GameEntity::exportToStream(rendered, levelFile);' in missile_save
+assert 'getIsOnMap()' not in missile_save, 'a carried object is off its tile but must still be saved'
+position_update = creature_source.split('void Creature::setPosition(', 1)[1].split('\n}\n', 1)[0]
+assert 'mCarriedEntity->notifyCarryMove(v);' in position_update
+assert 'mPosition.x' in read('source/entities/GameEntity.cpp')
+print('Mission metadata load failure and in-flight item save wiring: static PASS')
+
+# Both normal idle cargo selection and a forced drop-to-pickup are confined to workers.
+idle_worker = creature_source.split('bool Creature::handleIdleAction()', 1)[1].split('// A standing order', 1)[0]
+assert idle_worker.index('if (mDefinition->isWorker())') < idle_worker.index('CreatureActionSearchEntityToCarry')
+forced_drop = creature_source.split('void Creature::drop(const Ogre::Vector3& v)', 1)[1].split('// Fighters', 1)[0]
+assert forced_drop.index('if(mDefinition->isWorker())') < forced_drop.index('CreatureActionGrabEntity')
+# All interruptions destroy the existing carry action, releasing the same item and its pickup lock.
+for signature in ('void Creature::pickup()', 'void Creature::dropCarriedEquipment()', 'void Creature::changeSeat('):
+    interrupted = creature_source.split(signature, 1)[1].split('\n}\n', 1)[0]
+    assert 'clearActionQueue();' in interrupted, signature
+clear_actions = creature_source.split('void Creature::clearActionQueue()', 1)[1].split('\n}\n', 1)[0]
+assert 'mActions.clear();' in clear_actions
+release = carry.split('CreatureActionCarryEntity::~CreatureActionCarryEntity()', 1)[1].split('\n}\n', 1)[0]
+assert release.index('setCarryLock(mCreature, false)') < release.index('notifyEntityCarryOff(pos)')
+assert 'const Ogre::Vector3& pos = mCreature.getPosition();' in release
+assert 'new MissileStone' not in release
+print('Worker-only cargo entry and same-item pickup/death/conversion interruption: static PASS')

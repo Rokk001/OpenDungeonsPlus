@@ -763,11 +763,7 @@ void Player::notifyCreatureCannotFindBed(Creature& creature)
     {
         mCreatureCannotFindBed = CREATURE_CANNOT_FIND_BED_TIME_COUNT;
 
-        std::string chatMsg = creature.getName() + " cannot find room for a bed. Build or enlarge a Dormitory.";
-        ServerNotification *serverNotification = new ServerNotification(
-            ServerNotificationType::chatServer, this);
-        serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
-        ODServer::getSingleton().queueServerNotification(serverNotification);
+        notifyCreatureEvent(creature, " cannot find room for a bed. Build or enlarge a Dormitory.", EventShortNoticeType::genericGameInfo);
 
         std::vector<Seat*> seats;
         seats.push_back(getSeat());
@@ -784,11 +780,7 @@ void Player::notifyCreatureCannotFindFood(Creature& creature)
     {
         mCreatureCannotFindFood = CREATURE_CANNOT_FIND_FOOD_TIME_COUNT;
 
-        std::string chatMsg = creature.getName() + " cannot find food. Build a Hatchery.";
-        ServerNotification *serverNotification = new ServerNotification(
-            ServerNotificationType::chatServer, this);
-        serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
-        ODServer::getSingleton().queueServerNotification(serverNotification);
+        notifyCreatureEvent(creature, " cannot find food. Build a Hatchery.", EventShortNoticeType::genericGameInfo);
 
         std::vector<Seat*> seats;
         seats.push_back(getSeat());
@@ -829,11 +821,23 @@ void Player::notifyCreatureKilled(Creature& creature)
 
     mCreatureKilledTime = CREATURE_KILLED_TIME_COUNT;
 
-    std::string chatMsg = creature.getName() + " has been killed";
-    ServerNotification *serverNotification = new ServerNotification(
-        ServerNotificationType::chatServer, this);
-    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
-    ODServer::getSingleton().queueServerNotification(serverNotification);
+    notifyCreatureEvent(creature, " has been killed");
+}
+
+//! \brief Sends identity and existing message text without generating a competing server-side profile.
+void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix)
+{
+    notifyCreatureEvent(creature, suffix, EventShortNoticeType::aboutCreatures);
+}
+
+//! \brief Sends a server notice whose text lacks the creature name, followed by the creature identity,
+//! so the owning client puts the profile name of the creature card in front of the text.
+void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix, EventShortNoticeType noticeType)
+{
+    const CreatureDefinition* definition = creature.getDefinition();
+    ServerNotification* notification = new ServerNotification(ServerNotificationType::chatServer, this);
+    notification->mPacket << suffix << noticeType << creature.getName() << definition->getClassName() << definition->isWorker();
+    ODServer::getSingleton().queueServerNotification(notification);
 }
 
 void Player::notifyNewCreatureType(const std::string& creatureClassName)

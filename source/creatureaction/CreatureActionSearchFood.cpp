@@ -149,6 +149,11 @@ bool CreatureActionSearchFood::handleSearchFood(Creature& creature, bool forced)
     {
         // We couldn't find a path !
         OD_LOG_ERR("creature=" + creature.getName());
+        if((creature.getSeat()->getPlayer() != nullptr) &&
+            creature.getSeat()->getPlayer()->getIsHuman())
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
+        }
         creature.popAction();
         return true;
     }

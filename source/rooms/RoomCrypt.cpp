@@ -264,17 +264,6 @@ void RoomCrypt::doUpkeep()
                 continue;
             }
 
-            if((getSeat()->getPlayer() != nullptr) &&
-               getSeat()->getPlayer()->getIsHuman() &&
-               !getSeat()->getPlayer()->getHasLost())
-            {
-                ServerNotification *serverNotification = new ServerNotification(
-                    ServerNotificationType::chatServer, getSeat()->getPlayer());
-                std::string msg = "A creature has raised in your crypt thanks to the blood of the creatures rotting there";
-                serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-                ODServer::getSingleton().queueServerNotification(serverNotification);
-            }
-
             // Create a new creature and copy over the class-based creature parameters.
             Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
 
@@ -282,6 +271,7 @@ void RoomCrypt::doUpkeep()
             newCreature->addToGameMap();
             newCreature->setPosition(Ogre::Vector3(tileSpawn->getX(), tileSpawn->getY(), 0.0f));
             newCreature->createMesh();
+            getSeat()->notifyCreatureArrival(className);
         }
     }
 }

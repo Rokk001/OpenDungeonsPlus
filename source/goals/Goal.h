@@ -49,6 +49,10 @@ public:
     const std::string& getName() const
     { return mName; }
 
+    //! \brief Returns the original goal arguments to identify one stage of a named goal chain.
+    const std::string& getArguments() const
+    { return mArguments; }
+
     void addSuccessSubGoal(std::unique_ptr<Goal>&& g);
     unsigned numSuccessSubGoals() const;
     Goal* getSuccessSubGoal(int index);

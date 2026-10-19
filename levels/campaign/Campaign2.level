@@ -3509,4 +3509,69 @@ Cond	goalmet	1	KillAllEnemies
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	-1	campaign2-o01	reached
 [/Trigger]
+
+[Trigger]
+Name	mainGoalListSeat2
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	2	campaign2-main-heart-s2	Protect your heart.
+Action	mainobjectiveid	2	campaign2-main-enemies-s2	Defeat all enemies.
+Action	optionalobjectiveid	2	campaign2-extra-gold-s2	Mine 1000 gold.
+[/Trigger]
+[Trigger]
+Name	mainGoalListSeat1
+Mode	once
+Cond	time	0
+Action	mainobjectiveid	1	campaign2-main-heart-s1	Protect your heart.
+Action	mainobjectiveid	1	campaign2-main-enemies-s1	Defeat all enemies.
+Action	optionalobjectiveid	1	campaign2-extra-gold-s1	Mine 1000 gold.
+[/Trigger]
+[Trigger]
+Name	mainHeartSeat1
+Mode	repeat	0
+Cond	goalmet	1	ProtectDungeonTemple
+Action	objectivestate	1	campaign2-main-heart-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainEnemiesSeat1
+Mode	repeat	0
+Cond	goalmet	1	KillAllEnemies
+Action	objectivestate	1	campaign2-main-enemies-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainGoldSeat1
+Mode	once
+Cond	mined	1	>=	1000
+Action	objectivestate	1	campaign2-extra-gold-s1	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLostSeat1
+Mode	once
+Cond	roomtiles	1	DungeonTemple	<=	0
+Action	objectivestate	1	campaign2-main-heart-s1	failed
+[/Trigger]
+[Trigger]
+Name	mainHeartSeat2
+Mode	repeat	0
+Cond	goalmet	2	ProtectDungeonTemple
+Action	objectivestate	2	campaign2-main-heart-s2	reached
+[/Trigger]
+[Trigger]
+Name	mainEnemiesSeat2
+Mode	repeat	0
+Cond	goalmet	2	KillAllEnemies
+Action	objectivestate	2	campaign2-main-enemies-s2	reached
+[/Trigger]
+[Trigger]
+Name	mainGoldSeat2
+Mode	once
+Cond	mined	2	>=	1000
+Action	objectivestate	2	campaign2-extra-gold-s2	reached
+[/Trigger]
+[Trigger]
+Name	mainHeartLostSeat2
+Mode	once
+Cond	roomtiles	2	DungeonTemple	<=	0
+Action	objectivestate	2	campaign2-main-heart-s2	failed
+[/Trigger]
 [/Triggers]

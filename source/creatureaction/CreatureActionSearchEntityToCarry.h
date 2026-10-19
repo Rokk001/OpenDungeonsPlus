@@ -31,6 +31,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Selects reachable cargo and its existing building or configured mission destination.
     static bool handleSearchEntityToCarry(Creature& creature, bool forced);
 
 private:

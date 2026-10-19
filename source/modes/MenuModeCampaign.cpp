@@ -35,6 +35,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/RunLevelTest.h"
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/BasicImage.h>
@@ -159,7 +160,7 @@ bool readBriefingSeat(std::istream& level, Seat& player)
     return false;
 }
 
-//! \brief Reads initial open goals, identified objectives and untracked advice using the gameplay parsers.
+//! \brief Reads grouped main/optional goals or the legacy list using the gameplay parsers.
 //! \return True when level goal metadata was read; no game state or script action is executed.
 bool readBriefingGoals(const std::string& path, std::string& descriptions)
 {
@@ -192,6 +193,32 @@ bool readBriefingGoals(const std::string& path, std::string& descriptions)
         if(!script.importFromStream(level))
             return false;
         const std::vector<LevelScriptTrigger>& triggers = script.getTriggers();
+        std::vector<std::string> mainObjectives;
+        std::vector<std::string> optionalObjectives;
+        for(const LevelScriptTrigger& trigger : triggers)
+        {
+            for(const LevelScriptAction& action : trigger.mActions)
+            {
+                if(action.mType != LevelScriptActionType::objective ||
+                   action.mObjectiveGroup == LevelScriptObjectiveGroup::legacy ||
+                   (action.mSeatId >= 0 && action.mSeatId != player.getId()))
+                    continue;
+                if(action.mObjectiveGroup == LevelScriptObjectiveGroup::optional)
+                    optionalObjectives.push_back(action.mText);
+                else
+                    mainObjectives.push_back(action.mText);
+            }
+        }
+        if(!mainObjectives.empty() || !optionalObjectives.empty())
+        {
+            descriptions = "Main goals";
+            for(const std::string& objective : mainObjectives)
+                descriptions += "\n[image='GoalStatus/Open'] " + objective;
+            descriptions += "\n\nOptional goals";
+            for(const std::string& objective : optionalObjectives)
+                descriptions += "\n[image='GoalStatus/Open'] " + objective;
+            return true;
+        }
         for(const LevelScriptTrigger& trigger : triggers)
         {
             for(const LevelScriptAction& action : trigger.mActions)
@@ -356,10 +383,12 @@ void MenuModeCampaign::activate()
     // Debriefing of the level that was played last
     mResultText.clear();
     size_t playedLevel = campaign.getPlayedLevel();
+    bool playedLevelWon = false;
     if(playedLevel < campaign.getNumLevels())
     {
         const CampaignLevel& level = campaign.getLevel(playedLevel);
-        if(campaign.getPlayedLevelWon())
+        playedLevelWon = campaign.getPlayedLevelWon();
+        if(playedLevelWon)
         {
             mResultText = "Debriefing - " + level.mTitle + "\n\n" + level.mDebriefing + "\n\n";
             if(level.mBonus)
@@ -401,6 +430,10 @@ void MenuModeCampaign::activate()
     if(!mResultText.empty())
         showDebriefing();
     updateDifficultyButton();
+
+    // The level load test checks here that the map with the next level appeared after the won level
+    if(RunLevelTest::isActive())
+        RunLevelTest::onCampaignMapShown(playedLevelWon);
 }
 
 void MenuModeCampaign::updateDifficultyButton()

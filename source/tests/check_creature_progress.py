@@ -22,7 +22,8 @@ def function(path, signature):
 creature = 'source/entities/Creature.cpp'
 methods = '\n'.join(function(creature, sig) for sig in (
     'double Creature::getExperienceProgress()', 'void Creature::exportProgressToPacket(',
-    'void Creature::importProgressFromPacket(', 'void Creature::receiveExp('))
+    'void Creature::importProgressFromPacket(', 'void Creature::receiveExp(',
+    'void Creature::recordWorkerStepRecovery('))
 clock = function('source/render/CreatureOverlayStatus.cpp', 'void CreatureOverlayStatus::updateProgress(')
 source = (root / creature).read_text()
 for sig in ('void Creature::exportToPacket(', 'void Creature::exportToPacketForUpdate('):
@@ -53,24 +54,38 @@ struct Player {};
 struct Seat {Player player; Player* getPlayer() const {return const_cast<Player*>(&player);}};
 struct ODServer {bool enabled=true;static ODServer& getSingleton(){static ODServer s;return s;}bool supportsCreatureProgress(Player*){return enabled;}};
 struct ODClient {bool enabled=true;static ODClient& getSingleton(){static ODClient s;return s;}bool supportsCreatureProgress(){return enabled;}};
-struct Definition {double needed=100;double getXPNeededWhenLevel(unsigned)const{return needed;}};
+struct Definition {double needed=100;double getXPNeededWhenLevel(unsigned)const{return needed;}bool isWorker()const{return false;}};
 struct GameMap {double getGameSpeedFactor()const{return 1.0;}};
+//! \brief Minimal action identifiers used by the production packet selector.
+enum class CreatureActionType {nb, useRoom};
+//! \brief Minimal current-action snapshot for the production packet selector.
+struct CreatureActivity {CreatureActionType action=CreatureActionType::nb;};
+//! \brief Holds only the fields required by extracted production progress methods.
 struct Creature {
  GameMap map;GameMap* getGameMap()const{return const_cast<GameMap*>(&map);}
  bool server=true,mHasProgressInformation=false,mNeedFireRefresh=false;unsigned mLevel=1;
  double mExp=0,mExperienceProgress=0;Definition def;Definition* mDefinition=&def;
  uint32_t mAttackRecoveryTurns=0,mAttackRecoveryDuration=0,mAttackRecoverySerial=0;
+ int mJobCooldown=0;uint32_t mJobCooldownDuration=0;bool working=false;
+ //! \brief Reports the mocked current activity for the production progress packet.
+ CreatureActivity getActivity() const {CreatureActivity activity;if(working)activity.action=CreatureActionType::useRoom;return activity;}
+
  bool getIsOnServerMap()const{return server;}std::string getName()const{return "probe";}
+ //! \brief Records the real one-turn interval using the production method below.
+ void recordWorkerStepRecovery();
  double getExperienceProgress()const;void receiveExp(double);
  void exportProgressToPacket(ODPacket&,const Seat*)const;void importProgressFromPacket(ODPacket&);
  bool hasProgressInformation()const{return mHasProgressInformation;}
  uint32_t getAttackRecoveryTurns()const{return mAttackRecoveryTurns;}
  uint32_t getAttackRecoveryDuration()const{return mAttackRecoveryDuration;}
  uint32_t getAttackRecoverySerial()const{return mAttackRecoverySerial;}
+ Definition* getDefinition()const{return mDefinition;}
 };
 METHODS
 namespace Ogre {using Real=float;}
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
+//! \brief Inactive level test, as in a normal game.
+struct RunLevelTest {static bool isActive(){return false;}static void onRecoveryFrame(bool,uint32_t){}};
 enum class CreatureOverlays {health,experience,recovery,status};
 struct MovableTextOverlay {
  unsigned frames[4]={};bool shown[4]={};
@@ -83,6 +98,7 @@ struct CreatureOverlayStatus {
  void updateProgress(float);
 };
 CLOCK
+//! \brief Checks progress packets and the unchanged clock for attacks, room pauses and worker steps.
 int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<why<<'\n';}};
  Seat seat;Creature a,b;b.server=false;
  for(unsigned level=1;level<=30;++level)for(double xp:{0.,25.,100.,150.}){
@@ -102,6 +118,16 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  ODPacket bad;bad<<.5<<uint32_t(8)<<uint32_t(2)<<uint32_t(1);b.importProgressFromPacket(bad);check(!b.mHasProgressInformation,"invalid recovery rejected");
  ODPacket shortPacket;shortPacket<<.5;b.importProgressFromPacket(shortPacket);check(!b.mHasProgressInformation,"truncated payload rejected");
  a.mLevel=1;a.mExp=0;a.receiveExp(-1);check(a.mExp==0,"negative gain rejected");a.receiveExp(20);check(a.mExp==20&&a.mNeedFireRefresh,"XP changes schedule replication");
+ a.working=true;a.mAttackRecoveryTurns=0;a.mAttackRecoveryDuration=0;a.mAttackRecoverySerial=101;
+ for(unsigned remaining:{5u,4u,1u,0u}){
+  a.mJobCooldown=remaining;a.mJobCooldownDuration=5;
+  ODPacket packet;a.exportProgressToPacket(packet,&seat);packet<<uint32_t(0x76543210);b.importProgressFromPacket(packet);
+  check(b.mAttackRecoveryTurns==remaining&&b.mAttackRecoveryDuration==(remaining?5u:0u),"actual job pause round trip and end");
+  uint32_t tail=0;packet>>tail;check(tail==0x76543210&&packet.endOfPacket(),"job display keeps existing packet alignment");
+ }
+ a.working=false;a.mJobCooldown=4;a.mJobCooldownDuration=5;
+ ODPacket interrupted;a.exportProgressToPacket(interrupted,&seat);b.importProgressFromPacket(interrupted);
+ check(b.mAttackRecoveryTurns==0,"interrupted work does not display an unrelated old job pause");
  MovableTextOverlay overlay;CreatureOverlayStatus status{&b,&overlay};b.mHasProgressInformation=true;b.mExperienceProgress=.5;b.mAttackRecoveryDuration=4;b.mAttackRecoveryTurns=4;b.mAttackRecoverySerial=1;
  status.updateProgress(0);check(overlay.frames[1]==31&&overlay.frames[2]==1,"half XP and fresh attack");
  status.updateProgress(.35f);check(overlay.frames[2]>1,"recovery sweeps between turns");auto frozen=overlay.frames[2];
@@ -110,6 +136,15 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  b.mAttackRecoveryTurns=1;status.updateProgress(0);check(overlay.frames[2]==47,"server corrects recovery");
  b.mAttackRecoveryTurns=0;status.updateProgress(0);check(overlay.frames[2]==0,"ready hides clock");
  b.mAttackRecoveryTurns=4;++b.mAttackRecoverySerial;status.updateProgress(0);check(overlay.frames[2]==1,"repeated attack resets clock");
+ a.working=false;a.mAttackRecoverySerial=150;
+ for(unsigned step=1;step<=3;++step){
+  a.mNeedFireRefresh=false;a.recordWorkerStepRecovery();
+  ODPacket packet;a.exportProgressToPacket(packet,&seat);b.importProgressFromPacket(packet);
+  check(b.mAttackRecoveryTurns==1&&b.mAttackRecoveryDuration==1&&b.mAttackRecoverySerial==150+step&&a.mNeedFireRefresh,"worker step reports actual upkeep interval");
+  status.updateProgress(0);check(overlay.frames[2]==1,"each worker step restarts the existing ring");
+  status.updateProgress(.35f);check(overlay.frames[2]>1&&overlay.frames[2]<63,"worker interval sweeps within the server turn");
+  unsigned paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
+ }
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }

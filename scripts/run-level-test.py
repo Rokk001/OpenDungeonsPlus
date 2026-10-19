@@ -3,9 +3,11 @@
 
 Runs the game executable once per level with the debug parameters
 `--run-level <file> --seconds <N>`. The game starts a local game on the level,
-lets it run for N seconds of game time, fires the win and exits with a code:
+lets it run for N seconds of game time, sets all main goals of the level as reached, fires the win
+(a refused win is a failure; a campaign level must also show the victory message and the campaign
+map with the next level) and exits with a code:
 
-    0  PASS (level loaded, time ran, no error logged, win reported)
+    0  PASS (level loaded, time ran, no error logged, win reported, campaign map shown for campaign levels)
     1  usage error (for example --seconds 0)
     2  load error (level not found/rejected, game did not start in time)
     3  error during the run (error logged, exception, game ended without result)
