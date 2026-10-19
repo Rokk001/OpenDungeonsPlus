@@ -25,7 +25,6 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
-#include "gamemap/LevelScript.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
@@ -429,8 +428,7 @@ void RunLevelTest::recordFrame(float seconds)
     sFrameMicros.fetch_add(static_cast<uint64_t>(seconds * 1000000.0f));
 }
 
-//! \brief Checks loading, registered goals and the existing timed victory probe on server turns; a forced win
-//! that the level holds back because its main goals are still open counts as the expected result.
+//! \brief Checks loading, registered goals and the existing timed victory probe on server turns.
 void RunLevelTest::onServerTurn(GameMap& gameMap)
 {
     if(sFinished.load())
@@ -537,15 +535,6 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
     gameMap.addWinningSeat(humanSeat);
     if(!gameMap.seatIsAWinner(humanSeat))
     {
-        // Levels with grouped main goals hold a victory back until every main goal is reached; that is the
-        // expected answer to a forced win at the end of a short run, not a missing victory report
-        const LevelScript& script = gameMap.getLevelScript();
-        if(script.hasMainObjectives(humanSeat->getId()) && !script.areMainObjectivesReached(humanSeat->getId()))
-        {
-            emitResult(codePass, "PASS " + sLevelName + " : level loaded, ran " + played
-                + ", no errors, triggered win held back until all main goals are reached");
-            return;
-        }
         fail(codeNoVictory, "no victory: win was triggered after " + played + " but not reported");
         return;
     }
