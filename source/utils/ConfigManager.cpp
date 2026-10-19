@@ -44,6 +44,7 @@ const std::string ConfigManager::DefaultWorkerCreatureDefinition = "DefaultWorke
 
 template<> ConfigManager* Ogre::Singleton<ConfigManager>::msSingleton = nullptr;
 
+//! \brief Loads game settings, including the global dodge and shield block defaults.
 ConfigManager::ConfigManager(const std::string& configPath, const std::string& userConfigPath,
         const std::string& soundPath) :
     mConfigPath(configPath),
@@ -80,9 +81,9 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mParryBase(3.0),
     mParryPerLevel(0.5),
     mParryMax(15.0),
-    mParryShieldBase(6.0),
-    mParryShieldPerLevel(1.0),
-    mParryShieldMax(25.0),
+    mShieldBlockBase(6.0),
+    mShieldBlockPerLevel(1.0),
+    mShieldBlockMax(25.0),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
@@ -475,6 +476,7 @@ bool ConfigManager::loadGlobalConfigSeatColors(std::stringstream& configFile)
     return true;
 }
 
+//! \brief Loads global game values and the settings of each creature avoidance kind.
 bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
 {
     std::string nextParam;
@@ -650,24 +652,24 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
-        if(nextParam == "ParryShieldBase")
+        if(nextParam == "ShieldBlockBase")
         {
             configFile >> nextParam;
-            mParryShieldBase = Helper::toDouble(nextParam);
+            mShieldBlockBase = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
-        if(nextParam == "ParryShieldPerLevel")
+        if(nextParam == "ShieldBlockPerLevel")
         {
             configFile >> nextParam;
-            mParryShieldPerLevel = Helper::toDouble(nextParam);
+            mShieldBlockPerLevel = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
-        if(nextParam == "ParryShieldMax")
+        if(nextParam == "ShieldBlockMax")
         {
             configFile >> nextParam;
-            mParryShieldMax = Helper::toDouble(nextParam);
+            mShieldBlockMax = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
