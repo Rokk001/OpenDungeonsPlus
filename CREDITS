@@ -1208,3 +1208,5 @@ models/Troll.skeleton                                    OD Team  GPLv3+  Own wo
 materials/portraits/whole/**/*.jpg  AI-generated with Codex  GPLv3+  Original project creature portraits edited from the project neutral bases with simple existing clothing; no external artwork used.
 materials/portraits/whole/Goblin.mesh/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project goblin portraits, edited from the project neutral base with existing simple clothing.
 materials/portraits/whole/Elf.mesh/*.jpg	AI-generated with Codex	GPLv3+	Fifty original female woodland elf portraits, directly edited from the project clothed neutral base.
+materials/portraits/whole/Elf.mesh-male/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project male woodland elf portraits, directly edited from the project clothed neutral base.
+materials/portraits/whole/Kobold.mesh/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project male kobold portraits, directly edited from the project clothed neutral base.
