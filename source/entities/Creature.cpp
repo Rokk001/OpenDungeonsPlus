@@ -100,7 +100,7 @@
 #include "render/CreatureReactions.h"
 #include "render/DungeonbookAppearanceConfig.h"
 #include "render/DungeonbookQuirks.h"
-#include "render/PortraitManifestRegistry.h"
+#include "render/PortraitCatalogRegistry.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -181,11 +181,11 @@ const uint32_t APPEARANCE_RETRY_TURNS = 200;
 //! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
 const int64_t BED_STATUS_REPEAT_TURNS = 200;
 
-//! \brief Server side registry of the portrait manifests used to assign the Dungeonbook appearance.
+//! \brief Server side registry of the whole-image catalogs used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
-PortraitManifestRegistry& getAppearanceRegistry()
+PortraitCatalogRegistry& getAppearanceRegistry()
 {
-    static PortraitManifestRegistry registry;
+    static PortraitCatalogRegistry registry;
     static bool initialized = false;
     if(!initialized)
     {
@@ -204,7 +204,7 @@ PortraitManifestRegistry& getAppearanceRegistry()
 
         std::string root = config.getAssetRoot();
         if(root.empty())
-            root = "materials/portraits/variants";
+            root = "materials/portraits/whole";
 
         bool isAbsolute = (root.size() > 1) && ((root[1] == ':') || (root[0] == '/') || (root[0] == '\\'));
         if(!isAbsolute)
@@ -899,14 +899,15 @@ bool Creature::importFromStream(std::istream& is)
     return true;
 }
 
+//! \brief Assigns a unique whole portrait on spawn or stably migrates a saved image number.
 void Creature::assignAppearance(bool firstSpawn)
 {
     if(!getIsOnServerMap() || (mDefinition == nullptr))
         return;
 
-    PortraitManifestRegistry& registry = getAppearanceRegistry();
+    PortraitCatalogRegistry& registry = getAppearanceRegistry();
     CreatureAppearanceLogic::CatalogExistsFunction exists =
-        std::bind(&PortraitManifestRegistry::hasCatalog, &registry, std::placeholders::_1);
+        std::bind(&PortraitCatalogRegistry::hasCatalog, &registry, std::placeholders::_1);
     std::string catalogId = CreatureAppearanceLogic::resolveCatalogId(mDefinition->getMeshName(), getGender(), exists);
     if(catalogId.empty())
     {
@@ -916,15 +917,15 @@ void Creature::assignAppearance(bool firstSpawn)
     }
     mAppearanceNoCatalog = false;
 
-    const PortraitManifest* manifest = registry.getManifest(catalogId);
+    const PortraitCatalog* catalog = registry.getCatalog(catalogId);
     std::vector<std::string> messages = registry.takeMessages();
     for(std::vector<std::string>::const_iterator it = messages.begin(); it != messages.end(); ++it)
     {
         OD_LOG_WRN("Dungeonbook appearance: " + *it);
     }
 
-    // No manifest (yet): the appearance is derived later like for old saves, a stored one is kept
-    if(manifest == nullptr)
+    // No catalog (yet): the appearance is derived later like for old saves, a stored one is kept
+    if(catalog == nullptr)
         return;
 
     if(firstSpawn)
@@ -938,19 +939,20 @@ void Creature::assignAppearance(bool firstSpawn)
                 taken.push_back(other);
         }
 
-        mAppearance = CreatureAppearanceLogic::pickRandom(*manifest, catalogId, getAppearanceRandom, taken);
+        mAppearance = CreatureAppearanceLogic::pickRandom(*catalog, catalogId, getAppearanceRandom, taken);
         mAppearanceValidated = true;
         return;
     }
 
     if(mAppearance.isEmpty())
-        mAppearance = CreatureAppearanceLogic::pickStable(*manifest, catalogId, getName());
+        mAppearance = CreatureAppearanceLogic::pickStable(*catalog, catalogId, getName());
     else
-        CreatureAppearanceLogic::validate(*manifest, catalogId, getName(), mAppearance);
+        CreatureAppearanceLogic::validate(*catalog, catalogId, getName(), mAppearance);
 
     mAppearanceValidated = true;
 }
 
+//! \brief Retries unavailable whole catalogs and sends an updated appearance only when it changes.
 void Creature::retryAppearance()
 {
     // A creature without catalog id is only looked at when the catalog generation changed: no waiting period
@@ -961,7 +963,7 @@ void Creature::retryAppearance()
     }
     mAppearanceRetryTurns = APPEARANCE_RETRY_TURNS;
 
-    // A manifest that was missing or invalid at spawn may be there now: the registry looks again, then the
+    // A catalog that was missing or invalid at spawn may be there now: the registry looks again, then the
     // appearance is derived like for old saves
     getAppearanceRegistry().retryFailed();
     CreatureAppearance before = mAppearance;
@@ -1357,7 +1359,7 @@ void Creature::dropCarriedEquipment()
 void Creature::doUpkeep()
 {
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
-    // (or the stored one was never checked against a manifest): the appearance is derived or checked as soon as one is
+    // (or the stored one was never checked against a catalog): the appearance is derived or checked as soon as one is
     if(getIsOnServerMap())
     {
         // New catalog folders are looked for once per retry period for all creatures together, never per creature

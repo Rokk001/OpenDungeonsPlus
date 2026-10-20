@@ -464,10 +464,9 @@ set(OD_SOURCEFILES
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
     ${SRC}/render/PortraitTint.cpp
-    ${SRC}/render/PortraitManifest.cpp
-    ${SRC}/render/AppearanceCompose.cpp
+    ${SRC}/render/PortraitCatalog.cpp
     ${SRC}/render/CreatureAppearancePicture.cpp
-    ${SRC}/render/PortraitManifestRegistry.cpp
+    ${SRC}/render/PortraitCatalogRegistry.cpp
     ${SRC}/render/DungeonbookAppearanceConfig.cpp
     ${SRC}/render/DungeonbookQuirks.cpp
     ${SRC}/render/CreaturePanel.cpp

@@ -14,12 +14,12 @@
 #include <vector>
 
 class CreatureAppearance;
-class PortraitManifest;
+class PortraitCatalog;
 
-//! \brief Profile remarks that match the parts of a creature's appearance (config/dungeonbook-quirks.cfg).
+//! \brief Profile remarks that match the painted feature tags of a creature's appearance (config/dungeonbook-quirks.cfg).
 //! Pure source without any Ogre or engine dependency. Line based, TAB separated, '#' starts a comment:
-//!   <slot><TAB><option name><TAB><text>
-//! Slot and option name are the ones used in the portrait manifests. Bad lines and repeated keys (the
+//!   <feature tag><TAB><text>
+//! Feature tags are the ones listed for whole images in index.cfg. Bad lines and repeated keys (the
 //! first one wins) are dropped and listed in getWarnings(); the caller logs them once.
 class DungeonbookQuirks
 {
@@ -30,17 +30,19 @@ public:
     //! \brief Same for a stream, source only names the file in the warnings.
     void loadFromStream(std::istream& is, const std::string& source);
 
-    //! Returns nullptr if the part has no remark
-    const std::string* find(const std::string& slot, const std::string& optionName) const;
+    //! \brief Returns nullptr if the painted feature tag has no remark
+    const std::string* find(const std::string& tag) const;
 
+    //! \brief Returns the number of loaded feature-tag remarks.
     std::size_t size() const
     { return mTexts.size(); }
 
+    //! \brief Returns rejected-entry messages for one-time logging.
     const std::vector<std::string>& getWarnings() const
     { return mWarnings; }
 
 private:
-    std::map<std::pair<std::string, std::string>, std::string> mTexts;
+    std::map<std::string, std::string> mTexts;
     std::vector<std::string> mWarnings;
 };
 
@@ -49,9 +51,9 @@ namespace DungeonbookQuirkLogic
 //! Number of remarks one creature shows at most
 extern const uint32_t MAX_REMARKS;
 
-//! \brief The remarks of all parts of the appearance that have one, in the slot order of the appearance.
-//! Parts that no longer exist in the manifest are skipped.
-std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const PortraitManifest& manifest,
+//! \brief Returns remarks for the selected image tags in their index order.
+//! A removed image has no remarks until its number is repaired.
+std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance);
 
 //! \brief Picks at most maxCount of the candidates, derived only from the creature name, the appearance
@@ -62,7 +64,7 @@ std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates,
     const CreatureAppearance& appearance, uint32_t maxCount);
 
 //! \brief collectRemarks() followed by pickRemarks() with MAX_REMARKS.
-std::vector<std::string> selectRemarks(const DungeonbookQuirks& quirks, const PortraitManifest& manifest,
+std::vector<std::string> selectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance, const std::string& creatureName);
 
 //! \brief The remarks as one text for the profile: the heading "Quirks:" and one line per remark. Empty if
