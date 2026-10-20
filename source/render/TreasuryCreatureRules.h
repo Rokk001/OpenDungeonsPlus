@@ -26,8 +26,9 @@
 #include <cmath>
 #include <map>
 
-//! \brief Client side rules for creatures walking on the treasury gold: how far they are lifted,
-//! when a step splashes coins and how many splashes a room may show at once. Nothing here
+//! \brief Client side rules for creatures and effects on the treasury gold: how far creatures are lifted, when a step
+//! splashes coins, how a worker pours out its gold, how a pile settles when gold is added or taken, how deep objects
+//! stand in the gold, when coins slide, roll or sparkle and how many effects a room may show at once. Nothing here
 //! touches the renderer, the server or the creature position used for pathing.
 //! The tunable numbers live in config/treasury.cfg (see TreasurySettings.h); the constants below are references
 //! to the live values, so a value is read when it is used.
