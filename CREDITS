@@ -1206,3 +1206,4 @@ tools/blender-assets/armament_preview.py                  OD Team  GPLv3+  Own w
 models/Troll.skeleton                                    OD Team  GPLv3+  Own work: fitted right-hand weapon rest position and rotation, converted with OgreXMLConverter; existing data keeps its existing licence; original native animation keys retained byte for byte
 
 materials/portraits/whole/**/*.jpg  AI-generated with Codex  GPLv3+  Original project creature portraits edited from the project neutral bases with simple existing clothing; no external artwork used.
+materials/portraits/whole/Goblin.mesh/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project goblin portraits, edited from the project neutral base with existing simple clothing.
