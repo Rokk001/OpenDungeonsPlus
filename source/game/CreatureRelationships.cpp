@@ -37,6 +37,14 @@ namespace
     //! Factor between a fraction and percent, used to compare health with the percent settings of the brawl
     static const double BRAWL_PERCENT_FACTOR = 100.0;
 
+    //! Saved creature states: number of tab separated fields of a line and the position of each of them
+    static const size_t STATE_FIELD_COUNT = 6;
+    static const size_t STATE_FIELD_GRIEF = 1;
+    static const size_t STATE_FIELD_RAGE_TURNS = 2;
+    static const size_t STATE_FIELD_RAGE_SEAT = 3;
+    static const size_t STATE_FIELD_BRAWL_OPPONENT = 4;
+    static const size_t STATE_FIELD_BRAWL_TURNS = 5;
+
     //! Default values used when config/relationships.cfg is missing or lacks an entry
     static const int32_t DEFAULT_THRESHOLD_FRIENDS = 50;
     static const int32_t DEFAULT_THRESHOLD_BEST_FRIENDS = 80;
@@ -1159,8 +1167,9 @@ bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCr
         int64_t rageTurns;
         int64_t rageSeat;
         int64_t brawlTurns;
-        if((fields.size() < 6) || fields[0].empty() || !parseInt(fields[1], grief) || !parseInt(fields[2], rageTurns)
-           || !parseInt(fields[3], rageSeat) || !parseInt(fields[5], brawlTurns))
+        if((fields.size() < STATE_FIELD_COUNT) || fields[0].empty() || !parseInt(fields[STATE_FIELD_GRIEF], grief)
+           || !parseInt(fields[STATE_FIELD_RAGE_TURNS], rageTurns) || !parseInt(fields[STATE_FIELD_RAGE_SEAT], rageSeat)
+           || !parseInt(fields[STATE_FIELD_BRAWL_TURNS], brawlTurns))
         {
             return false;
         }
@@ -1170,10 +1179,10 @@ bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCr
         state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-100000, std::min<int64_t>(100000, grief)));
         state.mRageTurnsLeft = std::max<int64_t>(0, rageTurns);
         state.mRageSeatId = static_cast<int32_t>(rageSeat);
-        state.mBrawlOpponent = fields[4];
+        state.mBrawlOpponent = fields[STATE_FIELD_BRAWL_OPPONENT];
         state.mBrawlTurnsLeft = std::max<int64_t>(0, brawlTurns);
         // Older saves have no captor fields
-        for(size_t i = 6; i < fields.size() && (state.mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
+        for(size_t i = STATE_FIELD_COUNT; i < fields.size() && (state.mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
         {
             if(!fields[i].empty())
                 state.mCaptors.push_back(fields[i]);
