@@ -760,7 +760,7 @@ target_link_libraries(
 
 target_link_libraries(opendungeons-plus pybind11::embed Python::Python)
 
-if(MSVC AND PYTHON_DEBUG_LIBRARY AND NOT PYTHON_IS_DEBUG)
+if(MSVC AND Python_LIBRARY_DEBUG AND NOT PYTHON_IS_DEBUG)
     # Keep pybind11's headers consistent with the selected debug Python library.
     # Python's Windows header defines Py_DEBUG without a value as well.
     target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE "$<$<CONFIG:Debug>:Py_DEBUG=>")
