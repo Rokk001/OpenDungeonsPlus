@@ -189,6 +189,8 @@ static const std::string COLLAPSE_CLIP = "Collapse";
 static const std::string DESTROYED_CLIP = "Destroyed";
 //! The state of the animation of a door that is closed
 static const std::string DOOR_CLOSED_STATE = "Close";
+//! At least this many marks may be on the floor, whatever the configuration says
+const uint32_t MIN_MARK_LIMIT = 1;
 
 //! \brief True if the name fits the pattern, which is a plain name or has * as first or last character as wildcard
 bool matchesPattern(const std::string& pattern, const std::string& name)
@@ -2432,7 +2434,7 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
         if(isMark)
         {
             // The oldest mark makes room for the new one
-            while(mMarks.size() >= std::max<uint32_t>(1, mConfig.getMaxMarks()))
+            while(mMarks.size() >= std::max<uint32_t>(MIN_MARK_LIMIT, mConfig.getMaxMarks()))
             {
                 Emitter oldest;
                 oldest.mNode = mMarks.front().mNode;

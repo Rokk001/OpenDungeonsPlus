@@ -152,6 +152,9 @@ public:
 
     static const uint32_t NB_OVERLAY_HEALTH_VALUES;
 
+    //! The script of the aura of a possessed creature, which ends with the possession
+    static const std::string POSSESSION_AURA_SCRIPT;
+
     //! \brief Defaults of the dormitory settings for carrying and pulling hurt creatures to their bed. They are used
     //! when the key is missing in the room config (the name of each key is the one without the _DEFAULT suffix).
     //! Number of turns a pulled creature may take to slide into its bed (DormitoryWoundedDragLayTurns)
@@ -925,7 +928,8 @@ public:
     //! Called on server side to add an effect (spell, slap, ...) to this creature
     void addCreatureEffect(CreatureEffect* effect);
 
-    //! Called on server side to add a finite presentation-only particle effect.
+    //! Called on server side to add a presentation-only particle effect. A negative number of turns means
+    //! that the effect stays until something ends it (see GameEntity::endParticleEffectsByScript).
     void addParticleEffect(const std::string& effectScript, int32_t nbTurns);
 
     bool removeCreatureEffect(CreatureEffect* effectForDeletion);

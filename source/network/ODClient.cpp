@@ -2199,7 +2199,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
             RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
             if(possessed != nullptr)
-                possessed->endParticleEffectsByScript("SpellCreaturePossess");
+                possessed->endParticleEffectsByScript(Creature::POSSESSION_AURA_SCRIPT);
             if((possessed != nullptr) && possessed->getIsOnMap() && (ambience != nullptr))
             {
                 Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),

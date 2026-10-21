@@ -259,6 +259,7 @@ static const double HEALTH_STAGE_ROUNDING_TOLERANCE = 0.000001;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
+const std::string Creature::POSSESSION_AURA_SCRIPT = "SpellCreaturePossess";
 const double Creature::WOUNDED_DRAG_LAY_TURNS_DEFAULT = 12.0;
 const double Creature::WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT = 6.0;
 const double Creature::WOUNDED_CARRY_MAX_TURNS_DEFAULT = 400.0;
@@ -6916,7 +6917,7 @@ void Creature::endPossession()
     player->setPossessedCreatureName(std::string());
     // Whether the creature fell (dead, knocked out or gone), so the client does not have to guess it
     const bool lost = !isAlive() || isKo() || !getIsOnMap();
-    endParticleEffectsByScript("SpellCreaturePossess");
+    endParticleEffectsByScript(POSSESSION_AURA_SCRIPT);
     // The aura is permanent on the clients and a refresh never removes an effect that is missing from it. The turn
     // deletes the ended effect before the refresh of the turn is built, so the clients are told now, while the effect
     // is still there with no turns left

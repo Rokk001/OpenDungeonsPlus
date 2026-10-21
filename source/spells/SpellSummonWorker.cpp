@@ -41,6 +41,8 @@ const std::string SpellSummonWorkerName = "summonWorker";
 const std::string SpellSummonWorkerNameDisplay = "Summon worker";
 const std::string SpellSummonWorkerCooldownKey = "SummonWorkerCooldown";
 const SpellType SpellSummonWorker::mSpellType = SpellType::summonWorker;
+//! Turns the arrival look stays on a worker that was just summoned
+static const int32_t ARRIVAL_EFFECT_TURNS = 5;
 
 namespace
 {
@@ -214,7 +216,7 @@ bool SpellSummonWorker::summonWorkersOnTiles(GameMap* gameMap, Player* player, c
                                     static_cast<Ogre::Real>(tile->getY()),
                                     static_cast<Ogre::Real>(0.0));
         newCreature->addParticleEffect("SummonWorker", 3);
-        newCreature->addParticleEffect("SpellCreatureArrival", 5);
+        newCreature->addParticleEffect("SpellCreatureArrival", ARRIVAL_EFFECT_TURNS);
         newCreature->createMesh();
         newCreature->setPosition(spawnPosition);
         player->getSeat()->notifyCreatureArrival(classToSpawn->getClassName());

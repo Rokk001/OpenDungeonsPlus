@@ -279,6 +279,7 @@ public:
     //! \brief The most bolts and flying objects that may be on their way at once
     uint32_t getMaxFlights() const
     { return mMaxFlights; }
+    //! \brief The most ground marks that may be on the floor at once
     uint32_t getMaxMarks() const
     { return mMaxMarks; }
     //! \brief Distance in tiles within which a creature counts as close to an object or tile
@@ -315,6 +316,7 @@ private:
     uint32_t mMaxMotions;
     //! Most one-shot particle systems that may run at once
     uint32_t mMaxOneShots;
+    //! Most ground marks that may be on the floor at once
     uint32_t mMaxMarks;
     //! Most bolts and flying objects that may be on their way at once
     uint32_t mMaxFlights;

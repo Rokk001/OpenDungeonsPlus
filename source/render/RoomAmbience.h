@@ -389,6 +389,7 @@ private:
     //! \brief Plays the clips of the objects whose time has come
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
+    //! \brief Ends the one-shot effects of the list whose time is over
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
     void updatePendingSounds();
     //! \brief Lets a destroyed door (the door entity of the given type on the tile, which the server is about to
