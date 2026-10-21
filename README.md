@@ -88,7 +88,7 @@ In a few words, to build OpenDungeonsPlus, you need the following libraries:
 - OIS
 
 You will also need a recent CMake version (3.13 or newer) and a compiler
-that supports C++11 features reasonably well, i.e.:
+that supports C++17 features reasonably well, i.e.:
 
 - Linux: GCC 9+
 - Windows: MSVS 2019+ or MinGW 9+
