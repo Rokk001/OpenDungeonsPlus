@@ -81,13 +81,13 @@ on our wiki: https://github.com/OpenDungeons/OpenDungeons/wiki/Compile
 
 In a few words, to build OpenDungeonsPlus, you need the following libraries:
 
-- OGRE SDK (1.9.x)
+- OGRE SDK (14.6.1)
 - Boost (same version that OGRE was linked against)
-- CEGUI SDK (0.8.x)
-- SFML (2.x)
+- CEGUI SDK (0.9999.0)
+- SFML (3.1.0)
 - OIS
 
-You will also need a recent CMake version (2.8 or newer) and a compiler
+You will also need a recent CMake version (3.13 or newer) and a compiler
 that supports C++11 features reasonably well, i.e.:
 
 - Linux: GCC 4.8+
