@@ -99,6 +99,8 @@ static const int32_t BRAWL_CHANCE_ROLL_MAX = 99;
 const uint32_t GameMap::SKIRMISH_SPEED_MIN;
 const uint32_t GameMap::SKIRMISH_SPEED_MAX;
 const uint32_t GameMap::SKIRMISH_DURATION_MAX;
+const uint32_t GameMap::SKIRMISH_PERCENT_MIN;
+const uint32_t GameMap::SKIRMISH_PERCENT_MAX;
 
 using namespace std;
 
