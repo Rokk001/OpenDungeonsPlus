@@ -39,6 +39,9 @@ pieces = [e for e in entries if 'Heartstone=0' not in e]
 assert len(pieces) == 4 and all('Province=B0' in e for e in pieces)
 assert 'Province=B05' in [e for e in entries if 'Heartstone=0' in e][0]
 assert 'key == "Heartstone"' in read('source/game/Campaign.cpp')
+# The complete Heartstone gives the keepers the Summon champion spell when a campaign level starts
+server = read('source/network/ODServer.cpp')
+assert 'isHeartstoneComplete()' in server and 'SkillType::spellSummonChampion, true, true' in server
 # Victory keeps its authoritative goal list and saves progress before notifying the client.
 victory = game_map[game_map.index('void GameMap::addWinningSeat('):game_map.index('bool GameMap::seatIsAWinner(')]
 assert victory.index('mWinningSeats.push_back(s)') < victory.index('getGoalsStringForPlayer(player)')
