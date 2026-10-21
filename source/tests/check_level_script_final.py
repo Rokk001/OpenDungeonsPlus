@@ -123,7 +123,6 @@ for word in ('Cond	pickedup', 'Cond	dropped', 'Cond	slapped', 'Cond	happy', 'Con
     assert word in section, word
 
 # story state: the conditions are evaluated by the runner and the portal and class state reach the game
-script_h = read('source/gamemap/LevelScript.h')
 for kind in ('seatDefeated', 'ownsCreature', 'creatureHealth', 'spellKnown', 'trapsBuilt', 'roomTiles', 'largestRoom',
              'portalActive', 'creatureAlive', 'creatureReached'):
     assert 'case LevelScriptConditionType::%s:' % kind in runner, kind
