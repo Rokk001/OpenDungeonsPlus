@@ -1393,9 +1393,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
 
             // The skirmish game settings follow the seats
-            uint32_t goldDensityPercent;
-            uint32_t manaRegenerationPercent;
-            uint32_t maxCreaturesSetting;
+            uint32_t goldDensityPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
+            uint32_t manaRegenerationPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
+            uint32_t maxCreaturesSetting = 0;
             OD_ASSERT_TRUE(packetReceived >> goldDensityPercent);
             OD_ASSERT_TRUE(packetReceived >> manaRegenerationPercent);
             OD_ASSERT_TRUE(packetReceived >> maxCreaturesSetting);
