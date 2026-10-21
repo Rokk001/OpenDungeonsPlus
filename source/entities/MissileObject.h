@@ -78,7 +78,7 @@ public:
     virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget)
     {}
 
-    /*! brief Function called for each tile on the path of the missile. If it returns true, the missile stops
+    /*! \brief Function called for each tile on the path of the missile. If it returns true, the missile stops
      * on that tile
      */
     virtual bool stopsOnTile(Tile* tile)
@@ -89,6 +89,8 @@ public:
     { return false; }
 
     //! \brief Sends a missile that stopped on its way again
+    //! \param direction The direction the missile flies in
+    //! \param speed The speed in tiles per turn
     void launch(const Ogre::Vector3& direction, double speed);
 
     virtual GameEntityType getObjectType() const override;
@@ -137,6 +139,7 @@ protected:
     void setDirection(const Ogre::Vector3& direction)
     { mDirection = direction; }
 
+    //! \brief Changes the speed of the missile in tiles per turn
     void setSpeed(double speed)
     { mSpeed = speed; }
 

@@ -58,15 +58,21 @@ public:
     //! \brief Slaps the ball away from the point (fromX, fromY) in tile coordinates
     void slapFrom(float fromX, float fromY);
 
+    //! \brief Only a golf ball of the seat that lies still outside of a hole can be slapped (the client only checks
+    //! that it does not move)
     virtual bool canSlap(Seat* seat) override;
+    //! \brief Slaps the ball without the place of the hand: it rolls to the east
     virtual void slap() override;
+    //! \brief A golf ball stops in the holes of the level script
     virtual bool stopsOnTile(Tile* tile) override;
+    //! \brief A golf ball stays on the map when it stopped, so that it can be slapped again
     virtual bool staysWhenStopped() const override
     { return isGolfBall(); }
 
     static MissileBoulder* getMissileBoulderFromStream(GameMap* gameMap, std::istream& is);
     static MissileBoulder* getMissileBoulderFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
+    //! \brief A golf ball slows down every turn until it stops
     virtual void updateDirection() override;
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
