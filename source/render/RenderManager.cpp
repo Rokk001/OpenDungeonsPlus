@@ -4055,6 +4055,7 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     rrSetObjectAnimationState(curCreature, animName, animLoop);
 }
 
+//! \brief Tells whether the last melee blow shown for the creature was struck with its left hand.
 bool RenderManager::isLastBlowLeftHanded(const Creature* creature) const
 {
     std::map<const Creature*, bool>::const_iterator it = mCreatureLastBlowLeft.find(creature);
