@@ -44,6 +44,8 @@ namespace
     static const size_t STATE_FIELD_RAGE_SEAT = 3;
     static const size_t STATE_FIELD_BRAWL_OPPONENT = 4;
     static const size_t STATE_FIELD_BRAWL_TURNS = 5;
+    //! A saved grief mood is limited to this many points in both directions, whatever the file says
+    static const int64_t STATE_GRIEF_LIMIT = 100000;
 
     //! Default values used when config/relationships.cfg is missing or lacks an entry
     static const int32_t DEFAULT_THRESHOLD_FRIENDS = 50;
@@ -60,6 +62,10 @@ namespace
     static const int32_t DEFAULT_EVENT_CHICKEN_SNATCHED = -12;
     //! Largest absolute value a config setting may have; larger values are cut to it
     static const int64_t SETTING_LIMIT = 1000000;
+    //! Number of tab separated fields of a saved pair line: creatureA, creatureB, value, age in turns
+    static const size_t NB_SAVE_FIELDS = 4;
+    //! Number of fields of a saved pair that also has the lovers flag
+    static const size_t NB_SAVE_FIELDS_WITH_LOVERS = 5;
 
     //! \brief Reads a whole text as an integer. Returns false and leaves value untouched if the text
     //! is not exactly one integer.
@@ -1091,8 +1097,8 @@ bool CreatureRelationships::readFromStream(std::istream& is, int64_t turn)
         int64_t value;
         int64_t age;
         int64_t lovers = 0;
-        bool hasFlag = (fields.size() == 5);
-        if(((fields.size() != 4) && !hasFlag) || fields[0].empty() || fields[1].empty() || (fields[0] == fields[1])
+        bool hasFlag = (fields.size() == NB_SAVE_FIELDS_WITH_LOVERS);
+        if(((fields.size() != NB_SAVE_FIELDS) && !hasFlag) || fields[0].empty() || fields[1].empty() || (fields[0] == fields[1])
             || !parseInt(fields[2], value) || !parseInt(fields[3], age) || (hasFlag && !parseInt(fields[4], lovers)))
         {
             return false;
@@ -1176,7 +1182,7 @@ bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCr
 
         RelationshipCreatureState state;
         state.mName = fields[0];
-        state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-100000, std::min<int64_t>(100000, grief)));
+        state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-STATE_GRIEF_LIMIT, std::min<int64_t>(STATE_GRIEF_LIMIT, grief)));
         state.mRageTurnsLeft = std::max<int64_t>(0, rageTurns);
         state.mRageSeatId = static_cast<int32_t>(rageSeat);
         state.mBrawlOpponent = fields[STATE_FIELD_BRAWL_OPPONENT];
