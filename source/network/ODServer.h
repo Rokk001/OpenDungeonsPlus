@@ -78,7 +78,8 @@ class ODServer: public Ogre::Singleton<ODServer>,
     { return mServerMode; }
 
     //! \brief Loads the level and starts the server. Level files whose dungeon heart does not cover
-    //! 25 tiles (5x5) are refused; savegames and the editor may still load older hearts.
+    //! 25 tiles (5x5) are refused; savegames and the editor may still load older hearts. In a campaign
+    //! the computer keepers play with the difficulty chosen for the campaign.
     //! relationships is the game setup option "Creature relationships". It is ignored in editor
     //! mode and when a saved game is loaded (the save knows its own setting).
     //! \return true when the server is running.

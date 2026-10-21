@@ -290,6 +290,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void notifyPossessionEnded();
 
 protected:
+    //! \brief Leaves the game: starts the level again when that was asked, to the desktop, to the campaign menu while a campaign level is played, otherwise to the main menu
     bool onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/);
 
     //! \brief The different Game Options Menu handlers
@@ -663,7 +664,8 @@ private:
     void showDefeatDebriefing();
     //! Fills the hidden statistics area of the debriefing with the rows and shows it (nothing for no rows)
     void fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows);
-    //! The confirm button of the debriefing: leaves to the main menu with the skirmish sub-menu open
+    //! The confirm button of the debriefing: leaves to the campaign menu while a campaign level is played, otherwise to the
+    //! main menu with the skirmish sub-menu open
     bool onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& arg);
     //! \brief Hides every window of the game interface except the ones of the defeat sequence
     void hideInterfaceForDefeat();
