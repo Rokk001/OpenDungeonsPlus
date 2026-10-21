@@ -61,7 +61,6 @@ probe = r'''
 #include <string>
 #include <iostream>
 #include <chrono>
-#include <functional>
 
 static const char* const oversizedTestMesh="TestOversized.mesh";
 static const std::vector<RoomObjectPath::WalkingRadius>& testWalkingRadii(){
@@ -179,12 +178,12 @@ bool roomWorkGate(RoomType type,Creature& creature,BuildingObject* ro,const Ogre
 }
 int checks=0,failures=0;
 void check(bool ok,const char* reason){++checks;if(!ok){++failures;std::cout<<"FAIL "<<reason<<'\n';}}
+Ogre::Vector2 rotateCorridorPoint(Ogre::Vector2 p,int rotation){for(int i=0;i<rotation;++i)p={19-p.y,p.x};return p;}
 int main(){
  for(int rotation=0;rotation<4;++rotation)for(bool reverse:{false,true}){
   GameMap corridor(20,20);for(Tile& tile:corridor.tiles)tile.walkable=false;
-  const std::function<Ogre::Vector2(Ogre::Vector2)> rotate=[&](Ogre::Vector2 p){for(int i=0;i<rotation;++i)p={19-p.y,p.x};return p;};
-  std::vector<Ogre::Vector2> coarse;Ogre::Vector2 p(4,4);coarse.push_back(rotate(p));
-  for(int i=0;i<6;++i){p.x+=1;coarse.push_back(rotate(p));p.y+=1;coarse.push_back(rotate(p));}
+  std::vector<Ogre::Vector2> coarse;Ogre::Vector2 p(4,4);coarse.push_back(rotateCorridorPoint(p,rotation));
+  for(int i=0;i<6;++i){p.x+=1;coarse.push_back(rotateCorridorPoint(p,rotation));p.y+=1;coarse.push_back(rotateCorridorPoint(p,rotation));}
   for(const Ogre::Vector2& point:coarse)corridor.getTile(Helper::round(point.x),Helper::round(point.y))->walkable=true;
   if(reverse)std::reverse(coarse.begin(),coarse.end());
   Creature walker{&corridor};walker.pos={coarse.front().x,coarse.front().y,0};
