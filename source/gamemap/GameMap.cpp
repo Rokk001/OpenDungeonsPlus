@@ -4083,6 +4083,7 @@ void GameMap::applySkirmishSkillStates()
         if(seat->isRogueSeat())
             continue;
 
+        // Index 0 is nullSkillType, it is no skill
         for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
         {
             // What the host did not change stays as the level defines it for each seat

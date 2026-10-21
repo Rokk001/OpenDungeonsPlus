@@ -643,6 +643,9 @@ public:
     //! \brief The state of every skill chosen on the Game Settings page. The index is the SkillType. It is
     //! filled from the level the first time it is needed.
     const std::vector<SkirmishItemState>& getSkirmishSkillStates();
+    //! \brief Sets the state of one skill chosen on the Game Settings page
+    //! \param type The skill to change. Invalid skill types are ignored
+    //! \param state The new state. The state unchosen is ignored
     void setSkirmishSkillState(SkillType type, SkirmishItemState state);
 
     //! \brief Applies the states that differ from the level to every seat. To be called before the seats are initialized.

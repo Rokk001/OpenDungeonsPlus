@@ -53,7 +53,9 @@ const std::string SPINNER_GAME_DURATION = "SpinGameDuration";
 
 namespace
 {
+//! \brief The name of the Game settings window
 const std::string SETTINGS_WINDOW = "GameSettingsWindow";
+//! \brief The name of the tab control of the Game settings window
 const std::string SETTINGS_TABS = "SettingsTabs";
 
 //! \brief Height of one line on the creature, room, spell, trap and door pages, in layout pixels
@@ -87,6 +89,7 @@ const uint32_t SETTING_FOG_OFF = 0;
 const uint32_t SETTING_FOG_ON = 1;
 
 //! \brief The text on the button of a room, spell, trap or door
+//! \param state The availability, a GameMap::SkirmishItemState
 std::string itemStateText(uint32_t state)
 {
     switch(static_cast<GameMap::SkirmishItemState>(state))
@@ -101,6 +104,8 @@ std::string itemStateText(uint32_t state)
 }
 
 //! \brief The name of the page where the skill is shown or an empty string if it has none
+//! \param type The skill
+//! \return The page name, or an empty string if the skill is not shown on any page
 std::string itemPageName(SkillType type)
 {
     const std::string name = Skills::toString(type);
@@ -116,22 +121,32 @@ std::string itemPageName(SkillType type)
     return "";
 }
 
+//! \brief The value of a spinner of a page of the Game settings window
+//! \param page The page that holds the spinner
+//! \param spinnerName The name of the spinner
 uint32_t getSpinnerValue(CEGUI::Window* page, const std::string& spinnerName)
 {
     return static_cast<uint32_t>(static_cast<CEGUI::Spinner*>(page->getChild(spinnerName))->getCurrentValue());
 }
 
+//! \brief The Game settings window
+//! \param sheet The gui sheet of the seat configuration
 CEGUI::Window* getSettingsWindow(CEGUI::Window* sheet)
 {
     return sheet->getChild(SETTINGS_WINDOW);
 }
 
 //! \brief The page "General" of the Game settings window
+//! \param sheet The gui sheet of the seat configuration
 CEGUI::Window* getGeneralPage(CEGUI::Window* sheet)
 {
     return getSettingsWindow(sheet)->getChild(SETTINGS_TABS + "/General");
 }
 
+//! \brief Adds a choice to a skirmish setting combo
+//! \param combo The combo to add to
+//! \param text The text shown for the choice
+//! \param value The value the choice stands for, kept as the id of the list item
 void addSettingItem(CEGUI::Combobox* combo, const std::string& text, uint32_t value)
 {
     const CEGUI::Image* selImg = &CEGUI::ImageManager::getSingleton().get("OpenDungeonsSkin/SelectionBrush");
@@ -141,9 +156,12 @@ void addSettingItem(CEGUI::Combobox* combo, const std::string& text, uint32_t va
 }
 
 //! \brief Returns the id of the selected item or defaultValue if nothing is selected
-uint32_t getSettingValue(CEGUI::Window* playersWin, const std::string& comboName, uint32_t defaultValue)
+//! \param page The page of the Game settings window that holds the combo
+//! \param comboName The name of the combo
+//! \param defaultValue The value to return if nothing is selected
+uint32_t getSettingValue(CEGUI::Window* page, const std::string& comboName, uint32_t defaultValue)
 {
-    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(comboName));
+    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(page->getChild(comboName));
     CEGUI::ListboxItem* selItem = combo->getSelectedItem();
     if(selItem == nullptr)
         return defaultValue;
@@ -151,9 +169,13 @@ uint32_t getSettingValue(CEGUI::Window* playersWin, const std::string& comboName
     return selItem->getID();
 }
 
-void selectSettingValue(CEGUI::Window* playersWin, const std::string& comboName, uint32_t value)
+//! \brief Selects the choice of a skirmish setting combo that stands for the value, and shows its text
+//! \param page The page of the Game settings window that holds the combo
+//! \param comboName The name of the combo
+//! \param value The value to select; nothing changes in the text if the combo has no such choice
+void selectSettingValue(CEGUI::Window* page, const std::string& comboName, uint32_t value)
 {
-    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(playersWin->getChild(comboName));
+    CEGUI::Combobox* combo = static_cast<CEGUI::Combobox*>(page->getChild(comboName));
     CEGUI::ListboxItem* selItem = nullptr;
     for(uint32_t i = 0; i < combo->getItemCount(); ++i)
     {
@@ -375,6 +397,7 @@ void MenuModeConfigureSeats::initSettingPages()
     mItemStates.assign(static_cast<uint32_t>(SkillType::countSkill),
         static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch));
     std::map<std::string, float> pageLineY;
+    // Index 0 is nullSkillType, it is no skill
     for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
     {
         SkillType skillType = static_cast<SkillType>(i);

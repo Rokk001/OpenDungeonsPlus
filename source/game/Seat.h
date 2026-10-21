@@ -221,7 +221,8 @@ public:
 
     void setDraggableMapSize(int x, int y);
     
-    //! \brief Returns the next fighter creature class to spawn.
+    //! \brief Returns the next fighter creature class to spawn. Classes that reached the limit set in the
+    //! skirmish game settings are skipped.
     const CreatureDefinition* getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager );
 
     //! \brief Announces the first actual arrival of each class, once per seat.

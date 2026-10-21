@@ -56,9 +56,13 @@ public:
     bool chatText(const CEGUI::EventArgs& e);
 
     bool comboChanged(const CEGUI::EventArgs& ea);
+    //! \brief Shows the Game settings window
     bool openGameSettings(const CEGUI::EventArgs& ea);
+    //! \brief Hides the Game settings window
     bool closeGameSettings(const CEGUI::EventArgs& ea);
+    //! \brief Sends the settings to the server when the host changed a spinner of the Game settings window
     bool settingChanged(const CEGUI::EventArgs& ea);
+    //! \brief Switches the availability of a room, spell, trap or door to the next state and sends it to the server
     bool itemStateClicked(const CEGUI::EventArgs& ea);
     void addPlayer(const std::string& nick, int32_t id);
     void removePlayer(int32_t id);
@@ -86,7 +90,7 @@ private:
 
     void fireSeatConfigurationToServer();
 
-    //! \brief Fills the skirmish setting combos with their choices
+    //! \brief Fills the skirmish setting combos and the maximum creatures, game speed and game duration spinners with their choices
     void initSettingCombos();
 
     //! \brief Fills the pages of the Game settings window with one line per creature, room, spell, trap and door

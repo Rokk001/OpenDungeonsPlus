@@ -3543,6 +3543,7 @@ void ODServer::fireSeatConfigurationRefresh()
     for(const CreatureDefinition* def : fighterDefs)
         packetSend << def->getClassName() << mGameMap->getCreatureClassLimit(def->getClassName());
 
+    // The availability of each skill. Index 0 is nullSkillType, it is no skill
     const std::vector<GameMap::SkirmishItemState>& skillStates = mGameMap->getSkirmishSkillStates();
     uint32_t nbSkillStates = static_cast<uint32_t>(SkillType::countSkill) - 1;
     packetSend << nbSkillStates;

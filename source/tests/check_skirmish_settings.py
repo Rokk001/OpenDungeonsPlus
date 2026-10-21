@@ -15,6 +15,7 @@ failures = []
 
 
 def check(condition, message):
+    """Records a failure when the condition does not hold."""
     if not condition:
         failures.append(message)
 
@@ -23,6 +24,7 @@ windows = {w.get("name"): w for w in layout.iter("Window")}
 
 
 def area(name):
+    """Returns the four (scale, offset) pairs of the Area property of a layout window."""
     value = windows[name].find("Property[@name='Area']").get("value")
     numbers = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", value)]
     # {{sx,ox},{sy,oy},{sx,ox},{sy,oy}}
