@@ -233,6 +233,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Switches the options window to the end game page.
     bool showEndGameFromOptions(const CEGUI::EventArgs& = {});
     //! \brief Shows the buttons of the end game page (true) or of the options page (false).
+    //! \param endGame True to show the end game page, false to show the normal options page.
     void setOptionsPage(bool endGame);
     bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
