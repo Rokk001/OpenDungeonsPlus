@@ -75,6 +75,12 @@ const float COOP_DECOR_START_SECONDS = 10.0f;
 const uint32_t LOOK_PHASE_COUNT = 97;
 //! \brief Step of the phase offset between two chickens.
 const float LOOK_PHASE_STEP = 0.37f;
+//! \brief Height above the egg at which the shell pieces fly when it hatches.
+const float FEATHER_HEIGHT_HATCH_SHELL = 0.05f;
+//! \brief Height at which the shell pieces and yolk of a trampled egg start.
+const float FEATHER_HEIGHT_TRAMPLE_SHELL = 0.04f;
+//! \brief Height above the ground from which an egg counts as lying in a nest.
+const float NEST_EGG_MIN_HEIGHT = 0.01f;
 
 //! Small deterministic random numbers so that the meshes look the same every time
 class ShapeRandom
@@ -564,14 +570,14 @@ bool RenderManager::chickenClipVisible(ChickenEntity* chicken, const std::string
 //! \brief The egg hatched: lets the shell pieces fly.
 void RenderManager::rrChickenHatched(ChickenEntity* chicken)
 {
-    createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.05f), "ChickenEggShell");
+    createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, FEATHER_HEIGHT_HATCH_SHELL), "ChickenEggShell");
 }
 
 //! \brief An egg was trampled: lets shell pieces and yolk fly.
 void RenderManager::rrEggTrampled(const Ogre::Vector3& position)
 {
     // Shell pieces and yolk have no chicken feather trigger.
-    createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, 0.04f), "ChickenEggTrample");
+    createChickenFeatherEffect(position + Ogre::Vector3(0.0f, 0.0f, FEATHER_HEIGHT_TRAMPLE_SHELL), "ChickenEggTrample");
 }
 
 void RenderManager::rrSetHatcheryNests(const std::string& roomName, const std::vector<HatcheryNestField::Place>& places,
@@ -773,7 +779,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
         if(kind == ChickenKind::egg)
         {
             // An egg a little above the ground lies in a nest (the server puts it there)
-            if(!look.mNestEgg && (chicken->getPosition().z > 0.01f))
+            if(!look.mNestEgg && (chicken->getPosition().z > NEST_EGG_MIN_HEIGHT))
             {
                 look.mNestEgg = true;
                 hideEggStraw(look.mEntity);
