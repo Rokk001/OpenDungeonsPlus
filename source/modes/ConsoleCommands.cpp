@@ -713,6 +713,8 @@ Command::Result cListMeshAnims(const Command::ArgumentList_t& args, ConsoleInter
     return Command::Result::SUCCESS;
 }
 
+//! \brief Console command "reaction": lists the reaction events, reloads the file or shows an event on a
+//! creature (the one under the pointer, a named one, all visible ones or as a staggered group).
 Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleInterface& c, AbstractModeManager&)
 {
     CreatureReactions* reactions = CreatureReactions::getSingletonPtr();

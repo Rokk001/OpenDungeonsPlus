@@ -68,9 +68,13 @@ template<> CreatureReactions* Ogre::Singleton<CreatureReactions>::msSingleton = 
 namespace
 {
 
+//! Prefix of the material of an emote icon (the emote name follows)
 const std::string EMOTE_MATERIAL_PREFIX = "CreatureEmote_";
+//! Prefix of the scene name of a particle system a reaction creates (a counter follows)
 const std::string PARTICLE_NAME_PREFIX = "CreatureReaction_";
+//! Seconds between two runs that delete the cooldown entries that are over
 const double PRUNE_INTERVAL = 30.0;
+//! Pi, used for the hop motion
 const double PI_VALUE = 3.14159265358979323846;
 //! Seconds after an attack animation during which the creature counts as one of the fighters
 const double ATTACK_MEMORY = 3.0;
@@ -244,17 +248,20 @@ std::mt19937& cosmeticRng()
     return rng;
 }
 
+//! \brief Returns an evenly distributed random number from the cosmetic generator between min and max.
 double cosmeticRandom(double min, double max)
 {
     std::uniform_real_distribution<double> distribution(min, max);
     return distribution(cosmeticRng());
 }
 
+//! \brief True if the text begins with the prefix.
 bool startsWith(const std::string& text, const std::string& prefix)
 {
     return text.compare(0, prefix.size(), prefix) == 0;
 }
 
+//! \brief True if the list holds the value.
 bool contains(const std::vector<std::string>& list, const std::string& value)
 {
     return std::find(list.begin(), list.end(), value) != list.end();

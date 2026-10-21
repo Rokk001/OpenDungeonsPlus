@@ -274,6 +274,7 @@ public:
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
 
+    //! \brief The system configuration path, with the trailing separator
     inline const std::string& getConfigPath() const
     { return mConfigPath; }
 
