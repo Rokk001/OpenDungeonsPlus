@@ -121,6 +121,17 @@ public:
     //! Lowest and highest number of seconds the strike clip waits for the turn to the target
     static const double AttackTurnMaxDelayMin;
     static const double AttackTurnMaxDelayMax;
+    //! Lowest value of the glancing and strong hit shares
+    static const double HitShareMin;
+    //! Highest value of the glancing hit share
+    static const double HitGlanceShareMax;
+    //! Highest value of the strong hit share
+    static const double HitStrongShareMax;
+    //! Lowest and highest value of a dodge, parry or shield block chance in percent
+    static const double ChanceMin;
+    static const double ChanceMax;
+    //! Highest value of the chance in percent that every level adds
+    static const double ChancePerLevelMax;
 
     const Ogre::ColourValue& getColorFromId(const std::string& id) const;
 
@@ -205,11 +216,11 @@ public:
 
     //! \brief A blow that lets through less than this share of its damage counts as glancing (0.01 - 0.9)
     inline double getHitGlanceShare() const
-    { return std::max(0.01, std::min(0.9, mHitGlanceShare)); }
+    { return std::max(HitShareMin, std::min(HitGlanceShareMax, mHitGlanceShare)); }
 
     //! \brief A hit that takes at least this share of the maximum health of its target is a strong one (0.01 - 1)
     inline double getHitStrongShare() const
-    { return std::max(0.01, std::min(1.0, mHitStrongShare)); }
+    { return std::max(HitShareMin, std::min(HitStrongShareMax, mHitStrongShare)); }
 
     //! \brief True if the server tells the keepers that a creature turns to its target before a blow (cosmetic event attackTurn)
     inline bool getAttackTurnEvents() const
@@ -229,39 +240,39 @@ public:
 
     //! \brief Base dodge chance of creature types configured to dodge, in percent (0 - 100).
     inline double getDodgeBase() const
-    { return std::max(0.0, std::min(100.0, mDodgeBase)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mDodgeBase)); }
 
     //! \brief Dodge chance in percent that every level adds (0 - 10)
     inline double getDodgePerLevel() const
-    { return std::max(0.0, std::min(10.0, mDodgePerLevel)); }
+    { return std::max(ChanceMin, std::min(ChancePerLevelMax, mDodgePerLevel)); }
 
     //! \brief Highest dodge chance in percent (0 - 100)
     inline double getDodgeMax() const
-    { return std::max(0.0, std::min(100.0, mDodgeMax)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mDodgeMax)); }
 
     //! \brief Parry chance with a weapon in percent, base value (0 - 100)
     inline double getParryBase() const
-    { return std::max(0.0, std::min(100.0, mParryBase)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mParryBase)); }
 
     //! \brief Parry chance in percent that every level adds (0 - 10)
     inline double getParryPerLevel() const
-    { return std::max(0.0, std::min(10.0, mParryPerLevel)); }
+    { return std::max(ChanceMin, std::min(ChancePerLevelMax, mParryPerLevel)); }
 
     //! \brief Highest parry chance with a weapon in percent (0 - 100)
     inline double getParryMax() const
-    { return std::max(0.0, std::min(100.0, mParryMax)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mParryMax)); }
 
     //! \brief Base chance of blocking with a shield, in percent (0 - 100).
     inline double getShieldBlockBase() const
-    { return std::max(0.0, std::min(100.0, mShieldBlockBase)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mShieldBlockBase)); }
 
     //! \brief Shield block chance added per level, in percent (0 - 10).
     inline double getShieldBlockPerLevel() const
-    { return std::max(0.0, std::min(10.0, mShieldBlockPerLevel)); }
+    { return std::max(ChanceMin, std::min(ChancePerLevelMax, mShieldBlockPerLevel)); }
 
     //! \brief Highest shield block chance, in percent (0 - 100).
     inline double getShieldBlockMax() const
-    { return std::max(0.0, std::min(100.0, mShieldBlockMax)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mShieldBlockMax)); }
 
     inline int64_t getTimePayDay() const
     { return mTimePayDay; }
