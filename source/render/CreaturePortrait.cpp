@@ -122,9 +122,9 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
     lightNode->setDirection(0.4f, 1.0f, -0.6f);
 
     Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
-    unsigned short src, dest;
-    if(!mesh->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
-        mesh->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+    unsigned short src;
+    if(!mesh->suggestTangentVectorBuildParams(src))
+        mesh->buildTangentVectors(src);
     Ogre::Entity* entity = scene->createEntity(mesh);
     scene->getRootSceneNode()->createChildSceneNode()->attachObject(entity);
     if(entity->hasAnimationState("Idle"))
