@@ -66,7 +66,8 @@ struct Creature:GameEntity {CreatureDefinition definition;Creature(Seat* s,bool 
  const CreatureDefinition* getDefinition()const{return &definition;}};
 struct GameMap {bool editor=false;int fights=0;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}
- void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}};
+ void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}
+ static const uint32_t SKIRMISH_HEART_REWARD_SPECIALS=1;static const uint32_t SKIRMISH_HEART_REWARD_ROOMS_AND_LAND=2;};
 struct TreasuryObject {TreasuryObject(GameMap*,int){}void addToGameMap(){}void createMesh(){}void setPosition(Ogre::Vector3){}};
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}bool notifyRemoveAsked(){return true;}};
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;

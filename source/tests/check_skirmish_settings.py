@@ -98,18 +98,25 @@ check("isHeartKnown()" in (root / "source/modes/GameMode.cpp").read_text(encodin
       "the defeat sequence must handle an unknown heart")
 
 # The destroyed heart reward of the skirmish setting: captions, specials around the heart, rooms and land
-check('"Gain mana", 0' in mode and '"Gain mana and specials", 1' in mode and '"Gain mana, rooms and land", 2' in mode,
+check('"Gain mana", GameMap::SKIRMISH_HEART_REWARD_MANA' in mode
+      and '"Gain mana and specials", GameMap::SKIRMISH_HEART_REWARD_SPECIALS' in mode
+      and '"Gain mana, rooms and land", GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND' in mode,
       "the heart reward captions changed")
+# The three rewards are named; their values stay 0, 1 and 2 (they travel in the settings packet)
+check("SKIRMISH_HEART_REWARD_MANA = 0;" in header and "SKIRMISH_HEART_REWARD_SPECIALS = 1;" in header
+      and "SKIRMISH_HEART_REWARD_ROOMS_AND_LAND = 2;" in header, "heart reward range is 0 to 2")
 temple = (root / "source/rooms/RoomDungeonTemple.cpp").read_text(encoding="utf-8")
 reward_code = temple[temple.index("void placeHeartRewardSpecials"):temple.index("class DungeonHeartObject")]
 check("revealMapPermanently" not in reward_code and "addSkill" not in reward_code,
       "the reward must not reveal the map or give researched rooms")
 check("HEART_REWARD_SPECIAL_DISTANCE = 2" in temple, "the specials lie 2 tiles from the heart centre")
-offsets = re.search(r"offsetX\[4\] = \{([^}]*)\}.*?offsetY\[4\] = \{([^}]*)\}", reward_code, re.S)
+check("HEART_REWARD_NB_SPECIALS = 4;" in temple, "four special objects are expected")
+offsets = re.search(r"offsetX\[HEART_REWARD_NB_SPECIALS\] = \{([^}]*)\}.*?offsetY\[HEART_REWARD_NB_SPECIALS\] = \{([^}]*)\}", reward_code, re.S)
 check(offsets is not None and len(offsets.group(1).split(",")) == 4 and len(offsets.group(2).split(",")) == 4,
       "four special objects (north, east, south, west) are expected")
 check("setSeat(winnerSeat)" in reward_code, "the specials belong to the winner")
-check("if(reward == 1)" in reward_code and "else if(reward >= 2)" in reward_code,
+check("if(reward == GameMap::SKIRMISH_HEART_REWARD_SPECIALS)" in reward_code
+      and "else if(reward >= GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND)" in reward_code,
       "specials only for value 1, rooms and land only for value 2")
 check("candidate->getType() == RoomType::dungeonTemple" in reward_code, "the dungeon heart must stay with its owner")
 check("claimForSeat(winnerSeat, tile," in reward_code, "rooms must change hands through the room's own claim")
@@ -121,6 +128,12 @@ check("loserSeat->getMana()" in reward_code and "addManaToSeat(-mana, loserSeat-
 pool = re.search(r"HEART_REWARD_SPECIALS\[\] =\s*\{(.*?)\n\};", temple, re.S).group(1)
 weights = [int(w) for w in re.findall(r"GiftBoxType::\w+, (\d+) \}", pool)]
 check(len(weights) == 12 and sum(weights) == 100 and min(weights) >= 1, "the reward weights must add up to 100")
+check(all(w > 0 for w in weights), "every special of the reward pool needs a positive weight")
+# The reward is given when the heart dies, before the heart is announced as dead
+take_damage = temple[temple.index("double RoomDungeonTemple::takeHeartDamage"):]
+check("giveDestroyedHeartReward(" in take_damage, "the heart reward is not given when the heart is destroyed")
+check(take_damage.index("giveDestroyedHeartReward(") < take_damage.index("fireEntityDead();"),
+      "the heart reward must be given before the heart is announced as dead")
 check("pickHeartRewardSpecial()" in temple, "the specials are drawn by weight")
 bonus = (root / "source/giftboxes/GiftBoxBonus.cpp").read_text(encoding="utf-8")
 for entry in re.findall(r"GiftBoxType::(\w+)", pool):

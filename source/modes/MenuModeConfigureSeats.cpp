@@ -295,10 +295,10 @@ void MenuModeConfigureSeats::initSettingCombos()
     combo->setReadOnly(true);
     combo->setEnabled(false);
     mHostSettingWindows.push_back(combo);
-    addSettingItem(combo, "Gain mana", 0);
-    addSettingItem(combo, "Gain mana and specials", 1);
-    addSettingItem(combo, "Gain mana, rooms and land", 2);
-    selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, 0);
+    addSettingItem(combo, "Gain mana", GameMap::SKIRMISH_HEART_REWARD_MANA);
+    addSettingItem(combo, "Gain mana and specials", GameMap::SKIRMISH_HEART_REWARD_SPECIALS);
+    addSettingItem(combo, "Gain mana, rooms and land", GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND);
+    selectSettingValue(generalPage, COMBOBOX_HEART_DESTROYED, GameMap::SKIRMISH_HEART_REWARD_MANA);
     addEventConnection(
         combo->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
             CEGUI::Event::Subscriber(&MenuModeConfigureSeats::comboChanged, this))
@@ -1017,7 +1017,7 @@ void MenuModeConfigureSeats::refreshSeatConfiguration(ODPacket& packet)
     uint32_t gameSpeedPercent;
     uint32_t gameDurationMinutes;
     uint32_t fogOfWar;
-    uint32_t heartDestroyedReward;
+    uint32_t heartDestroyedReward = GameMap::SKIRMISH_HEART_REWARD_MANA;
     OD_ASSERT_TRUE(packet >> gameSpeedPercent);
     OD_ASSERT_TRUE(packet >> gameDurationMinutes);
     OD_ASSERT_TRUE(packet >> fogOfWar);

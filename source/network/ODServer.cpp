@@ -1411,7 +1411,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             uint32_t gameSpeedPercent;
             uint32_t gameDurationMinutes;
             uint32_t fogOfWar;
-            uint32_t heartDestroyedReward;
+            uint32_t heartDestroyedReward = GameMap::SKIRMISH_SETTING_UNCHOSEN;
             OD_ASSERT_TRUE(packetReceived >> gameSpeedPercent);
             OD_ASSERT_TRUE(packetReceived >> gameDurationMinutes);
             OD_ASSERT_TRUE(packetReceived >> fogOfWar);
