@@ -188,6 +188,7 @@ public:
     //! \brief A hen runs away to the spot (a hungry creature comes close) and does not scatter again for a while.
     bool scatterTo(const Ogre::Vector2& spot, uint32_t turns);
 
+    //! \brief True while a hen that ran away from a hungry creature does not scatter again.
     inline bool isScattering() const
     { return mScatterTurns > 0; }
 

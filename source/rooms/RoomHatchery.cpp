@@ -204,6 +204,8 @@ void RoomHatchery::fireProtest(Tile& tile)
     fireRoomSound(tile, "Hatchery/Protest");
 }
 
+//! \brief Saves the waiting counters of the coops and the crow interval, the eggs whose hen started laying and the
+//! grain that is gone.
 void RoomHatchery::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
@@ -232,6 +234,8 @@ void RoomHatchery::exportToStream(std::ostream& os) const
     }
 }
 
+//! \brief Loads what exportToStream wrote. A save without the lines loads as before: the stream is put back
+//! and the counters start from zero.
 bool RoomHatchery::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
