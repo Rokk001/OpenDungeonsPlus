@@ -331,6 +331,7 @@ BOOST_AUTO_TEST_CASE(test_Lifetime)
     BOOST_CHECK_EQUAL(torches.size(), 3u);
 }
 
+// A tile counts as lit when a torch of any owner is within the radius; the row ends of the map are not neighbours.
 BOOST_AUTO_TEST_CASE(test_LitByTorchInRange)
 {
     const int32_t sizeX = MAP_SIZE;
