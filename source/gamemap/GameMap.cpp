@@ -101,6 +101,7 @@ const uint32_t GameMap::SKIRMISH_SPEED_MAX;
 const uint32_t GameMap::SKIRMISH_DURATION_MAX;
 const uint32_t GameMap::SKIRMISH_PERCENT_MIN;
 const uint32_t GameMap::SKIRMISH_PERCENT_MAX;
+const uint32_t GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND;
 
 using namespace std;
 
