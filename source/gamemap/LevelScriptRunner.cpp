@@ -1225,6 +1225,7 @@ std::vector<std::string> resolveCreatureNames(GameMap& gameMap, const LevelScrip
 //! Running creatures move this much faster than walking ones (own tuning value)
 const double RUN_SPEED_FACTOR = 1.5;
 
+//! The creatures (names or party tags) run or walk again (the speed action)
 void changeCreatureSpeed(GameMap& gameMap, const LevelScript& script, const LevelScriptAction& action)
 {
     std::vector<std::string> names = resolveCreatureNames(gameMap, script, action.mCreatureNames);
@@ -1238,6 +1239,7 @@ void changeCreatureSpeed(GameMap& gameMap, const LevelScript& script, const Leve
     }
 }
 
+//! The creatures (names or party tags) get the standing order of the action (the order action)
 void giveCreatureOrder(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action)
 {
     LevelScriptOrder order;
@@ -1628,6 +1630,7 @@ bool walkToNearest(Creature& creature, Tile* myTile, const std::vector<Tile*>& t
     return true;
 }
 
+//! True if the tiles are at most that many tiles apart in both directions
 bool isNear(const Tile* first, const Tile* second, int32_t distance)
 {
     return (std::abs(first->getX() - second->getX()) <= distance) && (std::abs(first->getY() - second->getY()) <= distance);

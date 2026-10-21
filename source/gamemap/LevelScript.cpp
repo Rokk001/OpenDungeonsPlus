@@ -142,6 +142,7 @@ bool parseWaypoints(const std::string& text, std::vector<std::pair<int32_t, int3
     return true;
 }
 
+//! \brief Writes the waypoints in the form that parseWaypoints reads.
 void writeWaypoints(std::ostream& os, const std::vector<std::pair<int32_t, int32_t> >& waypoints)
 {
     if(waypoints.empty())
@@ -159,6 +160,7 @@ void writeWaypoints(std::ostream& os, const std::vector<std::pair<int32_t, int32
     }
 }
 
+//! \brief True if the text names a standing order.
 bool parseOrderJob(const std::string& job)
 {
     return (job == "killplayer") || (job == "goto") || (job == "killcreatures") || (job == "wait") || (job == "stealgold");
@@ -1818,7 +1820,7 @@ bool LevelScript::importFromStream(std::istream& is)
         else if(key == "Slaps")
         {
             int32_t seatId;
-            int64_t count;
+            int64_t count = 0;
             if(inTrigger || (t.size() != 3) || !parseInt32(t[1], seatId) || !parseInt(t[2], count))
                 return false;
 
@@ -1827,7 +1829,7 @@ bool LevelScript::importFromStream(std::istream& is)
         else if(key == "Order")
         {
             LevelScriptOrder order;
-            int64_t index;
+            int64_t index = 0;
             if(inTrigger || (t.size() != 6) || !parseOrderJob(t[2]) || !parseInt32(t[3], order.mSeatId) ||
                !parseInt(t[4], index) || (index < 0) || !parseWaypoints(t[5], order.mWaypoints))
             {

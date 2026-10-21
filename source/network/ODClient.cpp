@@ -1122,8 +1122,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::seatTeam:
         {
-            int32_t seatId;
-            int32_t teamId;
+            int32_t seatId = -1;
+            int32_t teamId = -1;
             OD_ASSERT_TRUE(packetReceived >> seatId >> teamId);
             Seat* seat = gameMap->getSeatById(seatId);
             if(seat != nullptr)
