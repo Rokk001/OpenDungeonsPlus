@@ -115,7 +115,6 @@ bool RoomDungeonTemple::isTreasuryTile(Tile*)const{return false;}
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*){}
 Tile* RoomDungeonTemple::getHeartTile()const{return nullptr;}
 int main(){int checks=0,failures=0;
- // allowed-lambda: the probe closure only counts and prints failed checks
  std::function<void(bool,const char*)> check=[&](bool ok,const char* msg){
   ++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};

@@ -35,7 +35,6 @@ struct Tile {
 struct GameMap {std::vector<GameEntity*> getVisibleForce(const std::vector<Tile*>&,Seat*,bool);};
 METHOD
 int main(){int checks=0,failures=0;
- // allowed-lambda: the probe closure only counts and prints failed checks
  std::function<void(bool,const char*)> check=[&](bool ok,const char* msg){
   ++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
  Seat owner{1},ally{1},enemy{2};GameMap map;Tile centre,outer,roomTile;

@@ -102,7 +102,6 @@ CENTRE
 ACTIVE
 POSITION
 int main(){int checks=0,failures=0;
- // allowed-lambda: the probe closure only counts and prints failed checks
  std::function<void(bool,const char*)> check=[&](bool ok,const char* label){
   ++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}};
  // Cut a 5x5 floor down its centre, leaving two disconnected islands, then

@@ -47,7 +47,6 @@ struct InputCommand {int selected=0,failures=0;void unselectAllTiles(){selected=
 std::string formatBuildRoom(int,int){return "build";}
 METHOD
 void hover(GameMap* gameMap,const InputManager& inputManager,InputCommand& inputCommand){HOVER}
-// allowed-lambda: the probe closure only counts and prints failed checks
 int main(){int checks=0,failures=0;std::function<void(bool)> check=[&](bool ok){++checks;if(!ok)++failures;};
  GameMap map;Tile tile{&map};Seat seat;Object heart{"",{58,102}};
  map.objects={&heart};map.hovered=&tile;
