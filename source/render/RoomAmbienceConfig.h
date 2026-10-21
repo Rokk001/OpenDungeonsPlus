@@ -134,6 +134,8 @@ const uint32_t DEFAULT_EFFECT_SPACING = 1;
 const double DEFAULT_EFFECT_MAX_DISTANCE = 28.0;
 //! \brief Default priority of an effect when the budget is used up
 const int32_t DEFAULT_EFFECT_PRIORITY = 5;
+//! \brief The health fraction below which a heart counts as low when an effect does not say (Below)
+const double DEFAULT_LOW_HEALTH_BELOW = 0.35;
 
 //! \brief One effect read from the room ambience configuration
 struct AmbienceEffect
@@ -154,7 +156,7 @@ struct AmbienceEffect
         mDuration(DEFAULT_EFFECT_DURATION),
         mFrom(Ogre::Vector3(0.0f, 0.0f, 8.0f)),
         mDelay(0.0),
-        mBelow(0.35),
+        mBelow(DEFAULT_LOW_HEALTH_BELOW),
         mEvery(DEFAULT_EFFECT_EVERY),
         mChance(DEFAULT_EFFECT_CHANCE),
         mSpacing(DEFAULT_EFFECT_SPACING),
