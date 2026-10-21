@@ -7,17 +7,20 @@
 #include "render/PortraitCatalog.h"
 #include <sstream>
 
-//! \brief Keeps permanent numeric order and tags without filling reserved gaps.
+//! \brief Keeps permanent numeric order through image 100 and its shade tags without filling reserved gaps.
 BOOST_AUTO_TEST_CASE(images_and_reserved_numbers)
 {
     PortraitCatalog catalog;
-    std::istringstream rows("3\t03.jpg\thair-braided\n# retired 2\n1\t01.jpg\thair-swept,eyepatch\n");
+    std::istringstream rows("100\t100.jpg\thair-curled,skin-warm-olive\n3\t03.jpg\thair-braided\n# retired 2\n1\t01.jpg\thair-swept,eyepatch\n");
     BOOST_REQUIRE(catalog.loadFromStream(rows, "whole/", "fixture"));
-    BOOST_CHECK_EQUAL(catalog.getImages().size(), 2u);
+    BOOST_CHECK_EQUAL(catalog.getImages().size(), 3u);
     BOOST_CHECK_EQUAL(catalog.getImages()[0].mNumber, 1u);
     BOOST_CHECK_EQUAL(catalog.findImage(1)->mPath, "whole/01.jpg");
     BOOST_CHECK_EQUAL(catalog.findImage(1)->mTags[1], "eyepatch");
     BOOST_CHECK(catalog.findImage(2) == nullptr);
+    BOOST_REQUIRE(catalog.findImage(100) != nullptr);
+    BOOST_CHECK_EQUAL(catalog.findImage(100)->mPath, "whole/100.jpg");
+    BOOST_CHECK_EQUAL(catalog.findImage(100)->mTags[1], "skin-warm-olive");
 }
 
 //! \brief Rejects malformed or ambiguous indices instead of inventing a portrait.

@@ -35,6 +35,8 @@ if len(catalogs) != 34:
 actual = {path.name for path in WHOLE.iterdir() if path.is_dir()} if WHOLE.exists() else set()
 if actual != set(catalogs):
     fail('Catalog folders differ: missing=%s extra=%s' % (sorted(set(catalogs) - actual), sorted(actual - set(catalogs))))
+hidden_face_catalogs = {'Knight.mesh', 'Knight.mesh-female', 'Cultist.mesh', 'Cultist.mesh-female'}
+expected_total = 3200
 all_tags = set()
 total = 0
 for catalog in catalogs:
@@ -43,6 +45,8 @@ for catalog in catalogs:
     if not index.is_file():
         fail(catalog + ': missing index.cfg')
         continue
+    expected_count = 50 if catalog in hidden_face_catalogs else 100
+    shade_choices = set()
     rows = []
     for line_number, line in enumerate(index.read_text(encoding='utf-8').splitlines(), 1):
         if not line or line.startswith('#'):
@@ -57,9 +61,16 @@ for catalog in catalogs:
             fail('%s/index.cfg:%d: invalid filename or duplicate tags' % (catalog, line_number))
         rows.append((number, filename))
         all_tags.update(tags)
+        if number > 50:
+            skin_tags = tuple(sorted(tag for tag in tags if tag.startswith('skin-')))
+            if not skin_tags or skin_tags in shade_choices:
+                fail('%s/index.cfg:%d: missing or repeated skin shade tags' % (catalog, line_number))
+            shade_choices.add(skin_tags)
     numbers = [number for number, _ in rows]
-    if len(numbers) != 50 or len(set(numbers)) != 50 or set(numbers) != set(range(1, 51)):
-        fail('%s: expected image numbers 1..50 exactly once, found %d rows' % (catalog, len(numbers)))
+    if (len(numbers) != expected_count or len(set(numbers)) != expected_count
+            or set(numbers) != set(range(1, expected_count + 1))):
+        fail('%s: expected image numbers 1..%d exactly once, found %d rows'
+             % (catalog, expected_count, len(numbers)))
     listed = {filename for _, filename in rows}
     delivered = {path.name for path in folder.iterdir() if path.name != 'index.cfg'}
     if delivered != listed:
@@ -112,6 +123,6 @@ for error in errors:
     print('FAIL: ' + error)
 for catalog, pairs in sorted(near_duplicates.items()):
     print('NEAR-DUPLICATES %s: %s' % (catalog, ', '.join(pairs)))
-print('Whole portraits: %d / 1700 valid JPEG files; %d errors. Head/headgear containment also requires individual visual review.'
-      % (total, len(errors)))
+print('Whole portraits: %d / %d valid JPEG files; %d errors. Head/headgear containment and skin shade differences also require individual visual review.'
+      % (total, expected_total, len(errors)))
 sys.exit(1 if errors else 0)
