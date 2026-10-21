@@ -3,7 +3,14 @@ $ErrorActionPreference = 'Stop'
 $taskRoot = $taskDependencyRoot
 $taskCmake = "$taskRoot\tools\cmake-4.4.1-windows-x86_64\bin\cmake.exe"
 $taskPatch = Join-Path $PSScriptRoot 'patches/cegui-msvc-snprintf.patch'
+$taskHitTestPatch = Join-Path $PSScriptRoot 'patches/cegui-list-hit-test.patch'
 $ErrorActionPreference = 'Continue'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskHitTestPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying CEGUI list row hit-test fix'
+    & git -C "$taskRoot\src\cegui" apply $taskHitTestPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI list hit-test patch failed' }
+}
 & git -C "$taskRoot\src\cegui" apply --reverse --check $taskPatch *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Output 'Applying CEGUI snprintf compatibility fix for modern MSVC'

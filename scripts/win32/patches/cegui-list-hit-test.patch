@@ -1,0 +1,32 @@
+From 192eb8256796a71d3732b8d49a504b224b855dd9 Mon Sep 17 00:00:00 2001
+From: Mario <mario.ziv@gmail.com>
+Date: Sun, 27 Sep 2026 14:37:27 +0200
+Subject: [PATCH] fix: accumulate list row hit-test from the item area top edge
+
+Listbox::getItemAtPoint started the row-height accumulation at the
+item rendering area's left edge (d_min.d_x) instead of its top edge
+(d_min.d_y). For skins whose item area left and top insets differ (e.g.
+OD/MenuListbox: left 26, top 16) every row hit boundary was shifted
+downward by (left - top) pixels, so clicks in the top part of a row
+selected the row above.
+
+---
+ cegui/src/widgets/Listbox.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cegui/src/widgets/Listbox.cpp b/cegui/src/widgets/Listbox.cpp
+index afc1604..39e5367 100644
+--- a/cegui/src/widgets/Listbox.cpp
++++ b/cegui/src/widgets/Listbox.cpp
+@@ -745,7 +745,7 @@ ListboxItem* Listbox::getItemAtPoint(const Vector2f& pt) const
+ 	// point must be within the rendering area of the Listbox.
+ 	if (renderArea.isPointInRect(local_pos))
+ 	{
+-		float y = renderArea.d_min.d_x - getVertScrollbar()->getScrollPosition();
++		float y = renderArea.d_min.d_y - getVertScrollbar()->getScrollPosition();
+ 
+ 		// test if point is above first item
+ 		if (local_pos.d_y >= y)
+-- 
+2.51.2.windows.1
+
