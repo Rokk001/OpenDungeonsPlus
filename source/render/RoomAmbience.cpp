@@ -142,6 +142,8 @@ const float MIN_REST_LENGTH_SQUARED = 0.0001f;
 const double RELOAD_STATE_SECONDS = 300.0;
 //! Seconds that the reload look is kept after the server said that the trap is loaded, so that a short reload is seen at all
 const double RELOAD_FADE_OUT_SECONDS = 2.0;
+//! The mesh of the dungeon heart
+static const std::string HEART_MESH = "DungeonTempleObject";
 //! Shakes per second of a view shake before the first one has started
 const double DEFAULT_SHAKE_SPEED = 12.0;
 //! The shortest time a view shake runs, in seconds
@@ -191,6 +193,18 @@ static const std::string DESTROYED_CLIP = "Destroyed";
 static const std::string DOOR_CLOSED_STATE = "Close";
 //! At least this many marks may be on the floor, whatever the configuration says
 const uint32_t MIN_MARK_LIMIT = 1;
+
+//! \brief The key "x,y" under which the state of a trap on a tile is kept
+std::string getTileKey(int32_t tileX, int32_t tileY)
+{
+    return Helper::toString(tileX) + "," + Helper::toString(tileY);
+}
+
+//! \brief The key of the tile that the given position lies on
+std::string getPositionKey(const Ogre::Vector3& position)
+{
+    return getTileKey(static_cast<int32_t>(std::floor(position.x + 0.5f)), static_cast<int32_t>(std::floor(position.y + 0.5f)));
+}
 
 //! \brief True if the name fits the pattern, which is a plain name or has * as first or last character as wildcard
 bool matchesPattern(const std::string& pattern, const std::string& name)
@@ -1077,15 +1091,13 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             }
             else if(effect.mWhen == AmbienceWhen::hit)
             {
-                std::string hitKey = Helper::toString(static_cast<int32_t>(std::floor(position.x + 0.5f))) + "," +
-                    Helper::toString(static_cast<int32_t>(std::floor(position.y + 0.5f)));
+                std::string hitKey = getPositionKey(position);
                 std::map<std::string, double>::const_iterator hitIt = mHitUntil.find(hitKey);
                 candidate.mActive = (hitIt != mHitUntil.end()) && (hitIt->second > mClock);
             }
             else if((effect.mWhen == AmbienceWhen::reloading) || (effect.mWhen == AmbienceWhen::ready))
             {
-                std::string reloadKey = Helper::toString(static_cast<int32_t>(std::floor(position.x + 0.5f))) + "," +
-                    Helper::toString(static_cast<int32_t>(std::floor(position.y + 0.5f)));
+                std::string reloadKey = getPositionKey(position);
                 std::map<std::string, double>::const_iterator reloadIt = mReloadingUntil.find(reloadKey);
                 bool reloading = (reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock);
                 candidate.mActive = (effect.mWhen == AmbienceWhen::reloading) ? reloading : !reloading;
@@ -1435,10 +1447,10 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
             // client only lost sight of it
             int32_t soldX = static_cast<int32_t>(std::floor(it->second.mPosition.x + 0.5f));
             int32_t soldY = static_cast<int32_t>(std::floor(it->second.mPosition.y + 0.5f));
-            mReloadingUntil.erase(Helper::toString(soldX) + "," + Helper::toString(soldY));
+            mReloadingUntil.erase(getTileKey(soldX, soldY));
             Tile* soldTile = mGameMap->getTile(soldX, soldY);
             std::map<std::string, double>::const_iterator wreckedIt =
-                mWreckedUntil.find(Helper::toString(soldX) + "," + Helper::toString(soldY));
+                mWreckedUntil.find(getTileKey(soldX, soldY));
             bool wrecked = (wreckedIt != mWreckedUntil.end()) && (wreckedIt->second > mClock);
             if(!wrecked && (soldTile != nullptr) && soldTile->getLocalPlayerHasVision())
             {
@@ -1618,7 +1630,7 @@ void RoomAmbience::scanHeartHit()
     const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
     for(RenderedMovableEntity* entity : entities)
     {
-        if(entity->getMeshName() != "DungeonTempleObject")
+        if(entity->getMeshName() != HEART_MESH)
             continue;
 
         const Ogre::Vector3& position = entity->getPosition();
@@ -1628,7 +1640,7 @@ void RoomAmbience::scanHeartHit()
         if((tile == nullptr) || (tile->getSeat() != localPlayer->getSeat()))
             continue;
 
-        mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + HEART_HIT_SECONDS;
+        mHitUntil[getTileKey(tileX, tileY)] = mClock + HEART_HIT_SECONDS;
         triggerEvent("HeartHit", position, false, "dungeonTempleRoom");
     }
 }
@@ -2494,8 +2506,7 @@ void RoomAmbience::updateTurrets(double timeSinceLastFrame)
         }
 
         const AmbienceEffect& effect = effects[turret.mEffect];
-        std::string key = Helper::toString(static_cast<int32_t>(std::floor(turret.mPosition.x + 0.5f))) + "," +
-            Helper::toString(static_cast<int32_t>(std::floor(turret.mPosition.y + 0.5f)));
+        std::string key = getPositionKey(turret.mPosition);
         std::map<std::string, double>::const_iterator holdIt = mTurretHoldUntil.find(key);
         if((holdIt != mTurretHoldUntil.end()) && (holdIt->second > mClock))
         {
@@ -2908,33 +2919,33 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
     {
         case 0:
             // The server has just aimed the trap at its target: the barrel is not turned away for a moment
-            mTurretHoldUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + TURRET_HOLD_SECONDS;
+            mTurretHoldUntil[getTileKey(tileX, tileY)] = mClock + TURRET_HOLD_SECONDS;
             triggerEvent("TrapFired", position, false, typeName);
             break;
         case 1:
             triggerEvent("TrapLinked", position, false, typeName);
             break;
         case 2:
-            mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + HIT_STATE_SECONDS;
+            mHitUntil[getTileKey(tileX, tileY)] = mClock + HIT_STATE_SECONDS;
             triggerEvent("DoorHit", position, false, typeName);
             if(fraction <= DOOR_HURT_FRACTION)
                 triggerEvent("DoorHurt", position, false, typeName);
             break;
         case 3:
-            mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + WRECKED_STATE_SECONDS;
+            mWreckedUntil[getTileKey(tileX, tileY)] = mClock + WRECKED_STATE_SECONDS;
             triggerEvent("DoorWrecked", position, false, typeName);
             startCollapse(tileX, tileY, typeName);
             break;
         case 4:
             // Reloading, or empty after the last shot: the state is kept until the server says ready. The
             // long time only protects against a ready message that was missed out of sight.
-            mReloadingUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + RELOAD_STATE_SECONDS;
+            mReloadingUntil[getTileKey(tileX, tileY)] = mClock + RELOAD_STATE_SECONDS;
             break;
         case 5:
         {
             // The reload look fades out for two seconds, so that a short reload is seen at all
             std::map<std::string, double>::iterator reloadIt =
-                mReloadingUntil.find(Helper::toString(tileX) + "," + Helper::toString(tileY));
+                mReloadingUntil.find(getTileKey(tileX, tileY));
             if((reloadIt != mReloadingUntil.end()) && (reloadIt->second > mClock + RELOAD_FADE_OUT_SECONDS))
                 reloadIt->second = mClock + RELOAD_FADE_OUT_SECONDS;
             break;
