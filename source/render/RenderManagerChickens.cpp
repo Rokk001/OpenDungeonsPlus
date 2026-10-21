@@ -67,6 +67,14 @@ const std::string MaterialGroup = "Graphics";
 const float COOP_DOOR_OFFSET = 0.9f;
 const float COOP_DOOR_REACH_SQUARED = 0.16f;
 const float COOP_DOOR_OPEN_MARGIN = 0.2f;
+//! \brief Largest squared distance (in square tiles) at which a coop counts as the one a chicken comes out of.
+const float COOP_DOOR_SEARCH_DISTANCE = 4.0f;
+//! \brief Seconds that are put on the coop decoration timer when a coop decoration is created, so the first check is done at once.
+const float COOP_DECOR_START_SECONDS = 10.0f;
+//! \brief Number of different phase offsets the idle motion of the chickens cycles through.
+const uint32_t LOOK_PHASE_COUNT = 97;
+//! \brief Step of the phase offset between two chickens.
+const float LOOK_PHASE_STEP = 0.37f;
 
 //! Small deterministic random numbers so that the meshes look the same every time
 class ShapeRandom
@@ -452,7 +460,7 @@ void RenderManager::rrCreateChickenLook(ChickenEntity* chicken)
     look.mEntity = entity;
     look.mTime = 0.0f;
     look.mPoseTime = 0.0f;
-    look.mPhase = static_cast<Ogre::Real>(++mChickenLookNumber % 97) * 0.37f;
+    look.mPhase = static_cast<Ogre::Real>(++mChickenLookNumber % LOOK_PHASE_COUNT) * LOOK_PHASE_STEP;
     look.mFeatherBursts = 0;
     look.mEmergeFeathersPending = false;
     look.mCoopDoorReplayPending = false;
@@ -668,7 +676,7 @@ void RenderManager::rrSetChickenPose(ChickenEntity* chicken, const std::string& 
         look.mCoopExitWalking = false;
         // The door of the closest coop swings
         std::map<BuildingObject*, CoopDecor>::iterator nearest = mCoopDecors.end();
-        Ogre::Real nearestDistance = 4.0f;
+        Ogre::Real nearestDistance = COOP_DOOR_SEARCH_DISTANCE;
         for(std::map<BuildingObject*, CoopDecor>::iterator coop = mCoopDecors.begin(); coop != mCoopDecors.end(); ++coop)
         {
             Ogre::Real distance = coop->first->getPosition().squaredDistance(position);
@@ -720,7 +728,7 @@ void RenderManager::rrCreateCoopDecor(BuildingObject* coop)
     decor.mNode = node->createChildSceneNode(name + "_node", Ogre::Vector3(COOP_DOOR_OFFSET, 0.0f, 0.0f));
     mCoopDecors[coop] = decor;
     // The first check is done at once
-    mCoopDecorTimer = 10.0f;
+    mCoopDecorTimer = COOP_DECOR_START_SECONDS;
 }
 
 //! \brief Removes the nest and the feathers next to the coop.
