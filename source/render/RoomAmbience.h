@@ -190,17 +190,23 @@ private:
     //! \brief A cannon (or another object of an effect of kind turn) that follows creatures in range with its barrel
     struct Turret
     {
+        //! \brief Creates a turret that is not attached to an object yet
         Turret() :
             mEffect(0), mPosition(Ogre::Vector3::ZERO), mRestFront(Ogre::Vector3::NEGATIVE_UNIT_Y), mSeat(nullptr),
             mGeneration(0)
         {}
 
+        //! Name of the scene node of the object that is turned
         std::string mNodeName;
+        //! Index of the effect (kind turn) that drives the turret
         uint32_t mEffect;
+        //! Where the object stands
         Ogre::Vector3 mPosition;
         //! Direction (flat) the object looked in when it was first seen, where it turns back to
         Ogre::Vector3 mRestFront;
+        //! The seat the object belongs to, to tell enemies from friends
         Seat* mSeat;
+        //! Scan in which the object was last seen; an older turret is sent back to rest and removed
         uint32_t mGeneration;
     };
 
@@ -225,11 +231,14 @@ private:
     //! \brief Where a creature was at the last scan and whose it is
     struct CreatureSpot
     {
+        //! \brief Creates a spot at the origin that belongs to nobody
         CreatureSpot() :
             mPosition(Ogre::Vector3::ZERO), mSeat(nullptr)
         {}
 
+        //! Where the creature was
         Ogre::Vector3 mPosition;
+        //! The seat the creature belongs to
         Seat* mSeat;
     };
 
@@ -364,6 +373,7 @@ private:
     void destroyCollapse(Collapse& collapse);
     //! \brief Lets the objects of effects of kind turn follow the creatures near them, or go back to rest
     void updateTurrets(double timeSinceLastFrame);
+    //! \brief Turns the object of a turret back to the direction it looked in when it was first seen
     void restoreTurret(const Turret& turret);
     //! \brief Starts a rolling object of the effect (kind roll) at the given place; true if it was started
     bool startRoll(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position);
@@ -489,6 +499,7 @@ private:
     //! Time until which a trap (key "x,y" of its tile) keeps its turn, because the server aims it for a shot
     std::map<std::string, double> mTurretHoldUntil;
     std::vector<Roller> mRollers;
+    //! Where the creatures were at the last scan
     std::vector<CreatureSpot> mCreatureSpots;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;

@@ -50,6 +50,7 @@
 #include <cmath>
 #include <functional>
 #include <random>
+#include <utility>
 
 template<> RoomAmbience* Ogre::Singleton<RoomAmbience>::msSingleton = nullptr;
 
@@ -126,6 +127,15 @@ const std::string MESH_SUFFIX = ".mesh";
 
 //! A full turn in radians
 const double TWO_PI = 6.283185307179586;
+//! Half a turn in radians
+const double HALF_TURN = 3.141592653589793;
+//! A direction whose flat parts add up to less than this is no direction to turn toward
+const float MIN_TURN_DIRECTION = 0.001f;
+//! A turn that is less than this many radians off the wanted direction is finished
+const double TURN_DONE_RADIANS = 0.005;
+//! A rest direction or a way to a creature with a smaller squared length than this is not used
+const float MIN_AIM_LENGTH_SQUARED = 0.01f;
+const float MIN_REST_LENGTH_SQUARED = 0.0001f;
 
 //! Seconds that a trap counts as reloading after the server sent the start of the reload; the long time only
 //! protects against a ready message that was missed out of sight
@@ -168,23 +178,26 @@ bool matchesPattern(const std::string& pattern, const std::string& name)
     return pattern == name;
 }
 
-//! Turns the node about the vertical axis toward the flat direction wanted, by at most maxRadians. The front of a
-//! node is its -Y direction (as in RenderManager::rrOrientEntityToward). It always turns from the orientation the
-//! node has now, so an orientation the server gave it in the meantime is simply continued from.
+//! \brief Turns the node about the vertical axis toward the flat direction wanted, by at most maxRadians.
+//! The front of a node is its -Y direction (as in RenderManager::rrOrientEntityToward). It always turns from
+//! the orientation the node has now, so an orientation the server gave it in the meantime is simply continued from.
 void turnNodeToward(Ogre::SceneNode* node, const Ogre::Vector3& wanted, double maxRadians)
 {
     Ogre::Vector3 front = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
-    if((std::fabs(front.x) + std::fabs(front.y) < 0.001f) || (std::fabs(wanted.x) + std::fabs(wanted.y) < 0.001f))
+    if((std::fabs(front.x) + std::fabs(front.y) < MIN_TURN_DIRECTION) ||
+       (std::fabs(wanted.x) + std::fabs(wanted.y) < MIN_TURN_DIRECTION))
+    {
         return;
+    }
 
     double delta = std::atan2(static_cast<double>(wanted.y), static_cast<double>(wanted.x)) -
         std::atan2(static_cast<double>(front.y), static_cast<double>(front.x));
-    while(delta > 3.141592653589793)
-        delta -= 6.283185307179586;
-    while(delta < -3.141592653589793)
-        delta += 6.283185307179586;
+    while(delta > HALF_TURN)
+        delta -= TWO_PI;
+    while(delta < -HALF_TURN)
+        delta += TWO_PI;
 
-    if(std::fabs(delta) < 0.005)
+    if(std::fabs(delta) < TURN_DONE_RADIANS)
         return;
 
     double step = std::max(-maxRadians, std::min(maxRadians, delta));
@@ -1000,7 +1013,7 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
                     turret.mNodeName = entity->getEntityNode()->getName();
                     Ogre::Vector3 front = entity->getEntityNode()->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
                     front.z = 0.0f;
-                    if(front.squaredLength() > 0.0001f)
+                    if(front.squaredLength() > MIN_REST_LENGTH_SQUARED)
                         turret.mRestFront = front;
                     turretIt = mTurrets.insert(std::make_pair(entity->getName(), turret)).first;
                 }
@@ -2487,12 +2500,12 @@ void RoomAmbience::updateTurrets(double timeSinceLastFrame)
         if(chosen != nullptr)
         {
             Ogre::Vector3 toCreature(chosen->mPosition.x - turret.mPosition.x, chosen->mPosition.y - turret.mPosition.y, 0.0f);
-            if(toCreature.squaredLength() > 0.01f)
+            if(toCreature.squaredLength() > MIN_AIM_LENGTH_SQUARED)
                 wanted = toCreature;
         }
 
         turnNodeToward(sceneManager->getSceneNode(turret.mNodeName), wanted,
-            effect.mSpeed * timeSinceLastFrame * 0.017453292519943295);
+            effect.mSpeed * timeSinceLastFrame * DEGREES_TO_RADIANS);
         ++it;
     }
 }
