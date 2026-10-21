@@ -64,7 +64,9 @@ assert speed.count('* tiredFactor') == 4
 # The walk clip keeps up exactly once; standing keeps its slower breathing
 pose = function_body(creature, 'double Creature::getClientPoseSpeedFactor() const')
 assert pose.count('getLowHealthWalkFactor()') == 1
-assert 'EntityAnimation::idle_anim' in pose and 'factor = 0.78;' in pose
+assert 'EntityAnimation::idle_anim' in pose and 'factor = IDLE_BREATH_FACTOR_HEAVY;' in pose
+# The named breathing factor keeps the value 0.78.
+assert 'static const double IDLE_BREATH_FACTOR_HEAVY = 0.78;' in creature
 assert 'CreatureMoodValues::Tired' in pose and pose.count('getTiredWalkSpeedFactor()') == 1
 else_part = pose[pose.index('else\n    {'):]
 assert 'getLowHealthWalkFactor()' in else_part and 'factor = 0.' not in else_part   # no stage factor on top of the real one
