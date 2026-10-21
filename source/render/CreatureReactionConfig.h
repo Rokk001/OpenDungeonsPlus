@@ -485,6 +485,7 @@ private:
     double mImpatientAfter;
     //! \brief Seconds a creature stays proud after a victory or a level up
     double mProudSeconds;
+    //! \brief Seconds a creature has to stand idle until it is bored
     double mBoredAfter;
     //! \brief Seconds a creature has to stand idle until it shows small habits
     double mAmbientAfter;

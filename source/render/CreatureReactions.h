@@ -455,6 +455,8 @@ private:
     static bool areFacingEachOther(const Creature* first, const Creature* second);
 
     //! \brief Another idle creature close by shows the event a moment later (the yawn that spreads)
+    //! \param creature The creature that shows the event first
+    //! \param eventName The event the neighbours show
     void spreadTo(Creature* creature, const std::string& eventName);
     //! \brief Shows the event on the creature and lets it turn its head to the point
     //! \param creature The creature that shows the event
@@ -464,11 +466,18 @@ private:
     bool triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target);
     //! \brief True if the event (a victory or a level up) makes a creature proud for a while
     static bool isProudEvent(const std::string& eventName);
+    //! \brief True if the motion needs the creature to stand where it is (it does not move the model away)
     static bool isStandingMotion(ReactionMotion::Type type);
 
     //! \brief Sprite props (balls, a coin, pebbles, ...) of the bored creatures
+    //! \param reaction The running reaction that owns the props
+    //! \param creature The creature the props belong to
+    //! \param variant The variant that names the prop, its sprite, count and size
+    //! \return False if the sprite is missing or the creature has no model to attach the props to
     bool createProps(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
+    //! \brief Moves the sprites of the props of a reaction to the place of the current moment
     void updateProps(RunningReaction& reaction, Creature* creature);
+    //! \brief Destroys the sprites and the scene node of the props of a reaction, if it has any
     void removeProps(RunningReaction& reaction);
     //! \brief Small models that fall off the creature and lie on the floor (shackles of a converted prisoner)
     bool createFallingProps(RunningReaction& reaction, Creature* creature, const ReactionProp& prop);

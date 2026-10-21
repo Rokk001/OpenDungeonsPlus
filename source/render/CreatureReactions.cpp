@@ -147,8 +147,19 @@ const double WALL_SIDE_RANDOM_MAX = 3.999;
 const uint32_t NB_WALL_SIDES = 4;
 //! Distance (world units) from the middle of a tile to the face of the wall next to it
 const float WALL_FACE_OFFSET = 0.5f;
+//! Prefix of the material of a prop sprite (the prop name follows)
 const std::string PROP_MATERIAL_PREFIX = "CreatureProp_";
+//! Prefix of the scene name of a prop sprite a reaction creates (a counter follows)
 const std::string PROP_NAME_PREFIX = "CreatureReactionProp_";
+//! Shortest and tallest creature height (world units) the size of the prop sprites follows
+static const double PROP_HEIGHT_MIN = 0.3;
+static const double PROP_HEIGHT_MAX = 6.0;
+//! Distance (world units) in front of a creature the props use as their target when there is no wall to turn to
+static const float PROP_FRONT_DISTANCE = 0.9f;
+//! Shortest length of a direction vector that can still be normalised
+static const float DIRECTION_MIN_LENGTH = 0.01f;
+//! Number of juggling balls that have a colour of their own
+static const uint32_t NB_BALL_COLOURS = 3;
 //! The reactions of the moods and the habits leave this many places of the simultaneous ones to the events
 const uint32_t MOOD_RESERVED_SLOTS = 2;
 //! Health stage (0 is unhurt, 7 is dead) from which a creature counts as hurt
@@ -296,6 +307,7 @@ struct PropFrame
     Ogre::Vector3 mForward;
     double mHeight;
 
+    //! \brief The offset of a point from the creature: sideways, ahead and up, each in shares of the height
     Ogre::Vector3 at(double sideways, double ahead, double up) const
     {
         return mRight * static_cast<Ogre::Real>(sideways * mHeight) +
@@ -3205,16 +3217,16 @@ bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creatur
 
     // The size of the sprites follows the size of the creature
     double height = static_cast<double>(entity->getWorldBoundingBox(true).getSize().z);
-    height = std::max(0.3, std::min(6.0, height));
+    height = std::max(PROP_HEIGHT_MIN, std::min(PROP_HEIGHT_MAX, height));
 
     // Without a wall to turn to, the props use a point in front of the creature
     if(!reaction.mHasLookTarget)
     {
         Ogre::Vector3 forward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
         forward.z = 0.0f;
-        if(forward.length() > 0.01f)
+        if(forward.length() > DIRECTION_MIN_LENGTH)
             forward.normalise();
-        reaction.mLookTarget = creature->getPosition() + forward * 0.9f;
+        reaction.mLookTarget = creature->getPosition() + forward * PROP_FRONT_DISTANCE;
         reaction.mHasLookTarget = true;
     }
 
@@ -3247,13 +3259,13 @@ bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creatur
     }
 
     // The balls of the juggler have colours of their own
-    const Ogre::ColourValue ballColours[3] = {Ogre::ColourValue(1.0f, 0.45f, 0.4f), Ogre::ColourValue(0.5f, 0.9f, 0.5f),
+    const Ogre::ColourValue ballColours[NB_BALL_COLOURS] = {Ogre::ColourValue(1.0f, 0.45f, 0.4f), Ogre::ColourValue(0.5f, 0.9f, 0.5f),
         Ogre::ColourValue(0.5f, 0.65f, 1.0f)};
     for(uint32_t i = 0; i < nbSprites; ++i)
     {
         Ogre::ColourValue colour = Ogre::ColourValue::White;
         if(prop.mPath == ReactionProp::Path::juggle)
-            colour = ballColours[i % 3];
+            colour = ballColours[i % NB_BALL_COLOURS];
 
         set->createBillboard(Ogre::Vector3::ZERO, colour);
     }
@@ -3298,7 +3310,7 @@ void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creatur
     frame.mHeight = reaction.mPropHeight;
     frame.mForward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
     frame.mForward.z = 0.0f;
-    if(frame.mForward.length() > 0.01f)
+    if(frame.mForward.length() > DIRECTION_MIN_LENGTH)
         frame.mForward.normalise();
     frame.mRight = frame.mForward.crossProduct(Ogre::Vector3::UNIT_Z);
 
@@ -3434,7 +3446,7 @@ void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creatur
             {
                 // The shadow on the wall flaps and fades in and out
                 Ogre::Vector3 towards = target;
-                if(towards.length() > 0.01f)
+                if(towards.length() > DIRECTION_MIN_LENGTH)
                     towards = towards - towards.normalisedCopy() * 0.08f;
                 offset = towards + Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(0.62 * reaction.mPropHeight));
                 width = size * static_cast<Ogre::Real>(1.0 + 0.15 * std::sin(2.0 * PI_VALUE * 2.0 * time));
