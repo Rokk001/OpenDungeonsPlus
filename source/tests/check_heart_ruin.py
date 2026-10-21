@@ -300,7 +300,9 @@ int main(){
 inline = '\n'.join(function(temple_header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
 methods = temple[temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
-methods += temple[temple.index('const std::string HeartMeshNameHealthy'):temple.index('class DungeonHeartObject :')]
+# The heart mesh names are defined once in the room object bounds header (namespace RoomObjectPath)
+bounds = read('source/gamemap/RoomObjectBounds.h')
+methods += 'namespace RoomObjectPath\n{\n' + bounds[bounds.index('static const std::string HEART_MESH_HEALTHY'):bounds.index('//! Returns true if name is the mesh of the dungeon heart')] + '}\n'
 methods += '\n'.join(function(temple, sig) for sig in (
     'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
     'const std::string& RoomDungeonTemple::getMeshNameForHeartTier(', 'void RoomDungeonTemple::checkHeartHealthTier(',
