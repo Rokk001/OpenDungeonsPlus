@@ -156,6 +156,8 @@ const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
 //! Height of the burst above the tile floor, so it is not hidden by the ground.
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_HEIGHT = 0.05f;
 const Ogre::Real CREATURE_COMBAT_IMPACT_DURATION = 0.55f;
+//! Seconds a feather effect of the hatchery lives: the feathers tumble down for about two seconds
+const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
 const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
 
@@ -5681,7 +5683,7 @@ void RenderManager::createChickenFeatherEffect(const Ogre::Vector3& position, co
     Ogre::ParticleSystem* particles = mSceneManager->createParticleSystem(name, particleName);
     node->attachObject(particles);
     particles->setQueryFlags(0);
-    mChickenFeatherEffects.push_back({node, particles, 2.6f});
+    mChickenFeatherEffects.push_back({node, particles, CHICKEN_FEATHER_EFFECT_DURATION});
 }
 
 void RenderManager::clearChickenFeatherEffects()
