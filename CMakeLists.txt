@@ -628,9 +628,9 @@ set(OGRE_PLUGIN_DIR_REL ${OGRE_PLUGIN_DIR})
 set(OGRE_PLUGIN_DIR_DBG ${OGRE_PLUGIN_DIR})
 find_package(CEGUI REQUIRED)
 if(OD_USE_SFML_WINDOW)
-    find_package(SFML 3 REQUIRED COMPONENTS Audio System Network Window Graphics)
+    find_package(SFML 3 CONFIG REQUIRED COMPONENTS Audio System Network Window Graphics)
 else()
-    find_package(SFML 3 REQUIRED COMPONENTS Audio System Network)
+    find_package(SFML 3 CONFIG REQUIRED COMPONENTS Audio System Network)
 endif()
 if("${OGRE_VERSION}" VERSION_LESS "14.0.0")
     message(FATAL_ERROR "OGRE version >= 14.0.0 required")
@@ -643,7 +643,7 @@ endif()
 if(SFML_VERSION VERSION_LESS 3.0)
     message(FATAL_ERROR "SFML version >= 3.0 required")
 else()
-    message(STATUS "SFML include directory: ${SFML_INCLUDE_DIR}; SFML audio library: ${SFML_AUDIO_LIBRARY_DEBUG} ${SFML_AUDIO_LIBRARY_RELEASE}")
+    message(STATUS "SFML ${SFML_VERSION} config directory: ${SFML_DIR}")
 endif()
 
 #This has to cover the versions not already known by CMake
@@ -685,7 +685,6 @@ include_directories(
 
     #external packages includes
     SYSTEM ${CEGUI_INCLUDE_DIR}
-    SYSTEM ${SFML_INCLUDE_DIR}
     SYSTEM ${OGRE_INCLUDE_DIRS}
     SYSTEM ${OIS_INCLUDE_DIRS}
 )
