@@ -550,7 +550,8 @@ public:
     //! part, gives up after a while.
     void resumeBrawl();
     //! \brief Applies damage and records actual hostile creature hits for regional script observers. On the server it
-    //! also counts the attacked, incapacitated and killed events for the conditions of the level script.
+    //! also counts the attacked, incapacitated and killed events for the conditions of the level script and the
+    //! creatures lost in the statistics of the seat.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -615,10 +616,11 @@ public:
     //! \brief In a sandbox level, the player can pick up and drop the heroes of the hero seat
     bool isSandboxHeroFor(const Seat* seat) const;
     //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile. It also counts the
-    //! pickedup event for the level script.
+    //! pickup in the statistics of the seat and the pickedup event for the level script.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
-    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.
+    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes. It also counts the
+    //! drop in the statistics of the seat.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -729,7 +731,8 @@ public:
     bool isHostileNear(double radius) const;
 
     bool canSlap(Seat* seat) override;
-    //! \brief Server side: the creature is slapped. It also counts the slapped event for the level script.
+    //! \brief Server side: the creature is slapped. It also counts the slap in the statistics of the seat and the
+    //! slapped event for the level script.
     void slap() override;
 
     void fireCreatureSound(CreatureSound sound);
