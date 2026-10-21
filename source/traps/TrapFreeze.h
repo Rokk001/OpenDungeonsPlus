@@ -26,17 +26,23 @@
 class TrapFreeze : public Trap
 {
 public:
+    //! \brief Creates a freeze trap and reads its reload time, number of shots, freeze time and shatter limit from the config.
     TrapFreeze(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::freeze; }
 
+    //! \brief Freezes every enemy creature standing on the tile; one with little health left shatters.
+    //! \return True if at least one creature was frozen or shattered.
     virtual bool shoot(Tile* tile) override;
+    //! \brief The freeze trap cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -45,8 +51,10 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the freeze trap.
     static const TrapType mTrapType;
 
 private:
