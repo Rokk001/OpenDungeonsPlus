@@ -14,7 +14,7 @@ $taskRuntimeNames = @(
     'CEGUICoreWindowRendererSet.dll', 'CEGUIExpatParser.dll'
     'Plugin_ParticleFX.dll', 'Plugin_OctreeSceneManager.dll'
     'Codec_STBI.dll', 'RenderSystem_GL3Plus.dll'
-    'freetype.dll', 'libexpat.dll', 'openal32.dll'
+    'freetype.dll', 'libexpat.dll'
 )
 $taskRuntimeSources = @($taskRuntimeNames | ForEach-Object { Join-Path "$taskPrefix\bin" $_ })
 $taskRuntimeSources += Join-Path $taskPythonRoot 'python314.dll'
