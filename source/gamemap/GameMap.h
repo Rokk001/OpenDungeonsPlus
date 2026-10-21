@@ -939,7 +939,8 @@ private:
     // random number generator for Tile's faces
     std::mt19937 generator;   
     //! \brief Updates different entities states.
-    //! Updates active objects (creatures, rooms, ...), goals, count each team Workers, gold, mana and claimed tiles
+    //! Updates active objects (creatures, rooms, ...), goals, count each team Workers, gold, mana and claimed tiles.
+    //! Every pay day it counts the payday event for the level script.
     unsigned long int doMiscUpkeep(double timeSinceLastTurn);
 
     //! \brief Applies the per-second mana income and worker upkeep of one seat for the current

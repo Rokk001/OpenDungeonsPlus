@@ -520,7 +520,8 @@ public:
     //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
     //! part, gives up after a while.
     void resumeBrawl();
-    //! \brief Applies damage and records actual hostile creature hits for regional script observers.
+    //! \brief Applies damage and records actual hostile creature hits for regional script observers. On the server it
+    //! also counts the attacked, incapacitated and killed events for the conditions of the level script.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -584,7 +585,8 @@ public:
 
     //! \brief In a sandbox level, the player can pick up and drop the heroes of the hero seat
     bool isSandboxHeroFor(const Seat* seat) const;
-    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile.
+    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile. It also counts the
+    //! pickedup event for the level script.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
     //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.
@@ -698,6 +700,7 @@ public:
     bool isHostileNear(double radius) const;
 
     bool canSlap(Seat* seat) override;
+    //! \brief Server side: the creature is slapped. It also counts the slapped event for the level script.
     void slap() override;
 
     void fireCreatureSound(CreatureSound sound);
@@ -1064,7 +1067,8 @@ public:
     bool searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData);
 
-    //! \brief Called when the creature changes seat (for example when it becomes rogue or after torture)
+    //! \brief Called when the creature changes seat (for example when it becomes rogue or after torture). A neutral
+    //! creature that joins a keeper counts as claimed for the level script.
     void changeSeat(Seat* newSeat);
 
     void stopWalking();
