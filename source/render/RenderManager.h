@@ -947,6 +947,8 @@ private:
     void updateCreatureStep(Creature* creature);
     void refreshCreaturesOnTile(Tile* tile);
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
+    //! \brief Starts an effect of the given kind at the position, when it is in view and its room still has a place
+    //! in the budget of the kind. Returns whether the effect was started.
     bool createTreasuryEffect(const void* roomKey, const std::string& script, const Ogre::Vector3& position,
         TreasuryEffectKind kind = TreasuryEffectKind::splash);
     //! \brief Now and then starts gold dust over a full pile in view, over the portals and over the heart of the
@@ -959,8 +961,11 @@ private:
     void startForeignWealthDust();
     //! \brief Now and then starts sliding coins or a sparkle on a rich pile in view.
     void updateTreasuryAmbient(Ogre::Real timeSinceLastFrame);
+    //! \brief A pile of a tile was created with another level than before: it settles to its new height, and a taken
+    //! pile gets a dent and throws coins.
     void startTreasuryPileChange(Ogre::SceneNode* node, const std::string& entityName, Tile* tile, int oldLevel,
         int newLevel, Ogre::Entity* entity, const std::string& pileMeshName);
+    //! \brief Lets the local dents of the piles that lose gold form and fill up again.
     void updateTreasuryDents(Ogre::Real timeSinceLastFrame);
     //! Distance of a point to the camera in tiles (0 without a camera)
     float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
@@ -969,12 +974,20 @@ private:
     void updateTreasuryRebuild();
     //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
     void finishTreasuryDent(const std::string& entityName);
+    //! \brief Lets the piles that grow or sink settle to their new height.
     void updateTreasuryPileSettles(Ogre::Real timeSinceLastFrame);
+    //! \brief Ends the settling of the pile at once (the entity of the pile goes away).
     void cancelTreasuryPileSettle(const std::string& entityName);
+    //! \brief True while the pile of that entity settles to a new height.
     bool isTreasuryPileSettling(const std::string& entityName) const;
+    //! \brief Lists an object (or gold) standing in the gold of a treasury; it is drawn partly buried.
     void registerBuriedObject(RenderedMovableEntity* entity, float objectHeight);
+    //! \brief The pile of the tile changed: the objects standing on it follow its new height.
     void refreshBuriedObjectsOnTile(Tile* tile);
+    //! \brief Lets the objects standing in the gold sink or rise smoothly to their depth.
     void updateTreasuryBuriedObjects(Ogre::Real timeSinceLastFrame);
+    //! \brief The height by which the node of the object is lifted so that it stands partly buried in the gold of
+    //! its tile (0 when it is not listed or is carried). With settleAtOnce the object takes that height at once.
     float getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce);
     //! \brief Removes the sack that a thief carries on its back (nothing happens when it has none).
     void removeTreasuryThiefSack(Creature* creature);
@@ -989,6 +1002,8 @@ private:
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);
     void cancelTreasuryPour(Creature* creature);
     float getTreasuryPourRise(Creature* creature) const;
+    //! \brief Forgets the effects, the piles, the buried objects, the sacks and the glow lights and destroys the draw
+    //! batches (the scene is cleared or destroyed).
     void clearTreasuryEffects();
     //! \brief Puts the given creature, or all lifted creatures if null, back on the floor.
     void cancelCreatureStep(Creature* creature = nullptr);

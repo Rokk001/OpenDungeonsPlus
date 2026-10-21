@@ -77,6 +77,7 @@ int registerPile(const std::string& entityName, float x, float y, const std::str
     const void* room = nullptr, bool replacesClassicStack = false);
 //! Forgets the pile, if the tile still holds the pile of that entity (a newer pile stays)
 void unregisterPile(const std::string& entityName, float x, float y);
+//! Forgets every registered pile (the scene is cleared)
 void clearPiles();
 
 //! True when the pile on that tile stands in for a classic stack of the server (dungeon heart ring), so the

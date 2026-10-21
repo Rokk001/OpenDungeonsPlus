@@ -55,6 +55,7 @@ static const float pourDescendStart = 0.85f;
 //! Clip time kept free at the end of a clip so that it never counts as ended before the phase changes
 static const float pourClipMargin = 0.1f;
 
+//! A smooth ramp from 0 at edgeStart to 1 at edgeEnd (cubic, flat at both ends)
 inline float smoothStep(float edgeStart, float edgeEnd, float t)
 {
     if(t <= edgeStart)
@@ -207,6 +208,7 @@ static const int& ambientBudgetReduced = TreasurySettings::current().ambientBudg
 static const int& slideLevel = TreasurySettings::current().slideLevel;
 static const int& glintLevel = TreasurySettings::current().glintLevel;
 
+//! Number of ambient effects one room may show at once at the given "Treasury detail" option
 inline int ambientBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)
@@ -251,13 +253,17 @@ inline float localDentFactor(float t)
     return smoothStep(0.0f, dentShare, progress) * (1.0f - smoothStep(dentShare, 1.0f, progress));
 }
 
+//! The start height factor of a settling pile is kept in this range, so that any change of the level looks sane
+static const float settleFromMin = 0.4f;
+static const float settleFromMax = 1.6f;
+
 //! The old level over the new one as a start height factor, kept in a range that looks sane for any change
 inline float pileSettleFrom(int oldLevel, int newLevel)
 {
     if(oldLevel <= 0 || newLevel <= 0)
         return 1.0f;
     const float ratio = static_cast<float>(oldLevel) / static_cast<float>(newLevel);
-    return ratio < 0.4f ? 0.4f : (ratio > 1.6f ? 1.6f : ratio);
+    return ratio < settleFromMin ? settleFromMin : (ratio > settleFromMax ? settleFromMax : ratio);
 }
 
 //! Objects standing in the gold (room objects, gold lying on the floor of a treasury) are drawn partly buried:
@@ -343,6 +349,8 @@ static const int& lodSwitchesPerUpdate = TreasurySettings::current().lodSwitches
 //! Piles and floor gold heaps rebuilt per frame after the "Treasury detail" option changed
 static const int& rebuildPerFrame = TreasurySettings::current().rebuildPerFrame;
 
+//! True when a pile at the given distance uses the reduced mesh (a reduced pile only leaves it again below the
+//! hysteresis distance)
 inline bool lodReducedAt(bool currentlyReduced, float distance)
 {
     return distance > (currentlyReduced ? lodFarDistance - lodHysteresis : lodFarDistance);
@@ -364,6 +372,7 @@ public:
         return true;
     }
 
+    //! Gives one place of the room back
     void release(const void* room)
     {
         std::map<const void*, int>::iterator it = mActive.find(room);
@@ -374,12 +383,14 @@ public:
             mActive.erase(it);
     }
 
+    //! Number of places of the room in use
     int active(const void* room) const
     {
         std::map<const void*, int>::const_iterator it = mActive.find(room);
         return it == mActive.end() ? 0 : it->second;
     }
 
+    //! Forgets every place of every room
     void clear()
     {
         mActive.clear();

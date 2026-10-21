@@ -78,6 +78,7 @@ std::map<std::pair<int, int>, RegisteredPile> registeredPiles;
 //! replaces it can tell whether gold was added or taken
 std::map<std::pair<int, int>, int> lastLevels;
 
+//! The tile that holds the map position (x, y)
 std::pair<int, int> tileOf(float x, float y)
 {
     return std::make_pair(static_cast<int>(std::floor(x + 0.5f)), static_cast<int>(std::floor(y + 0.5f)));
@@ -135,6 +136,8 @@ void addBand(RoundSurface& surface, int inner, int outer)
     }
 }
 
+//! Builds the round surface of the pile (lowered by the dent, when there is one) with the given number of rings: the
+//! middle point, a fan to the first ring and a band from ring to ring. The outer ring is the irregular foot of the heap.
 void buildRoundSurface(const TreasuryGoldLayer::PileShape& shape, int rings, const Dent* dent, RoundSurface& surface)
 {
     surface.mPoint.clear();
@@ -187,6 +190,7 @@ float roundHeightAt(const TreasuryGoldLayer::PileShape& shape, const RoundSurfac
     return TreasuryGoldLayer::heightAt(shape, u, v);
 }
 
+//! The point on the pile (with the dent, when there is one) at (u, v), relative to the middle of the tile
 Ogre::Vector3 pilePoint(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
 {
     return Ogre::Vector3(u - 0.5f, v - 0.5f, dentedHeight(shape, u, v, dent));
@@ -202,7 +206,7 @@ Ogre::Vector3 detailPoint(const TreasuryGoldLayer::PileShape& shape, float u, fl
     return point;
 }
 
-//! Normal of the pile surface from the neighbouring heights
+//! Normal of the pile surface (with the dent, when there is one) from the neighbouring heights
 Ogre::Vector3 pileNormal(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
 {
     const float step = 0.02f;

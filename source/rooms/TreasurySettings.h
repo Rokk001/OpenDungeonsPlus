@@ -69,17 +69,24 @@ struct TreasurySettings
     float ambientInterval = 0.9f;
     float ambientLifetime = 2.5f;
     int ambientBudgetFull = 3;
+    //! Sparkles, sliding and rolling coins a room may show at once at the full and at the reduced detail
     int ambientBudgetReduced = 1;
+    //! Piles of at least this fill step slide coins down their slope; the sparkle needs the richer pile
     int slideLevel = 3;
     int glintLevel = 5;
+    //! Seconds a pile needs to settle to its new height after gold was added or taken (objects buried in the
+    //! gold settle at the same rate), the height factor of the whole pile at the deepest point of the dip when
+    //! it settles at the reduced detail and the share of the settle time after which that dip is deepest
     float pileSettleTime = 0.7f;
     float dentDepth = 0.88f;
     float dentShare = 0.35f;
     //! Local dent where gold is taken: radius in tile units and depth below the surface
     float dentRadius = 0.3f;
     float dentLocalDepth = 0.08f;
+    //! Share of its height that an object sinks into a pile of the first fill step and into a full pile
     float buryShareFirst = 0.1f;
     float buryShareFull = 0.5f;
+    //! Seconds between two rebuilds of the draw batch of a changed room
     float batchRebuildInterval = 0.25f;
 
     // Warm glow lights over rich treasuries: at most this many per room and in all (full detail), the same at
@@ -106,13 +113,14 @@ struct TreasurySettings
 
     typedef std::map<std::string, std::string> Config;
 
-    //! The values of the game. Written once when the configuration is loaded.
+    //! \brief The values of the game. Written once when the configuration is loaded.
     static TreasurySettings& current()
     {
         static TreasurySettings settings;
         return settings;
     }
 
+    //! \brief The value of the key as a number limited to [low, high], or the given value when the key is missing.
     static float readFloat(const Config& config, const char* key, float value, float low, float high)
     {
         Config::const_iterator it = config.find(key);
@@ -122,6 +130,7 @@ struct TreasurySettings
         return parsed < low ? low : (parsed > high ? high : parsed);
     }
 
+    //! \brief The value of the key as an integer limited to [low, high], or the given value when the key is missing.
     static int readInt(const Config& config, const char* key, int value, int low, int high)
     {
         Config::const_iterator it = config.find(key);
