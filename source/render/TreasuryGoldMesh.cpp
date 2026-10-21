@@ -440,6 +440,7 @@ void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& sh
     }
 }
 
+//! Builds the mesh of a pile with the given number of divisions and stores it under the resource name.
 void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resourceName,
     const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail)
 {
