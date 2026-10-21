@@ -21,7 +21,7 @@
 #include <memory>
 #include <string>
 
-#include <SFML/System.hpp>
+#include <mutex>
 
 #include <OgreSingleton.h>
 
@@ -73,7 +73,7 @@ private:
     uint32_t mCriticalCount;
     std::string mFirstCritical;
     std::map<std::string, LogMessageLevel> mModuleLevel;
-    sf::Mutex mLock;
+    std::mutex mLock;
     std::vector<std::unique_ptr<LogSink>> mSinks;
     std::stringstream mTimestampStream;
 };

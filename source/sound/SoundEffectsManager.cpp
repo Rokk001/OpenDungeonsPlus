@@ -27,9 +27,10 @@
 #include <OgreQuaternion.h>
 
 // class GameSound
+//! \brief Loads the sound buffer and creates the sound constructed with it.
 GameSound::GameSound(const std::string& filename, bool spatialSound):
-    mSound(nullptr),
-    mSoundBuffer(nullptr)
+    mSoundBuffer(nullptr),
+    mSound(nullptr)
 {
     // Loads the buffer
     mSoundBuffer = new sf::SoundBuffer();
@@ -42,11 +43,10 @@ GameSound::GameSound(const std::string& filename, bool spatialSound):
 
     mFilename = filename;
 
-    mSound = new sf::Sound();
-    // Loads the main sound object
-    mSound->setBuffer(*mSoundBuffer);
+    // Loads the main sound object (SFML 3 needs the buffer at construction)
+    mSound = new sf::Sound(*mSoundBuffer);
 
-    mSound->setLoop(false);
+    mSound->setLooping(false);
 
     // Sets a correct attenuation value if the sound is spatial
     if (spatialSound == true)
@@ -80,6 +80,7 @@ GameSound::~GameSound()
         delete mSoundBuffer;
 }
 
+//! \brief Plays the sound at the given position unless it is too far from the listener.
 void GameSound::play(float x, float y, float z)
 {
     // Check whether the sound is spatial
@@ -96,7 +97,7 @@ void GameSound::play(float x, float y, float z)
             return;
     }
 
-    mSound->setPosition(x, y, z);
+    mSound->setPosition(sf::Vector3f(x, y, z));
     mSound->play();
 }
 
@@ -181,15 +182,16 @@ void SoundEffectsManager::readSounds(std::map<std::string, std::vector<GameSound
     }
 }
 
+//! \brief Moves the listener to the camera position and direction and starts the next queued relative sound.
 void SoundEffectsManager::updateListener(float timeSinceLastFrame,
         const Ogre::Vector3& position, const Ogre::Quaternion& orientation)
 {
-    sf::Listener::setPosition(static_cast<float> (position.x),
-                              static_cast<float> (position.y),
-                              static_cast<float> (position.z));
+    sf::Listener::setPosition(sf::Vector3f(static_cast<float> (position.x),
+                                           static_cast<float> (position.y),
+                                           static_cast<float> (position.z)));
 
     Ogre::Vector3 vDir = orientation.zAxis();
-    sf::Listener::setDirection(-vDir.x, -vDir.y, -vDir.z);
+    sf::Listener::setDirection(sf::Vector3f(-vDir.x, -vDir.y, -vDir.z));
 
     // We launch the next pending relative sound if any
     if(mRelativeSoundQueue.empty())
@@ -228,6 +230,7 @@ void SoundEffectsManager::playSpatialSound(const std::string& family,
     sounds[soundId]->play(XPos, YPos, height);
 }
 
+//! \brief Starts a looping spatial sound; returns its handle or 0 if there is none.
 uint32_t SoundEffectsManager::startSpatialLoop(const std::string& family,
         float XPos, float YPos, float height)
 {
@@ -243,13 +246,12 @@ uint32_t SoundEffectsManager::startSpatialLoop(const std::string& family,
         return 0;
 
     // Same fall-off as the other spatial sounds
-    sf::Sound* sound = new sf::Sound();
-    sound->setBuffer(*buffer);
-    sound->setLoop(true);
+    sf::Sound* sound = new sf::Sound(*buffer);
+    sound->setLooping(true);
     sound->setVolume(100.0f);
     sound->setAttenuation(3.0f);
     sound->setMinDistance(3.0f);
-    sound->setPosition(XPos, YPos, height);
+    sound->setPosition(sf::Vector3f(XPos, YPos, height));
     sound->play();
 
     uint32_t handle = mNextLoopHandle++;

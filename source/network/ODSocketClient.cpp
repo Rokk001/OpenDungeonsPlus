@@ -25,16 +25,34 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 
+#include <optional>
+#include <vector>
+
+//! \brief Resolves the host and connects to the server; returns false if resolving or connecting fails.
 bool ODSocketClient::connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename)
 {
     mSource = ODSource::none;
 
     // As we use selector, there is no need to set the socket as not-blocking
-    sf::Socket::Status status = mSockClient.connect(host, port, sf::milliseconds(timeout));
-    if (status != sf::Socket::Done)
+    // SFML 3 connects to an address, not to a host name, so the host is resolved first (IPv4 only, as before).
+    // A host that cannot be resolved is reported as a connection error.
+    sf::Socket::Status status = sf::Socket::Status::Error;
+    std::optional<std::vector<sf::IpAddress> > addresses = sf::Dns::resolve(host);
+    if(addresses.has_value())
+    {
+        for(std::vector<sf::IpAddress>::const_iterator it = addresses->begin(); it != addresses->end(); ++it)
+        {
+            if(!it->isV4())
+                continue;
+
+            status = mSockClient.connect(*it, port, sf::milliseconds(timeout));
+            break;
+        }
+    }
+    if (status != sf::Socket::Status::Done)
     {
         OD_LOG_ERR("Could not connect to distant server status="
-            + Helper::toString(status));
+            + Helper::toString(static_cast<int>(status)));
         mSockClient.disconnect();
         return false;
     }
@@ -141,20 +159,22 @@ bool ODSocketClient::isDataAvailable(int miliseconds)
     return false;
 }
 
+//! \brief Sends the packet to the server and reports the result as an ODComStatus.
 ODSocketClient::ODComStatus ODSocketClient::send(ODPacket& s)
 {
     if(mSource != ODSource::network)
         return ODComStatus::OK;
 
     sf::Socket::Status status = mSockClient.send(s.mPacket);
-    if (status == sf::Socket::Done)
+    if (status == sf::Socket::Status::Done)
         return ODComStatus::OK;
 
     OD_LOG_ERR("Could not send data from client status="
-        + Helper::toString(status));
+        + Helper::toString(static_cast<int>(status)));
     return ODComStatus::Error;
 }
 
+//! \brief Receives a packet from the server (or the replay file) and reports the result as an ODComStatus.
 ODSocketClient::ODComStatus ODSocketClient::recv(ODPacket& s)
 {
     switch(mSource)
@@ -168,7 +188,7 @@ ODSocketClient::ODComStatus ODSocketClient::recv(ODPacket& s)
         case ODSource::network:
         {
             sf::Socket::Status status = mSockClient.receive(s.mPacket);
-            if (status == sf::Socket::Done)
+            if (status == sf::Socket::Status::Done)
             {
                 s.writePacket(mGameClock.getElapsedTime().asMilliseconds(),
                     mReplayOutputStream);
@@ -176,17 +196,17 @@ ODSocketClient::ODComStatus ODSocketClient::recv(ODPacket& s)
             }
 
             if((!mSockClient.isBlocking()) &&
-                    (status == sf::Socket::NotReady))
+                    (status == sf::Socket::Status::NotReady))
             {
                 return ODComStatus::NotReady;
             }
 
-            if(status == sf::Socket::Disconnected)
+            if(status == sf::Socket::Status::Disconnected)
             {
                 OD_LOG_WRN("Socket disconnected");
                 return ODComStatus::Error;
             }
-            OD_LOG_ERR("Could not receive data from client status=" + Helper::toString(status));
+            OD_LOG_ERR("Could not receive data from client status=" + Helper::toString(static_cast<int>(status)));
             return ODComStatus::Error;
         }
         case ODSource::file:

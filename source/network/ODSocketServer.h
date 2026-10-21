@@ -22,6 +22,7 @@
 
 #include <SFML/Network.hpp>
 #include <atomic>
+#include <thread>
 
 class ODPacket;
 
@@ -68,7 +69,7 @@ class ODSocketServer
         void doTask(int timeoutMs);
         std::vector<ODSocketClient*> mSockClients;
         virtual void serverThread() = 0;
-        sf::Thread* mThread;
+        std::thread* mThread;
 
     private:
         sf::TcpListener mSockListener;
