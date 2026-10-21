@@ -88,6 +88,7 @@ public:
     //! \brief An enemy creature tramples the egg: it is gone at once. Only free eggs can be trampled.
     bool trample(Creature* creature);
 
+    //! \brief The stage of life of this animal (hen, chick, rooster or egg).
     inline ChickenKind getKind() const
     { return mKind; }
 
@@ -127,6 +128,7 @@ public:
     inline uint32_t getAge() const
     { return mAge; }
 
+    //! \brief Adds one turn to the age and returns the new age.
     inline uint32_t incrementAge()
     { return ++mAge; }
 
@@ -143,6 +145,7 @@ public:
     void setStageDuration(uint32_t turns)
     { mStageDuration = turns; }
 
+    //! \brief Sets the turns until a hen lays her next egg.
     inline void setLayTimer(uint32_t turns)
     { mNbTurnLay = turns; }
 
@@ -280,7 +283,9 @@ public:
     inline const std::string& getSnatchedFrom() const
     { return mSnatchedFrom; }
 
+    //! \brief Writes the entity and its kind to a packet for the clients.
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
+    //! \brief Reads the entity and its kind from a packet sent by the server.
     virtual void importFromPacket(ODPacket& is) override;
 
     static ChickenEntity* getChickenEntityFromStream(GameMap* gameMap, std::istream& is);
