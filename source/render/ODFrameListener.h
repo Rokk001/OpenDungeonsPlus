@@ -102,6 +102,7 @@ public:
     inline const std::string& getPendingRestartLevel() const
     { return mPendingRestartLevel; }
 
+    //! \brief Sets the level that the main menu starts as soon as it is shown (empty string clears it).
     inline void setPendingRestartLevel(const std::string& level)
     { mPendingRestartLevel = level; }
 
