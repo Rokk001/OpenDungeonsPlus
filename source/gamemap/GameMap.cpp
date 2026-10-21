@@ -94,6 +94,12 @@ const std::string DEFAULT_NICK = "You";
 //! Highest value of the roll (0 to this value) that is compared with a chance in percent for a nemesis brawl
 static const int32_t BRAWL_CHANCE_ROLL_MAX = 99;
 
+//! \brief Definitions of the skirmish limits that are used by reference (std::min, std::max). The values are set in
+//! the class, gcc needs these definitions for them.
+const uint32_t GameMap::SKIRMISH_SPEED_MIN;
+const uint32_t GameMap::SKIRMISH_SPEED_MAX;
+const uint32_t GameMap::SKIRMISH_DURATION_MAX;
+
 using namespace std;
 
 namespace
