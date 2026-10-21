@@ -269,6 +269,7 @@ private:
 
     std::unique_ptr<GameMap>       mGameMap;
     std::unique_ptr<CreatureReactions> mCreatureReactions;
+    //! The cosmetic life in the rooms (client side only)
     std::unique_ptr<RoomAmbience>  mRoomAmbience;
     std::unique_ptr<ModeManager>   mModeManager;
     std::unique_ptr<RenderSceneMenu>   mMainScene;
