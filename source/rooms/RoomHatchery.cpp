@@ -86,6 +86,20 @@ const float NEST_EGG_MIN_HEIGHT = 0.01f;
 const double FLEE_DEGREES_TO_RADIANS = 3.14159265358979 / 180.0;
 //! \brief Length of the vector away from a threat below which it has no usable direction.
 const float MIN_AWAY_LENGTH = 0.001f;
+//! \brief Upper bound of the random roll that decides which of two fighting roosters wins.
+const uint32_t FIGHT_WINNER_ROLL_MAX = 1000;
+//! \brief Number of turns a short pose (crow on the roof) lasts.
+const uint32_t POSE_TURNS_SHORT = 2;
+//! \brief Number of turns a long pose (fight, crow after a fight) lasts.
+const uint32_t POSE_TURNS_LONG = 3;
+//! \brief Fight notification phase sent when a fight starts.
+const uint32_t FIGHT_PHASE_START = 0;
+//! \brief Fight notification phase sent when a fight ends with a winner.
+const uint32_t FIGHT_PHASE_END = 1;
+//! \brief Fight notification phase sent when a fight is aborted because a fighter is gone.
+const uint32_t FIGHT_PHASE_ABORT = 2;
+//! \brief Default distance in tiles at which two fighting roosters start to brawl.
+const double DEFAULT_FIGHT_REACH = 1.0;
 
 
 namespace
@@ -1607,7 +1621,7 @@ void RoomHatchery::updateFight(std::vector<ChickenEntity*>& roosters, const Hatc
         mFightActive = true;
         mFightFirst = first->getName();
         mFightSecond = second->getName();
-        mFightFirstWins = (HatcheryCycle::fightWinner(Random::Uint(0, 1000)) == 0);
+        mFightFirstWins = (HatcheryCycle::fightWinner(Random::Uint(0, FIGHT_WINNER_ROLL_MAX)) == 0);
         mFightBrawling = false;
         mFightApproach = 0;
         mFightTurnsLeft = std::max<uint32_t>(1, settings.mFightTurns);
@@ -1622,10 +1636,10 @@ void RoomHatchery::updateFight(std::vector<ChickenEntity*>& roosters, const Hatc
             climbDown(fighter);
         }
         fireAnimalSound(*first, "Hatchery/Cluck");
-        first->notifyFight(mFightSecond, 0);
+        first->notifyFight(mFightSecond, FIGHT_PHASE_START);
     }
 
-    const double reach = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryFightReach", 1.0);
+    const double reach = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryFightReach", DEFAULT_FIGHT_REACH);
     const Ogre::Vector2 firstPos(first->getPosition().x, first->getPosition().y);
     const Ogre::Vector2 secondPos(second->getPosition().x, second->getPosition().y);
     if(!mFightBrawling)
@@ -1646,9 +1660,9 @@ void RoomHatchery::updateFight(std::vector<ChickenEntity*>& roosters, const Hatc
 
     // They brawl: wings beating, pecking, puffed up. The client adds the clouds of feathers.
     if(!first->isBusy())
-        first->playPose(ChickenPose::fight, 3);
+        first->playPose(ChickenPose::fight, POSE_TURNS_LONG);
     if(!second->isBusy())
-        second->playPose(ChickenPose::fight, 3);
+        second->playPose(ChickenPose::fight, POSE_TURNS_LONG);
     if(mFightTurnsLeft > 0)
         --mFightTurnsLeft;
     if(mFightTurnsLeft > 0)
@@ -1683,13 +1697,13 @@ void RoomHatchery::endFight(ChickenEntity* first, ChickenEntity* second, bool fi
         }
         ChickenEntity* sender = (first != nullptr) ? first : second;
         if(sender != nullptr)
-            sender->notifyFight((sender == first) ? mFightSecond : mFightFirst, 2);
+            sender->notifyFight((sender == first) ? mFightSecond : mFightFirst, FIGHT_PHASE_ABORT);
         return;
     }
 
     ChickenEntity* winner = mFightFirstWins ? first : second;
     ChickenEntity* loser = mFightFirstWins ? second : first;
-    winner->notifyFight(loser->getName(), 1);
+    winner->notifyFight(loser->getName(), FIGHT_PHASE_END);
     fireAnimalSound(*loser, "Hatchery/Cluck");
     if(loser->loseFight() && (counts.mRoosters > 0))
         --counts.mRoosters;
@@ -1699,7 +1713,7 @@ void RoomHatchery::endFight(ChickenEntity* first, ChickenEntity* second, bool fi
     winner->setRoomDriven(false);
     winner->setMood(RoosterMood::strut, 0);
     winner->resetSinceCrow();
-    winner->playPose(ChickenPose::crow, 3);
+    winner->playPose(ChickenPose::crow, POSE_TURNS_LONG);
     fireAnimalSound(*winner, "Hatchery/Crow");
 }
 
@@ -1906,7 +1920,7 @@ void RoomHatchery::actRoosterMood(ChickenEntity* rooster, const std::vector<Chic
         case RoosterMood::crow:
             // He crows from the roof; on the way (walking, fluttering up) he does not stand still for the pose
             if(roostOnRoof(rooster, ChickenPose::crow))
-                rooster->playPose(ChickenPose::crow, 2);
+                rooster->playPose(ChickenPose::crow, POSE_TURNS_SHORT);
             break;
         case RoosterMood::chase:
         {
