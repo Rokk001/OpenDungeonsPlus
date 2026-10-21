@@ -103,6 +103,7 @@ public:
     inline bool isFighting() const
     { return mFighting; }
 
+    //! \brief Marks the rooster as fighting (or no longer fighting) another rooster.
     inline void setFighting(bool fighting)
     { mFighting = fighting; }
 
