@@ -35,13 +35,14 @@ static const std::vector<std::pair<char,char>> specialChars = {
 
 namespace MasterServer
 {
+    //! \brief Fetches the list of games from the master server; false if the request does not return Ok.
     bool fillMasterServerGames(const std::string& odVersion, std::vector<MasterServerGame>& masterServerGames)
     {
-        sf::Http::Request request("/get_csv.php", sf::Http::Request::Get);
+        sf::Http::Request request("/get_csv.php", sf::Http::Request::Method::Get);
         sf::Http http(ConfigManager::getSingleton().getMasterServerUrl());
         sf::Http::Response response = http.sendRequest(request);
 
-        if (response.getStatus() != sf::Http::Response::Ok)
+        if (response.getStatus() != sf::Http::Response::Status::Ok)
             return false;
 
         // Read pending games
@@ -73,11 +74,12 @@ namespace MasterServer
         return true;
     }
 
+    //! \brief Announces a game to the master server and reads back its uuid; false if the request does not return Ok.
     bool registerGame(const std::string& odVersion, const std::string& creator, int32_t port, const std::string& label, const std::string& descr, std::string& uuid)
     {
         // Before sending the level informations, we format the strings to avoid special meaning chars
         // like '\n' or ';'
-        sf::Http::Request request("/announce.php", sf::Http::Request::Post);
+        sf::Http::Request request("/announce.php", sf::Http::Request::Method::Post);
         std::string body = "odVersion=" + formatStringForMasterServer(odVersion)
             + "&creator=" + formatStringForMasterServer(creator)
             + "&port=" + Helper::toString(port)
@@ -87,7 +89,7 @@ namespace MasterServer
 
         sf::Http http(ConfigManager::getSingleton().getMasterServerUrl());
         sf::Http::Response response = http.sendRequest(request);
-        if (response.getStatus() != sf::Http::Response::Ok)
+        if (response.getStatus() != sf::Http::Response::Status::Ok)
             return false;
 
         std::string line = response.getBody();
@@ -102,16 +104,17 @@ namespace MasterServer
         return true;
     }
 
+    //! \brief Sends the new status of a game to the master server; false if the request does not return Ok.
     bool updateGame(const std::string& uuid, int32_t status)
     {
-        sf::Http::Request request("/update.php", sf::Http::Request::Post);
+        sf::Http::Request request("/update.php", sf::Http::Request::Method::Post);
         std::string body = "uuid=" + uuid
             + "&status=" + Helper::toString(status);
         request.setBody(body);
 
         sf::Http http(ConfigManager::getSingleton().getMasterServerUrl());
         sf::Http::Response response = http.sendRequest(request);
-        if (response.getStatus() != sf::Http::Response::Ok)
+        if (response.getStatus() != sf::Http::Response::Status::Ok)
             return false;
 
         return true;
