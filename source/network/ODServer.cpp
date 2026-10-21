@@ -3082,19 +3082,23 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
             Player* player = clientSocket->getPlayer();
-            int32_t operation;
+            int32_t operation = 0;
             std::string regionName;
-            int32_t x1;
-            int32_t y1;
-            int32_t x2;
-            int32_t y2;
-            OD_ASSERT_TRUE(packetReceived >> operation >> regionName >> x1 >> y1 >> x2 >> y2);
+            int32_t x1 = 0;
+            int32_t y1 = 0;
+            int32_t x2 = 0;
+            int32_t y2 = 0;
+            if(!(packetReceived >> operation >> regionName >> x1 >> y1 >> x2 >> y2))
+            {
+                OD_LOG_ERR("Truncated editorRegionEdit packet");
+                break;
+            }
 
             // The markers belong to the level script, which is saved from the server side
             LevelScript& levelScript = gameMap->getLevelScript();
-            if(operation == 1)
+            if(operation == static_cast<int32_t>(EditorRegionOperation::set))
                 levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
-            else if(operation == 2)
+            else if(operation == static_cast<int32_t>(EditorRegionOperation::remove))
                 levelScript.removeRegion(regionName);
 
             ServerNotification notif(ServerNotificationType::editorRegionData, player);

@@ -2144,14 +2144,29 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
                 break;
             }
-            uint32_t nbRegions;
-            OD_ASSERT_TRUE(packetReceived >> nbRegions);
+            uint32_t nbRegions = 0;
+            if(!(packetReceived >> nbRegions))
+            {
+                OD_LOG_ERR("Truncated editorRegionData packet");
+                break;
+            }
+
             std::vector<LevelScriptRegion> regions;
+            bool isComplete = true;
             for(uint32_t i = 0; i < nbRegions; ++i)
             {
                 LevelScriptRegion region;
-                OD_ASSERT_TRUE(packetReceived >> region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2);
+                if(!(packetReceived >> region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2))
+                {
+                    isComplete = false;
+                    break;
+                }
                 regions.push_back(region);
+            }
+            if(!isComplete)
+            {
+                OD_LOG_ERR("Truncated editorRegionData packet");
+                break;
             }
 
             EditorMode* editorMode = static_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode());
