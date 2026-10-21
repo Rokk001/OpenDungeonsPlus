@@ -5,8 +5,19 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/RenderManager.cpp').read_text()
-method = source[source.index('static const float WALL_BORDER_LIFT'):
-                source.index('\nbool RenderManager::getKeeperHandPosition(')]
+# The preview renderer starts with its wall border helpers when the file has them, else with the method itself
+start = source.find('static const float WALL_BORDER_LIFT')
+if start < 0:
+    start = source.index('void RenderManager::rrDrawTilePreview(')
+method = source[start:source.index('\nbool RenderManager::getKeeperHandPosition(')]
+# The floor height and the line helper of the preview lie far above in the file; they are taken along when it has them
+preamble = ''
+height_at = source.find('const float TILE_PREVIEW_FLOOR_HEIGHT')
+if height_at >= 0:
+    preamble += source[height_at:source.index('\n', height_at) + 1]
+line_at = source.find('void addPreviewLine(')
+if line_at >= 0:
+    preamble += source[line_at:source.index('\n}\n', line_at) + 3]
 code = r'''
 #include <functional>
 #include <algorithm>
@@ -94,7 +105,7 @@ for(const Ogre::Vector3& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"
   "drag outline reaches full selection maximum");
  render.rrDrawTilePreview({}, {1,1,1},true);check(scene.object.sections.empty(),"cancel clears ribbon and lines");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;}
-'''.replace('METHOD', method)
+'''.replace('METHOD', preamble + method)
 with tempfile.TemporaryDirectory(prefix='odp-construction-preview-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
