@@ -90,8 +90,8 @@ In a few words, to build OpenDungeonsPlus, you need the following libraries:
 You will also need a recent CMake version (3.13 or newer) and a compiler
 that supports C++11 features reasonably well, i.e.:
 
-- Linux: GCC 4.8+
-- Windows: MSVS 2013 Express or MinGW 4.8+
+- Linux: GCC 9+
+- Windows: MSVS 2019+ or MinGW 9+
 
 On an UNIX system, you can then run:
 ```
