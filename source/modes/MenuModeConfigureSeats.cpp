@@ -336,7 +336,7 @@ void MenuModeConfigureSeats::initSettingPages()
     CEGUI::Window* settingsWin = getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
 
     // One line per fighter creature class, with the maximum number a keeper may have
-    float lineY = 10.0f;
+    float lineY = SETTING_LINE_START;
     for(const std::pair<const std::string, CreatureDefinition*>& def : ConfigManager::getSingleton().getCreatureDefinitions())
     {
         if(def.second->isWorker())
@@ -344,20 +344,22 @@ void MenuModeConfigureSeats::initSettingPages()
 
         CEGUI::Window* pane = settingsWin->getChild(SETTINGS_TABS + "/Creatures/CreaturesSP");
         CEGUI::Window* label = winMgr.createWindow("OD/StaticText", "Label" + def.first);
-        label->setArea(CEGUI::UDim(0, 16), CEGUI::UDim(0, lineY), CEGUI::UDim(0, 330), CEGUI::UDim(0, lineY + 28));
+        label->setArea(CEGUI::UDim(0, SETTING_LABEL_LEFT), CEGUI::UDim(0, lineY),
+            CEGUI::UDim(0, SETTING_LABEL_RIGHT), CEGUI::UDim(0, lineY + SETTING_CONTROL_HEIGHT));
         label->setText(def.first);
         label->setProperty("FrameEnabled", "False");
         label->setProperty("BackgroundEnabled", "False");
         pane->addChild(label);
 
         CEGUI::Spinner* spinner = static_cast<CEGUI::Spinner*>(winMgr.createWindow("OD/Spinner", "Limit" + def.first));
-        spinner->setArea(CEGUI::UDim(0, 350), CEGUI::UDim(0, lineY), CEGUI::UDim(0, 470), CEGUI::UDim(0, lineY + 28));
+        spinner->setArea(CEGUI::UDim(0, SETTING_CONTROL_LEFT), CEGUI::UDim(0, lineY),
+            CEGUI::UDim(0, SETTING_SPINNER_RIGHT), CEGUI::UDim(0, lineY + SETTING_CONTROL_HEIGHT));
         spinner->setTooltipText("Most creatures of this type a keeper may have. 32 means no limit.");
         pane->addChild(spinner);
         spinner->setTextInputMode(CEGUI::Spinner::Integer);
-        spinner->setMinimumValue(0.0);
+        spinner->setMinimumValue(SETTING_CREATURE_LIMIT_MIN);
         spinner->setMaximumValue(static_cast<double>(GameMap::SKIRMISH_CREATURE_LIMIT_NONE));
-        spinner->setStepSize(1.0);
+        spinner->setStepSize(SETTING_SPINNER_STEP);
         spinner->setCurrentValue(static_cast<double>(GameMap::SKIRMISH_CREATURE_LIMIT_NONE));
         spinner->setEnabled(false);
         mHostSettingWindows.push_back(spinner);
@@ -383,18 +385,20 @@ void MenuModeConfigureSeats::initSettingPages()
         CEGUI::Window* pane = settingsWin->getChild(SETTINGS_TABS + "/" + pageName + "/" + pageName + "SP");
         std::map<std::string, float>::iterator itY = pageLineY.find(pageName);
         if(itY == pageLineY.end())
-            itY = pageLineY.insert(std::pair<std::string, float>(pageName, 10.0f)).first;
+            itY = pageLineY.insert(std::pair<std::string, float>(pageName, SETTING_LINE_START)).first;
 
         const float y = itY->second;
         CEGUI::Window* label = winMgr.createWindow("OD/StaticText", "ItemLabel" + Helper::toString(i));
-        label->setArea(CEGUI::UDim(0, 16), CEGUI::UDim(0, y), CEGUI::UDim(0, 330), CEGUI::UDim(0, y + 28));
+        label->setArea(CEGUI::UDim(0, SETTING_LABEL_LEFT), CEGUI::UDim(0, y),
+            CEGUI::UDim(0, SETTING_LABEL_RIGHT), CEGUI::UDim(0, y + SETTING_CONTROL_HEIGHT));
         label->setText(Skills::skillTypeToPlayerVisibleString(skillType));
         label->setProperty("FrameEnabled", "False");
         label->setProperty("BackgroundEnabled", "False");
         pane->addChild(label);
 
         CEGUI::Window* button = winMgr.createWindow("OD/Button", "ItemButton" + Helper::toString(i));
-        button->setArea(CEGUI::UDim(0, 350), CEGUI::UDim(0, y), CEGUI::UDim(0, 540), CEGUI::UDim(0, y + 28));
+        button->setArea(CEGUI::UDim(0, SETTING_CONTROL_LEFT), CEGUI::UDim(0, y),
+            CEGUI::UDim(0, SETTING_BUTTON_RIGHT), CEGUI::UDim(0, y + SETTING_CONTROL_HEIGHT));
         button->setText(itemStateText(mItemStates[i]));
         button->setID(i);
         button->setEnabled(false);
