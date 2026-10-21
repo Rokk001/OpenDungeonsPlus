@@ -103,6 +103,9 @@ friend class RenderManager;
 friend class ODServer;
     
 public:
+    //! \brief Creates an empty game map with an empty level script.
+    //! \param isServerGameMap True for the map of the server, false for the one of a client.
+    //! \param nt The kind of tile node the map uses.
     GameMap(bool isServerGameMap, NodeType nt = NodeType::MTILES_NODE);
     virtual ~GameMap();
 
@@ -666,7 +669,8 @@ public:
     static const int32_t TIME_LIMIT_COUNTDOWN_FLAG = 0x40000000;
 
     //! \brief Tells the human players how many seconds are left (-1: there is no time limit), and the
-    //! wave countdown that checkGameDuration set
+    //! wave countdown that checkGameDuration set. Nothing is sent when both are the same as last time.
+    //! \param remainingSeconds Seconds left, with TIME_LIMIT_COUNTDOWN_FLAG added for a countdown
     void sendTimeLimit(int32_t remainingSeconds);
 
     void logFloodFileTiles();

@@ -101,10 +101,12 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline const LevelStatistics& getLevelStatistics() const
     { return mLevelStatistics; }
 
-    //! \brief Seconds left until the level is lost, -1 if there is no time limit
+    //! \brief Seconds left until the level is lost, -1 if there is no time limit. A countdown that ends
+    //! without a defeat has GameMap::TIME_LIMIT_COUNTDOWN_FLAG added.
     inline int32_t getTimeLimitSeconds() const
     { return mTimeLimitSeconds; }
 
+    //! \brief Seconds left until the next hero wave of a level script, -1 if none is shown
     inline int32_t getWaveCountdownSeconds() const
     { return mWaveCountdownSeconds; }
 
@@ -194,7 +196,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     // Debriefing counters sent by the server after playerDefeated
     bool mHasLevelStatistics;
     LevelStatistics mLevelStatistics;
+    //! \brief Last time limit received with timeLimit, -1 when there is none
     int32_t mTimeLimitSeconds;
+    //! \brief Last wave countdown received with timeLimit, -1 when none is shown
     int32_t mWaveCountdownSeconds;
 
     // Heart health received with heartHealth

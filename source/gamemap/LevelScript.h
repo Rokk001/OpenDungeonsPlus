@@ -765,6 +765,8 @@ public:
     inline int64_t getTimeLimitSeconds() const
     { return mTimeLimitSeconds; }
 
+    //! \brief Sets the time limit
+    //! \param seconds The level second at which it runs out, TIME_LIMIT_NOT_SET or TIME_LIMIT_REMOVED
     inline void setTimeLimitSeconds(int64_t seconds)
     { mTimeLimitSeconds = seconds; }
 
@@ -775,6 +777,8 @@ public:
     inline int64_t getCountdownSeconds() const
     { return mCountdownSeconds; }
 
+    //! \brief Sets the HUD countdown
+    //! \param seconds The level second at which it ends, or COUNTDOWN_NOT_SET
     inline void setCountdownSeconds(int64_t seconds)
     { mCountdownSeconds = seconds; }
 
@@ -783,6 +787,8 @@ public:
     inline int64_t getWaveCountdownSeconds() const
     { return mWaveCountdownSeconds; }
 
+    //! \brief Sets the HUD wave countdown
+    //! \param seconds The level second at which it ends, or COUNTDOWN_NOT_SET
     inline void setWaveCountdownSeconds(int64_t seconds)
     { mWaveCountdownSeconds = seconds; }
 

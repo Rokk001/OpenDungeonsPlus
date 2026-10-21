@@ -109,6 +109,17 @@ const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
 const std::string MANA_GAIN_TEXT_COLOUR = "FF7FE3A6";
 const std::string MANA_LOSS_TEXT_COLOUR = "FFFF4848";
 
+//! Text colour of the time limit display (ARGB)
+static const char* const TIME_LIMIT_COLOUR = "FFF6CB62";
+//! Text colour of the time limit display during its last minute (ARGB)
+static const char* const TIME_LIMIT_WARNING_COLOUR = "FFE05A4A";
+//! From this many seconds left the time limit is shown in the warning colour
+static const int32_t TIME_LIMIT_WARNING_SECONDS = 60;
+//! Tooltip of the display while it shows a countdown that ends without a defeat
+static const char* const TIME_LIMIT_TOOLTIP_COUNTDOWN = "Time left until the next stage of the level";
+//! Tooltip of the display while it shows a time limit
+static const char* const TIME_LIMIT_TOOLTIP_LIMIT = "Time left until the level is lost";
+
 // Message tabs are laid out in units of the message queue height; the queue is designed
 // for tabs of this height in pixels.
 const float MESSAGE_QUEUE_DESIGN_HEIGHT = 52.0f;
@@ -1963,7 +1974,7 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
 void GameMode::updateTimeLimitTooltip(bool isCountdown)
 {
     CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
-    timeLimitDisplay->setTooltipText(isCountdown ? "Time left until the next stage of the level" : "Time left until the level is lost");
+    timeLimitDisplay->setTooltipText(isCountdown ? TIME_LIMIT_TOOLTIP_COUNTDOWN : TIME_LIMIT_TOOLTIP_LIMIT);
 }
 
 bool GameMode::clickHeartBadge(const CEGUI::EventArgs& arg)
@@ -2228,7 +2239,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         mTimeLimitShown = timeLimitReceived;
         timeLimitDisplay->setText(formatDebriefingTime(timeLimitSeconds));
         // The last minute of a time limit is shown in red
-        timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= 60) ? "FFE05A4A" : "FFF6CB62");
+        timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= TIME_LIMIT_WARNING_SECONDS) ? TIME_LIMIT_WARNING_COLOUR : TIME_LIMIT_COLOUR);
         updateTimeLimitTooltip(isCountdown);
         timeLimitDisplay->show();
     }
