@@ -899,6 +899,7 @@ BOOST_AUTO_TEST_CASE(test_creature_events)
 }
 
 //! Tiles, tags, possession, boulders and the actions that change the level
+//! \brief Tile kind and tagged tile conditions and the terrain action are read, written and refused when malformed
 BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
 {
     static const std::string text =

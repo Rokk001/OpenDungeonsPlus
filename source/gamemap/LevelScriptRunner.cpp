@@ -996,6 +996,8 @@ void buildBridge(GameMap& gameMap, const LevelScriptAction& action)
     }
 }
 
+//! Changes the tiles of the rectangle, as digging or claiming does: the tile is recomputed and
+//! sent to every seat that sees it
 void alterTerrain(GameMap& gameMap, const LevelScriptAction& action)
 {
     if(action.mText == "bridge")
