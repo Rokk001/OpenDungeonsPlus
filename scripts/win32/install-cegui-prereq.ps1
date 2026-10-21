@@ -24,8 +24,15 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\cegui" apply $taskClippingPatch
     if ($LASTEXITCODE -ne 0) { throw 'CEGUI clipping patch failed' }
 }
+$taskTargetQueryPatch = Join-Path $PSScriptRoot 'patches/cegui-missing-target-query.patch'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskTargetQueryPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Guarding CEGUI target queries against missing targets'
+    & git -C "$taskRoot\src\cegui" apply $taskTargetQueryPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI target query patch failed' }
+}
 $ErrorActionPreference = 'Stop'
-$taskOptions = @('-S', "$taskRoot\src\cegui", '-B', "$taskRoot\build\cegui",
+$taskOptions =@('-S', "$taskRoot\src\cegui", '-B', "$taskRoot\build\cegui",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
     "-DCMAKE_PREFIX_PATH=$taskRoot\install", '-DCMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP4',
     '-DCEGUI_BUILD_RENDERER_OGRE=ON', '-DCEGUI_BUILD_RENDERER_OPENGL=OFF',
