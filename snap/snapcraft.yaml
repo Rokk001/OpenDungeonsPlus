@@ -34,7 +34,6 @@ apps:
       - wayland
       - pulseaudio
     environment:
-      ALSOFT_DRIVERS: pulse
       LD_LIBRARY_PATH: "${SNAP}/usr/lib:${SNAP}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}:${SNAP}/usr/lib/cegui-0.9999:${LD_LIBRARY_PATH}"   # ← FIX (compressed to valid form)
       OGRE_PLUGIN_DIR: "${SNAP}/usr/lib/OGRE"
       OGRE_CONFIG_DIR: "${SNAP}/usr/share/OGRE"
